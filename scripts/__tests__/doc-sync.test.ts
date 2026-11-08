@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runDocSyncChecks } from "../lib/doc-sync/checks";
+import { LANE_FRESHNESS_REVIEW_NOTES } from "../lib/lane-freshness-review";
+import { renderLaneFreshnessMatrix, replaceLaneFreshnessMatrix } from "../maintenance/generate-lane-freshness-matrix";
 import {
   DOC_CONTRACT_BLOCKS,
   docContractEndMarker,
@@ -93,32 +95,21 @@ describe("doc-sync lane freshness matrix", () => {
   const MATRIX = "docs/process/lane-freshness-matrix.md";
   const matrix = readFileSync(resolve(ROOT, MATRIX), "utf8");
 
-  it("rejects a row whose budget drifts from the job interval", () => {
-    const drifted = matrix.replace(
-      "| `sync-stablecoins` | 15m | 30m C | critical |",
-      "| `sync-stablecoins` | 15m | 20m C | critical |",
-    );
-    expect(drifted).not.toBe(matrix);
-    expect(checkWithOverrides({ [MATRIX]: drifted })).toEqual([
-      { file: MATRIX, label: "sync-stablecoins freshness budget", expected: "30m (2x interval)", found: "20m" },
-    ]);
-  });
-
-  it("rejects a missing, duplicate or unknown matrix row", () => {
-    const missing = matrix.replace(/^\| `sync-stablecoins` .*$/m, "");
-    expect(checkWithOverrides({ [MATRIX]: missing })).toEqual([
-      { file: MATRIX, label: "missing job sync-stablecoins", expected: "matrix row", found: null },
-    ]);
-
-    const duplicated = `${matrix}\n| \`sync-stablecoins\` | 15m | 30m C | critical | Duplicate. |\n`;
-    expect(checkWithOverrides({ [MATRIX]: duplicated })).toEqual([
-      { file: MATRIX, label: "duplicate job sync-stablecoins", expected: "one matrix row", found: "sync-stablecoins" },
-    ]);
-
-    const unknown = `${matrix}\n| \`unknown-job\` | 15m | 30m C | critical | Unknown. |\n`;
-    expect(checkWithOverrides({ [MATRIX]: unknown })).toEqual([
-      { file: MATRIX, label: "unknown job unknown-job", expected: "a CRON_JOB_DEFINITIONS job", found: "unknown-job" },
-    ]);
+  it("generates source-owned rows with complete review notes", () => {
+    const block = renderLaneFreshnessMatrix();
+    expect(matrix).toContain(block);
+    for (const row of [
+      "| `sync-fx-rates` | 30m | 1h C | critical |",
+      "| `reserve-recovery` | 5m | 10m O | critical |",
+      "| `yield-coverage-audit` | 30d nominal | 60d C | watch |",
+    ]) expect(block).toContain(row);
+    const missing = { ...LANE_FRESHNESS_REVIEW_NOTES };
+    delete missing["sync-stablecoins"];
+    for (const notes of [missing, { ...LANE_FRESHNESS_REVIEW_NOTES, unknown: "Unknown." }]) {
+      expect(() => renderLaneFreshnessMatrix(notes)).toThrow("lane freshness review note");
+    }
+    expect(replaceLaneFreshnessMatrix(matrix, block)).toBe(matrix);
+    expect(() => replaceLaneFreshnessMatrix(matrix + block, block)).toThrow("one complete");
   });
 
   it("rejects missing sign-off boundaries and owning prose", () => {

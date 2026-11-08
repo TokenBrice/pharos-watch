@@ -42,7 +42,7 @@ A policy-semantic change takes a numeric version even when it is provably score-
 
 ## ADR-35 applications
 
-- [Redemption](../redemption-backstops.md#cron-schedule) validates complete rows, persisted details and final dependency transforms before opening a run; invalid members become named failed placeholders and disclosures revalidate against that census. Global holds write no rows; post-manifest storage failure leaves an unreadable failed run. Supply repair/carry/quarantine remains solely [ADR-8(c)](../architecture.md#adr-8).
+- [Redemption](redemption-backstops-appendix.md#cron-schedule) validates complete rows, persisted details and final dependency transforms before opening a run; invalid members become named failed placeholders and disclosures revalidate against that census. Global holds write no rows; post-manifest storage failure leaves an unreadable failed run. Supply repair/carry/quarantine remains solely [ADR-8(c)](../architecture.md#adr-8).
 
 ## Shared Implementation Boundaries
 
@@ -54,7 +54,7 @@ Digest producers/archive readers import map-only `shared/types/digest-safety-map
 
 Mint/burn flow producer DTOs derive from `shared/types/mint-burn.ts`; the Worker strengthens required live coverage/valuation fields without mirroring the wire shape or declaring private reason extensions.
 
-`shared/types/status/` separates status domains; `shared/types/status.ts` remains the frontend/Worker compatibility barrel, including lazy schema loaders. Domain modules import lower-level siblings, never the barrel; internal primitives stay private.
+`shared/types/status/` separates status domains; `shared/types/status.ts` remains the frontend/Worker compatibility barrel; lazy schema loaders import status domain modules directly. Domain modules import lower-level siblings, never the barrel; internal primitives stay private.
 
 Stablecoin base records and whole-domain research sidecars merge through `scripts/lib/stablecoin-catalog-sources.ts` before full schema validation; generated registries consume only the merged projection. [Stablecoin Data](../stablecoin-data.md#source-files) owns authoring and source layout.
 

@@ -199,9 +199,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   let dewsRowsRead = 0;
   const publishedDews = await loadPublishedStressSignalGeneration(db, now);
   throwIfAborted(signal);
-  if (publishedDews.status !== "ok") {
+  if (publishedDews.status !== "ok" || !publishedDews.exactCoverageVerified) {
     dewsUnavailable = true;
-    dewsFailureReason = publishedDews.reason;
+    dewsFailureReason = publishedDews.status !== "ok" ? publishedDews.reason : "generation-coverage-unverified";
   } else {
     const rows = publishedDews.rows.filter((row) => CORE_PSI_ELIGIBLE_IDS.has(row.stablecoin_id));
     dewsRowsRead = rows.length;

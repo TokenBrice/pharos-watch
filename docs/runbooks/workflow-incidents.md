@@ -4,7 +4,7 @@
 
 Use this runbook for failed GitHub Actions validation, deployment, and scheduled automation runs. Workflow YAML defines required jobs, advisory jobs, and intentionally skipped surfaces; the owning producer or deployment runbook defines operational acceptance.
 
-Workflow failures do not create or reconcile GitHub incident issues. Domain-specific issue automation remains independent: scheduled-delivery incidents, curation review worklists, and agent-maintenance candidates retain their own owners and handling.
+Nightly validation upserts and closes one `ci:nightly-red` issue and the weekly run replaces one `ci:weekly-report` report issue in place; no other workflow failure creates or reconciles GitHub incident issues. Domain-specific issue automation remains independent: scheduled-delivery incidents, curation review worklists, and agent-maintenance candidates retain their own owners and handling.
 
 ## Notification channel
 

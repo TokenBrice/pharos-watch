@@ -22,7 +22,7 @@ Still true:
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
 - the UI treats Access as one operator gate and does not infer or display read-only/mutating roles from unverified browser-visible identity claims
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
-- the reserve-recovery fault injector that held the `workers.dev` admin route has been removed, and the preview-host admin carve-out is now retired: `isAccessProtectedAdminHost()` in `worker/src/lib/auth.ts` recognizes only `ops-api.pharos.watch`, so `*.workers.dev` preview hosts return `404` on admin paths even when presented with an Access JWT; `preview_urls = true` remains enabled for CI/site-proxy rehearsals
+- `isAccessProtectedAdminHost()` in `worker/src/lib/auth.ts` recognizes only `ops-api.pharos.watch`, so `*.workers.dev` preview hosts return `404` on admin paths even when presented with an Access JWT; `preview_urls = true` remains enabled for CI/site-proxy rehearsals
 - same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
 
 ---
@@ -42,22 +42,7 @@ If the operator API hostname still does not resolve afterward, finish the custom
 
 ### CORS allowlist
 
-`CORS_ORIGIN` now supports a comma-separated allowlist rather than a single static origin. The Worker:
-
-- parses the configured origins
-- echoes the request `Origin` when it is allowlisted
-- falls back to the first configured origin when there is no `Origin` header at all
-- omits `Access-Control-Allow-Origin` for foreign browser origins
-- returns `403` for disallowed `OPTIONS` preflights
-- sets `Vary: Origin`
-
-The production repo default is now:
-
-```toml
-CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
-```
-
-This is required so an Access-protected `ops.pharos.watch` can call the Worker during the current split-host setup.
+`CORS_ORIGIN` is a comma-separated Worker allowlist; it must include `https://ops.pharos.watch` so the Access-protected operator UI can call the Worker. The checked-in value lives in `worker/wrangler.toml` `[vars]`; [CORS Headers](process/worker-infrastructure-appendix.md#cors-headers) owns parsing, origin echo/omission, `Vary: Origin`, the no-`Origin` fallback and preflight `403` behavior.
 
 ### Runtime origin bindings
 
@@ -114,7 +99,7 @@ The current proxy now fails closed on its own trust boundary:
 - Every browser request is checked against `Sec-Fetch-Site` after JWT verification: `same-origin` and `none` (user-initiated navigation) pass, while `cross-site`, `same-site`, and any other value return `403` before the upstream fetch. Requests without the header (server-side automation, `npm run test:smoke-ops`) are unaffected; they cannot obtain the operator's Access session.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) additionally require an `Origin` matching `OPS_UI_ORIGIN`; missing, foreign, malformed or non-HTTP(S) origins return `403`. Only `POST` reaches this check: method validation rejects `PUT`, `PATCH` and `DELETE` with `405` and the endpoint's actual `Allow` methods (typically `POST`).
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
-- The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
+- The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Retry-After`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
 - Request bodies are capped incrementally at 128 KiB, including when `Content-Length` is absent or understated; oversized requests return `413`. Upstream responses are buffered under the shared 16 MiB proxy cap before returning to the browser; oversized or unreadable upstream responses return `502`.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
@@ -327,8 +312,8 @@ malformed cache-setting evidence fails rather than implying a healthy policy. In
 changes must update the manifest and its fixture tests in the same review;
 Terraform/OpenTofu import remains owner-gated and out of scope.
 
-The manifest pins the operator-selected `browser_cache_ttl` (60 seconds) and
-`cache_level` (`aggressive`), checked through the named zone-settings endpoints.
+The manifest pins the operator-selected zone browser-cache settings, checked through the named
+zone-settings endpoints.
 The independent Production Canaries transport job also runs
 `node scripts/ci/check-live-api-cache-policy.mjs`, requiring no secrets. Its
 bounded public GETs cover exempt direct API responses and same-origin
@@ -340,14 +325,13 @@ responses and directive drift fail with endpoint/profile evidence. This is
 representative response evidence, not proof about every route or Cache Rule.
 The accepted 60-second floor still lifts 10-second realtime/per-coin browser
 profiles; do not lengthen producer budgets or relabel retained generations.
-Live OG route cards can now have an origin TTL below 60 seconds, bounded by
-post-render admission lifetime. That same account floor can extend their delivered
-browser lifetime beyond the figure's expiry. The JSON-only cache-policy canary
-does not cover PNG OG responses: before accepting this policy, retain real
-uncached and cached `/api/og/page/:slug` headers (`Cache-Control`, `Age`,
-`CF-Cache-Status`, and the `X-Og-*` generation/budget/assessment headers), including
-a near-expiry card. A lifted TTL is not compliant merely because origin tests
-pass; correcting the external floor requires the explicit policy change below.
+The JSON-only cache-policy canary does not cover PNG OG responses: before
+accepting this policy, retain real uncached and cached `/api/og/page/:slug`
+headers (`Cache-Control`, `Age`, `CF-Cache-Status`, and the `X-Og-*`
+generation/budget/assessment headers), including a near-expiry card. A lifted
+TTL is not compliant merely because origin tests pass; [OG image caching](./og-images.md)
+owns the origin TTL bound, and correcting the external floor requires the
+explicit policy change below.
 A future **Respect Existing Headers** choice needs an explicit manifest/fixture
 update (floor zero) and successful direct/proxied response checks.
 
@@ -370,7 +354,7 @@ update (floor zero) and successful direct/proxied response checks.
 
 ### Session policy
 
-- UI session duration is manifest-owned and currently expected to be 12 hours
+- UI session duration is manifest-owned and set by the Zero Trust policy
 - MFA should be enforced for all human operators
 - owner: Cloudflare Zero Trust Access application policy for `https://ops.pharos.watch/*`
 - `scripts/ci/cloudflare-account-state-manifest.json`, its fixtures, and the Zero Trust policy must change together when that duration changes

@@ -11,25 +11,22 @@ composition-age threshold.
 Run every command from the repository root. Use one fresh production capture for the
 entire sweep; do not combine worklists or dates from different producer cycles.
 
-The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs this
-procedure every Tuesday at 05:45 UTC (and on a manual dispatch from `main`) with the deploy
-pipeline's Cloudflare credentials. The `sweep` job requires `refs/heads/main` before
-checkout or credential use, so a feature-branch dispatch skips it while scheduled
-execution and main dispatch remain enabled. It updates or creates the "Safety Score curation
-expiry sweep" issue with registry counts, all eight generator statuses and the full
-artifact link before the renewals, ledger-sentinel, live-withheld/expiry and
-Dependencies/Backing excerpts. Its complete
-body, including truncation marker and run footer, is capped at 60,000 UTF-8 bytes
-without splitting characters. All reports, logs, capture and replay (including partial
-outputs) are retained together in a 30-day run/attempt artifact. Replay and each of the
-seven downstream reports have separate workflow steps and status outputs; the issue's
-`Command status` and `Process status` lines name all eight. The sentinel check, the
-14-day renewal view and the renewal calendar each have a 10-minute ceiling; the
-live-withheld step has a 25-minute ceiling inside the unchanged 40-minute job budget,
-leaving time for issue/artifact publication when that report times out. Missing status
-outputs count as failures. Generator failures fail the run, but green
-generation does not attest cache freshness.
-Draining complete queues stays operator work — follow the steps below.
+The sweep is automated: `.github/workflows/curation-expiry-sweep.yml` runs this
+procedure every Tuesday at 05:45 UTC and on manual dispatch from `main` with the
+deploy pipeline's Cloudflare credentials. The `sweep` job requires
+`refs/heads/main` before checkout or credential use, so a feature-branch dispatch
+skips it. It updates or creates the "Safety Score curation expiry sweep" issue
+with registry counts, the artifact link and all eight generator statuses on its
+`Command status` and `Process status` lines before the renewals, ledger-sentinel,
+live-withheld/expiry and Dependencies/Backing excerpts; its complete body,
+including truncation marker and run footer, is capped at 60,000 UTF-8 bytes
+without splitting characters. All reports, logs, capture and replay, including
+partial outputs, are retained together in a 30-day run/attempt artifact. The
+sentinel check, the 14-day renewal view and the renewal calendar each have a
+10-minute ceiling; the live-withheld step has a 25-minute ceiling inside the
+unchanged 40-minute job budget. Missing status outputs count as failures;
+generator failures fail the run, but green generation does not attest cache
+freshness. Draining complete queues stays operator work — follow the steps below.
 
 **Operator contract:** the sweep operator reviews and drains the `DEP`/`RESV`,
 pre-expiry, and live-withheld rows weekly. Mark a high-supply counterfactual grade drop
@@ -391,9 +388,11 @@ window. Keep the horizon calendar a 30-day artifact, never the issue body.
 renewed from current primary sources, or listed as an issuer wait with a date or event
 trigger, within 48 hours of the sweep. A renewal re-verifies its evidence and writes its
 own `reviewedAt`; an unchanged fact still needs a new dated source, and a composition
-renewal re-verifies the composition. No date-bumps. Missing issuer evidence lapses
-fail-closed and is listed, never softened or hidden by confidence changes. The
-`DEP`/`RESV` drain and the live-withheld review stay the priority lanes.
+renewal re-verifies the composition. No date-bumps; never shorten a review window to
+exclude a known event, and renew an incident review only from a fresh primary search of
+the same surfaces. Missing issuer evidence lapses fail-closed and is listed, never
+softened or hidden by confidence changes. The `DEP`/`RESV` drain and the live-withheld
+review stay the priority lanes.
 
 **Incident reviews renew by stable identity.** Provider and issuer-surface negative
 incident reviews renew on the policy's `reviewedResearchMaxAgeSec` budget (365 days):
@@ -408,11 +407,11 @@ its authored `(assetId, routeId, controlId|controlIds)` identity, and a `retired
 renews nothing and never returns. Review windows follow the standing evidence contract:
 the window starts at the lane's first activity, `windowEndSec` is one pinned instant no
 later than `reviewedAt`, and an in-window operational incident is enumerated in the
-finding rather than written as a negative. The v10.38 train ships this identity and its migration only;
-certificate admission and provider/issuer lane closure (IR-1c) are v10.39, so the v10.38
-sweep must not demand a certificate closure or read its absence as a failed renewal. Once
-certificate admission lands, certificates roll with each screening cycle and exemptions
-are point-in-time and bound to the disclosed exposure: neither is a renewal row.
+finding rather than written as a negative. Certificates roll with each screening cycle and
+exemptions are point-in-time and bound to the disclosed exposure: neither is a renewal row.
+Lane certificates are runtime D1 rows joined at evaluation and do not appear in this
+calendar: an expired or gapped chain simply stops closing its lane; a
+`verifier-compromise` exemption is re-earned, not renewed.
 
 **Ledger sentinels.** Check the reviewed ledger against the regenerated registry from the
 same capture:
@@ -499,7 +498,7 @@ dependency scores from changing because an unrelated producer was withheld. Rows
 are sorted with unknown supply first (asset-ID tie breaks), then known circulating
 USD descending. Missing/null supply remains unavailable with a reason,
 distinct from observed zero. Rows include live/fallback scores/grades, fallback
-tier, evidence ceiling and binding-cap kind. Only eligible strict downgrades appear.
+tier and counterfactual binding-cap kind. Only eligible strict downgrades appear.
 The report owns its clock, assessed count and no-live/already-fallback/baseline-gap/
 fallback-gap/unchanged-or-upgrade census. An empty report means no assessed eligible
 strict downgrades, not healthy feeds or no possible changes among excluded assets.
@@ -578,17 +577,6 @@ counterfactual report.
 | Renewal calendar | Every boundary before 2027-01-19 has a renewed record, a live snapshot, or a dated issuer wait; no record moved by a date-bump. |
 | Ledger sentinels | Every `closed` group is booked through the applier PR or carries a recorded blocker; no `spp-admission-failed` row was booked as a reject. |
 | Measurement | The closing worklist, pre-expiry list, and counterfactual report come from one fresh capture replayed with its own `clockSec`. |
-
-
-## Incident-review renewals (v10.39)
-
-A provider or issuer-surface review expires on the reviewed-research budget (365 days from
-`reviewedAt`/`windowEndSec`). Renew it only from a fresh primary search of the same surfaces;
-never date-bump, never shorten the window to exclude a known event, and never drop a provider
-incident another current review of the same provider discloses. Lane certificates are runtime
-D1 rows joined at evaluation and do not appear in this calendar: an expired or gapped chain
-simply stops closing its lane. A `verifier-compromise` exemption is point-in-time evidence
-bound to the disclosed exposure and is re-earned, not renewed.
 
 ## Artifact hygiene
 

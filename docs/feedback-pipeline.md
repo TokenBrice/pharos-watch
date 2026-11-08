@@ -1,6 +1,6 @@
 # Feedback Pipeline
 
-In-app feedback routes to public GitHub Issues, not a private support inbox. `worker/src/api/feedback/` separates request/env policy, verification and GitHub submission/formatting. The request schema and API reference own validation/HTTP details, not copied prop/SQL/title tables here.
+In-app feedback routes to public GitHub Issues, not a private support inbox. `worker/src/api/feedback/` separates request/env policy, verification and GitHub submission/formatting. The request schema and this page own validation/HTTP details, not copied prop/SQL/title tables here.
 
 ## Frontend Components
 
@@ -12,7 +12,7 @@ Submit a collision-resistant Idempotency-Key. Retry the same serialized payload 
 
 ## API Endpoint
 
-[POST /api/feedback](./api-reference.md#post-apifeedback) owns authoritative request, validation, headers and error semantics. Valid requests require an idempotency key. Conflicting/in-flight reuse can return 409. Unknown GitHub execution returns 503 with `X-Execution-Certainty: unknown`; replaying the same key replays uncertainty without invoking GitHub again. Reconcile that outcome before submitting a new key: never turn timeout ambiguity into duplicate issues.
+[POST /api/feedback](./api-reference.md#post-apifeedback) records only the route's one-line description, registry key, path, unpublished-schema note, cache policy and OpenAPI exclusion; this page owns its request schema, Idempotency-Key and execution-certainty semantics. Valid requests require an idempotency key. Conflicting/in-flight reuse can return 409. Unknown GitHub execution returns 503 with `X-Execution-Certainty: unknown`; replaying the same key replays uncertainty without invoking GitHub again. Reconcile that outcome before submitting a new key: never turn timeout ambiguity into duplicate issues.
 
 ### Rate limiting And Privacy
 

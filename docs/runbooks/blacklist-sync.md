@@ -16,7 +16,7 @@ The thresholds live in `shared/lib/status-thresholds.ts`. Internal classificatio
 
 1. **Admin page → Debug sync state:** GET `/api/debug-sync-state` (Actions section: under Complete action catalog → Inspect, or in Recommended now while a blacklist gap cause is active). Shows last processed block per `config_key` (one row per contract/config, sorted by `config_key`).
 2. **Config-level lag:** compare `config_key` rows, not only chain names. Same-symbol/same-chain deployments can have separate contract/config cursors, and new freeze-ledger snapshots are contract/config scoped.
-3. **Stuck chain:** look for a `last_block` that has not advanced for many hours relative to network tip. Remember Tron `last_block` is a millisecond timestamp. The freshness watchdog independently raises `blacklist-config-stale` for any config whose `last_succeeded_at` is null, older than two six-hourly producer intervals (12h), or ahead of the watchdog clock, naming the config in the operator Telegram and in `cron_runs.metadata.quality`.
+3. **Stuck chain:** look for a `last_block` that has not advanced for many hours relative to network tip. Remember Tron `last_block` is a millisecond timestamp. The freshness watchdog independently raises `blacklist-config-stale` for any config whose `last_succeeded_at` is null, older than two six-hourly producer intervals (12h), or ahead of the watchdog clock, naming the config in the operator Telegram and in the run's `metadata.blacklistConfigWatch` conditions (`metadata.quality.reasons` carries only the `blacklist-config-stale` id).
 4. **Circuit-open skips:** inspect recent `sync-blacklist` `cron_runs.metadata` for `apiErrorConfigs`, `apiErrorClasses`, budget exhaustion, or circuit-open source skips before resetting cursors.
 5. **Upstream RPC health:** if a specific config is stuck, check the relevant provider lane for that chain/config (Dwellir/dRPC/chain RPC/Etherscan/TronGrid).
 
@@ -135,7 +135,7 @@ Use the guarded reconciliation only for the immutable `night-watch-usdt-tron-202
 
 Use `worker/scripts/rebuild-blacklist-current-balances.ts` only after the source event set is complete:
 
-1. Preview, then arm the writer pause with `--arm-writer-pause`; live changes require `--execute --confirm rebuild-blacklist-current-balances` and an explicit `--local` or `--remote` target.
+1. Preview, then arm the writer pause with `--arm-writer-pause`; live changes require `--execute --confirm rebuild-blacklist-current-balances`; the target defaults to local D1, so pass `--remote` deliberately for the production ledger.
 2. Wait for the `sync-blacklist` cron lease to expire. Live rebuilds check both the pause key and lease before provider work and again immediately before publication; dry-runs do not require those guards.
 3. Run the rebuild as a dry-run first. Provider lookups still run, but D1 remains unchanged; inspect `failedCount` before proceeding.
 4. Run the confirmed rebuild. More than 10% provider failures abort before D1 mutation. `--force` bypasses only this failure-rate guard and should be used only after reviewing the provider failures.
@@ -164,7 +164,7 @@ Do not run older delete-and-replace revisions of either balance tool: they can e
 
 ## Methodology And Ownership
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the runtime scans the live contract configurations in `worker/src/lib/blacklist-contracts.ts`; that registry owns the supported chains, symbols, and deferred deployments.
+Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the runtime scans the live contract configurations in `worker/src/lib/blacklist-contracts.ts`; that registry owns the supported chains and symbols; deferred and out-of-scope deployments are owned by `worker/src/lib/blacklist-coverage-manifest.ts`.
 
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
@@ -216,7 +216,8 @@ stats band and the FreezeWatch share card) classifies coverage as
 `complete`, `partial` or `unavailable`. `unavailable` (no reviewed coin reported supply, including a
 schema-valid empty list) publishes no supply total or share (`—`) while registry counts stay visible.
 `partial` keeps the freezable and unfreezable headline shares but qualifies them as observed-only: the
-hero reads "of observed" market cap, and the unfreezable card's secondary text names the observed totals
+freezable-supply meter adds the `Observed supply only · N assets without supply data excluded` coverage
+note (`describeFreezableSupplyCoverage()`), and the unfreezable card's secondary text names the observed totals
 and excluded count ("$X of $Y observed · N without supply data excluded") while the figure itself carries
 no marker, so a partial list can never read as a full-market share. FreezeWatch's tracked frozen total and
 total wiped value likewise show their subtotal without a `(partial)` qualifier (owner decision 2026-11-03:
@@ -370,7 +371,7 @@ Transfer and quiet-settle windows must retain their filters, complete pagination
 
 Both transfer-ledger and quiet-settle reads require a short terminal raw provider page. A page with at least 200 records and no continuation is retryable `provider_null` evidence, including when non-transfer records would be filtered out; it cannot yield or persist a recovered amount. This is not deterministic `history_over_cap`, which remains reserved for explicit page-cap truncation with continuation. Valid short terminal pages, per-page metering and quiet-settle bounds are unchanged.
 
-A Tron replay zero additionally requires positive-value pre-freeze activity, nonnegative ordered history, and a complete confirmed window of **every configured destroy family** excluding the address through the balance-proof boundary. Empty/zero-only histories, matching destroys, missing families and incomplete/stale/malformed windows cannot prove zero. Proven zeroes use `trongrid-transfer-replay-zero` (operator repairs append the evidence hash) and do not re-enter legacy-derived-zero retries.
+The [public event rules](../blacklist-tracker.md#event-and-coverage-rules) own the replay-zero evidence requirements; the destroy-family window still runs through the balance-proof boundary. Proven zeroes use `trongrid-transfer-replay-zero` (operator repairs append the evidence hash) and do not re-enter legacy-derived-zero retries.
 
 Destroy proof uses each family's configured victim key and same-origin/contract pagination preserving confirmation, family and time filters. It shares the replay page budget; failed/rejected pages count too. Stale evidence is `state_raced`, runtime stops are `runtime_budget` (neither consumes an attempt), invalid provider data is `provider_null`, and matching destroys or exceeded evidence caps are `evidence_mismatch`. Operator zero repair reads this window live even in dry-run and audits request URLs, minimum watermark, pages and outcome alongside the capture hash.
 
@@ -396,13 +397,11 @@ definition. Avalanche USDT uses indexed `BlockPlaced` / `BlockReleased` /
 `DestroyedBlockedFunds` events from its deployment block; its history does not use the legacy
 Tether family. Arbitrum and Polygon USDT retain both families for historical replay.
 
-Explicit current limitations also remain source-tested:
-
-- RLUSD clawbacks are not event-covered because the verified ABI has no dedicated clawback event. Supporting them would require transaction-input classification.
-- USDA role-gated burns are not mapped to destroy rows because the contract does not emit the configured Tether destroy event.
-- Binance-Peg USDT on BSC and legacy bridged USDT on Optimism are not scanned: their verified
-  contracts do not emit blacklist events. Optimism's separate USDT0 deployment remains scanned.
-  Removing a non-emitting scan does not delete stored event history or cursor rows.
+Explicit current limitations are published in the [public coverage limits](../blacklist-tracker.md#coverage-and-limitations).
+Supporting RLUSD clawbacks would require transaction-input classification.
+`worker/src/lib/__tests__/blacklist-contracts.test.ts` keeps the non-emitting Binance-Peg USDT (BSC) and
+legacy bridged USDT (Optimism) deployments out of the scan set; removing a non-emitting scan preserves
+stored event history and `blacklist_sync_state` cursor rows.
 
 Canonical coverage and parser tests live in:
 
@@ -458,7 +457,7 @@ Canonical event rows retain these amount-source meanings:
 
 `derived` is written by confirmed Tron transfer-replay recovery, not by initial event ingestion. Eligible unresolved rows enter the durable repair queue. Legacy derived-zero rows receive bounded recovery attempts before becoming permanently unavailable. `legacy_migration` records historical amount provenance only; it does not indicate a remaining identity repair.
 
-`data-invariant-canary` reports an error if either event or balance rows lack both `config_key` and `contract_address`. `syncBlacklist()` does not rescan or rewrite that legacy identity set; investigate any non-zero count as an invariant failure. Its `blacklist-roster-coverage` check also compares the published summary's event population, current-balance row count and supported config count with a seven-day high-water baseline; unreadable snapshot evidence is a failed observation, never a healthy one.
+`data-invariant-canary` reports an error if either event or balance rows lack both `config_key` and `contract_address`. `syncBlacklist()` does not rescan or rewrite that legacy identity set; investigate any non-zero count as an invariant failure. Its `blacklist-roster-coverage` check also compares the published summary's event population with a seven-day high-water baseline and requires a non-empty current-balance row count and supported config roster; unreadable snapshot evidence is a failed observation, never a healthy one.
 
 ### Freeze Ledger
 
@@ -505,7 +504,7 @@ Each run performs these phases under one scan deadline, one separately capped ma
 3. **Historical enrichment:** enrich only defensible event amounts before insertion. Duplicate event IDs skip unnecessary enrichment and cache work.
 4. **Persistence and cursor finalization:** insert event rows before advancing the claimed cursor; incomplete coverage never advances beyond its proven contiguous frontier.
 5. **Freeze-ledger refresh:** snapshot newly blocked addresses and preserve last-known values across provider failures. The snapshot is current-state ledger data only; it never supplies an event-time Tron amount.
-6. **Bounded maintenance:** retry durable amount repairs before other maintenance, replay unprovable Tron freeze amounts from the confirmed transfer ledger, migrate unambiguous legacy identities, and leave ambiguous same-symbol/same-chain identities explicit. If scans consume their full 10-minute budget, amount repair retains a 10-row ceiling and runs only while its own earlier deadline leaves room for the other maintenance stages. Repair reads 100-row pages up to 500 attempted EVM rows, stopping early to reserve the existing 45-second maintenance allowance plus the snapshot window for later stages; this is partial repair, not runtime exhaustion. Both paths reuse the scan's subrequest budget and serial provider limiter, so maintenance does not increase connection concurrency or consume scan time. The Tron replay lane is capped at 24 rows and 120 history pages per run, needs TronGrid only (it runs even when the Etherscan circuit is open), and reports its own `tronAmountRepair*` outcome, reason and counters in run metadata (null counters mean the lane failed or was skipped, not that it found no work).
+6. **Bounded maintenance:** retry durable amount repairs before other maintenance, replay unprovable Tron freeze amounts from the confirmed transfer ledger, migrate unambiguous legacy identities, and leave ambiguous same-symbol/same-chain identities explicit. If scans consume their full 10-minute budget, amount repair retains a 10-row ceiling and runs only while its own earlier deadline leaves room for the other maintenance stages. Repair reads 100-row pages up to 500 attempted EVM rows, stopping early to reserve the existing 45-second maintenance allowance plus the snapshot window for later stages; this is partial repair, not runtime exhaustion. Both paths reuse the scan's subrequest budget and serial provider limiter, so maintenance does not increase connection concurrency or consume scan time. The Tron replay lane is capped at 24 rows and 120 history pages per run, needs TronGrid only (it runs even when the Etherscan circuit is open), and reports its own `tronAmountRepair*` outcome, reason and counters in run metadata.
   The durable amount-repair queue is refreshed right after the scan phase, before any maintenance admission gate, so amount-gap rows this run inserted are always queued for the repair lane and the operator queue inspection even when every maintenance stage is skipped.
 7. **Publication and telemetry:** refresh the summary from persisted observations when enough maintenance/subrequest budget remains, independently of the overall ingestion status. A failed or catching-up config cannot block other configs' observations from reaching the summary. Freshness still uses the oldest required config success, never the materialization or cron completion time; if any required config has never succeeded, summary freshness is explicitly missing. Gap producer snapshots require that retained full-coverage timestamp; otherwise the summary reads gap metrics through the existing query path. Ingestion status and incomplete-coverage warnings remain conservative. Exhausted budgets still withhold snapshots, and failed aggregate reads never overwrite the retained summary. A publication exception degrades the run with `blacklist-snapshot-publication-failed` rather than reporting `ok`.
 

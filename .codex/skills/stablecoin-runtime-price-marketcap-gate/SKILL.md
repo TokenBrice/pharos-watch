@@ -6,9 +6,7 @@ user_invocable: true
 
 # Runtime Price + Market-Cap Gate
 
-This is a hard pre-edit gate for active stablecoin additions and pre-launch promotions. A metadata-complete JSON row is not enough: Pharos must be able to fetch both a current price and a market-cap / circulating-supply value. This skill is read-only preflight; a passing gate does not authorize registry edits.
-
-Pre-launch entries are exempt until promotion.
+This skill executes the hard pre-edit gate in [Phase 1a](../../../docs/process/adding-a-stablecoin.md#1a-hard-runtime-data-gate-for-active-assets), which owns the acceptance criteria and pre-launch exemption. It is read-only preflight; a passing gate does not authorize registry edits. The steps below add only fetch/verify mechanics and source pointers.
 
 For pinned RPC reads and provenance, follow [Pinned On-Chain Evidence](../../../docs/process/agent-artifacts.md#pinned-on-chain-evidence).
 
@@ -28,24 +26,23 @@ Use for normal DefiLlama-tracked active stablecoins.
 - Fetch `https://stablecoins.llama.fi/stablecoins?includePrices=true`.
 - Match by `llamaId`, then confirm name/symbol/issuer identity.
 - Require a usable price field.
-- Require positive observed `circulating` supply for admission, not merely a non-null object. Validate buckets with `getCirculatingRawOrNull()` in `shared/lib/supply.ts`; empty or invalid buckets are unavailable. DefiLlama list values are already USD-denominated; do not multiply by price.
+- Validate buckets with `getCirculatingRawOrNull()` in `shared/lib/supply.ts`; empty or invalid buckets are unavailable.
 
 ### 2. CoinGecko supplemental fiat path
 
 Use for non-DefiLlama fiat assets.
 
-- Require `detailProvider: "coingecko"`. This is the hard gate. A verified `geckoId` is the primary route (confirm `https://api.coingecko.com/api/v3/coins/{geckoId}` resolves to the intended asset), but a coin without one can still be admitted via the on-chain supply route below.
-- With a `geckoId`: require a positive current USD price through the DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price`, and either positive CoinGecko `usd_market_cap` or the on-chain supply route. Record upstream observation timestamps and apply the source-owned freshness rules in `shared/lib/pricing-source-registry.ts`; `resolveSupplementalCoinGeckoMcap()` in the supplemental `shared.ts` rejects missing, stale, or future `last_updated_at`, even for a positive cap.
-- Without a `geckoId`, independently prove a positive observed price. The existing DefiLlama contract-price resolver (`resolveSupplementalContractPrice()` in `worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts`) requires a supported single canonical deployment, matching symbol, sufficient confidence, current timestamp, and peg-aware price bounds. Record the actual response fields and observation time; a positive supply packet alone fails this gate.
+- A verified `geckoId` is the primary route (confirm `https://api.coingecko.com/api/v3/coins/{geckoId}` resolves to the intended asset); without one, use the contract-price resolver and the on-chain supply route below.
+- With a `geckoId`: fetch the current USD price through the DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price`, plus CoinGecko `usd_market_cap` or on-chain supply evidence. Record upstream observation timestamps and apply the source-owned freshness rules in `shared/lib/pricing-source-registry.ts`; `resolveSupplementalCoinGeckoMcap()` in the supplemental `shared.ts` rejects missing, stale, or future `last_updated_at`, even for a positive cap.
+- Without a `geckoId`, use `resolveSupplementalContractPrice()` in `worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts`; it requires a supported single canonical deployment, matching symbol, sufficient confidence, current timestamp, and peg-aware price bounds. Record the actual response fields and observation time; a positive supply packet alone fails this gate.
 - On-chain supply route: verified `contracts[]` deployments admitted by `hasRuntimeOnchainSupplyPath()` in `shared/lib/onchain-supply-probe.ts`. A single supported deployment needs no curated roster; multi-deployment assets need `CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS` with whole-asset coverage or the explicit residual policy (the source file wins). Runtime values supply at an observed price when available; only plain non-NAV/non-yield-bearing fiat assets may fall back to the peg reference. NAV/yield-bearing assets require an observed price or a maintained authoritative NAV supply path. Supply valuation never proves an observed price. A curated aggregate does not enable the single-contract price resolver; without CoinGecko, independently prove a maintained price integration.
 
 ### 3. Commodity supplemental path
 
 Use for gold/silver and similar commodity tokens.
 
-- Require verified `geckoId`.
-- Require positive `commodityOunces` (troy ounces per token) for every active gold/silver asset, including 1-ounce tokens; `getCommodityOuncesIssue()` in `scripts/ci/check-stablecoin-data.ts` enforces it. This feeds peg references and price-validation bounds, not market cap.
-- Require positive, fresh CoinGecko market cap, a reviewed curated aggregate on-chain supply path, or for gold a dedicated single-token `protocolSlug` accepted by `shared/lib/commodity-protocols.ts` whose DefiLlama data exposes positive `mcap`. Silver has no protocol-mcap path; it also supports fresh CoinGecko markets `circulating_supply` valued at the observed price. The commodity drivers in `worker/src/cron/sync-stablecoins/supplemental-assets/` own these paths.
+- Fetch the verified `geckoId` price; `getCommodityOuncesIssue()` in `scripts/ci/check-stablecoin-data.ts` enforces the Phase 1a commodity-ounce requirement. This feeds peg references and price-validation bounds, not market cap.
+- Use the accepted commodity supply paths in Phase 1a; the commodity drivers in `worker/src/cron/sync-stablecoins/supplemental-assets/` own them. Silver has no protocol-mcap path; it also supports fresh CoinGecko markets `circulating_supply` valued at the observed price.
 
 ### 4. Explicit runtime exception
 
@@ -80,7 +77,7 @@ Risks or follow-ups: <CMC slug, contract ambiguity, low volume, backfill needs>
 Verification: <source reads actually exercised and their results; catalog checks/runtime observations still unexercised>
 ```
 
-If the gate fails, do not add the asset as active. Recommend pre-launch/watchlist tracking or a separate runtime-source integration.
+If the gate fails, follow [Phase 1a](../../../docs/process/adding-a-stablecoin.md#1a-hard-runtime-data-gate-for-active-assets): do not add the asset as active; retain pre-launch/watchlist material or document the missing upstream path.
 
-Do not bootstrap shared artifacts or repeat catalog checks for this preflight. The addition orchestrator owns the integrated generation/check pass after authorized specialist source edits land; this gate must already have passed before those active-entry edits.
+Do not bootstrap shared artifacts or repeat catalog checks for this preflight; generation/check ownership follows the [packet contract](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). This gate must already have passed before those active-entry edits.
 

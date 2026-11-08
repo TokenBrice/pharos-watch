@@ -24,7 +24,7 @@ Compare at least two five-minute runs. Per-run counters come from the Access-pro
 3. **Planning stage failed?** A `degraded` run with `deliveryV2.planningErrors` had source loading, freeze detection, alert detection, retraction or fan-out throw. `source-loading` preserves dependent baselines under the [dispatch failure contract](../telegram-architecture.md#5-dispatch--fan-out); [unread source diagnostics](../telegram-alerts.md#admin-visibility) stay null while independent delivery stages continue. If retraction failed, `heldKinds` lists `freeze`/`freeze_batch` rows held until a later run's check succeeds.
 4. **Suppressed, not lost?** `suppressedDuplicate` counts rows whose identical body reached the same chat within 24 h (the anti-flap). A flapping coin produces these by design.
 5. **Unknown effects?** `unknown` rows (timeout, network error, or claim expiry after a crash) are never re-sent. Inspect them with [rows for one chat](#delivery-rows-for-one-chat). There is no operator resend.
-6. **Safety-only silence?** Read `cron.runs[0].metadata.safetySource` from `GET /api/status-cron-detail?job=telegram-degradation-watchdog`. `failureReason` distinguishes `v9-publication-held`, `v9-snapshot-read-failed` and `v9-snapshot-invalid`.
+6. **Safety-only silence?** Read `cron.runs[0].metadata.safetySource` from `GET /api/status-cron-detail?job=telegram-degradation-watchdog`. `failureReason` distinguishes `v9-publication-held`, `v9-snapshot-read-failed`, `v9-snapshot-invalid`, `v9-snapshot-stale`, `v9-snapshot-future`, `v9-snapshot-unavailable` and `publication-schema-cutover-pending`.
 7. **Snapshot seed?** `snapshotSeeded: true` means the run reseeded instead of alerting ([snapshot behavior](../telegram-alerts.md#first-run--stale-snapshot-behavior)). If it persists across three runs, inspect the `alert:*-snapshot` cache keys.
 8. **Single chat?** Use [subscriber controls](#subscriber-delivery-controls) and [rows for one chat](#delivery-rows-for-one-chat). The row `reason` tells the story: `subscriber_missing`, `chat_snoozed` (deferred to the snooze end; `4102444800` is the `/pause` sentinel), `coin_snoozed`, `duplicate_prior_delivery`, `predecessor_failed`, `ambiguous_send`, `claim_expired`, `max_attempts`, or a transport error class. `consecutive_block_count >= 2` means repeated 403s auto-disabled the chat's follows. A chat over the per-chat cap gets no row; its overflow appears in the next daily roll-up.
 9. **Webhook secret?** Failed validation returns `200 ok` without dispatch. [Secret rotation](./telegram-webhook.md#secret-rotation) owns recovery.
@@ -44,7 +44,7 @@ Compare at least two five-minute runs. Per-run counters come from the Access-pro
 
 ## Backlog and Expiration
 
-`telegramBot.pendingDeliveries`, `pendingDeliveryBacklog`, `oldestPendingDeliveryAgeSec` and `retryErrorClassCounts` read open `telegram_deliveries` rows. The watchdog degrades after a sustained 20-minute breach of: active rows > 500, oldest due ≥ 15 min, estimated drain ≥ 30 min, unknown work ≥ 15 min old, or any row inside 15 minutes of its TTL.
+`telegramBot.pendingDeliveries`, `pendingDeliveryBacklog`, `oldestPendingDeliveryAgeSec` and `retryErrorClassCounts` read open `telegram_deliveries` rows. The watchdog degrades after a sustained 20-minute breach of: active rows > 500, oldest pending ≥ 15 min, estimated drain ≥ 30 min, unknown work ≥ 15 min old, or any row inside 15 minutes of its TTL (a near-TTL breach triggers on a later evaluation without waiting out the sustained window).
 
 | Signal | Meaning / action |
 | --- | --- |
@@ -58,13 +58,13 @@ A recovery notice held only by the operator cooldown remains visible in `alertTr
 
 ## Rate-Limit Storm
 
-1. **One chat.** A chat 429 pushes all of that chat's queued rows to the Retry-After deadline (`state='retry'`, `error_class='rate_limit'`). Peers continue.
+1. **One chat.** A chat 429 raises `next_attempt_at` to at least the Retry-After deadline for every open (`pending`/`retry`) row of that chat; only the attempted row is settled (`state='retry'`, `error_class='rate_limit'`, or `failed`/`max_attempts` after `PENDING_MAX_ATTEMPTS`). Peers continue.
 2. **Many chats.** 429s from two or more chats in one wave raise `telegram:global-send-backoff-until` and stop the run (`drainStoppedReason: "global-backoff"`). Later runs skip sending until the deadline passes. Do not delete the cache key. A gate read that fails or returns a non-numeric value stops the run as `global-backoff-unreadable` instead of sending.
 3. **Expiry risk.** Go to [Backlog and expiration](#backlog-and-expiration).
 
 ## Bot-Wide Transport
 
-The generic `telegram-api` row in `circuit_breakers` is the only bot-wide gate, for both the alert drain and the digest outbox. A failing run (attempts made, none accepted or blocked) records a breaker failure. Recovery is the breaker's half-open probe; see [lease/breaker recovery](./lease-and-breaker-recovery.md). Correct credentials or wait for Telegram, and never clear queued rows.
+The generic `telegram-api` circuit row (`cache` key `circuit:telegram-api`) is the only bot-wide gate, for both the alert drain and the digest outbox. The alert dispatcher records a breaker failure when a run makes attempts and none is accepted or blocked; the digest drain only reads the gate (a digest-only outage never opens it). Recovery is the breaker's half-open probe; see [lease/breaker recovery](./lease-and-breaker-recovery.md). Correct credentials or wait for Telegram, and never clear queued rows.
 
 ## Preset Resolution Failure
 
@@ -85,7 +85,7 @@ There is no preset-only re-fire and no hand-enqueue after a job expires.
 
 ## Admin Broadcast Preflight
 
-`POST /api/admin-telegram-broadcast` ([API](../api-reference-admin.md#post-apiadmin-telegram-broadcast)) sends the private canary synchronously, then records one `broadcast:<digest>` job that the dispatcher fans out with priority 90 and a 45-minute TTL, behind every risk family.
+`POST /api/admin-telegram-broadcast` ([API](../api-reference-admin.md#post-apiadmin-telegram-broadcast)) sends the private canary synchronously, then records one `broadcast:<digest>` job with a 45-minute TTL that the dispatcher fans out.
 
 1. **Check backlog health.** Do not broadcast if `oldestPendingDeliveryAgeSec > 900`, `pendingDeliveryBacklog.expired > 0`, `pendingDeliveryBacklog.nearTtl > 0`, `retryErrorClassCounts.rate_limit` dominates, or the `telegram-api` circuit is open. Avoid active depeg, DEWS burst or safety-publication incidents.
 2. **Dry run.**
@@ -101,10 +101,10 @@ There is no preset-only re-fire and no hand-enqueue after a job expires.
         https://ops-api.pharos.watch/api/admin-telegram-broadcast
    ```
 
-   Dry-run and live requests preflight `messageHtml` before target selection; unsupported or unbalanced Telegram HTML returns `422` with an error position, and a body that cannot be split into Telegram-sized chunks (no rendered text, or a tag envelope larger than one chunk) returns `422` with `reason: "message-not-splittable"`. Review every chunk of the preview. In the operator panel, live send stays disabled until a successful preview covers the exact current message and audience; **Retry same intent** replays the original body and idempotency key only.
+   Dry-run and live requests preflight `messageHtml` before target selection; malformed, unsupported or unsplittable bodies return `422` (an error position, or `reason: "message-not-splittable"`) as specified in the [API error responses](../api-reference-admin.md#post-apiadmin-telegram-broadcast). Review every chunk of the preview. In the operator panel, live send stays disabled until a successful preview covers the exact current message and audience; **Retry same intent** replays the original body and idempotency key only.
 3. **Estimate.** Proceed only when `deliveryEstimate.hasMaterialTtlReserve` is true (at least 15 minutes of reserve inside the 45-minute TTL). Live requests return `409` otherwise; nothing bypasses it.
 4. **Scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices and `all` only when intentionally targeting every subscriber row.
-5. **Live send** with a stable idempotency key and a private operator `canaryChatId`. Every chunk goes to the canary silently first; a failed canary returns `fleetEnqueued: 0` and records no job. The canary chat is excluded from fan-out.
+5. **Live send** with a stable idempotency key and a private operator `canaryChatId`. Every chunk goes to the canary silently first; a failed canary records no job. The canary chat is excluded from fan-out.
 
    ```bash
    curl -X POST \

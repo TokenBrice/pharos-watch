@@ -6,7 +6,7 @@ Public `/timeline/` is the cross-class event feed. Internal tape names remain (`
 
 `src/app/timeline/page.tsx` owns shell/metadata, client/controller modules feed state, and `src/components/tape/` controls/cards. `src/lib/tape-digest.ts`, `tape-collapse.ts` and `tape-derive.ts` own grouping/public labels. `GET /api/events` is the dataset, via browser same-origin `/_site-data/events`.
 
-The route metadata is canonical `/timeline/`, static `og-timeline.png`, noindex/follow and omitted from sitemap/public route inventory. It keeps navigation and per-class links; there is no dynamic Timeline OG handler. Indexable trackers, coin pages and homepage provide search entrypoints.
+The route metadata is canonical `/timeline/`, the live card `/api/og/page/timeline`, noindex/follow and omitted from sitemap/public route inventory. It keeps navigation and per-class links; its static `og-timeline.png` twin remains the fail-closed fallback. Indexable trackers, coin pages and homepage provide search entrypoints.
 
 ## Visual Identity
 
@@ -57,7 +57,7 @@ PYS-drop carries the last usable selected score across null generations, seeded 
 Yield warnings distinguish observed empty (SQL NULL or `[]`), valid signal lists and unavailable evidence. Malformed JSON, non-arrays and any invalid member quarantine only that row; they never clear warnings. Both the backward prior-row seek and batch walk use the same decoder and retain the last usable baseline, including source-key tie-breaking at a shared timestamp; the seek is bounded per coin, after which the baseline is unavailable. Structured `warning-evidence-unavailable` logs expose machine-reason counts and at most ten row identities per invocation; no raw corrupt payload is logged.
 Existing-but-unavailable history is distinct from successful no-history bootstrap: when no usable predecessor survives a corrupt prefix, the first valid observation establishes state without emitting a transition. Later valid additions and observed-empty clears remain eligible.
 
-The peak seen-map checkpoint commits atomically with the final bounded event batch (or alone for a baseline-only scan). Larger scans can commit earlier batches before a later failure; the error propagates, the checkpoint remains unchanged, and source-key replay preserves every already-committed observation. No lease/checkpoint reset or production fault injection is needed for rollout.
+The peak seen-map checkpoint commits atomically with the final bounded event batch (or alone for a baseline-only scan). Larger scans can commit earlier batches before a later failure; the error propagates, the checkpoint remains unchanged, and source-key replay preserves every already-committed observation.
 
 ### Freeze Chain Repair
 

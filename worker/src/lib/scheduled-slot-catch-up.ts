@@ -117,9 +117,10 @@ export interface SlotCatchUpArmOutcome {
 
 /**
  * Zero-fetch detector shared by the five-minute digest poll and the
- * one-minute reserve-recovery lane. Outside every lane's window it touches no
- * D1 at all; otherwise it costs one indexed read. `reconcileStale` lets the
- * minute lane reconcile the due slot itself (one targeted sweep, only when
+ * five-minute reserve-recovery lane (`fiveMinuteReserveRecovery`, log host
+ * `minute-lane`). Outside every lane's window it touches no D1 at all;
+ * otherwise it costs one indexed read. `reconcileStale` lets the
+ * reserve-recovery lane reconcile the due slot itself (one targeted sweep, only when
  * that row is already stale), so abandonment does not wait for a late poll.
  * The forward-only marker and the slot fence make concurrent hosts safe.
  */

@@ -1429,6 +1429,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     if (ranking.provenance) {
       const effectiveSourceFreshness = staleSource ? "stale" : (source.sourceFreshness ?? "unknown");
       const qualificationInvalidated = staleSource || benchmarkFreshness === "stale";
+      const scoreQualification = qualificationInvalidated ? "NR" : source.scoreQualification;
       const newlyMissingEvidenceFields =
         (staleSource && source.sourceFreshness === "fresh" ? 1 : 0) +
         (benchmarkFreshness === "stale" && source.benchmarkFreshness !== "stale" ? 1 : 0);
@@ -1442,8 +1443,8 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
             (source.evidenceCompleteness - newlyMissingEvidenceFields / EVIDENCE_FIELD_COUNT).toFixed(4),
           ),
         ),
-        scoreQualification: qualificationInvalidated ? "NR" : source.scoreQualification,
-        scoreQualified: ranking.pharosYieldScore != null,
+        scoreQualification,
+        scoreQualified: scoreQualification !== "NR",
       };
     }
     ranking.sourceRole = deriveYieldSourceRole(

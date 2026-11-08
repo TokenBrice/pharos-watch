@@ -189,31 +189,20 @@ Run the commands below from the repository root with Wrangler authentication. Hi
 
 ## Recording the verdict
 
-Entries live in `shared/data/depegs/backfill-replay-suppressions.ts`:
-
-| Field | Type | Meaning |
-| ----- | ---- | ------- |
-| `coinId` | `string` | Tracked stablecoin id, validated against the canonical order |
-| `direction` | `"above" \| "below"` | Depeg side the verdict applies to |
-| `windowStart` / `windowEnd` | `number` | Inclusive UTC bounds in Unix seconds |
-| `reason` | `string` | The artifact conclusion |
-| `evidenceUrls` | `string[]` | On-chain transaction and price-feed links (`https` only) |
-| `reviewedAt` | `string` | Review date, `YYYY-MM-DD` |
+Entries live in `shared/data/depegs/backfill-replay-suppressions.ts`; entry fields, inclusive interval-overlap matching and corpus validation are owned by [the reviewed replay suppression registry](../depeg-detection.md#reviewed-replay-suppression-registry).
 
 Set the window to the union of the stored episode and its dust/recovery
 transactions plus a ±2h margin: hourly CoinGecko samples can move an episode
 edge by up to an hour, and matching is inclusive interval overlap on
 `(coinId, direction)`.
 
-The corpus validates at import time, and
+That contract validates at import time; run this suite after every edit:
 
 ```bash
 npx vitest run shared/data/depegs/__tests__/backfill-replay-suppressions.test.ts
 ```
 
-guards tracked coin ids, the shared direction vocabulary, ordered integer
-windows, `https` evidence URLs, review dates, and non-overlapping
-same-coin/same-direction windows. A window overlapping an existing entry on the
+A window overlapping an existing entry on the
 same coin and direction is rejected by design — extend the existing window
 instead of adding a second one.
 

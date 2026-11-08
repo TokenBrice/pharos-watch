@@ -14,7 +14,7 @@ Use the evidence below before retriggering:
 
 | Case | Evidence | Result |
 |---|---|---|
-| Style-gate block | A `daily_digest` row exists with `qualityGate = "blocked"`; `input_data.editorialAudit.qualityIssueCodes` includes `editorial-style`, and `digest_meta.editorialStyleGate` contains the bounded findings and retry result. | The copy was generated and held before publication. No channel replay is available for that copy. |
+| Style-gate block | A `daily_digest` row exists with `qualityGate = "blocked"`; `input_data.editorialAudit.qualityIssueCodes` includes `editorial-style` (daily editions only; a weekly `input_data` has no top-level `editorialAudit`), and `digest_meta.editorialStyleGate` contains the bounded findings and retry result. | The copy was generated and held before publication. No channel replay is available for that copy. |
 | Missing row | No `daily_digest` row exists for the UTC date, and no blocked row exists. The `daily-digest` or `schedule_key = "digestTriggerPoll"` cron history shows an error, an abandoned slot, a skipped run, or no started child. | Treat this as a generation or scheduled-slot incident. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) when the history shows slot reconciliation. |
 | Delivery skip | A non-blocked digest row exists and the archive projection assigns it a daily or weekly edition number, but channel metadata is `skipped: ...`, `queued: ...`, `outbox-*`, or another non-delivered state. | The edition was published to the archive. Follow [`telegram-digest-outbox.md`](./telegram-digest-outbox.md) for Telegram and inspect the channel delivery metadata for X. |
 | Watchdog gap alert | `GET /api/status-cron-detail?job=cron-sentinel` -> `cron.runs[0].metadata.sources.duration.metadata` reports `runtimeBreaching` or `slotAbandonmentBreaching`, or another retained `cron.runs[]` entry carries those findings; a synthetic `scheduled-slot-abandoned` event is independent slot evidence. | Successful observation is `ok` plus quality; it is not a style finding or a failure of the watchdog. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) and preserve the underlying schedule/runtime evidence. |
@@ -90,7 +90,7 @@ Each edition stores `digest_meta.editorialStyleGate`, and the same bounded objec
 - `retry` as `{eligible, attempted, outcome}`; outcomes distinguish shadow observation, time/token-budget skips, resolution, and unresolved findings
 - `finalUnresolvedFindings[]` plus the uncapped count and a truncation flag
 
-Each findings array is capped at 12 entries and each excerpt at 160 characters. `firstPassWouldBlock` remains safe for the flip metric even if details were truncated; `retry.eligible` separately records whether time and token budgets allowed a corrective generation. LLM attempts, latency, token use, `editorialStyleVersion`, and `editorialStyleHash` remain adjacent fields in `digest_meta` and cron metadata rather than being duplicated inside the bounded gate object.
+Each findings array is capped at 12 entries and each excerpt at 160 characters. `firstPassWouldBlock` remains safe for the flip metric even if details were truncated; `retry.eligible` separately records whether time and token budgets allowed a corrective generation. LLM attempts, latency and token use remain adjacent fields in `digest_meta.llm` and cron `llm` metadata, while `editorialStyleVersion` and `editorialStyleHash` stay top-level in `digest_meta`, rather than being duplicated inside the bounded gate object.
 
 For daily enforcement, count each distinct scheduled edition with a first-pass hard finding as one `would-block` event. Advisory findings never enter the blocking count. The daily criterion is at most one event in the latest 30 distinct scheduled daily editions, with complete boolean telemetry. The ratified weekly criterion is **eight consecutive distinct scheduled weekly editions after the cleft prompt cutover, complete boolean telemetry, and zero first-pass hard events**. Keep kinds separate; seven clean daily inputs and the five old-prompt weekly samples do not qualify weekly readiness.
 
@@ -124,7 +124,7 @@ The heavy stages cannot add a hard issue: every heavy failure keeps the draft, a
 
 ## Promote or roll back enforcement
 
-Daily and weekly use independent D1-backed controls at `digest:style-gate-mode:daily` and `digest:style-gate-mode:weekly`. A kind reads only its own key; a missing or invalid value fails safe to `shadow`, but a D1 read error propagates and is not evidence of shadow. Daily enforcement is approved conditional on the mode-only control and focused checks; weekly remains shadow until its ratified packet and separate approval pass. For each kind, that one value also controls the U+2012 through U+2015 compatibility repair: shadow enables the post-scan repair, while enforce disables it and activates hard blocking.
+Mode keys, per-kind fail-safe reads and the U+2012–U+2015 repair coupling are owned by [Editorial style gate](../digest-pipeline.md#editorial-style-gate). Daily enforcement is approved conditional on the mode-only control and focused checks; weekly remains shadow until its ratified packet and separate approval pass.
 
 Promote daily:
 
@@ -174,9 +174,9 @@ curl -fsS -X POST "https://ops-api.pharos.watch/api/trigger-digest" \
   --data '{"styleGateMode":{"weekly":"shadow"}}'
 ```
 
-These mode-only actions return both effective modes and write only the targeted mode key. They do **not** write `digest:force-run-request`, alter an existing force intent, or queue any additional daily/weekly generation. Confirm the other kind remained unchanged. The first enforced observation is the next scheduled edition of that kind; weekly mode changes never force an out-of-slot recap. An explicit separate empty-body/`{}` trigger is the only way to request a daily force-run.
+These mode-only actions return both effective modes without queueing generation; [Editorial style gate](../digest-pipeline.md#editorial-style-gate) owns the request semantics. Confirm the other kind remained unchanged. The first enforced observation is the next scheduled edition of that kind; weekly mode changes never force an out-of-slot recap. An explicit separate empty-body/`{}` trigger is the only way to request a daily force-run.
 
-A mode write can commit before an effective-mode read or response fails. Treat an errored/ambiguous action as a potential partial commit: inspect both exact mode keys and the original idempotency record before any new mutation, following ADR-27. Do not assume HTTP failure rolled back the key or blindly issue a new force-run. Reconcile an existing force intent separately if one was explicitly requested.
+For an errored or ambiguous mode action, follow [mode-control reconciliation](../digest-pipeline.md#editorial-style-gate) under ADR-27: inspect both exact `digest:style-gate-mode:daily` and `digest:style-gate-mode:weekly` keys and the original idempotency record before any new mutation. Do not assume HTTP failure rolled back the key or blindly issue a new force-run. Reconcile an existing force intent separately if one was explicitly requested.
 
 After changing the mode:
 

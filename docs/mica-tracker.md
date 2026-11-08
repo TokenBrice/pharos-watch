@@ -34,7 +34,7 @@ Author a dedicated `mica?: MicaProfile`, separate from generic `jurisdiction` an
 
 ## Status criteria
 
-Editorial assignment rules. Each non-`out-of-scope` status should carry at least one `references` link to the source that justifies it.
+Editorial assignment rules. Each non-`out-of-scope` status **must** carry at least one `references` link to the source that justifies it (`MicaProfileSchema` rejects the row otherwise).
 
 | Status | Assign when | Source of truth |
 | --- | --- | --- |
@@ -67,7 +67,7 @@ Per-coin `significant` records EBA designation of significant EMTs/ARTs (thresho
 
 [Compliance page composition](./compliance-page.md#page-composition) owns the route, tables, navigation and loading; [URL contract](./compliance-page.md#url-contract) owns filters; [data projection](./compliance-page.md#data-projection) owns lifecycle inclusion and evidence loading. MiCA status labels/descriptions/badge classes come from `shared/lib/mica.ts`, not route-local copies.
 
-**Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field. `RegulatoryStandingCard` is a rail card at `xl+` with an in-flow twin in the Control board's tile grid below `xl` (`density="main"`, an evidence-module tile), and that twin owns `#jurisdiction`. The card lists one row per applicable regime (GENIUS / US, MiCA / EU), and each regime row holds status only: a sentence-case status pill (out-of-scope is muted) with the issuer pathway or token-type caption beside it. What the issuer publishes sits in a separate "Issuer disclosures" row (attestation, redemption policy, reserves), shown only with a GENIUS review and never as cells of a regime, because a published attestation says nothing about authorization. Redemption policy and reserves come from the GENIUS review; the attestation cell reads the coin's `proofOfReserves` record first, the same fact as the passport's Attestor entry, and falls back to the GENIUS review's monthly-attestation finding only without a record or with an undisclosed attestor. A recorded cadence is the value: a check for daily to monthly, a watch-tone gap for "Quarterly", "Semi-annual", "Annual" or "Ad hoc" (GENIUS requires monthly); "Self-attested" is a gap, and an attestor without a cadence reads "Not monthly" when the review found no monthly attestation. Published is a check (the reserve disclosure links to the disclosure), a reviewed absence reads "Not found", and a missing record a muted "Not recorded" with "–", never a cross. The value word always follows the glyph, so the card carries no legend. Regulator facts, report dates, review notes and sources fold under `Details & sources (N)` in the rail and `Review notes & sources (N)` in the twin. A coin without a curated regime profile gets no passport field and an explicit "Regulatory standing · Not reviewed" state in the same slots; nothing is faked on-page. The GENIUS passport chip still links off-page to `/compliance/?regime=genius` rather than `#jurisdiction`.
+**Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field and links its GENIUS chip to `/compliance/?regime=genius` rather than `#jurisdiction`. `RegulatoryStandingCard` lists one row per applicable regime (GENIUS / US, MiCA / EU), with status only in each: a sentence-case pill (out-of-scope muted) plus the issuer-pathway or token-type caption. Issuer disclosures stay a separate row, shown only with a GENIUS review and never as regime cells, because a published attestation says nothing about authorization; the attestation reads the coin's `proofOfReserves` record first (the passport's Attestor fact) and falls back to the GENIUS review's monthly finding, while redemption policy and reserves come from that review. Card composition, rail/twin mounting and `#jurisdiction` ownership stay with [the detail page](./stablecoin-detail-page.md#evidence-composition-and-responsive-ownership); attestation cadence/absence rules stay with [Other pillar evidence](./stablecoin-detail-page.md#other-pillar-evidence); fold labels stay with [Design Language](./design-language.md#stablecoin-detail-module-contract); display labels stay with the card source. A coin without a curated regime profile gets no passport field and an explicit "Regulatory standing · Not reviewed" state in the same slots.
 
 **Static export / SEO:** route is statically pre-rendered and included in the sitemap; run `npm run seo:check` after crawlability changes. No `next.config.ts` change.
 
@@ -85,10 +85,6 @@ This is the dominant cost, not the code.
 - **Backfill scope:** Prioritize EUR coins, major EU-traded USD coins, existing structured `mica` metadata, and records whose licenses mention MiCA. Assets without structured metadata remain unassessed, not implicitly out of scope; use the live compliance surface or source metadata for current status totals.
 - **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Periodic refresh against the registers runs through the `compliance-research` skill (`mica` regime).
 
-### Worked reference examples (verify before entry)
-
-Use current source metadata and the compliance surface for examples; confirm each token/entity/authorization against the source order above at data-entry time. A likely-status seed is not evidence.
-
 ---
 
 ## Maintenance
@@ -96,6 +92,7 @@ Use current source metadata and the compliance surface for examples; confirm eac
 MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `compliance-research` skill (`mica` regime) plus normal route/build checks.
 
 - Data refresh: update or create the compliance sidecar's `mica` block with sourced register references, then run `npm run bootstrap:generated`, `npm run check:stablecoin-data`, and `npm run check:generated-artifacts`.
+- A likely-status seed is not evidence; confirm each token/entity/authorization against the source order above at data-entry time.
 - Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.
 - **Not a methodology-version bump:** MiCA status is a tracked attribute, not a score. Assignment criteria live in this doc, not in `/methodology` versioning.
 

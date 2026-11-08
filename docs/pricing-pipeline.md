@@ -56,7 +56,7 @@ Reserve USD3's exact Curve USD3/scrvUSD recovery is missing-only fallback eviden
 
 ### Release obligations
 
-Before releasing a Pricing methodology change, converge its runtime constant/registry, structured Pricing history, owning prose and public Pricing section, together with current-version route-parity fixtures and generated methodology documentation blocks. Public changelog metadata and Markdown exports derive from the registry. Provisional activation dates in structured history must be re-dated at release; the generated version marker above is not edited by hand.
+Before releasing a Pricing methodology change, converge the ADR-3 four targets: runtime version source and registry, structured Pricing history entry, this document, and the public Pricing section, together with current-version route-parity fixtures and generated methodology documentation blocks. Public changelog metadata and Markdown exports derive from the registry. Provisional activation dates in structured history must be re-dated at release; the generated version marker above is not edited by hand.
 
 Fixed-clock price/supply/valuation/coverage comparison remains a release prerequisite for the admitted-input and coverage changes. Fresh admitted producer observations and production resource evidence are separate acceptance gates, not conclusions established by a version bump or a passing local comparison. These obligations do not claim a completed replay or production-health observation.
 
@@ -109,7 +109,7 @@ Outcome bookkeeping and shared DEX read-clock handling follow the [implementatio
 
 Reserve NAV/supply share configuration-bound successful evidence, independent fetch/source-age checks and trusted FX, never nominal $1. JPMorgan requires current issuer-class/latest-attempt linkage; Chainlink/Superstate may retain current success after a failed attempt. [Decoder and valuation details](process/pricing-pipeline-appendix.md#primary-collection-bookkeeping) own adapter policies and unavailable-evidence handling.
 
-Curve USDT-reference pools first value USDT through its existing USDC anchor. USAT, Quantoz USDQ, sUSDS and USDx multiply their pool ratios by the admitted USDT USD quote; DOLA explicitly permits the two-dependency DOLA -> sUSDS -> USDT path. sUSDe's DOLA pool reuses that path, USD3's, DUSD's and trUSD's frxUSD pools reuse the existing frxUSD -> crvUSD route, reUSD's fxUSD pool reuses the existing fxUSD route, and scrvUSD chains through reUSD; MUSD's 2pool metapool resolves through its USDC underlying, and sUSDe's raw ratio is not multiplied by the ERC-4626 rate because its vault rate is internal. Missing or stale dependencies withhold the quote, and the oldest contributing observation dates the result.
+Curve USDT-reference pools first value USDT through its existing USDC anchor. USAT, Quantoz USDQ and USDx multiply their pool ratios by the admitted USDT USD quote; USD3's, DUSD's and trUSD's frxUSD pools reuse the existing frxUSD -> crvUSD route, reUSD's fxUSD pool reuses the existing fxUSD route, and scrvUSD chains through reUSD; MUSD's 2pool metapool resolves through its USDC underlying. Missing or stale dependencies withhold the quote, and the oldest contributing observation dates the result.
 
 Promoted DEX corroboration is candidate-scoped. A hard-source match admits only the agreeing protocol lane, while DEX-only corroboration requires an independent protocol lane within the existing divergence threshold. Divergent siblings are excluded with `lacked_corroboration` telemetry rather than inheriting another lane's evidence.
 
@@ -121,7 +121,7 @@ The current exact-address lane also requires a configured CoinGecko key and cano
 
 Both exact-address callers share one enabled predicate, a flat target list and a scalar circuit outcome. The comma-separated allowlist remains explicit opt-in; no candidates recover successfully, blocked or unattempted work stays neutral, and an answered 404 is an unindexed deployment rather than a provider outage.
 
-Kraken's curated `SOFIDUSD`, `FRNTUSD`, `CASHUSD` and `USDGOUSD` books supply those assets' hard-market quotes; the 2026-10-30 review added the `ZCHFUSD`, `USDSMUSD`, `USDSUIUSD`, `USDPTUSD`, `EUROPUSD`, `QCADUSD`, `AUDXUSD` and `BRL1USD` books for the coins those CoinGecko ticker sets name. Coinbase's `XSGD-USDC` FX-stablecoin book adds XSGD on the reviewed USDC-at-par precedent, and its last-trade clock rejects sparse prints. SoFiUSD has no nominal-par override; admitted consensus uses ordinary validation. Midpoints keep local-fetch clocks and never become single-source depeg authority; absent or stale quotes stay unavailable, never par, and registration alone is not a published observation. A two-sided CEX book wider than 100 bps of its midpoint, or crossed, rejects that symbol outright, with no last-trade replacement; a missing side keeps the last-trade fallback. [Kraken exact markets](process/pricing-pipeline-appendix.md#provider-specific-normalization) own identity joins and failure detail.
+Kraken's curated `KRAKEN_MARKETS` books supply the reviewed assets' hard-market quotes; the provider config holds the exact pairs and per-book rationale. Coinbase's `XSGD-USDC` FX-stablecoin book adds XSGD on the reviewed USDC-at-par precedent, and its last-trade clock rejects sparse prints. SoFiUSD has no nominal-par override; admitted consensus uses ordinary validation. Midpoints keep local-fetch clocks and never become single-source depeg authority; absent or stale quotes stay unavailable, never par, and registration alone is not a published observation. A two-sided CEX book wider than 100 bps of its midpoint, or crossed, rejects that symbol outright, with no last-trade replacement; a missing side keeps the last-trade fallback. [Kraken exact markets](process/pricing-pipeline-appendix.md#provider-specific-normalization) own identity joins and failure detail.
 
 USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins. USYC, reUSD, USP and USD3 (on-chain roster supply) follow it after DefiLlama's 2026-10-14 delisting, and ISC follows after its 2026-11-01 list removal.
 
@@ -244,11 +244,9 @@ After consensus, `applyListAggregatorDowngrade()` expands composite source label
 When changing live pricing behavior, update all relevant surfaces in the same change:
 
 1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`, `worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts`, or related provider modules
-2. this document for canonical pricing behavior
+2. the ADR-3 four targets: runtime version source and registry, structured Pricing history entry, this document, and the public Pricing section
 3. [Supply Snapshot](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#supply-pipeline), [Depeg Detection](https://pharos.watch/docs/depeg-detection/#stage-2----confirmation), [Pharos Stability Index](https://pharos.watch/docs/stability-index/#cron--storage), or [Blacklist Tracker](https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md#blacklist-sync-state-semantics) when the corresponding pipeline semantics changed
-4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
-5. `shared/lib/methodology-versions/registry.ts` and the matching entry under `shared/data/methodology-changelogs/pricing-pipeline/` if methodology semantics changed
-6. [About Pharos](https://pharos.watch/about/) and `src/lib/about-content.ts` when externally visible data sources change
+4. [About Pharos](https://pharos.watch/about/) and `src/lib/about-content.ts` when externally visible data sources change
 
 ## Treasury Benchmark Rates
 

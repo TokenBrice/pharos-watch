@@ -38,7 +38,7 @@ For committed local readiness, use `node --import tsx scripts/ci/run-gitleaks.ts
 
 Local `--tree` checks combined-diff resolution lines from merge commits in `base..head`; CI additionally checks GitHub's synthetic PR merge commit. The local mode therefore proves the requested committed range, not an uncreated synthetic merge result or uncommitted edits. Outputs retain Gitleaks redaction. Exits are `0` clean, `1` findings, and `2` invalid arguments or unavailable scan/setup prerequisites. Tooling can call `runLocalTrustedGitleaks({ baseSha, headSha, repoRoot })` from `scripts/ci/run-gitleaks.ts`, which returns `{ ok, exitCode, summary }`.
 
-The PR secrets job snapshots the trusted base before candidate checkout, then runs one trusted `--range --tree` invocation from the merge checkout with frozen base/head refs. This shares scanner setup for both passes; the changed-candidate policy check still runs afterward and cannot replace trusted success.
+The PR secrets job snapshots the trusted base scanner and policy before candidate checkout, so candidate code cannot influence the trusted snapshot. [PR outcomes and transport](./testing.md#pr-outcomes-and-transport) owns the scan sequence and required outcomes.
 
 A parity caller with an already-created synthetic merge can additionally pass `mergeSha` to that function. This changes only the detached checkout identity used for merge-resolution scanning: the commit range remains `baseSha..headSha`, and candidate scanner/helpers/policy still come from `headSha`. The synthetic merge commit must be available in the supplied repository's object database; no duplicate range scan is needed.
 
@@ -86,7 +86,7 @@ Route-specific exception: `/pharoswatchbot/app/` is the Telegram Mini App surfac
 
 These are already in the build; documented here so they aren't accidentally regressed.
 
-- JSON-LD `Organization` (`sameAs`: X, GitHub, Telegram) and `Person` (TokenBrice; `sameAs`: X, GitHub, Farcaster) nodes — gives classifiers verifiable third-party identity backing.
+- JSON-LD `Organization` (`sameAs`: X, GitHub, Telegram, Wikidata) and `Person` (TokenBrice; `sameAs`: X, GitHub, Farcaster) nodes — gives classifiers verifiable third-party identity backing.
 - `MIT` license declaration in repo root; the about page identifies the license and links to the repository.
 - Strict CSP for non-script directives: `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`.
 - Standard security headers: HSTS preload, X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy denying camera/mic/geo/payment/usb.

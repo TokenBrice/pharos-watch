@@ -82,7 +82,7 @@ The `og-cemetery` artifact renders the real resting plot map, depends on the atl
 
 ### Telegram channel notifications
 
-`worker/src/telegram/digest/digest-appendices.ts` compares deployed dataset with D1 snapshot during daily digest delivery. Seed silently on first run; new rows become one consolidated next-digest appendix with available epitaphs. This is not a separate API feed.
+`worker/src/telegram/digest/digest-appendices.ts` compares deployed dataset with D1 snapshot during daily digest delivery. Seed silently on first run; new rows become one consolidated next-digest appendix with available epitaphs. This is not a separate API feed. Digest delivery uses the Worker's `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
 
 ### UI behavior
 
@@ -98,7 +98,7 @@ Grave targets are real SVG anchors; Cloudflare Email Obfuscation is disabled for
 
 Exactly one responsive layer owns pin/key/tap events. Phone sheets keep record links and content clear of sticky/bottom navigation; layout handoff never reopens dismissed pins or replays scroll/focus. Hash-source portrait pins restore the tab stop, not a sheet covering the register. Reduced motion cuts beam, zoom and highlight transitions; no ambient motion is required.
 
-The server renders context, legend, count and desktop rest pose. Clients receive slim register rows/atlas, not the full dataset/model. Portrait mounting reserves its measured aspect against layout shift. No-JS CSS falls back to the desktop plan and register targets, subject to the page-shell visibility limitation below. Capacity failure requires design review, never lowering minimum face sizes.
+The server renders context, legend, count and desktop rest pose. Clients receive slim register rows/atlas, not the full dataset/model. Portrait mounting reserves its measured aspect against layout shift. No-JS CSS falls back to the desktop plan and register targets. Capacity failure requires design review, never lowering minimum face sizes.
 
 ### Selection and deep links
 
@@ -111,7 +111,7 @@ Anchors:
 - Section anchors are `CEMETERY_SECTION_ANCHORS` (`cemetery`, `key-facts`, `causes`, `register`, `analysis`, `methodology`, `dataset`, `faq`) plus `#cause-<cause>` for each cause column. The autopsy row takes `autopsy-<id>`, a desktop grave `grave-<id>` and a phone grave `walk-<id>`; grave links point at `#<id>`.
 - Unknown ids, unknown cause slugs and malformed encodings resolve to nothing.
 
-`/cemetery/#<id>` resolves in CSS without JavaScript. The server renders the first 25 register rows (`REGISTER_FOLD_COUNT`) in full, each followed by a `hidden` autopsy row; a `@layer base` rule in `cemetery-register.module.css` shows the autopsy row after a `:target` row until the register hydrates (`data-enhanced`). Rows past the fold render as one compact cell (`tr#<id>[data-folded]`: name, ticker, cause, death date, epitaph, obituary and source), hidden by `tr[data-folded]:not(:target)` so only a targeted record shows. Full rows replace the compact ones once the reader unfolds, filters, searches or sorts, or a reveal targets a folded record. From hydration on the client owns expansion, because `replaceState` never moves `:target`. The page shell itself still needs JavaScript today: `Providers` (`src/components/providers.tsx`) streams the whole body into a hidden boundary that a script reveals, so with JavaScript off the fold is correct but not on screen.
+`/cemetery/#<id>` resolves in CSS without JavaScript. The server renders the first 25 register rows (`REGISTER_FOLD_COUNT`) in full, each followed by a `hidden` autopsy row; a `@layer base` rule in `cemetery-register.module.css` shows the autopsy row after a `:target` row until the register hydrates (`data-enhanced`). Rows past the fold render as one compact cell (`tr#<id>[data-folded]`: name, ticker, cause, death date, epitaph, obituary and source), hidden by `tr[data-folded]:not(:target)` so only a targeted record shows. Full rows replace the compact ones once the reader unfolds, filters, searches or sorts, or a reveal targets a folded record. From hydration on the client owns expansion, because `replaceState` never moves `:target`.
 
 `revealRecord` in the register runs these steps in order: it clears any filters that exclude the row (keeping the sort) and announces that; unfolds the list; expands the row; scrolls it into view (instantly under reduced motion) and focuses its disclosure; highlights it (a static outline under reduced motion); and writes `#<id>`. The register registers its reveal handler only once the URL filters are readable, so a hash reveal queued during hydration judges the real filters. The peak chart's dots call `revealRecord` with the source `chart`, and the register's "Show on the field ↑" calls `pinGrave` with the source `register`.
 
@@ -222,6 +222,4 @@ The peg-track-record row `Open recorded incident` reports `activeDepeg` as Yes/N
 ## Operational notes
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
-- Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
-- Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
 - Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Per-coin flow-history failures get a retry notice; supply-history failures show inline "History unavailable". The supply-history read follows the chart range, requesting the unbounded `range=all` window for All and a covering bounded window otherwise. The shared retry includes both histories, preserving retained data and successful peers.

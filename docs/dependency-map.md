@@ -16,7 +16,7 @@ The page combines:
 2. `useStablecoins()` (`GET /api/stablecoins`) for nullable circulating USD context through `getCirculatingRawOrNull()`.
 3. Static `logosById` for token logos.
 
-A held V9 publication is shown with the shared status notice. Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The standalone graph takes its edge set only from the slim response's `edges`; it has no static fallback source.
+A held V9 publication serves the retained snapshot without a page-level hold notice; the held-ratings notice lives on `/status` (ADR-42). Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The standalone graph takes its edge set only from the slim response's `edges`; it has no static fallback source.
 
 `GET /api/dependency-graph/v1` is the free, no-key slim projection consumed by the standalone map and Exposure mode. Detail pages retain the full V9 report. The endpoint projects only the accepted publication, with generation id, methodology version, evaluation/publication clocks, current or held health, nodes, unchanged published edges, and optional common-mode groups. Nodes carry grade, nullable score, publication-bound supply and clock, shared-book id, role dependencies, and nullable coverage count. Retained v5 data leaves unpublished supply and coverage fields null. Held and stale (past the Safety Score consumer budget) responses use `Cache-Control: no-store` and expose `X-Safety-Score-Status`. Static metadata supplies names and symbols; the separate stablecoins query remains for Explore sizing and explicitly labelled market-cap proxy totals.
 
@@ -30,13 +30,13 @@ Dependency derivation no longer defaults a linked reserve row to collateral. A l
 
 ## Dependency Coverage Audit
 
-Run `npm run audit:coverage -- --domain=dependency-coverage` for the authored registry view, or add `--prod` to compare it with the current public V9 cards, live dependency graph, and stablecoin market-cap ordering. Cards publish `score`; graph edges publish `kind` (`serial` or `basket`) and use a null weight for serial claims. Report-v6 adds relationship and provenance fields while retained v5 publications remain readable.
+The [Dependency Network runbook](./runbooks/dependency-network.md#scope-and-commands) owns the audit commands; with `--prod` the report compares the authored registry view with the current public V9 cards, live dependency graph, and stablecoin market-cap ordering. Cards publish `score`; graph edges publish `kind` (`serial` or `basket`) and use a null weight for serial claims. Report-v6 adds relationship and provenance fields while retained v5 publications remain readable.
 
 The report separates graph invariants from curation queues. Self-edges, duplicate edges, cycles, invalid targets, stale reviews, malformed target dispositions, malformed dependency provenance, and missing reviews for dependency-producing live-reserve adapter mappings remain structural failures. The merge gate derives mapping requirements from the static authored graph when report cards are unavailable, so absence of a runtime capture cannot skip mapping coverage. Unlinked reserve slices, unique symbol-delimited active-target matches, sub-1% named exposures, and candidate IDs remain review leads: they can identify missing coverage, but never create an edge automatically. A curator must still establish current claim identity and either a measured basket weight or reviewed serial/mechanism semantics. Eligible assets, zero-balance routes, transformed strategy inputs, LP constituents, and same-symbol collisions are not dependencies by themselves.
 
-This permanent evidence queue is distinct from two existing controls: the static `check:dependency-review-gaps` merge gate and the weekly production structural audit (which fails/alerts its job, not releases). Static-versus-published reconciliation is advisory; a difference is not proof of a missing edge or permission to restore stale weights. Preserve reviewed registries, deliberate non-links, withheld claims, and append-only review history.
+This permanent evidence queue is distinct from the controls owned by the Dependency Network runbook: the static `check:dependency-review-gaps` merge gate ([commands](./runbooks/dependency-network.md#scope-and-commands)) and the weekly production structural audit, which [never blocks releases](./runbooks/dependency-network.md#weekly-failure-versus-advisory-findings). Static-versus-published reconciliation is advisory; a difference is not proof of a missing edge or permission to restore stale weights. Preserve reviewed registries, deliberate non-links, withheld claims, and append-only review history.
 
-Audit `provenance.publication` retains the upstream-validated Safety Score identity, original evaluation/publication clocks, source generations/digests, and publication health; it is `null` when unavailable. `generatedAt` is the audit capture clock and `provenance.checkoutRevision` identifies the capturing checkout. Reconciliation separately records the audit checkout and current comparison checkout plus publication comparison status. Never renew held publication evidence using a newer capture/checkout clock. Legacy missing provenance is unknown; malformed supplied provenance is rejected.
+Audit and reconciliation provenance identities, capture clocks and the held-evidence rule follow the [Dependency Network runbook](./runbooks/dependency-network.md#scope-and-commands); the audit's `provenance.publication` is `null` when unavailable.
 
 Runtime audit origins come from published edge provenance (`publishedSources`), with `mixed` for multiple known origins and a count of absent origins; unpublished set-level fallback and reserve-share facts stay null. `backingFromLiveReserves` is a separate backing fact and never proves a live dependency mapping. Scoreability follows the consumed serial, basket or role input: technical gaps are `pipeline-gap`, distinct from economic `active-nr`. Known exposure weights remain unchanged. An unavailable-target disposition becomes obsolete only when every referencing graph and role lane is scoreable. Verified published `outside-active-set:<id>` coverage rows also retain unavailable-target references without creating graph edges; unverified, unresolved or active-target rows do not. Published kind checks compare canonical effective dependencies, including variant-parent precedence, rather than overridden reserve slices.
 
@@ -52,12 +52,7 @@ This distinction matters because a live adapter can legitimately supersede stale
 
 V9 dependency edges are serial or basket. Their four-value `materiality` distinguishes serial blockage (`serial-blocked`) and bounded basket uncertainty (`basket-bounded-unknown`) from ordinary serial/basket relationships; it is not a null-score test.
 
-**The map draws two relationships, not four.** `contagionEdgeRelationship()` collapses `materiality` onto `edge.kind`, using the reader-facing vocabulary the methodology page already publishes ("a serial wrapper cannot escape its parent; basket exposure is weighted") and the V8 stroke encoding readers already know:
-
-| V9 `kind` | Legend label | Stroke | Meaning |
-| --- | --- | --- | --- |
-| `basket` | Collateral | solid slate | Weighted share of backing; risk inherited in proportion |
-| `serial` | Wrapper | dotted violet | Full pass-through claim; inherits the upstream's risk in full |
+**The map draws two relationships, not four.** `contagionEdgeRelationship()` uses `edge.kind`: basket exposure inherits backing risk in proportion to its share; serial exposure is a full pass-through claim that inherits upstream risk in full. `DEPENDENCY_TYPE_PRESENTATION` in `src/components/contagion-graph-model.ts` owns the reader-facing labels, stroke styles and descriptions.
 
 Blockage and bounded uncertainty stay out of the relationship legend. `v9DependencyEdgeScoreKnown()` reads materiality, not `upstreamScore`; its false state adds unavailable/not-rateable copy to tooltips, inspection options and live announcements. A bounded basket can still publish a numeric inherited score, while a serial pipeline gap can have null `upstreamScore` without `serial-blocked`. Known collateral shares remain visible in either case; `upstreamScore` is not the upstream asset's headline Safety Score.
 
@@ -137,7 +132,7 @@ Absent groups mean not published; `[]` means a published empty census. Published
 
 `buildWatershedModel` (`src/lib/dependency-watershed/model.ts`) is pure and deterministic: the same publication always yields the same layout, whatever the edge order.
 
-The Network component and its d3-force solver load lazily when the Network view (the default) or a genuine Watershed failure fallback mounts. URL defaults live in the solver-free `contagion-graph-constants.ts` module so reading a view choice cannot pull in d3-force. Layout, chunk cancellation and collision limits are unchanged.
+The Network component and its d3-force solver load lazily when the Network view (the default) or a genuine Watershed failure fallback mounts. The view URL default lives in the solver-free `src/lib/dependency-watershed/view-url.ts` module so reading a view choice cannot pull in d3-force. Layout, chunk cancellation and collision limits are unchanged.
 
 - **Inputs:** published nodes and edges only. An edge needs both endpoints published; a malformed share becomes an unknown basket share. USD uses the publication-bound `circulatingUsdAtEvaluation` (the Exposure basis), not the market-cap proxy used by the hero and board.
 - **Cycles fail closed.** An iterative Tarjan check runs first. A non-trivial strongly connected component or self-loop returns `{ ok: false, reason: "cycle", members }`, and the route renders the Network view under the notice **Layered view unavailable: the published graph contains a dependency cycle (A → B → A)**. No edge is broken or dropped to force a layering.
@@ -213,7 +208,7 @@ Dragging holds the position snapshot until pointerup/cancel, when pinned coordin
 
 `ContagionSnapshot` renders the Dependency Context section on `/stablecoin/[id]`. It:
 
-- uses edges touching the current asset with published endpoints to decide whether to show the stage and populate Used by, but passes the full published edge set and all published cards to the graph so full-graph hub tiers and exposure remain consistent;
+- uses edges touching the current asset with published endpoints to decide whether to show the stage and populate Used by, and passes the detail response's incident-and-dependent-input edge closure plus its neighborhood cards to the graph;
 - lazy-loads the graph with `next/dynamic` (`ssr: false`) behind a loading placeholder;
 - passes `focusCoinId`, `minimalChrome`, and a 500-node cap, which drops the header controls and renders only the focus coin's own neighborhood, ringed around it. The focused inspection rail omits the **Direct dependent exposure** metric: the detail response carries only the incident-and-dependent-input closure, so it cannot date full-graph exposure;
 - scales nodes up and shows ticker labels when the neighborhood is small: 1.5x at ≤10 visible nodes, 2x at ≤5. `MAX_RASTER_LOGO_RADIUS = 46` in `contagion-graph-svg.tsx` caps the drawn raster image radius; `.svg` logos are exempt. Logos come from static `logosById`, with no minimum raster-source resolution guarantee;
@@ -230,4 +225,4 @@ The four context disclosures use published data:
 
 Absent role or coverage lists mean not published for this generation, including older retained payloads; empty lists mean no corresponding rows were published. The disclosures render, even without a drawn neighborhood, only when at least one has a row: a direct dependent, an upstream link, a scored role, or a coverage row. Absent and empty lists alone never keep the section visible; a variant card or collateral-usage list still renders without the empty disclosures.
 
-The section links to `/dependency-map/?focus=<coinId>`. Its market-cap map also retains nulls. A report-card read failure with no retained data shows the shared retry notice; a supply-only failure keeps the drawn graph and its `mcap n/a` rows. Unlike the map-route client, it does not discard cached market caps on a market-cap query error.
+The section links to `/dependency-map/?focus=<coinId>`. Its market-cap map also retains nulls. A report-card read failure with no retained data shows the shared retry notice; a supply-only failure keeps the drawn graph and its `mcap n/a` rows.
