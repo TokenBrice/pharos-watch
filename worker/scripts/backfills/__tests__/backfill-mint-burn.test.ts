@@ -244,7 +244,7 @@ describe("handleBackfillMintBurn", () => {
     const receiveContext = receiptContext(BRIDGE_RECEIPTS.find((fixture) => fixture.name === "v2-receive")!);
     const transfer = receiveContext.receiptLogs!.find((log) => log.topics[0] === TRANSFER_TOPIC)!;
     const USDC_CONTRACT = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-    const TX_HASH = "0xcctpbridgemint";
+    const TX_HASH = `0x${"d".repeat(64)}`;
     const BLOCK_NUMBER = 21_950_000;
     const MINT_RECIPIENT = transfer.topics[2];
 
@@ -264,7 +264,7 @@ describe("handleBackfillMintBurn", () => {
             blockNumber: "0x" + BLOCK_NUMBER.toString(16),
             transactionHash: TX_HASH,
             transactionIndex: "0x0",
-            blockHash: "0x0",
+            blockHash: `0x${"a".repeat(64)}`,
             logIndex: "0x1",
             removed: false,
           },
@@ -295,7 +295,7 @@ describe("handleBackfillMintBurn", () => {
           blockNumber: "0x" + BLOCK_NUMBER.toString(16),
           transactionHash: TX_HASH,
           transactionIndex: "0x0",
-          blockHash: "0x0",
+          blockHash: `0x${"a".repeat(64)}`,
           logIndex: "0x" + index.toString(16),
           removed: false,
         })),
@@ -383,7 +383,7 @@ describe("admin mint/burn safe retry frontiers", () => {
     vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({
       number: HEAD - 10, timestamp: 1_700_000_000, hash: `0x${"a".repeat(64)}`,
     });
-    visibleLogs = [{ ...log(HEAD - 5), transactionHash: "0xorphan", blockHash: `0x${"b".repeat(64)}` }];
+    visibleLogs = [{ ...log(HEAD - 5), transactionHash: `0x${"e".repeat(64)}`, blockHash: `0x${"b".repeat(64)}` }];
     const first = await backfill(db, { fromBlock: HEAD - 10, ...range });
     expect(first).toMatchObject({ done: true, rowsInserted: 0 });
     expect(lastBlock(sqlite)).toBe(HEAD - 10);
@@ -391,11 +391,36 @@ describe("admin mint/burn safe retry frontiers", () => {
     vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({
       number: HEAD, timestamp: 1_700_000_000, hash: `0x${"c".repeat(64)}`,
     });
-    visibleLogs = [{ ...log(HEAD - 5), transactionHash: "0xcanonical", blockHash: `0x${"c".repeat(64)}` }];
+    visibleLogs = [{ ...log(HEAD - 5), transactionHash: `0x${"f".repeat(64)}`, blockHash: `0x${"c".repeat(64)}` }];
     const second = await backfill(db, {});
     expect(second).toMatchObject({ done: true, rowsInserted: 1 });
     expect(lastBlock(sqlite)).toBe(HEAD);
-    expect(sqlite.prepare("SELECT tx_hash FROM mint_burn_events").all()).toEqual([{ tx_hash: "0xcanonical" }]);
+    expect(sqlite.prepare("SELECT tx_hash FROM mint_burn_events").all()).toEqual([{ tx_hash: `0x${"f".repeat(64)}` }]);
+  });
+
+  it.each(["removed", "emitter", "direction"])("rejects %s response identity without backfill writes", async (kind) => {
+    const { db, sqlite } = fixtures.open();
+    const dai = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "dai-makerdao")!;
+    const mint = dai.events.find((event) => event.direction === "mint")!;
+    const word = (value: number) => `0x${value.toString(16).padStart(64, "0")}`;
+    const badLog: AlchemyLogEntry = { address: dai.contractAddress, topics: [mint.topicHash, word(0), word(1)],
+      data: word(20_000), blockNumber: "0x66", blockHash: word(12), transactionHash: word(20),
+      transactionIndex: "0x0", logIndex: "0x0", removed: false };
+    if (kind === "removed") badLog.removed = true;
+    if (kind === "emitter") badLog.address = `0x${"1".repeat(40)}`;
+    if (kind === "direction") badLog.topics = [mint.topicHash, word(1), word(0)];
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, _address, topics, _from, to) => ({
+      logs: topics.some((topic) => topic.index === 1) ? [badLog] : [],
+      complete: true, scannedToBlock: to, calls: 1, maxDepth: 0,
+    }));
+    const request = makeApiRequest("/api/backfill-mint-burn", { method: "POST", adminKey: "secret",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ configKey: `ethereum-${dai.contractAddress}`, fromBlock: 101, toBlock: 102 }) });
+    const response = await handleBackfillMintBurn({ db, url: makeApiUrl("/api/backfill-mint-burn"), request, alchemyApiKey: "test" });
+    expect(response.status).toBe(502);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_events").get()?.count).toBe(0);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()?.count).toBe(0);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_sync_state").get()?.count).toBe(0);
   });
 
   it("refuses a missing finalized head without writing raw events, hours or a cursor", async () => {

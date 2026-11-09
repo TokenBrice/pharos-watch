@@ -279,7 +279,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       scanTo,
       configBudget,
       signal,
-      { deadlineMs, endpointHeads, tronReader },
+      { deadlineMs, endpointHeads, tronReader, priorLogs: allConfigLogs.flatMap(({ logs }) => logs) },
     ), logRpcEvidenceIncomplete);
 
     if (!fetched) {

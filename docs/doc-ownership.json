@@ -992,6 +992,10 @@
         "shared/lib/depeg-resolver/**",
         "worker/src/lib/stability-index.ts",
         "worker/src/lib/mint-burn-scoring.ts",
+        "worker/src/lib/mint-burn-log-identity.ts",
+        "worker/src/lib/mint-burn-conservation.ts",
+        "worker/src/lib/mint-burn-mcap-weighting.ts",
+        "worker/src/lib/mint-burn-pipeline/rpc.ts",
         "worker/src/lib/dews.ts",
         "worker/src/lib/dews/**",
         "worker/src/cron/compute-depeg-resolver.ts",
@@ -1022,6 +1026,16 @@
       ],
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "reading": [
+        {
+          "sources": ["worker/src/lib/mint-burn-log-identity.ts", "worker/src/lib/mint-burn-conservation.ts", "worker/src/lib/mint-burn-pipeline/rpc.ts"],
+          "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "shared-ingestion-pipeline-boundaries" }],
+          "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "shared-ingestion-pipeline-boundaries" }]
+        },
+        {
+          "sources": ["worker/src/lib/mint-burn-mcap-weighting.ts"],
+          "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "bank-run-gauge-composite" }],
+          "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "bank-run-gauge-composite" }]
+        },
         {
           "sources": ["worker/src/cron/dex-liquidity/**", "worker/src/cron/measured-execution/**", "worker/src/lib/dex-api-token-pricing.ts", "worker/src/lib/dexscreener.ts", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
           "local": [

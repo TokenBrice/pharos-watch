@@ -347,7 +347,7 @@ export function MintBurnFlowMethodologySection() {
                   <h3 className="text-foreground font-medium">Bank Run Gauge</h3>
                   <p>
                     Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
-                    ecosystem-wide admitted issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s admitted tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
+                    ecosystem-wide admitted issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s admitted tracked-chain circulating supply. Every admitted chain must have observed supply when a chain breakdown is used; a missing chain withholds the whole weight, while observed zero counts. The gauge score maps to one of seven condition bands:
                   </p>
                   <ContentTable
                     tableId="methodology-mint-burn-bank-run-gauge"

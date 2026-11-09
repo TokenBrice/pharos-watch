@@ -282,6 +282,8 @@ If `configKey` is omitted, the job auto-selects one tracked EVM config using a c
 | `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                                   |
 | `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                                    |
 
+Every EVM response uses the cron's shared identity validator regardless of conservation-law support. Removed logs, wrong emitters or topics/direction, out-of-range blocks, inconsistent block hashes and conflicting duplicate identities fail the chunk with `502` before ingestion writes; retry the range after the provider response is corrected.
+
 Successful chunks materialize hours before committing a safe cursor. Both eventful and quiet chunks advance through the complete requested range capped to CHAIN's validated `finalized` header; explicit historical chunks retain full-range advancement below that ceiling. A missing, refused or unsupported finalized head returns `502` with `finality-head-unavailable: <chain>`, without tip fallback or ingestion writes. `done`/`nextFromBlock` reflect committed finalized coverage, not the provisional tip; a later request can resume when finality advances.
 
 Decode failures count in `rowsDropped` and `rowsDroppedDecode`; valid peers persist while the cursor holds below `earliestDecodeFailureBlock`. Shared per-log retries quarantine on observation three (`rowsQuarantinedDecode`, `decodeQuarantines[]`, reason `amount-decode-retry-exhausted`), then release the frontier. A held chunk ends the request; retry with a new observation.

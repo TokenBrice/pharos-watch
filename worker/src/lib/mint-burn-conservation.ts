@@ -2,7 +2,8 @@ import type { MintBurnConservationRecord } from "@shared/types/status";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
 import type { MintBurnContractConfig, MintBurnEventDef } from "./mint-burn-contracts";
 import type { MintBurnSupplyBurnProof } from "./mint-burn-contracts-types";
-import type { AlchemyLogEntry } from "./alchemy-logs";
+import type { AlchemyLogEntry, AlchemyTopicFilter } from "./alchemy-logs";
+import { createMintBurnLogIdentityValidator, mintBurnLogQuantity as quantity, MINT_BURN_TRANSFER_TOPIC as TRANSFER } from "./mint-burn-log-identity";
 import { readDataWord, type SubrequestBudget } from "./evm-logs";
 import type { MintBurnRow } from "./mint-burn-pipeline/types";
 import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
@@ -15,11 +16,8 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import conservationRuntimeLookup from "./mint-burn-conservation-runtime.generated.json";
 import type { RpcEndpoint } from "./chain-registry";
 
-const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO = `0x${"0".repeat(64)}`;
 const WORD = /^0x[0-9a-fA-F]{64}$/;
-const ADDRESS_WORD = /^0x0{24}[0-9a-fA-F]{40}$/;
-const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/;
 const SELECTOR = /^0x[0-9a-f]{8}$/;
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 // TetherToken.deprecated() — when true the configured address forwards totalSupply() to upgradedAddress.
@@ -507,13 +505,6 @@ export interface ConservationGuardEvent {
   log: AlchemyLogEntry;
 }
 
-function quantity(value: unknown): number {
-  if (typeof value !== "string" || !QUANTITY.test(value)) throw new Error("invalid-rpc-quantity");
-  const parsed = Number(BigInt(value));
-  if (!Number.isSafeInteger(parsed)) throw new Error("unsafe-rpc-quantity");
-  return parsed;
-}
-
 /**
  * Decodes one summed def's amount. Data must be whole 32-byte words — exactly as many as the
  * encoding addresses, so trailing or partial words stay invalid. "data-minus-data-uint256"
@@ -546,40 +537,25 @@ function conservationAmount(eventDef: ConservationEventDef, log: AlchemyLogEntry
  */
 export function collectConservationRawEvents(config: MintBurnContractConfig,
   batches: readonly ConservationLogBatch[], fromBlock: number, toBlock: number) {
-  const seen = new Map<string, string>();
-  const blockHashes = new Map<number, string>();
+  const identity = createMintBurnLogIdentityValidator();
+  const { blockHashes } = identity;
   const events: ConservationRawEvent[] = [];
   const guardEvents: ConservationGuardEvent[] = [];
   for (const { eventDef, logs } of batches) {
     const arity = eventDef.topicArity ?? 3;
     const topic0 = eventDef.topicHash.toLowerCase();
-    const emitter = (eventDef.emitter ?? config.contractAddress).toLowerCase();
-    // Address-topic validation and the ambiguity check only apply to Transfer-shaped defs.
+    const emitter = eventDef.emitter ?? config.contractAddress;
+    const topics: AlchemyTopicFilter[] = [{ index: 0, value: topic0 }];
+    if (eventDef.filterTopic) topics.push(eventDef.filterTopic);
     const transferShaped = arity === 3 && topic0 === TRANSFER;
     const guard = eventDef.role === "guard";
     for (const log of logs) {
-      const block = quantity(log.blockNumber);
-      quantity(log.transactionIndex);
-      const index = quantity(log.logIndex);
-      const data = log.data.slice(2);
-      if (log.removed !== false || log.address.toLowerCase() !== emitter ||
-        block <= fromBlock || block > toBlock || !WORD.test(log.blockHash) || log.blockHash === ZERO ||
-        !WORD.test(log.transactionHash) || log.transactionHash === ZERO ||
-        data.length % 64 !== 0 || !/^[0-9a-fA-F]*$/.test(data) ||
-        log.topics.length !== arity || log.topics[0].toLowerCase() !== topic0) throw new Error("invalid-raw-log");
-      if (eventDef.filterTopic != null && (eventDef.filterTopic.index < 1 || eventDef.filterTopic.index >= arity ||
-        log.topics[eventDef.filterTopic.index]?.toLowerCase() !== eventDef.filterTopic.value.toLowerCase())) throw new Error("invalid-raw-log");
-      if (transferShaped && (!ADDRESS_WORD.test(log.topics[1]!) || !ADDRESS_WORD.test(log.topics[2]!))) throw new Error("invalid-raw-log");
-      const hash = log.blockHash.toLowerCase();
-      if (blockHashes.has(block) && blockHashes.get(block) !== hash) throw new Error("inconsistent-log-block-hash");
-      blockHashes.set(block, hash);
-      const key = `${log.transactionHash.toLowerCase()}:${index}`;
-      const identity = JSON.stringify([block, hash, quantity(log.transactionIndex), log.topics.map((topic) => topic.toLowerCase()), log.data.toLowerCase()]);
-      if (seen.has(key)) {
-        if (seen.get(key) !== identity) throw new Error("conflicting-duplicate-log");
-        continue;
+      if (eventDef.filterTopic != null && (eventDef.filterTopic.index < 1 || eventDef.filterTopic.index >= arity)) {
+        throw new Error("invalid-raw-log");
       }
-      seen.set(key, identity);
+      const data = log.data.slice(2);
+      if (data.length % 64 !== 0 || !/^[0-9a-fA-F]*$/.test(data)) throw new Error("invalid-raw-log");
+      if (!identity.validate(log, emitter, topics, fromBlock + 1, toBlock, arity)) continue;
       if (guard) {
         guardEvents.push({ eventDef, log });
         continue;

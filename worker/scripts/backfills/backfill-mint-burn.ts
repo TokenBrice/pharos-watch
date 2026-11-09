@@ -250,7 +250,8 @@ export async function handleBackfillMintBurn({
           topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
         }
 
-        const fetched = await fetchMintBurnLogs([mintBurnAlchemyEndpoint(alchemyUrl)], config.contractAddress, topics, cursor, scanTo, budget);
+        const fetched = await fetchMintBurnLogs([mintBurnAlchemyEndpoint(alchemyUrl)], config.contractAddress, topics, cursor, scanTo, budget, undefined,
+          { priorLogs: collectedLogs.flatMap(({ logs }) => logs) });
         if (!fetched || !fetched.complete) {
           failedEventDefs.push(`${eventDef.signature}:${eventDef.direction}:fetch-failed`);
           continue;

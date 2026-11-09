@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   makeMintBurnDb,
+  mintBurnTestHash,
   makeMintBurnMintLog as makeMintLog,
   resetMintBurnMocks,
   seedMintBurnAdmissions,
@@ -152,9 +153,9 @@ function makeBurnLog(opts: { blockNumber?: number; txHash?: string; logIndex?: n
     ],
     data: "0x00000000000000000000000000000000000000000000000000000002540be400",
     blockNumber: "0x" + block.toString(16),
-    transactionHash: opts.txHash ?? "0xburn",
+    transactionHash: opts.txHash ?? mintBurnTestHash(10),
     transactionIndex: "0x0",
-    blockHash: "0x0",
+    blockHash: mintBurnTestHash(2),
     logIndex: "0x" + (opts.logIndex ?? 0).toString(16),
     removed: false,
   };
@@ -168,7 +169,7 @@ function makeReceiptLog(txHash: string, topics: string[]) {
     blockNumber: "0x14fb180",
     transactionHash: txHash,
     transactionIndex: "0x0",
-    blockHash: "0x0",
+    blockHash: mintBurnTestHash(2),
     logIndex: "0x0",
     removed: false,
   };
@@ -192,7 +193,7 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [makeMintLog(), makeMintLog({ txHash: "0xsecond", logIndex: 1 })], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [makeMintLog(), makeMintLog({ txHash: mintBurnTestHash(11), logIndex: 1 })], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
 
@@ -335,7 +336,7 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBe(21_949_999);
   });
 
-  it("ignores provider logs outside the requested scan range before advancing", async () => {
+  it("fences provider logs outside the requested scan range", async () => {
     const db = makeDb();
     const config = MINT_BURN_CONFIGS[0]!;
 
@@ -382,9 +383,10 @@ describe("syncMintBurn", () => {
     expect(result.summary.rowsParsed).toBe(0);
     expect(result.summary.rowsDropped).toBe(0);
     expect(result.summary.maxBlockSeen).toBe(0);
-    expect(result.summary.advanceReason).toBe("full-success-empty");
-    expect(result.summary.advancedTo).toBe(21_960_000);
-    expect(result.newLastBlock).toBe(21_960_000);
+    expect(result.summary.sourceFailureReason).toBe("invalid-raw-log");
+    expect(result.summary.advancedTo).toBeNull();
+    expect(result.newLastBlock).toBeNull();
+    expect(result.scanCoverage).toBeUndefined();
   });
 
   it("counts truncated amount data as decode failure instead of dust", async () => {
@@ -475,12 +477,11 @@ describe("syncMintBurn", () => {
       affectedHours: new Map(),
     });
 
-    // The mint was observed, decodable and above dust; only its event id could not
-    // be formed. No row and no decode quarantine accounts for it.
-    expect(result.summary.rowsRead).toBe(1);
-    expect(result.summary.rowsDropped).toBe(1);
+    // Identity is rejected at the fetch boundary, before decoding or parsing.
+    expect(result.summary.rowsRead).toBe(0);
+    expect(result.summary.rowsDropped).toBe(0);
     expect(result.summary.rowsDroppedDecode).toBe(0);
-    // An uncompensated dropped event cannot certify exhaustive coverage of the range.
+    expect(result.summary.sourceFailureReason).toBe("invalid-rpc-quantity");
     expect(result.newLastBlock).toBeNull();
     expect(result.scanCoverage).toBeUndefined();
     expect(result.summary.advanceReason).not.toBe("full-success-empty");
@@ -716,7 +717,7 @@ describe("syncMintBurn", () => {
 
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce(null as unknown as never)
-      .mockResolvedValueOnce({ logs: [makeMintLog()], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [makeBurnLog()], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
@@ -768,8 +769,8 @@ describe("syncMintBurn", () => {
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
         logs: [
-          makeMintLog({ blockNumber: 21_950_002, txHash: "0xmissing-ts", logIndex: 0 }),
-          makeMintLog({ blockNumber: 22_000_000, txHash: "0xpresent-ts", logIndex: 1 }),
+          makeMintLog({ blockNumber: 21_950_002, txHash: mintBurnTestHash(12), logIndex: 0 }),
+          makeMintLog({ blockNumber: 22_000_000, txHash: mintBurnTestHash(13), logIndex: 1 }),
         ],
         complete: true,
         scannedToBlock: 22_000_000,
@@ -882,11 +883,11 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce({
         logs: [
           makeBurnLog({
-            txHash: "0xbridge",
+            txHash: mintBurnTestHash(14),
             sender: "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
           }),
           makeBurnLog({
-            txHash: "0xeffective",
+            txHash: mintBurnTestHash(15),
             sender: "0x1234000000000000000000000000000000000000",
             logIndex: 1,
           }),
@@ -900,7 +901,7 @@ describe("syncMintBurn", () => {
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
     vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(async (_url, txHashes: string[]) =>
-      new Map(txHashes.map((txHash) => [txHash, txHash === "0xbridge"
+      new Map(txHashes.map((txHash) => [txHash, txHash === mintBurnTestHash(14)
         ? {
             tx: {
               hash: txHash,
@@ -944,7 +945,7 @@ describe("syncMintBurn", () => {
 
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
-        logs: [makeMintLog({ txHash: "0xmissing-context" })],
+        logs: [makeMintLog({ txHash: mintBurnTestHash(16) })],
         complete: true,
         scannedToBlock: 22_000_000,
         calls: 1,
@@ -978,7 +979,7 @@ describe("syncMintBurn", () => {
     const actualAlchemy = await vi.importActual<typeof import("../../lib/alchemy-logs")>("../../lib/alchemy-logs");
     vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(actualAlchemy.getAlchemyTransactionContextBatchMany);
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [makeMintLog({ txHash: "0xdenied-context" })], complete: true,
+      .mockResolvedValueOnce({ logs: [makeMintLog({ txHash: mintBurnTestHash(17) })], complete: true,
         scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
@@ -1081,7 +1082,7 @@ describe("syncMintBurn", () => {
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
         logs: Array.from({ length: 70 }, (_, index) =>
-          makeMintLog({ blockNumber: 21_960_000, txHash: `0xbridge-mint-${index}`, logIndex: index }),
+          makeMintLog({ blockNumber: 21_960_000, txHash: mintBurnTestHash(100 + index), logIndex: index }),
         ),
         complete: true,
         scannedToBlock: 22_000_000,
@@ -1150,14 +1151,14 @@ describe("syncMintBurn", () => {
 
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
-        logs: [makeMintLog({ txHash: "0xroundtrip", logIndex: 0 })],
+        logs: [makeMintLog({ txHash: mintBurnTestHash(18), logIndex: 0 })],
         complete: true,
         scannedToBlock: 22_000_000,
         calls: 1,
         maxDepth: 0,
       })
       .mockResolvedValueOnce({
-        logs: [makeBurnLog({ txHash: "0xroundtrip", logIndex: 1 })],
+        logs: [makeBurnLog({ txHash: mintBurnTestHash(18), logIndex: 1 })],
         complete: true,
         scannedToBlock: 22_000_000,
         calls: 1,

@@ -40,6 +40,13 @@ const conservationEventDef: ConservationEventDef = {
   topicArity: 1,
   emitter: `0x${"b".repeat(40)}`,
 };
+function mintLog() {
+  return { address: config.contractAddress,
+    topics: [config.events[0]!.topicHash, `0x${"0".repeat(64)}`, `0x${"0".repeat(63)}1`],
+    data: `0x${(1_000_000n).toString(16).padStart(64, "0")}`, blockNumber: "0x66",
+    transactionHash: `0x${"c".repeat(64)}`, transactionIndex: "0x0",
+    blockHash: `0x${"d".repeat(64)}`, logIndex: "0x0", removed: false };
+}
 function run(db: D1Database = {} as D1Database) {
   return syncMintBurnConfig({ db, config, key: "key", tier: "extended", fromBlock: 101,
     scanTo: 102, chainHead: 200, rpcEndpoints: [mintBurnAlchemyEndpoint("https://rpc.example")], configBudgetLimit: 25, runTimestamp: 1200,
@@ -48,8 +55,7 @@ function run(db: D1Database = {} as D1Database) {
 }
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [{ data: `0x${(1_000_000n).toString(16).padStart(64, "0")}`,
-    blockNumber: "0x66", logIndex: "0x0" }], complete: true, scannedToBlock: 102 } as never)
+  vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({ logs: [mintLog()], complete: true, scannedToBlock: 102 } as never)
     .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 102 } as never);
   vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[101, 1099], [102, 1100]]));
   vi.mocked(parseMintBurnLogs).mockReturnValue({
@@ -135,7 +141,7 @@ describe("conservation producer publication and cursor fences", () => {
   });
   it("withholds the conservation verdict when a decode quarantine removes a raw log", async () => {
     const quarantined = {
-      data: "0x1234", blockNumber: "0x66", transactionHash: "0xquarantine", logIndex: "0x1",
+      ...mintLog(), data: "0x1234", transactionHash: `0x${"e".repeat(64)}`, logIndex: "0x1",
     };
     const db = mockD1([
       { match: "SELECT value FROM cache", rows: [{
@@ -145,8 +151,7 @@ describe("conservation producer publication and cursor fences", () => {
     ]);
     vi.mocked(fetchAlchemyLogs).mockReset()
       .mockResolvedValueOnce({
-        logs: [{ data: `0x${(1_000_000n).toString(16).padStart(64, "0")}`, blockNumber: "0x66",
-          transactionHash: "0xkept", logIndex: "0x0" }, quarantined],
+        logs: [mintLog(), quarantined],
         complete: true, scannedToBlock: 102, calls: 1, maxDepth: 0,
       } as never)
       .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 102, calls: 1, maxDepth: 0 } as never);

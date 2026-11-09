@@ -200,6 +200,10 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
 }
 
 /** A zero-address `Transfer` log (a mint) for `contract`. */
+export function mintBurnTestHash(value: number): string {
+  return `0x${value.toString(16).padStart(64, "0")}`;
+}
+
 export function makeMintBurnMintLog(
   options: { contract?: string; blockNumber?: number; txHash?: string; logIndex?: number } = {},
 ) {
@@ -213,9 +217,9 @@ export function makeMintBurnMintLog(
     ],
     data: "0x00000000000000000000000000000000000000000000000000000002540be400",
     blockNumber: "0x" + block.toString(16),
-    transactionHash: options.txHash ?? "0xabc123",
+    transactionHash: options.txHash ?? mintBurnTestHash(1),
     transactionIndex: "0x0",
-    blockHash: "0x0",
+    blockHash: mintBurnTestHash(2),
     logIndex: "0x" + (options.logIndex ?? 0).toString(16),
     removed: false,
   };

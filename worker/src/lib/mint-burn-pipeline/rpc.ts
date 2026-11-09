@@ -1,5 +1,6 @@
 import { buildAlchemyUrl, fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps,
-  type AlchemyLogsFetchResult, type AlchemyTopicFilter, type ResolveBlockTimestampOptions } from "../alchemy-logs";
+  type AlchemyLogEntry, type AlchemyLogsFetchResult, type AlchemyTopicFilter, type ResolveBlockTimestampOptions } from "../alchemy-logs";
+import { createMintBurnLogIdentityValidator } from "../mint-burn-log-identity";
 import type { ChainRpcConfig, RpcEndpoint } from "../chain-registry";
 import { throwIfAborted } from "../abort";
 import { budgetExhausted, type SubrequestBudget } from "../evm-logs";
@@ -53,22 +54,29 @@ export async function getMintBurnFinalizedHead(chainId: string, endpoints: reado
   });
 }
 
-function boundLogRange(result: AlchemyLogsFetchResult | null, fromBlock: number, toBlock: number): AlchemyLogsFetchResult | null {
+function validateLogRange(result: AlchemyLogsFetchResult | null, contractAddress: string,
+  topics: readonly AlchemyTopicFilter[], fromBlock: number, toBlock: number,
+  priorLogs: readonly AlchemyLogEntry[] = []): AlchemyLogsFetchResult | null {
   if (!result) return null;
-  const inRange = (log: AlchemyLogsFetchResult["logs"][number]) => {
-    const block = Number(log.blockNumber);
-    return Number.isSafeInteger(block) && block >= fromBlock && block <= toBlock;
-  };
-  // No replacement allocation for the ordinary, already range-validated response.
-  const logs = result.logs.some((log) => !inRange(log)) ? result.logs.filter(inRange) : result.logs;
-  const scannedToBlock = Math.max(fromBlock - 1, Math.min(toBlock, result.scannedToBlock));
-  return logs === result.logs && scannedToBlock === result.scannedToBlock ? result : { ...result, logs, scannedToBlock };
+  const identity = createMintBurnLogIdentityValidator();
+  try {
+    for (const log of priorLogs) identity.validate(log, contractAddress, [], fromBlock, toBlock);
+    const logs = result.logs.filter((log) => identity.validate(log, contractAddress, topics, fromBlock, toBlock));
+    const scannedToBlock = Math.max(fromBlock - 1, Math.min(toBlock, result.scannedToBlock));
+    return { ...result, logs, scannedToBlock };
+  } catch (error) {
+    // Dropping one invalid row cannot certify an otherwise complete response.
+    return { ...result, logs: [], complete: false, scannedToBlock: fromBlock - 1,
+      failureReason: error instanceof Error ? error.message : "invalid-raw-log" };
+  }
 }
 
 /** Resume only at the proven contiguous frontier, discarding logs beyond an unproven gap. */
 export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contractAddress: string,
   topics: AlchemyTopicFilter[], fromBlock: number, toBlock: number, budget: SubrequestBudget,
-  signal?: AbortSignal, options?: { deadlineMs?: number; endpointHeads?: Map<string, number>; tronReader?: TronJsonRpcReader }): Promise<AlchemyLogsFetchResult | null> {
+  signal?: AbortSignal, options?: { deadlineMs?: number; endpointHeads?: Map<string, number>; tronReader?: TronJsonRpcReader;
+    /** Other directional replies in this attempt, for cross-query duplicate consistency. */
+    priorLogs?: readonly AlchemyLogEntry[] }): Promise<AlchemyLogsFetchResult | null> {
   if (options?.tronReader) {
     if (topics.length !== 1 || topics[0].index !== 0) throw new Error("Unsupported Tron mint/burn topic filter");
     const before = budget.count;
@@ -89,8 +97,8 @@ export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contr
       calls: budget.count - before, maxDepth: result.maxSplitDepth, failureReason: result.reason ?? undefined };
   }
   if (endpoints.length === 1) {
-    return boundLogRange(await fetchAlchemyLogs(endpoints[0].url, contractAddress, topics, fromBlock, toBlock, budget, signal,
-      options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined), fromBlock, toBlock);
+    return validateLogRange(await fetchAlchemyLogs(endpoints[0].url, contractAddress, topics, fromBlock, toBlock, budget, signal,
+      options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined), contractAddress, topics, fromBlock, toBlock, options?.priorLogs);
   }
   let combined: AlchemyLogsFetchResult | null = null;
   let start = fromBlock;
@@ -109,9 +117,9 @@ export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contr
         failureReason: "provider-head-lag" };
       continue;
     }
-    const result = boundLogRange(await fetchAlchemyLogs(endpoint.url, contractAddress, topics, start, endpointTo, budget, signal,
+    const result = validateLogRange(await fetchAlchemyLogs(endpoint.url, contractAddress, topics, start, endpointTo, budget, signal,
       endpoint.operator === "dwellir" ? { ...options, endpoint } : options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined),
-      start, endpointTo);
+      contractAddress, topics, start, endpointTo);
     if (!result) continue;
     if (result.complete && endpointTo < toBlock) {
       result.complete = false;
@@ -128,10 +136,10 @@ export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contr
       combined.complete = result.complete;
       combined.failureReason = result.failureReason;
     }
-    if (result.complete) return combined;
+    if (result.complete) return validateLogRange(combined, contractAddress, topics, fromBlock, toBlock, options?.priorLogs);
     start = Math.max(start, result.scannedToBlock + 1);
   }
-  return combined;
+  return validateLogRange(combined, contractAddress, topics, fromBlock, toBlock, options?.priorLogs);
 }
 
 export async function resolveMintBurnBlockTimestamps(endpoints: readonly RpcEndpoint[], blocks: number[],

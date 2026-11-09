@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   makeMintBurnDb,
+  mintBurnTestHash,
   makeMintBurnMintLog as makeMintLog,
   mintBurnEventInsertBinds,
   resetMintBurnMocks,
@@ -127,7 +128,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
             makeMintLog({
               contract,
               blockNumber: 22_000_000,
-              txHash: "0xeth-mint",
+              txHash: mintBurnTestHash(19),
             }),
           ],
           complete: true,
@@ -142,7 +143,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
             makeMintLog({
               contract,
               blockNumber: 249_500_000,
-              txHash: "0xarb-mint",
+              txHash: mintBurnTestHash(20),
             }),
           ],
           complete: true,
@@ -219,33 +220,29 @@ describe("syncMintBurn — multi-chain invariant", () => {
     vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({
       number: 21_999_999, timestamp, hash: `0x${"a".repeat(64)}`,
     });
-    const canonical = { ...makeMintLog({ blockNumber: 22_000_000, txHash: "0xcanonical" }), blockHash: `0x${"c".repeat(64)}` };
-    const orphan = { ...makeMintLog({ blockNumber: 22_000_000, txHash: "0xorphan" }), blockHash: `0x${"b".repeat(64)}` };
-    const prior = makeMintLog({ blockNumber: 21_999_999, txHash: "0xprior" });
+    const canonical = { ...makeMintLog({ blockNumber: 22_000_000, txHash: mintBurnTestHash(21) }), blockHash: `0x${"c".repeat(64)}` };
+    const orphan = { ...makeMintLog({ blockNumber: 22_000_000, txHash: mintBurnTestHash(22) }), blockHash: `0x${"b".repeat(64)}` };
+    const prior = makeMintLog({ blockNumber: 21_999_999, txHash: mintBurnTestHash(23) });
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[21_999_999, timestamp], [22_000_000, timestamp]]));
     // An over-returning provider exposes the provisional fork despite the bounded request.
     vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: eventful ? [prior, orphan] : [orphan],
       complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
     const first = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
     expect(first.status).toBe("ok");
-    expect(JSON.parse(first.metadata).configSamples[0]).toMatchObject({ scanTo: 21_999_999, advancedTo: 21_999_999 });
-    expect(sqlite.prepare("SELECT tx_hash FROM mint_burn_events ORDER BY block_number").all())
-      .toEqual(eventful ? [{ tx_hash: "0xprior" }] : []);
-    expect(sqlite.prepare("SELECT SUM(mint_count) AS count FROM mint_burn_hourly").get())
-      .toEqual({ count: eventful ? 1 : null });
-    expect(sqlite.prepare(`SELECT chain_id, from_block, to_block, from_timestamp, to_timestamp, finality_tag
-      FROM mint_burn_scan_coverage`).all()).toEqual([{ chain_id: "ethereum", from_block: 21_999_999,
-      to_block: 21_999_999, from_timestamp: timestamp, to_timestamp: timestamp, finality_tag: "finalized" }]);
+    expect(JSON.parse(first.metadata).configSamples[0]).toMatchObject({ scanTo: 21_999_999, advancedTo: null,
+      sourceFailureReason: "invalid-raw-log" });
+    expect(sqlite.prepare("SELECT tx_hash FROM mint_burn_events").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT * FROM mint_burn_scan_coverage").all()).toEqual([]);
 
     vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({
       number: 22_000_000, timestamp, hash: `0x${"c".repeat(64)}`,
     });
-    vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: [canonical], complete: true,
+    vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: eventful ? [prior, canonical] : [canonical], complete: true,
       scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
     const resumed = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
-    expect(JSON.parse(resumed.metadata).configSamples[0]).toMatchObject({ scanFrom: 22_000_000, advancedTo: 22_000_000 });
+    expect(JSON.parse(resumed.metadata).configSamples[0]).toMatchObject({ scanFrom: 21_999_999, advancedTo: 22_000_000 });
     expect(sqlite.prepare("SELECT tx_hash FROM mint_burn_events ORDER BY block_number").all())
-      .toEqual([...(eventful ? [{ tx_hash: "0xprior" }] : []), { tx_hash: "0xcanonical" }]);
+      .toEqual([...(eventful ? [{ tx_hash: mintBurnTestHash(23) }] : []), { tx_hash: mintBurnTestHash(21) }]);
     expect(sqlite.prepare("SELECT SUM(mint_count) AS count FROM mint_burn_hourly").get()).toEqual({ count: eventful ? 2 : 1 });
     expect(sqlite.prepare("SELECT from_block, to_block FROM mint_burn_scan_coverage").all())
       .toEqual([{ from_block: 21_999_999, to_block: 22_000_000 }]);
@@ -441,7 +438,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     }));
     vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) => new Map(blocks.map((block) => [block, timestamp])));
     vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, contract, _topics, _from, to) => ({
-      logs: [makeMintLog({ contract, blockNumber: to, txHash: `0x${contract}-mint` })],
+      logs: [makeMintLog({ contract, blockNumber: to, txHash: mintBurnTestHash(contract === USDT_CONTRACT ? 200 : 201) })],
       complete: true, scannedToBlock: to, calls: 1, maxDepth: 0,
     }));
     vi.mocked(recalcAffectedHours).mockImplementation(async (database, hours, options) => {

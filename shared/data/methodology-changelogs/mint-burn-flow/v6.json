@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.40",
+    "title": "Complete admitted-chain gauge weights and validated EVM log identities",
+    "date": "2026-11-10",
+    "effectiveAt": 1794275752,
+    "summary": "Gauge weights require observed supply for every admitted chain when a chain breakdown is used; EVM ingestion validates response identity before certifying a scan, independently of conservation-law support.",
+    "impact": [
+      "A partially observed admitted-chain breakdown now makes the coin's gauge weight unavailable, just like an explicit null chain supply. For example, admitted USDT Ethereum plus Tron cannot silently use Ethereum alone when Tron is absent. Explicit zero supply remains observed, and unavailable weights leave the gauge and tracked market-cap denominator with the existing mcapUnavailableCoins disclosure.",
+      "The existing global circulating-supply fallback remains limited to full configured publication scope with no tracked-chain entries at all. A partially observed breakdown cannot use that fallback or sum only its observed subset.",
+      "Every EVM cron and operator-backfill scan validates removal state, emitter, requested topics and direction, block range, block-hash consistency and duplicate identity before parsing. A corrupt response withholds scan proof and cursor advancement through the existing retry fence. Conservation reuses this validator and retains its reviewed amount and law checks; Tron retains its separate validation boundary."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.39",
     "title": "Receipt-bound bridge decoding by version and direction",
     "date": "2026-11-10",

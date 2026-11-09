@@ -34,6 +34,13 @@ describe("sumMcapForTrackedChains", () => {
   });
 
   it("preserves unavailable and measured zero Tron supply after admission", () => {
+    // A partially observed scope must not silently shrink to Ethereum alone.
+    expect(sumMcapForTrackedChains("usdt-tether", {
+      Ethereum: { current: 100 },
+    }, { peggedUSD: 140e9 })).toBeNull();
+    expect(sumMcapForTrackedChains("usdt-tether", {
+      Ethereum: { current: 100 }, Tron: { current: null },
+    }, { peggedUSD: 140e9 })).toBeNull();
     expect(sumMcapForTrackedChains("usdt-tether", {
       Ethereum: { current: 60e9 }, Tron: { current: null },
     }, { peggedUSD: 140e9 })).toBeNull();
@@ -97,7 +104,7 @@ describe("sumMcapForTrackedChains", () => {
 
   it("treats current=0 as real data (contributes 0, does NOT trigger fallback)", () => {
     // If a tracked chain reports 0 supply (bootstrapping or burn-to-zero), weight is 0.
-    // The canonicalizer creates an entry for the chain; anyFound flips true; result is 0.
+    // The canonicalizer retains the observed entry, so the result is 0.
     expect(sumMcapForTrackedChains("usdc-circle", { Ethereum: { current: 0 } }, peggedTotal)).toBe(0);
   });
 });

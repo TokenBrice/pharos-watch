@@ -29,7 +29,7 @@ Mint and burn events measure token creation and destruction, not investor intent
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.39`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.40`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -246,7 +246,9 @@ Prospective `mint_burn_scan_coverage` segments bind config identity and a versio
 
 ## Shared Ingestion Pipeline Boundaries
 
-EVM cron and admin backfill share `worker/src/lib/mint-burn-pipeline/` finalized-head admission, range-bounded log fetching, parsing, classification, event-time price resolution, persistence, hourly materialization and decode retries. Neither entrypoint imports the other. Both use monotonic-max sync-state commits; a partial replay cannot regress or overadvance a cursor. Explicit historical backfills retain complete-range advancement when the requested range is below the validated finalized ceiling; near-head requests are capped to that ceiling, never to an assumed 75-block margin. The [operator path](#operator-cli-backfill-mint-burn) additionally aborts an incomplete chunk instead of committing its resolved subset. This cutover does not remove previously stored orphan rows: any historical repair needs retained canonical evidence and audited row replacement/materialization, not a cursor rewind alone.
+EVM cron and admin backfill share `worker/src/lib/mint-burn-pipeline/` finalized-head admission, identity-validated log fetching, parsing, classification, event-time price resolution, persistence, hourly materialization and decode retries. Neither entrypoint imports the other. Both use monotonic-max sync-state commits; a partial replay cannot regress or overadvance a cursor. Explicit historical backfills retain complete-range advancement when the requested range is below the validated finalized ceiling; near-head requests are capped to that ceiling, never to an assumed 75-block margin. The [operator path](#operator-cli-backfill-mint-burn) additionally aborts an incomplete chunk instead of committing its resolved subset. This cutover does not remove previously stored orphan rows: any historical repair needs retained canonical evidence and audited row replacement/materialization, not a cursor rewind alone.
+
+Since v6.40, every EVM fetch validates removal state, the requested emitter and topic filters (including mint/burn direction), block range, block-hash consistency and duplicate transaction/log-index identity before parsing, regardless of conservation-law support. Corrupt responses return incomplete coverage with a machine-readable reason, no accepted logs and no proven frontier for that response; the existing retry fence withholds scan proof and cursor advancement. Identical duplicates are deduplicated. Conservation shares the identity validator while retaining its additional reviewed ABI/amount checks; Tron retains its own boundary. Operator backfill rejects an incomplete chunk before ingestion writes.
 
 `flow_type` is orthogonal to burn classification: bridge, atomic-roundtrip and individually reviewed protocol-internal events stay outside economic aggregates. Raw conservation still sees them. Tape excludes bridge/protocol-internal rows, but a previously projected reviewed burn remains a true historical event; reclassification is not evidence that it never happened.
 
@@ -379,7 +381,7 @@ Implementation (`worker/src/lib/mint-burn-mcap-weighting.ts`):
   1. Coin with no admitted tracked chains → unavailable weight; a legacy caller without an explicit publication scope retains the global-supply fallback.
   2. Canonicalized `chainCirculating` is empty → `getCirculatingRawOrNull({ circulating })` (keeps CG-fallback assets alive).
   3. No tracked chain has an entry in the canonicalized map → `getCirculatingRawOrNull({ circulating })`.
-  4. Otherwise sum observed `current` across tracked-chain entries. A present entry with `current = null` makes the entire weight unavailable; `current = 0` is real zero supply and does not trigger fallback.
+  4. Otherwise require an observed `current` for **every** admitted tracked chain and sum them (v6.40). A missing entry or `current = null` makes the entire weight unavailable; `current = 0` is real zero supply and does not trigger fallback. The global fallback cannot fill a partially observed breakdown.
 - A fallback with no observed circulating bucket returns `null`: that coin's weight is unavailable, not `0`. The aggregate excludes it from the gauge inputs and from `gauge.trackedMcapUsd` and counts it in `gauge.mcapUnavailableCoins` (absent on payloads produced before the count existed). Its flow row is still published. Because a zero weight already contributed nothing, the gauge score formula is unchanged.
 
 ### Flight-to-Quality Detection
