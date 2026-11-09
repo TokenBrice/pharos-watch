@@ -7,7 +7,7 @@
  *
  * Evidence: 2026-11-09 roster-wide supply-conservation review (methodology v6.37).
  */
-export const MINT_BURN_CLASSIFICATION_HOLDS: ReadonlyMap<string, string> = new Map([
+const MINT_BURN_CLASSIFICATION_HOLDS: ReadonlyMap<string, string> = new Map([
   // Burns through internal calls (DaiJoin.join) fail the per-receipt supply proof and
   // stay review_required while every mint counts: 30d net +$19.2B vs supply −$45M/7d.
   ["dai-makerdao", "proof-gated-burns-unresolved"],
