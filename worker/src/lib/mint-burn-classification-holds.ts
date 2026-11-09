@@ -13,11 +13,6 @@ const MINT_BURN_CLASSIFICATION_HOLDS: ReadonlyMap<string, string> = new Map([
   ["dai-makerdao", "proof-gated-burns-unresolved"],
   // Same proof gate: counted mints with all burns excluded since 2026-10-12.
   ["usdd-tron-dao-reserve", "proof-gated-burns-unresolved"],
-  // CCTP v1 inbound mints still count as issuance and pre-2026-10-10 v2 inbound mints
-  // remain in history: 90d net +$8.16B vs non-bridge supply change about −$4.79B.
-  ["usdc-circle", "bridge-inbound-mints-counted"],
-  // Modern CCIP sends are unrecognized and inbound pool mints count as issuance.
-  ["zchf-frankencoin", "bridge-inbound-mints-counted"],
 ]);
 
 export function isMintBurnClassificationHeld(stablecoinId: string): boolean {

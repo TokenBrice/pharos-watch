@@ -61,6 +61,12 @@ To remove only Tron from ingestion and publication, append **`tron-TR7NHqjeKQxGT
 
 Before rolling back to a pre-admission-gate Worker, pause Tron ingestion and either purge retained `usdt-tether` / `tron` rows from `mint_burn_events` and `mint_burn_hourly`, with reviewed backup and derived-publication/cache handling, or explicitly accept that those rows can become public. The old Tape projector has no admitted-chain filter, and the old DDR query filters by coin only; both can expose pending Tron history. The new disable policy cannot protect readers that do not implement it. A purge is a separate reviewed database-maintenance operation; Worker rollback alone leaves these rows and the additive admission tables intact.
 
+### Bridge classification and historical repair
+
+Use [Bridge Classifier](../mint-burn-flows.md#bridge-classifier) for exact deployment/version/token proofs. A known-pool burn with resolved context but no recognized signal remains `review_required / known-bridge-pool-without-bridge-signal`; do not clear it by counting all pool burns or excluding an entire transaction. Missing/malformed receipt context is a deferred read, not a non-bridge verdict. Unresolved mints are stored the same way (`review_required` with the bridge reason) and count as unresolved mint events in the hourly bucket.
+
+After activation, retain the deployed Worker version and one new affected execution with actual row-level CCTP v1/v2, CCIP or OFT proof. Validate a mixed transaction preserves its economic row through the later roundtrip stage. No additional context reads should appear. Historical rows need a separately reviewed whole-hour replay and classification/materialization proof; a successful forward run cannot repair a 90-day net. Keep USDC/ZCHF classification holds until that repair is accepted. Worker rollback does not undo already stored classifications.
+
 ### Historical price debt
 
 The command contract is canonical in [Operator runbook: historical mint/burn prices](./one-shot-backfills.md#backfill-mint-burn-prices). Operationally:
@@ -82,7 +88,7 @@ Inspect the flow response's independent `classification` verdict for the affecte
 
 The hourly `mint_unresolved_event_count` / `burn_unresolved_event_count` columns distinguish an observed zero from historical NULL. The bounded retained-hour rebuild may replace NULL only while every raw sibling is still retained; older hours require a complete audited replay, never a rebuild from survivors. Unresolved raw events and their whole coin/chain/hour remain protected through hourly retention. Every source classification change and its dirty-hour debt commit together; debt settles with the rebuilt aggregate. Do not clear debt or set counts to zero manually.
 
-The existing static classification holds remain until the separate history-repair lane verifies their removal. After deployment, correlate the active Worker version and methodology with a new affected execution and its publication before claiming acceptance; a green deploy or a completed maintenance attempt alone is insufficient. The [owning methodology](../mint-burn-flows.md#valuation-completeness-rendering) defines value-level disclosures; no reader-facing banner is needed.
+Static classification holds are a last resort for a defect with no generic gate; remove an entry when its classifier fix lands and the affected hours are either repaired or excluded from every window. After deployment, correlate the active Worker version and methodology with a new affected execution and its publication before claiming acceptance; a green deploy or a completed maintenance attempt alone is insufficient. The [owning methodology](../mint-burn-flows.md#valuation-completeness-rendering) defines value-level disclosures; no reader-facing banner is needed.
 
 ## Prevention
 

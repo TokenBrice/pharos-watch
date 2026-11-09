@@ -11,36 +11,33 @@ import {
 } from "./mint-burn-contracts-helpers";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
-const TOPIC_RE = /^0x[0-9a-fA-F]{64}$/;
-const SELECTOR_RE = /^0x[0-9a-fA-F]{8}$/;
-
 function bridgeAddressFields(d: MintBurnBridgeDetectionConfig): string[][] {
   switch (d.protocol) {
     case "ccip":
-      return [d.knownBridgePoolAddresses, d.knownBridgeRouterAddresses];
+      return [[d.tokenAddress, ...(d.externalMinterAddress ? [d.externalMinterAddress] : [])], d.knownBridgePoolAddresses];
     case "cctp":
-      return [d.knownBridgePoolAddresses, d.knownBridgeRouterAddresses, [d.messageTransmitterAddress, d.mintTokenAddress]];
+      return [[d.tokenAddress], d.knownBridgePoolAddresses, ...d.deployments.map((entry) =>
+        [entry.tokenMessenger, entry.tokenMinter, entry.messageTransmitter])];
     case "layerzero-oft":
-      return [d.knownBridgeContractAddresses, d.bridgeSignalEmitterAddresses];
+      return [[d.tokenAddress, d.endpointAddress, d.oappAddress, ...(d.zeroRecipientAddress ? [d.zeroRecipientAddress] : [])], d.knownBridgeContractAddresses];
   }
 }
 
 /**
- * Validate the hex-string format of every address/topic/selector in a bridge
- * detection config.
+ * Signatures are code-owned; every configurable deployment identity fails closed.
  */
 export function validateMintBurnBridgeDetection(d: MintBurnBridgeDetectionConfig): void {
-  const all: { kind: "address" | "topic" | "selector"; values: string[] }[] = [
-    ...bridgeAddressFields(d).map((values) => ({ kind: "address" as const, values })),
-    { kind: "topic", values: d.bridgeSignalTopics ?? [] },
-    { kind: "selector", values: d.bridgeSignalSelectors ?? [] },
-    ...(d.protocol === "cctp" ? [{ kind: "topic" as const, values: [d.messageReceivedTopic, d.mintAndWithdrawTopic] }] : []),
-  ];
-  for (const { kind, values } of all) {
+  if (d.protocol === "layerzero-oft" && (!Number.isSafeInteger(d.endpointId) || d.endpointId <= 0)) {
+    throw new Error("mint-burn bridge config: invalid LayerZero endpoint id");
+  }
+  if (d.protocol === "cctp" && (d.deployments.length === 0
+    || d.deployments.some((entry) => entry.version !== 1 && entry.version !== 2))) {
+    throw new Error("mint-burn bridge config: invalid CCTP deployment version");
+  }
+  for (const values of bridgeAddressFields(d)) {
     for (const v of values) {
-      const re = kind === "address" ? ADDRESS_RE : kind === "topic" ? TOPIC_RE : SELECTOR_RE;
-      if (!re.test(v)) {
-        throw new Error(`mint-burn bridge config: invalid ${kind} "${v}" for protocol ${d.protocol}`);
+      if (!ADDRESS_RE.test(v)) {
+        throw new Error(`mint-burn bridge config: invalid address "${v}" for protocol ${d.protocol}`);
       }
     }
   }

@@ -114,8 +114,9 @@ export function MintBurnFlowMethodologySection() {
                 An N-hour flow window covers N closed UTC hours ending at the common fully scanned hour
                 across admitted sources, within the published freshness budget, not a rolling window ending now.
                 The response exposes that watermark; pressure, largest events, baselines and longer net-flow windows
-                share it. Verified CCTP V2 destination recipient and fee mints are bridge transfers, while unrelated issuance in that transaction
-                stays counted. Historical valuation requires an actual observation within the inclusive 24-hour
+                share it. CCTP v1/v2, CCIP pools and LayerZero OFT routes require token-bound receipt proofs
+                for each bridge mint or burn, including separately matched CCTP fee mints. Unrelated issuance in that transaction
+                stays counted; a selector or shared endpoint alone cannot exclude it. Historical valuation requires an actual observation within the inclusive 24-hour
                 distance from the event; retention preserves all hourly siblings until repair and aggregation settle.
               </p>
               <p>

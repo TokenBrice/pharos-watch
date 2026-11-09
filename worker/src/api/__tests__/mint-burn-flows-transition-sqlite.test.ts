@@ -17,7 +17,7 @@ const HOUR = 3600;
 const DAY = 24 * HOUR;
 const CUTOVER = MINT_BURN_LEGACY_CUTOVER;
 const END = CUTOVER + 8 * HOUR;
-const config = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdc-circle")!;
+const config = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "pyusd-paypal")!;
 const key = mintBurnConfigKey(config);
 
 function openTransition() {

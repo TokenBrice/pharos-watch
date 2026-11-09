@@ -10,16 +10,6 @@ import type {
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
-const CCIP_ETHEREUM_ROUTER = "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d";
-const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
-const CCIP_SEND_SELECTOR = "0x96f4e9f9";
-const LAYERZERO_ENDPOINT_V2 = "0x1a44076050125825900e736c501f859c50fe728c";
-const LAYERZERO_PACKET_SENT_TOPIC = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
-const LAYERZERO_PACKET_DELIVERED_TOPIC = "0x3cd5e48f9730b129dc7550f0fcea9c767b7be37837cd10e55eb35f734f4bca04";
-const LAYERZERO_SEND_SELECTOR = "0xc7c7f5b3";
-const LAYERZERO_EXECUTE302_SELECTOR = "0xcfc32570";
-const LAYERZERO_LOCAL_COMPOSE_SELECTOR = "0x7cd44734";
-
 export function transferMintBurn(): MintBurnEventDef[] {
   return [
     {
@@ -39,58 +29,57 @@ export function transferMintBurn(): MintBurnEventDef[] {
   ];
 }
 
-const CCTP_ETHEREUM_TOKEN_MESSENGER_V2 = "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d";
-const CCTP_DEPOSIT_FOR_BURN_TOPIC = "0x2fa9ca894982930190727e75500a97d8dc500233a5065e0f3126c48fbe0343c0";
-const CCTP_DEPOSIT_FOR_BURN_SELECTOR = "0x6fd3504e";
-const CCTP_DEPOSIT_FOR_BURN_WITH_CALLER_SELECTOR = "0xf856ddb6";
-// Circle V2 Ethereum deployment and exact event signatures:
-// https://developers.circle.com/cctp/references/contract-addresses
-const CCTP_ETHEREUM_MESSAGE_TRANSMITTER_V2 = "0x81d40f21f12a8f0e3252bccb954d722d4c464b64";
-const CCTP_MESSAGE_RECEIVED_TOPIC = "0xff48c13eda96b1cceacc6b9edeedc9e9db9d6226afbc30146b720c19d3addb1c";
-const CCTP_MINT_AND_WITHDRAW_TOPIC = "0x50c55e915134d457debfa58eb6f4342956f8b0616d51a89a3659360178e1ab63";
-
+// Circle's Ethereum deployments: https://developers.circle.com/cctp/references/contract-addresses
 export function cctpBridgeDetection(
   knownBridgePoolAddresses: string[],
   stablecoinId: string,
 ): MintBurnBridgeDetectionConfig {
+  const deployments = [
+    { version: 1 as const, tokenMessenger: "0xbd3fa81b58ba92a82136038b25adec7066af3155",
+      tokenMinter: "0xc4922d64a24675e16e1586e3e3aa56c06fabe907", messageTransmitter: "0x0a992d191deec32afe36203ad87d7d289a738f81" },
+    { version: 2 as const, tokenMessenger: "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d",
+      tokenMinter: "0xfd78ee919681417d192449715b2594ab58f5d002", messageTransmitter: "0x81d40f21f12a8f0e3252bccb954d722d4c464b64" },
+  ];
   return {
     protocol: "cctp",
-    knownBridgePoolAddresses,
-    knownBridgeRouterAddresses: [CCTP_ETHEREUM_TOKEN_MESSENGER_V2],
-    bridgeSignalTopics: [CCTP_DEPOSIT_FOR_BURN_TOPIC],
-    bridgeSignalSelectors: [CCTP_DEPOSIT_FOR_BURN_SELECTOR, CCTP_DEPOSIT_FOR_BURN_WITH_CALLER_SELECTOR],
-    messageTransmitterAddress: CCTP_ETHEREUM_MESSAGE_TRANSMITTER_V2,
-    mintTokenAddress: resolveRequiredTrackedContractConfig(stablecoinId, "ethereum").contractAddress,
-    messageReceivedTopic: CCTP_MESSAGE_RECEIVED_TOPIC,
-    mintAndWithdrawTopic: CCTP_MINT_AND_WITHDRAW_TOPIC,
+    tokenAddress: resolveRequiredTrackedContractConfig(stablecoinId, "ethereum").contractAddress,
+    knownBridgePoolAddresses: [...new Set([...knownBridgePoolAddresses, ...deployments.map((entry) => entry.tokenMinter)])],
+    deployments,
   };
 }
 
 export function ccipBridgeDetection(
   knownBridgePoolAddresses: string[],
+  stablecoinId: string,
+  externalMinterAddress?: string,
+  poolKind?: "usdo",
 ): MintBurnBridgeDetectionConfig {
   return {
     protocol: "ccip",
+    tokenAddress: resolveRequiredTrackedContractConfig(stablecoinId, "ethereum").contractAddress,
     knownBridgePoolAddresses,
-    knownBridgeRouterAddresses: [CCIP_ETHEREUM_ROUTER],
-    bridgeSignalTopics: [CCIP_SEND_REQUESTED_TOPIC],
-    bridgeSignalSelectors: [CCIP_SEND_SELECTOR],
+    ...(externalMinterAddress ? { externalMinterAddress } : {}),
+    ...(poolKind ? { poolKind } : {}),
   };
 }
 
 export function layerZeroOftBridgeDetection(
   knownBridgeContractAddresses: string[],
+  stablecoinId: string,
+  chainId: string,
+  oappAddress = knownBridgeContractAddresses[0],
+  zeroRecipientAddress?: string,
 ): MintBurnBridgeDetectionConfig {
+  const endpointId = ({ ethereum: 30101, arbitrum: 30110 } as Record<string, number | undefined>)[chainId];
+  if (!endpointId) throw new Error(`Unreviewed LayerZero endpoint id for ${chainId}`);
   return {
     protocol: "layerzero-oft",
+    tokenAddress: resolveRequiredTrackedContractConfig(stablecoinId, chainId).contractAddress,
     knownBridgeContractAddresses,
-    bridgeSignalEmitterAddresses: [LAYERZERO_ENDPOINT_V2],
-    bridgeSignalTopics: [LAYERZERO_PACKET_SENT_TOPIC, LAYERZERO_PACKET_DELIVERED_TOPIC],
-    bridgeSignalSelectors: [
-      LAYERZERO_SEND_SELECTOR,
-      LAYERZERO_EXECUTE302_SELECTOR,
-      LAYERZERO_LOCAL_COMPOSE_SELECTOR,
-    ],
+    endpointAddress: "0x1a44076050125825900e736c501f859c50fe728c",
+    oappAddress,
+    endpointId,
+    ...(zeroRecipientAddress ? { zeroRecipientAddress } : {}),
   };
 }
 

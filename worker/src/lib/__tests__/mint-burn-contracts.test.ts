@@ -173,7 +173,6 @@ describe("mint-burn-contracts configured scope", () => {
         protocol: "layerzero-oft",
         knownBridgeContractAddresses: [
           "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-          "0x31cae3b7fb82d847621859fb1585353c5720660d",
         ],
       },
     });
@@ -361,45 +360,22 @@ describe("validateMintBurnBridgeDetection", () => {
     expect(collectMintBurnBridgeValidationErrors(MINT_BURN_CONFIGS)).toEqual([]);
   });
 
-  it("rejects malformed address (no 0x)", () => {
-    expect(() => validateMintBurnBridgeDetection({
-      protocol: "ccip",
-      knownBridgePoolAddresses: ["80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
-      knownBridgeRouterAddresses: [], bridgeSignalTopics: [], bridgeSignalSelectors: [],
-    })).toThrow(/address/i);
-  });
-  it("rejects topic of wrong length", () => {
-    expect(() => validateMintBurnBridgeDetection({
-      protocol: "ccip",
-      knownBridgePoolAddresses: [], knownBridgeRouterAddresses: [],
-      bridgeSignalTopics: ["0xdeadbeef"], bridgeSignalSelectors: [],
-    })).toThrow(/topic/i);
-  });
-  it("rejects selector of wrong length", () => {
-    expect(() => validateMintBurnBridgeDetection({
-      protocol: "ccip",
-      knownBridgePoolAddresses: [], knownBridgeRouterAddresses: [],
-      bridgeSignalTopics: [], bridgeSignalSelectors: ["0xabcd"],
-    })).toThrow(/selector/i);
-  });
-
-  it("collects per-config errors for fail-fast module validation", () => {
-    const [baseConfig] = MINT_BURN_CONFIGS;
-    expect(baseConfig).toBeDefined();
-    const malformed = {
-      ...baseConfig!,
-      bridgeDetection: {
-        protocol: "ccip" as const,
-        knownBridgePoolAddresses: ["0xnot-an-address"],
-        knownBridgeRouterAddresses: [],
-        bridgeSignalTopics: [],
-        bridgeSignalSelectors: [],
-      },
-    };
-
-    expect(collectMintBurnBridgeValidationErrors([malformed])).toEqual([
-      `${baseConfig!.chain.chainId}/${baseConfig!.stablecoinId}: mint-burn bridge config: invalid address "0xnot-an-address" for protocol ccip`,
-    ]);
+  it("rejects malformed deployment identities, versions and route ids", () => {
+    for (const config of MINT_BURN_CONFIGS.filter((entry) => entry.bridgeDetection)) {
+      const detection = config.bridgeDetection!;
+      expect(() => validateMintBurnBridgeDetection({ ...detection, tokenAddress: "0xnot-an-address" })).toThrow(/address/i);
+      if (detection.protocol === "cctp") {
+        expect(() => validateMintBurnBridgeDetection({ ...detection, deployments: [] })).toThrow(/version/i);
+        expect(() => validateMintBurnBridgeDetection({ ...detection, deployments: [{ ...detection.deployments[0], tokenMinter: "bad" }] })).toThrow(/address/i);
+      }
+      if (detection.protocol === "layerzero-oft") {
+        expect(() => validateMintBurnBridgeDetection({ ...detection, endpointId: 0 })).toThrow(/endpoint id/i);
+        expect(() => validateMintBurnBridgeDetection({ ...detection, oappAddress: "bad" })).toThrow(/address/i);
+      }
+    }
+    const base = MINT_BURN_CONFIGS.find((config) => config.bridgeDetection)!;
+    expect(collectMintBurnBridgeValidationErrors([{ ...base, bridgeDetection: { ...base.bridgeDetection!, tokenAddress: "bad" } }]))
+      .toEqual([`${base.chain.chainId}/${base.stablecoinId}: mint-burn bridge config: invalid address "bad" for protocol ${base.bridgeDetection!.protocol}`]);
   });
 });
 

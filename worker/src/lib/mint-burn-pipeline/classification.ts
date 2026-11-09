@@ -68,9 +68,14 @@ function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution
       if (!log || typeof log !== "object") return false;
       const logRecord = log as Record<string, unknown>;
       return typeof logRecord.address === "string"
+        && /^0x[0-9a-f]{40}$/i.test(logRecord.address)
         && Array.isArray(logRecord.topics)
-        && logRecord.topics.every((topic) => typeof topic === "string");
+        && logRecord.topics.every((topic) => typeof topic === "string" && /^0x[0-9a-f]{64}$/i.test(topic))
+        && typeof logRecord.data === "string" && /^0x[0-9a-f]*$/i.test(logRecord.data) && logRecord.data.length % 2 === 0
+        && typeof logRecord.logIndex === "string" && /^0x[0-9a-f]+$/i.test(logRecord.logIndex)
+        && Number.isSafeInteger(Number(logRecord.logIndex));
     })
+    || new Set(receiptRecord.logs.map((log) => Number((log as Record<string, unknown>).logIndex))).size !== receiptRecord.logs.length
   ) {
     return { context: null, shortfall: true };
   }

@@ -1,65 +1,58 @@
 import type { MintBurnBridgeClassifiableRow, MintBurnTxContext } from "../mint-burn-bridge-classifier";
-import type { MintBurnCcipBridgeDetectionConfig, MintBurnCctpBridgeDetectionConfig } from "../mint-burn-contracts";
+import type { MintBurnContractConfig } from "../mint-burn-contracts";
+import { BRIDGE_TOPICS } from "../mint-burn-bridge-classifier-protocols";
+import receipts from "./fixtures/mint-burn-bridge-receipts.json";
+import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters } from "viem/utils";
 
+/** Real RPC observations, trimmed by emitter; hashes and blocks retain provenance. */
+export const BRIDGE_RECEIPTS = receipts;
+export type BridgeReceipt = typeof receipts[number];
+export function receiptContext(fixture: BridgeReceipt): MintBurnTxContext {
+  return {
+    to: fixture.to, inputSelector: fixture.inputSelector,
+    logTopics: fixture.logs.flatMap((log) => log.topics), logAddresses: fixture.logs.map((log) => log.address),
+    receiptLogs: fixture.logs,
+  };
+}
 export function makeBridgeRow(overrides: Partial<MintBurnBridgeClassifiableRow> = {}): MintBurnBridgeClassifiableRow {
-  return {
-    id: "row-1", tx_hash: "0xtx", direction: "burn", flow_type: "standard",
-    counterparty: null, burn_type: null, burn_review_reason: null,
-    ...overrides,
-  };
+  return { id: "row-1", tx_hash: "0xtx", direction: "burn", flow_type: "standard",
+    counterparty: null, burn_type: null, burn_review_reason: null, ...overrides };
 }
-
-export function signalContext(detection: MintBurnCcipBridgeDetectionConfig | MintBurnCctpBridgeDetectionConfig): MintBurnTxContext {
-  return {
-    to: detection.knownBridgeRouterAddresses[0],
-    inputSelector: detection.bridgeSignalSelectors[0],
-    logTopics: [detection.bridgeSignalTopics[0]],
-    logAddresses: [detection.knownBridgeRouterAddresses[0]],
-  };
-}
-
-/** Circle V2 receipt shape: token Transfer, MintAndWithdraw, MessageReceived. */
-export function cctpReceiveContext(detection: MintBurnCctpBridgeDetectionConfig, fee = 0): MintBurnTxContext {
-  const recipient = `0x${"0".repeat(24)}abcdef1234567890abcdef1234567890abcdef12`;
-  const token = `0x${"0".repeat(24)}${detection.mintTokenAddress.slice(2).toLowerCase()}`;
-  const messenger = `0x${"0".repeat(24)}${detection.knownBridgeRouterAddresses[0].slice(2).toLowerCase()}`;
-  const amount = "00000000000000000000000000000000000000000000000000000002540be400";
-  const word = (value: number) => value.toString(16).padStart(64, "0");
-  const grossAmount = (BigInt(`0x${amount}`) + BigInt(fee)).toString(16).padStart(64, "0");
-  const body = `00000001${token.slice(2)}${recipient.slice(2)}${grossAmount}${recipient.slice(2)}${word(fee)}${word(fee)}${word(0)}`;
-  const receiptLogs = [
-    {
-      address: detection.mintTokenAddress,
-      topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", `0x${word(0)}`, recipient],
-      data: `0x${amount}`,
-      logIndex: "0x0",
-    },
-    {
-      address: detection.knownBridgeRouterAddresses[0],
-      topics: [detection.mintAndWithdrawTopic, recipient, token],
-      data: `0x${amount}${word(fee)}`,
-      logIndex: fee > 0 ? "0x2" : "0x1",
-    },
-    {
-      address: detection.messageTransmitterAddress,
-      topics: [detection.messageReceivedTopic, recipient, `0x${word(1)}`, `0x${word(2000)}`],
-      data: `0x${word(1)}${messenger.slice(2)}${word(96)}${word(body.length / 2)}${body.padEnd(Math.ceil(body.length / 64) * 64, "0")}`,
-      logIndex: fee > 0 ? "0x3" : "0x2",
-    },
-  ];
-  if (fee > 0) {
-    receiptLogs.splice(1, 0, {
-      address: detection.mintTokenAddress,
-      topics: [receiptLogs[0].topics[0], `0x${word(0)}`, `0x${"0".repeat(24)}1111111111111111111111111111111111111111`],
-      data: `0x${word(fee)}`,
-      logIndex: "0x1",
+export function receiptRows(fixture: BridgeReceipt, config: MintBurnContractConfig): MintBurnBridgeClassifiableRow[] {
+  const zero = `0x${"0".repeat(64)}`;
+  return fixture.logs.filter((log) => log.address.toLowerCase() === config.contractAddress.toLowerCase()
+    && log.topics[0] === BRIDGE_TOPICS.transfer && (log.topics[1] === zero || log.topics[2] === zero))
+    .map((log) => {
+      const direction = log.topics[1] === zero ? "mint" : "burn";
+      return makeBridgeRow({ id: `${config.chain.chainId}-${fixture.transactionHash}-${Number(log.logIndex)}`,
+        tx_hash: fixture.transactionHash, direction, counterparty: `0x${log.topics[direction === "mint" ? 2 : 1].slice(-40)}` });
     });
+}
+export function receiptConfig(fixture: BridgeReceipt, configs: MintBurnContractConfig[]): MintBurnContractConfig {
+  const config = configs.find((config) => config.bridgeDetection && config.chain.chainId === fixture.chain
+    && fixture.logs.some((log) => log.address.toLowerCase() === config.contractAddress.toLowerCase()));
+  if (!config) throw new Error(`No bridge config for receipt ${fixture.name}`);
+  return config;
+}
+
+/** Explicitly synthetic deployment substitution; never represent this as a captured receipt. */
+export function rebindReceipt(original: BridgeReceipt, source: MintBurnContractConfig, target: MintBurnContractConfig): BridgeReceipt {
+  const fixture = structuredClone(original), from = source.bridgeDetection!, to = target.bridgeDetection!;
+  fixture.name = `synthetic:${target.stablecoinId}:${original.name}`;
+  for (const log of fixture.logs) {
+    if (log.address.toLowerCase() === source.contractAddress.toLowerCase()) log.address = target.contractAddress;
+    log.topics = log.topics.map((word) => word.replace(source.contractAddress.slice(2).toLowerCase(), target.contractAddress.slice(2).toLowerCase()));
+    if (from.protocol !== "layerzero-oft" || to.protocol !== "layerzero-oft") continue;
+    if (log.address === from.knownBridgeContractAddresses[0]) log.address = to.knownBridgeContractAddresses[0];
+    if (log.topics[0] !== BRIDGE_TOPICS.packetSent) continue;
+    const abi = parseAbiParameters("bytes,bytes,address");
+    const [payload, options, library] = decodeAbiParameters(abi, log.data as `0x${string}`);
+    let rebound = payload.slice(0, 20) + to.endpointId.toString(16).padStart(8, "0")
+      + to.oappAddress.slice(2).toLowerCase().padStart(64, "0") + payload.slice(92);
+    const guid = keccak256(`0x${rebound.slice(4, 164)}`);
+    rebound = rebound.slice(0, 164) + guid.slice(2) + rebound.slice(228);
+    log.data = encodeAbiParameters(abi, [rebound as `0x${string}`, options, library]);
+    fixture.logs.find((entry) => entry.topics[0] === BRIDGE_TOPICS.oftSent)!.topics[1] = guid;
   }
-  return {
-    to: detection.messageTransmitterAddress,
-    inputSelector: "0x57ecfd28",
-    logTopics: receiptLogs.flatMap((log) => log.topics),
-    logAddresses: receiptLogs.map((log) => log.address),
-    receiptLogs,
-  };
+  return fixture;
 }

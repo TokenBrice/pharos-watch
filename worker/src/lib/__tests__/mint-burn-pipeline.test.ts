@@ -211,9 +211,7 @@ describe("mint-burn shared pipeline modules", () => {
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0xpool"],
-          knownBridgeRouterAddresses: ["0xrouter"],
-          bridgeSignalTopics: ["0xtopic"],
-          bridgeSignalSelectors: ["0x96f4e9f9"],
+          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         },
       }),
       [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
@@ -259,9 +257,7 @@ describe("mint-burn shared pipeline modules", () => {
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0xpool"],
-          knownBridgeRouterAddresses: ["0xrouter"],
-          bridgeSignalTopics: ["0xtopic"],
-          bridgeSignalSelectors: ["0x96f4e9f9"],
+          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         },
       }),
       [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
@@ -290,9 +286,7 @@ describe("mint-burn shared pipeline modules", () => {
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0xpool"],
-          knownBridgeRouterAddresses: ["0xrouter"],
-          bridgeSignalTopics: ["0xtopic"],
-          bridgeSignalSelectors: ["0x96f4e9f9"],
+          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         },
       }),
       [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
@@ -319,8 +313,7 @@ describe("mint-burn shared pipeline modules", () => {
     const counters = await classifyBridgeBurnRows(
       [makeRow({ direction: "burn", tx_hash: "0xdenied" })],
       makeMintBurnConfig({ bridgeDetection: {
-        protocol: "ccip", knownBridgePoolAddresses: [], knownBridgeRouterAddresses: [],
-        bridgeSignalTopics: [], bridgeSignalSelectors: [],
+        protocol: "ccip", knownBridgePoolAddresses: [], tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
       } }),
       [mintBurnAlchemyEndpoint("https://rpc.invalid")], { count: 0, limit: 10 }, new Map(), undefined,
       { blockHashesByTx: new Map([["0xdenied", `0x${"1".repeat(64)}`]]) },
@@ -328,11 +321,14 @@ describe("mint-burn shared pipeline modules", () => {
     expect(counters).toMatchObject({ txContextShortfalls: 1, txContextRequestsNotStarted: 1, deferredTxHashes: ["0xdenied"] });
   });
 
-  it("defers only the malformed transaction-context peer", async () => {
+  it.each(["non-array", "bad-data", "bad-index", "duplicate-index"] as const)("defers only the malformed transaction-context peer (%s)", async (mutation) => {
+    const log = { address: "0x1111111111111111111111111111111111111111", topics: [], data: "0x01", logIndex: "0x0" };
+    const logs = mutation === "non-array" ? {} : mutation === "bad-data" ? [{ ...log, data: "0xz" }]
+      : mutation === "bad-index" ? [{ ...log, logIndex: undefined }] : [log, log];
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(new Map([
       ["0xmalformed", {
         tx: { hash: "0xmalformed", to: "0xrouter", input: "0x96f4e9f9" },
-        receipt: { transactionHash: "0xmalformed", to: "0xrouter", logs: {} },
+        receipt: { transactionHash: "0xmalformed", to: "0xrouter", logs },
       }],
       ["0xeffective", alchemyMockHelpers.makeAlchemyContext("0xeffective")],
     ] as never));
@@ -349,9 +345,7 @@ describe("mint-burn shared pipeline modules", () => {
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0xpool"],
-          knownBridgeRouterAddresses: ["0xrouter"],
-          bridgeSignalTopics: ["0xtopic"],
-          bridgeSignalSelectors: ["0x96f4e9f9"],
+          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         },
       }),
       [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],

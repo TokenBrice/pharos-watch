@@ -27,30 +27,33 @@ export interface MintBurnSupplyBurnProof {
 
 export interface MintBurnCcipBridgeDetectionConfig {
   protocol: "ccip";
+  tokenAddress: string;
   knownBridgePoolAddresses: string[];
-  knownBridgeRouterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
+  externalMinterAddress?: string;
+  poolKind?: "usdo";
 }
 
 export interface MintBurnLayerZeroOftBridgeDetectionConfig {
   protocol: "layerzero-oft";
+  tokenAddress: string;
   knownBridgeContractAddresses: string[];
-  bridgeSignalEmitterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
+  endpointAddress: string;
+  /** Endpoint receiver/sender can be a shared messenger distinct from the token OFT. */
+  oappAddress: string;
+  endpointId: number;
+  zeroRecipientAddress?: string;
 }
 
 export interface MintBurnCctpBridgeDetectionConfig {
   protocol: "cctp";
+  tokenAddress: string;
   knownBridgePoolAddresses: string[];
-  knownBridgeRouterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
-  messageTransmitterAddress: string;
-  mintTokenAddress: string;
-  messageReceivedTopic: string;
-  mintAndWithdrawTopic: string;
+  deployments: Array<{
+    version: 1 | 2;
+    tokenMessenger: string;
+    tokenMinter: string;
+    messageTransmitter: string;
+  }>;
 }
 
 export type MintBurnBridgeDetectionConfig =

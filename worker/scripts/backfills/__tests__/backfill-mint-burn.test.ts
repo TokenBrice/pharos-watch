@@ -37,7 +37,7 @@ import {
 } from "../../../src/lib/alchemy-logs";
 import { getMintBurnFinalizedHead } from "../../../src/lib/mint-burn-pipeline/rpc";
 import { MINT_BURN_CONFIGS } from "../../../src/lib/mint-burn-contracts";
-import { cctpReceiveContext } from "../../../src/lib/__tests__/mint-burn-bridge-classifier.test-support";
+import { BRIDGE_RECEIPTS, receiptContext } from "../../../src/lib/__tests__/mint-burn-bridge-classifier.test-support";
 
 const TRON_USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 
@@ -241,11 +241,12 @@ describe("handleBackfillMintBurn", () => {
     const ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
     const detection = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "usdc-circle" && config.chain.chainId === "ethereum")!.bridgeDetection!;
     if (detection.protocol !== "cctp") throw new Error("USDC must have CCTP detection");
-    const receiveContext = cctpReceiveContext(detection);
+    const receiveContext = receiptContext(BRIDGE_RECEIPTS.find((fixture) => fixture.name === "v2-receive")!);
+    const transfer = receiveContext.receiptLogs!.find((log) => log.topics[0] === TRANSFER_TOPIC)!;
     const USDC_CONTRACT = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const TX_HASH = "0xcctpbridgemint";
     const BLOCK_NUMBER = 21_950_000;
-    const MINT_RECIPIENT = "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12";
+    const MINT_RECIPIENT = transfer.topics[2];
 
     vi.mocked(fetchAlchemyLogs).mockReset().mockImplementation(async (_url, _address, topics) => {
       const isMintTopic = topics.some(
@@ -259,12 +260,12 @@ describe("handleBackfillMintBurn", () => {
           {
             address: USDC_CONTRACT,
             topics: [TRANSFER_TOPIC, ZERO_TOPIC, MINT_RECIPIENT],
-            data: "0x00000000000000000000000000000000000000000000000000000002540be400", // 10_000_000_000
+            data: transfer.data,
             blockNumber: "0x" + BLOCK_NUMBER.toString(16),
             transactionHash: TX_HASH,
             transactionIndex: "0x0",
             blockHash: "0x0",
-            logIndex: "0x0",
+            logIndex: "0x1",
             removed: false,
           },
         ],

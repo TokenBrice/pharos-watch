@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.39",
+    "title": "Receipt-bound bridge decoding by version and direction",
+    "date": "2026-11-10",
+    "effectiveAt": 1794272152,
+    "summary": "CCTP, CCIP and LayerZero exclusions now bind exact token movements in both directions instead of tagging every row in a transaction.",
+    "impact": [
+      "CCTP v1/v2 send and receive use their reviewed deployments and canonical ABIs. Principal and fee mints require their own minter-authorized token Transfers; unrelated issuance stays standard.",
+      "CCIP authenticates legacy and modern sends and destination mints through reviewed pool actions, including USD1 external-minter and USDO rebasing-pool variants. LayerZero OFT evidence binds the token route, endpoint packet and GUID to exact raw debit/credit rows; selector-only and transaction-wide topic matching are removed.",
+      "A mint from a known pool, a receipt-identified Circle minter or an exact OFT movement without recognized inbound proof is stored as unresolved (standard flow, review_required) and counts as classification debt under v6.38, exactly like an unresolved burn. Forward decoding does not repair hours classified under the earlier rules. The decoder change gives the eight bridge configs (USDC, EURC, ZCHF, USD1, avUSD, USDO, GLDon, USDai) new scan fingerprints, so earlier scan proof no longer certifies them: the coins leave publication until their first complete hour under the new evidence, then each window returns once it lies entirely after activation (24h after one day, 7d, 30d and 90d as coverage accrues; pressure after seven baseline days). This replaces the static USDC and ZCHF holds, which are removed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.38",
     "title": "Classification completeness gates counted net-flow claims",
     "date": "2026-11-09",

@@ -11,7 +11,7 @@ import {
   type MintBurnDbOptions,
 } from "./mint-burn.test-support";
 
-const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
+const CCIP_BURNED_TOPIC = "0x696de425f79f4a40bc6d2122ca50507f0efbeabbff86a84871b7196ab8ea8df7";
 
 vi.mock("../../lib/mint-burn-contracts", async () => {
   // The hoisted factory runs before static bindings; use the registry-free builder to avoid a mock import cycle.
@@ -68,9 +68,7 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
         bridgeDetection: {
           protocol: "ccip",
           knownBridgePoolAddresses: ["0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79"],
-          knownBridgeRouterAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
-          bridgeSignalTopics: ["0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd"],
-          bridgeSignalSelectors: ["0x96f4e9f9"],
+          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         },
       }),
       makeMintBurnConfig({
@@ -912,7 +910,11 @@ describe("syncMintBurn", () => {
             receipt: {
               transactionHash: txHash,
               to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-              logs: [makeReceiptLog(txHash, [CCIP_SEND_REQUESTED_TOPIC])],
+              logs: [makeBurnLog({ txHash, sender: "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79" }), {
+                ...makeReceiptLog(txHash, [CCIP_BURNED_TOPIC, topicAddress("0x80226fc0ee2b096224eeac085bb9a8cba1146f7d")]),
+                address: "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
+                data: makeBurnLog().data, logIndex: "0x1",
+              }],
             },
           }
         : {
