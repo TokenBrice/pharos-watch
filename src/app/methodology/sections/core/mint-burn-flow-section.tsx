@@ -309,7 +309,7 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Ingestion safety</span> &mdash; sync state advances only to the
                       shared safe coverage frontier when some event definitions or block timestamps are incomplete;
-                      established coverage is marked lagging by cadence-derived block progress, or unknown when the
+                      established coverage is marked lagging when block progress trails its scan lane&apos;s cadence, or unknown when the
                       current chain head is unavailable. For quiet assets, completed block-scan span proves window
                       maturity even when the oldest event row has aged out of retention. BUIDL tracks both registered
                       Ethereum share-class contracts; coverage requires both scan cursors to catch up

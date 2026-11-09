@@ -10,6 +10,7 @@ import {
   readMintBurnCronSnapshot,
   readMintBurnCronSnapshotResult,
   selectLargestEvents,
+  withExtendedLaneHeads,
 } from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -510,10 +511,16 @@ describe("buildCoinCoverageMap", () => {
   });
 
   it.each([
-    { lagBlocks: 1_200, status: "full" },
-    { lagBlocks: 1_201, status: "lagging" },
-  ])("uses Tron's three-second blocks for a $lagBlocks-block coverage lag", ({ lagBlocks, status }) => {
-    const config = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === "tron");
+    // Critical Tron: 3,600 s / 3 s blocks.
+    { chainId: "tron", tier: "critical", lagBlocks: 1_200, status: "full" },
+    { chainId: "tron", tier: "critical", lagBlocks: 1_201, status: "lagging" },
+    // Extended legs get the lane's 14,400 s pass window, uncapped: / 12 s and / 0.25 s blocks.
+    { chainId: ETHEREUM_CHAIN_ID, tier: "extended", lagBlocks: 1_200, status: "full" },
+    { chainId: ETHEREUM_CHAIN_ID, tier: "extended", lagBlocks: 1_201, status: "lagging" },
+    { chainId: "arbitrum", tier: "extended", lagBlocks: 57_600, status: "full" },
+    { chainId: "arbitrum", tier: "extended", lagBlocks: 57_601, status: "lagging" },
+  ])("judges a $tier $chainId $lagBlocks-block coverage lag by its lane cadence", ({ chainId, tier, lagBlocks, status }) => {
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === chainId && (entry.tier ?? "critical") === tier);
     expect(config).toBeDefined();
     const nowSec = 200 * DAY_SECONDS;
     const head = config!.startBlock + 1_000_000;
@@ -521,13 +528,22 @@ describe("buildCoinCoverageMap", () => {
     const coverage = buildCoinCoverageMap(
       nowSec,
       new Map(segments.map((segment) => [segment.config_key, [segment]])),
-      new Map([[`tron-${config!.contractAddress}`, head - lagBlocks]]),
-      new Map([["tron", head]]),
+      new Map([[`${chainId}-${config!.contractAddress}`, head - lagBlocks]]),
+      new Map([[chainId, head]]),
       null,
       [config!],
     );
 
     expect(coverage.get(config!.stablecoinId)).toMatchObject({ status, lagBlocks, has90dWindow: true });
+  });
+
+  it("adds extended-lane heads only within that lane's pass window", () => {
+    const extended = { startedAt: 100_000, status: "ok", chainHead: null, chainHeads: new Map([["base", 9], ["ethereum", 5]]) };
+    const critical = new Map([["ethereum", 7]]);
+    expect(withExtendedLaneHeads(100_000 + 14_400, critical, extended)).toEqual(new Map([["ethereum", 7], ["base", 9]]));
+    expect(withExtendedLaneHeads(100_000 + 14_401, critical, extended)).toEqual(critical);
+    // A future-dated run cannot certify current heads.
+    expect(withExtendedLaneHeads(100_000 - DAY_SECONDS, critical, extended)).toEqual(critical);
   });
 
   it("returns unknown for established coverage when chain-head metadata is missing", () => {

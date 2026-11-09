@@ -3,7 +3,7 @@ import { canonicalTronAddress } from "@shared/lib/tron-address";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
-import { buildCoinCoverageMap, readMintBurnCronSnapshot, readMintBurnWindowContext, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
+import { buildCoinCoverageMap, readMintBurnCronSnapshot, readMintBurnWindowContext, withExtendedLaneHeads, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
 import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
@@ -334,13 +334,10 @@ export async function getMintBurnReconciliation(
     configsByStablecoin.set(config.stablecoinId, configs);
   }
 
-  const freshHeads = new Map<string, number>();
-  for (const snapshot of [cronSnapshot, extendedSnapshot]) {
-    if (snapshot.startedAt == null || now - snapshot.startedAt > MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC) continue;
-    for (const [chainId, head] of snapshot.chainHeads) {
-      freshHeads.set(chainId, Math.max(freshHeads.get(chainId) ?? 0, head));
-    }
-  }
+  const criticalAgeSec = assessFreshnessTimestamp(now, cronSnapshot.startedAt).ageSeconds;
+  const criticalHeads = criticalAgeSec != null && criticalAgeSec <= MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC
+    ? cronSnapshot.chainHeads : new Map<string, number>();
+  const freshHeads = withExtendedLaneHeads(now, criticalHeads, extendedSnapshot);
   const conservationConfigs = diagnosticConfigs.filter((config) => getMintBurnConservationEligibility(config).supported);
   const coverageMap = buildCoinCoverageMap(now, scanSegments, lastBlocks, freshHeads, null, conservationConfigs);
 
@@ -354,9 +351,9 @@ export async function getMintBurnReconciliation(
         if (record.status !== "ok") return record;
         const snapshot = config.tier === "extended" ? extendedSnapshot : cronSnapshot;
         // The gate certifies the audited window, not the coin's current sync backlog. The row-level
-        // `coverageStatus` folds in "lagging" (a config's cursor more than coverageLagThresholdBlocks
-        // behind the head merged across both lanes), which the extended lane's budget deferral produces
-        // by design while the deferred config's own audited window was still covered. The record-scoped
+        // `coverageStatus` folds in "lagging" (a config's cursor more than its lane's coverageLagThresholdBlocks
+        // behind the head merged across both lanes), which an overrunning extended rotation can reach
+        // while the deferred config's own audited window was still covered. The record-scoped
         // clauses below decide the verdict; `coverageStatus` stays published on the row for display.
         const freshScan = snapshot.startedAt != null && snapshot.startedAt <= now
           && now - snapshot.startedAt <= maxAgeSec

@@ -29,7 +29,7 @@ Mint and burn events measure token creation and destruction, not investor intent
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.35`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.36`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -50,7 +50,7 @@ Extended placement precedes the `:22/:52` Safety Score fence to avoid overlappin
 
 ## Constants & Thresholds
 
-The contract registry owns per-config dust thresholds, start blocks and lane selection. Dust is measured in token-native units; configured overrides are necessary where unit economics differ. Established coverage becomes lagging against the public freshness cadence translated to chain blocks, capped at 10K blocks.
+The contract registry owns per-config dust thresholds, start blocks and lane selection. Dust is measured in token-native units; configured overrides are necessary where unit economics differ. Established coverage becomes lagging when a config's block progress trails its own lane's cadence translated to chain blocks: the public freshness cadence (1 hour) for critical configs, the extended lane's `MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC` full-pass window (4 hours) for extended configs (v6.36). Lag is measured against the newest finalized head from either lane; an extended-lane head counts only within that window.
 
 The [Scoring](#scoring) section owns pressure/activity/flight-to-quality parameters. The [operational budget table](https://github.com/TokenBrice/pharos-watch/blob/main/docs/worker-and-api-limits.md#mint-burn-and-producer-metadata-budgets) owns global/per-config request caps, scan limits and self-deadline; they are not additive per-contract allowances. [Sync Algorithm](#sync-algorithm) owns finalized scan admission.
 
