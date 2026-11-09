@@ -200,11 +200,14 @@ describe("syncMintBurn", () => {
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
-    // call order: init sync-state, event insert, hourly aggregation
-    vi.mocked(batchExecute)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(0);
+    // The paired insert/debt batch observes one new row and one ignored replay.
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      if (statements.some((statement) => (statement as unknown as { sql: string }).sql.includes("INSERT OR IGNORE INTO mint_burn_events"))) {
+        return (await batch(statements)).map((result, index) => ({ ...result, meta: { ...result.meta, changes: index === 1 ? 1 : 0 } }));
+      }
+      return batch(statements);
+    });
 
     const result = await new MintBurnRun(db, "alchemy-key").execute();
 
@@ -1112,8 +1115,8 @@ describe("syncMintBurn", () => {
     const invalidation = history.find(
       (entry) =>
         entry.sql.includes("DELETE FROM cache")
-        && entry.binds[0] === "mint-burn-flows:v6:"
-        && entry.binds[1] === "mint-burn-flows:v6:\uffff",
+        && entry.binds[0] === "mint-burn-flows:v7:"
+        && entry.binds[1] === "mint-burn-flows:v7:\uffff",
     );
     expect(invalidation).toBeDefined();
   });
@@ -1121,8 +1124,8 @@ describe("syncMintBurn", () => {
   it("keeps the published aggregate gauge cache row when the extended lane invalidates", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
-    const aggregateKey = "mint-burn-flows:v6:aggregate:24";
-    const coinKey = "mint-burn-flows:v6:coin:usdt-tether:24";
+    const aggregateKey = "mint-burn-flows:v7:aggregate:24";
+    const coinKey = "mint-burn-flows:v7:coin:usdt-tether:24";
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
     insert.run(aggregateKey, Math.floor(Date.now() / 1000));
     insert.run(coinKey, Math.floor(Date.now() / 1000));

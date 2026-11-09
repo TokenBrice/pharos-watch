@@ -142,14 +142,14 @@ function GaugeStatusChips({
         <OpsStatusChip label="Not rated" reasonCodes={["gauge-score-null"]}>
           <p>
             No weighted coin has a pressure shift this window. A coin scores with 7 days of baseline history, at
-            least $50K of 24h flow and a fully valued window.
+            least $50K of 24h flow, complete classification and fully valued window and baseline.
           </p>
         </OpsStatusChip>
       ) : null}
       {model.bandUnsettled ? (
         <OpsStatusChip label="Band unsettled" reasonCodes={["band-not-robust-to-withheld-weight"]}>
           <p>
-            Weight withheld for valuation could carry the full-cohort score across a band edge, so no band is
+            Weight withheld for incomplete flow inputs could carry the full-cohort score across a band edge, so no band is
             claimed.
           </p>
           <p className="text-muted-foreground">
@@ -160,9 +160,9 @@ function GaugeStatusChips({
         </OpsStatusChip>
       ) : null}
       {withheld > 0 ? (
-        <OpsStatusChip label="Partial valuation" reasonCodes={["partial-valuation-inputs"]}>
+        <OpsStatusChip label="Incomplete flow inputs" reasonCodes={["partial-valuation-inputs"]}>
           <p>
-            {withheld} weighted {withheld === 1 ? "coin has" : "coins have"} unpriced events in the 24h window or
+            {withheld} weighted {withheld === 1 ? "coin has" : "coins have"} incomplete classification or valuation in the 24h window or
             baseline, so {withheld === 1 ? "its pressure is" : "their pressure is"} withheld and the gauge re-weights
             over the {scoredCoins} scored {scoredCoins === 1 ? "coin" : "coins"}.
           </p>
@@ -204,7 +204,11 @@ function GaugeStatusChips({
             ? "A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld."
             : gauge.flightToQualityReason === "flow-window-unavailable"
               ? "An incomplete 24h scan window could change the flight-to-quality verdict, so none is published."
-              : "Missing valuation could change the flight-to-quality verdict, so none is published."}</p>
+              : gauge.flightToQualityReason === "classification-unresolved"
+                ? "Events awaiting classification review could change the flight-to-quality verdict, so none is published."
+                : gauge.flightToQualityReason === "classification-unknown"
+                  ? "Historical classification completeness is unknown, so no flight-to-quality verdict is published."
+                  : "Missing valuation could change the flight-to-quality verdict, so none is published."}</p>
         </OpsStatusChip>
       ) : null}
       {/* Degraded reads (source advisories, failed refreshes, catch-up) are operator signal, not chips. */}
@@ -339,6 +343,8 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
               value={
                 <FlowVolumeValue
                   valueUsd={aggregate.mintVolumeUsd}
+                  classificationCompleteness={aggregate.mintClassificationCompleteness}
+                  unresolvedEventCount={aggregate.unresolvedMintEventCount}
                   completeness={aggregate.mintCompleteness}
                   unpricedEventCount={aggregate.unpricedMintEventCount}
                   scanComplete={aggregate.scanComplete}
@@ -351,6 +357,8 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
               value={
                 <FlowVolumeValue
                   valueUsd={aggregate.burnVolumeUsd}
+                  classificationCompleteness={aggregate.burnClassificationCompleteness}
+                  unresolvedEventCount={aggregate.unresolvedBurnEventCount}
                   completeness={aggregate.burnCompleteness}
                   unpricedEventCount={aggregate.unpricedBurnEventCount}
                   scanComplete={aggregate.scanComplete}

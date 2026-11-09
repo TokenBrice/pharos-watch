@@ -161,6 +161,7 @@ index	idx_mbe_symbol_ts
 index	idx_mbh_chain_coin_hour
 index	idx_mbh_chain_hour_coin
 index	idx_mbh_coin
+index	idx_mbh_completeness_unrecorded
 index	idx_mbh_ts
 index	idx_mbh_valuation_unrecorded
 index	idx_onchain_supply_updated

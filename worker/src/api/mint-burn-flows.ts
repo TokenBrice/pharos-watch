@@ -23,6 +23,7 @@ import {
   resolveMintBurnValuation,
   summarizeMintBurnValuation,
 } from "@shared/lib/mint-burn-valuation";
+import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../lib/mint-burn-hourly-valuation";
 import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
 import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
@@ -165,11 +166,12 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
     .map(([chainId, aggregate]) => {
       const valuation = summarizeMintBurnValuation(aggregate.valuation).completeness;
+      const classification = summarizeMintBurnClassification(aggregate.classification);
       const scanCoverage = data.partialChainIds.has(chainId) ? mintBurnScanWindow(false) : mintBurnWindowCoverage(
         data.configs.filter((config) => config.chain.chainId === chainId),
         data.scanSegments, data.legacy, data.windowEnd - 24 * 3600, data.windowEnd, data.watermark,
       );
-      return { chainId, netFlow24hUsd: !scanCoverage.complete || valuation === "partial" ? null : aggregate.netFlow, valuation, scanCoverage };
+      return { chainId, netFlow24hUsd: !scanCoverage.complete || valuation === "partial" || classification.completeness !== "complete" ? null : aggregate.netFlow, valuation, classification, scanCoverage };
     })
     .sort((a, b) => {
       if (a.netFlow24hUsd === null || b.netFlow24hUsd === null) {
@@ -336,6 +338,7 @@ async function reconcileCachedAggregateSafetyResponse(
           knownNetUsd: coin.netFlow24hUsd,
           valuation: resolveMintBurnValuation(coin.valuation?.window24h),
           window24hComplete: coin.coverage?.windows?.window24h.complete ?? null,
+          classification: coin.classification?.window24h,
         });
       }
       // A malformed cached publication proves no admission scope: no coin is
@@ -415,7 +418,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB),
     ]);
 
-    const rows = (snapshot[0].results ?? []) as HourlyRow[];
+    const rows = ((snapshot[0].results ?? []) as HourlyRow[]).map((row) => ({ ...row, stablecoin_id: stablecoinId }));
     const scanSegments = decodeMintBurnScanCoverage(snapshot[1] as D1Result<MintBurnScanSegment>);
     const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp;
     const freshnessLookupWarning =
@@ -432,6 +435,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     // Signed nets of a partial window are unavailable; volumes stay known subtotals.
     const chains = [...chainMap.entries()].map(([chainId, v]) => {
       const valuation = summarizeMintBurnValuation(v.valuation);
+      const classification = summarizeMintBurnClassification(v.classification);
       const chainScanCoverage = mintBurnWindowCoverage(
         configs.filter((config) => config.chain.chainId === chainId), scanSegments, context.legacy, window.start, window.end, context.watermark,
       );
@@ -441,8 +445,9 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
         burnVolumeUsd: v.burnVolume,
         mintCount: v.mintCount,
         burnCount: v.burnCount,
-        netFlowUsd: held || !chainScanCoverage.complete || valuation.completeness === "partial" ? null : v.netFlow,
+        netFlowUsd: held || !chainScanCoverage.complete || classification.completeness !== "complete" || valuation.completeness === "partial" ? null : v.netFlow,
         valuation,
+        classification,
         scanCoverage: chainScanCoverage,
       };
     });
@@ -456,16 +461,19 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     let totalMintCount = 0;
     let totalBurnCount = 0;
     const totalValuation = emptyMintBurnValuationTally();
+    const totalClassification = emptyMintBurnClassificationTally();
     for (const c of chainMap.values()) {
       totalMint += c.mintVolume;
       totalBurn += c.burnVolume;
       totalMintCount += c.mintCount;
       totalBurnCount += c.burnCount;
       addMintBurnValuationTally(totalValuation, c.valuation);
+      addMintBurnClassificationTally(totalClassification, c.classification);
     }
 
     const updatedAt = resolveFlowUpdatedAt(rows, nowSec);
     const valuation = summarizeMintBurnValuation(totalValuation);
+    const classification = summarizeMintBurnClassification(totalClassification);
 
     const body = {
       stablecoinId,
@@ -474,12 +482,13 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
         legs: context.publication.legs.filter((leg) => leg.stablecoinId === stablecoinId) }),
       mintVolumeUsd: totalMint,
       burnVolumeUsd: totalBurn,
-      netFlowUsd: held || !scanCoverage.complete || valuation.completeness === "partial" ? null : totalMint - totalBurn,
+      netFlowUsd: held || !scanCoverage.complete || classification.completeness !== "complete" || valuation.completeness === "partial" ? null : totalMint - totalBurn,
       mintCount: totalMintCount,
       burnCount: totalBurnCount,
       chains,
       hourly,
       valuation,
+      classification,
       scanCoverage: context.partialCoinIds.has(stablecoinId) ? mintBurnScanWindow(false) : scanCoverage,
       totalsSemantics: "observed-subtotals",
       updatedAt,

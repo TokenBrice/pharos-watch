@@ -194,7 +194,7 @@ describe("handleMintBurnEvents", () => {
 
   it.each([
     ["scope=counted", ["priced", "unpriced", "effective"]],
-    ["minAmount=1000000", ["priced", "atomic", "bridge", "effective"]],
+    ["minAmount=1000000", ["priced", "atomic", "bridge", "effective", "mint-review"]],
     ["scope=counted&minAmount=1000000", ["priced", "effective"]],
   ])("keeps count and selection aligned for %s", async (query, expected) => {
     const db = eventDb([
@@ -204,6 +204,7 @@ describe("handleMintBurnEvents", () => {
       makeMintBurnRow({ id: "bridge", amount_usd: 2_000_000, direction: "burn", burn_type: "bridge_burn" }),
       makeMintBurnRow({ id: "effective", amount_usd: 2_000_000, direction: "burn", burn_type: "effective_burn" }),
       makeMintBurnRow({ id: "small", amount_usd: 999_999, flow_type: "bridge_transfer" }),
+      makeMintBurnRow({ id: "mint-review", amount_usd: 2_000_000, burn_type: "review_required" }),
     ]);
     const body = await readJsonResponse<{ events: { id: string }[]; total: number }>(
       await handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&${query}`)), 200);

@@ -13,7 +13,7 @@ export const MINT_BURN_TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 export const USDT_CONTRACT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 
-/** `INSERT OR IGNORE INTO mint_burn_events` bind tuples seen by `batchExecute`. */
+/** `INSERT OR IGNORE INTO mint_burn_events` bind tuples seen by either batch path. */
 export const mintBurnEventInsertBinds: unknown[][] = [];
 
 // --- Module-level mocks shared by every syncMintBurn suite ---
@@ -161,7 +161,7 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
   const runStateRow = runState
     ? { degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null }
     : null;
-  return mockD1([
+  const db = mockD1([
     { match: "mint_burn_admission", rows: admissionRows(options.admittedConfigs ?? []) },
     { match: "mint_burn_publication_policy", rows: [] },
     { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
@@ -188,6 +188,15 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
     { match: "INSERT OR REPLACE INTO mint_burn_config_deferral", rows: [] },
     ...(options.cacheRows ? ([{ match: "cache", rows: options.cacheRows }] satisfies MockTableConfig[]) : []),
   ]);
+  const batch = db.batch.bind(db);
+  db.batch = async <T = unknown>(statements: D1PreparedStatement[]) => {
+    for (const statement of statements) {
+      const { sql = "", boundValues = [] } = statement as unknown as { sql?: string; boundValues?: unknown[] };
+      if (sql.includes("INSERT OR IGNORE INTO mint_burn_events")) mintBurnEventInsertBinds.push([...boundValues]);
+    }
+    return batch<T>(statements);
+  };
+  return db;
 }
 
 /** A zero-address `Transfer` log (a mint) for `contract`. */

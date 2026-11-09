@@ -20,7 +20,7 @@ const SEC = 1_700_000_000;
 beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(SEC * 1000));
 const RECONCILIATION_SINCE = SEC - SOURCE_RECONCILIATION_LOOKBACK_SEC;
 
-const MATCH_FETCH_FLOWS = "amount_usd >= ?";
+const MATCH_FETCH_FLOWS = "mint_burn_events.amount_usd >= 10000000";
 const NO_CHANGED_CLAIMS: MockTableConfig = { match: "JOIN tape_events AS t", rows: [] };
 
 function withRows(rows: Record<string, unknown>[]): MockTableConfig[] {
@@ -113,6 +113,9 @@ describe("mint_burn projector", () => {
       makeFlow({ id: "bridge", amount_usd: 100_000_000, flow_type: "bridge_transfer" }),
       makeFlow({ id: "review", amount_usd: 100_000_000, direction: "burn", burn_type: "review_required" }),
       makeFlow({ id: "unpriced", amount_usd: null }),
+      makeFlow({ id: "mint-review", burn_type: "review_required" }),
+      makeFlow({ id: "burn-null", direction: "burn", burn_type: null }),
+      makeFlow({ id: "burn-unknown", direction: "burn", burn_type: "legacy-unknown" }),
     ];
     for (const row of rows) {
       sqlite.prepare(`INSERT INTO mint_burn_events
@@ -154,10 +157,10 @@ describe("mint_burn projector", () => {
     insert.run("newer-priced", "mint", 20_000_000, SEC, null);
 
     expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC });
-    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("amount_usd >= ?"));
+    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes(MATCH_FETCH_FLOWS));
     expect(sourceSql).toBeDefined();
     const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sourceSql!}`)
-      .all(RECONCILIATION_SINCE, 10_000_000, JSON.stringify([["usdt-tether", "ethereum"]]), "[]", 500)
+      .all(RECONCILIATION_SINCE, JSON.stringify([["usdt-tether", "ethereum"]]), "[]", 500)
       .map((row) => row.detail).join("\n");
     expect(plan).toContain("idx_mbe2_ts");
     expect(plan).toContain("timestamp>?");

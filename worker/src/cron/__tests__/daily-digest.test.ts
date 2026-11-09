@@ -784,7 +784,7 @@ describe("market and risk collectors", () => {
     const coins = base.coins as Record<string, unknown>[];
     // Mixed USDC: unpriced mint plus priced burns; USDT's baseline is partial.
     const mixed = publishedGaugePayload({
-      coins: [{ ...coins[0], valuation: { ...(coins[0].valuation as object), baseline: "partial" } }, { ...coins[1], valuation: partialMint }, coins[2]],
+      coins: [{ ...coins[0], pressureShiftScore: null, valuation: { ...(coins[0].valuation as object), baseline: "partial" } }, { ...coins[1], valuation: partialMint }, coins[2]],
       chains: [{ chainId: "ethereum", netFlow24hUsd: 150_000_000, valuation: "partial" }, { chainId: "arbitrum", netFlow24hUsd: -3_000_000, valuation: "complete" }],
     });
     const result = await collectMintBurnFlows(ctxFor([publishedGaugeTable({ value: JSON.stringify(mixed) })]));
@@ -821,15 +821,15 @@ describe("market and risk collectors", () => {
     const robustStress = await withWithheld({ score: -60, partialValuationInputs: 1, partialValuationMcapUsd: 1, scoredMcapUsd: 100 });
     expect(robustStress.value?.gaugeScore).toBe(-60);
 
-    // A publication predating completeness is unknown: nets and pressure are not restated.
+    // A scored publication predating baseline completeness is rejected, not reused as a gauge.
     const legacy = publishedGaugePayload({
       gauge: { score: PUBLISHED_GAUGE_SCORE, band: "HEALTHY", flightToQuality: false, flightIntensity: 0 },
       coins: coins.map(({ valuation: _valuation, ...coin }) => coin),
       chains: [{ chainId: "ethereum", netFlow24hUsd: 150_000_000 }],
     });
     const legacyResult = await collectMintBurnFlows(ctxFor([publishedGaugeTable({ value: JSON.stringify(legacy) })]));
-    expect(legacyResult.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, topPressure: [], topChains: [] });
-    expect(legacyResult.qualityReasons).toContain("mint-burn-valuation-unknown");
+    expect(legacyResult.value).toBeUndefined();
+    expect(legacyResult.degradedReasons).toContain("mint-burn-gauge-malformed");
   });
   const activeRows = { usdc: { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: -100, started_at: 0 }, usdt: { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -500, peak_price: 0.95, peg_reference: 1, started_at: 0 } };
   it.each([["sorts and suppresses", [{ ...activeRows.usdc }, { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: 0 }], { first: "USDC", suppressed: true }], ["keeps critical", [activeRows.usdt, { ...activeRows.usdc, peak_deviation_bps: -5200 }, { ...activeRows.usdc, stablecoin_id: "dai-makerdao", symbol: "DAI2", peak_deviation_bps: 150 }, { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: 0 }], { count: 4, unsuppressed: true }], ["uses peak", [activeRows.usdc], { bps: -100 }], ["filters frozen", [{ ...activeRows.usdc, stablecoin_id: "usr-resolv", symbol: "USR", peak_deviation_bps: -9025 }, activeRows.usdc], { count: 1 }], ["uses stale peak", [{ ...activeRows.usdc, peak_deviation_bps: -3000, peak_price: 0.7, peg_reference: 1 }], { bps: -3000, basis: "peak-fallback" }]] as const)("%s", async (_label, rows, expected) => {

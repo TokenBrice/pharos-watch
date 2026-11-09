@@ -287,6 +287,8 @@ describe("buildBaselineMap", () => {
     unpriced_burn_event_count: 0,
     unknown_mint_hours: 0,
     unknown_burn_hours: 0,
+    unresolved_mint_event_count: 0, unresolved_burn_event_count: 0,
+    classification_unknown_mint_hours: 0, classification_unknown_burn_hours: 0,
     ...tally,
   });
 
@@ -303,7 +305,7 @@ describe("buildBaselineMap", () => {
       ],
     );
 
-    expect(baseline.get("usdt-tether")).toEqual({
+    expect(baseline.get("usdt-tether")).toMatchObject({
       avgNet: 5,
       avgAbs: 25,
       dataDays: 3,
@@ -330,7 +332,7 @@ describe("buildBaselineMap", () => {
     );
 
     // sumNet = 60 + 20 = 80, sumAbs = 260 + 30 = 290, dataDays = 2
-    expect(baseline.get("usdc-circle")).toEqual({
+    expect(baseline.get("usdc-circle")).toMatchObject({
       avgNet: 40,
       avgAbs: 145,
       dataDays: 2,
@@ -354,7 +356,7 @@ describe("buildBaselineMap", () => {
 
     expect(partial.get("partial-coin")?.valuation).toBe("partial");
     expect(unknown.get("legacy-coin")?.valuation).toBe("unknown");
-    expect(todayOnly.get("today-coin")).toEqual({ avgNet: 0, avgAbs: 0, dataDays: 3, valuation: "complete" });
+    expect(todayOnly.get("today-coin")).toMatchObject({ avgNet: 0, avgAbs: 0, dataDays: 3, valuation: "complete" });
   });
 
   it("produces no entry when coin is first seen today (firstDayTs > baselineEndDayTs)", () => {
@@ -387,7 +389,7 @@ describe("buildBaselineMap", () => {
       ],
     );
 
-    expect(baseline.get("old-coin")).toEqual({
+    expect(baseline.get("old-coin")).toMatchObject({
       avgNet: 10,
       avgAbs: 10,
       dataDays: 30,

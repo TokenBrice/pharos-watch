@@ -123,12 +123,23 @@ function mintBurnRepairableEventSql(frontiersSql: string, pendingProtectionSql: 
 
 /**
  * Deletable event: retention-eligible and its hour is already aggregated. Bind
- * order: cutoff, MINT_BURN_TAPE_CURSOR_KEY. Shared by the delete and the
+ * order: cutoff, MINT_BURN_TAPE_CURSOR_KEY, hourly cutoff. Shared by the delete and the
  * oldest-eligible backlog probe.
  */
 function mintBurnAggregatedEventSql(frontiersSql: string, pendingProtectionSql: string): string {
   return `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
   AND ${mintBurnFinalHourSql(frontiersSql, pendingProtectionSql)}
+  AND ((event.timestamp / 3600) * 3600 < ? OR NOT EXISTS (
+    SELECT 1 FROM mint_burn_events sibling
+     WHERE sibling.stablecoin_id = event.stablecoin_id
+       AND sibling.chain_id = event.chain_id
+       AND sibling.timestamp >= (event.timestamp / 3600) * 3600
+       AND sibling.timestamp < ((event.timestamp / 3600) * 3600) + 3600
+       AND sibling.flow_type = 'standard'
+       AND ((sibling.direction = 'mint' AND sibling.burn_type = 'review_required')
+         OR (sibling.direction = 'burn'
+           AND (sibling.burn_type IS NULL OR sibling.burn_type NOT IN ('effective_burn', 'bridge_burn'))))
+  ))
   AND EXISTS (
     SELECT 1
       FROM mint_burn_hourly hourly
@@ -310,7 +321,7 @@ async function pruneEventRows(
            ORDER BY event.timestamp ASC
            LIMIT ?
         )`,
-        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, limit],
+        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC, limit],
         batchLimit,
         runLimit,
       },
@@ -324,7 +335,7 @@ async function pruneEventRows(
             WHERE ${mintBurnAggregatedEventSql(frontiersSql, pendingProtectionSql)}
             ORDER BY event.timestamp ASC
             LIMIT 1`,
-        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY],
+        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC],
       },
     },
   });

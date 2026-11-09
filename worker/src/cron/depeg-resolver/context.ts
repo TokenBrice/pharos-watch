@@ -28,6 +28,9 @@ import {
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { tallyMintBurnHourlyBucket, type MintBurnValuationTally } from "@shared/lib/mint-burn-valuation";
+import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification, tallyMintBurnClassificationBucket } from "@shared/lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../../lib/mint-burn-classification";
+import { isMintBurnClassificationHeld } from "../../lib/mint-burn-classification-holds";
 import {
   loadRedemptionBackstopLiveSignalRows,
   RedemptionBackstopSnapshotUnavailableError,
@@ -420,6 +423,7 @@ export async function loadDdrContext(
 
   const mintBurnCoinIds = activeCoinIds.filter((id) => MINT_BURN_COVERED_COIN_IDS.has(id));
   let scanConfigs: typeof MINT_BURN_CONFIGS = [];
+  let partialMintBurnCoinIds = new Set<string>();
   let scanSegments = new Map<string, MintBurnScanSegment[]>();
   const scanFrom = Math.floor(Math.min(...active.map((event) => event.startedAt)) / 3600) * 3600 - 7 * DAY;
   const scanTo = Math.floor(Math.max(...active.map((event) => event.startedAt)) / 3600) * 3600;
@@ -431,17 +435,21 @@ export async function loadDdrContext(
     burn_count: number;
     mint_unpriced_event_count: number | null;
     burn_unpriced_event_count: number | null;
+    mint_unresolved_event_count: number | null;
+    burn_unresolved_event_count: number | null;
   };
   const mintBurnResult = await queryRows<MintBurnStoredRow>("mint_burn_hourly", async () => {
     if (mintBurnCoinIds.length === 0) return { results: [] };
     const scope = await readMintBurnWindowContext(db, nowSec,
       MINT_BURN_CONFIGS.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId)));
+    partialMintBurnCoinIds = scope.partialCoinIds;
     scanConfigs = scope.configs.filter((config) => mintBurnCoinIds.includes(config.stablecoinId));
     if (scanConfigs.length === 0) return { results: [] };
     const snapshot = await db.batch([
       db.prepare(
         `SELECT stablecoin_id, hour_ts, net_flow_usd, mint_count, burn_count,
-                mint_unpriced_event_count, burn_unpriced_event_count FROM mint_burn_hourly
+                mint_unpriced_event_count, burn_unpriced_event_count,
+                mint_unresolved_event_count, burn_unresolved_event_count FROM mint_burn_hourly
          WHERE (stablecoin_id, chain_id) IN (
            SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
          ) AND hour_ts >= ? AND hour_ts < ?
@@ -455,6 +463,16 @@ export async function loadDdrContext(
   const scanCoverageError = mintBurnResult.error;
   const mintBurnCoveredEventIds = new Set(active.filter((event) => {
     const end = Math.floor(event.startedAt / 3600) * 3600;
+    if (partialMintBurnCoinIds.has(event.stablecoinId) || isMintBurnClassificationHeld(event.stablecoinId)) return false;
+    const classification = emptyMintBurnClassificationTally();
+    for (const row of mintBurnResult.rows) {
+      if (row.stablecoin_id !== event.stablecoinId || row.hour_ts < end - 7 * DAY || row.hour_ts >= end) continue;
+      addMintBurnClassificationTally(classification, tallyMintBurnClassificationBucket({
+        unresolvedMintEventCount: row.mint_unresolved_event_count,
+        unresolvedBurnEventCount: row.burn_unresolved_event_count,
+      }, hasMintBurnClassificationReview(event.stablecoinId)));
+    }
+    if (summarizeMintBurnClassification(classification).completeness !== "complete") return false;
     return mintBurnScanCoverageAdmits(scanConfigs.filter((config) => config.stablecoinId === event.stablecoinId),
       scanSegments, end - 7 * DAY, end);
   }).map((event) => event.id));

@@ -86,6 +86,7 @@
 | 0296     | `0296_mint_burn_roundtrip_sweep_index.sql`                  | Add the group-ordered covering index the post-run roundtrip sweep streams instead of a temporary B-tree over every retained standard event; no row mutation. |
 | 0297     | `0297_daily_digest_read_numbering_index.sql`                | Cover the public digest archive, promo and edition-count passes so they number history from generated_at/rowid/digest_meta instead of every wide digest body; the body is joined by rowid for the returned page only; no row mutation. |
 | 0298     | `0298_producer_history_retention_index.sql`                | Add a partial non-calendar completion-clock index for per-window producer-history retention; reuse existing calendar/kind indexes and preserve all rows and older Worker reads/writes. |
+| 0299     | `0299_mint_burn_hourly_classification_completeness.sql`       | Add nullable per-direction unresolved-classification counts to hourly flows and a bounded completeness-rebuild index; historical NULL hours remain unknown until rebuilt from complete retained raw hours. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -540,6 +541,8 @@ Historical drops dated August 10 are not indefinitely recoverable through their 
 - `0297_daily_digest_read_numbering_index.sql`: restore the prior Worker for a code rollback; keep the additive index, which only changes the digest reads' plan and is inert to older Workers. Drop it only in a later measured cleanup migration, never as part of a Worker rollback.
 
 ## Rollback Procedure
+
+`0299_mint_burn_hourly_classification_completeness.sql` applies before the Worker that reads the new counts. Older named-column writers remain compatible and leave rewritten counts NULL. Keep the nullable columns and index on Worker rollback; no migration backfill or reverse mutation is required. Retain the verified pre-window Time Travel bookmark, ledger and Worker versions; observe the first classified-hour write, bounded retained rebuild and protected-hour retention separately from schema success. Pruned historical hours stay NULL. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
 If a deployed migration corrupts data:
 

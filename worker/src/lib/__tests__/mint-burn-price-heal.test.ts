@@ -197,10 +197,13 @@ describe("healNullPrices", () => {
       insertCache(sqlite, "usdc-circle", NOW - 60);
       insertEvent(sqlite, "e1", "usdc-circle", NOW - 120);
       sqlite.prepare("UPDATE mint_burn_events SET price_repair_status = 'pending_aggregate'").run();
+      insertEvent(sqlite, "review", "usdc-circle", NOW - 119);
+      sqlite.prepare(`UPDATE mint_burn_events SET direction = 'burn', burn_type = 'review_required', amount_usd = 100
+        WHERE id = 'review'`).run();
       const hour = Math.floor((NOW - 120) / 3600) * 3600;
       sqlite.prepare(`INSERT INTO mint_burn_hourly
-        (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd)
-        VALUES ('usdc-circle', 'ethereum', ?, 1, 7)`).run(hour);
+        (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, mint_unresolved_event_count, burn_unresolved_event_count)
+        VALUES ('usdc-circle', 'ethereum', ?, 1, 7, 0, 1)`).run(hour);
       const healed = await healNullPrices(db, NOW);
       const failingDb = createSqliteD1(sqlite, { onRun(sql) {
         if (sql.includes("DELETE FROM mint_burn_dirty_hours")) throw new Error("injected debt-clear failure");
@@ -212,8 +215,8 @@ describe("healNullPrices", () => {
         .toEqual({ amount_usd: 101, price_repair_status: "pending_aggregate" });
       expect(sqlite.prepare("SELECT hour_ts FROM mint_burn_dirty_hours").all()).toEqual([{ hour_ts: hour }]);
       await rebuildMintBurnMaterializationHours(db, healed.affectedHours);
-      expect(sqlite.prepare("SELECT mint_volume_usd, mint_unpriced_event_count FROM mint_burn_hourly").get())
-        .toEqual({ mint_volume_usd: 101, mint_unpriced_event_count: 0 });
+      expect(sqlite.prepare("SELECT mint_volume_usd, mint_unpriced_event_count, mint_unresolved_event_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
+        .toEqual({ mint_volume_usd: 101, mint_unpriced_event_count: 0, mint_unresolved_event_count: 0, burn_unresolved_event_count: 1 });
       expect(sqlite.prepare("SELECT price_repair_status FROM mint_burn_events").get())
         .toEqual({ price_repair_status: "recovered" });
       expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);

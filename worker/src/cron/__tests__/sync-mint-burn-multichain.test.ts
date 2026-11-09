@@ -467,7 +467,10 @@ describe("syncMintBurn — multi-chain invariant", () => {
     expect(sqlite.prepare("SELECT config_key FROM mint_burn_scan_coverage").all()).toEqual([{ config_key: admittedKey }]);
     expect(sqlite.prepare("SELECT chain_id FROM mint_burn_events ORDER BY chain_id").all())
       .toEqual([{ chain_id: "arbitrum" }, { chain_id: "ethereum" }]);
-    expect(sqlite.prepare("SELECT chain_id FROM mint_burn_dirty_hours").all()).toEqual([{ chain_id: "arbitrum" }]);
+    // A successful aggregate rebuild settles its debt even if the following
+    // cursor/proof commit fails; the pending frontier still protects raw rows.
+    expect(sqlite.prepare("SELECT chain_id FROM mint_burn_dirty_hours").all())
+      .toEqual(failure === "recalc" ? [{ chain_id: "arbitrum" }] : []);
     expect(sqlite.prepare("SELECT mint_count FROM mint_burn_hourly WHERE chain_id = 'ethereum'").get()).toEqual({ mint_count: 1 });
 
     if (failure === "cursor-commit") sqlite.exec("DROP TRIGGER fail_pending_proof");

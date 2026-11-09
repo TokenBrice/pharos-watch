@@ -353,6 +353,9 @@ describe("historical mint/burn price repair", () => {
         mint_volume_usd: 99.7,
         net_flow_usd: 99.7,
       });
+      expect(db.sqlite.prepare(`SELECT mint_unresolved_event_count, burn_unresolved_event_count
+        FROM mint_burn_hourly WHERE hour_ts = ?`).get(repairedHour))
+        .toEqual({ mint_unresolved_event_count: null, burn_unresolved_event_count: null });
       // The untouched legacy bucket keeps unrecorded (unknown) coverage; nothing defaults it to complete.
       expect(
         db.sqlite
@@ -399,6 +402,12 @@ describe("historical mint/burn price repair", () => {
     try {
       const timestamp = 1_800_000_000;
       insertEvent(db, { id: "event-1", stablecoinId: "usdt-tether", timestamp });
+      insertEvent(db, { id: "review-burn", stablecoinId: "usdt-tether", timestamp: timestamp + 1 });
+      db.sqlite.exec(`UPDATE mint_burn_events SET direction = 'burn', burn_type = 'review_required', amount_usd = 100
+        WHERE id = 'review-burn'`);
+      db.sqlite.prepare(`INSERT INTO mint_burn_hourly
+        (stablecoin_id, chain_id, hour_ts, mint_unresolved_event_count, burn_unresolved_event_count)
+        VALUES ('usdt-tether', 'ethereum', ?, 0, 1)`).run(Math.floor(timestamp / 3600) * 3600);
       // The operator backfill facade rejects RETURNING writes in its batches.
       const prepare = db.prepare.bind(db);
       db.prepare = ((sql: string) => {
@@ -417,6 +426,8 @@ describe("historical mint/burn price repair", () => {
         aggregateCoinsRebuilt: ["usdt-tether"],
         aggregateVerificationPassed: true,
       });
+      expect(db.sqlite.prepare("SELECT mint_unresolved_event_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
+        .toEqual({ mint_unresolved_event_count: 0, burn_unresolved_event_count: 1 });
     } finally {
       db.close();
     }

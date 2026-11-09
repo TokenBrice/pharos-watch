@@ -20,7 +20,7 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 import { batchExecute } from "../d1-primitives";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { readMintBurnWindowContext } from "../mint-burn-flows-service";
-import { MINT_BURN_TAPE_NOTICE_USD as NOTICE_USD, mintBurnTapeClaimStaleSql, mintBurnTapeEligibleSql } from "../mint-burn-tape-claim";
+import { mintBurnTapeClaimStaleSql, mintBurnTapeEligibleSql } from "../mint-burn-tape-claim";
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
@@ -69,17 +69,14 @@ async function fetchLargeFlows(
   admissionFloorsJson: string,
 ): Promise<MintBurnSourceRow[]> {
   // Bridge transfers and reviewed protocol-internal movements are not
-  // economic mint/burn — exclude them. `review_required` burns are still
-  // being classified; emit only confirmed burn types so the tape doesn't
-  // surface ambiguous rows.
+  // economic mint/burn. Eligibility also rejects unresolved rows on either side.
   return fetchRowsWithTieExpansion<MintBurnSourceRow>(db, {
     selectSql: `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
                       counterparty, timestamp, flow_type, burn_type`,
     fromSql: "mint_burn_events INDEXED BY idx_mbe2_ts",
     timeColumn: "timestamp",
     trailingWhereSql: `
-                   AND amount_usd IS NOT NULL
-                   AND amount_usd >= ?
+                   AND ${mintBurnTapeEligibleSql("mint_burn_events")}
                    AND (stablecoin_id, chain_id) IN (
                      SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
                    )
@@ -89,15 +86,12 @@ async function fetchLargeFlows(
                        AND mint_burn_events.chain_id = json_extract(value, '$[1]')
                        AND mint_burn_events.timestamp < json_extract(value, '$[2]')
                    )
-                   AND (flow_type IS NULL OR flow_type NOT IN ('bridge_transfer', 'protocol_internal'))
-                   AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')
-                   AND direction IN ('mint', 'burn')
                    AND NOT EXISTS (
                      SELECT 1 FROM tape_events INDEXED BY idx_tape_source_key
                      WHERE source_table = 'mint_burn_events'
                        AND source_row_id = mint_burn_events.id AND transition = 'updated'
                    )`,
-    trailingBinds: [NOTICE_USD, scopedPairsJson, admissionFloorsJson],
+    trailingBinds: [scopedPairsJson, admissionFloorsJson],
     orderBySql: "timestamp ASC, id ASC",
     since,
     until,

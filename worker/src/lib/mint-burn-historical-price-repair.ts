@@ -631,6 +631,8 @@ async function verifyHourlyAggregateForHour(
            OR a.burn_count != e.burn_count
            OR a.mint_unpriced_event_count IS NOT e.mint_unpriced_event_count
            OR a.burn_unpriced_event_count IS NOT e.burn_unpriced_event_count
+           OR (a.mint_unresolved_event_count IS NOT NULL AND a.mint_unresolved_event_count IS NOT e.mint_unresolved_event_count)
+           OR (a.burn_unresolved_event_count IS NOT NULL AND a.burn_unresolved_event_count IS NOT e.burn_unresolved_event_count)
            OR ABS(a.mint_volume_usd - e.mint_volume_usd) > MAX(0.000001, ABS(e.mint_volume_usd) * 0.000000001)
            OR ABS(a.burn_volume_usd - e.burn_volume_usd) > MAX(0.000001, ABS(e.burn_volume_usd) * 0.000000001)
            OR ABS(a.net_flow_usd - e.net_flow_usd) > MAX(0.000001, ABS(e.net_flow_usd) * 0.000000001)`,

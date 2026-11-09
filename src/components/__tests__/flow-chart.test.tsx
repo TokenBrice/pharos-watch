@@ -119,6 +119,19 @@ describe("FlowChart", () => {
     expect(screen.getByText(/shown as breaks and excluded from rolling averages/i)).toBeTruthy();
   });
 
+  it("withholds classification-incomplete nets and qualifies only the affected gross side", () => {
+    const classification = { completeness: "partial" as const, mintCompleteness: "complete" as const,
+      burnCompleteness: "partial" as const, unresolvedMintEventCount: 0, unresolvedBurnEventCount: 1,
+      unavailableReason: "classification-unresolved" as const };
+    render(<FlowChart isLoading={false} hourly={[{
+      hourTs: 1_700_000_000, netFlowUsd: 20_000, mintVolumeUsd: 20_000, burnVolumeUsd: 0,
+      valuation: "complete", classification,
+    }]} />);
+    const row = screen.getAllByRole("row")[1];
+    const cells = within(row).getAllByRole("cell").map((cell) => cell.textContent);
+    expect(cells).toEqual(["$20K", "≥ $0", "—", "—", "Classification incomplete: signed net unavailable", "—"]);
+  });
+
   it("draws no net for a partial-valuation bucket and stops the cumulative line there", () => {
     chartState.hatchedFrom = [];
     chartState.stopDot = null;

@@ -167,7 +167,7 @@ describe("mint/burn retention", () => {
     expect(MINT_BURN_EVENT_RETENTION_SEC).toBeGreaterThan(7 * 24 * HOUR_SEC);
   });
 
-  it("protects every priced sibling of a dirty hour, then releases only rebuilt debt", async () => {
+  it("protects every priced sibling of dirty and unresolved hours until rebuilt or hourly expiry", async () => {
     const { sqlite, db } = setupDb();
     openDb = sqlite;
     const hour = hourFor(NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - 2 * HOUR_SEC);
@@ -185,6 +185,39 @@ describe("mint/burn retention", () => {
     expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly WHERE hour_ts = ?").get(hour))
       .toEqual({ mint_count: 2, mint_volume_usd: 2 });
     expect((await pruneMintBurnRetention(db, NOW_SEC)).eventRows.deletedRows).toBe(2);
+    expect(eventIds(sqlite)).toEqual([]);
+    sqlite.exec("DELETE FROM mint_burn_hourly");
+    const unresolvedStartHour = hour - 4 * HOUR_SEC;
+
+    for (const [index, direction, burnType] of [
+      [0, "burn", "review_required"], [1, "burn", null], [2, "burn", "unrecognized"], [3, "mint", "review_required"],
+    ] as const) {
+      const unresolvedHour = unresolvedStartHour + index * HOUR_SEC;
+      insertEvent(sqlite, { id: `unresolved-${index}`, timestamp: unresolvedHour + 1, withHourly: false });
+      insertEvent(sqlite, { id: `priced-sibling-${index}`, timestamp: unresolvedHour + 2, withHourly: false });
+      sqlite.prepare("UPDATE mint_burn_events SET direction = ?, burn_type = ? WHERE id = ?")
+        .run(direction, burnType, `unresolved-${index}`);
+    }
+    const retained = await pruneMintBurnRetention(db, NOW_SEC);
+    expect(retained.error).toBeNull();
+    expect(retained.aggregationRepair.repairedRows).toBe(4);
+    expect(retained.eventRows.deletedRows).toBe(0);
+    expect(sqlite.prepare(`SELECT mint_unresolved_event_count AS mints, burn_unresolved_event_count AS burns
+      FROM mint_burn_hourly ORDER BY hour_ts`).all()).toEqual([
+      { mints: 0, burns: 1 }, { mints: 0, burns: 1 }, { mints: 0, burns: 1 }, { mints: 1, burns: 0 },
+    ]);
+    for (let index = 0; index < 4; index++) {
+      sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', ?)")
+        .run(unresolvedStartHour + index * HOUR_SEC);
+    }
+    await drainMintBurnMaterializationDebt(db);
+    expect((await pruneMintBurnRetention(db, NOW_SEC)).eventRows.deletedRows).toBe(0);
+    expect(sqlite.prepare("SELECT SUM(mint_unresolved_event_count + burn_unresolved_event_count) AS unresolved FROM mint_burn_hourly").get())
+      .toEqual({ unresolved: 4 });
+    const expired = await pruneMintBurnRetention(db, NOW_SEC + MINT_BURN_HOURLY_RETENTION_SEC);
+    expect(expired.error).toBeNull();
+    expect(expired.eventRows.deletedRows).toBe(8);
+    expect(expired.hourlyRows.deletedRows).toBe(4);
     expect(eventIds(sqlite)).toEqual([]);
   });
 
@@ -260,6 +293,8 @@ describe("mint/burn retention", () => {
     expect(await drainMintBurnMaterializationDebt(db, { limit: 1 })).toBe(1);
     expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly WHERE hour_ts = ?").get(hour))
       .toEqual({ mint_count: 2, mint_volume_usd: 15 });
+    expect(sqlite.prepare("SELECT mint_unresolved_event_count, burn_unresolved_event_count FROM mint_burn_hourly WHERE hour_ts = ?").get(hour))
+      .toEqual({ mint_unresolved_event_count: null, burn_unresolved_event_count: null });
     expect((await pruneMintBurnRetention(db, NOW_SEC)).eventRows.deletedRows).toBe(2);
     expect(eventIds(sqlite)).toEqual(["legacy-1", "legacy-2", "sibling-1", "sibling-2"]);
     expect(await drainMintBurnMaterializationDebt(db, { limit: 1 })).toBe(1);

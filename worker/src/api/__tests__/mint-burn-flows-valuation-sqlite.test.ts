@@ -124,6 +124,54 @@ to_timestamp, finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 2,
     }
     expect(published).toBe(true);
   });
+  it("withholds generic unresolved classification independently of static holds and discloses its gauge weight", async () => {
+    const { db } = await provenFixture();
+    const id = "gho-aave";
+    const burn = event(id, "ethereum", "burn", NOW - 2 * HOUR + 60, 2_000_000);
+    burn.burn_type = "review_required";
+    burn.burn_review_reason = "supply-proof-context-unavailable";
+    await produce(db, [event(id, "ethereum", "mint", NOW - 2 * HOUR, 2_000_000), burn,
+      event(id, "ethereum", "mint", NOW - 10 * 86400, 1_000_000),
+      event("usdt-tether", "ethereum", "mint", NOW - HOUR, 100)]);
+    const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
+    const result = buildCoinSummaries(data, new Map([[id, 123]]), null);
+    const coin = result.coins.find((row) => row.stablecoinId === id)!;
+    expect(coin).toMatchObject({ netFlow24hUsd: null, netFlowDirection24h: null, pressureShiftScore: null,
+      has24hActivity: null, mintVolume24hUsd: 2_000_000, burnVolume24hUsd: 0, largestEvent24h: null,
+      classification: { window24h: { completeness: "partial", burnCompleteness: "partial",
+        unresolvedBurnEventCount: 1, unavailableReason: "classification-unresolved" } } });
+    expect(coin.valuation.netFlow7dBound).toBeNull();
+    expect(result).toMatchObject({ partialValuationInputs: 1, partialValuationMcapUsd: 123, scoredMcapUsd: 0 });
+    expect(result.coins.find((row) => row.stablecoinId === "usdt-tether")?.netFlow24hUsd).toBe(100);
+    const detail = MintBurnPerCoinResponseSchema.parse(await (await handleMintBurnFlows(db,
+      new URL(`https://api.test/api/mint-burn-flows?stablecoin=${id}`))).json());
+    expect(detail).toMatchObject({ netFlowUsd: null, classification: { unavailableReason: "classification-unresolved" } });
+    expect(detail.chains[0]).toMatchObject({ netFlowUsd: null, classification: { completeness: "partial" } });
+    expect(detail.hourly[0]).toMatchObject({ netFlowUsd: null, classification: { completeness: "partial" } });
+  });
+
+  it("distinguishes legacy classification capability and withholds unknown baselines and partial-scope bounds", async () => {
+    const { db, sqlite } = await provenFixture();
+    await produce(db, [event("gho-aave", "ethereum", "mint", NOW - HOUR, 100),
+      event("usdt-tether", "ethereum", "mint", NOW - HOUR, null),
+      event("usdt-tether", "ethereum", "burn", NOW - HOUR + 60, 100_000),
+      event("usdt-tether", "ethereum", "mint", NOW - 10 * 86400, 100_000)]);
+    sqlite.exec("UPDATE mint_burn_hourly SET mint_unresolved_event_count = NULL, burn_unresolved_event_count = NULL");
+    sqlite.prepare("UPDATE mint_burn_hourly SET mint_unpriced_event_count = NULL WHERE hour_ts < ?").run(NOW - 86400);
+    const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
+    const before = buildCoinSummaries(data, new Map([["usdt-tether", 100]]), null);
+    expect(before.coins.find((row) => row.stablecoinId === "gho-aave"))
+      .toMatchObject({ netFlow24hUsd: null, classification: { window24h: { unavailableReason: "classification-unknown" } } });
+    const usdt = before.coins.find((row) => row.stablecoinId === "usdt-tether")!;
+    expect(usdt).toMatchObject({ classification: { window24h: { completeness: "complete" } },
+      pressureShiftScore: null, baselineDailyNetUsd: null, valuation: { baseline: "unknown" } });
+    expect(usdt.valuation.netFlow7dBound).not.toBeNull();
+    data.partialCoinIds.add("usdt-tether");
+    const partial = buildCoinSummaries(data, new Map(), null).coins.find((row) => row.stablecoinId === "usdt-tether")!;
+    expect(partial.valuation).toMatchObject({ netFlow7dBound: null, netFlow30dBound: null, netFlow90dBound: null });
+    expect(partial.baselineDailyNetUsd).toBeNull();
+  });
+
   it("withholds v2-certified stale hourly totals until classification debt is drained", async () => {
     const { db } = await provenFixture();
     const row = event("dai-makerdao", "ethereum", "burn", NOW - 2 * HOUR, 100);
@@ -330,6 +378,8 @@ VALUES ('usdt-tether', 'ethereum', ${retainedHour}, 1, 0, 500, 0, 500),
 ('usdt-tether', 'ethereum', ${prunedHour}, 1, 0, 400, 0, 400),
 ('usdc-circle', 'ethereum', ${retainedHour}, 1, 1, 800, 300, 500);
 `);
+    // The synthetic legacy materialization above is already settled.
+    sqlite.exec("DELETE FROM mint_burn_dirty_hours");
     let data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
     const coins = buildCoinSummaries(data, new Map(), null).coins;
     let usdt = coins.find((coin) => coin.stablecoinId === "usdt-tether")!;
@@ -338,17 +388,27 @@ VALUES ('usdt-tether', 'ethereum', ${retainedHour}, 1, 0, 500, 0, 500),
     expect(usdt).toMatchObject({ netFlow24hUsd: 500, netFlow30dUsd: 900, netFlowDirection24h: "minting" });
     const usdc = coins.find((coin) => coin.stablecoinId === "usdc-circle")!;
     expect(usdc.valuation.window24h.completeness).toBe("unknown");
-    expect(usdc).toMatchObject({ netFlow24hUsd: 500, netFlowDirection24h: null, pressureShiftScore: null });
+    expect(usdc).toMatchObject({ netFlow24hUsd: null, netFlowDirection24h: null, pressureShiftScore: null,
+      classification: { window24h: { unavailableReason: "classification-unknown" } } });
     sqlite.exec("DELETE FROM mint_burn_hourly WHERE stablecoin_id = 'usdc-circle'");
-    expect(await rebuildRetainedLegacyValuationHours(db, NOW)).toBe(1);
+    const classificationOnlyHour = retainedHour - HOUR;
+    await produce(db, [event("usdt-tether", "ethereum", "mint", classificationOnlyHour + 60, 50)]);
+    sqlite.prepare("UPDATE mint_burn_hourly SET mint_unresolved_event_count = NULL, burn_unresolved_event_count = NULL WHERE hour_ts = ?")
+      .run(classificationOnlyHour);
+    expect(await rebuildRetainedLegacyValuationHours(db, NOW, { limit: 1 })).toBe(1);
+    expect(sqlite.prepare("SELECT mint_unresolved_event_count FROM mint_burn_hourly WHERE hour_ts = ?").get(classificationOnlyHour))
+      .toEqual({ mint_unresolved_event_count: null });
+    expect(await rebuildRetainedLegacyValuationHours(db, NOW, { limit: 1 })).toBe(1);
+    expect(sqlite.prepare("SELECT mint_unresolved_event_count FROM mint_burn_hourly WHERE hour_ts = ?").get(classificationOnlyHour))
+      .toEqual({ mint_unresolved_event_count: 0 });
     data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
     usdt = buildCoinSummaries(data, new Map(), null).coins.find((coin) => coin.stablecoinId === "usdt-tether")!;
     expect(usdt.valuation.window24h.completeness).toBe("complete");
-    expect(usdt).toMatchObject({ netFlow24hUsd: 500, netFlowDirection24h: "minting" });
+    expect(usdt).toMatchObject({ netFlow24hUsd: 550, netFlowDirection24h: "minting" });
     expect(usdt.valuation.netFlow30d).toBe("unknown");
-    expect(usdt.netFlow30dUsd).toBe(900);
-    expect(sqlite.prepare("SELECT mint_unpriced_event_count FROM mint_burn_hourly WHERE hour_ts = ?").get(prunedHour))
-      .toEqual({ mint_unpriced_event_count: null });
+    expect(usdt.netFlow30dUsd).toBe(950);
+    expect(sqlite.prepare("SELECT mint_unpriced_event_count, mint_unresolved_event_count, burn_unresolved_event_count FROM mint_burn_hourly WHERE hour_ts = ?").get(prunedHour))
+      .toEqual({ mint_unpriced_event_count: null, mint_unresolved_event_count: null, burn_unresolved_event_count: null });
   });
   it("distinguishes never-scanned, legacy cursors, one missing contract and fully scanned quiet zero", async () => {
     const { db, sqlite } = await provenFixture();

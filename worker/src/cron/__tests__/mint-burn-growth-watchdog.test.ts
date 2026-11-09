@@ -136,6 +136,22 @@ describe("runMintBurnGrowthWatchdog", () => {
     });
   });
 
+  it("marks unresolved activity unavailable instead of claiming a silent leg", async () => {
+    const db = mockD1([rowCountTable(100_000), activityTable([{
+      stablecoin_id: activeConfig.stablecoinId, chain_id: activeConfig.chain.chainId,
+      recent_events: 0, baseline_events: MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS,
+      unresolved_mint_event_count: 0, unresolved_burn_event_count: 1,
+      classification_unknown_mint_hours: 0, classification_unknown_burn_hours: 0,
+    }])], { strictSql: false });
+    const result = await runMintBurnGrowthWatchdog(db);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      activityCollapse: [], activityClassificationUnavailableCount: 1,
+      activityClassificationUnavailable: [{ stablecoinId: activeConfig.stablecoinId,
+        chainId: activeConfig.chain.chainId, reason: "classification-unresolved" }],
+      firedRuleIds: [],
+    });
+  });
+
   it("honors a retained durable disable for an ambiguous symbol", async () => {
     const yusdKey = mintBurnConfigKey(ambiguousSymbolConfig);
     const db = mockD1(

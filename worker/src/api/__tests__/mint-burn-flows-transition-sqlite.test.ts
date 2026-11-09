@@ -33,8 +33,8 @@ function openTransition() {
     cursor.run(mintBurnConfigKey(source), from + 10_000);
   }
   const hourly = fixture.sqlite.prepare(`INSERT INTO mint_burn_hourly
-    (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count)
-    VALUES (?, ?, ?, 1, 0, ?, 0, ?, 0, 0)`);
+    (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count,mint_unresolved_event_count,burn_unresolved_event_count)
+    VALUES (?, ?, ?, 1, 0, ?, 0, ?, 0, 0, 0, 0)`);
   // History survives raw-event retention. Empty intervening hours are genuine quiet intervals.
   for (let days = 1; days <= 30; days++) hourly.run(config.stablecoinId, config.chain.chainId,
     Math.floor(CUTOVER / DAY) * DAY - days * DAY, 100_000, 100_000);
@@ -193,8 +193,8 @@ describe("bounded legacy transition and common scan watermark", () => {
         window30d: { complete: true, provenance: "legacy-pre-cutover" },
       });
     const hourly = sqlite.prepare(`INSERT INTO mint_burn_hourly
-      (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count)
-      VALUES (?,?,?,1,0,?,0,?,0,0)`);
+      (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count,mint_unresolved_event_count,burn_unresolved_event_count)
+      VALUES (?,?,?,1,0,?,0,?,0,0,0,0)`);
     for (const [hour, amount] of [
       [end - DAY, 1111], [end - DAY - HOUR, 2222],
       [end - 30 * DAY, 3333], [end - 30 * DAY - HOUR, 4444],

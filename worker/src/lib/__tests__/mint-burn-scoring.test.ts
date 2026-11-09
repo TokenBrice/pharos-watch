@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
 import {
   buildFlightToQualityCohorts,
   computeFlowIntensity,
@@ -236,6 +237,15 @@ describe("detectFlightToQualityFromValuedNets", () => {
   const complete = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
   const burnPartial = { mintCompleteness: "complete", burnCompleteness: "partial" } as const;
   const mintPartial = { mintCompleteness: "partial", burnCompleteness: "complete" } as const;
+
+  it.each(["partial", "unknown"] as const)("withholds even an inactive FTQ verdict for %s classification", (state) => {
+    const classification = summarizeMintBurnClassification({ ...emptyMintBurnClassificationTally(),
+      unresolvedBurnEventCount: state === "partial" ? 1 : 0, unknownBurnHours: state === "unknown" ? 1 : 0 });
+    const cohorts = { safe: [{ knownNetUsd: 0, valuation: complete, window24hComplete: true, classification }],
+      risky: [{ knownNetUsd: 0, valuation: complete, window24hComplete: true }], unpublishedIds: [] };
+    expect(detectFlightToQualityFromValuedNets(cohorts)).toBeNull();
+    expect(getFlightToQualityUnavailableReason(cohorts)).toBe(classification.unavailableReason);
+  });
 
   it("is exact when every classified coin has complete valuation", () => {
     expect(detectFlightToQualityFromValuedNets({

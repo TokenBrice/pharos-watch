@@ -6,7 +6,9 @@ import {
   resolvePressureScore,
   resolvePressureState,
   resolveNetDirection,
+  resolveBaselineDailyNetUsd,
 } from "@shared/lib/mint-burn-coin-helpers";
+import { emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
 import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
@@ -48,6 +50,32 @@ function stubCoin(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
 }
 
 describe("inferHas24hActivity", () => {
+  it("keeps classification uncertainty in totals and withholds every derived claim", () => {
+    const complete = summarizeMintBurnClassification(emptyMintBurnClassificationTally());
+    const unresolved = summarizeMintBurnClassification({ ...emptyMintBurnClassificationTally(), unresolvedBurnEventCount: 1 });
+    const coin = stubCoin({
+      has24hActivity: false, mintVolume24hUsd: 20000, netFlow24hUsd: 20000,
+      pressureShiftScore: 100, netFlowDirection24h: "minting", baselineDailyNetUsd: 200,
+      valuation: valuation24h(), classification: { window24h: unresolved, baseline: unresolved,
+        netFlow7d: unresolved, netFlow30d: unresolved, netFlow90d: unresolved },
+    });
+    expect(inferHas24hActivity(coin)).toBe(true);
+    for (const window of ["24h", "7d", "30d", "90d"] as const) {
+      expect(resolveCoinNetFlow(coin, window)).toMatchObject({ valueUsd: null, note: expect.stringContaining("Classification unresolved") });
+      expect(resolveCoinNetFlow(coin, window).bound).toBeUndefined();
+    }
+    expect(resolvePressureScore(coin)).toBeNull();
+    expect(resolvePressureState(coin)).toBe("nr");
+    expect(resolveNetDirection(coin)).toBeNull();
+    expect(resolveBaselineDailyNetUsd(coin)).toBeNull();
+    expect(aggregateCoinFlows24h([coin])).toMatchObject({
+      burnVolumeUsd: 0, burnClassificationCompleteness: "partial", unresolvedBurnEventCount: 1,
+      net: { valueUsd: null }, direction: null,
+    });
+    const unknown = { ...complete, completeness: "unknown", burnCompleteness: "unknown", unavailableReason: "classification-unknown" } as const;
+    expect(inferHas24hActivity({ ...coin, classification: { ...coin.classification!, window24h: unknown } })).toBeNull();
+    expect(resolveBaselineDailyNetUsd({ ...coin, classification: undefined, valuation: { ...valuation24h(), baseline: "unknown" } })).toBeNull();
+  });
   it("returns explicit has24hActivity when present", () => {
     expect(inferHas24hActivity(stubCoin({ has24hActivity: true }))).toBe(true);
     expect(inferHas24hActivity(stubCoin({ has24hActivity: false }))).toBe(false);

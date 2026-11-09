@@ -237,8 +237,8 @@ describe("aggregate flight-to-quality cohorts", () => {
     }
     const hourly = sqlite.prepare(`INSERT INTO mint_burn_hourly
       (stablecoin_id, chain_id, hour_ts, mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd,
-       mint_unpriced_event_count, burn_unpriced_event_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)`);
+       mint_unpriced_event_count, burn_unpriced_event_count, mint_unresolved_event_count, burn_unresolved_event_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)`);
     // Observed safe inflow is already past the +$100M activation threshold.
     hourly.run("usdc-circle", "ethereum", end - HOUR, 1, 0, 150_000_000, 0, 150_000_000);
     // The observed risky outflow is short of -$100M; the omitted risky coin is unbounded.

@@ -95,6 +95,19 @@ describe("mint/burn publication scope on real SQLite", () => {
     expect(buildCoinSummaries(data, new Map(), null).coins[0].netFlow90dUsd).toBe(910);
   });
 
+  it("keeps a fully scanned leg pending while its baseline has unresolved classification", async () => {
+    const { db, sqlite } = await fixture(90);
+    sqlite.prepare("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 1 WHERE chain_id = ?")
+      .run(pending.chain.chainId);
+    let data = await fetchAggregateData(db, buildAggregateQueryParams(end + 60, 24));
+    expect(data.configs).toEqual([existing]);
+    expect(data.publication.legs[1]).toMatchObject({ status: "pending-admission", reason: "classification-incomplete", admittedAt: null });
+    sqlite.prepare("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 0 WHERE chain_id = ?")
+      .run(pending.chain.chainId);
+    data = await fetchAggregateData(db, buildAggregateQueryParams(end + 60, 24));
+    expect(data.configs).toEqual([existing, pending]);
+  });
+
   it("removes disabled cached publications from downstream reads before scanning", async () => {
     const { db, sqlite } = await fixture(90);
     sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24), "{}", end);

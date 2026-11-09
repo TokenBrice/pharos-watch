@@ -122,7 +122,7 @@ export function MintBurnFlowMethodologySection() {
                 A new issuance leg joins published flows only after contiguous scan proof for its current
                 configuration covers 90 days through the publication watermark, its frontier is fresh,
                 and that baseline passes the existing valuation-completeness rules. Missing or unknown
-                valuation keeps it pending; a proven zero-event baseline can qualify without prices.
+                valuation keeps it pending; incomplete classification does too. A proven zero-event baseline can qualify without prices.
                 Supported new legs keep catching up, with their reason and progress disclosed, while the coin&apos;s
                 admitted legs keep publishing. Pending or operator-disabled legs contribute neither totals nor
                 gauge weights. Existing contracts sharing a chain bucket must be disabled together; a new
@@ -146,6 +146,15 @@ export function MintBurnFlowMethodologySection() {
                 partial coin as an unbounded cohort input: only a provably inactive verdict survives,
                 otherwise the verdict is unavailable with flow-window-unavailable. Existing Partial
                 treatment applies without additional captions.
+              </p>
+              <p>
+                Classification completeness is independent of scan and price coverage. Unresolved events
+                withhold exact net, direction, bounds, baseline and pressure; the affected gross side remains
+                an observed lower-bound subtotal. Historical hours with unrecorded classification are unknown
+                when the current configuration can produce unresolved events. Retention preserves their entire
+                coin/chain/hour for later proof, and classification corrections atomically mark the hour dirty.
+                Largest valued events rank counted events on admitted tracked chains; they do not rank unpriced
+                or unresolved candidates.
               </p>
               <p>
                 A coin whose classification is proven to drop one side of real supply movements is
@@ -302,7 +311,8 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Coverage and valuation gates</span> &mdash; pressure is NR,
                       and the coin leaves gauge weighting, unless current-fingerprint scan proof covers the window,
-                      the 24h window is fully valued and the baseline has no known unpriced events. Legacy scan
+                      the 24h window and baseline are fully valued and classification-complete. An unknown
+                      baseline cannot score or display as an exact daily average. Legacy scan
                       coverage remains unknown, not proof of quiet activity. Omitted coin counts and market-cap
                       weight remain disclosed; observed gross subtotals cannot establish a signed net or pressure
                     </li>

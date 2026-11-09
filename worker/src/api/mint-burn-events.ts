@@ -98,7 +98,7 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
     }
     if (scope === "counted") {
       conditions.push("flow_type = 'standard'");
-      conditions.push("(direction = 'mint' OR burn_type = 'effective_burn')");
+      conditions.push("((direction = 'mint' AND burn_type IS NOT 'review_required') OR (direction = 'burn' AND burn_type = 'effective_burn'))");
     }
     if (minAmount > 0) {
       conditions.push("amount_usd IS NOT NULL AND amount_usd >= ?");

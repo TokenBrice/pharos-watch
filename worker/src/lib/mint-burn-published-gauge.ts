@@ -21,7 +21,9 @@ import {
   MintBurnFlowsResponseSchema,
   MintBurnValuationSchema,
   MintBurnCoinFlowSchema,
+  MintBurnClassificationSchema,
   type MintBurnCoinCoverage,
+  type MintBurnClassification,
   type MintBurnValuation,
   type MintBurnValuationCompleteness,
   type MintBurnFlowsResponse,
@@ -65,6 +67,8 @@ export interface PublishedGaugeCoin {
   /** Pressure baseline valuation; `unknown` on publications that predate completeness. */
   baselineValuation: MintBurnValuationCompleteness;
   scanCoverage: MintBurnCoinCoverage["windows"] | null;
+  classification24h?: MintBurnClassification;
+  baselineClassification?: MintBurnClassification;
 }
 
 export interface PublishedGaugeChain {
@@ -72,6 +76,7 @@ export interface PublishedGaugeChain {
   /** Known-valuation 24h net; `null` when the publication gated it. */
   net24hUsd: number | null;
   valuation: MintBurnValuationCompleteness;
+  classification?: MintBurnClassification;
 }
 
 export interface PublishedMintBurnGauge {
@@ -151,6 +156,14 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
     if (!coverage.success) return null;
     const gaugeWeight = MintBurnCoinFlowSchema.shape.gaugeWeightUsd.safeParse(entry.gaugeWeightUsd);
     if (!gaugeWeight.success) return null;
+    const classification = MintBurnCoinFlowSchema.shape.classification.safeParse(entry.classification);
+    if (!classification.success) return null;
+    if (intensity !== null && resolveMintBurnValuationCompleteness(baselineValuation) !== "complete") return null;
+    if (classification.data && (
+      (classification.data.window24h.completeness !== "complete" && net24hUsd.value !== null)
+      || (intensity !== null && (classification.data.window24h.completeness !== "complete"
+        || classification.data.baseline.completeness !== "complete" || baselineValuation !== "complete"))
+    )) return null;
     coins.push({
       id: stablecoinId,
       symbol,
@@ -160,6 +173,10 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
       valuation24h: resolveMintBurnValuation(valuation24h),
       baselineValuation: resolveMintBurnValuationCompleteness(baselineValuation),
       scanCoverage: coverage.data?.windows ?? null,
+      ...(classification.data ? {
+        classification24h: classification.data.window24h,
+        baselineClassification: classification.data.baseline,
+      } : {}),
     });
   }
   return coins;
@@ -179,10 +196,14 @@ function parseChains(value: unknown): PublishedGaugeChain[] | null {
       ? undefined
       : MintBurnValuationCompletenessSchema.safeParse(entry.valuation);
     if (valuation && !valuation.success) return null;
+    const classification = MintBurnClassificationSchema.optional().safeParse(entry.classification);
+    if (!classification.success) return null;
+    if (classification.data && classification.data.completeness !== "complete" && net24hUsd.value !== null) return null;
     chains.push({
       chainId: entry.chainId,
       net24hUsd: net24hUsd.value,
       valuation: resolveMintBurnValuationCompleteness(valuation?.data),
+      ...(classification.data ? { classification: classification.data } : {}),
     });
   }
   return chains;

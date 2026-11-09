@@ -76,6 +76,14 @@ The command contract is canonical in [Operator runbook: historical mint/burn pri
 
 Unpriced events are retention-protected until price repair classifies them, so a burst of out-of-window events (backfills, new configs, `price_cache` outages) grows `nullPriceBacklogHistorical` and keeps their hours `partial`: the public API publishes null nets and NR pressure for those windows. Watch `nullPriceBacklog` in `sync-mint-burn` metadata and drain it through the historical price debt sequence above rather than loosening the ±24h admission.
 
+### Classification-completeness debt
+
+Inspect the flow response's independent `classification` verdict for the affected window. `classification-unresolved` means standard events still require review; `classification-unknown` means legacy hourly counts are NULL on a coin whose current config can produce unresolved events. Both withhold exact net, direction, bounds and score inputs. Valuation repair and a complete scan do not resolve classification evidence.
+
+The hourly `mint_unresolved_event_count` / `burn_unresolved_event_count` columns distinguish an observed zero from historical NULL. The bounded retained-hour rebuild may replace NULL only while every raw sibling is still retained; older hours require a complete audited replay, never a rebuild from survivors. Unresolved raw events and their whole coin/chain/hour remain protected through hourly retention. Every source classification change and its dirty-hour debt commit together; debt settles with the rebuilt aggregate. Do not clear debt or set counts to zero manually.
+
+The existing static classification holds remain until the separate history-repair lane verifies their removal. After deployment, correlate the active Worker version and methodology with a new affected execution and its publication before claiming acceptance; a green deploy or a completed maintenance attempt alone is insufficient. The [owning methodology](../mint-burn-flows.md#valuation-completeness-rendering) defines value-level disclosures; no reader-facing banner is needed.
+
 ## Prevention
 
 - Token identity comes from shared stablecoin metadata, but tracker-specific config lives in `worker/src/lib/mint-burn-contracts.ts` and lane state in `worker/src/cron/mint-burn/run-state.ts`. Adding a new coin without mint/burn contract config keeps it outside mint/burn reconciliation and backfill scope; it does not emit a per-coin `onchain_monitor_unavailable`.

@@ -8,12 +8,16 @@ import {
 } from "../mint-burn-published-gauge";
 
 const NOW_SEC = 1_800_000_000;
+const COMPLETE_VALUATION = {
+  window24h: { completeness: "complete", mintCompleteness: "complete", burnCompleteness: "complete", unpricedMintEventCount: 0, unpricedBurnEventCount: 0 },
+  baseline: "complete",
+};
 
 function payload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     gauge: { score: -12.5, band: "CAUTIOUS" },
     coins: [
-      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: -20, netFlow24hUsd: -5_000_000 },
+      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: -20, netFlow24hUsd: -5_000_000, valuation: COMPLETE_VALUATION },
       { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: null, netFlow24hUsd: 1_000_000 },
     ],
     chains: [{ chainId: "ethereum", netFlow24hUsd: -4_000_000 }],
@@ -24,7 +28,7 @@ function payload(overrides: Record<string, unknown> = {}): Record<string, unknow
 function cacheTable(value: string, ageSec: number) {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v6:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v7:aggregate:24"],
     rows: [],
     first: { value, updated_at: NOW_SEC - ageSec },
   };
@@ -44,10 +48,30 @@ const PARTIAL_MINT_VALUATION = {
   unpricedMintEventCount: 1,
   unpricedBurnEventCount: 0,
 };
+const COMPLETE_CLASSIFICATION = {
+  completeness: "complete", mintCompleteness: "complete", burnCompleteness: "complete",
+  unresolvedMintEventCount: 0, unresolvedBurnEventCount: 0, unavailableReason: null,
+};
 
 describe("parsePublishedMintBurnGauge", () => {
+  it("carries classification into digest inputs and rejects an exact claim under unresolved classification", () => {
+    const unresolved = { ...COMPLETE_CLASSIFICATION, completeness: "partial", burnCompleteness: "partial",
+      unresolvedBurnEventCount: 1, unavailableReason: "classification-unresolved" };
+    const classification = { window24h: unresolved, baseline: COMPLETE_CLASSIFICATION,
+      netFlow7d: unresolved, netFlow30d: unresolved, netFlow90d: unresolved };
+    const coin = { stablecoinId: "gho-aave", symbol: "GHO", pressureShiftScore: null,
+      netFlow24hUsd: null, classification };
+    expect(parsePublishedMintBurnGauge(payload({ coins: [coin], chains: [] }), NOW_SEC, false)?.coins[0])
+      .toMatchObject({ classification24h: unresolved, baselineClassification: COMPLETE_CLASSIFICATION, net24hUsd: null });
+    expect(parsePublishedMintBurnGauge(payload({ coins: [{ ...coin, netFlow24hUsd: 100 }] }), NOW_SEC, false)).toBeNull();
+    expect(parsePublishedMintBurnGauge(payload({ coins: [{ ...coin, pressureShiftScore: 100 }] }), NOW_SEC, false)).toBeNull();
+    expect(parsePublishedMintBurnGauge(payload({ chains: [{ chainId: "ethereum", netFlow24hUsd: 100, classification: unresolved }] }), NOW_SEC, false)).toBeNull();
+  });
   it("reads a publication that predates valuation completeness as unknown, never complete", () => {
-    const gauge = parsePublishedMintBurnGauge(payload(), NOW_SEC, false);
+    const gauge = parsePublishedMintBurnGauge(payload({ coins: [
+      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: -5_000_000 },
+      { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: null, netFlow24hUsd: 1_000_000 },
+    ] }), NOW_SEC, false);
     expect(gauge).toEqual({
       score: -12.5,
       partialValuationInputs: null,
@@ -55,7 +79,7 @@ describe("parsePublishedMintBurnGauge", () => {
       scoredMcapUsd: null,
       coins: [
         {
-          id: "usdt-tether", symbol: "USDT", intensity: -20, net24hUsd: -5_000_000,
+          id: "usdt-tether", symbol: "USDT", intensity: null, net24hUsd: -5_000_000,
           gaugeWeightUsd: null,
           valuation24h: UNKNOWN_VALUATION, baselineValuation: "unknown",
           scanCoverage: null,
@@ -74,6 +98,16 @@ describe("parsePublishedMintBurnGauge", () => {
       publishedAt: NOW_SEC,
       stale: false,
     });
+  });
+
+  it.each([undefined, "unknown"] as const)("rejects scored pressure with %s baseline valuation", (baseline) => {
+    const coin = { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: -20,
+      netFlow24hUsd: -5_000_000,
+      ...(baseline == null ? {} : { valuation: { ...COMPLETE_VALUATION, baseline } }),
+    };
+    expect(parsePublishedMintBurnGauge(payload({ coins: [coin] }), NOW_SEC, false)).toBeNull();
+    expect(parsePublishedMintBurnGauge(payload({ coins: [{ ...coin, pressureShiftScore: null }] }), NOW_SEC, false)?.coins[0])
+      .toMatchObject({ intensity: null, baselineValuation: "unknown" });
   });
 
   it("reads valuation blocks and valuation-gated null nets", () => {
@@ -100,7 +134,7 @@ describe("parsePublishedMintBurnGauge", () => {
   it.each([undefined, null, 0, 3_860_000])("preserves optional observed gauge weight %s", (gaugeWeightUsd) => {
     const gauge = parsePublishedMintBurnGauge(payload({ coins: [{
       stablecoinId: "usg-tangent", symbol: "USG", pressureShiftScore: -100,
-      netFlow24hUsd: -36_850_000, gaugeWeightUsd,
+      netFlow24hUsd: -36_850_000, gaugeWeightUsd, valuation: COMPLETE_VALUATION,
     }] }), NOW_SEC, false);
     expect(gauge?.coins[0].gaugeWeightUsd).toBe(gaugeWeightUsd ?? null);
   });
@@ -108,7 +142,7 @@ describe("parsePublishedMintBurnGauge", () => {
   it.each([-1, "3860000", Infinity, NaN])("rejects invalid observed gauge weight %s", (gaugeWeightUsd) => {
     expect(parsePublishedMintBurnGauge(payload({ coins: [{
       stablecoinId: "usg-tangent", symbol: "USG", pressureShiftScore: -100,
-      netFlow24hUsd: -36_850_000, gaugeWeightUsd,
+      netFlow24hUsd: -36_850_000, gaugeWeightUsd, valuation: COMPLETE_VALUATION,
     }] }), NOW_SEC, false)).toBeNull();
   });
 
@@ -156,7 +190,7 @@ describe("readPublishedMintBurnGauge", () => {
     const result = await readPublishedMintBurnGauge(mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["mint-burn-flows:v6:aggregate:24"],
+        matchBinds: ["mint-burn-flows:v7:aggregate:24"],
         rows: [],
         first: null,
       },
@@ -200,7 +234,7 @@ describe("readPublishedMintBurnGauge", () => {
     // until that clock passes. The reader must fail closed rather than pinning it.
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["mint-burn-flows:v6:aggregate:24"],
+      matchBinds: ["mint-burn-flows:v7:aggregate:24"],
       rows: [],
       first: { value: JSON.stringify(payload()), updated_at: NOW_SEC + 6 * 3600 },
     }], { assertMatchesUsed: true });

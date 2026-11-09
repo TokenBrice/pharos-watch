@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.38",
+    "title": "Classification completeness gates counted net-flow claims",
+    "date": "2026-11-09",
+    "effectiveAt": 1794269167,
+    "summary": "Unresolved standard-flow events persist as side-specific classification debt, withholding exact nets and derived signals independently of scan and price coverage.",
+    "impact": [
+      "Hourly buckets now retain nullable unresolved mint and burn event counts. NULL marks an hour predating this accounting contract; zero is an observed absence of unresolved events. Legacy unknown hours with a current supply-proof or bridge-review producer withhold exact net claims. Unaffected configurations retain their structural classification completeness.",
+      "Every exact net, direction, bound, baseline and pressure contribution requires classification completeness. Gross counted volumes remain observed subtotals, with affected sides labelled incomplete; unresolved events cannot become complete zero burns. The gauge discloses incomplete-input weight through its existing withheld-weight fields, and classification-unknown inputs cannot establish FTQ.",
+      "Classification writes enqueue dirty hours atomically, including replay reversals and roundtrip changes. Bounded retained-hour rebuilds materialize the new counts, and retention protects unresolved events and their complete hourly siblings until hourly expiry. Pruned legacy hours remain unknown until separately audited replay.",
+      "Whole-coin long-window bounds are withheld for partial scope, unknown baseline valuation no longer scores or displays as an exact average, and largest-event output is explicitly scoped to valued counted events on admitted tracked chains. The v6.37 holds remain until classifier and historical repairs land."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.37",
     "title": "Classification holds withhold known-wrong coin nets",
     "date": "2026-11-09",

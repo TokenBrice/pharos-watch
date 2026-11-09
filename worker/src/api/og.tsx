@@ -31,10 +31,15 @@ import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "
 import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../lib/stress-signals-current-rows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { summarizeMintBurnValuation } from "@shared/lib/mint-burn-valuation";
+import { summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../lib/mint-burn-classification";
 import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import {
+  MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL,
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
+  type MintBurnClassificationTallyRow,
   type MintBurnValuationTallyRow,
+  readMintBurnClassificationTallyRow,
   readMintBurnValuationTallyRow,
 } from "../lib/mint-burn-hourly-valuation";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
@@ -376,7 +381,8 @@ async function readOgMintBurnFlow(db: D1Database, id: string, now: number): Prom
         `SELECT COUNT(*) AS bucket_count,
                 SUM(net_flow_usd) AS net_flow,
                 SUM(mint_volume_usd + burn_volume_usd) AS gross_flow,
-                ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
+                ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL},
+                ${MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL}
          FROM mint_burn_hourly
          WHERE stablecoin_id = ? AND hour_ts >= ? AND hour_ts < ?
            AND chain_id IN (SELECT value FROM json_each(?))`,
@@ -385,10 +391,11 @@ async function readOgMintBurnFlow(db: D1Database, id: string, now: number): Prom
       prepareMintBurnScanCoverage(db, flowConfigs, flowStart, flowEnd),
     ]);
     const flowRow = flowSnapshot[0].results[0] as
-      ({ bucket_count: number; net_flow: number | null; gross_flow: number | null } & MintBurnValuationTallyRow) | undefined;
+      ({ bucket_count: number; net_flow: number | null; gross_flow: number | null } & MintBurnValuationTallyRow & MintBurnClassificationTallyRow) | undefined;
     const flowComplete = mintBurnScanCoverageAdmits(flowConfigs,
       decodeMintBurnScanCoverage(flowSnapshot[1] as D1Result<MintBurnScanSegment>), flowStart, flowEnd);
     return flowComplete && flowRow && flowRow.bucket_count > 0
+      && summarizeMintBurnClassification(readMintBurnClassificationTallyRow(flowRow, hasMintBurnClassificationReview(id))).completeness === "complete"
       ? {
           knownNetUsd: flowRow.net_flow ?? 0,
           knownGrossUsd: flowRow.gross_flow ?? 0,

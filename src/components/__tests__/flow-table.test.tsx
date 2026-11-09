@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { FlowTable } from "@/components/flow-table";
-import { makeMintBurnCoinValuation } from "@/test-utils/mint-burn-fixtures";
+import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 vi.mock("next/link", async () => (await import("@/test-utils/frontend")).createNextLinkMock());
 
@@ -54,6 +54,22 @@ const coin = {
 const table = (coins: MintBurnCoinFlow[]) => renderToStaticMarkup(<FlowTable coins={coins} isLoading={false} />);
 
 describe("FlowTable", () => {
+  it("qualifies an unresolved zero burn subtotal without hiding the coin or ranking its net", () => {
+    const classification = { completeness: "partial" as const, mintCompleteness: "complete" as const,
+      burnCompleteness: "partial" as const, unresolvedMintEventCount: 0, unresolvedBurnEventCount: 1,
+      unavailableReason: "classification-unresolved" as const };
+    const { container } = render(<FlowTable isLoading={false} coins={[makeMintBurnFlowCoin({
+      stablecoinId: "usdg-global", symbol: "USDG", mintVolume24hUsd: 20_000, burnVolume24hUsd: 0,
+      classification: { window24h: classification, baseline: classification, netFlow7d: classification,
+        netFlow30d: classification, netFlow90d: classification },
+    })]} />);
+    expect(screen.getByText("USDG")).toBeTruthy();
+    expect(screen.getByTitle("Observed subtotal, lower bound: 1 event requires classification review").textContent).toContain("≥");
+    expect(container.textContent).toContain("classification review required");
+    expect(container.textContent).not.toContain("-$3.00M");
+    expect(screen.getByText("Largest valued event")).toBeTruthy();
+  });
+
   it("exposes legacy pre-cutover scan provenance on the coin pressure tooltip", () => {
     const html = table([{
       ...coin, coverage: { ...coin.coverage, provenance: "legacy-pre-cutover" },
