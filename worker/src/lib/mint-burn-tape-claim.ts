@@ -1,6 +1,6 @@
 /** Large-flow Tape claim eligibility, shared by the projector, store write guard and retention. */
 
-export const MINT_BURN_TAPE_NOTICE_USD = 10_000_000;
+const MINT_BURN_TAPE_NOTICE_USD = 10_000_000;
 const NOTICE_USD = MINT_BURN_TAPE_NOTICE_USD;
 
 /** Single-transaction eligibility, shared with the store write guard and retention. */

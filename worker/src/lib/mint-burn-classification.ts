@@ -2,7 +2,7 @@ import { getMintBurnConfigsForStablecoin, type MintBurnContractConfig } from "./
 import { requiresReviewedSupplyBurnProof } from "./mint-burn-conservation";
 
 /** Current producers whose failed classification evidence can leave a standard flow unresolved. */
-export function mintBurnConfigHasClassificationReview(config: MintBurnContractConfig): boolean {
+function mintBurnConfigHasClassificationReview(config: MintBurnContractConfig): boolean {
   return requiresReviewedSupplyBurnProof(config) || config.bridgeDetection?.protocol === "ccip" || config.bridgeDetection?.protocol === "cctp";
 }
 
