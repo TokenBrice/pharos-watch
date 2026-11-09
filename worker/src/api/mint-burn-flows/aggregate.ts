@@ -60,6 +60,7 @@ import {
   readMintBurnWindowContext,
   withExtendedLaneHeads,
 } from "../../lib/mint-burn-flows-service";
+import { isMintBurnClassificationHeld } from "../../lib/mint-burn-classification-holds";
 
 /** Candidate roster only; readMintBurnWindowContext owns the admitted, enabled publication scope. */
 export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
@@ -391,6 +392,8 @@ export function buildCoinSummaries(
     const coverage = data.coverageMap.get(id);
     const has24hWindow = coverage?.has24hWindow === true;
     const partialScope = data.partialCoinIds.has(id);
+    // A classification hold makes every signed net and baseline of this coin unknown.
+    const held = isMintBurnClassificationHeld(id);
     const complete24hWindow = has24hWindow && !partialScope;
     const knownNetFlow24h = agg?.netFlow ?? 0;
     const observedActivity = (agg?.mintCount ?? 0) > 0
@@ -447,7 +450,7 @@ export function buildCoinSummaries(
     const net90dValuation = net90dSummary.completeness;
     // A withheld (partial) net publishes only its proven one-sided bound, never the known net itself.
     const windowBound = (window: WindowNetFlow | undefined, summary: MintBurnValuation, admitted: boolean) =>
-      admitted && window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
+      !held && admitted && window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
@@ -461,19 +464,19 @@ export function buildCoinSummaries(
       // PR-B readers use this null gate before reconstructing bounds from gross subtotals.
       has24hActivity: complete24hWindow ? has24hActivity : null,
       observed24hActivity: observedActivity,
-      baselineDailyNetUsd: baseline?.avgNet ?? null,
-      baselineDailyAbsUsd: baseline?.avgAbs ?? null,
+      baselineDailyNetUsd: held ? null : baseline?.avgNet ?? null,
+      baselineDailyAbsUsd: held ? null : baseline?.avgAbs ?? null,
       baselineDataDays: baseline?.dataDays ?? null,
       gaugeWeightUsd: mcap,
-      netFlow24hUsd: !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
+      netFlow24hUsd: held || !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
       mintVolume24hUsd: agg?.mintVolume ?? 0,
       burnVolume24hUsd: agg?.burnVolume ?? 0,
       mintCount24h: agg?.mintCount ?? 0,
       burnCount24h: agg?.burnCount ?? 0,
       totalsSemantics: "observed-subtotals",
-      netFlow7dUsd: !coverage.has7dWindow || net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
-      netFlow30dUsd: !coverage.has30dWindow || net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
-      netFlow90dUsd: !coverage.has90dWindow || net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
+      netFlow7dUsd: held || !coverage.has7dWindow || net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
+      netFlow30dUsd: held || !coverage.has30dWindow || net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
+      netFlow90dUsd: held || !coverage.has90dWindow || net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
       largestEvent24h: largest && largest.amount_usd != null && (largest.direction === "mint" || largest.direction === "burn")
         ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp }
         : null,

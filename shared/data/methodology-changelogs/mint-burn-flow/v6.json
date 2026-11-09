@@ -1,9 +1,23 @@
 [
   {
+    "version": "6.37",
+    "title": "Classification holds withhold known-wrong coin nets",
+    "date": "2026-11-09",
+    "effectiveAt": 1794232800,
+    "summary": "Coins whose classification is proven to drop one side of real supply movements no longer publish signed nets, baselines or pressure; they appear as partial scope until their classifier fix and history repair land.",
+    "impact": [
+      "A roster-wide supply-conservation review found four coins whose published nets were materially wrong. DAI and USDD Ethereum burns through internal calls fail the per-receipt supply proof and stay review_required while every mint counts (DAI 30d published +$19.2B against a falling supply). USDC CCTP v1 inbound mints still count as issuance, and pre-2026-10-10 CCTP v2 inbound mints remain in history (90d published +$8.16B against a non-bridge supply change of about -$4.79B). ZCHF inbound CCIP pool mints count as issuance.",
+      "For held coins, 24h/7d/30d/90d nets, net direction, baseline daily net and absolute averages, signed-net bounds and pressure shift are published as null. Coverage reads partial-history with incomplete windows, reusing the v6.35 Partial treatment. The coins leave the Bank Run Gauge score and flight-to-quality as unbounded inputs. Chain-level 24h nets for their chains and the aggregate hourly net series are withheld as partial.",
+      "Gross observed mint and burn subtotals, counts and event ledgers stay published. Scanning, admission, the common watermark and stalled-leg quarantine ignore holds. No other coin's numbers change. Holds lift only with their classifier fix and repaired history; the systematic fix is tracked publicly."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.36",
     "title": "Coverage lag judged by each config's own scan lane",
     "date": "2026-11-09",
-    "effectiveAt": 1794182400,
+    "effectiveAt": 1794224100,
     "summary": "Per-coin coverage marks an established config lagging only when its block progress trails its own scan lane's cadence, so the extended lane's designed rotation no longer reads as lagging sync.",
     "impact": [
       "Extended-lane configs are judged against that lane's 4-hour full-pass window (MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC) instead of the critical lane's 1-hour public freshness cadence. Critical-lane configs keep the 1-hour cadence. Before this change, every extended config skipped by the most recent rotating run read lagging: 45 of 128 coins on 2026-11-09.",
