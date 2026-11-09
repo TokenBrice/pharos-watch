@@ -54,9 +54,11 @@ import {
   mintBurnPairKey,
   mintBurnHourlyWindow,
   mintBurnScanWindow,
+  readMintBurnCronSnapshot,
   readMintBurnCronSnapshotResult,
   selectLargestEvents,
   readMintBurnWindowContext,
+  withExtendedLaneHeads,
 } from "../../lib/mint-burn-flows-service";
 
 /** Candidate roster only; readMintBurnWindowContext owns the admitted, enabled publication scope. */
@@ -204,7 +206,7 @@ export async function fetchAggregateData(
       )
       .bind(trackedPairsJson, windowStart, params.windowEnd);
 
-  const [batchResults, [lastBlocks, latestCronSnapshotResult]] = await Promise.all([
+  const [batchResults, [lastBlocks, latestCronSnapshotResult, extendedCronSnapshot]] = await Promise.all([
     db.batch([
       db
         .prepare(
@@ -261,6 +263,7 @@ export async function fetchAggregateData(
     Promise.all([
       readMintBurnSyncStateBatch(db, configs),
       readMintBurnCronSnapshotResult(db),
+      readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
     ]),
   ]);
   const scanSegments = decodeMintBurnScanCoverage(batchResults[6] as D1Result<MintBurnScanSegment>);
@@ -280,7 +283,8 @@ export async function fetchAggregateData(
     ? "Mint/burn freshness lookup failed; producer observation is unavailable."
     : null;
   const coverageMap = buildCoinCoverageMap(
-    params.nowSec, scanSegments, lastBlocks, latestCronSnapshot.chainHeads,
+    params.nowSec, scanSegments, lastBlocks,
+    withExtendedLaneHeads(requestedParams.nowSec, latestCronSnapshot.chainHeads, extendedCronSnapshot),
     latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null, configs, legacy, watermark,
   );
   // Only a continuous admitted suffix of complete UTC days enters the baseline.

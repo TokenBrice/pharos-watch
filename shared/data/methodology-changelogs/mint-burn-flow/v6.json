@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.36",
+    "title": "Coverage lag judged by each config's own scan lane",
+    "date": "2026-11-09",
+    "effectiveAt": 1794182400,
+    "summary": "Per-coin coverage marks an established config lagging only when its block progress trails its own scan lane's cadence, so the extended lane's designed rotation no longer reads as lagging sync.",
+    "impact": [
+      "Extended-lane configs are judged against that lane's 4-hour full-pass window (MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC) instead of the critical lane's 1-hour public freshness cadence. Critical-lane configs keep the 1-hour cadence. Before this change, every extended config skipped by the most recent rotating run read lagging: 45 of 128 coins on 2026-11-09.",
+      "The legacy 10K-block ceiling is removed, so a fast chain's lag budget is the same time budget as every other chain's: Arbitrum's 0.25-second blocks no longer cut its window to about 42 minutes.",
+      "Coverage reads chain heads from both lanes. The extended lane's heads count only within its own pass window, so extended-only Base and Arbitrum legs are no longer reported unknown just because the critical lane never reads those chains.",
+      "Published flow figures, watermark windows, stalled-leg quarantine, scoring and the Bank Run Gauge are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.35",
     "title": "Partial-qualified coin totals while an established leg is isolated",
     "date": "2026-11-06",
