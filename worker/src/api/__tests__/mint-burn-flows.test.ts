@@ -14,6 +14,11 @@ import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
 
+const heldIds = vi.hoisted(() => new Set<string>());
+vi.mock("../../lib/mint-burn-classification-holds", () => ({
+  isMintBurnClassificationHeld: (id: string) => heldIds.has(id),
+}));
+
 function cachedCoinValuation(window24h: MintBurnValuationCompleteness) {
   return {
     window24h: {
@@ -50,6 +55,7 @@ describe("handleMintBurnFlows contract tests", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    heldIds.clear();
   });
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -196,7 +202,8 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.hourly.some((row) => row.netFlowUsd === 5_000_000)).toBe(false);
   });
 
-  it("publishes the per-chain 24h net breakdown sorted by absolute net flow", async () => {
+  it.each([false, true])("publishes the per-chain 24h net breakdown sorted by absolute net flow (USDC held: %s)", async (held) => {
+    if (held) heldIds.add("usdc-circle");
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
@@ -265,9 +272,17 @@ describe("handleMintBurnFlows contract tests", () => {
     // without recorded coverage read as unknown and keep their net.
     expect(body.chains?.map(({ scanCoverage: _scanCoverage, ...chain }) => chain)).toEqual([
       { chainId: "arbitrum", netFlow24hUsd: -50_000_000, valuation: "unknown" },
-      { chainId: "ethereum", netFlow24hUsd: 30_000_000, valuation: "unknown" },
+      { chainId: "ethereum", netFlow24hUsd: held ? null : 30_000_000, valuation: "unknown" },
       { chainId: "base", netFlow24hUsd: null, valuation: "partial" },
     ]);
+    // A classification hold withholds every signed net and baseline of the coin (v6.37).
+    if (held) {
+      expect(body.coins.find((coin) => coin.stablecoinId === "usdc-circle")).toMatchObject({
+        netFlow24hUsd: null, netFlow7dUsd: null, netFlow30dUsd: null, netFlow90dUsd: null,
+        baselineDailyNetUsd: null, pressureShiftScore: null, netFlowDirection24h: null,
+        coverage: { status: "partial-history", isPartial: true },
+      });
+    }
   });
 
   it("excludes tracked coins without observed supply from the gauge mcap and counts them", async () => {
@@ -1076,6 +1091,22 @@ describe("handleMintBurnFlows contract tests", () => {
       if (suffix.startsWith("coin:")) expect(body.netFlowUsd).toBeNull();
       else expect(MintBurnFlowsResponseSchema.parse(body).coins.every((coin) => coin.netFlow24hUsd === null)).toBe(true);
     }
+  });
+
+  it("withholds a classification-held coin's per-coin total, chain and hourly nets", async () => {
+    heldIds.add("usdt-tether");
+    const now = Math.floor(Date.now() / 1000);
+    const row = { ...makeFlowHourlyRow(now), hour_ts: Math.floor(now / 3600) * 3600 - 3600,
+      mint_unpriced_event_count: 0, burn_unpriced_event_count: 0 };
+    const body = await readJsonResponse(await handleMintBurnFlows(mintBurnScenario({ nowSec: now, rows: { hourly: [row] } }),
+      new URL("https://x/api/mint-burn-flows?stablecoin=usdt-tether")), 200) as {
+      netFlowUsd: number | null; mintVolumeUsd: number; scanCoverage: { complete: boolean };
+      chains: Array<{ netFlowUsd: number | null }>; hourly: Array<{ netFlowUsd: number | null }>;
+    };
+    expect(body).toMatchObject({ netFlowUsd: null, mintVolumeUsd: 10_000, scanCoverage: { complete: false } });
+    expect(body.chains.length).toBeGreaterThan(0);
+    expect(body.chains.every((chain) => chain.netFlowUsd === null)).toBe(true);
+    expect(body.hourly.every((hour) => hour.netFlowUsd === null)).toBe(true);
   });
 
   it("keeps per-coin observed gross flow while withholding unproved chain, hourly and total signed nets", async () => {

@@ -148,6 +148,11 @@ export function MintBurnFlowMethodologySection() {
                 treatment applies without additional captions.
               </p>
               <p>
+                A coin whose classification is proven to drop one side of real supply movements is
+                held: its signed nets, baseline and pressure are withheld and it reads as partial scope
+                until its classifier fix and history repair land. Gross observed subtotals stay published.
+              </p>
+              <p>
                 USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;
                 their paired zero-address Transfers would duplicate the same flow. Scans stop at a fresh
                 solidified head. Historical conservation remains unsupported because Tron cannot supply the
