@@ -11,7 +11,7 @@ import {
 } from "@shared/lib/format";
 import type { StablecoinMeta } from "@shared/types";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { hasObservedDisplayPrice } from "@/lib/current-peg";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
@@ -126,8 +126,7 @@ export function HeroPriceMetric({
   coinData,
   price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceMetricProps & { variant: HeroMetricVariant }) {
-  const observed = isObservedPrice(coinData) && typeof coinData.price === "number"
-    && Number.isFinite(coinData.price) && coinData.price > 0;
+  const observed = hasObservedDisplayPrice(coinData);
   const pegCurrency = coin.flags.pegCurrency ?? "USD";
   const price = formatHeroNativePrice(observed ? coinData.price : null, pegCurrency, pegRef);
   // The label names the unit the formatter actually used: a "$" peg symbol or an

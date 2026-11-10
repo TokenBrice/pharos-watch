@@ -36,7 +36,7 @@ Active predicates require their own source publication: DEWS ranges use stress s
 
 Default sorting is descending Safety Score; shared comparator/`useSort()` owns unrated handling, direction and `aria-sort`. The table presents published Backing / Exit / Economic Control, weakest pillar, evidence, pipeline gaps and cap context without rescoring.
 
-Peg Range is `[worst tracked deviation, current deviation]` from peg summary, not a 30-day history or a per-coin history fetch; labels/tooltips must agree. The separate 30d Supply sparkline compares monthly/current endpoints.
+Peg Range is `[worst tracked deviation, current deviation]`: the worst value comes from peg summary and the current endpoint from the stablecoins row’s `currentPeg`, with peg-summary fallback for legacy rows. It is not a 30-day history or a per-coin history fetch; labels/tooltips must agree. The separate 30d Supply sparkline compares monthly/current endpoints.
 
 Only the active responsive layout mounts. Available results render in 50-row pages with an explicit “Showing N–M of total” range; pagination bounds presentation only. Filtering and sorting run over the full matched set before paging, and the toolbar count and export remain independent of the displayed page. Desktop row-cursor shortcuts operate on the current page and yield to interactive controls, including pager and sort buttons.
 

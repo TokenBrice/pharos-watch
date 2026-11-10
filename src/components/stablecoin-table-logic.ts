@@ -1,5 +1,6 @@
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
 import { createTableComparator } from "@/lib/table-comparator";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
@@ -70,7 +71,7 @@ export function resolveDisplayedNativePrice(
   if (!isObservedPrice(coin)) return null;
   const meta = TRACKED_META_BY_ID.get(coin.id);
   const currency = meta?.flags.pegCurrency ?? "USD";
-  const pegRef = pegSummary?.pegReference?.valueUsd ?? null;
+  const pegRef = resolveCurrentPeg(coin, pegSummary)?.pegReference?.valueUsd ?? null;
   const reference = meta?.flags.navToken ? getNavPriceReference(currency, pegScores) : pegRef;
   const usesUsdSymbol = getPegTaxonomyByCurrency(currency)?.nativePriceUsesUsdSymbol === true;
   if (reference == null && !meta?.flags.navToken && !usesUsdSymbol) return null;
@@ -246,11 +247,8 @@ export function sortStablecoins({
     },
     mintAuthority: (r) => resolveMintAuthorityScoreDisplay(reportCards?.[r.id]?.mint).score,
     peg: (r) => {
-      const pegSummary = pegScores?.get(r.id);
-      if (!isObservedPrice(r) || pegSummary?.pegReferenceUnavailable === true) return null;
-      return pegSummary?.currentDeviationBps == null
-        ? null
-        : Math.abs(pegSummary.currentDeviationBps);
+      const bps = resolveCurrentDeviationBps(r, pegScores?.get(r.id));
+      return bps == null ? null : Math.abs(bps);
     },
   };
   const extractSortValue = extractors[effectiveSortKey];

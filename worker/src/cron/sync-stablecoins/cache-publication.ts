@@ -2,6 +2,9 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
 import { StablecoinDataSchema, type StablecoinData } from "@shared/types/market";
+import { CurrentPegSchema } from "@shared/types/current-peg";
+import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices, type CurrentPegDexRow } from "../../lib/current-peg-observations";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import { writeResponseReadyCache } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
@@ -181,6 +184,28 @@ export async function validateAndWriteStablecoinsCache(
     // normalizeStablecoinsPayload maps rows 1:1, so indexes address the caller's asset rows.
     const kept = assets.filter((_, index) => !admission.quarantinedIndexes.has(index));
     assets.splice(0, assets.length, ...kept);
+  }
+
+  // One optional cohort read: unavailable DEX evidence never becomes an agreement verdict.
+  const now = Math.floor(Date.now() / 1000);
+  const dexRows = await runWithOverloadRetry(() => db.prepare(
+    "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
+  ).all<CurrentPegDexRow>(), 1, signal).then((result) => result.results ?? []).catch((error: unknown) => {
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Current DEX comparison unavailable:", error);
+    return [];
+  });
+  const observations = deriveCurrentPegObservationMap({
+    peggedAssets: admission.payload.peggedAssets, fxFallbackRates, asOf: syncStartSec, now,
+    dexPrices: selectCurrentPegDexPrices(dexRows, now),
+  });
+  for (const asset of admission.payload.peggedAssets) {
+    const observation = observations.get(asset.id);
+    if (observation) asset.currentPeg = CurrentPegSchema.parse({
+      ...observation,
+      // The legacy summary may compare DEX to a peg alone; this block accompanies a live quote.
+      dexPriceCheck: observation.currentPriceUnavailable ? null : observation.dexPriceCheck,
+    });
+    else delete asset.currentPeg;
   }
 
   const cacheWriteAbort = returnIfAborted(

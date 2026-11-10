@@ -220,6 +220,8 @@ The hourly DEX writer separately retains original quote clocks in `dex_prices.pr
 
 ---
 
+`/api/stablecoins` publishes optional `currentPeg` beside each active quote after row admission. `shared/lib/current-peg-observations.ts` owns the existing reference, deviation and comparison calculations for both publication and peg-summary; the row's price/source/original observation clock/mode and source-agreement lists provide the identity and provenance. Publication makes one optional bulk DEX read; overload/read failure leaves its DEX comparison null without withholding the price. Current readers prefer these row fields, falling back to peg-summary only while `currentPeg` is absent on an old Worker/cache generation. Either deploy order is compatible; coherence starts once a new publication reaches the reader. This changes transport and display consistency, not price admission, formulas or Pricing/DEWS methodology under ADR-3.
+
 ## Confidence Model
 
 The final cached price can carry one of four confidence states:

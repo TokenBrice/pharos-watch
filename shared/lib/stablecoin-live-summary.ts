@@ -89,6 +89,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     priceSyncedAt: detail.priceSyncedAt,
     ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
     ...(detail.priceDerivation ? { priceDerivation: detail.priceDerivation } : {}),
+    ...(detail.currentPeg ? { currentPeg: detail.currentPeg } : {}),
     consensusSources: detail.consensusSources,
     agreeSources: detail.agreeSources,
     supplyObservedAt,

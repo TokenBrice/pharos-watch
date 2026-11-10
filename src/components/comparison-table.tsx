@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { hasObservedDisplayPrice, resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
 import { memo, useId, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
@@ -232,11 +232,13 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
           label: "Price",
           numeric: true,
           render: (coin) => {
-            const ref = getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
-            return formatNativePrice(isObservedPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, ref);
+            const ref = coin.data.currentPeg
+              ? coin.data.currentPeg.pegReference?.valueUsd ?? null
+              : getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
+            return formatNativePrice(hasObservedDisplayPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, ref);
           },
         },
-        { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(isObservedPrice(coin.data) ? coin.pegDetails?.currentDeviationBps : null) },
+        { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(resolveCurrentDeviationBps(coin.data, coin.pegDetails)) },
         { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegDetails?.pegScore) },
         { key: "market-cap", label: "Market cap", numeric: true, render: formatCurrentSupply },
         { key: "supply-24h", label: "Market-cap change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
@@ -264,8 +266,8 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "worst-deviation", label: "Worst deviation", numeric: true, render: (coin) => formatComparisonBps(coin.pegDetails?.worstDeviationBps) },
         { key: "event-count", label: "Recorded incidents", numeric: true, render: (coin) => coin.pegDetails ? formatCount(coin.pegDetails.eventCount, "incident") : NULL_VALUE },
         { key: "tracking-span", label: "Tracking span", numeric: true, render: (coin) => formatDays(coin.pegDetails?.trackingSpanDays) },
-        { key: "price-confidence", label: "Price confidence", render: (coin) => humanize(coin.pegDetails?.priceConfidence) },
-        { key: "price-sources", label: "Price sources", numeric: true, render: (coin) => coin.pegDetails ? formatCount(coin.pegDetails.consensusSources?.length ?? 0, "source") : NULL_VALUE },
+        { key: "price-confidence", label: "Price confidence", render: (coin) => humanize(resolveCurrentPeg(coin.data, coin.pegDetails)?.priceConfidence) },
+        { key: "price-sources", label: "Price sources", numeric: true, render: (coin) => resolveCurrentPeg(coin.data, coin.pegDetails) ? formatCount(resolveCurrentPeg(coin.data, coin.pegDetails)?.consensusSources?.length ?? 0, "source") : NULL_VALUE },
       ],
     },
     {

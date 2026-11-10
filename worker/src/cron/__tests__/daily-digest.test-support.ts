@@ -440,6 +440,8 @@ export function currentPegObservation(
   return {
     currentDeviationBps: null,
     currentSignal: null,
+    primaryTrust: "unusable",
+    dexPriceCheck: null,
     pegReference: valueUsd == null ? null : { valueUsd, source: "median", contributorCount: 1, asOf: 0 },
     pegReferenceUnavailable: false,
     currentPriceUnavailable: false,

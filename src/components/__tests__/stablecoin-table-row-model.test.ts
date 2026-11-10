@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
+import { deviationColorClass } from "@/lib/severity-colors";
 
 function makeCoin(price: number | null) {
   return makeStablecoin({
@@ -14,16 +15,6 @@ function makeCoin(price: number | null) {
     circulatingPrevWeek: { peggedUSD: 1_000_000 },
     supplySource: "defillama",
     chains: ["Ethereum"],
-  });
-}
-
-function build(price: number | null, currentDeviationBps: number | null) {
-  const pegSummaryCoin = makePegSummaryCoin({ currentDeviationBps });
-  return buildStablecoinTableRowModel({
-    coin: makeCoin(price),
-    pegScores: new Map([[pegSummaryCoin.id, pegSummaryCoin]]),
-    density: "spacious",
-    variant: "default",
   });
 }
 
@@ -51,27 +42,21 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
     expect(model.absPegDeviationBps).toBeNull();
   });
 
-  it("uses the Worker deviation for both display and severity", () => {
-    const model = build(1.02, -50);
-
-    expect(model.pegDeviationBps).toBe(-50);
-    expect(model.absPegDeviationBps).toBe(50);
-    expect(model.pegDeviationColorClass).toBe("text-amber-700 dark:text-amber-400");
-  });
-
-  it("does not turn a Worker-unavailable deviation into an on-peg signal", () => {
-    for (const price of [null, Number.NaN]) {
-      const model = build(price, null);
-      expect(model.absPegDeviationBps).toBeNull();
-      expect(model.pegDeviationColorClass).toBe("text-muted-foreground");
-    }
-  });
-
-  it("preserves a real zero deviation as a numeric signal", () => {
-    const model = build(1.2, 0);
-
-    expect(model.absPegDeviationBps).toBe(0);
-    expect(model.pegDeviationColorClass).toBe("text-green-700 dark:text-green-400");
+  it("uses the row observation across cache skew, with legacy fallback and authoritative nulls", () => {
+    const coin = makeCoin(0.8);
+    coin.currentPeg = {
+      currentDeviationBps: -2000, pegReference: null, pegReferenceUnavailable: false,
+      currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null,
+    };
+    const render = () => buildStablecoinTableRowModel({
+      coin, pegScores: new Map([[coin.id, makePegSummaryCoin({ currentDeviationBps: 0, priceSource: "kraken" })]]),
+      density: "spacious", variant: "default",
+    });
+    expect(render()).toMatchObject({ priceCell: "$0.8000", pegDeviationBps: -2000, absPegDeviationBps: 2000 });
+    coin.currentPeg.currentDeviationBps = null;
+    expect(render().pegDeviationBps).toBeNull();
+    delete coin.currentPeg;
+    expect(render().pegDeviationBps).toBe(0);
   });
 
   it("keeps a USD coin's observed price while the peg summary is pending", () => {
@@ -91,56 +76,14 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
     expect(model.absPegDeviationBps).toBeNull();
   });
 
-  it("keeps a non-USD price unavailable while its peg reference is unknown", () => {
-    const model = buildStablecoinTableRowModel({
-      coin: makeStablecoin({
-        id: "eurc-circle",
-        pegType: "peggedEUR",
-        price: 1.08,
-        priceSource: "coingecko",
-        priceConfidence: "high",
-      }),
-      pegScores: new Map(),
-      density: "spacious",
-      variant: "default",
-    });
-
-    expect(model.priceCell).toBe("—");
-  });
-
-  it("keeps an observed commodity price while its peg reference is unavailable and skips deviation", () => {
-    const model = buildStablecoinTableRowModel({
-      coin: makeStablecoin({
-        id: "xaut-tether",
-        symbol: "XAUT",
-        pegType: "peggedGOLD",
-        price: 3_000,
-        circulating: { peggedGOLD: 1_000_000 },
-      }),
-      pegScores: new Map([["xaut-tether", makePegSummaryCoin({
-        id: "xaut-tether",
-        symbol: "XAUT",
-        name: "Tether Gold",
-        pegType: "peggedGOLD",
-        pegCurrency: "GOLD",
-        currentDeviationBps: null,
-        pegReference: null,
-        pegReferenceUnavailable: true,
-      })]]),
-      density: "spacious",
-      variant: "default",
-    });
-
-    expect(model.pegRef).toBeNull();
-    expect(model.priceCell).toBe("$3000.0000");
-    expect(model.absPegDeviationBps).toBeNull();
-  });
-
   it.each([
     ["USD", "usdc-circle", "peggedUSD", 0.98, 1, -200, 200],
     ["non-USD", "eurc-circle", "peggedEUR", 1.08, 1.2, -1000, 1000],
     ["commodity", "xaut-tether", "peggedGOLD", 3030, 3000, 100, 100],
     ["unavailable reference", "eurc-circle", "peggedEUR", 1.08, null, null, null],
+    ["commodity reference", "xaut-tether", "peggedGOLD", 3000, null, null, null],
+    ["measured zero", "usdc-circle", "peggedUSD", 1, 1, 0, 0],
+    ["invalid price", "usdc-circle", "peggedUSD", Number.NaN, 1, null, null],
     ["unavailable price", "usdc-circle", "peggedUSD", null, 1, null, null],
     ["NAV", "fpi-frax", "peggedVAR", 1.2, null, null, null],
   ] as const)("pins the %s peg-summary projection", (
@@ -170,6 +113,9 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
 
     expect(model.pegRef).toBe(pegReference);
     expect(model.absPegDeviationBps).toBe(expectedAbsDeviationBps);
+    expect(model.pegDeviationColorClass).toBe(expectedAbsDeviationBps == null ? "text-muted-foreground" : deviationColorClass(expectedAbsDeviationBps));
+    if (_label === "commodity reference") expect(model.priceCell).toBe("$3000.0000");
+    if (_label === "unavailable reference") expect(model.priceCell).toBe("—");
   });
 });
 
@@ -193,24 +139,13 @@ describe("buildStablecoinTableRowModel NAV price", () => {
     expect(model.priceCell).toBe("$1.0834");
   });
 
-  it("converts a non-USD NAV token's price with a peer's currency reference", () => {
+  it.each([[true, "€1.1000"], [false, "$1.2100"]] as const)("formats a non-USD NAV quote with peer reference=%s", (peer, priceCell) => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({ id: "eutbl-spiko", pegType: "peggedEUR", price: 1.21, ...observed }),
-      pegScores: new Map([[eurPeer.id, eurPeer]]),
-      density: "spacious",
-      variant: "default",
+      pegScores: new Map(peer ? [[eurPeer.id, eurPeer]] : []),
+      density: "spacious", variant: "default",
     });
-    expect(model.priceCell).toBe("€1.1000");
-  });
-
-  it("falls back to the USD price when no peer published a currency reference", () => {
-    const model = buildStablecoinTableRowModel({
-      coin: makeStablecoin({ id: "eutbl-spiko", pegType: "peggedEUR", price: 1.21, ...observed }),
-      pegScores: new Map(),
-      density: "spacious",
-      variant: "default",
-    });
-    expect(model.priceCell).toBe("$1.2100");
+    expect(model.priceCell).toBe(priceCell);
   });
 
   it("keeps an unobserved NAV price unavailable", () => {

@@ -153,6 +153,17 @@ describe("ComparisonTable", () => {
     expect(html).not.toContain("Evidence age unknown");
   });
 
+  it("pairs current deviation and confidence with the displayed quote despite stale analytics", () => {
+    const coin = makeCoin("usdc-circle", "USDC");
+    coin.data.price = 0.8;
+    coin.data.priceConfidence = "fallback";
+    coin.data.currentPeg = { currentDeviationBps: -2000, pegReference: null, pegReferenceUnavailable: false,
+      currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={{}} />);
+    expect(html).toContain("-2000 bps");
+    expect(html).toContain("Fallback");
+  });
+
   it.each([false, true])("distinguishes whole-feed availability (%s) from an unrated coin", (available) => {
     const coin = makeCoin("usdt", "USDT");
     coin.bluechipPublicationAvailable = available;

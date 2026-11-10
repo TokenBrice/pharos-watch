@@ -1,5 +1,5 @@
 import { getStablecoinTableRowRiskLevel, getSupplyChangePercent, resolveDisplayedNativePrice } from "@/components/stablecoin-table-logic";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-table-row-types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
@@ -35,13 +35,11 @@ export function buildStablecoinTableRowModel({
   const pegSummary = pegScores?.get(coin.id);
   const pegScore = pegSummary?.pegScore ?? null;
   const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
-  const pegRef = pegSummary?.pegReference?.valueUsd ?? null;
+  const pegRef = resolveCurrentPeg(coin, pegSummary)?.pegReference?.valueUsd ?? null;
   // NAV tokens have no peg reference, but their observed price is still shown,
   // converted to the peg currency (USD fallback inside formatNativePrice).
   const displayedNativePrice = resolveDisplayedNativePrice(coin, pegSummary, pegScores);
-  const currentDeviationBps = !isObservedPrice(coin) || pegSummary?.pegReferenceUnavailable === true
-    ? null
-    : pegSummary?.currentDeviationBps ?? null;
+  const currentDeviationBps = resolveCurrentDeviationBps(coin, pegSummary);
   const absPegDeviationBps = currentDeviationBps == null ? null : Math.abs(currentDeviationBps);
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
   const isOverview = variant === "figmaOverview";

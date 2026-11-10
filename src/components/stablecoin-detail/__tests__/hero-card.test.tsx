@@ -393,9 +393,9 @@ describe("HeroCard", () => {
     expect(html).not.toContain("$0.0000");
   });
 
-  it("uses the published deviation when the live price snapshot disagrees", () => {
+  it.each(["low", "fallback"] as const)("shows published deviation for an observed %s quote", (priceConfidence) => {
     const html = renderHero({
-      coinData: { price: 1.02 },
+      coinData: { price: 1.02, priceConfidence },
       deviationBps: -50,
     });
 

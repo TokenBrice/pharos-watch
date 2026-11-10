@@ -23,7 +23,8 @@ export async function overlayCanonicalDetail(
     if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
     // Only the admitted canonical publication can set restoration, unavailability or price-reference provenance.
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
-      || "priceDerivation" in detail || "nominalPriceReference" in detail) {
+      || "priceDerivation" in detail || "nominalPriceReference" in detail || "currentPeg" in detail) {
+      delete detail.currentPeg;
       delete detail.priceDerivation;
       delete detail.nominalPriceReference;
       delete detail.currentSupplyRestored;
@@ -95,10 +96,9 @@ export async function overlayCanonicalDetail(
     }
     if (coin?.nominalPriceReference) detail.nominalPriceReference = coin.nominalPriceReference;
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;
-    // One price authority (R5): the quote peg summary measures replaces any provider
-    // quote, with its own confidence and clocks, so a hero price never sits beside a
-    // deviation measured from another quote. A provider quote survives only without one.
-    const canEnrichPrice = coin != null && !coin.frozen && hasUsableCurrentPrice(coin) &&
+    // A new publication carries unavailable/nominal observations too, so provider
+    // fallback cannot put a different quote beside its current peg fields.
+    const canEnrichPrice = coin != null && !coin.frozen && (coin.currentPeg != null || hasUsableCurrentPrice(coin)) &&
       isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources);
     if (!hasCurrentSupply && !supplyUnavailable && !coin?.nominalPriceReference && !canEnrichPrice) return response;
 
@@ -129,6 +129,7 @@ export async function overlayCanonicalDetail(
       ...detail,
       ...(canEnrichPrice && coin ? {
         price: coin.price,
+        ...(coin.currentPeg ? { currentPeg: coin.currentPeg } : {}),
         priceSource: coin.priceSource,
         priceConfidence: coin.priceConfidence,
         priceUpdatedAt: coin.priceUpdatedAt,

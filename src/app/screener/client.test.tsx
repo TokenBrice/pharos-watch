@@ -270,15 +270,20 @@ describe("ScreenerClient freshness notices", () => {
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ data: [], disabled: true });
   });
 
-  it("keeps retained primary rows and compact liquidity scores available after refresh failure", () => {
+  it("keeps retained rows and their current deviation after refresh failure", () => {
     mocks.useStablecoins.mockReturnValue({
-      data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: new Error("Offline"),
+      data: { peggedAssets: [makeStablecoin({ price: 0.8, currentPeg: {
+        currentDeviationBps: -2000, pegReference: null, pegReferenceUnavailable: false,
+        currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null,
+      } })] }, isLoading: false, error: new Error("Offline"),
       dataUpdatedAt: 1_700_000_000, meta: null, refetch,
     });
     render(<ScreenerClient />);
     const table = mocks.ScreenerTable.mock.calls.at(-1)?.[0];
     expect(table.dataState).toBe("ready");
-    expect(table.rows.find((row: ScreenerRow) => row.id === "usdc-circle")?.liquidityScore).toBe(80);
+    const row = table.rows.find((row: ScreenerRow) => row.id === "usdc-circle");
+    expect(row.liquidityScore).toBe(80);
+    expect(row.pegDeviationSeries.at(-1)).toBe(-2000);
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0].disabled).toBe(false);
   });
 

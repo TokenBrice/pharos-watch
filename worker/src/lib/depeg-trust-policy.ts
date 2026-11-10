@@ -1,12 +1,8 @@
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC, DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD } from "@shared/lib/depeg-config";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
-import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
-import {
-  countDepegAuthoritativeSources,
-  hasUpstreamCapableDepegAuthoritativeSource,
-  isSingleSourceDepegAuthoritative,
-  isObservedPrice,
-} from "@shared/lib/pricing-source-policy";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { getPrimaryPriceAgeSec, getPrimaryTrustSources, type PrimaryPriceTrustInput } from "@shared/lib/depeg-primary-trust";
+export { classifyPrimaryDepegTrust } from "@shared/lib/depeg-primary-trust";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC, DEX_PRICE_CHECK_UI_MIN_TVL_USD } from "./constants";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
@@ -19,42 +15,12 @@ export interface DexTrustPolicy {
   minTvlUsd: number;
 }
 
-interface PrimaryPriceTrustInput {
-  price?: number | null;
-  priceSource?: string | null;
-  priceConfidence?: PriceConfidence | null;
-  priceUpdatedAt?: number | null;
-  priceObservedAt?: number | null;
-  priceObservedAtMode?: PriceObservedAtMode | null;
-  agreeSources?: string[] | null;
-}
-
 // Moved to shared so display surfaces (frontend hero, peg-analytics) share
 // the detection engine's peg-reference gate; re-exported below for existing
 // worker call sites.
 export { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 
 export type OffchainDepegConfirmerKey = "coingecko-confirm";
-
-function getPrimaryPriceAgeSec(
-  input: Pick<PrimaryPriceTrustInput, "priceObservedAt" | "priceUpdatedAt">,
-  nowSec: number,
-): number {
-  const observedAt = typeof input.priceObservedAt === "number" && Number.isFinite(input.priceObservedAt)
-    ? input.priceObservedAt
-    : typeof input.priceUpdatedAt === "number" && Number.isFinite(input.priceUpdatedAt)
-      ? input.priceUpdatedAt
-      : null;
-  if (observedAt == null || observedAt > nowSec) return Number.POSITIVE_INFINITY;
-  return nowSec - observedAt;
-}
-
-function getPrimaryTrustSources(input: Pick<PrimaryPriceTrustInput, "agreeSources" | "priceSource">): string[] {
-  const sources = input.agreeSources && input.agreeSources.length > 0
-    ? input.agreeSources
-    : input.priceSource ?? "";
-  return normalizePricingSourceKeys(sources);
-}
 
 export function resolveDepegSourceFamily(sourceKey: string | null | undefined): string | null {
   if (!sourceKey) return null;
@@ -252,44 +218,4 @@ export function hasFreshMultiSourcePrimaryAgreement(
   }
 
   return [...sourceFamilies].some((family) => !family.startsWith("fallback:"));
-}
-
-
-export function classifyPrimaryDepegTrust(
-  input: PrimaryPriceTrustInput,
-  nowSec: number,
-): DepegPrimaryTrust {
-  if (!isObservedPrice(input) || input.price == null || !Number.isFinite(input.price) || input.price <= 0) {
-    return "unusable";
-  }
-
-  const ageSec = getPrimaryPriceAgeSec(input, nowSec);
-  const trustSources = getPrimaryTrustSources(input);
-
-  if (
-    input.priceSource === "cached" ||
-    input.priceConfidence === "fallback" ||
-    input.priceConfidence === "low" ||
-    ageSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
-  ) {
-    return "confirm_required";
-  }
-
-  if (input.priceConfidence === "single-source") {
-    return trustSources.length === 1 && isSingleSourceDepegAuthoritative(trustSources[0], input.priceObservedAtMode)
-      ? "authoritative"
-      : "confirm_required";
-  }
-
-  if (input.priceConfidence === "high") {
-    if (countDepegAuthoritativeSources(trustSources) >= 2) {
-      return "authoritative";
-    }
-
-    if (hasUpstreamCapableDepegAuthoritativeSource(trustSources)) {
-      return "authoritative";
-    }
-  }
-
-  return "confirm_required";
 }
