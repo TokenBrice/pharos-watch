@@ -23,7 +23,11 @@ import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
 } from "../../blacklist-contracts";
-import { getDexAggregateObservedAt, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
+import { getDexAggregateObservedAt, getDexPriceSourceEntries, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { validatePricingSourceFreshness } from "../../pricing-source-freshness";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../constants";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
@@ -313,20 +317,36 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
       .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
       .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number; price_sources_json: string | null }>();
     for (const row of dexPriceRows.results ?? []) {
-      const decoded = decodeJsonString<number, PersistedJsonDecodeReason>(row.price_sources_json, {
+      const decoded = decodeJsonString<{ observedAt: number; independentPrices: number[] }, PersistedJsonDecodeReason>(row.price_sources_json, {
         updatedAt: row.updated_at, missingReason: "missing", parseErrorReason: "json-parse-failed",
         normalize: (payload) => {
           const clock = getDexAggregateObservedAt(payload, ctx.nowSec);
           return clock.aggregateClockReason != null
             ? { ok: false, reason: clock.aggregateClockReason }
-            : { ok: true, payload: clock.aggregateObservedAt! };
+            : { ok: true, payload: { observedAt: clock.aggregateObservedAt!, independentPrices:
+              (getDexPriceSourceEntries(payload) ?? []).flatMap((value) => {
+                if (!value || typeof value !== "object") return [];
+                const source = value as Record<string, unknown>;
+                if (typeof source.protocol !== "string") return [];
+                const registry = getPricingSourceRegistryEntry(`${source.protocol}-dex`);
+                if (!registry || registry.depegSourceFamily === getPricingSourceRegistryEntry("mento-broker")?.depegSourceFamily ||
+                  typeof source.price !== "number" || !Number.isFinite(source.price) || source.price <= 0 ||
+                  typeof source.tvl !== "number" || source.tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD || !Number.isFinite(source.tvl) ||
+                  typeof source.observedAt !== "number" || source.observedAt > ctx.nowSec || !validatePricingSourceFreshness({
+                    source: registry.key, observedAt: source.observedAt, nowSec: ctx.nowSec,
+                    maxAgeSec: Math.min(DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, registry.maxTrustedAgeSec ?? DEX_PROTOCOL_SOURCE_FRESHNESS_SEC),
+                    maxFutureSkewSec: 0,
+                  }).accepted) return [];
+                return [source.price];
+              }),
+            } };
         },
       });
       if (!decoded.ok) ctx.registerMalformedPersistedInput({
         source: "dex_prices", context: "dex_prices.price_sources_json", stablecoinId: row.stablecoin_id,
         updatedAt: row.updated_at, reason: decoded.reason, degradesRun: false,
       });
-      const aggregateObservedAt = decoded.ok ? decoded.payload : null;
+      const aggregateObservedAt = decoded.ok ? decoded.payload.observedAt : null;
       const ageSec = getRowAgeSec(aggregateObservedAt, ctx.nowSec);
       const publicationAgeSec = getRowAgeSec(row.updated_at, ctx.nowSec);
       if (ageSec != null) dexPriceAgeSecById.set(row.stablecoin_id, ageSec);
@@ -340,6 +360,7 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
         dexPriceUsd: row.dex_price_usd,
         sourceTotalTvl: row.source_total_tvl,
         updatedAt: aggregateObservedAt!,
+        ...(decoded.ok && decoded.payload.independentPrices.length > 0 ? { independentPrices: decoded.payload.independentPrices } : {}),
       });
     }
     succeeded = true;

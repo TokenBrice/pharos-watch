@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { PriceCacheEntry } from "../../../lib/db-cache";
 import { classifyPrimaryDepegTrust } from "../../../lib/depeg-trust-policy";
@@ -287,6 +287,8 @@ describe("buildPreviousTrustedPriceLookup", () => {
 
 describe("nominal par precedence (DEC-02 / CR-43)", () => {
   const NOW = 1_800_000_000;
+  beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(NOW * 1000); });
+  afterEach(() => vi.restoreAllMocks());
   const REFERENCES: PriceValidationReferences = {
     rates: { peggedZAR: 0.0608, peggedXOF: 0.00172 },
     type: "fresh",

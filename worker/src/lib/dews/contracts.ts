@@ -66,6 +66,7 @@ export interface LiquidityHistorySnapshot {
 
 export interface DexPriceSnapshot {
   dexPriceUsd: number;
+  independentPrices?: number[];
   sourceTotalTvl: number;
   updatedAt: number;
 }

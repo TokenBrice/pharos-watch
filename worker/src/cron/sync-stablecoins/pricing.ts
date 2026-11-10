@@ -533,6 +533,7 @@ export function applyProtocolPriceOverrides(input: {
     authoritativeOverrideStats,
   } = input;
 
+  const assessmentAtSec = Math.floor(Date.now() / 1000);
   let appliedCount = 0;
   for (const asset of assets) {
     const override = overrides.get(asset.id);
@@ -547,7 +548,7 @@ export function applyProtocolPriceOverrides(input: {
       validationContext: validationContexts.get(asset), validationReferences,
     }).accepted) {
       asset.nominalPriceReference = { price: nominal.price, source: "protocol-par", mode: "nominal_reference", ...nominal.nominalFx };
-      if (!isTrustedMarketQuote(asset, syncStartSec) && !hasFreshMentoBrokerQuote(asset, syncStartSec, validationReferences)) {
+      if (!isTrustedMarketQuote(asset, assessmentAtSec) && !hasFreshMentoBrokerQuote(asset, assessmentAtSec, validationReferences)) {
         publishNominalPriceReference(asset, asset.nominalPriceReference, syncStartSec);
       }
     }
@@ -577,7 +578,7 @@ export function applyProtocolPriceOverrides(input: {
       continue;
     }
 
-    const trustedMarket = isTrustedMarketQuote(asset, syncStartSec);
+    const trustedMarket = isTrustedMarketQuote(asset, assessmentAtSec);
     if (asset.price != null && asset.price > 0 && override.price > 0) {
       const divergenceBps = relativeBps(override.price, asset.price)!.absBps;
       if (divergenceBps > 100) {
@@ -629,13 +630,14 @@ export function applyProtocolPriceOverrides(input: {
  * Other cached/fallback fills never displace par.
  */
 export function settleNominalPriceReferences(assets: PeggedAsset[], syncStartSec: number, references?: PriceValidationReferences): void {
+  const assessmentAtSec = Math.floor(Date.now() / 1000);
   for (const asset of assets) {
     if (asset.priceSource === "mento-broker" && protocolParProvider.matches(asset.id) &&
-      !hasFreshMentoBrokerQuote(asset, syncStartSec, references)) clearPriceMetadata(asset);
+      !hasFreshMentoBrokerQuote(asset, assessmentAtSec, references)) clearPriceMetadata(asset);
     const reference = asset.nominalPriceReference;
     if (!reference || asset.priceObservedAtMode === "nominal_reference") continue;
-    if (isTrustedMarketQuote(asset, syncStartSec)) continue;
-    if (hasFreshMentoBrokerQuote(asset, syncStartSec, references)) continue;
+    if (isTrustedMarketQuote(asset, assessmentAtSec)) continue;
+    if (hasFreshMentoBrokerQuote(asset, assessmentAtSec, references)) continue;
     publishNominalPriceReference(asset, reference, syncStartSec);
   }
 }

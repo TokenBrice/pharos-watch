@@ -13,9 +13,18 @@ function computeDews(input: DEWSInput) {
 }
 
 describe("computeDEWS", () => {
+  const broker = { price: 0.98, priceSource: "mento-broker", priceConfidence: "fallback", circulatingCurrent: 5e9, circulatingPrevWeek: 5e9 };
   it.each([
     ["uncorroborated", {}, false],
     ["market-price", { dexPriceUsd: 0.9 }, true],
+    ["broker", broker, false],
+    ["confirmed", { ...broker, dexPriceUsd: 0.98, independentDexPrices: [0.98] }, true],
+    ["raw", { ...broker, dexPriceUsd: 0.98 }, false],
+    ["quiet", { ...broker, price: 1, independentDexPrices: [0.98] }, false],
+    ["par", { ...broker, dexPriceUsd: 1, independentDexPrices: [1], prevDivergValue: 100, prevDivergAvailable: true }, false],
+    ["agree", { ...broker, agreeSources: ["kraken"] }, true],
+    ["same", { ...broker, priceSource: "mento-broker+mento-fpmm" }, false],
+    ["other-fallback", { ...broker, priceSource: "curve-thin-onchain" }, true],
     ["issuer-control", { hasBlacklistTracking: true, blacklistEvents24h: 20, blacklistEvents7d: 20 }, true],
   ] as const)("applies the methodology WATCH ceiling and evidence overrides for %s evidence", (_kind, overrides, bypass) => {
     const result = computeDews(makeDewsInput({
@@ -23,9 +32,21 @@ describe("computeDEWS", () => {
       price: null, priceConfidence: null, ...overrides,
     }));
 
-    expect(result.baseScore * result.amplifiers.psi * result.amplifiers.contagion).toBeGreaterThan(WATCH_MAX_SCORE);
+    if (_kind !== "quiet") expect(result.baseScore * result.amplifiers.psi * result.amplifiers.contagion).toBeGreaterThan(WATCH_MAX_SCORE);
     expect(result.finalScore > WATCH_MAX_SCORE).toBe(bypass);
-    if (!bypass) expect(result.finalScore).toBe(WATCH_MAX_SCORE);
+    if (!bypass && _kind !== "quiet") expect(result.finalScore).toBe(WATCH_MAX_SCORE);
+    if (_kind === "quiet") expect(result.insufficientEvidenceReason).toBe("data_quality_only");
+    if (_kind === "uncorroborated") {
+      expect(result.band).toBe("WATCH");
+      expect(result.dataQualityScore).toBe(100);
+      expect(result.evidenceKinds).not.toContain("dex-liquidity");
+    }
+    if ("priceSource" in overrides) expect(result.signals.diverg.primaryDevBps).toBe(_kind === "quiet" ? 0 : 200);
+    expect(result.evidenceKinds.includes("market-price")).toBe(_kind !== "issuer-control" && bypass);
+    if (_kind === "market-price") {
+      expect(result.signals.diverg).toMatchObject({ available: true, dexDevBps: 1000 });
+      expect(result.insufficientEvidenceReason).toBeNull();
+    }
   });
 
   it("returns CALM for a healthy large-cap coin with all signals available", () => {
@@ -415,41 +436,6 @@ describe("DEWS scoring boundaries", () => {
     expect(result?.signals.black.available).toBe(true);
     expect(Number.isFinite(result?.signals.black.value ?? NaN)).toBe(true);
     expect(result?.signals.black.spikeRatio).toBe(3); // falls back to raw 24h count
-  });
-
-  it("caps supply plus null-price data quality at WATCH without market evidence", () => {
-    const result = computeDEWS(
-      makeDewsInput({
-        circulatingCurrent: 4e9,
-        circulatingPrevDay: 5e9,
-        circulatingPrevWeek: 5.5e9,
-        price: null,
-        priceConfidence: null,
-      }),
-    );
-
-    expect(result).not.toBeNull();
-    expect(result!.band).toBe("WATCH");
-    expect(result!.score).toBe(35);
-    expect(result!.evidenceKinds).not.toContain("market-price");
-    expect(result!.evidenceKinds).not.toContain("dex-liquidity");
-    expect(result!.dataQualityScore).toBe(100);
-  });
-
-  it("retains stressed DEX-only market evidence without the sparse-evidence WATCH cap", () => {
-    const result = computeDEWS(makeDewsInput({
-      price: null,
-      priceConfidence: null,
-      dexPriceUsd: 0.9,
-      circulatingCurrent: 4e9,
-      circulatingPrevDay: 5e9,
-      circulatingPrevWeek: 5.5e9,
-    }));
-    expect(result).not.toBeNull();
-    expect(result!.signals.diverg).toMatchObject({ available: true, dexDevBps: 1000 });
-    expect(result!.evidenceKinds).toContain("market-price");
-    expect(result!.score).toBeGreaterThan(35);
-    expect(result!.insufficientEvidenceReason).toBeNull();
   });
 
   it("allows supply contraction plus market divergence to produce elevated risk", () => {

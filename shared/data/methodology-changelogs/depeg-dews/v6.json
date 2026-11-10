@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.46",
+    "title": "Lone Mento Broker quotes cannot establish DEWS escalation evidence",
+    "date": "2026-11-10",
+    "effectiveAt": 1794355200,
+    "summary": "A spread-bearing Mento Broker observation without independent confirmation retains its raw price and divergence but cannot alone release the existing DEWS WATCH cap.",
+    "impact": [
+      "The live DEWS projection preserves primary source and agreeing-source provenance. Any mento-broker-priced asset without a registered independent observed agreeing source uses only individually admitted, registered non-Mento DEX protocol marks for market-price escalation evidence. Same-family Mento observations, cached/search/nominal references and protocol overrides do not establish independent primary confirmation; an opaque aggregate, at-par DEX or previous mixed divergence cannot authenticate Broker spread. Protocol marks retain their original clocks and existing source-age/TVL gates.",
+      "The published quote, deviation, raw divergence sub-signal and preliminary weighted score remain unchanged. The existing WATCH_MAX_SCORE authority caps the final score when this removes the only qualifying escalation evidence; independently stressed admitted DEX evidence or an independent agreeing primary source restores ordinary behaviour. Lone Broker rows without other qualifying evidence serialize their evidence limit even when already at or below WATCH, preserving the numerical score. Telegram honors every serialized producer evidence cap before exit hysteresis, so capped WATCH35 cannot inherit a prior ALERT and complete a pending escalation. Uncapped hysteresis, the two-computation persistence, liquidity and severe issuer-control bypasses, weights, thresholds and depeg confirmation are unchanged. Other source classes retain their DEWS scoring treatment.",
+      "The rule is source-wide, including existing AUDm/CADm/COPm Broker routes as well as XOFm/ZARm. Reviewed-fee fixtures change XOFm from ALERT39 to WATCH35 while retaining the other twelve Mento bands. At the admitted 200-bps envelope, existing AUDm/CADm/COPm and XOFm/ZARm change from ALERT39 to WATCH35 with calm supply and no other evidence. These are deterministic source-route fixtures, not current production-band claims.",
+      "Provisional activation is 2026-11-11 00:00 UTC (1794355200), to be re-dated after activation. Pricing remains v6.76; production acceptance requires a new affected DEWS publication and Telegram evaluation."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.44",
     "title": "Original aggregate clocks qualify affirmative DEX evidence",
     "date": "2026-11-06",

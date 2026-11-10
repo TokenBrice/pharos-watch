@@ -658,7 +658,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.44"
+  "currentVersion": "6.46"
 }
 ```
 
@@ -696,7 +696,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.44"
+  "currentVersion": "6.46"
 }
 ```
 
@@ -1112,8 +1112,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.44",
-  "methodologyVersion": "6.44"
+  "currentVersion": "6.46",
+  "methodologyVersion": "6.46"
 }
 ```
 

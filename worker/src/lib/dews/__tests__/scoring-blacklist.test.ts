@@ -85,6 +85,17 @@ describe("buildDewsScoringResult peg reference admission", () => {
 });
 
 describe("buildDewsScoringResult blacklist attribution", () => {
+  it.each([0, 1, 2])("Broker provenance: %s", (confirmed) => {
+    const asset = { ...createAsset("usdt-tether"), price: 0.98, priceSource: "mento-broker", agreeSources: confirmed === 1 ? ["kraken"] : [], priceConfidence: "fallback" as const };
+    const state = createSourceState();
+    if (confirmed === 2) state.dexPriceMap.set(asset.id, { dexPriceUsd: 0.98, independentPrices: [0.98], sourceTotalTvl: 1e6, updatedAt: 1 });
+    const row = buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), pegRates: {},
+      sourceState: state, registerMalformedPersistedInput: () => {} }).results[0];
+    expect(row.band).toBe(confirmed ? "ALERT" : "WATCH");
+    expect(row.evidenceKinds.includes("market-price")).toBe(!!confirmed);
+    expect(asset.price).toBe(0.98);
+  });
+
   it("applies blacklist counts only to the tracker stablecoin id for same-symbol assets", () => {
     const result = buildDewsScoringResult({
       assetById: new Map([

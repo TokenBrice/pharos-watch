@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
+import { sha256Hex } from "@shared/lib/sha256";
+import { loadFreshFxRates } from "../../cron/sync-stablecoins/shared";
 import { MENTO_POOL_EXCHANGE_ABI_PARAMETERS } from "@shared/lib/mento-contracts";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 const blockNumber = vi.fn(), blockHeader = vi.fn(), multicall = vi.fn();
@@ -89,15 +91,16 @@ describe("Mento V2 Broker guarded prices", () => {
     expect(multicall).toHaveBeenCalledTimes(1);
   });
   it.each([
-    ["cadm-mento", "peggedCAD", 0.73],
-    ["audm-mento", "peggedAUD", 0.73],
-    ["copm-mento", "peggedCOP", 0.00032],
-  ])("guards %s publication", async (id, pegType, reference) => {
+    ["cadm-mento", "peggedCAD", 0.73, 0.7272],
+    ["audm-mento", "peggedAUD", 0.73, 0.7272],
+    ["copm-mento", "peggedCOP", 0.00032, 0.0003232],
+  ])("guards %s publication", async (id, pegType, reference, expected) => {
     fixture({}, 0n, id);
     expect(mentoBrokerProvider.matches(id)).toBe(true);
     expect(await mentoBrokerProvider.fetchLivePrice!({ ...context().assetsById.get("cusd-celo")!, id }, context())).toBeNull();
     const override = await fetchMentoBrokerPrice(id, context());
-    expect(override).not.toBeNull();
+    expect(override!.price).toBeCloseTo(expected, 12);
+    expect(override!.observedAt).toBe(Math.floor(Date.now() / 1000) - 60);
     for (const severe of [false, true]) {
       const asset = { id, name: id, symbol: id, pegType, price: null } as PeggedAsset;
       const applied = applyProtocolPriceOverrides({
@@ -107,7 +110,8 @@ describe("Mento V2 Broker guarded prices", () => {
         syncStartSec: Math.floor(Date.now() / 1000),
       });
       expect(applied).toBe(severe ? 0 : 1);
-      expect(asset.price).toBe(severe ? null : override!.price);
+      if (severe) expect(asset.price).toBeNull();
+      else expect(asset.price).toBeCloseTo(expected, 12);
     }
   });
   const int48Limit = (1n << 47n) - 1n;
@@ -136,8 +140,17 @@ describe("Mento V2 Broker guarded prices", () => {
   ])("withholds %s", async (_name, overrides) => { fixture(overrides); expect(await fetchMentoBrokerPrice("cadm-mento", context())).toBeNull(); });
   it.each([["xofm-mento", "peggedXOF", 0.0017], ["zarm-mento", "peggedZAR", 0.06]] as const)("%s prefers verified Broker, failing closed", async (id, pegType, par) => {
     const now = Math.floor(Date.now() / 1000);
-    const refs = { rates: { [pegType]: par }, type: "fresh" as const, updatedAt: now - 60,
-      sourceModeByPeg: { [pegType]: "live" as const }, typeByPeg: { [pegType]: "fresh" as const }, updatedAtByPeg: { [pegType]: now - 60 } };
+    const rates = JSON.stringify({ [pegType]: par });
+    const meta = { usableSyncAt: now, mode: "live", ratesSha256: sha256Hex(rates),
+      sourceUpdatedAtByPeg: { [pegType]: now - 60 }, sourceModeByPeg: { [pegType]: "live" },
+      sourceCadenceByPeg: { [pegType]: "intraday" }, sourceDateByPeg: { [pegType]: new Date(Date.now()).toISOString().slice(0, 10) } };
+    const db = { prepare: () => ({ bind: () => ({ all: async () => ({ results: [
+      { key: "fx-rates", value: rates, updated_at: now },
+      { key: "fx-rates-meta", value: JSON.stringify(meta), updated_at: now },
+    ] }) }) }) } as unknown as D1Database;
+    const refs = (await loadFreshFxRates(db)).validationReferences!;
+    expect(refs).toMatchObject({ sourceModeByPeg: meta.sourceModeByPeg, sourceCadenceByPeg: meta.sourceCadenceByPeg,
+      sourceDateByPeg: meta.sourceDateByPeg, maxAgeSec: 21600 });
     const asset = { id, name: id, symbol: id, pegType, circulating: { [pegType]: 1e6 }, price: par,
       priceSource: "protocol-par", priceObservedAtMode: "nominal_reference", priceSyncedAt: now } as PeggedAsset;
     fixture({}, 0n, id);
@@ -155,6 +168,19 @@ describe("Mento V2 Broker guarded prices", () => {
       apply(); Object.assign(asset, state); settleNominalPriceReferences([asset], now, refs);
       expect(asset.priceSource).toBe("protocol-par");
     }
+    fixture({ oracleTime: uint(BigInt(now - 240)) }, 0n, id);
+    const acquired = await fetchMentoBrokerPrice(id, { ...context(), validationReferences: refs });
+    expect(acquired).not.toBeNull();
+    for (const delay of [0, 80]) {
+      vi.spyOn(Date, "now").mockReturnValue((now + delay) * 1000);
+      const quote = delay ? acquired! : { ...overrides.get(id)!, observedAt: now - 1 };
+      applyProtocolPriceOverrides({ assets: [asset], overrides: new Map([[id, quote]]),
+        validationContexts: createValidationContextResolver(), validationReferences: refs, syncStartSec: now - 100 });
+      settleNominalPriceReferences([asset], now - 100, refs);
+      expect(asset.priceSource).toBe(delay ? "protocol-par" : "mento-broker");
+      expect(asset.priceSyncedAt).toBe(now - 100);
+    }
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     apply(new Map([[id, { ...overrides.get(id)!, price: par / 5 }]]));
     expect(asset.priceSource).toBe("protocol-par");
     apply(new Map());

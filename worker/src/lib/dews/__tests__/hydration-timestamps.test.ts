@@ -275,7 +275,8 @@ describe("DEWS hydration timestamp admission", () => {
         updated_at: publicationAge == null ? null : RUN_AT - publicationAge,
         price_sources_json: typeof age === "string" ? age :
           JSON.stringify(id === "crash" ? { aggregateObservedAt: RUN_AT - 60, sources: [] } :
-            [{ aggregateObservedAt: age == null ? null : RUN_AT - age }]),
+            [["curve", 60, 2e6], ["mento", 60, 2e6], [null, 60, 2e6], ["curve", 2200, 2e6], ["curve", -0.5, 2e6], ["curve", 60, 10]].map(([protocol, sourceAge, tvl]) => ({
+              protocol, price: 0.98, tvl, observedAt: RUN_AT - Number(sourceAge), aggregateObservedAt: age == null ? null : RUN_AT - age }))),
       })) }]);
     const hydrated = await hydrateDexPrices({
       db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput,
@@ -285,7 +286,7 @@ describe("DEWS hydration timestamp admission", () => {
       .toEqual([["missing", "aggregate-clock-unavailable", false], ["malformed", "json-parse-failed", false],
         ["future", "aggregate-clock-future", false], ["invalid", "aggregate-clock-invalid", false]]);
     expect([...hydrated.dexPriceMap]).toEqual([
-      ["trusted", { dexPriceUsd: 1, sourceTotalTvl: 2_000_000, updatedAt: RUN_AT - 60 }],
+      ["trusted", { dexPriceUsd: 1, sourceTotalTvl: 2_000_000, updatedAt: RUN_AT - 60, independentPrices: [0.98] }],
       ["crash", { dexPriceUsd: 0.4, sourceTotalTvl: 5_000_000, updatedAt: RUN_AT - 60 }],
     ]);
     expect(hydrated.trustedCount).toBe(2);
