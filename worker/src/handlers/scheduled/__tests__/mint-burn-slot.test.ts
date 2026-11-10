@@ -78,9 +78,9 @@ describe("mint/burn slot lanes", () => {
     vi.unstubAllGlobals();
   });
 
-  it("runs the critical lane with 24h and 168h aggregate cache publication", async () => {
+  it.each(["ok", "degraded", "error"])("publishes both critical windows only for non-error primary status: %s", async (status) => {
     const rt = runtime();
-
+    mocks.syncMintBurn.mockResolvedValue({ status });
     const summary = await runHalfHourlyMintBurnCriticalSlot(rt);
 
     expect(mocks.syncMintBurn).toHaveBeenCalledWith(
@@ -88,8 +88,7 @@ describe("mint/burn slot lanes", () => {
       rt.env.ALCHEMY_API_KEY ?? null,
       expect.objectContaining({ lane: "critical", jobName: "sync-mint-burn" }),
     );
-    expect(mocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(rt.db, 24);
-    expect(mocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(rt.db, 168);
+    expect(mocks.refreshAggregateMintBurnFlowCache.mock.calls).toEqual(status === "error" ? [] : [[rt.db, 24], [rt.db, 168]]);
     expect(summary.jobs.map((job) => job.job)).toEqual(["sync-mint-burn"]);
   });
 

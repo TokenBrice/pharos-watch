@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
-import { syncMintBurnConfig } from "../mint-burn/sync-config";
+import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "../mint-burn/sync-config";
+import { isMintBurnCapacityOnlyRepairDebt } from "../mint-burn/repair-coverage";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
@@ -66,8 +67,8 @@ function mintLog() {
     transactionHash: `0x${"c".repeat(64)}`, transactionIndex: "0x0",
     blockHash: `0x${"d".repeat(64)}`, logIndex: "0x0", removed: false };
 }
-function run(db: D1Database = {} as D1Database) {
-  return syncMintBurnConfig({ db, config, key: "key", tier: "extended", fromBlock: 101,
+function run(db: D1Database = {} as D1Database, summary?: MintBurnConfigSummary) {
+  return syncMintBurnConfig({ db, summary, config, key: "key", tier: "extended", fromBlock: 101,
     scanTo: 102, chainHead: 200, rpcEndpoints: [mintBurnAlchemyEndpoint("https://rpc.example")], configBudgetLimit: 25, runTimestamp: 1200,
     priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
     txContextCache: new Map(), affectedHours: new Map() });
@@ -234,9 +235,15 @@ describe("conservation producer publication and cursor fences", () => {
     expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(), [], expect.anything(), expect.anything());
     expect(result.summary.conservationFailure).toBe(true);
   });
-  it("propagates cache write failure without returning an advanced cursor", async () => {
-    vi.mocked(persistMintBurnConservation).mockRejectedValue(new Error("cache write failed"));
-    await expect(run()).rejects.toThrow("cache write failed");
+  it.each(["mismatch", "rpc"])("retains %s evidence through a later D1 overload", async (kind) => {
+    const summary = createMintBurnConfigSummary(config, "key", "extended");
+    if (kind === "mismatch") vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "mismatch" });
+    else vi.mocked(classifyBridgeBurnRows).mockResolvedValue({ effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
+      txContextShortfalls: 1, deferredTxHashes: ["tx"] });
+    vi.mocked(persistMintBurnConservation).mockRejectedValue(new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window"));
+    await expect(run(undefined, summary)).rejects.toThrow("D1 DB is overloaded");
+    expect(kind === "mismatch" ? summary.conservationFailure : summary.rpcEvidenceIncomplete).toBe(true);
+    expect(isMintBurnCapacityOnlyRepairDebt({ ...summary, repairReason: "repair-runtime-exhausted" })).toBe(false);
   });
 });
 

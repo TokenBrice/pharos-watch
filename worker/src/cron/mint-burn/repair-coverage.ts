@@ -123,6 +123,27 @@ export interface MintBurnCoverageRepairSummary extends MintBurnConfigSummary {
     | "proof-committed" | "materialization-failed";
 }
 
+/** Historical scheduling debt is neutral to live health only with no evidence failure. */
+export function isMintBurnCapacityOnlyRepairDebt(summary: MintBurnCoverageRepairSummary): boolean {
+  if (!["scan-coverage-unproven", "repair-runtime-exhausted", "repair-budget-exhausted", "proof-staged", "proof-committed"].includes(summary.repairReason)
+    || summary.conservationFailure || summary.conservationStatus === "mismatch"
+    || summary.supplyProofStatus === "residual" || summary.rpcEvidenceIncomplete
+    || summary.sourceFailureReason || summary.headFailureReason
+    || summary.rowsDroppedDecode > 0 || (summary.rowsQuarantinedDecode ?? 0) > 0
+    || (summary.decodeQuarantines?.length ?? 0) > 0 || summary.missingTimestampCount > 0
+    || (summary.conservationStatus === "unavailable" && summary.conservationReason != null
+      && !["incomplete-event-persistence-context", "persisted-event-readback-deadline"].includes(summary.conservationReason))
+    || (summary.supplyProofReason != null && summary.supplyProofReason !== "persisted-event-readback-deadline")) return false;
+  if (summary.failedEventDefs.length > 0) return summary.failedEventDefs.every((reason) =>
+    /^(?:range-proof|conservation):persisted-event-readback-deadline$/.test(reason)
+    || /^tx-context(?:-request-not-started)?:\d+$/.test(reason));
+  return summary.supplyProofReason === "persisted-event-readback-deadline"
+    || summary.conservationReason === "persisted-event-readback-deadline"
+    || summary.repairReason === "repair-runtime-exhausted" || summary.repairReason === "repair-budget-exhausted"
+    || (!summary.attempted && summary.repairReason === "scan-coverage-unproven")
+    || (summary.errors > 0 && ["proof-staged", "proof-committed"].includes(summary.repairReason));
+}
+
 /** Serial, bounded replays share the live scanner's caches and materialization debt.
  * Returned proofs MUST remain behind the caller's hourly-materialization fence.
  */
@@ -217,7 +238,7 @@ export async function repairMintBurnCoverage(
         budget, checkedAt: input.runTimestamp, signal: input.signal, deadlineMs: configDeadlineMs,
       });
       const result = await syncMintBurnConfig({
-        db: input.db, config, key, tier: config.tier ?? "critical", fromBlock, scanTo: toBlock,
+        db: input.db, config, key, summary, tier: config.tier ?? "critical", fromBlock, scanTo: toBlock,
         chainHead: context.chainHead, rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads,
         tronReader: context.tronReader,
         signal: input.signal, configBudgetLimit: Math.max(0, limit - budget.count), runTimestamp: input.runTimestamp,
@@ -234,9 +255,8 @@ export async function repairMintBurnCoverage(
       }
       // Scheduling state is not certified progress. Keep the cursor behind the
       // caller's materialization fence, including after partially persisted work.
-      const capacityOnly = !summary.conservationFailure && !result.rpcEvidenceIncomplete && summary.errors > 0
-        && summary.failedEventDefs.length > 0 && summary.failedEventDefs.every((reason) =>
-          reason === "range-proof:persisted-event-readback-deadline" || /^tx-context(?:-request-not-started)?:\d+$/.test(reason));
+      const capacityOnly = summary.errors > 0 && summary.failedEventDefs.length > 0
+        && !result.rpcEvidenceIncomplete && isMintBurnCapacityOnlyRepairDebt(summary);
       const span = toBlock - fromBlock + 1;
       maxBlocks = capacityOnly ? Math.max(1, Math.floor(span / 2))
         : summary.repairReason === "proof-staged" ? Math.min(COVERAGE_REPAIR_MAX_BLOCKS,
