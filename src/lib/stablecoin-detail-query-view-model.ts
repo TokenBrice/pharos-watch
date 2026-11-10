@@ -131,10 +131,11 @@ export function buildDetailPegPriceSnapshot(
   coin: StablecoinMeta,
   pegSummaryData?: PegSummaryResponse,
   summaryData?: StablecoinLiveSummary,
+  nowMs = Date.now(),
 ): DetailPegPriceSnapshot {
   const isNavToken = coin.flags.navToken ?? false;
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
-  const currentPeg = resolveCurrentPeg(summaryData, pegScoreResult);
+  const currentPeg = resolveCurrentPeg(summaryData, pegScoreResult, nowMs);
   const pegRef = isNavToken
     ? getNavPriceReference(coin.flags.pegCurrency, pegSummaryData?.coins)
     : currentPeg?.pegReference?.valueUsd ?? null;

@@ -232,7 +232,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
           label: "Price",
           numeric: true,
           render: (coin) => {
-            const ref = coin.data.currentPeg
+            const ref = coin.data.currentPeg && !coin.meta.flags.navToken
               ? coin.data.currentPeg.pegReference?.valueUsd ?? null
               : getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
             return formatNativePrice(hasObservedDisplayPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, ref);

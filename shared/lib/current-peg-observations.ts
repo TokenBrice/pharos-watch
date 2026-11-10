@@ -102,6 +102,7 @@ export function deriveCurrentPegObservationMap(options: {
     result.set(meta.id, {
       primaryTrust,
       dexPriceCheck,
+      dexPriceCheckExpiresAt: dexPriceCheck && !currentPriceUnavailable ? dexRow?.expiresAt ?? null : null,
       currentDeviationBps,
       currentSignal,
       pegReference,
@@ -120,6 +121,7 @@ export function hasUsableCurrentPrice(asset: StablecoinData): asset is Stablecoi
 }
 
 export interface CurrentPegDexPrice {
+  expiresAt: number;
   dex_price_usd: number;
   deviation_from_primary_bps: number | null;
   source_pool_count: number;
@@ -147,4 +149,3 @@ export function deriveDexDeviationBps(
   }
   return null;
 }
-

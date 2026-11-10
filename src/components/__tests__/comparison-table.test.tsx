@@ -164,6 +164,16 @@ describe("ComparisonTable", () => {
     expect(html).toContain("Fallback");
   });
 
+  it("keeps a NAV currency conversion with a quote-bound block", () => {
+    const coin = makeCoin("eutbl-spiko", "EUTBL");
+    coin.meta.flags = { ...coin.meta.flags, pegCurrency: "EUR", navToken: true };
+    coin.data = { ...coin.data, pegType: "peggedEUR", price: 1.21, currentPeg: {
+      currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: false,
+      currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null,
+    } };
+    expect(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={{ peggedEUR: 1.1 }} />)).toContain("€1.1000");
+  });
+
   it.each([false, true])("distinguishes whole-feed availability (%s) from an unrated coin", (available) => {
     const coin = makeCoin("usdt", "USDT");
     coin.bluechipPublicationAvailable = available;

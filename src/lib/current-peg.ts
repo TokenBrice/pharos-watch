@@ -10,8 +10,14 @@ export function hasObservedDisplayPrice(row: Pick<CurrentPriceRow, "price" | "pr
 }
 
 /** Only absent fields use the legacy second payload; published nulls remain unavailable. */
-export function resolveCurrentPeg(row: CurrentPriceRow | undefined, legacy?: PegSummaryCoin | null) {
-  return row?.currentPeg ? { ...row, ...row.currentPeg } : legacy;
+export function resolveCurrentPeg(row: CurrentPriceRow | undefined, legacy?: PegSummaryCoin | null, nowMs = Date.now()) {
+  if (!row?.currentPeg) return legacy;
+  const expiresAt = row.currentPeg.dexPriceCheckExpiresAt;
+  return {
+    ...row, ...row.currentPeg,
+    dexPriceCheck: expiresAt != null && Number.isFinite(expiresAt) && nowMs < expiresAt * 1000
+      ? row.currentPeg.dexPriceCheck : null,
+  };
 }
 
 export function resolveCurrentDeviationBps(row: CurrentPriceRow | undefined, legacy?: PegSummaryCoin | null): number | null {

@@ -21,6 +21,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useQuerySlice, type QueryResultLike, type QuerySlice } from "@/hooks/use-query-slice";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import {
@@ -304,12 +305,15 @@ export function useStablecoinDetailViewModel({
     yieldEnabled,
   ]);
 
+  const dexExpiresAt = liveSummary.data?.currentPeg?.dexPriceCheckExpiresAt;
+  const boundaryNowMs = useFreshnessBoundary([], current, dexExpiresAt == null ? [] : [dexExpiresAt * 1000]);
+  const nowMs = dexExpiresAt == null ? undefined : boundaryNowMs;
   const viewModel = useMemo(
     () =>
       buildStablecoinDetailViewModel({
         core: { id, coin, summary, logoSrc, handleRetryAll, savedAssessment },
         queries,
-        supplemental: { yieldRankings, stressSignals, flows, blacklist, reserves },
+        supplemental: { yieldRankings, stressSignals, flows, blacklist, reserves, nowMs },
       }),
     [
       id,
@@ -324,6 +328,7 @@ export function useStablecoinDetailViewModel({
       flows,
       blacklist,
       reserves,
+      nowMs,
     ],
   );
 

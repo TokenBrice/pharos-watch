@@ -4,6 +4,7 @@ import { handlePegSummary } from "../../../api/peg-summary";
 import { CurrentPegSchema } from "@shared/types/current-peg";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { overlayCanonicalDetail } from "../../../api/stablecoin-detail/price";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../../lib/constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
@@ -26,7 +27,8 @@ describe("validateAndWriteStablecoinsCache", () => {
     const { db, sqlite } = fixtures.open();
     vi.spyOn(Date, "now").mockReturnValue(1_777_000_100_000);
     sqlite.prepare("INSERT INTO dex_prices (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl, updated_at, price_sources_json) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run("usdc-circle", "USDC", 0.8, 4, 10_000_000, 1_777_000_090, '{"aggregateObservedAt":1777000090,"sources":[]}');
+      .run("usdc-circle", "USDC", 0.8, 4, 10_000_000, 1_777_000_090,
+        JSON.stringify({ aggregateObservedAt: 1_777_000_101 - DEX_PRICE_CHECK_FRESHNESS_SEC, sources: [] }));
     const prepare = db.prepare.bind(db);
     const dexRead = vi.spyOn(db, "prepare").mockImplementation((sql) => {
       if (overload && sql.includes("FROM dex_prices")) throw new Error("D1 DB is overloaded: consumed within a 10 second window");
@@ -58,12 +60,13 @@ describe("validateAndWriteStablecoinsCache", () => {
     const published = canonical.peggedAssets[0];
     expect(published.currentPeg).toMatchObject({ currentDeviationBps: price == null ? null : -2_000, currentPriceUnavailable: price == null });
     expect(published.price).toBe(price);
+    expect(published.currentPeg.dexPriceCheckExpiresAt).toBe(price == null || overload ? null : 1_777_000_101);
     expect(published.currentPeg.dexPriceCheck?.agrees ?? null).toBe(price == null || overload ? null : true);
     expect(derive).toHaveBeenCalledOnce();
     derive.mockClear();
     const summary = await (await handlePegSummary(db)).json() as { coins: { id: string }[] };
     const summaryCoin = summary.coins.find(({ id }) => id === asset.id);
-    expect(CurrentPegSchema.parse({ ...summaryCoin, dexPriceCheck: published.currentPeg.dexPriceCheck })).toEqual(published.currentPeg);
+    expect(CurrentPegSchema.parse({ ...summaryCoin, dexPriceCheck: published.currentPeg.dexPriceCheck, dexPriceCheckExpiresAt: published.currentPeg.dexPriceCheckExpiresAt })).toEqual(published.currentPeg);
     expect(derive).toHaveBeenCalledTimes(2);
     const detail = await (await overlayCanonicalDetail(db, asset.id, Response.json({ price: 1 }))).json();
     expect(projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail))).toMatchObject({ price, currentPeg: published.currentPeg });

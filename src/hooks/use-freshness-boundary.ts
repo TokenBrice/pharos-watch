@@ -7,10 +7,10 @@ import { deriveDataHealth, getDataHealthBoundaries } from "@/lib/data-health";
 type FreshnessInput = Parameters<typeof deriveDataHealth>[0];
 
 /** A local render at the next health crossing, never a poll or an application-wide tick. */
-export function useFreshnessBoundary(inputs: readonly FreshnessInput[], enabled = true): number | undefined {
+export function useFreshnessBoundary(inputs: readonly FreshnessInput[], enabled = true, expiresAtMs: readonly number[] = []): number | undefined {
   const hydrated = useHydrated();
   const [nowMs, setNowMs] = useState<number>();
-  const boundaryKey = inputs.flatMap(getDataHealthBoundaries).join(",");
+  const boundaryKey = [...inputs.flatMap(getDataHealthBoundaries), ...expiresAtMs].filter(Number.isFinite).join(",");
 
   useEffect(() => {
     if (!hydrated || !enabled || !boundaryKey) return;
