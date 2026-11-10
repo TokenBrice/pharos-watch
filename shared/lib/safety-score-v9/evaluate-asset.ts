@@ -416,6 +416,7 @@ const REASON_EVIDENCE_LEVEL: Partial<Record<V9ReasonCode, V9EvidenceLevel>> = {
   "missing-reserve-composition": "limited",
   "missing-runtime-route-evidence": "limited",
   "missing-same-notional-route": "limited",
+  "negligible-dex-route": "limited",
   "unproven-settlement-bound": "limited",
   "missing-upgrade-control": "limited",
   "missing-upgradeability-review": "limited",

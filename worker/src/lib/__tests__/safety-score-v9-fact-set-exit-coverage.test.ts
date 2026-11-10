@@ -224,17 +224,14 @@ describe("configured redemption channel census", () => {
           circulatingUsd: 10_000_000, portfolioFactStatus: compiled.exitStatus,
           gaps: [...context.gaps.values()], routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
         }, V9_CANDIDATE_POLICY_V1);
-        expect(evaluated.score).toBe(scenario === "measured-zero-dex" ? 0 : 50);
-        if (scenario === "measured-zero-dex") {
-          expect(evaluated.reasons).toContain("no-viable-exit-path");
-        } else {
-          expect(evaluated.reasons).toContain("missing-same-notional-route");
-          expect(evaluated.reasons).not.toContain("no-viable-exit-path");
-        }
+        expect(evaluated.score).toBe(50);
+        expect(evaluated.reasons).toContain("missing-same-notional-route");
+        expect(evaluated.reasons).not.toContain("no-viable-exit-path");
         expect(evaluated.routes.find((route) => route.routeKey === channel.routeKey)).toMatchObject({
           included: false, capacityPoint: null,
         });
         if (scenario === "measured-zero-dex") {
+          expect(evaluated.reasons).toContain("negligible-dex-route");
           expect(evaluated.routes.find((route) => route.lane === "dex")).toMatchObject({ included: true, score: 0 });
         }
       } finally {
@@ -485,7 +482,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(compiled.assets[0]!.exitRoutes.find((entry) => entry.lane === "redemption")!.capacityCurve).toEqual(observation.capacityCurve);
   });
 
-  it.each([false, true])("excludes proven unavailable live-only redemption without reviving an exhausted DEX (empty DEX: %s)", (emptyDex) => {
+  it.each([false, true])("retains unknown Exit beside unavailable redemption (empty DEX: %s)", (emptyDex) => {
     const fixed = structuredClone(queuedRedemptionFixedInput());
     const redemption = fixed.redemptionBackstopMap.alpha!;
     redemption.provider = "reserve-sync-metadata";
@@ -535,7 +532,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       gaps: asset.gaps, portfolioFactStatus: asset.exitStatus,
       routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
     }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(emptyDex ? 50 : 0);
+    expect(result.score).toBe(50);
     expect(result.aggregationDisposition).toBe("included");
     if (emptyDex) expect(result.limitedEvidenceCauses).toContain("U");
     expect(result.routes.find((route) => route.routeKey === missing.routeKey)).toMatchObject({
@@ -825,6 +822,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       });
       const result = evaluateV9Exit({
         circulatingUsd: asset.supply.circulatingUsd,
+        portfolioStatus: "reviewed-complete",
         gaps: asset.gaps,
         portfolioFactStatus: asset.exitStatus,
         routes: [projectV9ExitEvaluationRoute(route)],

@@ -1135,21 +1135,32 @@ export function evaluateV9Exit(
         : routeCause(route, "capacity").cause !== null ? routeCause(route, "capacity") : routeCause(route);
   };
   const excludedGap = (trace: V9ExitRouteTrace) => excludedCause(trace).excluded;
-  // A route-local materiality zero does not prove whole-asset exhaustion
-  // while another applicable rail is unavailable for an A pipeline or C/U
-  // reason, or the inventory still carries such a gap.
-  // Reuse the no-usable-route path, not a floor on an actual measured zero.
+  const negligibleDexRoutes = new Set(evaluated.filter(({ route }) => {
+    if (route.lane !== "dex") return false;
+    // Traces contain rounded, valued recovery; materiality uses raw capacity.
+    const capacity = resolveIncludedRouteCapacity(route, stressRequest, envelope);
+    return capacity.state === "included" && !hasMaterialExitCapacity({
+      executableCapacityUsd: capacity.capacityPoint.executableUsd,
+      requestedNotionalUsd: stressRequest.rawSupplyRequestUsd,
+    }, envelope.policy.semantic.exit);
+  }).map(({ route }) => route.routeKey));
+  const onlyNegligibleDex = evaluated.length > 0 && negligibleDexRoutes.size === evaluated.length;
+  // Local DEX exhaustion, including measured zero, proves nothing about an
+  // unmeasured rail or incomplete census. Keep the measurement diagnostic.
   if (evaluated.length > 0 &&
-    evaluated.every((candidate) => candidate.trace.capsApplied.includes("immaterial-executable-capacity")) &&
+    evaluated.every((candidate) => candidate.trace.capsApplied.includes("immaterial-executable-capacity") ||
+      negligibleDexRoutes.has(candidate.route.routeKey)) &&
     (inventoryCause.cause === "A" || inventoryCause.cause === "C" || inventoryCause.cause === "U" ||
+      (onlyNegligibleDex && (args.portfolioStatus !== "reviewed-complete" || inventoryCause.cause === "B")) ||
       traces.some((trace, index) => {
         if (trace.included || trace.exclusionReason === null ||
           routes[index]!.applicability === "not-applicable" || routes[index]!.routeSuspension) return false;
         const causal = excludedCause(trace);
-        return causal.cause !== "D" && (!causal.excluded || causal.cause === "A");
+        return causal.cause !== "D" && (!causal.excluded || causal.cause === "A" || onlyNegligibleDex);
       }))) {
     evaluated = [];
     pillarMetadata.supportedComponentKeys = [];
+    if (negligibleDexRoutes.size > 0) diagnosticReasons.push("negligible-dex-route");
   }
   if (evaluated.length === 0) {
     const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||

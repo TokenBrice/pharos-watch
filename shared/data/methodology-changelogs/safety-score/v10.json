@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.44",
+    "title": "Negligible DEX measurements preserve unknown Exit pricing",
+    "date": "2026-11-10",
+    "effectiveAt": 1794355200,
+    "summary": "Owner ruling for issue #1918: a negligible measured DEX route, including exact zero executable capacity, cannot by itself replace unknown Exit pricing while another applicable rail is unmeasured or the route inventory remains incomplete. Keep the measured route diagnostic and the existing unknown evidence and missing-route reasons.",
+    "impact": [
+      "Reuse hasMaterialExitCapacity and the versioned policy: capacity is negligible below both 1% of the materiality denominator (5% of usable supply clamped to $100,000–$25 million; missing or stale supply uses $25 million) and $100,000 executable USD. No new threshold, weight, admission rule or execution confidence is introduced.",
+      "Retain unknownQuality Exit pricing, original gap causes and limited evidence; publish negligible-dex-route beside the existing missing-route reason and preserve the route measurement and caps without a primary scored route. A/B/C/U gaps and incomplete inventory cannot establish the absence of other exits. A complete reviewed inventory whose routes are measured non-viable still receives no-viable-exit-path at zero. Material measured weakness and admitted redemption exhaustion retain their existing treatment.",
+      "The XGZ-like regression keeps Exit at 50 with limited evidence after adding an exact measured-zero DEX route; the guard case retains Exit 0 when both DEX and issuer routes are measured non-viable. Offline all-coin movers are unverified: committed captures are synthetic partial cohorts and none includes XGZ; production captures and original measurement bytes are not committed. The issue reports overall 43 D to 17 F, not a reproduced full-card delta.",
+      "Activation placeholder: 2026-11-11 00:00 UTC; this timestamp is not deployment or production-acceptance evidence."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.43",
     "title": "Per-lane incident closure for global native controls",
     "date": "2026-11-05",

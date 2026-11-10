@@ -213,6 +213,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   // Retained V2 cannot distinguish a measured zero-exit outcome from producer
   // or integration absence. Only native V3 facts may author measured-adverse.
   "no-viable-exit-path": "method-unsupported",
+  "negligible-dex-route": "method-unsupported",
   "parent-cycle": "method-unsupported",
   "partial-reserve-review": "issuer-undisclosed",
   "stale-audited-reserve-composition": "published-evidence-expired",

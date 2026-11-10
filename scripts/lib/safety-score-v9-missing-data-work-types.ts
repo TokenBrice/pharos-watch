@@ -324,10 +324,9 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
         "incomparable-route-requests",
         "missing-same-notional-route",
       ],
-      // A reviewed-complete exit portfolio with zero score-eligible routes is
-      // a measured terminal finding, not missing evidence: it clears only when
-      // a viable route observation lands through the curated EXIT work above.
-      "non-curation": ["correlated-exit-routes", "no-viable-exit-path"],
+      // Route and portfolio diagnostics add no curation obligation; the
+      // missing-route reasons above own the unresolved work.
+      "non-curation": ["correlated-exit-routes", "no-viable-exit-path", "negligible-dex-route"],
     }),
     context: exitContext,
     touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
