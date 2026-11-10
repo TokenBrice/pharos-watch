@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CurrentPegSchema } from "./current-peg";
 import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
 import { DepegAuditVerdictSchema, type DepegAuditVerdict } from "./depeg-audit";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
@@ -107,6 +108,7 @@ export const StablecoinDetailResponseSchema = z.object({
   priceObservedAt: z.number().nullable().optional(),
   /** Canonical parent derivation of the overlaid publication quote only. */
   priceDerivation: PriceDerivationSchema.optional(),
+  currentPeg: CurrentPegSchema.optional(),
   /** Current admitted list USD buckets; distinct from the provider's dated token history. */
   currentCirculatingUSD: PegBucketsSchema.optional(),
   currentCirculatingPrevDayUSD: PegBucketsSchema.optional(),
@@ -260,6 +262,7 @@ const StablecoinDataRawSchema = z.object({
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
   nominalPriceReference: NominalPriceReferenceSchema.optional(),
   priceDerivation: PriceDerivationSchema.optional(),
+  currentPeg: CurrentPegSchema.optional(),
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
@@ -316,6 +319,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   priceObservedAtMode: asset.priceObservedAtMode ?? null,
   ...(asset.nominalPriceReference != null ? { nominalPriceReference: asset.nominalPriceReference } : {}),
   ...(asset.priceDerivation != null ? { priceDerivation: asset.priceDerivation } : {}),
+  ...(asset.currentPeg != null ? { currentPeg: asset.currentPeg } : {}),
   priceSyncedAt: asset.priceSyncedAt ?? null,
   consensusSources: asset.consensusSources ?? [],
   agreeSources: asset.agreeSources ?? [],

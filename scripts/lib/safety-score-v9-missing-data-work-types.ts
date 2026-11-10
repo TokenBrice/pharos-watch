@@ -324,9 +324,8 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
         "incomparable-route-requests",
         "missing-same-notional-route",
       ],
-      // A reviewed-complete exit portfolio with zero score-eligible routes is
-      // a measured terminal finding, not missing evidence: it clears only when
-      // a viable route observation lands through the curated EXIT work above.
+      // Route and portfolio diagnostics add no curation obligation; the
+      // missing-route reasons above own the unresolved work.
       "non-curation": ["correlated-exit-routes", "no-viable-exit-path"],
     }),
     context: exitContext,

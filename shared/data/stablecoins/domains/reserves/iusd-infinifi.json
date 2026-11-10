@@ -272,6 +272,22 @@
       ],
       "liquidityHorizon": "over-seven-days",
       "maturityDaysMax": 62
+    },
+    {
+      "sourceKey": "infinifi:jet-stream",
+      "name": "JetStream escrow farm (delta-neutral cash/perpetual strategy)",
+      "pct": 0,
+      "risk": "high",
+      "issuerOrObligor": "JetStream",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "market",
+        "basis",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -342,13 +358,29 @@
       {
         "label": "Ethereum block 26290000 (2026-10-28T08:22:47Z): PT 0xecfafdc7741323a945a163ed068b5a3c43483957 expiry() = 1796860800 (2026-12-10T00:00:00Z); read 2026-10-29",
         "url": "https://eth.blockscout.com/block/26290000"
+      },
+      {
+        "label": "infiniFi exact MAINNET jet-stream farm and strategy, observed 2026-11-10T16:12:08.406200Z; classification only",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/data"
+      },
+      {
+        "label": "JetStream RWAEscrowRouterFarm verified source at exact farm address",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf29E7a84de6B5efF82eb31A82FfE9CBB97C16639"
+      },
+      {
+        "label": "Ethereum block 26385639 (2026-11-10T16:14:35Z): exact JetStream farm assets, liquidity, duration, perpetual and maturity calls",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Jetstream Global Basis+ instrument and withdrawal overview, September 1, 2026; exact-farm entitlement not established",
+        "url": "https://www.jetstream.markets/blog/jetstream-what-is-global-basis-plus"
       }
     ],
-    "rationale": "The infiniFi live protocol capture on 2026-10-27 reports thirteen nonzero farm slices (farm balances sum to $69,343,008.49 against reported protocol TVL of $69,342,920.04) totaling 100.0% after rounding to one decimal. Rows that carried zero weight on 2026-09-21 (Liquid Cap stcUSD, Pendle PT reUSD 10DEC2026, Aave USDC on Monad, August USDC) now carry measured weights, and the Morpho infiniFi Ecosystem Vault farm is empty. Morpho's vault page identifies the previously unmapped Steakhouse Prime USDC position (0.5% on 2026-10-27) as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04 on the keyed rows is retained. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Classification metadata reviewed on 2026-10-07 and 2026-10-09 is retained; the weights are the 2026-10-27 measurements. The issuer API binds MAINNET aave-v4-usdg farm 0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657 to USDG 0xe343167631d89B6Ffc58B88d6b7fB0228795491D and describes Aave V3/V4 lending. It binds MONAD morpho-v2-august-usdc farm 0x1330902050dB4edAc0D9D8ca33FdAb5DbE986c9c to AugustUSDCv2 share 0x80017bF0f793EBbE9679Cd61ff0e395B62CAbB59; Morpho identifies that exact vault as USDC with August Digital as curator, and Circle identifies native Monad USDC 0x754704Bc059F8C67012fEd69BC8A327a5aafb603. No farm bucket or conditional pool-utilization statement is converted into a liquidity guarantee.",
-    "compositionBasis": "infiniFi protocol farm balances captured on 2026-10-27, with the Base Steakhouse Prime vault identity verified against Morpho. The October 9 keyed classification metadata for Liquid Cap and PT-reUSD, and the ordinary liquidity terms on the Aave and August rows, apply to rows that now carry measured weights. PT expiry() is 2026-12-10T00:00:00Z, giving a conservative 62-day maximum remaining instrument tenor at the October 9 pin, not a USDC settlement guarantee. PT SY getTokensIn() names exact registered reUSD; SY assetInfo() names USDC as accounting asset, not collateral. Resilience issuer attribution does not give PT holders registered-noteholder rights. PT liquidity is classified over-seven-days: Pendle documents PT redemption at 1:1 for the accounting asset only upon maturity, the pinned expiry() read at Ethereum block 26290000 (2026-10-28T08:22:47Z) returns 2026-12-10T00:00:00Z, and no earlier contractual conversion to USDC exists; secondary-market depth remains unquantified. Aave immediate horizons are utilization-conditional ordinary withdrawal terms; August seven-days is the issuer's approximate normal horizon, not a binding maximum. No hard liquidity bound, current available fraction, stress exit capacity or financial assurance is inferred.",
+    "rationale": "The infiniFi live protocol capture on 2026-10-27 reports thirteen nonzero farm slices (farm balances sum to $69,343,008.49 against reported protocol TVL of $69,342,920.04) totaling 100.0% after rounding to one decimal. Rows that carried zero weight on 2026-09-21 (Liquid Cap stcUSD, Pendle PT reUSD 10DEC2026, Aave USDC on Monad, August USDC) now carry measured weights, and the Morpho infiniFi Ecosystem Vault farm is empty. Morpho's vault page identifies the previously unmapped Steakhouse Prime USDC position (0.5% on 2026-10-27) as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04 on the keyed rows is retained. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Classification metadata reviewed on 2026-10-07 and 2026-10-09 is retained; the weights are the 2026-10-27 measurements. The issuer API binds MAINNET aave-v4-usdg farm 0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657 to USDG 0xe343167631d89B6Ffc58B88d6b7fB0228795491D and describes Aave V3/V4 lending. It binds MONAD morpho-v2-august-usdc farm 0x1330902050dB4edAc0D9D8ca33FdAb5DbE986c9c to AugustUSDCv2 share 0x80017bF0f793EBbE9679Cd61ff0e395B62CAbB59; Morpho identifies that exact vault as USDC with August Digital as curator, and Circle identifies native Monad USDC 0x754704Bc059F8C67012fEd69BC8A327a5aafb603. No farm bucket or conditional pool-utilization statement is converted into a liquidity guarantee. Scoped JetStream classification research on 2026-11-10: issuer API farm name jet-stream, chain MAINNET, address 0xf29E7a84de6B5efF82eb31A82FfE9CBB97C16639, label JetStream, reports assetsNormalized 3002738.497834 and describes offsetting cash-market/perpetual funding arbitrage. At Ethereum block 26385639 (0xb7e2a55a33b01b5ec78361df2018b08e22e39cc4ffd92e330b52a00131a695b6; 2026-11-10T16:14:35Z), assets() returns raw 3002738497834 and liquidity() 5000000 in six-decimal USDC units; exact runtime matches verified RWAEscrowRouterFarm. This establishes accounted exposure and the named strategy counterparty, not independent offchain NAV, direct cash backing or a particular legal debtor. The keyed zero-percent row is classification metadata for current live weights, not zero exposure or a new whole-book observation. The exact held instrument and asset class remain unresolved: generic USDJ fund documentation does not prove this farm holds those shares, and traditional equity/commodity funding arbitrage is not assumed to be hedged crypto. Verified perpetual=true and maturity()=block.timestamp+604800 establish rolling fund-availability metadata, not seven-day contractual maturity or final realization. Liquidity and maturity remain unknown; issuer app and exact offering documents were not inspectable. No C classification is supported.",
+    "compositionBasis": "infiniFi protocol farm balances captured on 2026-10-27, with the Base Steakhouse Prime vault identity verified against Morpho. The October 9 keyed classification metadata for Liquid Cap and PT-reUSD, and the ordinary liquidity terms on the Aave and August rows, apply to rows that now carry measured weights. PT expiry() is 2026-12-10T00:00:00Z, giving a conservative 62-day maximum remaining instrument tenor at the October 9 pin, not a USDC settlement guarantee. PT SY getTokensIn() names exact registered reUSD; SY assetInfo() names USDC as accounting asset, not collateral. Resilience issuer attribution does not give PT holders registered-noteholder rights. PT liquidity is classified over-seven-days: Pendle documents PT redemption at 1:1 for the accounting asset only upon maturity, the pinned expiry() read at Ethereum block 26290000 (2026-10-28T08:22:47Z) returns 2026-12-10T00:00:00Z, and no earlier contractual conversion to USDC exists; secondary-market depth remains unquantified. Aave immediate horizons are utilization-conditional ordinary withdrawal terms; August seven-days is the issuer's approximate normal horizon, not a binding maximum. No hard liquidity bound, current available fraction, stress exit capacity or financial assurance is inferred. The JetStream row adds November 10 identity metadata only; all historical weights, compositionAsOf and the existing review clock remain unchanged.",
     "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "All thirteen nonzero adapter farm slices are identified. Private-credit and fund positions remain explicit non-links; the Aave, Spark, and Morpho positions are linked to their tracked USDC underlying.",
+    "knownUnknownExposure": "All thirteen nonzero adapter farm slices are identified. Private-credit and fund positions remain explicit non-links; the Aave, Spark, and Morpho positions are linked to their tracked USDC underlying. JetStream is now keyed for live classification; its zero placeholder is not observed zero and is outside the historical composition census. Exact instrument class, liquidity and maturity remain unresolved.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

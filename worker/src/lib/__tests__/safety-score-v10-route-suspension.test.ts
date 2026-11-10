@@ -3,12 +3,14 @@ import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
+import { projectSafetyScoreV9Card } from "@shared/lib/safety-score-v9/public";
+import { computeV9UnknownPricedWeightShare } from "@shared/types/safety-score-v9-public-breakdowns";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import type { RedemptionRouteSuspension } from "@shared/types/redemption";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
-import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { evaluateV9FactSet, type V9EvaluatedAsset } from "@shared/lib/safety-score-v9/evaluate-set";
 import { makeV9Extension, makeV9FixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
@@ -45,6 +47,11 @@ function evaluate(asset: V9AssetFactsV3) {
     portfolioStatus: "reviewed-complete", routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
   }, V9_CANDIDATE_POLICY_V1);
 }
+function exitPricing(result: V9EvaluatedAsset) {
+  const { card } = projectSafetyScoreV9Card({ ...result, policy: V9_CANDIDATE_POLICY_V1 });
+  return [card.score, card.pillars.exit.score, card.pillars.exit.evidenceLevel,
+    computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation)];
+}
 
 describe("reviewed exact-channel suspension", () => {
   it("withholds captured positive capacity only on the named rail and leaves DEX and another issuer channel unchanged", () => {
@@ -67,9 +74,9 @@ describe("reviewed exact-channel suspension", () => {
       expect(review).toMatchObject({ coverageClass: "diagnostic", routeSuspension: suspension });
       const after = compile(fixed);
       const withdrawn = after.exitRoutes.find((item) => item.routeId === suspension.routeId)!;
-      expect(withdrawn).toMatchObject({ scoreEligible: false, capacityCurve: [], request: null, routeSuspension: suspension });
+      expect(withdrawn).toMatchObject({ scoreEligible: false, capacityCurve: [], request: null, routeSuspension: suspension,
+        capacityEvidenceTier: "unknown" });
       expect(withdrawn.factorStatuses).toEqual({});
-      expect(withdrawn.capacityEvidenceTier).toBe("unknown");
       expect(after.gaps.filter((gap) => gap.causeScope?.routeKey === withdrawn.routeKey)).toEqual([
         expect.objectContaining({ causeProof: expect.objectContaining({ cause: "D" }),
           responsibility: "measured-adverse", causeScope: expect.objectContaining({ factorKey: "suspended" }) }),
@@ -82,9 +89,9 @@ describe("reviewed exact-channel suspension", () => {
       expect(trace).toMatchObject({ included: false, score: null, capacityPoint: null, routeSuspension: suspension,
         cause: "D", scoringDisposition: "measured-adverse", causeGapIds: withdrawn.status.gapIds });
       const independentlyEvaluated = evaluate({ ...before, exitRoutes: before.exitRoutes.filter((item) => item.routeId !== suspension.routeId) });
-      expect(result.score).toBe(independentlyEvaluated.score);
-      expect(result.primaryRouteKey).toBe(independentlyEvaluated.primaryRouteKey);
-      expect(result.reasons).toEqual(independentlyEvaluated.reasons);
+      expect([result.score, result.primaryRouteKey, result.reasons]).toEqual([
+        independentlyEvaluated.score, independentlyEvaluated.primaryRouteKey, independentlyEvaluated.reasons,
+      ]);
       expect(fixed).toEqual(frozen);
     });
   });
@@ -102,7 +109,8 @@ describe("reviewed exact-channel suspension", () => {
       expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
       expect(result.reasons).toEqual(["missing-same-notional-route"]);
       expect(result.reasons).not.toContain("no-viable-exit-path");
-      expect(result.routes[0]).toMatchObject({ included: false, capacityPoint: null, routeSuspension: suspension });
+      expect(result.routes[0]).toMatchObject({ included: false, capacityPoint: null, routeSuspension: suspension,
+        cause: "D", scoringDisposition: "measured-adverse" });
       expect(asset.gaps.filter((gap) => gap.gapId.includes(":suspended"))).toEqual([
         expect.objectContaining({ responsibility: "measured-adverse", reasonCode: "unsupported-same-notional-route",
           causeProof: expect.objectContaining({ cause: "D" }) }),
@@ -112,7 +120,6 @@ describe("reviewed exact-channel suspension", () => {
       expect(withdrawn.capacityEvidenceTier).toBe("unknown");
       expect(asset.gaps.filter((gap) => gap.causeScope?.routeKey === withdrawn.routeKey)).toHaveLength(1);
       expect(asset.gaps.some((gap) => gap.causeScope?.routeKey === withdrawn.routeKey && gap.causeProof.cause === "U")).toBe(false);
-      expect(result.routes[0]).toMatchObject({ cause: "D", scoringDisposition: "measured-adverse" });
       const adverseEvidence = asset.evidence.find((item) => item.evidenceId === withdrawn.status.evidenceRefIds[0])!;
       expect(adverseEvidence).toMatchObject({ disposition: "observed", rejection: null, url: suspension.sources[0]!.url,
         causeBinding: { assetId: ID, scope: { pillar: "exit", componentKey: "exit-route",
@@ -143,8 +150,7 @@ describe("reviewed exact-channel suspension", () => {
         } : {}),
       });
       if (executableUsd !== undefined) {
-        // A $1,000 admitted DEX observation remains submaterial against the
-        // continuous $500k stress request; the issuer rail is closed.
+        // Route-exhaustive dust cannot close the independent whole-Exit census.
         const dex = fixed.dexLiqMap[assetId]!;
         const observations = dex.exitRouteObservations!.map((observation) => ({
           ...observation, executableUsd, completionRatio: executableUsd / observation.requestedNotionalUsd,
@@ -152,14 +158,15 @@ describe("reviewed exact-channel suspension", () => {
             ...point, executableUsd, completionRatio: executableUsd / point.requestedNotionalUsd,
           })),
         }));
-        fixed = rebuildFixed({ ...fixed, dexLiqMap: { [assetId]: { ...dex, exitRouteObservations: observations } } });
+        fixed = rebuildFixed({ ...fixed, dexLiqMap: { [assetId]: { ...dex, exitRouteObservations: observations,
+          exitRouteObservationCoverage: { ...dex.exitRouteObservationCoverage!, status: "unknown" },
+        } } });
       }
       const extension = makeV9Extension({ assetId, clockSec, registryFingerprint: fixed.registryFingerprint });
       const review = extension.assets[0]!;
       review.mechanismRiskReview = null;
       if (adverseMint) {
-        // USDKG's retained danger is its independently measured unbounded
-        // mint, not the exact-channel suspension (frozen audit attribution).
+        // USDKG's independent unbounded mint retains its adverse attribution.
         review.controlReview = { state: "reviewed-controls", controls: [localControl({
           controlKey: "mint:known", deploymentKey: `asset:${assetId}`, controlKind: "mint",
           capabilities: ["mint"], capSemantics: { kind: "unbounded", bound: null },
@@ -184,19 +191,14 @@ describe("reviewed exact-channel suspension", () => {
     const compiled = makeSet(dexCapacityUsd !== undefined, dexCapacityUsd);
     const asset = compiled.assets[0]!;
     const censusId = `${assetId}:gap:exit-independent-route-census`;
-    if (dexCapacityUsd === undefined) {
-      expect(asset.gaps.find((gap) => gap.gapId === censusId)).toMatchObject({
-        causeProof: { cause: "U" }, observationState: "bounded-unknown",
-        path: { kind: "local-component", componentKey: "exit-routes" },
-        causeScope: { pillar: "exit", componentKey: "exit-routes", factorKey: null,
-          routeKey: null, exposureId: null, requiredDatum: "independent-route-census" },
-      });
-      expect(asset.exitStatus.gapIds).toContain(censusId);
-      expect(asset.exitStatus.observationState).toBe("bounded-unknown");
-    } else {
-      expect(asset.gaps.some((gap) => gap.gapId === censusId)).toBe(false);
-      expect(asset.exitStatus.gapIds).not.toContain(censusId);
-    }
+    expect(asset.gaps.find((gap) => gap.gapId === censusId)).toMatchObject({
+      causeProof: { cause: "U" }, observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "exit-routes" },
+      causeScope: { pillar: "exit", componentKey: "exit-routes", factorKey: null,
+        routeKey: null, exposureId: null, requiredDatum: "independent-route-census" },
+    });
+    expect(asset.exitStatus.gapIds).toContain(censusId);
+    expect(asset.exitStatus.observationState).toBe("bounded-unknown");
     const withdrawn = asset.exitRoutes.find((route) => route.routeSuspension)!;
     expect(withdrawn).toMatchObject({ scoreEligible: false, request: null, capacityCurve: [], factorStatuses: {} });
     expect(asset.gaps.filter((gap) => gap.causeScope?.routeKey === withdrawn.routeKey)).toEqual([
@@ -204,37 +206,27 @@ describe("reviewed exact-channel suspension", () => {
         causeScope: expect.objectContaining({ factorKey: "suspended" }) }),
     ]);
     const published = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
-    if (dexCapacityUsd === undefined) {
-      // The reviewed channel establishes the applicable Exit subject, while
-      // its suspension does not establish exhaustion of independent rails.
-      expect(published.scoreInput.pillars.exit.evidenceLevel).toBe("limited");
-      expect(published.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
-    } else {
-      expect(published.exit.score).toBe(0);
-      expect(published.scoreInput.pillars.exit.limitingCauseGapIds ?? []).not.toContain(censusId);
-    }
-    expect(published.exit.reasons.includes("no-viable-exit-path")).toBe(dexCapacityUsd !== undefined);
+    expect(published.scoreInput.pillars.exit).toMatchObject({ evidenceLevel: "limited",
+      limitingCauseGapIds: expect.arrayContaining([censusId]) });
+    expect(published.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
+    expect(published.exit.reasons).not.toContain("no-viable-exit-path");
     expect(published.scoreInput.pillars.backing.evidenceLevel).toBe("insufficient");
     if (dexCapacityUsd !== undefined) {
       const measured = asset.exitRoutes.find((route) => route.lane === "dex")!;
       expect(measured.scoreEligible).toBe(true);
+      expect(measured.coverageClass).toBe("exact-lower-bound");
       expect(measured).not.toHaveProperty("routeSuspension");
-      expect(measured.capacityCurve).toEqual(expect.arrayContaining([
-        expect.objectContaining({ requestedNotionalUsd: 1_000_000, executableUsd: 1_000, completionRatio: 0.001 }),
-      ]));
+      expect(measured.capacityCurve).toContainEqual(
+        expect.objectContaining({ requestedNotionalUsd: 1_000_000, executableUsd: 1_000, completionRatio: 0.001 }));
       expect(published.exit.stressRequest).toMatchObject({ requestedNotionalUsd: 1_000_000, rawSupplyRequestUsd: 500_000 });
       expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)).toMatchObject({
-        included: true, capacityPoint: { executableUsd: 1_000 },
+        included: false, score: null, capacityPoint: { executableUsd: 1_000 },
+        capsApplied: expect.arrayContaining(["immaterial-executable-capacity"]),
       });
-      expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)!.score).toBe(0);
-      expect(published.exit.routes.find((route) => route.routeKey === measured.routeKey)!.capsApplied)
-        .toContain("immaterial-executable-capacity");
+      const withoutDust = evaluateV9FactSet(makeSet(false), V9_CANDIDATE_POLICY_V1).assets[0]!;
+      expect(exitPricing(published)).toEqual(exitPricing(withoutDust));
     }
-    if (dexCapacityUsd !== undefined) {
-      expect(published.trace.adverseAttribution).toContainEqual(expect.objectContaining({
-        source: "pillar-score", responsibility: "measured-adverse",
-      }));
-    } else if (!adverseMint) {
+    if (!adverseMint) {
       expect(published.trace.adverseAttribution).toEqual([]);
     } else {
       expect(published.trace.adverseAttribution).toEqual([
@@ -247,6 +239,9 @@ describe("reviewed exact-channel suspension", () => {
     const independent = makeSet(true);
     expect(independent.assets[0]!.gaps.some((gap) => gap.gapId === censusId)).toBe(false);
     const withIndependent = evaluateV9FactSet(independent, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(withIndependent.exit.score).toBe(evaluate({ ...independent.assets[0]!,
+      exitRoutes: independent.assets[0]!.exitRoutes.filter((route) => !route.routeSuspension),
+    }).score);
     expect(withIndependent.exit.routes.some((route) => !route.routeSuspension && route.included)).toBe(true);
     expect(withIndependent.scoreInput.pillars.exit.limitingCauseGapIds ?? []).not.toContain(censusId);
     expect(withIndependent.scoreInput.pillars.exit.evidenceLevel).not.toBe("limited");

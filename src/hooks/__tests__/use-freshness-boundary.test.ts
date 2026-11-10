@@ -18,10 +18,12 @@ describe("useFreshnessBoundary", () => {
   it("keeps the first render clock-free and commits the browser clock from its timer", () => {
     vi.useFakeTimers();
     vi.setSystemTime(savedAt);
-    const { result, unmount } = renderHook(() => useFreshnessBoundary([input]));
+    const { result, unmount } = renderHook(() => useFreshnessBoundary([input], true, [savedAt + 1]));
     expect(result.current).toBeUndefined();
     act(() => vi.advanceTimersByTime(0));
     expect(result.current).toBe(savedAt);
+    act(() => vi.advanceTimersByTime(1));
+    expect(result.current).toBe(savedAt + 1);
     unmount();
     expect(vi.getTimerCount()).toBe(0);
   });

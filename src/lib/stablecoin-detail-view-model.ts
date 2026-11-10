@@ -73,7 +73,7 @@ export function buildStablecoinDetailViewModel({
     queries.annualPriceHistory?.data ?? resolvedSupplyHistory,
     supplemental.nowMs ?? Date.now(),
   );
-  const pegPrice = buildDetailPegPriceSnapshot(id, coin, pegSummary.data, summaryData);
+  const pegPrice = buildDetailPegPriceSnapshot(id, coin, pegSummary.data, summaryData, supplemental.nowMs);
   const pegScoreResult = pegPrice.pegScoreResult
     ? {
         ...pegPrice.pegScoreResult,

@@ -531,7 +531,7 @@ Materialized chronological feed of typed events (depeg, freeze, score) backed by
 
 ### `GET /api/stablecoins`
 
-Current stablecoin list with supply, price, peg, chain distribution, FX context, and freshness headers. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1stablecoins/get).
+Current stablecoin list with supply, price, same-observation current peg deviation/trust, chain distribution, FX context, and freshness headers. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1stablecoins/get).
 
 - **Operation ID:** `stablecoins`
 - **Path:** `/api/stablecoins`
@@ -544,6 +544,8 @@ Current stablecoin list with supply, price, peg, chain distribution, FX context,
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `geckoId` | `string \| null` | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`) |
+| `currentPeg` | `object` (optional) | Same-row `currentDeviationBps`, `pegReference`, `pegReferenceUnavailable`, `currentPriceUnavailable`, `primaryTrust` and nullable `dexPriceCheck` with optional exclusive Unix-second `dexPriceCheckExpiresAt`; expired/unclocked DEX checks are unavailable while price/deviation remain; agreement/provenance/observation identity use the row's existing price source, confidence, clocks, `consensusSources` and `agreeSources`, without joining peg-summary |
+| `currentPeg.currentDeviationBps` | `number \| null` | Null for unavailable admitted price/reference, NAV tokens or nominal par; null never means zero or fallback. An absent `currentPeg` on legacy/cached rows falls back to existing peg-summary behavior, allowing Worker/Pages deployment in either order |
 
 ### `GET /api/stablecoin/:id`
 
@@ -1033,7 +1035,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.54",
-  "methodologyVersion": "10.43"
+  "methodologyVersion": "10.44"
 }
 ```
 

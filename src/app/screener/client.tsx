@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { resolveCurrentDeviationBps } from "@/lib/current-peg";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SelectorCallout } from "@/components/selector/selector-callout";
 import { TableExportMenu } from "@/components/table-export-menu";
@@ -119,9 +119,9 @@ function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<num
 
 // The two endpoints are the all-time worst tracked deviation and the current
 // published deviation; this is a range, not a 30-day history window.
-function buildPegDeviationSeries(pegCoin: PegSummaryCoin | undefined): ReadonlyArray<number | null> | undefined {
-  if (pegCoin?.currentDeviationBps == null) return undefined;
-  return [pegCoin.worstDeviationBps ?? pegCoin.currentDeviationBps, pegCoin.currentDeviationBps];
+function buildPegDeviationSeries(asset: StablecoinData | undefined, pegCoin: PegSummaryCoin | undefined): ReadonlyArray<number | null> | undefined {
+  const current = resolveCurrentDeviationBps(asset, pegCoin);
+  return current == null ? undefined : [pegCoin?.worstDeviationBps ?? current, current];
 }
 
 export function ScreenerClient() {
@@ -215,9 +215,8 @@ export function ScreenerClient() {
     if (!stablecoinsData?.peggedAssets) return [];
     const supplyById = new Map<string, number | null>();
     const supplySeriesById = new Map<string, ReadonlyArray<number | null>>();
-    const unobservedPriceIds = new Set<string>();
+    const assetById = new Map(stablecoinsData.peggedAssets.map((asset) => [asset.id, asset]));
     for (const asset of stablecoinsData.peggedAssets) {
-      if (!isObservedPrice(asset)) unobservedPriceIds.add(asset.id);
       supplyById.set(asset.id, getCirculatingRawOrNull(asset));
       const supplySeries = buildSupplySeries(asset);
       if (supplySeries) supplySeriesById.set(asset.id, supplySeries);
@@ -269,7 +268,7 @@ export function ScreenerClient() {
         mintAuthorityScoreBandLabel: mintAuthorityScore?.bandLabel ?? null,
         mintAuthorityScoreBadgeClassName: mintAuthorityScore?.badgeClassName ?? null,
         mintAuthorityScoreDetail: mintAuthorityScore?.detail ?? null,
-        pegDeviationSeries: unobservedPriceIds.has(meta.id) ? undefined : buildPegDeviationSeries(pegCoin),
+        pegDeviationSeries: buildPegDeviationSeries(assetById.get(meta.id), pegCoin),
         supplySeries: supplySeriesById.get(meta.id),
       });
     }

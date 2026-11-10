@@ -1,3 +1,4 @@
+import { resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
 import type { SupplyHistoryPoint } from "@shared/types";
 import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -130,29 +131,29 @@ export function buildDetailPegPriceSnapshot(
   coin: StablecoinMeta,
   pegSummaryData?: PegSummaryResponse,
   summaryData?: StablecoinLiveSummary,
+  nowMs = Date.now(),
 ): DetailPegPriceSnapshot {
   const isNavToken = coin.flags.navToken ?? false;
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
+  const currentPeg = resolveCurrentPeg(summaryData, pegScoreResult, nowMs);
   const pegRef = isNavToken
     ? getNavPriceReference(coin.flags.pegCurrency, pegSummaryData?.coins)
-    : pegScoreResult?.pegReference?.valueUsd ?? null;
-  const deviationBps = pegScoreResult?.currentDeviationBps ?? null;
+    : currentPeg?.pegReference?.valueUsd ?? null;
+  const deviationBps = resolveCurrentDeviationBps(summaryData, pegScoreResult);
   return {
     pegRef,
     deviationBps,
-    pegReferenceUnavailable: !isNavToken && pegScoreResult?.pegReferenceUnavailable === true,
+    pegReferenceUnavailable: !isNavToken && currentPeg?.pegReferenceUnavailable === true,
     pegScoreResult,
-    // The active-only peg summary omits frozen archives. Fall back to the
-    // admitted summary's own provenance only when no peg row was read, so a
-    // present row's empty source lists remain an honest empty result.
-    // Neither read present means unread provenance, not a measured zero.
-    consensusSources: pegScoreResult
-      ? (pegScoreResult.consensusSources ?? [])
+    // Legacy archives have no active peg row; unread provenance stays null.
+    // A present publication's empty lists never borrow sibling sources.
+    consensusSources: currentPeg
+      ? (currentPeg.consensusSources ?? [])
       : (summaryData?.consensusSources ?? null),
-    agreeSources: pegScoreResult
-      ? (pegScoreResult.agreeSources ?? [])
+    agreeSources: currentPeg
+      ? (currentPeg.agreeSources ?? [])
       : (summaryData?.agreeSources ?? null),
-    dexPriceCheck: pegScoreResult?.dexPriceCheck ?? null,
+    dexPriceCheck: currentPeg?.dexPriceCheck ?? null,
   };
 }
 

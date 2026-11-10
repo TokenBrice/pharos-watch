@@ -26,6 +26,8 @@ import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
 import { CompiledV9FactSetV3Schema } from "../../types/safety-score-v9-facts";
 import { buildV9EvidenceGapQueue } from "../safety-score-v9/evidence-gap-queue";
 import { unknownQuality } from "../safety-score-v9/policy";
+import { projectSafetyScoreV9Card } from "../safety-score-v9/public";
+import { computeV9UnknownPricedWeightShare } from "../../types/safety-score-v9-public-breakdowns";
 import * as backingArchetypes from "../safety-score-v9/archetypes";
 
 function mutableNativeFactSet() {
@@ -304,6 +306,8 @@ describe("Safety Score v9 fact evaluation", () => {
 
   it.each(["A", "B"] as const)("retains a no-primary admission gap without an independent blocker (%s)", (cause) => {
     const { core, asset } = exitPromotionFixture();
+    const dust = asset.exitRoutes.find((route) => route.lane === "dex")!;
+    dust.capacityCurve = dust.capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0 }));
     const candidate = asset.exitRoutes.find((route) => route.lane === "redemption")!;
     asset.exitRoutes = [candidate];
     candidate.scoreEligible = false;
@@ -317,6 +321,10 @@ describe("Safety Score v9 fact evaluation", () => {
       excludedPillars: [], excludedComponentKeys: [], causes: [cause], causeGapIds: [gap.gapId],
     });
     expect(evaluated.scoreInput.pillars.exit.limitingCauseGapIds).not.toContain(gap.gapId);
+    asset.exitRoutes.push(dust);
+    const withDust = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(withDust.scoreInput.pillars.exit).toMatchObject({ score: evaluated.exit.score,
+      evidenceLevel: evaluated.scoreInput.pillars.exit.evidenceLevel });
   });
 
   it.each(["A", "B"] as const)("preserves a selected primary Exit route's factor exclusion (%s)", (cause) => {
@@ -1783,19 +1791,11 @@ describe("Safety Score v9 fact evaluation", () => {
       const trace = evaluated.exit.routes.find((route) => route.routeKey === measuredRoute.routeKey)!;
       expect(evaluated.exit.stressRequest?.requestedNotionalUsd, scenario.name).toBe(scenario.requestUsd);
       expect(evaluated.exit.stressRequest?.rawSupplyRequestUsd, scenario.name).toBe(scenario.materialityRequestUsd);
-      if (!scenario.material && coverageClass === "exact-lower-bound") {
-        expect(trace, scenario.name).toMatchObject({
-          included: false, score: null, capacityPoint: null,
-          exclusionReason: "missing-same-notional-route",
-        });
+      if (!scenario.material) {
+        expect(trace, scenario.name).toMatchObject({ included: false, score: coverageClass === "exact-complete" ? 0 : null,
+          exclusionReason: "missing-same-notional-route" });
+        expect(trace.capacityPoint!.executableUsd).toBeGreaterThan(0);
         expect(evaluated.exit.primaryRouteKey, scenario.name).toBeNull();
-      } else if (!scenario.material) {
-        // Exhaustive submaterial measurements retain adverse zero credit;
-        // an excluded lower bound never establishes that exhaustion finding.
-        expect(trace, scenario.name).toMatchObject({
-          included: true, score: 0,
-          capsApplied: expect.arrayContaining(["immaterial-executable-capacity"]),
-        });
         expect(evaluated.exit.score, scenario.name).toBe(0);
       } else {
         expect(trace.included, scenario.name).toBe(true);
@@ -1808,6 +1808,44 @@ describe("Safety Score v9 fact evaluation", () => {
       expect(evaluated.scoreInput.pillars.exit.score).toBe(evaluated.exit.score);
       expect(evaluated.trace.finalScore).not.toBeNull();
       expect(evaluated.trace.nrReasons).toEqual([]);
+    }
+  });
+  it.each(["unknown", "dust-gap", "empty", "issuer-zero", "not-applicable"])("dust preserves public Exit evidence and unknown weight: %s", (scenario) => {
+    const input = coreFixture();
+    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
+    const evidence = beta.evidence;
+    const routeEvidence = alpha.evidence.find((ref) => ref.evidenceId === "evidence:route")!;
+    const dust = structuredClone(alpha.exitRoutes.find((route) => route.lane === "dex")!);
+    const issuer = structuredClone(alpha.exitRoutes.find((route) => route.lane === "redemption")!);
+    issuer.capacityCurve = issuer.capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0 }));
+    if (scenario === "empty") beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
+    if (scenario === "not-applicable") issuer.status.applicability = {
+      state: "not-applicable", policyRuleId: "no-issuer", rationale: "No issuer rail applies.", gapId: null,
+    };
+    if (scenario === "issuer-zero" || scenario === "not-applicable") beta.exitRoutes = [issuer];
+    const evaluate = () => {
+      beta.evidence = [...evidence, ...(beta.exitRoutes.length > 0 || scenario === "empty" ? [routeEvidence] : [])];
+      const { v9FactSetDigest: _digest, ...core } = CompiledV9FactSetV3Schema.parse(compileNativeV3FactSet(input));
+      const target = core.assets.find((asset) => asset.assetId === "beta")!;
+      const measured = target.exitRoutes.find((route) => route.routeKey === dust.routeKey);
+      if (scenario === "dust-gap" && measured) exitFactorGap(target, measured, "B");
+      const result = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === "beta")!;
+      return projectSafetyScoreV9Card({ ...result, policy: V9_CANDIDATE_POLICY_V1, display: {
+        exitHolderEligibility: Object.fromEntries(beta.exitRoutes.map((route) => [route.routeKey, projectV9ExitEvaluationRoute(route).holderEligibility])),
+      } }).card;
+    };
+    const accounting = (card: ReturnType<typeof evaluate>) => [card.score, card.pillars.exit.score, card.pillars.exit.evidenceLevel,
+      computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation)];
+    const before = evaluate();
+    for (const executableUsd of [0, 1]) {
+      dust.capacityCurve = dust.capacityCurve.map((point) => ({ ...point, executableUsd, completionRatio: executableUsd / point.requestedNotionalUsd }));
+      beta.exitRoutes.push(dust);
+      const after = evaluate();
+      expect(accounting(after)).toEqual(accounting(before));
+      expect(after.breakdowns!.exit.alternatives.some((route) => route.label.includes("Negligible"))).toBe(true);
+      beta.exitRoutes.pop();
     }
   });
   it.each(["exact-complete", "exact-lower-bound"] as const)("does not attribute non-score-eligible %s redemption zero as measured exhaustion", (coverageClass) => {

@@ -2,7 +2,6 @@ import type { V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { assertV9PublicCardProjections, projectV9DetailNeighborhoodCard, projectV9TableCard } from "../report-cards-v9-projections";
-import { ReportCardsV9TableCardSchema } from "../../types/report-cards-v9-projections";
 import { attributedScoredParent } from "../../types/safety-score-v9-public-internal";
 import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
@@ -35,6 +34,9 @@ import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribut
 import { ReviewedProviderRowExclusionSchema } from "../../types/safety-score-v9-supply-attribution";
 import { isV9OperationallyGovernedIssuanceQualified } from "../safety-score-v9/control-primitives";
 import type { V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
+import { evaluateV9Exit } from "../safety-score-v9/exit";
+import { makeExitGap, makeExitRoute } from "./safety-score-v9-exit.test-support";
+import { previousReader } from "../../types/__tests__/safety-score-v9-public.test-support";
 import { scoreV9EvaluatedAsset } from "../safety-score-v9/score";
 import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 import { V9EvidenceResponsibilitySchema, V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
@@ -448,6 +450,44 @@ describe("Safety Score v9 public projection", () => {
     expect(legacy.success).toBe(true);
   });
 
+  it.each(["A", "B"] as const)("keeps %s-only Exit pricing, 55% unknown weight and Provisional beside dust", async (cause) => {
+    const missing = makeExitGap(cause, "gap:exit");
+    const rail = makeExitRoute({ observationState: "missing", status: missing.status, capacityCurve: [] });
+    const dust = makeExitRoute({ routeKey: "dex:xgz", lane: "dex", routeFamily: "dex-amm",
+      capacityEvidenceTier: "live-direct", evidenceKind: "measured-executable-depth" });
+    dust.capacityCurve = makeExitRoute().capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0 }));
+    const reader = await previousReader();
+    for (const routes of [[rail], [dust, rail]]) {
+      const exit = evaluateV9Exit({ circulatingUsd: 20_000_000, gaps: [missing.gap], routes }, V9_CANDIDATE_POLICY_V1);
+      const scoreInput = makeV9ProductionScoreInput({ assetId: "dust", pillars: {
+        backing: makeV9Pillar(50), control: makeV9Pillar(50), exit: makeV9Pillar(exit.score, {
+          ...exit, reasons: [], evidenceLevel: exit.score === null ? "insufficient" : "limited",
+          excludedCauses: [cause], excludedCauseGapIds: ["gap:exit"], excludedComponentKeys: ["rail"],
+        }),
+      } });
+      const trace = scoreV9EvaluatedAsset(scoreInput, V9_CANDIDATE_POLICY_V1);
+      const input = fixture("dust", { score: trace.finalScore, grade: trace.finalGrade,
+        qualityScore: trace.weightedQuality, pegAdjustedScore: trace.preCapScore, pillars: { backing: 50, exit: exit.score, control: 50 } });
+      Object.assign(input, { trace, scoreInput, exit });
+      input.backing = { ...input.backing!, contributions: input.backing!.contributions.map((component) => ({ ...component, factors: [
+        { componentKey: "unknown", score: 50, normalizedWeight: 0.5, effectiveScoringWeight: 0.5,
+          cause: "U", causeGapIds: ["gap:backing"], scoringDisposition: "bounded-uncertainty" },
+        { componentKey: "known", score: 50, normalizedWeight: 0.5, ...knownCause, effectiveScoringWeight: 0.5 },
+      ] })) };
+      const { card } = projectSafetyScoreV9Card(input);
+      expect(card.unknownPricedWeightShare).toBeCloseTo(0.55);
+      expect(card.provisional).toBe(true);
+      expect(card.scoreTrace.aggregation!.pricedUnknownPillars).toMatchObject([{ pillar: "exit", cause: "U", score: 50 }]);
+      expect(card.partialEvidence!.causes).toContain(cause);
+      const priced = { score: null, aggregationDisposition: "excluded-a-b", pricedUnknown: { cause: "U", score: 50 } };
+      expect(projectV9TableCard(card).pillars.exit).toEqual(priced);
+      expect(projectV9DetailNeighborhoodCard(card).pillars!.exit).toEqual(priced);
+      expect(reader.card.safeParse(card).success).toBe(true);
+      expect(reader.table.safeParse(projectV9TableCard(card)).success).toBe(true);
+      if (routes.length > 1) expect(card.breakdowns!.exit.alternatives.some((route) => route.label.includes("Negligible"))).toBe(true);
+    }
+  });
+
   it("uses a strict majority and weights only unknown reserve subfactors, not their whole mixed row", () => {
     const input = fixture("mixed", { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } });
     const unknown = { cause: "U" as const, causeGapIds: ["mixed:gap:unknown"], scoringDisposition: "bounded-uncertainty" as const };
@@ -562,32 +602,6 @@ describe("Safety Score v9 public projection", () => {
     expect(card.breakdowns?.exit.limitedEvidenceCauses).toEqual(["A"]);
     expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
     expect(computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation)).toBeCloseTo(0.35);
-  });
-
-  it.each(["A", "B"] as const)("publishes the scorer's priced cause-%s A/B-excluded pillar through every card projection (#1674)", (cause) => {
-    const scoreInput = makeV9ProductionScoreInput({
-      assetId: "priced-excluded",
-      pillars: {
-        backing: makeV9Pillar(50), control: makeV9Pillar(50),
-        exit: makeV9Pillar(null, {
-          aggregationDisposition: "excluded-a-b", supportedComponentKeys: [], causeGapIds: ["gap:exit"],
-          excludedCauses: [cause], excludedCauseGapIds: ["gap:exit"], excludedComponentKeys: ["exit:route"],
-        }),
-      },
-    });
-    const trace = scoreV9EvaluatedAsset(scoreInput, V9_CANDIDATE_POLICY_V1);
-    expect(trace.ratingStatus).toBe("rated");
-    expect(trace.aggregation!.pricedUnknownPillars).toMatchObject([{ pillar: "exit", cause: "U", score: 50 }]);
-    const projection = fixture("priced-excluded", {
-      score: trace.finalScore, grade: trace.finalGrade, pillars: { backing: 50, exit: null, control: 50 },
-      qualityScore: trace.weightedQuality, pegAdjustedScore: trace.preCapScore,
-    });
-    projection.trace = trace;
-    projection.scoreInput = scoreInput;
-    const [card] = publish([projection]).cards;
-    const priced = { score: null, aggregationDisposition: "excluded-a-b", pricedUnknown: { cause: "U", score: 50 } };
-    expect(ReportCardsV9TableCardSchema.parse(projectV9TableCard(card!)).pillars.exit).toEqual(priced);
-    expect(projectV9DetailNeighborhoodCard(card!).pillars!.exit).toEqual(priced);
   });
 
   it("publishes a required-parent issuer-NR child without a table priced unknown", () => {

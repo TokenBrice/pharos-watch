@@ -1,102 +1,24 @@
-import { WORKER_TRACKED_META_BY_ID, WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
-import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
-import type { StablecoinData } from "@shared/types/market";
-import type { PegSummaryCoin } from "@shared/types/peg";
-import { deriveDepegSignal, type DepegSignal } from "@shared/lib/depeg-signals";
+export { deriveCurrentPegObservationMap, hasUsableCurrentPrice } from "@shared/lib/current-peg-observations";
+export type { CurrentPegObservation } from "@shared/lib/current-peg-observations";
+import { getDexTrustPolicy, isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "./depeg-trust-policy";
+import type { CurrentPegDexPrice } from "@shared/lib/current-peg-observations";
 
-export interface CurrentPegObservation {
-  currentDeviationBps: number | null;
-  currentSignal: DepegSignal | null;
-  pegReference: PegSummaryCoin["pegReference"];
-  pegReferenceUnavailable: boolean;
-  currentPriceUnavailable: boolean;
-  /**
-   * The asset (or its current supply buckets) is absent, so the live-event supply floor
-   * cannot be assessed. This does not withhold an otherwise observed deviation.
-   */
-  currentSupplyUnavailable: boolean;
+export interface CurrentPegDexRow extends Omit<CurrentPegDexPrice, "expiresAt"> {
+  stablecoin_id: string;
+  updated_at: number;
+  price_sources_json: string | null;
 }
 
-export function deriveCurrentPegObservationMap(options: {
-  peggedAssets: StablecoinData[];
-  fxFallbackRates?: Record<string, number>;
-  asOf: number;
-}): Map<string, CurrentPegObservation> {
-  const priceById = new Map(options.peggedAssets.map((asset) => [asset.id, asset]));
-  const {
-    rates: pegRates,
-    sources: pegRateSources = {},
-    counts: pegRateCounts = {},
-  } = derivePegRates(options.peggedAssets, WORKER_TRACKED_META_BY_ID, options.fxFallbackRates);
-  const result = new Map<string, CurrentPegObservation>();
-
-  for (const meta of WORKER_ACTIVE_STABLECOINS) {
-    const asset = priceById.get(meta.id);
-    const supply = getCirculatingRawOrNull(asset);
-    const currentSupplyUnavailable = !meta.flags.navToken && supply === null;
-    const currentPriceUnavailable =
-      !meta.flags.navToken && (asset === undefined || !hasUsableCurrentPrice(asset));
-    let currentDeviationBps: number | null = null;
-    let currentSignal: DepegSignal | null = null;
-    let pegReferenceUnavailable = false;
-    let pegReference: PegSummaryCoin["pegReference"] = null;
-
-    if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset)) {
-      const pegType = normalizePegType(asset.pegType);
-      // One authority for the peg unit: the curated registry currency decides
-      // whether the snapshot's pegType may anchor a same-unit reference.
-      const registryPegType = normalizePegType(pegTypeFromCurrency(meta.flags.pegCurrency));
-      if (registryPegType != null && registryPegType !== pegType) {
-        pegReferenceUnavailable = true;
-      } else if (
-        !isAuthoritativeDepegPegReference({
-          pegType,
-          pegCurrency: meta.flags.pegCurrency,
-          pegRateSource: pegType ? pegRateSources[pegType] ?? null : null,
-          pegRateContributorCount: pegType ? pegRateCounts[pegType] ?? null : null,
-        })
-      ) {
-        pegReferenceUnavailable = true;
-      } else {
-        const pegRef = getPegReference(pegType, pegRates, meta.commodityOunces);
-        const pegRateSource = pegType ? pegRateSources[pegType] : undefined;
-        if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && pegRateSource) {
-          pegReference = {
-            valueUsd: pegRef,
-            ...((pegType === "peggedGOLD" || pegType === "peggedSILVER")
-              ? { usdPerTroyOunce: pegRates[pegType] }
-              : {}),
-            source: pegRateSource,
-            contributorCount: pegType ? pegRateCounts[pegType] ?? 0 : 0,
-            asOf: options.asOf,
-          };
-        }
-        currentSignal =
-          pegRef != null && Number.isFinite(pegRef) && pegRef > 0
-            ? deriveDepegSignal(asset.price, pegRef)
-            : null;
-        currentDeviationBps = currentSignal?.bps ?? null;
-      }
-    }
-
-    result.set(meta.id, {
-      currentDeviationBps,
-      currentSignal,
-      pegReference,
-      pegReferenceUnavailable,
-      currentPriceUnavailable,
-      currentSupplyUnavailable,
+/** Successful reads still need original aggregate-clock admission before an affirmative verdict. */
+export function selectCurrentPegDexPrices(rows: CurrentPegDexRow[], now: number): Map<string, CurrentPegDexPrice> {
+  const prices = new Map<string, CurrentPegDexPrice>();
+  for (const row of rows) {
+    if (!isTrustedDexPriceRow(row, now, "ui")) continue;
+    const aggregateObservedAt = readDexAggregateObservedAt(row.price_sources_json, now);
+    if (aggregateObservedAt == null || !isAffirmativeDexPriceRow({ ...row, aggregateObservedAt }, now, "ui")) continue;
+    prices.set(row.stablecoin_id, {
+      ...row, expiresAt: Math.min(row.updated_at, aggregateObservedAt) + getDexTrustPolicy("ui").maxAgeSec,
     });
   }
-
-  return result;
-}
-
-/** The published quotes peg summary measures; the detail overlay displays exactly these. */
-export function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
-  return isObservedPrice(asset) && typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
+  return prices;
 }

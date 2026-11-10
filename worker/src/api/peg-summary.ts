@@ -1,6 +1,6 @@
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { derivePegRates, normalizePegType } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { medianOfRounded } from "@shared/lib/peg-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -9,7 +9,6 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
@@ -18,9 +17,9 @@ import { getDepegThresholdBpsForPegCurrency } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
-import { classifyPrimaryDepegTrust, isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
-import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
-import { deriveCurrentPegObservationMap } from "../lib/current-peg-observations";
+import { signalCrossesThreshold } from "@shared/lib/depeg-signals";
+import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices } from "../lib/current-peg-observations";
+import { deriveDexDeviationBps } from "@shared/lib/current-peg-observations";
 import {
   effectiveStartedAtSql,
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
@@ -33,29 +32,6 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
-import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
-
-function deriveDexDeviationBps(
-  dexPriceUsd: number,
-  pegType: string | null,
-  pegRates: Record<string, number>,
-  commodityOunces: number | undefined,
-  currentDeviationBps: number | null,
-  dexVsPrimaryBps: number | null,
-): number | null {
-  const pegRef = pegType
-    ? getPegReference(pegType, pegRates, commodityOunces)
-    : null;
-  if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && Number.isFinite(dexPriceUsd) && dexPriceUsd > 0) {
-    return deriveDepegSignal(dexPriceUsd, pegRef)?.bps ?? null;
-  }
-  if (currentDeviationBps != null && dexVsPrimaryBps != null) {
-    const currentMultiplier = 1 + currentDeviationBps / 10000;
-    const dexVsPrimaryMultiplier = 1 + dexVsPrimaryBps / 10000;
-    return Math.round(((currentMultiplier * dexVsPrimaryMultiplier) - 1) * 10000);
-  }
-  return null;
-}
 
 /**
  * The peg unit the live observation map admits: the curated registry currency
@@ -265,15 +241,17 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
 
   // Build DEX price lookup. A failed read is represented separately from a
   // successful empty result so consumers can distinguish absence from outage.
-  const dexPrices = new Map(dexPriceResult.results.map((r) => [r.stablecoin_id, r]));
+  const dexPrices = selectCurrentPegDexPrices(dexPriceResult.results, now);
 
   // 3. Build lookup maps
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-  const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
+  const { sources: pegRateSources } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
   const currentObservations = deriveCurrentPegObservationMap({
     peggedAssets,
     fxFallbackRates,
     asOf: stablecoinsCache.updatedAt,
+    now,
+    dexPrices,
   });
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", stablecoinsCache.updatedAt);
 
@@ -301,62 +279,6 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     const currentBps = observation?.currentDeviationBps ?? null;
     // NAV score fields are normalized at the peg-analytics source via
     // NULL_PEG_SCORE_RESULT; only live deviation is withheld again here.
-    const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
-
-    // Build DEX price check if available (only for coins with meaningful
-    // supply). Skipped when the peg-reference authority gate withheld the
-    // deviation: the DEX cross-check would compare against the same untrusted
-    // self-referential reference, publishing an agrees/disagrees signal beside
-    // "ref n/a".
-    let dexPriceCheck: typeof coins[number]["dexPriceCheck"] = null;
-    const dexRow = dexPrices.get(meta.id);
-    const supply = getCirculatingRawOrNull(asset);
-    if (
-      observation?.pegReferenceUnavailable !== true &&
-      dexRow && supply !== null && supply >= DEPEG_EVENT_MIN_SUPPLY_USD &&
-      isTrustedDexPriceRow(dexRow, now, "ui") && isAffirmativeDexPriceRow({
-        ...dexRow, aggregateObservedAt: readDexAggregateObservedAt(dexRow.price_sources_json, now),
-      }, now, "ui")
-    ) {
-      // NAV / yield-bearing tokens accrue above their peg unit by design
-      // (sUSDe trades near $1.25), so DEX-vs-peg would report thousands of bps
-      // for a correctly priced token. Their DEX print is checked against the
-      // token's own observed reference price instead. Without a usable
-      // reference there is no deviation and therefore no verdict; the check
-      // never falls back to the peg unit.
-      let dexBps: number | null;
-      if (isNavToken) {
-        const referencePrice = primaryTrust !== "unusable" ? asset?.price ?? null : null;
-        dexBps = referencePrice == null ? null : deriveDepegSignal(dexRow.dex_price_usd, referencePrice)?.bps ?? null;
-      } else {
-        const pegType = resolvePegType(asset, meta.flags.pegCurrency, pegData.pegType) || null;
-        dexBps = deriveDexDeviationBps(
-          dexRow.dex_price_usd,
-          pegType,
-          pegRates,
-          meta.commodityOunces,
-          currentBps,
-          dexRow.deviation_from_primary_bps,
-        );
-      }
-      if (dexBps != null) {
-        // "agrees" = both sources within 50bps of each other (signed comparison
-        // catches opposite-direction disagreements, e.g. +200bps vs -200bps).
-        // NAV tokens carry no currentBps; their dexBps is already measured
-        // against the reference price.
-        const agrees = currentBps != null
-          ? Math.abs(currentBps - dexBps) < 50
-          : Math.abs(dexBps) < 50;
-        dexPriceCheck = {
-          dexPrice: dexRow.dex_price_usd,
-          dexDeviationBps: dexBps,
-          agrees,
-          sourcePools: dexRow.source_pool_count,
-          sourceTvl: dexRow.source_total_tvl,
-        };
-      }
-    }
-
     coins.push({
       id: meta.id,
       symbol: meta.symbol,
@@ -382,7 +304,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       priceUpdatedAt: asset?.priceUpdatedAt ?? null,
       consensusSources: asset?.consensusSources,
       agreeSources: asset?.agreeSources,
-      primaryTrust,
+      primaryTrust: observation?.primaryTrust ?? "unusable",
       pegPct: pegData.pegPct,
       ...(pegData.unknownCoverageSeconds != null ? { unknownCoverageSeconds: pegData.unknownCoverageSeconds } : {}),
       severityScore: pegData.severityScore,
@@ -398,7 +320,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       historyCoverage: pegData.historyCoverage,
       recent90d: pegData.recent90d,
       methodologyVersion,
-      dexPriceCheck: dexPriceCheck ?? undefined,
+      dexPriceCheck: observation?.dexPriceCheck ?? undefined,
     });
 
     // Summary aggregation

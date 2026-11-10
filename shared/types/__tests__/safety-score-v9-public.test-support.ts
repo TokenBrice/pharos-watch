@@ -1,4 +1,7 @@
-import type { z } from "zod";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { z } from "zod";
+import { vi } from "vitest";
 import type { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-publication-response";
 import type { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES as EVIDENCE_RESPONSIBILITIES } from "../safety-score-v9-vocabulary";
@@ -474,4 +477,63 @@ export function partialResponse(
       baseAssetScore: mean, deploymentAdjustedScore: mean, preCapScore: mean });
   }
   return result;
+}
+
+// Frozen reader vocabulary from 10555474f4, before issue #1918. Reader modules otherwise match that revision.
+export const PRE_DUST_REASON_CODES = (
+  "bounded-mechanism-review|bounded-unknown-reserve-exposure|correlated-exit-routes|critical-unresolved|future-dated-input-fact|historical-critical-input|implementation-parent-cycle|incomparable-route-requests|incomplete-dex-route-coverage|incomplete-oracle-liquidation-branch|" +
+  "inherited-access-exposure|reviewed-possible-access|insufficient-evidence|material-bridge-supply-unmatched|material-dependency-unavailable|material-reserve-slice-unstructured|material-unknown-reserve-exposure|mint-control-question|missing-applicable-peg|missing-archetype|" +
+  "missing-bridge-route-rows|missing-bridge-routes|missing-custody-profile|missing-implementation-date|missing-latest-assurance-report|missing-mint-authority|missing-oracle-profile|missing-parent-score|missing-peg-input|peg-price-unavailable-adverse-history|" +
+  "peg-supply-floor-withheld|missing-pillar|missing-access-review|missing-pillar-evidence|missing-required-oracle-branches|missing-reserve-composition|missing-runtime-route-evidence|missing-same-notional-route|unproven-settlement-bound|missing-upgrade-control|" +
+  "missing-upgradeability-review|nonmaterial-bridge-supply-unmatched|nonmaterial-dependency-unavailable|no-viable-exit-path|oracle-topology-undisclosed|parent-cycle|partial-reserve-review|stale-audited-reserve-composition|runtime-bridge-materiality-unavailable|scoped-control-question|" +
+  "selected-bridge-route-missing|selected-bridge-route-unresolved|unknown-control-cap-authority|unknown-control-mint-ability|unknown-upgrade-authority|unresolved-control-identity|unresolved-exit-output|unresolved-mint-authority|unresolved-oracle-branch-applicability|unsupported-same-notional-route|" +
+  "unreviewed-dependency-relationships|unreviewed-oracle-profile|unreviewed-reserve-envelope|partial-evidence-pipeline-gap|single-pillar-pipeline-gap|all-pillars-pipeline-gap|f-without-measured-adverse"
+).split("|");
+
+// Exact pre-dust reader closure; reject future fields/refinements before reusing current modules.
+const PRE_DUST_READER_FILES = (
+  "business-calendars.ts|chain-identity.ts|coin-projection.ts|core.ts|date-primitives.ts|dependency-graph.ts|dependency-types.ts|deployment-amounts.ts|" +
+  "deployment-id.ts|exit-route-identity.ts|exit-route.ts|live-reserve-core.ts|methodology-envelope.ts|redemption.ts|report-card-grade.ts|report-cards-v9-materialization.ts|" +
+  "report-cards-v9-projections.ts|report-cards-v9.ts|reserve-bounded-facts.ts|reserve-input.ts|reserves.ts|safety-schema-primitives.ts|safety-score-publication.ts|safety-score-v9-access-lookthrough.ts|" +
+  "safety-score-v9-allocation.ts|safety-score-v9-backing.ts|safety-score-v9-causes.ts|safety-score-v9-control-scope.ts|safety-score-v9-deployment-supply-census.ts|safety-score-v9-fact-input-primitives.ts|safety-score-v9-fact-primitives.ts|safety-score-v9-facts.ts|" +
+  "safety-score-v9-grade.ts|safety-score-v9-immutable.ts|safety-score-v9-incidents.ts|safety-score-v9-l2-messenger-pending.ts|safety-score-v9-lender-book.ts|safety-score-v9-open-evidence.ts|safety-score-v9-operational-resilience-primitives.ts|safety-score-v9-public-attribution.ts|" +
+  "safety-score-v9-public-breakdowns.ts|safety-score-v9-public-cause-gaps.ts|safety-score-v9-public-causes.ts|safety-score-v9-public-evidence-facts.ts|safety-score-v9-public-facts.ts|safety-score-v9-public-historical.ts|safety-score-v9-public-internal.ts|safety-score-v9-public-trace.ts|" +
+  "safety-score-v9-public-witness-texts.ts|safety-score-v9-public.ts|safety-score-v9-publication-response.ts|safety-score-v9-reserve-scope.ts|safety-score-v9-supply-attribution.ts|safety-score-v9-vocabulary.ts|safety-score-v9-wrapper.ts|safety-score-v9.ts|" +
+  "stablecoin-meta-control-schemas.ts|stablecoin-meta-mint-authority-refinements.ts|stablecoin-meta-primitives.ts|stablecoin-taxonomy.ts|validators.ts"
+).split("|");
+function assertPreviousReaderSource() {
+  const hash = createHash("sha256");
+  for (const path of PRE_DUST_READER_FILES) {
+    let source = readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+    if (path === "safety-score-v9.ts") source = source.replace(/^  "negligible-dex-route",\r?\n/m, "");
+    hash.update(path).update("\0").update(source).update("\0");
+  }
+  const policy = JSON.parse(readFileSync(new URL("../../data/safety-score-v9/methodology-policy-candidate-v1.json", import.meta.url), "utf8")) as {
+    semantic: unknown; reasonRegistry: { code: string; defaultTreatment: string }[];
+  };
+  // Version/identity metadata is not a validator input; semantic policy and charged reason vocabulary are.
+  hash.update("policy-reader-values\0").update(JSON.stringify({
+    semantic: policy.semantic,
+    reasonCodes: policy.reasonRegistry.filter(reason => reason.defaultTreatment !== "diagnostic").map(reason => reason.code),
+  }));
+  if (hash.digest("hex") !== "b821c9bf99ab7b5bd21cc87c30eda1fe12eb15de3a110121e35f13cc0ab58e5c") throw new Error("Pre-dust reader source/refinement inputs changed");
+}
+
+export async function previousReader() {
+  assertPreviousReaderSource();
+  vi.resetModules();
+  vi.doMock("../safety-score-v9", async (original) => ({
+    ...await original<typeof import("../safety-score-v9")>(),
+    V9_REASON_CODES: PRE_DUST_REASON_CODES,
+    V9ReasonCodeSchema: z.enum(PRE_DUST_REASON_CODES),
+  }));
+  try {
+    const { SafetyScoreV9CurrentCardSchema: card } = await import("../safety-score-v9-public");
+    const { ReportCardsV9TableCardSchema: table } = await import("../report-cards-v9-projections");
+    const { SafetyScoreV9CurrentResponseSchema: response } = await import("../safety-score-v9-publication-response");
+    return { card, table, response };
+  } finally {
+    vi.doUnmock("../safety-score-v9");
+    vi.resetModules();
+  }
 }

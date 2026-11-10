@@ -154,6 +154,10 @@ export interface V9ExitEvaluationResult {
   routes: readonly V9ExitRouteTrace[];
 }
 
+export function isV9NegligibleDexDiagnostic(route: V9ExitRouteTrace): boolean {
+  return route.lane === "dex" && !route.included && route.capsApplied.includes("immaterial-executable-capacity");
+}
+
 /**
  * The pillar uses the clamped supply share continuously. The observation grid
  * sizes producer measurements, not the liability the holder needs to exit.
@@ -431,6 +435,7 @@ function resolveIncludedRouteCapacity(
   route: V9ExitEvaluationRoute,
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
+  includeDiagnosticZero = false,
 ):
   | { state: "included"; capacityPoint: V9ExitCapacityPoint; valuedExecutableUsd: number; costEvidence: "measured" | "upper-bound" }
   | { state: "excluded"; exclusionReason: V9ReasonCode | null }
@@ -455,7 +460,7 @@ function resolveIncludedRouteCapacity(
   if (capacityPoint === null) return { state: "incomparable" };
   // A modeled zero is not an exhaustion measurement. A missing settlement
   // bound also cannot turn a zero lower bound into executable recovery.
-  if (capacityPoint.executableUsd === 0 && !isExhaustionMeasurement(route)) {
+  if (capacityPoint.executableUsd === 0 && !isExhaustionMeasurement(route) && !includeDiagnosticZero) {
     return { state: "excluded", exclusionReason: route.settlementBoundUnproven
       ? "unproven-settlement-bound" : "missing-same-notional-route" };
   }
@@ -1119,6 +1124,42 @@ export function evaluateV9Exit(
       supportedComponentCeiling: null, exclusionReason: null,
     };
   });
+  const negligible = new Map<string, V9ExitRouteTrace>();
+  for (const [index, route] of routes.entries()) {
+    if (route.lane !== "dex") continue;
+    // Read raw capacity, before valuation/rounding; zero lower bounds are diagnostic only.
+    const capacity = resolveIncludedRouteCapacity(route, stressRequest, envelope, true);
+    if (capacity.state !== "included" || hasMaterialExitCapacity({
+      executableCapacityUsd: capacity.capacityPoint.executableUsd,
+      requestedNotionalUsd: stressRequest.rawSupplyRequestUsd,
+    }, envelope.policy.semantic.exit)) continue;
+    const trace = traces[index]!;
+    negligible.set(route.routeKey, { ...trace, included: false, effectiveScoringWeight: 0,
+      capacityPoint: trace.capacityPoint ?? { ...capacity.capacityPoint,
+        executableUsd: roundTo(capacity.valuedExecutableUsd, 2),
+        completionRatio: roundTo(capacity.valuedExecutableUsd / stressRequest.requestedNotionalUsd, 2),
+      }, exclusionReason: "missing-same-notional-route",
+      capsApplied: uniqueSorted([...trace.capsApplied, "immaterial-executable-capacity"]),
+    });
+  }
+  const completeNonViableSuspensionPortfolio = args.portfolioStatus === "reviewed-complete" &&
+    inventoryCause.causes.every((cause) => cause === "D") &&
+    routes.some((route) => route.applicability === "required" && route.routeSuspension !== undefined) &&
+    routes.every((route, index) => {
+      if (route.applicability === "not-applicable" || superseded.has(route.routeKey)) return true;
+      const causes = resolveV9StatusCauses([route.status, route.factorStatuses?.capacity, route.factorStatuses?.output], route.gaps);
+      if (route.applicability !== "required" || causes.causes.some((cause) => cause !== "D")) return false;
+      const trace = traces[index]!;
+      return route.routeSuspension !== undefined && trace.cause === "D" ||
+        isExhaustionMeasurement(route) && trace.included && trace.score === 0 &&
+          trace.capsApplied.some((cap) => cap === "zero-executable-capacity" || cap === "immaterial-executable-capacity");
+    });
+  if (negligible.size > 0 && !completeNonViableSuspensionPortfolio) {
+    // Preserve unknown pricing, but never erase an exhaustive census beside known closed channels.
+    const withoutDust = evaluateV9Exit({ ...args, routes: args.routes.filter((route) => !negligible.has(route.routeKey)) }, envelope);
+    const retained = new Map(withoutDust.routes.map((route) => [route.routeKey, route]));
+    return { ...withoutDust, routes: routes.map((route) => negligible.get(route.routeKey) ?? retained.get(route.routeKey)!) };
+  }
   let evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
     .sort((left, right) => right.score - left.score || compareText(left.route.routeKey, right.route.routeKey));
@@ -1135,10 +1176,7 @@ export function evaluateV9Exit(
         : routeCause(route, "capacity").cause !== null ? routeCause(route, "capacity") : routeCause(route);
   };
   const excludedGap = (trace: V9ExitRouteTrace) => excludedCause(trace).excluded;
-  // A route-local materiality zero does not prove whole-asset exhaustion
-  // while another applicable rail is unavailable for an A pipeline or C/U
-  // reason, or the inventory still carries such a gap.
-  // Reuse the no-usable-route path, not a floor on an actual measured zero.
+  // A submaterial redemption measurement cannot establish exhaustion beside an unmeasured rail.
   if (evaluated.length > 0 &&
     evaluated.every((candidate) => candidate.trace.capsApplied.includes("immaterial-executable-capacity")) &&
     (inventoryCause.cause === "A" || inventoryCause.cause === "C" || inventoryCause.cause === "U" ||

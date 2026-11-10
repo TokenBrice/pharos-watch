@@ -481,29 +481,26 @@ describe("stablecoin detail view-model builder", () => {
     expect(snapshot.agreeSources).toBeNull();
   });
 
-  it("keeps a present peg row's empty source lists instead of borrowing summary provenance", () => {
+  it("uses one row for deviation/agreement, expires DEX evidence and retains legacy fallback", () => {
+    const now = Date.now();
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
-    const summary = { consensusSources: ["coingecko"], agreeSources: ["coingecko"] } as StablecoinLiveSummary;
-    const pegSummaryCoin = makePegSummaryCoin({
-      id: "usdc-circle",
-      name: coin.name,
-      symbol: coin.symbol,
-      pegType: "peggedUSD",
-      pegCurrency: coin.flags.pegCurrency,
-      currentDeviationBps: 0,
-      consensusSources: [],
-      agreeSources: [],
-    });
-
-    const snapshot = buildDetailPegPriceSnapshot(
-      "usdc-circle",
-      coin,
-      { coins: [pegSummaryCoin], summary: null, methodology: {} } as PegSummaryResponse,
-      summary,
-    );
-
-    expect(snapshot.consensusSources).toEqual([]);
-    expect(snapshot.agreeSources).toEqual([]);
+    const dex = { dexPrice: 0.8, dexDeviationBps: -2000, agrees: true, sourcePools: 1, sourceTvl: 1 };
+    const legacy = makePegSummaryCoin({ currentDeviationBps: 0, consensusSources: [], agreeSources: [], dexPriceCheck: { ...dex, agrees: false } });
+    const summary = {
+      price: 0.8, priceSource: "coingecko", priceConfidence: "fallback",
+      consensusSources: ["coingecko"], agreeSources: ["coingecko"],
+      currentPeg: { currentDeviationBps: -2000, pegReference: null, pegReferenceUnavailable: false,
+        currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: dex, dexPriceCheckExpiresAt: now / 1000 + 1 },
+    } as StablecoinLiveSummary;
+    const read = (nowMs = now) => buildDetailPegPriceSnapshot(coin.id, coin,
+      { coins: [{ ...legacy, id: coin.id }] } as PegSummaryResponse, summary, nowMs);
+    expect(read()).toMatchObject({ deviationBps: -2000, consensusSources: ["coingecko"], agreeSources: ["coingecko"], dexPriceCheck: dex });
+    expect(read(now + 1000)).toMatchObject({ deviationBps: -2000, dexPriceCheck: null });
+    expect(read(now + 540000).dexPriceCheck).toBeNull();
+    delete summary.currentPeg!.dexPriceCheckExpiresAt;
+    expect(read().dexPriceCheck).toBeNull();
+    delete summary.currentPeg;
+    expect(read()).toMatchObject({ deviationBps: 0, consensusSources: [], agreeSources: [] });
   });
 
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {

@@ -1,4 +1,6 @@
 import type { V9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
+import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
+import type { V9FactStatusV2, V9FactGapV3 } from "@shared/types/safety-score-v9-facts";
 import type { V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
 
 export function makeExitRoute(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
@@ -98,5 +100,29 @@ export function makeNormalizedExitRoute(overrides: Partial<V9ExitRouteFactV2> = 
     },
     failureDomains: [{ kind: "redemption-rail", key: "issuer" }],
     ...overrides,
+  };
+}
+
+export function makeExitGap(cause: "A" | "B" | "C" | "U", id: string): { status: V9FactStatusV2; gap: V9FactGapV3 } {
+  const proof = cause === "A" ? {
+    cause, producerState: "stale-producer" as const, sourceId: "route-producer", sourceGenerationId: "captured",
+    observedAtSec: 100, rejectionCode: "route-observation-stale", evidenceRefIds: ["attempt"],
+  } : cause === "U" ? { cause, reason: "not-yet-researched" as const, evidenceRefIds: [] as [] }
+    : cause === "B" ? {
+      cause, proofOrigin: "typed-review" as const, classificationId: id, reviewedAt: "2026-10-01",
+      sources: [{ url: "https://issuer.example/terms", assertion: "The exact route datum is public." }],
+      evidenceRefIds: ["review"], assertion: "required-data-public" as const,
+    } : {
+      cause, proofOrigin: "typed-review" as const, classificationId: id, reviewedAt: "2026-10-01",
+      sources: [{ url: "https://issuer.example/terms", assertion: "The exact route datum was researched." }],
+      evidenceRefIds: ["review"], assertion: "researched-nondisclosure" as const,
+      rationale: "The required current datum is not published.",
+    };
+  return {
+    status: { applicability: { state: "required", policyRuleId: "route-factor", rationale: null, gapId: null },
+      observationState: "bounded-unknown", evidenceRefIds: [], gapIds: [id] },
+    gap: createV9FactGapV3({ gapId: id, reasonCode: "missing-same-notional-route", ownerDomain: "exit",
+      policyRuleId: "route-factor", responsibility: "unresearched", observationState: "bounded-unknown",
+      path: { kind: "optional-exit", routeKey: "route" }, message: "Scoped datum gap.", causeProof: proof }),
   };
 }
