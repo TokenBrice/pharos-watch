@@ -333,6 +333,7 @@ export async function fetchDataSources(
 
   // --- DL Protocols (consume body to release connection) ---
   const dexProjects = new Set<string>();
+  const nonDexProjects = new Set<string>();
   const protocolTvlCaps = new Map<string, number>();
   let dlProtocolsAvailable = false;
 
@@ -353,7 +354,10 @@ export async function fetchDataSources(
         }
         for (const p of protocols) {
           if (typeof p.slug !== "string") continue;
-          if (p.category !== "Dexs") continue;
+          if (p.category !== "Dexs") {
+            if (typeof p.category === "string" && p.category.trim()) nonDexProjects.add(p.slug);
+            continue;
+          }
           if (p.deadFrom || p.rugged || p.deprecated) continue;
           dexProjects.add(p.slug);
           // Store TVL cap keyed by normalized protocol name for CG/GT pool sanity checks
@@ -476,6 +480,7 @@ export async function fetchDataSources(
     rawPoolCount,
     poolRejections,
     dexProjects,
+    nonDexProjects,
     protocolTvlCaps,
     curvePayloads,
     curveFailedChains,

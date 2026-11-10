@@ -14,6 +14,7 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import * as priceValidation from "../../lib/price-validation";
 import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
 import { CRON_TIMEOUT_MS, createSlotDeadline } from "../../lib/cron-timeouts";
+import { getCronMetadataBudgetBytes } from "../../lib/cron-metadata-persistence";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import * as v2Enrichment from "../dex-liquidity/constant-product-v2";
 import * as quoterEnrichment from "../dex-liquidity/enrich-quoter-v2-targets";
@@ -543,20 +544,38 @@ describe("dex liquidity scoring stage cycle", () => {
     },
   );
   it("scopes Yearn vaults", async () => {
+    const refresh = priceRefresh.refreshPoolPrices;
+    vi.spyOn(priceRefresh, "refreshPoolPrices").mockImplementationOnce(async (...args) => {
+      const summary = await refresh(...args);
+      summary.demand.networks = Array(100).fill({ network: "ethereum", pools: 1, requests: 1 });
+      return summary;
+    });
     const real = await vi.importActual<typeof import("../dex-liquidity/process-pools")>("../dex-liquidity/process-pools");
-    const pools = Array.from({ length: 67 }, (_, i) => llamaPool({ pool: `yearn-${i}`, project: "yearn-finance", chain: "Ethereum",
+    const pools = Array.from({ length: 67 }, (_, i) => llamaPool({ pool: `7d89af7a-24c9-4292-aa38-0000000000${i + 10}`, project: "yearn-finance", chain: "Ethereum",
       symbol: "", poolMeta: null, underlyingTokens: ["0x0000000000000000000000000000000000000000"], exposure: "single",
       tvlUsd: i ? 2_000_000 : 11_399_064 }));
     vi.mocked(processPoolMetrics).mockImplementationOnce(real.processPoolMetrics);
-    Object.assign(phaseFixtures.current.primary, { pools, rawPoolCount: 67, dexProjects: new Set(["uniswap-v3"]) });
-    for (const result of [await stageSource(), await consumeScoringStage(db)]) {
+    Object.assign(phaseFixtures.current.primary, { pools, rawPoolCount: 67, dexProjects: new Set(["uniswap-v3"]), nonDexProjects: new Set(["yearn-finance"]) });
+    for (const [job, result] of [["sync-dex-liquidity-stage", await stageSource()], ["sync-dex-liquidity", await consumeScoringStage(db)]] as const) {
+      expect(Buffer.byteLength(result.metadata!)).toBeLessThanOrEqual(getCronMetadataBudgetBytes(job));
       expect(result.status).toBe("ok");
       const metadata = readMetadata(result);
       expect(metadata.reason).toBeUndefined();
       expect(metadata.poolRejections[0]).toMatchObject({ scope: "non-dex-project", protocol: "yearn-finance" });
       expect(metadata.poolRejectionMateriality).toMatchObject({ rejectedPoolCount: 67, rejectedPoolTvlUsd: 143_399_064,
-        outOfScopeRejectedPoolCount: 67, candidateRejectedPoolCount: 0, candidateRejectedPoolTvlUsd: 0, material: false });
+        outOfScopeRejectedPoolCount: 67, candidateRejectedPoolCount: 0, candidateRejectedPoolTvlUsd: 0, detailsOmitted: 63, material: false });
     }
+    const chunk = scoringStage.chunks[0]!;
+    const [header, ...rest] = chunk.payload.split("\n");
+    const legacy = JSON.parse(header!);
+    delete legacy.pool.poolRejections[0].scope;
+    chunk.payload = [JSON.stringify(legacy), ...rest].join("\n");
+    chunk.payloadBytes = Buffer.byteLength(chunk.payload);
+    vi.mocked(persistScores).mockClear();
+    const held = await consumeScoringStage(db);
+    expect([held.status, readMetadata(held).reason, readMetadata(held).poolRejections[0].scope])
+      .toEqual(["degraded", "pool-rejection-scope-unavailable", "unknown-project"]);
+    expect(persistScores).not.toHaveBeenCalled();
   });
 
   it("throws on catastrophic source failure instead of silently returning", async () => {

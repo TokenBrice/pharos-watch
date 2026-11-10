@@ -5,9 +5,20 @@ import {
   buildPoolRejectionMetadata,
 } from "./process-pools";
 import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters } from "./types";
-import type { MeasuredTargetFunnel } from "./route-telemetry";
+import { boundTelemetryEntries, type MeasuredTargetFunnel } from "./route-telemetry";
 import type { DexLiquidityScoringSourceState, DexLiquidityPoolState } from "./scoring-stage-contract";
 import { SOURCE_FAMILY_DROP_FLAG_PREFIX } from "./orchestrator-drift";
+
+/** Cron copies share the job budget with rejection evidence; the scoring-stage payload stays complete. */
+export function boundDexLiquidityPriceRefreshMetadata(summary: DexLiquidityPoolState["priceRefresh"]) {
+  if (!summary) return summary;
+  const networks = boundTelemetryEntries(summary.demand.networks, 8, 512);
+  const failures = boundTelemetryEntries(summary.failures, 3, 512);
+  return { ...summary,
+    demand: { ...summary.demand, networks, networksOmitted: summary.demand.networks.length - networks.length },
+    failures, failuresOmitted: summary.failuresOmitted + summary.failures.length - failures.length,
+  };
+}
 
 export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidityScoringSourceState,
   "failedSources" | "degradedSources" | "directApiSourceSummary">): string[] {
@@ -112,7 +123,7 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
     stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
     stagedWritebackRows: poolState.stagedWritebackRows,
-    priceRefresh: poolState.priceRefresh,
+    priceRefresh: boundDexLiquidityPriceRefreshMetadata(poolState.priceRefresh),
     stagedWritebackSkippedUntrustedIds: poolState.stagedWritebackSkippedUntrustedIds,
     registryEvaluation: poolState.registryEvaluatedAtSec == null ? undefined : {
       evaluatedAtSec: poolState.registryEvaluatedAtSec,

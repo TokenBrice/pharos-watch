@@ -362,6 +362,8 @@ export interface DataSources {
   /** Compaction quarantine carried into the existing scoring-stage quality gate. */
   poolRejections: PoolProcessingRejection[];
   dexProjects: Set<string>;
+  /** Affirmative non-DEX categories from this run's Protocols response; absence is unknown. */
+  nonDexProjects?: Set<string>;
   /** DL protocol slug -> observed total TVL; bounds fallback admission, never scales raw pool TVL. */
   protocolTvlCaps: Map<string, number>;
   curvePayloads: (CurveApiPayload | null)[];

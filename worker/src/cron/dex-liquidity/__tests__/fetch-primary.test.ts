@@ -140,7 +140,7 @@ function mockDlYieldsSuccess(curveResponse: (() => Promise<{ response: Response;
     if (urlStr.includes("api.llama.fi/protocols")) {
       return {
         response: new Response("", { status: 200 }),
-        body: [],
+        body: [{ slug: "yearn-finance", category: "Yield Aggregator" }, { slug: "unknown", category: "" }],
       };
     }
     if (urlStr.includes("api.curve.finance")) {
@@ -171,7 +171,7 @@ describe("fetchDataSources", () => {
     });
 
     const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
-    expect(result).not.toBeNull();
+    expect(result?.nonDexProjects).toEqual(new Set(["yearn-finance"]));
     // Curve calls should not have been made
     const curveCalls = vi
       .mocked(fetchJsonWithRetry)
