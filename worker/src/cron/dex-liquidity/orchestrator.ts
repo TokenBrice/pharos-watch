@@ -23,8 +23,8 @@ import {
 } from "./fetch-primary";
 import { publishDexPriceChallengerSnapshots } from "./challenger-publish";
 import {
-  POOL_REJECTION_MATERIAL_TVL_USD,
-  hasMaterialPoolRejections,
+  buildPoolRejectionMetadata,
+  scopePoolRejections,
   processPoolMetrics,
 } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
@@ -220,17 +220,6 @@ export async function stageDexLiquidityScoring(
   };
   const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
   const itemCount = poolState.metrics.size;
-  const rejectedPoolCount = poolState.poolRejections.reduce(
-    (sum, rejection) => sum + rejection.count,
-    0,
-  );
-  const rejectedPoolTvlUsd = poolState.poolRejections.reduce(
-    (sum, rejection) => sum + rejection.tvlUsd,
-    0,
-  );
-  const materialPoolRejections = hasMaterialPoolRejections(
-    poolState.poolRejections,
-  );
   const persistenceStartedAtMs = Date.now();
   const stored = await persistDexLiquidityScoringStage(
     db,
@@ -257,11 +246,9 @@ export async function stageDexLiquidityScoring(
     ? "pagination-cursor-acknowledgement-failed"
     : scoringSourceState.criticalSourceFailures.length > 0
       ? `${scoringSourceState.criticalSourceFailures[0]}-unavailable`
-      : materialPoolRejections
-        ? "pool-rejection-material"
-        : stored.retention.error
-          ? "stage-retention-failed"
-          : null;
+      : stored.retention.error
+        ? "stage-retention-failed"
+        : null;
 
   return {
     status: degradedReason == null ? "ok" : "degraded",
@@ -290,13 +277,7 @@ export async function stageDexLiquidityScoring(
       subgraphFailures: scoringSourceState.subgraphFailures ?? [],
       directApiSourceSummary: scoringSourceState.directApiSourceSummary,
       fallbackSignals: scoringSourceState.fallbackSignals,
-      poolRejections: poolState.poolRejections,
-      poolRejectionMateriality: {
-        thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD,
-        rejectedPoolCount,
-        rejectedPoolTvlUsd,
-        material: materialPoolRejections,
-      },
+      ...buildPoolRejectionMetadata(poolState.poolRejections),
       fallbackCounters,
       targetEnrichment,
       targetEnrichmentGroupsOmitted: (poolState.targetEnrichment?.length ?? 0) - targetEnrichment.length,
@@ -797,7 +778,7 @@ async function buildDexLiquidityPoolState(
     sourceState.subgraphEnrichment.uniV3PoolFees,
   );
 
-  const { metrics, rejections: poolRejections } = processPoolMetrics({
+  const { metrics, rejections } = processPoolMetrics({
     pools: preferredPrimaryPools,
     dexProjects: sourceState.dataSources.dexProjects,
     symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
@@ -817,7 +798,9 @@ async function buildDexLiquidityPoolState(
       sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
     fallbackCounters: ctx.fallbackCounters,
   });
-  poolRejections.unshift(...sourceState.dataSources.poolRejections);
+  const poolRejections = scopePoolRejections(
+    [...sourceState.dataSources.poolRejections, ...rejections], sourceState.dataSources.dexProjects,
+  );
 
   // Primary pools and display-only enrichment maps have been projected into
   // metrics and the identity index. Keep only the exact target candidates
@@ -1114,6 +1097,7 @@ async function scoreDexLiquidityPoolState(
     scoreResults,
     globalAgg,
     retainedPoolsByStablecoin,
+    poolRejections: poolState.poolRejections,
     priceObservations: sourceState.priceObservations,
     diagnostics,
     stagedMergedCount: poolState.stagedMergedCount,
@@ -1357,7 +1341,6 @@ function buildDexLiquidityCronResult(
 ): CronResult {
   const degradedReason = dexLiquidityDegradedReason({
     criticalSourceFailures: sourceState.criticalSourceFailures,
-    poolRejections: poolState.poolRejections,
     analysis: scoreState.analysis,
     persistence: persistenceState.persistence,
     dexPriceDiagnostics: persistenceState.dexPriceDiagnostics,

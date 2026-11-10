@@ -4,9 +4,8 @@ import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-pe
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
 import type { DexLiquidityDriftCandidate } from "../orchestrator-drift";
-import { isDexLiquidityDegraded } from "../orchestrator-metadata";
 import type { FullScoreResult, GlobalAgg } from "../types";
-import { processPoolMetrics } from "../process-pools";
+import { assessPoolRejectionCoverage, buildPoolRejectionMetadata, processPoolMetrics, scopePoolRejections } from "../process-pools";
 import { rebuildMetricsFromPools } from "../scoring-helpers";
 import { makePool } from "./scoring-test-builders";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -439,71 +438,10 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
 
-  it("keeps TVL step diagnostics empty when the previous published generation cannot be read", async () => {
-    const db = mockD1([{
-      match: "FROM dex_liquidity_run_rows r",
-      rows: [],
-      throwError: new Error("generation read failed"),
-    }], { assertMatchesUsed: true });
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db }));
 
-    expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(0);
-    expect(analysis.sourceCoverage.coinTvlStepCount25).toBe(0);
-    expect(analysis.sourceCoverage.coinTvlStepTop).toEqual([]);
-    expect(analysis.sourceCoverage).toMatchObject({
-      coinTvlStepIds150: [],
-      coinTvlStepIds150Omitted: 0,
-      coinTvlStepIds25: [],
-      coinTvlStepIds25Omitted: 0,
-      coinTvlStepComparisons: 0,
-      coinTvlStepMissingBaseline: 0,
-      coinTvlStepMissingCurrent: 0,
-      coinTvlStepBaselineUnavailable: true,
-    });
-  });
-
-  it("treats previous coverage read failures as degraded unavailable state instead of a fake high baseline", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: null,
-        throwError: new Error("count read failed"),
-      },
-    ], { assertMatchesUsed: true });
-
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
-      db,
-    }));
-
-    expect(analysis.previousCoverage).toBeNull();
-    expect(analysis.previousCoverageBaselineAvailable).toBe(false);
-    expect(analysis.minExpectedCoverage).toBeNull();
-    expect(analysis.nearCoverageGuard).toBe(false);
-    expect(analysis.sourceCoverage.previousCoverageBaselineAvailable).toBe(false);
-    expect(
-      isDexLiquidityDegraded({
-        criticalSourceFailures: [],
-        analysis,
-        persistence: {
-          placeholderCount: 0,
-          inactiveMetricRowsSkipped: 0,
-          inactiveMetricIdsSkipped: [],
-          orphanRowsDeleted: 0,
-          orphanCleanupFailed: false,
-        },
-        historicalSnapshot: {
-          snapshotRowsWritten: 0,
-          skipped: true,
-          writeFailed: false,
-          historyRowsPruned: 0,
-          retentionPruneFailed: false,
-        },
-      }),
-    ).toBe(true);
-  });
 
   it.each([
+    ["COUNT(*) as cnt FROM dex_liquidity", "coverage-count-read-failed", true],
     ["ORDER BY total_tvl_usd DESC", "top-ten-read-failed", true],
     ["GROUP BY coverage_class", "coverage-classes-read-failed", false],
     ["SELECT total_tvl_usd, updated_at", "global-tvl-read-failed", true],
@@ -539,7 +477,20 @@ describe("analyzeDexLiquidityPostScoring", () => {
       expect(failed.previousGlobalTvl).toBeNull();
       expect(failed.minExpectedGlobalTvl).toBeNull();
     }
+    if (reason === "coverage-count-read-failed") {
+      expect(failed.previousCoverage).toBeNull();
+      expect(failed.previousCoverageBaselineAvailable).toBe(false);
+      expect(failed.minExpectedCoverage).toBeNull();
+      expect(failed.nearCoverageGuard).toBe(false);
+      expect(failed.sourceCoverage.previousCoverageBaselineAvailable).toBe(false);
+    }
     if (reason === "cron-history-read-failed") expect(failed.previousCoverage).toBeNull();
+    if (reason === "coin-tvl-read-failed") expect(failed.sourceCoverage).toMatchObject({
+      coinTvlStepCount150: 0, coinTvlStepCount25: 0, coinTvlStepTop: [],
+      coinTvlStepIds150: [], coinTvlStepIds150Omitted: 0, coinTvlStepIds25: [], coinTvlStepIds25Omitted: 0,
+      coinTvlStepComparisons: 0, coinTvlStepMissingBaseline: 0, coinTvlStepMissingCurrent: 0,
+      coinTvlStepBaselineUnavailable: true,
+    });
   });
 
   it("ignores a source-incomplete persisted value baseline and uses the last source-complete cron baseline", async () => {
@@ -703,7 +654,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(analysis.sourceCoverage.majorTvlCliffs[0]?.previousTvlUsd).toBe(152_000_000);
   });
 
-  it("keeps hard value guard behavior for source-complete table baselines", async () => {
+  it.each([true, false])("keeps table value guards with parseable metadata=%s", async (parseable) => {
     const db = mockStrictAnalysisDb(
       { cnt: 159 },
       { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
@@ -712,10 +663,10 @@ describe("analyzeDexLiquidityPostScoring", () => {
         {
           started_at: 1_776_321_604,
           status: "ok",
-          metadata: makeCronMetadata({
+          metadata: parseable ? makeCronMetadata({
             dlProtocolsAvailable: true,
             currentGlobalTvl: 10_000_000_000,
-          }),
+          }) : "{not-json",
         },
       ],
     );
@@ -834,97 +785,56 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(analysis.sourceCoverage.previousTop10GuardTvl).toBe(8_209_498_735);
   });
 
-  it("falls back to the table baseline when cron metadata is not parseable", async () => {
-    const db = mockStrictAnalysisDb(
-      { cnt: 159 },
-      { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
-      [],
-      [{ started_at: 1_776_321_604, status: "ok", metadata: "{not-json" }],
-    );
 
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
-      db,
-      globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 5_000_000_000 },
-    }));
-
-    expect(analysis.sourceCoverage.valueBaselineSource).toBe("dex_liquidity_global");
-    expect(analysis.hardValueGuard).toBe(true);
-  });
-
-  it("degrades cron status when rejected primary-pool TVL reaches the materiality threshold", () => {
-    const analysis = {
-      previousCoverageBaselineAvailable: true,
-      nearCoverageGuard: false,
-      nearValueGuard: false,
-      nearMajorCoverageGuard: false,
-    } as Awaited<ReturnType<typeof analyzeDexLiquidityPostScoring>>;
-    const base = {
-      criticalSourceFailures: [],
-      analysis,
-      persistence: {
-        placeholderCount: 0,
-        inactiveMetricRowsSkipped: 0,
-        inactiveMetricIdsSkipped: [],
-        orphanRowsDeleted: 0,
-        orphanCleanupFailed: false,
-      },
-      historicalSnapshot: {
-        snapshotRowsWritten: 0,
-        skipped: false,
-        writeFailed: false,
-        historyRowsPruned: 0,
-        retentionPruneFailed: false,
-      },
-    };
-
-    expect(
-      isDexLiquidityDegraded({
-        ...base,
-        poolRejections: [
-          {
-            reason: "invalid-pool-identity",
-            poolIds: ["0xmaterial"],
-            count: 1,
-            tvlUsd: 10_000,
-          },
-        ],
-      }),
-    ).toBe(true);
-    expect(
-      isDexLiquidityDegraded({
-        ...base,
-        poolRejections: [
-          {
-            reason: "invalid-pool-identity",
-            poolIds: ["0xsubthreshold"],
-            count: 1,
-            tvlUsd: 9_999,
-          },
-        ],
-      }),
-    ).toBe(false);
-  });
-
-  it("counts a decayed dl-only coin as crawler-only but an observed dl pool as primary coverage", async () => {
-    const decayedPool = makePool({
-      poolId: "ethereum:0xdecayed",
-      source: "dl",
-      extra: { measurement: { decayed: true } },
+  it("keeps rejection losses anchored to accepted coin liquidity, not rejected input TVL", async () => {
+    const rejection = scopePoolRejections([{ reason: "invalid-pool-volume", project: "uniswap-v3", poolIds: ["bad"], count: 67,
+      tvlUsd: 144_037_426, tvlUsdByStablecoin: { "usdt-tether": 144_037_426 }, details: [] }], new Set(["uniswap-v3"]))[0];
+    const prior = new Map([["usdt-tether", 100_000]]);
+    const assess = (tvl: number, carried?: ReturnType<typeof assessPoolRejectionCoverage>) =>
+      assessPoolRejectionCoverage([rejection], prior, new Map([["usdt-tether", tvl]]), carried);
+    expect(assess(100_000).material).toBe(false);
+    expect(assess(90_001).material).toBe(false);
+    const lost = assess(90_000);
+    expect(lost.reason).toBe("material-pool-rejections");
+    const persistent = assessPoolRejectionCoverage([], new Map([["usdt-tether", 90_000]]),
+      new Map([["usdt-tether", 90_000]]), lost);
+    expect(persistent).toEqual(lost);
+    expect(assess(100_000, persistent).material).toBe(false);
+    expect(assessPoolRejectionCoverage([rejection], new Map(), new Map()).material).toBe(false);
+    expect(assessPoolRejectionCoverage([rejection], null, new Map()).reason).toBe("pool-rejection-baseline-unavailable");
+    const unknown = assessPoolRejectionCoverage([{ ...rejection, tvlUsd: 0, unavailableTvlCount: 1, tvlUsdByStablecoin: undefined }], prior, prior);
+    expect(unknown.reason).toBe("pool-rejection-attribution-unavailable");
+    expect(unknown.material).toBeNull();
+    expect(assessPoolRejectionCoverage([], prior, prior, unknown).reason).toBe(unknown.reason);
+    for (const mode of ["retained", "expired", "scoped"] as const) {
+      const rows = [{ stablecoin_id: "usdt-tether", total_tvl_usd: 100_000 }];
+      const clean = mode === "scoped";
+      const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ poolRejections: [rejection],
+        db: mockAnalysisDb([
+          { match: "FROM dex_liquidity_run_rows r", rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: clean ? 100_000 : 90_000 }] },
+          ...(clean ? [{ match: "FROM cron_runs", rows: [{ status: "ok", metadata: JSON.stringify({ rowsDropped: 67,
+            poolRejectionMateriality: { candidateRejectedPoolCount: 0 }, sourceCoverage: {
+              poolRejectionCoverage: assessPoolRejectionCoverage([], null, new Map(), undefined, 1),
+            } }) }] }] : [{ match: "SELECT stablecoin_id, total_tvl_usd FROM dex_liquidity_run_rows", rows: mode === "expired" ? [] : rows }]),
+        ]), scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 90_000 }]]),
+      }));
+      expect(analysis.sourceCoverage.poolRejectionCoverage.reason)
+        .toBe(mode === "expired" ? "pool-rejection-baseline-unavailable" : lost.reason);
+      if (clean) expect(analysis.sourceCoverage.poolRejectionCoverage.baselineBeforeSec).toBeGreaterThan(1);
+    }
+    expect(assessPoolRejectionCoverage([], null, new Map([["usdt-tether", 90_000]]), lost).coins).toEqual(lost.coins);
+    expect(buildPoolRejectionMetadata([rejection], lost)).toMatchObject({
+      poolRejectionMateriality: { rejectedPoolCount: 67, detailsOmitted: 67, material: true },
     });
-
-    const decayed = await analyzeDexLiquidityPostScoring(
-      makeAnalysisInput({ retainedPoolsByStablecoin: new Map([["usdc-circle", [decayedPool]]]) }),
-    );
-    expect(decayed.sourceCoverage.coinsCrawlerOnly).toBe(1);
-    expect(decayed.sourceCoverage.retainedPoolCountBySourceFamily.dl).toBe(1);
-
-    const observed = await analyzeDexLiquidityPostScoring(
-      makeAnalysisInput({
-        retainedPoolsByStablecoin: new Map([
-          ["usdc-circle", [{ ...decayedPool, extra: { measurement: { decayed: false } } }]],
-        ]),
-      }),
-    );
-    expect(observed.sourceCoverage.coinsCrawlerOnly).toBe(0);
   });
+
+  it.each([true, false])("counts retained DL pools with decayed=%s", async (decayed) => {
+    const pool = makePool({ source: "dl", extra: { measurement: { decayed } } });
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      retainedPoolsByStablecoin: new Map([["usdc-circle", [pool]]]),
+    }));
+    expect(analysis.sourceCoverage.coinsCrawlerOnly).toBe(decayed ? 1 : 0);
+    expect(analysis.sourceCoverage.retainedPoolCountBySourceFamily.dl).toBe(1);
+  });
+
 });

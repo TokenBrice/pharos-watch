@@ -104,6 +104,8 @@ describe("dex liquidity cron metadata", () => {
     Object.assign(params.scoreState.analysis.sourceCoverage, { qualityDriftSeverity: "none", qualityDriftFlags: [] });
     params.sourceState.fallbackSignals = ["gecko"];
     expect(buildDexLiquidityCronMetadata(params)).not.toHaveProperty("quality");
+    params.sourceState.directApiSourceSummary.sourceWarnings = ["orca: partial inventory"];
+    expect(getCronQualityReasons(buildDexLiquidityCronMetadata(params))).toEqual(["direct-api-source-warnings"]);
   });
 
   it("retains a chain TVL drop as a warning without declaring incomplete inputs", () => {
@@ -134,11 +136,6 @@ describe("dex liquidity cron metadata", () => {
     },
   );
 
-  it("reports partial-source warnings even without confirmed drift or a failed source", () => {
-    const params = metadataParams();
-    params.sourceState.directApiSourceSummary.sourceWarnings = ["orca: partial inventory"];
-    expect(getCronQualityReasons(buildDexLiquidityCronMetadata(params))).toEqual(["direct-api-source-warnings"]);
-  });
 
   it("publishes plain-NG admissions as non-withholding internal diagnostics", () => {
     const params = metadataParams();
@@ -157,7 +154,7 @@ describe("dex liquidity cron metadata", () => {
     expect(metadata).not.toHaveProperty("quality");
   });
 
-  it("aggregates rejection groups and applies aggregate TVL materiality", () => {
+  it("aggregates rejection groups without claiming accepted-liquidity loss", () => {
     const params = metadataParams();
     params.poolState.poolRejections = [
       { reason: "invalid-pool-identity", poolIds: ["a", "b"], count: 2, tvlUsd: 600_000 },
@@ -166,7 +163,7 @@ describe("dex liquidity cron metadata", () => {
     const metadata = buildDexLiquidityCronMetadata(params);
     expect(metadata).toMatchObject({
       rowsDropped: 3,
-      poolRejectionMateriality: { rejectedPoolCount: 3, rejectedPoolTvlUsd: 1_000_000, material: true },
+      poolRejectionMateriality: { rejectedPoolCount: 3, rejectedPoolTvlUsd: 1_000_000, material: null },
     });
   });
 
@@ -188,7 +185,6 @@ describe("dex liquidity cron metadata", () => {
   ): string | null {
     return dexLiquidityDegradedReason({
       criticalSourceFailures: [],
-      poolRejections: params.poolState.poolRejections,
       analysis,
       persistence: params.persistenceState.persistence,
       dexPriceDiagnostics: params.persistenceState.dexPriceDiagnostics,
@@ -204,12 +200,11 @@ describe("dex liquidity cron metadata", () => {
     }> = [
       {
         expected: "material-pool-rejections",
-        mutate: (params) => {
-          params.poolState.poolRejections = [
-            { reason: "invalid-pool-identity", poolIds: ["0xfeed"], count: 1, tvlUsd: 12_500 },
-          ];
-        },
+        analysis: analysisState({ sourceCoverage: { ...metadataParams().scoreState.analysis.sourceCoverage, poolRejectionCoverage: {
+          reason: "material-pool-rejections", material: true, coins: [], coinsOmitted: 0, baselineTvlUsdByCoin: {},
+        } } }),
       },
+      { expected: "previous-coverage-baseline-unavailable", analysis: analysisState({ previousCoverageBaselineAvailable: false }) },
       { expected: "near-value-guard", analysis: analysisState({ nearValueGuard: true }) },
       {
         expected: "orphan-cleanup-failed",

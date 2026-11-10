@@ -163,6 +163,10 @@ const DexSubgraphFailuresSchema = z.array(z.object({
 
 /** Dex liquidity cron metadata shape */
 export const DexLiquidityCronMetadataSchema = z.object({
+  rowsDropped: z.number().optional(),
+  poolRejectionMateriality: z.object({
+    candidateRejectedPoolCount: z.number().int().nonnegative().optional(),
+  }).passthrough().optional(),
   stagedPoolsMerged: z.number().optional(),
   stagedPoolsSkipped: z.number().optional(),
   stagedPoolsSkippedByExactIdentity: z.number().optional(),
@@ -209,6 +213,18 @@ export const DexLiquidityCronMetadataSchema = z.object({
         .optional(),
       valueBaselineGlobalTvl: z.number().nullable().optional(),
       ignoredPersistedGlobalTvl: z.number().nullable().optional(),
+      poolRejectionCoverage: z.object({
+        reason: z.enum(["material-pool-rejections", "pool-rejection-attribution-unavailable", "pool-rejection-baseline-unavailable"]).nullable(),
+        material: z.boolean().nullable(),
+        baselineBeforeSec: z.number().int().nonnegative().optional(),
+        baselineTvlUsdByCoin: z.record(z.string(), z.number().finite().nonnegative().nullable()),
+        coinsOmitted: z.number().int().nonnegative(),
+        coins: z.array(z.object({
+          stablecoinId: z.string(), baselineTvlUsd: z.number().finite().nonnegative(),
+          currentTvlUsd: z.number().finite().nonnegative(), lossUsd: z.number().finite().nonnegative(),
+          lossRatio: z.number().finite().nonnegative(), material: z.boolean(),
+        })),
+      }).optional(),
       coinTvlStepCount150: z.number().optional(),
       coinTvlStepCount25: z.number().optional(),
       coinTvlStepIds150: z.array(z.string()).optional(),
