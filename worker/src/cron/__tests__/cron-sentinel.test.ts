@@ -65,7 +65,7 @@ describe("runCronSentinel", () => {
     expect(mocks.duration).not.toHaveBeenCalled();
   });
 
-  it.each([undefined, "duration", "growth", "repair", "reconciliation"] as const)("runs daily sources and retries failed %s across modes", async (failed) => {
+  it.each([undefined, "duration", "growth", "reconciliation"] as const)("runs daily sources and retries failed %s across modes", async (failed) => {
     const signal = new AbortController().signal;
     if (failed) mocks[failed].mockRejectedValueOnce(Error("D1 overloaded")).mockRejectedValueOnce(Error("still overloaded"));
     const result = await runDailyCronSentinel(emptyDb(), {
@@ -89,12 +89,28 @@ describe("runCronSentinel", () => {
       const retry = await runCronSentinel(emptyDb(), { mode, nowSec: at, repairRunnerEnabled: true, signal });
       expect(retry.status).toBe(status);
       expect(mocks[failed]).toHaveBeenCalledTimes(calls);
-      const source = failed === "repair" ? "repair-debt" : failed === "reconciliation" ? "supply-reconciliation" : failed;
+      const source = failed === "reconciliation" ? "supply-reconciliation" : failed;
       expect(JSON.parse(retry.metadata!).sources[source]).toMatchObject({
         intervalSec: 86400, maxAgeSec: 172800,
         attempt: { count: calls, attemptedAt: calls === 1 ? 789 : calls === 2 ? 1689 : 2589 },
       });
     }
+  });
+
+  it.each(["status", "turnover", "reserve-post-sync"] as const)("keeps writing repairs out of %s replays", async (mode) => {
+    const db = emptyDb();
+    mocks.repair.mockRejectedValueOnce(Error("repair read failed"));
+    await runDailyCronSentinel(db, { nowSec: 100, repairRunnerEnabled: true });
+    const result = await runCronSentinel(db, { mode, nowSec: 1000, repairRunnerEnabled: true });
+    expect(mocks.repair).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("error");
+    expect(JSON.parse(result.metadata!).sources["repair-debt"]).toMatchObject({
+      status: "error", reason: "source-evaluation-error", observedAt: 100, attempt: { count: 1 },
+    });
+    expect(JSON.parse(result.metadata!).sources["repair-debt"].nextRetryAt).toBeUndefined();
+    const daily = await runDailyCronSentinel(db, { nowSec: 86_500, repairRunnerEnabled: true });
+    expect(JSON.parse(daily.metadata!).sources["repair-debt"].status).toBe("ok");
+    expect(mocks.repair).toHaveBeenCalledTimes(2);
   });
 
   it.each([

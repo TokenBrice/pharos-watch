@@ -54,6 +54,9 @@ const SOURCE_INTERVAL_SEC: Record<CronSentinelRuleSource, number> = {
   "reserve-post-sync": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
 };
 const SOURCE_ERROR_BACKOFF_SEC = CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec;
+// Repair executes DDR writes; only observational daily sources may replay in other slots.
+const CROSS_MODE_RETRY_SOURCES: readonly CronSentinelRuleSource[] = SOURCES_BY_MODE.daily.filter((source) => source !== "repair-debt");
+const SOURCE_ERROR_MAX_ATTEMPTS = 4; // Native daily evaluation plus three cross-mode retries.
 const SOURCE_STATE_MAX_AGE_SEC = 48 * 60 * 60;
 const SOURCE_STATE_INTERVAL_MULTIPLIER = 2;
 
@@ -101,6 +104,10 @@ function parseSourceResult(value: string): StoredSourceResult {
 function lastAttemptAt(result: StoredSourceResult, observedAt: number): number {
   return result.attempt && Number.isFinite(result.attempt.attemptedAt)
     ? Math.max(observedAt, result.attempt.attemptedAt) : observedAt;
+}
+
+function sourceRetryExhausted(result: StoredSourceResult): boolean {
+  return (result.attempt?.count ?? 1) >= SOURCE_ERROR_MAX_ATTEMPTS;
 }
 
 function worstStatus(results: readonly CronResult[]): CronResult["status"] {
@@ -187,12 +194,17 @@ function buildCronSentinelResult(
         ...(state !== "current" ? { reason: `source-state-${state}`, lastStatus: result.status ?? null } : {}),
         ...(result.attempt ? { attempt: result.attempt } : {}),
         ...(result.status === "error" ? {
-          // Only daily sources have a cross-mode retry; the rest re-run at their native cadence.
-          ...(SOURCES_BY_MODE.daily.includes(source) ? {
+          ...(CROSS_MODE_RETRY_SOURCES.includes(source) ? {
             retryBackoffSec: SOURCE_ERROR_BACKOFF_SEC,
-            nextRetryAt: observedAt == null ? null : lastAttemptAt(result, observedAt) + SOURCE_ERROR_BACKOFF_SEC,
+            retryAttemptLimit: SOURCE_ERROR_MAX_ATTEMPTS,
+            retryExhausted: sourceRetryExhausted(result),
+            nextRetryAt: observedAt == null || sourceRetryExhausted(result)
+              ? null : lastAttemptAt(result, observedAt) + SOURCE_ERROR_BACKOFF_SEC,
           } : {}),
-          ...(state === "current" ? { reason: "source-evaluation-error" } : {}),
+          ...(state === "current" ? {
+            reason: CROSS_MODE_RETRY_SOURCES.includes(source) && sourceRetryExhausted(result)
+              ? "source-retry-exhausted" : "source-evaluation-error",
+          } : {}),
         } : {}),
         itemCount: result.itemCount ?? 0,
         metadata: parseMetadata(result.metadata),
@@ -248,11 +260,12 @@ export async function runCronSentinelSources(
   // One extra, oldest failed daily source per invocation; producer-adjacent
   // sources retain their native execution points. All modes share the job lease.
   if (retryDailySource) {
-    const due = SOURCES_BY_MODE.daily.filter((source) => {
+    const due = CROSS_MODE_RETRY_SOURCES.filter((source) => {
       const row = saved.get(`cron-sentinel:source:${source}`);
       if (!row || sources.some((entry) => entry.source === source)) return false;
       const result = parseSourceResult(row.value);
-      return result.status === "error" && nowSec >= lastAttemptAt(result, row.updatedAt) + SOURCE_ERROR_BACKOFF_SEC;
+      return result.status === "error" && !sourceRetryExhausted(result)
+        && nowSec >= lastAttemptAt(result, row.updatedAt) + SOURCE_ERROR_BACKOFF_SEC;
     }).sort((a, b) => {
       const aRow = saved.get(`cron-sentinel:source:${a}`)!;
       const bRow = saved.get(`cron-sentinel:source:${b}`)!;
@@ -266,7 +279,7 @@ export async function runCronSentinelSources(
     const row = saved.get(key);
     const previous = row ? parseSourceResult(row.value) : null;
     const attempt: NonNullable<StoredSourceResult["attempt"]> = {
-      count: previous?.status === "error" ? (previous.attempt?.count ?? 1) + 1 : 1,
+      count: mode !== "daily" && previous?.status === "error" ? (previous.attempt?.count ?? 1) + 1 : 1,
       attemptedAt: nowSec, mode, status: "incomplete",
     };
     // Persist admission before retry work: cancellation or a neutral/locked
