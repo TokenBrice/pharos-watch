@@ -16,6 +16,7 @@ import { parseQuantityHex } from "./bigint";
 import { FetchRequestNotStartedError, rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
+import { supportsEvmRpcBlockSelectors } from "@shared/lib/evm-rpc-capabilities";
 
 export interface JsonRpcEnvelope<T> {
   result?: T;
@@ -434,6 +435,9 @@ function buildRpcUrls(
   const endpoints = chainRpc?.endpoints ?? [];
   const demoted = chainRpcs == null ? undefined : demotedSupplementalRpcOriginsByRun.get(chainRpcs);
   const eligible = (url: string): boolean => {
+    if (!supportsEvmRpcBlockSelectors(url) && options.requirements.some(requirement =>
+      requirement.kind === "historical-state" || requirement.kind === "recent-pinned-state" ||
+      (requirement.kind === "current-state" && requirement.finalizedTag))) return false;
     const endpoint = endpoints.find(row => row.url === url);
     if (endpoint?.operator === "dwellir" || isDwellirRpcUrl(url)) {
       if (!endpoint || options.excludeSupplementalRpc || demoted?.has(endpointOrigin(url) ?? url)) return false;
@@ -624,6 +628,7 @@ async function fetchJsonRpcOutcome<T>(
   const requirement = options?.recentStatePin ? rpcReadRequirement({ method, params }, options) : undefined;
 
   for (const rpcUrl of urls) {
+    if (!supportsEvmRpcBlockSelectors(rpcUrl) && requiresHistoricalEvmState(method, params)) continue;
     if (isTronRpcUrl(rpcUrl) && requiresHistoricalEvmState(method, params)) continue;
     const remainingMs = options?.deadlineMs == null
       ? configuredTimeoutMs
@@ -794,6 +799,7 @@ async function runEvmRpcBatch<Value>(
   const maxRetries = options?.maxRetries ?? 1;
   const onRpcRequest = chainId ? options?.chainRpcs?.get(chainId)?.onRpcRequest : undefined;
   endpoints: for (const rpcUrl of urls) {
+    if (!supportsEvmRpcBlockSelectors(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
     if (isTronRpcUrl(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
     const endpoint = chainId ? options?.chainRpcs?.get(chainId)?.endpoints.find(row => row.url === rpcUrl) : undefined;
     if (!fitsRpcLogSpan(calls, endpoint?.maxLogBlockSpan)) continue;

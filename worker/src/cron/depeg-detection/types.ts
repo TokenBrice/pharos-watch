@@ -53,8 +53,8 @@ export interface DepegObservationCensus {
   unavailableIdsDropped?: boolean;
 }
 
-/** Why a sync run has no census: detection held or failed before building one. */
-export type DepegObservationUnavailableReason = DepegHoldReason | "depeg-detection-error";
+/** Why a sync run has no census: detection held, failed or was cancelled. */
+export type DepegObservationUnavailableReason = DepegHoldReason | "depeg-detection-error" | "aborted";
 
 /** Detection-only result: a completed run always carries its census. */
 export type DepegDetectionResult =

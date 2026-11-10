@@ -242,6 +242,10 @@ export async function fetchCgTokenPoolsWithStatus(
   return { transportOk, schemaDegraded, complete: paged.complete, pools };
 }
 
+export function isAddressableCgPoolId(network: string, address: string): boolean {
+  return /^[A-Za-z0-9._:-]+$/.test(address) && address !== "." && address !== ".." && fitsCgPoolBatch(network, [address]);
+}
+
 /**
  * Fetch current data for up to 30 pools on one network by pool address.
  * GET /onchain/networks/{network}/pools/multi/{address,...}
@@ -259,7 +263,7 @@ export async function fetchCgPoolsByAddressesWithStatus(
   if (addresses.length === 0) return { transportOk: true, schemaDegraded: false, pools: [] };
   const validAddresses: string[] = [], rejectedAddresses: string[] = [];
   for (const address of addresses) {
-    (/^[A-Za-z0-9._:-]+$/.test(address) && address !== "." && address !== ".." && fitsCgPoolBatch(network, [address])
+    (isAddressableCgPoolId(network, address)
       ? validAddresses : rejectedAddresses).push(address);
   }
   const rejected = rejectedAddresses.length ? { rejectedAddresses } : {};

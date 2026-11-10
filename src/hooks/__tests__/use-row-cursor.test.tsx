@@ -48,8 +48,8 @@ describe("useRowCursor keyboard ownership", () => {
       expect(fireEvent.keyDown(row, { key: "j", ...options })).toBe(true);
     }
     expect(row.textContent).toBe("Row first");
-    for (const key of ["j", "Enter", "s", "c"]) fireEvent.keyDown(window, { key, shiftKey: true });
-    for (const fn of [onOpen, onStar, onCompare]) expect(fn).toHaveBeenCalledWith(rows[1]);
+    for (const key of ["j", "Enter", "s", "c"]) expect(fireEvent.keyDown(row, { key, shiftKey: true })).toBe(false);
+    for (const fn of [onOpen, onStar, onCompare]) expect(fn).toHaveBeenCalledExactlyOnceWith(rows[1]);
     fireEvent.keyDown(row, { key: "k" });
     fireEvent.keyDown(row, { key: "o" });
     expect(onOpen).toHaveBeenLastCalledWith(rows[0]);

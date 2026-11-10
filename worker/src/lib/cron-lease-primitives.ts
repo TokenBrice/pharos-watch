@@ -20,7 +20,7 @@ import {
 } from "./reserve-producer-priority";
 import { parseJsonObject } from "./json-parse";
 
-export interface CronLeaseOptions {
+export interface CronLeaseOptions<T = unknown> {
   ttlSec?: number;
   heartbeatSec?: number;
   owner?: string;
@@ -31,6 +31,8 @@ export interface CronLeaseOptions {
   onLeaseState?: (state: CronLeaseStateUpdate) => Promise<void> | void;
   leaseStateObserverMode?: "best-effort" | "required";
   reserveRecoveryAdmission?: boolean;
+  /** Explicit result admission after cooperative abort settlement; omitted by default. */
+  settledAbortResult?: (result: T | undefined) => T | undefined;
   acquisitionWait?: {
     deadlineMs: number;
     onWait?: (blockedBy: CronLeaseBlocker, attempts: number) => Promise<void> | void;
@@ -261,7 +263,7 @@ export async function runCronWithLease<T>(
   db: D1Database,
   job: string,
   fn: (ctx: { leaseOwner: string; signal: AbortSignal }) => Promise<T>,
-  opts?: CronLeaseOptions,
+  opts?: CronLeaseOptions<T>,
 ): Promise<CronLeaseRunResult<T>> {
   const timeoutBudget = opts?.timeoutBudget ?? resolveCronTimeoutBudget(job, { deadline: opts?.deadline });
   const timeoutMs = timeoutBudget.effectiveTimeoutMs;
@@ -450,8 +452,12 @@ export async function runCronWithLease<T>(
   combinedSignal.addEventListener("abort", clearHeartbeat, { once: true });
 
   try {
+    let result: T | undefined;
     const outcome = await settleAfterAbort(
-      () => fn({ leaseOwner: owner, signal: combinedSignal }), combinedSignal,
+      async () => {
+        result = await fn({ leaseOwner: owner, signal: combinedSignal });
+        return result;
+      }, combinedSignal,
       { platformDeadlineMs: opts?.deadline
         ? opts.deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS : undefined },
     );
@@ -465,10 +471,11 @@ export async function runCronWithLease<T>(
           graceMs: CRON_ABORT_GRACE_MS, leaseHeldUntilTtl: true,
         });
       }
-      throw outcome.error ?? stopError;
+      result = opts?.settledAbortResult?.(result);
+      if (result === undefined) throw outcome.error ?? stopError;
     }
     if (outcome.status === "rejected") throw outcome.error;
-    const result = outcome.value;
+    if (outcome.status === "fulfilled") result = outcome.value;
     return {
       status: "ok",
       leaseOwner: owner,

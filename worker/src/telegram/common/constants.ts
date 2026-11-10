@@ -88,6 +88,7 @@ export const TELEGRAM_PROCESSING_STALE_SEC = 60;
  * welcome message for 24h once sent.
  */
 export const TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC = 24 * 60 * 60;
+export const TELEGRAM_GROUP_WELCOME_PENDING_PREFIX = "pending:";
 
 /** Generous per-chat cap across commands, callbacks, and pending text replies. */
 export const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;

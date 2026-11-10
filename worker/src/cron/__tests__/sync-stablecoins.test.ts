@@ -142,6 +142,21 @@ describe("syncStablecoins", () => {
     vi.restoreAllMocks();
   });
 
+  it.each(["cache-write", "depeg-pipeline", "complete", "fallback-cache-write", "fallback-depeg-pipeline"])("retains committed publication after cancellation at %s", async (stage) => {
+    const db = makeSyncDb(); const writes = trackCacheWrites(db); const controller = new AbortController();
+    if (stage.startsWith("fallback")) vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== CIRCUIT_SOURCE.DL_STABLECOINS);
+    mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60), stage.startsWith("fallback") ? fallbackCoinGeckoData() : {}));
+    const result = await syncStablecoins(db, controller.signal, {
+      reportProgress: async (update) => { if (update.stage === stage) controller.abort("cancelled"); },
+    });
+    expect(result).toMatchObject({ status: "degraded", itemCount: stage.startsWith("fallback") ? 50 : 60, abortResultPolicy: "preserve-committed-publication",
+      productivity: { productive: true, publications: [{ surface: "stablecoins", generationId: expect.any(String) }] } });
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "aborted-after-publication", cacheWriteMode: "published",
+      ...(stage === "complete" ? {} : { quality: { depegObservation: null, depegObservationUnavailableReason: "aborted" } }),
+      capabilities: { stablecoinsCache: true, depegPipeline: stage === "complete" } });
+    expect(writes.some((write) => write.key === "stablecoins")).toBe(true);
+  });
+
   it("publishes the DefiLlama snapshot and runs the downstream depeg workflow", async () => {
     const db = makeSyncDb();
     const assertCost = observeMockD1Cost(db);
@@ -169,18 +184,24 @@ describe("syncStablecoins", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-stablecoins", true);
   });
 
-  it("publishes an uncorroborated exact-par DefiLlama quote as unavailable", async () => {
+  it.each([
+    ["exact-par", 1, 1, "defillama", "exact_par_list_price_requires_corroboration"],
+    ["list fill default", 0.9990120985638516, 5, "defillama", "list_fill_default_requires_corroboration"],
+    ["coingecko-attributed fill", 0.9990120985638516, 5, "coingecko", "list_fill_default_requires_corroboration"],
+  ] as const)("publishes an uncorroborated %s as unavailable", async (_label, price, count, priceSource, reason) => {
     const data = makeDlResponse(60);
-    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1, priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
+    for (let i = 0; i < count; i++) Object.assign(data.peggedAssets[i], { price });
+    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", priceSource,
+      priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
     const db = makeSyncDb();
     const writes = trackCacheWrites(db);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);
-    const asset = publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether");
+    const asset = publishedAssets(writes).find(candidate => candidate.id === "usdt-tether");
     expect(asset).toMatchObject({ price: null, priceSource: "missing" });
-    expect(warnSpy.mock.calls.some((call) => call.some((arg) =>
-      typeof arg === "string" && arg.includes("exact_par_list_price_requires_corroboration")))).toBe(true);
+    expect(asset).not.toHaveProperty("priceListFillDefault");
+    expect(warn.mock.calls.some(call => call.some(arg => typeof arg === "string" && arg.includes(reason)))).toBe(true);
   });
 
   it("keeps a corroborated exact-par DefiLlama quote admitted", async () => {
@@ -193,43 +214,6 @@ describe("syncStablecoins", () => {
     await syncStablecoins(db);
     expect(publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether"))
       .toMatchObject({ price: 1, priceSource: "coingecko+defillama-list", priceConfidence: "single-source" });
-  });
-
-  it("publishes an uncorroborated DefiLlama list fill default as unavailable", async () => {
-    const data = makeDlResponse(60);
-    const fillDefault = 0.9990120985638516;
-    for (let index = 0; index < 5; index += 1) {
-      Object.assign(data.peggedAssets[index], { price: fillDefault });
-    }
-    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
-    const db = makeSyncDb();
-    const writes = trackCacheWrites(db);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mockFetchWithRetry(defaultSyncRoutes(data));
-    await syncStablecoins(db);
-    const asset = publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether");
-    expect(asset).toMatchObject({ price: null, priceSource: "missing" });
-    expect(asset).not.toHaveProperty("priceListFillDefault");
-    expect(warnSpy.mock.calls.some((call) => call.some((arg) =>
-      typeof arg === "string" && arg.includes("list_fill_default_requires_corroboration")))).toBe(true);
-  });
-
-  it("covers a fill default the DefiLlama list attributes to coingecko", async () => {
-    const data = makeDlResponse(60);
-    const fillDefault = 0.9990120985638516;
-    for (let index = 0; index < 5; index += 1) {
-      Object.assign(data.peggedAssets[index], { price: fillDefault });
-    }
-    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", priceSource: "coingecko", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
-    const db = makeSyncDb();
-    const writes = trackCacheWrites(db);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    mockFetchWithRetry(defaultSyncRoutes(data));
-    await syncStablecoins(db);
-    expect(publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether"))
-      .toMatchObject({ price: null, priceSource: "missing" });
-    expect(warnSpy.mock.calls.some((call) => call.some((arg) =>
-      typeof arg === "string" && arg.includes("list_fill_default_requires_corroboration")))).toBe(true);
   });
 
   it("keeps a list value shared by only four wrapped variants admitted", async () => {
@@ -274,7 +258,7 @@ describe("syncStablecoins", () => {
     const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);
-    const asset = (JSON.parse(writes.find((write) => write.key === "stablecoins")!.value) as { peggedAssets: PeggedAsset[] }).peggedAssets.find((candidate) => candidate.id === "usdt-tether");
+    const asset = publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether");
     expect(asset).toMatchObject({ price: 0.9998, priceSource: "defillama", priceConfidence: "single-source", consensusSources: ["defillama"], agreeSources: ["defillama"] });
   });
 
@@ -288,7 +272,7 @@ describe("syncStablecoins", () => {
     const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);
-    const asset = (JSON.parse(writes.find((write) => write.key === "stablecoins")!.value) as { peggedAssets: PeggedAsset[] }).peggedAssets.find((candidate) => candidate.id === "usdt-tether");
+    const asset = publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether");
     expect(asset).toMatchObject({ price: 0.5, priceSource: "defillama", priceConfidence: "single-source" });
   });
 
@@ -300,7 +284,7 @@ describe("syncStablecoins", () => {
     const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);
-    const asset = (JSON.parse(writes.find((write) => write.key === "stablecoins")!.value) as { peggedAssets: PeggedAsset[] }).peggedAssets.find((candidate) => candidate.id === "usdt-tether");
+    const asset = publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether");
     expect(asset).toMatchObject({ price: 0.25580214, priceSource: "cached", priceConfidence: "fallback", priceObservedAt: now - 120, priceSyncedAt: now - 135 });
   });
 

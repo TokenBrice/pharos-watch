@@ -22,6 +22,15 @@ function mutateFixtureField<T>(key: string, mutate: (value: T) => void): string 
   return SAMPLE_HTML.replace(fragment, anchor + JSON.stringify(JSON.stringify(value)).slice(1, -1));
 }
 
+function metricsHtml(tokenSymbol = "usdc", valueWei = "100000000000000000000", redemptionRows?: unknown[], asOf = "2026-04-14") {
+  const payload = {
+    initialChainBreakdowns: { ethereum: { asOf, rows: [{ tokenSymbol, valueWei, valueKnown: true }] } },
+    initialCards: [{ seriesKey: "offchain_capital", stats: { current: 100 }, points: [{ date: asOf.slice(0, 10), value: 100 }] }],
+    ...(redemptionRows === undefined ? {} : { redemptionRows }),
+  };
+  return `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
+}
+
 type FixtureReserveRow = { tokenSymbol?: unknown; valueWei?: unknown; valueKnown?: unknown };
 type FixtureBreakdowns = Record<string, { rows: FixtureReserveRow[] }>;
 
@@ -50,7 +59,7 @@ describe("adaptReMetrics", () => {
       SAMPLE_HTML, '\\"initialChainBreakdowns\\":', "re-metrics",
     )) as Record<string, { rows: Array<{ tokenSymbol: string; valueWei: string }> }>;
     const rows = Object.values(breakdowns).flatMap(({ rows }) => rows);
-    const total = rows.reduce((sum, row) => sum + Number(BigInt(row.valueWei)) / 1e18, 179595196.93262026);
+    const total = rows.reduce((sum, row) => sum + Number(BigInt(row.valueWei)) / 1e18, 250402573.22802934);
     const susde = rows.filter((row) => row.tokenSymbol.toLowerCase() === "susde")
       .reduce((sum, row) => sum + Number(BigInt(row.valueWei)) / 1e18, 0);
     expect(result.slices.find((slice) => slice.sourceKey === "re-metrics:token:susde")?.pct)
@@ -58,14 +67,14 @@ describe("adaptReMetrics", () => {
     expect(result.metadata).toMatchObject({
       chainBreakdownCount: 4,
       trackedTokenCount: 6,
-      offchainCapitalUsd: 179595196.93262026,
-      offchainAsOf: Date.parse("2026-08-09T00:00:00.000Z") / 1000,
-      sourceTimestamp: Math.floor(Date.parse("2026-08-09T00:00:00.000Z") / 1000),
+      offchainCapitalUsd: 250402573.22802934,
+      offchainAsOf: Date.parse("2026-11-10T00:00:00.000Z") / 1000,
+      sourceTimestamp: Math.floor(Date.parse("2026-11-10T00:00:00.000Z") / 1000),
       freshnessMode: "verified",
       stableAssetUsd: expect.any(Number),
-      redemptionRowsCount: 4,
+      redemptionRowsCount: 2,
       redemption: {
-        capacityUsd: 45535373.18748523,
+        capacityUsd: 166998504.4604357,
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-api",
         routeStatus: "unknown",
@@ -98,11 +107,7 @@ describe("adaptReMetrics", () => {
   });
 
   it("maps liUSD 4w explicitly instead of degrading as an unmapped token", () => {
-    const html = `
-<html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"liusd-4w\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
-</script></body></html>
-`;
+    const html = metricsHtml("liusd-4w");
     const result = adaptReMetrics(html);
 
     expect(result.slices).toEqual([
@@ -117,11 +122,12 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
   });
 
   it("extracts instant redemption vault capacity from redemptionRows", () => {
-    const html = `
-<html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-06-15T10:00:00.000Z\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"redemptionRows\\":[{\\"chainName\\":\\"Ethereum\\",\\"vaultAddress\\":\\"0x5C454f5526e41fBE917b63475CD8CA7E4631B147\\",\\"custodialWalletAddress\\":\\"0x9eA38e09F41A9DE53972a68268BA0Dcc6d2fAdf8\\",\\"totalReserveValueWei\\":\\"25000000000000000000000000\\"},{\\"chainName\\":\\"Base\\",\\"vaultAddress\\":\\"0x9AB62AebAbE738AB233C447eEdCE88D1D0a61FE3\\",\\"custodialWalletAddress\\":\\"0x81d3C071d9c6d3d1f2f307004e9E5bB6db089f64\\",\\"totalReserveValueWei\\":\\"500000000000000000000000\\"}],\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-06-15\\",\\"value\\":100}]}]..."]);
-</script></body></html>
-`;
+    const html = metricsHtml("usdc", "100000000000000000000", [
+      { chainName: "Ethereum", vaultAddress: "0x5C454f5526e41fBE917b63475CD8CA7E4631B147",
+        custodialWalletAddress: "0x9eA38e09F41A9DE53972a68268BA0Dcc6d2fAdf8", totalReserveValueWei: "25000000000000000000000000" },
+      { chainName: "Base", vaultAddress: "0x9AB62AebAbE738AB233C447eEdCE88D1D0a61FE3",
+        custodialWalletAddress: "0x81d3C071d9c6d3d1f2f307004e9E5bB6db089f64", totalReserveValueWei: "500000000000000000000000" },
+    ], "2026-06-15T10:00:00.000Z");
     const result = adaptReMetrics(html);
 
     expect(result.metadata).toMatchObject({
@@ -145,11 +151,7 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
   });
 
   it("normalizes large wei-denominated token values", () => {
-    const html = `
-<html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000000123456\\",\\"valueKnown\\":true}]}},\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
-</script></body></html>
-`;
+    const html = metricsHtml("usdc", "100000000000000000000000123456");
     const result = adaptReMetrics(html);
 
     expect(result.metadata?.stableAssetUsd).toBe(100_000_000_000);
@@ -198,20 +200,13 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
   });
 
   it("keeps absent optional redemption data absent", () => {
-    const payload = {
-      initialChainBreakdowns: {
-        ethereum: { asOf: "2026-04-14", rows: [{ tokenSymbol: "usdc", valueWei: "100000000000000000000", valueKnown: true }] },
-      },
-      initialCards: [{ seriesKey: "offchain_capital", stats: { current: 100 }, points: [{ date: "2026-04-14", value: 100 }] }],
-    };
-    const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
-    expect(adaptReMetrics(html).metadata?.redemption).toBeUndefined();
+    expect(adaptReMetrics(metricsHtml()).metadata?.redemption).toBeUndefined();
   });
 });
 
 describe("fetchReMetricsReserves", () => {
   const url = "https://app.re.xyz/metrics";
-  const nowSec = Math.floor(Date.parse("2026-08-10T00:00:00Z") / 1000);
+  const nowSec = Math.floor(Date.parse("2026-11-10T12:00:00Z") / 1000);
 
   it("fetches the embedded metrics page through the shared network harness", async () => {
     const { result, network } = await runAdapter("re-metrics", "reusd-re-protocol", {
@@ -249,7 +244,7 @@ describe("fetchReMetricsReserves", () => {
     }));
     expect(result.metadata?.freshnessMode).toBe("unverified");
     expect(result.metadata?.stableAssetUsd).toBeUndefined();
-    expect(result.metadata?.redemption?.capacityUsd).toBe(45535373.18748523);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(166998504.4604357);
     expect(validateAdapterOutput(result, { now: nowSec }).valid).toBe(false);
   });
 
@@ -304,7 +299,7 @@ describe("fetchReMetricsReserves", () => {
       network: installAdapterNetwork({ html: { [url]: html } }), nowSec,
     });
     expect(result.metadata?.redemption?.capacityUsd).toBe(0);
-    expect(result.metadata?.redemptionRowsCount).toBe(4);
+    expect(result.metadata?.redemptionRowsCount).toBe(2);
     expect(result.slices).toEqual(adaptReMetrics(SAMPLE_HTML).slices);
   });
 

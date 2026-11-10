@@ -36,6 +36,7 @@ import { compactCronMetadataForPersistence } from "./cron-metadata-persistence";
 import { parseJsonObject } from "./json-parse";
 import { confirmedCronOutputAt } from "./cron-output";
 import { buildResourcePressure, selectLatestResourcePressure } from "./cron-resource-pressure";
+import { retainCommittedCronResultAfterAbort } from "./cron-result";
 
 // --- Cron failure recording ---
 // `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
@@ -229,6 +230,8 @@ export interface CronResult {
   aborted?: true;
   /** Explicit productive-output/publication contract for durable producer history. */
   productivity?: CronProductivity;
+  /** Job opt-in: only confirmed committed publication evidence may survive a settled abort. */
+  abortResultPolicy?: "preserve-committed-publication";
 }
 
 /** A completed run's terminal row outlasts one spent D1 resource window instead of misreporting the run. */
@@ -552,7 +555,10 @@ export async function logCronRun(
     }
 
     timeoutHandle = setTimeout(() => ac.abort(timeoutError), timeoutMs);
-    const outcome = await settleAfterAbort(() => fn(operationSignal, reportProgress), operationSignal, {
+    const outcome = await settleAfterAbort(async () => {
+      resolvedResult = await fn(operationSignal, reportProgress);
+      return resolvedResult;
+    }, operationSignal, {
       observer: true,
       platformDeadlineMs: options?.deadline
         ? options.deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS : undefined,
@@ -566,10 +572,11 @@ export async function logCronRun(
           graceMs: CRON_ABORT_GRACE_MS + CRON_ABORT_OBSERVATION_MARGIN_MS, leaseHeldUntilTtl: false,
         });
       }
-      throw outcome.error ?? outcome.reason;
+      resolvedResult = retainCommittedCronResultAfterAbort(resolvedResult);
+      if (!resolvedResult) throw outcome.error ?? outcome.reason;
     }
     if (outcome.status === "rejected") throw outcome.error;
-    resolvedResult = outcome.value;
+    if (outcome.status === "fulfilled") resolvedResult = outcome.value;
     const resultStatus = resolvedResult?.status ?? "ok";
     const completedAt = Math.floor(Date.now() / 1000);
     const parsedMetadata = parseJsonObject(resolvedResult?.metadata);

@@ -11,7 +11,9 @@ import {
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
 } from "./telegram-webhook.test-support.ts";
-import { handleMyChatMember } from "../telegram-webhook-group-welcome";
+import { handleMyChatMember, type TelegramChatMemberUpdated } from "../telegram-webhook-group-welcome";
+import * as cache from "../../../lib/db-cache";
+import { TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC, TELEGRAM_PROCESSING_STALE_SEC } from "../../common/constants";
 
 
 const LIFECYCLE_MIGRATION_FALLBACKS = [
@@ -143,30 +145,18 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toBeTruthy();
   });
 
-  it("skips duplicate update ids that are already processed", async () => {
+  it.each(["processed", "processing"])("acknowledges only completed duplicate updates (%s)", async status => {
     const db = makeLifecycleDb([
-      {
-        match: "INSERT INTO telegram_processed_updates",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
-        match: "SELECT status, received_at FROM telegram_processed_updates",
-        rows: [],
-        first: { status: "processed", received_at: 1_700_000_000 },
-      },
+      { match: "INSERT INTO telegram_processed_updates", rows: [], runMeta: { changes: 0 } },
+      { match: "SELECT status, received_at FROM telegram_processed_updates", rows: [],
+        first: { status, received_at: Math.floor(Date.now() / 1000) } },
     ]);
-
-    const res = await handleTelegramWebhook(
-      db,
-      makeWebhookRequest(123, "/help", "test-secret", { updateId: 500 }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(res.status).toBe(200);
+    const res = await handleTelegramWebhook(db,
+      makeWebhookRequest(123, "/help", "test-secret", { updateId: 502 }), "test-secret", "bot-token");
+    expect(res.status).toBe(status === "processed" ? 200 : 503);
+    if (status === "processing") expect(res.headers.get("Retry-After")).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_disambiguation"))).toBe(false);
+    expect(db.getHistory().some(entry => entry.sql.includes("FROM telegram_pending_disambiguation"))).toBe(false);
   });
 
   it("releases the claim when the processed marker fails so Telegram's retry is processed", async () => {
@@ -222,74 +212,84 @@ describe("handleTelegramWebhook", () => {
     }
   });
 
-  it("deletes the claimed group welcome marker when Telegram send fails", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
-    const db = makeLifecycleDb([
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [],
-        first: null,
-      },
-    ]);
-
-    const res = await handleTelegramWebhook(
-      db,
-      makeMyChatMemberRequest({ from: { id: 999, username: "alice" } }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(res.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(true);
-    expect(db.getHistory().some(
-      (entry) =>
-        entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
-        entry.binds[0] === "telegram:group-welcome:-123",
-    )).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
+  it.each([false, true])("cleans up only the failed welcome's owner (replaced: %s)", async (replaced) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    fetchSpy.mockImplementationOnce(async () => {
+      if (replaced) sqlite.exec("UPDATE cache SET value = 'pending:replacement'");
+      return new Response("blocked", { status: 403 });
+    });
+    try {
+      expect((await handleTelegramWebhook(db, makeMyChatMemberRequest(), "test-secret", "bot-token")).status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(sqlite.prepare("SELECT value FROM cache").all()).toEqual(replaced ? [{ value: "pending:replacement" }] : []);
+    } finally { sqlite.close(); }
   });
 
-  it("suppresses duplicate group welcomes while the idempotency cache is fresh", async () => {
-    const db = makeLifecycleDb([
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [],
-        first: {
-          key: "telegram:group-welcome:-123",
-          value: "1",
-          updated_at: Math.floor(Date.now() / 1000),
-        },
-      },
-    ]);
-
-    await handleTelegramWebhook(db, makeMyChatMemberRequest(), "test-secret", "bot-token");
-
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache"))).toBe(false);
+  it.each(["empty", "sent", "expired", "INSERT INTO cache", "UPDATE cache SET updated_at", "UPDATE cache SET value"])("welcome claim: %s", async (mode) => {
+    vi.useFakeTimers();
+    let threw = false, reads = 0;
+    const fault = mode.includes("cache"), readCache = cache.getCache;
+    const { sqlite, db } = createLatestSchemaSqlite({ rowsWritten: (sql, changes) => {
+      if (fault && !threw && sql.includes(mode)) { threw = true; throw new Error("Network connection lost"); }
+      return changes;
+    } });
+    let claimed!: () => void;
+    const acquired = new Promise<void>((resolve) => { claimed = resolve; });
+    const read = vi.spyOn(cache, "getCache").mockImplementation(async (...args) => {
+      const row = await readCache(...args);
+      if (++reads === 2) await acquired; // Return the contender's stale read after the first acquisition.
+      return row;
+    });
+    try {
+      const payload = (await makeMyChatMemberRequest().json() as { my_chat_member: TelegramChatMemberUpdated }).my_chat_member;
+      if (mode !== "empty") sqlite.prepare("INSERT INTO cache VALUES (?, '1', ?)")
+        .run("telegram:group-welcome:-123", Math.floor(Date.now() / 1000) - (mode === "sent" ? 0 : TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC));
+      const first = handleMyChatMember(db, "bot-token", payload, { beforeIrreversibleEffect: async () => claimed() });
+      const deliveries = Promise.allSettled(fault || mode === "sent" ? [first] : [first, handleMyChatMember(db, "bot-token", payload)]);
+      await vi.runAllTimersAsync();
+      await deliveries;
+      expect(fetchSpy).toHaveBeenCalledTimes(mode === "sent" ? 0 : 1);
+      expect(threw).toBe(fault);
+      expect(sqlite.prepare("SELECT value FROM cache").all()).toEqual([{ value: "1" }]);
+    } finally {
+      read.mockRestore(); sqlite.close(); vi.useRealTimers();
+    }
   });
 
-  it("atomically claims a group welcome before concurrent sends", async () => {
+  it.each([1, 59])("crash redelivery: welcome starts %is after ingress", async (lag) => {
+    vi.useFakeTimers();
+    const { sqlite, db } = createLatestSchemaSqlite(), now = Math.floor(Date.now() / 1000);
+    const deliver = () => handleTelegramWebhook(db, makeMyChatMemberRequest({ updateId: 5610 }), "test-secret", "bot-token");
+    try {
+      sqlite.prepare("INSERT INTO telegram_processed_updates (update_id, received_at, status) VALUES (5610, ?, 'processing')")
+        .run(now - TELEGRAM_PROCESSING_STALE_SEC);
+      sqlite.prepare("INSERT INTO cache VALUES ('telegram:group-welcome:-123', 'pending:crashed', ?)")
+        .run(now - TELEGRAM_PROCESSING_STALE_SEC + lag);
+      const busy = await deliver();
+      expect([busy.status, busy.headers.get("Retry-After")]).toEqual([503, String(lag)]);
+      expect(sqlite.prepare("SELECT status FROM telegram_processed_updates").all()).toEqual([]);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(lag * 1000);
+      expect((await deliver()).status).toBe(200);
+      expect((await deliver()).status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(sqlite.prepare("SELECT status FROM telegram_processed_updates").all()).toEqual([{ status: "processed" }]);
+    } finally { sqlite.close(); vi.useRealTimers(); }
+  });
+
+  it.each([
+    ["1", 100, "pending:new", 200, true], ["pending:old", 200, "1", 100, false],
+    ["pending:old", 90000, "1", 100, true], ["1", 100, "pending:new", 90000, false],
+  ] as const)("merge welcome deadlines: %s/%i, %s/%i", async (old, oldAt, next, nextAt, oldWins) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
-      const payload = {
-        chat: { id: -123, type: "supergroup" },
-        from: { id: 999, username: "alice" },
-        old_chat_member: { status: "left" },
-        new_chat_member: { status: "member" },
-      };
-
-      await Promise.all([
-        handleMyChatMember(db, "bot-token", payload),
-        handleMyChatMember(db, "bot-token", payload),
-      ]);
-
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
-      expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get("telegram:group-welcome:-123"))
-        .toEqual({ key: "telegram:group-welcome:-123" });
-    } finally {
-      sqlite.close();
-    }
+      sqlite.prepare("INSERT INTO cache VALUES ('telegram:group-welcome:-123', ?, ?), ('telegram:group-welcome:-100123', ?, ?)")
+        .run(old, oldAt, next, nextAt);
+      expect((await handleTelegramWebhook(db,
+        makeChatMigrationRequest({ chatId: -123, migrateToChatId: -100123 }), "test-secret", "bot-token")).status).toBe(200);
+      expect(sqlite.prepare("SELECT value, updated_at FROM cache").all())
+        .toEqual([{ value: oldWins ? old : next, updated_at: oldWins ? oldAt : nextAt }]);
+    } finally { sqlite.close(); }
   });
 
   it("returns ok when a my_chat_member welcome cache read fails", async () => {
@@ -313,161 +313,47 @@ describe("handleTelegramWebhook", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM cache WHERE key = ?"))).toBe(true);
   });
 
-  it("ignores private my_chat_member updates", async () => {
+  it.each([
+    { chatId: 123, chatType: "private" as const },
+    { oldStatus: "member", newStatus: "administrator" },
+  ])("ignores member updates outside bot-added group transitions: %j", async patch => {
     const db = makeLifecycleDb([]);
-
-    await handleTelegramWebhook(
-      db,
-      makeMyChatMemberRequest({ chatId: 123, chatType: "private" }),
-      "test-secret",
-      "bot-token",
-    );
-
+    await handleTelegramWebhook(db, makeMyChatMemberRequest(patch), "test-secret", "bot-token");
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(db.getHistory()).toHaveLength(0);
   });
 
-  it("cleans up group subscriber state when my_chat_member reports bot removal", async () => {
+  it.each([
+    [-123, "group", "member"], [-100123, "channel", "administrator"],
+  ] as const)("cleans subscriber and lifecycle caches when removed from %s (%s)", async (chatId, chatType, oldStatus) => {
     const db = makeLifecycleDb();
-
-    const res = await handleTelegramWebhook(
-      db,
-      makeMyChatMemberRequest({ oldStatus: "member", newStatus: "left" }),
-      "test-secret",
-      "bot-token",
-    );
-
+    const res = await handleTelegramWebhook(db,
+      makeMyChatMemberRequest({ chatId, chatType, oldStatus, newStatus: "left" }), "test-secret", "bot-token");
     expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
     const history = db.getHistory();
-    expect(
-      history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers") && entry.binds.includes("-123")),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("DELETE FROM cache WHERE key = ?") && entry.binds.includes("telegram:group-welcome:-123"),
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("DELETE FROM cache WHERE key = ?") && entry.binds.includes("telegram:chat-admins:-123"),
-      ),
-    ).toBe(true);
+    expect(history.some(entry => entry.sql.includes("DELETE FROM telegram_subscribers") && entry.binds.includes(String(chatId)))).toBe(true);
+    for (const key of [`telegram:group-welcome:${chatId}`, `telegram:chat-admins:${chatId}`]) {
+      expect(history.some(entry => entry.sql.includes("DELETE FROM cache WHERE key = ?") && entry.binds.includes(key))).toBe(true);
+    }
   });
 
-  it("cleans up channel subscriber state when my_chat_member reports bot removal", async () => {
-    const db = makeLifecycleDb();
-
-    const res = await handleTelegramWebhook(
-      db,
-      makeMyChatMemberRequest({
-        chatId: -100123,
-        chatType: "channel",
-        oldStatus: "administrator",
-        newStatus: "left",
-      }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(res.status).toBe(200);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    const history = db.getHistory();
-    expect(
-      history.some(
-        (entry) => entry.sql.includes("DELETE FROM telegram_subscribers") && entry.binds.includes("-100123"),
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
-          entry.binds.includes("telegram:group-welcome:-100123"),
-      ),
-    ).toBe(true);
-  });
-
-  it("ignores my_chat_member status changes that are not bot-added transitions", async () => {
-    const db = makeLifecycleDb([]);
-
-    await handleTelegramWebhook(
-      db,
-      makeMyChatMemberRequest({ oldStatus: "member", newStatus: "administrator" }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(db.getHistory()).toHaveLength(0);
-  });
-
-  it("migrates stored chat state on migrate_to_chat_id service messages", async () => {
+  it.each(["to", "from"] as const)("migrates stored chat state on migrate_%s_chat_id service messages", async direction => {
     const db = makeLifecycleDb([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
-
-    const res = await handleTelegramWebhook(
-      db,
-      makeChatMigrationRequest({
-        chatId: -123,
-        migrateToChatId: -100123,
-        updateId: 700,
-      }),
-      "test-secret",
-      "bot-token",
-    );
-
+    const res = await handleTelegramWebhook(db, makeChatMigrationRequest(direction === "to"
+      ? { chatId: -123, migrateToChatId: -100123, updateId: 700 }
+      : { chatId: -100123, migrateFromChatId: -123, updateId: 701 }), "test-secret", "bot-token");
     expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
     const history = db.getHistory();
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("INSERT INTO telegram_subscribers") &&
-          entry.binds[0] === "-100123" &&
-          entry.binds[1] === "-123",
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("INSERT INTO cache") &&
-          entry.binds[0] === "telegram:group-welcome:-100123" &&
-          entry.binds[1] === "telegram:group-welcome:-123",
-      ),
-    ).toBe(true);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("DELETE FROM telegram_subscribers WHERE chat_id = ?") && entry.binds[0] === "-123",
-      ),
-    ).toBe(true);
-    expect(info).toHaveBeenCalledWith(
-      expect.stringContaining('"action":"chat-migration"'),
-    );
-    expect(info).toHaveBeenCalledWith(
-      expect.stringContaining('"message":"telegram chat id migrated"'),
-    );
+    expect(history.find(entry => entry.sql.includes("INSERT INTO telegram_subscribers"))?.binds.slice(0, 2)).toEqual(["-100123", "-123"]);
+    expect(history.some(entry => entry.sql.includes("INSERT INTO cache") &&
+      entry.binds[0] === "telegram:group-welcome:-100123" && entry.binds[1] === "telegram:group-welcome:-123")).toBe(true);
+    expect(history.some(entry => entry.sql.includes("DELETE FROM telegram_subscribers WHERE chat_id = ?") && entry.binds[0] === "-123")).toBe(true);
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('"action":"chat-migration"'));
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('"message":"telegram chat id migrated"'));
     info.mockRestore();
-  });
-
-  it("migrates stored chat state on migrate_from_chat_id service messages", async () => {
-    const db = makeLifecycleDb([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
-
-    await handleTelegramWebhook(
-      db,
-      makeChatMigrationRequest({
-        chatId: -100123,
-        migrateFromChatId: -123,
-        updateId: 701,
-      }),
-      "test-secret",
-      "bot-token",
-    );
-
-    const subscriberMigration = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"));
-    expect(subscriberMigration?.binds.slice(0, 2)).toEqual(["-100123", "-123"]);
   });
 
   it.each([
@@ -504,34 +390,7 @@ describe("handleTelegramWebhook", () => {
     error.mockRestore();
   });
 
-  it("returns a retryable status for duplicate update ids still in flight", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = makeLifecycleDb([
-      {
-        match: "INSERT INTO telegram_processed_updates",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
-        match: "SELECT status, received_at FROM telegram_processed_updates",
-        rows: [],
-        first: { status: "processing", received_at: Math.floor(Date.now() / 1000) },
-      },
-    ]);
 
-    const res = await handleTelegramWebhook(
-      db,
-      makeWebhookRequest(123, "/help", "test-secret", { updateId: 502 }),
-      "test-secret",
-      "bot-token",
-    );
-
-    expect(res.status).toBe(503);
-    expect(res.headers.get("Retry-After")).toBeTruthy();
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_disambiguation"))).toBe(false);
-    warn.mockRestore();
-  });
 
   it("processes older out-of-order update ids without using the old high-watermark cache", async () => {
     const db = makeLifecycleDb([

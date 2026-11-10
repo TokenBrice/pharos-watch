@@ -79,7 +79,7 @@ describe("cron sentinel persisted source state", () => {
     });
     expect(JSON.parse(expired.metadata!).sources[source]).toMatchObject({
       status: "expired", lastStatus: "error", observedAt, maxAgeSec: budget, reason: "source-state-expired",
-      ...(budget === 172_800 ? { nextRetryAt: observedAt + budget + 901 } : {}),
+      ...(["growth", "duration"].includes(source) ? { nextRetryAt: observedAt + budget + 901 } : {}),
       attempt: { count: 3, attemptedAt: observedAt + budget + 1, status: "skipped_locked" },
     });
     const recovered = await runCronSentinelSources(db, "daily", [
@@ -116,20 +116,39 @@ describe("cron sentinel persisted source state", () => {
     expect(JSON.parse(expired.metadata!).sourceStatuses["repair-debt"]).toBe("expired");
   });
 
-  it.each([false, true])("bounds cross-mode retries and preserves skipped/aborted clocks (%s)", async (aborted) => {
+  it.each(["error", "skipped_neutral", "skipped_locked", "aborted"] as const)("caps cross-mode %s retries without losing failure evidence", async (outcome) => {
     const { db } = fixtures.open();
     await runCronSentinelSources(db, "daily", (["growth", "duration"] as const).map(source => evaluation(source, "error")), 100);
     const attempts: string[] = [];
     const retry = async (source: CronSentinelRuleSource) => {
       attempts.push(source);
-      return source === "growth" ? { status: "skipped_neutral", ...(aborted ? { aborted } : {}) } as CronResult : { status: "ok" } as CronResult;
+      return source === "growth" ? { status: outcome === "aborted" ? "skipped_neutral" : outcome,
+        ...(outcome === "aborted" ? { aborted: true } : {}) } as CronResult : { status: "ok" } as CronResult;
     };
     for (const at of [1000, 1000, 1001]) await runCronSentinelSources(db, "status", [], at, undefined, retry);
     expect(attempts).toEqual(["growth", "duration"]);
     const result = await runCronSentinelSources(db, "status", [], 1002);
     expect(JSON.parse(result.metadata!).sources.growth).toMatchObject({
-      observedAt: 100, reason: "source-evaluation-error", nextRetryAt: 1900, retryBackoffSec: 900,
-      attempt: { count: 2, attemptedAt: 1000, mode: "status", status: aborted ? "incomplete" : "skipped_neutral" },
+      observedAt: outcome === "error" ? 1000 : 100, reason: "source-evaluation-error", nextRetryAt: 1900, retryBackoffSec: 900,
+      attempt: { count: 2, attemptedAt: 1000, mode: "status", status: outcome === "aborted" ? "incomplete" : outcome },
     });
+    for (const at of [1900, 2800, 3700]) await runCronSentinelSources(db, "turnover", [], at, undefined, retry);
+    expect(attempts).toEqual(["growth", "duration", "growth", "growth"]);
+    const capped = await runCronSentinelSources(db, "reserve-post-sync", [], 4000, undefined, retry);
+    expect(capped.status).toBe("error");
+    expect(JSON.parse(capped.metadata!).sources.growth).toMatchObject({
+      status: "error", reason: "source-retry-exhausted", nextRetryAt: null,
+      retryAttemptLimit: 4, retryExhausted: true, attempt: { count: 4, attemptedAt: 2800 },
+    });
+    const expired = await runCronSentinelSources(db, "status", [], 200_000, undefined, retry);
+    expect(expired.status).toBe("degraded");
+    expect(JSON.parse(expired.metadata!).sources.growth).toMatchObject({
+      status: "expired", reason: "source-state-expired", lastStatus: "error", retryExhausted: true, nextRetryAt: null,
+    });
+    expect(attempts).toHaveLength(4);
+    const daily = await runCronSentinelSources(db, "daily", [evaluation("growth", "error")], 201_000);
+    expect(JSON.parse(daily.metadata!).sources.growth).toMatchObject({ retryExhausted: false, attempt: { count: 1 } });
+    const recovered = await runCronSentinelSources(db, "status", [], 201_900, undefined, async () => ({ status: "ok" }));
+    expect(JSON.parse(recovered.metadata!).sources.growth).toMatchObject({ status: "ok", attempt: { count: 2 } });
   });
 });

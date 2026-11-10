@@ -1,4 +1,5 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import { HYPEREVM_HISTORY_RPC_URL } from "@shared/lib/evm-rpc-capabilities";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import { sleepWithSignal, throwIfAborted } from "../abort";
@@ -37,7 +38,7 @@ const PLUME_RPC_URL = "https://rpc.plume.org";
 const WM_EVM_EXTRA_RPC_URLS_BY_CHAIN: Readonly<Record<string, readonly string[]>> = {
   plume: [PLUME_RPC_URL],
   linea: ["https://rpc.linea.build"],
-  hyperevm: ["https://rpc.hyperliquid.xyz/evm"],
+  hyperevm: [HYPEREVM_HISTORY_RPC_URL],
   soneium: ["https://rpc.soneium.org"],
   citrea: ["https://rpc.mainnet.citrea.xyz"],
 };

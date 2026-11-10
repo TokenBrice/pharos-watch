@@ -449,7 +449,7 @@ describe("sync-depeg-events", () => {
     expect(readFileSync(join(root, "data/depeg-events/metadata/capture.json"), "utf8")).toBe(originalCapture);
   });
 
-  it("accepts a total that excludes reviewed disputed rows the listing still carries", async () => {
+  it("reconciles the total against every listed row, including reviewed disputes", async () => {
     const root = makeRoot();
     const indexPath = join(root, "data/depeg-events/index.json");
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({
@@ -457,7 +457,7 @@ describe("sync-depeg-events", () => {
         event({ id: 1 }),
         event({ id: 2, provenance: { auditVerdict: "disputed" } }),
       ],
-      total: 1,
+      total: 2,
       nextCursor: null,
     })))));
 
@@ -467,7 +467,7 @@ describe("sync-depeg-events", () => {
     expect(shard.map((entry) => entry.id).sort()).toEqual([1, 2]);
     expect(readDepegLedgerCapture(join(root, "data/depeg-events"))).toMatchObject({
       eventCount: 2,
-      apiTotal: 1,
+      apiTotal: 2,
     });
   });
 

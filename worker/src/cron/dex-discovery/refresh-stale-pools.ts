@@ -96,9 +96,11 @@ const STALE_POOL_REFRESH_BACKOFF_KEY = "dex_stale_pool_refresh_backoff";
  * Why an attempted pool was not refreshed, in pipeline order: a pool with
  * several stablecoin attributions reports the furthest stage any of them
  * reached. `transport` (failed request, or a pool missing from a
- * schema-degraded answer) is a provider failure and never backs a pool off.
+ * schema-degraded answer) is a provider failure; neither it nor a locally
+ * rejected `unaddressableId` backs a pool off.
  */
 const STALE_POOL_REFRESH_FAILURE_REASONS = [
+  "unaddressableId",
   "transport",
   "notReturned",
   "parseFailed",
@@ -131,7 +133,7 @@ function furtherFailure(
 }
 
 interface StalePoolRefreshBackoffEntry {
-  /** Consecutive attempted runs that ended without a refresh (transport failures excluded). */
+  /** Consecutive attempted runs that ended without a refresh (transport and local ID rejection excluded). */
   misses: number;
   /** `nowSec` of the latest such attempt. */
   at: number;
@@ -542,7 +544,7 @@ export async function refreshStaleRegistryPools({
         }
         if (result.rejectedAddresses?.length === batch.candidates.length) {
           summary.requests--;
-          for (const candidate of batch.candidates) attemptOutcomes.set(candidate.poolId, "invalidRow");
+          for (const candidate of batch.candidates) attemptOutcomes.set(candidate.poolId, "unaddressableId");
           continue;
         }
         const circuit = await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, succeeded);
@@ -564,10 +566,10 @@ export async function refreshStaleRegistryPools({
             summary.rowsWritten += await upsertStagedPools(db, classified.staged, signal);
           }
           for (const [poolId, outcome] of classified.outcomes) attemptOutcomes.set(poolId, outcome);
-          for (const candidate of batch.candidates) if (result.rejectedAddresses?.includes(candidate.address)) attemptOutcomes.set(candidate.poolId, "invalidRow");
         } else {
           for (const candidate of batch.candidates) attemptOutcomes.set(candidate.poolId, "transport");
         }
+        for (const candidate of batch.candidates) if (result.rejectedAddresses?.includes(candidate.address)) attemptOutcomes.set(candidate.poolId, "unaddressableId");
         if (circuit.after.state === "open") {
           summary.outcome = "stopped-circuit-opened";
           break;
@@ -687,7 +689,7 @@ function classifyRefreshBatch(
 /**
  * Persist the next backoff map, keyed only by pools still due. A refreshed pool
  * leaves the map; a pool the provider answered for without a refresh records
- * one more miss; a transport failure or an unattempted pool keeps its entry
+ * one more miss; transport, local ID rejection or an unattempted pool keeps its entry
  * unchanged. The due set is not capped by the request budget, so a row over
  * `backoffMaxRowBytes` keeps the highest-TVL entries (pool id breaks ties) and
  * drops the rest, which are simply re-attempted next run. A write failure is
@@ -709,7 +711,7 @@ async function writeStalePoolRefreshBackoff(
     const outcome = attemptOutcomes.get(candidate.poolId);
     if (outcome === "refreshed") continue;
     let entry: StalePoolRefreshBackoffEntry | null;
-    if (outcome === undefined || outcome === "transport") {
+    if (outcome === undefined || outcome === "transport" || outcome === "unaddressableId") {
       entry = candidate.backoff;
     } else {
       entry = { misses: (candidate.backoff?.misses ?? 0) + 1, at: nowSec, reason: outcome };

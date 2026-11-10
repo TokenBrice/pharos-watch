@@ -274,9 +274,11 @@ jobs:
         env:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
           # Presence opts this job into the audit; the PR lane omits it.
-          # Advisory for two weeks; ratchet from measured p50 before switching to "1".
+          # "1" blocks on the ratcheted routes (/depeg/, /safety-scores/, /stablecoins/;
+          # thresholds live in run-pages-artifact-lane.ts). "/" and the USDC profile
+          # stay advisory at this threshold.
           PHAROS_LIGHTHOUSE_THRESHOLD: "70"
-          PHAROS_LIGHTHOUSE_ENFORCE: "0"
+          PHAROS_LIGHTHOUSE_ENFORCE: "1"
       - name: Retain Lighthouse reports
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

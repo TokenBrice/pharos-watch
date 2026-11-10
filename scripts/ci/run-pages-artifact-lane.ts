@@ -228,20 +228,26 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     if (lighthouseEnforcement === undefined) {
       report("- Lighthouse: skipped; this lane did not opt in (nightly sets PHAROS_LIGHTHOUSE_ENFORCE).");
     } else {
+      // Ratcheted routes carry their own blocking threshold (measured nightly
+      // p50 minus 10%, docs/testing.md#performance-guardrails); the others stay
+      // advisory at the lane threshold until their variance allows a ratchet.
+      const ratcheted: Record<string, string> = { "/depeg/": "65", "/safety-scores/": "67", "/stablecoins/": "81" };
       const lighthouseFailures: string[] = [];
+      const blockingFailures: string[] = [];
       for (const route of ["/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/"]) {
         try {
           command(`lighthouse ${route}`, "npm", ["run", "lighthouse:static", "--", "--route", route,
-            "--threshold", process.env.PHAROS_LIGHTHOUSE_THRESHOLD ?? "70", "--output-dir", ".tmp/lighthouse"]);
+            "--threshold", ratcheted[route] ?? process.env.PHAROS_LIGHTHOUSE_THRESHOLD ?? "70", "--output-dir", ".tmp/lighthouse"]);
         } catch (error) {
           lighthouseFailures.push(String(error));
+          if (route in ratcheted) blockingFailures.push(String(error));
         }
       }
-      report(`- Lighthouse (${lighthouseEnforcement === "1" ? "blocking" : "advisory"}): ${
+      report(`- Lighthouse (${lighthouseEnforcement === "1" ? "blocking on ratcheted routes" : "advisory"}): ${
         lighthouseFailures.length ? lighthouseFailures.join("; ") : "all routes met the score threshold"
       }. Static-export scores do not measure production CSP/proxy or live-data readiness.`);
-      if (lighthouseEnforcement === "1" && lighthouseFailures.length) {
-        throw new Error(lighthouseFailures.join("; "));
+      if (lighthouseEnforcement === "1" && blockingFailures.length) {
+        throw new Error(blockingFailures.join("; "));
       }
     }
     return result;

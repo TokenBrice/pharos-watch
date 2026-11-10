@@ -29,9 +29,15 @@ describe("design invariants", () => {
   });
 
   it("keeps scoped focus rings opaque", () => {
-    const rings = [...CSS.matchAll(/\.pharos-(?:focus-ring|source-list a|prose-link) \{([^}]+)\}/g),
-      ...read("src/components/digest-archive-client.tsx").matchAll(/className="([^"]*focus-visible:ring-2[^"]*)"/g)];
-    expect(rings.length).toBeGreaterThan(0);
+    const rings = [/\.pharos-focus-ring \{([^}]+)\}/, /\.pharos-source-list a \{([^}]+)\}/,
+      /\.pharos-prose-link \{([^}]+)\}/].map((selector) => {
+      const rule = CSS.match(selector);
+      expect(rule, selector.source).not.toBeNull();
+      return rule!;
+    });
+    const controls = [...read("src/components/digest-archive-client.tsx").matchAll(/className="([^"]*focus-visible:ring-2[^"]*)"/g)];
+    expect(controls.length).toBeGreaterThan(0);
+    rings.push(...controls);
     for (const [, classes] of rings) {
       expect(classes.match(/focus-visible:ring-ring\S*/g)?.every((ring) => /^focus-visible:ring-ring(?:\/100)?$/.test(ring))).toBe(true);
     }
@@ -69,7 +75,21 @@ describe("design invariants", () => {
       }
     }
     expect(inspect("src/components/liquidity-table.tsx", `<${tag} role={"row"} /><a role="link" />`)).toEqual([]);
-    expect(inspect("src/components/stablecoin-table-row.tsx", `<${tag} tabIndex={isCursor ? 0 : undefined} />`)).toEqual([]);
+    expect(inspect("src/components/stablecoin-table-row.tsx", `<${tag} tabIndex={isCursor ? 0 : undefined} />`))
+      .toEqual(tag === "TableRow" ? [] : ["interactive-row"]);
+  });
+
+  it("inspects spread row props and structurally bounds the roving exception", () => {
+    for (const props of ['role: "link"', "tabIndex: 0", "onKeyDown: open"]) {
+      for (const spread of [`{${props}}`, "props"]) {
+        expect(inspect("src/app/x.tsx", `const props={${props}}; <TableRow {...${spread}} />`)).toEqual(["interactive-row"]);
+      }
+    }
+    const path = "src/components/stablecoin-table-row.tsx";
+    expect(inspect(path, '<TableRow tabIndex={ (isCursor) ? (0) : (undefined) } />')).toEqual([]);
+    expect(inspect(path, '<TableRow tabIndex={isCursor ? undefined : 0} />')).toEqual(["interactive-row"]);
+    expect(inspect(path, 'const p={onKeyDown: open}; const props={...p}; <TableRow {...props} />')).toEqual(["interactive-row"]);
+    expect(inspect(path, 'const props={role: "row", title: "Safe"}; <TableRow {...props} />')).toEqual([]);
   });
 
   it.each([
