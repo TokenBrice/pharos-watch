@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
-import { getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
 import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
@@ -208,7 +208,8 @@ export function buildTronReplayRepairSql(repairs: TronReplayRepair[], hash: stri
   return [
     `INSERT INTO admin_action_audit(created_at,actor,action,target,result,details_json,intent_key) SELECT ${nowSec},'operator-cli',${sqlString(SCRIPT)},'tron-USDT',CASE WHEN (SELECT COUNT(*) FROM blacklist_events WHERE ${where})=${repairs.length} THEN 'ok' ELSE 'guard_failed' END,${sqlString(details)},${sqlString(hash)};`,
     `UPDATE blacklist_events SET amount_native=${value},amount_usd_at_event=${value},amount_source='derived',amount_status='resolved',amount_last_error_class=NULL,amount_last_provider='trongrid-transfer-ledger',amount_last_attempted_at=${nowSec},amount_attempt_count=amount_attempt_count+1,provenance_source=${provenance},provenance_observed_at=${observedAt} WHERE ${where};`,
-    `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(",")});`,
+    `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(",")});
+     ${BLACKLIST_DERIVED_GENERATION_ROTATION_SQL}`,
   ];
 }
 

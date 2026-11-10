@@ -9,7 +9,7 @@ import { parseEvmLogsWithCoverage } from "../src/cron/blacklist/evm-source";
 import { buildBlacklistEventInsert } from "../src/cron/blacklist/persistence";
 import { blockHashesForLogs, fetchAlchemyLogs, resolveBlockTimestamps, type AlchemyLogEntry } from "../src/lib/alchemy-logs";
 import { getBlacklistConfigByKey, getBlacklistTopicHashes, type ContractEventConfig } from "../src/lib/blacklist-contracts";
-import { getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
 import { BLACKLIST_CURRENT_BALANCE_COLUMNS, BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY, BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, buildBlacklistCurrentBalanceValues } from "../src/lib/blacklist-current-balances";
 import { buildCurrentBalanceSnapshotRows } from "../src/lib/blacklist/row-preparation";
 import { shouldSuppressAsMirrorZero, type BlacklistRow } from "../src/lib/blacklist/shared";
@@ -315,7 +315,8 @@ export async function runConfigHistoryReplay(options: ReplayOptions, dependencie
     `INSERT INTO admin_action_audit(created_at, actor, action, target, result, details_json, intent_key)
       SELECT ${now}, 'operator-cli', 'replay-blacklist-config-history', ${sqlString(config.configKey)},
       CASE WHEN ${guard} THEN 'ok' ELSE 'guard_failed' END, ${sqlString(details)}, ${sqlString(runId)};`,
-    `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(", ")});`,
+    `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(", ")});
+     ${BLACKLIST_DERIVED_GENERATION_ROTATION_SQL}`,
   ];
   for (const row of missing) {
     const insert = buildBlacklistEventInsert(row);

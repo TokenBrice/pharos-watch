@@ -313,6 +313,7 @@ describe("Night Watch blacklist reconciliation", () => {
     for (const statement of mutationStatements) sqlite.exec(statement);
     const finalStatements = executeStatements.mock.calls[1]?.[0] as string[];
     for (const statement of finalStatements) sqlite.exec(statement);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
     const stored = sqlite
       .prepare("SELECT COUNT(*) AS count FROM blacklist_events WHERE reconciliation_manifest_id = ?")
       .get(frozenManifest.manifestId) as { count: number };

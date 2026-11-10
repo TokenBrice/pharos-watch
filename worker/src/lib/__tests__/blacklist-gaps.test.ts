@@ -12,6 +12,55 @@ import { getBlacklistGapMetricsCacheKey } from "../blacklist-cache-keys";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
+const gapTables = [
+  {
+    match: "blacklist-gap-aggregate",
+    rows: [],
+    first: {
+      total: 100,
+      missing: 4,
+      missing_recent: 1,
+      oldest_gap_age_sec: 86400,
+      never_attempted: 2,
+      repeated_failures: 1,
+      unrecoverable: 3,
+    },
+  },
+  {
+    match: "blacklist-gap-status-distribution",
+    rows: [
+      { amount_status: "resolved", n: 93 },
+      { amount_status: "recoverable_pending", n: 4 },
+      { amount_status: "permanently_unavailable", n: 3 },
+    ],
+  },
+  {
+    match: "blacklist-gap-source-distribution",
+    rows: [
+      { amount_source: "event", n: 93 },
+      { amount_source: "unavailable", n: 7 },
+    ],
+  },
+];
+const coreMetrics = {
+  totalEvents: 100,
+  missingAmounts: 4,
+  recentMissingAmounts: 1,
+  recentWindowSec: 86_400,
+  missingRatio: 0.04,
+  classificationMissingAmounts: 4,
+  classificationWatchCount: 1,
+  unrecoverableMissingAmounts: 3,
+  oldestRecoverableAgeSec: 86_400,
+  neverAttemptedCount: 2,
+  repeatedFailureCount: 1,
+  statusDistribution: {},
+  sourceDistribution: {},
+};
+const producerMetrics = { ...coreMetrics, totalEvents: 20, missingAmounts: 2, missingRatio: 0.1,
+  classificationMissingAmounts: 2, unrecoverableMissingAmounts: 0, oldestRecoverableAgeSec: 3600,
+  neverAttemptedCount: 1, repeatedFailureCount: 0 };
+
 describe("queryBlacklistGapMetrics", () => {
   it.each(["classificationMissingAmounts", "classificationWatchCount"])("rejects cached metrics missing internal %s", async (field) => {
     const now = 1_800_000_000;
@@ -73,221 +122,48 @@ describe("queryBlacklistGapMetrics", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT"))).toBe(false);
   });
 
-  it("returns extended recoverable-gap telemetry", async () => {
-    const db = mockD1([
-      {
-        match: "blacklist-gap-aggregate",
-        rows: [],
-        first: {
-          total: 100,
-          missing: 4,
-          missing_recent: 1,
-          oldest_gap_age_sec: 86400,
-          never_attempted: 2,
-          repeated_failures: 1,
-          unrecoverable: 3,
-        },
-      },
-      {
-        match: "blacklist-gap-status-distribution",
-        rows: [
-          { amount_status: "resolved", n: 93 },
-          { amount_status: "recoverable_pending", n: 4 },
-          { amount_status: "permanently_unavailable", n: 3 },
-        ],
-      },
-      {
-        match: "blacklist-gap-source-distribution",
-        rows: [
-          { amount_source: "event", n: 93 },
-          { amount_source: "unavailable", n: 7 },
-        ],
-      },
-    ]);
-
-    const result = await queryBlacklistGapMetrics(db, 1_700_000_000, 86_400);
-
+  it.each([true, false])("returns extended gap telemetry with distributions=%s and skips unrequested scans", async (includeDistributions) => {
+    const db = mockD1(gapTables);
+    const result = await queryBlacklistGapMetrics(db, 1_700_000_000,
+      includeDistributions ? 86_400 : { recentWindowSec: 86_400, includeDistributions });
     expect(result).toEqual({
-      totalEvents: 100,
-      missingAmounts: 4,
-      recentMissingAmounts: 1,
-      recentWindowSec: 86_400,
-      missingRatio: 0.04,
-      classificationMissingAmounts: 4,
-      classificationWatchCount: 1,
-      unrecoverableMissingAmounts: 3,
-      oldestRecoverableAgeSec: 86_400,
-      neverAttemptedCount: 2,
-      repeatedFailureCount: 1,
-      statusDistribution: {
-        resolved: 93,
-        recoverable_pending: 4,
-        permanently_unavailable: 3,
-      },
-      sourceDistribution: {
-        event: 93,
-        unavailable: 7,
-      },
+      ...coreMetrics,
+      statusDistribution: includeDistributions ? { resolved: 93, recoverable_pending: 4, permanently_unavailable: 3 } : {},
+      sourceDistribution: includeDistributions ? { event: 93, unavailable: 7 } : {},
     });
+    for (const scan of ["blacklist-gap-status-distribution", "blacklist-gap-source-distribution"]) {
+      expect(db.getHistory().some((entry) => entry.sql.includes(scan))).toBe(includeDistributions);
+    }
   });
 
-  it("skips distribution scans when the caller only needs diagnostic gap metrics", async () => {
-    const db = mockD1([
-      {
-        match: "blacklist-gap-aggregate",
-        rows: [],
-        first: {
-          total: 100,
-          missing: 4,
-          missing_recent: 1,
-          oldest_gap_age_sec: 86400,
-          never_attempted: 2,
-          repeated_failures: 1,
-          unrecoverable: 3,
-        },
-      },
-    ]);
-
+  it.each([
+    ["request", 60, coreMetrics], ["producer", 120, producerMetrics],
+  ] as const)("serves fresh %s metrics without scans, preferring the producer", async (kind, age, metrics) => {
+    const key = getBlacklistGapMetricsCacheKey({ recentWindowSec: 86_400, includeDistributions: false }, kind);
+    const db = mockD1([{
+      match: "blacklist-gap-metrics-cache-read",
+      rows: [{ value: JSON.stringify({ version: 3, includeDistributions: false, recentWindowSec: 86_400, metrics }),
+        updated_at: 1_700_000_000 - age }],
+    }]);
     const result = await queryBlacklistGapMetrics(db, 1_700_000_000, {
-      recentWindowSec: 86_400,
-      includeDistributions: false,
+      recentWindowSec: 86_400, includeDistributions: false, cacheTtlSec: 300,
+      producerSnapshotTtlSec: kind === "producer" ? 43_200 : 0,
     });
-
-    expect(result.statusDistribution).toEqual({});
-    expect(result.sourceDistribution).toEqual({});
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-gap-status-distribution"))).toBe(false);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-gap-source-distribution"))).toBe(false);
-  });
-
-  it("serves fresh cached diagnostic metrics without rescanning blacklist_events", async () => {
-    const metrics = {
-      totalEvents: 100,
-      missingAmounts: 4,
-      recentMissingAmounts: 1,
-      recentWindowSec: 86_400,
-      missingRatio: 0.04,
-      classificationMissingAmounts: 4,
-      classificationWatchCount: 1,
-      unrecoverableMissingAmounts: 3,
-      oldestRecoverableAgeSec: 86_400,
-      neverAttemptedCount: 2,
-      repeatedFailureCount: 1,
-      statusDistribution: {},
-      sourceDistribution: {},
-    };
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        rows: [{
-          key: "blacklist:gap-metrics:v3:86400:core",
-          value: JSON.stringify({
-            version: 3,
-            includeDistributions: false,
-            recentWindowSec: 86_400,
-            metrics,
-          }),
-          updated_at: 1_700_000_000 - 60,
-        }],
-      },
-    ]);
-
-    const result = await queryBlacklistGapMetrics(db, 1_700_000_000, {
-      recentWindowSec: 86_400,
-      includeDistributions: false,
-      cacheTtlSec: 300,
-    });
-
-    expect(result).toEqual({
-      ...metrics,
-      oldestRecoverableAgeSec: 86_460,
-    });
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
-  });
-
-  it("prefers fresh producer snapshots before request-cache fallback", async () => {
-    const metrics = {
-      totalEvents: 20,
-      missingAmounts: 2,
-      recentMissingAmounts: 1,
-      recentWindowSec: 86_400,
-      missingRatio: 0.1,
-      classificationMissingAmounts: 2,
-      classificationWatchCount: 1,
-      unrecoverableMissingAmounts: 0,
-      oldestRecoverableAgeSec: 3600,
-      neverAttemptedCount: 1,
-      repeatedFailureCount: 0,
-      statusDistribution: {},
-      sourceDistribution: {},
-    };
-    const db = mockD1([
-      {
-        match: "blacklist-gap-metrics-cache-read",
-        rows: [{
-          key: "blacklist:gap-metrics:producer:v3:86400:core",
-          value: JSON.stringify({
-            version: 3,
-            includeDistributions: false,
-            recentWindowSec: 86_400,
-            metrics,
-          }),
-          updated_at: 1_700_000_000 - 120,
-        }],
-      },
-    ]);
-
-    const result = await queryBlacklistGapMetrics(db, 1_700_000_000, {
-      recentWindowSec: 86_400,
-      includeDistributions: false,
-      producerSnapshotTtlSec: 43_200,
-      cacheTtlSec: 300,
-    });
-
-    expect(result.oldestRecoverableAgeSec).toBe(3720);
+    expect(result).toEqual({ ...metrics, oldestRecoverableAgeSec: metrics.oldestRecoverableAgeSec + age });
     expect(db.getHistory()).toHaveLength(1);
-    expect(db.getHistory()[0]?.binds).toEqual(["blacklist:gap-metrics:producer:v3:86400:core"]);
+    expect(db.getHistory()[0]?.binds).toEqual([key]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
   });
 
   it("rejects producer snapshots past the surface freshness budget", async () => {
     const now = 1_800_000_000;
     const { sqlite, db } = fixtures.open();
     const options = { recentWindowSec: 86_400, includeDistributions: false };
-    const metrics = (totalEvents: number) => ({
-      totalEvents,
-      missingAmounts: 2,
-      recentMissingAmounts: 1,
-      recentWindowSec: 86_400,
-      missingRatio: 0.1,
-      classificationMissingAmounts: 2,
-      classificationWatchCount: 1,
-      unrecoverableMissingAmounts: 0,
-      oldestRecoverableAgeSec: 3600,
-      neverAttemptedCount: 1,
-      repeatedFailureCount: 0,
-      statusDistribution: {},
-      sourceDistribution: {},
-    });
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-    insert.run(
-      getBlacklistGapMetricsCacheKey(options, "producer"),
-      JSON.stringify({
-        version: 3,
-        includeDistributions: false,
-        recentWindowSec: 86_400,
-        metrics: metrics(999),
-      }),
-      now - 7 * 3600,
-    );
-    insert.run(
-      getBlacklistGapMetricsCacheKey(options, "request"),
-      JSON.stringify({
-        version: 3,
-        includeDistributions: false,
-        recentWindowSec: 86_400,
-        metrics: metrics(20),
-      }),
-      now - 60,
-    );
+    for (const [kind, totalEvents, age] of [["producer", 999, 7 * 3600], ["request", 20, 60]] as const) {
+      insert.run(getBlacklistGapMetricsCacheKey(options, kind),
+        JSON.stringify({ version: 3, ...options, metrics: { ...producerMetrics, totalEvents } }), now - age);
+    }
 
     const result = await queryBlacklistGapMetrics(db, now, {
       ...options,
@@ -299,37 +175,7 @@ describe("queryBlacklistGapMetrics", () => {
   });
 
   it("materializes full and core producer snapshots from one live full query", async () => {
-    const db = mockD1([
-      {
-        match: "blacklist-gap-aggregate",
-        rows: [],
-        first: {
-          total: 100,
-          missing: 4,
-          missing_recent: 1,
-          oldest_gap_age_sec: 86400,
-          never_attempted: 2,
-          repeated_failures: 1,
-          unrecoverable: 3,
-        },
-      },
-      {
-        match: "blacklist-gap-status-distribution",
-        rows: [
-          { amount_status: "resolved", n: 93 },
-          { amount_status: "recoverable_pending", n: 4 },
-          { amount_status: "permanently_unavailable", n: 3 },
-        ],
-      },
-      {
-        match: "blacklist-gap-source-distribution",
-        rows: [
-          { amount_source: "event", n: 93 },
-          { amount_source: "unavailable", n: 7 },
-        ],
-      },
-      { match: "blacklist-gap-metrics-cache-write", rows: [] },
-    ]);
+    const db = mockD1([...gapTables, { match: "blacklist-gap-metrics-cache-write", rows: [] }]);
 
     const result = await materializeBlacklistGapMetrics(db, 1_700_000_000, 86_400, 1_699_999_000);
 

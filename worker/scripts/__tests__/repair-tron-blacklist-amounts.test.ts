@@ -155,12 +155,13 @@ describe("Tron event-balance replay", () => {
     const db = new DatabaseSync(":memory:");
     db.exec(`CREATE TABLE admin_action_audit(created_at,actor,action,target,result CHECK(result IN ('ok','error')),details_json,intent_key UNIQUE);
       CREATE TABLE blacklist_events(id PRIMARY KEY,chain_id,stablecoin,event_type,contract_address,address,tx_hash,block_number,timestamp,config_key,amount_native,amount_usd_at_event,amount_status,suppression_reason,amount_source,amount_last_error_class,amount_last_provider,amount_last_attempted_at,amount_attempt_count DEFAULT 0,provenance_source,provenance_observed_at);
-      CREATE TABLE cache(key PRIMARY KEY);`);
+      CREATE TABLE cache(key PRIMARY KEY,value,updated_at);`);
     const e = repair.event;
     db.prepare("INSERT INTO blacklist_events(id,chain_id,stablecoin,event_type,contract_address,address,tx_hash,block_number,timestamp,config_key,amount_status) VALUES (?,'tron','USDT','blacklist',?,?,?,?,?,?,'provider_failed')").run(e.id,token,e.address,e.tx_hash,e.block_number,e.timestamp,e.configKey);
     const sql = buildTronReplayRepairSql([repair], "e".repeat(64), "bookmark", now / 1000 + 120).join("\n");
     db.exec(`BEGIN;${sql}COMMIT;`);
     expect(db.prepare("SELECT amount_native,amount_source,provenance_observed_at,amount_last_attempted_at FROM blacklist_events").get()).toMatchObject({ amount_native: 14591.2, amount_source: "derived", provenance_observed_at: now / 1000, amount_last_attempted_at: now / 1000 + 120 });
+    expect(db.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
     expect(() => db.exec(`BEGIN;${sql}COMMIT;`)).toThrow();
     db.exec("ROLLBACK;");
     expect(db.prepare("SELECT COUNT(*) AS n FROM admin_action_audit").get()).toMatchObject({ n: 1 });
@@ -182,7 +183,7 @@ describe("Tron event-balance replay", () => {
     try {
       db.exec(`CREATE TABLE admin_action_audit(created_at,actor,action,target,result CHECK(result IN ('ok','error')),details_json,intent_key UNIQUE);
         CREATE TABLE blacklist_events(id PRIMARY KEY,chain_id,stablecoin,event_type,contract_address,address,tx_hash,block_number,timestamp,config_key,amount,amount_native,amount_usd_at_event,amount_status,suppression_reason,amount_source,amount_last_error_class,amount_last_provider,amount_last_attempted_at,amount_attempt_count DEFAULT 0,provenance_source,provenance_observed_at);
-        CREATE TABLE cache(key PRIMARY KEY);`);
+        CREATE TABLE cache(key PRIMARY KEY,value,updated_at);`);
       const e = repair.event;
       const legacyAmount = 987654321;
       db.prepare("INSERT INTO blacklist_events(id,chain_id,stablecoin,event_type,contract_address,address,tx_hash,block_number,timestamp,config_key,amount,amount_native,amount_usd_at_event,amount_status,suppression_reason) VALUES (?,'tron','USDT','blacklist',?,?,?,?,?,?,?,?,?,?,?)")
@@ -214,7 +215,7 @@ describe("Tron event-balance replay", () => {
     const db = new DatabaseSync(":memory:");
     db.exec(`CREATE TABLE admin_action_audit(created_at,actor,action,target,result CHECK(result IN ('ok','error')),details_json,intent_key UNIQUE);
       CREATE TABLE blacklist_events(id PRIMARY KEY,chain_id,stablecoin,event_type,contract_address,address,tx_hash,block_number,timestamp,config_key,amount_native,amount_usd_at_event,amount_status,suppression_reason,amount_source,amount_last_error_class,amount_last_provider,amount_last_attempted_at,amount_attempt_count DEFAULT 0,provenance_source,provenance_observed_at);
-      CREATE TABLE cache(key PRIMARY KEY);`);
+      CREATE TABLE cache(key PRIMARY KEY,value,updated_at);`);
     const e = repair.event;
     db.prepare("INSERT INTO blacklist_events(id,chain_id,stablecoin,event_type,contract_address,address,tx_hash,block_number,timestamp,config_key,amount_status) VALUES (?,'tron','USDT','blacklist',?,?,?,?,?,?,'provider_failed')").run(e.id,token,e.address,e.tx_hash,e.block_number,e.timestamp,e.configKey);
     const hash = "e".repeat(64);
