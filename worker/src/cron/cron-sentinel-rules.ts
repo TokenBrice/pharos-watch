@@ -1,4 +1,8 @@
-import { sendToChat, type TelegramCreds } from "../telegram/delivery/telegram";
+import { escapeHtml, sendToChat, type TelegramCreds } from "../telegram/delivery/telegram";
+
+/** Operator-alert surface for sentinel sources, which may not import Telegram delivery directly. */
+export { escapeHtml as escapeOperatorAlertHtml };
+export type OperatorTelegramCreds = TelegramCreds;
 
 export type CronSentinelRuleSource =
   | "freshness"

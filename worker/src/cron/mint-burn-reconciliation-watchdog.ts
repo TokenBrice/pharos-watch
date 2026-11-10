@@ -7,8 +7,7 @@ import { getCache, setCache } from "../lib/db-cache";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { readMintBurnSupplyReconciliation } from "../lib/mint-burn-supply-reconciliation";
-import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
-import { deliverOperatorAlert } from "./cron-sentinel-rules";
+import { deliverOperatorAlert, escapeOperatorAlertHtml as escapeHtml, type OperatorTelegramCreds as TelegramCreds } from "./cron-sentinel-rules";
 
 const ALERT_STATE_KEY = "mint-burn:daily-reconciliation:delivered";
 

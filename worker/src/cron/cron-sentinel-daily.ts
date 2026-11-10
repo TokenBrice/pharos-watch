@@ -1,5 +1,5 @@
 import { runCronSentinelSources } from "./cron-sentinel-result";
-import type { TelegramCreds } from "../telegram/delivery/telegram";
+import type { OperatorTelegramCreds as TelegramCreds } from "./cron-sentinel-rules";
 
 export interface DailyCronSentinelOptions {
   nowSec: number;
