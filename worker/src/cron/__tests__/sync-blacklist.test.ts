@@ -119,6 +119,11 @@ vi.mock("../../lib/blacklist/tron-order-recovery", async (importOriginal) => {
   return { ...actual, resolveTronBlacklistOrder: vi.fn(actual.resolveTronBlacklistOrder) };
 });
 
+vi.mock("../../lib/blacklist-gaps", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/blacklist-gaps")>();
+  return { ...actual, materializeBlacklistGapMetrics: vi.fn(actual.materializeBlacklistGapMetrics) };
+});
+
 vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
   ...(await importOriginal<typeof AlchemyLogsModule>()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 })),
@@ -223,8 +228,14 @@ import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS } from "../blacklist/config-sca
 import { backfillAmounts } from "../../lib/blacklist/amount-recovery";
 import { backfillTronBlacklistAmounts } from "../../lib/blacklist/tron-amount-recovery";
 import { resolveTronBlacklistOrder } from "../../lib/blacklist/tron-order-recovery";
+import * as tronReplayProvider from "../../lib/blacklist/tron-replay-provider";
+import { invalidateBlacklistDerivedCaches } from "../../lib/blacklist-cache-invalidation";
+import { materializeBlacklistGapMetrics } from "../../lib/blacklist-gaps";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
+import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY } from "../../lib/blacklist-cache-keys";
 
 const mockD1 = createMockD1Preset([
+  { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null } },
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },
@@ -331,6 +342,75 @@ describe("syncBlacklist", () => {
     vi.restoreAllMocks();
     sqliteFixtures.closeAll();
   });
+
+  it.each(["scan", "gaps", "own", "foreign-before", "foreign-after", "crash"])(
+    "fences producer publication across %s interleaving in SQLite", async (phase) => {
+      const { sqlite, db } = sqliteFixtures.open();
+      sqlite.function("unixepoch", () => Math.floor(Date.now() / 1000));
+      const now = Math.floor(Date.now() / 1000);
+      const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
+      const actualGaps = await vi.importActual<typeof import("../../lib/blacklist-gaps")>("../../lib/blacklist-gaps");
+      const actualOrder = await vi.importActual<typeof TronOrderRecoveryModule>("../../lib/blacklist/tron-order-recovery");
+      vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
+      installFetch(async () => new Response(JSON.stringify({ success: true, data: [] })));
+      await materializeBlacklistSummarySnapshot(db, now, now);
+      const invalidate = vi.fn(() => invalidateBlacklistDerivedCaches(db));
+      const stored = () => sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
+      const repairs = !["scan", "gaps"].includes(phase);
+      if (repairs) {
+        const insert = sqlite.prepare(`INSERT INTO blacklist_events
+          (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+           timestamp, config_key, amount_status, explorer_tx_url, explorer_address_url)
+          VALUES (?, 'USDT', 'tron', 'Tron', ?, '0x00000000000000000000000000000000000000ab', ?, 1, ?, ?,
+            'permanently_unavailable', '', '')`);
+        for (const [index, event] of ["blacklist", "unblacklist"].entries()) {
+          insert.run(`order-${index}`, event, String(index).repeat(64), now - 3600, CONTRACT_CONFIGS[2].configKey);
+        }
+        vi.spyOn(tronReplayProvider, "fetchTronBlockTransactionPositions").mockResolvedValue({
+          timestamp: now - 3600, positions: new Map([["0".repeat(64), 0], ["1".repeat(64), 1]]),
+        });
+      }
+      if (phase === "scan") {
+        vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockImplementationOnce(async () => {
+          await invalidate();
+          return completeEtherscanLogs();
+        });
+      }
+      if (phase === "gaps" || phase === "crash") {
+        vi.mocked(materializeBlacklistGapMetrics).mockImplementationOnce(async (...args) => {
+          if (phase === "crash") throw new Error("producer stopped after repair rotation");
+          const result = await actualGaps.materializeBlacklistGapMetrics(...args);
+          await invalidate();
+          return result;
+        });
+      }
+      vi.mocked(resolveTronBlacklistOrder).mockImplementationOnce(async (...args) => {
+        if (phase === "foreign-before") await invalidate();
+        const result = await actualOrder.resolveTronBlacklistOrder(...args);
+        if (phase === "foreign-after") await invalidate();
+        return result;
+      });
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const metadata = JSON.parse(result.metadata);
+      expect(invalidate).toHaveBeenCalledTimes(phase === "own" || phase === "crash" ? 0 : 1);
+      if (phase === "own" || phase === "crash") {
+        expect(metadata.tronOrderPositionsResolved).toBe(2);
+        expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
+        expect(sqlite.prepare("SELECT transaction_index FROM blacklist_events ORDER BY id").all())
+          .toEqual([{ transaction_index: 0 }, { transaction_index: 1 }]);
+        expect(metadata.producerSummarySnapshot).toBe(phase === "own");
+        if (phase === "crash") {
+          expect(stored()).toBeUndefined();
+          expect((await handleBlacklistSummary(db)).status).toBe(200);
+          expect(stored()).toBeDefined();
+        }
+      } else {
+        expect(metadata).toMatchObject({ producerSummarySnapshot: false, producerSnapshotReason: "superseded", reason: "superseded" });
+        expect(result.status).toBe("degraded");
+        expect(stored()).toBeUndefined();
+      }
+    },
+  );
 
   it("processes events and writes to DB on normal path", async () => {
     const db = makeDb();

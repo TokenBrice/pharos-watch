@@ -128,6 +128,7 @@ describe("configured blacklist history replay", () => {
       .toEqual({ amount_native: 12.5, source: "destroy_event", config_key: config.configKey });
     expect(fixture.sqlite.prepare("SELECT * FROM blacklist_current_balances WHERE id = 'unrelated'").get()).toEqual(retained[0]);
     expect(derivedCacheRows(fixture.sqlite)).toEqual([]);
+    expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
     expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = 'unrelated-cache'").get()).toEqual({ value: "{}" });
     expect(fixture.sqlite.prepare("SELECT cursor_value,last_block FROM blacklist_sync_state WHERE config_key = ?").get(config.configKey)).toEqual({ cursor_value: 200, last_block: 200 });
     const writes = fixture.imports.length;

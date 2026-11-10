@@ -499,40 +499,22 @@ describe("handleRemediateBlacklistAmountGaps", () => {
   it("updates rows to resolved when a destroy event explicitly emits zero", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue(receiptResponse(0));
 
-    const db = mockD1([
-      {
-        match: "FROM blacklist_events",
-        rows: [{
-          id: "gap-1",
-          stablecoin: "USDT",
-          chain_id: "avalanche",
-          event_type: "destroy",
-          address: affectedAddress,
-          block_number: 12_757_005,
-          timestamp: 1_648_614_948,
-          amount_status: "recoverable_pending",
-          amount_attempt_count: 0,
-          amount_last_attempted_at: null,
-          contract_address: null,
-          config_key: null,
-        }],
-      },
-      {
-        match: "UPDATE blacklist_events",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "FROM price_cache WHERE asset_id = ?",
-        rows: [],
-        first: null,
-      },
-      {
-        match: "DELETE FROM cache WHERE key = ?",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ]);
+    const { db, sqlite } = sqliteFixtures.open();
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_status, explorer_tx_url, explorer_address_url)
+      VALUES ('gap-1', 'USDT', 'avalanche', 'Avalanche', 'destroy', ?, '0xtx', 100,
+        1648614948, 'recoverable_pending', '', '')`).run(affectedAddress);
+    const cacheKeys = [
+      "blacklist:gap-metrics:producer:v3:86400:core",
+      "blacklist:gap-metrics:producer:v3:86400:full",
+      "blacklist:gap-metrics:v3:86400:core",
+      "blacklist:gap-metrics:v3:86400:full",
+      "blacklist:summary:producer:v5",
+    ];
+    for (const key of cacheKeys) {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', 1)").run(key);
+    }
 
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
       method: "POST",
@@ -566,22 +548,9 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       failed: 0,
     });
 
-    const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE blacklist_events"));
-    expect(updateCall).toBeTruthy();
-    expect(updateCall?.binds[0]).toBe(0);
-    expect(updateCall?.binds[1]).toBe(0);
-    expect(updateCall?.binds[3]).toBe("resolved");
-    const deletedCacheKeys = db.getHistory()
-      .filter((entry) => entry.sql.includes("DELETE FROM cache WHERE key = ?"))
-      .map((entry) => entry.binds[0])
-      .sort();
-    expect(deletedCacheKeys).toEqual([
-      "blacklist:gap-metrics:producer:v3:86400:core",
-      "blacklist:gap-metrics:producer:v3:86400:full",
-      "blacklist:gap-metrics:v3:86400:core",
-      "blacklist:gap-metrics:v3:86400:full",
-      "blacklist:summary:producer:v5",
-    ]);
+    expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_status FROM blacklist_events WHERE id = 'gap-1'").get())
+      .toEqual({ amount_native: 0, amount_usd_at_event: 0, amount_status: "resolved" });
+    for (const key of cacheKeys) expect(sqlite.prepare("SELECT 1 FROM cache WHERE key = ?").get(key)).toBeUndefined();
   });
 
 });

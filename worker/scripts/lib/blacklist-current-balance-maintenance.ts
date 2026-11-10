@@ -5,7 +5,7 @@ import {
   buildBlacklistCurrentBalanceValues,
   type BlacklistCurrentBalanceRow,
 } from "../../src/lib/blacklist-current-balances";
-import { getBlacklistDerivedCacheKeys } from "../../src/lib/blacklist-cache-keys";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../../src/lib/blacklist-cache-keys";
 import { sqlString, type RemoteD1Client } from "./remote-d1";
 
 export type CurrentBalanceMaintenanceRow = Omit<BlacklistCurrentBalanceRow, "id">;
@@ -56,6 +56,7 @@ export function applyBlacklistCurrentBalanceMaintenance(
     d1.executeStatements([
       // SAFETY: stage is UUID-hex-only; columns/policy are fixed and cache keys are sqlString literals.
       `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(", ")});
+       ${BLACKLIST_DERIVED_GENERATION_ROTATION_SQL}
        INSERT INTO blacklist_current_balances (${BLACKLIST_CURRENT_BALANCE_COLUMNS})
        SELECT ${BLACKLIST_CURRENT_BALANCE_COLUMNS} FROM ${stage} WHERE 1
        ${BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY};
