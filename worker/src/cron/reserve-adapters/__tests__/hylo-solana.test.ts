@@ -117,7 +117,7 @@ describe("hylo-solana", () => {
     expect(evaluateAdapterSnapshotAdmission(runResult, NOW_SEC).reasons).toContain("degraded-snapshot");
     const classification = buildReviewedReserveClassifications([zec], coin, NOW_SEC)[0];
     expect(classification.assetClass).toBe("cryptoasset");
-    expect(classification.issuerOrObligorKey).toBeNull();
+    expect(classification.issuerOrObligorKey).toContain("Near One Omni Bridge");
     expect(coin.reserves?.map((slice) => slice.pct)).toEqual(capture.verification.rows.map((row) => row.pct));
   });
 
