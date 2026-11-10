@@ -106,11 +106,11 @@ describe("adaptCircleTransparency", () => {
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
+      sourceTimestamp: Date.UTC(2026, 10, 5) / 1000,
       redemption: {
         capacityKind: "documented-bound",
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
+        sourceTimestamp: Date.UTC(2026, 10, 5) / 1000,
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
       },
@@ -121,13 +121,13 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
+      sourceTimestamp: Date.UTC(2026, 10, 5) / 1000,
     });
     expect(result.metadata?.diag).not.toHaveProperty("rawSumDeviation");
     expect(result.slices).toEqual([
-      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: expect.closeTo(71.93274975684314, 8), risk: "very-low" },
-      { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: expect.closeTo(15.575934417118246, 8), risk: "very-low" },
-      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: expect.closeTo(12.491315826038628, 8), risk: "very-low" },
+      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: expect.closeTo(51.96481770463897, 8), risk: "very-low" },
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: expect.closeTo(32.99758831039864, 8), risk: "very-low" },
+      { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: expect.closeTo(15.037593984962408, 8), risk: "very-low" },
     ]);
   });
 

@@ -357,19 +357,15 @@ describe("adaptAttestationPdfIndex", () => {
     }).warnings).toEqual([]);
   });
 
-  it("dates the captured Supercoin August report from its reviewed balance date", () => {
-    const reportUrl = "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf";
-    const params = parseLiveReserveAdapterParams("attestation-pdf-index", {
-      ...zarsc.liveReservesConfig.params,
-      reviewedReport: { url: reportUrl, balanceDate: "2026-08-31" },
-    });
+  it("dates the captured Supercoin September report from its reviewed balance date", () => {
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", zarsc.liveReservesConfig.params);
     const result = adaptAttestationPdfIndex(ZARSC_SUPERCOIN_HTML, params, {
       indexUrl: "https://www.supercoin.co.za/assurance-reports",
     });
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.parse("2026-08-31T00:00:00Z") / 1000,
+      sourceTimestamp: Date.parse("2026-09-30T00:00:00Z") / 1000,
       freshnessMode: "verified",
-      reportPdfUrl: reportUrl,
+      reportPdfUrl: "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf",
       compositionSource: "configured-static-slices",
     });
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");

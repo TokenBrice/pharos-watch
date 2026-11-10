@@ -220,16 +220,26 @@ jobs:
           until="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           echo "since=${since}" >> "$GITHUB_OUTPUT"
           echo "until=${until}" >> "$GITHUB_OUTPUT"
+          # One transient GitHub 5xx must not fail the weekly report: retry each
+          # read, and emit a page set only when the whole read succeeded.
+          gh_read() {
+            local out attempt
+            for attempt in 1 2 3; do
+              if out="$(gh api --paginate "$@")"; then printf '%s\n' "${out}"; return 0; fi
+              sleep "$((attempt * 15))"
+            done
+            return 1
+          }
           # Newest first, then a hard cap so the per-run job requests stay
           # inside the run's bounded API budget.
-          gh api --paginate \
+          gh_read \
             "repos/${GH_REPO}/actions/workflows/pull-request-checks.yml/runs?created=%3E%3D${since}&per_page=100" \
             | jq -s '[.[].workflow_runs[]] | map({id, createdAt: .created_at, conclusion}) | .[0:200]' \
             > .tmp/ci-weekly/runs.json
           # One jobs request per run. `filter=latest` drops superseded attempts,
           # so a re-run is not counted twice.
           while IFS= read -r run_id; do
-            gh api --paginate "repos/${GH_REPO}/actions/runs/${run_id}/jobs?per_page=100&filter=latest" \
+            gh_read "repos/${GH_REPO}/actions/runs/${run_id}/jobs?per_page=100&filter=latest" \
               | jq -c --argjson run "${run_id}" \
                 '.jobs[] | {runId: $run, name, conclusion, startedAt: .started_at, completedAt: .completed_at}'
           done < <(jq -r '.[].id' .tmp/ci-weekly/runs.json) > .tmp/ci-weekly/jobs.ndjson

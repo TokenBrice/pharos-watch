@@ -18,22 +18,22 @@ describe("adaptSgForgeCoinvertible", () => {
     ]);
     expect(result.metadata).toMatchObject({
       coinType: "eur",
-      circulationAmount: 139700459.12,
-      cashAmount: 139700459.12,
+      circulationAmount: 173644800.93,
+      cashAmount: 173644800.93,
       collateralizationRatio: 1,
       cashCoveragePct: 100,
       details: {
         bankBreakdown: [
-          { bankName: "Societe Generale", bankPct: 100, cashAmount: 139700459.12 },
+          { bankName: "Societe Generale", bankPct: 100, cashAmount: 173644800.93 },
         ],
       },
-      lastUpdate: "9/08/2026",
-      sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
+      lastUpdate: "10/11/2026",
+      sourceTimestamp: Date.UTC(2026, 10, 10) / 1000,
       freshnessMode: "verified",
       redemption: {
         capacityKind: "documented-bound",
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
+        sourceTimestamp: Date.UTC(2026, 10, 10) / 1000,
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
       },
@@ -50,14 +50,14 @@ describe("adaptSgForgeCoinvertible", () => {
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       coinType: "usd",
-      circulationAmount: 12422429.05,
-      cashAmount: 12422429.05,
+      circulationAmount: 11926206,
+      cashAmount: 11926206,
       collateralizationRatio: 1,
       cashCoveragePct: 100,
       details: {
         bankBreakdown: [
-          { bankName: "BNY", bankPct: 88.55, cashAmount: 11000000 },
-          { bankName: "Societe Generale", bankPct: 11.45, cashAmount: 1422429.05 },
+          { bankName: "BNY", bankPct: 8.38, cashAmount: 1000000 },
+          { bankName: "Societe Generale", bankPct: 91.62, cashAmount: 10926206 },
         ],
       },
     });
@@ -118,7 +118,7 @@ describe("adaptSgForgeCoinvertible", () => {
   });
 
   it("degrades when cash coverage falls below circulation", () => {
-    const undercoveredHtml = SAMPLE_HTML.replace(/139 700 459,12\s+€/, "138 000 000,00 €");
+    const undercoveredHtml = SAMPLE_HTML.replace(/173 644 800,93\s+€/, "138 000 000,00 €");
     const result = adaptSgForgeCoinvertible(undercoveredHtml, "eur");
 
     expect(result.metadata?.collateralizationRatio).toBeLessThan(0.995);
@@ -136,8 +136,8 @@ describe("adaptSgForgeCoinvertible", () => {
 
   it("throws when bank and cash bucket counts differ", () => {
     const mismatchedBucketsHtml = SAMPLE_HTML.replace(
-      /<div class="number">\s*1 422 429,05/,
-      '<div class="not-a-number">1 422 429,05',
+      /<div class="number">\s*10 926 206,00/,
+      '<div class="not-a-number">10 926 206,00',
     );
 
     expect(() => adaptSgForgeCoinvertible(mismatchedBucketsHtml, "usd")).toThrow("layout-changed");
@@ -146,14 +146,14 @@ describe("adaptSgForgeCoinvertible", () => {
 
 describe("fetchSgForgeCoinvertibleReserves", () => {
   const url = "https://www.sgforge.com/product/coinvertible/";
-  const nowSec = Date.parse("2026-08-10T00:00:00Z") / 1000;
+  const nowSec = Date.parse("2026-11-10T12:00:00Z") / 1000;
 
   it("fetches the EUR disclosure through the shared network harness", async () => {
     const { result, network } = await runAdapter("sgforge-coinvertible", "eurcv-societe-generale-forge", {
       network: installAdapterNetwork({ html: { [url]: SAMPLE_HTML } }),
       nowSec,
     });
-    expect(result.metadata).toMatchObject({ coinType: "eur", circulationAmount: 139700459.12 });
+    expect(result.metadata).toMatchObject({ coinType: "eur", circulationAmount: 173644800.93 });
     expect(network.requests).toEqual([{ url, method: "GET" }]);
   });
 
