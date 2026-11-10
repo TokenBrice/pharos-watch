@@ -90,6 +90,16 @@ async function seedJournal(f: AdmissionFixture, second = false, fail = false) {
   return join(out, "journal.jsonl");
 }
 
+async function replayFixture(second = false, fail = false) {
+  const f = fixture();
+  const journal = await seedJournal(f, second, fail);
+  return { f, journal, before: readFileSync(f.sidecarPath, "utf8") };
+}
+function expectUnchanged(f: AdmissionFixture, before: string) {
+  expect(readFileSync(f.sidecarPath, "utf8")).toBe(before);
+  expect(readFileSync(f.runtimePath, "utf8")).toBe("runtime-sentinel");
+}
+
 function replayArgs(f: AdmissionFixture, journal: string, extra: string[] = []) {
   return ["--ids", config.stablecoinId, "--out", join(f.directory, "replay"), "--replay", journal, ...extra];
 }
@@ -147,12 +157,10 @@ describe("conservation admission CLI journal and write boundary", () => {
   });
 
   it("replays the original bytes and record without credentials, network, semantics, or implicit merge", async () => {
-    const f = fixture();
-    const journal = await seedJournal(f);
+    const { f, journal, before } = await replayFixture();
     const network = vi.fn(() => { throw new Error("Replay reached network"); });
     vi.stubGlobal("fetch", network);
     vi.stubEnv("ALCHEMY_API_KEY", "");
-    const before = readFileSync(f.sidecarPath, "utf8");
     await runAdmissionAuditCli(replayArgs(f, journal), f);
     expect(network).not.toHaveBeenCalled();
     const bytes = readFileSync(journal, "utf8");
@@ -161,26 +169,20 @@ describe("conservation admission CLI journal and write boundary", () => {
     expect(readFileSync(join(f.directory, "replay", filename), "utf8")).toBe(readFileSync(join(f.directory, "seed", filename), "utf8"));
     expect(JSON.parse(readFileSync(join(f.directory, "replay", filename), "utf8")).journalSha256).toBe(createHash("sha256").update(bytes).digest("hex"));
     expect(existsSync(join(f.directory, "replay", "sidecar-draft.json"))).toBe(false);
-    expect(readFileSync(f.sidecarPath, "utf8")).toBe(before);
-    expect(readFileSync(f.runtimePath, "utf8")).toBe("runtime-sentinel");
+    expectUnchanged(f, before);
   });
 
   it("drafts complete passing windows without merging", async () => {
-    const f = fixture();
-    const journal = await seedJournal(f, true);
-    const before = readFileSync(f.sidecarPath, "utf8");
+    const { f, journal, before } = await replayFixture(true);
     await runAdmissionAuditCli(replayArgs(f, journal, draftArgs(f)), f);
     expect(draft(f)).toHaveLength(1);
     expect(draft(f)[0]).toMatchObject({ disposition: "admitted", decimals: config.decimals, invariant: "transfer-supply" });
     expect(draft(f)[0].windows).toHaveLength(2);
-    expect(readFileSync(f.sidecarPath, "utf8")).toBe(before);
-    expect(readFileSync(f.runtimePath, "utf8")).toBe("runtime-sentinel");
+    expectUnchanged(f, before);
   });
 
   it("does not admit a passing first window when the disjoint second window fails", async () => {
-    const f = fixture();
-    const journal = await seedJournal(f, true, true);
-    const before = readFileSync(f.sidecarPath, "utf8");
+    const { f, journal, before } = await replayFixture(true, true);
     await expect(runAdmissionAuditCli(replayArgs(f, journal, draftArgs(f)), f)).rejects.toThrow("audited window(s) not ok");
     expect(draft(f)).toEqual([]);
     expect(readFileSync(f.sidecarPath, "utf8")).toBe(before);
@@ -192,26 +194,22 @@ describe("conservation admission CLI journal and write boundary", () => {
     { chainId: "wrong-chain" }, { stablecoinId: "wrong-id" },
     { address: word(999).slice(0, 42) }, { configDecimals: config.decimals + 1 },
   ])("rejects semantic identity mismatch %j before output or merge", async (mismatch) => {
-    const f = fixture();
-    const journal = await seedJournal(f);
+    const { f, journal, before } = await replayFixture();
     writeFileSync(f.semanticPath, JSON.stringify({ ...f.review, ...mismatch }));
-    const before = readFileSync(f.sidecarPath, "utf8");
     await expect(runAdmissionAuditCli(replayArgs(f, journal, [...draftArgs(f), "--merge-into-sidecar"]), f)).rejects.toThrow("identity does not match the config");
     expect(existsSync(join(f.directory, "replay"))).toBe(false);
     expect(readFileSync(f.sidecarPath, "utf8")).toBe(before);
   });
 
   it("keeps unknown semantic verdicts pending even after a passing replay", async () => {
-    const f = fixture();
-    const journal = await seedJournal(f);
+    const { f, journal } = await replayFixture();
     writeFileSync(f.semanticPath, JSON.stringify({ ...f.review, semanticVerdict: "unproven-law" }));
     await runAdmissionAuditCli(replayArgs(f, journal, draftArgs(f)), f);
     expect(draft(f)).toEqual([]);
   });
 
   it("retains explicit unsupported evidence without manufacturing passing windows", async () => {
-    const f = fixture();
-    const journal = await seedJournal(f);
+    const { f, journal } = await replayFixture();
     writeFileSync(f.semanticPath, JSON.stringify({ ...f.review, semanticVerdict: "unsupported", unsupportedReason: "rebasing-supply-without-events" }));
     await expect(runAdmissionAuditCli(replayArgs(f, journal, [...draftArgs(f), "--merge-into-sidecar"]), f)).rejects.toThrow("audited window(s) not ok");
     expect(draft(f)[0]).toMatchObject({ disposition: "unsupported", unsupportedReason: "rebasing-supply-without-events", windows: [] });
@@ -223,18 +221,15 @@ describe("conservation admission CLI journal and write boundary", () => {
   });
 
   it("never admits or merges a failed replay with missing RPC exchanges", async () => {
-    const f = fixture();
-    const journal = await seedJournal(f);
+    const { f, journal, before } = await replayFixture();
     const missing = join(f.directory, "missing-exchanges.jsonl");
     writeFileSync(missing, `${readFileSync(journal, "utf8").split("\n")[0]}\n`);
-    const before = readFileSync(f.sidecarPath, "utf8");
     const network = vi.fn(() => { throw new Error("Replay reached network"); });
     vi.stubGlobal("fetch", network);
     await expect(runAdmissionAuditCli(replayArgs(f, missing, [...draftArgs(f), "--merge-into-sidecar"]), f)).rejects.toThrow();
     expect(network).not.toHaveBeenCalled();
     expect(draft(f)).toEqual([]);
-    expect(readFileSync(f.sidecarPath, "utf8")).toBe(before);
-    expect(readFileSync(f.runtimePath, "utf8")).toBe("runtime-sentinel");
+    expectUnchanged(f, before);
   });
 
   it("requires explicit draft intent before merge and leaves destinations untouched", async () => {
@@ -245,8 +240,7 @@ describe("conservation admission CLI journal and write boundary", () => {
   });
 
   it("explicitly replaces one identity and regenerates the byte-exact runtime projection", async () => {
-    const f = fixture();
-    const journal = await seedJournal(f);
+    const { f, journal } = await replayFixture();
     const previous = { version: 1, entries: reviewedSidecar.entries.map((entry) => entry.stablecoinId === config.stablecoinId ? { ...entry, decimals: config.decimals + 1 } : entry) };
     writeFileSync(f.sidecarPath, JSON.stringify(previous));
     await runAdmissionAuditCli(replayArgs(f, journal, [...draftArgs(f), "--merge-into-sidecar"]), f);

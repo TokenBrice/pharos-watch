@@ -1,5 +1,5 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
+import { getCache, setCache } from "../../../lib/db-cache";
 import { buildInClause, chunkArray } from "../../../lib/db";
 import { parseJsonObject } from "../../../lib/json-parse";
 import { logTelegramEvent } from "../../../telegram/common/log";
@@ -135,6 +135,7 @@ export async function loadFreshFreezeAlerts(
   cursor: number | null;
   droppedUnparsed?: number;
   deadLetteredUnparsed?: number;
+  holdCleanup?: D1PreparedStatement;
 }> {
   const latestRun = await db.prepare(
     "SELECT started_at FROM cron_runs WHERE job = 'project-tape' AND status = 'ok' ORDER BY started_at DESC, id DESC LIMIT 1",
@@ -199,7 +200,6 @@ export async function loadFreshFreezeAlerts(
     };
   }
 
-  await deleteCache(db, FREEZE_ROW_HOLD_KEY);
   logTelegramEvent({
     level: "error",
     message: "dead-lettered unparseable freeze Tape row after retry limit",
@@ -217,6 +217,7 @@ export async function loadFreshFreezeAlerts(
     cursor: unparseable.id,
     droppedUnparsed: 1,
     deadLetteredUnparsed: 1,
+    holdCleanup: db.prepare("DELETE FROM cache WHERE key = ?").bind(FREEZE_ROW_HOLD_KEY),
   };
 }
 

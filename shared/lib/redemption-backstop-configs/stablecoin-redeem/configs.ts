@@ -985,7 +985,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(
-      "The verified Ethereum USDC custodian exposes redeemFee as an 18-decimal fraction. At block 26141525 (2026-10-07T15:52:35Z), wasInitialized is true and redeemFee is zero; subsequent setMintRedeemFee calls require redeemFee < 1e18, giving a conservative 100% issuer-fee ceiling, not a fixed/current fee. previewRedeem floors decimal conversion and the fee deduction; transaction gas is separate.",
+      "The verified Ethereum USDC custodian implementation exposes redeemFee as an 18-decimal fraction. Historical implementation reads at block 26141525 (2026-10-07T15:52:35Z) returned wasInitialized true and redeemFee zero; they do not establish the proxy's fee. setMintRedeemFee requires redeemFee < 1e18, giving a conservative 100% issuer-fee ceiling, not a fixed/current fee. previewRedeem floors decimal conversion and the fee deduction; transaction gas is separate.",
       "formula",
     ),
     docs: [
@@ -1001,7 +1001,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail",
       "If the Frax balance-sheet snapshot is unavailable or stale, the route is intentionally left unrated rather than falling back to a static heuristic buffer",
-      "The initialized USDC custodian 0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10 and fee were pinned at Ethereum block 26141525 via https://api-ethereum-mainnet-erigon.n.dwellir.com; the 10,000 bps bound covers issuer fees only, not rounding, gas, or downstream USDC redemption.",
+      "The holder-facing USDC custodian is proxy 0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c, whose EIP-1967 slot resolves to implementation 0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10 at Ethereum block 26356959 (2026-11-06T16:18:59Z), pinned via https://api-ethereum-mainnet-erigon.n.dwellir.com. Inventory and execution must target the proxy; the 10,000 bps bound covers issuer fees only, not rounding, gas, or downstream USDC redemption.",
     ],
   }),
   "jupusd-jupiter": defineStablecoinRedeemConfig({

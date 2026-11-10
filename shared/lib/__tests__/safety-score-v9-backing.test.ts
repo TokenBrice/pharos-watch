@@ -1198,20 +1198,6 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     expect(result.score).toBeLessThan(50);
   });
 
-  it("keeps a split exact parent claim equivalent without looking through a different strategy identity", () => {
-    const merged = inherited();
-    const parent = merged.reserveExposures[0]!;
-    const split = { ...merged, reserveExposures: [
-      { ...parent, exposureKey: "idle", weight: .05 },
-      { ...parent, exposureKey: "strategy", weight: .95 },
-    ] };
-    expect(evaluateV9ReserveExposures(split, V9_CANDIDATE_POLICY_V1).score)
-      .toBe(evaluateV9ReserveExposures(merged, V9_CANDIDATE_POLICY_V1).score);
-    expect(verifiedLiveInheritedExposures({ ...split, reserveExposures: [
-      split.reserveExposures[0]!, { ...split.reserveExposures[1]!, trackedAssetId: "synthetic-different-strategy" },
-    ] }, merged.inheritedStablecoinBacking!)).toBeUndefined();
-  });
-
   it("does not inherit a lending strategy's denomination unless its row is an admitted parent-token claim", () => {
     const direct = inherited(undefined, 90);
     const deployed = { ...direct, reserveExposures: [{

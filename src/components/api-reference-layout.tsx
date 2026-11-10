@@ -62,7 +62,12 @@ export function ApiReferenceLayout({ sections, children }: ApiReferenceLayoutPro
     // Handle initial hash
     if (!initialHashHandled.current) {
       initialHashHandled.current = true;
-      const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      let hash: string;
+      try {
+        hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      } catch {
+        hash = "";
+      }
       if (hash && ids.includes(hash)) {
         requestAnimationFrame(() => {
           setActiveId(hash);

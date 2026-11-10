@@ -545,7 +545,7 @@ export async function observeMorphoLenderBook(
     const configured = meta?.contracts ?? [];
     const supplied = coin.contracts ?? [];
     if (configured.length === 0 || supplied.length !== configured.length ||
-      new Set(configured.map(row => row.chain)).size !== configured.length ||
+      new Set(configured.map(row => `${row.chain}:${canonicalEvmAddress(row.address)}`)).size !== configured.length ||
       configured.some(row => !supplied.some(candidate => candidate.chain === row.chain &&
         canonicalEvmAddress(candidate.address) === canonicalEvmAddress(row.address)))) fail("identity-mismatch");
     const deployments: LenderDeploymentObservation[] = [];

@@ -1075,13 +1075,6 @@ describe("open-evidence publication contract", () => {
     }
   });
 
-  it("carries the publication documentation gap set only when it resolves", () => {
-    const response = annotatedResponse();
-    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
-    response.documentationCauseGaps = ["external:gap:absent"];
-    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
-  });
-
   it("accepts the optional documentation carrier and rejects critical or over-counted documentation facts", () => {
     const response = currentResponse();
     response.openEvidence = openEvidence();

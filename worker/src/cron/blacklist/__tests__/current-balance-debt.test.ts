@@ -18,7 +18,7 @@ vi.mock("../../../lib/blacklist/tron-replay-provider", () => ({
   fetchTronBlockTransactionPositions: vi.fn(),
 }));
 import { fetchTronBlockTransactionPositions } from "../../../lib/blacklist/tron-replay-provider";
-import { fetchEvmTokenBalance } from "../../../lib/blacklist/balance-providers";
+import { fetchEvmTokenBalance, fetchTronTokenCurrentBalance } from "../../../lib/blacklist/balance-providers";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const circuits = { etherscanAllowed: true, tronGridAllowed: true };
@@ -33,6 +33,43 @@ function context() {
 afterEach(() => { fixtures.closeAll(); vi.clearAllMocks(); });
 
 describe("durable current snapshot reconciliation", () => {
+  it.each([["tron", 0], ["evm", 0], ["tron", 101]] as const)("passes 24 blocked %s debts with %i extra configs", async (blockedType, extraConfigs) => {
+    const { sqlite, db } = fixtures.open();
+    const tron = CONTRACT_CONFIGS.find((config) => config.chain.type === "tron" && config.stablecoin === "USDT")!;
+    const [blocked, eligible] = blockedType === "tron" ? [tron, ethereumConfig] : [ethereumConfig, tron];
+    const rows = Array.from({ length: 49 }, (_, i) => {
+      const config = i < 24 ? blocked : eligible;
+      return makeCacheRow({ id: `debt-${i}`, address: `address-${i}`, config_key: config.configKey,
+        chain_id: config.chain.chainId, contract_address: config.contractAddress });
+    });
+    await insertBlacklistRows(db, rows);
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    rows.forEach((row, i) => insert.run(`${CURRENT_BALANCE_DEBT_PREFIX}${row.id}`, row.id, i));
+    const prepare = db.prepare.bind(db);
+    vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      const bind = statement.bind.bind(statement);
+      statement.bind = (...values) => {
+        if (values.length > 100) throw new Error("D1 bound parameter limit exceeded");
+        return bind(...values);
+      };
+      return statement;
+    });
+    const registrySize = CONTRACT_CONFIGS.length;
+    CONTRACT_CONFIGS.push(...Array.from({ length: extraConfigs }, (_, i) => ({ ...ethereumConfig, configKey: `extra-${i}` })));
+    try {
+      await reconcileCurrentBalanceDebt(db, context(), {
+        etherscanAllowed: blockedType !== "evm", tronGridAllowed: blockedType !== "tron",
+      });
+    } finally { CONTRACT_CONFIGS.splice(registrySize); }
+    expect(fetchEvmTokenBalance).toHaveBeenCalledTimes(blockedType === "evm" ? 0 : 24);
+    expect(fetchTronTokenCurrentBalance).toHaveBeenCalledTimes(blockedType === "tron" ? 0 : 24);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM cache WHERE key GLOB ?").get(`${CURRENT_BALANCE_DEBT_PREFIX}*`))
+      .toEqual({ n: 25 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM cache WHERE key GLOB ? AND updated_at < 24")
+      .get(`${CURRENT_BALANCE_DEBT_PREFIX}*`)).toEqual({ n: 24 });
+  });
+
   it("recovers budget-skipped freeze capture on quiet maintenance without rewinding the event cursor", async () => {
     const { sqlite, db } = fixtures.open();
     const row = makeCacheRow({ id: "debt-freeze", config_key: ethereumConfig.configKey });

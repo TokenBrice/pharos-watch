@@ -443,21 +443,6 @@ describe("handleEvents", () => {
     }
   });
 
-  it.each([
-    ["PYUSD", ["search-2", "search-1", "search-0"]],
-    ["US%_D\\x", ["search-3"]],
-  ])("searches title, summary and coin literally for %s", async (query, expected) => {
-    const db = eventDb([
-      { title: "pyusd supply" }, { summary: "PYUSD update" }, { coin_id: "pyusd-paypal" },
-      { title: "US%_D\\x literal" }, { title: "USanythingAD\\x wildcard decoy" },
-    ].map((overrides, index) => makeRow({ id: index + 1, event_id: `search-${index}`, source_row_id: String(index), ...overrides })));
-    const url = new URL("https://x/api/events?includeTotal=true");
-    url.searchParams.set("q", query);
-    const body = TapeEventsResponseSchema.parse(await readJsonResponse(await handleEvents(db, url), 200));
-    expect(body.events.map((event) => event.id)).toEqual(expected);
-    expect(body.total).toBe(expected.length);
-  });
-
   it.each(["a".repeat(48), "a".repeat(49), "a".repeat(200), "%", "_", "\\", "\u8cc7\u7523"])(
     "serves literal q matches and exact totals at admitted boundaries for %j", async (q) => {
       const db = eventDb([

@@ -122,11 +122,11 @@
   "launchDate": "2024-04-12",
   "status": "quarantined",
   "listingStatusReview": {
-    "changedAt": "2026-10-08",
-    "reviewBy": "2026-11-07",
-    "reason": "September 29 issuer CETES totals and positive CoinGecko data leave MXN/USD denomination and circulating/native/represented supply scope unreconciled. Keep quarantined until fresh identity-bound pricing and a double-count-safe multichain circulating census agree.",
+    "changedAt": "2026-11-10",
+    "reviewBy": "2026-12-10",
+    "reason": "October 26 attestation: 67.46M net CETES at MXN 1.188; CoinGecko on November 10: 12.73M circulating at MXN 1.19. Denomination now agrees, but supply scope differs about 5.3x. Keep quarantined until a double-count-safe multichain circulating census agrees.",
     "source": {
-      "label": "Etherfuse attestation history: September 29 exact CETES mint totals, reviewed October 8",
+      "label": "Etherfuse attestation history: October 26 exact CETES mint totals, reviewed November 10",
       "url": "https://api.etherfuse.com/statement/attestation"
     }
   }

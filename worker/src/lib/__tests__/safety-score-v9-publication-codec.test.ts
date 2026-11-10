@@ -90,6 +90,7 @@ describe("Safety Score V9 publication codec", () => {
     expect(await serializeSafetyScoreV9Publication(publication)).toBe(dictionary);
     const old = JSON.parse(legacy), packed = JSON.parse(dictionary);
     expect(packed).toMatchObject({
+      kind: "safety-score-v9-publication",
       storageSchemaVersion: 2, encoding: "gzip-json-dictionary-base64-v1",
       payloadSha256: old.payloadSha256, uncompressedBytes: canonical.byteLength,
     });
@@ -353,20 +354,6 @@ describe("Safety Score V9 publication codec", () => {
     const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
     const stored = authenticatedBytes(envelope, Buffer.from([0xc3, 0x28]));
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(/not valid UTF-8/);
-  });
-
-  it("round-trips the canonical compressed publication", async () => {
-    const publication = makeWorkerSafetyScoreV9Publication();
-    const stored = await serializeSafetyScoreV9Publication(publication);
-
-    expect(JSON.parse(stored)).toMatchObject({
-      storageSchemaVersion: 2,
-      kind: "safety-score-v9-publication",
-      encoding: "gzip-json-dictionary-base64-v1",
-    });
-    await expect(
-      parseSafetyScoreV9Publication(stored),
-    ).resolves.toEqual(publication);
   });
 
   it("rejects invalid evidence inside a compressed publication with a valid payload digest", async () => {

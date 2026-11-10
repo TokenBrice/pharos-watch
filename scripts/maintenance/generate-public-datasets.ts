@@ -39,6 +39,7 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
+import { isRecord } from "@shared/lib/type-guards";
 import type { DepegEvent, SupplyObservationProvenance } from "@shared/types/market";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { formatUtcDateOnly } from "@shared/lib/format";
@@ -68,7 +69,6 @@ import {
 import {
   V9_OPEN_EVIDENCE_SEMANTICS,
   V9OpenEvidenceTotalsSchema,
-  type V9OpenEvidenceTotals,
 } from "@shared/types/safety-score-v9-open-evidence";
 import { z } from "zod";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
@@ -379,35 +379,6 @@ type ArchivedSafetyPublication = z.infer<typeof HistoricalResolvedReportCardsV9R
 type AcceptedSafetyPublication = CurrentSafetyPublication | ArchivedSafetyPublication;
 type AcceptedSafetyCard = AcceptedSafetyPublication["cards"][number];
 
-/**
- * The three server-computed question counts, copied from the publication's
- * `openEvidence` block. `semantics` travels with the counts so a definition
- * change never reads as a moved series, and the dataset never recomputes them.
- */
-interface ScoresLatestOpenEvidenceProjection {
-  semantics: typeof V9_OPEN_EVIDENCE_SEMANTICS;
-  totals: V9OpenEvidenceTotals;
-}
-
-interface ScoresLatestDisplayProjection {
-  version: 2;
-  snapshotDate: string;
-  capturedAtSec: number;
-  sourceSnapshotPath: string;
-  safety: {
-    identity: unknown;
-    asOfSec: number;
-    publishedAtSec: number;
-    sourceGenerations: Record<string, string>;
-    publicationHealth: unknown;
-    completeness: unknown;
-  } | null;
-  safetyUnavailableReason: "legacy-source-metadata-unavailable" | null;
-  openEvidence: ScoresLatestOpenEvidenceProjection | null;
-  /** Names why the counts are absent; a missing block never reads as zero questions. */
-  openEvidenceUnavailableReason: ScoresLatestOpenEvidenceUnavailableReason | null;
-}
-
 type ScoresLatestOpenEvidenceUnavailableReason =
   | "safety-publication-unavailable"
   | "open-evidence-unavailable";
@@ -417,6 +388,11 @@ const SCORES_LATEST_OPEN_EVIDENCE_UNAVAILABLE_REASONS = [
   "open-evidence-unavailable",
 ] as const satisfies readonly ScoresLatestOpenEvidenceUnavailableReason[];
 
+/**
+ * The three server-computed question counts, copied from the publication's
+ * `openEvidence` block. `semantics` travels with the counts so a definition
+ * change never reads as a moved series, and the dataset never recomputes them.
+ */
 const ScoresLatestOpenEvidenceProjectionSchema = z
   .object({
     semantics: z.literal(V9_OPEN_EVIDENCE_SEMANTICS),
@@ -443,6 +419,7 @@ const ScoresLatestDisplayProjectionSchema = z
       .nullable(),
     safetyUnavailableReason: z.literal("legacy-source-metadata-unavailable").nullable(),
     openEvidence: ScoresLatestOpenEvidenceProjectionSchema.nullable(),
+    /** Names why the counts are absent; a missing block never reads as zero questions. */
     openEvidenceUnavailableReason: z
       .enum(SCORES_LATEST_OPEN_EVIDENCE_UNAVAILABLE_REASONS)
       .nullable(),
@@ -464,13 +441,11 @@ const ScoresLatestDisplayProjectionSchema = z
     });
   });
 
+type ScoresLatestDisplayProjection = z.infer<typeof ScoresLatestDisplayProjectionSchema>;
+
 interface ScoresLatestProjection {
   rows: ScoreLatestRow[];
   displayProjection: ScoresLatestDisplayProjection | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function sameSafetyIdentity(left: unknown, right: unknown): boolean {

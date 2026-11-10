@@ -88,17 +88,44 @@ function parseStablecoinPublicationHealth(
     ? coverage.waivedActiveCount
     : 0;
   const missingActiveIds = stringArray(coverage.missingActiveIds);
-  const complete = coverage.complete === true
-    && expectedActiveCount === ACTIVE_IDS.size
+  const waivedActiveIds = stringArray(coverage.waivedActiveIds);
+  const ownCatalogComplete = coverage.complete === true
     && presentActiveCount + waivedActiveCount === expectedActiveCount
     && missingActiveIds.length === 0;
+  if (ownCatalogComplete && expectedActiveCount !== ACTIVE_IDS.size) {
+    // A lifecycle deploy landed after this publication: reconcile it against the
+    // deployed catalog. Price coverage partitions every published-catalog ID into
+    // priced, nominal or missing, so retired IDs drop out and newly listed IDs are
+    // named as missing. Lists that do not cover the published catalog stay incomplete.
+    const price = isRecord(metadata) && isRecord(metadata.activePriceCoverage) ? metadata.activePriceCoverage : null;
+    const publishedCatalog = new Set(price == null ? [] : [
+      ...stringArray(price.pricedActiveIds), ...stringArray(price.nominalReferenceIds), ...stringArray(price.missingActiveIds),
+    ]);
+    if (publishedCatalog.size === expectedActiveCount) {
+      const waived = new Set(waivedActiveIds);
+      const current = [...ACTIVE_IDS];
+      const reconciledMissing = current.filter((id) => !publishedCatalog.has(id));
+      const reconciledWaived = current.filter((id) => waived.has(id));
+      return {
+        status: reconciledMissing.length === 0 ? "complete" : "incomplete",
+        expectedActiveCount: current.length,
+        presentActiveCount: current.length - reconciledMissing.length - reconciledWaived.length,
+        waivedActiveCount: reconciledWaived.length,
+        missingActiveIds: reconciledMissing,
+        waivedActiveIds: reconciledWaived,
+        expiredWaiverIds: stringArray(coverage.expiredWaiverIds),
+        observedAt,
+      };
+    }
+  }
+  const complete = ownCatalogComplete && expectedActiveCount === ACTIVE_IDS.size;
   return {
     status: complete ? "complete" : "incomplete",
     expectedActiveCount,
     presentActiveCount,
     waivedActiveCount,
     missingActiveIds,
-    waivedActiveIds: stringArray(coverage.waivedActiveIds),
+    waivedActiveIds,
     expiredWaiverIds: stringArray(coverage.expiredWaiverIds),
     observedAt,
   };

@@ -43,23 +43,15 @@ See [Failure handling](#failure-handling) for corrective retries, publication ho
 
 Total market cap and supply change/velocity use `core-stablecoins-v1`: active `core-stablecoin` and `cash-equivalent` listings. PSI contribution uses `CORE_PSI_ELIGIBLE_IDS`, which also includes reviewed historical PSI assets. Tracked variants and stable-value investments remain monitored in depeg, DEWS, safety, yield and liquidity signals. Mint/burn aggregates use the active tracked-pair universe described below. New daily snapshots persist `aggregateUniverse: "core-stablecoins-v1"`; weekly rollups prefer marked rows to avoid mixing legacy and core totals.
 
-Current aggregate supply carries `supplyCoverage` (complete, observed, unavailable and optional carried counts/IDs) against that full active universe: unavailable buckets stay out of the known subtotal, observed zero remains a measured member, and prompts present incomplete current sums as known subtotals, never full ecosystem totals. A core row restored by the DefiLlama-outage fallback (`supplyRestoreMode: "outage-fallback"`) is a carry from an earlier publication, not this run's observation: it is excluded from the observed count, `totalMcapUsd`, the seven-day delta and the biggest-mover candidates, and named through `carriedCount` / `carriedIds`, so coverage stays incomplete. Routine main-path carries (`supplyRestored` without that mode) keep their existing treatment. The DEWS ALERT+ supply census applies the same outage-only exclusion and reports `carriedCount` / `carriedIds` in `alertPlusSupplyCoverage`. ATH comparison and historical market-cap trajectories require proven complete coverage. Safety-map summaries separately persist known-mapped-supply coverage, including per-id reasons for unavailable values, through archive parsing.
+See [Aggregate supply coverage and comparability](#aggregate-supply-coverage-and-comparability) for observed-member accounting, carried-supply exclusions and historical comparison rules.
 
-New daily captures also include optional `supplyCoverage.memberFingerprint`: SHA-256 of JSON `[aggregateUniverse, sorted full-universe member IDs]`. This identifies membership, not supply values or observation freshness. Snapshot and archive response schemas admit coverage additively; legacy rows without it remain readable but unproven. The web archive and market snapshot label partial or legacy amounts as known subtotals with observed-member counts or “coverage unproven”; no observed members means unavailable rather than a total of zero.
-
-After the coverage cutover, legacy rows cannot populate market-cap history: ATH is absent until a complete core-universe digest is stored; the seven-day trajectory then rebuilds from complete rows. PSI and gauge history are unaffected.
-
-Total and per-coin ATH context uses absolute percentage distance with above/below wording; equality is at the high, not above it. These comparisons keep the complete-coverage and historical-context admission rules.
-
-Weekly market-cap ranges and endpoint comparisons also require explicit complete supply coverage: legacy rows without coverage proof and partial known subtotals publish `N/A (supply-coverage-incomplete)` instead of ecosystem totals, while unrelated observed weekly metrics remain available. Monetary-threshold depeg/recovery/liquidity candidates with unavailable supply are withheld with named quality findings; the active incident count still retains the observed open event.
-
-Depeg statistics are independent of editorial display lists. `activeDepegCount` counts every tracked, non-frozen open event; `resolvedDepegCount` counts every tracked, non-frozen positively recovered event in the last 24h before supply, peak-size and top-five filters. Failed reads persist null counts with `active-depegs-query` / `resolved-depegs-query`, which the prompt and captured frontend never turn into zero. `depegSignalKeys` persists the full active/resolved incident identities (`stablecoinId:startedAt:kind`) before display filtering for weekly deduplication. Legacy editions lacking those identities cannot establish a complete unique-signal statistic and publish unavailable, not a count reconstructed from capped rows.
+Depeg statistics are independent of editorial display lists. `activeDepegCount` counts every tracked, non-frozen open event whose audit verdict is not `disputed` or `false_positive`; `resolvedDepegCount` counts every tracked, non-frozen positively recovered event in the last 24h on the same verdict exclusion, before supply, peak-size and top-five filters. Disputed rows remain in evidence rows and `depegSignalKeys` but are never counted by either daily counter. Failed reads persist null counts with `active-depegs-query` / `resolved-depegs-query`, which the prompt and captured frontend never turn into zero. `depegSignalKeys` persists the full active/resolved incident identities (`stablecoinId:startedAt:kind`) before display filtering for weekly deduplication. Legacy editions lacking those identities cannot establish a complete unique-signal statistic and publish unavailable, not a count reconstructed from capped rows.
 
 The risk tape uses the full `activeDepegCount` as its absence authority: only an observed zero with no failed read supports “None active.” A positive count without admitted sized details retains that count and marks severity/supply unavailable; an unknown count stays unavailable, and neither state can certify a CALM regime merely because detail rows were withheld.
 
 DEWS persists full admitted ALERT+ `alertPlusMcapUsd` and `alertPlusSupplyCoverage` before supply-size or top-five presentation filters. Missing supply remains unavailable; observed zero is a measured member. `bandChangeCount` counts all rank-changing comparisons before slicing and is null without a prior generation. Regime, breadth candidates and risk tape use these aggregates, never display-list sums or lengths; partial known supply can establish a stress threshold but cannot certify CALM. Legacy captures without full aggregates stay unavailable, not reconstructed from displayed coins.
 
-Organic grade accounting is separate from the top-five `gradeTransitions` presentation list. `gradeTransitionAccounting` persists the half-open 48-hour capture window, comparable Safety identity, eligible distinct count and every slim `{historyId, recordedAt}` pair. The collector applies tracked graded-coin supply >$10M, active model/schema/methodology/policy/build and the existing bump exclusions before counting or limiting details. It drains fixed 500-row keyset pages on the existing recorded-at/history-id index and reconciles them with `COUNT(DISTINCT history_id)` before marking `complete: true`; a failed drain or mismatch persists explicit incomplete accounting without a partial identity list, so the prompt renders grade movers unavailable with that reason, not "none recorded". A transition with a null from/to score (NR) has no measured delta, direction or impact size. Canonical Safety transition classification is unchanged.
+See [Organic grade-transition accounting](#organic-grade-transition-accounting) for complete capture windows and identity reconciliation before presentation limits.
 
 | Category | Source | Key signals |
 |----------|--------|-------------|
@@ -98,13 +90,7 @@ Optional source fields are populated only when their evidence exists; absent evi
 `safetyMap` is another optional, archive-compatible field. It stores the exact dated image URL, manifest capture (including the validated summary), and `current` or `carried-forward` freshness with whole-day age. It is persisted only when the summary is complete and capture-matched and the edition's canonical `safetyContext` is available; older rows and degraded editions omit it.
 `shared/types/digest-safety-map-contract.ts` owns the shared map field shapes and three distinct profiles: strict canonical Zod trims text and rejects unknown keys; canonical readers preserve text and project admitted fields; archive readers additionally admit relative dated URLs, legacy summary locations and missing age (projected null). Archive projection does not import the full digest/Safety schema graph. Reader coverage reconciliation and invalid optional-summary omission remain separate from strict structural validation.
 
-**Deterministic intelligence evidence contract.** The prompt is intentionally presentation-capped: top-N rows (active depegs, yield anomalies, DEWS elevations) are model context only. `changeSummary` and `forwardLookOutcomes` evaluate each prior target against the full current canonical evidence set by stable event or asset id, with legacy symbol fallback only for archived rows lacking an id; absence from a top-N or admission slice is never evidence that a target cleared.
-
-A depeg recovery claim requires a positively observed closure classified by `classifyDepegClosure` as `recovered` or `legacy_recovered`. Omission, top-N demotion, failed read, coverage loss, supersession, orphaning or unknown closure is unavailable, not recovery. Excluded or failed evidence yields an `unavailable` outcome and is excluded from both the daily hit-share and weekly hit/miss denominators.
-
-Depeg movement and threshold claims require two fresh current observations on the same event, asset and peg/reference basis: the prior observation that armed the comparison and the current observation that evaluates it. Current-to-peak, peak-to-current or peak-to-peak comparisons cannot establish depeg movement or threshold outcomes; stored peaks remain historical context.
-
-These deterministic evidence and publication contracts are not a scoring-formula or methodology-version change; they apply prospectively and never rewrite published history.
+See [Deterministic intelligence evidence policy](#deterministic-intelligence-evidence-policy) for full-evidence matching, recovery admission and comparable observations.
 
 The digest intelligence pass runs after editorial candidates are built and before the LLM prompt is assembled. It adds:
 
@@ -117,9 +103,9 @@ The digest intelligence pass runs after editorial candidates are built and befor
 
 Digest pillar reads use the accepted cohort; identity/FTQ use the score index. Both bind publication and health. Missing or mismatched cohorts are unavailable with a machine-readable reason. Held/unavailable states stay explicit; public bytes stay unchanged.
 
-The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, matching `/api/mint-burn-flows`. Only an unproved 24h window degrades it; valuation-only gaps use the bounded detector.
+The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, matching `/api/mint-burn-flows`. An unproved 24h scan window degrades it; unresolved or unknown flow classification withholds FTQ with its classification reason. Valuation-only gaps use the bounded detector.
 
-**Bank Run Gauge — one producer, one universe.** `refreshAggregateMintBurnFlowCache()` (`worker/src/api/mint-burn-flows.ts`) computes the gauge over active tracked pairs with tracked-chain mcap weighting. The digest reads that publication through `worker/src/lib/mint-burn-published-gauge.ts` and re-bins it; it never recomputes from `mint_burn_hourly`. Malformed, future-dated or >24h-old publications are dropped and degrade the run (`mint-burn-gauge-malformed` / `mint-burn-gauge-future-timestamp` / `mint-burn-gauge-expired`); >2h-old publications (≈4 missed 30-minute producer runs) remain usable but mark `mint-burn-gauge-stale`. Missing rows omit the section and record quality finding `mint-burn-gauge-missing` in `dataQuality.degradedSources` without independently degrading cron health, and the missing-input regime floor still applies.
+See [Bank Run Gauge producer contract](#bank-run-gauge-producer-contract) for publication consumption and freshness handling.
 
 Flow captures retain original closed-hour windows and independent publication/body clocks; unavailable legacy provenance stays null. [Flow provenance details](#flow-provenance-details) never infer generation identity from a timestamp.
 
@@ -127,7 +113,7 @@ DEX claims pass collector comparability, independent editorial corroboration and
 
 ### LLM call
 
-Both jobs wrap the shared 12-minute LLM deadline in a 14-minute cron budget: two minutes remain for persistence, distribution and logging, plus one before the platform's 15-minute ceiling. D1 lease TTL adds 60 seconds to the effective wrapper budget. Daily uses `heartbeatSec = 30` / `maxRenewFailures = 3` in `worker/src/handlers/scheduled/context.ts`; other jobs retain defaults.
+Both jobs wrap the shared 12-minute LLM deadline in a 14-minute cron budget: two minutes remain for persistence, distribution and logging, plus one before the platform's 15-minute ceiling. D1 lease TTL adds 60 seconds to the effective wrapper budget. Both digest jobs use `heartbeatSec = 30` / `maxRenewFailures = 3`, defined as the shared `LONG_RUNNING_LEASE_OPTIONS` in `shared/lib/scheduled-runner-registry.ts` and attached to the digest task policy; jobs without `leaseOptions` retain the TTL-derived defaults.
 
 - **Model:** daily typed configuration defaults to `claude-opus-5-5` (Claude Opus 5.5) at `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and `output_config.effort = "high"`. Editions retain requested/served model and effort to audit voice drift across server-side refusal fallback.
 - **Reasoning:** no `budget_tokens` or sampling parameters are sent.
@@ -176,7 +162,7 @@ If parsing or content validation produces hard issues, the worker sends one corr
 
 When a blocking hard issue remains after the applicable retry, the digest row is stored with `digest_meta.qualityGate = "blocked"` for operator inspection: blocked rows are excluded from every public read endpoint, from edition numbering, from recent-copy variety context, and from lead-streak history because they never reached readers, and external delivery is skipped as `quality-gate`. Style-only findings in shadow do not set `qualityGate = "blocked"`. Advisory findings remain visible in run metadata without changing cron health. `meta.coins` labels are cross-checked against the copy (`meta-coins-mismatch`).
 
-`suppressed-lead` is a hard issue: a declared `meta.leadSignalId` that resolves to a suppressed editorial candidate fails validation instead of publishing. Suppression previously lived only in prompt instructions, which is how edition #179's suppression-eligible USDS liquidity claim reached X and Telegram. See [DEX liquidity admission gate](#dex-liquidity-admission-gate).
+`suppressed-lead` is a hard issue: a declared `meta.leadSignalId` that resolves to a suppressed editorial candidate fails validation instead of publishing. See [DEX liquidity admission gate](#dex-liquidity-admission-gate).
 
 The active-depeg collector also computes **lifecycle review flags** over the full open-event set (`worker/src/lib/depeg-lifecycle.ts`): `stalled-collapse` (open ≥21d at ≥2,500 bps live deviation) and `chronic-shallow` (open ≥30d under 300 bps). USD-quote events measure against the current authoritative peg reference; native-quote events measure against the event-native reference. Flags are persisted to the `depeg:lifecycle-flags` cache entry and appended to cron metadata as `lifecycle-review: SYMBOL:kind|…` for owner review — see [`runbooks/depeg-lifecycle-review.md`](./runbooks/depeg-lifecycle-review.md). A failed active-depeg read, a stale stablecoins price cache, an open event without readable supply, or an open USD event without a usable current reference (`active-depeg-reference-unavailable`) leaves the prior cache entry in place instead of writing a fresh empty queue. Flagging never freezes or closes anything automatically.
 
@@ -192,6 +178,8 @@ All collectors now distinguish "no signal" from "collector failed". If the activ
 
 Regime-critical degraded sources (active depegs, PSI, supply, Safety) also raise the digest-publication watchdog's `daily-inputs`/`weekly-inputs` condition, and the weekly recap escalates only those regime-critical members of `degradedSourcesThisWeek` into its degraded reasons rather than reporting a clean run; chronic partial-cohort supply metadata (for example `supply-current-unavailable`) stays recorded on the persisted input for the prompt and watchdog, never a standing cron condition.
 
+The watchdog distinguishes missing edition rows from readable inputs and unreadable evidence. Missing rows remain owned by row-presence conditions; valid objects may omit empty degraded-source arrays. Malformed input JSON, non-object inputs or daily `dataQuality`, and present degraded-source fields other than string arrays keep the input condition stale with `digest-input-data-unreadable`, so they cannot report recovery.
+
 Staleness degrades without implying currency. PSI samples older than 2h record `psi-sample-stale`; fallback admits a completed daily observation window ending ≤24h ago, not a midnight key treated as publication time. Future clocks are rejected. Without either source, `stabilityIndex` is null and regime-critical `psi-unavailable` prevents CALM. PSI contributors older than 2h are dropped; stablecoins outside 600 seconds withhold live severity; yield rows older than 24h are filtered.
 
 A failed read is never published as an optimistic observation. `classifyRegime()` floors the regime at WATCHFUL whenever `degradedSources` names the active-depeg, DEWS-stress, or Bank Run Gauge collector, whenever the FTQ classification is unavailable, or whenever a counted active depeg is missing from the capped/sized detail list, so a collector that could not read (or a withheld detail row) cannot publish CALM; an accepted DEWS generation older than two `compute-dews` intervals is withheld as `dews-published-generation`. The risk tape prints "Unavailable" rather than "No active peg breaks" when the active-depeg query failed; and an absent prior DEWS generation publishes `yesterdayBandCounts: null`, which the prompt renders as "vs yesterday: unavailable" instead of an all-zero band distribution. On the weekly side, `rollupDigestInputs()` publishes `null` for every cross-day total that does not have all seven daily editions behind it, and the weekly prompt prints `N/A (n of 7 daily editions)` rather than a partial sum presented as a week. A coin without a `circulatingPrevWeek` bucket leaves both sides of the 7d supply aggregate instead of having its absent baseline published as full-size growth.
@@ -206,21 +194,7 @@ Change detection and trigger matching key depegs by `stablecoinId` (falling back
 
 ## Storage
 
-**Table:** `daily_digest`
-
-```sql
-CREATE TABLE daily_digest (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  generated_at INTEGER NOT NULL,   -- Unix seconds
-  digest_text  TEXT    NOT NULL,   -- tweet-sized text
-  digest_title TEXT,               -- headline
-  digest_extended TEXT,            -- longer editorial
-  digest_meta    TEXT,             -- editorial metadata (lead, tone, coins) for variety enforcement
-  input_data   TEXT    NOT NULL    -- full DigestInputData JSON for reconstruction
-);
-
-CREATE INDEX idx_daily_digest_generated_at ON daily_digest(generated_at);
-```
+**Table:** `daily_digest` — DDL and indexes are owned by `worker/migrations/0000_baseline.sql` and later additive migrations; object names are inventoried in `worker/migrations/EXPECTED_SCHEMA.txt`. The paragraphs below own `input_data` and `digest_meta` semantics; `generated_at` is Unix seconds, `digest_text` the tweet-sized published text, `digest_title` the headline and `digest_extended` the longer editorial.
 
 The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data. It includes the deterministic intelligence fields listed above and the authored `safetyContext` when generated by the current pipeline. When one of the early collectors fails, `input_data.degradedSources` records the failed collector keys (`active-depegs-query`, `blacklist-activity-query`, `supply-velocity-query`, etc.).
 
@@ -281,7 +255,7 @@ Existing-edition recovery reads durable X marker/ledger and Telegram outbox stat
 
 ### Web archive and sitemap policy
 
-`/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Every detail page stays live as a durable archive/citation page. Indexing is split: weekly recaps are the indexable, sitemap-listed unit; every daily edition emits `noindex, follow` from publication and stays out of `src/app/sitemap.ts` and the public route inventory. This replaced the 2026-10-11 rolling 30-day window for dailies under the 2026-10-25 SEO plan (NQ6): Search Console left most dailies crawled but not indexed, and the window made each edition flip from index to noindex. `isDigestIndexable` in `src/lib/digest-registry.ts` is the single authority. The release SEO gate's archive-continuity check accepts a digest URL that leaves the sitemap while its HTML is still exported.
+`/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Every detail page stays live as a durable archive/citation page. Indexing is split: weekly recaps are the indexable, sitemap-listed unit; every daily edition emits `noindex, follow` from publication and stays out of `src/app/sitemap.ts` and the public route inventory. `isDigestIndexable` in `src/lib/digest-registry.ts` is the single authority. The release SEO gate's archive-continuity check accepts a digest URL that leaves the sitemap while its HTML is still exported.
 
 The interactive archive may narrow the visible wire table with URL-addressable `view` (`all`, `daily`, or `weekly`), `month`, and `q` (title/body search) parameters. These controls do not alter the server-rendered crawlable link index or the sitemap's digest membership.
 
@@ -329,11 +303,12 @@ If any of the four are absent or blank, Twitter posting returns `skipped: no-cre
 
 `extended` replaces `text`. The optional map summary uses canonical Safety Score context and tier market caps, before the edition kicker after the map photo. `Standing:`, `New Cemetery Entries` and `Tracking Changes` retain expandable blockquotes. New editions omit the retired personalized-recap CTA; queued immutable payloads stay unchanged. Map URL/date/media state remain durable: sendPhoto acceptance is persisted before text resumes from its chunk cursor, retryable photo failure does not advance text, and text retries never resend an accepted photo. Mapless editions remain text-only. Safe structural splitting stays below 4096 characters and persists every chunk before external requests.
 
-Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/telegram/digest/digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes:
+Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/telegram/digest/digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body as expandable blockquotes, except the frozen list, which renders as plain lines:
 
 - `New Cemetery Entries` for newly added cemetery rows
 - `Tracking Changes` for newly tracked coins, split into live tracked vs pre-launch
 - `Launched` for pre-launch coins promoted to active since the last post. A promoted coin is announced here once and removed from the tracked-additions queue, so it does not also appear as newly tracked. This is how launches reach users now that per-user launch alerts are retired.
+- `Newly Frozen Stablecoins` for coins newly moved to the frozen set, each with its registry obituary (`frozenDetected`/`frozenSymbols` in appendix metadata).
 
 Every free-form appendix field (symbol, name, header, footer) is dash-normalised before escaping, so curated data containing U+2012-U+2015 cannot trip the hard delivery-wrapper `no-clause-dash` rule and re-block later editions.
 
@@ -341,7 +316,9 @@ Active tracked additions are queued earlier by `worker/src/cron/sync-stablecoins
 
 Appendix preparation returns deferred `successActions` for storage with the immutable edition; it applies only safe baseline seeds immediately, never delivery-success writes. The outbox alone commits those actions atomically with `sent` after accepted media and every text chunk. Each cache write repeats the terminal transition's exact edition/state/owner/generation/media/cursor predicate. Losing that fence changes neither appendix nor edition state; SQL failure rolls back the full batch. Failed, partial or ambiguous delivery therefore does not consume pending additions.
 
-`digest-appendices.ts` uses cache keys `telegram:cemetery-snapshot`, `telegram:cemetery-footer-index`, `telegram:tracked-stablecoins-snapshot`, `telegram:tracked-stablecoins-pending` (sync-stablecoins queues newly active tracked IDs), and `telegram:prelaunch-stablecoins-snapshot` (pre-launch IDs at the last post; an ID that is now active is a launch). Seed/reseed identity snapshots without consuming queued tracked additions; append those on next successful post. Snapshot advancement is edition-bound and commits only after all exact chunks are accepted; retry reuses chunks and ambiguity preserves notices for reconciliation. Cemetery identity is stable dead-coin `id`; legacy `llama:*` and `symbol|deathDate|name` entries compare equivalent but new snapshots rewrite stable IDs only. Tracked identity is canonical Pharos ID.
+Tracked and launch notices use the `telegram:tracked-stablecoins-consumed` action key with evaluated IDs, keeping the stored `{key, value}` shape. Finalization subtracts only those IDs from the current pending set, preserving notices queued after preparation. Non-announceable tracked IDs retire silently without an empty heading; the snapshot diff announces a later return to active status. An older Worker stores the action harmlessly, allowing a repeat. The new finalizer ignores legacy pending-list replacement actions because their evaluated-ID baseline is unknown. Malformed pending data retains its value and timestamp and logs `invalid_tracked_pending`; the other success actions and `sent` still commit.
+
+`digest-appendices.ts` uses cache keys `telegram:cemetery-snapshot`, `telegram:cemetery-footer-index`, `telegram:tracked-stablecoins-snapshot`, `telegram:tracked-stablecoins-pending` (sync-stablecoins queues newly active tracked IDs), `telegram:prelaunch-stablecoins-snapshot` (pre-launch IDs at the last post; an ID that is now active is a launch), and `frozen_ids_snapshot` (frozen IDs at the last post; an ID now in the frozen set is an addition; the literal key has no `telegram:` prefix). Seed/reseed identity snapshots without consuming queued tracked additions; append those on next successful post. Snapshot advancement is edition-bound and commits only after all exact chunks are accepted; retry reuses chunks and ambiguity preserves notices for reconciliation. Cemetery identity is stable dead-coin `id`; legacy `llama:*` and `symbol|deathDate|name` entries compare equivalent but new snapshots rewrite stable IDs only. Tracked identity is canonical Pharos ID.
 
 Immutable edition storage, safety-identity admission (including the safety-free degraded exception), delivery states and terminal reconciliation belong to the [Telegram outbox contract](./runbooks/telegram-digest-outbox.md#contract). The five-minute digest-trigger slot drains due pending editions without rerunning Anthropic or re-rendering copy.
 
@@ -528,6 +505,38 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 
 ## Generation Implementation Appendix
 
+### Aggregate supply coverage and comparability
+
+Current aggregate supply carries `supplyCoverage` (complete, observed, unavailable and optional carried counts/IDs) against the full active universe defined in [Data collection](#data-collection): unavailable buckets stay out of the known subtotal, observed zero remains a measured member, and prompts present incomplete current sums as known subtotals, never full ecosystem totals. A core row restored by the DefiLlama-outage fallback (`supplyRestoreMode: "outage-fallback"`) is a carry from an earlier publication, not this run's observation: it is excluded from the observed count, `totalMcapUsd`, the seven-day delta and the biggest-mover candidates, and named through `carriedCount` / `carriedIds`, so coverage stays incomplete. Routine main-path carries (`supplyRestored` without that mode) keep their existing treatment. The DEWS ALERT+ supply census applies the same outage-only exclusion and reports `carriedCount` / `carriedIds` in `alertPlusSupplyCoverage`. ATH comparison and historical market-cap trajectories require proven complete coverage. Safety-map summaries separately persist known-mapped-supply coverage, including per-id reasons for unavailable values, through archive parsing.
+
+New daily captures also include optional `supplyCoverage.memberFingerprint`: SHA-256 of JSON `[aggregateUniverse, sorted full-universe member IDs]`. This identifies membership, not supply values or observation freshness. Snapshot and archive response schemas admit coverage additively; legacy rows without it remain readable but unproven. The web archive and market snapshot label partial or legacy amounts as known subtotals with observed-member counts or “coverage unproven”; no observed members means unavailable rather than a total of zero.
+
+After the coverage cutover, legacy rows cannot populate market-cap history: ATH is absent until a complete core-universe digest is stored; the seven-day trajectory then rebuilds from complete rows. PSI and gauge history are unaffected.
+
+Total and per-coin ATH context uses absolute percentage distance with above/below wording; equality is at the high, not above it. These comparisons keep the complete-coverage and historical-context admission rules.
+
+Weekly market-cap ranges and endpoint comparisons also require explicit complete supply coverage: legacy rows without coverage proof and partial known subtotals publish `N/A (supply-coverage-incomplete)` instead of ecosystem totals, while unrelated observed weekly metrics remain available. Monetary-threshold depeg/recovery/liquidity candidates with unavailable supply are withheld with named quality findings; the active incident count still retains the observed open event.
+
+### Organic grade-transition accounting
+
+Organic grade accounting is separate from the top-five `gradeTransitions` presentation list. `gradeTransitionAccounting` persists the half-open 48-hour capture window, comparable Safety identity, eligible distinct count and every slim `{historyId, recordedAt}` pair. The collector applies tracked graded-coin supply >$10M, active model/schema/methodology/policy/build and the existing bump exclusions before counting or limiting details. It drains fixed 500-row keyset pages on the existing recorded-at/history-id index and reconciles them with `COUNT(DISTINCT history_id)` before marking `complete: true`; a failed drain or mismatch persists explicit incomplete accounting without a partial identity list, so the prompt renders grade movers unavailable with that reason, not "none recorded". A transition with a null from/to score (NR) has no measured delta, direction or impact size. Canonical Safety transition classification is unchanged.
+
+### Deterministic intelligence evidence policy
+
+**Deterministic intelligence evidence contract.** The prompt is intentionally presentation-capped: top-N rows (active depegs, yield anomalies, DEWS elevations) are model context only. `changeSummary` and `forwardLookOutcomes` evaluate each prior target against the full current canonical evidence set by stable event or asset id, with legacy symbol fallback only for archived rows lacking an id; absence from a top-N or admission slice is never evidence that a target cleared.
+
+A depeg recovery claim requires a positively observed closure classified by `classifyDepegClosure` as `recovered` or `legacy_recovered`. Omission, top-N demotion, failed read, coverage loss, supersession, orphaning or unknown closure is unavailable, not recovery. Excluded or failed evidence yields an `unavailable` outcome and is excluded from both the daily hit-share and weekly hit/miss denominators.
+
+Depeg movement and threshold claims require two fresh current observations on the same event, asset and peg/reference basis: the prior observation that armed the comparison and the current observation that evaluates it. Current-to-peak, peak-to-current or peak-to-peak comparisons cannot establish depeg movement or threshold outcomes; stored peaks remain historical context.
+
+These deterministic evidence and publication contracts are not a scoring-formula or methodology-version change; they apply prospectively and never rewrite published history.
+
+### Bank Run Gauge producer contract
+
+**Bank Run Gauge — one producer, one universe** ([owner](./mint-burn-flows.md#bank-run-gauge-composite)). The digest reads that publication through `worker/src/lib/mint-burn-published-gauge.ts` and re-bins it; it never recomputes from `mint_burn_hourly`. Malformed, future-dated or >24h-old publications are dropped and degrade the run (`mint-burn-gauge-malformed` / `mint-burn-gauge-future-timestamp` / `mint-burn-gauge-expired`); >2h-old publications (≈4 missed 30-minute producer runs) remain usable but mark `mint-burn-gauge-stale`. Missing rows omit the section and record quality finding `mint-burn-gauge-missing` in `dataQuality.degradedSources` without independently degrading cron health, and the missing-input regime floor still applies.
+
+The versioned flow cache separates classification-aware publications from older payloads. The published-gauge reader retains classification verdicts for digest FTQ and rejects a numeric pressure input whose baseline valuation is unknown. Classification uncertainty withholds pressure and chain nets; its withheld weight uses the same disclosed cohort-weight interval as missing valuation.
+
 ### DEX liquidity admission gate
 
 Aggregate producer abort guards cannot establish per-coin completeness. A partial pool inventory may pass global TVL, top-ten and row-coverage checks, so digest evidence requires its own admission layers.
@@ -565,8 +574,6 @@ Coverage does not rescore liquidity. Composite score movement need not be propor
 Before top-three pressure selection, a coin needs an observed published `gaugeWeightUsd` (tracked-chain circulating supply). A 24h absolute net at or above 25% of that weight requires independent `supply_history` confirmation: adjacent UTC-day rows ending on the flow window's end date, each no more than 12 hours behind its corresponding closed-hour boundary, with circulating USD supply moving in the same direction by at least 50% of the net. A row whose `supply_provenance` records a partial-chain remainder is not a complete daily total and cannot confirm a flow. The quarter-supply trigger catches implausible inventory-sized flows; the half-net confirmation allows daily timing and chain-coverage differences. This is approximate daily-resolution evidence, not exact event-time reconciliation. Missing/invalid supply, absent/future windows, mismatched dates or contradictory changes fail closed: no pressure candidate or raw per-coin prompt signal. Withheld signals record `mint-burn-pressure-supply-{weight-unavailable,unavailable,window-mismatch,unconfirmed}` quality reasons. A failed confirmation query records degradation `mint-burn-pressure-supply-query` while preserving the published gauge and unaffected small flows.
 
 Per-coin captures retain `gaugeWeightShare` against the publication's full `scoredMcapUsd`, never a top-pressure subtotal. Only shares of at least 1% may carry the gauge score as a headline fact or arm a gauge next-trigger; smaller shares are explicitly negligible, and unavailable shares permit no attribution. The 1% floor excludes coins incapable of materially explaining aggregate moves. Prompt rules forbid even implied causation from negligible coins and require independent contribution evidence for any causal claim. These admission rules do not recompute the gauge or rewrite archived editions.
-
-Edition #242 (2026-10-24) is the motivating case: USG's PegKeeper inventory burn (about $36.85M against roughly $3.86M circulating, supply flat) led the edition and was framed against a gauge move it carried 0.006% of the weight for.
 
 ### Flow provenance details
 

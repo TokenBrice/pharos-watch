@@ -23,11 +23,12 @@ import {
 } from "./fetch-primary";
 import { publishDexPriceChallengerSnapshots } from "./challenger-publish";
 import {
-  POOL_REJECTION_MATERIAL_TVL_USD,
-  hasMaterialPoolRejections,
+  buildPoolRejectionMetadata,
+  scopePoolRejections,
   processPoolMetrics,
 } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
+import { captureObservedPoolPrices, refreshPoolPrices } from "./price-refresh";
 import {
   computeStablecoinScores,
   publishStablecoinScoreTargets,
@@ -73,7 +74,8 @@ import {
   buildSlipstreamMeasuredExecutionTargets,
   buildUniV3DirectMeasuredExecutionTargets,
 } from "../measured-execution/inventory";
-import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
+import { enrichEvmV2ExecutionModels, refreshUsdaV2Price } from "./constant-product-v2";
+import { refreshTempoPathUsdPrice } from "./tempo-price";
 import { enrichQuoterV2ExecutionTargets } from "./enrich-quoter-v2-targets";
 import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-factory";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
@@ -94,6 +96,7 @@ import { boundMeasuredTargetFunnelGroups, boundTelemetryEntries } from "./route-
 import { consumeDexLiquidityStage, type DexLiquidityStageConsumerOptions, type DexLiquidityStageLifecycle } from "./lifecycle/consume";
 import { DEX_D1_COST_EXCLUSIONS } from "./lifecycle/d1-cost";
 import type { DexLiquidityStageRecoveryOutcome } from "./lifecycle/recovery";
+import { dexLiquidityStageReadyDeadlineMs } from "./lifecycle/source-slot";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
@@ -190,6 +193,7 @@ export async function stageDexLiquidityScoring(
   reportProgress?: CronProgressReporter,
   sourceSlotStartedAt?: number,
   deadline?: SlotDeadline,
+  readinessDeadlineMs?: number,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const d1Cost = createD1CostTracker(db, DEX_D1_COST_EXCLUSIONS);
@@ -210,22 +214,12 @@ export async function stageDexLiquidityScoring(
     syncStartSec,
     sourceSlotStartedAt,
     deadline,
+    readinessDeadlineMs: readinessDeadlineMs ?? dexLiquidityStageReadyDeadlineMs(sourceSlotStartedAt ?? syncStartSec),
     fallbackCounters,
     phaseTimingsMs,
   };
   const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
   const itemCount = poolState.metrics.size;
-  const rejectedPoolCount = poolState.poolRejections.reduce(
-    (sum, rejection) => sum + rejection.count,
-    0,
-  );
-  const rejectedPoolTvlUsd = poolState.poolRejections.reduce(
-    (sum, rejection) => sum + rejection.tvlUsd,
-    0,
-  );
-  const materialPoolRejections = hasMaterialPoolRejections(
-    poolState.poolRejections,
-  );
   const persistenceStartedAtMs = Date.now();
   const stored = await persistDexLiquidityScoringStage(
     db,
@@ -252,11 +246,9 @@ export async function stageDexLiquidityScoring(
     ? "pagination-cursor-acknowledgement-failed"
     : scoringSourceState.criticalSourceFailures.length > 0
       ? `${scoringSourceState.criticalSourceFailures[0]}-unavailable`
-      : materialPoolRejections
-        ? "pool-rejection-material"
-        : stored.retention.error
-          ? "stage-retention-failed"
-          : null;
+      : stored.retention.error
+        ? "stage-retention-failed"
+        : null;
 
   return {
     status: degradedReason == null ? "ok" : "degraded",
@@ -266,6 +258,7 @@ export async function stageDexLiquidityScoring(
       d1Cost: d1Cost.snapshot(),
       phaseTimingsMs,
       stagedWritebackRows: poolState.stagedWritebackRows ?? null,
+      priceRefresh: poolState.priceRefresh,
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,
       syncStartSec,
@@ -282,14 +275,9 @@ export async function stageDexLiquidityScoring(
       uniV3CandidateCarryForward: scoringSourceState.uniV3CandidateCarryForward ?? [],
       uniswapV4CandidateCarryForward: scoringSourceState.uniswapV4CandidateCarryForward ?? [],
       subgraphFailures: scoringSourceState.subgraphFailures ?? [],
+      directApiSourceSummary: scoringSourceState.directApiSourceSummary,
       fallbackSignals: scoringSourceState.fallbackSignals,
-      poolRejections: poolState.poolRejections,
-      poolRejectionMateriality: {
-        thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD,
-        rejectedPoolCount,
-        rejectedPoolTvlUsd,
-        material: materialPoolRejections,
-      },
+      ...buildPoolRejectionMetadata(poolState.poolRejections),
       fallbackCounters,
       targetEnrichment,
       targetEnrichmentGroupsOmitted: (poolState.targetEnrichment?.length ?? 0) - targetEnrichment.length,
@@ -388,6 +376,7 @@ export interface DexLiquidityRunContext {
   /** Source-stage slot identity; execution budgets use the event deadline. */
   sourceSlotStartedAt?: number;
   deadline?: SlotDeadline;
+  readinessDeadlineMs?: number;
   signal?: AbortSignal;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -789,7 +778,7 @@ async function buildDexLiquidityPoolState(
     sourceState.subgraphEnrichment.uniV3PoolFees,
   );
 
-  const { metrics, rejections: poolRejections } = processPoolMetrics({
+  const { metrics, rejections } = processPoolMetrics({
     pools: preferredPrimaryPools,
     dexProjects: sourceState.dataSources.dexProjects,
     symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
@@ -809,7 +798,9 @@ async function buildDexLiquidityPoolState(
       sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
     fallbackCounters: ctx.fallbackCounters,
   });
-  poolRejections.unshift(...sourceState.dataSources.poolRejections);
+  const poolRejections = scopePoolRejections(
+    [...sourceState.dataSources.poolRejections, ...rejections], sourceState.dataSources.dexProjects,
+  );
 
   // Primary pools and display-only enrichment maps have been projected into
   // metrics and the identity index. Keep only the exact target candidates
@@ -871,6 +862,7 @@ async function buildDexLiquidityPoolState(
   // backfills arrive from dex_pool_registry, so writing them back would advance
   // refreshed_at every hour and no row would ever age out (immortal registry).
   const stagedWriteback = buildStagedPoolWriteback(metrics, ctx.syncStartSec);
+  const observedThisRun = captureObservedPoolPrices({ metrics, priceObservations: sourceState.priceObservations }, ctx.syncStartSec);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -902,7 +894,7 @@ async function buildDexLiquidityPoolState(
     }));
   }
   // Disjoint V3/Slipstream and V4 pool families each issue serial RPCs. Their
-  // bounded pair peaks at two, below the existing five-connection reservation.
+  // bounded pair peaks at two, below the four-connection reservation.
   // Keep Curve rate -> factory ordering and direct provider intake unchanged.
   const [quoterResult, v4Result] = await Promise.allSettled([
     enrichQuoterV2ExecutionTargets({
@@ -968,6 +960,27 @@ async function buildDexLiquidityPoolState(
     stablecoinPriceById: sourceState.stablecoinPriceById,
     capturedAt: ctx.syncStartSec,
   });
+  // Resolve the registry first so trust-first selection cannot restore an older native quote.
+  const priceRefresh = { ...await refreshPoolPrices({
+    db: ctx.db, metrics, priceObservations: sourceState.priceObservations, observedThisRun,
+    protocolTvlCaps: sourceState.dataSources.protocolTvlCaps, registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
+    primaryPrices: sourceState.primaryPriceById ?? sourceState.stablecoinPriceById,
+    sourceStartedAtSec: ctx.syncStartSec, apiKey: ctx.coingeckoApiKey,
+    references: sourceState.validationReferences, signal: ctx.signal, deadline: ctx.deadline, readinessDeadlineMs: ctx.readinessDeadlineMs,
+  }), native: {
+    usda: refreshUsdaV2Price({ metrics,
+      sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
+      nowSec: Math.floor(Date.now() / 1000) }),
+    pathUsd: await refreshTempoPathUsdPrice({ sourcePools: metrics,
+      stablecoinPriceById: sourceState.stablecoinPriceById,
+      stablecoinPriceProvenanceById: sourceState.stablecoinPriceProvenanceById,
+      chainRpcs: ctx.chainRpcs, signal: ctx.signal, nowSec: Math.floor(Date.now() / 1000),
+      deadlineMs: Math.min(ctx.deadline?.platformDeadlineMs ?? Infinity, ctx.readinessDeadlineMs ?? Infinity) - 20_000 }),
+  } };
+  await ctx.reportDexProgress("pool-price-refresh-complete", {
+    message: "Completed exact-pool price refresh", providerFamily: "cg-onchain",
+    counts: { requests: priceRefresh.requests, refreshed: priceRefresh.refreshed },
+  });
   sourceState.lookups.chainAddressToId = new Map();
   sourceState.lookups.contractMetaByChainAddress = new Map();
   // Staged dedup is the final identity consumer. Release its multi-map index
@@ -1003,6 +1016,7 @@ async function buildDexLiquidityPoolState(
   });
 
   return {
+    priceRefresh,
     registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
     targetEnrichment: [...(quoterEnrichment?.telemetry ?? []), ...(v4Enrichment ?? [])],
     graphApiKeyConfigured: Boolean(ctx.graphApiKey),
@@ -1083,6 +1097,7 @@ async function scoreDexLiquidityPoolState(
     scoreResults,
     globalAgg,
     retainedPoolsByStablecoin,
+    poolRejections: poolState.poolRejections,
     priceObservations: sourceState.priceObservations,
     diagnostics,
     stagedMergedCount: poolState.stagedMergedCount,
@@ -1245,6 +1260,7 @@ async function persistDexLiquidityScoreState(
     db: ctx.db,
     retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
     nowSec: ctx.syncStartSec,
+    admissionNowSec: Math.floor(Date.now() / 1000),
     primaryPrices: sourceState.primaryPriceById ?? sourceState.stablecoinPriceById,
     references: sourceState.validationReferences,
     signal: ctx.signal,
@@ -1325,7 +1341,6 @@ function buildDexLiquidityCronResult(
 ): CronResult {
   const degradedReason = dexLiquidityDegradedReason({
     criticalSourceFailures: sourceState.criticalSourceFailures,
-    poolRejections: poolState.poolRejections,
     analysis: scoreState.analysis,
     persistence: persistenceState.persistence,
     dexPriceDiagnostics: persistenceState.dexPriceDiagnostics,

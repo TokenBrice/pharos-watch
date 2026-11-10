@@ -314,6 +314,31 @@ describe("StablecoinTable", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("activates a stablecoin row only for an unmodified cell click without selected text", () => {
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} onTogglePinnedStablecoin={vi.fn()} />);
+    const link = screen.getByRole("link", { name: /View Tether \(USDT\) details/i });
+    const cell = link.closest("tr")!.querySelector("td")!;
+    const icon = screen.getByRole("button", { name: "Star USDT" }).querySelector("svg")!;
+    for (const options of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+      fireEvent.click(cell, options);
+    }
+    fireEvent.click(icon);
+    link.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    fireEvent.click(link);
+    expect(push).not.toHaveBeenCalled();
+    const selection = window.getSelection()!, range = document.createRange();
+    range.selectNodeContents(link);
+    selection.addRange(range);
+    try {
+      fireEvent.click(cell);
+      expect(push).not.toHaveBeenCalled();
+    } finally {
+      selection.removeAllRanges();
+    }
+    fireEvent.click(cell);
+    expect(push).toHaveBeenCalledExactlyOnceWith("/stablecoin/usdt-tether/");
+  });
+
   it("marks starred row controls as pressed", () => {
     render(
       <StablecoinTable

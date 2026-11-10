@@ -242,13 +242,11 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 
 - `flags.backing` should describe the actual reserve base, not the marketing story.
 - `structured-tranche` is reserved for runtime opportunity rows such as Royco Dawn senior/junior vaults. Do not use it for ordinary static stablecoin metadata unless the tracked asset is itself a tranche wrapper.
-- Flags that equal schema defaults may be omitted or authored explicitly. `StablecoinFlagsSchema` supplies `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` when the key is absent, so the parsed record and every generated aggregate still carry explicit values. `backing` and `governance` have no default and are always required.
+- Flags equal to schema defaults may be omitted or authored explicitly; the defaults, required fields and variant admission rules are owned by [Editing Rules](../stablecoin-data.md#editing-rules).
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer descriptive control-posture label, not a Safety Score input.
 - Every coin — including pre-launch — requires a `blacklistabilityReview` with sources or an explicit `sourceFreeRationale`. Its `reviewedStatus` is the canonical verdict; `check:stablecoin-data` fails on any entry without one. Apply the [FreezeWatch decision procedure](../blacklist-tracker.md#freezewatch-decision-procedure) for status values, material deployments, direct-control precedence, parent/custody/reserve bases and evidence requirements; do not infer holder-control powers from governance or mint authority.
 - `mintAuthority` is curated metadata that feeds Safety Score V9 Economic Control facts and its published mint component. The separate Mint Authority scoring engine is retired. This metadata does not create selector exclusions. Require reviewed primary-source/control evidence, and do not use it as a workaround for blacklistability/freezability review. Active variants require an explicit `mintAuthority` review, normally `wrapped-or-variant-inherited` with `inheritedFrom` set to `variantOf`, so inherited mint risk cannot silently become an unresolved V9 gap.
-- `bridgeRouteRisk` is curated metadata for cross-chain mint, lockbox, attestation, liquidity, intent, or canonical routes. The current Safety Score consumes reviewed bridge evidence with bounded runtime materiality; missing required evidence becomes an explicit gap or cap. L2BEAT Interop matches are research leads, never sourced profiles or backing edges: verify the exact deployed route, contracts, controls, and primary sources before authoring a profile.
-- `pegReferenceId` requires `variantOf` and must equal it; it is not a standalone dependency or NAV-reference field.
-- `variantOf` / `variantKind` co-require and are allowed for post-launch readable children, not pre-launch entries. Active children require an active parent; inactive readable children require a readable parent. The parent must be non-variant and non-`navToken`, and `pegReferenceId` must equal `variantOf`. Use `VARIANT_KIND_VALUES` in `shared/types/core.ts` for supported kinds and `shared/lib/stablecoins/validate-variants.ts` plus `schema.ts` for admission rules: `pure-wrapper` keeps `navToken === false`; other kinds require `navToken === true`, and `risk-absorption` requires `wrapperOperator`. V9 evaluates wrapper strategy and parent caps; retired Selector ceilings do not apply. Review wrapper-local controls and parent exposure through the same [FreezeWatch procedure](../blacklist-tracker.md#freezewatch-decision-procedure), not a variant-specific status rule.
+- `bridgeRouteRisk`, `pegReferenceId` and `variantOf`/`variantKind` authoring rules are owned by [Editing Rules](../stablecoin-data.md#editing-rules); L2BEAT Interop matches stay research leads, never sourced profiles or backing edges, and active variants still need the explicit `mintAuthority` review above.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
 
 ### Infrastructure taxonomy vs dependency graph
@@ -257,17 +255,7 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 
 L2BEAT `type`, `category`, `hostChain`, stage, and risk fields are chain-route context. Use them to review bridge-route and host-chain exposure, but do not copy them into `infrastructures[]` and do not turn host chains into `dependencies[]` unless there is an actual stablecoin collateral/mechanism/wrapper dependency.
 
-Use `infrastructures[]` only when the coin directly belongs to a supported technical lineage:
-
-- `liquity-v1`: original Liquity design, 110% liquidation threshold, Stability Pool liquidations, no ongoing borrower interest
-- `liquity-v2`: BOLD-style design, user-set borrower rates, branch-style collateral markets, Stability Pools
-- `m0`: built on the M0 issuance platform, minter governance, `SwapFacility`, `MExtension.sol` pattern
-
-Important M0 rules:
-
-- M0-built coins may or may not actually hold `m-m0` in reserves.
-- `m-m0` is itself tagged `["m0"]` as the base infrastructure asset, so it appears in the M0 infrastructure cohort.
-- A wrapper or downstream derivative should not inherit `["m0"]` automatically just because the base asset depends on M0.
+- `infrastructures[]` cohort admission (including the Liquity v1/v2 and M0 definitions and M0 non-inheritance) is owned by [Infrastructure Tagging](../classification.md#infrastructure-tagging); keep only the infrastructures-vs-dependencies distinction above.
 
 Use `dependencies[]` separately to describe asset relationships:
 
@@ -305,7 +293,7 @@ Three optional clusters on `StablecoinMeta` drive the hero verdict, mechanism sc
 
 Mapping cheatsheet:
 
-- `fiat-cash`: RWA-backed + centralized + cash/repo/short-T-Bill mix (USDC, USDT, PYUSD). Formally also covers protocol-reserve-backed FX inventory — assets minted and burned against a shared on-chain protocol reserve at oracle rates with no borrower vault, health factor, or liquidation path (the Mento class: USDm, EURm, and the Mento FX stables). Read the class as reserve-backed cash-equivalent inventory issuance, not strictly custodial off-chain cash.
+- `fiat-cash`: RWA-backed + centralized + cash/repo/short-T-Bill mix (USDC, USDT, PYUSD). Protocol-reserve-backed FX inventory (the Mento class: USDm, EURm, and the Mento FX stables) is `shared-reserve`, not `fiat-cash`; Mento CDP currencies remain `cdp`. See [Native mechanism families](../classification.md#native-mechanism-families).
 - `tbill`: RWA-backed + dominantly Treasury fund or NAV-bearing (USTB, USDtb, USDY)
 - `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
 - `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)
@@ -370,7 +358,7 @@ Add scalar metadata to the asset's per-coin JSON file using current field names 
 
 ### Minimal active-asset skeleton (field shapes only — a real entry also needs the mandatory `blacklistabilityReview` from Phase 3 and a `listing-decisions.json` class)
 
-Use `StablecoinMetaAssetSchemaShape` in `shared/lib/stablecoins/schema.ts` for the active-asset shape and the [registry editing rules](../stablecoin-data.md#editing-rules) for authoring semantics. A valid base row alone is insufficient: add the required risk-review sidecar, listing decision, Phase 3.5 editorial decisions and observed Phase 1a runtime PASS. UI fallbacks do not waive these gates.
+Use `StablecoinMetaSourceAssetSchema` in `shared/lib/stablecoins/schema.ts` for the authored per-coin source shape (full catalog validation runs post-merge through `StablecoinMetaAssetSchema`) and the [registry editing rules](../stablecoin-data.md#editing-rules) for authoring semantics. A valid base row alone is insufficient: add the required risk-review sidecar, listing decision, Phase 3.5 editorial decisions and observed Phase 1a runtime PASS. UI fallbacks do not waive these gates.
 
 ### Mint Authority profile shape
 
@@ -383,11 +371,7 @@ Author the profile in `shared/data/stablecoins/domains/mint-authority/<id>.json`
 - Add the ID and derived class to `shared/data/stablecoins/listing-decisions.json`.
 - Hand off completed source edits for the single Phase 7 generation/check pass; do not regenerate while specialists are still editing.
 - Keep new keys canonical and consistent with the current schema.
-- For active assets, ensure there is a runtime cache admission path and a Phase 1a price + market-cap gate record:
-  - DefiLlama-tracked assets need `llamaId`.
-  - Fiat assets not in DefiLlama need `detailProvider: "coingecko"` plus either `geckoId` or a supply path accepted by `hasRuntimeOnchainSupplyPath()` in `shared/lib/onchain-supply-probe.ts`.
-  - Gold/silver assets need a `geckoId` for the commodity supplemental path.
-  - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
+- For active assets, record the Phase 1a price + market-cap path in the packet (Phase 1a owns the enumeration; do not rely on `canonical-order.json` alone — static routes can exist before the Worker `/api/stablecoins` cache has a row).
 - If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
 - For an active multi-deployment asset, complete the native-versus-representation review in Phase 5f: Mint Authority controls and mutable upgrade paths need native-only deployment references unless a reviewed `noLocalIssuance` exception applies; bridge capabilities need structured route-scoped controls.
 - Work the three coupling groups below. The build, tests, and generated-artifact gates fail on **every** addition (active or pre-launch) until they match the registry.
@@ -409,7 +393,7 @@ value; do not weaken the assertion.
 
 | File | What moves | Applies to |
 | --- | --- | --- |
-| `shared/lib/__tests__/stablecoins.test.ts` | `EXPECTED_TRACKED_STABLECOIN_COUNT`, lifecycle ID snapshots, and the implementation-scope variant ID list | Count on every addition; pre-launch snapshot on additions/promotions; variant list for `variantOf` children |
+| `shared/lib/__tests__/stablecoins.test.ts` | The implementation-scope variant ID list. Tracked counts and the pre-launch roster are catalog-derived invariants, so there is no count or lifecycle snapshot to bump. | Variant list for `variantOf` children only |
 | `scripts/__tests__/bridge-route-coverage-audit.test.ts` | Registry-derived equality of reviewed profiles and applicable multi-deployment coins | Supply reviewed route rows; no hardcoded count to bump |
 | `src/lib/__tests__/reserve-coinid-validation.test.ts` | A `REVIEWED_WARNING_IDS` entry with the reason | Only when a new `reserves[].name` contains a tracked ticker and the slice intentionally carries no `coinId`. Link the slice with `coinId` instead whenever that is honest. |
 
@@ -424,12 +408,11 @@ byte-identical; regenerate affected tracked units explicitly and commit them wit
 
 These are artifact owners, not per-specialist steps. The coordinator owns Phase 7 generation; bootstrap includes the ignored `llms-txt` compile/serve output, which post-refresh generation rebuilds after live data updates.
 
-| Artifact | Owning generator | Notes |
-| --- | --- | --- |
-| `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
-| `public/datasets/stablecoin-cemetery.json` + `.csv` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
-| `public/logos/atlas/cemetery-atlas.webp` + `src/lib/cemetery-logo-atlas.generated.json` (`cemetery-logo-atlas`) | `npm run logos:cemetery-atlas` | Selected by catalog and `data/logos.json` changes, but its input signature covers only cemetery rows' logos, so a live addition leaves it byte-identical; it moves only when a cemetery row or its logo changes |
-| `public/og-cemetery.png` (`og-cemetery`) | `npm run build:og-cemetery` | Selected with the atlas it embeds; its input signature is the rendered plot-map card, so a live addition leaves it byte-identical; it moves only when a cemetery row, the atlas or the plot map changes |
+| Artifact | Notes |
+| --- | --- |
+| `public/datasets/stablecoin-cemetery.json` + `.csv` | Provenance pins the curated dead-stablecoin file and the frozen-row projection, so a live addition leaves it byte-identical; it moves only when a frozen or dead row changes |
+| `public/logos/atlas/cemetery-atlas.webp` + `src/lib/cemetery-logo-atlas.generated.json` (`cemetery-logo-atlas`) | Selected by catalog and `data/logos.json` changes, but its input signature covers only cemetery rows' logos, so a live addition leaves it byte-identical; it moves only when a cemetery row or its logo changes |
+| `public/og-cemetery.png` (`og-cemetery`) | Selected with the atlas it embeds; its input signature is the rendered plot-map card, so a live addition leaves it byte-identical; it moves only when a cemetery row, the atlas or the plot map changes |
 
 The Phase 7 bootstrap pass also materializes gitignored projections, including the client constants
 and command-palette tuples that the build, tests, and `check:stablecoin-data` all read. It executes
@@ -543,38 +526,7 @@ Listing a stablecoin, and promoting a pre-launch row to active, must pass the ne
 
 #### Receipt
 
-Commit one receipt per gated asset at `.github/artifacts/new-asset-evidence-packet/<id>.json`, named by the canonical asset id (lowercase `ticker-issuer`; the file name and `assetId` must agree). `NewAssetAdmissionReceiptSchema` in the gate is the field authority; the shape is:
-
-```json
-{
-  "schemaVersion": 1,
-  "kind": "safety-score-v9-new-asset-admission-receipt",
-  "assetId": "ausd-acme",
-  "captureId": "20261029T1814Z",
-  "captureClockSec": 1793294244,
-  "registryFingerprint": "<64 lowercase hex>",
-  "card": {
-    "id": "ausd-acme",
-    "openBucketQuestionsCarried": 1,
-    "inheritedOpenBucketQuestionsCarried": 0,
-    "openBucketObligationsCarried": 1,
-    "documentationObligationsCarried": 0
-  },
-  "questions": [
-    {
-      "questionKey": "ausd-acme|component|economic-control:mint",
-      "bucket": "open",
-      "inherited": false,
-      "obligations": 1,
-      "codes": [{ "code": "missing-mint-authority", "obligations": 1, "documentation": false }]
-    }
-  ]
-}
-```
-
-- `card` is the replay's `openEvidence.byCard[]` row for the asset — the same counts the publication shows. The schema rejects a receipt whose list contradicts the row: open questions, inherited open questions, their summed obligations, and documentation-classed obligations must match the four `...Carried` counts.
-- `questions[]` holds one row per question the card carries, across all three buckets: `questionKey` (the counting authority's key), `bucket` (`open`, `issuer`, or `documentation`), `inherited` when the key is rooted at another asset, the question's `obligations`, and one `codes[]` row per reason code with its own obligation count and documentation flag. Per-code obligations must sum to `obligations`; a `documentation` question carries only documentation-classed datums while any other bucket carries at least one counted datum; reason codes are unique per question.
-- `registryFingerprint` must be the branch tree's registry fingerprint **after** the listing or promotion. A receipt replayed before the asset was in the tree is stale and rejected. Replay after the last coin edit: a second gated asset in the same PR changes the fingerprint and stales the first receipt. `captureId` and `captureClockSec` are provenance, not a freshness budget.
+Commit one receipt per gated asset at `.github/artifacts/new-asset-evidence-packet/<id>.json`, named by the canonical asset id (lowercase `ticker-issuer`; the file name and `assetId` must agree). `NewAssetAdmissionReceiptSchema` in the gate is the field authority and prints exact errors. `card` is the replay's `openEvidence.byCard[]` row for the asset — the same counts the publication shows — and the schema rejects a `questions[]` list that contradicts it. `questions[]` holds one row per question the card carries across all three buckets (`open`, `issuer`, `documentation`), with `inherited` set only when the key is rooted at another asset; the gate's open-question and mint-authority checks read this audit trail, and only the open-bucket counts and documentation obligations are cross-checked mechanically. `registryFingerprint` must be the branch tree's registry fingerprint **after** the listing or promotion. Replay after the last coin edit: a second gated asset in the same PR changes the fingerprint and stales the first receipt. `captureId` and `captureClockSec` are provenance, not a freshness budget.
 
 #### Gate conditions
 
@@ -697,7 +649,7 @@ Curation rules:
 - Sort each coin's array by `date` ascending.
 - Do NOT invent dates. Drop a candidate rather than guess.
 
-Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The historical launch seed remains a corpus-integrity contract: ≥10 annotations across the original top 4 seed coins (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`), enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`. It is no longer a flag-flip gate.
+Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The historical launch seed remains a coverage target — ≥10 annotations across the original top 4 seed coins (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`) — but no test enforces it, and it is no longer a flag-flip gate.
 
 ---
 

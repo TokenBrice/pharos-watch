@@ -307,6 +307,23 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
       controllerAddress: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
       controllerProgramOwner: SOLANA_SYSTEM_PROGRAM,
     },
+    // Reviewed pins: X Layer 75356629, Arc 30150643; exact JTRSY pool/share class and Spoke ward.
+    "xlayer:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "9fcdeadc7475bc4a9b66a1674420773f281fa54a73437744a0dc56b1b3ab4408",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 12,
+    },
+    "arc:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "cc94a8560b293e9d6b9a6b460240b51b9d842dcb074dd8e682b6f863c74d5efc",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 2,
+    },
   },
   "acrdx-anemoy-apollo": {
     "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {

@@ -1,3 +1,4 @@
+import { resolveDdrRepairTaskRunnerConfig } from "../../lib/env";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Four-hourly reserve-sync trigger (11 * / 4 * * *), two chains:
@@ -167,6 +168,9 @@ function buildReserveSyncSlotGroups(
           run: async (signal) => {
             const { runCronSentinel } = await import("../../cron/cron-sentinel");
             return runCronSentinel(runtime.db, {
+              repairRunnerEnabled: resolveDdrRepairTaskRunnerConfig(runtime.env).enabled,
+              mintBurnDisabledIds: runtime.mintBurnDisabledIds,
+              mintBurnDisabledSymbols: runtime.mintBurnDisabledSymbols,
               mode: "reserve-post-sync",
               signal,
             });

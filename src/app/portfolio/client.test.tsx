@@ -7,6 +7,7 @@ import { compile } from "tailwindcss";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
+import PortfolioPage from "./page";
 import type { ReportCardsV9Response } from "@shared/types";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -14,11 +15,6 @@ import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "
 let portfolioState: {
   holdings: Array<{ coinId: string; amount: number }>;
   initialized: boolean;
-  upstreamExposure: Array<{ coinId: string; name: string; symbol: string; usd: number; pct: number; isCollateral: boolean }>;
-  upstreamExposureGrouped: Array<{ coinId: string; name: string; symbol: string; usd: number; pct: number; isCollateral: boolean }>;
-  portfolioGrade: string;
-  portfolioScore: number | null;
-  dimensionScores: Record<string, number | null>;
   totalUsd: number;
   addCoin: ReturnType<typeof vi.fn>;
   clearAll: ReturnType<typeof vi.fn>;
@@ -81,10 +77,6 @@ vi.mock("@/components/coin-selector", () => ({
   CoinSelector: () => <div>coin-selector</div>,
 }));
 
-vi.mock("@/components/radar-chart", () => ({
-  ReportCardRadar: () => <div>radar</div>,
-}));
-
 vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <div>{name}</div>,
 }));
@@ -105,17 +97,6 @@ function basePortfolioState(): typeof portfolioState {
   return {
     holdings: [],
     initialized: true,
-    upstreamExposure: [],
-    upstreamExposureGrouped: [],
-    portfolioGrade: "NR",
-    portfolioScore: null,
-    dimensionScores: {
-      pegStability: null,
-      liquidity: null,
-      resilience: null,
-      decentralization: null,
-      dependencyRisk: null,
-    },
     totalUsd: 0,
     addCoin: vi.fn(),
     clearAll: vi.fn(),
@@ -143,21 +124,37 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.getByText("portfolio-empty-state")).toBeTruthy();
   });
 
-  it.each([["", true], ["", false], ["?p=usdc-circle:100", false]] as const)("prerenders safely (query %s, bootstrap %s)", async (search, runs) => {
+  it.each([
+    ["", "[]", true, true],
+    ["", "[]", false, false],
+    ["", '[{"coinId":"usdc-circle","amount":100}]', true, false],
+    ["?p=usdc-circle:100", "[]", true, false],
+    ["?coins=usdc-circle", "[]", true, false],
+  ] as const)("prerenders safely (%s, %s, bootstrap %s)", async (search, stored, runs, firstVisit) => {
     portfolioState.initialized = false;
     window.history.replaceState(null, "", `/portfolio/${search}`);
-    window.localStorage.setItem("pharos:portfolio", runs ? "[]" : '[{"coinId":"usdc-circle","amount":100}]');
-    const html = renderToString(<PortfolioClient />);
+    window.localStorage.setItem("pharos:portfolio", stored);
+    const html = renderToString(<PortfolioPage />);
     expect(html).toContain("portfolio-empty-state");
     expect(html).toContain("Add holdings manually or load a starter mix below.");
+    expect(html).not.toContain("<!--$");
     if (runs) new Function(bootstrapScript)();
-    const { container } = render(<PortfolioClient />);
-    const [empty, loading] = container.firstElementChild!.children;
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.append(container);
+    const note = container.querySelector(".pharos-empty-note");
+    const { rerender } = render(<PortfolioPage />, { container, hydrate: true });
+    const empty = screen.getByText("portfolio-empty-state").parentElement!;
+    const loading = empty.nextElementSibling!;
     const style = document.createElement("style");
     style.textContent = (await compile("@tailwind utilities;")).build([...empty.classList, ...loading.classList]);
     document.head.append(style);
-    expect(getComputedStyle(empty).display).toBe(runs ? "block" : "none");
-    expect(getComputedStyle(loading).display).toBe(runs ? "none" : "block");
+    expect(getComputedStyle(empty).display).toBe(firstVisit ? "block" : "none");
+    expect(getComputedStyle(loading).display).toBe(firstVisit ? "none" : "block");
+    portfolioState.initialized = true;
+    rerender(<PortfolioPage />);
+    expect(container.querySelector(".pharos-empty-note")).toBe(note);
+    expect(screen.getAllByText(/Add holdings manually/)).toHaveLength(1);
     style.remove();
     document.documentElement.removeAttribute("data-portfolio-empty");
     expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
@@ -188,27 +185,14 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.queryByText(/Weighted V10 safety aggregate/)).toBeNull();
   });
 
-  it("removes stale legacy portfolio params when nothing valid survives", async () => {
+  it.each([false, true])("normalizes legacy URL holdings (retained %s)", async (retained) => {
+    portfolioState.holdings = retained ? [{ coinId: "usdt-tether", amount: 25 }] : [];
     window.history.replaceState(null, "", "/portfolio/?p=1:25");
 
     render(<PortfolioClient />);
 
     await waitFor(() => {
-      expect(window.location.search).toBe("");
-    });
-  });
-
-  it("rewrites stale portfolio params to canonical holdings", async () => {
-    portfolioState = {
-      ...basePortfolioState(),
-      holdings: [{ coinId: "usdt-tether", amount: 25 }],
-    };
-    window.history.replaceState(null, "", "/portfolio/?p=1:25");
-
-    render(<PortfolioClient />);
-
-    await waitFor(() => {
-      expect(window.location.search).toBe("?p=usdt-tether%3A25");
+      expect(window.location.search).toBe(retained ? "?p=usdt-tether%3A25" : "");
     });
   });
 

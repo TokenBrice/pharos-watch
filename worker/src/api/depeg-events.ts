@@ -1,4 +1,4 @@
-import { DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
@@ -8,6 +8,7 @@ import { jsonResponse } from "../lib/api-response";
 
 import {
   normalizePendingDepegRow,
+  getPendingExpiryLimitSec,
   SELECT_PENDING_DEPEGS_SQL,
   type PendingDepegRow,
 } from "../lib/depeg-pending";
@@ -32,8 +33,9 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base
 import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { DepegEvent, DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
+import { isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
 import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
+import { isExtremeMovePending } from "../lib/depeg-helpers";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
@@ -59,6 +61,7 @@ interface DexAvailabilityRow {
   stablecoin_id: string;
   source_total_tvl: number | null;
   updated_at: number | null;
+  price_sources_json: string | null;
 }
 
 interface PoolAvailabilityRow {
@@ -77,24 +80,26 @@ function isFreshTimestamp(timestamp: number | null | undefined, nowSec: number, 
 
 async function loadDexAvailability(
   db: D1Database,
-  stablecoinId: string | null,
+  stablecoinIds: string[],
   nowSec: number,
 ): Promise<Map<string, boolean>> {
   try {
-    const where = stablecoinId ? " WHERE stablecoin_id = ?" : "";
-    const stmt = db
+    const result = await db
       .prepare(
         `SELECT /* pharos:depeg-events:dex-availability */
-           stablecoin_id, source_total_tvl, updated_at FROM dex_prices${where}`,
-      );
-    const result = stablecoinId
-      ? await stmt.bind(stablecoinId).all<DexAvailabilityRow>()
-      : await stmt.all<DexAvailabilityRow>();
+           stablecoin_id, source_total_tvl, updated_at, price_sources_json FROM dex_prices
+         WHERE stablecoin_id IN (SELECT value FROM json_each(?))`,
+      ).bind(JSON.stringify(stablecoinIds)).all<DexAvailabilityRow>();
     return new Map((result.results ?? []).map((row) => [
       row.stablecoin_id,
       typeof row.updated_at === "number" &&
         typeof row.source_total_tvl === "number" &&
-        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg"),
+        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg") &&
+        isAffirmativeDexPriceRow({
+          updated_at: row.updated_at,
+          source_total_tvl: row.source_total_tvl,
+          aggregateObservedAt: readDexAggregateObservedAt(row.price_sources_json, nowSec),
+        }, nowSec, "depeg"),
     ]));
   } catch (err) {
     const msg = toErrorMessage(err);
@@ -191,7 +196,7 @@ async function loadPendingIncidents(
   if (rows.length === 0) return [];
 
   const [dexAvailability, poolAvailability] = await Promise.all([
-    loadDexAvailability(db, stablecoinId, nowSec),
+    loadDexAvailability(db, rows.map((row) => row.stablecoin_id), nowSec),
     loadPoolAvailability(db, stablecoinId, nowSec),
   ]);
 
@@ -209,7 +214,12 @@ async function loadPendingIncidents(
       peakSeenBps: pending.peakSeenBps,
       reason: pending.reason,
       ageSec: Math.max(0, nowSec - pending.firstSeenAt),
-      expiresAt: pending.firstSeenAt + DEPEG_PENDING_EXPIRY_SEC,
+      expiresAt: pending.firstSeenAt + getPendingExpiryLimitSec({
+        primarySameDirectionDepegged: false,
+        isExtremeMove: isExtremeMovePending(pending.reason),
+        unavailableSources: categories.missing,
+        circuitOpenSources: [],
+      }),
       availableConfirmationCategories: categories.available,
       missingConfirmationCategories: categories.missing,
     };

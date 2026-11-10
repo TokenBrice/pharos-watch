@@ -232,5 +232,56 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "At Ethereum block 26357851 (2026-11-06T19:18:11Z), thBILL depositAssetsList() contains only tULTRA 0x82b840b6edf77f90c92a70b99f0b5d50e7967330. The thBILL IToken and tULTRA TTokenV3 proxy implementations and their runtimes match the verified sources. IToken values this receipt through sharesToEscrowAssets; TTokenV3 consumes getLatestExchangeRate() from configured TheoTUltraOracle 0x2fb6f063c1950100db45492f1c359d809d42f9ce, whose runtime also matches its verified source. Its setExchangeRate(epoch,rate) is owner-only; owner() is 0x0f21ee679e40123dea03cc64983035ce24bffcf3. This is privileged internal exchange-rate pricing. The oracle stores nonzero epoch rates without an elapsed-time freshness check or external feed aggregation, and TTokenV3 permits DEFAULT_ADMIN_ROLE to replace the oracle. No signer independence, update cadence or executable redemption capacity is established.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-3",
+      "rationale": "The exact current thBILL receipt valuation path is top-level NAV conversion through the sole admitted deposit receipt and its configured epoch-rate oracle. This is a mint/redemption exchange-rate authority, not a borrower-collateral liquidation engine; the pinned inventory and verified code bind the reviewed path without attributing any third-party lending branch to thBILL.",
+      "sources": [
+        {
+          "label": "Verified IToken source, verified 2025-08-01: receipt-to-escrow NAV conversion",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+        },
+        {
+          "label": "Verified TTokenV3 source, verified 2026-02-12: admin-set oracle and escrow conversion",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd020ce4aa335a11933f1e38a00020bd7f8c80a2b"
+        },
+        {
+          "label": "Verified TheoTUltraOracle source, verified 2026-04-22: owner-only epoch exchange rates",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2fb6f063c1950100db45492f1c359d809d42f9ce"
+        },
+        {
+          "label": "Ethereum block 26357851, hash 0x3a4d219828f8982315e9398ba9da5e292ff15a4e2ec1440c9906c58601d6a08c, 2026-11-06T19:18:11Z; approved pinned eth_call, eth_getStorageAt and eth_getCode reads via https://ethereum-rpc.publicnode.com",
+          "url": "https://etherscan.io/block/26357851"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c2-3",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified IToken source, verified 2025-08-01: receipt-to-escrow NAV conversion",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+      },
+      {
+        "label": "Verified TTokenV3 source, verified 2026-02-12: admin-set oracle and escrow conversion",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd020ce4aa335a11933f1e38a00020bd7f8c80a2b"
+      },
+      {
+        "label": "Verified TheoTUltraOracle source, verified 2026-04-22: owner-only epoch exchange rates",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2fb6f063c1950100db45492f1c359d809d42f9ce"
+      },
+      {
+        "label": "Ethereum block 26357851, hash 0x3a4d219828f8982315e9398ba9da5e292ff15a4e2ec1440c9906c58601d6a08c, 2026-11-06T19:18:11Z; approved pinned eth_call, eth_getStorageAt and eth_getCode reads via https://ethereum-rpc.publicnode.com",
+        "url": "https://etherscan.io/block/26357851"
+      }
+    ]
   }
 }

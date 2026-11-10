@@ -55,7 +55,7 @@ function configScope<T>(key: string, run: () => Promise<T>, failed: (result: T) 
     withRpcRequestOperation(key, "test-read", run, failed), failed);
 }
 
-function runtime(scheduleKey: string, cron: string): ScheduledRuntimeContext {
+function runtime(scheduleKey = "halfHourlyMintBurnCritical", cron = "4 * * * *"): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
   return makeScheduledRuntime({
     scheduleKey: scheduleKey as ScheduledRuntimeContext["scheduleKey"],
@@ -78,9 +78,9 @@ describe("mint/burn slot lanes", () => {
     vi.unstubAllGlobals();
   });
 
-  it("runs the critical lane with 24h and 168h aggregate cache publication", async () => {
-    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
-
+  it.each(["ok", "degraded", "error"])("publishes both critical windows only for non-error primary status: %s", async (status) => {
+    const rt = runtime();
+    mocks.syncMintBurn.mockResolvedValue({ status });
     const summary = await runHalfHourlyMintBurnCriticalSlot(rt);
 
     expect(mocks.syncMintBurn).toHaveBeenCalledWith(
@@ -88,8 +88,7 @@ describe("mint/burn slot lanes", () => {
       rt.env.ALCHEMY_API_KEY ?? null,
       expect.objectContaining({ lane: "critical", jobName: "sync-mint-burn" }),
     );
-    expect(mocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(rt.db, 24);
-    expect(mocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledWith(rt.db, 168);
+    expect(mocks.refreshAggregateMintBurnFlowCache.mock.calls).toEqual(status === "error" ? [] : [[rt.db, 24], [rt.db, 168]]);
     expect(summary.jobs.map((job) => job.job)).toEqual(["sync-mint-burn"]);
   });
 
@@ -97,7 +96,7 @@ describe("mint/burn slot lanes", () => {
     const warning = '199 - "Flight-to-quality classification is unavailable (publication-held)."';
     mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () =>
       new Response("{}", { headers: { "X-Data-Freshness": "fresh", Warning: warning } }));
-    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
+    const rt = runtime();
 
     const summary = await runHalfHourlyMintBurnCriticalSlot(rt);
     const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
@@ -117,7 +116,7 @@ describe("mint/burn slot lanes", () => {
     async (freshness) => {
       mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () =>
         new Response("{}", { headers: freshness == null ? {} : { "X-Data-Freshness": freshness } }));
-      const summary = await runHalfHourlyMintBurnCriticalSlot(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+      const summary = await runHalfHourlyMintBurnCriticalSlot(runtime());
 
       expect(summary.jobs[0]).toMatchObject({
         status: "degraded", reason: "mint-burn-aggregate-freshness-unavailable",
@@ -129,7 +128,7 @@ describe("mint/burn slot lanes", () => {
     mocks.refreshAggregateMintBurnFlowCache
       .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
       .mockResolvedValueOnce(new Response("{}", { headers: { "X-Data-Freshness": "fresh" } }));
-    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
+    const rt = runtime();
 
     const summary = await runHalfHourlyMintBurnCriticalSlot(rt);
     const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
@@ -149,7 +148,7 @@ describe("mint/burn slot lanes", () => {
     mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () => {
       throw new Error("cache write failed");
     });
-    const summary = await runHalfHourlyMintBurnCriticalSlot(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const summary = await runHalfHourlyMintBurnCriticalSlot(runtime());
 
     expect(summary.jobs[0]).toMatchObject({ status: "degraded", reason: "finality-head-unavailable" });
   });
@@ -174,7 +173,7 @@ describe("mint/burn slot lanes", () => {
       vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(JSON.stringify({ id: 1, result: "0x7b" }), {
         status: url === DWELLIR_URL ? 503 : 200,
       })));
-      const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+      const rt = withProviders(runtime());
       for (const status of ["degraded", "degraded", "error"] as const) {
         mocks.syncMintBurn.mockImplementationOnce(async () => {
           await configRead(DWELLIR_URL);
@@ -212,7 +211,7 @@ describe("mint/burn slot lanes", () => {
     { status: "error", decision: "failure" },
   ])("keeps run-level $status semantics for terminal Alchemy failure", async ({ status, decision }) => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const rt = withProviders(runtime());
     mocks.syncMintBurn.mockImplementationOnce(async () => {
       await configRead(ALCHEMY_URL);
       return { status };
@@ -221,125 +220,70 @@ describe("mint/burn slot lanes", () => {
     expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, decision);
   });
 
-  it("retains Alchemy protection when another Alchemy config succeeds", async () => {
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: "0x7b" })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
-    mocks.syncMintBurn.mockImplementationOnce(async () => {
-      await configScope("healthy", () => rpcRead(ALCHEMY_URL), () => false);
-      await configScope("failed", () => rpcRead(ALCHEMY_URL), () => true);
-      return { status: "error" };
-    });
-    await runHalfHourlyMintBurnCriticalSlot(rt);
-    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "failure");
-  });
-
-  it("does not attribute a recovered Alchemy split to another provider's terminal failure", async () => {
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: null }), { status: 503 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: "0x7b" })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
-    mocks.syncMintBurn.mockImplementationOnce(async () => {
-      await configScope("recovered", async () => {
+    it.each([
+    { name: "retains Alchemy protection when another Alchemy config succeeds", replies: [200, 503], decision: "failure", run: async () => {
+        await configScope("healthy", () => rpcRead(ALCHEMY_URL), () => false);
+        await configScope("failed", () => rpcRead(ALCHEMY_URL), () => true);
+      } },
+    { name: "does not attribute a recovered Alchemy split to another provider's terminal failure", replies: [503, 200, 503], decision: "neutral", run: async () => {
+        await configScope("recovered", async () => {
         await rpcRead(ALCHEMY_URL);
         await rpcRead(ALCHEMY_URL);
       }, () => false);
-      await configRead(DWELLIR_URL);
-      return { status: "error" };
-    });
-    await runHalfHourlyMintBurnCriticalSlot(rt);
-    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
-  });
-
-  it("keeps a recovered Alchemy split plus a decode-only config error neutral", async () => {
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: null }), { status: 504 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: "0x7b" }))));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
-    mocks.syncMintBurn.mockImplementationOnce(async () => {
-      await configScope("decode-only", async () => {
+        await configRead(DWELLIR_URL);
+      } },
+    { name: "keeps a recovered Alchemy split plus a decode-only config error neutral", replies: [504, 200], decision: "neutral", run: async () => {
+        await configScope("decode-only", async () => {
         await rpcRead(ALCHEMY_URL);
         await rpcRead(ALCHEMY_URL);
         return { rpcEvidenceIncomplete: false, newLastBlock: null,
           summary: { advanceReason: "scan-coverage-unproven" as const }, apiErrors: 1 };
       }, hasTerminalMintBurnRpcFailure);
-      return { status: "error" };
-    });
-    await runHalfHourlyMintBurnCriticalSlot(rt);
-    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
-  });
-
-  it("does not blame recovered Alchemy work for a later Dwellir-only failure in the same config", async () => {
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: null }), { status: 503 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: "0x7b" })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
-    mocks.syncMintBurn.mockImplementationOnce(async () => {
-      await withRpcRequestScope({ kind: "config", key: "mixed", affectsRun: true }, async () => {
+      } },
+    { name: "does not blame recovered Alchemy work for a later Dwellir-only failure in the same config", replies: [503, 200, 503], decision: "neutral", run: async () => {
+        await withRpcRequestScope({ kind: "config", key: "mixed", affectsRun: true }, async () => {
         await withRpcRequestOperation("mixed", "recovered-logs", async () => {
           await rpcRead(ALCHEMY_URL);
           await rpcRead(DWELLIR_URL);
         }, () => false);
         await withRpcRequestOperation("mixed", "unavailable-context", () => rpcRead(DWELLIR_URL), () => true);
       }, () => true);
-      return { status: "error" };
-    });
-    await runHalfHourlyMintBurnCriticalSlot(rt);
-    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
-  });
-
-  it("preserves a failed Alchemy operation when a different operation succeeds in the same config", async () => {
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: null }), { status: 503 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 1, result: "0x7b" }))));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
-    mocks.syncMintBurn.mockImplementationOnce(async () => {
-      await withRpcRequestScope({ kind: "config", key: "mixed", affectsRun: true }, async () => {
+      } },
+    { name: "preserves a failed Alchemy operation when a different operation succeeds in the same config", replies: [503, 200], decision: "failure", run: async () => {
+        await withRpcRequestScope({ kind: "config", key: "mixed", affectsRun: true }, async () => {
         await withRpcRequestOperation("mixed", "failed-topic", () => rpcRead(ALCHEMY_URL), () => true);
         await withRpcRequestOperation("mixed", "healthy-topic", () => rpcRead(ALCHEMY_URL), () => false);
       }, () => true);
-      return { status: "error" };
-    });
-    await runHalfHourlyMintBurnCriticalSlot(rt);
-    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "failure");
-  });
-
-  it("discards failed operations from an earlier retry attempt", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
-    mocks.syncMintBurn.mockImplementationOnce(async () => {
-      await withRpcRequestScope({ kind: "config", key: "retried", affectsRun: true }, async () => {
+      } },
+    { name: "discards failed operations from an earlier retry attempt", replies: [503], decision: "neutral", run: async () => {
+        await withRpcRequestScope({ kind: "config", key: "retried", affectsRun: true }, async () => {
         await withRpcRequestScope({ kind: "config-attempt", key: "retried", affectsRun: true }, () =>
           withRpcRequestOperation("retried", "old-topic", () => rpcRead(ALCHEMY_URL), () => true), () => false);
         await withRpcRequestScope({ kind: "config-attempt", key: "retried", affectsRun: true }, () =>
           withRpcRequestOperation("retried", "final-topic", () => rpcRead(DWELLIR_URL), () => true), () => false);
       }, () => true);
-      return { status: "error" };
-    });
-    await runHalfHourlyMintBurnCriticalSlot(rt);
-    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
-  });
-
-  it("keeps maintenance failures out of required operation attribution", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
-    mocks.syncMintBurn.mockImplementationOnce(async () => {
-      await withRpcRequestScope({ kind: "config", key: "maintenance", affectsRun: true }, async () => {
+      } },
+    { name: "keeps maintenance failures out of required operation attribution", replies: [503], decision: "neutral", run: async () => {
+        await withRpcRequestScope({ kind: "config", key: "maintenance", affectsRun: true }, async () => {
         await withRpcRequestOperation("maintenance", "required-context", () => rpcRead(DWELLIR_URL), () => true);
         await rpcRead(ALCHEMY_URL);
       }, () => true);
-      return { status: "error" };
-    });
+      } },
+  ] as const)("$name", async ({ replies, decision, run }) => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const response = (status: number) => new Response(JSON.stringify({ id: 1, result: status === 200 ? "0x7b" : null }), { status });
+    if (replies.length === 1) fetchMock.mockImplementation(async () => response(replies[0]));
+    else for (const status of replies) fetchMock.mockResolvedValueOnce(response(status));
+    vi.stubGlobal("fetch", fetchMock);
+    const rt = withProviders(runtime());
+    mocks.syncMintBurn.mockImplementationOnce(async () => { await run(); return { status: "error" }; });
     await runHalfHourlyMintBurnCriticalSlot(rt);
-    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
+    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, decision);
   });
 
   it("retains Alchemy protection when a required transaction-context transport fails", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("connection reset"); }));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const rt = withProviders(runtime());
     mocks.syncMintBurn.mockImplementationOnce(async () => {
       await configScope("context", () => getAlchemyTransactionContextBatchMany(ALCHEMY_URL, ["0xtx"], { count: 0, limit: 10 }),
         (contexts) => contexts.get("0xtx")?.tx == null);
@@ -351,7 +295,7 @@ describe("mint/burn slot lanes", () => {
 
   it("does not attribute pending config failures or local exceptions to Alchemy run failure", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const rt = withProviders(runtime());
     mocks.syncMintBurn.mockImplementationOnce(async () => {
       await configRead(ALCHEMY_URL, true, false);
       return { status: "error" };
@@ -371,7 +315,7 @@ describe("mint/burn slot lanes", () => {
 
   it.each([false, true])("attributes failed chain heads only when admitted scope is affected (%s)", async (admitted) => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const rt = withProviders(runtime());
     mocks.syncMintBurn.mockImplementationOnce(async () => {
       await withRpcRequestScope({ kind: "chain-head", key: "synthetic-chain", affectsRun: true }, () => rpcRead(ALCHEMY_URL), () => true);
       return { status: "error", metadata: JSON.stringify({ admittedFinalityUnavailableChains: admitted ? ["synthetic-chain"] : [] }) };
@@ -392,7 +336,7 @@ describe("mint/burn slot lanes", () => {
       return Response.json({ jsonrpc: "2.0", id: body.id, result: body.method === "eth_blockNumber"
         ? "0x65" : { number: "0x64", hash, timestamp: `0x${timestamp.toString(16)}` } });
     }));
-    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
+    const rt = runtime();
     rt.dwellirNative = createDwellirNativeCapability("test-key");
     rt.env.TRONGRID_API_KEY = "test-grid-key";
     mocks.syncMintBurn.mockImplementationOnce(async (_db, _key, options) => {
@@ -431,7 +375,7 @@ describe("mint/burn slot lanes", () => {
       return Response.json({ jsonrpc: "2.0", id: body.id, result: body.method === "eth_blockNumber"
         ? "0x65" : { number: "0x64", hash, timestamp: `0x${timestamp.toString(16)}` } });
     }));
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const rt = withProviders(runtime());
     mocks.syncMintBurn.mockImplementationOnce(async (_db, _key, options) => {
       await configScope("recovered", async () => {
         await rpcRead(ALCHEMY_URL);
@@ -503,7 +447,7 @@ describe("mint/burn slot lanes", () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     const fetchMock = vi.fn(async (_url: string) => new Response(JSON.stringify({ id: 1, result: "0x7b" })));
     vi.stubGlobal("fetch", fetchMock);
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const rt = withProviders(runtime());
     rt.mintBurnDisabledIds = ["synthetic-disabled-coin"];
     rt.mintBurnDisabledSymbols = ["SYNTH"];
     mocks.syncMintBurn.mockImplementationOnce(async () => {
@@ -526,7 +470,7 @@ describe("mint/burn slot lanes", () => {
   });
 
   it("does not treat sidecar failures, missing requests or thrown local errors as provider failures", async () => {
-    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    const rt = withProviders(runtime());
     mocks.refreshAggregateMintBurnFlowCache.mockRejectedValue(new Error("D1 unavailable"));
     await runHalfHourlyMintBurnCriticalSlot(rt);
     expect(recordOutcomeDecision).not.toHaveBeenCalled();

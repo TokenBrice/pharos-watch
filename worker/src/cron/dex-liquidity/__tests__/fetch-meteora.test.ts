@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchMeteoraPools } from "../fetch-meteora";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
-function validMeteoraPool(index: number) {
+function validMeteoraPool(index: number, tokenX = `TokenX${index}`, tokenY = `TokenY${index}`) {
   return {
     address: `Pool${index}`,
-    token_x: { address: `TokenX${index}`, symbol: "SOL", decimals: 9, price: 90 },
-    token_y: { address: `TokenY${index}`, symbol: "USDC", decimals: 6, price: 1 },
+    token_x: { address: tokenX, symbol: "SOL", decimals: 9, price: 90 },
+    token_y: { address: tokenY, symbol: "USDC", decimals: 6, price: 1 },
     token_x_amount: 100,
     token_y_amount: 9000,
     current_price: 90,
@@ -29,19 +29,7 @@ describe("fetchMeteoraPools", () => {
       outcomes: [
         {
           body: {
-            data: [{
-              address: "Pool111",
-              token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
-              token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
-              token_x_amount: 100,
-              token_y_amount: 9000,
-              current_price: 90,
-              tvl: 18000,
-              volume: { "24h": 25000 },
-              pool_config: { base_fee_pct: 0.01 },
-              dynamic_fee_pct: 0.002,
-              is_blacklisted: false,
-            }],
+            data: [validMeteoraPool(111, "So111", "USDC111")],
           },
         },
         { body: { data: [] } },
@@ -83,7 +71,7 @@ describe("fetchMeteoraPools", () => {
     expect(result.degraded).toBe(false);
   });
 
-  it("marks a bounded head as a warning when more pages remain", async () => {
+  it("reports bounded pagination when more pages remain", async () => {
     const page = (currentPage: number) => ({
       body: {
         pages: 127,
@@ -100,7 +88,8 @@ describe("fetchMeteoraPools", () => {
 
     expect(result.pools).toHaveLength(1500);
     expect(result.errors).toEqual([]);
-    expect(result.warnings).toContain("bounded sample: stopped at page 3 with more pages advertised");
+    expect(result.warnings).toEqual([]);
+    expect(result.pagination).toEqual({ state: "partial", headRefreshed: true, pagesFetched: 3, cursor: "4", cycleCompleted: false });
   });
 
   it("returns a degraded result when Meteora returns invalid JSON", async () => {
@@ -117,10 +106,13 @@ describe("fetchMeteoraPools", () => {
     expect(result.errors[0]).toContain("invalid JSON");
   });
 
-  it("returns a degraded result when Meteora returns a null root", async () => {
+  it.each([
+    ["null", "non-object JSON root"],
+    [JSON.stringify({ pages: 1, current_page: 1, data: {} }), "malformed body"],
+  ])("rejects malformed Meteora body %s", async (body, error) => {
     mockFetch([{
       match: "api.meteora.ag",
-      outcomes: [{ body: "null" }],
+      outcomes: [{ body }],
     }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
@@ -128,7 +120,8 @@ describe("fetchMeteoraPools", () => {
     expect(result.pools).toHaveLength(0);
     expect(result.ok).toBe(false);
     expect(result.degraded).toBe(true);
-    expect(result.errors[0]).toContain("non-object JSON root");
+    expect(result.errors[0]).toContain(error);
+    expect(result.pagination?.cycleCompleted).toBe(false);
   });
 
   it("skips malformed Meteora rows while preserving valid rows from the same page", async () => {
@@ -143,19 +136,7 @@ describe("fetchMeteoraPools", () => {
             token_y_amount: 100,
             tvl: 20_000,
           },
-          {
-            address: "Pool111",
-            token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
-            token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
-            token_x_amount: 100,
-            token_y_amount: 9000,
-            current_price: 90,
-            tvl: 18_000,
-            volume: { "24h": 25_000 },
-            pool_config: { base_fee_pct: 0.01 },
-            dynamic_fee_pct: 0.002,
-            is_blacklisted: false,
-          },
+          validMeteoraPool(111, "So111", "USDC111"),
         ],
       },
     }], { requireMatch: true });

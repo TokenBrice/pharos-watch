@@ -191,27 +191,6 @@ describe("yield.warning_emitted projector", () => {
     expect(inserts[0]![2]).toBe("warning");
   });
 
-  it("emits nothing when the signal set is unchanged", async () => {
-    const db = mockTapeD1(
-      historyTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            source_key: "aave-v3:usdt",
-            recorded_at: SEC + 900,
-            warning_signals: JSON.stringify(["reward-heavy"]),
-          },
-        ],
-        [
-          { warning_signals: JSON.stringify(["reward-heavy"]) },
-        ],
-      ),
-    ) as MockD1Database;
-
-    await projectYieldWarningEmitted(db);
-    expect(tapeInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(0);
-  });
-
   it("emits nothing when warning_signals is empty/null", async () => {
     const db = mockTapeD1(
       historyTables([

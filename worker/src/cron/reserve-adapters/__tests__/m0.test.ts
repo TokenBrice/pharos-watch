@@ -83,21 +83,6 @@ describe("adaptM0Collateral", () => {
     expect(usdat?.liveReservesConfig).toMatchObject({ adapter: "saturn-pyusdx", breakerScope: "usdat-saturn" });
   });
 
-  it("converts the total collateral snapshot into the single protocol-constrained slice", () => {
-    const result = adaptM0Collateral(SAMPLE_PAYLOAD);
-
-    expect(result.slices).toEqual([
-      {
-        sourceKey: "m0:eligible-collateral",
-        name: "U.S. Treasury bills & cash (M0 eligible collateral)",
-        pct: 100,
-        risk: "very-low",
-      },
-    ]);
-    expect(result.warnings).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("m0") ?? undefined }).valid).toBe(true);
-  });
-
   it("normalizes 6-decimal units and reconciles the per-minter sum in metadata", () => {
     const result = adaptM0Collateral(SAMPLE_PAYLOAD);
 
@@ -116,6 +101,7 @@ describe("adaptM0Collateral", () => {
         collateralLagCapSec: 43_200,
       },
     });
+    expect(result.warnings).toBeUndefined();
     expect(result.metadata?.redemption).toBeUndefined();
   });
 

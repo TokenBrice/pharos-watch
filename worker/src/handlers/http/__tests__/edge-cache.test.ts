@@ -194,25 +194,7 @@ describe("writeEdgeCache", () => {
     const ctx = makeExecutionContext();
     const response = new Response("{}", {
       status: 200,
-      headers: { "Cache-Control": "public, s-maxage=60, max-age=10" },
-    });
-
-    writeEdgeCache(makeContext(), response, ctx);
-    await Promise.all(ctx.waitUntil.mock.calls.map(([promise]) => promise));
-
-    expect(put).toHaveBeenCalledOnce();
-    await expect(put.mock.calls[0]![1].text()).resolves.toBe("{}");
-    await expect(response.text()).resolves.toBe("{}");
-  });
-
-  it("stores cacheable responses without dropping Vary metadata", async () => {
-    const ctx = makeExecutionContext();
-    const response = new Response("{}", {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, s-maxage=60, max-age=10",
-        Vary: "Authorization",
-      },
+      headers: { "Cache-Control": "public, s-maxage=60, max-age=10", Vary: "Authorization" },
     });
 
     writeEdgeCache(makeContext(), response, ctx);
@@ -220,6 +202,8 @@ describe("writeEdgeCache", () => {
 
     expect(put).toHaveBeenCalledOnce();
     expect(put.mock.calls[0]?.[1]?.headers.get("Vary")).toBe("Authorization");
+    await expect(put.mock.calls[0]![1].text()).resolves.toBe("{}");
+    await expect(response.text()).resolves.toBe("{}");
   });
 
   it("skips no-store, no-cache, and private responses", () => {

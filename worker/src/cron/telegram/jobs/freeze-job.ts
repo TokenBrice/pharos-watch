@@ -105,12 +105,14 @@ export async function detectTelegramFreezeJobs(db: D1Database, nowSec: number): 
   statements.push(...buildTelegramChangeLogStatements(db, freezeAlertsToChangeLogEntries(belowRealtimeThreshold, nowSec)));
   // A burst can exceed one D1 batch. Job and change-log inserts are INSERT OR
   // IGNORE, so they commit in bounded chunks and the cursor advance rides in the
-  // last one: a crash before it replays the page as no-ops, and the cursor never
-  // advances past an event whose job or change-log row was not written.
+  // last one with any poison-row hold cleanup: a crash retains retries and
+  // replays inserts as no-ops, without skipping unwritten jobs/change-log rows.
   if (loaded.cursor != null) {
     statements.push(prepareCacheUpsert(db, { key: FREEZE_CURSOR_KEY, value: String(loaded.cursor), updatedAt: nowSec }));
   }
-  for (const chunk of chunkArray(statements, D1_BATCH_SIZE)) {
+  const chunks = chunkArray(statements, D1_BATCH_SIZE - (loaded.holdCleanup ? 1 : 0));
+  if (loaded.holdCleanup) chunks[chunks.length - 1]!.push(loaded.holdCleanup);
+  for (const chunk of chunks) {
     await executeAtomicBatch(db, chunk);
   }
   return {

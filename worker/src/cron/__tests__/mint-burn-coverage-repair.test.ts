@@ -2,10 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
-import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { loadMintBurnCoverageGaps, repairMintBurnCoverage, COVERAGE_REPAIR_MAX_BLOCKS } from "../mint-burn/repair-coverage";
-import { createMintBurnConfigSummary, syncMintBurnConfig } from "../mint-burn/sync-config";
+import { hasMintBurnScanCoverage, mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { loadMintBurnCoverageGaps as loadGaps, repairMintBurnCoverage, COVERAGE_REPAIR_MAX_BLOCKS } from "../mint-burn/repair-coverage";
+import { createMintBurnConfigSummary as configSummary, syncMintBurnConfig } from "../mint-burn/sync-config";
 import type { runMintBurnConfigPhase } from "../mint-burn/run-configs";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { fetchConservationBoundaries, mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
+import * as rpc from "../../lib/mint-burn-pipeline/rpc";
+import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
+import * as abort from "../../lib/abort";
+import * as cache from "../../lib/db-cache";
+import { abiWord, reviewedBurnFixture } from "../../lib/__tests__/mint-burn-supply-proof.test-support";
+import {
+  commitMintBurnSupplyProofRepair as commitSupplyRepair, loadMintBurnSupplyProofRepairRanges as loadSupplyRepairs,
+  mintBurnSupplyProofRepairCursorKey as repairCursorKey, loadMintBurnSupplyProofRepairCursor as loadRepairCursor,
+} from "../mint-burn/repair-supply-proofs";
 
 import type * as SyncConfigModule from "../mint-burn/sync-config";
 import type * as ConservationModule from "../../lib/mint-burn-conservation";
@@ -20,6 +31,12 @@ const fixtures = createLatestSchemaFixtureTracker();
 const now = Date.parse("2026-10-20T20:00:00Z") / 1000;
 const config = makeMintBurnConfig({ asset: { startBlock: 100 } });
 const key = mintBurnConfigKey(config);
+const supplyConfig = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "dai-makerdao")!;
+const supplyKey = mintBurnConfigKey(supplyConfig);
+const supplyCursorKey = repairCursorKey(supplyKey);
+const supplyFingerprint = mintBurnConservationFingerprint(supplyConfig);
+const empty = { apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0, newLastBlock: null };
+const overload = new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
 function proof(fromBlock: number, toBlock: number, overrides: Partial<MintBurnScanCoverage> = {}): MintBurnScanCoverage {
   return { configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
     fromBlock, toBlock, fromTimestamp: now - 3600, toTimestamp: now - 60, finalizedBlock: 100_000,
@@ -35,119 +52,239 @@ function input(db: D1Database): Parameters<typeof runMintBurnConfigPhase>[0] {
     runTimestamp: now, priceContext: { priceObservations: new Map(), priceHistory: new Map() },
     lastBlocksAfterRun: new Map([[key, 300]]), pendingCursorUpdates: new Map(), pendingScanCoverage: new Map(),
     maxScanRange: 50_000, criticalConfigBudgetLimit: 60, extendedConfigBudgetLimit: 25, affectedHours: new Map(),
-    deadlineMs: Date.now() + 60_000 };
+    deadlineMs: Date.now() + 180_000 };
 }
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(now * 1000);
+  vi.spyOn(abort, "sleepWithSignal").mockImplementation(async (ms, signal) => {
+    abort.throwIfAborted(signal);
+    vi.setSystemTime(Date.now() + ms);
+  });
+  vi.mocked(fetchConservationBoundaries).mockReset().mockResolvedValue(new Map());
   vi.mocked(syncMintBurnConfig).mockReset().mockImplementation(async (request) => ({
-    summary: { ...createMintBurnConfigSummary(request.config, request.key, request.tier), requestBudgetUsed: 4 },
-    apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0,
-    newLastBlock: request.scanTo, scanCoverage: proof(request.fromBlock, request.scanTo),
+    summary: { ...configSummary(request.config, request.key, request.tier), requestBudgetUsed: 4 },
+    ...empty, newLastBlock: request.scanTo, scanCoverage: proof(request.fromBlock, request.scanTo, {
+      configKey: request.key, configFingerprint: mintBurnScanFingerprint(request.config), chainId: request.config.chain.chainId,
+      finalizedBlock: request.chainHead,
+    }),
   }));
 });
-afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
+afterEach(() => { vi.restoreAllMocks(); fixtures.closeAll(); vi.useRealTimers(); });
 
 describe("bounded scanner coverage repair", () => {
-  it("finds internal and tail holes without inheriting old-fingerprint proof", async () => {
+  it.each(["deadline", "overload", "context"])("certifies the full range after %s without oscillation", async (failure) => {
+    const { db, sqlite } = fixtures.open();
+    const size = failure === "context" ? 300 : 100;
+    const first = supplyConfig.startBlock, last = first + size * 100 - 1;
+    const template = reviewedBurnFixture("dai-makerdao").log;
+    const logs = Array.from({ length: size }, (_, i) => ({ ...template,
+      blockNumber: `0x${(first + i * 100).toString(16)}`, blockHash: abiWord(BigInt(first + i * 100)),
+      transactionHash: abiWord(BigInt(i + 1)), data: abiWord(1n) }));
+    await commit(db, proof(first, last, { configKey: supplyKey,
+      configFingerprint: mintBurnScanFingerprint(supplyConfig), finalizedBlock: last }));
+    const scanner = (await vi.importActual<typeof SyncConfigModule>("../mint-burn/sync-config")).syncMintBurnConfig;
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (request) => {
+      if (failure !== "context" || request.scanTo - request.fromBlock < 5000) return scanner(request);
+      return { summary: { ...configSummary(request.config, request.key, request.tier),
+        scanFrom: request.fromBlock, scanTo: request.scanTo,
+        errors: 1, failedEventDefs: ["tx-context:100", ...(request.fromBlock > first ? ["tx-context-request-not-started:100"] : [])], txContextShortfalls: 100 }, ...empty, apiErrors: 1 };
+    });
+    vi.spyOn(rpc, "fetchMintBurnLogs").mockImplementation(async (_endpoints, _address, topics, from, to) => ({
+      logs: topics.some((topic) => topic.index === 2) ? logs.filter((log) => Number(log.blockNumber) >= from
+        && Number(log.blockNumber) <= to) : [], complete: true, scannedToBlock: to, calls: 1, maxDepth: 0,
+    }));
+    vi.spyOn(rpc, "resolveMintBurnBlockTimestamps").mockImplementation(async (_endpoints, blocks) =>
+      new Map(blocks.map((block) => [block, now - 600])));
+    vi.mocked(fetchConservationBoundaries).mockImplementation(async ({ requests }) => new Map(requests.map((range) =>
+      [range.key, { status: "ready" as const, fromBlockHash: abiWord(BigInt(range.fromBlock - 1)),
+        toBlockHash: abiWord(BigInt(range.toBlock)), fromTimestamp: now - 600, toTimestamp: now - 600,
+        fromSupplyRaw: String(1000 - logs.filter((log) => Number(log.blockNumber) < range.fromBlock).length),
+        toSupplyRaw: String(1000 - logs.filter((log) => Number(log.blockNumber) <= range.toBlock).length) }])));
+    const batch = db.batch.bind(db);
+    let exhausted = false;
+    vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      if (exhausted && statements.length === 100) { vi.setSystemTime(now * 1000 + 121_000); throw overload; }
+      const result = await batch(statements);
+      vi.setSystemTime(Date.now() + statements.length * 400);
+      return result;
+    });
+    const ranges: number[][] = [], accepted: number[] = [];
+    for (let attempt = 0; attempt < 30; attempt++) {
+      vi.setSystemTime((now + attempt * 1800) * 1000);
+      exhausted = failure === "overload" && attempt === 0;
+      const request = { ...input(db), deadlineMs: Date.now() + 540_000, runTimestamp: now + attempt * 1800 }, pending: MintBurnScanCoverage[] = [];
+      request.chainContexts.get("ethereum")!.chainHead = last;
+      const gaps = await loadSupplyRepairs(db, [supplyConfig], new Map([[supplyKey, last]]), now);
+      if (!gaps.length) break;
+      const [summary] = await repairMintBurnCoverage(request, gaps, pending, new Map(), { supplyProofRepair: true });
+      ranges.push([summary!.scanFrom!, summary!.scanTo!]);
+      accepted.push(pending.length);
+      if (pending.length) {
+        await recalcAffectedHours(db, request.affectedHours);
+        await commitSupplyRepair(db, supplyConfig, pending[0]!);
+      }
+    }
+    expect(ranges.slice(0, 2)).toEqual([[first, first + 9999], [first, first + 4999]]);
+    if (failure === "context") expect(accepted.join("")).toContain("111");
+    else expect(ranges[2]).toEqual([first + 5000, last]);
+    expect(vi.mocked(fetchConservationBoundaries).mock.calls.map(([call]) =>
+      [call.requests[0]!.fromBlock, call.requests[0]!.toBlock])).toEqual(ranges);
+    expect(await loadSupplyRepairs(db, [supplyConfig], new Map([[supplyKey, last]]), now)).toEqual([]);
+    expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM mint_burn_events e JOIN mint_burn_supply_proofs p
+      ON p.proof_id = e.supply_proof_id WHERE p.lifecycle = 'accepted' AND p.status = 'proven'`).get()).toEqual({ count: size });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_supply_proofs WHERE lifecycle = 'pending'").get())
+      .toEqual({ count: failure === "context" ? 0 : 1 });
+  });
+  it("keeps oldest-first fallback outside live coverage", async () => {
     const { db } = fixtures.open();
+    const load = () => loadGaps(db, [config], new Map([[key, 300]]), now);
+    expect(await load()).toEqual([]);
     await commit(db, proof(100, 300, { configFingerprint: "old" }));
+    expect(await load()).toEqual([{ config, fromBlock: 100, toBlock: 300 }]);
     await commit(db, proof(100, 110));
     await commit(db, proof(121, 200));
-    const cursors = new Map([[key, 300]]);
-    expect(await loadMintBurnCoverageGaps(db, [config], cursors, now)).toEqual([{ config, fromBlock: 111, toBlock: 120 }]);
+    expect(await load()).toEqual([{ config, fromBlock: 111, toBlock: 120 }]);
     await commit(db, proof(111, 120));
-    expect(await loadMintBurnCoverageGaps(db, [config], cursors, now)).toEqual([{ config, fromBlock: 201, toBlock: 300 }]);
+    expect(await load()).toEqual([{ config, fromBlock: 201, toBlock: 300 }]);
   });
-  it("finds leading holes and bounds replay to retained raw hours and block chunks", async () => {
-    const { db } = fixtures.open();
-    await commit(db, proof(100, 90_000, { configFingerprint: "old" }));
-    await commit(db, proof(80_000, 90_000));
-    expect(await loadMintBurnCoverageGaps(db, [config], new Map([[key, 90_000]]), now))
-      .toEqual([{ config, fromBlock: 100, toBlock: 100 + COVERAGE_REPAIR_MAX_BLOCKS - 1 }]);
-    expect(await loadMintBurnCoverageGaps(db, [config], new Map([[key, 90_000]]), now + 9 * 86_400)).toEqual([]);
-  });
-  it("never manufactures historical proof from a cursor with no ledger", async () => {
-    const { db } = fixtures.open();
-    expect(await loadMintBurnCoverageGaps(db, [config], new Map([[key, 300]]), now)).toEqual([]);
-  });
-  it("stages a genuine repair then commits monotonically behind the live cursor", async () => {
+  it("joins recent repairs through the real 24h reader", async () => {
     const { db, sqlite } = fixtures.open();
-    await commit(db, proof(100, 110));
-    await commit(db, proof(121, 300));
-    const request = input(db);
-    const proofs: MintBurnScanCoverage[] = [];
-    const summaries = await repairMintBurnCoverage(request, [{ config, fromBlock: 111, toBlock: 120 }], proofs, new Map());
-    expect(summaries[0]?.repairReason).toBe("proof-staged");
-    expect(request.pendingCursorUpdates.size).toBe(0);
-    expect(request.lastBlocksAfterRun.get(key)).toBe(300);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 2 });
-    await commit(db, proofs[0]!);
-    expect(sqlite.prepare("SELECT from_block, to_block FROM mint_burn_scan_coverage").all())
-      .toEqual([{ from_block: 100, to_block: 300 }]);
-    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state").get()).toEqual({ last_block: 300 });
-  });
-  it.each(["unproved", "throw"])("keeps failed repair %s unproved with a machine-readable reason", async (failure) => {
-    const { db } = fixtures.open();
-    if (failure === "throw") vi.mocked(syncMintBurnConfig).mockRejectedValue(new Error("provider unavailable"));
-    else vi.mocked(syncMintBurnConfig).mockImplementation(async (request) => ({
-      summary: createMintBurnConfigSummary(config, key, request.tier), apiErrors: 1, effectiveBurns: 0,
-      bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0, newLastBlock: null,
-    }));
-    const proofs: MintBurnScanCoverage[] = [];
-    const request = input(db);
-    const summaries = await repairMintBurnCoverage(request, [{ config, fromBlock: 111, toBlock: 120 }], proofs, new Map());
-    expect(proofs).toEqual([]);
-    expect(summaries[0]?.repairReason).toBe(failure === "throw" ? "repair-scan-failed" : "scan-coverage-unproven");
-    if (failure === "throw") expect(request.budget.count).toBe(185);
-  });
-  it("caps configs, shared requests, and the wall-time window", async () => {
-    const { db } = fixtures.open();
-    const gaps = Array.from({ length: 8 }, (_, i) => ({ config, fromBlock: 111 + i * 10, toBlock: 120 + i * 10 }));
-    await repairMintBurnCoverage(input(db), gaps, [], new Map());
-    expect(syncMintBurnConfig).toHaveBeenCalledTimes(4);
-    vi.mocked(syncMintBurnConfig).mockClear();
-    const request = input(db);
-    request.budget.count = 199;
-    expect((await repairMintBurnCoverage(request, gaps, [], new Map()))[0]?.repairReason).toBe("repair-budget-exhausted");
-    expect(syncMintBurnConfig).not.toHaveBeenCalled();
-    request.budget.count = 160;
-    request.deadlineMs = Date.now() + 4_000;
-    expect((await repairMintBurnCoverage(request, gaps, [], new Map()))[0]?.repairReason).toBe("repair-runtime-exhausted");
-    expect(syncMintBurnConfig).not.toHaveBeenCalled();
-  });
-  it("charges expensive replays to the shared 40-request reserve and rotates failures", async () => {
-    const { db } = fixtures.open();
+    const stamp = (block: number) => now - 86_400 + (block - 1000) * 12;
+    const p = (from: number, to: number, configFingerprint = mintBurnScanFingerprint(config)) =>
+      proof(from, to, { fromTimestamp: stamp(from), toTimestamp: stamp(to), configFingerprint });
+    await commit(db, p(1000, 8200, "old"));
+    await commit(db, p(1500, 2000));
+    await commit(db, p(7000, 8200));
+    await cache.setCacheIfNewer(db, repairCursorKey(key),
+      JSON.stringify({ fingerprint: mintBurnConservationFingerprint(config), lastBlock: null, maxBlocks: 2000 }), now);
+    const ranges: number[][] = [];
     vi.mocked(syncMintBurnConfig).mockImplementation(async (request) => ({
-      summary: { ...createMintBurnConfigSummary(config, key, request.tier), requestBudgetUsed: request.configBudgetLimit },
-      apiErrors: 1, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0, newLastBlock: null,
+      summary: configSummary(config, key, "critical"), ...empty,
+      newLastBlock: request.scanTo, scanCoverage: p(request.fromBlock, request.scanTo),
     }));
-    const gaps = Array.from({ length: 5 }, (_, i) => ({ config, fromBlock: 111 + i * 10, toBlock: 120 + i * 10 }));
-    const request = input(db);
-    await repairMintBurnCoverage(request, gaps, [], new Map());
-    expect(request.budget.count).toBe(200);
-    expect(vi.mocked(syncMintBurnConfig).mock.calls.map(([scan]) => scan.configBudgetLimit)).toEqual([25, 15]);
-    const firstStart = vi.mocked(syncMintBurnConfig).mock.calls[0]![0].fromBlock;
-    vi.mocked(syncMintBurnConfig).mockClear();
-    await repairMintBurnCoverage({ ...input(db), runTimestamp: now + 1800 }, gaps, [], new Map());
-    expect(vi.mocked(syncMintBurnConfig).mock.calls[0]![0].fromBlock).not.toBe(firstStart);
+    for (let turn = 0; turn < 4; turn++) {
+      expect(await hasMintBurnScanCoverage(db, [config], now - 86_400, now)).toBe(false);
+      const pending: MintBurnScanCoverage[] = [];
+      const gaps = await loadGaps(db, [config], new Map([[key, 8200]]), now);
+      await repairMintBurnCoverage(input(db), gaps, pending, new Map());
+      const accepted = pending[0]!;
+      ranges.push([accepted.fromBlock, accepted.toBlock]);
+      await commit(db, accepted);
+    }
+    expect(ranges).toEqual([[5000, 6999], [2500, 4999], [2001, 2499], [1000, 1499]]);
+    expect(await hasMintBurnScanCoverage(db, [config], now - 86_400, now)).toBe(true);
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state").get()).toEqual({ last_block: 8200 });
+    expect(await loadGaps(db, [config], new Map([[key, 8200]]), now + 9 * 86_400)).toEqual([]);
   });
-  it.each([330_000, 360_000])("caps pending repairs at six minutes without blocking admitted repairs (%i ms)", async (elapsed) => {
+  it("bounds forward supply replay to retained hours", async () => {
+    const { db, sqlite } = fixtures.open();
+    const retainedHour = Math.ceil((now - 8 * 86_400) / 3600) * 3600;
+    const first = supplyConfig.startBlock + 500;
+    const live = first + 90_000;
+    await commit(db, proof(supplyConfig.startBlock, live, { configKey: supplyKey, configFingerprint: "old",
+      fromTimestamp: retainedHour - 3600, finalizedBlock: live }));
+    sqlite.prepare("INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)")
+      .run(supplyConfig.chain.chainId, first, retainedHour, now);
+    const load = () => loadSupplyRepairs(db, [supplyConfig], new Map([[supplyKey, live]]), now);
+    expect(await load()).toEqual([{ config: supplyConfig, fromBlock: first, toBlock: first + COVERAGE_REPAIR_MAX_BLOCKS - 1 }]);
+    const cursor = (fingerprint: string, lastBlock: number) => sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(supplyCursorKey, JSON.stringify({ fingerprint, lastBlock }), now);
+    cursor(supplyFingerprint, first + 99);
+    expect((await load())[0]?.fromBlock).toBe(first + 100);
+    cursor("old-law", live);
+    expect((await load())[0]?.fromBlock).toBe(first);
+    sqlite.prepare("DELETE FROM mint_burn_scan_coverage WHERE config_key = ?").run(supplyKey);
+    for (const [fromBlock, toBlock] of [[first, first + 99], [first + 200, first + 299]]) {
+      await commit(db, proof(fromBlock!, toBlock!, { configKey: supplyKey, configFingerprint: "old",
+        fromTimestamp: retainedHour, finalizedBlock: live }));
+    }
+    cursor(supplyFingerprint, first + 99);
+    expect(await load()).toEqual([]);
+  });
+  it("atomically fences repair cursor commits", async () => {
+    const { db, sqlite } = fixtures.open();
+    const p = proof(100, 199, { configKey: supplyKey });
+    sqlite.exec("CREATE TRIGGER fail_repair BEFORE INSERT ON cache BEGIN SELECT RAISE(ABORT, 'cursor failed'); END");
+    await expect(commitSupplyRepair(db, supplyConfig, p)).rejects.toThrow("cursor failed");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 0 });
+    sqlite.exec("DROP TRIGGER fail_repair");
+    vi.spyOn(cache, "getCache").mockRejectedValue(overload);
+    await commitSupplyRepair(db, supplyConfig, p);
+    vi.mocked(cache.getCache).mockRestore();
+    expect((await loadRepairCursor(db, supplyConfig)).lastBlock).toBe(p.toBlock);
+  });
+  it.each(["shrink", "grow", "mismatch", "rpc"])("separates sizing-write overload from %s evidence", async (mode) => {
     const { db } = fixtures.open();
-    const pending = makeMintBurnConfig({ asset: { contractAddress: "0x0000000000000000000000000000000000000002" } });
-    const pendingKey = mintBurnConfigKey(pending);
-    vi.setSystemTime(now * 1000 + elapsed);
-    const request = { ...input(db), pendingAdmissionKeys: new Set([pendingKey]), deadlineMs: now * 1000 + 9 * 60_000 };
-    const summaries = await repairMintBurnCoverage(request, [
-      { config: pending, fromBlock: 111, toBlock: 120 }, { config, fromBlock: 111, toBlock: 120 },
-    ], [], new Map());
-    const calls = vi.mocked(syncMintBurnConfig).mock.calls.map(([scan]) => scan);
-    expect(calls.find((scan) => scan.key === key)?.deadlineMs).toBe(Date.now() + 60_000);
-    if (elapsed < 360_000) {
-      expect(calls.find((scan) => scan.key === pendingKey)?.deadlineMs).toBe(now * 1000 + 360_000);
+    const local = mode === "shrink" || mode === "grow";
+    if (local) await cache.setCacheIfNewer(db, repairCursorKey(key),
+      JSON.stringify({ fingerprint: mintBurnConservationFingerprint(config), lastBlock: null, maxBlocks: 4 }), now);
+    if (mode !== "grow") vi.mocked(syncMintBurnConfig).mockResolvedValue({
+      summary: { ...configSummary(config, key, "critical"), errors: 1,
+        conservationFailure: mode === "mismatch", failedEventDefs: [mode === "shrink"
+          ? "range-proof:persisted-event-readback-deadline" : "tx-context:1"] },
+      rpcEvidenceIncomplete: mode === "rpc", ...empty, apiErrors: 1,
+    });
+    if (local) vi.spyOn(cache, "setCacheIfNewer").mockRejectedValue(overload);
+    const pending: MintBurnScanCoverage[] = [];
+    const result = await repairMintBurnCoverage(input(db), [
+      { config, fromBlock: 111, toBlock: 120 }, ...(local ? [{ config, fromBlock: 121, toBlock: 130 }] : []),
+    ], pending, new Map());
+    expect(pending).toHaveLength(mode === "grow" ? 1 : 0);
+    expect(syncMintBurnConfig).toHaveBeenCalledTimes(1);
+    if (local) {
+      expect(result[0]?.errors).toBeGreaterThan(0);
+      expect(result[1]).toMatchObject({ attempted: false, repairReason: "repair-runtime-exhausted" });
+      expect(abort.sleepWithSignal).toHaveBeenCalledWith(10_000, undefined);
     } else {
-      expect(calls).toHaveLength(1);
-      expect(summaries.find((summary) => summary.key === pendingKey)?.repairReason).toBe("repair-runtime-exhausted");
+      expect(result[0]?.repairReason).toBe("scan-coverage-unproven");
+      expect((await loadRepairCursor(db, config)).maxBlocks).toBeUndefined();
+    }
+  });
+  it.each([
+    [0, 1, 0, false, [120]], [160, 1, 0, false, [30]],
+    [0, 2, 0, false, [120, 70]], [160, 2, 0, false, [15, 15]],
+    [199, 1, 0, false, []], [0, 1, 480_000, false, []], [160, 8, 0, false, [9, 7, 7, 7]],
+    [0, 2, 0, true, [120, 120]], [160, 2, 330_000, true, [15, 26]], [160, 2, 360_000, true, [15]],
+  ] as const)("shares unused requests/time and protects admitted work (%#)", async (used, count, elapsed, pending, expected) => {
+    const { db } = fixtures.open();
+    const configs = Array.from({ length: count }, (_, i) => i === 0 ? config : makeMintBurnConfig({
+      asset: { contractAddress: `0x${String(i + 1).padStart(40, "0")}` },
+    }));
+    const pendingKey = mintBurnConfigKey(configs[configs.length - 1]!);
+    vi.setSystemTime(now * 1000 + elapsed);
+    const start = Date.now(), base = vi.mocked(syncMintBurnConfig).getMockImplementation()!;
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (scan) => {
+      const result = await base(scan);
+      if (!pending) return { ...empty, summary: { ...result.summary, requestBudgetUsed: scan.configBudgetLimit } };
+      if (scan.key !== pendingKey) return result;
+      vi.setSystemTime(scan.deadlineMs!);
+      return { ...result, newLastBlock: null, scanCoverage: undefined, summary: { ...result.summary,
+        errors: 1, failedEventDefs: ["tx-context:1"], txContextShortfalls: 1 } };
+    });
+    if (count === 8) vi.mocked(fetchConservationBoundaries).mockImplementation(async () => {
+      vi.setSystemTime(Date.now() + 1000); return new Map();
+    });
+    const request = { ...input(db), deadlineMs: now * 1000 + 540_000 };
+    request.budget.count = used;
+    if (pending) request.pendingAdmissionKeys = new Set([pendingKey]);
+    const gaps = configs.map((config, i) => ({ config, fromBlock: 111 + i * 10, toBlock: 120 + i * 10 }));
+    const summaries = await repairMintBurnCoverage(request, pending ? [...gaps].reverse() : gaps, [], new Map());
+    const calls = vi.mocked(syncMintBurnConfig).mock.calls.map(([scan]) => scan);
+    expect(calls.map((scan) => scan.configBudgetLimit)).toEqual(expected);
+    expect(request.budget.count).toBe(used + (pending ? calls.length * 4 : expected.reduce((sum, n) => sum + n, 0)));
+    const deadline = Math.min(start + 120_000, now * 1000 + 460_000);
+    if (count === 2) expect(calls.map((scan) => [scan.key, scan.deadlineMs])).toEqual([
+      [key, start + (deadline - start) / 2], ...(calls.length === 2
+        ? [[pendingKey, pending ? Math.min(deadline, now * 1000 + 360_000) : deadline]] : []),
+    ]);
+    if (!expected.length || (pending && calls.length === 1)) expect(summaries[summaries.length - 1]?.repairReason)
+      .toBe(used === 199 ? "repair-budget-exhausted" : "repair-runtime-exhausted");
+    if (count === 8) {
+      expect(abort.sleepWithSignal).toHaveBeenCalledWith(3000, undefined);
+      vi.mocked(syncMintBurnConfig).mockClear();
+      await repairMintBurnCoverage({ ...input(db), runTimestamp: now + 1800 }, gaps, [], new Map());
+      expect(vi.mocked(syncMintBurnConfig).mock.calls[0]![0].fromBlock).not.toBe(calls[0]!.fromBlock);
     }
   });
 });

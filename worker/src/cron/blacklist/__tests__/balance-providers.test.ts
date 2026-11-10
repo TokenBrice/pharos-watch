@@ -53,6 +53,21 @@ describe("fetchTronTokenCurrentBalance", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([1, 10])("stops Tron REST fallback when JSON-RPC exhausts budget %i", async (limit) => {
+    const fetchMock = mockFetch([
+      { match: "/jsonrpc", body: { result: null } },
+      { match: "/v1/accounts/", body: { data: [{ trc20: [{ [tronConfig.contractAddress]: "1000000" }] }] } },
+    ], { requireMatch: true });
+    const budget = createBudget(limit);
+    budget.count = limit - 1;
+    const amount = await fetchTronTokenCurrentBalance(
+      tronConfig, "TCtVtrdy8sSXGMx1QYUjMrAvau1pduC2Aa", null, async (fn) => fn(), budget,
+    );
+    expect(budget.count).toBe(limit);
+    expect(amount).toBeNull();
+    expect(fetchMock.getHistory()).toHaveLength(1);
+  });
+
   it("extracts the configured token balance from the Tron account payload", async () => {
     mockFetch([{
       match: "api.trongrid.io",

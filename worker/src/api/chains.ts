@@ -49,41 +49,35 @@ function buildV9ExpectedDependencyMeta(
     maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
   });
   const ageSeconds = evidence.reason === "accepted-evidence-future" ? null : evidence.ageSec;
+  const base = {
+    updatedAt,
+    ageSeconds,
+    freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+    generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
+  };
   if (activeSource.kind === "held") {
     return {
-      updatedAt,
-      ageSeconds,
-      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-      generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
+      ...base,
       status: "degraded",
       reason: "publication-held",
     };
   }
   if (evidence.reason === "accepted-evidence-future") {
     return {
-      updatedAt,
-      ageSeconds,
-      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-      generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
+      ...base,
       status: "stale",
       reason: "future-timestamp",
     };
   }
   if (!evidence.withinBudget) {
     return {
-      updatedAt,
-      ageSeconds,
-      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-      generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
+      ...base,
       status: "stale",
       reason: "stale-cache",
     };
   }
   return {
-    updatedAt,
-    ageSeconds,
-    freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-    generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
+    ...base,
     status: "fresh",
   };
 }

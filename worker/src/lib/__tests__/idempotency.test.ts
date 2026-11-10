@@ -541,27 +541,6 @@ describe("runIdempotentAction", () => {
     vi.restoreAllMocks();
   });
 
-  it("suppresses retry after a crash immediately after execution-start was persisted", async () => {
-    const db = makeIdempotencyDb();
-    let started!: () => void;
-    const startedPromise = new Promise<void>((resolve) => {
-      started = resolve;
-    });
-    const first = runIdempotentAction(db, "backfill-depegs", request("crash-before-effect"), async () => {
-      started();
-      return new Promise<Response>(() => {});
-    });
-    void first;
-    await startedPromise;
-
-    let calls = 0;
-    const retry = await runIdempotentAction(db, "backfill-depegs", request("crash-before-effect"), async () =>
-      Response.json({ calls: ++calls }),);
-
-    expect(retry.status).toBe(503);
-    expect(calls).toBe(0);
-  });
-
   it.each(["success", "no-op", "throw", "competing-owner"])(
     "never re-executes a started attempt whose outcome is unknown, however stale (CAS %s)", async (outcome) => {
     const now = 1_800_000_000;

@@ -10,10 +10,10 @@ afterEach(() => fixtures.closeAll());
 
 function seedPair(sqlite: DatabaseSync, tx: string, burnAmount = 1000, timestamp = 1700000000, coin = "usdc-circle") {
   const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-    (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, burn_type, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
-    VALUES (?, ?, 'USDC', 'ethereum', ?, ?, ?, ?, ?, 1, ?, '', 'standard')`);
-  insert.run(`${tx}-mint`, coin, "mint", 1000, 1000, null, tx, timestamp);
-  insert.run(`${tx}-burn`, coin, "burn", burnAmount, burnAmount, "effective_burn", tx, timestamp);
+    (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, amount_usd, burn_type, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
+    VALUES (?, ?, 'USDC', 'ethereum', ?, ?, ?, ?, ?, ?, 1, ?, '', 'standard')`);
+  insert.run(`${tx}-mint`, coin, "mint", 1000, "1000000", 1000, null, tx, timestamp);
+  insert.run(`${tx}-burn`, coin, "burn", burnAmount, String(Math.round(burnAmount * 1000)), burnAmount, "effective_burn", tx, timestamp);
 }
 
 describe("sweepRecentRoundtrips", () => {
@@ -36,6 +36,7 @@ describe("sweepRecentRoundtrips", () => {
     expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").get()).toEqual({
       stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1699999200,
       mint_count: 0, burn_count: 0, mint_unpriced_event_count: 0, burn_unpriced_event_count: 0,
+      mint_unresolved_event_count: 0, burn_unresolved_event_count: 0,
       mint_volume_usd: 0, burn_volume_usd: 0, net_flow_usd: 0,
     });
   });
@@ -76,13 +77,13 @@ describe("sweepRecentRoundtrips", () => {
     expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
   });
 
-  it("includes exactly 0.5% mismatch but excludes just outside tolerance", async () => {
+  it("preserves every unequal raw residual, including the old tolerance boundary", async () => {
     const { db, sqlite } = fixtures.open();
     seedPair(sqlite, "boundary", 995);
     seedPair(sqlite, "outside", 994.999);
-    expect((await sweepRecentRoundtrips(db, 1700001000)).reclassified).toBe(2);
+    expect((await sweepRecentRoundtrips(db, 1700001000)).reclassified).toBe(0);
     expect(sqlite.prepare("SELECT tx_hash, flow_type FROM mint_burn_events WHERE direction = 'burn' ORDER BY tx_hash").all()).toEqual([
-      { tx_hash: "boundary", flow_type: "atomic_roundtrip" }, { tx_hash: "outside", flow_type: "standard" },
+      { tx_hash: "boundary", flow_type: "standard" }, { tx_hash: "outside", flow_type: "standard" },
     ]);
   });
 
@@ -96,4 +97,45 @@ describe("sweepRecentRoundtrips", () => {
     expect(sqlite.prepare("SELECT tx_hash FROM mint_burn_events WHERE direction = 'mint' AND flow_type = 'standard' ORDER BY tx_hash").all())
       .toEqual([{ tx_hash: "aaa" }, { tx_hash: "newest" }, { tx_hash: "tx-200" }]);
   });
+
+  it("does not let the first page of unequal groups starve a later exact group", async () => {
+    const { db, sqlite } = fixtures.open();
+    for (let index = 0; index < 200; index++) seedPair(sqlite, `unequal-${index}`, 999);
+    seedPair(sqlite, "later-exact", 1000, 1700000001);
+    expect(await sweepRecentRoundtrips(db, 1700001000)).toMatchObject({ reclassified: 0, saturated: true });
+    expect(await sweepRecentRoundtrips(db, 1700001000)).toMatchObject({ reclassified: 2, saturated: false });
+  });
+
+  it("keeps unresolved/excluded legs out of candidate sums and preserves legacy null tags", async () => {
+    const { db, sqlite } = fixtures.open();
+    for (const tx of ["bridge", "internal", "review", "legacy", "legacy-standard"]) seedPair(sqlite, tx);
+    sqlite.exec(`UPDATE mint_burn_events SET flow_type = 'bridge_transfer' WHERE id = 'bridge-burn';
+      UPDATE mint_burn_events SET flow_type = 'protocol_internal' WHERE id = 'internal-burn';
+      UPDATE mint_burn_events SET burn_type = 'review_required' WHERE id = 'review-burn';
+      UPDATE mint_burn_events SET amount_raw = NULL, flow_type = 'atomic_roundtrip' WHERE tx_hash = 'legacy';
+      UPDATE mint_burn_events SET amount_raw = NULL WHERE tx_hash = 'legacy-standard';`);
+    expect((await sweepRecentRoundtrips(db, 1700001000)).reclassified).toBe(0);
+    expect(sqlite.prepare("SELECT flow_type FROM mint_burn_events WHERE tx_hash = 'legacy'").all())
+      .toEqual([{ flow_type: "atomic_roundtrip" }, { flow_type: "atomic_roundtrip" }]);
+    expect(sqlite.prepare("SELECT DISTINCT flow_type FROM mint_burn_events WHERE tx_hash = 'legacy-standard'").all())
+      .toEqual([{ flow_type: "standard" }]);
+  });
+
+  it("fences the BigInt decision against a concurrent transaction sibling", async () => {
+    const { sqlite } = fixtures.open();
+    seedPair(sqlite, "concurrent");
+    let injected = false;
+    const db = createSqliteD1(sqlite, { onAll(sql) {
+      if (!injected && sql.includes("FROM mint_burn_events e JOIN json_each")) {
+        injected = true;
+        sqlite.exec(`INSERT INTO mint_burn_events
+          (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
+          VALUES ('new-sibling', 'usdc-circle', 'USDC', 'ethereum', 'mint', 1, '1000', 'concurrent', 1, 1700000000, '', 'standard')`);
+      }
+    } });
+    expect((await sweepRecentRoundtrips(db, 1700001000)).reclassified).toBe(0);
+    expect(sqlite.prepare("SELECT DISTINCT flow_type FROM mint_burn_events").all()).toEqual([{ flow_type: "standard" }]);
+    expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
+  });
+
 });

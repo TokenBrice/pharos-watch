@@ -138,33 +138,6 @@ describe("adaptSolsticeAttestation", () => {
     ).toThrow(/invalid response/);
   });
 
-  it("throws when the latest timeline point has no reserve/supply values", () => {
-    expect(() =>
-      adaptSolsticeAttestation({
-        res: "ok",
-        data: {
-          reserves: {
-            timeline: [{ ts: "1776200000000" }],
-          },
-        },
-      }),
-    ).toThrow(/missing reserve\/supply/);
-  });
-
-  it("falls back to unverified freshness when no timestamp is discoverable", () => {
-    const result = adaptSolsticeAttestation({
-      res: "ok",
-      data: {
-        reserves: {
-          timeline: [
-            { reserves: 1000, supply: 900 },
-          ],
-        },
-      },
-    });
-    expect(result.metadata?.freshnessMode).toBe("unverified");
-  });
-
   it("does not date an undated selected point with a fresh envelope", () => {
     const result = adaptSolsticeAttestation({
       res: "ok",

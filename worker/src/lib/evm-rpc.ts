@@ -11,10 +11,12 @@ import { getRpcRequestObserver } from "./rpc-request-observer";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
+import type { BodyReadObserver } from "./response-body";
 import { parseQuantityHex } from "./bigint";
 import { FetchRequestNotStartedError, rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
+import { supportsEvmRpcBlockSelectors } from "@shared/lib/evm-rpc-capabilities";
 
 export interface JsonRpcEnvelope<T> {
   result?: T;
@@ -389,6 +391,8 @@ function validRecentPin(pin: RecentFinalizedRpcPin, chainId?: string): boolean {
 
 function supportsRead(endpoint: RpcEndpoint, requirement: EvmRpcReadRequirement, chainId?: string): boolean {
   if (endpoint.operator === "dwellir" && (endpoint.routingDisabled || requirement.kind === "unsupported")) return false;
+  // HyperEVM Dwellir backends served `latest` ~47 min behind their own head (#1724); pins fail closed instead.
+  if (chainId === "hyperevm" && endpoint.operator === "dwellir" && requirement.kind === "current-state") return false;
   if (requirement.kind === "current-state" && requirement.finalizedTag && endpoint.finalizedTagUnsupported) return false;
   if (requirement.kind === "historical-state" || requirement.kind === "recent-pinned-state") {
     // The reviewed HyperEVM Alchemy numeric-state mispin cannot be cured by retrying it.
@@ -431,6 +435,9 @@ function buildRpcUrls(
   const endpoints = chainRpc?.endpoints ?? [];
   const demoted = chainRpcs == null ? undefined : demotedSupplementalRpcOriginsByRun.get(chainRpcs);
   const eligible = (url: string): boolean => {
+    if (!supportsEvmRpcBlockSelectors(url) && options.requirements.some(requirement =>
+      requirement.kind === "historical-state" || requirement.kind === "recent-pinned-state" ||
+      (requirement.kind === "current-state" && requirement.finalizedTag))) return false;
     const endpoint = endpoints.find(row => row.url === url);
     if (endpoint?.operator === "dwellir" || isDwellirRpcUrl(url)) {
       if (!endpoint || options.excludeSupplementalRpc || demoted?.has(endpointOrigin(url) ?? url)) return false;
@@ -508,6 +515,7 @@ export async function requestJsonRpcAtUrl(
   options: Pick<EvmRpcOptions, "signal" | "timeoutMs" | "deadlineMs" | "maxResponseBytes" | "maxRetries"> & {
     beforeRequest?: () => boolean;
     responseMode?: "text";
+    onBodyRead?: BodyReadObserver;
   },
 ): Promise<JsonRpcTransportOutcome> {
   const observer = getRpcRequestObserver();
@@ -535,6 +543,7 @@ export async function requestJsonRpcAtUrl(
         },
         retryMode: "network-only",
         returnFinalResponse: true,
+        ...(options.onBodyRead === undefined ? {} : { onBodyRead: options.onBodyRead }),
         ...(options.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
       },
     );
@@ -619,6 +628,7 @@ async function fetchJsonRpcOutcome<T>(
   const requirement = options?.recentStatePin ? rpcReadRequirement({ method, params }, options) : undefined;
 
   for (const rpcUrl of urls) {
+    if (!supportsEvmRpcBlockSelectors(rpcUrl) && requiresHistoricalEvmState(method, params)) continue;
     if (isTronRpcUrl(rpcUrl) && requiresHistoricalEvmState(method, params)) continue;
     const remainingMs = options?.deadlineMs == null
       ? configuredTimeoutMs
@@ -789,6 +799,7 @@ async function runEvmRpcBatch<Value>(
   const maxRetries = options?.maxRetries ?? 1;
   const onRpcRequest = chainId ? options?.chainRpcs?.get(chainId)?.onRpcRequest : undefined;
   endpoints: for (const rpcUrl of urls) {
+    if (!supportsEvmRpcBlockSelectors(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
     if (isTronRpcUrl(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
     const endpoint = chainId ? options?.chainRpcs?.get(chainId)?.endpoints.find(row => row.url === rpcUrl) : undefined;
     if (!fitsRpcLogSpan(calls, endpoint?.maxLogBlockSpan)) continue;
@@ -803,12 +814,17 @@ async function runEvmRpcBatch<Value>(
         const payload = noBatch
           ? { jsonrpc: "2.0", id: requestIndex + 1, method: calls[requestIndex]!.method, params: calls[requestIndex]!.params }
           : calls.map((call, index) => ({ jsonrpc: "2.0", id: index + 1, method: call.method, params: call.params }));
+        let bodyTooLarge = false;
         const result = await requestJsonRpcAtUrl(rpcUrl, payload, {
           signal: options?.signal,
           maxRetries,
           timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
           deadlineMs: options?.deadlineMs,
           maxResponseBytes: options?.maxResponseBytes,
+          onBodyRead: ({ outcome, intakeBytes, declaredBytes, limitBytes }) => {
+            bodyTooLarge = outcome === "rejected" &&
+              ((intakeBytes !== null && intakeBytes > limitBytes) || (declaredBytes !== null && declaredBytes > limitBytes));
+          },
           beforeRequest: () => {
             if (requirements.some(requirement => requirement.kind === "recent-pinned-state" &&
               !validRecentPin(requirement.pin, chainId))) return false;
@@ -822,7 +838,7 @@ async function runEvmRpcBatch<Value>(
         });
         if (result.status === "control-error" || result.status === "transport-error") {
           if (result.error != null) throw result.error;
-          demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+          if (!bodyTooLarge) demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
           continue endpoints;
         }
         if (result.status === "parse-error") throw result.error;

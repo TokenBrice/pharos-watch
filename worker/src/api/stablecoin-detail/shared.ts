@@ -140,6 +140,7 @@ export function createDetailResponseHelpers(config: {
   pegType: string;
   cached: DetailCacheEntry;
   execCtx: ExecutionContext;
+  onFreshAcquisition?: () => void;
 }): DetailResponseHelpers {
   const cacheKey = `detail:${config.stablecoinId}`;
   // Failed/oversized cache writes used to vanish into sampled console logs,
@@ -220,7 +221,9 @@ export function createDetailResponseHelpers(config: {
 
   const createFreshResponseFromBody = (body: string): Response => {
     queueCacheWrite(body);
-    return createFreshUpstreamResponse(body);
+    const response = createFreshUpstreamResponse(body);
+    config.onFreshAcquisition?.();
+    return response;
   };
 
   const createFreshResponseFromTokens = (tokens: DetailTokens): Response =>

@@ -52,10 +52,20 @@ export const ScoreChart = memo(function ScoreChart({
 }) {
   const psiScoreGradientId = useSvgId("psi-score");
   const chartRef = useRef<HTMLDivElement>(null);
+  const exportPendingRef = useRef(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const handlePngExport = useCallback(async () => {
-    const exported = await downloadChartPng(chartRef, "pharos-psi-history");
-    setExportError(exported ? null : "Chart export failed. Try again from this browser.");
+    if (exportPendingRef.current) return;
+    exportPendingRef.current = true;
+    setIsExporting(true);
+    try {
+      const exported = await downloadChartPng(chartRef, "pharos-psi-history");
+      setExportError(exported ? null : "Chart export failed. Try again from this browser.");
+    } finally {
+      exportPendingRef.current = false;
+      setIsExporting(false);
+    }
   }, []);
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts", undefined, { initialRange });
   const isMobile = useIsMobile();
@@ -106,8 +116,9 @@ export const ScoreChart = memo(function ScoreChart({
             <Button
               variant="ghost"
               size="icon"
-              className="shrink-0"
+              className="shrink-0 aria-disabled:opacity-50"
               onClick={handlePngExport}
+              aria-disabled={isExporting}
               title="Save chart as PNG"
               aria-label="Save chart as PNG"
             >

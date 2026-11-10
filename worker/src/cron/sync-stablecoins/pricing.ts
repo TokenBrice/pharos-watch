@@ -210,7 +210,8 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     validationContext,
     validationReferences,
     previousTrustedPrice,
-    listFillDefault: asset.priceListFillDefault ?? null,
+    // The list's claimed upstream attribution describes intake, not this fetched primary quote.
+    listFillDefault: asset.priceListFillDefault ? { ...asset.priceListFillDefault, upstreamSource: null } : null,
   });
   if (!decision.accepted) {
     return decision.reason;

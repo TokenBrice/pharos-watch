@@ -381,6 +381,7 @@ describe("fetchCoinbasePrices", () => {
   it.each([
     ["trailing non-numeric text", "0.9997 USD", "0.9999 USD", "0.9998 USD"],
     ["non-decimal JavaScript numeric literals", "0x10", "0b10", "0o10"],
+    ["leading signs", "+1", "-1", "+1"],
   ])("rejects ticker prices containing %s", async (_case, bid, ask, price) => {
     mockFetch([
       { match: "/products/USDT-USD/ticker", body: { bid, ask, price } },

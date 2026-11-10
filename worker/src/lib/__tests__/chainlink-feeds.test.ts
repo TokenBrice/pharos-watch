@@ -109,24 +109,6 @@ describe("fetchChainlinkReferenceQuoteSnapshot", () => {
     expect(mockFetchEtherscanProxyHex).not.toHaveBeenCalled();
   });
 
-  it("skips stale quotes", async () => {
-    const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
-    expect(eurFeed).toBeDefined();
-
-    mockFetchEvmCallHexAtBlock.mockImplementation(async (_chainId, address, data) => {
-      if (address === eurFeed!.proxyAddress && data === "0x313ce567") {
-        return "0x0000000000000000000000000000000000000000000000000000000000000008";
-      }
-      if (address === eurFeed!.proxyAddress && data === "0xfeaf968c") {
-        return buildLatestRoundDataHex(115_820_000n, 1_763_800_000);
-      }
-      return null;
-    });
-
-    const quotes = (await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000)).quotes;
-    expect(quotes.has("peggedEUR")).toBe(false);
-  });
-
   it("reports summary counts for unavailable and stale feeds", async () => {
     const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
     const gbpFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedGBP");

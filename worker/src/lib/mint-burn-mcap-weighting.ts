@@ -40,7 +40,7 @@ export function getMintBurnTrackedChains(stablecoinId: string, configs: readonly
  *
  * Note: `current = 0` is treated as real data (a tracked-chain entry exists
  * and reports zero supply); it contributes 0 but does NOT trigger fallback.
- * A tracked-chain entry whose `current` is unavailable (`null`) makes the whole
+ * A missing tracked-chain entry or unavailable `current` (`null`) makes the whole
  * weight unavailable (`null`) rather than a partial sum that reads as a zero leg.
  */
 export function sumMcapForTrackedChains(
@@ -59,16 +59,13 @@ export function sumMcapForTrackedChains(
   const canonical = canonicalizeChainCirculating(chainCirculating);
   if (canonical.size === 0) return fallbackSupply;
 
+  if (!trackedChains.some((chainId) => canonical.has(chainId))) return fallbackSupply;
+
   let total = 0;
-  let anyFound = false;
   for (const chainId of trackedChains) {
     const entry = canonical.get(chainId);
-    if (entry) {
-      if (entry.current == null) return null;
-      total += entry.current;
-      anyFound = true;
-    }
+    if (entry?.current == null) return null;
+    total += entry.current;
   }
-  if (!anyFound) return fallbackSupply;
   return total;
 }

@@ -28,7 +28,8 @@ import {
   buildStablecoinsSyncResult,
   countFallbackCoingeckoAssets,
 } from "./metadata";
-import { isAbortResult, runDepegPipeline } from "./post-enrichment";
+import { isAbortResult, runDepegPipeline, type DepegPipelineResult } from "./post-enrichment";
+import { COMMITTED_PUBLICATION_ABORT_REASON } from "../../lib/cron-result";
 import {
   abortResult,
   returnIfAborted,
@@ -311,103 +312,132 @@ export async function runStablecoinsPostIntakePublication(
     previousAcceptedAssetsById: previousPriceEvidence,
   });
   previousPriceEvidence.clear();
-  await seedAbsentActivePriceCoverageMarketCaps(input.db, activePriceCoverage, Math.floor(Date.now() / 1000));
-  const admittedAssetIds = new Set(input.assets.map((asset) => asset.id));
+  const publishedResult = (depegResult: DepegPipelineResult | null): CronResult => {
+    const providerDiagnostics = [...input.providerDiagnostics, ...(depegResult?.providerDiagnostics ?? [])];
+    const completion = {
+      assets: input.assets,
+      providerDiagnostics,
+      stalenessWarning: staleness.stalenessWarning,
+      stalenessSummary: staleness.stalenessSummary,
+      stalenessCheckFailed: staleness.stalenessCheckFailed,
+      stalenessCheckFailureReason: staleness.stalenessCheckFailureReason,
+      depegErrorCount: depegResult?.depegErrorCount ?? 0,
+      depegHeldReason: depegResult?.depegHeldReason,
+      depegObservation: depegResult?.depegObservation ?? null,
+      depegObservationUnavailableReason: depegResult ? depegResult.depegObservationUnavailableReason : "aborted" as const,
+      cacheKey: cacheResult.cacheKey,
+      syncStartSec: cacheResult.syncStartSec,
+      activePriceCoverage,
+    };
+    const result = input.metadata.path === "main"
+      ? buildStablecoinsSyncResult({
+          ...input.metadata.input, ...completion,
+          depegErrors: depegResult?.depegErrors ?? [],
+          responseReadyCacheError: cacheResult.responseReadyCacheError,
+          depegPipelineSucceeded: depegResult != null && !depegResult.depegHeldReason && depegResult.depegErrorCount === 0,
+          previousActivePriceCoverage: input.previousActivePriceCoverage,
+        })
+      : buildFallbackStablecoinsSyncResult({
+          ...input.metadata.input, ...completion,
+          previousActivePriceCoverage: input.previousActivePriceCoverage,
+        });
 
-  if (input.supplyChainGuard) {
-    await persistChainDropoutState(input.db, input.supplyChainGuard, input.syncStartSec, input.signal);
+    return {
+      ...result,
+      abortResultPolicy: "preserve-committed-publication",
+      productivity: {
+        productive: true,
+        reason: labels.productivityReason,
+        publications: [{
+          surface: "stablecoins",
+          generationId: `stablecoins:${cacheResult.syncStartSec}`,
+          publishedAt: cacheResult.syncStartSec,
+          // `input.assets` already excludes rows the publication boundary quarantined (DEC-03).
+          candidateRows: input.assets.length + cacheResult.quarantinedAssets.length,
+          publishedRows: input.assets.length,
+          expectedRows: input.assets.length,
+          artifactCacheKey: cacheResult.cacheKey,
+          ...(labels.productivityValidationSummary
+            ? { validationSummary: labels.productivityValidationSummary }
+            : {}),
+        }],
+      },
+    };
+  };
+  const publishedAbort = (
+    interrupted = abortResult(input.signal, "post-publication"), depegResult: DepegPipelineResult | null = null,
+  ): CronResult => {
+    const result = publishedResult(depegResult);
+    const metadata = JSON.parse(result.metadata!);
+    const { stage, detail } = JSON.parse(interrupted.metadata ?? "{}");
+    return {
+      ...result, aborted: true, status: "degraded",
+      metadata: JSON.stringify({
+        ...metadata,
+        ...(metadata.reason ? { preAbortReason: metadata.reason } : {}),
+        reason: COMMITTED_PUBLICATION_ABORT_REASON, stage, detail,
+        depegPipelineSucceeded: depegResult != null && metadata.depegPipelineSucceeded,
+        capabilities: { ...metadata.capabilities, depegPipeline: depegResult != null && metadata.capabilities.depegPipeline },
+      }),
+    };
+  };
+
+  try {
+    if (input.signal?.aborted) return publishedAbort();
+    await seedAbsentActivePriceCoverageMarketCaps(input.db, activePriceCoverage, Math.floor(Date.now() / 1000));
+    const admittedAssetIds = new Set(input.assets.map((asset) => asset.id));
+
+    if (input.supplyChainGuard) {
+      await persistChainDropoutState(input.db, input.supplyChainGuard, input.syncStartSec, input.signal);
+    }
+
+    await reportStablecoinsStage(
+      input.reportProgress,
+      labels.cacheWriteProgressStage,
+      labels.cacheWriteProgressMessage,
+      { itemsDone: input.assets.length, itemsTotal: input.assets.length },
+    );
+    const priceCacheCommit = await commitReplayPriceCache({
+      db: input.db,
+      entries: input.priceCacheEntries.filter((entry) => admittedAssetIds.has(entry.id)),
+      signal: input.signal,
+      stagePrefix: labels.priceCacheStagePrefix,
+    });
+    if (priceCacheCommit) return publishedAbort(priceCacheCommit);
+    if (main) await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
+
+    await queueTrackedAdditionsNotice(input.db, previousAssetIds, input.assets, { previousBaselineFallbackBacked });
+    await reportStablecoinsStage(
+      input.reportProgress,
+      labels.depegProgressStage,
+      labels.depegProgressMessage,
+      { itemsTotal: input.assets.length },
+    );
+    const depegResult = await runDepegPipeline(
+      input.db,
+      input.assets,
+      input.fxFallbackRates,
+      input.signal,
+      input.coingeckoApiKey,
+      labels.depegAbortStagePrefix,
+      labels.depegLogContext,
+      input.binanceSession,
+      input.nativePegSession,
+    );
+    if (isAbortResult(depegResult)) return publishedAbort(depegResult);
+
+    const result = publishedResult(depegResult);
+    await reportStablecoinsStage(input.reportProgress, "complete", labels.completeMessage, {
+      itemsDone: input.assets.length,
+      itemsTotal: input.assets.length,
+      metadata: {
+        path: input.metadata.path,
+        status: result.status ?? "ok",
+      },
+    });
+    return input.signal?.aborted ? publishedAbort(undefined, depegResult) : result;
+  } catch (error) {
+    if (input.signal?.aborted) return publishedAbort();
+    throw error;
   }
-
-  await reportStablecoinsStage(
-    input.reportProgress,
-    labels.cacheWriteProgressStage,
-    labels.cacheWriteProgressMessage,
-    { itemsDone: input.assets.length, itemsTotal: input.assets.length },
-  );
-  const priceCacheCommit = await commitReplayPriceCache({
-    db: input.db,
-    entries: input.priceCacheEntries.filter((entry) => admittedAssetIds.has(entry.id)),
-    signal: input.signal,
-    stagePrefix: labels.priceCacheStagePrefix,
-  });
-  if (priceCacheCommit) return priceCacheCommit;
-  if (main) await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-
-  await queueTrackedAdditionsNotice(input.db, previousAssetIds, input.assets, { previousBaselineFallbackBacked });
-  await reportStablecoinsStage(
-    input.reportProgress,
-    labels.depegProgressStage,
-    labels.depegProgressMessage,
-    { itemsTotal: input.assets.length },
-  );
-  const depegResult = await runDepegPipeline(
-    input.db,
-    input.assets,
-    input.fxFallbackRates,
-    input.signal,
-    input.coingeckoApiKey,
-    labels.depegAbortStagePrefix,
-    labels.depegLogContext,
-    input.binanceSession,
-    input.nativePegSession,
-  );
-  if (isAbortResult(depegResult)) return depegResult;
-
-  const providerDiagnostics = [...input.providerDiagnostics, ...depegResult.providerDiagnostics];
-  const completion = {
-    assets: input.assets,
-    providerDiagnostics,
-    stalenessWarning: staleness.stalenessWarning,
-    stalenessSummary: staleness.stalenessSummary,
-    stalenessCheckFailed: staleness.stalenessCheckFailed,
-    stalenessCheckFailureReason: staleness.stalenessCheckFailureReason,
-    depegErrorCount: depegResult.depegErrorCount,
-    depegHeldReason: depegResult.depegHeldReason,
-    depegObservation: depegResult.depegObservation,
-    depegObservationUnavailableReason: depegResult.depegObservationUnavailableReason,
-    cacheKey: cacheResult.cacheKey,
-    syncStartSec: cacheResult.syncStartSec,
-    activePriceCoverage,
-  };
-  const result = input.metadata.path === "main"
-    ? buildStablecoinsSyncResult({
-        ...input.metadata.input, ...completion,
-        depegErrors: depegResult.depegErrors,
-        responseReadyCacheError: cacheResult.responseReadyCacheError,
-        depegPipelineSucceeded: !depegResult.depegHeldReason && depegResult.depegErrorCount === 0,
-        previousActivePriceCoverage: input.previousActivePriceCoverage,
-      })
-    : buildFallbackStablecoinsSyncResult({
-        ...input.metadata.input, ...completion,
-        previousActivePriceCoverage: input.previousActivePriceCoverage,
-      });
-
-  await reportStablecoinsStage(input.reportProgress, "complete", labels.completeMessage, {
-    itemsDone: input.assets.length,
-    itemsTotal: input.assets.length,
-    metadata: {
-      path: input.metadata.path,
-      status: result.status ?? "ok",
-    },
-  });
-  return {
-    ...result,
-    productivity: {
-      productive: true,
-      reason: labels.productivityReason,
-      publications: [{
-        surface: "stablecoins",
-        generationId: `stablecoins:${cacheResult.syncStartSec}`,
-        publishedAt: cacheResult.syncStartSec,
-        // `input.assets` already excludes rows the publication boundary quarantined (DEC-03).
-        candidateRows: input.assets.length + cacheResult.quarantinedAssets.length,
-        publishedRows: input.assets.length,
-        expectedRows: input.assets.length,
-        artifactCacheKey: cacheResult.cacheKey,
-        ...(labels.productivityValidationSummary
-          ? { validationSummary: labels.productivityValidationSummary }
-          : {}),
-      }],
-    },
-  };
 }

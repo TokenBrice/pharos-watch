@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { MintBurnValuationCompleteness } from "@shared/types";
+import type { MintBurnClassification, MintBurnValuationCompleteness } from "@shared/types";
 import {
   describeMintBurnVolumeBound,
   formatMintBurnVolume,
@@ -77,6 +77,8 @@ export function FlowVolumeValue({
   completeness,
   unpricedEventCount,
   scanComplete,
+  classificationCompleteness,
+  unresolvedEventCount,
   format,
   className,
 }: {
@@ -84,13 +86,15 @@ export function FlowVolumeValue({
   completeness: MintBurnValuationCompleteness | null | undefined;
   unpricedEventCount?: number | null;
   scanComplete?: boolean;
+  classificationCompleteness?: MintBurnClassification["completeness"] | null;
+  unresolvedEventCount?: number | null;
   format: (valueUsd: number) => string;
   className?: string;
 }) {
-  const note = describeMintBurnVolumeBound(completeness, unpricedEventCount, scanComplete);
+  const note = describeMintBurnVolumeBound(completeness, unpricedEventCount, scanComplete, classificationCompleteness, unresolvedEventCount);
   return (
     <span className={className} title={note ?? undefined}>
-      {formatMintBurnVolume(valueUsd, completeness, format, scanComplete)}
+      {formatMintBurnVolume(valueUsd, completeness, format, scanComplete, classificationCompleteness)}
       {note ? <span className="sr-only"> ({note})</span> : null}
     </span>
   );

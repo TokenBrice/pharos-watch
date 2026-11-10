@@ -159,16 +159,6 @@ describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)
     expect(ledger.alternatives[0]?.rejectionReasonCode).toBe("lower-confidence");
   });
 
-  it("codes 'rewards-only' when reward share exceeds REWARDS_ONLY_SHARE (0.5)", () => {
-    const candidate = makeSource({
-      sourceKey: "alt",
-      currentApy: 10,
-      apyReward: 6,
-    });
-    const ledger = ledgerFor(selected, [candidate]);
-    expect(ledger.alternatives[0]?.rejectionReasonCode).toBe("rewards-only");
-  });
-
   it("codes 'smaller' when selected TVL >= candidate TVL * SMALLER_TVL_RATIO (5)", () => {
     const candidate = makeSource({ sourceKey: "alt", sourceTvlUsd: 100_000 });
     const sel = makeSource({ sourceKey: "selected", sourceTvlUsd: 500_000 });

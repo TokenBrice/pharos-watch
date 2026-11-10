@@ -40,13 +40,13 @@ describe("buildPrimaryConsensusResults", () => {
     const nowSec = 1_790_629_276;
     const usdc: PeggedAsset = { id: "usdc-circle", name: "USD Coin", symbol: "USDC", pegType: "peggedUSD" };
 
-    function build(input: { dexAgeSec: number; withIndependentLegs: boolean; aggregatorLegsOnly?: boolean }): PrimaryPriceResult | undefined {
+    function build(input: { dexAgeSec: number | null; withIndependentLegs: boolean; aggregatorLegsOnly?: boolean; dexPrice?: number }, asset = usdc, sourceTotalTvl = 2_411_298_816): PrimaryPriceResult | undefined {
       const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
       if (input.aggregatorLegsOnly) {
-        usdc.geckoId = "usd-coin";
+        asset.geckoId = "usd-coin";
         quoteMaps.cgQuotes.set("usd-coin", { price: 0.9999, observedAt: nowSec - 30, observedAtMode: "upstream" });
       } else {
-        delete usdc.geckoId;
+        delete asset.geckoId;
       }
       if (input.withIndependentLegs && !input.aggregatorLegsOnly) {
         quoteMaps.krakenPrices.set("USDC", 0.9999);
@@ -55,19 +55,20 @@ describe("buildPrimaryConsensusResults", () => {
         quoteMaps.binanceObservedAt = nowSec - 30;
       }
       const dexRows = new Map([[
-        "usdc-circle",
+        asset.id,
         {
-          stablecoin_id: "usdc-circle",
-          dex_price_usd: 0.999936,
+          stablecoin_id: asset.id,
+          dex_price_usd: input.dexPrice ?? 0.999936,
           deviation_from_primary_bps: 0,
           source_pool_count: 748,
-          source_total_tvl: 2_411_298_816,
-          updated_at: nowSec - input.dexAgeSec,
+          source_total_tvl: sourceTotalTvl,
+          updated_at: nowSec - 1,
+          aggregateObservedAt: input.dexAgeSec == null ? null : nowSec - input.dexAgeSec,
         },
       ]]) as PrimaryDexRows;
       const results = new Map<string, PrimaryPriceResult>();
       buildPrimaryConsensusResults({
-        candidates: [usdc],
+        candidates: [asset],
         quoteMaps,
         dexRows,
         dexPriceSources: new Map() as PrimaryDexPriceSources,
@@ -76,7 +77,7 @@ describe("buildPrimaryConsensusResults", () => {
         results,
         stats: createStats(),
       });
-      return results.get("usdc-circle");
+      return results.get(asset.id);
     }
 
     it("keeps a DEX aggregate older than the primary budget from ageing fresh agreement", () => {
@@ -114,14 +115,29 @@ describe("buildPrimaryConsensusResults", () => {
       }).accepted).toBe(true);
     });
 
-    it("keeps an older DEX aggregate as the sole leg with its own clock", () => {
-      const result = build({ dexAgeSec: 3_018, withIndependentLegs: false });
+    it.each([0.999936, 0.4])("keeps an older DEX aggregate as the sole leg with its own clock ($%s)", (price) => {
+      const result = build({ dexAgeSec: 3_018, withIndependentLegs: false, dexPrice: price });
 
       expect(result).toMatchObject({
         source: "dex-promoted",
+        price,
         confidence: "single-source",
         observedAt: nowSec - 3_018,
       });
+    });
+
+    it.each([
+      ["usdc-circle", 250_000, 60, false],
+      ["vusd-virtue", 249_999, 60, false],
+      ["vusd-virtue", 250_000, 4500, true],
+      ["vusd-virtue", 250_000, 4501, false],
+    ] as const)("preserves the %s aggregate tier at TVL %s and original age %s", (id, tvl, dexAgeSec, accepted) => {
+      expect(build({ dexAgeSec, withIndependentLegs: false }, { ...usdc, id }, tvl) != null).toBe(accepted);
+    });
+
+    it.each([null, 21_600, 4500])("rejects original age %s despite fresh publication", (dexAgeSec) => {
+      expect(build({ dexAgeSec, withIndependentLegs: false })).toBeUndefined();
+      expect(build({ dexAgeSec, withIndependentLegs: true })?.candidateSources).not.toContain("dex-promoted");
     });
   });
 

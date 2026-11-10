@@ -40,9 +40,9 @@ Start with narrow diagnosis, not broad release gates, retries, or timeout change
 
 ## Checks Owned By The Verifier
 
-The assigned verifier reruns focused reproductions after causal edits; these are authoring feedback, not readiness proof. Before an authorized replacement push, use focused authoring checks; `npm run check:pr` is optional broader feedback under [Pre-push readiness](../../../docs/testing.md#pre-push-readiness). Hosted CI owns readiness; local receipts are optional diagnostics. Push once through the protected-main PR path, never directly to `main`; release policy owns authorization. `check:release` is only a requested production rehearsal.
+The assigned verifier reruns focused reproductions after causal edits; these are authoring feedback, not readiness proof. Readiness and receipt rules follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness). Push once through the protected-main PR path, never directly to `main`; release policy owns authorization. `check:release` is only a requested production rehearsal.
 
-Use `npm run check:pr -- --explain-receipt` for read-only receipt diagnosis: local Git state only, no fetch/check execution/receipt rewrite/staging/push authorization. Exit success only means diagnosis completed, even for missing/failed/stale evidence; remote-base freshness remains unknown. It never replaces readiness.
+Receipt diagnosis: `npm run check:pr -- --explain-receipt`; exit success only means diagnosis completed, even for missing/failed/stale evidence; remote-base freshness remains unknown. Semantics are owned by [Pre-push readiness](../../../docs/testing.md#pre-push-readiness).
 
 ## Completion Evidence
 

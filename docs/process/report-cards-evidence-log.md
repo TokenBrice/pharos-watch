@@ -2,7 +2,7 @@
 
 > **Agent navigation** — Historical review context only, not scoring input or a second methodology authority. [Dependency rulings](#dependency-rulings) · [Exit rulings](#exit-rulings) · [Supply identity review](#supply-identity-review) · [Publication calibration and cleanup](#publication-calibration-and-cleanup). Current contracts remain in the [implementation appendix](report-cards-appendix.md).
 
-These records preserve review dates, scope limits and operator observations formerly embedded in the appendix. An undated record below means the source paragraph did not record a date; relocation does not establish one. Nothing here renews a review, proves current closure or authorizes a score, supply override or destructive cleanup. Consult current admitted evidence before applying a historical disposition.
+These records preserve review dates, scope limits and operator observations formerly embedded in the owning appendix or contract. An undated record below means the source paragraph did not record a date; relocation does not establish one. Nothing here renews a review, proves current closure or authorizes a score, supply override or destructive cleanup. Consult current admitted evidence before applying a historical disposition.
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
@@ -135,6 +135,21 @@ The primary-source vault review records privileged internal share-pricing paths 
 
 Equivalent existing EUTBL claim/NAV component reviews remain unchanged rather than duplicated. Custody, bridge, parent, incident, legal recovery and existing C/adverse constraints are not renewed or cleared. Date-only evidence keeps its admission clock; generated local inputs and schema/test checks are not captured-clock replay or production acceptance.
 
+## Governance path-correction pins — GHO/Sky/D3M
+
+Current owner: [Truthful path corrections and GHO improvement trigger](../mint-authority-scoring.md#truthful-path-corrections-and-gho-improvement-trigger-1005).
+
+- **GHO fixed-pool minters:** `mintAndSupply(uint256)` (`0x749b1e8b`) supplies the immutable configured Core/Lido/Horizon pool, not a caller-selected pool. Downstream pool/admin/withdraw reach is separate; the fixed first hop is not automatically reserve-backed. Historical evidence pin: Ethereum **26118181**; Core `0x5513224daaeabca31af5280727878d52097afa05`, [implementation source](https://eth.blockscout.com/api/v2/smart-contracts/0xe4c958de49303c9be571e00582cf9454586de76f) (53–74); Lido `0x2ce01c87fec1b71a9041c52caed46fc5f4807285`, [implementation source](https://eth.blockscout.com/api/v2/smart-contracts/0xc718786a7e45353835de634897385b3371a749f0) (54–75); Horizon `0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea`, [implementation source](https://eth.blockscout.com/api/v2/smart-contracts/0x68807d04df1f1bb74bb7498b1e832d2ce356cd18) (53–74), each `mintAndSupply` body. These historical observations are not cosmetically refreshed to a later pin.
+- **GHO ordinary payload clock:** the corrected integer-second public-visibility lower bound is **345603 seconds = 1 + 259201 + 86401**. The older 432003-second value included pre-payload cooldown. Slot timing/transport may add latency; this is not a claim of exact attainability or complete mutable-target closure. Independent zero-delay Council paths remain independent. Historical Ethereum **26118181**: live Governance `0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7`, proposal-creation / `activateVoting` source predicates, [implementation source](https://eth.blockscout.com/api/v2/smart-contracts/0x58bcb647c4beff253b4b6996c62f737b783f2cdd) (2879–2990); live PayloadsController `0xdabad81af85554e9ae636395611c58f7ec1aaec5`, `createPayload` / queue / execution predicates, [implementation source](https://eth.blockscout.com/api/v2/smart-contracts/0x7222182cb9c5320587b5148bf03eee107ad64578) (2386–2463, 2565–2617).
+- **Sky current versus legacy LockstakeClipper:** distinguish current `0x836f56750517b1528b5078cba4ac4b94fbe4a399` (`stopped=3`, Mom ward 0) from legacy `0xa85621d35caf9cf5c146d2376ce553d7b78a6239` (Mom ward 1). Do not copy the legacy Mom bypass onto the current instance or delete governor-reachable latent capacity. Ethereum block **26118754**, `stopped()` and `wards(address)` (`0xbf353dbb`), the Mom breaker setter (`0x2145a7f3`); [current verified source](https://eth.blockscout.com/api/v2/smart-contracts/0x836f56750517b1528b5078cba4ac4b94fbe4a399) and [legacy verified source](https://eth.blockscout.com/api/v2/smart-contracts/0xa85621d35caf9cf5c146d2376ce553d7b78a6239), ward authorization and breaker source bodies.
+- **D3M `_exec` fee/donation accounting:** positive Vow `suck` paired with positive `grab` cancels the added sin/vice and creates matched pool debt. It is paired accounting, **not atomic `heal`**, blanket loss-replacement mint or automatically harmless surplus transfer. The negative loss/cull branch is separate, and zero line/Art does not erase residual assets or latent accounting reach. Ethereum block **26118754**, Hub `0x12f36cdea3a28c35ac8c6cc71d9265c17c74a27f`, `exec(bytes32)` / `_exec` source body; [verified Hub source](https://eth.blockscout.com/api/v2/smart-contracts/0x12f36cdea3a28c35ac8c6cc71d9265c17c74a27f), `_exec` lines 399–429.
+
+## Convex voting evidence — Ethereum block 26118754
+
+Current owner: [Uniform voting control](../mint-authority-scoring.md#uniform-voting-control-1005).
+
+Ethereum block **26118754** placed Convex VoterProxy at approximately 54.1% of pinned veCRV, with its pooled other-holder vote caster replaceable by the extension's 3-of-5 Safe. The [verified extension source](https://eth.blockscout.com/api/v2/smart-contracts/0x5349ffba494ac3c888ffa16fd438f44b8c67fb07) supports operator/replacement reach, not a concentration-only cap or an accusation about holders. Proved own-locked stake and minority veto are different facts. Current admitted topology and engine replay determine scores; this historical evidence is not a permanent numeric assignment.
+
 ## Dependency Rulings
 
 Current owner: [Dependency Coverage](report-cards-appendix.md#dependency-coverage).
@@ -177,7 +192,7 @@ The retained record names CGO's physical-exit reader boundary and unavailable re
 
 ## Supply Identity Review
 
-Current owner: [Supply Attribution And In-Flight Accounting](report-cards-appendix.md#supply-attribution-and-in-flight-accounting).
+Current owner: [Supply Attribution And In-Flight Accounting](report-cards-appendix.md#supply-attribution-and-in-flight-accounting). Durable supply-pipeline decisions remain in [Supply Data Source](../supply-snapshot.md#supply-data-source).
 
 ### Spiko added native registers — 2026-10-26
 

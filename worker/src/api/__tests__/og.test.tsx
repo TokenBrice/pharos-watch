@@ -214,6 +214,12 @@ describe("stablecoin OG card data", () => {
       const before = beforeCalls[beforeCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(before.props.data.flow7dSource).toBe("mint-burn");
       expect(before.props.data.flow7d).toBe(100);
+      sqlite.exec("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 1 WHERE chain_id = 'ethereum'");
+      expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
+      const unresolvedCalls = vi.mocked(satoriStandalone).mock.calls;
+      const unresolved = unresolvedCalls[unresolvedCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(unresolved.props.data.flow7dSource).not.toBe("mint-burn");
+      sqlite.exec("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 0 WHERE chain_id = 'ethereum'");
       sqlite.prepare("INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts) VALUES ('usdt-tether', 'ethereum', ?)")
         .run(end - 3600);
       expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);

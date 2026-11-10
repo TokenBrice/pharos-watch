@@ -47,7 +47,7 @@ raw body leaves `captures/`, but a new replay or an integrity mismatch fails
 closed. Registries and attestations therefore remain byte-stable while the raw
 retention policy is enforced.
 
-Protocol-API collection and reviewed weekly automation are permanent non-publishing evidence tooling. Strict replay distinguishes canonical raw-byte V2, the exact hash-verified normalized-only V1 exception, and unavailable evidence. Recognizing the frozen V1 hash in summary metadata does not verify its original bytes. Absent/corrupt bodies fail `--replay` and `--replay-all`; missing account/access fails when replay needs R2 rather than local original bytes or verified cache. No unavailable V2 counts as V1 or as a passed replay. Network-free verification requires local original bytes or verified cache; otherwise signed R2 reads and a cache write occur. Original-byte hash readback is required before claiming preservation.
+Artifact V1/V2 admission is owned by the [Artifact Contract](./protocol-api-mechanism-refresh.md#artifact-contract). Absent/corrupt bodies fail `--replay` and `--replay-all`; missing account/access fails when replay needs R2 rather than local original bytes or verified cache. Network-free verification requires local original bytes or verified cache; otherwise signed R2 reads and a cache write occur. Original-byte hash readback is required before claiming preservation.
 
 ## Test-owned replay fixtures
 

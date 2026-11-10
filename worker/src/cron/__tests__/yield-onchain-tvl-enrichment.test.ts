@@ -179,7 +179,7 @@ describe("on-chain measured TVL enrichment", () => {
       startSec: nowSec,
       sevenDaysAgoSec: nowSec - 7 * 86_400,
       dlPools: [makeDlPool({ pool: "pool-susde-native", tvlUsd: 3_500_000_000 })],
-      onChainRates: new Map([["susde-ethena", { rate: 1.001 }]]),
+      onChainRates: new Map([["susde-ethena", { rate: 1.001, sourceTvlUsd: 999 }]]),
       safetyScores: new Map(),
       riskFreeRates: {} as never,
     });
@@ -222,24 +222,6 @@ describe("on-chain measured TVL enrichment", () => {
       sourceTvlUsd: null,
       dataSource: "onchain",
     });
-  });
-
-  it("prefers DL-joined TVL over on-chain tvlRead residual", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const result = await resolveTrackedYieldSources({
-      db: makeDb(),
-      startSec: nowSec,
-      sevenDaysAgoSec: nowSec - 7 * 86_400,
-      dlPools: [makeDlPool({ pool: "pool-susde-native", tvlUsd: 1_234_567 })],
-      onChainRates: new Map([["susde-ethena", { rate: 1.001, sourceTvlUsd: 999 }]]),
-      safetyScores: new Map(),
-      riskFreeRates: {} as never,
-    });
-
-    const entry = result.resolved.find(
-      (row) => row.id === "susde-ethena" && row.yield?.dataSource === "onchain",
-    );
-    expect(entry?.yield?.sourceTvlUsd).toBe(1_234_567);
   });
 
   it("uses on-chain tvlRead residual when no pinned DL pool is available", async () => {

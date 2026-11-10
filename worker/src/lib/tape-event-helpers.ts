@@ -1,6 +1,7 @@
 import { TapeEventSchema, type TapeEvent, type TapeEventSeverity } from "@shared/types/tape-event";
 import { getReportCardGradeRank, UNKNOWN_REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { TapeEventRow } from "./tape-event-types";
+import { parseJsonObject as parsePayload } from "./json-parse";
 
 /** Stable per-row hash for the wire `event_id`. djb2 → 8 hex chars. */
 function tapeEventHash(input: string): string {
@@ -139,17 +140,6 @@ export interface TapeEventQuarantine {
 export type TapeEventRowMapping =
   | { event: TapeEvent; quarantine: null }
   | { event: null; quarantine: TapeEventQuarantine };
-
-/** Parse stored `payload_json`; unparsable or non-object JSON is never coerced into `{}`. */
-function parsePayload(payloadJson: string): Record<string, unknown> | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(payloadJson);
-  } catch {
-    return null;
-  }
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
-}
 
 function isScoreTapeEventType(type: string): boolean {
   return type === "score.upgraded" || type === "score.downgraded";

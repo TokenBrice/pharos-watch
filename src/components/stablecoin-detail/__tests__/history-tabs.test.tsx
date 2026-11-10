@@ -102,14 +102,21 @@ describe("HistoryTabs", () => {
     expect(screen.getByTestId("depeg-preview")).toBeTruthy();
   });
 
-  it("renders nothing for a NAV profile with no grade history and never mounts its preview", async () => {
+  it.each(["legacy", "v2"] as const)("restores NAV history from %s after an empty result without mounting its preview", async (source) => {
     mockHooks({ grade: [] });
-    const { container } = render(
-      <HistoryTabs stablecoinId="nav" isNavToken historyActive
-        depegHistoryPreview={preview} {...depegProps} />,
-    );
+    const props = { stablecoinId: "nav", isNavToken: true, historyActive: true, depegHistoryPreview: preview, ...depegProps };
+    const { container, rerender } = render(<HistoryTabs {...props} />);
 
-    await waitFor(() => expect(container.firstChild).toBeNull());
+    await waitFor(() => expect(container.firstElementChild?.innerHTML).toBe(""));
+    expect(container.firstElementChild?.hasAttribute("hidden")).toBe(true);
+    expect(screen.queryByTestId("depeg-preview")).toBeNull();
+    hooks[source].mockReturnValue({ isLoading: false, error: null, data: source === "legacy" ? [{}] : { history: [{}] } });
+    rerender(<HistoryTabs {...props} />);
+    expect(await screen.findByTestId("grade-panel")).toBeTruthy();
+    expect(container.firstElementChild?.hasAttribute("hidden")).toBe(false);
+    expect(container.querySelectorAll("#grade-history")).toHaveLength(1);
+    expect(screen.queryByTestId("depeg-panel")).toBeNull();
+    expect(screen.queryByTestId("ddr-panel")).toBeNull();
     expect(screen.queryByTestId("depeg-preview")).toBeNull();
   });
 

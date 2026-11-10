@@ -82,7 +82,7 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("commodity-claim");
 
     const review = buildSafetyScoreV9MechanismReview(
-      PROFILE_FIXED_INPUT,
+      { ...PROFILE_FIXED_INPUT, clockSec: Date.UTC(2026, 10, 7) / 1_000 },
       { id: "xaut-tether" } as MechanismMeta,
       "commodity-claim",
     );

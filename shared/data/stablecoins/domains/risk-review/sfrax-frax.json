@@ -425,6 +425,72 @@
     ],
     "controls": [
       {
+        "id": "avalanche-legacy-sfrax-bridge-governor",
+        "routeRefs": [
+          "avalanche:0x3405e88af759992937b84e58f2fe691ef0eea320"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xc036caff65c1a31eaa53e60f6e17f1e6689937aa",
+        "label": "avalanche legacy sFRAX bridge governor",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "observedAt": "2026-11-06",
+        "observedBlock": 99600450,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x05fb8ec3c41da95b26fcb85503daf8b89b89a935",
+            "0xee8787aa507958905edbd99ccdc53f223d4b60b1",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0xc28339c70054bc22255a74e927a0b9e9a475f224"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 99600450,
+          "observedAt": "2026-11-06",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Issuer legacy sFRAX Avalanche deployment identity",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "Verified CrossChainCanonicalV2 source and runtime; Avalanche byte correspondence after exact EIP712 immutable binding",
+            "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x2dd1b4d4548accea497050619965f91f78b3b532"
+          },
+          {
+            "label": "Avalanche block 99600450, hash 0xa91851c10758b77b6a81d874e7aeb0e552abf6a281a2511a9f8976dd5025ada0, 2026-11-06T16:39:09Z: token, Safe and executable-code reads",
+            "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc"
+          },
+          {
+            "label": "Verified exact Avalanche GnosisSafeProxy source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xc036caff65c1a31eaa53e60f6e17f1e6689937aa"
+          },
+          {
+            "label": "Verified exact Avalanche GnosisSafeL2 1.3.0 implementation and authorization paths",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xfb1bffc9d739b8d520daf37df666da4c687191ea"
+          },
+          {
+            "label": "Verified exact Avalanche CompatibilityFallbackHandler; signature checks and reverting simulation",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x017062a1de2fe6b99be3d9d37841fed19f573804"
+          }
+        ],
+        "evidence": "Reviewed 2026-11-06 by Safety unknowns campaign 2026-11-06 — k-fsa. At the cited block, owner(), timelock_address() and the sole minters_array(0) are this Safe; nominatedOwner is zero, array length at slot 12 is 1 and minters(Safe) is true. Token runtime keccak256 0xd3ed0d444fe7561982a862ba2c674e6596191ff63ada11e714d9cd5939014112 exactly matches verified Optimism CrossChainCanonicalV2, including metadata, after recomputing only EIP712 cachedThis, cachedChainId 43114 and cachedDomainSeparator at byte offsets 6666, 6708 and 6750. The domain uses Staked FRAX, version 1 and the exact Avalanche token, producing 0xcda864a588e67c79231d052376a99f4b405b32a96d3aa67c7cee2cb9ce0df886. Safe proxy, singleton and handler runtime keccak256 hashes are respectively 0xb89c1b3bdf2cf8827818646bce9a8f6e372885f8c55e5c07acbd307cb133b000, 0x21842597390c4c6e3c1239e434a682b054bd9548eee5e9b1d6a4482731023c0f and 0x03e69f7ce809e81687c69b19a7d7cca45b6d551ffdec73d9bb87178476de1abf. minter_mint permits arbitrary amounts without collateral or a cap; owner/timelock can add minters and replace the timelock. minter_burn_from still requires holder allowance. The 3-of-5 Safe has no enabled modules (pagination returns the sentinel), a zero guard and five owners with no runtime code at this pin. Its verified singleton enforces the signature threshold; the compatibility handler checks Safe signatures and its simulation always reverts state. Owner/module/handler changes require Safe self-authorization. The Safe can mint immediately, with no enforced delay. This establishes unbounded representation issuance, not native Ethereum vault minting, complete cross-chain liability accounting, human signer independence or incident absence. Original route review and transport uncertainty are unchanged."
+      },
+      {
         "id": "arbitrum-legacy-sfrax-bridge-governor",
         "routeRefs": [
           "arbitrum:0xe3b3fe7bca19ca77ad877a5bebab186becfad906"

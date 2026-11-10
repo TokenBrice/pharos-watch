@@ -80,13 +80,76 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     evidenceUrls: ["https://basescan.org/token/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"],
     reason: "Reviewed collapse release: finalized Base block 53496375 confirms 91.4k USDGLO, down from the $1.018M carry; the eight-chain published total is $852.3k.",
   },
+  ...[
+    {
+      stablecoinId: "sparkusdtbc-spark",
+      baselineUsd: 850_692.45,
+      evidenceUrls: [
+        "https://eth.blockscout.com/tx/0xe0a239b8708cc3955a18e4e568fc1b972369ae8e7fc2958abdb289ee9b8fc8ff",
+        "https://eth.blockscout.com/token/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+      ],
+      reason: "Verified November 6 vault redemptions: Ethereum block 26365071 confirms 835,854.472234 shares and 851,338.899178 USDT totalAssets, supporting the published $850.7k rather than the pre-redemption $50.3M baseline.",
+    },
+    {
+      stablecoinId: "frnt-wyoming",
+      baselineUsd: 397_773.24,
+      evidenceUrls: [
+        "https://stablecoins.llama.fi/stablecoin/441",
+        "https://etherscan.io/token/0x5e817f2abccb9095585d26c2a3ce234a440574fc?a=0x3994d1bBb6a96671804D996915AAbE8b1569712E",
+      ],
+      reason: "Corrected DefiLlama circulating perimeter: six pinned EVM reads confirm 569,895 FRNT in its configured unreleased wallet. Net EVM stock plus finalized Solana supply is 398,052.919913 FRNT; the old $967.4k daily row counted that inventory.",
+    },
+    {
+      stablecoinId: "wmxn-ripio",
+      baselineUsd: 176_488.15,
+      evidenceUrls: [
+        "https://stablecoins.llama.fi/stablecoin/383",
+        "https://etherscan.io/token/0x337e7456b420bd3481e7fa61fa9850343d610d34?a=0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807",
+      ],
+      reason: "Corrected DefiLlama circulating perimeter: seven hash-pinned native totals minus its configured unreleased wallet reconcile to 3,269,392.897505 MXN, excluding 9,092,861.065585 MXN. The old $663.1k daily level reflected gross stock, not a 73% circulating redemption.",
+    },
+    {
+      stablecoinId: "wcop-ripio",
+      baselineUsd: 193_650.25,
+      evidenceUrls: [
+        "https://stablecoins.llama.fi/stablecoin/382",
+        "https://etherscan.io/token/0x8a1d45e102e886510e891d2ec656a708991e2d76?a=0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807",
+      ],
+      reason: "Corrected DefiLlama circulating perimeter: seven hash-pinned native totals minus its configured unreleased wallet reconcile to 620,785,461.758091 COP, excluding 1,132,848,349.038808 COP. The old $544.9k daily level reflected gross stock, not a 64% circulating redemption.",
+    },
+  ].map((review) => ({
+    ...review,
+    reviewedAt: Date.parse("2026-11-07T19:48:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-14T19:48:00Z") / 1000,
+  })),
+  {
+    stablecoinId: "tryb-bilira",
+    baselineUsd: 698_792.67,
+    reviewedAt: Date.parse("2026-11-07T20:27:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-14T20:27:00Z") / 1000,
+    evidenceUrls: [
+      "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1742983312-tryb-yaratma-ve-yakma-surecinin-seffafligi",
+      "https://github.com/DefiLlama/peggedassets-server/blob/66e24e7adc31b49c37b7fe03c98996ef40546030/src/peggedData/peggedData.ts",
+      "https://stablecoins.llama.fi/stablecoin/300",
+    ],
+    reason: "Corrected DefiLlama circulating perimeter: BiLira identifies 0x75950B957009fe615c8AE02fBAac8AaA6da91B2D as its redemption sweep awaiting burn. Pinned Ethereum block 26365294 and the other nine deployments net to 36,124,961.095158 TRYB ($698,792.67); the newly excluded sweep holds 17,676,620.201490 TRYB across Ethereum/BSC/Avalanche, not a fresh circulating redemption against the old $2.22M daily baseline.",
+  },
+  {
+    stablecoinId: "gbpa-agant",
+    baselineUsd: 1_191_268.85,
+    reviewedAt: Date.parse("2026-11-07T21:10:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-14T21:10:00Z") / 1000,
+    evidenceUrls: ["https://etherscan.io/token/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b#balances"],
+    reason: "Follow-on to the reviewed Ethereum collapse release: block 26365071 shows 1,001,981.18 GBPA total supply with 1,001,879.18 in the detail feed's unreleased inventory, leaving 102 circulating. The released aggregate publishes $1.191M; the earlier daily row counted that inventory, so its comparison is obsolete.",
+  },
 ];
 
 export interface ReviewedSupplyCarry {
   stablecoinId: string;
   reviewedAt: number;
   expiresAt: number;
-  reason: "defillama-list-fill-default-carry" | "nav-parent-price-gap";
+  owner?: "ops";
+  reason: "defillama-list-fill-default-carry" | "nav-parent-price-gap" | "coingecko-cap-carry";
   evidence: string;
 }
 
@@ -106,12 +169,20 @@ export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
     reason: "nav-parent-price-gap",
     evidence: "NAV parent aid-gaib has no admissible price; STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-coverage.ts reviews that gap until 2026-11-14T12:37Z. No par valuation or fresh supply is admitted by this acknowledgement.",
   },
+  {
+    stablecoinId: "wm-m0",
+    reviewedAt: Date.parse("2026-11-08T08:41:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-15T08:41:00Z") / 1000,
+    owner: "ops",
+    reason: "coingecko-cap-carry",
+    evidence: "O6 review: six missing deployments read 39.519543 wM at pinned 2026-11-08 blocks, but Nexus remains unreadable (https://docs.m0.org/resources/addresses/m0-platform; https://3946.rpc.thirdweb.com returns chain ID but rejects token/state reads). Legacy Plume retains 0.000001 wM. No complete native roster or inventory perimeter is admitted. CoinGecko cap publication recovered by 2026-11-08T08:30Z; this review is dormant for fresh supply and covers only a bounded coingecko-fallback restore, never a native or quarantine carry. No value or observation clock is changed.",
+  },
 ];
 
 /**
  * A review covers only the carry mechanism it was written for: a chain-dropout
- * quarantine carry, or a tracked native-supply restore. A carry produced by any
- * other path stays unacknowledged.
+ * quarantine carry, a tracked native-supply restore, or a CoinGecko cap restore.
+ * A carry produced by any other path stays unacknowledged.
  */
 function carryMatchesReview(
   asset: { supplyChainGuard?: { reason: string; status: string } | null; supplySource?: string | null },
@@ -120,7 +191,8 @@ function carryMatchesReview(
   const guard = asset.supplyChainGuard ?? null;
   return review.reason === "defillama-list-fill-default-carry"
     ? guard?.reason === "supply-chain-dropout" && guard.status === "quarantined"
-    : guard == null && asset.supplySource === "onchain-total-supply";
+    : guard == null && asset.supplySource === (review.reason === "coingecko-cap-carry"
+      ? "coingecko-fallback" : "onchain-total-supply");
 }
 
 function isReviewedValueRebaseline(stablecoinId: string, currentUsd: number, nowSec: number): boolean {
@@ -417,7 +489,9 @@ async function loadSupplyValueIntegrity(
       if (acknowledged) report.acknowledgedCarryReviews.push(review);
       else {
         report.unacknowledgedCarryIds.push(asset.id);
-        if (review != null && nowSec >= review.expiresAt) report.expiredCarryReviewIds.push(asset.id);
+        if (review != null && nowSec >= review.expiresAt && carryMatchesReview(asset, review)) {
+          report.expiredCarryReviewIds.push(asset.id);
+        }
       }
       const observedAt = asset.supplyObservedAt;
       if (typeof observedAt === "number" && Number.isSafeInteger(observedAt) && observedAt > 0) {
@@ -770,9 +844,9 @@ export interface SupplyIntegrityCondition {
   /** Stable across runs while the same finding persists; confirmation resets when it changes. */
   signature: string;
   /**
-   * Pre-rollover evidence retained while the condition stays raised, so a
-   * changing snapshot baseline is not mistaken for recovery. Omitted when the
-   * evidence read failed and the previous state must stand.
+   * Pre-rollover evidence retained while drifting or quarantined, so a changing
+   * snapshot baseline is not mistaken for recovery. Omitted when the evidence
+   * read failed and the previous state must stand.
    */
   held?: Record<string, number>;
 }
@@ -935,7 +1009,7 @@ export function buildSupplyIntegrityConditions(report: SupplyIntegrityReport): S
 interface ConfirmationEntry {
   signature: string;
   runs: number;
-  /** Drift baselines retained while the value-drift condition stays raised. */
+  /** Drift baselines retained while drifting or quarantined. */
   held?: Record<string, number>;
 }
 
@@ -994,7 +1068,13 @@ export async function confirmSupplyIntegrityConditions(
       if (previous[condition.id] != null) next[condition.id] = previous[condition.id];
       return condition;
     }
-    if (!condition.active) return condition;
+    if (!condition.active) {
+      // Keep quarantine evidence without counting an unavailable value as a breach.
+      if (condition.held && Object.keys(condition.held).length > 0) {
+        next[condition.id] = { signature: condition.signature, runs: 0, held: condition.held };
+      }
+      return condition;
+    }
     const runs = previous[condition.id]?.signature === condition.signature
       ? previous[condition.id].runs + 1
       : 1;

@@ -5,7 +5,7 @@ import {
 } from "./shared";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { CRON_INTERVALS, CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { getPublicProducerGraceBudget, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
 import { FRESHNESS_RATIOS, getCacheHealthyMaxRatio, getCacheRatioThresholds } from "@shared/lib/status-thresholds";
@@ -140,20 +140,11 @@ function checkRedemptionBackstopsDoc(failures: Failure[], readDocument: typeof r
 }
 
 const LANE_FRESHNESS_FILE = "docs/process/lane-freshness-matrix.md";
-const DURATION_UNIT_SEC: Record<string, number> = { m: 60, h: 3_600, d: 86_400 };
 const hours = (sec: number) => `${sec / 3_600}h`;
 const minutes = (sec: number) => `${sec / 60}m`;
-const formatDuration = (sec: number) =>
-  sec % 86_400 === 0 ? `${sec / 86_400}d` : sec % 3_600 === 0 ? `${sec / 3_600}h` : `${sec / 60}m`;
 
-function parseDurationCell(cell: string): number | null {
-  const match = /^(\d+)([mhd])(?: nominal)?$/.exec(cell.trim());
-  return match ? Number(match[1]) * DURATION_UNIT_SEC[match[2]!]! : null;
-}
-
-/** The review matrix is derived from `CRON_JOB_DEFINITIONS`; a hand-edited row
- * must not claim a cadence or budget the runtime does not use. */
-function checkLaneFreshnessMatrix(failures: Failure[], readDocument: typeof read): void {
+/** Owner-review boundaries remain authored outside the generated matrix. */
+function checkLaneFreshnessSignOff(failures: Failure[], readDocument: typeof read): void {
   const matrix = readDocument(LANE_FRESHNESS_FILE);
   const add = (label: string, expected: string, found: string | null) =>
     failures.push({ file: LANE_FRESHNESS_FILE, label, expected, found });
@@ -164,47 +155,12 @@ function checkLaneFreshnessMatrix(failures: Failure[], readDocument: typeof read
   expectContains("draft sign-off boundary", "**Draft for owner sign-off.**");
   expectContains("sign-off boundary heading", "## Sign-off boundary");
   expectContains("Safety recovery note", "Safety publishes hourly at :22; :46 preparation is conditional recovery.");
-  expectContains("logical job count", `all ${CRON_JOB_DEFINITIONS.length} logical jobs`);
 
-  const rows = matrix.split("\n")
-    .filter((line) => line.startsWith("| `"))
-    .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
-  const jobs = new Map(CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]));
-  const seen = new Set<string>();
-
-  for (const [jobCell, intervalCell, budgetCell, impactCell] of rows) {
-    const jobId = (jobCell ?? "").replace(/`/g, "");
-    const job = jobs.get(jobId);
-    if (seen.has(jobId)) add(`duplicate job ${jobId}`, "one matrix row", jobId);
-    seen.add(jobId);
-    if (!job) {
-      add(`unknown job ${jobId}`, "a CRON_JOB_DEFINITIONS job", jobId);
-      continue;
-    }
-    const intervalSec = parseDurationCell(intervalCell ?? "");
-    if (intervalSec === null) {
-      add(`${jobId} interval`, "duration cell", intervalCell ?? null);
-      continue;
-    }
-    if (!intervalCell!.endsWith("nominal") && intervalSec !== job.intervalSec) {
-      add(`${jobId} interval`, `${job.intervalSec}s`, intervalCell!);
-    }
-    const [budgetCellValue, evidenceCell] = (budgetCell ?? "").split(" ");
-    const budgetSec = parseDurationCell(budgetCellValue ?? "");
-    if (budgetSec !== 2 * intervalSec) {
-      add(`${jobId} freshness budget`, `${formatDuration(2 * intervalSec)} (2x interval)`, budgetCellValue ?? null);
-    }
-    const expectedEvidence = job.freshnessSurface === "consumer" ? "C" : "O";
-    if (evidenceCell !== expectedEvidence) {
-      add(`${jobId} evidence kind`, expectedEvidence, evidenceCell ?? null);
-    }
-    if (impactCell !== job.statusImpact) {
-      add(`${jobId} status impact`, job.statusImpact, impactCell ?? null);
-    }
-  }
-  for (const definition of CRON_JOB_DEFINITIONS) {
-    if (!seen.has(definition.job)) add(`missing job ${definition.job}`, "matrix row", null);
-  }
+  const start = matrix.indexOf("<!-- GENERATED-START: lane-freshness-matrix -->");
+  const end = matrix.indexOf("<!-- GENERATED-END: lane-freshness-matrix -->");
+  const outside = start < 0 || end < start ? matrix : matrix.slice(0, start) + matrix.slice(end);
+  const strayRow = outside.split("\n").find((line) => line.startsWith("| `"));
+  if (strayRow) add("hand-authored matrix row outside the generated block", "rows only inside the generated block", strayRow);
 }
 
 /** Sentences interpolated from cron/threshold authorities must stay in their
@@ -308,7 +264,7 @@ export function runDocSyncChecks(readDocument: typeof read = read): Failure[] {
   checkMethodologyCommitProvenance(failures, readDocument);
   checkWorkerInfrastructureIsolateStateDoc(failures, readDocument);
   checkWorkerInfrastructureRuntimeDoc(failures, readDocument);
-  checkLaneFreshnessMatrix(failures, readDocument);
+  checkLaneFreshnessSignOff(failures, readDocument);
   checkOwningFreshnessProse(failures, readDocument);
   checkMethodologyOwnerSentences(failures, readDocument);
   checkRedemptionBackstopsDoc(failures, readDocument);

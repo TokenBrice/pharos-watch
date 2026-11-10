@@ -62,26 +62,28 @@ describe("3jane-usd3 adapter", () => {
 
 
 describe("adaptThreeJaneUsd3Snapshot", () => {
+  const snapshot: Parameters<typeof adaptThreeJaneUsd3Snapshot>[0] = {
+    contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+    navRaw: 100n * ONE,
+    totalAssetsRaw: 100n * ONE,
+    totalSupplyRaw: 80n * ONE,
+    idleUsdcRaw: 15n * ONE,
+    localWaUsdcRaw: 5n * ONE,
+    suppliedWaUsdcRaw: 80n * ONE,
+    marketTotalSupplyAssetsRaw: 100n * ONE,
+    marketTotalSharesRaw: 100n * ONE,
+    marketTotalBorrowAssetsRaw: 75n * ONE,
+    marketLiquidityRaw: 25n * ONE,
+    marketLiquidPositionRaw: 20n * ONE,
+    creditPositionRaw: 60n * ONE,
+    liquidPositionAssetsRaw: 25n * ONE,
+    creditPositionAssetsRaw: 60n * ONE,
+    availableWithdrawRaw: 40n * ONE,
+    isShutdown: false,
+  };
+
   it("separates liquid waUSDC from deployed credit and emits direct redemption capacity", () => {
-    const result = adaptThreeJaneUsd3Snapshot({
-      contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
-      navRaw: 100n * ONE,
-      totalAssetsRaw: 100n * ONE,
-      totalSupplyRaw: 80n * ONE,
-      idleUsdcRaw: 15n * ONE,
-      localWaUsdcRaw: 5n * ONE,
-      suppliedWaUsdcRaw: 80n * ONE,
-      marketTotalSupplyAssetsRaw: 100n * ONE,
-      marketTotalSharesRaw: 100n * ONE,
-      marketTotalBorrowAssetsRaw: 75n * ONE,
-      marketLiquidityRaw: 25n * ONE,
-      marketLiquidPositionRaw: 20n * ONE,
-      creditPositionRaw: 60n * ONE,
-      liquidPositionAssetsRaw: 25n * ONE,
-      creditPositionAssetsRaw: 60n * ONE,
-      availableWithdrawRaw: 40n * ONE,
-      isShutdown: false,
-    });
+    const result = adaptThreeJaneUsd3Snapshot({ ...snapshot });
 
     expect(result.slices).toEqual([
       { sourceKey: "3jane-usd3:credit-receivables", name: "Fintech and crypto credit receivables", pct: 60, risk: "high" },
@@ -122,23 +124,20 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
   });
   it("preserves a 0.04% credit receivable instead of rounding it into the liquid buffer", () => {
     const result = adaptThreeJaneUsd3Snapshot({
-      contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+      ...snapshot,
       navRaw: 100_000n * ONE,
       totalAssetsRaw: 100_000n * ONE,
       totalSupplyRaw: 80_000n * ONE,
       idleUsdcRaw: 99_940n * ONE,
-      localWaUsdcRaw: 5n * ONE,
       suppliedWaUsdcRaw: 60n * ONE,
       marketTotalSupplyAssetsRaw: 100_000n * ONE,
       marketTotalSharesRaw: 100_000n * ONE,
       marketTotalBorrowAssetsRaw: 75_000n * ONE,
       marketLiquidityRaw: 25_000n * ONE,
-      marketLiquidPositionRaw: 20n * ONE,
       creditPositionRaw: 40n * ONE,
       liquidPositionAssetsRaw: 20n * ONE,
       creditPositionAssetsRaw: 40n * ONE,
       availableWithdrawRaw: 40_000n * ONE,
-      isShutdown: false,
     });
 
     expect(result.slices).toEqual([
@@ -149,44 +148,19 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
 
   it("fails closed when reserve accounting diverges materially from nav()", () => {
     expect(() => adaptThreeJaneUsd3Snapshot({
-      contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
-      navRaw: 100n * ONE,
-      totalAssetsRaw: 100n * ONE,
-      totalSupplyRaw: 80n * ONE,
-      idleUsdcRaw: 15n * ONE,
-      localWaUsdcRaw: 5n * ONE,
-      suppliedWaUsdcRaw: 80n * ONE,
-      marketTotalSupplyAssetsRaw: 100n * ONE,
-      marketTotalSharesRaw: 100n * ONE,
-      marketTotalBorrowAssetsRaw: 75n * ONE,
-      marketLiquidityRaw: 25n * ONE,
-      marketLiquidPositionRaw: 20n * ONE,
+      ...snapshot,
       creditPositionRaw: 100n * ONE,
-      liquidPositionAssetsRaw: 25n * ONE,
       creditPositionAssetsRaw: 100n * ONE,
-      availableWithdrawRaw: 40n * ONE,
-      isShutdown: false,
     })).toThrow(/reviewed 2% bound/);
   });
 
   it("surfaces shutdown state and keeps bounded recoverable liquidity degraded", () => {
     const result = adaptThreeJaneUsd3Snapshot({
-      contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
-      navRaw: 100n * ONE,
-      totalAssetsRaw: 100n * ONE,
+      ...snapshot,
       totalSupplyRaw: 100n * ONE,
       idleUsdcRaw: 20n * ONE,
       localWaUsdcRaw: 0n,
-      suppliedWaUsdcRaw: 80n * ONE,
-      marketTotalSupplyAssetsRaw: 100n * ONE,
-      marketTotalSharesRaw: 100n * ONE,
-      marketTotalBorrowAssetsRaw: 75n * ONE,
-      marketLiquidityRaw: 25n * ONE,
-      marketLiquidPositionRaw: 20n * ONE,
-      creditPositionRaw: 60n * ONE,
       liquidPositionAssetsRaw: 20n * ONE,
-      creditPositionAssetsRaw: 60n * ONE,
-      availableWithdrawRaw: 40n * ONE,
       isShutdown: true,
     });
 

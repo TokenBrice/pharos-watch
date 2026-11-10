@@ -154,7 +154,10 @@ export const handleFewerCallback: CallbackHandler = async (context) => {
   const valid = isSubscribableStablecoinId(parsed.arg) && FEWER_CODES.has(code) && (
     hasExactParts(parsed.parts, 3) || (hasExactParts(parsed.parts, 4) && carried != null && isFewerValueFor(code, carried))
   );
-  const value = !valid ? null : await resolveFewerValue(db, chatId, parsed.arg!, code, carried);
+  const generation = !valid ? null : await db.prepare(
+    "SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?",
+  ).bind(chatId).first<{ preference_generation: number }>();
+  const value = !valid || generation == null ? null : await resolveFewerValue(db, chatId, parsed.arg!, code, carried);
   await runCallbackMutation<FewerTarget>(context, {
     validate: () => (valid && value != null ? { id: parsed.arg!, code, value } : null),
     requireAdmin: true,
@@ -163,10 +166,13 @@ export const handleFewerCallback: CallbackHandler = async (context) => {
     logAction: "fewer",
     logMessage: "fewer callback write failed",
     write: async ({ id, code: setting, value: next }, options) => {
-      const prepared = prepareCoinSettingStatements(db, chatId, callbackUsername(cb), id, setting, next);
-      await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])]);
+      if (generation == null) return "stale";
+      const prepared = prepareCoinSettingStatements(db, chatId, callbackUsername(cb), id, setting, next, generation.preference_generation);
+      const results = await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])], { returnResults: true });
+      if (Number(results[prepared.statements.length - 1]?.meta?.changes ?? 0) === 0) return "stale";
     },
     successText: (target) => fewerToast(target, callbackChatType(cb) === "private"),
+    staleText: "Settings changed. Please try again.",
     failureText: "Could not save setting. Please try again.",
   });
 };

@@ -237,16 +237,18 @@ const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 
-/** Owner-reviewed 2026-10-28 seven-day parity passes; capability alone is not admission.
+/** Owner-reviewed 2026-10-28 seven-day parity passes, plus chiliz and viction from the
+ * 2026-11-06 gate (#1723); capability alone is not admission.
  * Membership survives missing keys, ledger/circuit denial and routing rollback.
  * Re-admission requires a fresh passing seven-day gate (including freshness),
  * resolution of the recorded failure, and a reviewed edit here. Short-window
  * parity does not prove long-span log completeness; scanners own that frontier.
- * Excluded: hyperevm (stale latest), xdc (freshness sample deficit), flow (head lag),
- * chiliz/viction (no history). See worker-infrastructure-appendix routing. */
+ * Excluded: hyperevm (stale latest), xdc (freshness sample deficit), flow (head lag).
+ * See worker-infrastructure-appendix routing. */
 export const DWELLIR_ONLY_REGISTRY_CHAINS: ReadonlySet<string> = new Set([
   "linea", "zksync", "stable", "megaeth", "worldchain", "scroll", "unichain",
   "blast", "manta", "cronos", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko",
+  "chiliz", "viction",
 ]);
 
 

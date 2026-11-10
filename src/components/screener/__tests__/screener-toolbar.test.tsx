@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
+import { useJustEntered } from "@/hooks/use-just-entered";
 import { SCREENER_FILTER_DEFAULTS, type ScreenerFilters } from "@/lib/screener-filters";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 
@@ -30,6 +31,29 @@ function setFloor(label: string, value: string) {
 }
 
 afterEach(cleanupFrontendTest);
+
+it.each<[string, string[], string[], number]>([
+  ["removal", [], [], 250],
+  ["unrelated array identity change", ["A"], ["A"], 150],
+  ["new addition", ["A", "B"], ["B"], 250],
+])("bounds chip entrance after %s", (_, next, expected, remaining) => {
+  vi.useFakeTimers();
+  const { result, rerender, unmount } = renderHook(({ values }) => useJustEntered(values), {
+    initialProps: { values: [] as string[] },
+  });
+  expect([...result.current]).toEqual([]);
+  rerender({ values: ["A"] });
+  expect([...result.current]).toEqual(["A"]);
+  act(() => vi.advanceTimersByTime(100));
+  rerender({ values: next });
+  act(() => vi.advanceTimersByTime(remaining - 1));
+  expect([...result.current]).toEqual(expected);
+  act(() => vi.advanceTimersByTime(1));
+  expect([...result.current]).toEqual([]);
+  rerender({ values: ["C"] });
+  unmount();
+  expect(vi.getTimerCount()).toBe(0);
+});
 
 describe("ScreenerToolbar floor/ceiling guard", () => {
   it("clears a URL-carried DEWS ceiling when the visible DEWS floor passes it", () => {

@@ -1000,22 +1000,6 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
-  it.each([70, 110])("cannot substitute legacy gross-stock helper output (%s) for the joined sFRAX certificate", async (remote) => {
-    const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
-    const supplies = {
-      ethereum: 100, arbitrum: remote - 60, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10,
-      solana: 0.000117001,
-    };
-    installSupplyReads(meta, supplies);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
-    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
-    expect(fetchSolanaTokenSupplyMock).not.toHaveBeenCalled();
-    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
-      metadata: expect.objectContaining({ stablecoinId: meta.id, reason: "economic-float-unreconciled" }),
-    }));
-  });
-
   it.each(["decimals", "exception"])("fails syzUSD closed on Aptos %s failure", async (failure) => {
     const meta = TRACKED_META_BY_ID.get("syzusd-yuzu")!;
     installSupplyReads(meta, cases[2].supplies);

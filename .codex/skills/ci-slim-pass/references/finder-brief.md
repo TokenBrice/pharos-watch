@@ -5,9 +5,9 @@ You review one batch of Pharos test files. Pharos is a stablecoin analytics dash
 ## Rules
 
 - Work read-only from the repository: no npm, npx, vitest, tsc or builds. Read tools and small read-only scripts only.
-- Production code lives in `src/`, `worker/src/`, `worker/scripts/`, `shared/lib/`, `shared/types/`, `functions/`, `scripts/`; tests are `*.test.ts(x)` under `__tests__/`. Helpers live in `shared/test-utils/`, `worker/src/test-helpers/`, `src/test-utils/` and siblings named `*.test-support.ts`.
+- Production code lives in `src/`, `worker/src/`, `worker/scripts/`, `shared/lib/`, `shared/types/`, `functions/`, `scripts/`; tests are `*.test.ts(x)` files, either under `__tests__/` or colocated with the owning module. Helpers live in `shared/test-utils/`, `worker/src/test-helpers/`, `src/test-utils/` and siblings named `*.test-support.ts`.
 - Per-file overhead dominates CI: the `worker` and `src` Vitest projects isolate files in their own process, so each file re-imports its module graph; the `node` project and the classified `worker-shared` pilot run `isolate: false`, and `node-isolated` keeps the node exceptions (see `EXECUTABLE_TEST_PROJECTS` in `scripts/lib/critical-ownership.mts` and the project list in `vitest.config.mts`). A file in a non-isolated project does not pay the fork cost, but it also must keep the eligibility rules (no `vi.mock`/hoisted module factories, no unrestored globals or env writes) that put it there. Deleting or merging whole files, and dropping heavy imports, saves more than deleting single cases.
-- Files that open `shared/test-utils/latest-schema-sqlite.ts` replay the migrations once per file. Tests that pin curated data (exact counts, rosters, addresses, digests, byte sizes, version strings) break routine data PRs and cause re-runs.
+- Files that open `shared/test-utils/latest-schema-sqlite.ts` restore the per-run migrated template built by `scripts/test/prepare-latest-schema-sqlite-template.ts`; they replay migrations in-process only on a cache miss (or when a migration-inventory test uses the uncached creator). Tests that pin curated data (exact counts, rosters, addresses, digests, byte sizes, version strings) break routine data PRs and cause re-runs.
 
 ## Protected classes
 

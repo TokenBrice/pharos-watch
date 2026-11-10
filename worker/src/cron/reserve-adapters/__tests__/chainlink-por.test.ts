@@ -112,7 +112,7 @@ describe("adaptChainlinkPorResponse", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 145_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
-      {
+      makePorSupply({
         contributions: [
           {
             chain: "ethereum",
@@ -121,10 +121,7 @@ describe("adaptChainlinkPorResponse", () => {
             decimals: 18,
           },
         ],
-        omittedNonEvmChains: [],
-        omittedNoRpcChains: [],
-        omittedReadFailureChains: [],
-      },
+      }),
     );
     expect(result.metadata?.totalReservesRaw).toBe("145000000000");
     expect(result.metadata?.feedDecimals).toBe(8);
@@ -141,6 +138,8 @@ describe("adaptChainlinkPorResponse", () => {
   it.each([
     ["XAU", "troy ounces of gold"],
     ["XAG", "troy ounces of silver"],
+    ["XAU_G", "grams of fine gold"],
+    ["XAG_G", "grams of fine silver"],
   ] as const)("labels %s reserves as commodity quantities instead of USD", (reserveUnit, reserveUnitLabel) => {
     const result = adaptChainlinkPorResponse(
       { reserves: 145_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
@@ -163,19 +162,7 @@ describe("adaptChainlinkPorResponse", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 99_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       { ...params, reserveUnit: "XAU" },
-      {
-        contributions: [
-          {
-            chain: "ethereum",
-            tokenAddress: "0x0000000000000000000000000000000000000001",
-            raw: 1000_000000000000000000n,
-            decimals: 18,
-          },
-        ],
-        omittedNonEvmChains: [],
-        omittedNoRpcChains: [],
-        omittedReadFailureChains: [],
-      },
+      makePorSupply(),
     );
 
     expect(result.metadata).toMatchObject({
@@ -187,27 +174,6 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
     expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
-  });
-
-  it.each([
-    ["XAU_G", "grams of fine gold"],
-    ["XAG_G", "grams of fine silver"],
-  ] as const)("labels %s reserves as gram quantities instead of USD", (reserveUnit, reserveUnitLabel) => {
-    const result = adaptChainlinkPorResponse(
-      { reserves: 145_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
-      { ...params, reserveUnit },
-    );
-
-    expect(result.metadata).toMatchObject({
-      reserveUnit,
-      reserveUnitLabel,
-      totalReserveQuantity: 1450,
-      totalReservesRaw: "145000000000",
-      feedDecimals: 8,
-      feedRoundId: "42",
-      feedUpdatedAt: 1710000000,
-    });
-    expect(result.metadata?.totalReserveUsd).toBeUndefined();
   });
 
   it("compares gram-denominated reserves 1:1 against token supply for gram-pegged tokens", () => {
@@ -442,7 +408,7 @@ describe("adaptChainlinkPorResponse with issuer circulation", () => {
       reserveSymbol: "IB01.L",
     },
   };
-  const grossSupply = {
+  const grossSupply = makePorSupply({
     contributions: [
       {
         chain: "ethereum",
@@ -451,10 +417,7 @@ describe("adaptChainlinkPorResponse with issuer circulation", () => {
         decimals: 18,
       },
     ],
-    omittedNonEvmChains: [],
-    omittedNoRpcChains: [],
-    omittedReadFailureChains: [],
-  };
+  });
 
   it("withholds coverage for undated circulation despite a current reserve numerator", () => {
     // Backed-style: 1,018 reserve shares, 155k gross pre-minted, 80 circulating.

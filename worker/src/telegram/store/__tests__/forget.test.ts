@@ -267,6 +267,42 @@ describe("forgetSubscriber", () => {
 });
 
 describe("migrateTelegramChatId", () => {
+  it.each([
+    [800, null, 750, "forbidden", null],
+    [750, "forbidden", 800, null, null],
+    [800, null, 800, "forbidden", "forbidden"],
+    [800, "forbidden", 800, null, "forbidden"],
+    [800, "unknown", 800, "forbidden", "unknown"],
+  ])("merges latest attempt diagnostics (%s, %s, %s, %s)", async (oldAt, oldFailure, newAt, newFailure, failure) => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    for (const [chatId, at, error, delivery, reply] of [
+      ["-123", oldAt, oldFailure, oldFailure == null ? oldAt : 600, null],
+      ["-100123", newAt, newFailure, null, newFailure == null ? newAt : 700],
+    ] as const) insertRow(sqlite, "telegram_chat_delivery_diagnostics", {
+      chat_id: chatId, last_delivery_attempt_at: at, recent_failure_class: error,
+      last_successful_delivery_at: delivery, last_successful_reply_at: reply, updated_at: at,
+    });
+    await migrateTelegramChatId(db, "-123", "-100123");
+    expect(sqlite.prepare("SELECT * FROM telegram_chat_delivery_diagnostics").all()).toEqual([{
+      chat_id: "-100123", last_successful_delivery_at: oldFailure == null ? oldAt : 600,
+      last_successful_reply_at: newFailure == null ? newAt : 700,
+      last_delivery_attempt_at: 800, recent_failure_class: failure, updated_at: 800,
+    }]);
+  });
+
+  it.each([[900, 600], [600, 900], [900, 900]])("keeps the latest coherent rollup marker (%s, %s)", async (oldAt, newAt) => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    for (const [chatId, at, date] of [["-123", oldAt, "2026-11-08"], ["-100123", newAt, "2026-11-09"]] as const) {
+      insertRow(sqlite, "telegram_subscribers", { chat_id: chatId, created_at: 1, last_active_at: 1 });
+      insertRow(sqlite, "telegram_rollup_state", { chat_id: chatId, last_rollup_at: at, last_rollup_local_date: date });
+    }
+    await migrateTelegramChatId(db, "-123", "-100123");
+    await migrateTelegramChatId(db, "-123", "-100123");
+    expect(sqlite.prepare("SELECT * FROM telegram_rollup_state").all()).toEqual([{
+      chat_id: "-100123", last_rollup_at: 900, last_rollup_local_date: oldAt > newAt ? "2026-11-08" : "2026-11-09",
+    }]);
+  });
+
   it.each([[900, 600], [600, 900]])("preserves the greatest chat deadline across migration (%s, %s)", async (oldDeadline, newDeadline) => {
     const { sqlite, db } = setupChatMigrationSqlite();
     for (const chatId of ["-123", "-100123"]) {

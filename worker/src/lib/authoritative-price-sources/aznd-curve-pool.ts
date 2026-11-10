@@ -4,8 +4,12 @@ import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch, isHexRes
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
+  decodeAddressWord,
   decodeUint256WordBigInt,
+  decimalFromRaw,
+  encodeIndexedCall,
   encodeUint256,
+  quoteUsdcPrice,
   resolveTrustedOverrideParent,
   type CurrentPriceOverride,
   type LivePriceContext,
@@ -34,30 +38,9 @@ const MIN_USDC_BALANCE = 100;
 const MAX_QUOTE_IMPACT_RATIO = 0.05;
 const MAX_BLOCK_AGE_SEC = 5 * 60;
 
-function decodeAddressWord(value: `0x${string}` | null): string | null {
-  if (!value || value.length < 66) return null;
-  return `0x${value.slice(26, 66)}`.toLowerCase();
-}
-
-function decimalFromRaw(value: bigint, decimals: number): number {
-  const scale = 10n ** BigInt(decimals);
-  return Number(value / scale) + Number(value % scale) / Number(scale);
-}
-
-function encodeIndexedCall(selector: string, index: number): string {
-  return `${selector}${encodeUint256(index)}`;
-}
-
 function encodeGetDy(inputTokens: number): string {
   const inputRaw = BigInt(inputTokens) * 10n ** BigInt(AZND_DECIMALS);
   return `${GET_DY_SELECTOR}${encodeUint256(AZND_INDEX)}${encodeUint256(USDC_INDEX)}${encodeUint256(inputRaw)}`;
-}
-
-function quotePrice(outputRaw: bigint | null, inputTokens: number): number | null {
-  if (outputRaw == null || outputRaw <= 0n) return null;
-  const output = decimalFromRaw(outputRaw, USDC_DECIMALS);
-  const price = output / inputTokens;
-  return Number.isFinite(price) && price > 0 ? price : null;
 }
 
 export async function fetchAzndCurvePoolPrice(
@@ -74,6 +57,7 @@ export async function fetchAzndCurvePoolPrice(
     },
   );
   if (!quoteParent) return null;
+  if (Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > MAX_BLOCK_AGE_SEC) return null;
 
   // Configured Worker RPCs first; public endpoints are only the fallback tail.
   const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
@@ -114,23 +98,27 @@ export async function fetchAzndCurvePoolPrice(
     return null;
   }
 
-  const smallPrice = quotePrice(
+  const smallPrice = quoteUsdcPrice(
     smallQuoteRaw ? decodeUint256WordBigInt(smallQuoteRaw) : null,
     SMALL_QUOTE_AZND,
   );
-  const impactPrice = quotePrice(
+  const impactPrice = quoteUsdcPrice(
     impactQuoteRaw ? decodeUint256WordBigInt(impactQuoteRaw) : null,
     IMPACT_QUOTE_AZND,
   );
   if (smallPrice == null || impactPrice == null) return null;
   if (Math.abs(impactPrice - smallPrice) / smallPrice > MAX_QUOTE_IMPACT_RATIO) return null;
 
+  // Multiplication must preserve the older dependency clock under this route's budget.
+  const parentClockSelected = quoteParent.trustedParent.observedAt < blockTimestamp;
+  const observedAt = parentClockSelected ? quoteParent.trustedParent.observedAt : blockTimestamp;
+  if (Math.floor(Date.now() / 1000) - observedAt > MAX_BLOCK_AGE_SEC) return null;
   return {
     price: smallPrice * quoteParent.trustedParent.price,
     source: AZND_CURVE_SOURCE,
     confidence: "fallback",
-    observedAt: blockTimestamp,
-    observedAtMode: "upstream",
+    observedAt,
+    observedAtMode: parentClockSelected ? quoteParent.trustedParent.observedAtMode ?? "upstream" : "upstream",
   };
 }
 

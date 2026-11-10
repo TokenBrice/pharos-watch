@@ -8,6 +8,7 @@ import {
   INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS,
   INCIDENT_REVIEWS_PATH,
   REVIEW_KEY_MIGRATION_RETIRED_AT,
+  applyIncidentReviewMigration,
   assertMigrationPreservesLegacyKeys,
   buildIncidentReviewKeyMigration,
 } from "../generate-safety-score-v9-incident-review-key-migration";
@@ -65,7 +66,7 @@ describe("incident review key migration", () => {
       .toMatchObject({ legacyControlKey: null, digestMatch: false, reason: expect.stringContaining("Lisk") });
   });
 
-  it("applies every authored scope and retires the adjudicated orphans with provenance", () => {
+  it.each([false, true])("applies every authored scope and retires the adjudicated orphans with provenance (already retired: %s)", (alreadyRetired) => {
     const reviews = readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: RawReview[] };
     const generated = buildIncidentReviewKeyMigration(ROOT);
     const authored = reviews.negativeReviews.filter((review) =>
@@ -76,7 +77,7 @@ describe("incident review key migration", () => {
     const authoredRetirements = retired.filter((review) => typeof review.scope.controlKey !== "string");
     const legacyDigests = reviews.negativeReviews.filter((review) =>
       typeof review.scope.controlKey === "string");
-    expect(authored).toHaveLength(639);
+    expect(authored).toHaveLength(641);
     expect(authored).toHaveLength(generated.counts.authoredApplied + generated.counts.legacyBlocked);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
     expect(retired).toHaveLength(generated.counts.retired);
@@ -91,6 +92,15 @@ describe("incident review key migration", () => {
     const deploymentScopedMint = authored.find((review) =>
       review.scope.controlId === "USDSM Etherlink proxy owner");
     expect(deploymentScopedMint?.scope.routeId).toBe("etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de");
+    const review = structuredClone(adjudicatedRetirements[0]!);
+    const retirement = alreadyRetired
+      ? { reviewedAt: "2026-10-28", reviewer: "Prior reviewer", reason: "Prior retirement" }
+      : review.retired!;
+    if (alreadyRetired) review.retired = retirement;
+    else delete review.retired;
+    const applied = applyIncidentReviewMigration({ negativeReviews: [review] }, generated);
+    expect(applied.negativeReviews).toEqual([{ ...review, retired: retirement }]);
+    expect(applyIncidentReviewMigration(applied, generated)).toEqual(applied);
   });
 
   it("skips issuer-surface and provider reviews, which are not key-migration subjects", () => {
@@ -131,6 +141,15 @@ describe("incident review key migration", () => {
     // assetId, so a row for it would fail the checker's artifact schema.
     expect(generated.rows.some((row) => row.reviewId === "fixture-provider" || row.reviewId === "fixture-issuer")).toBe(false);
     expect(generated.rows.every((row) => typeof row.assetId === "string")).toBe(true);
+    expect(applyIncidentReviewMigration(reviews, generated)).toEqual(reviews);
+  });
+
+  it.each(["control", "deployment"])("rejects a missing %s subject mapping", (kind) => {
+    const reviews = readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: RawReview[] };
+    const generated = buildIncidentReviewKeyMigration(ROOT, reviews);
+    const review = reviews.negativeReviews.find((review) => review.scope.kind === kind)!;
+    expect(() => applyIncidentReviewMigration({ negativeReviews: [review] }, { ...generated, rows: [] }))
+      .toThrow(`Incident review ${review.reviewId} is missing from the key migration`);
   });
 
   it("emits only canonical colon-separated stable review ids", () => {

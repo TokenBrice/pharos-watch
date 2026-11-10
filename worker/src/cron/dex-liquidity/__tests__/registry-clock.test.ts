@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
@@ -14,7 +15,7 @@ import type { SourcePoolGraph } from "../types";
 import { seedGeneration } from "../../measured-execution/__tests__/persistence.test-support";
 import { makeV3Target } from "../../measured-execution/__tests__/measured-execution.test-support";
 import { computeDexPrices } from "../dex-price-publisher";
-import { seedPublishedDexGeneration } from "./scoring-test-support";
+import { readPublicPriceRows, seedPublishedDexGeneration } from "./scoring-test-support";
 import { makePool, makePricePoolMap } from "./scoring-test-builders";
 import { loadDexPrices } from "../../../lib/depeg-helpers";
 
@@ -83,28 +84,56 @@ async function score(db: D1Database, metrics: Map<string, SourcePoolGraph>, regi
 
 describe("registry read-consumption clock", () => {
   it.each([
-    { oldPrice: 0.4, aggregateAge: 6 * 3600 },
-    { oldPrice: 0.1, aggregateAge: 60 },
-  ])("ages only actual aggregate contributors for old price $oldPrice", async ({ oldPrice, aggregateAge }) => {
-    const harness = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
-    openDatabases.push(harness.sqlite);
+    [0.4, 21_600, false], [0.1, 120, false], [0.4, 60, true], [0.4, 21_600, true],
+  ] as const)("dates subset %s / %s / %s", async (oldPrice, age, aggregateOnly) => {
+    const h = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
+    openDatabases.push(h.sqlite);
     const pools = [
-      makePool({ poolId: "base:old", project: "orca", price: oldPrice, priceObservedAt: READ_CLOCK - 6 * 3600 }),
+      makePool({ poolId: "base:old", project: "orca", price: oldPrice, tvlUsd: aggregateOnly ? 5e6 : 5e7,
+        priceObservedAt: READ_CLOCK - age }),
       makePool({ poolId: "base:fresh1", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 60 }),
       makePool({ poolId: "base:fresh2", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 30 }),
-    ];
-    await computeDexPrices({ db: harness.db, retainedPoolsByStablecoin: new Map([["usdc-circle", pools]]),
-      nowSec: READ_CLOCK, generationId: harness.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
-    const row = harness.sqlite.prepare(
-      "SELECT price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'",
-    ).get() as { price_sources_json: string };
-    expect(JSON.parse(row.price_sources_json)).toEqual([
-      expect.objectContaining({ protocol: "curve", observedAt: READ_CLOCK - 60,
-        aggregateObservedAt: READ_CLOCK - aggregateAge }),
+    ].slice(0, aggregateOnly ? 1 : 3);
+    const diagnostics = await computeDexPrices({ db: h.db, retainedPoolsByStablecoin: new Map([["usdc-circle", pools]]),
+      nowSec: SOURCE_CLOCK, admissionNowSec: READ_CLOCK, generationId: h.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
+    const clock = READ_CLOCK - (aggregateOnly ? age : 60);
+    const [row] = readPublicPriceRows(h.sqlite);
+    expect(JSON.parse(row.price_sources_json!)).toEqual(aggregateOnly ? { aggregateObservedAt: clock, sources: [] } : [
+      expect.objectContaining({ protocol: "curve", observedAt: clock, aggregateObservedAt: clock }),
     ]);
+    expect(diagnostics.contributorAdmissionByStablecoin).toEqual([{
+      stablecoinId: "usdc-circle", totalContributorCount: pools.length,
+      inBudgetContributorCount: Number(age < DEX_FRESHNESS_SEC) + (aggregateOnly ? 0 : 2),
+      fallbackReason: aggregateOnly && age >= DEX_FRESHNESS_SEC ? "no-in-budget-contributors" : null,
+    }]);
+    const loaded = await loadDexPrices(h.db, READ_CLOCK);
+    expect(loaded.dexPriceRows.get("usdc-circle")?.aggregateObservedAt).toBe(clock);
+    expect(row).toMatchObject({ dex_price_usd: aggregateOnly ? 0.4 : 1,
+      source_pool_count: aggregateOnly ? 1 : 2, source_total_tvl: aggregateOnly ? 5e6 : 1e7 });
+    if (aggregateOnly) {
+      expect(loaded.dexPriceRows.get("usdc-circle")).toMatchObject({ dex_price_usd: 0.4, source_total_tvl: 5e6 });
+      expect(loaded.dexPriceSources.has("usdc-circle")).toBe(false);
+    }
   });
 
-  it("replays a retained six-hour quote through scoring-stage storage and fresh publication without renewing it", async () => {
+  it.each([60, DEX_FRESHNESS_SEC, 21_600, null, -1, NaN, Infinity])("ages ticker %s", async (age) => {
+    const h = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
+    openDatabases.push(h.sqlite);
+    await computeDexPrices({ db: h.db, nowSec: READ_CLOCK, generationId: h.generationId,
+      primaryPrices: new Map([["usdc-circle", 1]]), retainedPoolsByStablecoin: new Map([["usdc-circle", [
+        makePool({ price: 1, priceObservedAt: READ_CLOCK - 30 }),
+      ]]]), exactPriceEvidenceByStablecoin: new Map([["usdc-circle", [{
+        price: 0.8, tvl: 0, observedVolumeUsd: 100_000_000, chain: "orderbook", protocol: "ticker",
+        sourceFamily: "cg_tickers", observedAt: age == null ? null : READ_CLOCK - age,
+      }]]]) });
+    const [row] = readPublicPriceRows(h.sqlite);
+    const current = age != null && age >= 0 && age < DEX_FRESHNESS_SEC;
+    expect(row).toMatchObject({ dex_price_usd: current ? 0.8 : 1, source_pool_count: current ? 2 : 1,
+      source_total_tvl: 5_000_000 });
+    expect(JSON.parse(row.price_sources_json!)).toHaveLength(current ? 2 : 1);
+  });
+
+  it("preserves a six-hour quote through stage storage and republication", async () => {
     const quoteClock = READ_CLOCK - 6 * 3600;
     const { metrics, result } = await merge([
       registryRow(2, { source: "dl", tvl_usd: 200_000, volume_24h: 25_000,
@@ -112,36 +141,32 @@ describe("registry read-consumption clock", () => {
       registryRow(2, { tvl_usd: 100_000, volume_24h: 25_000, price_usd: 0.998,
         refreshed_at: quoteClock }),
     ]);
-    const harness = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
-    openDatabases.push(harness.sqlite);
+    const h = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
+    openDatabases.push(h.sqlite);
     const source = sourceState();
     source.priceObservations = result.priceObservations;
-    await persistDexLiquidityScoringStage(harness.db, {
+    await persistDexLiquidityScoringStage(h.db, {
       sourceSlotStartedAt: SOURCE_CLOCK, syncStartSec: SOURCE_CLOCK,
       sourceState: source, poolState: poolState(metrics, result.registryEvaluatedAtSec),
     });
-    const loaded = await loadDexLiquidityScoringStage(harness.db, {
-      nowSec: READ_CLOCK, expectedSourceSlotStartedAt: SOURCE_CLOCK,
-    });
+    const loaded = await loadDexLiquidityScoringStage(h.db, { nowSec: READ_CLOCK, expectedSourceSlotStartedAt: SOURCE_CLOCK });
     expect(loaded.sourceState.priceObservations.get("usdc-circle")?.[0]?.observedAt).toBe(quoteClock);
     expect(loaded.poolState.metrics.get("usdc-circle")?.pools[0]?.priceObservedAt).toBe(quoteClock);
-    const scored = await score(harness.db, loaded.poolState.metrics, loaded.poolState.registryEvaluatedAtSec);
-    await computeDexPrices({ db: harness.db, retainedPoolsByStablecoin: scored.retainedPoolsByStablecoin,
+    const scored = await score(h.db, loaded.poolState.metrics, loaded.poolState.registryEvaluatedAtSec);
+    await computeDexPrices({ db: h.db, retainedPoolsByStablecoin: scored.retainedPoolsByStablecoin,
       nowSec: READ_CLOCK, exactPriceEvidenceByStablecoin: loaded.sourceState.priceObservations,
-      generationId: harness.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
-    const row = harness.sqlite.prepare(
-      "SELECT updated_at, price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'",
-    ).get() as { updated_at: number; price_sources_json: string };
+      generationId: h.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
+    const [row] = readPublicPriceRows(h.sqlite);
     expect(row.updated_at).toBe(READ_CLOCK);
-    expect(JSON.parse(row.price_sources_json)).toEqual([
+    expect(JSON.parse(row.price_sources_json!)).toEqual([
       expect.objectContaining({ observedAt: quoteClock, aggregateObservedAt: quoteClock, price: 0.998 }),
     ]);
-    const admitted = await loadDexPrices(harness.db, READ_CLOCK);
+    const admitted = await loadDexPrices(h.db, READ_CLOCK);
     expect(admitted.dexPriceRows.get("usdc-circle")?.updated_at).toBe(READ_CLOCK);
     expect(admitted.dexPriceSources.has("usdc-circle")).toBe(false);
   });
 
-  it("screens the post-stage-start zero-trade outlier in the same generation without losing a healthy refresh", async () => {
+  it("screens zero-trade outliers, preserving a healthy refresh", async () => {
     const { metrics, result } = await merge([
       registryRow(1),
       registryRow(2, { tvl_usd: 100_000, volume_24h: 25_000 }),
@@ -149,9 +174,9 @@ describe("registry read-consumption clock", () => {
     expect(result.registryEvaluatedAtSec).toBe(READ_CLOCK);
     expect(result.mergedCount).toBe(2);
     expect(result.priceObservations.get("usdc-circle")?.map((obs) => obs.poolKey)).toEqual([poolId(2)]);
-    const harness = createLatestSchemaSqlite();
-    openDatabases.push(harness.sqlite);
-    const scored = await score(harness.db, metrics, result.registryEvaluatedAtSec);
+    const h = createLatestSchemaSqlite();
+    openDatabases.push(h.sqlite);
+    const scored = await score(h.db, metrics, result.registryEvaluatedAtSec);
     expect(scored.diagnostics.deadPoolExclusions).toMatchObject({
       reason: "dead-pool-zero-trade-untracked-counter", poolCount: 1, tvlUsd: 17_459_719,
     });
@@ -160,7 +185,7 @@ describe("registry read-consumption clock", () => {
     expect(scored.globalAgg.totalVol24h).toBe(25_000);
   });
 
-  it("rejects a row beyond the read clock plus the diagnostic grace whole and counts the reason", async () => {
+  it("rejects and counts rows beyond read-clock grace", async () => {
     const { metrics, result } = await merge([registryRow(1, { refreshed_at: READ_CLOCK + 61, volume_24h: 10_000 })]);
     expect(result.registryEvaluatedAtSec).toBe(READ_CLOCK);
     expect(result.registryRowsRead).toBe(1);
@@ -182,51 +207,51 @@ describe("registry read-consumption clock", () => {
       tvl_usd: 100_000, volume_24h: 25_000, refreshed_at: READ_CLOCK - ageSec,
     })]);
     expect(result.priceObservations.get("usdc-circle")?.length ?? 0).toBe(priceCount);
-    const harness = createLatestSchemaSqlite();
-    openDatabases.push(harness.sqlite);
-    const scored = await score(harness.db, metrics, result.registryEvaluatedAtSec);
+    const h = createLatestSchemaSqlite();
+    openDatabases.push(h.sqlite);
+    const scored = await score(h.db, metrics, result.registryEvaluatedAtSec);
     expect(scored.scores.get("usdc-circle")?.vol24h).toBe(admittedVolume);
     expect(scored.globalAgg.totalVol24h).toBe(admittedVolume);
   });
 
-  it.each([6 * 60, 36 * 60])("preserves the serialized admission basis when publication consumes it %i seconds after source start", async (delay) => {
+  it.each([6 * 60, 36 * 60])("pins admission at publication delay %i", async (delay) => {
     const { metrics, result } = await merge([registryRow(2, {
       tvl_usd: 100_000, volume_24h: 25_000,
       refreshed_at: READ_CLOCK - DEX_VOLUME_OBSERVATION_MAX_AGE_SEC,
     })]);
-    const harness = createLatestSchemaSqlite();
-    openDatabases.push(harness.sqlite);
-    await persistDexLiquidityScoringStage(harness.db, {
+    const h = createLatestSchemaSqlite();
+    openDatabases.push(h.sqlite);
+    await persistDexLiquidityScoringStage(h.db, {
       sourceSlotStartedAt: SOURCE_CLOCK, syncStartSec: SOURCE_CLOCK,
       sourceState: sourceState(), poolState: poolState(metrics, result.registryEvaluatedAtSec),
     });
     vi.spyOn(Date, "now").mockReturnValue((SOURCE_CLOCK + delay) * 1000);
-    const loaded = await loadDexLiquidityScoringStage(harness.db, {
+    const loaded = await loadDexLiquidityScoringStage(h.db, {
       nowSec: SOURCE_CLOCK + delay, expectedSourceSlotStartedAt: SOURCE_CLOCK,
     });
     expect(loaded.syncStartSec).toBe(SOURCE_CLOCK);
     expect(loaded.poolState.registryEvaluatedAtSec).toBe(READ_CLOCK);
-    const scored = await score(harness.db, loaded.poolState.metrics, loaded.poolState.registryEvaluatedAtSec);
+    const scored = await score(h.db, loaded.poolState.metrics, loaded.poolState.registryEvaluatedAtSec);
     expect(scored.scores.get("usdc-circle")?.vol24h).toBe(25_000);
     expect(scored.globalAgg.totalVol24h).toBe(25_000);
   });
 
-  it("selects the quote cohort at the source clock even when the registry clock covers a newer publication", async () => {
+  it("selects quotes at the source clock", async () => {
     const { metrics, result } = await merge([registryRow(2, { tvl_usd: 100_000, volume_24h: 25_000 })]);
-    const harness = createLatestSchemaSqlite();
-    openDatabases.push(harness.sqlite);
+    const h = createLatestSchemaSqlite();
+    openDatabases.push(h.sqlite);
     const target = makeV3Target({ capturedAt: SOURCE_CLOCK - 100 });
-    seedGeneration(harness.sqlite, {
+    seedGeneration(h.sqlite, {
       generationId: "quote-before-source", targetGenerationId: "target-before-source",
       publishedAt: SOURCE_CLOCK - 10, state: "superseded",
       rows: [{ target, status: "failed", failureReason: "pool-revert" }],
     });
-    seedGeneration(harness.sqlite, {
+    seedGeneration(h.sqlite, {
       generationId: "quote-after-source", targetGenerationId: "target-after-source",
       publishedAt: SOURCE_CLOCK + 50, state: "published",
       rows: [{ target, status: "failed", failureReason: "pool-revert" }],
     });
-    const scored = await score(harness.db, metrics, result.registryEvaluatedAtSec);
+    const scored = await score(h.db, metrics, result.registryEvaluatedAtSec);
     expect(scored.diagnostics.measuredExecution.join.quoteGenerationId).toBe("quote-before-source");
     expect(scored.diagnostics.measuredExecution.join.targetGenerationId).toBe("target-before-source");
     expect(scored.globalAgg.totalVol24h).toBe(25_000);
@@ -234,37 +259,19 @@ describe("registry read-consumption clock", () => {
 });
 
 describe("DEX price publication precision", () => {
-  it("persists the admitted low-unit peg median without contradicting the row's own deviation", async () => {
+  it("keeps low-unit medians and deviations consistent", async () => {
     const nowSec = 1_800_000_000;
-    // IDR/USD is ~6.15e-5: fixed 1e-6 quantization would persist 0.000062
-    // (+81 bps) while the row's deviation says 0 bps.
     const primaryPrice = 0.0000615;
-    const harness = seedPublishedDexGeneration({ nowSec });
-    openDatabases.push(harness.sqlite);
-    await computeDexPrices({
-      db: harness.db,
-      retainedPoolsByStablecoin: makePricePoolMap(
-        [0.000061, 0.0000615, 0.000062].map((price, index) => ({
-          stablecoinId: "idrx-idrx",
-          poolId: `polygon:idrx-usdc-${index}`,
-          project: "curve",
-          chain: "Polygon",
-          tvlUsd: 100_000,
-          price,
-          source: "dl",
-        })),
-      ),
-      nowSec,
-      generationId: harness.generationId,
+    const h = seedPublishedDexGeneration({ nowSec });
+    openDatabases.push(h.sqlite);
+    await computeDexPrices({ db: h.db, nowSec, generationId: h.generationId,
       primaryPrices: new Map([["idrx-idrx", primaryPrice]]),
+      retainedPoolsByStablecoin: makePricePoolMap([0.000061, 0.0000615, 0.000062].map((price, index) => ({
+        stablecoinId: "idrx-idrx", poolId: `polygon:idrx-usdc-${index}`, project: "curve", chain: "Polygon",
+        tvlUsd: 100_000, price, source: "dl",
+      }))),
     });
-
-    const row = harness.sqlite
-      .prepare(
-        `SELECT dex_price_usd, deviation_from_primary_bps, primary_price_at_calc
-           FROM dex_prices WHERE stablecoin_id = 'idrx-idrx'`,
-      )
-      .get() as { dex_price_usd: number; deviation_from_primary_bps: number | null; primary_price_at_calc: number | null } | undefined;
+    const [row] = readPublicPriceRows(h.sqlite);
     expect(row, "an at-peg IDR row must publish").toBeDefined();
     expect(relativeBps(row!.dex_price_usd, primaryPrice)?.absRawBps ?? Infinity).toBeLessThanOrEqual(1);
     const storedDeviation = row!.deviation_from_primary_bps;

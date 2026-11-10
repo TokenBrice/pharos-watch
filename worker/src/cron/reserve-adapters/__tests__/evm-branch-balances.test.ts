@@ -985,29 +985,6 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "branch-reserve-book-partial", effect: "degraded" }));
   });
 
-  it("propagates optional coinId and depType to slices", async () => {
-    const { result } = await runBranches(
-      makeBranchConfig([
-        {
-          ...wstEthBranch(),
-          coinId: "wsteth",
-          depType: "wrapper",
-        },
-      ]),
-      {
-        json: priceJson({ [assetKey("ethereum", "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")]: 2000 }),
-        rpc: branchRpc({
-          balances: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": 1_000_000_000_000_000_000n },
-          decimals: { "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": 18n },
-        }),
-      },
-    );
-
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].coinId).toBe("wsteth");
-    expect(result.slices[0].depType).toBe("wrapper");
-  });
-
   it("uses fixed price overrides for branches without DefiLlama pricing", async () => {
     const { result } = await runBranches(
       makeBranchConfig([

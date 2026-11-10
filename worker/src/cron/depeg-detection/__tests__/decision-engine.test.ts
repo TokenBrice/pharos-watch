@@ -5,6 +5,17 @@ import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { decideDepegAsset } from "../decision-engine";
 import type { DepegDetectionRow } from "../types";
 
+const usdPeg = {
+  pegRates: { peggedUSD: 1 },
+  pegRateSources: { peggedUSD: "median" as const },
+  pegRateCounts: { peggedUSD: 4 },
+};
+const brlPeg = {
+  pegRates: { peggedREAL: 0.191895 },
+  pegRateSources: { peggedREAL: "median" as const },
+  pegRateCounts: { peggedREAL: 3 },
+};
+
 const usdMeta: StablecoinMeta = {
   id: "usdt-tether",
   name: "Tether",
@@ -24,14 +35,7 @@ const brlMeta: StablecoinMeta = {
   id: "brz-transfero",
   name: "Brazilian Digital Token",
   symbol: "BRZ",
-  flags: {
-    backing: "rwa-backed",
-    pegCurrency: "BRL",
-    governance: "centralized",
-    yieldBearing: false,
-    rwa: true,
-    navToken: false,
-  },
+  flags: { ...usdMeta.flags, pegCurrency: "BRL" },
   geckoId: "brz",
 };
 
@@ -39,14 +43,7 @@ const chfMeta: StablecoinMeta = {
   id: "vchf-vnx",
   name: "VNX Swiss Franc",
   symbol: "VCHF",
-  flags: {
-    backing: "rwa-backed",
-    pegCurrency: "CHF",
-    governance: "centralized",
-    yieldBearing: false,
-    rwa: true,
-    navToken: false,
-  },
+  flags: { ...usdMeta.flags, pegCurrency: "CHF" },
   geckoId: "vnx-swiss-franc",
 };
 
@@ -54,14 +51,7 @@ const goldMeta: StablecoinMeta = {
   id: "vnxau-vnx",
   name: "VNX Gold",
   symbol: "VNXAU",
-  flags: {
-    backing: "rwa-backed",
-    pegCurrency: "GOLD",
-    governance: "centralized",
-    yieldBearing: false,
-    rwa: true,
-    navToken: false,
-  },
+  flags: { ...usdMeta.flags, pegCurrency: "GOLD" },
   geckoId: "vnx-gold",
   commodityOunces: 0.0321507466,
 };
@@ -125,13 +115,15 @@ function assertNativeOpening({
   expectedReason,
   expectSeenEventIds = false,
   dexCorroboration,
+  admitted = true,
 }: {
   circulating: Record<string, number>;
   nativePrice: number;
   expectedBps: number;
   expectedReason: string;
   expectSeenEventIds?: boolean;
-  dexCorroboration?: { price: number; tvl: number };
+  dexCorroboration?: { price: number; tvl: number; aggregateObservedAt?: number };
+  admitted?: boolean;
 }) {
   const protocolSources = dexCorroboration
     ? [
@@ -146,14 +138,11 @@ function assertNativeOpening({
       symbol: "BRZ",
       price: 0.191187,
       priceSource: "coingecko",
-      priceUpdatedAt: 1_750_000_000 - 60,
       pegType: "peggedREAL",
       circulating,
     }),
     meta: brlMeta,
-    pegRates: { peggedREAL: 0.191895 },
-    pegRateSources: { peggedREAL: "median" },
-    pegRateCounts: { peggedREAL: 3 },
+    ...brlPeg,
     dexRow: dexCorroboration
       ? {
           stablecoin_id: "brz-transfero",
@@ -162,6 +151,7 @@ function assertNativeOpening({
           source_pool_count: 2,
           source_total_tvl: dexCorroboration.tvl,
           updated_at: 1_750_000_000 - 60,
+          aggregateObservedAt: dexCorroboration.aggregateObservedAt,
         }
       : undefined,
     protocolSources,
@@ -176,6 +166,13 @@ function assertNativeOpening({
 
   expect(decision.trackedCoinId).toBe("brz-transfero");
   if (expectSeenEventIds) expect(decision.seenEventIds).toEqual([]);
+  if (!admitted) {
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([{
+      level: "warn", message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move",
+    }]);
+    return;
+  }
   expect(decision.commands).toHaveLength(1);
   expect(decision.commands[0]).toMatchObject({
     type: "upsert-pending",
@@ -197,6 +194,36 @@ function assertNativeOpening({
 }
 
 describe("decideDepegAsset", () => {
+  describe("original aggregate clocks", () => {
+    const now = 1_750_000_000;
+    it.each([null, now - 6 * 3600, now - 60])("separates affirmative evidence from vetoes at %s", (aggregateObservedAt) => {
+      const fresh = aggregateObservedAt === now - 60;
+      const sample = (price: number, dexPrice: number, authoritative = false) => ({
+        now, meta: usdMeta, ...usdPeg,
+        asset: makeAsset({ price, priceSource: authoritative ? "pyth" : "coingecko" }),
+        existing: makeExistingEvent({ stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD",
+          direction: "below", peg_reference: 1, peak_deviation_bps: -200 }),
+        dexRow: { stablecoin_id: usdMeta.id, dex_price_usd: dexPrice, deviation_from_primary_bps: null,
+          source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: now - 30, aggregateObservedAt },
+        protocolSources: ["curve", "uniswap"].map((protocol) => ({
+          protocol, sourceFamily: protocol, chain: "ethereum", price: dexPrice, tvl: 2_500_000, updatedAt: now - 30,
+        })),
+      });
+      const recovery = decideDepegAsset(sample(1, 1));
+      expect(recovery.observation).toEqual({ kind: "observed" });
+      expect(recovery.commands.map((command) => command.type)).toEqual(fresh ? ["begin-recovery"] : []);
+      expect(recovery.priceCoverage?.lastObservationKind).toBe(fresh ? "trusted-at-par" : "blind");
+      const reversal = decideDepegAsset(sample(1.02, 1.02));
+      expect(reversal.commands.map((command) => command.type)).toEqual(fresh ? ["close-event", "upsert-pending"] : []);
+      expect(decideDepegAsset(sample(0.98, 0.98)).priceCoverage?.lastObservationKind)
+        .toBe(fresh ? "trusted-off-peg" : "blind");
+      const veto = decideDepegAsset(sample(1, 0.98, true));
+      expect(veto.commands).toEqual([]);
+      expect(veto.priceCoverage?.lastObservationKind).toBe("blind");
+      expect(decideDepegAsset({ ...sample(0.98, 1), existing: undefined }).commands).toEqual([]);
+    });
+  });
+
   it.each([
     { priceSource: "pyth", priceObservedAtMode: "nominal_reference" as const },
     { priceSource: "protocol-par" },
@@ -210,9 +237,7 @@ describe("decideDepegAsset", () => {
           asset: makeAsset({ price, priceConfidence: "high", ...provenance }),
           meta: usdMeta,
           existing,
-          pegRates: { peggedUSD: 1 },
-          pegRateSources: { peggedUSD: "median" },
-          pegRateCounts: { peggedUSD: 4 },
+          ...usdPeg,
         });
         expect(decision.commands).toEqual([]);
       }
@@ -223,9 +248,7 @@ describe("decideDepegAsset", () => {
     const usdInput = {
       now: 1_750_000_000,
       meta: usdMeta,
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" as const },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     };
     const usdEvent = () => makeExistingEvent({
       stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD", peg_reference: 1, direction: "below",
@@ -300,9 +323,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_000,
       asset: makeAsset(),
       meta: usdMeta,
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.trackedCoinId).toBe("usdt-tether");
@@ -334,9 +355,7 @@ describe("decideDepegAsset", () => {
         direction: "below",
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
     expect(directionFlip.commands[0]).toMatchObject({
       type: "close-event",
@@ -354,9 +373,7 @@ describe("decideDepegAsset", () => {
         now: 1_750_000_000,
         asset: makeAsset({ circulating: { ethereum: 2_000_000_000 } }),
         meta: usdMeta,
-        pegRates: { peggedUSD: 1 },
-        pegRateSources: { peggedUSD: "median" },
-        pegRateCounts: { peggedUSD: 4 },
+        ...usdPeg,
       });
 
       expect(decision.commands).toHaveLength(1);
@@ -389,13 +406,10 @@ describe("decideDepegAsset", () => {
       asset: makeAsset({
         price: 0.975,
         circulating: { ethereum: 999_000_000 },
-        priceSource: "pyth",
         agreeSources: ["pyth"],
       }),
       meta: usdMeta,
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.commands).toHaveLength(1);
@@ -421,9 +435,7 @@ describe("decideDepegAsset", () => {
         circulating: { ethereum: 999_000_000 },
       }),
       meta: usdMeta,
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.commands).toHaveLength(1);
@@ -443,9 +455,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_000,
       asset: makeAsset({ price: 0.99005 }),
       meta: usdMeta,
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.commands).toEqual([]);
@@ -461,7 +471,6 @@ describe("decideDepegAsset", () => {
         priceSource: "coingecko+defillama-list",
         priceConfidence: "high",
         agreeSources: ["coingecko", "defillama-list"],
-        priceUpdatedAt: 1_750_000_000 - 60,
         circulating: { ethereum: 20_000_000 },
       }),
       meta: {
@@ -471,9 +480,7 @@ describe("decideDepegAsset", () => {
         symbol: "msUSD",
         geckoId: "main-street-usd",
       },
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.trackedCoinId).toBe("msusd-main-street");
@@ -499,13 +506,10 @@ describe("decideDepegAsset", () => {
         priceSource: "coingecko+coingecko-low-volume",
         priceConfidence: "high",
         agreeSources: ["coingecko", "coingecko-low-volume"],
-        priceUpdatedAt: 1_750_000_000 - 60,
         circulating: { ethereum: 20_000_000 },
       }),
       meta: usdMeta,
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.commands).toHaveLength(1);
@@ -571,15 +575,33 @@ describe("decideDepegAsset", () => {
     });
   });
 
-  it("routes extreme native-peg openings to pending confirmation when independent DEX protocols corroborate", () => {
+  it.each([60, 21_600, undefined])("routes extreme native-peg openings only with fresh original DEX clocks (%s)", (age) => {
     assertNativeOpening({
       circulating: { gnosis: 22_000_000 },
       nativePrice: 0.2,
       expectedBps: -8000,
       expectedReason: "confirmation-window+extreme-move+native-origin",
       expectSeenEventIds: true,
-      dexCorroboration: { price: 0.038379, tvl: 2_500_000 },
+      dexCorroboration: { price: 0.038379, tvl: 2_500_000,
+        aggregateObservedAt: age == null ? undefined : 1_750_000_000 - age },
+      admitted: age === 60,
     });
+  });
+
+  it.each([60, 21_600, undefined])("preserves the extreme native-quote veto at original DEX age %s", (age) => {
+    const now = 1_750_000_000;
+    const decision = decideDepegAsset({ now, meta: brlMeta, ...brlPeg,
+      asset: makeAsset({ id: brlMeta.id, symbol: "BRZ", pegType: "peggedREAL", price: 0.191895 * 1.03 }),
+      nativePegQuote: { stablecoinId: brlMeta.id, geckoId: "brz", pegCurrency: "BRL", price: 0.2, updatedAt: now - 60 },
+      dexRow: { stablecoin_id: brlMeta.id, dex_price_usd: 0.038379, deviation_from_primary_bps: null,
+        source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: now - 60,
+        aggregateObservedAt: age == null ? undefined : now - age },
+      protocolSources: ["curve", "uniswap-v3"].map((protocol) => ({
+        protocol, sourceFamily: protocol, chain: "ethereum", price: 0.038379, tvl: 2_500_000, updatedAt: now - 60,
+      })),
+    });
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics.some(({ message }) => message.includes("Suppressed live depeg mutation"))).toBe(true);
   });
 
   it("withholds an uncorroborated extreme native-peg opening as unavailable evidence", () => {
@@ -590,14 +612,11 @@ describe("decideDepegAsset", () => {
         symbol: "BRZ",
         price: 0.191187,
         priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
         pegType: "peggedREAL",
         circulating: { gnosis: 22_000_000 },
       }),
       meta: brlMeta,
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
       nativePegQuote: {
         stablecoinId: "brz-transfero",
         geckoId: "brz",
@@ -622,14 +641,11 @@ describe("decideDepegAsset", () => {
         symbol: "BRZ",
         price: 0.191187,
         priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
         pegType: "peggedREAL",
         circulating: { gnosis: 22_000_000 },
       }),
       meta: brlMeta,
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
       dexRow: {
         stablecoin_id: "brz-transfero",
         dex_price_usd: 0.1919,
@@ -637,6 +653,7 @@ describe("decideDepegAsset", () => {
         source_pool_count: 2,
         source_total_tvl: 5_000_000,
         updated_at: 1_750_000_000 - 60,
+        aggregateObservedAt: 1_750_000_000 - 60,
       },
       nativePegQuote: {
         stablecoinId: "brz-transfero",
@@ -676,7 +693,6 @@ describe("decideDepegAsset", () => {
         symbol: "EURm",
         price: 1.16,
         priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
         pegType: "peggedEUR",
         circulating: { celo: 22_000_000 },
       }),
@@ -812,9 +828,7 @@ describe("decideDepegAsset", () => {
         recovery_first_seen_at: 1_750_000_000,
         recovery_last_seen_at: 1_750_000_000,
       }),
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
       nativePegQuote: {
         stablecoinId: "brz-transfero",
         geckoId: "brz",
@@ -878,9 +892,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.9758,
         peg_reference: 1,
       }),
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -904,9 +916,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.9758,
         peg_reference: 1,
       }),
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
       nativePegQuote: {
         stablecoinId: "brz-transfero",
         geckoId: "brz",
@@ -940,9 +950,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.9758,
         peg_reference: 1,
       }),
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
       nativePegQuote: {
         stablecoinId: "brz-transfero",
         geckoId: "brz",
@@ -994,9 +1002,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.98,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -1021,9 +1027,7 @@ describe("decideDepegAsset", () => {
         direction: "below",
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.seenEventIds).toEqual([]);
@@ -1059,9 +1063,7 @@ describe("decideDepegAsset", () => {
         direction: "below",
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -1080,9 +1082,7 @@ describe("decideDepegAsset", () => {
       asset: makeAsset({ circulating: { ethereum: 0 } }),
       meta: usdMeta,
       existing: makeExistingEvent({ stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below", peg_reference: 1 }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.commands).toEqual([
@@ -1119,7 +1119,7 @@ describe("decideDepegAsset", () => {
   it("keeps an ongoing event open when only the aggregate DEX price disagrees", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
-      asset: makeAsset({ price: 0.98 }),
+      asset: makeAsset(),
       meta: usdMeta,
       existing: makeExistingEvent({
         stablecoin_id: "usdt-tether",
@@ -1132,9 +1132,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.98,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       dexRow: {
         stablecoin_id: "usdt-tether",
         dex_price_usd: 1.001,
@@ -1142,6 +1140,7 @@ describe("decideDepegAsset", () => {
         source_pool_count: 5,
         source_total_tvl: 5_000_000,
         updated_at: 1_750_000_840,
+        aggregateObservedAt: 1_750_000_840,
       },
     });
 
@@ -1158,11 +1157,9 @@ describe("decideDepegAsset", () => {
   it("suppresses a new event when independent DEX protocols show recovery", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
-      asset: makeAsset({ price: 0.98 }),
+      asset: makeAsset(),
       meta: usdMeta,
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       dexRow: {
         stablecoin_id: "usdt-tether",
         dex_price_usd: 0.999,
@@ -1170,6 +1167,7 @@ describe("decideDepegAsset", () => {
         source_pool_count: 2,
         source_total_tvl: 5_000_000,
         updated_at: 1_750_000_840,
+        aggregateObservedAt: 1_750_000_840,
       },
       protocolSources: [
         {
@@ -1218,9 +1216,7 @@ describe("decideDepegAsset", () => {
         recovery_first_seen_at: 1_750_000_300,
         recovery_last_seen_at: 1_750_000_840,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       dexRow: {
         stablecoin_id: "usdt-tether",
         dex_price_usd: 0.98,
@@ -1228,6 +1224,7 @@ describe("decideDepegAsset", () => {
         source_pool_count: 2,
         source_total_tvl: 5_000_000,
         updated_at: 1_750_000_840,
+        aggregateObservedAt: 1_750_000_840,
       },
       protocolSources: [
         {
@@ -1278,9 +1275,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.98,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       dexRow: {
         stablecoin_id: "usdt-tether",
         dex_price_usd: 0.999,
@@ -1288,6 +1283,7 @@ describe("decideDepegAsset", () => {
         source_pool_count: 1,
         source_total_tvl: 5_000_000,
         updated_at: 1_750_000_840,
+        aggregateObservedAt: 1_750_000_840,
       },
       protocolSources: [
         {
@@ -1328,9 +1324,7 @@ describe("decideDepegAsset", () => {
         recovery_first_seen_at: 1_750_000_600,
         recovery_last_seen_at: 1_750_000_840,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -1346,7 +1340,7 @@ describe("decideDepegAsset", () => {
   it("clears recovery progress when the primary price returns to the depeg", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
-      asset: makeAsset({ price: 0.98 }),
+      asset: makeAsset(),
       meta: usdMeta,
       existing: makeExistingEvent({
         stablecoin_id: "usdt-tether",
@@ -1360,9 +1354,7 @@ describe("decideDepegAsset", () => {
         recovery_first_seen_at: 1_750_000_600,
         recovery_last_seen_at: 1_750_000_840,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -1390,9 +1382,7 @@ describe("decideDepegAsset", () => {
         recovery_first_seen_at: now - gap - 900,
         recovery_last_seen_at: now - gap,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     }));
 
     expect(decisions[0]?.commands[0]?.type).toBe("close-event");
@@ -1421,9 +1411,7 @@ describe("decideDepegAsset", () => {
         peg_reference: 1,
         recovery_first_seen_at: 1_750_000_300,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -1447,9 +1435,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.9758,
         peg_reference: 1,
       }),
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
       nativePegQuote: {
         stablecoinId: "brz-transfero",
         geckoId: "brz",
@@ -1490,9 +1476,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.9758,
         peg_reference: 1,
       }),
-      pegRates: { peggedREAL: 0.191895 },
-      pegRateSources: { peggedREAL: "median" },
-      pegRateCounts: { peggedREAL: 3 },
+      ...brlPeg,
       nativePegQuote: {
         stablecoinId: "brz-transfero",
         geckoId: "brz",
@@ -1544,9 +1528,7 @@ describe("decideDepegAsset", () => {
         peak_price: 0.8938719491,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       challengerPools: [
         {
           price: 0.952866583,
@@ -1592,9 +1574,7 @@ describe("decideDepegAsset", () => {
         start_price: 0.98,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       challengerPools: [
         {
           price: 0.985,
@@ -1700,9 +1680,7 @@ describe("decideDepegAsset", () => {
         peak_price: 1.025,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       challengerPools: [
         { price: 1.02, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" },
         { price: 1.021, tvlUsd: 1_000_000, protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain" },
@@ -1745,9 +1723,7 @@ describe("decideDepegAsset", () => {
         peak_price: 1.025,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       challengerPools: [
         { price: 1.02, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" },
         { price: 1.021, tvlUsd: 1_000_000, protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain" },
@@ -1782,12 +1758,10 @@ describe("decideDepegAsset", () => {
         symbol: "USDB",
         price: 0.9998628369821569,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 107,
         priceObservedAt: now - 107,
         priceObservedAtMode: "upstream",
-        pegType: "peggedUSD",
         circulating: { blast: 11_348_078.487122247 },
       }),
       meta: { ...usdMeta, id: "usdb-blast", name: "USDB Blast", symbol: "USDB", geckoId: "usdb" },
@@ -1805,9 +1779,7 @@ describe("decideDepegAsset", () => {
         recovery_first_seen_at: now - 1_000,
         recovery_last_seen_at: now - 450,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       challengerPools: [
         { price: 0.995936075327477, tvlUsd: 1_047_212.8546, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain", observedAt },
         { price: 0.997280614842842, tvlUsd: 290_687.4629, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain", observedAt },
@@ -1834,7 +1806,6 @@ describe("decideDepegAsset", () => {
         symbol: "VNXAU",
         price: 137.80559627497053,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 77,
         priceObservedAt: now - 77,
@@ -1889,7 +1860,6 @@ describe("decideDepegAsset", () => {
         priceUpdatedAt: now - 77,
         priceObservedAt: now - 77,
         priceObservedAtMode: "upstream",
-        pegType: "peggedUSD",
         circulating: { hydration: 12_833_596.24937689 },
       }),
       meta: { ...usdMeta, id: "hollar-hydrated", name: "Hydrated Dollar", symbol: "HOLLAR", geckoId: "hydrated-dollar" },
@@ -1907,9 +1877,7 @@ describe("decideDepegAsset", () => {
         recovery_first_seen_at: now - 1_000,
         recovery_last_seen_at: now - 450,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       challengerPools: [
         { price: 0.9474579112, tvlUsd: 11_916_235.7742, protocol: "hydration-dex", chain: "hydration", sourceFamily: "cg_onchain" },
         { price: 0.9474396418, tvlUsd: 2_460_799.2408, protocol: "hydration-dex", chain: "hydration", sourceFamily: "cg_onchain" },
@@ -1940,7 +1908,6 @@ describe("decideDepegAsset", () => {
         symbol: "AUDF",
         price: 0.7030877342041957,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 77,
         priceObservedAt: now - 77,
@@ -1994,7 +1961,6 @@ describe("decideDepegAsset", () => {
           symbol: "DUSD",
           price: 0.9995,
           priceSource: "coingecko",
-          priceConfidence: "single-source",
           agreeSources: ["coingecko"],
           priceUpdatedAt: now - 60,
           priceObservedAt: now - 60,
@@ -2016,9 +1982,7 @@ describe("decideDepegAsset", () => {
           recovery_first_seen_at: now - 1_000,
           recovery_last_seen_at: now - 450,
         }),
-        pegRates: { peggedUSD: 1 },
-        pegRateSources: { peggedUSD: "median" },
-        pegRateCounts: { peggedUSD: 4 },
+        ...usdPeg,
         challengerPools: [
           { price: 0.985, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "cg_onchain" },
           { price: 0.986, tvlUsd: 1_000_000, protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain" },
@@ -2059,7 +2023,6 @@ describe("decideDepegAsset", () => {
         symbol: "DUSD",
         price: 1.0005,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 60,
         priceObservedAt: now - 60,
@@ -2079,9 +2042,7 @@ describe("decideDepegAsset", () => {
         peak_price: 1.025,
         peg_reference: 1,
       }),
-      pegRates: { peggedUSD: 1 },
-      pegRateSources: { peggedUSD: "median" },
-      pegRateCounts: { peggedUSD: 4 },
+      ...usdPeg,
       dexRow: {
         stablecoin_id: "dusd-test",
         dex_price_usd: 1.0005,
@@ -2089,6 +2050,7 @@ describe("decideDepegAsset", () => {
         source_pool_count: 3,
         source_total_tvl: 6_000_000,
         updated_at: now - 60,
+        aggregateObservedAt: now - 60,
       },
       protocolSources: [
         { protocol: "curve", chain: "ethereum", sourceFamily: "dl", price: 1.0005, tvl: 3_000_000, updatedAt: now - 60 },

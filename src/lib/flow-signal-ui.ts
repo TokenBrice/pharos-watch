@@ -192,7 +192,7 @@ export function buildGaugeVerdict(
   ].filter((part): part is string => part != null);
   const pullSentence = pulls.length > 0 ? `${pulls.join("; ")}.` : null;
   if (band === "unsettled") {
-    return pullSentence ?? "Weight withheld for valuation could move the gauge across a band edge, so no band is claimed.";
+    return pullSentence ?? "Weight withheld for incomplete flow inputs could move the gauge across a band edge, so no band is claimed.";
   }
   return pullSentence ? `${GAUGE_BAND_VERDICTS[band]} ${pullSentence}` : GAUGE_BAND_VERDICTS[band];
 }

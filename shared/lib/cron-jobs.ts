@@ -550,7 +550,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "halfHourlyMintBurnCritical",
     triggerMode: "isolated",
     statusImpact: "critical",
-    maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
+    maxConnections: 3, // Three concurrent transaction-context POSTs; other RPC work is serial
   },
   {
     job: "sync-mint-burn-extended",
@@ -558,7 +558,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "hourly",
     scheduleKey: "halfHourlyMintBurnExtended",
     triggerMode: "isolated",
-    maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
+    maxConnections: 3, // Three concurrent transaction-context POSTs; other RPC work is serial
   },
   {
     job: "sync-dex-discovery",
@@ -583,7 +583,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 3600,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "isolated",
-    maxConnections: 5, // Nested direct-API peak; below the platform header-wait ceiling and repo budget.
+    maxConnections: 4, // Curve/subgraph peak; serial direct families peak at 3, price refresh at 1.
   },
   {
     job: "sync-dex-liquidity",
@@ -592,7 +592,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 3600,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
-    maxConnections: 5, // D1-only consumer of the complete source-stage generation; the bounded inline :16 stage-recovery re-run reuses the stage job's nested direct-API peak.
+    maxConnections: 4, // D1-only consumer; bounded inline source recovery reuses the stage's Curve/subgraph peak.
     connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {

@@ -14,6 +14,9 @@ import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../mint-burn-publication";
+import { readMintBurnSupplyReconciliation } from "../../mint-burn-supply-reconciliation";
+
+vi.mock("../../mint-burn-supply-reconciliation", () => ({ readMintBurnSupplyReconciliation: vi.fn(async () => new Map()) }));
 
 const NOW = 1_800_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -40,7 +43,7 @@ function conservationFixture(config = byId("usds-sky")[0]) {
 }
 
 async function reconcile(options: {
-  id?: string; records?: unknown[]; coverage?: string; admittedTron?: boolean; disabledKeys?: string[]; paused?: boolean;
+  id?: string; records?: unknown[]; coverage?: string; scanAgeSec?: number; admittedTron?: boolean; disabledKeys?: string[]; paused?: boolean;
 } = {}) {
   const id = options.id ?? "usds-sky";
   const configs = byId(id);
@@ -66,7 +69,7 @@ async function reconcile(options: {
     })) },
     ...["sync-mint-burn", "sync-mint-burn-extended"].map((job) => ({
       match: "FROM cron_runs", matchBinds: [job], rows: [{
-        started_at: options.coverage === "stale" ? NOW - 86400 : NOW,
+        started_at: NOW - (options.scanAgeSec ?? (options.coverage === "stale" ? 86400 : 0)),
         status: options.coverage === "error" ? "error" : "ok",
         metadata: JSON.stringify({ chainHeads: { ethereum: 100_000_000 } }),
       }],
@@ -116,6 +119,19 @@ describe("conservation compatibility schema", () => {
 });
 
 describe("getMintBurnReconciliation verified conservation", () => {
+  it("projects daily ledger findings without changing the raw scan verdict", async () => {
+    const config = byId("usds-sky")[0];
+    const leg = { configKey: mintBurnConfigKey(config), chainId: config.chain.chainId,
+      address: config.contractAddress, decimals: config.decimals, latestDay: NOW - 86400, checkedAt: NOW,
+      status: "unavailable" as const, reason: "incomplete-scan-coverage", windows: [],
+      activeFindings: [{ day: NOW - 172800, status: "review-suppression" as const, reason: "material-review-suppression" }] };
+    vi.mocked(readMintBurnSupplyReconciliation).mockResolvedValueOnce(new Map([[leg.configKey, leg]]));
+    const result = await reconcile();
+    expect(result.rows[0].dailyReconciliation).toEqual([leg]);
+    expect(result.rows[0].status).toBe("ok");
+    expect(MintBurnReconciliationSummarySchema.safeParse(result).success).toBe(true);
+  });
+
   it.each(["tbill-openeden"])("excludes inactive %s just like the producer", async (id) => {
     expect(MINT_BURN_CONFIGS.some((config) => config.stablecoinId === id)).toBe(true);
     expect(ACTIVE_IDS.has(id)).toBe(false);
@@ -137,8 +153,8 @@ describe("getMintBurnReconciliation verified conservation", () => {
   it.each([
     ["missing", undefined],
     ["malformed", { status: "bad" }],
-    ["stale", { checkedAt: NOW - 4501 }],
-    ["old block", { toTimestamp: NOW - 4501, fromTimestamp: NOW - 4600 }],
+    ["stale", { checkedAt: NOW - 5401, toTimestamp: NOW - 5413, fromTimestamp: NOW - 5521 }],
+    ["old block", { toTimestamp: NOW - 5401, fromTimestamp: NOW - 5521 }],
     ["future", { checkedAt: NOW + 1 }],
     ["configuration changed", { configFingerprint: "different" }],
     ["missing internal fingerprint", { configFingerprint: undefined }],
@@ -166,6 +182,16 @@ describe("getMintBurnReconciliation verified conservation", () => {
 
   it.each(["stale", "error", "missing-cursor", "lagging"])("gates positive evidence on %s scan coverage", async (coverage) => {
     expect((await reconcile({ coverage })).rows[0].status).toBe("insufficient-source");
+  });
+
+  it.each([["usds-sky", 5400], ["fdusd-first-digital", 10800]] as const)("uses three producer intervals for %s proof and scans", async (id, maxAgeSec) => {
+    for (const age of [maxAgeSec, maxAgeSec + 1]) {
+      const result = await reconcile({ id, scanAgeSec: age, records: [{ ...conservationFixture(byId(id)[0]),
+        checkedAt: NOW - age, toTimestamp: NOW - age, fromTimestamp: NOW - age - 120 }] });
+      expect(result.rows[0].status).toBe(age === maxAgeSec ? "ok" : "insufficient-source");
+      expect(MintBurnReconciliationSummarySchema.parse(result).rows[0].conservation?.[0].maxAgeSec).toBe(maxAgeSec);
+    }
+    expect((await reconcile({ id, scanAgeSec: maxAgeSec + 1 })).rows[0].status).toBe("insufficient-source");
   });
 
   it.each([

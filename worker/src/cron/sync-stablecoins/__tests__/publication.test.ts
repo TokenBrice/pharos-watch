@@ -88,6 +88,46 @@ describe("publication path authority", () => {
     });
   });
 
+  it.each([["main", true], ["fallback", true], ["main", false], ["fallback", false]] as const)(
+    "preserves %s publication on a cancelled=%s post-write exception", async (path, cancelled) => {
+      vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+      const { db } = fixtures.open();
+      const controller = new AbortController();
+      const error = new Error("notice interrupted");
+      const assets = WORKER_ACTIVE_STABLECOINS.map((meta) => makePeggedAsset({
+        id: meta.id, name: meta.name, symbol: meta.symbol, price: 1, priceSource: "coingecko",
+        pegMechanism: "fiat-backed", circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [],
+      }));
+      vi.spyOn(phase, "fillMissingSupplyHistory").mockResolvedValue(0);
+      const depeg = vi.spyOn(post, "runDepegPipeline");
+      vi.spyOn(notices, "queueTrackedAdditionsNotice").mockImplementation(async () => {
+        if (cancelled) controller.abort(error);
+        throw error;
+      });
+      const publication = runStablecoinsPostIntakePublication({
+        ...publicationInput(path, db, assets), signal: controller.signal,
+      });
+      if (!cancelled) await expect(publication).rejects.toBe(error);
+      else {
+        const result = await publication;
+        expect(result).toMatchObject({ aborted: true, status: "degraded", itemCount: assets.length,
+          abortResultPolicy: "preserve-committed-publication", productivity: { productive: true,
+            reason: path === "main" ? "stablecoins-cache-published" : "stablecoins-fallback-cache-published",
+            publications: [{ surface: "stablecoins", generationId: "stablecoins:1800000000", publishedRows: assets.length }] } });
+        expect(JSON.parse(result.metadata!)).toMatchObject({
+          reason: "aborted-after-publication", stage: "post-publication", detail: error.message,
+          rowsWritten: assets.length, cacheKey: "stablecoins", syncStartSec: 1_800_000_000,
+          cacheWriteMode: "published", cacheWriteSucceeded: true, depegPipelineSucceeded: false,
+          capabilities: { stablecoinsCache: true, depegPipeline: false },
+          quality: { depegObservation: null, depegObservationUnavailableReason: "aborted" },
+        });
+      }
+      expect(depeg).not.toHaveBeenCalled();
+      const cached = (await getCache(db, "stablecoins"))!;
+      expect(cached.updatedAt).toBe(1_800_000_000);
+      expect(JSON.parse(cached.value).peggedAssets.map((asset: PeggedAsset) => asset.id)).toEqual(assets.map((asset) => asset.id));
+    });
+
   it.each(["main", "fallback"] as const)("retains %s mid-stage cancellation metadata and writes no generation", async (path) => {
     const { db } = fixtures.open();
     const controller = new AbortController();

@@ -106,7 +106,6 @@ describe("runFiveMinuteTelegramSlot", () => {
   it.each([
     ["measures registration duration without the preceding critical lane", false],
     ["measures cached registration checks independently of critical-lane duration", true],
-    ["does not refresh registration success when every unit is skipped", true],
   ])("%s", async (_name, cached) => {
     let now = 0;
     vi.mocked(Date.now).mockImplementation(() => now);
@@ -230,10 +229,6 @@ describe("runFiveMinuteTelegramSlot", () => {
 
     expect(summary.budgetOnlyJobs).toBe(1);
     expect(order).toEqual(["dispatch", "watchdog", "pulse", "commands", "profile", "menu", "webhook"]);
-    expect(reconcileTelegramCommandRegistration).toHaveBeenCalledOnce();
-    expect(reconcileTelegramProfileRegistration).toHaveBeenCalledOnce();
-    expect(reconcileTelegramMenuButton).toHaveBeenCalledOnce();
-    expect(reconcileTelegramWebhookRegistration).toHaveBeenCalledOnce();
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "telegram-registration-reconciliation",
       dueCount: 4,

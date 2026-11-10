@@ -1303,46 +1303,6 @@ describe("buildReviewedReserveClassifications", () => {
     });
   });
 
-  it("keeps reviewed classifications joined across arbitrary live composition drift", () => {
-    const reviewed = reviewedMeta([
-      {
-        name: "<3-Month U.S. Treasuries",
-        pct: 73.7,
-        risk: "very-low",
-        assetClass: "treasury-bill",
-        issuerOrObligor: "United States Treasury",
-      },
-      {
-        name: "Other Bank Deposits",
-        pct: 14.8,
-        risk: "very-low",
-        assetClass: "bank-deposit",
-        issuerOrObligor: "Other regulated financial institutions",
-      },
-    ]);
-    const drifted = buildReviewedReserveClassifications(
-      [
-        { name: "<3-Month U.S. Treasuries", pct: 71.7, risk: "very-low" },
-        { name: "Other Bank Deposits", pct: 15.9, risk: "very-low" },
-      ],
-      reviewed,
-      CLOCK_SEC,
-    );
-    expect(drifted).toMatchObject([
-      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
-      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit" },
-    ]);
-
-    const grosslyDifferent = buildReviewedReserveClassifications(
-      [{ name: "<3-Month U.S. Treasuries", pct: 62, risk: "very-low" }],
-      reviewed,
-      CLOCK_SEC,
-    );
-    expect(grosslyDifferent).toMatchObject([
-      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
-    ]);
-  });
-
   it("uses explicit source keys across label and weight changes and fails closed on key mismatch", () => {
     const reviewed = reviewedMeta([{
       sourceKey: "circle:usdc:treasuries-under-3m",

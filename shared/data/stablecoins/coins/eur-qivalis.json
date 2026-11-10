@@ -31,7 +31,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "announced",
-  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); De Nederlandsche Bank granted Qivalis electronic money institution authorisation, announced October 14 2026; Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. No launch date accompanied the authorisation and the H2 2026 target stands; September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release.",
+  "launchPhaseDetail": "37-institution consortium across 15 countries (May 20 expansion added 25 new member banks to 12 existing members, including new arrivals ABN AMRO, Intesa Sanpaolo, Rabobank and Nordea; Raiffeisen Bank International was already a member); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); De Nederlandsche Bank granted Qivalis electronic money institution authorisation, announced October 14 2026; Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. No launch date accompanied the authorisation and the H2 2026 target stands; September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release.",
   "featuredContent": [
     {
       "type": "article",
@@ -108,16 +108,16 @@
     {
       "date": "2026-05-05",
       "type": "partnership",
-      "title": "Second wave of banks join: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank: consortium now 17 members",
-      "description": "Five Spanish and European banks expand the consortium beyond the original 12 founding members.",
+      "title": "Five Spanish banks prepare to join Qivalis",
+      "description": "Sabadell, Bankinter, Abanca, Kutxabank and Cecabank were preparing to join Qivalis; the report did not establish completed membership.",
       "sourceUrl": "https://www.banklesstimes.com/articles/2026/05/05/sabadell-bankinter-join-qivalis-euro-stablecoin-push-in-2026/"
     },
     {
       "date": "2026-05-20",
       "type": "milestone",
       "title": "Consortium expands to 37 banks across 15 countries",
-      "description": "Roughly 20 additional institutions join, including ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, and Raiffeisen Bank International, up from 17 members.",
-      "sourceUrl": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520"
+      "description": "Qivalis announced 25 new member banks, expanding the consortium from 12 to 37 institutions across 15 countries. New members include ABN AMRO, Intesa Sanpaolo, Rabobank and Nordea; Raiffeisen Bank International was already a member.",
+      "sourceUrl": "https://qivalis.eu/press/news/qivalis-more-than-triples-in-size-as-25-new-banks-join-the-consortium-accelerating-institutional-shift-towards-a-fully-regulated-euro-stablecoin"
     },
     {
       "date": "2026-07-21",

@@ -21,6 +21,7 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { flushDwellirCredits, loadDwellirBudgetState } from "../../lib/rpc-provider-budget";
 import { settleAfterAbort, retainUntilDeadline, CRON_ABORT_GRACE_MS, CRON_ABORT_OBSERVATION_MARGIN_MS } from "../../lib/cron-abort-settlement";
+import { retainCommittedCronResultAfterAbort } from "../../lib/cron-result";
 import { createDwellirNativeCapability, type DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
@@ -316,12 +317,13 @@ export function createScheduledRuntimeContext(
               ...(timeoutBudgetMetadata ? { timeoutBudget: timeoutBudgetMetadata } : {}),
               ...slotMeta,
             });
-            const leaseOptions: CronLeaseOptions = {
+            const leaseOptions: CronLeaseOptions<CronResult | void> = {
               owner: leaseOwner,
               abortSignal: signal,
               timeoutBudget,
               deadline,
               ...descriptor.leaseOptions,
+              settledAbortResult: retainCommittedCronResultAfterAbort,
             };
             if (scheduled.recoveryCheckpoint) leaseOptions.reserveRecoveryAdmission = true;
             if (job === "sync-live-reserves" && scheduled.scheduleKey === "fourHourlyReserveSync"

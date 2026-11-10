@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 
 const fetchEvmBlockNumberMock = vi.fn();
@@ -16,6 +16,7 @@ import {
   azndCurvePoolProvider,
   fetchAzndCurvePoolPrice,
 } from "../authoritative-price-sources/aznd-curve-pool";
+import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 
 const AZND = "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0";
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -23,19 +24,21 @@ const word = (value: bigint) => value.toString(16).padStart(64, "0");
 const addressWord = (address: string) => `0x${address.slice(2).toLowerCase().padStart(64, "0")}` as `0x${string}`;
 const uintResult = (value: bigint) => `0x${word(value)}` as `0x${string}`;
 
-function trustedUsdc(): PeggedAsset {
-  const now = Math.floor(Date.now() / 1000);
+const now = 1_800_000_000;
+function trustedUsdc(age = 0): PeggedAsset {
   return {
     id: "usdc-circle",
     symbol: "USDC",
     price: 1,
     priceSource: "coingecko+defillama-list",
     priceConfidence: "high",
-    priceObservedAt: now,
+    priceObservedAt: now - age,
     priceObservedAtMode: "local_fetch",
     priceSyncedAt: now,
   } as PeggedAsset;
 }
+
+const context = (age = 0) => ({ assetsById: new Map([["usdc-circle", trustedUsdc(age)]]) });
 
 function mockHealthyPool(overrides: { coin0?: string; usdcBalance?: bigint; impactOutput?: bigint } = {}): void {
   fetchEvmRpcBatchMock.mockResolvedValue([
@@ -49,29 +52,18 @@ function mockHealthyPool(overrides: { coin0?: string; usdcBalance?: bigint; impa
 }
 
 describe("AZND exact Curve pool price", () => {
+  afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     fetchEvmBlockNumberMock.mockReset().mockResolvedValue(25_543_520);
-    fetchEvmBlockTimestampMock.mockReset().mockResolvedValue(Math.floor(Date.now() / 1000) - 12);
+    fetchEvmBlockTimestampMock.mockReset().mockResolvedValue(now - 12);
     fetchEvmRpcBatchMock.mockReset();
-  });
-
-  it("accepts a fresh identity-bound executable quote as fallback display evidence", async () => {
-    mockHealthyPool();
-
-    await expect(fetchAzndCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toMatchObject({
-      price: 0.22,
-      source: "curve-thin-onchain",
-      confidence: "fallback",
-      observedAtMode: "upstream",
-    });
   });
 
   it("batches six direct calls at the original block with the same abort signal", async () => {
     mockHealthyPool();
     const signal = new AbortController().signal;
-    await fetchAzndCurvePoolPrice({ assetsById: new Map([["usdc-circle", trustedUsdc()]]) }, signal);
+    await fetchAzndCurvePoolPrice(context(), signal);
     expect(fetchEvmRpcBatchMock).toHaveBeenCalledTimes(1);
     const [chain, calls, options] = fetchEvmRpcBatchMock.mock.calls[0];
     expect(chain).toBe("ethereum");
@@ -91,9 +83,7 @@ describe("AZND exact Curve pool price", () => {
 
   it.each([null, [], [null, null, null, null, null, null]])("rejects an unavailable or incomplete batch (%j)", async (result) => {
     fetchEvmRpcBatchMock.mockResolvedValue(result);
-    await expect(fetchAzndCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
+    await expect(fetchAzndCurvePoolPrice(context())).resolves.toBeNull();
   });
 
   it.each([
@@ -103,39 +93,63 @@ describe("AZND exact Curve pool price", () => {
   ])("rejects %s", async (_name, overrides) => {
     mockHealthyPool(overrides);
 
-    await expect(fetchAzndCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
+    await expect(fetchAzndCurvePoolPrice(context())).resolves.toBeNull();
   });
 
   it("rejects a stale block before pool calls", async () => {
-    fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) - 301);
+    fetchEvmBlockTimestampMock.mockResolvedValue(now - 301);
 
-    await expect(fetchAzndCurvePoolPrice({
-      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
-    })).resolves.toBeNull();
+    await expect(fetchAzndCurvePoolPrice(context())).resolves.toBeNull();
     expect(fetchEvmRpcBatchMock).not.toHaveBeenCalled();
   });
 
+  it.each([0, 240, 300, 301, 800])("keeps the USDC clock within the 300-second route budget (%is)", async (age) => {
+    mockHealthyPool();
+    const result = await fetchAzndCurvePoolPrice(context(age));
+    if (age <= 300) {
+      expect(result).toMatchObject({
+        price: 0.22, source: "curve-thin-onchain", confidence: "fallback",
+        observedAt: now - Math.max(age, 12), observedAtMode: age ? "local_fetch" : "upstream",
+      });
+    } else {
+      expect(result).toBeNull();
+      expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each(["parent", "block"])("rechecks the older %s clock after pool awaits", async (older) => {
+    mockHealthyPool();
+    const batch = fetchEvmRpcBatchMock.getMockImplementation()!;
+    fetchEvmRpcBatchMock.mockImplementation((...args) => {
+      vi.mocked(Date.now).mockReturnValue((now + 1) * 1000);
+      return batch(...args);
+    });
+    fetchEvmBlockTimestampMock.mockResolvedValue(now - (older === "block" ? 300 : 12));
+    await expect(fetchAzndCurvePoolPrice(context(older === "parent" ? 300 : 0))).resolves.toBeNull();
+  });
+
   it("does not replace an existing usable market price with the thin fallback", async () => {
-    const now = Math.floor(Date.now() / 1000);
     const asset = {
+      ...trustedUsdc(),
       id: "aznd-mu-digital",
       symbol: "AZND",
       price: 0.31,
       priceSource: "coingecko",
-      priceConfidence: "high",
       priceObservedAt: now - 60,
       priceObservedAtMode: "upstream",
-      priceSyncedAt: now,
     } as PeggedAsset;
 
     await expect(azndCurvePoolProvider.fetchLivePrice?.(asset, {
-      assetsById: new Map([
-        [asset.id, asset],
-        ["usdc-circle", trustedUsdc()],
-      ]),
+      assetsById: new Map([...context().assetsById, [asset.id, asset]]),
     })).resolves.toBeNull();
+    expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unpriced USDC parent before spending block or pool reads", async () => {
+    const unpriced: LivePriceContext = { assetsById: new Map([["usdc-circle", { ...trustedUsdc(), price: null }]]) };
+
+    await expect(fetchAzndCurvePoolPrice(unpriced)).resolves.toBeNull();
+    expect(unpriced.lastUntrustedParent).toEqual({ parentId: "usdc-circle", reason: "parent-price-missing" });
     expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import { isDewsAlertable, type DepegAlertPayload } from "../../../telegram/common/alerts-formatting";
 import { setCacheMany } from "../../../lib/db-cache";
+import { parseJsonObject } from "../../../lib/json-parse";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   getReportCardGradeRank,
@@ -81,15 +82,8 @@ export function parseSnapshotMap<T extends Record<string, unknown>>(
   cached: { value: string; updatedAt: number } | null,
 ): T | null {
   if (!cached) return null;
-  try {
-    const parsed = JSON.parse(cached.value);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed as T;
-  } catch { /* expected: corrupted or legacy cache format */
-    return null;
-  }
+  // Corrupted or legacy cache values parse to null.
+  return parseJsonObject<T>(cached.value);
 }
 
 export function isSnapshotMissingOrStale(

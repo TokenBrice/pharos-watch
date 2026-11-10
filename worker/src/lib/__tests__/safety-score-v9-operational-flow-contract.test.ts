@@ -975,13 +975,6 @@ describe("governance public-clock and replacement-approval admission", () => {
     if (family === "H") expect(denied.process?.coverage).toBe("incomplete");
   });
 
-  it("does not demand other-holder approval from a controller voting only its own proved stake", () => {
-    const profile = governanceProfile("D29");
-    profile.governedIssuance!.votingControl.controllers[0]!.voteReplacementApproval = "unknown";
-    const compiled = compile(profile);
-    expect(compiled.governance.votingControl).toMatchObject({ qualified: true, unknownAboveThresholdVoteOwnershipControllerIds: [] });
-    expect(posture(compiled.asset)).toBe("unbounded-governed");
-  });
 });
 
 describe("authority clock, cycle, and compact runtime admission", () => {

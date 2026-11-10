@@ -221,10 +221,6 @@ function isBalancerPool(value: unknown): value is BalancerPool {
     value.poolTokens.every(isBalancerPoolToken);
 }
 
-function normalizedAddress(value: string): string {
-  return canonicalEvmAddress(value) ?? value.trim().toLowerCase();
-}
-
 function formatGraphqlErrors(errors: unknown): string[] {
   if (!Array.isArray(errors)) return [];
   return errors.map((entry) => {
@@ -385,19 +381,13 @@ function captureGateForPool(
 function shapeBalancerPool(
   pool: BalancerPool,
   chain: string,
-  priceOverrides: ReadonlyMap<string, number | null> = new Map(),
-  priceDependencyOverrides: ReadonlyMap<
-    string,
-    NonNullable<DexApiPool["tokens"][number]["priceUsdDependency"]>
-  > = new Map(),
-  gateOverride?: BalancerExecutionCapabilityGate,
 ): DexApiPool {
   const tvlUsd = parseStrictFiniteDecimal(pool.dynamicData.totalLiquidity) ?? Number.NaN;
   const volume24h = parseStrictFiniteDecimal(pool.dynamicData.volume24h) ?? Number.NaN;
   const swapFee = parseStrictFiniteDecimal(pool.dynamicData.swapFee) ?? Number.NaN;
   const balances = pool.poolTokens.map((token) => parseStrictFiniteDecimal(token.balance) ?? Number.NaN);
   const poolAddress = extractBalancerPoolAddress(pool);
-  const executionCapabilityGate = gateOverride ?? captureGateForPool(pool, poolAddress, balances, swapFee);
+  const executionCapabilityGate = captureGateForPool(pool, poolAddress, balances, swapFee);
   const poolType = STABLE_DISPLAY_POOL_TYPES.has(pool.type)
     ? "balancer-stable"
     : pool.type === "WEIGHTED"
@@ -414,20 +404,14 @@ function shapeBalancerPool(
       const balanceUsd = parseStrictFiniteDecimal(token.balanceUSD) ?? Number.NaN;
       const weight = token.weight == null ? null : parseStrictFiniteDecimal(token.weight);
       const priceRate = token.priceRate == null ? null : parseStrictFiniteDecimal(token.priceRate);
-      const tokenAddress = normalizedAddress(token.address);
-      const sourcePriceUsd = Number.isFinite(balance) && balance > 0 && Number.isFinite(balanceUsd) && balanceUsd > 0
+      const priceUsd = Number.isFinite(balance) && balance > 0 && Number.isFinite(balanceUsd) && balanceUsd > 0
         ? balanceUsd / balance
         : null;
-      const priceUsd = priceOverrides.has(tokenAddress)
-        ? priceOverrides.get(tokenAddress) ?? null
-        : sourcePriceUsd;
-      const priceUsdDependency = priceDependencyOverrides.get(tokenAddress);
       return {
         address: token.address,
         symbol: token.symbol,
         decimals: token.decimals,
         priceUsd,
-        ...(priceUsdDependency ? { priceUsdDependency } : {}),
         weight: Number.isFinite(weight) && weight != null && weight > 0 ? weight : null,
         priceRate: Number.isFinite(priceRate) && priceRate != null && priceRate > 0 ? priceRate : null,
       };

@@ -45,7 +45,7 @@ const MAINTENANCE_CAUSE_CODES = new Set(["ddr_repair_debt_present", "reserve_syn
  */
 const STANDING_NOTICE_CAUSE_CODES = new Set([
   "active_price_coverage_nominal_reference", "reserve_feed_reviews_acknowledged",
-  "supply_carry_reviews_acknowledged",
+  "supply_carry_reviews_acknowledged", "depeg_blind_event_reviews_acknowledged",
 ]);
 const PUBLICATION_CAUSE_CODES = new Set(["stablecoin_publication_incomplete", "stablecoin_publication_unknown"]);
 const ACTIVE_PRICE_COVERAGE_CAUSE_CODE = "active_price_coverage_incomplete";

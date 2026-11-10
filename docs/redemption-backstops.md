@@ -2,7 +2,7 @@
 
 Modeled redemption-route coverage for tracked stablecoins. This subsystem estimates how credibly a holder can exit to par or near-par outside secondary-market DEX liquidity, then exposes that estimate through a standalone snapshot API. Since redemption `v4.3` the legacy `effectiveExitScore` blend is retired: same-notional exit is published by the Safety Score V9 Exit pillar alone, which composes the same route-scoring primitives from `shared/lib/exit-route-scoring.ts`.
 
-> **Agent navigation** — Grep headings: Coverage · Cron Schedule · Scoring Model · Captured local-fiat costs · Physical-to-USD Exit · Exact-request execution certificates · Config Registry · Reviewed channel suspension · Output-key identity contract · Capacity Models · Provider / Source Definitions · Database Schema · API Endpoint · Frontend Consumers. Current configs own the inventory; structured methodology changelogs own release history.
+> **Agent navigation** — Current scoring contract: Coverage · Scoring Model · Captured local-fiat costs · Physical-to-USD Exit · Exact-request execution certificates · Reviewed channel suspension · Output-key identity contract · Capacity Models · API Endpoint · Frontend Consumers. Implementation and storage details live in the [technical appendix](process/redemption-backstops-appendix.md#cron-schedule). Current configs own the inventory; structured methodology changelogs own release history.
 
 ---
 
@@ -12,10 +12,6 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/registry.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
-
-The `v4.51` release keeps cohort restrictions bound to the exact output path; only a source-owned pause survives a rejected payout identity. MetaMorpho V1 donations cannot floor or replace validated API capacity, and Liquity v1 gross ActivePool debt cannot establish executable eligible-Trove debt. GBPA and MXNT explicitly retain unquantified capacity. FILQ and Sygnum FIUSD distinguish cash output from NAV input pricing; strUSD separates permissionless on-chain submission from issuer-discretionary eligibility. The NAV label correction alone is presentation-only. Weights, ladders and freshness budgets are unchanged.
-
-Activation is provisionally **2026-10-16 00:00 UTC (`1792108800`)**, to be re-dated at release. The changed route-score inputs follow the `v4.5` precedent for withdrawn unsupported assumptions; a route-level fixed-clock comparison and fresh producer-dependent observations remain separate release requirements. No comparison result or production acceptance is claimed. Safety's existing exact-request execution and evidence policy is unchanged, so this release does not itself advance the Safety Score methodology.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -50,7 +46,7 @@ Coverage is route-specific, not a second inventory of reserve holdings. Family c
 - **Valuation:** generic non-USD ERC-4626 capacity is unavailable without same-path FX (`erc4626-capacity-non-usd-unvalued`). Exact EUR certificates independently bind fresh observed token USD prices and EUR/USD expected value to both source generations and the older clock; that does not promote unvalued reserve telemetry or assume EURCV/TRY parity.
 - **Direct observers:** the registry in `worker/src/cron/reserve-adapters/executable-redemption-observers.ts` distinguishes measured from diagnostic-only lanes. Lido/Monetrix/Saturn queues do not become funded capacity from idle cash, queue counts or operator processing. USDfr's restricted controller and apyUSD's funded owner-claimable receipts require their exact guards and same-run output valuation; delayed funded receipts are eventual-only. Reserve-backed eEARN/sdUSD/sUSN keep their separate strategies rather than duplicate reads.
   The observer contracts and shared `readStateWithPlan` identity/read helper live below the registry in `worker/src/cron/reserve-adapters/executable-redemption-read-client.ts`; concrete observers import that module rather than their own registry.
-- **Clocks:** observer state uses `EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC` (600 seconds) and shared future skew. Captured valuation retains the stablecoins generation's original `updatedAt`, positive safe-integer generation and `STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC` budget (1,800 seconds). Measured native amount, output valuation and all-in cost are independent predicates; `output-valuation-unobserved` and `all-in-cost-unobserved` remain distinct.
+- **Clocks:** observer state uses `EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC` (600 seconds) and shared future skew. Captured valuation retains the stablecoins generation's original `updatedAt`, positive safe-integer generation and `STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC` budget (1,800 seconds). Measured native amount, output valuation and all-in cost are independent predicates; `output-valuation-unobserved` and `all-in-cost-unobserved` remain distinct. After identity, source-clock and settlement admission, missing all-in cost takes precedence over missing output valuation, so a structural cost-evidence limit cannot fluctuate into a runtime coverage failure with price availability. Neither rejection publishes numeric capacity.
 - **Queues and access:** cooldown minima, serviced-day bands, API averages and source-staleness budgets are not completion maxima or FIFO allocation. Protocol submission may be permissionless while legal eligibility is issuer-discretionary; it does not make a parent issuer rail permissionless. The configured payout and current holder/cohort must match before faster settlement can apply.
 - **Fees and replay:** issuer/protocol zero covers only its stated component. Frozen request-point costs take precedence; an observation scalar applies only when both notional and cost budget match. Other points resolve their own bounded terms. Formula-provenance repair requires captured formula confidence. Curation needs a new producer/accepted publication, never backdated fees or synthetic capacity.
 - **Calendars:** `v9RouteReviewTerms.businessDayTerms` retains jurisdiction, cutoff/timezone, binding-versus-target assurance, start event and unresolved/sequential gates. Safety walks the complete reviewed submission horizon, not a calendar-day guess or a rejected captured scalar. The coarse `days` label is **Multi-day**, never an implied seven-day maximum.
@@ -65,47 +61,7 @@ Current configs retain the exact source-backed distinctions for Ondo USDon versu
 
 ## Cron Schedule
 
-- **Pattern:** `11 */4 * * *`
-- **Function:** `syncRedemptionBackstops(db, signal)`
-- **File:** `worker/src/cron/sync-redemption-backstops.ts`
-- **Trigger order:** runs after `sync-live-reserves` in the 4-hourly reserve lane (`worker/src/handlers/scheduled/four-hourly-reserves.ts`)
-
-The cron reads:
-
-1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`, including its generation timestamp, underlying price-observation timestamps and provenance, FX references, and same-generation prices used to derive current signed deviations
-2. Published DEX liquidity scores and their latest admitted timestamp via `loadDexLiquidityScores(db)`: 64-row pages preserve the full snapshot's coverage and exit-route quarantine rules while discarding unused route graphs and omitting deployment census reads. Row update/publication identities are fenced before, during and after pagination; concurrent publication drift fails closed through the existing preload-warning path.
-3. One validated sealed reserve envelope from `cache['live-reserves:accepted-generation:v2']`, reassessed against current configuration and consumer time; no mutable reserve-row fallback is permitted
-
-Live reserve telemetry is reused from the accepted D1 envelope without refetching reserve adapters. Registry-declared direct executable observers instead perform bounded same-run RPC reads using the scheduled runtime transport; they do not fabricate reserve consumption.
-The four-hour source cadence and consumer lease are unchanged. Scheduled redemption is a cohort tail on a fresh five-minute recovery invocation after the full reserve frontier exhausts; incomplete/error/locked heads no longer launch repeated redemption passes against previous acceptance. A consumer-only continuation retries only unfinished consumers and retains all producer/domain mutation fences. Missing, malformed or unreadable acceptance returns `accepted-reserve-view-unavailable` or `accepted-reserve-view-invalid` without writing a run. Per-asset rejected evidence retains existing missing/static-fallback semantics.
-
-Independent asset resolvers use the existing `mapWithConcurrency` worker pool with `REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY = 3` from `shared/lib/cron-jobs.ts`; that same constant owns the natural redemption and recovery connection reservations. Each observer retains its sequential, body-draining RPC/proof steps. The natural reserve slot is **4/6** (`max(reserves 2, redemption 3, sentinel 1) + Kinesis 1`); five-minute recovery is **3/6**, with its phases and Kinesis serialized. The resolver pool changes neither freshness/admission nor the 300-second child timeout.
-
-Results and failed-row placeholders are collected by input index and published in configured order only after every resolver settles; one asset failure remains isolated. Cancellation stops admission of new assets, drains already-started resolvers and prevents partial publication. Resolution progress counts completed resolvers (including failed rows), coalesced after ten completions or fifteen seconds and on completion, with serialized reporting to prevent stale progress overwrites.
-
-Final row and selected-detail schema admission happens inside each asset's failure boundary, then again after the output-dependency join. A malformed member becomes an explicit failed placeholder with unavailable capacity; `sourceFailureReasons[id]` records `redemption-snapshot-schema-invalid`, `schemaPath`, and the schema's machine-readable `schemaReason`. If a post-join member fails, disclosures are rebuilt against that placeholder and revalidated before opening the immutable manifest. Healthy rows and placeholders retain the complete configured census; storage validation remains defense in depth. Global reserve/stablecoins admission holds and cancellation before publication still write no snapshot rows.
-
-Only selected capacity, fee, route-status/output or specialized-route evidence carries `reserveInput` in immutable `details_json`: generation/digest, asset, successful attempt, configuration fingerprint and the consumed `ReserveFreshnessView`. Direct RPC, unused and purely static evidence remain unbound. Accepted reserve envelopes and consumed manifests use schema v2: original `freshnessMode` (including absent/null) and `sourceFreshnessInvalid` are captured, never reconstructed as not-applicable from a null timestamp. Mode-less v1 bound input is unavailable to current capture health until new full-cohort reserve and redemption runs; no immutable backfill or old-envelope reinterpretation is allowed.
-
-When timestamp-less composition carries independently admitted same-run on-chain redemption capacity, the consumed binding additionally seals `redemptionCapacityEvidence: { sourceTimestamp, blockNumber, outputAssetKeys }`. The producer emits it only after the existing exact-route capacity, status, eligibility, warning and identity gates pass. Capture checks the immutable row/census match, original fetch/config identity, original on-chain timestamp and configured output keys; the source age remains capped by the tighter adapter/coin allowance and 48-hour same-run ceiling. The composition's original unverified freshness stays unchanged and grants no Backing credit. Old composition-only bindings remain quarantined until a newly produced redemption run; no evidence is backfilled into historical rows.
-
-Before building rows, the strict stablecoins cache must have a positive safe-integer generation timestamp no later than the run clock and age within `STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC` (twice the producer interval, currently 1,800 seconds). This producer-to-producer admission window is distinct from the 600-second public endpoint advisory and pinned executable-state freshness budgets. Failure returns `stablecoins-cache:invalid-supply-generation` and holds prior output. Run metadata records `stablecoinsInput: { updatedAt, assessedAt, maxAgeSec }`, the actual source timestamp and assessment clock, independently of depeg's evidence budget. Metadata also binds reserve generation/digest, `runClockSec` and the consumed-input census to immutable rows. A missing per-asset supply bucket remains null, not global cache failure or observed zero.
-
-Status semantics:
-
-- `ok` when routes publish without blocking failures and the reused DEX diagnostic input is fresh. Diagnostic `missing-capacity`, market-impaired and `missing-cache` rows do not by themselves degrade the cron. The capacity tolerance budget (`max(1, ceil(runtime-configured * 1%))` over active configured routes excluding capability-structural ones) grades **runtime** missing capacity only. Structural rows are missing-capacity by construction and never count toward the floor, classified without stablecoin-ID special cases from published row facts plus config/registry capability: authored `unquantified` models (`unquantified-model` provider), `capacityUse: "diagnostic-only"` observer lanes, reserve-sync routes whose adapter declares no (or params-gated and unconfigured) route-capacity telemetry, and the deterministic evidence-model rejection reasons `settlement-bound-unproven`, `all-in-cost-unobserved`, `route-output-identity-unobserved` and `unsupported-capacity-kind`. Everything a capable source could have emitted this run (degraded/stale/missing snapshot, malformed or stale/future telemetry, failed observer reads, freshness evidence missing) stays runtime. The census stays fully published (`unresolvedMissingCapacity` total, `structuralMissingCapacity` plus `structuralMissingCapacityBy`, and the per-family/per-provider breakdowns). A breach is recorded as `metadata.quality.reason = capacity-coverage-floor`; it does not change successful publication into an operational failure. The same published generation surfaces as the `/status` `redemption_capacity_coverage_floor` data-quality cause, so failed placeholder rows cannot hide behind a renewed endpoint freshness clock. The DEX score remains backward-compatible context only; it never computes a combined exit score.
-- `degraded` when at least one row is written but an active configured route fails or hits a non-`missing-capacity`/non-`impaired`/non-`missing-cache` unresolved state, the reused DEX liquidity snapshot is stale, future-dated or missing, the runtime cache has no active configured route at all, a DEX-liquidity preload step failed, or the D1 write/retention step returned warnings
-- `error` when no row reaches `resolutionState: "resolved"` and route failures, blocking unresolved states, all active configured routes missing capacity, or an empty active configured cohort prevent resolution; an eventual-only resolved row need not have a numeric headline score
-
-Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity` (total, including structural rows), `structuralMissingCapacity` with its `structuralMissingCapacityBy` kind breakdown when nonzero (`unquantified-model`, `diagnostic-only-observer`, `adapter-without-capacity-telemetry`, or a structural rejection reason; `unresolvedMissingCapacity - structuralMissingCapacity` is the runtime count the threshold grades), plus per-family/per-provider `familyMissingCapacityBy` / `providerMissingCapacityBy` breakdowns when any capacity is missing, so a single failing adapter family cannot hide inside the aggregate tolerance), `unresolvedCritical`, `availabilityDegraded`, `marketImpliedDegraded`, `marketEvidenceUncertain`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `activeConfigured`, `cacheAbsentConfigured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`), plus capped matching ID lists or `missingFromCache` when relevant. Intentional confirmed impairment and current-evidence uncertainty do not by themselves degrade the cron run.
-
-The producer label includes executable observers as well as reused reserve adapters and static policy. `routeStatusProducerFetches` is derived from actual direct-observer attempts, not configured capability. `directObserverAttemptedCount` counts routes whose direct observer was invoked, including unavailable reads; `directObserverConsumedCount` counts admitted rows that actually selected its live route status. `directObserverUnavailableCount` counts attempted routes whose status was not consumed, including failed, output-rejected, overridden, or schema-quarantined evidence. Static-only runs report false and zero counts. These diagnostics do not change scheduler connection accounting or claim that reused reserve evidence was fetched again.
-
-Route exceptions also persist `sourceFailureReasons`, keyed by stablecoin ID, in both the immutable run manifest and cron metadata. Each entry contains a machine-readable `code` and a sanitized error `message` (at most 240 characters); the first 25 failed routes in configured order are retained, with `sourceFailureReasonsTruncated` marking any remainder. Executable identity checks preserve `code-unavailable`, `implementation-unavailable`, `code-drift`, or `implementation-drift`: unavailable reads are not observed mismatches. Their messages name the checked address, identity kind and exact observation block, without provider response text. Other exceptions use `route-resolution-failed`. Every identity rejection remains fail-closed with unknown route status and unavailable capacity; proxy bytecode, implementation storage/code and route state retain the same concrete block and caller-supplied RPC routing options, never re-pinning or changing expected identities to clear a failure. This compaction-protected metadata key preserves the actual observer/decode failure instead of only a `sync-error` placeholder or an array count. Full stacks remain in Worker logs; URLs, credentials and SQL are removed from persisted messages.
-
-`registryHash` is a diagnostic digest of complete configs in canonical ID order; authoring order cannot rotate it. It is not a cache key, snapshot generation ID or Safety Score capture/publication fingerprint.
-
-`coverageRatio` is `activeResolved / activeConfigured` over cache-present configured IDs (zero when that cohort is empty); `resolved` still counts all resolved rows. Cache-absent rows with measured absolute capacity remain published but cannot inflate active-cache coverage.
+Redemption snapshots refresh after the reserve producer completes its cohort, using admitted supply, reserve and DEX evidence at their original clocks. Failed inputs do not become fresh route claims, and individual route failures remain isolated within a complete publication. See the [producer and publication reference](process/redemption-backstops-appendix.md#cron-schedule).
 
 ---
 
@@ -113,39 +69,25 @@ Route exceptions also persist `sourceFailureReasons`, keyed by stablecoin ID, in
 
 ### Component Weights
 
-Canonical weights are authored in `shared/lib/exit-route-scoring.ts`; `shared/lib/redemption-backstop-scoring.ts` aliases that table for the standalone diagnostic:
-
-| Component            | Weight |
-| -------------------- | ------ |
-| Access               | 0.20   |
-| Settlement           | 0.15   |
-| Execution certainty  | 0.15   |
-| Capacity             | 0.25   |
-| Output asset quality | 0.15   |
-| Cost                 | 0.10   |
+Canonical weights are authored in `shared/lib/exit-route-scoring.ts`; `shared/lib/redemption-backstop-scoring.ts` aliases that table for the standalone diagnostic. The current values are generated into the `/api/redemption-backstops` response example in the [API reference](https://github.com/TokenBrice/pharos-watch/blob/6982c122e5e4bf9648cfc8d7dfb207f1aafa7d3f/docs/api-reference.md#get-apiredemption-backstops); do not restate them here.
 
 If `capacityScore` is unavailable, `computeRedemptionBackstopScore()` returns `null` and the route is treated as unrated. When executable capacity is measured, zero capacity returns a zero headline with `zero-executable-capacity`; positive capacity below both the first 1% request-completion and $100,000 absolute-capacity breakpoints returns zero with `immaterial-executable-capacity`. Other components cannot manufacture a positive route score without a material executable exit.
 
 ### Route-Family Caps
 
-Some route families are intentionally capped even when their component mix scores higher:
-
-| Route family      | Cap |
-| ----------------- | --- |
-| `queue-redeem`    | 70  |
-| `offchain-issuer` | 65  |
+Some route families are intentionally capped even when their component mix scores higher: `queue-redeem` and `offchain-issuer`. The current cap values are generated in the same response example.
 
 An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 Route-family classification and score caps do not establish execution. A native unwrap pays its exact output, not guaranteed downstream dollars or access to the parent's issuer rail. Holder/cohort restrictions, collateral valuation and queued request/claim gates survive classification; documented fast paths cannot make an ordinary queued route atomic.
 
-The exit-route observation envelope this producer emits is consumed by the Safety Score V9 Exit pillar, which is the only same-notional route grader. Redemption observations accept only `issuer-redemption` and `protocol-redemption` as potentially scoreable families; `eventual-redemption` is diagnostic-only. Reviewed `documented-terms` evidence uses a one-year review window. Reviewed opaque-fee observations can carry modeled capacity tagged with `feeEvidence: "undisclosed-reviewed"` while remaining producer-level non-score-eligible; a consumer must apply an explicit bounded-unknown fee policy rather than treating the route as cost-bounded. Derived full-supply rows evaluate a documented-variable fee against the same reviewed ceiling as hot-buffer routes (`costModel.feeBpsMax` or the Safety-only `v9RouteCostTerms` overlay, including its minimum and fixed charges); only a documented-variable fee without a ceiling keeps that tag. Route independence — and with it the pillar's bounded redundancy credit — is decided by the V9 Exit pillar from enumerated failure domains and physical resource keys.
+The exit-route observation envelope this producer emits is consumed by the Safety Score V9 Exit pillar, which is the only same-notional route grader. Redemption observations mark only `issuer-redemption` and `protocol-redemption` as producer-level score-eligible; `eventual-redemption` stays non-score-eligible but earns settlement-discounted Exit-pillar credit. Reviewed `documented-terms` evidence uses a one-year review window. Reviewed opaque-fee observations can carry modeled capacity tagged with `feeEvidence: "undisclosed-reviewed"` while remaining producer-level non-score-eligible; a consumer must apply an explicit bounded-unknown fee policy rather than treating the route as cost-bounded. Derived full-supply rows evaluate a documented-variable fee against the same reviewed ceiling as hot-buffer routes (`costModel.feeBpsMax` or the Safety-only `v9RouteCostTerms` overlay, including its minimum and fixed charges); only a documented-variable fee without a ceiling keeps that tag. Route independence — and with it the pillar's bounded redundancy credit — is decided by the V9 Exit pillar from enumerated failure domains and physical resource keys.
 
 The V9-only FPI path observes its Controller Pool, FRAX and FPI price feeds, and CPI tracker at one Ethereum block. Admission pins every dependency address and runtime hash, verifies current oracle rounds and controller/feed agreement, rejects paused or out-of-band state, and measures the live fee, quote, FRAX balance, and maximum redeemable FPI. Capacity is denominated as input FPI at the CPI peg; execution cost and the pinned FRAX output value remain separate so the all-in loss must satisfy the modeled-request ceiling. The configured CPI update bounds admit observations up to 62 days old at high model confidence, downgrade observations from 62 through 366 days to medium, and reject older state. The issuer collateral response and the nested route attempt publish through the same reserve-adapter result, so a failed issuer request cannot leave a new route attempt attached to stale composition. This evidence is consumed only by explicit V9 replay and does not alter standalone public redemption rows or scores.
 
 Physical `physicalCommodityDelivery` uses `commodity:xau`/`commodity:xag` from the shared XAU/XAG enum, never fiat or same-notional output. USD valuation requires a source and clock; absent prices stay unavailable. Standalone valuation is captured USD/oz × fine weight less published fees, tier 65 (55 for unbounded delivery), with `sameNotionalEligible: false`. Safety Exit separately admits reviewed physical-to-USD capabilities without changing the standalone score or inventing fiat proceeds.
 
-The September 21 terms pass structures XAUt, PAXG, KAU, KAG, GGBR, PGOLD, XAUm, DGLD, XAGm, CGO and GLDT. CGO conservatively uses the contractual 1,000-token minimum rather than the FAQ's 10; both sources remain attached. XAUt's 430-token deposit is a conservative threshold, not a fixed bar weight. GLDT's CHF 300 vault-pickup charge is an authored CHF `costModel.feeComponents` component, not an invented USD delivery deduction; without a complete fee ceiling it cannot establish all-in cost. GLDY stays unstructured because no reviewed primary source publishes a physical minimum; contradictory secondary fees do not establish one.
+Per-asset physical terms reviewed on September 21 are recorded in the [route evidence log](./process/redemption-route-evidence.md#september-21-terms-pass).
 
 ### Captured local-fiat costs and outputs
 
@@ -213,15 +155,15 @@ Execution-model reviews use an **inclusive** `expiresAt` instant: the evaluation
 
 The implemented permissioned adapter is `worker/src/lib/exit-execution/securitize-offramp.ts`. It pins the off-ramp proxy/implementation, asset/provider/output identities, dependency bytecode and EIP-1967 implementation bindings, then reads pause, transfer-not-burn, internal two-step semantics and provider inventory. Each passing prefix receives its own NAV/fee/minimum-output quote and actual holder `redeem(amount,minOutput)` `eth_call`, with real token balance/approval prerequisites and no state overrides. It also obtains gas estimate/gas price and requires a current native-USD reference. A view quote alone, provider inventory alone, absent approved holder context, failed execution or unknown gas value is diagnostic. Internal two-step transfers are one transaction; external queues/issuer processing are not silently recast as atomic.
 
-The certificate records executable **input notional** separately from retained output USD. Output legs keep their real denomination (for example, VBILL's RLUSD, FUSD's USDT, scrvUSD's pool USDaf versus separate vault crvUSD). Integer raw-unit arithmetic is preserved until the existing numeric valuation/curve boundary. Execution fees and gas affect execution cost; the output-valuation mechanism applies output-price retention once. Unknown valuation of one basket leg invalidates the basket. Shared provider/token inventory, PSM/vault resources and settlement accounts are common-mode resources, not additive independent liquidity.
+The certificate records executable **input notional** separately from retained output USD. Output legs keep their real denomination (for example, VBILL's RLUSD, FUSD's USDT, scrvUSD's crvUSD output). Integer raw-unit arithmetic is preserved until the existing numeric valuation/curve boundary. Execution fees and gas affect execution cost; the output-valuation mechanism applies output-price retention once. Unknown valuation of one basket leg invalidates the basket. Shared provider/token inventory, PSM/vault resources and settlement accounts are common-mode resources, not additive independent liquidity.
 
 `buildRedemptionBackstopEntry` appends new producer observations without replacing its documented issuer route. `buildSafetyScoreV9RouteReviews` uses certificate-specific holder/access/settlement/resource/output semantics rather than inheriting one issuer entry's terms for every rail. The compiler admits the exact canonical-supply stress request and the evaluator independently rechecks current policy, review, clock and request before accepting the point; missing exact points cannot fall back to smaller legacy curves. Public projection excludes customer identities, prerequisites, evidence IDs and producer configuration.
 
-For reviewed vault-owned shares, an absent or stale market-price reference may be replaced only by the exact pinned `convertToAssets` gross NAV multiplied by an independently observed, policy-fresh underlying USD price. The reference binds the vault block hash and complete underlying reference, with the older source clock; no synthetic seed price, nominal underlying parity or freshness extension is admitted. External-share custodian routes retain their separate market-price and pinned gas requirements.
+For reviewed vault-owned shares, an absent or stale market-price reference may be replaced only by the exact pinned `convertToAssets` gross NAV multiplied by an independently observed, policy-fresh underlying USD price. The reference binds the vault block hash and complete underlying reference, with the older source clock; no synthetic seed price, nominal underlying parity or freshness extension is admitted. External-share custodian routes retain their separate market-price and pinned gas requirements. FRXUSD execution targets the holder-facing USDC custodian proxy, binding its code and EIP-1967 implementation separately; the implementation contract's own inventory does not describe proxy liquidity.
 
 Withheld execution routes persist diagnostic-only `executionRouteFailures` and `exitRouteObservationCoverage.unsupportedReasons` in per-asset run/history details and API rows, naming stale, unavailable or future price legs with their observed clock, source generation and effective `capturePriceMaxAgeSec`, without changing route admission or scoring. Price-leg reasons are `execution-price-leg-stale:<leg>`, `execution-price-leg-future:<leg>` (a leg clock after the capture clock, previously reported as unavailable) and `execution-price-reference-unavailable`; a producer exception without a message records `execution-producer-failed`.
 
-The serial ERC-4626 observer measures one canonical request and at most five bounded smaller probes after its ordinary-max/idle fallback. A successful call that burns shares but transfers no underlying is an unfunded/deferred receipt, not instant execution. The original attempt remains in the optional, diagnostic-only `canonicalAttempt` on the point, pinned to its block and retaining its actual burn, return and received amounts; classification distinguishes completed, accepted-but-unfunded, reverted and inconsistent receipts. Canonical queue acceptance requires full burn, zero return and same-call supply/fee reconciliation before any smaller probe. For a reviewed vault-owned-share route with positive max bounds, smaller same-block calls with the original holder balance may prove an instant lower bound; every selected receipt still requires exact transfer, burn, return value, supply reconciliation and cost admission. Fee-share replay restores the winning calldata even after later unsuccessful probes. `settlement.scope: "executed-input-only"` confines immediate settlement to the demonstrated fraction; the unexecuted remainder stays unknown, not zero capacity or a bounded queue payout. The diagnostic does not itself alter admission, gates, capacity or scores. Existing certificates without these optional fields parse unchanged. Existing four-hour scheduling, one-connection peak and policy admission floors remain unchanged.
+The serial ERC-4626 observer measures one canonical request and at most five bounded smaller probes after its ordinary-max/idle fallback. A reverted canonical preview remains unavailable but does not abort the actual redeem and existing fallback; every successful retained receipt still requires a valid preview. Zero-output idle dust is skipped without replacing the canonical receipt or suppressing the remaining probes. A successful call that burns shares but transfers no underlying is an unfunded/deferred receipt, not instant execution. The original attempt remains in the optional, diagnostic-only `canonicalAttempt` on the point, pinned to its block and retaining its actual burn, return and received amounts; classification distinguishes completed, accepted-but-unfunded, reverted and inconsistent receipts. Canonical queue acceptance requires full burn, zero return and same-call supply/fee reconciliation before any smaller probe. For a reviewed vault-owned-share route with positive max bounds, smaller same-block calls with the original holder balance may prove an instant lower bound; every selected receipt still requires exact transfer, burn, return value, supply reconciliation and cost admission. Fee-share replay restores the winning calldata even after later unsuccessful probes. `settlement.scope: "executed-input-only"` confines immediate settlement to the demonstrated fraction; the unexecuted remainder stays unknown, not zero capacity or a bounded queue payout. The diagnostic does not itself alter admission, gates, capacity or scores. Existing certificates without these optional fields parse unchanged. Existing four-hour scheduling, one-connection peak and policy admission floors remain unchanged.
 
 An inconsistent canonical receipt fails closed; its typed pinned diagnostic is retained in the runtime failure, not admitted as execution. Public certificate projection retains diagnostic amounts and outcomes but omits opaque revert bytes. Neither diagnostic outcome nor an unknown remainder is a new scoring input.
 
@@ -233,52 +175,7 @@ Captured-input replay uses the supported maintainer procedure in `docs/process/s
 
 ### Config Registry
 
-Each configured coin declares:
-
-- `routeFamily`
-- `accessModel`
-- `settlementModel`
-- `executionModel`
-- `outputAssetType` (`nav` displays as "NAV-priced output"; NAV-priced off-chain issuer routes can pay fiat cash, so this classification does not itself mean non-cash payout)
-- `capacityModel`
-- `costModel`
-- optional `costModel.feeDescription`
-- optional `holderEligibility`
-- optional `routeStatus` (`open`, `unknown`, or reviewed `suspended`)
-- required `routeSuspension` when suspended: exact `routeId`, named `channel`, `suspendedAt`, reason, `reviewer`, `reviewedAt`, and primary-source URL/quote pairs
-- optional `routeExitCorrelation`
-- optional `totalScoreCap`
-- optional `outputAssets`
-- optional `unresolvedOutputAssetKeys` and `unresolvedOutputDisposition`
-- optional `docs` and `reviewedAt`
-- optional `notes`
-- optional reviewed overlays `v9RouteCostTerms`, `v9RouteReviewTerms`, and `v9ComposedDexExit`. A `v9RouteReviewTerms.settlementModel` is the canonical reviewed settlement fact for both the standalone producer and V9: conservative corrections remain admissible, while a favorable correction requires its cited review to remain inside the 365-day evidence window. The remaining V9 projections stay consumer-specific.
-
-Scalar `v9RouteReviewTerms.settlementDelaySec` is admitted only with dated, current source support explicitly including `settlement` for the **completed configured endpoint**, with chronology and payout-identity gates for favorable corrections. A route-only citation, processing target, cooldown or claim-eligibility minimum does not prove final receipt. Scalar and business-day representations are mutually exclusive; only unconditional binding calendar terms with admitted cutoff/timezone/coverage can yield a completion ceiling. Rejected scalar/calendar reviews cannot revive a persisted generated SLA. A route whose own review withholds `settlement` and would otherwise inherit the `issuerBase` same-day default publishes the conservative `days` lane with unknown holder eligibility instead.
-
-`scoringDisposition: "bounded-terms-gap"` plus `missingScoringFields` retains the asset's primary capacity/cost/settlement review across every redemption-lane route ID, including noncanonical FPI controller, sfrxUSD cross-chain and `execution:<digest>` observations, even when captured numbers or known statuses exist. Canonical ID formatting is not an exemption. Only the separately reviewed `physical-to-usd:<asset-id>` rail with its own `physicalToUsd` trace opts out; a matching name alone cannot. Strictly newer admitted exact execution evidence for the same asset/rail/model/request can supersede the review. The explicit missing factors remain causal diagnostics, not proof of measured total-exit failure.
-
-Config cloning uses native `structuredClone` on data-only configs at registry initialization, isolating the complete nested authored shape, including fee tiers, physical fees/stages/evidence, suspension sources, docs and calendar terms. Keep functions and other non-cloneable values out of configs. Each family authors one final row per ID with its source path; registry and family factories reject every duplicate before map conversion and enforce family ownership. Reviewed docs are finalized without replaying historical default overrides. Midas, Spiko, Ondo and Nest use the same collision-safe construction without new semantic defaults or evidence credit.
-
-`RedemptionBackstopConfigSchema` owns scalar bounds; the registry audit renders each canonical issue as `schema-validation` with its field path, without a second scalar diagnostic. Contextual adapter/observer identity, numeric daily-limit prose, documentation-support ratchets, source-AST overwrite detection and manifest completeness remain separate checks. Unused-live-telemetry policy rows remain exported and audited; only consumed runtime policy kinds need private indexes.
-
-The public registry import lives in `shared/lib/redemption-backstops.ts`. The actual config inventory is split by route family under `shared/lib/redemption-backstop-configs/` to keep review and change scopes small. The live producer cohort is the configured routes of active stablecoins; frozen, pre-launch, quarantined and delisted configs remain archive history and are excluded from the sync and live rows.
-
-Family ownership follows the modeled holder endpoint, not issuer branding: opaque asynchronous burn/attest/release belongs to `queue-redeem`, and inventory-dependent on-chain swaps to `psm-swap`, including whitelisted cohorts. Preserve the reviewed access, execution, payout and gap facts when correcting family ownership; do not falsify them to satisfy a family constraint. Such corrections can change route diagnostics and require replay.
-
-`outputAssets` records concrete holder-route outputs, not every reserve asset. Stable outputs use tracked stablecoin IDs; collateral outputs use canonical `asset:<symbol>` keys. Configured baskets are limited to 16 members, matching the `ExitRouteOutput.assetKeys` bound. Leave the field unset when the published route is incomplete or when its tracked and untracked members cannot all be represented: an incomplete subset must not turn an unresolved basket into a resolved one. When a complete reviewed route contains untracked assets, `unresolvedOutputAssetKeys` may preserve the exact identities for diagnostics; those keys do not resolve or score the output.
-
-Explicit stable `outputAssets` take precedence over offchain issuers' legacy fiat default; payouts are not input NAV or reserve holdings. Physical delivery and unresolved commodity collateral retain precedence. The output schema requires currency for fiat, and commodity identity plus `sameNotionalEligible: false` for physical delivery; it rejects fiat/tracked fields on physical outputs and requires source-timed USD evidence for any valuation. Issuer rails never infer payouts from `variantOf`; the legacy fiat projection is not evidence of bank settlement.
-
-The reviewed issuer selections explicitly pay USDT for FinChain FUSD, USDC for Gate GUSD, wM for Noble USDN, and M for KAST USDK. Noble's separate wM-to-USDC market swap is not its direct bridge-redemption output. These tracked endpoints flow through the producer and Safety output review rather than `fiat:USD`. KAST's M unwrap is not a separately mediated partner fiat ramp; every route retains its reviewed access, cost, capacity and settlement constraints.
-
-Config modules own per-asset payout evidence and gaps. A single tracked payout scores output quality **100** at par only with captured valuation; a multi-output route retains conservative `stable-basket` quality **80** and weakest-price semantics, not invented equal weights or holder-choice branches. Known physical delivery remains non-comparable unless its separately reviewed metal-sale path is admitted.
-
-A holder route must bind the exact tracked asset and deployment, not a same-symbol token, legacy/replacement mint or unrelated wrapper. Administrative burns, borrower repayment, reserve management and secondary-market cash-out do not by themselves establish holder redemption.
-
-For example, [PYUSDx terms](https://www.moonpay.com/legal/pyusdx_terms) give onboarded eligible counterparties PYUSD, not a universal fiat claim; [Ondo's guide](https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md) separates instant USDon from inventory-conditioned USDC. Full-supply issuer/fund entitlements are eventual-only unless a funded buffer is independently established. Bank rights, subscription minima, NAV, daily thresholds and gate percentages supply neither current capacity nor completed receipt.
-
-Opaque composite/migration paths cannot be relabeled deterministic `stablecoin-redeem`/`psm-swap` merely to register documentary access. Solomon replacement USDv, Initia iUSD and legacy ICON bnUSD retain sourced unconfigured dispositions; known balances, 1:1 displays and institutional issuer terms do not establish exact end-to-end payout/execution. A configured institutional route likewise does not admit an unrelated native/wrapper rail.
+Each configured holder route records its access, settlement, execution, payout, capacity, cost and reviewed evidence, including explicit gaps. A known entitlement or payout identity alone does not establish funded execution. See the [config registry reference](process/redemption-backstops-appendix.md#config-registry).
 
 ### Reviewed channel suspension (local V10)
 
@@ -286,11 +183,7 @@ Opaque composite/migration paths cannot be relabeled deterministic `stablecoin-r
 
 DEX observations, separately identified issuer routes and execution certificates keep their own scoring evidence. If there is no scored alternative, or the best measured alternative scores zero, a suspended channel cannot certify total exit failure: the portfolio retains the existing `missing-same-notional-route` bounded-unknown floor, without `no-viable-exit-path` or measured-adverse total-exit attribution. The other routes' own traces remain unchanged. This record never changes lifecycle, wind-down, holder rights or reserve evidence.
 
-**VNXAU, reviewed October 2, 2026.** The [June 19 primary notice](https://vnx.li/blog) suspended the legacy **vnx.li** platform exchange from **June 30 at 18:00 CET** and ended its remaining-balance withdrawal window **July 31 at 18:00 CET**. Only that legacy channel is reviewed suspended. [VNX Global terms §6](https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf) separately describe discretionary, resource-dependent commodity-token exchange at **my.vnx.io**, including VNXAU for fiat or other digital assets. That channel has no admitted capacity, complete payout set or settlement maximum and earns no credit; it is not treated as suspended by the legacy notice. The Metals.io market diagnostic remains separate. No currently bounded physical-release timing or current reserve composition is established, and the production-capture smoke still publishes VNXAU **NR**, not F.
-
-**EURR, reviewed October 7, 2026.** The StablR direct issuer channel is source-confirmed suspended **as of June 24, 2026**. The rendered publisher date, not the URL's `2025` suffix, owns that date; it is an as-of boundary, not an invented incident onset. Missing or severe market quotes do not reopen the selected channel. Other routes and lifecycle retain their separate evidence.
-
-**USDR, reviewed October 30, 2026.** The StablR direct issuer channel is source-confirmed suspended **as of August 25, 2026**, when the issuer's recovery update still reported minting and redemption of EURR and USDR temporarily suspended after the May 2026 cybersecurity incident. That date is the notice's as-of boundary, not an inferred onset; the separately reviewed EURR channel keeps its own record.
+Reviewed channel suspensions are owned by the family configs (for example, VNXAU's legacy vnx.li platform exchange and the StablR direct issuer channel shared by EURR and USDR); each `routeSuspension` record owns the exact channel, as-of date, reviewer and primary-source quote. The config's source-confirmed `suspendedAt` is the as-of boundary, not an inferred onset; a rendered publisher date or URL suffix cannot invent an earlier onset; missing/severe market quotes do not reopen the selected channel. A suspension removes only that channel's credit: VNXAU's separate my.vnx.io discretionary exchange, missing market quotes and other issuer/DEX routes neither inherit the suspension nor earn credit without their own reviewed evidence. No currently bounded physical-release timing or current reserve composition is established for VNXAU. Dated reviews are retained in the [channel-suspension evidence log](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/redemption-route-evidence.md#reviewed-channel-suspensions--2026-10).
 
 
 ### Output-key identity contract
@@ -330,7 +223,7 @@ For positive supply, `immediateCapacityRatio = immediateCapacityUsd / supplyUsd`
 
 Absent, empty or wholly invalid supply buckets remain null; explicit finite zero remains observed zero. Independently measured/fixed absolute USD buffers remain visible when supply is unavailable, with ratios unavailable and existing absolute-tier scoring; supply-full/ratio models cannot invent a denominator or redeemable zero.
 
-The internal `evidenceObservedAt` is the validated nested `redemption.sourceTimestamp`, or, for `same-run-onchain` / `same-run-api` telemetry without one, the producing reserve snapshot's `fetchedAt`. Exit observations keep that original clock for `observedAt` and age; entry `updatedAt` remains publication time. Missing evidence time cannot establish a scoreable live-direct observation. Documented-bound observations use their direct evidence time when available and otherwise retain the terms-review date. An evidence clock later than the run clock is not admitted: a documented-bound observation falls back to the review date, while any other live capacity keeps `live-reserve-state` provenance with `observedAt` 0 instead of a fabricated fresh age. Same-run state retains V9's existing 8h redemption evidence budget. An exact reserve-backed `verified-source-timestamp` observation instead expires at the earliest of the original disclosed source time plus the admitted tighter adapter/coin source budget, original reserve fetch plus 48 hours, and redemption run plus 8 hours. This separates disclosure cadence from producer cadence without renewing either clock or widening either budget. Nested source timestamps older than the stricter adapter/coin reserve source-age budget are rejected before persistence; the existing two-day reserve freshness fallback applies when neither declares a budget.
+The internal `evidenceObservedAt` is the validated nested `redemption.sourceTimestamp`, or, for `same-run-onchain` / `same-run-api` telemetry without one, the producing reserve snapshot's `fetchedAt`. Exit observations keep that original clock for `observedAt` and age; entry `updatedAt` remains publication time. Missing evidence time cannot establish a scoreable live-direct observation. Documented-bound observations use their direct evidence time when available and otherwise retain the terms-review date. An evidence clock later than the run clock is not admitted: a documented-bound observation falls back to the review date, while any other live capacity keeps `live-reserve-state` provenance with `observedAt` 0 instead of a fabricated fresh age. Same-run state retains V9's existing 8h redemption evidence budget. An exact reserve-backed `verified-source-timestamp` observation is admitted only when, at the redemption run, the disclosed source time is inside the tighter adapter/coin source budget and the reserve fetch is inside 48 hours; once admitted it remains usable until that run's 8-hour budget expires, even if either underlying budget lapses in between, and a run assessed after either budget lapsed cannot admit or renew it. This separates disclosure cadence from producer cadence without renewing either clock or widening either budget. Nested source timestamps older than the stricter adapter/coin reserve source-age budget are rejected before persistence; the existing two-day reserve freshness fallback applies when neither declares a budget.
 
 Live reserve adapters emit a nested `metadata.redemption` object for redemption-specific telemetry. The validator rejects malformed or unsupported redemption telemetry before persistence, including negative capacity, capacity ratios outside `0..1`, negative fees, capacity fields from adapters that declare no capacity support, fee fields from adapters that declare no fee support, or direct-capacity tiers emitted by proxy-only adapters. The store-row decoder still reads legacy flat capacity/fee fields from historical rows (30-day retention) and maps them into the nested contract at decode time, but no producer writes them.
 
@@ -363,206 +256,33 @@ The resulting row is tagged with one `sourceMode`:
 
 ### Docs / Notes
 
-- `docs` prefers explicit config-reviewed sources first (`docs[]` + `reviewedAt`), then live-reserve display links for reserve-sync routes, then the coin metadata's `proofOfReserves.url`, then preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
-- `docs.provenance` distinguishes reviewed route docs from fallback live-reserve, proof-of-reserves, or generic project-link sources so detail pages do not overstate evidence quality
-- `docs.reviewedAt` is the route-review date, not a claim that the rendered fallback link itself was the reviewed source; the detail card now shows review date and provenance together
-- `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
-- The registry check ratchets aggregate source-support coverage and emits per-config warnings when a `documented-bound` capacity route lacks explicit `route` or `capacity` support. These warnings are backlog controls, not hard CI errors, until the remaining documented-bound source-support gaps are cleaned up.
-- Audited source-role corrections may update the ratchet only with exact asset/source attribution; backing or another token's terms must never be tagged as executable-capacity evidence merely to preserve a count.
-- `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
-- `notes` merges config notes plus runtime notes such as stale reserve metadata expiry, conservative fallback use, or live fee fallback
-- `capsApplied` records any score caps triggered during scoring
+Route documentation distinguishes reviewed sources from fallback project links and states what each source supports. Review dates, evidence provenance, runtime notes and applied caps accompany the route so a display link cannot imply stronger evidence. See the [documentation and notes reference](process/redemption-backstops-appendix.md#docs--notes).
 
 ### Cost Modeling
 
-- `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
-- Explicit issuer statements that redemption charges no fee are modeled as a fixed `0` bps schedule rather than as an opaque or variable fee. This applies to the reviewed Spiko funds, Midas mF-ONE, JTRSY, YLDS, EUROP, EUSD, and USD3 routes; the registry validates the complete reviewed ID tables so additions and removals cannot silently drift.
-- An owner-settable on-chain fee that read zero at review is a `formula` cost with no fixed bound, so a current read owns the fee (USSD and USDso BrandedCustodian `redeemFee()`).
-- HBD conversion has no extra conversion fee, but the debt-ratio haircut and 3.5-day median-price window leave all-in USD payout cost unquantified. Its reviewed formula disposition therefore carries no numeric zero-cost bound until current payout valuation accounts for those effects.
-- Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
-- Admitted live fees retain fractional basis points in publication, scenario costs and exact threshold comparisons; rounding belongs only to presentation, never fee statistics.
-- Every on-chain rate probe must explicitly pin the return-value decimal scale; missing scale fails configuration validation rather than silently publishing an unknown fee
-- Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound
-- `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
-- `feeDescription` is used to surface:
-  - dynamic formulas such as Liquity-style `min 50 bps + baseRate`
-  - conditional fee schedules such as borrower-vs-non-borrower redemptions
-  - flat minimums or bank/network charges that do not map cleanly to one global bps number
-  - cases where public docs were reviewed but no numeric redemption-fee schedule is published
-- If live formula telemetry is missing, the route falls back to the reviewed-formula bucket rather than pretending a fixed fee is known
-- `costScore` uses the active-user scenario by default when v4 fee-shape inputs are present; optional `costScenarioScores` exposes retail, active-user, and institutional route-size scores
-
-`resolveRedemptionCostBpsAtNotional` requires an observed exact fee quote, real authored maximum or fixed percentage basis. For notional N it uses `10_000 × (max(N × bps / 10_000, minFeeUsd) + gasOrBridgeCostUsd) / N`; `minFeeUsd` is a minimum charge, **not** additive flat cost, and a fee floor alone never establishes a complete ceiling. Above-budget costs retain the exact trace but do not establish raw zero inventory.
-
-Issuer/fund fee zero is scoped, never an all-in promise or universal holder entitlement. Different bank/network/partner deductions, investor cohorts, original-currency quota accounting and instant-versus-queued branches retain separate terms. “No spread”, an observed variable fee, a cooldown or claim availability cannot substitute for complete cost and final-receipt bounds.
-
-Private tariffs, holder-specific quotes, conditional bank receipt, calendar gates and unfunded queue completion remain explicit reviewed gaps. Never guess elapsed seconds from a conditional following-month-end promise or renew evidence after failed retrieval. Closing a fee field does not clear the independent DEX portfolio-coverage obligation.
+Costs distinguish bounded fees, disclosed formulas, variable schedules and reviewed but undisclosed charges; missing all-in costs remain unquantified. A zero issuer fee covers only that component, while holder, bank, network and settlement conditions keep their own evidence requirements. See the [cost implementation reference](process/redemption-backstops-appendix.md#cost-modeling).
 
 ---
 
 ## Provider / Source Definitions
 
-Provider identifiers are defined in `shared/lib/redemption-backstop-providers.ts` and describe where the capacity number came from, what confidence defaults apply, and whether the source can ever survive a severe-depeg gate.
-
-| Provider                | Capacity source           | Default source mode | Default confidence | Default semantics   | Severe-depeg scoreability         |
-| ----------------------- | ------------------------- | ------------------- | ------------------ | ------------------- | --------------------------------- |
-| `supply-full-model`     | Full supply model         | `estimated`         | `heuristic`        | `eventual-only`     | Not scoreable                     |
-| `supply-ratio-model`    | Configured supply ratio   | `estimated`         | `heuristic`        | `immediate-bounded` | Not scoreable                     |
-| `fixed-usd-model`       | Fixed reviewed USD buffer | `static`            | `documented-bound` | `immediate-bounded` | Not scoreable                     |
-| `unquantified-model`    | No quantified capacity    | `static`            | `heuristic`        | `eventual-only`     | Not scoreable                     |
-| `reserve-sync-metadata` | Live reserve metadata     | `dynamic`           | `dynamic`          | `immediate-bounded` | Requires strong live-direct route |
-| `reserve-sync-fallback` | Reviewed fallback ratio   | `estimated`         | `heuristic`        | `immediate-bounded` | Not scoreable                     |
-| `executable-observer` | Direct executable reader | `dynamic` | Measurement-derived | Use/horizon-dependent | Requires separately admitted strong live-direct evidence |
-| `sync-error`            | Failure sentinel          | `static`            | `heuristic`        | `immediate-bounded` | Not scoreable                     |
-
-`reserve-sync-metadata` readback can refine confidence to `live-direct` or `live-proxy` when the configured adapter declares direct or proxy redemption-capacity telemetry. Proxy and queue telemetry can provide context or lower-bound capacity, but they cannot qualify as severe active-depeg live-direct evidence.
-
-Each row also carries:
-
-- `resolutionState`:
-  - `resolved` when a numeric standalone score is available or admitted eventual capacity yields a numeric `eventualRedeemabilityScore`; the latter can have null aggregate `score`. Missing executable evidence cannot bypass materiality, and every non-resolved state has null aggregate `score`
-  - `missing-cache` when the stablecoins snapshot did not contain the asset or its current supply
-  - `missing-capacity` when the route is configured but current runtime inputs could not produce usable capacity
-  - `failed` when a route-specific resolver failed
-  - `impaired` when the route shape is known but current market or route-availability evidence either contradicts broad par redemption or cannot establish whether an open downside incident is still severe; impaired rows have `score = null` and `modelConfidence = low`
-- `routeStatus`:
-  - `open` for normal resolved routes without current impairment evidence
-  - `degraded` when fresh authoritative current evidence confirms severe market-implied impairment
-  - `unknown` with `routeStatusSource: market-implied` when an open downside incident lacks current authoritative evidence; this withholds the score rather than restoring the static route claim
-  - `paused`, `cohort-limited`, and other `unknown` combinations remain available to explicit route-availability sources and backward-compatible legacy rows
-  - whitelist or approved-holder gates should normally be modeled through `accessModel` / `holderEligibility`; use `cohort-limited` only when current route evidence shows impairment beyond that reviewed eligible cohort
-  - unknown route status remains a low-confidence signal unless the capacity evidence is direct live telemetry or a source-reviewed documented bound
-- `routeStatusSource`:
-  - `static-config` for normal config-derived status
-  - `market-implied` for both confirmed severe current-depeg impairment and unresolved current-evidence currency on an open downside incident
-  - reviewed adapters may emit `protocol-api` or `onchain` only when the current run evaluated a route-specific executable predicate; capacity, balance, collateral, TVL, backing, or configuration evidence alone does not qualify
-  - `operator-notice` is emitted for a capture-time-admitted, exact-channel authored `routeSuspension`; there is no independent operator-status feed
-  - a reviewed suspension wins over live and market evidence; otherwise live adapter evidence wins over static config, with the market-implied overlay applied last unless a strong live-direct route is explicitly open. Output impairment or uncertainty cannot use that exception
-- `holderEligibility`:
-  - derived from the route access model by default: permissionless onchain routes are `any-holder`, whitelist routes are `whitelisted-primary`, issuer API routes are `verified-customer`, and manual routes are `issuer-discretionary`
-- `capacityConfidence`:
-  - `live-direct` for live reserve-sync capacity sourced from direct current redemption telemetry
-  - `live-proxy` for live reserve-sync capacity inferred from a live proxy liquidity bucket rather than a protocol-native redemption-limit feed
-  - `dynamic` only as a legacy / unresolved reserve-sync bucket when older stored rows lack the richer live-capacity classification
-  - `documented-bound` when a bounded model is explicitly configured that way after source review, including reviewed full-supply redeemability where official issuer or protocol terms establish eventual redemption of outstanding supply
-  - `heuristic` by default for `supply-full`, `supply-ratio`, and inferred legacy rows without stronger evidence
-- Reserve-sync capacity now ignores degraded snapshots, weak fee-only adapters, and snapshots that do not carry scoring-grade freshness evidence by default. The only exceptions are route-specific lower-bound warning classes that explicitly preserve a trustworthy redeemable-capacity floor while keeping reserve sync itself degraded for completeness review.
-- Immutable fully on-chain systems and reviewed direct issuer / direct redeem routes can use `documented-bound` with `eventual-only` semantics when protocol mechanics or issuer terms establish full-system redeemability directly, even if no separate immediate buffer is measured
-- `capacitySemantics`:
-  - `immediate-bounded` when the model is intended to represent a current redeemable buffer
-  - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Current V9 applies the unified Exit route ladder: reliable reviewed non-atomic issuer/protocol/eventual routes require output, evidence, failure-domain, and capacity gates and receive the applicable delay/confidence discounts. The DEX-gated primary-market bonus was historical V7.05 behavior, not a current scoring path.
-- `capacityBasis` (orthogonal to `capacityConfidence`: basis describes the model shape, confidence the evidence strength — consumers must read both; a `psm-balance-share` basis can be live-measured or a heuristic guess):
-  - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `fixed-buffer`, `live-direct-telemetry`, or `live-proxy-buffer`
-  - `fixed-buffer` identifies a reviewed fixed USD buffer (`capacityModel.kind === "fixed-usd"`), distinct from live-direct or live-proxy telemetry
-  - reserve-sync fallback ratios use the configured `basis` when present, otherwise route-family defaults such as `psm-balance-share`, `strategy-buffer`, or `hot-buffer`; they are not labeled `live-proxy-buffer` unless live proxy telemetry produced the capacity
-- Live reserve telemetry fields are additive display/provenance context, not Safety Score eligibility by themselves:
-  - `capacityKind` describes the adapter-declared evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`
-  - `freshnessKind` describes the adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified`
-  - `sourceTimestamp`, `sourceUrls`, `settlementDelaySec`, `queueDepthUsd`, `dailyLimitUsd`, `minRedeemUsd`, and `liveHolderEligibility` are carried through the API/UI when emitted by live reserve adapters
-  - `settlementDelaySec` is raw nonnegative telemetry: a measured `0` is an atomic route, not a missing value. The projected exit-route observation window (`settlementHorizonSec`) is a separate strictly positive integer, so a live positive integer delay becomes the horizon and a zero or absent delay takes the reviewed `settlementModel` ceiling instead of publishing an invalid zero-second horizon.
-- `feeConfidence`:
-  - `fixed` for bounded bps schedules
-  - `formula` for disclosed formulas such as Liquity-style base-rate fees
-  - `undisclosed-reviewed` when docs were reviewed but only descriptive fee information is available. It asserts that no bounded number is published — never that the fee is zero
-- `feeModelKind`:
-  - `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`
-- `modelConfidence`:
-  - `high`, `medium`, or `low` rollups used by the API and detail page to communicate fidelity
-  - `low` for heuristic-capacity routes, unresolved rows, impaired rows, unclear holder eligibility, stale docs without current route-status evidence, or unknown route status without direct live telemetry or source-reviewed documented-bound capacity
-  - `confidenceDetails` can expose the component evidence scores and rollup reasons
-  - the route-status freshness component reaches 100 only for `open` current `onchain` / `protocol-api` evidence with positive executable capacity; an open route with zero or missing capacity is capped at 70
-- `routeExitCorrelation`:
-  - `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown`
-  - retained as legacy diagnostic/display metadata; it has no current scoring effect
-  - V9 Exit derives route independence from disjoint failure domains and physical-resource keys instead of this tag
-
-**Documented zero versus undisclosed fees.** A quoted zero issuer charge is fixed `0` bps, not undisclosed-reviewed; numeric restatement remains per-entry source curation. Descriptive/formula fees without a genuine maximum remain unquantified. Neither a fee label nor a historic cohort count grants model confidence, all-in proceeds or positive same-notional credit.
+Route results distinguish measured live capacity, reviewed bounds, heuristic models and unavailable or impaired evidence. Capacity confidence is `live-direct` (direct current redemption telemetry), `live-proxy` (a live proxy liquidity bucket, not a protocol-native redemption-limit feed), `documented-bound` (a reviewed bounded model) or `heuristic` (default supply models without stronger evidence); legacy `dynamic` rows predate the richer live classification. Only separately admitted strong live-direct reserve or executable-observer evidence can survive the severe active-depeg gate; proxy and queue context alone cannot. See the [provider and field reference](process/redemption-backstops-appendix.md#provider--source-definitions).
 
 ## Database Schema
 
-Schema: `worker/migrations/0000_baseline.sql` owns all redemption tables in the current post-squash tree. The former `0094` completed-run manifest and `0120` manifest-scoped row-store migrations are absorbed into that baseline; historical lineage is recorded in `worker/migrations/MANIFEST.md`.
+Published snapshots are complete immutable runs, preserving one generation, methodology and evidence clock. An unreadable run falls back atomically to an earlier valid completed run, or the API reports unavailability when none survives. See the [storage and retention reference](process/redemption-backstops-appendix.md#database-schema).
 
 ### `redemption_backstop`
 
-Retired mutable current-mirror table, frozen pending cleanup. Active current snapshots are read from immutable `redemption_backstop_run_rows`, keyed by `(snapshot_run_id, stablecoin_id)` and selected through completed `redemption_backstop_runs` manifests.
-
-Key columns:
-
-- `stablecoin_id` — PK
-- `score`
-- `effective_exit_score`
-- `dex_liquidity_score`
-- `access_score`
-- `settlement_score`
-- `execution_certainty_score`
-- `capacity_score`
-- `output_asset_quality_score`
-- `cost_score`
-- `route_family`
-- `access_model`
-- `settlement_model`
-- `execution_model`
-- `output_asset_type`
-- `provider`
-- `source_mode`
-- `immediate_capacity_usd`
-- `immediate_capacity_ratio`
-- `fee_bps`
-- `queue_enabled`
-- `updated_at`
-- `methodology_version`
-- `details_json`
-- `snapshot_run_id`
-
-`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, optional live telemetry fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and free-form `capsApplied` markers such as `market-implied-depeg-evidence-uncertain`. The v4.42 uncertainty state therefore uses existing JSON fields and requires no typed column or D1 migration.
-
-`snapshot_run_id` links immutable `redemption_backstop_run_rows` to a completed `redemption_backstop_runs` manifest. API and report-card readers prefer the latest valid completed run. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`. The true-legacy `MAX(updated_at)` fallback is retired: with no valid completed run, readers fail closed to `503` (fresh local databases 503 cleanly until the first completed sync).
-
-
-`parseDetails` in `worker/src/lib/redemption-backstops-store.ts` requires a successfully decoded object with explicit valid `resolutionState`. Missing details, malformed JSON, null/scalars/arrays, missing current core status/confidence/eligibility fields or invalid `reserveInput` reject the row and its complete run. A scalar score cannot reconstruct resolved state. Historical versions below v4 may salvage only independently valid diagnostic docs/notes/caps/confidence/scenario fields; salvage never fabricates state or provenance. Earlier-run fallback is atomic, retaining its run ID, clock, methodology and metadata, not mixing good rows from a rejected generation.
-
-Bulk, per-coin and depeg-resolver live-signal readers share one completed-run admission boundary. It validates the full immutable row census, unique identities, details and entries in bounded pages before selecting a generation; a malformed unrequested sibling rejects that run even when the requested coin is absent. Narrow readers discard unrelated decoded graphs and then query only their selected-row or four-column signal projection under the admitted run ID, without constructing or serializing the full feed or keeping an isolate object cache.
-
-Each dropped row logs `redemption-backstop-row-rejected` with run ID, stablecoin ID, stored methodology version and a named reason: `missing-details`, `json-parse-failed`, `invalid-payload`, `unrecognized-methodology-version`, or `invalid-entry`. Rejected-run diagnostics retain the per-row codes. Only positively identified numeric versions greater than zero and below four use historical decoding; an unrecognized version must satisfy current detail requirements and is not rejected solely for its version text.
+The retired mutable mirror is no longer the source of current snapshots; readers use immutable rows from an admitted completed run. See the [table reference](process/redemption-backstops-appendix.md#redemption_backstop).
 
 ### `redemption_backstop_history`
 
-Daily history table keyed by `(stablecoin_id, snapshot_date)`. No runtime reader consumes it today; rows are retained for 90 days for future track-record use and pruned in bounded batches by the same retention pass that prunes run manifests.
-
-Stored fields:
-
-- `score`
-- `effective_exit_score`
-- `dex_liquidity_score`
-- `updated_at`
-- `methodology_version`
-- `details_json`
-- `snapshot_run_id`
-
-The cron writes immutable `redemption_backstop_run_rows` first, marks the run manifest completed only after the immutable row count and bounds are valid, and writes daily history only for that admitted run. A run rejected after completion removes its own history rows and is marked `failed`, so an unadmitted generation never replaces the day's close. The legacy current-mirror refresh is retired: readers (including the depeg-resolver context, which uses a narrow store reader over the latest valid completed run) consume immutable run rows exclusively, and the `redemption_backstop` table is frozen in place pending a separately coordinated destructive cleanup.
+Daily history retains only admitted runs and is separate from the current snapshot. See the [table reference](process/redemption-backstops-appendix.md#redemption_backstop_history).
 
 ### `redemption_backstop_runs`
 
-Completed-run manifest table used to prevent mixed-generation current snapshots from being treated as fresh.
-
-Stored fields:
-
-- `run_id` — unique generated run identifier
-- `started_at`
-- `completed_at`
-- `status` (`running`, `completed`, or `failed`)
-- `expected_count`
-- `written_count`
-- `methodology_version`
-- `min_updated_at`
-- `max_updated_at`
-- `metadata_json`
-
-The sync inserts a `running` row before writing immutable run rows, marks the manifest `completed` only after the immutable row count and update bounds are valid, and then writes the day's history. If immutable row, completion, or history writes fail after the manifest is started, the writer best-effort removes the run's history rows and marks the manifest `failed` with phase-specific failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they return `503`; the legacy current-mirror write and the `MAX(updated_at)` fallback are retired.
-
-Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
-
-The orphan run-row pass (rows whose manifest no longer exists) derives its candidate run ids from a covering-index `DISTINCT snapshot_run_id` scan and is bounded per distinct orphan run, instead of walking the whole run-row table with a correlated manifest probe per row. An empty pass therefore stays a cheap index scan rather than a ~28k-row table walk on every retention run.
+Completed-run manifests prevent mixed-generation snapshots and retain the served generation’s original freshness and methodology. See the [table reference](process/redemption-backstops-appendix.md#redemption_backstop_runs).
 
 ---
 
@@ -586,7 +306,7 @@ See the [public API reference](https://pharos.watch/api/) for the exact response
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()`, wired through `FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops` in `src/lib/api-query-descriptors.ts` with `CRON_INTERVALS["sync-redemption-backstops"]` (the 4-hour producer cadence)
 - `src/hooks/use-stablecoin-detail-view-model.ts` uses `useRedemptionBackstopCoin(id)` and the site-only `/api/redemption-backstop-coin?stablecoin=<id>` transport. It selects a row only after the same whole-run admission as bulk and live-signal readers, preserving the original methodology, manifest generation and full cohort count. Response freshness uses the admitted manifest's original `max_updated_at`; `projection.updatedAt` retains the selected row's own clock. Absent rows carry `row-not-published` under that admitted generation, never a zero route score or permission to skip sibling validation. Whole-cohort consumers keep `useRedemptionBackstops()`.
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders one `Standalone route score` with a route-specific title (`Issuer redemption route` or `Redemption route`), source freshness, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions.
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders one `Standalone route score` with the route-specific title (`Issuer redemption route` for `offchain-issuer`, otherwise `Redemption route`); fee summaries are keyed off `feeModelKind`. The card must keep eventual-only versus immediate-bounded capacity wording distinct and show docs review date plus provenance together.
 - Capacity headlines preserve finite nonnegative absolute observations, including zero with no supply ratio. Eventual-only semantics alone assert no amount: current-supply wording requires an admitted resolved eventual profile bound without capacity rejection; unquantified routes remain explicit.
 - `composeExitComponentScore` in `shared/lib/exit-route-scoring.ts` owns the displayed weighted total and cap delta; labels are centralized in `shared/lib/classification.ts` via `classification/redemption.ts`. Safety reconciliation uses typed exact `routeId` plus the redemption `lane`, never opaque key suffixes.
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail

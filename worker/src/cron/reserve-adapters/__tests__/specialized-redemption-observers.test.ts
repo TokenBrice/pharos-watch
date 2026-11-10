@@ -141,6 +141,7 @@ describe("native quote guards remain independent of all-in USD admission", () =>
       });
       expect(capacity.eventualCapacityUsd).toBeNull();
       expect(capacity.immediateCapacityUsd).toBeNull();
+      expect(capacity.capacityRejectionReason).toBe("all-in-cost-unobserved");
     });
     it(`${descriptor.coinId} cannot certify measured/open after missing previews even without cost proof`, async () => {
       await expect(observe(descriptor, fixture, { quote: null })).rejects.toThrow();

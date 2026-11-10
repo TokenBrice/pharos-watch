@@ -3,6 +3,7 @@ import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-fres
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { isRecord } from "@shared/lib/type-guards";
 import type { LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
 import { buildAlertReserveSourceEnvelope } from "../lib/alert-reserve-source-cache";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
@@ -222,27 +223,33 @@ export function evaluateReserveAdapterAlerts(params: {
   };
 }
 
-function parseReserveAdapterAlertState(value: string | null | undefined): ReserveAdapterAlertState {
-  if (!value) return { version: 1, coins: {} };
+function parseReserveAdapterAlertState(value: string | null | undefined):
+  | { state: ReserveAdapterAlertState; issue: null }
+  | { state: null; issue: "invalid-json" | "invalid-state" } {
+  if (value == null) return { state: { version: 1, coins: {} }, issue: null };
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(value) as { coins?: unknown };
-    if (!parsed || typeof parsed !== "object" || !parsed.coins || typeof parsed.coins !== "object") {
-      return { version: 1, coins: {} };
-    }
-    const coins: Record<string, ReserveAdapterAlertCoinState> = {};
-    for (const [coinId, entry] of Object.entries(parsed.coins as Record<string, unknown>)) {
-      if (!entry || typeof entry !== "object") continue;
-      const { failureRaised, scoreIneligibleRaised, clockRaised } = entry as Record<string, unknown>;
-      if (typeof failureRaised !== "boolean" || typeof clockRaised !== "boolean") continue;
-      // Older state entries predate the score-ineligible rule; absent means not raised.
-      const scoreRaised = typeof scoreIneligibleRaised === "boolean" && scoreIneligibleRaised;
-      if (!failureRaised && !scoreRaised && !clockRaised) continue;
-      coins[coinId] = { failureRaised, scoreIneligibleRaised: scoreRaised, clockRaised };
-    }
-    return { version: 1, coins };
+    parsed = JSON.parse(value);
   } catch {
-    return { version: 1, coins: {} };
+    return { state: null, issue: "invalid-json" };
   }
+  if (!isRecord(parsed) || parsed.version !== 1 || !isRecord(parsed.coins)) {
+    return { state: null, issue: "invalid-state" };
+  }
+  const coins: Record<string, ReserveAdapterAlertCoinState> = {};
+  for (const [coinId, entry] of Object.entries(parsed.coins)) {
+    if (!isRecord(entry)) return { state: null, issue: "invalid-state" };
+    const { failureRaised, scoreIneligibleRaised, clockRaised } = entry;
+    if (typeof failureRaised !== "boolean" || typeof clockRaised !== "boolean"
+      || (scoreIneligibleRaised !== undefined && typeof scoreIneligibleRaised !== "boolean")) {
+      return { state: null, issue: "invalid-state" };
+    }
+    // Older state entries predate the score-ineligible rule; absent means not raised.
+    const scoreRaised = scoreIneligibleRaised ?? false;
+    if (!failureRaised && !scoreRaised && !clockRaised) continue;
+    coins[coinId] = { failureRaised, scoreIneligibleRaised: scoreRaised, clockRaised };
+  }
+  return { state: { version: 1, coins }, issue: null };
 }
 
 interface ReserveAdapterAlertAttemptRow {
@@ -509,9 +516,13 @@ export async function runReservePostSyncWatchdog(
         scoreIneligibleCoinIds: scoringEvidence.scoreIneligibleIds,
         scoreIneligibleUnknownCoinIds: scoringEvidence.unknownIds,
         acknowledgedCoinIds,
-        previous: previousState,
+        previous: previousState.state ?? { version: 1, coins: {} },
       });
       await setCache(db, RESERVE_ALERT_STATE_KEY, JSON.stringify(evaluation.state), signal);
+      if (previousState.issue) {
+        // Reseeding repairs the next run, never a verdict against unreadable state.
+        throw new Error(`Reserve adapter alert baseline unreadable (${previousState.issue}); reseeded for the next run`);
+      }
       const activeRuleIds = new Set<ReserveAdapterAlertRuleId>();
       const alertReasons: string[] = [];
       for (const [coinId, state] of Object.entries(evaluation.state.coins)) {

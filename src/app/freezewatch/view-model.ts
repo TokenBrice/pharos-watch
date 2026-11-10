@@ -132,7 +132,7 @@ export function useFreezeWatchPageController() {
     () => () => {
       if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
     },
-    [],
+    [searchQuery],
   );
 
   const pageSize = PAGE_SIZE;
@@ -224,6 +224,11 @@ export function useFreezeWatchPageController() {
     [parsedFilters, replaceParams],
   );
 
+  const updateFiltersRef = useRef(updateFilters);
+  useEffect(() => {
+    updateFiltersRef.current = updateFilters;
+  }, [updateFilters]);
+
   useEffect(() => {
     if (statusBucket && previousStatusBucketRef.current !== statusBucket) {
       drilldownRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -270,10 +275,10 @@ export function useFreezeWatchPageController() {
       if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
       searchSyncTimer.current = setTimeout(() => {
         trackSearch("freezewatch", v.length);
-        updateFilters({ searchQuery: v });
+        updateFiltersRef.current({ searchQuery: v });
       }, 300);
     },
-    [updateFilters],
+    [],
   );
 
   const handleSortChange = useCallback(

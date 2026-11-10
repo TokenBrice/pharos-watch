@@ -18,6 +18,7 @@ import {
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import { budgetExhausted } from "../evm-logs";
 import type { RpcEndpoint } from "../chain-registry";
+import type { MintBurnSupplyProofEvidence } from "../mint-burn-supply-proofs";
 import { getMintBurnConservationRuntimeEntry, requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
 import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-logs";
 import { updateEventClassifications } from "./persistence";
@@ -39,6 +40,7 @@ const TX_CONTEXT_MIN_REMAINING_MS = 2_000;
 interface BridgeClassificationOptions {
   deadlineMs?: number;
   blockHashesByTx?: ReadonlyMap<string, string>;
+  rangeSupplyProof?: MintBurnSupplyProofEvidence;
 }
 
 interface TxContextResolution {
@@ -68,9 +70,14 @@ function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution
       if (!log || typeof log !== "object") return false;
       const logRecord = log as Record<string, unknown>;
       return typeof logRecord.address === "string"
+        && /^0x[0-9a-f]{40}$/i.test(logRecord.address)
         && Array.isArray(logRecord.topics)
-        && logRecord.topics.every((topic) => typeof topic === "string");
+        && logRecord.topics.every((topic) => typeof topic === "string" && /^0x[0-9a-f]{64}$/i.test(topic))
+        && typeof logRecord.data === "string" && /^0x[0-9a-f]*$/i.test(logRecord.data) && logRecord.data.length % 2 === 0
+        && typeof logRecord.logIndex === "string" && /^0x[0-9a-f]+$/i.test(logRecord.logIndex)
+        && Number.isSafeInteger(Number(logRecord.logIndex));
     })
+    || new Set(receiptRecord.logs.map((log) => Number((log as Record<string, unknown>).logIndex))).size !== receiptRecord.logs.length
   ) {
     return { context: null, shortfall: true };
   }
@@ -146,7 +153,7 @@ async function resolveTxContextBatch(
   if (uncached.length === 0) return resolutions;
   if (budgetExhausted(budget) || !hasRuntimeWindow(options) || signal?.aborted) {
     for (const txHash of uncached) {
-      resolutions.set(txHash, { context: null, shortfall: true });
+      resolutions.set(txHash, { context: null, shortfall: true, unavailableReason: "rpc-request-not-started" });
     }
     return resolutions;
   }
@@ -179,7 +186,8 @@ async function resolveTxContextBatch(
     pending = unresolved;
   }
   for (const txHash of pending) {
-    if (!resolutions.has(txHash)) resolutions.set(txHash, { context: null, shortfall: true });
+    if (!resolutions.has(txHash)) resolutions.set(txHash, { context: null, shortfall: true,
+      ...((budgetExhausted(budget) || !hasRuntimeWindow(options)) ? { unavailableReason: "rpc-request-not-started" as const } : {}) });
   }
 
   return resolutions;
@@ -273,7 +281,7 @@ export async function classifyBridgeBurnRows(
     return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, txContextShortfalls: 0, deferredTxHashes: [] };
   }
 
-  const requiresSupplyProof = requiresReviewedSupplyBurnProof(config);
+  const requiresSupplyProof = requiresReviewedSupplyBurnProof(config) && options?.rangeSupplyProof?.status !== "proven";
   if (!config.bridgeDetection && !requiresSupplyProof) {
     classifyBridgeAwareBurnRows(rows, undefined, new Map());
     const burnRows = rows.filter((row) => row.direction === "burn");
@@ -314,7 +322,7 @@ export async function classifyBridgeBurnRows(
   }
 
   classifyBridgeAwareBurnRows(rows, config.bridgeDetection, txContextByHash);
-  applyReviewedSupplyBurnAdmission(rows, config, txContextByHash);
+  if (requiresSupplyProof) applyReviewedSupplyBurnAdmission(rows, config, txContextByHash);
 
   let effectiveBurns = 0;
   let bridgeBurns = 0;
@@ -369,6 +377,8 @@ export async function reconcileReviewedSupplyBurns(
   const candidates = await db.prepare(`SELECT * FROM mint_burn_events
     WHERE stablecoin_id = ? AND chain_id = ? AND direction = 'burn'
       AND timestamp >= ?
+      AND NOT EXISTS (SELECT 1 FROM mint_burn_supply_proofs proof
+        WHERE proof.proof_id = mint_burn_events.supply_proof_id AND proof.status = 'proven' AND proof.lifecycle = 'accepted')
       AND (burn_review_reason IS NULL OR burn_review_reason NOT IN
         ('reviewed-supply-destruction', 'unproven-supply-destruction'))
       ${cursor ? "AND (timestamp, id) > (?, ?)" : ""}

@@ -30,6 +30,7 @@ import { toStructural } from "../utils";
 import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../../lib/mint-burn-pipeline/scan-coverage";
+import * as mintBurnFlowsService from "../../../lib/mint-burn-flows-service";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -43,9 +44,10 @@ describe("DDR historical context", () => {
   it("excludes pending and disabled legs from both mint-surge rows and its scan proof", async () => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);
-    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdc-circle");
+    const event = activeRow({ stablecoin_id: "usdt-tether", symbol: "USDT" });
+    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");
     const pending = { ...configs[0], chain: { ...configs[0].chain, chainId: "synthetic-pending" } };
-    const end = Math.floor(activeRow().started_at / 3600) * 3600;
+    const end = Math.floor(event.started_at / 3600) * 3600;
     MINT_BURN_CONFIGS.push(pending);
     try {
       for (const config of configs) {
@@ -59,16 +61,25 @@ describe("DDR historical context", () => {
       }
       const insert = sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
         mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
-        VALUES ('usdc-circle', ?, ?, 1, 0, 0, 0, ?, 0, ?)`);
+        VALUES ('usdt-tether', ?, ?, 1, 0, 0, 0, ?, 0, ?)`);
       insert.run(configs[0].chain.chainId, end - 3600, 100, 100);
       insert.run(pending.chain.chainId, end - 3600, 1_000_000, 1_000_000);
-      const admitted = await loadDdrContext(db, [activeRow()], NOW_SEC);
+      const admitted = await loadDdrContext(db, [event], NOW_SEC);
       if (admitted.kind !== "ok") throw new Error(admitted.reason);
-      expect(admitted.context.mintBurnCoveredEventIds.has(activeRow().id)).toBe(true);
-      expect(admitted.context.mintBurnHourlyByCoin.get("usdc-circle")?.map((row) => row.netFlowUsd)).toEqual([100]);
+      expect(admitted.context.mintBurnCoveredEventIds.has(event.id)).toBe(true);
+      expect(admitted.context.mintBurnHourlyByCoin.get("usdt-tether")?.map((row) => row.netFlowUsd)).toEqual([100]);
+      const scope = await mintBurnFlowsService.readMintBurnWindowContext(db, NOW_SEC, MINT_BURN_CONFIGS);
+      vi.spyOn(mintBurnFlowsService, "readMintBurnWindowContext").mockResolvedValueOnce({ ...scope, partialCoinIds: new Set(["usdt-tether"]) });
+      const partial = await loadDdrContext(db, [event], NOW_SEC);
+      if (partial.kind !== "ok") throw new Error(partial.reason);
+      expect(partial.context.mintBurnCoveredEventIds.size).toBe(0);
+      sqlite.exec("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 1 WHERE chain_id = 'ethereum'");
+      const unresolved = await loadDdrContext(db, [event], NOW_SEC);
+      if (unresolved.kind !== "ok") throw new Error(unresolved.reason);
+      expect(unresolved.context.mintBurnCoveredEventIds.size).toBe(0);
       sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)")
         .run(JSON.stringify(configs.map(mintBurnConfigKey)), NOW_SEC);
-      const disabled = await loadDdrContext(db, [activeRow()], NOW_SEC);
+      const disabled = await loadDdrContext(db, [event], NOW_SEC);
       if (disabled.kind !== "ok") throw new Error(disabled.reason);
       expect(disabled.context.mintBurnCoveredEventIds.size).toBe(0);
       expect(disabled.context.mintBurnHourlyByCoin.size).toBe(0);

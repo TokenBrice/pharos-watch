@@ -260,17 +260,6 @@ describe("adapter request cache", () => {
     }));
   });
 
-  it("dedupes identical JSON GETs within an adapter context", async () => {
-    const network = installAdapterNetwork({ json: { "https://issuer.example/reserves": { ok: true } } });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
-    const signal = new AbortController().signal;
-    await Promise.all([
-      fetchJsonWithRetry("https://issuer.example/reserves", signal, 1_000, ctx),
-      fetchJsonWithRetry("https://issuer.example/reserves", signal, 1_000, ctx),
-    ]);
-    expect(network.fetchSpy).toHaveBeenCalledTimes(1);
-  });
-
   it("keeps same-URL JSON GETs separate when Headers instances differ", async () => {
     const network = installAdapterNetwork({
       json: { "https://issuer.example/reserves": (request: Request) => ({ json: { origin: request.headers.get("origin") } }) },

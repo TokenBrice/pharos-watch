@@ -95,6 +95,8 @@ A cohort is null before its first observation and on loading/failure, including 
 
 Theme, query cache, source navigation and global search remain stable providers across navigation. Optional shortcut/toast/route-progress plumbing is a sibling lazy island, never an async parent of route content. `src/lib/editorial-routes.ts` owns the text-first route policy used by that island and the deferred desktop market tape. PSI chrome imports the narrow classification leaf; `shared/types/stability-constants.ts` owns its band vocabulary without executable schemas, while full API readers still validate before cache admission.
 
+Command-palette history retains up to five deduplicated selections, newest first. Snapshot reads (including mounts and rerenders) and additions reevaluate the seven-day cutoff against each selection's original timestamp, even when stored JSON is unchanged. Unchanged retained entries reuse the same snapshot array; expiry alone does not schedule a render or rewrite storage.
+
 Retained-homepage evidence is route-local: only the homepage mounts its provider under the shared query client. Other routes do not load its persistence module or subscribe to homepage query publications; detail has its own bounded per-coin retained-evidence provider.
 
 Footer research and about/legal links retain their crawlable anchors, order and labels but explicitly disable Next route prefetch. They are discovery links, not an instruction to download every hub as soon as a short route exposes the footer. The blog banner and homepage teaser profile links disable Next route prefetch, so unvisited destinations do not download their cover or Tweet media.

@@ -42,10 +42,10 @@ Reference models:
 
 ### Methodology href routes
 
-List the current routes from the directory; the source file wins over this snapshot:
+List the current routes from `METHODOLOGY_CHANGELOG_REGISTRY` (`publicPath` per entry) in `shared/lib/methodology-versions/registry.ts`; the source file wins over this snapshot:
 
 ```bash
-ls src/app/methodology/ | grep changelog
+rg -n "publicPath:" shared/lib/methodology-versions/registry.ts
 ```
 
 Non-obvious name mappings: Safety Score → `scoring-changelog`; PegScore / DEWS / depeg events → `depeg-changelog`; DDR verdicts → `depeg-resolver-changelog`; PSI → `stability-index-changelog`. General overview → `/methodology/`.

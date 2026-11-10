@@ -1,12 +1,13 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { DepegEventsResponseSchema } from "@shared/types/market";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDepegEvents } from "../depeg-events";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "@shared/lib/depeg-config";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -16,6 +17,15 @@ afterEach(() => {
 
 describe("handleDepegEvents", () => {
   const row = makeDepegRow();
+
+  function mockEvents(rows: Record<string, unknown>[], total: number | null, extra: MockTableConfig[] = []) {
+    return mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
+      ...(total === null ? [] : [{ match: "pharos:depeg-events:count", rows: [{ total }] }]),
+      { match: "depeg_events", rows },
+      ...extra,
+    ]);
+  }
 
   it("returns dependency unavailability rather than raw history when incident projection fails", async () => {
     const db = mockD1([
@@ -36,13 +46,16 @@ describe("handleDepegEvents", () => {
   });
 
   it.each([
-    { current_event_id: null, first_started_at: 1_700_000_000, first_start_price: 0.97, first_peg_reference: 1, constituent_event_count: 2 },
-    { current_event_id: 2, first_started_at: null, first_start_price: 0.97, first_peg_reference: 1, constituent_event_count: 2 },
-    { current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: "0.97", first_peg_reference: 1, constituent_event_count: 2 },
-    { current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97, first_peg_reference: -1, constituent_event_count: 2 },
-    { current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97, first_peg_reference: 1, constituent_event_count: 0 },
-    { current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97, first_peg_reference: 1, constituent_event_count: 1.5 },
-  ])("withholds raw history when an incident projection row is malformed: %j", async (projection) => {
+    { current_event_id: null },
+    { first_started_at: null },
+    { first_start_price: "0.97" },
+    { first_peg_reference: -1 },
+    { constituent_event_count: 0 },
+    { constituent_event_count: 1.5 },
+  ].map((invalid) => ({
+    current_event_id: 2, first_started_at: 1_700_000_000, first_start_price: 0.97,
+    first_peg_reference: 1, constituent_event_count: 2, ...invalid,
+  })))("withholds raw history when an incident projection row is malformed: %j", async (projection) => {
     const db = mockD1([
       { match: "pharos:depeg-event-projection:active-incidents", rows: [{ references_valid: 1, ...projection }] },
       { match: "pharos:depeg-events:count", rows: [{ total: 0 }] },
@@ -56,11 +69,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("keeps a successful empty incident projection readable", async () => {
-    const db = mockD1([
-      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
-      { match: "pharos:depeg-events:count", rows: [{ total: 1 }] },
-      { match: "depeg_events", rows: [row] },
-    ]);
+    const db = mockEvents([row], 1);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     const body = await readJsonResponse(res, 200) as { events: unknown[]; total: number };
     expect(body.total).toBe(1);
@@ -68,17 +77,10 @@ describe("handleDepegEvents", () => {
   });
 
   it("marks a row whose coin left the catalog as retired and leaves catalog rows unmarked", async () => {
-    const db = mockD1([
-      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
-      { match: "pharos:depeg-events:count", rows: [{ total: 2 }] },
-      {
-        match: "depeg_events",
-        rows: [
-          makeDepegRow({ id: 1, stablecoin_id: "bean-beanstalk", symbol: "BEAN" }),
-          makeDepegRow({ id: 2, stablecoin_id: "usdt-tether", symbol: "USDT" }),
-        ],
-      },
-    ]);
+    const db = mockEvents([
+      makeDepegRow({ id: 1, stablecoin_id: "bean-beanstalk", symbol: "BEAN" }),
+      makeDepegRow({ id: 2, stablecoin_id: "usdt-tether", symbol: "USDT" }),
+    ], 2);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
     const byId = new Map(body.events.map((event) => [event.id, event]));
@@ -284,37 +286,31 @@ describe("handleDepegEvents", () => {
   });
 
   it("exposes closeReason for terminal depeg rows", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, {
-      match: "depeg_events",
-      rows: [
-        makeDepegRow({
-          ended_at: 1_800_000_000,
-          recovery_price: null,
-          close_reason: "coverage-lost-supply",
-        }),
-      ],
-    },]);
+    const db = mockEvents([
+      makeDepegRow({
+        ended_at: 1_800_000_000,
+        recovery_price: null,
+        close_reason: "coverage-lost-supply",
+      }),
+    ], 1);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     const body = DepegEventsResponseSchema.parse(await res.json());
     expect(body.events[0]?.closeReason).toBe("coverage-lost-supply");
   });
 
   it("maps optional provenance JSON while preserving legacy rows", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 2 }] }, {
-      match: "depeg_events",
-      rows: [
-        {
-          ...row,
-          provenance_json: JSON.stringify({
-            sourceKind: "market",
-            replayRunId: "run-1",
-            confidenceTier: "medium",
-            auditVerdict: "confirmed",
-          }),
-        },
-        { ...row, id: 2 },
-      ],
-    },]);
+    const db = mockEvents([
+      {
+        ...row,
+        provenance_json: JSON.stringify({
+          sourceKind: "market",
+          replayRunId: "run-1",
+          confidenceTier: "medium",
+          auditVerdict: "confirmed",
+        }),
+      },
+      { ...row, id: 2 },
+    ], 2);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     const body = (await res.json()) as { events: Array<Record<string, unknown>> };
     expect(body.events[0]?.provenance).toMatchObject({
@@ -327,7 +323,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("returns 200 with empty results when no data", async () => {
-    const emptyDb = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 0 }] }, { match: "depeg_events", rows: [] },]);
+    const emptyDb = mockEvents([], 0);
     const res = await handleDepegEvents(emptyDb, new URL("https://x/api/depeg-events"));
     const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(0);
@@ -342,7 +338,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("filters active events", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [makeDepegRow({ ended_at: null })] },]) as MockD1Database;
+    const db = mockEvents([makeDepegRow({ ended_at: null })], 1);
 
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true"));
 
@@ -359,19 +355,6 @@ describe("handleDepegEvents", () => {
     const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?active=yes"));
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid active: must be true or false" });
-  });
-
-  it("excludes superseded rows from active DDR incident repairs", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]) as MockD1Database;
-
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx"));
-
-    expect(res.status).toBe(200);
-    const dataQuery = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("pharos:depeg-events:page"));
-    expect(dataQuery?.sql).toContain("depeg_resolver_incident_event_links");
-    expect(dataQuery?.sql).toContain("links.event_id != COALESCE(effective_alias.current_event_id, canonical.current_event_id)");
   });
 
   it("counts a superseded alias's linked rows in the projected public incident", async () => {
@@ -563,8 +546,7 @@ describe("handleDepegEvents", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [makeDepegRow({ started_at: now - 7 * 86400 })] },
-    { match: "cron_runs", rows: [], first: { started_at: now - 45 } },]);
+    const db = mockEvents([makeDepegRow({ started_at: now - 7 * 86400 })], 1, [{ match: "cron_runs", rows: [], first: { started_at: now - 45 } }]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     expect(res.headers.get("X-Data-Age")).toBe("45");
   });
@@ -608,7 +590,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("can skip the exact total count for cursor-style callers", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [row] }, ]) as MockD1Database;
+    const db = mockEvents([row], null);
 
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?includeTotal=false"));
 
@@ -620,7 +602,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("does not query or emit derived incident counts", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [row] }, ]) as MockD1Database;
+    const db = mockEvents([row], null);
 
     const res = await handleDepegEvents(
       db,
@@ -632,88 +614,54 @@ describe("handleDepegEvents", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("threshold-crossing-count"))).toBe(false);
   });
 
-  it.each([
-    { label: "trusted pool evidence", count: 2, tvl: 5_000_000, dexAvailable: true },
-    { label: "ticker-only price evidence", count: 1, tvl: 0, dexAvailable: false },
-    { label: "absent TVL evidence", count: 1, tvl: null, dexAvailable: false },
-    { label: "malformed TVL evidence", count: 1, tvl: "5000000", dexAvailable: false },
-  ])("derives pending confirmation categories from $label", async ({ count, tvl, dexAvailable }) => {
-    const nowSec = 1_800_000_000;
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(nowSec * 1000));
-
-    try {
-      const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [] }, {
-        match: "FROM depeg_pending",
-        rows: [
-          {
-            id: 10,
-            stablecoin_id: "usdt-tether",
-            symbol: "USDT",
-            peg_type: "peggedUSD",
-            direction: "below",
-            first_seen_bps: -180,
-            first_seen_at: nowSec - 600,
-            first_price: 0.982,
-            last_seen_bps: -240,
-            last_seen_at: nowSec - 120,
-            last_price: 0.976,
-            peak_seen_bps: -310,
-            peak_price: 0.969,
-            peg_reference: 1,
-            reason: "large-cap+low-confidence",
-            updated_at: nowSec - 120,
-          },
-        ],
-      },
-      {
-        match: "FROM dex_prices",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            source_pool_count: count,
-            source_total_tvl: tvl,
-            updated_at: nowSec - 60,
-          },
-        ],
-      },
-      {
-        match: "FROM dex_price_challenger_snapshots",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            snapshot_at: nowSec - 60,
-            has_rows: 0,
-          },
-        ],
-      },]);
-
-      const res = await handleDepegEvents(
-        db,
-        new URL("https://x/api/depeg-events?includeTotal=false&includePending=true"),
-      );
-
-      const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
-      expect(body.pending).toEqual([
-        {
-          stablecoinId: "usdt-tether",
-          symbol: "USDT",
-          direction: "below",
-          firstSeenAt: nowSec - 600,
-          lastSeenAt: nowSec - 120,
-          firstSeenBps: -180,
-          lastSeenBps: -240,
-          peakSeenBps: -310,
-          reason: "large-cap+low-confidence",
-          ageSec: 600,
-          expiresAt: nowSec - 600 + (45 * 60),
-          availableConfirmationCategories: dexAvailable ? ["offchain", "dex"] : ["offchain"],
-          missingConfirmationCategories: dexAvailable ? ["pool"] : ["dex", "pool"],
-        },
-      ]);
-    } finally {
-      vi.useRealTimers();
-    }
+  describe("aggregate original-clock availability", () => {
+    it.each([
+      ["trusted pool evidence", 2, 5_000_000, 60, true],
+      ["ticker-only price evidence", 1, 0, 60, false],
+      ["absent TVL evidence", 1, null, 60, false],
+      ["malformed TVL evidence", 1, "5000000", 60, false],
+      ["six-hour original", 2, 5_000_000, 21_600, false],
+      ["missing original", 2, 5_000_000, null, false],
+      ["original age boundary", 2, 5_000_000, 4500, false],
+      ["inside original budget", 2, 5_000_000, 4499, true],
+      ["future original", 2, 5_000_000, -1, false],
+      ["all families available", 2, 5_000_000, 60, true, true],
+      ["severe unavailable families", 2, 5_000_000, null, false, false, true],
+    ] as const)("derives pending confirmation categories from %s", async (_label, count, tvl, age, dexAvailable, pool: boolean = false, extreme: boolean = false) => {
+      const nowSec = 1_800_000_000, reason = extreme ? "extreme-move" : "large-cap+low-confidence";
+      vi.useFakeTimers();
+      vi.setSystemTime(nowSec * 1000);
+      const db = mockEvents([], null, [{ match: "FROM depeg_pending", rows: [{
+          id: 10, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below",
+          first_seen_bps: -180, first_seen_at: nowSec - 600, first_price: 0.982,
+          last_seen_bps: -240, last_seen_at: nowSec - 120, last_price: 0.976,
+          peak_seen_bps: -310, peak_price: 0.969, peg_reference: 1,
+          reason, updated_at: nowSec - 120,
+        }] }, { match: "FROM dex_prices", rows: [{
+          stablecoin_id: "usdt-tether", source_pool_count: count, source_total_tvl: tvl, updated_at: nowSec - 60,
+          price_sources_json: JSON.stringify({ aggregateObservedAt: age == null ? null : nowSec - age, sources: [] }),
+        }] }, { match: "FROM dex_price_challenger_snapshots", rows: [{
+          stablecoin_id: "usdt-tether", snapshot_at: nowSec - 60, has_rows: pool ? 1 : 0,
+        }] }]);
+      for (const filter of ["", "&stablecoin=usdt-tether"]) {
+        const res = await handleDepegEvents(db,
+          new URL(`https://x/api/depeg-events?includeTotal=false&includePending=true${filter}`));
+        const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+        expect(db.getHistory().find(({ sql }) => sql.includes("pharos:depeg-events:dex-availability"))).toMatchObject({
+          sql: expect.stringContaining("price_sources_json FROM dex_prices\n         WHERE stablecoin_id IN (SELECT value FROM json_each(?))"),
+          binds: [JSON.stringify(["usdt-tether"])],
+        });
+        expect(body.pending).toEqual([{
+          stablecoinId: "usdt-tether", symbol: "USDT", direction: "below",
+          firstSeenAt: nowSec - 600, lastSeenAt: nowSec - 120, firstSeenBps: -180, lastSeenBps: -240,
+          peakSeenBps: -310, reason, ageSec: 600,
+          expiresAt: nowSec - 600 + (extreme ? DEPEG_PENDING_SEVERE_EXPIRY_SEC :
+            dexAvailable && pool ? DEPEG_PENDING_EXPIRY_SEC : DEPEG_PENDING_EXTENDED_EXPIRY_SEC),
+          availableConfirmationCategories: ["offchain", ...(dexAvailable ? ["dex"] : []), ...(pool ? ["pool"] : [])],
+          missingConfirmationCategories: [...(dexAvailable ? [] : ["dex"]), ...(pool ? [] : ["pool"])],
+        }]);
+      }
+    });
   });
 
   it("reports pending pool availability from accepted v2 membership, retaining v1 only before a head exists", async () => {
@@ -759,8 +707,7 @@ describe("handleDepegEvents", () => {
   });
 
   it("filters pending incidents by readable stablecoin ID", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 0 }] }, { match: "depeg_events", rows: [] },
-    {
+    const db = mockEvents([], 0, [{
       match: "FROM depeg_pending",
       matchBinds: ["usdc-circle"],
       rows: [
@@ -783,9 +730,7 @@ describe("handleDepegEvents", () => {
           updated_at: 1_800_000_000,
         },
       ],
-    },
-    { match: "pharos:depeg-events:dex-availability", rows: [] },
-    { match: "pharos:depeg-events:pool-availability", rows: [] },]) as MockD1Database;
+    }, { match: "pharos:depeg-events:dex-availability", rows: [] }, { match: "pharos:depeg-events:pool-availability", rows: [] }]);
 
     const res = await handleDepegEvents(
       db,

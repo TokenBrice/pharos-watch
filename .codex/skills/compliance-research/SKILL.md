@@ -18,14 +18,7 @@ For `genius`, read `docs/genius-tracker.md` (including [source rules](../../../d
 3. Map token → legal issuer → exact authorization/public posture. Reject same-name affiliates and token-unspecific licenses.
 4. Apply the owning tracker’s schema and conservative classification. “Not assessed” is absence of a row; it is not an out-of-scope finding.
 5. Present the proposed object, source URLs/dates, access date, and confidence. Stop there for research-only requests. Before writes, establish approval for the proposed scope. Prior explicit cohort authorization persists across its 3–5 coin batches; ask only for changes outside that authorization.
-6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. For a standalone approved edit, after coupled source edits are complete, run:
-
-```bash
-npm run bootstrap:generated
-npm run check:stablecoin-data
-```
-
-In a coordinated addition, keep the primary-source and pre-edit schema validation duties below, but return evidence, changed source paths, observed validation, and unexercised integration checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). The orchestrator owns the single Phase 7 generation/check pass after all specialists land; do not independently run the commands above.
+6. Patch only the compliance sidecar. For GENIUS set the required reviewer/review date; for MiCA include references where its schema requires them. In a coordinated addition, keep the primary-source and pre-edit schema validation duties below, but return evidence, changed source paths, observed validation, and unexercised integration checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet). Generation/check ownership in coordinated additions and standalone approved edits follows that packet contract and its [Phase 7 pass](../../../docs/process/adding-a-stablecoin.md#phase-7---validate).
 
 ## Guardrails
 

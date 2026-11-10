@@ -1,8 +1,7 @@
 import {
   parseLiveReserveAdapterParams,
-  type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
 import {
@@ -30,15 +29,6 @@ const DEFAULT_M_TOKEN_SELECTOR = "0xc3b6f939"; // mToken()
 const DEFAULT_SWAP_FACILITY_SELECTOR = "0xae06b7e4"; // swapFacility()
 const DEFAULT_CAN_SWAP_VIA_PATH_SELECTOR = "0xd8e21132"; // canSwapViaPath(address,address,address)
 
-type M0WrapperUnderlyingParams = LiveReserveAdapterParamsByKey[typeof ADAPTER_KEY];
-
-interface SliceConfig {
-  name: ReserveSlice["name"];
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-}
-
 function normalizeAddress(address: string): `0x${string}` {
   const normalized = normalizeEvmAddress(address);
   if (!normalized) {
@@ -54,15 +44,6 @@ function encodeCanSwapViaPathCall(
   toToken: string,
 ): `0x${string}` {
   return `${selector}${encodeAddress(swapper)}${encodeAddress(fromToken)}${encodeAddress(toToken)}` as `0x${string}`;
-}
-
-function parseSliceConfig(params: M0WrapperUnderlyingParams): SliceConfig {
-  return {
-    name: params.slice.name,
-    risk: params.slice.risk,
-    ...(params.slice.coinId ? { coinId: params.slice.coinId } : {}),
-    ...(params.slice.depType ? { depType: params.slice.depType } : {}),
-  };
 }
 
 interface WrapperUnderlyingBalances {
@@ -281,7 +262,7 @@ export async function fetchM0WrapperUnderlyingReserves(
       `M0 wrapper supply covers ${Array.from(coveredChains).join(", ")} only; catalog deployments omitted: ${omittedDeploymentChains.join(", ")}`,
     ));
   }
-  const sliceConfig = parseSliceConfig(params);
+  const sliceConfig = params.slice;
   return wrapperCoverageResult({
     coverage,
     slice: {

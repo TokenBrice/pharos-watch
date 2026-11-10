@@ -334,23 +334,18 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(db.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
       .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`)).toBeUndefined();
   });
-  it("returns degraded when DEWS dependency is unavailable", async () => {
-    const db = makeDb({ dewsUnavailable: true });
-
+  it.each([
+    ["is unavailable", { dewsUnavailable: true }, "", "stress_signal_publication_rows"],
+    ["has unverified legacy coverage", {}, "UPDATE cache SET value = json_remove(value, '$.coverageVersion', '$.expectedRowCount', '$.stablecoinIdsDigest') WHERE key = 'dews:published-generation'", "generation-coverage-unverified"],
+  ] as const)("returns degraded when the DEWS dependency %s", async (_label, options, sql, reason) => {
+    const db = makeDb(options);
+    if (sql) db.sqlite.exec(sql);
     const result = await computeAndStoreStabilityIndex(db);
-
-    expect(result.status).toBe("degraded");
-    expect(result.itemCount).toBe(0);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string;
-      dewsUnavailable: boolean;
-      dewsFailureReason: string | null;
-      preservedCurrentSample: boolean;
-    };
-    expect(metadata.fallbackMode).toBe("dews-unavailable");
-    expect(metadata.dewsUnavailable).toBe(true);
-    expect(metadata.dewsFailureReason).toContain("stress_signal_publication_rows");
-    expect(metadata.preservedCurrentSample).toBe(true);
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      fallbackMode: "dews-unavailable", dewsUnavailable: true,
+      dewsFailureReason: expect.stringContaining(reason), preservedCurrentSample: true,
+    });
     expect(persistedSampleCount(db)).toBe(0);
   });
 

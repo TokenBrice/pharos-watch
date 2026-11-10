@@ -28,19 +28,20 @@ export function MobileUtilityDock() {
 
   if (pathname === "/") return null;
   const feedbackEnabled = !isFeedbackHiddenPath(pathname);
+  const showDock = showScrollTop || (feedbackEnabled && showFeedback);
 
   return (
     <>
       <div
         className={cn(
           "fixed inset-x-0 bottom-[calc(var(--mobile-bottom-nav-safe-height)+0.875rem)] z-chrome flex max-w-[100vw] justify-end overflow-x-clip px-4 sm:hidden",
-          showFeedback
+          showDock
             ? "pointer-events-none visible translate-y-0 opacity-100"
             : "pointer-events-none invisible translate-y-4 opacity-0",
           !prefersReducedMotion && "transition-[opacity,transform] duration-300 ease-out",
         )}
         style={{
-          transitionTimingFunction: showFeedback ? "cubic-bezier(0.0, 0.0, 0.2, 1)" : "cubic-bezier(0.4, 0.0, 1, 1)",
+          transitionTimingFunction: showDock ? "cubic-bezier(0.0, 0.0, 0.2, 1)" : "cubic-bezier(0.4, 0.0, 1, 1)",
         }}
       >
         <div

@@ -883,13 +883,26 @@ function safetyPreviewRegion({
   return `${region}${Array.from({ length: regionCount - 1 }, () => region).join("")}`;
 }
 
-async function writeSafetyScoresPage(root: string, extraMain: string) {
+const MAP_PRELOAD = '<link rel="preload" as="image" href="/safety-scores/map.webp" fetchpriority="high">';
+const HEAD_CHUNK = '<script src="/_next/static/chunks/app/safety-scores/page.js"></script>';
+
+async function writeSafetyScoresPage(root: string, extraMain: string, extraHead = MAP_PRELOAD + HEAD_CHUNK) {
   await writeBaselinePages(root, ["/safety-scores/"]);
-  await writePage(root, "/safety-scores/", { h1: "Safety Scores", extraMain });
+  await writePage(root, "/safety-scores/", { h1: "Safety Scores", extraMain, extraHead });
   await writeSitemap(root, ["/", "/stability-index/", "/safety-scores/"]);
 }
 
 describe("safety scores dated preview", () => {
+  it.each([
+    HEAD_CHUNK,
+    HEAD_CHUNK + MAP_PRELOAD,
+    MAP_PRELOAD.replace('="high"', '="low"') + HEAD_CHUNK,
+    MAP_PRELOAD + '<script src="/_next/static/chunks/recharts-vendor-abc.js"></script>',
+  ])("rejects late/missing image priority or eager live charts: %s", async (head) => {
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(root, safetyPreviewRegion(), head);
+    expect(collectFixtureSeoResult(root).errors).toContainEqual(expect.stringMatching(/map preload|live card charts/));
+  });
   it("projects the expected preview from the committed dataset instead of an inventory", () => {
     expect(SAFETY_EXPECTATION.status).toBe("ok");
     expect(SAFETY_PREVIEW.rows.length).toBeGreaterThan(0);
@@ -901,35 +914,13 @@ describe("safety scores dated preview", () => {
     expect(scores).toEqual([...scores].sort((left, right) => right - left));
   });
 
-  it("accepts exactly one dated results region with the projected facts", async () => {
-    const root = await makeOutDir();
-    await writeSafetyScoresPage(root, safetyPreviewRegion());
-
-    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
-    expect(result.errors).toEqual([]);
-  });
-
-  it("accepts the preview when only Next's streamed segment carries it", async () => {
-    const root = await makeOutDir();
-    // The route-level fallback is the neutral skeleton; the client's pending
-    // render lands in the hidden segment that hydration reveals.
-    await writeSafetyScoresPage(root, `<div hidden id="S:0">${safetyPreviewRegion()}</div>`);
-
-    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
-    expect(result.errors).toEqual([]);
-  });
-
-  it("rejects a second results region inside Next's streamed segment", async () => {
+  it.each([false, true])("accepts one projected results region (streamed %s)", async (streamed) => {
     const root = await makeOutDir();
     const region = safetyPreviewRegion();
-    // A fallback that also renders the preview duplicates every fact: the
-    // exported document carries two result sets for the same grades.
-    await writeSafetyScoresPage(root, `${region}<div hidden id="S:0">${region}</div>`);
+    await writeSafetyScoresPage(root, streamed ? `<div hidden id="S:0">${region}</div>` : region);
 
     const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
-    expect(result.errors).toContainEqual(
-      expect.stringContaining('expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 2'),
-    );
+    expect(result.errors).toEqual([]);
   });
 
   it("dates the caption with the publication clock rather than the dataset date", async () => {
@@ -973,7 +964,7 @@ describe("safety scores dated preview", () => {
     const cases: Array<[string, string, string]> = [
       [
         "duplicate",
-        safetyPreviewRegion({ regionCount: 2 }),
+        `${safetyPreviewRegion()}<div hidden id="S:0">${safetyPreviewRegion()}</div>`,
         'expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 2',
       ],
       ["time", safetyPreviewRegion({ omitTime: true }), "must carry exactly one <time> grade date (found 0)"],

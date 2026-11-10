@@ -1,4 +1,4 @@
-import type { MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "../types";
+import type { MintBurnClassification, MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "../types";
 import {
   boundMintBurnSignedNetRange,
   combineMintBurnValuationCompleteness,
@@ -54,7 +54,15 @@ export function resolveMintBurnSignedNet(
   counts?: UnpricedCounts | null,
   /** Proven one-sided bound on the withheld net (see `mintBurnSignedNetBound`). */
   bound?: MintBurnSignedNetBound | null,
+  classification?: MintBurnClassification | null,
 ): MintBurnSignedNetView {
+  if (classification && classification.completeness !== "complete") return {
+    valueUsd: null,
+    completeness: resolveMintBurnValuationCompleteness(completeness),
+    note: classification.unavailableReason === "classification-unresolved"
+      ? `Classification unresolved: ${classification.unresolvedMintEventCount} mint / ${classification.unresolvedBurnEventCount} burn events require review; signed net unavailable`
+      : "Classification unknown: historical hours predate classification completeness; signed net unavailable",
+  };
   const resolved = resolveMintBurnValuationCompleteness(completeness);
   if (resolved === "partial") {
     if (bound) {
@@ -116,7 +124,16 @@ export function describeMintBurnVolumeBound(
   completeness: MintBurnValuationCompleteness | null | undefined,
   unpricedEventCount?: number | null,
   scanComplete = true,
+  classificationCompleteness?: MintBurnClassification["completeness"] | null,
+  unresolvedEventCount?: number | null,
 ): string | null {
+  if (classificationCompleteness && classificationCompleteness !== "complete") {
+    const classificationNote = classificationCompleteness === "partial"
+      ? unresolvedEventCount != null ? `${unresolvedEventCount} ${unresolvedEventCount === 1 ? "event requires" : "events require"} classification review` : "events require classification review"
+      : "historical classification completeness unknown";
+    const otherNote = describeMintBurnVolumeBound(completeness, unpricedEventCount, scanComplete);
+    return `Observed subtotal, lower bound: ${classificationNote}${otherNote ? `; ${otherNote}` : ""}`;
+  }
   const resolved = resolveMintBurnValuationCompleteness(completeness);
   if (!scanComplete) {
     const valuationNote = resolved === "complete" ? "" : `; ${describeMintBurnVolumeBound(completeness, unpricedEventCount)}`;
@@ -137,6 +154,7 @@ export function formatMintBurnVolume(
   completeness: MintBurnValuationCompleteness | null | undefined,
   format: (value: number) => string,
   scanComplete = true,
+  classificationCompleteness?: MintBurnClassification["completeness"] | null,
 ): string {
-  return scanComplete && resolveMintBurnValuationCompleteness(completeness) === "complete" ? format(valueUsd) : `≥ ${format(valueUsd)}`;
+  return (classificationCompleteness == null || classificationCompleteness === "complete") && scanComplete && resolveMintBurnValuationCompleteness(completeness) === "complete" ? format(valueUsd) : `≥ ${format(valueUsd)}`;
 }

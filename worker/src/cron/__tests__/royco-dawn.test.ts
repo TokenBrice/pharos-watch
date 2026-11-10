@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
 import { makeMarket, makeVault, installRoycoMarketRoutes } from "./royco-dawn.test-support";
-const mockFetch = (routes: Parameters<typeof installRoycoMarketRoutes>[0]) => vi.stubGlobal("fetch", vi.fn(installRoycoMarketRoutes(routes)));
+const mockFetch = (data: ReturnType<typeof makeMarket>[]) => vi.stubGlobal("fetch", vi.fn(installRoycoMarketRoutes([{ match: "ecosystem/explore", body: { count: data.length, data } }])));
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -43,11 +43,7 @@ describe("fetchRoycoDawnSources", () => {
       marketId: `0x${String(index + 1).padStart(40, "0")}`,
       seniorVault: makeVault({
         address: `0x${String(index + 11).padStart(40, "0")}`,
-        apy: 0.05,
         tvlUsd: 1_000_000,
-        depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-        depositSymbol: "apyUSD",
-        shareAddress: `0x${String(index + 11).padStart(40, "0")}`,
       }),
     }));
     const routes = installRoycoMarketRoutes([{
@@ -77,35 +73,24 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("emits senior and junior tranche candidates for tracked deposit tokens", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
-            count: 1,
-            data: [
-              makeMarket({
-                marketId: "0xcfbdea0990f21b103c8d123d0d5273b4ea269cb4",
-                name: "Apyx apyUSD",
-                tvlUsd: 4_600_000,
-                coverage: { currentRatio: 0.36, requiredRatio: 0.15 },
-                utilization: { currentRatio: 0.41, requiredRatio: 0.9 },
-                seniorVault: makeVault({
-                  address: "0xbd373c9d3d8976a4fecc504a93c768bbe8c3227c",
-                  apy: 0.099,
-                  tvlUsd: 2_900_000,
-                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                  depositSymbol: "apyUSD",
-                  shareAddress: "0xbd373c9d3d8976a4fecc504a93c768bbe8c3227c",
-                }),
-                juniorVault: makeVault({
-                  address: "0xab2ab53e1e2e2c5d7202918ec8c873712bcc4a2d",
-                  apy: 0.136,
-                  tvlUsd: 1_700_000,
-                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                  depositSymbol: "apyUSD",
-                  shareAddress: "0xab2ab53e1e2e2c5d7202918ec8c873712bcc4a2d",
-                }),
-              }),
-            ],
-          },
-        }]);
+    mockFetch([
+      makeMarket({
+        marketId: "0xcfbdea0990f21b103c8d123d0d5273b4ea269cb4",
+        tvlUsd: 4_600_000,
+        coverage: { currentRatio: 0.36, requiredRatio: 0.15 },
+        utilization: { currentRatio: 0.41, requiredRatio: 0.9 },
+        seniorVault: makeVault({
+          address: "0xbd373c9d3d8976a4fecc504a93c768bbe8c3227c",
+          apy: 0.099,
+          tvlUsd: 2_900_000,
+        }),
+        juniorVault: makeVault({
+          address: "0xab2ab53e1e2e2c5d7202918ec8c873712bcc4a2d",
+          apy: 0.136,
+          tvlUsd: 1_700_000,
+        }),
+      }),
+    ]);
 
     const { candidates, degraded } = await fetchRoycoDawnSources();
 
@@ -136,9 +121,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it.each([null, undefined])("retains observed tranche APY with unavailable API status (%s) without scoring market health", async (status) => {
-    mockFetch([{ match: "ecosystem/explore", body: {
-      count: 1, data: [makeMarket({ status })],
-    } }]);
+    mockFetch([makeMarket({ status })]);
     const { candidates } = await fetchRoycoDawnSources();
     expect(candidates).toHaveLength(1);
     const candidate = candidates[0];
@@ -155,36 +138,29 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("maps Royco sNUSD deposit tokens to the tracked Neutrl USD parent", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
-            count: 1,
-            data: [
-              makeMarket({
-                marketId: "0x1111111111111111111111111111111111111111",
-                name: "Staked Neutrl USD",
-                tvlUsd: 2_000_000,
-                coverage: { currentRatio: 0.08, requiredRatio: 0.07 },
-                utilization: { currentRatio: 0.79, requiredRatio: 0.9 },
-                juniorRedemptionDelay: 86_400,
-                seniorVault: makeVault({
-                  address: "0x2222222222222222222222222222222222222222",
-                  apy: 0.045,
-                  tvlUsd: 1_100_000,
-                  depositAddress: "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
-                  depositSymbol: "sNUSD",
-                  shareAddress: "0x2222222222222222222222222222222222222222",
-                }),
-                juniorVault: makeVault({
-                  address: "0x3333333333333333333333333333333333333333",
-                  apy: 0.087,
-                  tvlUsd: 900_000,
-                  depositAddress: "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
-                  depositSymbol: "sNUSD",
-                  shareAddress: "0x3333333333333333333333333333333333333333",
-                }),
-              }),
-            ],
-          },
-        }]);
+    mockFetch([
+      makeMarket({
+        marketId: "0x1111111111111111111111111111111111111111",
+        name: "Staked Neutrl USD",
+        coverage: { currentRatio: 0.08, requiredRatio: 0.07 },
+        utilization: { currentRatio: 0.79, requiredRatio: 0.9 },
+        juniorRedemptionDelay: 86_400,
+        seniorVault: makeVault({
+          address: "0x2222222222222222222222222222222222222222",
+          apy: 0.045,
+          tvlUsd: 1_100_000,
+          depositAddress: "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
+          depositSymbol: "sNUSD",
+        }),
+        juniorVault: makeVault({
+          address: "0x3333333333333333333333333333333333333333",
+          apy: 0.087,
+          tvlUsd: 900_000,
+          depositAddress: "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
+          depositSymbol: "sNUSD",
+        }),
+      }),
+    ]);
 
     const { candidates } = await fetchRoycoDawnSources();
 
@@ -198,35 +174,23 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("resolves each tranche vault to its own tracked deposit token", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
-            count: 1,
-            data: [
-              makeMarket({
-                marketId: "0x4444444444444444444444444444444444444444",
-                name: "Mixed deposit market",
-                tvlUsd: 2_000_000,
-                coverage: { currentRatio: 0.12, requiredRatio: 0.1 },
-                utilization: { currentRatio: 0.4, requiredRatio: 0.9 },
-                seniorVault: makeVault({
-                  address: "0x5555555555555555555555555555555555555555",
-                  apy: 0.05,
-                  tvlUsd: 1_200_000,
-                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                  depositSymbol: "apyUSD",
-                  shareAddress: "0x5555555555555555555555555555555555555555",
-                }),
-                juniorVault: makeVault({
-                  address: "0x6666666666666666666666666666666666666666",
-                  apy: 0.09,
-                  tvlUsd: 800_000,
-                  depositAddress: "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
-                  depositSymbol: "sNUSD",
-                  shareAddress: "0x6666666666666666666666666666666666666666",
-                }),
-              }),
-            ],
-          },
-        }]);
+    mockFetch([
+      makeMarket({
+        marketId: "0x4444444444444444444444444444444444444444",
+        name: "Mixed deposit market",
+        seniorVault: makeVault({
+          address: "0x5555555555555555555555555555555555555555",
+          tvlUsd: 1_200_000,
+        }),
+        juniorVault: makeVault({
+          address: "0x6666666666666666666666666666666666666666",
+          apy: 0.09,
+          tvlUsd: 800_000,
+          depositAddress: "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
+          depositSymbol: "sNUSD",
+        }),
+      }),
+    ]);
 
     const { candidates } = await fetchRoycoDawnSources();
 
@@ -244,14 +208,11 @@ describe("fetchRoycoDawnSources", () => {
         address: "0x2222222222222222222222222222222222222222",
         apy: 0.08,
         tvlUsd: 500_000,
-        depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-        depositSymbol: "apyUSD",
-        shareAddress: "0x2222222222222222222222222222222222222222",
       }),
     });
     stale.seniorVault.apyInfo.duration.end.blockTimestamp -= 7 * 3600;
     const healthy = makeMarket({ marketId: "healthy" });
-    mockFetch([{ match: "ecosystem/explore", body: { count: 2, data: [stale, healthy] } }]);
+    mockFetch([stale, healthy]);
 
     const { candidates, degraded } = await fetchRoycoDawnSources();
 
@@ -269,40 +230,26 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("does not admit Day markets through the Dawn risk model", async () => {
-    mockFetch([{ match: "ecosystem/explore", body: { count: 1, data: [makeMarket({ majorType: "day" })] } }]);
+    mockFetch([makeMarket({ majorType: "day" })]);
     expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: false });
   });
 
   it("drops tranche vaults below the tranche TVL floor", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
-            count: 1,
-            data: [
-              makeMarket({
-                marketId: "0x7777777777777777777777777777777777777777",
-                name: "Thin junior market",
-                tvlUsd: 2_000_000,
-                coverage: { currentRatio: 0.12, requiredRatio: 0.1 },
-                utilization: { currentRatio: 0.4, requiredRatio: 0.9 },
-                seniorVault: makeVault({
-                  address: "0x8888888888888888888888888888888888888888",
-                  apy: 0.05,
-                  tvlUsd: 1_200_000,
-                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                  depositSymbol: "apyUSD",
-                  shareAddress: "0x8888888888888888888888888888888888888888",
-                }),
-                juniorVault: makeVault({
-                  address: "0x9999999999999999999999999999999999999999",
-                  apy: 0.09,
-                  tvlUsd: 4_500,
-                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-                  depositSymbol: "apyUSD",
-                  shareAddress: "0x9999999999999999999999999999999999999999",
-                }),
-              }),
-            ],
-          },
-        }]);
+    mockFetch([
+      makeMarket({
+        marketId: "0x7777777777777777777777777777777777777777",
+        name: "Thin junior market",
+        seniorVault: makeVault({
+          address: "0x8888888888888888888888888888888888888888",
+          tvlUsd: 1_200_000,
+        }),
+        juniorVault: makeVault({
+          address: "0x9999999999999999999999999999999999999999",
+          apy: 0.09,
+          tvlUsd: 4_500,
+        }),
+      }),
+    ]);
 
     const { candidates } = await fetchRoycoDawnSources();
 
@@ -356,20 +303,20 @@ describe("Royco discovery boundaries", () => {
 
   it("rejects unverified and unknown chain or token markets", async () => {
     const valid = makeMarket();
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: { count: 3, data: [
+    mockFetch([
       makeMarket({ marketId: "unverified", listingType: "unverified" }), makeMarket({ marketId: "unknown-chain", chainId: 99999999 }),
       makeMarket({ seniorVault: { ...valid.seniorVault, depositToken: { ...valid.seniorVault.depositToken, contractAddress: "0x9999999999999999999999999999999999999999" } } }),
-    ] } }]);
+    ]);
     expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: false });
   });
 
   it("accepts exact APY and TVL bounds but rejects values beyond them", async () => {
     const valid = makeMarket();
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: { count: 3, data: [
+    mockFetch([
       makeMarket({ marketId: "boundary", seniorVault: { ...valid.seniorVault, apy: 2 } }),
       makeMarket({ marketId: "high-apy", seniorVault: { ...valid.seniorVault, apy: 2.0001 } }),
       makeMarket({ marketId: "low-tvl", seniorVault: { ...valid.seniorVault, tvl: { tokenAmountUsd: 99_999 } } }),
-    ] } }]);
+    ]);
     const { candidates } = await fetchRoycoDawnSources();
     expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual(["royco-dawn:1:boundary:senior"]);
     expect(candidates[0].yield).toMatchObject({ currentApy: 200, sourceTvlUsd: 100_000 });

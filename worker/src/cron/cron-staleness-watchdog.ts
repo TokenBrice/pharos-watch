@@ -5,12 +5,13 @@ import {
 } from "@shared/lib/api-freshness";
 import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "@shared/lib/telegram-delivery-policy";
 import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
-import { chunkArray, D1_MAX_BOUND_PARAMETERS, runChunkedInFilter } from "../lib/db";
+import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS, runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
 import { getCache, setCache } from "../lib/db-cache";
 import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
@@ -111,10 +112,10 @@ export function deriveCronFreshnessProducers(
 // exceeds the D1 value cap (see stablecoin-detail/shared.ts). Demand-refreshed
 // detail rows can't be age-monitored like cron lanes (an old row may just be
 // an unvisited coin), so the write failure itself is the staleness signal. An
-// unresolved marker stays a failure until the recovery fence deletes it, not
+// unresolved active-coin marker stays a failure until the recovery fence deletes it, not
 // until it merely ages out of a freshness window.
 const DETAIL_WRITE_FAILURE_RETENTION_SEC = 7 * 24 * 3600;
-/** Per-invocation delete budget for expired markers (hourly sentinel lane). */
+/** Per-invocation delete budget for expired non-active/orphan markers (hourly sentinel lane). */
 const DETAIL_WRITE_FAILURE_PRUNE_BUDGET = 500;
 
 export interface DetailWriteFailureObservation {
@@ -128,19 +129,21 @@ export async function loadDetailWriteFailures(
   db: D1Database,
   nowSec: number,
 ): Promise<DetailWriteFailureObservation[]> {
-  // Prune markers past retention so resolved incidents age out of the table.
-  // Bounded per invocation: an unbounded DELETE over the marker family made
-  // this watchdog the heaviest writer in the sentinel lane.
+  // Retain unresolved evidence for active coins, bounded to one row per ID.
+  // Non-active and orphan markers expire; cap that cleanup independently of recovery.
   await runWithOverloadRetry(() =>
     db
       .prepare(
         `DELETE FROM cache WHERE rowid IN (
-           SELECT rowid FROM cache WHERE key LIKE ? AND updated_at < ? LIMIT ?
+           SELECT rowid FROM cache WHERE key LIKE ? AND updated_at < ?
+             AND key NOT IN (SELECT ? || value FROM json_each(?)) LIMIT ?
          )`,
       )
       .bind(
         `${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`,
         nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC,
+        DETAIL_WRITE_FAILURE_KEY_PREFIX,
+        JSON.stringify([...WORKER_ACTIVE_IDS]),
         DETAIL_WRITE_FAILURE_PRUNE_BUDGET,
       )
       .run(),
@@ -148,8 +151,8 @@ export async function loadDetailWriteFailures(
 
   const rows = await runWithOverloadRetry(() =>
     db
-      .prepare("SELECT key, value, updated_at FROM cache WHERE key LIKE ? AND updated_at >= ?")
-      .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC)
+      .prepare("SELECT key, value, updated_at FROM cache WHERE key LIKE ?")
+      .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`)
       .all<{ key: string; value: string; updated_at: number }>(),
   );
 
@@ -179,41 +182,23 @@ export async function loadDetailWriteFailures(
     );
   }
 
-  const failures: DetailWriteFailureObservation[] = [];
+  const unresolvedMarkers: typeof markerRows = [];
   const recoveredMarkers: typeof markerRows = [];
   for (const row of markerRows) {
-    const stablecoinId = row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length);
-
-    // A detail row written after the marker means a later cache write
-    // succeeded; the coin has recovered, so drop the stale marker instead of
-    // degrading runs for up to 24h.
+    // A later detail write is only a recovery candidate until fenced cleanup confirms it.
     const detailUpdatedAt = detailUpdatedAtByKey.get(detailKeyByMarkerKey.get(row.key) ?? "");
     if (detailUpdatedAt != null && detailUpdatedAt > row.updated_at) {
       recoveredMarkers.push(row);
       continue;
     }
 
-    let reason = "unknown";
-    let bytes: number | null = null;
-    try {
-      const parsed = JSON.parse(row.value) as { reason?: unknown; bytes?: unknown };
-      if (typeof parsed.reason === "string") reason = parsed.reason;
-      if (typeof parsed.bytes === "number") bytes = parsed.bytes;
-    } catch {
-      // keep defaults
-    }
-    failures.push({
-      stablecoinId,
-      reason,
-      bytes,
-      ageSeconds: Math.max(0, nowSec - row.updated_at),
-    });
+    unresolvedMarkers.push(row);
   }
 
   // Fence cleanup to the scanned marker, including same-second replacements,
   // and recheck recovery in the DELETE rather than trusting the earlier read.
   for (const chunk of chunkArray(recoveredMarkers, Math.floor(D1_MAX_BOUND_PARAMETERS / 4))) {
-    await runWithOverloadRetry(() =>
+    const deleted = await runWithOverloadRetry(() =>
       db
         .prepare(
           `WITH recovered(marker_key, marker_updated_at, marker_value, detail_key) AS (
@@ -232,8 +217,32 @@ export async function loadDetailWriteFailures(
         ]))
         .run(),
     );
+    if (deleted.meta.changes !== chunk.length) {
+      const inClause = buildInClause(chunk.map((row) => row.key));
+      const retained = await runWithOverloadRetry(() => db
+        .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${inClause.sql})`)
+        .bind(...inClause.binds)
+        .all<(typeof markerRows)[number]>());
+      unresolvedMarkers.push(...(retained.results ?? []));
+    }
   }
-  return failures;
+  return unresolvedMarkers.map((row) => {
+    let reason = "unknown";
+    let bytes: number | null = null;
+    try {
+      const parsed = JSON.parse(row.value) as { reason?: unknown; bytes?: unknown };
+      if (typeof parsed.reason === "string") reason = parsed.reason;
+      if (typeof parsed.bytes === "number") bytes = parsed.bytes;
+    } catch {
+      // keep defaults
+    }
+    return {
+      stablecoinId: row.key.slice(DETAIL_WRITE_FAILURE_KEY_PREFIX.length),
+      reason,
+      bytes,
+      ageSeconds: Math.max(0, nowSec - row.updated_at),
+    };
+  });
 }
 
 export interface CronStalenessObservation {

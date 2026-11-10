@@ -151,6 +151,31 @@ describe("YieldSourceSheet", () => {
       expect(screen.getByRole("button", { name: "Show chosen source history" }).getAttribute("aria-pressed")).toBe("true");
     });
 
+  it.each(["retained", "removed", "reopened"])("aligns the inspected source when an alternate is %s", (update) => {
+    const ranking = makeRanking("susde-ethena", "chosen", "alternate");
+    ranking.sourceRisk = { sourceRiskScore: 72 };
+    ranking.altSources[0]!.sourceRisk = { sourceRiskScore: 31 };
+    ranking.altSources.push(makeAltYieldSource({ sourceKey: "second", yieldSource: "second-alt" }));
+    const props = { ranking, logo: undefined, riskFreeRate: 0.02, medianApy: 0.03, open: true, onOpenChange: vi.fn() };
+    const { rerender } = renderYieldSourceSheet(ranking);
+    fireEvent.click(screen.getByRole("button", { name: /susde-ethena-alt/i }));
+    expect(screen.getByTestId("yield-history-chart").textContent).toBe("alternate");
+    if (update === "reopened") rerender(<YieldSourceSheet {...props} open={false} />);
+    rerender(<YieldSourceSheet {...props} ranking={{
+      ...ranking, altSources: update === "removed" ? ranking.altSources.slice(1) : ranking.altSources,
+    }} />);
+    const retained = update === "retained";
+    const label = `susde-ethena-${retained ? "alt" : "best"}`;
+    expect(screen.getByTestId("yield-history-chart").textContent).toBe(retained ? "alternate" : "chosen");
+    expect(screen.getByText("Showing").textContent).toBe(`Showing ${label}`);
+    expect(screen.getByText("Source risk").nextElementSibling?.textContent).toBe(label);
+    expect(screen.getByText("Score").nextElementSibling?.textContent).toBe(retained ? "31/100" : "72/100");
+    expect(screen.getByRole("button", { name: "Show chosen source history" }).getAttribute("aria-pressed"))
+      .toBe(String(!retained));
+    expect(screen.getByRole("link", { name: /Deep dive yield/i }).getAttribute("href"))
+      .toBe(`/stablecoin/susde-ethena/yield${retained ? "?sources=alternate" : ""}`);
+  });
+
   it("resolves a missing row rate from its registry benchmark for the history chart", () => {
     renderYieldSourceSheet(
       {

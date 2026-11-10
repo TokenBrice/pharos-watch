@@ -31,7 +31,7 @@ describe("loadDexPrices", () => {
     const sources = [source(NOW), { ...source(NOW), protocol: "balancer", sourceFamily: "balancer" }];
     const { db, all } = database([{ ...row, price_sources_json: JSON.stringify(sources) }]);
     const result = await loadDexPrices(db, NOW);
-    expect(result.dexPriceRows).toEqual(new Map([["usdc", row]]));
+    expect(result.dexPriceRows).toEqual(new Map([["usdc", { ...row, aggregateObservedAt: NOW }]]));
     expect(result.dexPriceSources).toEqual(new Map([["usdc", sources.map((entry) => ({ ...entry, updatedAt: NOW }))]]));
     expect(db.prepare).toHaveBeenCalledOnce();
     expect(db.prepare).toHaveBeenCalledWith("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices");
@@ -42,9 +42,20 @@ describe("loadDexPrices", () => {
     const clocked = { ...source(NOW), observedAt: NOW - 6 * 3600 };
     const { db } = database([{ ...aggregate("usdc"), price_sources_json: JSON.stringify([clocked]) }]);
     const result = await loadDexPrices(db, NOW);
-    expect(result.dexPriceRows.get("usdc")?.updated_at).toBe(NOW);
+    expect(result.dexPriceRows.get("usdc")).toEqual({ ...aggregate("usdc"), aggregateObservedAt: NOW });
     expect(result.dexPriceSources.has("usdc")).toBe(false);
   });
+
+  it.each([[NOW - 60, NOW - 120], [NOW - 21_600, NOW - 60]])(
+    "retains oldest aggregate clock before rejecting stale protocol lanes: %s, %s", async (a, b) => {
+      const { db } = database([{ ...aggregate("usdc"), price_sources_json: JSON.stringify([a, b].map((aggregateObservedAt) => ({
+        ...source(NOW - MAX_AGE - 1), aggregateObservedAt,
+      }))) }]);
+      const result = await loadDexPrices(db, NOW);
+      expect(result.dexPriceRows.get("usdc")?.aggregateObservedAt).toBe(Math.min(a, b));
+      expect(result.dexPriceSources.size).toBe(0);
+    },
+  );
 
   it("requires original source and aggregate clocks instead of legacy publication fallbacks", async () => {
     const { db } = database([{ ...aggregate("usdc"), price_sources_json: JSON.stringify([
@@ -84,7 +95,7 @@ describe("loadDexPrices", () => {
     const { db } = database([{ ...aggregate("usdc", NOW - MAX_AGE - 1), price_sources_json: null }]);
     const telemetry = createDexPriceSourceLoadTelemetry();
     const result = await loadDexPrices(db, NOW, MAX_AGE, telemetry);
-    expect(result.dexPriceRows.size).toBe(1);
+    expect(result.dexPriceRows).toEqual(new Map([["usdc", { ...aggregate("usdc", NOW - MAX_AGE - 1), aggregateObservedAt: null }]]));
     expect(result.dexPriceSources.size).toBe(0);
     expect(telemetry).toEqual({ staleRows: [], malformedRows: [] });
   });
@@ -98,6 +109,7 @@ describe("loadDexPrices", () => {
     ]);
     const telemetry = createDexPriceSourceLoadTelemetry();
     const result = await loadDexPrices(db, NOW, MAX_AGE, telemetry);
+    expect([...result.dexPriceRows.values()].map((row) => row.aggregateObservedAt)).toEqual([null, null, null]);
     expect(result.dexPriceRows.size).toBe(3);
     expect(result.dexPriceSources.size).toBe(0);
     expect(telemetry.malformedRows).toEqual([

@@ -1,5 +1,7 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { parseObjectMetadata } from "./json-metadata";
+import { DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT } from "../cron/depeg-detection/types";
 import type {
   DepegObservationCensus,
   DepegObservationGapReason,
@@ -67,14 +69,7 @@ function parseReasonCounts(value: unknown): Partial<Record<DepegObservationGapRe
 }
 
 /** A malformed census is unavailable evidence, never a measured zero (R2). */
-function parseCensus(value: string | null): DepegObservationCensus | null {
-  if (value == null) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return null;
-  }
+export function parseDepegObservationCensus(parsed: unknown): DepegObservationCensus | null {
   if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
   const record = parsed as Record<string, unknown>;
   const reasonCounts = parseReasonCounts(record.reasonCounts);
@@ -89,6 +84,16 @@ function parseCensus(value: string | null): DepegObservationCensus | null {
   ) {
     return null;
   }
+  const assets: unknown = record.unavailableAssets;
+  const unavailableAssets = Array.isArray(assets) && assets.length <= DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT
+    && (assets as unknown[]).every((entry) => {
+      if (entry == null || typeof entry !== "object") return false;
+      const asset = entry as Record<string, unknown>;
+      return typeof asset.id === "string" && asset.id.trim().length > 0
+        && (CENSUS_GAP_REASONS as readonly unknown[]).includes(asset.reason)
+        && typeof asset.reviewedNominalReference === "boolean";
+    })
+    ? assets as NonNullable<DepegObservationCensus["unavailableAssets"]> : undefined;
   return {
     scope: record.scope,
     evaluatedAt: record.evaluatedAt,
@@ -97,6 +102,9 @@ function parseCensus(value: string | null): DepegObservationCensus | null {
     unavailableCount: record.unavailableCount,
     belowFloorCount: record.belowFloorCount,
     reasonCounts,
+    unavailableAssets,
+    unavailableIdsTruncated: typeof record.unavailableIdsTruncated === "boolean" ? record.unavailableIdsTruncated : undefined,
+    unavailableIdsDropped: record.unavailableIdsDropped === undefined ? undefined : record.unavailableIdsDropped !== false,
   };
 }
 
@@ -124,7 +132,7 @@ export async function loadDepegCensusRuns(
   return (rows.results ?? []).map((row) => ({
     runStartedAt: row.started_at,
     pipelineSucceeded: row.pipeline_succeeded === 1,
-    census: parseCensus(row.census_json),
+    census: parseDepegObservationCensus(parseObjectMetadata(row.census_json)),
     unavailableReason: typeof row.unavailable_reason === "string" ? row.unavailable_reason : null,
   }));
 }

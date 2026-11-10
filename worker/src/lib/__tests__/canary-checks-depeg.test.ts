@@ -4,12 +4,16 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 import {
   checkDdrEligibleUnsealed,
   checkDepegDetectionCensus,
   checkDepegDexSuppression,
   checkDepegOpenCoverage,
   checkDepegPendingConfirmation,
+  DEPEG_BLIND_EVENT_REVIEWS,
+  DepegBlindEventReviewSchema,
+  resolveDepegBlindEventReviews,
 } from "../canary-checks-depeg";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -19,6 +23,15 @@ afterEach(() => {
 });
 
 const NOW = 1_775_900_000;
+const recoverySources = [
+  { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
+  { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
+];
+
+function suppressionRow(stablecoin_id: string, price_sources_json: string, candidate_count: number) {
+  return { stablecoin_id, price_sources_json, candidate_count, dex_price_usd: 0.999,
+    primary_price_at_calc: 0.985, deviation_from_primary_bps: 142, source_total_tvl: 9_000_000 };
+}
 
 const USD_IDS = [...PSI_ELIGIBLE_META_BY_ID]
   .filter(([, meta]) => meta.flags.pegCurrency === "USD")
@@ -133,6 +146,41 @@ describe("depeg canary checks", () => {
       executionStatus: "failed",
       executionFailureReason: "canary-source-unavailable",
     });
+  });
+
+  it.each([
+    ["nominal", true, "primary-unusable", 0, {}, 0],
+    ["unreviewed", false, "primary-unusable", 0, {}, 1],
+    ["reviewed", false, "primary-unusable", 0, {}, 0],
+    ["expired", false, "primary-unusable", 1, {}, 1],
+    ["future", false, "primary-unusable", -1, {}, 1],
+    ["wrong mechanism", true, "supply-unavailable", 0, {}, 1],
+    ["truncated", true, "primary-unusable", 0, { unavailableIdsTruncated: true }, 1],
+    ["dropped", true, "primary-unusable", 0, { unavailableIdsDropped: true }, 1],
+    ["legacy", true, "primary-unusable", 0, { unavailableAssets: undefined }, 1],
+    ["malformed", true, "primary-unusable", 0, { unavailableIdsDropped: "invalid" }, 1],
+    ["incomplete", true, "primary-unusable", 0, { unavailableAssets: [] }, 1],
+    ["closure", false, "primary-unusable", 0, {}, 0],
+    ["reopening wait", false, "primary-unusable", 0, {}, 0],
+    ["reopened", false, "primary-unusable", 0, {}, 1],
+  ] as const)("grades actionable census gaps: %s", async (kind, nominal, reason, reviewClock, overrides, actionable) => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS[0];
+    const reopen = Date.UTC(2026, 10, 8, 23) / 1000;
+    const market = ["closure", "reopening wait", "reopened"].includes(kind);
+    const now = market ? reopen + 1_801
+      : reviewClock > 0 ? review.expiresAt : reviewClock < 0 ? review.reviewedAt - 1 : review.reviewedAt + 60;
+    const evaluatedAt = market ? reopen + (kind === "closure" ? -1 : kind === "reopened" ? 1_800 : 1_799) : now;
+    const id = market ? "audm-mento" : kind === "unreviewed" ? "unreviewed" : review.stablecoinId;
+    const row = censusRow({ started_at: now - 60, census_json: censusJson({ evaluatedAt, eligibleCount: 10,
+      observedCount: 9, unavailableCount: 1, reasonCounts: { [reason]: 1 }, unavailableIdsTruncated: false,
+      unavailableAssets: [{ id, reason, reviewedNominalReference: nominal }], ...overrides }) });
+    const result = await checkDepegDetectionCensus(mockD1([{ match: "pharos:depeg-census-runs",
+      rows: [row, { ...row, started_at: now - 960 }] }]), now);
+    expect(result).toMatchObject({ status: actionable ? "degraded" : "ok", metadata: {
+      unavailableCount: 1, unavailableShare: 0.1, acknowledgedUnavailableCount: 1 - actionable,
+      actionableUnavailableCount: actionable, actionableUnavailableIds: "unavailableAssets" in overrides
+        || "unavailableIdsTruncated" in overrides || "unavailableIdsDropped" in overrides ? null : actionable ? [id] : [],
+    } });
   });
 
   it("projects the census from persisted cron_runs metadata", async () => {
@@ -325,6 +373,7 @@ describe("depeg canary checks", () => {
             last_trusted_price_at: NOW - 2_000,
             price_coverage_gap_started_at: NOW - 1_800,
             total_count: 1,
+            acknowledged_count: 0, acknowledged_ids_json: "[]",
           },
         ],
       },
@@ -340,6 +389,36 @@ describe("depeg canary checks", () => {
         events: [{ eventId: 7, stablecoinId: "usdt-tether", blindAgeSec: 1_800 }],
       },
     });
+  });
+
+  it.each(["reviewed", "unreviewed", "new-event", "expired", "future"])("grades only actionable blind events: %s", async (kind) => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    const now = kind === "expired" ? review.expiresAt : review.reviewedAt - (kind === "future" ? 1 : 0);
+    const id = kind === "unreviewed" ? "usdt-tether" : review.stablecoinId;
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, last_trusted_price_at)
+      VALUES (?, ?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(review.eventId + (kind === "new-event" ? 1 : 0), id, now - 5000, now - 2000);
+    const acknowledged = kind === "reviewed" ? 1 : 0;
+    expect(await checkDepegOpenCoverage(db, now)).toMatchObject({ status: acknowledged ? "ok" : "degraded",
+      metadata: { blindEventCount: 1, acknowledgedBlindEventCount: acknowledged, actionableBlindEventCount: 1 - acknowledged,
+        acknowledgedBlindEvents: acknowledged ? [expect.objectContaining({ stablecoinId: id })] : [],
+        actionableBlindEvents: acknowledged ? [] : [expect.objectContaining({ stablecoinId: id })] } });
+  });
+
+  it.each([{ owner: "" }, { reason: " " }, { sources: [] }, { sources: ["http://example.com"] }, { sources: ["https://"] },
+    { reviewedAt: NaN }, { stablecoinId: "unknown" }, { expiresAt: DEPEG_BLIND_EVENT_REVIEWS[0].reviewedAt + 14 * 86400 + 1 },
+  ])("ignores malformed blind reviews: %j", (overrides) => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    expect(resolveDepegBlindEventReviews(review.reviewedAt, [{ ...review, ...overrides }]).size).toBe(0);
+  });
+
+  it("validates the blind review registry and rejects duplicates", () => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    for (const entry of DEPEG_BLIND_EVENT_REVIEWS) expect(DepegBlindEventReviewSchema.safeParse(entry).success).toBe(true);
+    expect(resolveDepegBlindEventReviews(review.reviewedAt).size).toBe(DEPEG_BLIND_EVENT_REVIEWS.length);
+    expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, review]).size).toBe(0);
+    expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });
 
   it("uses the newer trusted clock when an old continuity gap survives a fresh at-par observation", async () => {
@@ -381,23 +460,26 @@ describe("depeg canary checks", () => {
   });
 
   it("reports the full blind cohort while capping the event detail list", async () => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(
       `INSERT INTO depeg_events
-         (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+         (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
           start_price, peg_reference, last_trusted_price_at, price_coverage_gap_started_at)
-       VALUES (?, ?, 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, NULL)`,
+       VALUES (?, ?, ?, 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, NULL)`,
     );
     for (let index = 0; index < 30; index++) {
-      insert.run(`coin-${index}`, `C${index}`, NOW - 5_000, NOW - 2_000 - index);
+      insert.run(review.eventId + index, index < 2 ? review.stablecoinId : `coin-${index}`, `C${index}`, NOW - 5_000 - index, NOW - 2_000 - index);
     }
 
-    const result = await checkDepegOpenCoverage(db, NOW);
+    const result = await checkDepegOpenCoverage(db, review.reviewedAt);
 
     expect(result).toMatchObject({
       status: "degraded",
-      metadata: { blindEventCount: 30 },
+      metadata: { blindEventCount: 30, acknowledgedBlindEventCount: 1, actionableBlindEventCount: 29,
+        acknowledgedBlindReviewIds: [review.eventId], acknowledgedBlindEventsTruncated: true },
     });
+    expect(JSON.stringify(result.metadata).length).toBeLessThan(3500);
     expect((result.metadata as { events: unknown[] }).events).toHaveLength(10);
   });
 
@@ -508,26 +590,13 @@ describe("depeg canary checks", () => {
     });
   });
 
-  it("flags a fresh DEX recovery-band suppression with two corroborating protocol groups", async () => {
+  it.each([false, true])("flags a fresh DEX recovery-band suppression with two corroborating protocol groups (envelope=%s)", async (envelope) => {
     const stablecoinId = USD_IDS[0]!;
-    const sources = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
+    const sources = JSON.stringify(envelope ? { aggregateObservedAt: NOW - 60, sources: recoverySources } : recoverySources);
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
-        rows: [
-          {
-            stablecoin_id: stablecoinId,
-            dex_price_usd: 0.999,
-            primary_price_at_calc: 0.985,
-            deviation_from_primary_bps: 142,
-            source_total_tvl: 9_000_000,
-            price_sources_json: sources,
-            candidate_count: 1,
-          },
-        ],
+        rows: [suppressionRow(stablecoinId, sources, 1)],
       },
     ]);
 
@@ -544,29 +613,17 @@ describe("depeg canary checks", () => {
   });
 
   it("ignores a single-protocol DEX row, a stale protocol clock, and non-USD pegs", async () => {
-    const singleProtocol = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
-    const staleProtocol = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 4_000, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 4_000, aggregateObservedAt: NOW - 60 },
-    ]);
-    const row = (stablecoinId: string, priceSourcesJson: string, candidateCount: number) => ({
-      stablecoin_id: stablecoinId,
-      dex_price_usd: 0.999,
-      primary_price_at_calc: 0.985,
-      deviation_from_primary_bps: 142,
-      source_total_tvl: 9_000_000,
-      price_sources_json: priceSourcesJson,
-      candidate_count: candidateCount,
-    });
+    const singleProtocol = JSON.stringify(recoverySources.slice(0, 1));
+    const staleProtocol = JSON.stringify(recoverySources.map((source) => ({ ...source, observedAt: NOW - 4_000 })));
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
         rows: [
-          row(USD_IDS[0]!, singleProtocol, 3),
-          row(USD_IDS[1]!, staleProtocol, 3),
-          ...(NON_USD_ID ? [row(NON_USD_ID, singleProtocol, 3)] : []),
+          suppressionRow(USD_IDS[0]!, singleProtocol, 5),
+          suppressionRow(USD_IDS[1]!, staleProtocol, 5),
+          suppressionRow(USD_IDS[2]!, JSON.stringify({ aggregateObservedAt: NOW, sources: [] }), 5),
+          suppressionRow(USD_IDS[3]!, "{}", 5),
+          ...(NON_USD_ID ? [suppressionRow(NON_USD_ID, singleProtocol, 5)] : []),
         ],
       },
     ]);
@@ -577,24 +634,13 @@ describe("depeg canary checks", () => {
   });
 
   it("escalates a broad DEX suppression cohort to error", async () => {
-    const sources = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
+    const sources = JSON.stringify(recoverySources);
     const ids = USD_IDS.slice(0, 10);
     expect(ids).toHaveLength(10);
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
-        rows: ids.map((stablecoinId) => ({
-          stablecoin_id: stablecoinId,
-          dex_price_usd: 0.999,
-          primary_price_at_calc: 0.985,
-          deviation_from_primary_bps: 142,
-          source_total_tvl: 9_000_000,
-          price_sources_json: sources,
-          candidate_count: ids.length,
-        })),
+        rows: ids.map((id) => suppressionRow(id, sources, ids.length)),
       },
     ]);
 
@@ -608,24 +654,13 @@ describe("depeg canary checks", () => {
   });
 
   it("names a saturated DEX suppression cohort as a lower bound", async () => {
-    const sources = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
+    const sources = JSON.stringify(recoverySources);
     const ids = USD_IDS.slice(0, 50);
     expect(ids).toHaveLength(50);
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
-        rows: ids.map((stablecoinId) => ({
-          stablecoin_id: stablecoinId,
-          dex_price_usd: 0.999,
-          primary_price_at_calc: 0.985,
-          deviation_from_primary_bps: 142,
-          source_total_tvl: 9_000_000,
-          price_sources_json: sources,
-          candidate_count: 60,
-        })),
+        rows: ids.map((id) => suppressionRow(id, sources, 60)),
       },
     ]);
 

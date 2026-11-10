@@ -2096,11 +2096,11 @@ describe("yield source-risk registry", () => {
     expect(resolved.venueProtocol).toBe("spark-savings");
     expect(resolved.venueRiskTier).toBe("low");
 
-    // An unreviewed wrapper venue publishes the venue but keeps the tier unknown.
-    for (const [id, venue] of [
-      ["susde-ethena", "ethena"],
-      ["sfrxusd-frax", "frax"],
-      ["wsrusd-reservoir", "reservoir-protocol"],
+    // Wrapper tiers follow their independent venue reviews.
+    for (const [id, venue, tier] of [
+      ["susde-ethena", "ethena", "medium"],
+      ["sfrxusd-frax", "frax", "unknown"],
+      ["wsrusd-reservoir", "reservoir-protocol", "medium"],
     ] as const) {
       const sourceRisk = buildYieldSourceRisk({
         source: makeRiskSource({ id, sourceKey: `onchain:${id}`, dataSource: "onchain" }),
@@ -2108,7 +2108,7 @@ describe("yield source-risk registry", () => {
         isBest: true,
       });
       expect(sourceRisk.venueProtocol, id).toBe(venue);
-      expect(sourceRisk.venueRiskTier, id).toBe("unknown");
+      expect(sourceRisk.venueRiskTier, id).toBe(tier);
     }
   });
 

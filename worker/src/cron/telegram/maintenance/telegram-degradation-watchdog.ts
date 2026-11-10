@@ -85,7 +85,7 @@ type WatchdogResult = {
   zeroSend: WatchdogOutcome & {
     availability: "available" | "unknown";
     reason: string | null;
-    streak: number;
+    streak: number | null;
     evaluated: boolean;
     runIdentity: string | null;
   };
@@ -394,27 +394,32 @@ interface ZeroSendState {
   lastRunIdentity: string | null;
 }
 
-async function readZeroSendState(db: D1Database): Promise<ZeroSendState> {
-  const cached = await getCache(db, WATCHDOG_KEYS.zeroSendStreak);
-  if (!cached) return { streak: 0, lastRunIdentity: null };
+type ZeroSendStateReadResult =
+  | { state: ZeroSendState; reason: null }
+  | { state: null; reason: string };
+
+async function readZeroSendState(db: D1Database): Promise<ZeroSendStateReadResult> {
+  let cached;
   try {
-    const parsedResult = parseJson(cached.value);
-    if (!parsedResult.ok) throw new Error("legacy zero-send state");
-    const parsed = parsedResult.value;
-    if (typeof parsed !== "object" || parsed == null) throw new Error("legacy zero-send state");
-    const state = parsed as Partial<ZeroSendState>;
-    const streak = Number(state.streak);
-    return {
-      streak: Number.isFinite(streak) && streak > 0 ? Math.floor(streak) : 0,
-      lastRunIdentity: typeof state.lastRunIdentity === "string" ? state.lastRunIdentity : null,
-    };
+    cached = await getCache(db, WATCHDOG_KEYS.zeroSendStreak);
   } catch {
-    const legacyStreak = Number(cached.value);
-    return {
-      streak: Number.isFinite(legacyStreak) && legacyStreak > 0 ? Math.floor(legacyStreak) : 0,
-      lastRunIdentity: null,
-    };
+    return { state: null, reason: "streak-state-read-failed" };
   }
+  if (!cached) return { state: { streak: 0, lastRunIdentity: null }, reason: null };
+  const parsed = parseJson(cached.value);
+  const value = parsed.ok ? parsed.value : null;
+  const record = readMetadataRecord(value);
+  if (parsed.ok && typeof value !== "number" && (
+    !record || Object.keys(record).some((key) => key !== "streak" && key !== "lastRunIdentity")
+  )) return { state: null, reason: "unsupported-streak-state" };
+  const streak = typeof value === "number" ? value : record?.streak;
+  const lastRunIdentity = typeof value === "number" ? null : record?.lastRunIdentity;
+  if (
+    typeof streak === "number" && Number.isSafeInteger(streak) && streak >= 0 &&
+    (lastRunIdentity === null || (typeof lastRunIdentity === "string" && lastRunIdentity.length > 0)) &&
+    (record == null || Object.keys(record).length === 2)
+  ) return { state: { streak, lastRunIdentity }, reason: null };
+  return { state: null, reason: "invalid-streak-state" };
 }
 
 async function writeZeroSendState(db: D1Database, state: ZeroSendState): Promise<void> {
@@ -570,20 +575,38 @@ function sumEvents(metadata: TelegramDispatchCronMetadata): number | null {
 
 async function evaluateZeroSendStreak(
   db: D1Database,
+  previouslyTriggered: boolean,
 ): Promise<WatchdogResult["zeroSend"]> {
   const dispatchRead = await readLatestDispatchMetadata(db);
   const latestRun = dispatchRead.availability === "available" ? dispatchRead.value : null;
-  const priorState = await readZeroSendState(db);
-  const priorStreak = priorState.streak;
+  const { state: priorState, reason: stateReason } = await readZeroSendState(db);
   const outcome: WatchdogResult["zeroSend"] = {
     ...emptyOutcome(),
-    triggered: priorStreak >= ZERO_SEND_STREAK_THRESHOLD,
-    availability: dispatchRead.availability,
-    reason: dispatchRead.availability === "unknown" ? dispatchRead.reason : null,
-    streak: priorStreak,
+    triggered: priorState ? priorState.streak >= ZERO_SEND_STREAK_THRESHOLD : previouslyTriggered,
+    availability: priorState ? dispatchRead.availability : "unknown",
+    reason: stateReason ?? (dispatchRead.availability === "unknown" ? dispatchRead.reason : null),
+    streak: priorState?.streak ?? null,
     evaluated: false,
     runIdentity: dispatchRead.availability === "unknown" ? dispatchRead.runIdentity : latestRun?.runIdentity ?? null,
   };
+
+  if (!priorState) {
+    if (
+      stateReason === "invalid-streak-state" && latestRun &&
+      latestRun.metadata.messagesSent != null && latestRun.metadata.messagesSent > 0 &&
+      sumEvents(latestRun.metadata) != null
+    ) {
+      await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
+      return {
+        ...outcome, availability: "available", reason: null, streak: 0, evaluated: true,
+        triggered: false, recovered: previouslyTriggered,
+        detail: "dispatch sent; invalid zero-send state reset",
+      };
+    }
+    outcome.detail = "zero-send state unavailable; existing incident state preserved";
+    return outcome;
+  }
+  const priorStreak = priorState.streak;
 
   if (!latestRun) {
     if (dispatchRead.availability === "available") outcome.reason = "no-completed-run";
@@ -660,7 +683,7 @@ export async function runTelegramDegradationWatchdog(
 
   const pendingBacklog = await evaluatePendingBacklog(db, nowSec, options.pendingCapacitySnapshot);
   const safetySource = await evaluateSafetySource(db, nowSec, options.safetySourceAssessment);
-  const zeroSend = await evaluateZeroSendStreak(db);
+  const zeroSend = await evaluateZeroSendStreak(db, notificationState.observed.includes("zero-send"));
 
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };
   const creds = options.operatorTelegramCreds ?? null;

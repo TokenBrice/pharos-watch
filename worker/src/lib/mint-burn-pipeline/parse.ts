@@ -20,7 +20,7 @@ export function parseMintBurnLogs(
 ): {
   rows: MintBurnRow[];
   dropped: number;
-  /** Decodable, above-dust logs without a usable event identity (block/log index). */
+  /** Decodable, positive logs without a usable event identity (block/log index). */
   droppedMalformed: number;
   droppedDecode: number;
   earliestDecodeFailureBlock: number | null;
@@ -32,6 +32,7 @@ export function parseMintBurnLogs(
   let droppedMalformed = 0;
   let droppedDecode = 0;
   let earliestDecodeFailureBlock: number | null = null;
+  const displayThresholdRaw = BigInt(config.dustThreshold) * 10n ** BigInt(config.decimals);
 
   for (const log of logs) {
     const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
@@ -46,7 +47,7 @@ export function parseMintBurnLogs(
       }
       continue;
     }
-    if (amount <= 0 || amount < config.dustThreshold) {
+    if (amount <= 0) {
       dropped++;
       continue;
     }
@@ -83,6 +84,7 @@ export function parseMintBurnLogs(
     const eventPrice = resolveMintBurnEventPrice(config.stablecoinId, timestamp, priceContext);
     const amountUsd = eventPrice ? amount * eventPrice.price : null;
 
+    const rawAmount = BigInt(readDataWord(log.data, slot)!);
     rows.push({
       id,
       stablecoin_id: config.stablecoinId,
@@ -90,6 +92,8 @@ export function parseMintBurnLogs(
       chain_id: config.chain.chainId,
       direction,
       amount,
+      amount_raw: rawAmount.toString(),
+      below_display_threshold: rawAmount < displayThresholdRaw ? 1 : 0,
       amount_usd: amountUsd,
       price_used: eventPrice?.price ?? null,
       price_timestamp: eventPrice?.priceTimestamp ?? null,

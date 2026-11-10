@@ -89,8 +89,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
   // Cap stcUSD - cap native staking, Ethereum, $90M+ TVL, ~5.9% APY
   "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
-  // SMARDEX USDN - native rebasing vault, Ethereum, $1M+ TVL
-  "usdn-smardex": "f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109",
   // HedgeCore sUSD's gross Venus USDC pin is permanently excluded (2026-09-27):
   // holder rewards are 93% of Venus APY, not the gross pool quote. Read-only BSC
   // convertToAssets / exchangeRateStored / totalAssets calls revert on sUSD;
@@ -111,4 +109,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "ybold-yearn": "4c29f645-12db-461f-a1d7-16900d624271",
   // yvUSDC - yearn-finance USDC vault, Ethereum, $29M TVL, ~3.43% APY
   "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",
+  // apyUSD holder vault; DL labels its apxUSD deposit asset. RateView measures vested holder income.
+  "apyusd-apyx": "cb6139f9-4a68-4efd-8245-0312a92aee55",
 };

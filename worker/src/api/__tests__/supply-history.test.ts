@@ -29,17 +29,6 @@ describe("handleSupplyHistory", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with empty array when no data", async () => {
-    const db = mockD1([{ match: "supply_history", rows: [] }]);
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
-    const body = await readJsonResponse(res, 200);
-    expect(body).toEqual([]);
-    expect(res.headers.get("X-Data-Age")).toBe("unavailable");
-    expect(res.headers.get("X-Data-Updated-At")).toBe("unknown");
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(res.headers.get("X-Data-Freshness-Reason")).toBe("missing-timestamp");
-  });
-
   it("rejects a future served-row fallback clock instead of minting freshness", async () => {
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);

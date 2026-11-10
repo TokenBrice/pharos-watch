@@ -191,7 +191,11 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
   const darkHtmlTag = /\sclass\s*=/i.test(htmlTag)
     ? htmlTag.replace(/(\sclass\s*=\s*)(["'])(.*?)\2/i, "$1$2$3 dark$2")
     : htmlTag.replace(/>$/, ' class="dark">');
-  let after = (await optimizer.process(before.replace(htmlTag, darkHtmlTag)))
+  // Portfolio's before-paint bootstrap selects these rules before full CSS loads.
+  const extractionHtmlTag = before.includes('src="/portfolio-bootstrap.js"')
+    ? darkHtmlTag.replace(/>$/, " data-portfolio-empty>")
+    : darkHtmlTag;
+  let after = (await optimizer.process(before.replace(htmlTag, extractionHtmlTag)))
     .replace(/<html\b[^>]*>/i, htmlTag);
 
   let hasAsyncStylesheet = false;

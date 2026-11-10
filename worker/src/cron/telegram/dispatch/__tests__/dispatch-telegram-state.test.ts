@@ -23,8 +23,10 @@ import { buildReserveTransitions, buildSafetyChanges, planDewsAlerts } from "../
 import {
   buildDispatchSnapshotState,
   loadDewsRows,
+  readPresetFailureCount,
   type DispatchSourceData,
 } from "../dispatch-telegram-state";
+import { presetFailureCountCache } from "../../sources/__tests__/dispatch-telegram-events.test-support";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const completedDewsAt = nowSec - 60;
@@ -111,6 +113,15 @@ async function safetyAssessment(response: ReportCardsV9CurrentResponse | null) {
     sqlite.close();
   }
 }
+
+it.each([
+  [null, 0], ["0", 0], ["7", 7], ["9007199254740991", Number.MAX_SAFE_INTEGER],
+  ["bad", null], ["", null], [" ", null], ["-1", null], ["1.5", null],
+  ["1e-9999", null], ["1.0000000000000001", null], ["Infinity", null],
+  ["9007199254740992", null], [new Error("preset-count-read-failed"), null],
+] as const)("reads preset failure count %s as %s", async (value, expected) => {
+  await expect(readPresetFailureCount(mockD1([presetFailureCountCache(value)]))).resolves.toBe(expected);
+});
 
 describe("loadDewsRows", () => {
   it("uses the published DEWS generation pointer as the reader cutoff", async () => {

@@ -80,7 +80,7 @@ For the deceptive-content category specifically, build a mental model of what a 
 
 **Signature:** A form with email + password inputs (or seed-phrase-like patterns) on a non-login page; a "verify your account" CTA without backend context; a "claim your tokens" button.
 
-**Fix:** Explain the affected ceremony positively and accurately. `npm run check:sensitive-page-copy` (part of `check:structural`) enforces `FORBIDDEN_COPY` over `SENSITIVE_COPY_ROOTS` in `scripts/ci/check-sensitive-page-copy.ts`; consult those registries before authoring disclaimers. Do not widen the phrase list to make copy pass. Do not reintroduce the retired email-verification form or imply that supporter-key issuance collects contact details.
+**Fix:** Explain the affected ceremony positively and accurately. `npm run check:sensitive-page-copy` (selected by the PR static-check plan; a dedicated nightly leaf, not a `check:structural` member) enforces `FORBIDDEN_COPY` over `SENSITIVE_COPY_ROOTS` in `scripts/ci/check-sensitive-page-copy.ts`; consult those registries before authoring disclaimers. Do not widen the phrase list to make copy pass. Do not reintroduce the retired email-verification form or imply that supporter-key issuance collects contact details.
 
 #### C. Brand / system-warning impersonation
 

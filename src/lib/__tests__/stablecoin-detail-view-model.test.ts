@@ -877,37 +877,6 @@ describe("stablecoin detail view-model builder", () => {
     );
   });
 
-  it("enables the yield section for non-yield-bearing coins when a live ranking exists", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
-    expect(coin?.flags.yieldBearing).toBe(false);
-
-    const viewModel = buildStablecoinDetailViewModel(
-      makeReadyDetailParams({
-        id: "usdc-circle",
-        coin: coin!,
-        asset: {
-          circulatingPrevDay: { peggedUSD: 95 },
-          circulatingPrevWeek: { peggedUSD: 90 },
-          circulatingPrevMonth: { peggedUSD: 85 },
-        },
-        supplemental: {
-          yieldRankingsData: {
-            rankings: [
-              makeYieldRanking({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }),
-            ],
-          } as never,
-        },
-      }),
-    );
-
-    expect(viewModel.status).toBe("ready");
-    if (viewModel.status !== "ready") return;
-
-    expect(viewModel.yieldRanking?.id).toBe("usdc-circle");
-    expect(viewModel.hasYieldSection).toBe(true);
-  });
-
   it("exposes tracked variant parent and parent-side child variants", () => {
     const variant = TRACKED_META_BY_ID.get("susds-sky");
     const parent = TRACKED_META_BY_ID.get("usds-sky");

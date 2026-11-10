@@ -10,7 +10,8 @@ import { escapeHtml } from "../delivery/telegram";
 const CEMETERY_SNAPSHOT_CACHE_KEY = "telegram:cemetery-snapshot";
 const CEMETERY_FOOTER_INDEX_CACHE_KEY = "telegram:cemetery-footer-index";
 const TRACKED_SNAPSHOT_CACHE_KEY = "telegram:tracked-stablecoins-snapshot";
-const TRACKED_PENDING_CACHE_KEY = "telegram:tracked-stablecoins-pending";
+export const TRACKED_PENDING_CACHE_KEY = "telegram:tracked-stablecoins-pending";
+export const TRACKED_CONSUMED_CACHE_KEY = "telegram:tracked-stablecoins-consumed";
 const PRE_LAUNCH_SNAPSHOT_CACHE_KEY = "telegram:prelaunch-stablecoins-snapshot";
 const FROZEN_SNAPSHOT_CACHE_KEY = "frozen_ids_snapshot";
 
@@ -391,18 +392,13 @@ export async function prepareTelegramDigestAppendices(
       seedReasons: ["launched:first-run", "launched:invalid-reseeded"],
       diff: diffLaunchedIds,
       hasAdditions: (ids) => ids.size > 0,
-      render: async (ids) => {
+      render: (ids) => {
         launchedIds = ids;
-        const cachedPending = await getCache(db, TRACKED_PENDING_CACHE_KEY);
-        const pendingIds = cachedPending ? parseSnapshotKeys(cachedPending.value) : null;
-        const remainingPending = [...(pendingIds ?? [])].filter((id) => !ids.has(id));
         return {
           appendixHtml: buildLaunchedAppendix(
             [...ids].map((id) => TRACKED_META_BY_ID.get(id)).filter((coin): coin is TrackedStablecoinMeta => coin != null),
           ),
-          successActions: pendingIds != null && remainingPending.length !== pendingIds.size
-            ? [{ key: TRACKED_PENDING_CACHE_KEY, value: JSON.stringify(remainingPending) }]
-            : [],
+          successActions: [{ key: TRACKED_CONSUMED_CACHE_KEY, value: JSON.stringify([...ids]) }],
         };
       },
       applyMetadata: (ids) => {
@@ -416,6 +412,7 @@ export async function prepareTelegramDigestAppendices(
   );
 
   const trackedSnapshotPayload = buildTrackedSnapshotPayload();
+  let evaluatedTrackedIds: ReadonlySet<string> = new Set();
   await prepareSetSnapshotAppendix(
     db,
     {
@@ -431,10 +428,14 @@ export async function prepareTelegramDigestAppendices(
       mergePending: async (additions) => {
         const cachedPending = await getCache(db, TRACKED_PENDING_CACHE_KEY);
         const parsedPending = cachedPending ? parseSnapshotKeys(cachedPending.value) : null;
-        return new Set([
+        evaluatedTrackedIds = new Set([
           ...(additions ?? []),
           ...Array.from(parsedPending ?? []).filter((id) => TRACKED_META_BY_ID.has(id)),
         ].filter((id) => !launchedIds.has(id)));
+        return new Set([...evaluatedTrackedIds].filter((id) => {
+          const coin = TRACKED_META_BY_ID.get(id);
+          return coin != null && isTrackedAnnouncementCoin(coin);
+        }));
       },
       hasAdditions: (ids) => ids.size > 0,
       render: (ids) => {
@@ -448,10 +449,6 @@ export async function prepareTelegramDigestAppendices(
         }
         return {
           appendixHtml: buildTrackedAppendix(trackedCoins, preLaunchCoins),
-          successActions: [{
-            key: TRACKED_PENDING_CACHE_KEY,
-            value: JSON.stringify([]),
-          }],
         };
       },
       applyMetadata: (ids) => {
@@ -469,6 +466,9 @@ export async function prepareTelegramDigestAppendices(
     },
     snapshotAppendixState,
   );
+  if (evaluatedTrackedIds.size > 0) {
+    postSuccessWrites.push({ key: TRACKED_CONSUMED_CACHE_KEY, value: JSON.stringify([...evaluatedTrackedIds]) });
+  }
 
   await prepareSetSnapshotAppendix(
     db,

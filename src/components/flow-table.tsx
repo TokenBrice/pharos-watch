@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   TableCell,
   TableRow,
@@ -98,7 +99,7 @@ function buildFlowTableColumns(unknown: UnknownCounts, total: number): readonly 
       sortKey: "net90d",
       className: unknown["90d"] > 0 ? "hidden w-[188px] text-right xl:table-cell" : "hidden w-[112px] text-right xl:table-cell",
     },
-    { id: "largest", label: "Largest event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
+    { id: "largest", label: "Largest valued event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
   ];
 }
 
@@ -154,6 +155,7 @@ function FlowNetCell({
 function hasNoObserved24hActivity(coin: MintBurnCoinFlow): boolean {
   const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
   return (
+    (coin.classification?.window24h.completeness == null || coin.classification.window24h.completeness === "complete") &&
     inferHas24hActivity(coin) === false &&
     coin.mintVolume24hUsd === 0 &&
     coin.burnVolume24hUsd === 0 &&
@@ -238,33 +240,38 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 key={coin.stablecoinId}
                 onActivate={() => router.push(buildStablecoinUrl(coin.stablecoinId))}
                 onHover={() => prefetch(coin.stablecoinId)}
-                role="link"
-                ariaLabel={`Open ${label} flow detail`}
                 className="h-11 sm:h-auto"
               >
                 <TableCell className="w-[126px] max-w-[126px] overflow-hidden sm:w-[150px] sm:max-w-[150px]">
-                  <StablecoinIdentity
-                    logoSrc={logos?.[coin.stablecoinId]}
-                    name={name}
-                    symbol={label}
-                    logoSize={24}
-                    className="min-w-0"
-                    textClassName="flex min-w-0 flex-col items-start gap-0.5"
-                    symbolRowClassName="min-w-0 gap-1.5"
-                    symbolClassName="whitespace-normal break-words"
-                    details={
-                      coverageBadge ? (
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full border px-1.5 py-0.5 text-xs font-medium leading-none",
-                            coverageBadge.className,
-                          )}
-                        >
-                          {coverageBadge.label}
-                        </span>
-                      ) : null
-                    }
-                  />
+                  <Link
+                    href={buildStablecoinUrl(coin.stablecoinId)}
+                    prefetch={false}
+                    aria-label={`Open ${label} flow detail`}
+                    className="pharos-focus-ring block min-w-0 rounded-md"
+                  >
+                    <StablecoinIdentity
+                      logoSrc={logos?.[coin.stablecoinId]}
+                      name={name}
+                      symbol={label}
+                      logoSize={24}
+                      className="min-w-0"
+                      textClassName="flex min-w-0 flex-col items-start gap-0.5"
+                      symbolRowClassName="min-w-0 gap-1.5"
+                      symbolClassName="whitespace-normal break-words"
+                      details={
+                        coverageBadge ? (
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full border px-1.5 py-0.5 text-xs font-medium leading-none",
+                              coverageBadge.className,
+                            )}
+                          >
+                            {coverageBadge.label}
+                          </span>
+                        ) : null
+                      }
+                    />
+                  </Link>
                 </TableCell>
                 <TableCell className="text-right">
                   <span
@@ -292,18 +299,17 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                       )}
                   </span>
                 </TableCell>
-                <TableCell className="text-right">
-                  <FlowSignedNetValue
-                    net={resolveCoinNetFlow(coin, "24h")}
-                    format={formatSignedCurrency}
-                    colorClassName={getNetColor}
-                    className="pharos-numeric text-sm font-semibold"
-                    unknownMarker="sr-only"
-                  />
-                </TableCell>
+                <FlowNetCell
+                  net={resolveCoinNetFlow(coin, "24h", true)}
+                  hasWindow={coin.coverage?.has24hWindow}
+                  cellClassName="text-right pharos-numeric text-sm font-semibold"
+                  windowLabel="24h"
+                />
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
                   <FlowVolumeValue
                     valueUsd={coin.mintVolume24hUsd}
+                    classificationCompleteness={coin.classification?.window24h.mintCompleteness}
+                    unresolvedEventCount={coin.classification?.window24h.unresolvedMintEventCount}
                     completeness={window24h.mintCompleteness}
                     unpricedEventCount={window24h.unpricedMintEventCount}
                     scanComplete={hasCompleteCoinScan(coin, "24h")}
@@ -313,28 +319,28 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
                   <FlowVolumeValue
                     valueUsd={coin.burnVolume24hUsd}
+                    classificationCompleteness={coin.classification?.window24h.burnCompleteness}
+                    unresolvedEventCount={coin.classification?.window24h.unresolvedBurnEventCount}
                     completeness={window24h.burnCompleteness}
                     unpricedEventCount={window24h.unpricedBurnEventCount}
                     scanComplete={hasCompleteCoinScan(coin, "24h")}
                     format={formatCurrency}
                   />
                 </TableCell>
-                <TableCell className="hidden text-right pharos-numeric md:table-cell">
-                  <FlowSignedNetValue
-                    net={resolveCoinNetFlow(coin, "7d")}
-                    format={formatSignedCurrency}
-                    colorClassName={getNetColor}
-                    unknownMarker="sr-only"
-                  />
-                </TableCell>
                 <FlowNetCell
-                  net={resolveCoinNetFlow(coin, "30d")}
+                  net={resolveCoinNetFlow(coin, "7d", true)}
+                  hasWindow={coin.coverage?.has7dWindow}
+                  cellClassName="hidden text-right pharos-numeric md:table-cell"
+                  windowLabel="7-day"
+                />
+                <FlowNetCell
+                  net={resolveCoinNetFlow(coin, "30d", true)}
                   hasWindow={coin.coverage?.has30dWindow}
                   cellClassName="hidden text-right pharos-numeric lg:table-cell"
                   windowLabel="30-day"
                 />
                 <FlowNetCell
-                  net={resolveCoinNetFlow(coin, "90d")}
+                  net={resolveCoinNetFlow(coin, "90d", true)}
                   hasWindow={coin.coverage?.has90dWindow}
                   cellClassName="hidden text-right pharos-numeric xl:table-cell"
                   windowLabel="90-day"
@@ -342,6 +348,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="hidden text-right pharos-numeric xl:table-cell">
                   {coin.largestEvent24h ? (
                     <span
+                      title="Largest USD-valued counted event in the admitted tracked-chain scope over 24h"
                       className={
                         coin.largestEvent24h.direction === "mint"
                           ? "text-state-positive"

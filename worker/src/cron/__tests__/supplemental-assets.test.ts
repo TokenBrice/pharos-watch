@@ -388,6 +388,22 @@ describe("fetchSupplementalPriceData", () => {
       consecutiveFailures: 1,
     });
   });
+
+  it.each([
+    ["a non-OK response", 404, {}],
+    ["an unparseable body", 200, "{"],
+  ])("records %s from supplemental DefiLlama prices as a DL coins failure", async (_case, status, body) => {
+    const db = mockD1([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [] }]);
+    mockFetch([{ match: () => true, status, body }]);
+    const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
+
+    await expect(fetchSupplementalPriceData([meta], "supplemental-test", undefined, db)).resolves.toEqual({ coins: {} });
+
+    const circuitWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({ consecutiveFailures: 1 });
+  });
 });
 
 describe("fetchGoldTokens", () => {

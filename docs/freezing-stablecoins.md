@@ -1,6 +1,6 @@
 # Freezing a Tracked Stablecoin
 
-Operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase. Frozen coins keep their detail page and historical data as a read-only archive but are excluded from every live aggregate, score recomputation, and write-side cron.
+Operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase. Frozen coins keep their detail page and historical data as a read-only archive but are excluded from every live aggregate and score recomputation, and no write-side cron collects new per-coin observations for them; `sync-stablecoins` still merges each captured frozen snapshot into the published `stablecoins` cache.
 
 ## When to freeze
 
@@ -32,7 +32,7 @@ If `/api/stablecoins` no longer serves the coin, the snapshot is built from its 
 ### 2. Apply the JSON edits
 
 - Append the snapshot entry to `frozen-snapshots.json`.
-- In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings with finalized copy and review the generated `deathDate` (defaults to the freeze month, not the actual death date) and `peakMcap` (maximum observed within 1,825 days, not a guaranteed lifetime peak; omit it without reliable evidence). Follow [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record).
+- In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings with finalized copy and review the generated `deathDate` (defaults to the freeze month, not the actual death date) and `peakMcap` (maximum over the last 1,825 days on the live path; the supply-history fallback uses the full retained history, so it can be a lifetime peak; omit it without reliable evidence). Follow [Cemetery and Compare](./cemetery-and-compare.md#curating-a-record).
 - The cemetery row's `recordedAt` (the UTC date the record entered Pharos) is `frozenAt` unless `obituary.recordedAt` overrides it. Set `obituary.recordedAt` to the strict UTC `YYYY-MM-DD` on which the coin enters the cemetery only when `frozenAt` preserves an earlier historical freeze date. The row also takes the coin's `mechanismArchetype`, so keep that field.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
 
@@ -51,7 +51,7 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 - `shared/lib/redemption-backstop-configs/` — remove the coin's route if it uses `capacityModel: { kind: "reserve-sync-metadata" }`: that route needs an unsuspended `liveReservesConfig`, which a frozen coin cannot keep (`npx tsx scripts/ci/check-redemption-backstops.ts`). Other route kinds stay as archive history; the live sync cohort excludes non-active IDs, so a frozen config is not published as a live redemption row.
 - `worker/src/lib/stablecoin-publication-coverage.ts` — remove the coin's `STABLECOIN_PRICE_GAP_REVIEWS` row as part of the active→frozen transition; an inactive-ID review is invalid, not retained history. Run `worker/src/lib/__tests__/stablecoin-publication-coverage.test.ts` and `public-health-assessment.test.ts`.
 - `worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts` — remove from `LOW_VOLUME_CG_FALLBACK_IDS` if present. Its adjacent `__tests__/enrich-prices-coingecko-low-volume-pass.test.ts` enforces active membership and the unchanged seven-day source-age policy.
-- `src/lib/compare-pages.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin.
+- `src/lib/compare-links.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin (validated by `src/lib/compare-pages.ts`).
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.
 - **Authoritative price providers and identity guards stay in place** (e.g. `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/solomon-usdv-identity.ts`). Live candidates are gated on `ACTIVE_IDS`, so a frozen ID cannot run, and the guards that stop a frozen or aliased row from inheriting a successor's provider or DefiLlama price still apply. Record the freeze in `docs/process/pricing-pipeline-appendix.md` when the route is coin-specific; do not delete the provider.
 - **`liveReservesConfig` block in the coin's own meta JSON.** If the frozen coin has a `liveReservesConfig` field on its `StablecoinMeta`, **delete that field**. Otherwise the live-reserves cron's `ACTIVE_STABLECOINS.filter(coin.liveReservesConfig)` would still include the coin once the registry filter widens (it is currently safe because `ACTIVE_STABLECOINS` excludes frozen, but removing the config eliminates ambiguity and matches the "no live data sources" intent of the freeze). Exception: keep a `suspended` binding that anchors a staged adapter review's `retainedBinding` (bnUSD(old)'s `sodax-sonic`); frozen coins never enter the live cohort.
@@ -112,7 +112,7 @@ Commit/push according to [Pre-push readiness](./testing.md#pre-push-readiness) a
 
 - Visit `/cemetery/#<id>`: confirm the coin's register row opens, its autopsy reads "Tracked archive: frozen detail page" with an "Archived data →" link to `/stablecoin/<id>/`, and the key-facts "Latest record added" date reflects its `recordedAt` when it is the newest record. On the plot map, confirm its grave stands in its cause's section and death year with a bronze plaque and its logo on the medallion.
 - Visit `/stablecoin/<id>/` — confirm the frozen banner below the hero (within the identity zone), and the "Data frozen on YYYY-MM-DD" footer above each chart section.
-- Inspect Worker logs — confirm no INSERT/UPDATE for the coin's id from any cron.
+- Inspect Worker logs — confirm no cron INSERTs or UPDATEs a per-coin row for the coin's id; the archived row in the `stablecoins` cache is expected.
 - With a valid prior frozen-ID snapshot, confirm the next daily Telegram digest includes **Newly Frozen Stablecoins** for the coin (`frozenDetected` in appendix metadata). An absent or invalid baseline is seeded silently, not replayed. The cemetery appendix diffs `DEAD_STABLECOINS` only and stays silent on a freeze.
 - Test OG: `https://api.pharos.watch/api/og/stablecoin/<id>` returns 200.
 

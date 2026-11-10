@@ -16,7 +16,7 @@ import { getPublicProducerGraceBudget, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PROD
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
-import type { CronRunDetail, DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
+import type { CanaryStatus, CronRunDetail, DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { maxStatus, SEVERITY } from "../status-reliability-shared";
@@ -26,6 +26,7 @@ import { SCHEDULED_DELIVERY_LAG_SIGNAL, type CronFindingJobs, type ScheduledDeli
 import { getSourceFailureMessage } from "./section-errors";
 import { expiringReviews } from "./evaluation-causes";
 import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES, type SafetyPublicationSizeObservation } from "./safety-publication-size";
+import { resolveDepegBlindEventReviews } from "../canary-checks-depeg";
 
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed
@@ -950,8 +951,9 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
               "data-quality",
               "stablecoin_publication_incomplete",
               status === "healthy" ? "info" : "warning",
-              `Stablecoin publication is missing ${missing.length} unwaived active ID(s)` +
-                (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
+              missing.length === 0
+                ? `Stablecoin publication counts do not reconcile with the deployed catalog (${publication.presentActiveCount} present + ${publication.waivedActiveCount} waived of ${publication.expectedActiveCount} expected).`
+                : `Stablecoin publication is missing ${missing.length} unwaived active ID(s): ${examples}${missing.length > 12 ? ", ..." : ""}.`,
               { metric: "missingActiveStablecoins", value: missing.length, threshold: 1 },
             );
           })()
@@ -1186,6 +1188,32 @@ function formatPersistentStaleIndependentFeeds(
   return `${coins.length} persistently stale independent feed(s)${examples ? ` (${examples}${suffix})` : ""}`;
 }
 
+export function evaluateDepegBlindReviewCauses(canaries: Pick<CanaryStatus, "checks" | "maxAgeSec"> | null | undefined, nowSec: number): StatusCause[] {
+  if (!canaries) return [];
+  const check = canaries.checks["depeg-open-coverage"];
+  const ids: unknown = check?.metadata?.acknowledgedBlindReviewIds;
+  if (!check || check.executionStatus !== "completed" || !["ok", "degraded"].includes(check.status)
+    || !Number.isFinite(check.observedAt) || check.observedAt <= 0 || check.observedAt > nowSec
+    || !Number.isFinite(canaries.maxAgeSec) || canaries.maxAgeSec <= 0 || nowSec - check.observedAt > canaries.maxAgeSec
+    || !Array.isArray(ids) || !(ids as unknown[]).every((id) => typeof id === "number" && Number.isSafeInteger(id) && id > 0)) return [];
+  // Re-resolve at read time: retained canary metadata cannot renew an expired review.
+  const active = resolveDepegBlindEventReviews(nowSec);
+  const reviews = [...new Set(ids as number[])].flatMap((id) => {
+    const review = active.get(id);
+    return review ? [review] : [];
+  });
+  if (reviews.length === 0) return [];
+  const causes = [makeCause("data-quality", "depeg_blind_event_reviews_acknowledged", "info",
+    `Reviewed blind open-event coverage: ${reviews.map((review) =>
+      `${review.stablecoinId}(${review.eventId}) (expires ${new Date(review.expiresAt * 1000).toISOString()})`).join(", ")}. Raw blindness, events and trusted-price rules are unchanged.`)];
+  const expiring = expiringReviews(reviews.map((review) => ({ id: `${review.stablecoinId}(${review.eventId})`, expiresAt: review.expiresAt })), nowSec);
+  if (expiring.length > 0) causes.push(makeCause("data-quality", "depeg_blind_event_reviews_expiring", "info",
+    `Blind-event review(s) currently acknowledging open-event coverage expire within 48h: ${expiring.map((review) =>
+      `${review.id} (expires ${new Date(review.expiresAt * 1000).toISOString()}, ${Math.floor(review.remainingSec / 3600)}h left)`).join(", ")}. Renew with fresh evidence or let blind coverage re-alert.`,
+    { metric: "depegBlindEventReviewsExpiringSoonestSec", value: expiring[0].remainingSec, threshold: STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC }));
+  return causes;
+}
+
 const RUNBOOK_BASE = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks";
 
 const RUNBOOK_BY_CODE: Record<string, string> = {
@@ -1204,6 +1232,7 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   active_price_coverage_breadth_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   price_gap_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
+  depeg_blind_event_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
   price_gap_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
   price_gap_reviews_invalid: `${RUNBOOK_BASE}/review-renewal.md`,
   price_market_hours_calendars_invalid: `${RUNBOOK_BASE}/review-renewal.md`,

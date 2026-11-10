@@ -3,7 +3,6 @@ import {
   DEX_MEASURED_MAX_COST_BPS,
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
   buildDexMeasuredExecutionTargetId,
-  type DexMeasuredExecutionQuotePointProof,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -282,13 +281,27 @@ export function buildReviewedV2Profile(input: {
   const pancakeDeployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
     (deployment) => deployment.source === "pancakeswap-v2",
   )!;
+  const callData = `0xe6a43905${addressWord(replay.stablecoinAddress).slice(2)}${addressWord(
+    replay.counterAddress,
+  ).slice(2)}`;
   const profile = {
-    ...buildMeasuredProfile({
-      replay,
+    ...buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target,
+      targetGenerationId: "evm-v2-fixture-targets",
+      quoteGenerationId: "evm-v2-fixture-quotes",
+      quotedAt: target.capturedAt + 1,
+      blockNumber: EVM_V2_REPLAY_BLOCK,
+      endpointAddress: replay.poolAddress,
+      endpointCodeHash: `0x${"ab".repeat(32)}`,
+      poolBindingProof: {
+        factoryAddress: pancakeDeployment.factoryAddress,
+        factoryCodeHash: pancakeDeployment.expectedFactoryCodeHash,
+        resolvedPoolAddress: replay.poolAddress,
+        callData,
+        returnData: addressWord(replay.poolAddress),
+      },
       points,
-      factoryAddress: pancakeDeployment.factoryAddress,
-      factoryCodeHash: pancakeDeployment.expectedFactoryCodeHash,
     }),
   };
 
@@ -296,34 +309,4 @@ export function buildReviewedV2Profile(input: {
     profile,
     capacityCurve,
   };
-}
-
-function buildMeasuredProfile(input: {
-  replay: EvmV2ReplayCase;
-  target: DexMeasuredExecutionTarget;
-  points: DexMeasuredExecutionQuotePointProof[];
-  factoryAddress: `0x${string}`;
-  factoryCodeHash: `0x${string}`;
-}): DexMeasuredExecutionProfile {
-  const callData = `0xe6a43905${addressWord(input.replay.stablecoinAddress).slice(2)}${addressWord(
-    input.replay.counterAddress,
-  ).slice(2)}`;
-  return buildDexMeasuredExecutionProfile({
-    blockHash: `0x${"ab".repeat(32)}`,
-    target: input.target,
-    targetGenerationId: "evm-v2-fixture-targets",
-    quoteGenerationId: "evm-v2-fixture-quotes",
-    quotedAt: input.target.capturedAt + 1,
-    blockNumber: EVM_V2_REPLAY_BLOCK,
-    endpointAddress: input.replay.poolAddress,
-    endpointCodeHash: `0x${"ab".repeat(32)}`,
-    poolBindingProof: {
-      factoryAddress: input.factoryAddress,
-      factoryCodeHash: input.factoryCodeHash,
-      resolvedPoolAddress: input.replay.poolAddress,
-      callData,
-      returnData: addressWord(input.replay.poolAddress),
-    },
-    points: input.points,
-  });
 }

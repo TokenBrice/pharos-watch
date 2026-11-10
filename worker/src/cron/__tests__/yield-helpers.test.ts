@@ -504,12 +504,12 @@ describe("matchAllDlPools", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("does not accept Layer 3 substring-only symbol matches", () => {
+  it.each([["usdh-test", "USDH", "FEUSDH"], ["usdn-smardex", "USDN", "USDN"]])("rejects substring/gap matches: %s", (id, symbol, poolSymbol) => {
     const pools = [
-      makeDlYieldPool({ pool: "p1", symbol: "FEUSDH", project: "test", tvlUsd: 5e6, apy: 3, apyBase: 3, stablecoin: true }),
+      makeDlYieldPool({ pool: "p1", symbol: poolSymbol, project: "test", tvlUsd: 5e6, apy: 3, apyBase: 3, stablecoin: true }),
     ];
 
-    const result = matchAllDlPools("usdh-test", "USDH", pools, {}, {});
+    const result = matchAllDlPools(id, symbol, pools, {}, {});
     expect(result).toHaveLength(0);
   });
 
@@ -721,6 +721,18 @@ describe("findBestLendingPool", () => {
 });
 
 describe("isBlockedYieldOpportunitySource", () => {
+  it.each([
+    ["radiant-v2", "any", true], ["sovryn-dex", "any", true],
+    ["loopscale", "any", true], ["loopscale-lending", "any", true],
+    ["truefi", "ca6ed758-967b-46ec-9e88-8fe50d7cc188", true], ["truefi", "replacement", false],
+    ["brila", "replacement", false],
+    ["brila", "ca6ed758-967b-46ec-9e88-8fe50d7cc188", true],
+    ["blend-pools-v2", "ecf788e3-d2ef-4fdd-9ece-8a2d96226ddf", true],
+    ["blend-pools-v2", "v2.1", false],
+  ] as const)("scopes the reviewed %s hold to pool %s", (project, pool, blocked) => {
+    expect(isBlockedYieldOpportunitySource({ project, pool })).toBe(blocked);
+  });
+
   it("matches Resolv and USR aliases", () => {
     expect(isBlockedYieldOpportunitySource({ yieldSource: "Morpho: Resolv USDC" })).toBe(true);
     expect(isBlockedYieldOpportunitySource({ yieldSource: "Vault using stUSR" })).toBe(true);

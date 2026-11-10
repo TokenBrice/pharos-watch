@@ -1,9 +1,8 @@
 import { execFileSync } from "node:child_process";
 import type * as ChildProcess from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   compileInputStageArtifacts,
   criticalCssScopeForLane,
@@ -15,6 +14,12 @@ import {
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { depegLedgerCaptureId } from "../lib/depeg-ledger-capture.ts";
 import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
+
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const { makeRoot, cleanup } = createTempRepoTracker("pages-artifact-lane");
+beforeEach(() => { spawn.mockReset().mockReturnValue({ status: 0, signal: null }); });
+afterEach(() => { vi.unstubAllEnvs(); cleanup(); });
 
 const spawn = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async (importOriginal) => ({
@@ -71,79 +76,55 @@ describe("Pages artifact input profile", () => {
   });
 
   it("adds any compile-input output the transported workspace lacks", () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-prepared-outputs-"));
-    try {
-      preparedCompileInputOutputs(root);
-      expect(compileInputStageArtifacts(root)).toEqual(RERUN_COMPILE_INPUT_IDS);
-      rmSync(join(root, "shared/data/safety-score-v9/incident-runtime-v1.generated.json"));
-      expect(compileInputStageArtifacts(root)).toEqual(
-        [...RERUN_COMPILE_INPUT_IDS, "safety-score-v9-incident-runtime"].sort(),
-      );
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    preparedCompileInputOutputs(root);
+    expect(compileInputStageArtifacts(root)).toEqual(RERUN_COMPILE_INPUT_IDS);
+    rmSync(join(root, "shared/data/safety-score-v9/incident-runtime-v1.generated.json"));
+    expect(compileInputStageArtifacts(root)).toEqual(
+      [...RERUN_COMPILE_INPUT_IDS, "safety-score-v9-incident-runtime"].sort(),
+    );
   });
 
   it("reruns only those artifacts when reuse of the prepared workspace is requested", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-reuse-workspace-"));
-    try {
-      dataFixture(root);
-      preparedCompileInputOutputs(root);
-      vi.stubEnv("PHAROS_PAGES_REUSE_PREPARED_WORKSPACE", "1");
-      spawn.mockReset();
-      spawn.mockReturnValue({ status: 0, signal: null });
-      await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).resolves.toMatchObject({ dataStatus: "degraded-data" });
-      const compileInputs = spawn.mock.calls.filter((call) => call[1].some((arg: string) => arg.includes("run-generated-artifacts.ts")));
-      expect(compileInputs).toHaveLength(1);
-      expect(compileInputs[0][0]).toBe(process.execPath);
-      expect(compileInputs[0][1]).toEqual([
-        "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts",
-        `--only=${RERUN_COMPILE_INPUT_IDS.join(",")}`,
-      ]);
-      expect(spawn.mock.calls.some((call) => call[1].includes("generated:compile-input"))).toBe(false);
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    dataFixture(root);
+    preparedCompileInputOutputs(root);
+    vi.stubEnv("PHAROS_PAGES_REUSE_PREPARED_WORKSPACE", "1");
+    await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).resolves.toMatchObject({ dataStatus: "degraded-data" });
+    const compileInputs = spawn.mock.calls.filter((call) => call[1].some((arg: string) => arg.includes("run-generated-artifacts.ts")));
+    expect(compileInputs).toHaveLength(1);
+    expect(compileInputs[0][0]).toBe(process.execPath);
+    expect(compileInputs[0][1]).toEqual([
+      "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts",
+      `--only=${RERUN_COMPILE_INPUT_IDS.join(",")}`,
+    ]);
+    expect(spawn.mock.calls.some((call) => call[1].includes("generated:compile-input"))).toBe(false);
   });
 
   it("reruns every missing compile-input artifact when the prepared workspace is empty", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-reuse-incomplete-"));
-    try {
-      dataFixture(root);
-      vi.stubEnv("PHAROS_PAGES_REUSE_PREPARED_WORKSPACE", "1");
-      spawn.mockReset();
-      spawn.mockReturnValue({ status: 0, signal: null });
-      await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-      const compileInputs = spawn.mock.calls.filter((call) => call[1].some((arg: string) => arg.includes("run-generated-artifacts.ts")));
-      expect(compileInputs).toHaveLength(1);
-      const only = (compileInputs[0][1] as string[]).find((arg) => arg.startsWith("--only="))!;
-      expect(only.slice("--only=".length).split(",")).toEqual(expect.arrayContaining([
-        ...RERUN_COMPILE_INPUT_IDS,
-        "sitemap-dates",
-        "docs-metadata",
-        "safety-score-v9-incident-runtime",
-        "safety-score-v9-incident-review-key-migration",
-        "safety-score-v9-lane-emitter-descriptors",
-      ]));
-      expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(false);
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    dataFixture(root);
+    vi.stubEnv("PHAROS_PAGES_REUSE_PREPARED_WORKSPACE", "1");
+    await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    const compileInputs = spawn.mock.calls.filter((call) => call[1].some((arg: string) => arg.includes("run-generated-artifacts.ts")));
+    expect(compileInputs).toHaveLength(1);
+    const only = (compileInputs[0][1] as string[]).find((arg) => arg.startsWith("--only="))!;
+    expect(only.slice("--only=".length).split(",")).toEqual(expect.arrayContaining([
+      ...RERUN_COMPILE_INPUT_IDS,
+      "sitemap-dates",
+      "docs-metadata",
+      "safety-score-v9-incident-runtime",
+      "safety-score-v9-incident-review-key-migration",
+      "safety-score-v9-lane-emitter-descriptors",
+    ]));
+    expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(false);
   });
 
   it("keeps the full compile-input lifecycle without the reuse flag", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-full-compile-input-"));
-    try {
-      dataFixture(root);
-      spawn.mockReset();
-      spawn.mockReturnValue({ status: 0, signal: null });
-      await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-      expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(true);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    dataFixture(root);
+    await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(true);
   });
 
   it.each([
@@ -153,135 +134,105 @@ describe("Pages artifact input profile", () => {
     { value: undefined, scope: "all" },
   ] as const)("narrows critical CSS only for an explicit full-pass=false ($value)", async ({ value, scope }) => {
     expect(criticalCssScopeForLane({ PHAROS_CRITICAL_CSS_FULL_PASS: value })).toBe(scope);
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-critical-css-scope-"));
-    try {
-      dataFixture(root);
-      vi.stubEnv("PHAROS_CRITICAL_CSS_FULL_PASS", value);
-      spawn.mockReset();
-      spawn.mockReturnValue({ status: 0, signal: null });
-      await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-      const postbuild = spawn.mock.calls.find((call) => call[1].includes("postbuild"));
-      expect(postbuild?.[2].env.PHAROS_CRITICAL_CSS_SCOPE).toBe(scope);
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    dataFixture(root);
+    vi.stubEnv("PHAROS_CRITICAL_CSS_FULL_PASS", value);
+    await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    const postbuild = spawn.mock.calls.find((call) => call[1].includes("postbuild"));
+    expect(postbuild?.[2].env.PHAROS_CRITICAL_CSS_SCOPE).toBe(scope);
   });
 
   it("never forwards acquisition tokens or other credentials to generator/build children", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-child-env-"));
-    try {
-      dataFixture(root);
-      vi.stubEnv("PHAROS_PAGES_REPLAY", "1");
+    const root = makeRoot();
+    dataFixture(root);
+    vi.stubEnv("PHAROS_PAGES_REPLAY", "1");
+    vi.stubEnv("GITHUB_STEP_SUMMARY", join(root, "summary.md"));
+    for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
+      vi.stubEnv(name, "test-credential");
+    }
+    const result = await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    expect(result.dataStatus).toBe("degraded-data");
+    const summary = readFileSync(join(root, "summary.md"), "utf8");
+    expect(summary).toContain("Data status: `degraded-data`");
+    expect(summary).toContain("Reason: `pages-artifact-data-unavailable`");
+    expect(spawn.mock.calls.length).toBeGreaterThan(0);
+    for (const call of spawn.mock.calls) {
+      const childEnv = call[2].env as NodeJS.ProcessEnv;
+      expect(childEnv.NODE_ENV).toBe("production");
+      expect(childEnv.PHAROS_PAGES_REPLAY).toBe("");
       for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
-        vi.stubEnv(name, "test-credential");
+        expect(childEnv).not.toHaveProperty(name);
       }
-      spawn.mockReset();
-      spawn.mockReturnValue({ status: 0, signal: null });
-      const result = await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-      expect(result.dataStatus).toBe("degraded-data");
-      expect(spawn.mock.calls.length).toBeGreaterThan(0);
-      for (const call of spawn.mock.calls) {
-        const childEnv = call[2].env as NodeJS.ProcessEnv;
-        expect(childEnv.NODE_ENV).toBe("production");
-        expect(childEnv.PHAROS_PAGES_REPLAY).toBe("");
-        for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
-          expect(childEnv).not.toHaveProperty(name);
-        }
-      }
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(root, { recursive: true, force: true });
     }
   });
 
   it("waives only wall-clock age after validating and overlaying retained release data", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-retained-replay-"));
-    try {
-      const release = join(root, "release");
-      const candidate = join(root, "candidate");
-      const acquisition = join(root, "acquisition");
-      dataFixture(release);
-      dataFixture(candidate);
-      const artifactName = `pages-release-data-${"a".repeat(40)}`;
-      createPagesReleaseDataArchive(release, join(acquisition, PAGES_RELEASE_DATA_ARCHIVE));
-      write(acquisition, "release-data-result.json", JSON.stringify({
-        schemaVersion: 1, dataStatus: "release-snapshot", artifactName,
-      }));
-      vi.stubEnv("PAGES_RELEASE_DATA_DIR", acquisition);
-      spawn.mockReset();
-      spawn.mockReturnValue({ status: 0, signal: null });
-      await expect(runPagesArtifactLane({ repoRoot: candidate })).resolves.toEqual({
-        dataStatus: "release-snapshot", artifactName,
-      });
-      expect(spawn.mock.calls.length).toBeGreaterThan(0);
-      for (const call of spawn.mock.calls) expect(call[2].env.PHAROS_PAGES_REPLAY).toBe("1");
+    const root = makeRoot();
+    const release = join(root, "release");
+    const candidate = join(root, "candidate");
+    const acquisition = join(root, "acquisition");
+    dataFixture(release);
+    dataFixture(candidate);
+    const artifactName = `pages-release-data-${"a".repeat(40)}`;
+    createPagesReleaseDataArchive(release, join(acquisition, PAGES_RELEASE_DATA_ARCHIVE));
+    write(acquisition, "release-data-result.json", JSON.stringify({
+      schemaVersion: 1, dataStatus: "release-snapshot", artifactName,
+    }));
+    vi.stubEnv("PAGES_RELEASE_DATA_DIR", acquisition);
+    vi.stubEnv("GITHUB_STEP_SUMMARY", join(root, "summary.md"));
+    await expect(runPagesArtifactLane({ repoRoot: candidate })).resolves.toEqual({
+      dataStatus: "release-snapshot", artifactName,
+    });
+    const summary = readFileSync(join(root, "summary.md"), "utf8");
+    expect(summary).toContain(`Release artifact: \`${artifactName}\``);
+    expect(summary).not.toContain("pages-artifact-data-unavailable");
+    expect(spawn.mock.calls.length).toBeGreaterThan(0);
+    for (const call of spawn.mock.calls) expect(call[2].env.PHAROS_PAGES_REPLAY).toBe("1");
 
-      // Corruption must fail before any generator/build receives the waiver.
-      write(acquisition, PAGES_RELEASE_DATA_ARCHIVE, "corrupt archive");
-      spawn.mockClear();
-      await expect(runPagesArtifactLane({ repoRoot: candidate })).rejects.toThrow();
-      expect(spawn).not.toHaveBeenCalled();
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(root, { recursive: true, force: true });
-    }
+    // Corruption must fail before any generator/build receives the waiver.
+    write(acquisition, PAGES_RELEASE_DATA_ARCHIVE, "corrupt archive");
+    spawn.mockClear();
+    await expect(runPagesArtifactLane({ repoRoot: candidate })).rejects.toThrow();
+    expect(spawn).not.toHaveBeenCalled();
   });
 
   it.each(["0", "1"])("audits all five routes when explicitly opted in and keeps Lighthouse failure advisory unless enforcement is enabled (%s)", async (enforce) => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-lighthouse-"));
-    try {
-      dataFixture(root);
-      vi.stubEnv("PHAROS_LIGHTHOUSE_ENFORCE", enforce);
-      vi.stubEnv("PHAROS_LIGHTHOUSE_THRESHOLD", "75");
-      spawn.mockReset();
-      spawn.mockImplementation((_program: string, args: string[]) => ({
-        status: args.includes("lighthouse:static") ? 1 : 0, signal: null,
-      }));
-      const result = runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
-      if (enforce === "1") await expect(result).rejects.toThrow("lighthouse");
-      else await expect(result).resolves.toMatchObject({ dataStatus: "degraded-data" });
-      const probes = spawn.mock.calls.filter((call) => call[1].includes("lighthouse:static"));
-      expect(probes.map((call) => call[1][call[1].indexOf("--route") + 1])).toEqual([
-        "/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/",
-      ]);
-      expect(probes[0][1]).toContain("75");
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    dataFixture(root);
+    vi.stubEnv("PHAROS_LIGHTHOUSE_ENFORCE", enforce);
+    vi.stubEnv("PHAROS_LIGHTHOUSE_THRESHOLD", "75");
+    spawn.mockImplementation((_program: string, args: string[]) => ({
+      status: args.includes("lighthouse:static") ? 1 : 0, signal: null,
+    }));
+    const result = runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    if (enforce === "1") await expect(result).rejects.toThrow("lighthouse");
+    else await expect(result).resolves.toMatchObject({ dataStatus: "degraded-data" });
+    const probes = spawn.mock.calls.filter((call) => call[1].includes("lighthouse:static"));
+    expect(probes.map((call) => call[1][call[1].indexOf("--route") + 1])).toEqual([
+      "/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/",
+    ]);
+    expect(probes[0][1]).toContain("75");
+    expect(probes[2][1]).toContain("65");
   });
 
   it("skips Lighthouse unless this lane opts in", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-lighthouse-skip-"));
-    try {
-      dataFixture(root);
-      vi.stubEnv("PHAROS_LIGHTHOUSE_ENFORCE", undefined);
-      spawn.mockReset();
-      spawn.mockReturnValue({ status: 0, signal: null });
-      await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).resolves.toMatchObject({ dataStatus: "degraded-data" });
-      expect(spawn.mock.calls.filter((call) => call[1].includes("lighthouse:static"))).toEqual([]);
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    dataFixture(root);
+    vi.stubEnv("PHAROS_LIGHTHOUSE_ENFORCE", undefined);
+    await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).resolves.toMatchObject({ dataStatus: "degraded-data" });
+    expect(spawn.mock.calls.filter((call) => call[1].includes("lighthouse:static"))).toEqual([]);
   });
 
   it("restores post-refresh outputs it regenerated from release data, even when a gate fails", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-pages-restore-"));
-    try {
-      dataFixture(root);
-      write(root, "public/llms.txt", "candidate llms\n");
-      spawn.mockReset();
-      spawn.mockImplementation((_program: string, args: string[]) => {
-        if (args.includes("generated:post-refresh")) write(root, "public/llms.txt", "release-derived llms\n");
-        return { status: args.includes("check:pages-release") ? 1 : 0, signal: null };
-      });
-      await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).rejects.toThrow(/pages-release-artifact-gates/);
-      expect(readFileSync(join(root, "public/llms.txt"), "utf8")).toBe("candidate llms\n");
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
+    const root = makeRoot();
+    dataFixture(root);
+    write(root, "public/llms.txt", "candidate llms\n");
+    spawn.mockImplementation((_program: string, args: string[]) => {
+      if (args.includes("generated:post-refresh")) write(root, "public/llms.txt", "release-derived llms\n");
+      return { status: args.includes("check:pages-release") ? 1 : 0, signal: null };
+    });
+    await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).rejects.toThrow(/pages-release-artifact-gates/);
+    expect(readFileSync(join(root, "public/llms.txt"), "utf8")).toBe("candidate llms\n");
   });
 
   it("considers only unexpired identity-matched main artifacts, newest first", () => {
@@ -311,39 +262,35 @@ describe("Pages release data archive", () => {
   });
 
   it("replays release inputs without replacing candidate redirects or resurrecting removed coins", () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-release-data-test-"));
-    try {
-      const release = join(root, "release");
-      const candidate = join(root, "candidate");
-      dataFixture(release);
-      write(candidate, "public/_redirects", `/candidate-only /new 301\n${aliases("2026-10-01")}\n`);
-      write(candidate, "src/generated/stablecoin-detail-snapshots/existing.json", '{"lanes":{}}');
-      write(candidate, "src/generated/stablecoin-detail-snapshots/new.json", '{"lanes":{}}');
-      const archive = join(root, "data.tar.zst");
-      createPagesReleaseDataArchive(release, archive);
-      overlayPagesReleaseData(candidate, archive, join(root, "staging"));
-      expect(readFileSync(join(candidate, "public/_redirects"), "utf8")).toBe(`/candidate-only /new 301\n${aliases("2026-10-07")}\n`);
-      expect(readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/existing.json"), "utf8")).toContain('"price":1');
-      expect(readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/new.json"), "utf8")).toBe('{"lanes":{}}');
-      expect(() => readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/removed.json"))).toThrow();
-      expect(readFileSync(join(candidate, "data/digests.json"), "utf8")).toBe('{"release":true}');
-      expect(readFileSync(join(candidate, "data/depeg-events/metadata/capture.json"), "utf8")).toBe('{"release":true}');
-    } finally { rmSync(root, { recursive: true, force: true }); }
+    const root = makeRoot();
+    const release = join(root, "release");
+    const candidate = join(root, "candidate");
+    dataFixture(release);
+    write(candidate, "public/_redirects", `/candidate-only /new 301\n${aliases("2026-10-01")}\n`);
+    write(candidate, "src/generated/stablecoin-detail-snapshots/existing.json", '{"lanes":{}}');
+    write(candidate, "src/generated/stablecoin-detail-snapshots/new.json", '{"lanes":{}}');
+    const archive = join(root, "data.tar.zst");
+    createPagesReleaseDataArchive(release, archive);
+    overlayPagesReleaseData(candidate, archive, join(root, "staging"));
+    expect(readFileSync(join(candidate, "public/_redirects"), "utf8")).toBe(`/candidate-only /new 301\n${aliases("2026-10-07")}\n`);
+    expect(readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/existing.json"), "utf8")).toContain('"price":1');
+    expect(readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/new.json"), "utf8")).toBe('{"lanes":{}}');
+    expect(() => readFileSync(join(candidate, "src/generated/stablecoin-detail-snapshots/removed.json"))).toThrow();
+    expect(readFileSync(join(candidate, "data/digests.json"), "utf8")).toBe('{"release":true}');
+    expect(readFileSync(join(candidate, "data/depeg-events/metadata/capture.json"), "utf8")).toBe('{"release":true}');
   });
 
   it("refuses to publish unexpected files or links inside allowed data directories", () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-release-data-test-"));
-    try {
-      dataFixture(root);
-      write(root, "public/datasets/.env", "not-a-public-input");
-      expect(() => createPagesReleaseDataArchive(root, join(root, "data.tar.zst"))).toThrow(/refusing to archive/);
-      rmSync(join(root, "public/datasets/.env"));
-      symlinkSync(join(root, "data/digests.json"), join(root, "public/datasets/link.json"));
-      expect(() => createPagesReleaseDataArchive(root, join(root, "data.tar.zst"))).toThrow(/refusing to archive/);
-      // Downloaded transport receives the same path boundary, before extraction.
-      execFileSync("tar", ["--zstd", "-cf", join(root, "bad.tar.zst"), "public/datasets/link.json"], { cwd: root });
-      expect(() => overlayPagesReleaseData(root, join(root, "bad.tar.zst"), join(root, "stage"))).toThrow(/links are forbidden/);
-    } finally { rmSync(root, { recursive: true, force: true }); }
+    const root = makeRoot();
+    dataFixture(root);
+    write(root, "public/datasets/.env", "not-a-public-input");
+    expect(() => createPagesReleaseDataArchive(root, join(root, "data.tar.zst"))).toThrow(/refusing to archive/);
+    rmSync(join(root, "public/datasets/.env"));
+    symlinkSync(join(root, "data/digests.json"), join(root, "public/datasets/link.json"));
+    expect(() => createPagesReleaseDataArchive(root, join(root, "data.tar.zst"))).toThrow(/refusing to archive/);
+    // Downloaded transport receives the same path boundary, before extraction.
+    execFileSync("tar", ["--zstd", "-cf", join(root, "bad.tar.zst"), "public/datasets/link.json"], { cwd: root });
+    expect(() => overlayPagesReleaseData(root, join(root, "bad.tar.zst"), join(root, "stage"))).toThrow(/links are forbidden/);
   });
 
   it("rejects missing alias blocks instead of replacing candidate configuration", () => {
@@ -353,32 +300,28 @@ describe("Pages release data archive", () => {
 
 describe("dropRetiredDepegEventEntries", () => {
   it("drops replayed depeg entries retired by a committed 301 and re-seals the capture", () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-retired-depeg-"));
-    try {
-      const dataDir = join(root, "data/depeg-events");
-      mkdirSync(join(dataDir, "metadata"), { recursive: true });
-      mkdirSync(join(root, "public"), { recursive: true });
-      writeFileSync(join(root, "public/_redirects"), [
-        "/depeg/eurs-2026-04-19/ /stablecoin/eurs-stasis/ 301",
-        "/depeg/eurs-2026-04-19 /stablecoin/eurs-stasis/ 301",
-        "/depeg-old/* /depeg/ 301",
-        "",
-      ].join("\n"));
-      const entries = [{ slug: "eurs-2026-04-19" }, { slug: "usdc-2023-03-11" }];
-      writeFileSync(join(dataDir, "2026.json"), `${JSON.stringify(entries, null, 2)}\n`);
-      writeFileSync(join(dataDir, "2023.json"), `${JSON.stringify([{ slug: "usdt-2023-06-15" }], null, 2)}\n`);
-      writeFileSync(join(dataDir, "index.json"), `${JSON.stringify(entries, null, 2)}\n`);
-      writeFileSync(join(dataDir, "metadata/capture.json"), `${JSON.stringify({ captureId: "sha256:stale", eventCount: 3 })}\n`);
+    const root = makeRoot();
+    const dataDir = join(root, "data/depeg-events");
+    mkdirSync(join(dataDir, "metadata"), { recursive: true });
+    mkdirSync(join(root, "public"), { recursive: true });
+    writeFileSync(join(root, "public/_redirects"), [
+      "/depeg/eurs-2026-04-19/ /stablecoin/eurs-stasis/ 301",
+      "/depeg/eurs-2026-04-19 /stablecoin/eurs-stasis/ 301",
+      "/depeg-old/* /depeg/ 301",
+      "",
+    ].join("\n"));
+    const entries = [{ slug: "eurs-2026-04-19" }, { slug: "usdc-2023-03-11" }];
+    writeFileSync(join(dataDir, "2026.json"), `${JSON.stringify(entries, null, 2)}\n`);
+    writeFileSync(join(dataDir, "2023.json"), `${JSON.stringify([{ slug: "usdt-2023-06-15" }], null, 2)}\n`);
+    writeFileSync(join(dataDir, "index.json"), `${JSON.stringify(entries, null, 2)}\n`);
+    writeFileSync(join(dataDir, "metadata/capture.json"), `${JSON.stringify({ captureId: "sha256:stale", eventCount: 3 })}\n`);
 
-      expect(dropRetiredDepegEventEntries(root)).toEqual(["eurs-2026-04-19"]);
-      expect(JSON.parse(readFileSync(join(dataDir, "2026.json"), "utf8"))).toEqual([{ slug: "usdc-2023-03-11" }]);
-      expect(JSON.parse(readFileSync(join(dataDir, "index.json"), "utf8"))).toEqual([{ slug: "usdc-2023-03-11" }]);
-      expect(JSON.parse(readFileSync(join(dataDir, "metadata/capture.json"), "utf8"))).toEqual({
-        captureId: depegLedgerCaptureId(dataDir),
-        eventCount: 2,
-      });
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
+    expect(dropRetiredDepegEventEntries(root)).toEqual(["eurs-2026-04-19"]);
+    expect(JSON.parse(readFileSync(join(dataDir, "2026.json"), "utf8"))).toEqual([{ slug: "usdc-2023-03-11" }]);
+    expect(JSON.parse(readFileSync(join(dataDir, "index.json"), "utf8"))).toEqual([{ slug: "usdc-2023-03-11" }]);
+    expect(JSON.parse(readFileSync(join(dataDir, "metadata/capture.json"), "utf8"))).toEqual({
+      captureId: depegLedgerCaptureId(dataDir),
+      eventCount: 2,
+    });
   });
 });

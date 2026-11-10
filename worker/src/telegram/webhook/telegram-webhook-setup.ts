@@ -1,9 +1,9 @@
 /**
- * `/start` onboarding. One card, three choices, no stored wizard state:
+ * `/start` onboarding. One card, three choices, a bounded Undo proof:
  *
  *   setup:top25   follow the USD Top 25 preset for depeg and stress alerts
- *   setup:undo:<mask>:<expiry>   restore the preset follow as it was before
- *                 the tap (mask of prior families, base-36 expiry; offered
+ *   setup:undo:<mask>:<expiry>-<generation>.<identity>   restore the preset follow as it was before
+ *                 the tap (prior families, base-36 expiry/generation, opaque identity; offered
  *                 only when the tap changed something)
  *   setup:sample  show one sample alert
  *
@@ -19,10 +19,9 @@ import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import { TELEGRAM_PRESET_LABEL_BY_ID, resolveTelegramPresetTargets, type TelegramPresetId } from "../common/presets";
 import { recordTelegramUsageEvent } from "../store/usage-analytics";
 import {
-  applySubscribeIntent,
-  applyUnsubscribeIntent,
   loadPresetSubscriptions,
-  prepareSubscriberAndPresetPatchStatements,
+  followPresetForSetup,
+  restorePresetSubscription,
 } from "../store/presets";
 import { loadSubscriberByChat, unixNow } from "../store/subscribers";
 import { loadSubscriptionRowsByChat } from "../store/subscriptions";
@@ -34,12 +33,10 @@ import {
   followsNothing,
 } from "./telegram-webhook-messages";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
-import { executeAtomicBatch } from "../../lib/db";
 import { decodeAlertTypes, encodeAlertTypes } from "../callbacks/pick";
 import { isUnexpired } from "../callbacks/confirm";
 
 const RECOMMENDED_PRESET_ID: TelegramPresetId = "usd-top25";
-const RECOMMENDED_ALERT_TYPES = ["dews", "depeg"] as const;
 const FOLLOW_TOP_LABEL = "Follow the top 25 USD stablecoins";
 const UNDO_TTL_SEC = 24 * 3600;
 
@@ -142,23 +139,18 @@ export async function handleSetupFollowTop(context: SetupCallbackContext): Promi
     await sendSetupReply(context, buildPresetUnavailableMessage());
     return { text: "Try again in a moment." };
   }
-  const existing = (await loadPresetSubscriptions(context.db, context.chatId))
-    .find((row) => row.preset_id === RECOMMENDED_PRESET_ID);
-  const alreadyFollowing = Boolean(existing?.alert_dews && existing.alert_depeg);
   await recordTelegramUsageEvent(context.db, {
     eventType: "setup_choice",
     sourceCategory: "wizard",
     actionDetail: "recommended",
     outcome: "selected",
   });
-  if (!alreadyFollowing) {
-    await applySubscribeIntent(context.db, {
-      chatId: context.chatId,
-      username: context.username,
-      alertTypes: new Set(RECOMMENDED_ALERT_TYPES),
-      directStablecoinIds: [],
-      presetIds: [RECOMMENDED_PRESET_ID],
-    });
+  const result = await followPresetForSetup(context.db, context.chatId, context.username, RECOMMENDED_PRESET_ID);
+  const alreadyFollowing = result.kind === "unchanged";
+  let undoData: string | undefined;
+  if (result.kind === "applied") {
+    const prior = new Set((["dews", "depeg", "safety"] as const).filter((type) => result.prior?.[`alert_${type}`] === 1));
+    undoData = `setup:undo:${encodeAlertTypes(prior)}:${(unixNow() + UNDO_TTL_SEC).toString(36)}-${result.generation.toString(36)}.${result.identity}`;
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: "recommended",
@@ -181,17 +173,13 @@ export async function handleSetupFollowTop(context: SetupCallbackContext): Promi
     "Pharos news: @pharoswatch · Community: @pharoswatchers",
   ];
   const row: InlineKeyboardButton[] = isPrivate ? [manageAlertsButton()] : [];
-  if (!alreadyFollowing) {
-    const prior = new Set((["dews", "depeg", "safety"] as const).filter((type) => existing?.[`alert_${type}`] === 1));
-    const expiry = (unixNow() + UNDO_TTL_SEC).toString(36);
-    row.push({ text: "Undo", callback_data: `setup:undo:${encodeAlertTypes(prior)}:${expiry}` });
-  }
+  if (undoData) row.push({ text: "Undo", callback_data: undoData });
   await sendSetupReply(context, lines.join("\n"), row.length > 0 ? { inline_keyboard: [row] } : undefined);
   return { text: alreadyFollowing ? "Already following." : "Following." };
 }
 
 /**
- * `setup:undo:<mask>:<expiry>`: put the USD Top 25 follow back the way it was
+ * `setup:undo:<mask>:<expiry>-<generation>.<identity>`: put the USD Top 25 follow back the way it was
  * before the one-tap setup. Mask 0 means there was no follow, so the row goes;
  * otherwise exactly the prior families are restored. Direct coin follows stay.
  */
@@ -204,20 +192,14 @@ export async function handleSetupUndo(
   if (!prior || [...prior].some((type) => type !== "dews" && type !== "depeg" && type !== "safety")) {
     return { text: "Action not recognized." };
   }
-  if (!isUnexpired(expiryCode)) return { text: "This Undo expired. Change your alerts in Manage Alerts." };
-  if (prior.size === 0) {
-    await applyUnsubscribeIntent(context.db, {
-      chatId: context.chatId,
-      directStablecoinIds: [],
-      presetIds: [RECOMMENDED_PRESET_ID],
-    });
-  } else {
-    await executeAtomicBatch(context.db, prepareSubscriberAndPresetPatchStatements(
-      context.db, context.chatId, context.username, RECOMMENDED_PRESET_ID,
-      { dews: prior.has("dews"), depeg: prior.has("depeg"), safety: prior.has("safety") },
-      undefined,
-    ));
-  }
+  const [fence, identity, extraIdentity] = expiryCode?.split(".") ?? [];
+  const [expiry, generationCode, extra] = fence?.split("-") ?? [];
+  const generation = generationCode && /^[0-9a-z]{1,11}$/.test(generationCode) ? parseInt(generationCode, 36) : NaN;
+  const expired = { text: "This Undo expired. Change your alerts in Manage Alerts." };
+  if (!isUnexpired(expiry) || extra !== undefined || !Number.isSafeInteger(generation) || generation < 1
+    || !identity || !/^[\w-]{22}$/.test(identity) || extraIdentity !== undefined) return expired;
+  const outcome = await restorePresetSubscription(context.db, context.chatId, RECOMMENDED_PRESET_ID, prior, generation, identity);
+  if (outcome === "stale") return expired;
   await recordTelegramUsageEvent(context.db, {
     eventType: "preset_unfollow",
     actionDetail: "setup_undo",

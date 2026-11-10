@@ -191,8 +191,8 @@ export const SupplyChainGuardProvenanceSchema = z.object({
   status: z.enum(["repaired", "quarantined", "unavailable", "chains-unavailable"]),
   quarantinedSince: z.number().int().nonnegative().optional(),
   /**
-   * Past the carry ceiling, a minority-share material quarantine publishes the observed remainder with
-   * `status: "chains-unavailable"`: the published aggregate excludes the unavailable chains.
+   * A bounded minority-share quarantine, reviewed exclusion, or fill-default native remainder publishes
+   * `status: "chains-unavailable"`: the aggregate excludes unavailable chains; fill-default uses native reads only.
    */
   partialCoverage: z.literal(true).optional(),
   /**
@@ -1054,14 +1054,13 @@ export const DepegPendingIncidentSchema = z
         message: "A pending incident cannot be last seen before it is first seen",
       });
     }
-    // `expiresAt` is the base expiry (`firstSeenAt + DEPEG_PENDING_EXPIRY_SEC`).
-    // The confirmation cron keeps a row pending past it under the extended and
-    // severe limits, so a row last seen after `expiresAt` is legitimate.
+    // `expiresAt` is the effective expiry: `firstSeenAt` plus the base, extended
+    // or severe limit that applies to the row's current evidence.
     if (incident.expiresAt <= incident.firstSeenAt) {
       ctx.addIssue({
         code: "custom",
         path: ["expiresAt"],
-        message: "A pending incident's base expiry must fall after it is first seen",
+        message: "A pending incident's expiry must fall after it is first seen",
       });
     }
   });

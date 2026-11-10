@@ -34,7 +34,7 @@ Set `launchPhase: "launched"` only on primary evidence of public on-chain issuan
 
 Refresh an AI summary only for a material change: phase advance, launch-date shift of at least a quarter, named regulator/custodian/major partner, completed reputable audit, approval/charter/license decision, or confirmed mainnet date. Use `write-ai-summaries` for the editorial contract.
 
-For standalone approved edits, run `npm run bootstrap:generated` and `npm run check:stablecoin-data` after coupled source edits are complete. In a coordinated addition, keep the research and promotion-evidence duties here, but return evidence, changed source paths, and observed versus unexercised checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet); the orchestrator owns the single Phase 7 generation/check pass after all specialists land. Do not treat a build alone as schema validation.
+For standalone approved edits and coordinated additions, keep the research and promotion-evidence duties here, return evidence, changed source paths, and observed versus unexercised checks in the [addition/evidence handoff packet](../../../docs/process/adding-a-stablecoin.md#additionevidence-handoff-packet), and follow its [Phase 7 generation/check pass](../../../docs/process/adding-a-stablecoin.md#phase-7---validate). Do not treat a build alone as schema validation.
 
 ## Promotion Handoff
 

@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { isRecord } from "../../shared/lib/type-guards.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const API_BASE_URL = "https://api.cloudflare.com/client/v4";
@@ -9,10 +10,6 @@ const API_TOKEN_ENV = "CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN";
 const ZONE_SETTINGS_TOKEN_ENV = "CLOUDFLARE_ZONE_ANALYTICS_READ";
 const MANIFEST_PATH = "scripts/ci/cloudflare-account-state-manifest.json";
 const REQUEST_TIMEOUT_MS = 30_000;
-
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];

@@ -107,6 +107,7 @@ describe("rebuild blacklist current balances script args", () => {
     expect(before.stats.trackedFrozenTotal).toBe(300);
     applyCurrentBalanceRebuild(sqliteRemoteD1(sqlite).d1, [observation({ amountNative: 200, amountUsd: 200 })]);
     expect(derivedCacheRows(sqlite)).toEqual([]);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'unrelated-cache'").get()).toEqual({ value: "{}" });
     const after = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
     expect(after.stats.trackedFrozenTotal).toBe(400);

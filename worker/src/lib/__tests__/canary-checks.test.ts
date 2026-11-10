@@ -87,6 +87,7 @@ function stablecoinsRunRows(options: {
   pricedActiveCount?: number;
   missingPriceCount?: number;
   unavailableCount?: number;
+  unavailableAssets?: { id: string; reason: string; reviewedNominalReference: boolean }[];
   reasonCounts?: Record<string, number>;
   includeCoverage?: boolean;
   includeCensus?: boolean;
@@ -119,6 +120,8 @@ function stablecoinsRunRows(options: {
               eligibleCount: expectedActiveCount,
               observedCount: expectedActiveCount - unavailableCount,
               unavailableCount,
+              unavailableAssets: options.unavailableAssets,
+              unavailableIdsTruncated: false,
               belowFloorCount: 0,
               reasonCounts: options.reasonCounts ?? {},
             },
@@ -1740,6 +1743,18 @@ describe("pricing canaries", () => {
   it("keeps a stable depeg census ok without inventing a baseline", async () => {
     const single = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows({ unavailableCount: 2 }));
     expect(single).toMatchObject({ status: "ok", metadata: { baselineAvailable: false, unavailableCount: 2 } });
+  });
+
+  it.each([true, false])("grades cohort growth by actionability (nominal=%s)", async (nominal) => {
+    const gap = (id: string, reviewedNominalReference: boolean) => ({ id, reviewedNominalReference, reason: "primary-unusable" });
+    const result = await runPricingCheck("depeg-observation-coverage", [
+      ...stablecoinsRunRows({ unavailableCount: 2, reasonCounts: { "primary-unusable": 2 }, unavailableAssets: [gap("old", false), gap("new", nominal)] }),
+      ...stablecoinsRunRows({ startedAt: NOW - 960, unavailableCount: 1, reasonCounts: { "primary-unusable": 1 }, unavailableAssets: [gap("old", false)] }),
+    ]);
+    expect(result).toMatchObject({ status: nominal ? "ok" : "degraded", metadata: {
+      unavailableCount: 2, acknowledgedUnavailableCount: nominal ? 1 : 0,
+      actionableUnavailableCount: nominal ? 1 : 2, actionableUnavailableIds: nominal ? ["old"] : ["old", "new"],
+    } });
   });
 
   it("grades the last published generation when newer attempts did not publish", async () => {

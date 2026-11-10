@@ -13,7 +13,6 @@ vi.mock("../../telegram/delivery/telegram", async (importOriginal) => ({
 import {
   runDigestPublicationWatchdog,
 } from "../digest-publication-watchdog";
-import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "../digest-input-quality";
 
 const DATE = "2026-08-31";
 const fixtures = createLatestSchemaFixtureTracker();
@@ -80,14 +79,16 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
                 const isWeekly = sql.includes("json_extract(digest_meta, '$.type') = 'weekly'");
                 const present = isWeekly ? fixture.weeklyRow : fixture.dailyRow;
                 if (!present) return null;
-                if (sql.includes("critical_sources")) {
+                if (sql.includes("sources_json")) {
                   const sources = (isWeekly
                     ? fixture.weeklyCriticalSources
                     : fixture.dailyCriticalSources
-                  ).filter((source) => (REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[]).includes(source));
+                  );
                   return {
+                    input_type: "object",
+                    parent_type: "object",
                     sources_type: "array",
-                    critical_sources: JSON.stringify(sources),
+                    sources_json: JSON.stringify(sources),
                   } as T;
                 }
                 if (sql.includes("SELECT 1 AS present")) {
@@ -260,6 +261,34 @@ describe("digest publication watchdog", () => {
       state: "stale",
       detail: "degraded: active-depegs-query",
     });
+  });
+
+  it.each(["daily", "weekly"].flatMap((type) => [
+    "{", "null", "[]",
+    ...[null, {}, "psi-unavailable", [1], ["psi-unavailable", 1]].map((sources) => JSON.stringify(
+      type === "daily" ? { dataQuality: { degradedSources: sources } } : { degradedSourcesThisWeek: sources },
+    )),
+    ...(type === "daily" ? ['{"dataQuality":null}', '{"dataQuality":[]}'] : []),
+  ].map((input) => [type, input])))("does not recover %s inputs from unreadable %s", async (type, input) => {
+    const { sqlite, db } = fixtures.open();
+    const now = at(`${DATE}T09:00:00Z`);
+    const condition = `${type}-inputs`;
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    sqlite.prepare(
+      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, 'digest', ?, ?)",
+    ).run(now, JSON.stringify({
+      dataQuality: { degradedSources: ["psi-unavailable"] }, degradedSourcesThisWeek: ["psi-unavailable"],
+    }), JSON.stringify({ type }));
+    await runDigestPublicationWatchdog(db, now, options);
+    sqlite.prepare("UPDATE daily_digest SET input_data = ?").run(input);
+    const metadata = JSON.parse((await runDigestPublicationWatchdog(db, now + 1800, options)).metadata ?? "{}");
+    expect(metadata.conditions[condition]).toMatchObject({ state: "stale", detail: "digest-input-data-unreadable" });
+    expect(metadata.alertTransitions.recovered).not.toContain(condition);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    sqlite.prepare("UPDATE daily_digest SET input_data = '{}'").run();
+    const clean = JSON.parse((await runDigestPublicationWatchdog(db, now + 3600, options)).metadata ?? "{}");
+    expect(clean.conditions[condition].state).toBe("ok");
+    expect(clean.alertTransitions.recovered).toContain(condition);
   });
 
   it("ignores a later blocked edition when reading daily degraded sources", async () => {

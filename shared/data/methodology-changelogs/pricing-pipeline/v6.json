@@ -1,5 +1,49 @@
 [
   {
+    "version": "6.75",
+    "title": "Reviewed MOVEUSD Orca pool read directly on Solana",
+    "date": "2026-11-08",
+    "effectiveAt": 1794127086,
+    "summary": "MOVEUSD can recover a missing price from its reviewed Orca MOVEUSD/USDC pool without a DexScreener request.",
+    "impact": [
+      "The exact finalized pool, both six-decimal SPL mints and both initialized vaults must match the reviewed identities in one atomic bank. The Whirlpool square-root price supplies the market mark; actual vault inventory valued through the trusted USDC parent must meet the unchanged $50,000 total-liquidity floor. This is a pool mark, not an executable sell quote.",
+      "The pool block time and trusted USDC observation must each be younger than the existing exact-address 15-minute budget, rechecked after reads. Publication retains the older input clock and its observation mode, fallback confidence, no replay or standalone depeg authority, and all existing weak-source, peg-bound and temporal-jump guards. Failed or rejected reads withhold the quote and never substitute par or a stale price.",
+      "The registered missing-only provider runs within the existing bounded authoritative stage without a new trigger or increased connection peak. MOVEUSD's dated price-gap acknowledgement is retired; renewed gaps remain actionable. Production acceptance requires the first successful post-deploy read and stablecoins publication."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.74",
+    "title": "Bounded native remainders during DefiLlama fill defaults",
+    "date": "2026-11-07",
+    "effectiveAt": 1794092005,
+    "summary": "A complete reviewed native roster may publish only its observed native remainder during a DefiLlama fill default when unresolved legs stay within the existing 5% bound by both frozen baseline and current list share. Missing supply is never added.",
+    "impact": [
+      "This extends v6.70 current-supply admission beyond complete native corroboration or an existing bounded vetted carry. Every reviewed deployment must be flagged and resolve either to an admitted native repair or an unresolved leg; attribution ambiguity, any chart repair, an unaccounted deployment or a leg below the $1M flagging floor rejects the exception. Unresolved baselines must be at most 5% of native repairs plus those baselines, and their observed current list amounts must be at most 5% of the original list aggregate. Missing list amounts or a nonpositive list total cannot establish that bound.",
+      "The published aggregate is exactly the native-repaired sum, dated by its oldest read, with chains-unavailable, partialCoverage and the original unresolved quarantine clock. Unreadable chains stay null; no frozen baseline or fill-priced list residue is added. Fill-scaled historical buckets remain unavailable. The operator warning names the asset, missing chain IDs and current list missing share.",
+      "Single-chain native repairs preserve their exact observed value rather than a subtract-and-add rounding residue. Per-pair native reads may use the existing reviewed supply-profile fallback when a second registry RPC route is absent. Fill-default incidents cannot release low baselines using the same provider's rescaled chart. Price admission, supply units, native-roster accounting, carry ceilings and the 5% policy bound are unchanged. Production acceptance requires the first qualifying stablecoins publication after deployment."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.73",
+    "title": "Original DEX and AZND dependency clocks govern price admission",
+    "date": "2026-11-06",
+    "effectiveAt": 1793962500,
+    "summary": "Aggregate DEX medians use plausible contributors younger than the existing 75-minute depeg budget, then apply the existing outlier filter. The selected subset retains its oldest original clock through primary consensus, co-leg admission and public comparisons. AZND's Curve cross-rate also inherits its older USDC parent or block clock and enforces the route's existing five-minute budget on both.",
+    "impact": [
+      "The publisher selects deduplicated plausible contributors with valid, non-future original clocks strictly younger than DEX_FRESHNESS_SEC (75 minutes), then applies the existing outlier filter within that subset. Price-source count, source TVL and displayed protocol provenance describe the actual median inputs. Diagnostics record in-budget and total contributor counts and no-in-budget-contributors when none qualify; that fallback preserves the full-blend median and its oldest clock for conservative vetoes. Refreshing a pool cannot renew an exchange ticker clock. Affirmative aggregate admission validates original clock evidence in price_sources_json before protocol filtering. Nonempty legacy source arrays retain repeated aggregateObservedAt values and reduce them to the oldest; when no display lane qualifies, the writer stores {aggregateObservedAt,sources:[]} without inventing a protocol source. Missing, invalid, nonpositive, nonfinite or future clock evidence withholds the quote. Publication updated_at and surviving protocol lanes cannot renew it; public priceSources projects the empty envelope as [].",
+      "The existing strict freshness and TVL gates remain: depeg aggregates need age below 75 minutes and at least $1M source TVL; public comparisons and the reviewed VUSD primary tier need age below two hourly producer intervals plus the stage lead and at least $250K. Beside other primary legs, the original aggregate clock also governs the existing co-leg budget. Protocol-source 35/75-minute inclusive gates, weights, corroboration and independence are unchanged.",
+      "AZND keeps its reviewed Curve pool, pinned calldata, inventory, impact and incumbent protections. The USDC parent must also fit the existing five-minute route budget, checked again after awaited reads; the result carries the older dependency clock and its observation mode rather than a fresh block timestamp.",
+      "Peg-summary adds optional nullable price from the same admitted live observation used for current deviation and provenance, including retained-history paths. Unavailable or nominal live observations emit null even if the raw asset contains a positive number; an observed NAV quote can remain present while current deviation is null. Invalid or nonpositive prices emit null, and legacy responses without price remain accepted. Historical analytics are not rewritten.",
+      "Conservative aggregate and challenger vetoes retain their separate policies; rejected old evidence cannot become a new vote, confirmation, recovery, coverage claim or public agreement. Original-clock refusals retain machine-readable primary and pending diagnostics, and malformed DEWS evidence retains decoder telemetry. Public readers apply cheap freshness and TVL gates before parsing; pending availability reads only candidate IDs. Fixed-clock producer replay and qualifying production observations remain required; this entry claims neither."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.72",
     "title": "Separate observed DEX comparison anchors from trusted quote valuation; bound Reserve USD3 pool recovery by a trusted baseline",
     "date": "2026-11-05",

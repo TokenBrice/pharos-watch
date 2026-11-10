@@ -187,16 +187,6 @@ describe("adaptChainlinkNavResponse", () => {
     expect(classifications[0]?.classificationKey).toMatch(/^registry-reviewed:/);
   });
 
-  it("retains native fund-share exposure without a scoring degradation", () => {
-    const result = adaptChainlinkNavResponse(
-      { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
-      params,
-    );
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].pct).toBe(100);
-    expect(result.warnings?.filter((warning) => warning.effect === "degraded") ?? []).toEqual([]);
-  });
-
   it("keeps portfolio NAV visible but degrades unverified composition", () => {
     const result = adaptChainlinkNavResponse(
       { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },

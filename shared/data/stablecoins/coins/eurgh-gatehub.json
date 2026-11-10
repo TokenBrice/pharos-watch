@@ -1,0 +1,70 @@
+{
+  "id": "eurgh-gatehub",
+  "name": "GateHub Euro",
+  "symbol": "EURGH",
+  "oneLiner": "EURGH is Dinaro's euro e-money token, distributed through GateHub on XRP Ledger and Xahau with at-par redemption through SEPA.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized"
+  },
+  "contracts": [
+    {
+      "chain": "xrpl",
+      "address": "4555524748000000000000000000000000000000.rDdaSjBbgCGQQsGRSfMidBMyHbPoeE5KQR",
+      "decimals": null,
+      "amountEncoding": {
+        "kind": "xrpl-issued-currency"
+      }
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://gatehub.net/"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://gatehub.net/blog/gatehub-partners-with-dinaro-to-launch-gatehub-euro-eurgh/"
+    },
+    {
+      "label": "MiCA white paper",
+      "url": "https://dinaro.si/eurgh-whitepaper.html"
+    },
+    {
+      "label": "Bank of Slovenia issuer register",
+      "url": "https://www.bsi.si/en/banking-supervision/register-of-supervised-entities/dinaro-company-for-electronic-money-issuing-and-payment-services-ltd"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Slovenia",
+    "regulator": "Banka Slovenije",
+    "license": "Electronic Money Institution"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-11-05",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Dinaro d.o.o. issues EURGH as a euro e-money token under MiCA. The Bank of Slovenia register confirms its electronic money authorisation, granted on November 2 2021. The white paper dates publication and the start of the public offer or admission to trading to September 1 2026. GateHub's November 5 announcement says EURGH is available through its XRP Ledger and Xahau wallets, with issuance against received euros and at-par redemption through SEPA, subject to legal and verification requirements. Public XRPL gateway_balances and account_lines reads on November 8 2026 confirm outstanding EURGH issued by the account named in the announcement. Pharos retains the launched pre-launch status because no price lane and no supply lane have been admitted.",
+  "milestones": [
+    {
+      "date": "2026-09-01",
+      "type": "milestone",
+      "title": "EURGH white paper dates the start of its public offer",
+      "description": "Dinaro's MiCA white paper gives September 1 2026 as both its publication date and the starting date of the offer to the public or admission to trading. This is the documented offer start, not a verified first issuance date.",
+      "sourceUrl": "https://dinaro.si/eurgh-whitepaper.html"
+    },
+    {
+      "date": "2026-11-05",
+      "type": "announcement",
+      "title": "GateHub announces EURGH distribution with Dinaro",
+      "description": "GateHub announces the euro e-money token issued by Dinaro on XRP Ledger and Xahau. The release identifies the issuer account and currency code, describes funding through SEPA and gives holders at-par redemption rights subject to legal and verification requirements.",
+      "sourceUrl": "https://gatehub.net/blog/gatehub-partners-with-dinaro-to-launch-gatehub-euro-eurgh/"
+    }
+  ],
+  "launchDate": "2026-09-01",
+  "listingStatusReview": {
+    "changedAt": "2026-11-08",
+    "reason": "Missing lanes: no admitted price lane and no admitted supply lane. Public XRPL issuance is verified, but neither runtime lane has been admitted for EURGH.",
+    "reviewBy": "2027-01-07"
+  }
+}

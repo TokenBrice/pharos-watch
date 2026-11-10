@@ -8,15 +8,13 @@ import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockHeader, fetchEvmCallHexAtBlock, fetchEvmCodeStatusAtBlock,
-  type EvmBlockHeader,
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS, type DexMeasuredExecutionRpcBudget,
 } from "./profiles";
 import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { CURVE_RATE_BEARING_ADAPTER_PROFILE_ID, getCurveCompositePolicy,
-type CurveCompositePoolPolicy, } from "@shared/lib/curve-composite-policies";
-import type { CurveFamilyVerificationDependencies } from "./curve-stableswap-execution-pipeline";
+type CurveCompositePoolPolicy, type CurveRateBearingPoolPolicy, type CurveMetapoolPolicy, } from "@shared/lib/curve-composite-policies";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -52,6 +50,46 @@ const ERC4626_ABI = parseAbi([
   "function asset() view returns (address)",
   "function convertToAssets(uint256 shares) view returns (uint256)",
 ]);
+function encodeRateProviderCallData(policy: CurveRateBearingPoolPolicy) {
+  const assetTypesData = encodeFunctionData({
+    abi: FACTORY_ABI,
+    functionName: "get_pool_asset_types",
+    args: [policy.poolAddress],
+  }).toLowerCase() as `0x${string}`;
+  const assetData = encodeFunctionData({
+    abi: ERC4626_ABI,
+    functionName: "asset",
+  }).toLowerCase() as `0x${string}`;
+  const shares = 10n ** BigInt(policy.poolTokens[policy.rateProvider.tokenIndex].decimals);
+  const convertData = encodeFunctionData({
+    abi: ERC4626_ABI,
+    functionName: "convertToAssets",
+    args: [shares],
+  }).toLowerCase() as `0x${string}`;
+  const storedRatesData = encodeFunctionData({
+    abi: POOL_ABI,
+    functionName: "stored_rates",
+  }).toLowerCase() as `0x${string}`;
+  return { assetTypesData, assetData, convertData, storedRatesData };
+}
+
+function encodeMetapoolCallData(
+  policy: CurveMetapoolPolicy,
+  functionName: "get_base_pool" | "get_underlying_coins" | "get_underlying_decimals" | "is_meta",
+): `0x${string}` {
+  return functionName === "get_base_pool" && policy.metapool.basePoolBinding === "registry-lp-token"
+    ? encodeFunctionData({
+        abi: MAIN_REGISTRY_ABI,
+        functionName: "get_pool_from_lp_token",
+        args: [policy.poolTokens[1].address],
+      }).toLowerCase() as `0x${string}`
+    : encodeFunctionData({
+        abi: FACTORY_ABI,
+        functionName,
+        args: [policy.poolAddress],
+      }).toLowerCase() as `0x${string}`;
+}
+
 function decodeFactoryAddressArray(
   policy: CurveCompositePoolPolicy,
   functionName: "get_coins" | "get_underlying_coins",
@@ -204,14 +242,6 @@ export function evaluateCurveCompositeEligibility(input: {
   return { ok: true };
 }
 
-interface VerificationDependencies extends CurveFamilyVerificationDependencies {
-  fetchBlockHeader(
-    chain: string,
-    blockNumber: number | "finalized",
-    options: Parameters<typeof fetchEvmBlockHeader>[2],
-  ): Promise<EvmBlockHeader | null>;
-}
-
 export type CurveCompositeDeploymentVerification =
   | {
       ok: true;
@@ -237,400 +267,351 @@ function decodeAddress(
   });
 }
 
-function createCurveCompositeDeploymentVerifier(dependencies: VerificationDependencies) {
-  return async function verifyCurveCompositeDeployment(input: {
-    policy: CurveCompositePoolPolicy;
-    nowSec: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<CurveCompositeDeploymentVerification> {
-    const policy = input.policy;
-    const requestOptions = {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      maxRetries: 0,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-    };
-    const header = await dependencies.fetchBlockHeader(policy.chain, "finalized", requestOptions);
-    input.rpcBudget?.recordChainResult(policy.chain, header != null);
-    if (!header) return { ok: false, reason: "block-header-unavailable" };
-    if (header.timestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
-    if (input.nowSec - header.timestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
-      return { ok: false, reason: "stale-pinned-block" };
-    }
+export async function verifyCurveCompositeDeployment(input: {
+  policy: CurveCompositePoolPolicy;
+  nowSec: number;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
+}): Promise<CurveCompositeDeploymentVerification> {
+  const policy = input.policy;
+  const requestOptions = {
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+    maxRetries: 0,
+    ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
+    ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
+  };
+  const header = await fetchEvmBlockHeader(policy.chain, "finalized", requestOptions);
+  input.rpcBudget?.recordChainResult(policy.chain, header != null);
+  if (!header) return { ok: false, reason: "block-header-unavailable" };
+  if (header.timestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
+  if (input.nowSec - header.timestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
+    return { ok: false, reason: "stale-pinned-block" };
+  }
 
-    const hashCode = dependencies.hashCode ?? ((code: `0x${string}`) => keccak256(code));
-    const readCode = async (
-      address: `0x${string}`,
-    ): Promise<{ ok: true; hash: `0x${string}` } | { ok: false; absent: boolean }> => {
-      throwIfAborted(input.signal);
-      if (input.rpcBudget && !input.rpcBudget.canRequestChain(policy.chain)) {
-        return { ok: false, absent: false };
-      }
-      const result = await dependencies.fetchCodeStatus(
-        policy.chain,
-        address,
-        header.number,
-        requestOptions,
-      );
-      input.rpcBudget?.recordChainResult(policy.chain, result.status !== "unavailable");
-      return result.status === "available"
-        ? { ok: true, hash: hashCode(result.code).toLowerCase() as `0x${string}` }
-        : { ok: false, absent: result.status === "absent" };
-    };
-    const calls: DexMeasuredExecutionCurveCompositeProof["calls"] = [];
-    const readCall = async (
-      role: string,
-      target: `0x${string}`,
-      callData: `0x${string}`,
-    ): Promise<`0x${string}` | null> => {
-      throwIfAborted(input.signal);
-      if (input.rpcBudget && !input.rpcBudget.canRequestChain(policy.chain)) return null;
-      const result = await dependencies.fetchCall(
-        policy.chain,
+  const readCode = async (
+    address: `0x${string}`,
+  ): Promise<{ ok: true; hash: `0x${string}` } | { ok: false; absent: boolean }> => {
+    throwIfAborted(input.signal);
+    if (input.rpcBudget && !input.rpcBudget.canRequestChain(policy.chain)) {
+      return { ok: false, absent: false };
+    }
+    const result = await fetchEvmCodeStatusAtBlock(
+      policy.chain,
+      address,
+      header.number,
+      requestOptions,
+    );
+    input.rpcBudget?.recordChainResult(policy.chain, result.status !== "unavailable");
+    return result.status === "available"
+      ? { ok: true, hash: keccak256(result.code).toLowerCase() as `0x${string}` }
+      : { ok: false, absent: result.status === "absent" };
+  };
+  const calls: DexMeasuredExecutionCurveCompositeProof["calls"] = [];
+  const readCall = async (
+    role: string,
+    target: `0x${string}`,
+    callData: `0x${string}`,
+  ): Promise<`0x${string}` | null> => {
+    throwIfAborted(input.signal);
+    if (input.rpcBudget && !input.rpcBudget.canRequestChain(policy.chain)) return null;
+    const result = await fetchEvmCallHexAtBlock(
+      policy.chain,
+      target,
+      callData,
+      header.number,
+      requestOptions,
+    );
+    input.rpcBudget?.recordChainResult(policy.chain, result != null);
+    if (result != null) {
+      calls.push({
+        role,
         target,
         callData,
-        header.number,
-        requestOptions,
-      );
-      input.rpcBudget?.recordChainResult(policy.chain, result != null);
-      if (result != null) {
-        calls.push({
-          role,
-          target,
-          callData,
-          returnData: result.toLowerCase() as `0x${string}`,
-        });
-      }
-      return result;
-    };
+        returnData: result.toLowerCase() as `0x${string}`,
+      });
+    }
+    return result;
+  };
 
-    const poolCode = await readCode(policy.poolAddress);
-    if (!poolCode.ok) {
-      return { ok: false, reason: poolCode.absent ? "runtime-code-absent" : "runtime-code-unavailable" };
-    }
-    if (poolCode.hash !== policy.expectedPoolCodeHash) {
-      return { ok: false, reason: "runtime-code-hash-mismatch" };
-    }
-    const factoryCode = await readCode(policy.factoryAddress);
-    if (!factoryCode.ok || factoryCode.hash !== policy.expectedFactoryCodeHash) {
-      return { ok: false, reason: "factory-code-mismatch" };
-    }
-    const implementationCode = policy.implementationBinding === "standalone-runtime"
-      ? poolCode
-      : await readCode(policy.implementationAddress);
-    if (
-      !implementationCode.ok ||
-      implementationCode.hash !== policy.expectedImplementationCodeHash ||
-      (
-        policy.implementationBinding === "standalone-runtime" &&
-        policy.implementationAddress !== policy.poolAddress
+  const poolCode = await readCode(policy.poolAddress);
+  if (!poolCode.ok) {
+    return { ok: false, reason: poolCode.absent ? "runtime-code-absent" : "runtime-code-unavailable" };
+  }
+  if (poolCode.hash !== policy.expectedPoolCodeHash) {
+    return { ok: false, reason: "runtime-code-hash-mismatch" };
+  }
+  const factoryCode = await readCode(policy.factoryAddress);
+  if (!factoryCode.ok || factoryCode.hash !== policy.expectedFactoryCodeHash) {
+    return { ok: false, reason: "factory-code-mismatch" };
+  }
+  const implementationCode = policy.implementationBinding === "standalone-runtime"
+    ? poolCode
+    : await readCode(policy.implementationAddress);
+  if (
+    !implementationCode.ok ||
+    implementationCode.hash !== policy.expectedImplementationCodeHash ||
+    (
+      policy.implementationBinding === "standalone-runtime" &&
+      policy.implementationAddress !== policy.poolAddress
+    )
+  ) {
+    return { ok: false, reason: "implementation-code-mismatch" };
+  }
+
+  const poolListData = encodeFunctionData({
+    abi: FACTORY_ABI,
+    functionName: "pool_list",
+    args: [BigInt(policy.factoryPoolIndex)],
+  }).toLowerCase() as `0x${string}`;
+  const factoryCoinsData = encodeFunctionData({
+    abi: FACTORY_ABI,
+    functionName: "get_coins",
+    args: [policy.poolAddress],
+  }).toLowerCase() as `0x${string}`;
+  const implementationResult = policy.implementationBinding === "factory-lookup"
+    ? await readCall(
+        "factory-implementation",
+        policy.factoryAddress,
+        encodeFunctionData({
+          abi: FACTORY_ABI,
+          functionName: "get_implementation_address",
+          args: [policy.poolAddress],
+        }).toLowerCase() as `0x${string}`,
       )
-    ) {
-      return { ok: false, reason: "implementation-code-mismatch" };
-    }
+    : null;
+  const [poolListResult, factoryCoinsResult] = [
+    await readCall("factory-pool-list", policy.factoryAddress, poolListData),
+    await readCall("factory-coins", policy.factoryAddress, factoryCoinsData),
+  ];
+  if (
+    !poolListResult ||
+    !factoryCoinsResult ||
+    (policy.implementationBinding === "factory-lookup" && !implementationResult)
+  ) {
+    return { ok: false, reason: "rpc-failure" };
+  }
+  const factoryCoins = decodeFactoryAddressArray(
+    policy,
+    "get_coins",
+    factoryCoinsResult,
+    policy.poolTokens.length,
+  );
+  if (
+    !factoryCoins ||
+    decodeAddress(FACTORY_ABI, "pool_list", poolListResult) !== policy.poolAddress ||
+    (
+      policy.implementationBinding === "factory-lookup" &&
+      decodeAddress(
+        FACTORY_ABI,
+        "get_implementation_address",
+        implementationResult!,
+      ) !== policy.implementationAddress
+    ) ||
+    factoryCoins.length !== policy.poolTokens.length ||
+    factoryCoins.some(
+      (address, index) => canonicalEvmAddress(address) !== policy.poolTokens[index]!.address,
+    )
+  ) return { ok: false, reason: "factory-membership-mismatch" };
 
-    const poolListData = encodeFunctionData({
-      abi: FACTORY_ABI,
-      functionName: "pool_list",
-      args: [BigInt(policy.factoryPoolIndex)],
+  for (let index = 0; index < policy.poolTokens.length; index += 1) {
+    throwIfAborted(input.signal);
+    const callData = encodeFunctionData({
+      abi: POOL_ABI,
+      functionName: "coins",
+      args: [BigInt(index)],
     }).toLowerCase() as `0x${string}`;
-    const factoryCoinsData = encodeFunctionData({
-      abi: FACTORY_ABI,
-      functionName: "get_coins",
-      args: [policy.poolAddress],
+    const result = await readCall(`pool-coin-${index}`, policy.poolAddress, callData);
+    if (!result || decodeAddress(POOL_ABI, "coins", result) !== policy.poolTokens[index]!.address) {
+      return { ok: false, reason: "pool-token-order-mismatch" };
+    }
+  }
+  for (let index = 0; index < policy.executionTokens.length; index += 1) {
+    throwIfAborted(input.signal);
+    const token = policy.executionTokens[index]!;
+    const callData = encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: "decimals",
     }).toLowerCase() as `0x${string}`;
-    const implementationResult = policy.implementationBinding === "factory-lookup"
-      ? await readCall(
-          "factory-implementation",
-          policy.factoryAddress,
-          encodeFunctionData({
-            abi: FACTORY_ABI,
-            functionName: "get_implementation_address",
-            args: [policy.poolAddress],
-          }).toLowerCase() as `0x${string}`,
-        )
-      : null;
-    const [poolListResult, factoryCoinsResult] = [
-      await readCall("factory-pool-list", policy.factoryAddress, poolListData),
-      await readCall("factory-coins", policy.factoryAddress, factoryCoinsData),
+    const result = await readCall(`token-decimals-${index}`, token.address, callData);
+    if (!result) return { ok: false, reason: "token-decimals-mismatch" };
+    try {
+      if (
+        Number(decodeFunctionResult({
+          abi: ERC20_ABI,
+          functionName: "decimals",
+          data: result,
+        })) !== token.decimals
+      ) return { ok: false, reason: "token-decimals-mismatch" };
+    } catch {
+      return { ok: false, reason: "token-decimals-mismatch" };
+    }
+  }
+
+  let rateProvider: DexMeasuredExecutionCurveCompositeProof["rateProvider"];
+  let metapool: DexMeasuredExecutionCurveCompositeProof["metapool"];
+  if (policy.adapterProfileId === CURVE_RATE_BEARING_ADAPTER_PROFILE_ID) {
+    const providerCode = await readCode(policy.rateProvider.providerAddress);
+    if (!providerCode.ok || providerCode.hash !== policy.rateProvider.expectedProviderCodeHash) {
+      return { ok: false, reason: "rate-provider-mismatch" };
+    }
+    const { assetTypesData, assetData, convertData, storedRatesData } = encodeRateProviderCallData(policy);
+    const [assetTypesResult, assetResult, convertResult, storedRatesResult] = [
+      await readCall("factory-asset-types", policy.factoryAddress, assetTypesData),
+      await readCall("rate-provider-asset", policy.rateProvider.providerAddress, assetData),
+      await readCall("rate-provider-convert", policy.rateProvider.providerAddress, convertData),
+      await readCall("pool-stored-rates", policy.poolAddress, storedRatesData),
     ];
-    if (
-      !poolListResult ||
-      !factoryCoinsResult ||
-      (policy.implementationBinding === "factory-lookup" && !implementationResult)
-    ) {
-      return { ok: false, reason: "rpc-failure" };
+    if (!assetTypesResult || !assetResult || !convertResult || !storedRatesResult) {
+      return { ok: false, reason: "rate-provider-mismatch" };
     }
-    const factoryCoins = decodeFactoryAddressArray(
-      policy,
-      "get_coins",
-      factoryCoinsResult,
-      policy.poolTokens.length,
-    );
-    if (
-      !factoryCoins ||
-      decodeAddress(FACTORY_ABI, "pool_list", poolListResult) !== policy.poolAddress ||
-      (
-        policy.implementationBinding === "factory-lookup" &&
-        decodeAddress(
-          FACTORY_ABI,
-          "get_implementation_address",
-          implementationResult!,
-        ) !== policy.implementationAddress
-      ) ||
-      factoryCoins.length !== policy.poolTokens.length ||
-      factoryCoins.some(
-        (address, index) => canonicalEvmAddress(address) !== policy.poolTokens[index]!.address,
-      )
-    ) return { ok: false, reason: "factory-membership-mismatch" };
-
-    for (let index = 0; index < policy.poolTokens.length; index += 1) {
-      throwIfAborted(input.signal);
-      const callData = encodeFunctionData({
-        abi: POOL_ABI,
-        functionName: "coins",
-        args: [BigInt(index)],
-      }).toLowerCase() as `0x${string}`;
-      const result = await readCall(`pool-coin-${index}`, policy.poolAddress, callData);
-      if (!result || decodeAddress(POOL_ABI, "coins", result) !== policy.poolTokens[index]!.address) {
-        return { ok: false, reason: "pool-token-order-mismatch" };
-      }
-    }
-    for (let index = 0; index < policy.executionTokens.length; index += 1) {
-      throwIfAborted(input.signal);
-      const token = policy.executionTokens[index]!;
-      const callData = encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "decimals",
-      }).toLowerCase() as `0x${string}`;
-      const result = await readCall(`token-decimals-${index}`, token.address, callData);
-      if (!result) return { ok: false, reason: "token-decimals-mismatch" };
-      try {
-        if (
-          Number(decodeFunctionResult({
-            abi: ERC20_ABI,
-            functionName: "decimals",
-            data: result,
-          })) !== token.decimals
-        ) return { ok: false, reason: "token-decimals-mismatch" };
-      } catch {
-        return { ok: false, reason: "token-decimals-mismatch" };
-      }
-    }
-
-    let rateProvider: DexMeasuredExecutionCurveCompositeProof["rateProvider"];
-    let metapool: DexMeasuredExecutionCurveCompositeProof["metapool"];
-    if (policy.adapterProfileId === CURVE_RATE_BEARING_ADAPTER_PROFILE_ID) {
-      const providerCode = await readCode(policy.rateProvider.providerAddress);
-      if (!providerCode.ok || providerCode.hash !== policy.rateProvider.expectedProviderCodeHash) {
-        return { ok: false, reason: "rate-provider-mismatch" };
-      }
-      const assetTypesData = encodeFunctionData({
+    try {
+      const assetTypes = decodeFunctionResult({
         abi: FACTORY_ABI,
         functionName: "get_pool_asset_types",
-        args: [policy.poolAddress],
-      }).toLowerCase() as `0x${string}`;
-      const assetData = encodeFunctionData({
-        abi: ERC4626_ABI,
-        functionName: "asset",
-      }).toLowerCase() as `0x${string}`;
-      const shares = 10n ** BigInt(policy.poolTokens[policy.rateProvider.tokenIndex].decimals);
-      const convertData = encodeFunctionData({
+        data: assetTypesResult,
+      }) as readonly number[];
+      const observedRate = decodeFunctionResult({
         abi: ERC4626_ABI,
         functionName: "convertToAssets",
-        args: [shares],
-      }).toLowerCase() as `0x${string}`;
-      const storedRatesData = encodeFunctionData({
+        data: convertResult,
+      }) as bigint;
+      const storedRates = decodeFunctionResult({
         abi: POOL_ABI,
         functionName: "stored_rates",
-      }).toLowerCase() as `0x${string}`;
-      const [assetTypesResult, assetResult, convertResult, storedRatesResult] = [
-        await readCall("factory-asset-types", policy.factoryAddress, assetTypesData),
-        await readCall("rate-provider-asset", policy.rateProvider.providerAddress, assetData),
-        await readCall("rate-provider-convert", policy.rateProvider.providerAddress, convertData),
-        await readCall("pool-stored-rates", policy.poolAddress, storedRatesData),
-      ];
-      if (!assetTypesResult || !assetResult || !convertResult || !storedRatesResult) {
-        return { ok: false, reason: "rate-provider-mismatch" };
-      }
-      try {
-        const assetTypes = decodeFunctionResult({
-          abi: FACTORY_ABI,
-          functionName: "get_pool_asset_types",
-          data: assetTypesResult,
-        }) as readonly number[];
-        const observedRate = decodeFunctionResult({
-          abi: ERC4626_ABI,
-          functionName: "convertToAssets",
-          data: convertResult,
-        }) as bigint;
-        const storedRates = decodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "stored_rates",
-          data: storedRatesResult,
-        }) as readonly bigint[];
-        if (
-          assetTypes.length !== policy.expectedAssetTypes.length ||
-          assetTypes.some((value, index) => Number(value) !== policy.expectedAssetTypes[index]) ||
-          decodeAddress(ERC4626_ABI, "asset", assetResult) !== policy.rateProvider.underlyingAddress ||
-          observedRate <= 0n ||
-          storedRates.length !== policy.poolTokens.length ||
-          storedRates[policy.rateProvider.tokenIndex] !== observedRate
-        ) return { ok: false, reason: "rate-provider-mismatch" };
-        rateProvider = {
-          kind: "erc4626",
-          tokenAddress: policy.poolTokens[policy.rateProvider.tokenIndex].address,
-          providerAddress: policy.rateProvider.providerAddress,
-          providerCodeHash: providerCode.hash,
-          underlyingAddress: policy.rateProvider.underlyingAddress,
-          observedRate: observedRate.toString(),
-        };
-      } catch {
-        return { ok: false, reason: "rate-provider-mismatch" };
-      }
-    } else {
-      const baseCode = await readCode(policy.metapool.basePoolAddress);
-      if (!baseCode.ok || baseCode.hash !== policy.metapool.expectedBasePoolCodeHash) {
-        return { ok: false, reason: "base-pool-mismatch" };
-      }
-      const basePoolData = policy.metapool.basePoolBinding === "registry-lp-token"
-        ? encodeFunctionData({
-            abi: MAIN_REGISTRY_ABI,
-            functionName: "get_pool_from_lp_token",
-            args: [policy.poolTokens[1].address],
-          }).toLowerCase() as `0x${string}`
-        : encodeFunctionData({
-            abi: FACTORY_ABI,
-            functionName: "get_base_pool",
-            args: [policy.poolAddress],
-          }).toLowerCase() as `0x${string}`;
-      const basePoolRole = policy.metapool.basePoolBinding === "registry-lp-token"
-        ? "registry-base-pool-from-lp-token"
-        : "factory-base-pool";
-      const underlyingCoinsData = encodeFunctionData({
-        abi: FACTORY_ABI,
-        functionName: "get_underlying_coins",
-        args: [policy.poolAddress],
-      }).toLowerCase() as `0x${string}`;
-      const underlyingDecimalsData = encodeFunctionData({
-        abi: FACTORY_ABI,
-        functionName: "get_underlying_decimals",
-        args: [policy.poolAddress],
-      }).toLowerCase() as `0x${string}`;
-      const isMetaData = encodeFunctionData({
+        data: storedRatesResult,
+      }) as readonly bigint[];
+      if (
+        assetTypes.length !== policy.expectedAssetTypes.length ||
+        assetTypes.some((value, index) => Number(value) !== policy.expectedAssetTypes[index]) ||
+        decodeAddress(ERC4626_ABI, "asset", assetResult) !== policy.rateProvider.underlyingAddress ||
+        observedRate <= 0n ||
+        storedRates.length !== policy.poolTokens.length ||
+        storedRates[policy.rateProvider.tokenIndex] !== observedRate
+      ) return { ok: false, reason: "rate-provider-mismatch" };
+      rateProvider = {
+        kind: "erc4626",
+        tokenAddress: policy.poolTokens[policy.rateProvider.tokenIndex].address,
+        providerAddress: policy.rateProvider.providerAddress,
+        providerCodeHash: providerCode.hash,
+        underlyingAddress: policy.rateProvider.underlyingAddress,
+        observedRate: observedRate.toString(),
+      };
+    } catch {
+      return { ok: false, reason: "rate-provider-mismatch" };
+    }
+  } else {
+    const baseCode = await readCode(policy.metapool.basePoolAddress);
+    if (!baseCode.ok || baseCode.hash !== policy.metapool.expectedBasePoolCodeHash) {
+      return { ok: false, reason: "base-pool-mismatch" };
+    }
+    const basePoolData = encodeMetapoolCallData(policy, "get_base_pool");
+    const basePoolRole = policy.metapool.basePoolBinding === "registry-lp-token"
+      ? "registry-base-pool-from-lp-token"
+      : "factory-base-pool";
+    const underlyingCoinsData = encodeMetapoolCallData(policy, "get_underlying_coins");
+    const underlyingDecimalsData = encodeMetapoolCallData(policy, "get_underlying_decimals");
+    const isMetaData = encodeMetapoolCallData(policy, "is_meta");
+    const [basePoolResult, underlyingCoinsResult, underlyingDecimalsResult, isMetaResult] = [
+      await readCall(basePoolRole, policy.factoryAddress, basePoolData),
+      await readCall("factory-underlying-coins", policy.factoryAddress, underlyingCoinsData),
+      await readCall("factory-underlying-decimals", policy.factoryAddress, underlyingDecimalsData),
+      await readCall("factory-is-meta", policy.factoryAddress, isMetaData),
+    ];
+    if (!basePoolResult || !underlyingCoinsResult || !underlyingDecimalsResult || !isMetaResult) {
+      return { ok: false, reason: "base-pool-mismatch" };
+    }
+    try {
+      const underlyingCoins = decodeFactoryAddressArray(
+        policy,
+        "get_underlying_coins",
+        underlyingCoinsResult,
+        policy.executionTokens.length,
+      );
+      const underlyingDecimals = decodeFactoryDecimalsArray(
+        policy,
+        underlyingDecimalsResult,
+        policy.executionTokens.length,
+      );
+      const isMeta = decodeFunctionResult({
         abi: FACTORY_ABI,
         functionName: "is_meta",
-        args: [policy.poolAddress],
-      }).toLowerCase() as `0x${string}`;
-      const [basePoolResult, underlyingCoinsResult, underlyingDecimalsResult, isMetaResult] = [
-        await readCall(basePoolRole, policy.factoryAddress, basePoolData),
-        await readCall("factory-underlying-coins", policy.factoryAddress, underlyingCoinsData),
-        await readCall("factory-underlying-decimals", policy.factoryAddress, underlyingDecimalsData),
-        await readCall("factory-is-meta", policy.factoryAddress, isMetaData),
-      ];
-      if (!basePoolResult || !underlyingCoinsResult || !underlyingDecimalsResult || !isMetaResult) {
-        return { ok: false, reason: "base-pool-mismatch" };
-      }
-      try {
-        const underlyingCoins = decodeFactoryAddressArray(
-          policy,
-          "get_underlying_coins",
-          underlyingCoinsResult,
-          policy.executionTokens.length,
-        );
-        const underlyingDecimals = decodeFactoryDecimalsArray(
-          policy,
-          underlyingDecimalsResult,
-          policy.executionTokens.length,
-        );
-        const isMeta = decodeFunctionResult({
-          abi: FACTORY_ABI,
-          functionName: "is_meta",
-          data: isMetaResult,
-        }) as boolean;
-        const decodedBasePool = policy.metapool.basePoolBinding === "registry-lp-token"
-          ? decodeAddress(MAIN_REGISTRY_ABI, "get_pool_from_lp_token", basePoolResult)
-          : decodeAddress(FACTORY_ABI, "get_base_pool", basePoolResult);
-        if (
-          decodedBasePool !== policy.metapool.basePoolAddress ||
-          !isMeta ||
-          !underlyingCoins ||
-          underlyingCoins.length !== policy.executionTokens.length ||
-          underlyingCoins.some(
-            (address, index) => canonicalEvmAddress(address) !== policy.executionTokens[index]!.address,
-          ) ||
-          !underlyingDecimals ||
-          underlyingDecimals.length !== policy.executionTokens.length ||
-          underlyingDecimals.some(
-            (decimals, index) => Number(decimals) !== policy.executionTokens[index]!.decimals,
-          )
-        ) return { ok: false, reason: "base-pool-mismatch" };
-        metapool = {
-          basePoolAddress: policy.metapool.basePoolAddress,
-          basePoolCodeHash: baseCode.hash,
-          basePoolTokenAddresses: policy.metapool.basePoolTokens.map((token) => token.address),
-        };
-      } catch {
-        return { ok: false, reason: "base-pool-mismatch" };
-      }
+        data: isMetaResult,
+      }) as boolean;
+      const decodedBasePool = policy.metapool.basePoolBinding === "registry-lp-token"
+        ? decodeAddress(MAIN_REGISTRY_ABI, "get_pool_from_lp_token", basePoolResult)
+        : decodeAddress(FACTORY_ABI, "get_base_pool", basePoolResult);
+      if (
+        decodedBasePool !== policy.metapool.basePoolAddress ||
+        !isMeta ||
+        !underlyingCoins ||
+        underlyingCoins.length !== policy.executionTokens.length ||
+        underlyingCoins.some(
+          (address, index) => canonicalEvmAddress(address) !== policy.executionTokens[index]!.address,
+        ) ||
+        !underlyingDecimals ||
+        underlyingDecimals.length !== policy.executionTokens.length ||
+        underlyingDecimals.some(
+          (decimals, index) => Number(decimals) !== policy.executionTokens[index]!.decimals,
+        )
+      ) return { ok: false, reason: "base-pool-mismatch" };
+      metapool = {
+        basePoolAddress: policy.metapool.basePoolAddress,
+        basePoolCodeHash: baseCode.hash,
+        basePoolTokenAddresses: policy.metapool.basePoolTokens.map((token) => token.address),
+      };
+    } catch {
+      return { ok: false, reason: "base-pool-mismatch" };
     }
+  }
 
-    const revalidated = await dependencies.fetchBlockHeader(policy.chain, header.number, requestOptions);
-    input.rpcBudget?.recordChainResult(policy.chain, revalidated != null);
-    if (
-      !revalidated ||
-      revalidated.hash !== header.hash ||
-      revalidated.timestamp !== header.timestamp
-    ) return { ok: false, reason: "block-header-unavailable" };
+  const revalidated = await fetchEvmBlockHeader(policy.chain, header.number, requestOptions);
+  input.rpcBudget?.recordChainResult(policy.chain, revalidated != null);
+  if (
+    !revalidated ||
+    revalidated.hash !== header.hash ||
+    revalidated.timestamp !== header.timestamp
+  ) return { ok: false, reason: "block-header-unavailable" };
 
-    const proof: DexMeasuredExecutionCurveCompositeProof = {
-      blockNumber: header.number,
-      blockHash: header.hash,
-      blockCommitment: "finalized",
-      factoryAddress: policy.factoryAddress,
-      factoryCodeHash: factoryCode.hash,
-      poolIndex: policy.factoryPoolIndex,
-      registeredPoolAddress: policy.poolAddress,
-      poolCodeHash: poolCode.hash,
-      implementationAddress: policy.implementationAddress,
-      implementationCodeHash: implementationCode.hash,
-      quoteFunction: policy.quoteFunction,
-      poolTokenAddresses: policy.poolTokens.map((token) => token.address),
-      executionTokenAddresses: policy.executionTokens.map((token) => token.address),
-      calls,
-      ...(rateProvider ? { rateProvider } : {}),
-      ...(metapool ? { metapool } : {}),
-    };
-    const runtimeEvidence = { blockTimestamp: header.timestamp, proof };
-    const eligibility = evaluateCurveCompositeEligibility({
-      chain: policy.chain,
-      endpointAddress: policy.poolAddress,
-      blockNumber: header.number,
-      nowSec: input.nowSec,
-      evidence: runtimeEvidence,
-    });
-    return eligibility.ok
-      ? {
-          ok: true,
-          codeHash: poolCode.hash,
-          blockNumber: header.number,
-          blockTimestamp: header.timestamp,
-          runtimeEvidence,
-          proof,
-        }
-      : eligibility;
+  const proof: DexMeasuredExecutionCurveCompositeProof = {
+    blockNumber: header.number,
+    blockHash: header.hash,
+    blockCommitment: "finalized",
+    factoryAddress: policy.factoryAddress,
+    factoryCodeHash: factoryCode.hash,
+    poolIndex: policy.factoryPoolIndex,
+    registeredPoolAddress: policy.poolAddress,
+    poolCodeHash: poolCode.hash,
+    implementationAddress: policy.implementationAddress,
+    implementationCodeHash: implementationCode.hash,
+    quoteFunction: policy.quoteFunction,
+    poolTokenAddresses: policy.poolTokens.map((token) => token.address),
+    executionTokenAddresses: policy.executionTokens.map((token) => token.address),
+    calls,
+    ...(rateProvider ? { rateProvider } : {}),
+    ...(metapool ? { metapool } : {}),
   };
+  const runtimeEvidence = { blockTimestamp: header.timestamp, proof };
+  const eligibility = evaluateCurveCompositeEligibility({
+    chain: policy.chain,
+    endpointAddress: policy.poolAddress,
+    blockNumber: header.number,
+    nowSec: input.nowSec,
+    evidence: runtimeEvidence,
+  });
+  return eligibility.ok
+    ? {
+        ok: true,
+        codeHash: poolCode.hash,
+        blockNumber: header.number,
+        blockTimestamp: header.timestamp,
+        runtimeEvidence,
+        proof,
+      }
+    : eligibility;
 }
-
-export const verifyCurveCompositeDeployment = createCurveCompositeDeploymentVerifier({
-  fetchCodeStatus: fetchEvmCodeStatusAtBlock,
-  fetchCall: fetchEvmCallHexAtBlock,
-  fetchBlockHeader: fetchEvmBlockHeader,
-});
 
 export function resolveCurveCompositeTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
@@ -847,25 +828,10 @@ export function validateCurveCompositeProfileProof(profile: DexMeasuredExecution
     const asset = callByRole(proof, "rate-provider-asset");
     const convert = callByRole(proof, "rate-provider-convert");
     const storedRates = callByRole(proof, "pool-stored-rates");
-    const assetTypesCallData = encodeFunctionData({
-      abi: FACTORY_ABI,
-      functionName: "get_pool_asset_types",
-      args: [policy.poolAddress],
-    }).toLowerCase() as `0x${string}`;
-    const assetCallData = encodeFunctionData({
-      abi: ERC4626_ABI,
-      functionName: "asset",
-    }).toLowerCase() as `0x${string}`;
-    const shares = 10n ** BigInt(policy.poolTokens[policy.rateProvider.tokenIndex].decimals);
-    const convertCallData = encodeFunctionData({
-      abi: ERC4626_ABI,
-      functionName: "convertToAssets",
-      args: [shares],
-    }).toLowerCase() as `0x${string}`;
-    const storedRatesCallData = encodeFunctionData({
-      abi: POOL_ABI,
-      functionName: "stored_rates",
-    }).toLowerCase() as `0x${string}`;
+    const {
+      assetTypesData: assetTypesCallData, assetData: assetCallData,
+      convertData: convertCallData, storedRatesData: storedRatesCallData,
+    } = encodeRateProviderCallData(policy);
     try {
       const observedAssetTypes = assetTypes
         ? decodeFunctionResult({
@@ -915,32 +881,10 @@ export function validateCurveCompositeProfileProof(profile: DexMeasuredExecution
     const underlyingCoins = callByRole(proof, "factory-underlying-coins");
     const underlyingDecimals = callByRole(proof, "factory-underlying-decimals");
     const isMeta = callByRole(proof, "factory-is-meta");
-    const basePoolCallData = policy.metapool.basePoolBinding === "registry-lp-token"
-      ? encodeFunctionData({
-          abi: MAIN_REGISTRY_ABI,
-          functionName: "get_pool_from_lp_token",
-          args: [policy.poolTokens[1].address],
-        }).toLowerCase() as `0x${string}`
-      : encodeFunctionData({
-          abi: FACTORY_ABI,
-          functionName: "get_base_pool",
-          args: [policy.poolAddress],
-        }).toLowerCase() as `0x${string}`;
-    const underlyingCoinsCallData = encodeFunctionData({
-      abi: FACTORY_ABI,
-      functionName: "get_underlying_coins",
-      args: [policy.poolAddress],
-    }).toLowerCase() as `0x${string}`;
-    const underlyingDecimalsCallData = encodeFunctionData({
-      abi: FACTORY_ABI,
-      functionName: "get_underlying_decimals",
-      args: [policy.poolAddress],
-    }).toLowerCase() as `0x${string}`;
-    const isMetaCallData = encodeFunctionData({
-      abi: FACTORY_ABI,
-      functionName: "is_meta",
-      args: [policy.poolAddress],
-    }).toLowerCase() as `0x${string}`;
+    const basePoolCallData = encodeMetapoolCallData(policy, "get_base_pool");
+    const underlyingCoinsCallData = encodeMetapoolCallData(policy, "get_underlying_coins");
+    const underlyingDecimalsCallData = encodeMetapoolCallData(policy, "get_underlying_decimals");
+    const isMetaCallData = encodeMetapoolCallData(policy, "is_meta");
     try {
       const coins = underlyingCoins
         ? decodeFactoryAddressArray(

@@ -1,4 +1,5 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { HYPEREVM_HISTORY_RPC_URL } from "@shared/lib/evm-rpc-capabilities";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -334,7 +335,8 @@ describe("reviewed plain-token branches", () => {
     expect(branch.kind).toBe("plain-token");
     const assetKey = defillamaAssetKey(branch.token.chain, branch.token.address);
     const { result, network } = await runAdapter("liquity-v2-branches", coinId, {
-      params: { mechanismMetrics: undefined },
+      // HyperEVM's public registry routes are latest-only, so a pinned read needs a history-capable route.
+      params: { mechanismMetrics: undefined, ...(coinId === "feusd-felix" ? { rpcUrl: HYPEREVM_HISTORY_RPC_URL } : {}) },
       nowSec: NOW,
       network: {
         block: BLOCK,

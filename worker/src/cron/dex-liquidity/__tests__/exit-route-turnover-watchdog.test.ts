@@ -459,7 +459,7 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(failed.status).toBe("degraded");
     expect(metadataOf(failed)).toMatchObject({
       reason: "operator-alert-delivery-failed",
-      operatorAlert: { episodeActive: true, sent: false, deliveryFailed: true },
+      operatorAlert: { episodeActive: true, sent: false, deliveryFailed: true, deliveryErrorClass: "unknown" },
     });
     const original = snapshot().pendingAlert;
     const pendingReceipt = receipt();

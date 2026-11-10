@@ -136,7 +136,7 @@ Every five minutes `dispatchTelegramAlerts` (`worker/src/cron/telegram/dispatch/
 2. Detected events become a deterministic `alert:<sha256(events + baseline)>` job. The job, the advanced baselines and the roll-up change-log rows they consume commit in **one** D1 batch (eventless runs too), so a crash or failed write re-detects the same events and re-derives the same job id (`INSERT OR IGNORE`).
 3. Fresh Tape freeze events after `alert:freeze-tape-cursor` become one `freeze:<tapeEventId>` job each. Below-threshold events go to the roll-up change log. Job and change-log inserts are idempotent (`INSERT OR IGNORE`) and commit in chunks of at most 100 statements. The cursor advance rides in the last chunk, so a burst cannot wedge the cursor, and the cursor never passes an unwritten event.
 4. `planning` jobs, read one at a time in `(created_at, job_id)` order, fan out one page of ≤200 chats at a time through the kind's `buildPage` (12 pages per run at most). A page's rows are sorted by chat id and committed in batches of at most 420 rows ending on chat boundaries. Each batch advances `telegram_jobs.cursor` to its last chat; builders page by `chat_id > cursor`. The batch that readies the job also removes a broadcast payload's message HTML, since every row then carries its own chunk. A slice that still cannot fit, or any other throw, fails the job closed without stopping other jobs. A replayed page is ignored by `UNIQUE (job_id, chat_id, seq)`. A builder that throws (for example a preset resolution failure) leaves the job `planning`: it fails closed, is retried next run and is cancelled at its TTL. It is never treated as an empty audience.
-5. The roll-up hook `runTelegramRollupStep` (hourly freeze batch and the 09:00-local daily roll-up) enqueues direct-delivery `freeze_batch` and `rollup` jobs. It is wrapped, so a failure is logged, degrades the run and never blocks alerts.
+5. The roll-up hook `runTelegramRollupStep` (hourly freeze batch and the 09:00-local daily roll-up) enqueues a planning `freeze_batch` job and direct-delivery `rollup` jobs. It is wrapped, so a failure is logged, degrades the run and never blocks alerts.
 6. Drain and the sweep run (see [Queue](#6-queue--rate-limit--retry)).
 
 At plan time, every alert and freeze page passes through the per-chat cap (`rollup/chat-cap.ts`). Rows over the cap become roll-up overflow entries in the same batch.
@@ -209,17 +209,17 @@ Subscriber UPSERTs use common chat/username/activity inputs and one SQL builder.
 
 Mini App bounded direct patches (bulk edit, single removal and their undo) run in one generation-fenced atomic batch: ensure the parent when requested, claim the generation lease, apply guarded preference and first-follow writes, restore explicit undo snoozes, restore the next generation, and prove the result from the lease claim. The batch retains D1 bind/statement bounds and overload retry.
 
-Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecycle snapshot when pending-delivery evidence is unavailable.
+Unavailable pulse quality is `unknown`, never `complete`; do not write a lifecycle snapshot when pending-delivery evidence is unavailable. Daily lifecycle UPSERTs reject an older `snapshot_at`, so overlapping refreshes cannot regress stored clocks or counts.
 
 Lifecycle family opt-in totals and the all-types conjunction share manifest-derived direct/preset/global predicates, counting each chat once per family; presets contribute only their supported families.
 
-Digest appendix preparation exposes immutable-edition `successActions`, not a separate commit callback. Only `worker/src/telegram/outbox/digest-outbox.ts` applies these post-delivery cache writes, atomically with the exact edition's fenced `sent` transition; preparation retains immediate writes solely for safe first-run/reseed baselines. The [digest outbox contract](./runbooks/telegram-digest-outbox.md#contract) owns finalization and replay safety.
+Digest appendix preparation exposes immutable-edition `successActions`, not a separate commit callback. Only `worker/src/telegram/outbox/digest-outbox.ts` applies these post-delivery cache writes, atomically with the exact edition's fenced `sent` transition; preparation retains immediate writes solely for safe first-run/reseed baselines. Tracked and launch actions consume evaluated IDs from the current pending set, preserving later additions and silently retiring non-announceable notices. Malformed pending state remains untouched and logged without blocking other actions or `sent`. [Digest Telegram delivery](./digest-pipeline.md#telegram) owns action keys and legacy compatibility; the [digest outbox contract](./runbooks/telegram-digest-outbox.md#contract) owns finalization and replay safety.
 
 Delivery diagnostics reconcile atomically across command replies and alert batches: each independent success clock retains its greatest observed timestamp (null until observed), and attempt/update clocks never decrease. Older attempts may contribute genuine historical successes but cannot change the latest attempt's failure class. At equal-second attempts, failures take precedence over successes; among failures the last persisted observation wins, matching within-batch coalescing. A strictly newer successful attempt clears the failure class. Diagnostics remain best-effort and never block replies or delivery.
 
 `/forget` erases subscriber-owned rows and raw chat cache keys while retaining processed-update replay proof. Mini App abuse admission is independent, not subscriber-owned: only anonymous time-scoped HMAC keys, counters and the original admission clock survive, for at most the remainder of the anchored 30-second window. They never extend on forget/denial or identify a later window. Expired anonymous rows are inert and physically removed by the existing daily bounded cache prune; no raw chat-key retention or precise 30-second physical deletion is implied. [Mini App auth](./telegram-mini-app.md#auth-model) owns admission and identity details.
 
-Chat migration derives insert/select columns and conflict assignments from one ordered local descriptor per merged table, including copy-only identities. Paired quiet-hour windows, null-safe minima, snooze normalization and generation increments retain explicit merge rules; repeated service events preserve complete destination rows. Child-table order, collision cleanup and processed-update evidence remain unchanged.
+Chat migration derives insert/select columns and conflict assignments from one ordered local descriptor per merged table, including copy-only identities. Diagnostics use the same latest-attempt and equal-second failure rules as ordinary writes. Colliding roll-up markers retain the later handling clock and its associated local date; equal clocks retain the destination marker. A handled marker includes empty summaries and does not prove delivery. Paired quiet-hour windows, null-safe minima, snooze normalization and generation increments retain explicit merge rules; repeated service events preserve complete destination rows. Child-table order, collision cleanup and processed-update evidence remain unchanged.
 
 **Owned files.**
 - `worker/src/telegram/store/*` — topic-specific SQL builders, imported directly (no barrel).
@@ -291,7 +291,7 @@ Distinct-chat scheduling stays in `schedulePerChatBatches`; the delivery drain s
 
 **Allowed inbound dependencies.** The Next.js route `/pharoswatchbot/app/`, Worker route registry entries for `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate`, and private-chat Web App buttons generated by Action handlers / Callback routing.
 
-**Allowed outbound dependencies.** State / persistence helpers for subscription writes and cooldowns, Worker preset resolution for dynamic targets, `telegram-usage-analytics` for validated usage events, the shared Mini App contract/catalog and preset definitions, shared endpoint metadata, shared stablecoin metadata, and the Telegram WebApp browser bridge on the frontend.
+**Allowed outbound dependencies.** State / persistence helpers for subscription writes and cooldowns, Worker preset resolution for dynamic targets, `worker/src/telegram/store/usage-analytics.ts` for validated usage events, the shared Mini App contract/catalog and preset definitions, shared endpoint metadata, shared stablecoin metadata, and the Telegram WebApp browser bridge on the frontend.
 
 **Must NOT.**
 - Accept mutation auth older than the 5-minute mutation window.
@@ -364,15 +364,15 @@ Indexes are part of that migration authority; this map does not duplicate index 
 
 **User deletion.** A fan-out cursor that names the forgotten chat is rewound to the previous subscriber id (resume replays nothing new), and a broadcast's `excludeChatId` is scrubbed. `/forget` immediately deletes subscriber-owned settings, diagnostics, `telegram_deliveries` rows, roll-up jobs (by delivery ownership, then by id), roll-up state and change-log overflow rows, plus exact/prefix cache residue from `prepareDeleteTelegramChatCacheStatements` (`worker/src/telegram/store/subscriber-lifecycle.ts`). `/unsubscribe all` stops follows without immediate erasure.
 
-**Retention** (`telegram-retention-cleanup`, windows in `TELEGRAM_RETENTION_WINDOWS`, `shared/lib/retention-policy.ts`):
+**Retention** (`telegram-retention-cleanup`, windows owned by `TELEGRAM_RETENTION_WINDOWS` (`shared/lib/retention-policy.ts`), `TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC` (`worker/src/telegram/common/constants.ts`) and `TELEGRAM_ALERT_POLICY.rollup.changeLogRetentionSec` (`shared/lib/telegram-delivery-policy.ts`)):
 
 | Evidence | Retention |
 | --- | --- |
-| Terminal `telegram_deliveries` rows (`done_at`, body dropped), then `telegram_jobs` with no remaining row (a broadcast payload's `messageHtml` is removed before that) | 90d (`alertAudit`) |
-| Processed updates | 7d |
-| Usage and lifecycle aggregates | 400d |
-| Chat delivery diagnostics | 90d |
-| Roll-up change log | 8d, pruned by the roll-up step |
+| Terminal `telegram_deliveries` rows (`done_at`, body dropped), then `telegram_jobs` with no remaining row (a broadcast payload's `messageHtml` is removed before that) | `TELEGRAM_RETENTION_WINDOWS.alertAudit` |
+| Processed updates | `TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC` |
+| Usage and lifecycle aggregates | `TELEGRAM_RETENTION_WINDOWS.usageDaily` |
+| Chat delivery diagnostics | `TELEGRAM_RETENTION_WINDOWS.chatDiagnostics` |
+| Roll-up change log | `TELEGRAM_ALERT_POLICY.rollup.changeLogRetentionSec`, pruned by the roll-up step |
 | Digest outbox rows | owned by the [digest outbox](./runbooks/telegram-digest-outbox.md) |
 
 Deletion is batched and capped per table per run; a capped run sets `runBudgetTruncated` and per-table `cappedAtLimit`, and one family error degrades the cron while the others continue.
@@ -401,7 +401,7 @@ The reconciled menu is `Manage Alerts`, a Web App link to `https://pharos.watch/
 
 ### Webhook Secret Rotation
 
-[Secret rotation](./runbooks/telegram-webhook.md#secret-rotation) is the operational authority. The receiver accepts current or previous webhook secret while both are configured; the up-to-24-hour overlap is operator policy, not a timestamp gate. Registration sends only the current secret. Previous bot tokens validate signed Mini App sessions only, never outbound sends.
+[Secret rotation](./runbooks/telegram-webhook.md#secret-rotation) is the operational authority. The up-to-24-hour webhook-secret overlap is operator policy, not a timestamp gate, and must be ended by removing the previous secret after a successful delivery.
 
 ## Ingress Implementation Appendix
 

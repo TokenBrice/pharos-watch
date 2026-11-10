@@ -83,7 +83,7 @@ For retired BIMA, CETES, or vaults.fyi candidates, read the [protocol-native sou
 The kind list above mirrors `YieldCoverageAuditQueueItemKind` in
 `shared/types/status/yield-liquidity.ts`. The source file wins; triage any
 kind not listed here from its emitting code in
-`worker/src/cron/yield-coverage-audit.ts`.
+`worker/src/cron/yield-coverage-audit/detectors.ts`.
 
 ### 2. Verify source identity
 

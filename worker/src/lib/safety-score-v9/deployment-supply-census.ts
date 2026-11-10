@@ -862,13 +862,21 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
     throwIfAborted(input.signal);
     const evmTargets = evmTargetsByAssetId.get(accumulator.assetId);
     if (evmTargets === undefined) continue;
+    const rawChainBounds = new Map(accumulator.chainSupplyUsdByChainId);
+    // Canonical bounds apply after mirror netting; keep independent chain failures visible.
+    for (const entry of accumulator.entries) {
+      if (entry.canonicalDeployment &&
+        accumulator.entries.some(mirror => mirror.mirroredFromChainId === entry.chainId)) {
+        rawChainBounds.delete(entry.chainId);
+      }
+    }
     let census: DeploymentSupplyCensusEvmCensus;
     try {
       census = await observeDeploymentSupplyCensusEvm({
         targets: evmTargets,
         scoringClockSec: observationClockSec,
         aggregateSupplyUsd: accumulator.aggregateSupplyUsd!,
-        chainSupplyUsdByChainId: accumulator.chainSupplyUsdByChainId,
+        chainSupplyUsdByChainId: rawChainBounds,
         referencePrices: new Map(evmTargets.map(target => [target.routeId, accumulator.referencePrice])),
         pins,
         chainRpcs: input.chainRpcs,

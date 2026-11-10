@@ -1,0 +1,46 @@
+{
+  "id": "rdusd-rd-technologies",
+  "name": "RDUSD",
+  "symbol": "RDUSD",
+  "oneLiner": "RDUSD is Anchorage Digital Bank's planned US dollar stablecoin for RD Technologies, with deployment planned on HSK Chain.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://rd.group/"
+    },
+    {
+      "label": "Issuer announcement",
+      "url": "https://www.anchorage.com/press-room/anchorage-digital-bank-n-a-to-issue-rdusd-a-us-dollar-backed-stablecoin-for-rd-technologies"
+    },
+    {
+      "label": "RD Technologies announcement",
+      "url": "https://rd.group/news/blogs/RD%20Technologies%20Upgrades%20Its%20Cross-Border%20Payments%20and%20Digital%20Finance%20Ecosystem/"
+    },
+    {
+      "label": "RD Technologies November 1 release",
+      "url": "https://www.prnewswire.com/news-releases/rd-technologies-upgrades-its-cross-border-payments-and-digital-finance-ecosystem-302925736.html"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "National Trust Bank"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-11-01",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Anchorage Digital announced that Anchorage Digital Bank N.A. will issue RDUSD, with each token backed 1:1 by US dollars held at the bank. Anchorage will manage issuance, reserves, minting, redemption and custody. RD Technologies supports brand development and the application ecosystem, and deployment is planned on HSK Chain. RD Technologies' November 1 release and its November 2 website publication restrict Hong Kong distribution to professional investors and state that RDUSD is not licensed by the HKMA or approved or recognised by any Hong Kong regulatory authority. These announcements describe a planned deployment and do not establish public issuance or a launch date.",
+  "milestones": [
+    {
+      "date": "2026-11-01",
+      "type": "announcement",
+      "title": "Anchorage Digital announces RDUSD with RD Technologies",
+      "description": "Anchorage Digital Bank N.A. will issue the US dollar stablecoin and manage its reserves and redemption, while RD Technologies supports brand development and its application ecosystem. The announcement plans deployment on HSK Chain without setting a launch date.",
+      "sourceUrl": "https://www.anchorage.com/press-room/anchorage-digital-bank-n-a-to-issue-rdusd-a-us-dollar-backed-stablecoin-for-rd-technologies"
+    }
+  ]
+}

@@ -195,6 +195,13 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-09-27",
     note: "Rebasing holder yield is not price appreciation; no reviewed rebasing-return adapter is wired",
   },
+  // https://yields.llama.fi/chart/f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109
+  "usdn-smardex": {
+    code: "no-public-yield-source",
+    since: "2026-11-07",
+    nextReviewAt: "2026-11-21",
+    note: "2026-11-07 review: the native DeFiLlama pool is absent and its chart ends on 2026-08-26; no reviewed rebasing-return reader replaces it. Revisit on a current issuer holder-rate feed or verified rebase adapter; price appreciation cannot measure rebasing income",
+  },
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",

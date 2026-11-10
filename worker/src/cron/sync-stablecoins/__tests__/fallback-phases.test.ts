@@ -344,68 +344,7 @@ describe("CoinGecko fallback phases", () => {
     expect(current.circulatingPrevMonth).toEqual({ peggedUSD: 970_000 });
   });
 
-  it("returns the fallback stale-blocked result before cache publication", async () => {
-    const assets = Array.from({ length: 50 }, (_, index) =>
-      makeAsset({
-        id: `fixture-${index}`,
-        geckoId: `fixture-${index}`,
-        price: 1,
-      }),
-    );
-    const previousPayload = {
-      peggedAssets: assets.map((asset) => ({
-        id: asset.id,
-        price: asset.price,
-        priceSource: asset.priceSource,
-        priceConfidence: asset.priceConfidence,
-        priceUpdatedAt: asset.priceUpdatedAt,
-        priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
-        priceSyncedAt: asset.priceSyncedAt,
-      })),
-    };
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: JSON.stringify(previousPayload),
-          updated_at: NOW_SEC - 8 * 3600,
-        },
-      },
-    ]);
-
-    const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
-    const result = await evaluateFallbackStalenessFixture({
-      db,
-      assets,
-      previousAssetsById,
-      previousCacheState,
-      syncStartSec: NOW_SEC,
-    });
-
-    expect("metadata" in result).toBe(true);
-    const metadata = JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}") as Record<string, unknown>;
-    expect(result).toMatchObject({
-      status: "degraded",
-      itemCount: 50,
-    });
-    expect(metadata).toMatchObject({
-      rowsRead: 50,
-      rowsWritten: 0,
-      fallbackMode: "coingecko-supply-fallback-stale-blocked",
-      stalenessWarning: true,
-      staleWriteBlocked: true,
-      cacheWriteMode: "no-write",
-      cacheWriteSucceeded: false,
-      depegPipelineSucceeded: false,
-    });
-  });
-
-  it.each([
-    { label: "blocks a collapsed payload whose identical overlap still represents it", total: 40, overlap: 30, blocked: true },
-    { label: "keeps publishing when the identical overlap covers under half the payload", total: 100, overlap: 40, blocked: false },
-  ])("$label", async ({ total, overlap, blocked }) => {
+  async function evaluateStaleCohort(total: number, overlap: number) {
     const assets = Array.from({ length: total }, (_, index) =>
       makeAsset({
         id: `fixture-${index}`,
@@ -437,13 +376,41 @@ describe("CoinGecko fallback phases", () => {
     ]);
 
     const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
-    const result = await evaluateFallbackStalenessFixture({
+    return evaluateFallbackStalenessFixture({
       db,
       assets,
       previousAssetsById,
       previousCacheState,
       syncStartSec: NOW_SEC,
     });
+  }
+
+  it("returns the fallback stale-blocked result before cache publication", async () => {
+    const result = await evaluateStaleCohort(50, 50);
+
+    expect("metadata" in result).toBe(true);
+    const metadata = JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}") as Record<string, unknown>;
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 50,
+    });
+    expect(metadata).toMatchObject({
+      rowsRead: 50,
+      rowsWritten: 0,
+      fallbackMode: "coingecko-supply-fallback-stale-blocked",
+      stalenessWarning: true,
+      staleWriteBlocked: true,
+      cacheWriteMode: "no-write",
+      cacheWriteSucceeded: false,
+      depegPipelineSucceeded: false,
+    });
+  });
+
+  it.each([
+    { label: "blocks a collapsed payload whose identical overlap still represents it", total: 40, overlap: 30, blocked: true },
+    { label: "keeps publishing when the identical overlap covers under half the payload", total: 100, overlap: 40, blocked: false },
+  ])("$label", async ({ total, overlap, blocked }) => {
+    const result = await evaluateStaleCohort(total, overlap);
 
     if (blocked) {
       const metadata = JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}") as Record<string, unknown>;
@@ -460,17 +427,25 @@ describe("CoinGecko fallback phases", () => {
     });
   });
 
-  it("marks malformed previous cache as check-failed in the fallback staleness gate", async () => {
+  it.each([
+    {
+      name: "marks malformed previous cache as check-failed in the fallback staleness gate",
+      response: { first: { value: "{not-json", updated_at: NOW_SEC - 60 } },
+      reason: "malformed-previous-cache",
+    },
+    {
+      name: "marks D1 read failures as check-failed in the fallback staleness gate",
+      response: { throwError: new Error("cache read failed") },
+      reason: "cache read failed",
+    },
+  ])("$name", async ({ response, reason }) => {
     const assets = [makeAsset()];
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
         rows: [],
-        first: {
-          value: "{not-json",
-          updated_at: NOW_SEC - 60,
-        },
+        ...response,
       },
     ]);
 
@@ -488,36 +463,7 @@ describe("CoinGecko fallback phases", () => {
       stalenessWarning: false,
       stalenessSummary: null,
       stalenessCheckFailed: true,
-      stalenessCheckFailureReason: "malformed-previous-cache",
-    });
-  });
-
-  it("marks D1 read failures as check-failed in the fallback staleness gate", async () => {
-    const assets = [makeAsset()];
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        throwError: new Error("cache read failed"),
-      },
-    ]);
-
-    const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
-    const result = await evaluateFallbackStalenessFixture({
-      db,
-      assets,
-      previousAssetsById,
-      previousCacheState,
-      syncStartSec: NOW_SEC,
-    });
-
-    expect("metadata" in result).toBe(false);
-    expect(result).toMatchObject({
-      stalenessWarning: false,
-      stalenessSummary: null,
-      stalenessCheckFailed: true,
-      stalenessCheckFailureReason: "cache read failed",
+      stalenessCheckFailureReason: reason,
     });
   });
 
@@ -653,7 +599,7 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect(published.circulating).toEqual({});
   });
 
-  it.each(["usg-tangent", "usyc-hashnote"].map((id) => {
+  it.each(["usg-tangent", "usyc-hashnote", "jtrsy-anemoy"].map((id) => {
     const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === id);
     if (!meta) throw new Error(`missing preferred supply fixture: ${id}`);
     return meta;

@@ -168,6 +168,7 @@ async function executeDirectApiProvider(
 
   try {
     const value = await fn(timeout.signal);
+    if (!timeout.isTimedOut()) throwIfAborted(parentSignal);
     const circuitOutcome = await recordOutcomeSafe(db, circuitKey, value.ok && !timeout.isTimedOut());
     return { value, circuitOutcome };
   } catch (error) {

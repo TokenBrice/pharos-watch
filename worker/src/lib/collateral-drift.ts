@@ -43,10 +43,11 @@ export function summarizeCollateralDriftFromLiveReserveMap(
     if (adapter?.sourceModel !== "dynamic-mix" || adapter.evidenceClass !== "independent") continue;
 
     const liveSlices = liveReserveMap.get(meta.id);
-    if (!liveSlices || liveSlices.length < MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES) {
+    if (!liveSlices || liveSlices.length === 0) {
       fallbackCoins.push(meta.id);
       continue;
     }
+    if (liveSlices.length < MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES) continue;
     observedIds.push(meta.id);
 
     if (meta.reserves && meta.reserves.length > 0) {

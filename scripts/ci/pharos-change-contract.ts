@@ -5,6 +5,7 @@ import { appendFileSync, closeSync, constants, existsSync, fstatSync, mkdirSync,
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { isRecord } from "../../shared/lib/type-guards.ts";
 
 import {
   hasDeployImpact,
@@ -265,10 +266,6 @@ function getRoutingRegistry() {
 }
 
 class ExplicitPathError extends Error {}
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values.filter(Boolean))];

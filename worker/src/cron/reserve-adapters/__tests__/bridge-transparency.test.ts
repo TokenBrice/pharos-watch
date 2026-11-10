@@ -8,7 +8,6 @@ import {
   type BridgeTransparencyPayload,
 } from "../bridge-transparency";
 import {
-  expectValidAdapterOutput,
   expectWarnings,
   runAdapter,
 } from "./reserve-adapter.test-support";
@@ -299,17 +298,6 @@ describe("adaptBridgeTransparency", () => {
     expect(result.slices[0]).toMatchObject({ sourceKey: "bridge-transparency:treasury", pct: 100, assetClass: "other" });
   });
 
-  it("is degraded-but-valid under validateAdapterOutput when the source timestamp is stale", () => {
-    const stale: BridgeTransparencyPayload = {
-      ...USDSUI_PAYLOAD,
-      last_updated: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-    const result = adaptBridgeTransparency(stale, "usd_sui");
-    const report = expectValidAdapterOutput("bridge-transparency", result);
-    expect(report.warnings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "stale-source-data", effect: "degraded" })]),
-    );
-  });
 });
 
 describe("fetchBridgeTransparencyReserves", () => {

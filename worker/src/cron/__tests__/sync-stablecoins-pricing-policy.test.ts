@@ -4,6 +4,7 @@ import { restoreMissingTrackedAssets } from "../sync-stablecoins/shared";
 import { carryForwardSupplyGapFill } from "../sync-stablecoins/supply-gap-reconciliation";
 import { enrichMissingPrices, type PeggedAsset, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { makePeggedAsset, makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
 
@@ -21,6 +22,21 @@ describe("pricing application policy", () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
+
+  it.each([["coingecko", 1], ["coingecko", 0.9995], ["defillama-list", 0.9995]] as const)(
+    "distinguishes a fetched %s quote at %s from the list's attributed fill", (source, price) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const asset = makePeggedAsset({ id: "buidl-blackrock", price: null,
+        priceListFillDefault: { value: price, upstreamSource: "coingecko" } });
+      const primaryPriceResults = new Map([[asset.id, makePrimaryPriceResultFixture({
+        price, source, agreeSources: [source], allPrices: { [source]: price }, observedAt: nowSec - 60,
+      })]]);
+      const validationContexts = createValidationContextResolver();
+      applyConsensusResults({ assets: [asset], primaryPriceResults, validationContexts, syncStartSec: nowSec, reason: "primary" });
+      prevalidatePrices({ assets: [asset], primaryPriceResults, validationContexts, logLabel: "test" });
+      expect(asset.price).toBe(source === "coingecko" ? price : null);
+    },
+  );
 
   it("lets USG reject a weak address-provider depeg and recover through exact DefiLlama contract fallback", async () => {
     const assets: PeggedAsset[] = [

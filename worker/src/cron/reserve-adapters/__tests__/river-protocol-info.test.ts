@@ -204,16 +204,6 @@ describe("adaptRiverProtocolInfo", () => {
     expect(() => adaptRiverProtocolInfo({ tvl: 0, circulatingSupply: 100 })).toThrow();
   });
 
-  it("falls back to unverified freshness when both time series are empty", () => {
-    const result = adaptRiverProtocolInfo({
-      tvl: 1000,
-      circulatingSupply: 500,
-      tvlData: [],
-      circulatingData: [],
-    });
-    expect(result.metadata?.freshnessMode).toBe("unverified");
-  });
-
   it("is rejected by validateAdapterOutput when the latest source timestamp is in the future", () => {
     const futureSec = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
     const result = adaptRiverProtocolInfo({

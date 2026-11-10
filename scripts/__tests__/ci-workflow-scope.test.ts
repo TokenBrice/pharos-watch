@@ -10,6 +10,19 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
+  it.each([
+    ["weekly-validation", "ci-report"],
+    ["agent-maintenance-candidates", null],
+    ["curation-expiry-sweep", null],
+    ["ddr-curation-watch", null],
+    ["ops-followups", null],
+  ])("serializes %s issue publication without cancellation", (name, job) => {
+    const workflow = parseYaml(readRepoFile(`.github/workflows/${name}.yml`));
+    expect((job ? workflow.jobs[job] : workflow).concurrency).toEqual({
+      group: `${name}-publication`, "cancel-in-progress": false,
+    });
+  });
+
   it("transports ignored compile/serve inputs without an unused Next cache branch", () => {
     const action = parseYaml(readRepoFile(".github/actions/setup-workspace/action.yml"));
     expect(action.inputs["next-cache"]).toBeUndefined();
@@ -818,7 +831,7 @@ describe("CI workflow scope", () => {
     const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
     const job = nightly.jobs["worker-shared-stability"];
     expect(job.needs).toBeUndefined();
-    expect(job["timeout-minutes"]).toBe(20);
+    expect(job["timeout-minutes"]).toBe(30);
     expect(job.steps?.filter((step) => step.run).map((step) => step.run)).toEqual([
       "npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}",
       "npm test -- --project worker-shared --isolate",

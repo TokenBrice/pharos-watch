@@ -4,6 +4,10 @@ import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
+import { hasMintBurnClassificationReview } from "../lib/mint-burn-classification";
+import { summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
+import type { MintBurnClassification } from "@shared/types/mint-burn";
+import { MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL, readMintBurnClassificationTallyRow, type MintBurnClassificationTallyRow } from "../lib/mint-burn-hourly-valuation";
 import {
   mintBurnDisabledReason,
   readMintBurnDisabledKeys,
@@ -24,14 +28,17 @@ export const MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD = 2_300_000;
 /**
  * Per-leg volume collapse: a leg with a real 30-day baseline that records no
  * counted event for a full week is silent unless a content check compares it
- * with history. Unsupported conservation legs never had a supply-delta fence.
+ * with history. Counts include dust since v6.41; only zero recent activity fires,
+ * so the accounting step cannot itself trigger a collapse. The absolute row
+ * threshold still counts all retained ledger rows, including protected debt.
+ * Unsupported conservation legs never had a supply-delta fence.
  */
 const MINT_BURN_ACTIVITY_BASELINE_WINDOW_SEC = 30 * DAY_SECONDS;
 const MINT_BURN_ACTIVITY_RECENT_WINDOW_SEC = 7 * DAY_SECONDS;
 export const MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS = 30;
 const MINT_BURN_ACTIVITY_SAMPLE_LIMIT = 10;
 
-interface MintBurnActivityRow {
+interface MintBurnActivityRow extends MintBurnClassificationTallyRow {
   stablecoin_id: string;
   chain_id: string;
   recent_events: number | null;
@@ -74,7 +81,11 @@ type CollapsedLeg = {
 };
 
 type CollapsedLegsResult =
-  | { failed: false; legs: CollapsedLeg[] }
+  | { failed: false; legs: CollapsedLeg[]; classificationUnavailable: Array<{
+      stablecoinId: string;
+      chainId: string;
+      reason: MintBurnClassification["unavailableReason"];
+    }> }
   | { failed: true; reason: "mint-burn-activity-baseline-unavailable" | "mint-burn-disabled-policy-unavailable" };
 
 async function loadCollapsedLegs(
@@ -97,7 +108,8 @@ async function loadCollapsedLegs(
         `/* pharos:mint-burn-activity-collapse */
          SELECT stablecoin_id, chain_id,
                 SUM(CASE WHEN hour_ts >= ? THEN mint_count + burn_count ELSE 0 END) AS recent_events,
-                SUM(mint_count + burn_count) AS baseline_events
+                SUM(mint_count + burn_count) AS baseline_events,
+                ${MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL}
            FROM mint_burn_hourly
           WHERE hour_ts >= ?
             AND (stablecoin_id, chain_id) IN (
@@ -115,20 +127,24 @@ async function loadCollapsedLegs(
       )
       .all<MintBurnActivityRow>();
     throwIfAborted(signal);
+    const classificationUnavailable: Extract<CollapsedLegsResult, { failed: false }>["classificationUnavailable"] = [];
+    const legs: CollapsedLeg[] = [];
+    for (const row of rows.results ?? []) {
+      if (!activePairs.keys.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
+      const classification = summarizeMintBurnClassification(readMintBurnClassificationTallyRow(row, hasMintBurnClassificationReview(row.stablecoin_id)));
+      if (classification.completeness !== "complete") {
+        classificationUnavailable.push({ stablecoinId: row.stablecoin_id, chainId: row.chain_id, reason: classification.unavailableReason });
+        continue;
+      }
+      const baselineEvents = row.baseline_events;
+      if (typeof baselineEvents !== "number" || !Number.isSafeInteger(baselineEvents)
+        || baselineEvents < MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS || row.recent_events !== 0) continue;
+      legs.push({ stablecoinId: row.stablecoin_id, chainId: row.chain_id, baselineEvents });
+    }
     return {
       failed: false,
-      legs: (rows.results ?? [])
-        .filter((row) => activePairs.keys.has(`${row.stablecoin_id}|${row.chain_id}`))
-        .flatMap((row) => {
-          const baselineEvents = row.baseline_events;
-          if (typeof baselineEvents !== "number" || !Number.isSafeInteger(baselineEvents)
-            || baselineEvents < MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS) return [];
-          return [{
-            stablecoinId: row.stablecoin_id,
-            chainId: row.chain_id,
-            baselineEvents,
-          }];
-        }),
+      legs,
+      classificationUnavailable,
     };
   } catch {
     throwIfAborted(signal);
@@ -161,7 +177,11 @@ export async function runMintBurnGrowthWatchdog(
     rowCount,
     thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
     ...(!activity.failed
-      ? { activityCollapse: activity.legs.slice(0, MINT_BURN_ACTIVITY_SAMPLE_LIMIT) }
+      ? { activityCollapse: activity.legs.slice(0, MINT_BURN_ACTIVITY_SAMPLE_LIMIT),
+          ...(activity.classificationUnavailable.length > 0 ? {
+            activityClassificationUnavailable: activity.classificationUnavailable.slice(0, MINT_BURN_ACTIVITY_SAMPLE_LIMIT),
+            activityClassificationUnavailableCount: activity.classificationUnavailable.length,
+          } : {}) }
       : activity.reason === "mint-burn-disabled-policy-unavailable"
         ? { disabledPolicyUnavailable: true }
         : { activityBaselineUnavailable: true }),

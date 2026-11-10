@@ -43,7 +43,7 @@ Failure behavior:
 
 Successful observations are `current` with no reason; unsuccessful fetches retain the original clock and become `retained` within budget, or `stale` outside it. Reasons preserve the failed attempt (`http-404`, `no-grade`, `empty-data`, transport/parse failures); age expiry without a failed-attempt reason uses `observation-expired`. Unknown legacy clocks and future clocks are `unknown`, never initialized from the map timestamp or current time.
 
-Selector scoring, grade exclusions and recommendations admit only within-budget `current`/`retained` records; unresolved 404/no-grade/empty-data records are ineligible immediately. Stale/unknown/missing grades are unavailable inputs, not positive or negative current evidence. Detail and compare may still display the external grade with a retained/stale/unknown label. A successful later fetch restores current eligibility. The Pharos-owned designation remains suspended.
+Selector scoring, grade exclusions and recommendations admit only within-budget `current`/`retained` records; unresolved 404/no-grade/empty-data records are ineligible immediately. Stale/unknown/missing grades are unavailable inputs, not positive or negative current evidence. Detail and compare may still display the external grade with its original observation date, or an explicit `Observation date unavailable`. A successful later fetch restores current eligibility. The Pharos-owned designation remains suspended.
 
 ---
 

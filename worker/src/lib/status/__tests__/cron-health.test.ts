@@ -56,12 +56,7 @@ function seedWithOverrides(now: number, overrides: SeedRun[]): Record<string, un
 const CRON_HISTORY_MATCH = "FROM cron_runs\n          WHERE job = ?\n            AND NOT (";
 
 function makeDb(_now: number, rows: Record<string, unknown>[]) {
-  return mockD1([
-    { match: CRON_HISTORY_MATCH, rows },
-    { match: "SELECT MAX(output_at)", rows: [] },
-    { match: "FROM cron_leases", rows: [] },
-    { match: "FROM cron_run_progress", rows: [] },
-  ]);
+  return mockD1([{ match: CRON_HISTORY_MATCH, rows }]);
 }
 
 describe("loadCronHealth optional reads", () => {
@@ -319,72 +314,18 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.crons["status-self-check"].runs[1].degradedReason).toBe("required-stage-failed");
     expect(snapshot.crons["sync-stablecoins"].runs[0]?.degradedReason).toBeUndefined();
   });
-  it("returns 0 when a critical cron has only one error run followed by ok", async () => {
-    // After the base ok row is cleared (because sync-stablecoins appears in
-    // overrides), we explicitly seed an earlier ok run so the streak check
-    // has a non-error previous entry to compare against.
-    const rows = seedWithOverrides(NOW, [
-      { job: "sync-stablecoins", status: "error", ageSec: 30 },
-      { job: "sync-stablecoins", status: "ok", ageSec: 900 },
-    ]);
+  it.each([
+    ["returns 0 when a critical cron has only one error run followed by ok", ["error", "ok"], [30, 900], ["sync-stablecoins"], 1, 0],
+    ["returns 1 when exactly one critical cron has 2 consecutive errors", ["error", "error", "ok"], [30, 900, 1800], ["sync-stablecoins"], 1, 1],
+    ["ignores neutral skips when checking critical error streaks", ["skipped_neutral", "error", "error"], [30, 900, 1800], ["sync-stablecoins"], 1, 1],
+    ["returns 2 when two critical crons each have 2 consecutive errors", ["error", "error"], [30, 900], ["sync-stablecoins", "sync-fx-rates"], 2, 2],
+    ["ignores watch-tier error streaks", ["error", "error"], [30, 1800], ["sync-dex-liquidity"], null, 0],
+    ["resets the streak when the previous run was not an error", ["error", "ok", "error"], [30, 900, 1800], ["sync-stablecoins"], null, 0],
+  ] as const)("%s", async (_name, statuses, ages, jobs, errors, streaks) => {
+    const rows = seedWithOverrides(NOW, jobs.flatMap(job => statuses.map((status, index) => ({ job, status, ageSec: ages[index] }))));
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.availabilityImpactingCronErrors).toBe(1);
-    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(0);
-  });
-
-  it("returns 1 when exactly one critical cron has 2 consecutive errors", async () => {
-    const rows = seedWithOverrides(NOW, [
-      { job: "sync-stablecoins", status: "error", ageSec: 30 },
-      { job: "sync-stablecoins", status: "error", ageSec: 900 },
-      { job: "sync-stablecoins", status: "ok", ageSec: 1800 },
-    ]);
-    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.availabilityImpactingCronErrors).toBe(1);
-    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(1);
-  });
-
-  it("ignores neutral skips when checking critical error streaks", async () => {
-    const rows = seedWithOverrides(NOW, [
-      { job: "sync-stablecoins", status: "skipped_neutral", ageSec: 30 },
-      { job: "sync-stablecoins", status: "error", ageSec: 900 },
-      { job: "sync-stablecoins", status: "error", ageSec: 1800 },
-    ]);
-    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.availabilityImpactingCronErrors).toBe(1);
-    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(1);
-  });
-
-  it("returns 2 when two critical crons each have 2 consecutive errors", async () => {
-    const rows = seedWithOverrides(NOW, [
-      { job: "sync-stablecoins", status: "error", ageSec: 30 },
-      { job: "sync-stablecoins", status: "error", ageSec: 900 },
-      { job: "sync-fx-rates", status: "error", ageSec: 30 },
-      { job: "sync-fx-rates", status: "error", ageSec: 900 },
-    ]);
-    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.availabilityImpactingCronErrors).toBe(2);
-    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(2);
-  });
-
-  it("ignores watch-tier error streaks", async () => {
-    // sync-dex-liquidity is watch-tier (not critical)
-    const rows = seedWithOverrides(NOW, [
-      { job: "sync-dex-liquidity", status: "error", ageSec: 30 },
-      { job: "sync-dex-liquidity", status: "error", ageSec: 1800 },
-    ]);
-    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(0);
-  });
-
-  it("resets the streak when the previous run was not an error", async () => {
-    const rows = seedWithOverrides(NOW, [
-      { job: "sync-stablecoins", status: "error", ageSec: 30 },
-      { job: "sync-stablecoins", status: "ok", ageSec: 900 },
-      { job: "sync-stablecoins", status: "error", ageSec: 1800 },
-    ]);
-    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    // Most recent 2 runs are error/ok → streak is 0
-    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(0);
+    if (errors != null) expect(snapshot.availabilityImpactingCronErrors).toBe(errors);
+    expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(streaks);
   });
 
   it("treats a fresh neutral skipped run as healthy after a fresh required ok run", async () => {
@@ -781,13 +722,7 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
   /** Seed every cron with a baseline ok row, except for the jobs named in
    *  `clearedJobs` which are left entirely absent from the cron_runs rows. */
   function seedWithClearedJobs(now: number, clearedJobs: string[]): Record<string, unknown>[] {
-    const cleared = new Set(clearedJobs);
-    const rows: Record<string, unknown>[] = [];
-    for (const job of Object.keys(CRON_INTERVALS)) {
-      if (cleared.has(job)) continue;
-      rows.push(makeCronRow(job, "ok", 30, now));
-    }
-    return rows;
+    return seedWithOverrides(now, []).filter(row => !clearedJobs.includes(row.job as string));
   }
 
   it("does not count a never-ran watch-tier cron as unhealthy", async () => {

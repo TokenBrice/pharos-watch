@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRef } from "react";
 import { useRowCursor } from "@/hooks/use-row-cursor";
@@ -8,11 +8,7 @@ import { cleanupFrontendTest } from "@/test-utils/frontend";
 
 const rows = [{ id: "first" }, { id: "second" }];
 
-function CursorHarness({ onOpen, onStar, onCompare }: {
-  onOpen: (row: { id: string }) => void;
-  onStar: (row: { id: string }) => void;
-  onCompare: (row: { id: string }) => void;
-}) {
+function CursorHarness({ onOpen, onStar, onCompare }: Record<"onOpen" | "onStar" | "onCompare", (row: typeof rows[number]) => void>) {
   const scopeRef = useRef<HTMLDivElement>(null);
   const cursor = useRowCursor({ rows, getRowId: (row) => row.id, scopeRef, onOpen, onToggleStar: onStar, onAddToCompare: onCompare });
   return (
@@ -30,29 +26,37 @@ function CursorHarness({ onOpen, onStar, onCompare }: {
 afterEach(cleanupFrontendTest);
 
 describe("useRowCursor keyboard ownership", () => {
+  it.each(["ArrowUp", "k"])("moves %s from the bounded cursor after rows shrink", (key) => {
+    const initialRows = Array.from({ length: 10 }, (_, id) => ({ id: String(id) }));
+    const { result, rerender } = renderHook(({ rows }) => useRowCursor({ rows, getRowId: (row) => row.id }), {
+      initialProps: { rows: initialRows },
+    });
+    act(() => result.current.activateCursorAtIndex(9));
+    expect(result.current.activeCursorIndex).toBe(9);
+    rerender({ rows: initialRows.slice(0, 2) });
+    expect(result.current.activeCursorIndex).toBe(1);
+    fireEvent.keyDown(window, { key });
+    expect(result.current.activeCursorIndex).toBe(0);
+  });
+
   it("preserves row navigation, open, star and compare shortcuts on a non-interactive row", () => {
-    const onOpen = vi.fn();
-    const onStar = vi.fn();
-    const onCompare = vi.fn();
+    const onOpen = vi.fn(), onStar = vi.fn(), onCompare = vi.fn();
     render(<CursorHarness onOpen={onOpen} onStar={onStar} onCompare={onCompare} />);
     const row = screen.getByTestId("row");
     row.focus();
-    fireEvent.keyDown(row, { key: "j" });
-    fireEvent.keyDown(row, { key: "Enter" });
-    fireEvent.keyDown(row, { key: "s" });
-    fireEvent.keyDown(row, { key: "c" });
-    expect(onOpen).toHaveBeenCalledWith(rows[1]);
-    expect(onStar).toHaveBeenCalledWith(rows[1]);
-    expect(onCompare).toHaveBeenCalledWith(rows[1]);
+    for (const options of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
+      expect(fireEvent.keyDown(row, { key: "j", ...options })).toBe(true);
+    }
+    expect(row.textContent).toBe("Row first");
+    for (const key of ["j", "Enter", "s", "c"]) expect(fireEvent.keyDown(row, { key, shiftKey: true })).toBe(false);
+    for (const fn of [onOpen, onStar, onCompare]) expect(fn).toHaveBeenCalledExactlyOnceWith(rows[1]);
     fireEvent.keyDown(row, { key: "k" });
     fireEvent.keyDown(row, { key: "o" });
     expect(onOpen).toHaveBeenLastCalledWith(rows[0]);
   });
 
   it("does not cancel or act on keys from native controls, nested icons or editable ancestors", () => {
-    const onOpen = vi.fn();
-    const onStar = vi.fn();
-    const onCompare = vi.fn();
+    const onOpen = vi.fn(), onStar = vi.fn(), onCompare = vi.fn();
     render(<CursorHarness onOpen={onOpen} onStar={onStar} onCompare={onCompare} />);
     const targets = [
       screen.getByTestId("button-child"), screen.getByTestId("link-icon"),
@@ -65,9 +69,7 @@ describe("useRowCursor keyboard ownership", () => {
         expect(fireEvent.keyDown(target, { key })).toBe(true);
       }
     }
-    expect(onOpen).not.toHaveBeenCalled();
-    expect(onStar).not.toHaveBeenCalled();
-    expect(onCompare).not.toHaveBeenCalled();
+    for (const fn of [onOpen, onStar, onCompare]) expect(fn).not.toHaveBeenCalled();
     expect(screen.getByTestId("row").textContent).toBe("Row first");
   });
 });

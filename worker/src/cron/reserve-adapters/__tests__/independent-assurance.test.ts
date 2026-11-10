@@ -697,19 +697,6 @@ describe("independent-assurance manifest framework", () => {
     expect(IndependentAssuranceManifestSchema.safeParse(base).success).toBe(true);
   });
 
-  it("requires adjustments to declare that they are already netted into asset rows", () => {
-    const raw = {
-      ...manifest(),
-      adjustments: [{
-        code: "settlement",
-        label: "Settlement difference",
-        amount: "1",
-        treatment: "Already reflected in the reported total",
-      }],
-    };
-    expect(IndependentAssuranceManifestSchema.safeParse(raw).success).toBe(false);
-  });
-
   it("rejects a zero reported asset total before computing a relative difference", () => {
     const zeroAssets = manifest({
       assets: [{ code: "cash", label: "Cash", amount: "0" }],

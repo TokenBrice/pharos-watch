@@ -81,42 +81,8 @@ type DigestArchiveMeta = {
   editorialStyleHash?: string;
 };
 
-function isDigestInputDataSummary(
-  value: unknown,
-): value is DigestArchiveInput {
-  return typeof value === "object" && value !== null;
-}
-
-function decodeDigestInputData(value: string | null, generatedAt: number) {
-  const decoded = decodeJsonString<DigestArchiveInput, "missing" | "json-parse-failed" | "invalid-shape">(
-    value,
-    {
-      updatedAt: generatedAt,
-      missingReason: "missing",
-      parseErrorReason: "json-parse-failed",
-      normalize: (parsed) => {
-        if (!isDigestInputDataSummary(parsed)) {
-          return { ok: false, reason: "invalid-shape" };
-        }
-        return { ok: true, payload: parsed };
-      },
-    },
-  );
-  if (!decoded.ok && decoded.reason !== "missing") {
-    logMalformedJsonPath({
-      scope: "api",
-      owner: "digest-archive",
-      context: "daily_digest.input_data",
-      reason: decoded.reason,
-      source: "daily_digest",
-      updatedAt: generatedAt,
-    });
-  }
-  return decoded.ok ? decoded.payload : null;
-}
-
-function decodeDigestMeta(value: string | null, generatedAt: number): DigestArchiveMeta | null {
-  const decoded = decodeJsonString<DigestArchiveMeta, "missing" | "json-parse-failed" | "invalid-shape">(
+function decodeDigestArchiveField<T>(value: string | null, generatedAt: number, context: string): T | null {
+  const decoded = decodeJsonString<T, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
       updatedAt: generatedAt,
@@ -126,7 +92,7 @@ function decodeDigestMeta(value: string | null, generatedAt: number): DigestArch
         if (typeof parsed !== "object" || parsed === null) {
           return { ok: false, reason: "invalid-shape" };
         }
-        return { ok: true, payload: parsed as DigestArchiveMeta };
+        return { ok: true, payload: parsed as T };
       },
     },
   );
@@ -134,7 +100,7 @@ function decodeDigestMeta(value: string | null, generatedAt: number): DigestArch
     logMalformedJsonPath({
       scope: "api",
       owner: "digest-archive",
-      context: "daily_digest.digest_meta",
+      context,
       reason: decoded.reason,
       source: "daily_digest",
       updatedAt: generatedAt,
@@ -215,7 +181,7 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
     let nextTriggers: DigestNextTrigger[] | null = null;
     let forwardLookOutcomes: DigestForwardLookOutcome[] | null = null;
     let riskTape: DigestRiskTapeItem[] | null = null;
-    const input = decodeDigestInputData(r.input_data, r.generated_at);
+    const input = decodeDigestArchiveField<DigestArchiveInput>(r.input_data, r.generated_at, "daily_digest.input_data");
     const coverage = DigestSupplyCoverageSchema.safeParse(input?.supplyCoverage);
     if (input) {
       psiScore = input.stabilityIndex?.score ?? null;
@@ -229,7 +195,7 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
       riskTape = intelligence.riskTape;
     }
     let digestType: "daily" | "weekly" = "daily";
-    const meta = decodeDigestMeta(r.digest_meta, r.generated_at);
+    const meta = decodeDigestArchiveField<DigestArchiveMeta>(r.digest_meta, r.generated_at, "daily_digest.digest_meta");
     if (meta?.type === "weekly") {
       digestType = "weekly";
     }

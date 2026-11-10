@@ -45,14 +45,25 @@ const providerSupplyCases: Array<{
 ];
 
 describe("audit-dex-pricing-source-gaps", () => {
-  it.each(providerSupplyCases)(
-    "renders provider targeting supply without coercing absence (%j)", ({ circulating, marketCapUsd, rendered }) => {
+  it("accepts an empty aggregate envelope without a shape warning", () => {
+    const audit = buildDexPricingSourceGapAudit({
+      stablecoins: [stablecoinRow({})],
+      dexPrices: [dexPriceRow({ price_sources_json: JSON.stringify({ aggregateObservedAt: 1_700_000_000, sources: [] }) })],
+    });
+    expect(audit.warnings).toEqual([]);
+    expect(audit.registryGaps).toEqual([]);
+  });
+  it.each(providerSupplyCases.flatMap((row) => [false, true].map((envelope) => ({ ...row, envelope }))))(
+    "renders provider targeting supply without coercing absence (%j)", ({ circulating, marketCapUsd, rendered, envelope }) => {
+      const price = dexPriceRow({ source_total_tvl: 6_000_000 });
+      if (envelope) price.price_sources_json = JSON.stringify({ aggregateObservedAt: price.updated_at, sources: JSON.parse(price.price_sources_json!) });
       const audit = buildDexPricingSourceGapAudit({
         stablecoins: [stablecoinRow({ circulating })],
-        dexPrices: [dexPriceRow({ source_total_tvl: 6_000_000 })],
+        dexPrices: [price],
       });
       expect(audit.providerTargetingGaps).toMatchObject([{ marketCapUsd }]);
       expect(renderDexPricingSourceGapMarkdown(audit)).toContain(`| ${rendered} |`);
+      expect(audit.warnings).toEqual([]);
     },
   );
 });

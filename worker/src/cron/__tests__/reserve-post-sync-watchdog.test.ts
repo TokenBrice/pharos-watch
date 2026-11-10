@@ -399,7 +399,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     }
   });
 
-  it("fires once at the third cycle and recovers once when a cycle succeeds", async () => {
+  it.each([false, true])("fires once at the third cycle and recovers once (legacy=%s)", async (legacy) => {
     const second = await readAlert([historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error")]);
     expect(second.reserveAdapterAlert?.raised).toEqual([]);
     expect(second.firedRuleIds).not.toContain("reserve-adapter-failure-sustained");
@@ -407,6 +407,9 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     const third = await readAlert(historyRows("error"));
     expect(third.reserveAdapterAlert?.raised).toEqual(["reserve-adapter-failure-sustained"]);
     expect(third.firedRuleIds).toContain("reserve-adapter-failure-sustained");
+    if (legacy) cache.set("reserve-post-sync-watchdog:adapter-alerts:v1", JSON.stringify({
+      version: 1, coins: { [COIN]: { failureRaised: true, clockRaised: false } },
+    }));
 
     const fourth = await readAlert([
       historyRow(NOW + 14_400, "error"), historyRow(NOW, "error"),
@@ -419,6 +422,25 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     const recovered = await readAlert([historyRow(NOW + 28_800, "ok")]);
     expect(recovered.reserveAdapterAlert?.recovered).toEqual(["reserve-adapter-failure-sustained"]);
     expect(recovered.firedRuleIds).not.toContain("reserve-adapter-failure-sustained");
+  });
+
+  it.each([
+    "{not-json", "", "null", '{"version":2,"coins":{}}', '{"version":1,"coins":[]}',
+    JSON.stringify({ version: 1, coins: { [COIN]: null } }),
+    JSON.stringify({ version: 1, coins: { [COIN]: { ...failureState, failureRaised: 1 } } }),
+    JSON.stringify({ version: 1, coins: { [COIN]: { ...failureState, scoreIneligibleRaised: null } } }),
+  ])("suppresses transitions against unreadable adapter state %s and reseeds the next run", async (value) => {
+    cache.set("reserve-post-sync-watchdog:adapter-alerts:v1", value);
+    const corrupt = await readAlert(historyRows("error"));
+    expect(corrupt.degradedReasons).toContain("reserve-adapter-alert-evidence-read-failed");
+    expect(corrupt.reserveAdapterAlert).toBeNull();
+    expect(corrupt.activeAdapterAlertReasons).toEqual([]);
+    expect(corrupt.firedRuleIds).not.toContain("reserve-adapter-failure-sustained");
+    expect(JSON.parse(cache.get("reserve-post-sync-watchdog:adapter-alerts:v1")!)).toEqual(priorState(failureState));
+    const next = await readAlert(historyRows("error"));
+    expect(next.reserveAdapterAlert?.raised).toEqual([]);
+    expect(next.reserveAdapterAlert?.recovered).toEqual([]);
+    expect(next.degradedReasons).not.toContain("reserve-adapter-alert-evidence-read-failed");
   });
 
   it("degrades the reserve source with machine reasons while an adapter alert is active", async () => {

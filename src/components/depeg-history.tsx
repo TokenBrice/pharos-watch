@@ -120,9 +120,9 @@ export function DepegHistory({
     () => events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict)),
     [events],
   );
-  // The cursor API skips the exact count (includeTotal=false); its `total` is then a page
-  // lower bound, so it is only a count once exact or once every page has loaded.
-  const knownTotal = data?.totalExact ? data.total : hasLoadedAllPages ? countedEvents.length : null;
+  // API totals include disputed rows; statistics need the fully loaded filtered set.
+  const knownTotal = hasLoadedAllPages ? countedEvents.length : null;
+  const pageableTotal = data?.totalExact ? data.total : null;
   const incidentCountLabel = knownTotal != null ? knownTotal.toLocaleString() : `${countedEvents.length.toLocaleString()}+`;
   const thresholdCrossings = isFullyLoaded
     ? countedEvents.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0)
@@ -300,14 +300,14 @@ export function DepegHistory({
       {isAutoLoadCapped ? (
         <p className="mb-3 text-xs text-state-warn">
           Partial history: the newest {loadedCount.toLocaleString()}
-          {knownTotal != null ? ` of ${knownTotal.toLocaleString()}` : ""} incidents are loaded. Peg-stability metrics need the
+          {pageableTotal != null ? ` of ${pageableTotal.toLocaleString()}` : ""} incidents are loaded. Peg-stability metrics need the
           full history and stay hidden until the rest is loaded.
         </p>
       ) : null}
       {isHydratingFullHistory ? (
         <p className="mb-3 text-xs text-muted-foreground">
           Loading full history... {loadedCount.toLocaleString()}
-          {knownTotal != null ? ` / ${knownTotal.toLocaleString()}` : ""} incidents{isFetchingNextPage ? "" : " loaded"}
+          {pageableTotal != null ? ` / ${pageableTotal.toLocaleString()}` : ""} incidents{isFetchingNextPage ? "" : " loaded"}
         </p>
       ) : null}
       <ol className="space-y-2 md:hidden" aria-label="Compact depeg event history">

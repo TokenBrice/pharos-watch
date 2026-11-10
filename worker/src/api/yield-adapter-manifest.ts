@@ -36,7 +36,8 @@ const MANIFEST_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
  * lifecycle review (`lifecycleReason.since`, when a strategy entered its current
  * `quarantined` / `intentional-gap` state) or the latest methodology revision
  * effective at the serve clock, whichever is newer. Future release activations
- * are not registry revisions until their activation boundary is reached.
+ * and future-dated lifecycle reviews are not registry revisions until their
+ * boundary is reached.
  *
  * The previous implementation published the *current* methodology entry's date
  * alone: a registry whose adapter set changed without a version bump kept
@@ -44,23 +45,21 @@ const MANIFEST_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
  * published `updatedAt: 0` (epoch 1970) — with freshness headers attached that
  * would have served a permanent stale warning plus `no-store`.
  */
-const MANIFEST_LIFECYCLE_REVIEW_AT_SEC = (() => {
-  const lifecycleReviews = YIELD_ADAPTER_MANIFEST.flatMap((entry) =>
-    entry.strategies
-      .map((strategy) => strategy.lifecycleReason?.since)
-      .filter((since): since is string => typeof since === "string")
-      .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))
-      .filter((seconds) => Number.isFinite(seconds)),
-  );
-  return Math.max(0, ...lifecycleReviews);
-})();
+const MANIFEST_LIFECYCLE_REVIEWS_SEC = YIELD_ADAPTER_MANIFEST.flatMap((entry) =>
+  entry.strategies
+    .map((strategy) => strategy.lifecycleReason?.since)
+    .filter((since): since is string => typeof since === "string")
+    .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))
+    .filter((seconds) => Number.isFinite(seconds)),
+);
 
 function manifestUpdatedAtSec(nowSec: number): number {
   const effectiveVersion = getMethodologyVersionAt("yield", nowSec);
   const methodologyRevision = YIELD_METHODOLOGY_CHANGELOG.find(
     (entry) => entry.version === effectiveVersion && entry.effectiveAt <= nowSec,
   );
-  const updatedAtSec = Math.max(MANIFEST_LIFECYCLE_REVIEW_AT_SEC, methodologyRevision?.effectiveAt ?? 0);
+  const lifecycleReviewAtSec = Math.max(0, ...MANIFEST_LIFECYCLE_REVIEWS_SEC.filter((seconds) => seconds <= nowSec));
+  const updatedAtSec = Math.max(lifecycleReviewAtSec, methodologyRevision?.effectiveAt ?? 0);
   if (updatedAtSec <= 0) {
     throw new Error("Yield adapter manifest has no registry revision date to publish");
   }

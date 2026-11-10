@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { collectEndpointProbes, ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY } from "../use-endpoint-probes";
+import { getProbePaths } from "@shared/lib/api-endpoints";
 
 describe("collectEndpointProbes", () => {
+  it("leaves keyed-only DEX history to the server probe cohort", () => {
+    const path = "/api/dex-liquidity-history?stablecoin=usdt-tether";
+    expect(getProbePaths("public")).toContain(path);
+    expect(ENDPOINT_GROUPS.public).not.toContain(path);
+    expect(ENDPOINT_GROUPS.public).toContain("/api/supply-history?stablecoin=usdt-tether");
+  });
   it("uses the published blacklist component while raw gap counts include queued proofs", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
       status: "healthy", warnings: [],

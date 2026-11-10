@@ -10,7 +10,7 @@ import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import { chunkArray } from "../src/lib/collections";
 import { CONTRACT_CONFIGS } from "../src/lib/blacklist-contracts";
-import { getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
 import { fetchKycRipRows, parsePositiveInteger, type KycRipCurrentBalanceRow } from "./lib/kyc-rip";
 import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { createRemoteD1Client, sqlString, type RemoteD1Client } from "./lib/remote-d1";
@@ -978,7 +978,8 @@ export async function runNightWatchBlacklistReconciliation(
   const runningVerification = JSON.stringify({ phase: "mutation", tailEventCount: upstreamTail.length });
   const statements = [
     // Invalidate before the first authoritative write, including partial import failures.
-    `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(", ")});`,
+    `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(", ")});
+     ${BLACKLIST_DERIVED_GENERATION_ROTATION_SQL}`,
     auditRunStatement({
       runId,
       mode: "apply",

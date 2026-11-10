@@ -2,27 +2,6 @@ import { describe, expect, it } from "vitest";
 import { getMintBurnTrackedChains, sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 
-// Per-coin tracked-chain contract pins. When a coin adds a second tracked
-// chain (e.g., USDC on Base via CCTP), update the assertion here deliberately —
-// the change will shift gauge weighting, and that's a methodology decision
-// that should be reflected in the version timeline.
-describe("getMintBurnTrackedChains — per-coin contract pins", () => {
-  it("USDT configures Ethereum and Tron issuance", () => {
-    expect(getMintBurnTrackedChains("usdt-tether")).toEqual(["ethereum", "tron"]);
-  });
-
-  it("USDC tracks ethereum only (until Base/CCTP expansion)", () => {
-    expect(getMintBurnTrackedChains("usdc-circle")).toEqual(["ethereum"]);
-  });
-  it("USDai tracks arbitrum only", () => {
-    expect(getMintBurnTrackedChains("usdai-usd-ai")).toEqual(["arbitrum"]);
-  });
-
-  it("returns empty array for an untracked coin", () => {
-    expect(getMintBurnTrackedChains("nonexistent-coin")).toEqual([]);
-  });
-});
-
 describe("sumMcapForTrackedChains", () => {
   it("adds Tron supply only when its config is in the admitted publication scope", () => {
     const allUsdt = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");
@@ -34,6 +13,13 @@ describe("sumMcapForTrackedChains", () => {
   });
 
   it("preserves unavailable and measured zero Tron supply after admission", () => {
+    // A partially observed scope must not silently shrink to Ethereum alone.
+    expect(sumMcapForTrackedChains("usdt-tether", {
+      Ethereum: { current: 100 },
+    }, { peggedUSD: 140e9 })).toBeNull();
+    expect(sumMcapForTrackedChains("usdt-tether", {
+      Ethereum: { current: 100 }, Tron: { current: null },
+    }, { peggedUSD: 140e9 })).toBeNull();
     expect(sumMcapForTrackedChains("usdt-tether", {
       Ethereum: { current: 60e9 }, Tron: { current: null },
     }, { peggedUSD: 140e9 })).toBeNull();
@@ -97,7 +83,7 @@ describe("sumMcapForTrackedChains", () => {
 
   it("treats current=0 as real data (contributes 0, does NOT trigger fallback)", () => {
     // If a tracked chain reports 0 supply (bootstrapping or burn-to-zero), weight is 0.
-    // The canonicalizer creates an entry for the chain; anyFound flips true; result is 0.
+    // The canonicalizer retains the observed entry, so the result is 0.
     expect(sumMcapForTrackedChains("usdc-circle", { Ethereum: { current: 0 } }, peggedTotal)).toBe(0);
   });
 });

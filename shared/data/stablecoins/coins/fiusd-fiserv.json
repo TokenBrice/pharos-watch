@@ -26,7 +26,6 @@
   },
   "status": "pre-launch",
   "announcedDate": "2025-06",
-  "expectedLaunchDate": "2026",
   "dateHistory": [
     {
       "date": "2026",
@@ -35,10 +34,14 @@
     {
       "date": "2026-07",
       "setOn": "2026-09-06"
+    },
+    {
+      "date": "2026",
+      "setOn": "2026-11-08"
     }
   ],
   "launchPhase": "beta",
-  "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'). At the Bernstein Strategic Decisions conference (June 3 2026) CEO Lyons confirmed 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch. That window closed without a launch announcement. The Q2 2026 earnings release filed with the SEC on August 6 2026 does not mention FIUSD, stablecoins, digital assets, or Solana anywhere, and Fiserv cut its full-year guidance in the same release; the earnings call transcript is equally silent. Pharos retired the July expectation on September 6 2026 and now carries the year only. Fiserv's digital asset platform went live on October 1 2026 hosting Roughrider Coin rather than FIUSD; on October 5 Fiserv said it had pivoted away from Paxos and Circle toward a more proprietary coin, joined the Open USD consortium, and gave no FIUSD launch date.",
+  "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'). At the Bernstein Strategic Decisions conference (June 3 2026) CEO Lyons confirmed 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch. That window closed without a launch announcement. The Q2 2026 earnings release filed with the SEC on August 6 2026 does not mention FIUSD, stablecoins, digital assets, or Solana anywhere, and Fiserv cut its full-year guidance in the same release; the earnings call transcript is equally silent. Fiserv's digital asset platform went live on October 1 2026 hosting Roughrider Coin rather than FIUSD; on October 5 Fiserv said it had pivoted away from Paxos and Circle toward a more proprietary coin, joined the Open USD consortium, and gave no FIUSD launch date. Pharos cleared the remaining 2026 expectation on November 8 2026 after the October 5 interview gave no timetable.",
   "featuredContent": [
     {
       "type": "article",

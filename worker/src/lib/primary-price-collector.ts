@@ -25,6 +25,7 @@ interface DexProtocolSourceQuote {
 interface DexAggregateQuote {
   dex_price_usd: number;
   updated_at: number;
+  aggregateObservedAt?: number | null;
   source_pool_count: number;
   source_total_tvl: number;
 }
@@ -511,13 +512,15 @@ export function buildPrimarySourceCandidates(
 
   if (
     collected.dexAggregateQuote &&
+    collected.dexAggregateQuote.aggregateObservedAt != null &&
+    collected.dexAggregateQuote.aggregateObservedAt <= coLegNowSec &&
     !hasPromotedDexProtocolSource &&
     !hasBinanceDexBridgeOverlap(collected)
   ) {
     const dexAggregateSource = buildSourcePrice({
       source: "dex-promoted",
       price: collected.dexAggregateQuote.dex_price_usd,
-      observedAt: collected.dexAggregateQuote.updated_at,
+      observedAt: collected.dexAggregateQuote.aggregateObservedAt,
       nowSec,
       metadata: {
         poolCount: collected.dexAggregateQuote.source_pool_count,

@@ -159,6 +159,24 @@ describe("MintBurnReconciliationCard", () => {
     expect(screen.getByText("Conservation evidence is stale.")).toBeTruthy();
   });
 
+  it.each(["unexplained-residual", "review-suppression"] as const)("keeps an unresolved daily %s visible through a later unavailable day", (finding) => {
+    const summary = makeSummary();
+    summary.conservationVersion = 1;
+    summary.rows[0]!.status = "ok";
+    summary.rows[0]!.conservation = [record()];
+    summary.rows[0]!.dailyReconciliation = [{ configKey: "ethereum-token", chainId: "ethereum",
+      address: record().address, decimals: 18, latestDay: 1_772_928_000, checkedAt: 1_773_000_000,
+      status: "unavailable", reason: "incomplete-scan-coverage", windows: [{ days: 7,
+        fromDay: 1_772_409_600, toDay: 1_773_014_400, status: "unavailable", reason: "missing-daily-receipt" }],
+      activeFindings: [{ day: 1_772_841_600, status: finding, reason: "unresolved-finding", residualRaw: "1" }] }];
+    render(<MintBurnReconciliationCard summary={summary} />);
+    expect(group().getByText("Critical")).toBeTruthy();
+    expect(group().getByText("incomplete-scan-coverage")).toBeTruthy();
+    expect(group().getByText((text) => text.includes(finding) && text.includes("0.000000000000000001"))).toBeTruthy();
+    expect(group().getByText("missing-daily-receipt")).toBeTruthy();
+    expect(group().queryByText("Verified")).toBeNull();
+  });
+
   it("expands and collapses the long tail while prioritizing audit mismatches", () => {
     const summary = makeSummary(8);
     summary.conservationVersion = 1;

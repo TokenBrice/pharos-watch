@@ -2,6 +2,7 @@
 // purpose — no mint-burn contract registry import — so DEWS, DDR and the flow
 // API share one tally definition.
 import type { MintBurnValuationTally } from "@shared/lib/mint-burn-valuation";
+import type { MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
 
 /**
  * Stored hourly bucket value columns, in the order the hourly writer
@@ -10,7 +11,30 @@ import type { MintBurnValuationTally } from "@shared/lib/mint-burn-valuation";
  */
 export const MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL = `mint_count, burn_count,
        mint_unpriced_event_count, burn_unpriced_event_count,
+       mint_unresolved_event_count, burn_unresolved_event_count,
        mint_volume_usd, burn_volume_usd, net_flow_usd`;
+
+export const MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL = `SUM(COALESCE(mint_unresolved_event_count, 0)) AS unresolved_mint_event_count,
+       SUM(COALESCE(burn_unresolved_event_count, 0)) AS unresolved_burn_event_count,
+       SUM(CASE WHEN mint_unresolved_event_count IS NULL THEN 1 ELSE 0 END) AS classification_unknown_mint_hours,
+       SUM(CASE WHEN burn_unresolved_event_count IS NULL THEN 1 ELSE 0 END) AS classification_unknown_burn_hours`;
+
+export interface MintBurnClassificationTallyRow {
+  unresolved_mint_event_count: number | null;
+  unresolved_burn_event_count: number | null;
+  classification_unknown_mint_hours: number | null;
+  classification_unknown_burn_hours: number | null;
+}
+
+/** SQL counts are observed subtotals; legacy absence becomes unknown only for review-capable configs. */
+export function readMintBurnClassificationTallyRow(row: MintBurnClassificationTallyRow, hasReviewProducer: boolean): MintBurnClassificationTally {
+  return {
+    unresolvedMintEventCount: typeof row.unresolved_mint_event_count === "number" ? row.unresolved_mint_event_count : 0,
+    unresolvedBurnEventCount: typeof row.unresolved_burn_event_count === "number" ? row.unresolved_burn_event_count : 0,
+    unknownMintHours: hasReviewProducer ? (typeof row.classification_unknown_mint_hours === "number" ? row.classification_unknown_mint_hours : 1) : 0,
+    unknownBurnHours: hasReviewProducer ? (typeof row.classification_unknown_burn_hours === "number" ? row.classification_unknown_burn_hours : 1) : 0,
+  };
+}
 
 /**
  * Window valuation tally over stored buckets. A legacy bucket (NULL unpriced

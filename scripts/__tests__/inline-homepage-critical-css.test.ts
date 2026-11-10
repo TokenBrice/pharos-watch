@@ -118,17 +118,6 @@ describe("critical CSS worker pool", () => {
     expect(selectCriticalCssPages(outDir, "gates")).toEqual(collectCriticalCssPages(outDir));
   });
 
-  it("keeps every per-page assertion for a gate-scoped page", async () => {
-    const outDir = fixture();
-    addGateRoutes(outDir);
-    const broken = path.join(outDir, "api/reference/index.html");
-    const content = "<!DOCTYPE html><html><head></head><body>No stylesheet</body></html>";
-    writeFileSync(broken, content);
-    await expect(optimizeCriticalCssPages(outDir, selectCriticalCssPages(outDir, "gates"), 1))
-      .rejects.toThrow("out/api/reference/index.html: Beasties did not inline a critical style block.");
-    expect(readFileSync(broken, "utf8")).toBe(content);
-  });
-
   it("bounds the default pool by available CPUs and pages, with a local override", () => {
     vi.stubEnv("PHAROS_CRITICAL_CSS_WORKERS", undefined);
     expect(criticalCssWorkerCount(7)).toBe(Math.max(1, Math.min(availableParallelism() - 1, 7)));
@@ -141,12 +130,13 @@ describe("critical CSS worker pool", () => {
     expect(() => criticalCssWorkerCount(7)).toThrow("PHAROS_CRITICAL_CSS_WORKERS must be a positive integer.");
   });
 
-  it.each([1, 3])("propagates a page assertion failure without writing its invalid output (%i workers)", async (workers) => {
+  it.each([[1, false], [3, false], [1, true]] as const)("propagates page failures without writing (%i workers, gates %s)", async (workers, gates) => {
     const outDir = fixture();
+    if (gates) addGateRoutes(outDir);
     const brokenPath = path.join(outDir, "depeg/index.html");
     const broken = "<!DOCTYPE html><html><head></head><body>No stylesheet</body></html>";
     writeFileSync(brokenPath, broken);
-    await expect(optimizeCriticalCssPages(outDir, collectCriticalCssPages(outDir), workers))
+    await expect(optimizeCriticalCssPages(outDir, selectCriticalCssPages(outDir, gates ? "gates" : "all"), workers))
       .rejects.toThrow("out/depeg/index.html: Beasties did not inline a critical style block.");
     expect(readFileSync(brokenPath, "utf8")).toBe(broken);
   }, 20_000);
@@ -207,16 +197,20 @@ describe("critical CSS worker pool", () => {
     expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(css);
   });
 
-  it.each(['<html lang="en">', '<html lang="en" class="font-sans">'])('retains only page-matched dark variants and restores %s', async (htmlTag) => {
+  it.each([
+    ['<html lang="en">', false], ['<html lang="en" class="font-sans">', false], ['<html lang="en">', true],
+  ] as const)('retains runtime selectors and restores %s (portfolio %s)', async (htmlTag, portfolio) => {
     const outDir = fixture();
     const file = path.join(outDir, "depeg/index.html");
-    writeFileSync(file, `${htmlTag}<head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body class="coin dark:bg-muted"><main>Page</main></body></html>`);
-    writeFileSync(path.join(outDir, "_next/static/css/app.css"), `${stylesheet}.dark\\:bg-muted:is(.dark *){background:black}.dark\\:bg-unused:is(.dark *){background:purple}`);
+    writeFileSync(file, `${htmlTag}<head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body class="coin dark:bg-muted">${portfolio ? '<script src="/portfolio-bootstrap.js"></script>' : ""}<main class="first pending">Page</main></body></html>`);
+    const selectors = "html[data-portfolio-empty] .first{display:block}html[data-portfolio-empty] .pending{display:none}";
+    writeFileSync(path.join(outDir, "_next/static/css/app.css"), `${stylesheet}.dark\\:bg-muted:is(.dark *){background:black}.dark\\:bg-unused:is(.dark *){background:purple}${selectors}`);
 
     await optimizeCriticalCssPages(outDir, [file], 1);
 
     const after = readFileSync(file, "utf8");
-    expect(after).toContain(htmlTag);
+    expect(after.match(/<html[^>]*>/)?.[0]).toBe(htmlTag);
+    expect(after.includes(selectors)).toBe(portfolio);
     expect(after).toContain(".dark\\:bg-muted:is(.dark *){background:black}");
     expect(after).not.toContain("bg-unused");
   });

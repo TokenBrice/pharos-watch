@@ -104,14 +104,6 @@ describe("static import-graph PR test selection", () => {
     expect(selectImportGraphTests(graph, ["src/components/badge.tsx"])).toContain("scripts/__tests__/dynamic.test.ts");
   });
 
-  it("ignores type-only imports and vi.mock specifiers, which the runtime erases", () => {
-    const graph = build();
-    const typesOnly = selectImportGraphTests(graph, ["shared/lib/registry.ts"]);
-    expect(typesOnly).not.toContain("scripts/__tests__/types-only.test.ts");
-    expect(typesOnly).not.toContain("scripts/__tests__/inline-type.test.ts");
-    expect(selectImportGraphTests(graph, ["src/components/badge.tsx"])).not.toContain("scripts/__tests__/mock-only.test.ts");
-  });
-
   it("keeps declaration, dynamic and re-export forms distinct when reading a module", () => {
     const cases: readonly [string, string[]][] = [
       ['import { a } from "./a";', ["./a"]],

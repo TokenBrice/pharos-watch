@@ -33,6 +33,13 @@ async function evaluated(entry: ResolvedYieldEntry): Promise<EvaluatedYieldSourc
 }
 
 describe("yield identity and ownership boundaries", () => {
+  it("selects an independent pool and rejects held supplemental opportunities", () => {
+    const resolved = resolve([
+      pool({ project: "radiant-v2", pool: "held", tvlUsd: 9_000_000 }), pool(),
+    ], [{ stablecoinId: "usdc-circle", symbol: "USDC", yield: source({ project: "loopscale-lending", yieldType: "lending-opportunity" }) }]);
+    expect(resolved.filter((entry) => entry.id === "usdc-circle").map((entry) => entry.yield?.project)).toEqual(["aave-v3"]);
+  });
+
   it("does not attach Axis USDx to Hex Trust even with a matching ticker", () => {
     const candidates = ["0xa1fa7777974312f7d801a8880714a218f76233f8", "0xf8750b54d86be7ae9e32b4a0c826811198d63313"].map((address) => ({ symbol: "USDX", chain: "ethereum", address, yield: source({ sourceKey: address, dataSource: "protocol-api", yieldType: "fixed-yield" }) }));
     const resolved = resolve([], candidates);

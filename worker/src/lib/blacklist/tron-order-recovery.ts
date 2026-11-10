@@ -1,6 +1,6 @@
 import { rethrowIfAborted } from "../abort";
 import { batchExecute } from "../db";
-import { invalidateBlacklistDerivedCaches } from "../blacklist-cache-invalidation";
+import { invalidateBlacklistDerivedCaches, type BlacklistSummaryFence } from "../blacklist-cache-invalidation";
 import { logWorkerEventArgs } from "../structured-log";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { fetchTronBlockTransactionPositions, type TronReplayProviderContext } from "./tron-replay-provider";
@@ -60,6 +60,7 @@ export async function resolveTronBlacklistOrder(
   db: D1Database,
   provider: TronReplayProviderContext,
   runBudget: BlacklistRunBudget,
+  ownRepairFence?: BlacklistSummaryFence,
 ): Promise<TronOrderBackfillResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   // Retry state lives in the existing durable cache table (no migration): a
@@ -146,7 +147,7 @@ export async function resolveTronBlacklistOrder(
           result.positionsResolved += await batchExecute(db, statements, { signal: provider.signal });
         } finally {
           // Partial D1 batch success must also invalidate old ambiguous snapshots.
-          await invalidateBlacklistDerivedCaches(db);
+          await invalidateBlacklistDerivedCaches(db, ownRepairFence);
         }
       }
     } catch (error) {

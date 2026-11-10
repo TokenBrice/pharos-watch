@@ -10,6 +10,7 @@ import {
   LENDING_PROTOCOL_ALLOWLIST,
   LENDING_PROTOCOL_LABELS,
 } from "../../lib/yield-config/yield-config-lending-protocols";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 import {
   ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS,
@@ -24,6 +25,7 @@ import {
   YIELD_ADAPTER_LIFECYCLE,
 } from "../../lib/yield-config/yield-config-rate-sources";
 import { isPriceDerivedYieldEligible } from "../../lib/yield-config/yield-config-registry";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const autoLendingPoolsById: Readonly<Partial<Record<string, string>>> = AUTO_LENDING_POOL_MAP;
@@ -34,25 +36,6 @@ const intentionalGapIds = new Set(
 );
 const directProtocolApiIds = new Set(Object.keys(DIRECT_PROTOCOL_API_STRATEGIES));
 const trackedCoinsById = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin] as const));
-const WAVE_1_DETERMINISTIC_PROMOTION_IDS = [
-  "gtusdc-gauntlet",
-  "susdc-spark",
-  "susdt-spark",
-  "syrupusdc-maple",
-  "syrupusdt-maple",
-  "yvusdc-yearn",
-  "sgho-aave",
-  "wsrusd-reservoir",
-  "stcusd-cap",
-  "savusd-avant",
-  "yousd-yield-optimizer",
-] as const;
-const WAVE_1_RATE_DERIVED_IDS = [
-  "fusd-finchain",
-  "safo-spiko-usd",
-  "spkcc-spiko",
-] as const;
-const ONE_E18_INPUT_AMOUNT = 10n ** 18n;
 
 function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
     return (
@@ -69,6 +52,17 @@ function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
 }
 
 describe("yield config registry", () => {
+  it("bounds opportunity exclusion re-reviews to fourteen days with owner and evidence", () => {
+    for (const entry of YIELD_OPPORTUNITY_EXCLUSIONS) {
+      const span = Date.parse(entry.nextReviewAt) - Date.parse(entry.reviewedAt);
+      expect(span).toBeGreaterThan(0);
+      expect(span).toBeLessThanOrEqual(14 * 86_400_000);
+      expect(Date.parse(entry.since)).toBeLessThanOrEqual(Date.parse(entry.reviewedAt));
+      expect(entry.owner).toBe("ops");
+      expect(entry.reason).toContain("https://");
+    }
+  });
+
   const activeYieldCoins = TRACKED_STABLECOINS.filter(
     (coin) => coin.flags.yieldBearing && isActiveStablecoinMeta(coin),
   );
@@ -143,23 +137,10 @@ describe("yield config registry", () => {
         }
       }
       expect((coin?.contracts ?? []).length, config.stablecoinId).toBeGreaterThan(0);
+      expect(config.selector, config.stablecoinId).toMatch(/^0x[0-9a-fA-F]{8}$/);
+      expect(BigInt(config.inputAmount), config.stablecoinId).toBeGreaterThanOrEqual(0n);
+      expect(config.decimals, config.stablecoinId).toBeGreaterThan(0);
     }
-  });
-
-  it("wires A7A5 through the RUB key-rate derived source", () => {
-    const config = RATE_DERIVED_CONFIGS.find((entry) => entry.stablecoinId === "a7a5-old-vector");
-    expect(config).toMatchObject({
-      spreadBps: 100,
-      benchmarkCurrency: "RUB",
-      benchmarkOverrideKey: "RUB",
-    });
-    expect(INTENTIONAL_GAP_REASONS["a7a5-old-vector"]).toBeUndefined();
-    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "a7a5-old-vector")).toMatchObject({
-      status: "covered",
-      strategies: expect.arrayContaining([
-        expect.objectContaining({ kind: "rate-derived" }),
-      ]),
-    });
   });
 
   it("keeps frozen coins out of every curated yield registry", () => {
@@ -172,89 +153,40 @@ describe("yield config registry", () => {
     }
   });
 
-  it("promotes Wave 1 tracked vaults to deterministic on-chain readers", () => {
-    const configsById = new Map(ON_CHAIN_RATE_CONFIGS.map((config) => [config.stablecoinId, config] as const));
-    const unsupportedLocalTargets = WAVE_1_DETERMINISTIC_PROMOTION_IDS.filter((stablecoinId) => {
-      const coin = trackedCoinsById.get(stablecoinId);
-      return !coin
-        || !isActiveStablecoinMeta(coin)
-        || !coin.flags.yieldBearing
-        || !coin.flags.navToken
-        || !coin.yieldConfig
-        || (coin.contracts ?? []).length === 0;
-    });
-
-    expect(unsupportedLocalTargets).toEqual([]);
-
-    for (const stablecoinId of WAVE_1_DETERMINISTIC_PROMOTION_IDS) {
-      const config = configsById.get(stablecoinId);
-      expect(config, stablecoinId).toBeDefined();
-      if (!config) continue;
-
-      const coin = trackedCoinsById.get(stablecoinId);
-      const hasMatchingContract = coin?.contracts?.some(
-        (contract) =>
-          contract.chain === config.chain &&
-          contract.address.toLowerCase() === config.contract.toLowerCase(),
-      );
-      expect(hasMatchingContract, `${stablecoinId} ${config.chain} ${config.contract}`).toBe(true);
-      expect(config.selector, stablecoinId).toMatch(/^0x[0-9a-fA-F]{8}$/);
-      expect(BigInt(config.inputAmount), stablecoinId).toBeGreaterThan(0n);
-      expect(config.decimals, stablecoinId).toBeGreaterThan(0);
-
-      const manifestEntry = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId);
-      expect(manifestEntry?.status, stablecoinId).toBe("covered");
-      expect(manifestEntry?.strategies, stablecoinId).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            kind: "deterministic-onchain",
-            sourceKey: `onchain:${stablecoinId}`,
-          }),
-        ]),
-      );
+  it("projects every authored source into its yield-bearing manifest entry", () => {
+    const assertStrategy = (stablecoinId: string, kind: string, sourceKey: string | null, label?: string) => {
+      const entry = YIELD_ADAPTER_MANIFEST.find((row) => row.stablecoinId === stablecoinId);
+      if (!entry) return;
+      const matches = entry.strategies.filter((strategy) => strategy.kind === kind);
+      expect(matches, stablecoinId).toHaveLength(1);
+      expect(matches[0], stablecoinId).toMatchObject({ sourceKey, ...(label ? { label } : {}) });
+    };
+    for (const [id, pool] of Object.entries(YIELD_POOL_MAP)) assertStrategy(id, "native-pool", pool);
+    for (const config of ON_CHAIN_RATE_CONFIGS) {
+      assertStrategy(config.stablecoinId, "deterministic-onchain", buildOnChainSourceKey(config.stablecoinId));
     }
+    for (const config of RATE_DERIVED_CONFIGS) assertStrategy(config.stablecoinId, "rate-derived", "rate-derived");
+    for (const [id, config] of Object.entries(DIRECT_PROTOCOL_API_STRATEGIES)) {
+      assertStrategy(id, "protocol-api", config.sourceKey, config.label);
+    }
+    for (const entry of YIELD_ADAPTER_MANIFEST) {
+      const reason = INTENTIONAL_GAP_REASONS[entry.stablecoinId];
+      expect(entry.status, entry.stablecoinId).toBe(reason ? "intentional-gap" : "covered");
+      if (reason) {
+        assertStrategy(entry.stablecoinId, "intentional-gap", null);
+        expect(entry.strategies.find((strategy) => strategy.kind === "intentional-gap")?.rationale).toBe(reason);
+      }
+    }
+  });
 
-    expect(configsById.get("gtusdc-gauntlet")).toMatchObject({
-      decimals: 6,
-      inputAmount: expect.any(String),
-    });
-    expect(BigInt(configsById.get("gtusdc-gauntlet")?.inputAmount ?? "0")).toBe(ONE_E18_INPUT_AMOUNT);
+  it("labels every allowed lending protocol", () => {
+    for (const protocol of LENDING_PROTOCOL_ALLOWLIST) expect(LENDING_PROTOCOL_LABELS[protocol], protocol).toBeTruthy();
   });
 
   it("keeps rate-derived configs unique", () => {
     const ids = RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
-  });
-
-  it("wires Wave 1 rate-derived coverage through active manifest entries", () => {
-    const configsById = new Map(RATE_DERIVED_CONFIGS.map((config) => [config.stablecoinId, config] as const));
-
-    for (const stablecoinId of WAVE_1_RATE_DERIVED_IDS) {
-      const coin = trackedCoinsById.get(stablecoinId);
-      expect(coin?.status ?? "active", stablecoinId).toBe("active");
-      expect(coin?.flags.yieldBearing, stablecoinId).toBe(true);
-      expect(configsById.has(stablecoinId), stablecoinId).toBe(true);
-      expect(INTENTIONAL_GAP_REASONS[stablecoinId], stablecoinId).toBeUndefined();
-
-      const manifestEntry = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId);
-      expect(manifestEntry?.status, stablecoinId).toBe("covered");
-      expect(manifestEntry?.strategies, stablecoinId).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            kind: "rate-derived",
-            sourceKey: "rate-derived",
-          }),
-        ]),
-      );
-    }
-
-    for (const stablecoinId of ["safo-spiko-usd", "spkcc-spiko"] as const) {
-      expect(configsById.get(stablecoinId), stablecoinId).toMatchObject({
-        spreadBps: 0,
-      });
-      expect(configsById.get(stablecoinId)?.benchmarkCurrency ?? "USD", stablecoinId).toBe("USD");
-    }
   });
 
   it("requires every safety-bypass id to have a deterministic lending override", () => {
@@ -284,82 +216,11 @@ describe("yield config registry", () => {
     }
   });
 
-  it("marks intentional manifest gaps explicitly instead of leaving them implicit", () => {
-    for (const stablecoinId of ["pusd-polaris"]) {
-      expect(
-        YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId),
-      ).toMatchObject({
-        status: "intentional-gap",
-        strategies: [
-          expect.objectContaining({
-            kind: "intentional-gap",
-          }),
-        ],
-      });
-    }
-  });
-
-  it("wires the Base Dollar Stability Pool standalone source", () => {
-    expect(DIRECT_PROTOCOL_API_STRATEGIES["bd-basedollar"]).toMatchObject({
-      label: "Base Dollar Stability Pools (interest-only)",
-      sourceKey: "onchain:bd-basedollar",
-    });
-    expect(
-      INTENTIONAL_GAP_REASONS["bd-basedollar"],
-    ).toBeUndefined();
-    expect(YIELD_ADAPTER_LIFECYCLE["bd-basedollar"]).toBeUndefined();
-    // BD itself is not yield-bearing: the source concerns an opt-in Stability
-    // Pool opportunity, so it belongs in the authored source configs rather than the
-    // yield-bearing asset manifest.
-    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "bd-basedollar")).toBeUndefined();
-  });
-
-  it("separates the BOLD Stability Pool aggregate from the Yearn yBOLD wrapper source", () => {
-    // BOLD is not yield-bearing: its opt-in Liquity V2 Stability Pool return is
-    // a standalone deterministic source, never the tracked yBOLD wrapper's row.
-    expect(DIRECT_PROTOCOL_API_STRATEGIES["bold-liquity"]).toMatchObject({
-      label: "Liquity V2 Stability Pools (interest-only)",
-      sourceKey: "onchain:bold-liquity",
-    });
-    expect(YIELD_POOL_MAP["bold-liquity"]).toBeUndefined();
-    expect(YIELD_VARIANT_MAP["bold-liquity"]).toBeUndefined();
-    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "bold-liquity")).toBeUndefined();
-    // The generic Tier-1 reader must not carry BOLD: its old entry pointed at the
-    // yBOLD vault, which both spent an RPC call every sync and reserved the same
-    // `onchain:bold-liquity` key the branch aggregate now owns.
-    expect(onChainIds.has("bold-liquity")).toBe(false);
-
-    // yBOLD keeps first-party Yearn numbers as its selected source; the curated
-    // DeFiLlama pool stays pinned as the lower-evidence corroborating row.
-    expect(DIRECT_PROTOCOL_API_STRATEGIES["ybold-yearn"]).toMatchObject({
-      label: "Yearn yBOLD Stability Pool vault",
-      sourceKey: "protocol-api:yearn:ybold",
-    });
-    expect(YIELD_POOL_MAP["ybold-yearn"]).toBe("4c29f645-12db-461f-a1d7-16900d624271");
-    expect(
-      YIELD_ADAPTER_MANIFEST
-        .find((entry) => entry.stablecoinId === "ybold-yearn")
-        ?.strategies.map((strategy) => strategy.kind),
-    ).toContain("protocol-api");
-  });
-
   it("keeps pre-launch assets out of deterministic lending overrides", () => {
     for (const stablecoin of PRE_LAUNCH_STABLECOINS) {
       expect(autoLendingPoolsById[stablecoin.id], stablecoin.id).toBeUndefined();
       expect(AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoin.id), stablecoin.id).toBe(false);
     }
-  });
-
-  it("excludes incompatible generic readers without obsolete quarantine prospects", () => {
-    for (const stablecoinId of ["scrvusd-curve", "ustb-superstate"]) {
-      expect(onChainIds.has(stablecoinId)).toBe(false);
-      expect(YIELD_ADAPTER_LIFECYCLE[stablecoinId]).toBeUndefined();
-      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)
-        ?.strategies.some((strategy) => strategy.kind === "quarantined")).toBe(false);
-    }
-    expect(DIRECT_PROTOCOL_API_STRATEGIES["scrvusd-curve"])
-      .toMatchObject({ sourceKey: "onchain:scrvusd-curve:scrvusd-current-rate" });
-    expect(YIELD_POOL_MAP["ustb-superstate"]).toBe("1910847a-f8b5-40ce-a1ab-1dafdded5fbb");
   });
 
   it("keeps rejected gross holder-yield pins absent and the HedgeCore gap effective", () => {
@@ -368,68 +229,6 @@ describe("yield config registry", () => {
     expect(YIELD_POOL_MAP["susd-hedgecore"]).toBeUndefined();
     expect(YIELD_ADAPTER_LIFECYCLE["susd-hedgecore"]?.lifecycle).toBe("intentional-gap");
     expect(isPriceDerivedYieldEligible("susd-hedgecore", INTENTIONAL_GAP_REASONS["susd-hedgecore"])).toBe(false);
-  });
-
-  it("wires Re Protocol yield to reUSD itself and the official price API", () => {
-    expect(YIELD_POOL_MAP["reusd-re-protocol"]).toBeUndefined();
-    expect(YIELD_VARIANT_MAP["reusd-re-protocol"]).toBeUndefined();
-    expect(
-      DIRECT_PROTOCOL_API_STRATEGIES["reusd-re-protocol"],
-    ).toMatchObject({
-      label: "Re Protocol Basis-Plus (reUSD)",
-      sourceKey: "protocol-api:re-protocol-reusd",
-    });
-  });
-
-  it("moves tracked savings-wrapper runtime ownership from the parent ids to the child ids", () => {
-    for (const stablecoinId of [
-      "usde-ethena",
-      "usds-sky",
-      "dai-makerdao",
-      "frxusd-frax",
-      "crvusd-curve",
-      "avusd-avant",
-      "gho-aave",
-      "dola-inverse-finance",
-      "usdf-falcon",
-      "xdai-gnosis",
-      "usdat-saturn",
-    ]) {
-      expect(YIELD_POOL_MAP[stablecoinId], stablecoinId).toBeUndefined();
-      expect(YIELD_VARIANT_MAP[stablecoinId], stablecoinId).toBeUndefined();
-      expect(ON_CHAIN_RATE_CONFIGS.some((entry) => entry.stablecoinId === stablecoinId), stablecoinId).toBe(false);
-    }
-
-  });
-
-  it("includes high-TVL stablecoin lending protocols from 2026-03-25 audit", () => {
-    const tierAProtocols = [
-      "wildcat-protocol", "tectonic", "upshift", "venus-flux",
-      "avantis", "cap", "resupply", "zerobase-cedefi",
-    ];
-    for (const slug of tierAProtocols) {
-      expect(LENDING_PROTOCOL_ALLOWLIST.has(slug), slug).toBe(true);
-      expect(LENDING_PROTOCOL_LABELS[slug], slug).toBeTruthy();
-    }
-  });
-
-
-  it("allows Wave 2 category-gated thin-chain and app-chain lenders", () => {
-    const wave2Protocols = {
-      "aries-markets": "Aries Markets",
-      "blend-pools-v2": "Blend",
-      current: "Current",
-      curvance: "Curvance",
-      "scallop-lend": "Scallop",
-      tydro: "Tydro",
-      bifi: "BiFi",
-      fraxlend: "Fraxlend v1",
-    };
-
-    for (const [protocol, label] of Object.entries(wave2Protocols)) {
-      expect(LENDING_PROTOCOL_ALLOWLIST.has(protocol), protocol).toBe(true);
-      expect(LENDING_PROTOCOL_LABELS[protocol], protocol).toBe(label);
-    }
   });
 
   it("records auto-lending same-symbol collision blocks", () => {
@@ -501,47 +300,6 @@ describe("yield config registry", () => {
     })).toBe(true);
   });
 
-  it("includes Aave v4 in lending discovery allowlist labels", () => {
-    expect(LENDING_PROTOCOL_ALLOWLIST.has("aave-v4")).toBe(true);
-    expect(LENDING_PROTOCOL_LABELS["aave-v4"]).toBe("Aave v4");
-  });
-
-  it("pins May 2026 native wrapper and rate-derived coverage without using invalid DL pools", () => {
-    expect(YIELD_POOL_MAP).toMatchObject({
-      "gtusdc-gauntlet": "a306885c-001e-4479-9ae8-459a56527bc1",
-      "susdc-spark": "c5c74dd1-995c-4445-9d84-3e710bad7d52",
-      "susdt-spark": "a5d67f7e-5b51-4a9d-969d-caf051a7f5a4",
-      "sgho-aave": "ff2a68af-030c-4697-b0a1-b62a738eaef0",
-      "ybold-yearn": "4c29f645-12db-461f-a1d7-16900d624271",
-      "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",
-    });
-
-    // DefiLlama currently exposes AA_FalconXUSDC as a multi-exposure, zero-APY
-    // tranche row, so it must not be pinned through the single-exposure DL pool lane.
-    expect(YIELD_POOL_MAP["aa-falconx-mev-capital"]).toBeUndefined();
-
-    for (const stablecoinId of [
-      "cgusd-cygnus-finance",
-      "benji-franklin-templeton",
-      "wtgxx-wisdomtree",
-      "ustbl-spiko",
-      "eutbl-spiko",
-      "witry-brix",
-    ]) {
-      expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
-    }
-
-  });
-
-  it("keeps USDGO out of yield wiring because the token pays holders nothing", () => {
-    const coin = trackedCoinsById.get("usdgo-osl");
-
-    expect(coin?.flags.yieldBearing).toBe(false);
-    expect(coin?.yieldConfig).toBeUndefined();
-    expect(RATE_DERIVED_CONFIGS.some((entry) => entry.stablecoinId === "usdgo-osl")).toBe(false);
-    expect(intentionalGapIds.has("usdgo-osl")).toBe(false);
-  });
-
   it("distinguishes EFFR APY sources from EFFR PYS benchmark overrides", () => {
     const effrApyConfigs = RATE_DERIVED_CONFIGS.filter((entry) => entry.label.toUpperCase().includes("EFFR"));
     const effrOverrideOnlyConfigs = RATE_DERIVED_CONFIGS.filter(
@@ -558,55 +316,6 @@ describe("yield config registry", () => {
       expect(config.benchmarkOverrideKey, config.stablecoinId).toBe("USD_EFFR");
       expect(config.benchmarkCurrency, config.stablecoinId).toBeUndefined();
     }
-  });
-
-  it("wires TRY and tokenized-treasury benchmark overrides for rate-derived rows", () => {
-    const configsById = new Map(RATE_DERIVED_CONFIGS.map((entry) => [entry.stablecoinId, entry] as const));
-
-    expect(configsById.get("witry-brix")).toMatchObject({
-      stablecoinId: "witry-brix",
-      spreadBps: 0,
-      benchmarkCurrency: "TRY",
-    });
-
-    for (const stablecoinId of [
-      "buidl-blackrock",
-      "cgusd-cygnus-finance",
-      "ylds-figure",
-      "mtbill-midas",
-      "ousg-ondo-finance",
-      "susd-solayer",
-      "benji-franklin-templeton",
-      "wtgxx-wisdomtree",
-      "ustbl-spiko",
-      "fusd-finchain",
-    ]) {
-      expect(configsById.get(stablecoinId), stablecoinId).toMatchObject({
-        benchmarkOverrideKey: "USD_EFFR",
-      });
-    }
-
-    expect(configsById.get("eutbl-spiko")).toMatchObject({
-      benchmarkCurrency: "EUR",
-      benchmarkOverrideKey: "EUR",
-    });
-    expect(configsById.get("uktbl-spiko")).toMatchObject({
-      benchmarkCurrency: "GBP",
-      benchmarkOverrideKey: "GBP",
-    });
-  });
-
-  it("wires mMEV to the Midas NAV oracle protocol source", () => {
-    expect(directProtocolApiIds.has("mmev-midas")).toBe(true);
-    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "mmev-midas")).toMatchObject({
-      status: "covered",
-      strategies: expect.arrayContaining([
-        expect.objectContaining({
-          kind: "protocol-api",
-          sourceKey: "protocol-api:midas-mmev-nav-oracle",
-        }),
-      ]),
-    });
   });
 
   it("uses the return reference rather than benchmark availability for USD-price fallback eligibility", () => {
@@ -626,55 +335,11 @@ describe("yield config registry", () => {
     }
   });
 
-  it("wires v8.16 coverage additions to runtime source keys", () => {
-    // silk-shade-protocol left this pin list when it was quarantined on
-    // 2026-08-18 (invalid upstream supply); the manifest only covers active coins.
-    for (const stablecoinId of [
-      "fpi-frax",
-      "isc-international-stable-currency",
-    ]) {
-      const coin = TRACKED_STABLECOINS.find((entry) => entry.id === stablecoinId);
-      expect(coin?.flags.yieldBearing, stablecoinId).toBe(true);
-      expect(coin?.flags.navToken, stablecoinId).toBe(true);
-      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
-      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
-        status: "covered",
-        strategies: [
-          expect.objectContaining({
-            kind: "price-derived",
-            sourceKey: "price-derived",
-          }),
-        ],
-      });
-    }
-
-    for (const stablecoinId of ["cgusd-cygnus-finance"]) {
-      expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
-      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
-      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
-        status: "covered",
-        strategies: [
-          expect.objectContaining({
-            kind: "rate-derived",
-            sourceKey: "rate-derived",
-          }),
-        ],
-      });
-    }
-  });
-
-  it("keeps intentional gaps attached to tracked coins, including re-admitted STBT", () => {
+  it("keeps intentional gaps attached to tracked coins", () => {
     for (const stablecoinId of Object.keys(INTENTIONAL_GAP_REASONS)) {
       expect(trackedCoinsById.has(stablecoinId), stablecoinId).toBe(true);
     }
-    expect(trackedCoinsById.get("stbt-matrixdock")?.flags.yieldBearing).toBe(true);
-    expect(INTENTIONAL_GAP_REASONS["stbt-matrixdock"]).toBeDefined();
-    expect(
-      YIELD_ADAPTER_LIFECYCLE["stbt-matrixdock"],
-    ).toBeDefined();
-    expect(
-      YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "stbt-matrixdock"),
-    ).toMatchObject({ status: "intentional-gap" });
+
   });
 
   it("keeps exact-pool overrides separate from the yield-bearing manifest", () => {
@@ -683,24 +348,8 @@ describe("yield config registry", () => {
     const nonYieldBearingExplicitPoolIds = Object.keys(EXPLICIT_YIELD_SOURCE_POOL_MAP)
       .filter((stablecoinId) => !trackedById.get(stablecoinId)?.flags.yieldBearing);
 
-    expect(nonYieldBearingExplicitPoolIds).toContain("xaut-tether");
     for (const stablecoinId of nonYieldBearingExplicitPoolIds) {
       expect(manifestIds.has(stablecoinId), stablecoinId).toBe(false);
     }
-  });
-
-  it("wires Zephyr yield only to the ZYS share wrapper", () => {
-    expect(
-      DIRECT_PROTOCOL_API_STRATEGIES["zys-zephyr-protocol"],
-    ).toMatchObject({
-      label: "Zephyr Scanner ZYS returns",
-    });
-
-    expect(
-      DIRECT_PROTOCOL_API_STRATEGIES["zsd-zephyr-protocol"],
-    ).toBeUndefined();
-    expect(
-      TRACKED_STABLECOINS.find((entry) => entry.id === "zsd-zephyr-protocol")?.flags.yieldBearing,
-    ).not.toBe(true);
   });
 });

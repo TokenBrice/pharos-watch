@@ -1,6 +1,6 @@
 # Redemption Route Evidence
 
-> **Agent navigation** — Retained evidence only. Grep headings: Existing-route bound review · July 2026 Output Reconciliation · September 2026 Noon Route Corrections · October 2026 Output and Coverage Review · October 2026 route-evidence closure · Zero-route producer evidence review · PKT-12 configured cohort. The [public contract](../redemption-backstops.md) owns current route semantics; family configs and the disposition registry own current admission decisions.
+> **Agent navigation** — Retained evidence only. Grep headings: Existing-route bound review · July 2026 Output Reconciliation · September 2026 Noon Route Corrections · September 21 terms pass · October 2026 Output and Coverage Review · October 2026 route-evidence closure · Reviewed channel suspensions · Zero-route producer evidence review · PKT-12 configured cohort. The [public contract](../redemption-backstops.md) owns current route semantics; family configs and the disposition registry own current admission decisions.
 
 These dated source reviews preserve exact external citations and unresolved predicates, not a current coverage census or renewed runtime evidence. Review dates are provenance, not publisher dates. The [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns release chronology.
 
@@ -8,7 +8,7 @@ These dated source reviews preserve exact external citations and unresolved pred
 
 ### Existing-route bound review (2026-10-14)
 
-The [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns the review/release record. Config defaults, legal rights and numeric diagnostics cannot close executable-capacity, complete-cost or final-completion gaps. The source-specific records below retain exact citations or blockers not fully duplicated in config `docs`; they are not a current coverage census. Their source/review dates are provenance, never renewed runtime observations or proof of zero capacity.
+The [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns the review/release record. The source-specific records below retain exact citations or blockers not fully duplicated in config `docs`; they are not a current coverage census. Their source/review dates are provenance, never renewed runtime observations or proof of zero capacity.
 
 | Asset | Missing datum(s) under review | Source and date | Admission decision |
 | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ The [structured redemption history](https://pharos.watch/methodology/redemption-
 | mMEV | Capacity; cost | [Issuer discontinuation notice](https://blog.midas.app/midas-in-april-2026-recap/), published 2026-04-30, discontinuation 2026-05-10; retained Final Terms review | **No admissible residual-route bound.** The wind-down notice and legacy 0.50% redemption term do not prove post-retirement executable capacity or complete residual-holder costs. A still-listed atomic-capacity target does not reopen the discontinued channel. |
 | USDFC | Capacity | [Native FIL redemption mechanics](https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption), checked 2026-10-14; retained route review 2026-10-03 | **No admissible config-only upgrade.** Current ActivePool debt/collateral, oracle, TCR/MCR and rate reads do not enumerate eligible Troves or prove request-sized redemption after Trove constraints. The favorable aggregate-debt curve must not override the reviewed capacity gap. |
 
-Consequently, these reviewed unknowns remain open; a new production run alone cannot turn them into known bounds. Exact-route telemetry or an independently admitted request-sized certificate can resolve a runtime item only when it measures the missing predicate, rather than reusing backing inventory, mutable historical settings or another route's terms. The separate FRXUSD execution-certificate item and gUSDTq certificate settlement are runtime integration concerns, not evidence supplied by this config review.
+The separate FRXUSD execution-certificate item and gUSDTq certificate settlement are runtime integration concerns, not evidence supplied by this config review.
 
 ### WUSD operational route review (2026-10-19)
 
@@ -55,6 +55,10 @@ The following source-specific records remain because their exact citation is not
 
 The retained boundary separates issuer processing from completed payout and a request/claim handler's live period from a static issuer SLA. Current USN/sUSN terms and exact sources live in `shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts`. The dedicated observer binds the actual handler pointer and mutable period; the documented one-transaction fast path is not the ordinary queued holder route.
 
+### September 21 terms pass
+
+The September 21 terms pass structures XAUt, PAXG, KAU, KAG, GGBR, PGOLD, XAUm, DGLD, XAGm, CGO and GLDT. CGO conservatively uses the contractual 1,000-token minimum rather than the FAQ's 10; both sources remain attached. XAUt's 430-token deposit is a conservative threshold, not a fixed bar weight. GLDT's CHF 300 vault-pickup charge is an authored CHF `costModel.feeComponents` component, not an invented USD delivery deduction; without a complete fee ceiling it cannot establish all-in cost. GLDY stays unstructured because no reviewed primary source publishes a physical minimum; contradictory secondary fees do not establish one.
+
 ### October 2026 Output and Coverage Review
 
 Known payout identity does not prove openness, valuation, funded capacity, an all-in fee ceiling or final completion. Untracked receipts retain their exact identity rather than aliasing aUSDC/aUSDT, iTRY or ZUSD to a tracked sibling; selected HSM/Mynt outputs are not pro-rata baskets. Legacy VNX suspension applies only to its exact channel, not an inferred reopening/suspension of its successor. GLDY's alternative payouts and Wintermute secondary sale remain separate.
@@ -68,7 +72,7 @@ Source-specific evidence not otherwise retained in config docs:
 
 ### October 2026 route-evidence closure
 
-This linked evidence boundary preserves the distinction between direct observation, diagnostic state and eventual entitlement. Config sources and `v9RouteReviewTerms` own each asset's remaining gaps; [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns release chronology. Endpoint recovery or a new production run alone never renews positive evidence.
+This linked evidence boundary preserves the distinction between direct observation, diagnostic state and eventual entitlement. Config sources and `v9RouteReviewTerms` own each asset's remaining gaps; [structured redemption history](https://pharos.watch/methodology/redemption-backstop-changelog/) owns release chronology.
 
 - Legal full-position rights, issuer reserves, AUM and gate percentages are not funded immediate/scoring liquidity. Cash output is distinct from NAV input pricing; unspecified stablecoins, securities-in-kind and physical bullion cannot be blended into a guaranteed cash payout.
 - Direct USDfr observations measure only the restricted guarded par-state USDC lane; gas/all-in cost remains independent. apyUSD admits only funded owner-claimable apxUSD receipts with same-run valuation and mutable ceiling-rounded fees, eventual-only. Its queued category/20-day modelled horizon and three-day funded-claim minimum are not a completion maximum.
@@ -76,10 +80,17 @@ This linked evidence boundary preserves the distinction between direct observati
 - Measured exact reserve/route data does not establish full queued-claim coverage. Source-specific USYC authorized receiver, Spiko investor/day/FX and JLTXX cash-versus-securities conditions stay with their reviewed config; an observation cannot clear unmeasured sibling conditions.
 - GoldZip's ordinary physical route remains separate from its conditional, time-limited USDT issuer-change option. A customer-response deadline is not completion, and unbounded transport, assay or sale costs remain gaps.
 
+### Reviewed channel suspensions — 2026-10
+
+**VNXAU, reviewed October 2, 2026.** The [June 19 primary notice](https://vnx.li/blog) suspended the legacy **vnx.li** platform exchange from **June 30 at 18:00 CET** and ended its remaining-balance withdrawal window **July 31 at 18:00 CET**. Only that legacy channel is reviewed suspended. [VNX Global terms §6](https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf) separately describe discretionary, resource-dependent commodity-token exchange at **my.vnx.io**, including VNXAU for fiat or other digital assets. That channel has no admitted capacity, complete payout set or settlement maximum and earns no credit; it is not treated as suspended by the legacy notice. The Metals.io market diagnostic remains separate. No currently bounded physical-release timing or current reserve composition is established, and the production-capture smoke still publishes VNXAU **NR**, not F.
+
+**EURR, reviewed October 7, 2026.** The StablR direct issuer channel is source-confirmed suspended **as of June 24, 2026**. The rendered publisher date, not the URL's `2025` suffix, owns that date; it is an as-of boundary, not an invented incident onset. Missing or severe market quotes do not reopen the selected channel. Other routes and lifecycle retain their separate evidence.
+
+**USDR, reviewed October 30, 2026.** The StablR direct issuer channel is source-confirmed suspended **as of August 25, 2026**, when the issuer's recovery update still reported minting and redemption of EURR and USDR temporarily suspended after the May 2026 cybersecurity incident. That date is the notice's as-of boundary, not an inferred onset; the separately reviewed EURR channel keeps its own record.
 
 ## Zero-route producer evidence review (PKT-12, 2026-10-14)
 
-The [v4.5 release record](https://pharos.watch/methodology/redemption-backstop-changelog/archive/v4/#changelog-v-4-5) owns the conservative config-correction chronology. A documented mechanism, legal entitlement, mint/burn interface or balance never substitutes for same-notional holder execution; unknown capacity stays unknown, not zero. Review dates do not become publisher dates.
+The [v4.5 release record](https://pharos.watch/methodology/redemption-backstop-changelog/archive/v4/#changelog-v-4-5) owns the conservative config-correction chronology.
 
 Exact asset identities remain separate: Anything Labs/Youves UUSD, Neutrl/Nexus NUSD, RISE/Ring USDR and legacy/replacement Solomon USDv cannot share inferred routes.
 
@@ -97,7 +108,7 @@ The disposition registry owns configured-versus-unconfigured decisions. These re
 | `nxusd-nereus` | [Current Nereus site](https://www.nereus.finance/), undated; [issuer's historical NXUSD article](https://medium.com/nereus-protocol/the-nxusd-genesis-event-41d22f8b2020), May 2022 | Wirex holder redemption was historically advertised; current gateway, eligibility and payout are unverified. Do not re-use historical 0.5% fees or protocol batch limits as current holder capacity. |
 | `home-homecoin` | [Official DEX-pool guide](https://raw.githubusercontent.com/homecoin-finance/gitbook/master/resources/dex-pools.md) and [FAQ](https://raw.githubusercontent.com/homecoin-finance/gitbook/master/getting-started/faq.md), undated | HOME/3CRV trading and mortgage borrower flows establish neither a general holder claim against liens nor issuer redemption. |
 | `susd-hedgecore` | [Protocol architecture](https://docs.hedgecore.io/docs/whitepaper/protocol-architecture) and [contract directory](https://docs.hedgecore.io/docs/github/smart-contracts), undated | Owner/operator-authorized `earlyRedeem()` burns for USDC but is not an ordinary-holder route; `unlock()` only permits transfer. The issuer lists the sUSD contract as TBA, without corroborating the tracked BNB deployment; yield fees are not redemption fees. |
-| `pht-pht` | [APACX offramp](https://docs.apacx.io/user-guides/pht-onramp-and-offramp), undated; [MoneyBees terms](https://www.moneybees.ph/terms/), updated 2026-08-27 | APACX advertises OTC cash-out; MoneyBees describes trading, does not establish current PHT-specific acceptance and retains discretionary asset acceptance. This does not establish an issuer/agent redemption commitment. Its unquantified exchange-rate margin is not zero cost; customer limits are not route capacity. APACX's on-chain redeem is borrower repayment. |
+| `pht-pht` | [APACX offramp](https://docs.apacx.io/user-guides/pht-onramp-and-offramp), undated; [MoneyBees terms](https://www.moneybees.ph/terms/), updated 2026-08-27 | APACX advertises OTC cash-out; MoneyBees describes trading, does not establish current PHT-specific acceptance and retains discretionary asset acceptance. This does not establish an issuer/agent redemption commitment. Its unquantified exchange-rate margin is not zero cost; customer limits are not route capacity. APACX's on-chain redeem is borrower repayment. Delisted on 2026-11-08 because the advertised discretionary OTC process does not establish an ordinary-holder PHP exit at a verifiable rate and depth. |
 | `stusd-stoneyield` | [Token lifecycle](https://docs.stoneyield.io/docs/whitepaper/token-lifecycle) and [wrapper](https://docs.stoneyield.io/docs/protocol/stusd-wrapper), undated | Exceptional owner-only `earlyRedeem()` is not participant-callable; holder `unlock()` permits transfer rather than payout, and the wrapper is one-way. |
 | `isc-international-stable-currency` | [Reserve mechanics](https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics) and [key entities](https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities), undated | Reserve market purchases/sales and issuer mint/burn do not give holders a claim to reserve assets or an issuer redemption payout. |
 | `nusd-nexus` | [Synapse Bridge interface](https://contracts.synapseprotocol.com/bridge/synapsebridge), [nUSD deployment](https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/deploy/010_deploy_nUSD.ts) and [PoolConfig](https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/contracts/bridge/PoolConfig.sol), undated | `redeemAndRemove` is a real burn/node-processing flow, but exact tracked-token→pool/output binding is not established. Bridge-minted nUSD is not the separate nUSD-LP token; the displayed Ethereum DAI/USDC/USDT pool is not proof of this token's payout. Output failure can return nUSD; no fee/completion/capacity bound is established. |

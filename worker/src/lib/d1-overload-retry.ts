@@ -20,7 +20,18 @@ const d1AbortReason = (signal: AbortSignal): unknown => abortReason(signal, () =
  */
 export const D1_RESOURCE_WINDOW_MS = 10_000;
 
-function isD1ResourceWindowError(err: unknown): boolean {
+/**
+ * Idle time after a heavy D1 statement, as a multiple of its wall time. D1
+ * rejects a database that consumes too many resources within a 10 s window, and
+ * back-to-back yield history reads alone filled one on 2026-11-04 (about 12 s of
+ * query time in the minute the loader ran, failing the run and every concurrent
+ * producer). A ratio of 3 holds these statements to about a quarter of any
+ * window and leaves the rest to other traffic; a ratio of 2 still tripped the
+ * window on the 18:55Z run.
+ */
+export const D1_HEAVY_STATEMENT_IDLE_RATIO = 3;
+
+export function isD1ResourceWindowError(err: unknown): boolean {
   return String(err).includes("consumed within a 10 second window");
 }
 

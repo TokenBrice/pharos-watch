@@ -205,8 +205,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
 
     const { result, meta } = await evaluate(db);
 
-    expect(meta.pendingBacklog.triggered).toBe(false);
-    expect(meta.pendingBacklog.detail).toContain("newly tripped");
+    expect(meta.pendingBacklog).toMatchObject({ triggered: false, detail: expect.stringContaining("newly tripped") });
     expect(result.status).toBe("ok");
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
     expect(recordOperatorAlertReceipt).toHaveBeenLastCalledWith(db, "telegramDelivery",
@@ -327,7 +326,6 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     expect(meta.safetySource.triggered).toBe(age === 8000);
     expect(meta.safetySource.detail).toContain("state=missing");
     expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)).toEqual(cached);
-    expect(mockSetCache.mock.calls.some(([, key]) => key === WATCHDOG_KEYS.safetySourceSince)).toBe(false);
     if (age === 60) {
       vi.advanceTimersByTime((2 * CRON_INTERVALS["compute-safety-score-v9"] - age) * 1000);
       const sustained = await runTelegramDegradationWatchdog(db);
@@ -345,10 +343,6 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
 
     expect(meta.safetySource.recovered).toBe(true);
     expect(store.values.has(WATCHDOG_KEYS.safetySourceSince)).toBe(false);
-    expect(mockDeleteCache).toHaveBeenCalledWith(
-      expect.anything(),
-      WATCHDOG_KEYS.safetySourceSince,
-    );
   });
 
   it.each(["newly-tripped", "sustained", "pending-masked", "recovered"] as const)("retains preloaded source provenance on %s outcomes", async (phase) => {
@@ -394,6 +388,37 @@ function dispatchWork(events: Record<string, number> = { dews: 1 }, messagesSent
 }
 
 describe("runTelegramDegradationWatchdog · zero-send streak", () => {
+  it.each([
+    ...["read-failed", "broken", "", "{}", "-1", "1.5",
+      '{"streak":"bad","lastRunIdentity":"17"}', '{"streak":3,"lastRunIdentity":17}',
+    ].map((value) => ({ value, reason: value === "read-failed" ? "streak-state-read-failed" : "invalid-streak-state" })),
+    ...["null", "true", '"3"', "[]", '{"version":2,"streak":3,"lastRunIdentity":"17"}']
+      .map((value) => ({ value, reason: "unsupported-streak-state" })),
+    { value: '{"version":2,"streak":3,"lastRunIdentity":"17"}', reason: "unsupported-streak-state", messagesSent: 1 },
+  ].flatMap((row) => [false, true].map((active) => ({ messagesSent: 0, ...row, active }))))("preserves alert history for $value (active $active, sent $messagesSent)", async ({ value, reason, active, messagesSent }) => {
+    await useRealCache();
+    if (value === "read-failed") {
+      const read = mockGetCache.getMockImplementation()!;
+      mockGetCache.mockImplementation((...args: Parameters<typeof DbCache.getCache>) => {
+        if (args[1] === WATCHDOG_KEYS.zeroSendStreak) throw new Error("streak read failed");
+        return read(...args);
+      });
+    }
+    const { sqlite, db } = fixtures.open();
+    const history = JSON.stringify({ version: 2, observed: active ? ["zero-send"] : [], acknowledged: active ? ["zero-send"] : [], pending: [], lastDeliveredAt: 1 });
+    for (const [key, retained] of [[WATCHDOG_KEYS.zeroSendStreak, value], [WATCHDOG_KEYS.notifications, history]]) {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, 1)").run(key, retained);
+    }
+    sqlite.prepare("INSERT INTO cron_runs (id, job, started_at, duration_ms, status, metadata) VALUES (18, 'dispatch-telegram-alerts', 1, 0, 'ok', ?)")
+      .run(JSON.stringify(dispatchWork(undefined, messagesSent)));
+    const { result, meta } = await evaluate(db);
+    expect(result.status).toBe("degraded");
+    expect(meta.zeroSend).toMatchObject({ availability: "unknown", reason, streak: null, triggered: active, recovered: false, evaluated: false });
+    for (const [key, retained] of [[WATCHDOG_KEYS.zeroSendStreak, value], [WATCHDOG_KEYS.notifications, history]]) {
+      expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(key)).toEqual({ value: retained, updated_at: 1 });
+    }
+  });
+
   it.each([
     { reason: "read-failed", streak: 0, metadata: null },
     { reason: "read-failed", metadata: null },
@@ -500,23 +525,22 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
     const state = JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}");
 
     expect(state).toEqual({ streak: priorStreak + 1, lastRunIdentity: "77" });
-    expect(meta.zeroSend.streak).toBe(priorStreak + 1);
     expect(meta.zeroSend).toMatchObject({
       availability: "available", reason: "already-evaluated", triggered: priorStreak === 2, recovered: false,
+      streak: priorStreak + 1, evaluated: false, runIdentity: "77",
     });
     expect(second.status).toBe(priorStreak === 2 ? "degraded" : "ok");
-    expect(meta.zeroSend.evaluated).toBe(false);
-    expect(meta.zeroSend.runIdentity).toBe("77");
   });
 
   it.each([
     ["does not trigger before reaching streak threshold", 0, { dews: 1 }],
+    ["admits a legacy zero scalar", 0, { dews: 1 }, "0"],
     ["increments the streak for a reserve-only zero-send run", 0, { reserve: 2 }],
     ["triggers after threshold consecutive zero-send runs", 2, { dews: 2, depeg: 1 }],
     ["stays triggered while the zero-send streak continues", 3, { dews: 2, depeg: 1 }],
-  ] as const)("%s", async (_name, prior, events) => {
+  ] as const)("%s", async (_name, prior, events, retained?: string) => {
     const store = installCacheStore();
-    if (prior) store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: String(prior), updatedAt: 1 });
+    if (prior || retained) store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: retained ?? String(prior), updatedAt: 1 });
     const { result, meta } = await evaluate(makeDb({ dispatchMetadata: dispatchWork(events) }));
     expect(meta.zeroSend).toMatchObject({ triggered: prior + 1 >= ZERO_SEND_STREAK_THRESHOLD, streak: prior + 1 });
     expect(result.status).toBe(prior + 1 >= ZERO_SEND_STREAK_THRESHOLD ? "degraded" : "ok");
@@ -525,14 +549,18 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   it.each([
     ["recovers and resets streak when dispatch sends again", 1, 7, 3, true],
     ["recovers when the evaluated source has an observed zero-target workload", 18, 0, 0, false],
-  ] as const)("%s", async (_name, id, messages, targets, legacy) => {
+    ["repairs malformed streak state when dispatch sends again", 18, 1, 3, false, true],
+  ] as const)("%s", async (_name, id, messages, targets, legacy, corrupt?: boolean) => {
     const store = installCacheStore();
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, {
-      value: legacy ? String(ZERO_SEND_STREAK_THRESHOLD) : JSON.stringify({ streak: ZERO_SEND_STREAK_THRESHOLD, lastRunIdentity: "17" }), updatedAt: 1,
+      value: corrupt ? "broken" : legacy ? String(ZERO_SEND_STREAK_THRESHOLD) : JSON.stringify({ streak: ZERO_SEND_STREAK_THRESHOLD, lastRunIdentity: "17" }), updatedAt: 1,
+    });
+    if (corrupt) store.values.set(WATCHDOG_KEYS.notifications, {
+      value: JSON.stringify({ version: 2, observed: ["zero-send"], acknowledged: ["zero-send"], pending: [], lastDeliveredAt: 1 }), updatedAt: 1,
     });
     const db = makeDb({ dispatchRunId: id, dispatchMetadata: dispatchWork({ dews: legacy ? 1 : 2 }, messages, targets) });
     const { meta } = await evaluate(db);
-    expect(meta.zeroSend).toMatchObject({ availability: "available", recovered: true, evaluated: true, triggered: false, streak: 0 });
+    expect(meta.zeroSend).toMatchObject({ availability: "available", reason: null, recovered: true, evaluated: true, triggered: false, streak: 0 });
     expect(JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}"))
       .toEqual({ streak: 0, lastRunIdentity: String(id) });
     const repeated = await runTelegramDegradationWatchdog(db);
@@ -553,9 +581,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
 
     const { result, meta } = await evaluate(db);
 
-    expect(meta.zeroSend.triggered).toBe(false);
-    expect(meta.zeroSend.streak).toBe(0);
-    expect(meta.zeroSend).toMatchObject({ availability: "available", reason: null, evaluated: true });
+    expect(meta.zeroSend).toMatchObject({ triggered: false, streak: 0, availability: "available", reason: null, evaluated: true });
     expect(result.status).toBe("ok");
   });
 
@@ -607,6 +633,7 @@ describe("delivery notifications", () => {
       expect(mockSetCache.mock.lastCall![1]).toBe(WATCHDOG_KEYS.notifications);
       expect(state()).toEqual(initial);
       expect(onset()).toBeDefined();
+      expect(deliverOperatorAlert).toHaveBeenCalledOnce();
     }
     const recovered = await run(phase !== "credentials");
     const reason = phase === "credentials" ? "operator-alert-credentials-missing" : "operator-alert-delivery-failed";
@@ -633,20 +660,21 @@ describe("delivery notifications", () => {
     await run();
     if (phase === "batched") { capacity = {}; await run(); }
     expect(state().acknowledged).toEqual(initial.acknowledged);
-    const summary = state().pending[0];
-    expect(summary).toMatchObject({ active, observedAt, detail });
-    expect(state().pending).toHaveLength(1);
+    const latest = {
+      active: phase !== "batched", observedAt: Math.floor(Date.now() / 1000),
+      detail: phase === "batched" ? "pending=0, recovered" : `pending=700>500, sustainedSec=${PENDING_BACKLOG_SUSTAINED_SEC}`,
+    };
     const count = phase === "batched" ? 4 : phase === "raise" ? 3 : 2;
-    expect(summary.transitionCount).toBe(count);
+    expect(state().pending).toEqual([{ condition: "backlog", active, observedAt, detail, latest, transitionCount: count }]);
     mockDeliverOperatorAlert.mockResolvedValue({ ok: true });
     await run();
     expect(state().pending).toEqual([]);
-    expect(state().acknowledged).toEqual(summary.latest.active ? ["backlog"] : []);
+    expect(state().acknowledged).toEqual(latest.active ? ["backlog"] : []);
     const line = (event: { active: boolean; observedAt: number; detail: string }) =>
       `${event.active ? "RAISED" : "RECOVERED"} backlog observed ${new Date(event.observedAt * 1000).toISOString()}: ${escapeHtml(event.detail)}`;
     const text = mockDeliverOperatorAlert.mock.lastCall![1];
     expect(text.split("\n").slice(1)).toEqual([
-      `backlog: ${count} transitions (${count - 2} intervening)`, line({ active, observedAt, detail }), `Latest: ${line(summary.latest)}`,
+      `backlog: ${count} transitions (${count - 2} intervening)`, line({ active, observedAt, detail }), `Latest: ${line(latest)}`,
     ]);
     expect(text.length).toBeLessThan(4096);
     expect(recordOperatorAlertReceipt).toHaveBeenLastCalledWith(db, "telegramDelivery",

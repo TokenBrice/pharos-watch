@@ -18,6 +18,7 @@ import { rescoreConfidenceForAvailability } from "../lib/status/evaluation-state
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
 import {
   evaluateSafetyPublicationSizeCauses,
+  evaluateDepegBlindReviewCauses,
   evaluateSchedulerLiveness,
   mergeD1QuotaCauses,
   rebuildCronDerivedAvailabilityCauses,
@@ -368,6 +369,10 @@ export function handleStatus({
         ),
         ...evaluateSafetyPublicationSizeCauses(safetyPublicationSize),
       ];
+      const dataQualityCauses = [
+        ...raw.causes.dataQuality,
+        ...evaluateDepegBlindReviewCauses(supplements.canaries, now),
+      ];
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak,
         "status-missing", probeIssues.length > 0 ? "probe-unreadable" : "probe-missing");
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
@@ -411,7 +416,8 @@ export function handleStatus({
         causes: {
           ...raw.causes,
           availability: availabilityCauses,
-          overall: synthesizeOverallCauses(availabilityCauses, raw.causes.dataQuality),
+          dataQuality: dataQualityCauses,
+          overall: synthesizeOverallCauses(availabilityCauses, dataQualityCauses),
         },
         state: resolvedState,
         staleness: resolvedStaleness,

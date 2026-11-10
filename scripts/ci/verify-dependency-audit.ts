@@ -8,6 +8,7 @@ import {
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { isRecord as isObject } from "../../shared/lib/type-guards.ts";
 
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { CliUsageError, parseStrictCliArgs } from "../lib/cli-args.mjs";
@@ -52,10 +53,6 @@ function isHighOrCritical(vulnerability: unknown): vulnerability is AuditVulnera
     isObject(vulnerability) &&
     (vulnerability.severity === "high" || vulnerability.severity === "critical")
   );
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function sortedUniqueStrings(value: unknown, fieldName: string): string[] {

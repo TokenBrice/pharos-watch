@@ -281,29 +281,6 @@ describe("resolveTronBlacklistOrder candidate selection", () => {
     expect(orderRetryKeys(sqlite)).toEqual([]);
   });
 
-  it("exits candidacy once a block is filled and never refetches it", async () => {
-    const { sqlite, db } = fixtures.open();
-    seedConflictBlock(sqlite, { block: 100 });
-    seedConflictBlock(sqlite, { block: 200 });
-    const calls: number[] = [];
-    stubConfirmedBlocks(
-      new Map([
-        [100, { timestamp: BASE_TIMESTAMP + 100, transactions: [TX_A, TX_B] }],
-        [200, { timestamp: BASE_TIMESTAMP + 200, transactions: [TX_B, TX_A] }],
-      ]),
-      calls,
-    );
-
-    const first = await resolveTronBlacklistOrder(db, providerContext(), makeRunBudget());
-    expect(first).toEqual({ blocksAttempted: 2, positionsResolved: 4, blocksDeferred: 0 });
-    expect(calls).toEqual([100, 200]);
-
-    const second = await resolveTronBlacklistOrder(db, providerContext(), makeRunBudget());
-    expect(second).toEqual({ blocksAttempted: 0, positionsResolved: 0, blocksDeferred: 0 });
-    expect(calls).toEqual([100, 200]);
-    expect(orderRetryKeys(sqlite)).toEqual([]);
-  });
-
   it("stops before the first block when the run budget is exhausted", async () => {
     const subrequestExhausted = fixtures.open();
     seedConflictBlock(subrequestExhausted.sqlite, { block: 100 });

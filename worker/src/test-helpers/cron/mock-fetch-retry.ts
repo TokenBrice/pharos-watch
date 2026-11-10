@@ -88,6 +88,7 @@ export function mockFetchRetry(options: MockFetchRetryOptions = {}) {
   }
 
   return {
+    DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES: 16 * 1024 * 1024,
     fetchWithRetry,
     fetchJsonWithRetry: vi.fn(readBody(async (response) => await response.json())),
     fetchTextWithRetry: vi.fn(readBody(async (response) => await response.text())),

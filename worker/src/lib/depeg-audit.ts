@@ -31,8 +31,8 @@ export function auditVerdictNotInSql(column: string, excluded: readonly DepegAud
   };
 }
 
-/** Rows whose provenance carries a reviewed dispute; callers subtract these from public event counts. */
-export function disputedAuditVerdictSql(column: string): { sql: string; binds: readonly string[] } {
+/** Rows whose provenance carries a reviewed dispute. */
+function disputedAuditVerdictSql(column: string): { sql: string; binds: readonly string[] } {
   return auditVerdictInSql(column, DISPUTED_AUDIT_VERDICTS);
 }
 

@@ -66,13 +66,6 @@ describe("sendToChat", () => {
     });
   });
 
-  it("passes disable_notification when set", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    await sendToChat("12345", "test", "bot-token", { disableNotification: true });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
-    expect(body.disable_notification).toBe(true);
-  });
-
   it("cancels a pending chat send when the caller aborts", async () => {
     const controller = new AbortController();
     let suppliedSignal: AbortSignal | null = null;

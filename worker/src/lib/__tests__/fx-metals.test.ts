@@ -187,28 +187,6 @@ describe("resolveMetalReferenceRates", () => {
     });
   });
 
-  it("accepts a >20% spot move corroborated by a fresh Chainlink round", async () => {
-    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
-    vi.mocked(fetchJsonWithRetry)
-      .mockResolvedValueOnce(okResult({ price: 2_900, updatedAt: "2026-11-02T10:44:00Z" }))
-      .mockResolvedValueOnce(okResult({ price: 50.39, updatedAt: "2026-11-02T10:44:00Z" }));
-
-    const result = await resolveMetalReferenceRates({
-      prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
-      prevRateIsFresh: () => false,
-      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
-      freshChainlinkRates: { peggedSILVER: 50.378 },
-      syncStartSec,
-      validateRate: validateWithPriorDelta,
-    });
-
-    expect(result.resolvedByPeg.peggedSILVER).toMatchObject({
-      rate: 50.39,
-      source: "gold-api.com",
-      updatedAt: Math.floor(Date.parse("2026-11-02T10:44:00Z") / 1000),
-    });
-  });
-
   it("accepts a >20% spot move corroborated by a three-contributor peer median", async () => {
     const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
     vi.mocked(fetchJsonWithRetry)

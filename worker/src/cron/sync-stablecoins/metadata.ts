@@ -444,6 +444,8 @@ function sizeGuardMetadataForRung(
 // an oversized payload whose global persistence compaction would silently
 // drop the same evidence without any marker.
 function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Record<string, unknown> {
+  const quality = guard.metadata.quality as Record<string, unknown> | undefined;
+  const census = quality?.depegObservation as DepegObservationCensus | null | undefined;
   return {
     reason: "stablecoins-metadata-over-budget",
     metadataCompactedBySizeGuard: true,
@@ -460,7 +462,9 @@ function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Re
     depegHeldReason: guard.metadata.depegHeldReason,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
     supplyChainGuard: guard.metadata.supplyChainGuard,
-    quality: guard.metadata.quality,
+    quality: census?.unavailableAssets ? { ...quality,
+      depegObservation: { ...census, unavailableAssets: undefined, unavailableIdsDropped: true },
+    } : quality,
     activePublicationCoverage: {
       complete: guard.publicationCoverage.complete,
       expectedActiveCount: guard.publicationCoverage.expectedActiveCount,

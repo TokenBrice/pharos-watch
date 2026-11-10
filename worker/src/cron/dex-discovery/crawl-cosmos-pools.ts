@@ -1,4 +1,5 @@
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
+import { readRecord as asRecord } from "@shared/lib/type-guards";
 import {
   isNobleSwapDiscoveryDeployment,
   isOsmosisSqsDiscoveryDeployment,
@@ -58,12 +59,6 @@ export interface CosmosPoolsStageResult {
 }
 
 export { isNobleSwapDiscoveryDeployment, isOsmosisSqsDiscoveryDeployment };
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
 
 function parseDenom(value: unknown): string | null {
   if (typeof value !== "string") return null;

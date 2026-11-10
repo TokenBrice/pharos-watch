@@ -1,9 +1,10 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
 import { useReportCardsV9Table } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -33,6 +34,11 @@ import {
   type PegFilter,
   type V9SortKey,
 } from "./v9-view-model";
+
+// Live cards need charts; the first-paint hero and dated preview do not.
+const ReportCardMiniV9 = dynamic(() => import("@/components/report-card-mini-v9").then((m) => m.ReportCardMiniV9), {
+  loading: () => <Skeleton className="h-[274px] w-full rounded-xl" aria-label="Loading safety card" />,
+});
 
 const SORT_OPTIONS: ReadonlyArray<{ key: V9SortKey; label: string }> = [
   { key: "overall", label: "Overall" },
@@ -250,14 +256,23 @@ export function ReportCardsV9Client({ initialPreview = null }: { initialPreview?
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
   const [pegFilter, setPegFilter] = useState<PegFilter>("all");
   const [sortKey, setSortKey] = useState<V9SortKey>("overall");
-  // Hydration-stable first render: the build publication clock keeps server
-  // and client markup identical, then a deferred tick re-evaluates the
-  // calendar-date retention boundary with the viewer's clock.
+  // Hydration-stable first render uses the build clock; after hydration,
+  // re-evaluate retention with the viewer's clock and at its deadline.
   const [nowSec, setNowSec] = useState(initialPreview?.capturedAtSec ?? 0);
+  const previewExpiresAtSec = initialPreview?.expiresAtSec;
   useEffect(() => {
-    const timer = setTimeout(() => setNowSec(Math.floor(Date.now() / 1000)), 0);
+    let timer: ReturnType<typeof setTimeout>;
+    const updateClock = () => {
+      const nowMs = Date.now();
+      setNowSec(Math.floor(nowMs / 1000));
+      if (previewExpiresAtSec !== undefined && nowMs < previewExpiresAtSec * 1000) {
+        // Browser timeouts cannot represent delays beyond signed 32-bit milliseconds.
+        timer = setTimeout(updateClock, Math.min(previewExpiresAtSec * 1000 - nowMs, 2_147_483_647));
+      }
+    };
+    timer = setTimeout(updateClock, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [previewExpiresAtSec]);
   const previewActive = initialPreview !== null && nowSec < initialPreview.expiresAtSec;
 
   const cards = useMemo(

@@ -1,119 +1,122 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
-import { inspectComponentStyles, inspectComponentTree, isComponentSourceFile } from "./design-invariants.test-support";
+import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification/risk";
+import { readFileSync, readdirSync } from "node:fs";
+import { sep } from "node:path";
+import { contrast, tokenColors, inspectComponentStyles as inspect, inspectComponentTree, isComponentSourceFile as isSource } from "./design-invariants.test-support";
 
-/**
- * Design invariants guarded at the repo level so a future commit cannot
- * silently introduce Newsreader serif or Tailwind's `font-serif` into a
- * non-editorial surface. The Daily Digest, the detail-page AI summary and the
- * Stablecoin Cemetery (h1, epitaphs, record card) are the intentional
- * carve-outs per docs/design-language.md.
- */
+// Georgia avoids error font preloads.
+const SERIF_ALLOWED = new Set([
+  "ai-summary", "ai-summary-prose", "cemetery/cemetery-register-autopsy", "cemetery/cemetery-hero",
+  "cemetery/plot-map-record-card", "page-error-editorial", "daily-digest", "home-alt-mini-cards/daily-digest-card",
+].map((name) => `src/components/${name}.tsx`));
+const read = (path: string) => readFileSync(path, "utf8");
+const CSS = read("src/app/globals.css");
+const TOKENS = [read("src/styles/tokens/primitives.css"), read("src/styles/tokens/semantic.css"), CSS];
 
-const ROOT = process.cwd();
-const COMPONENTS_DIR = join(ROOT, "src/components");
-
-// Relative posix-style paths (for stable match regardless of OS separator).
-const ALLOWED_SERIF_FILES: Record<string, true> = {
-  "src/components/ai-summary.tsx": true,
-  // The clamped-prose client half of the AI summary carries the same serif
-  // editorial carve-out as its parent.
-  "src/components/ai-summary-prose.tsx": true,
-  // Cemetery Autopsy Register epitaph pull line: Newsreader as an intentional
-  // editorial carve-out (Design Council B11), matching the Digest register.
-  "src/components/cemetery/cemetery-register-autopsy.tsx": true,
-  // Cemetery hero h1 (plot map redesign): the same sanctioned cemetery carve-out.
-  "src/components/cemetery/cemetery-hero.tsx": true,
-  // Plot-map record card (desktop inspector and phone sheet): name, editorial title and epitaph in Newsreader.
-  "src/components/cemetery/plot-map-record-card.tsx": true,
-  // Root error boundary keeps its editorial register in Georgia
-  // (`font-serif`), deliberately not Newsreader: error.tsx is in every
-  // route's preload graph, and importing digestDisplay from it preloaded
-  // the digest font CSS app-wide (mythos design review #19).
-  "src/components/page-error-editorial.tsx": true,
-  // Existing Digest surfaces import the font by its digestDisplay alias.
-  "src/components/daily-digest.tsx": true,
-  "src/components/home-alt-mini-cards/daily-digest-card.tsx": true,
-};
-
-function toPosixRel(absolute: string): string {
-  return relative(ROOT, absolute).split(sep).join("/");
-}
-
-function walk(dir: string, out: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    const s = statSync(full);
-    if (s.isDirectory()) {
-      walk(full, out);
-    } else if (isComponentSourceFile(toPosixRel(full))) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-// Collected once: both invariants scan the same component tree through one
-// shared TypeScript Program instead of one Program per source file.
-const COMPONENT_SOURCES = (() => {
-  const files = walk(COMPONENTS_DIR).map((file) => ({ path: toPosixRel(file), source: readFileSync(file, "utf8") }));
-  const violations = inspectComponentTree(files);
-  return files.map(({ path }) => ({ rel: path, violations: violations.get(path) ?? [] }));
-})();
+const paths = readdirSync("src", { recursive: true }).map((p) => `src/${p}`.split(sep).join("/")).filter(isSource);
+const sources = inspectComponentTree(paths.map((path) => ({ path, source: read(path) })));
+const offenders = (kind: string) => [...sources].filter(([p, v]) => v.some((item) => item === kind) &&
+  (kind === "interactive-row" || /^src\/(components\/|app\/chains\/(client|\[chain\]\/stablecoin-table)\.tsx$)/.test(p))).map(([p]) => p);
 
 describe("design invariants", () => {
-  it("never uses Tailwind max-* variants (this pipeline does not emit them)", () => {
-    const offenders = COMPONENT_SOURCES.filter(({ violations }) => violations.includes("max-breakpoint"))
-      .map(({ rel }) => rel);
-    expect(offenders).toEqual([]);
+  it.each(["max-breakpoint", "interactive-row"])("guards %s", (kind) => {
+    expect(offenders(kind)).toEqual([]);
   });
 
-  it("font-serif / Newsreader usage is confined to editorial carve-outs", () => {
-    const offenders: string[] = [];
+  it("serif stays editorial", () => {
+    expect(offenders("serif").filter((p) => !SERIF_ALLOWED.has(p) &&
+      !p.includes("/digest-") && !p.includes("/digest/"))).toEqual([]);
+  });
 
-    for (const { rel, violations } of COMPONENT_SOURCES) {
-      if (ALLOWED_SERIF_FILES[rel]) continue;
-      // Digest editorial surfaces — any current or future file under the
-      // digest directory is allowed its serif treatment.
-      if (rel.includes("/digest-") || rel.includes("/digest/")) continue;
-      if (violations.includes("serif")) {
-        offenders.push(rel);
+  it("keeps scoped focus rings opaque", () => {
+    const rings = [/\.pharos-focus-ring \{([^}]+)\}/, /\.pharos-source-list a \{([^}]+)\}/,
+      /\.pharos-prose-link \{([^}]+)\}/].map((selector) => {
+      const rule = CSS.match(selector);
+      expect(rule, selector.source).not.toBeNull();
+      return rule!;
+    });
+    const controls = [...read("src/components/digest-archive-client.tsx").matchAll(/className="([^"]*focus-visible:ring-2[^"]*)"/g)];
+    expect(controls.length).toBeGreaterThan(0);
+    rings.push(...controls);
+    for (const [, classes] of rings) {
+      expect(classes.match(/focus-visible:ring-ring\S*/g)?.every((ring) => /^focus-visible:ring-ring(?:\/100)?$/.test(ring))).toBe(true);
+    }
+  });
+
+  it.each([false, true])("token contrast (dark=%s)", (dark) => {
+    const color = tokenColors(TOKENS, dark), ring = color("--ring"), surfaces = ["--background", "--card"];
+    for (const surface of [...surfaces, "--surface-raised"]) {
+      const bg = color(surface);
+      expect(contrast(ring, bg)).toBeGreaterThanOrEqual(3);
+      expect(contrast(ring, bg, .6)).toBeLessThan(3);
+    }
+    for (const band of ["high", "single-source"] as const) {
+      const classes = /^text-([\w-]+) dark:text-([\w-]+)$/.exec(CONFIDENCE_LEVEL_COLORS[band]);
+      const fg = color(`--color-${classes?.[dark ? 2 : 1]}`);
+      for (const surface of surfaces) expect(contrast(fg, color(surface))).toBeGreaterThanOrEqual(4.5);
+      if (!dark) expect(contrast(color(`--color-${band === "high" ? "emerald" : "amber"}-600`), color("--card"))).toBeLessThan(4.5);
+    }
+  });
+
+  it("color parser", () => {
+    const color = tokenColors([":root { --cycle: var(--cycle); }"], false);
+    for (const [lch, ratio] of [["0 0 0", 21], ["0.627955 0.257683 29.233885", 4], ["1 0 0", 1]] as const) {
+      expect(contrast(color(`oklch(${lch})`), [1, 1, 1])).toBeCloseTo(ratio, 2);
+    }
+    for (const value of ["--missing", "rgb(0 0 0)", "--cycle"]) {
+      expect(() => color(value)).toThrow();
+    }
+  });
+
+  it.each(["tr", "TableRow", "InteractiveTableRow"])("native %s roles", (tag) => {
+    for (const attr of ['role="link"', 'role={"button"}', "role={role}", "tabIndex={0}", "onKeyDown={open}"]) {
+      for (const path of ["src/components/liquidity-table.tsx", "src/app/other/page.tsx", "src/components/stablecoin-table-row.tsx"]) {
+        expect(inspect(path, `<${tag} ${attr} />`)).toEqual(["interactive-row"]);
       }
     }
+    expect(inspect("src/components/liquidity-table.tsx", `<${tag} role={"row"} /><a role="link" />`)).toEqual([]);
+    expect(inspect("src/components/stablecoin-table-row.tsx", `<${tag} tabIndex={isCursor ? 0 : undefined} />`))
+      .toEqual(tag === "TableRow" ? [] : ["interactive-row"]);
+  });
 
-    expect(offenders).toEqual([]);
+  it("inspects spread row props and structurally bounds the roving exception", () => {
+    for (const props of ['role: "link"', "tabIndex: 0", "onKeyDown: open"]) {
+      for (const spread of [`{${props}}`, "props"]) {
+        expect(inspect("src/app/x.tsx", `const props={${props}}; <TableRow {...${spread}} />`)).toEqual(["interactive-row"]);
+      }
+    }
+    const path = "src/components/stablecoin-table-row.tsx";
+    expect(inspect(path, '<TableRow tabIndex={ (isCursor) ? (0) : (undefined) } />')).toEqual([]);
+    expect(inspect(path, '<TableRow tabIndex={isCursor ? undefined : 0} />')).toEqual(["interactive-row"]);
+    expect(inspect(path, 'const p={onKeyDown: open}; const props={...p}; <TableRow {...props} />')).toEqual(["interactive-row"]);
+    expect(inspect(path, 'const props={role: "row", title: "Safe"}; <TableRow {...props} />')).toEqual([]);
   });
 
   it.each([
-    ["JSX breakpoint class", '<div className="max-lg:hidden" />', ["max-breakpoint"]],
-    ["JSX serif class", '<div className="font-serif" />', ["serif"]],
-    ["conditional class", '<div className={ready ? "font-serif" : "font-sans"} />', ["serif"]],
-    ["template class", '<div className={`max-md:hidden ${extra}`} />', ["max-breakpoint"]],
-    ["referenced class", 'const tone = "font-serif"; const classes = tone; <div className={classes} />', ["serif"]],
-    ["class construction", 'const classes = cn("max-sm:hidden");', ["max-breakpoint"]],
-    ["aliased class construction", 'import { clsx as classes } from "clsx"; classes("font-serif");', ["serif"]],
-    ["variant construction", 'const variants = cva("base", { variants: { tone: { editorial: "font-serif" } } });', ["serif"]],
-    ["class prop", 'const props = { tableClassName: "max-xl:hidden" };', ["max-breakpoint"]],
-    ["font import", 'import { Newsreader as Serif } from "next/font/google";', ["serif"]],
-    ["editorial font import", 'import { digestDisplay as serif } from "@/lib/fonts/digest";', ["serif"]],
-    ["local font", 'import font from "next/font/local"; font({ src: "./Newsreader.woff2" });', ["serif"]],
-    ["comments", '// Avoid font-serif, Newsreader and max-lg: here\n<div className="font-sans">{/* font-serif max-sm: */}Safe</div>', []],
-    ["display text", 'const message = "font-serif Newsreader max-lg:"; <p>{message}</p>', []],
-    ["type-only import", 'import type { Newsreader } from "next/font/google";', []],
-    ["type-only specifier", 'import { type Newsreader } from "next/font/google";', []],
-  ] as const)("scopes design violations to runtime styling: %s", (_name, source, expected) => {
-    expect(inspectComponentStyles("src/components/example.tsx", source)).toEqual(expected);
+    ["JSX breakpoint class", '<div className="max-lg:hidden" />', "max-breakpoint"],
+    ["JSX serif class", '<div className="font-serif" />', "serif"],
+    ["conditional class", '<div className={ready ? "font-serif" : "font-sans"} />', "serif"],
+    ["template class", '<div className={`max-md:hidden ${extra}`} />', "max-breakpoint"],
+    ["referenced class", 'const a="font-serif"; const b=a; <div className={b}/>', "serif"],
+    ["class construction", 'cn("max-sm:hidden");', "max-breakpoint"],
+    ["aliased class construction", 'import { clsx as classes } from "clsx"; classes("font-serif");', "serif"],
+    ["variant construction", 'cva("base", {variants:{tone:{editorial:"font-serif"}}});', "serif"],
+    ["class prop", 'const p={tableClassName:"max-xl:hidden"};', "max-breakpoint"],
+    ["font import", 'import { Newsreader as Serif } from "next/font/google";', "serif"],
+    ["editorial font import", 'import { digestDisplay as serif } from "@/lib/fonts/digest";', "serif"],
+    ["local font", 'import font from "next/font/local"; font({ src: "./Newsreader.woff2" });', "serif"],
+    ["comments", '// font-serif Newsreader max-lg:\n<div className="font-sans">{/* font-serif max-sm: */}Safe</div>', ""],
+    ["display text", 'const t="font-serif Newsreader max-lg:"; <p>{t}</p>', ""],
+    ["type-only import", 'import type { Newsreader } from "next/font/google";', ""],
+    ["type-only specifier", 'import { type Newsreader } from "next/font/google";', ""],
+  ])("styling: %s", (_name, source, expected) => {
+    expect(inspect("src/components/x.tsx", source)).toEqual(expected ? [expected] : []);
   });
 
   it.each([
-    "src/components/__tests__/example.tsx",
-    "src/components/example.test.tsx",
-    "src/components/example.spec.tsx",
-    "src/components/example.test-support.ts",
-    "src/components/__fixtures__/example.tsx",
-  ])("excludes test-only styling in %s", (path) => {
-    expect(isComponentSourceFile(path)).toBe(false);
-    expect(inspectComponentStyles(path, '<div className="font-serif max-lg:hidden" />')).toEqual([]);
+    "__tests__/x.tsx", "x.test.tsx", "x.spec.tsx", "x.test-support.ts", "__fixtures__/x.tsx",
+  ].map((p) => `src/components/${p}`))("excludes %s", (path) => {
+    expect(isSource(path)).toBe(false);
+    expect(inspect(path, '<div className="font-serif max-lg:hidden" />')).toEqual([]);
   });
 });

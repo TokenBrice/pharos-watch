@@ -314,6 +314,20 @@ describe("useEvents", () => {
     useRegisteredApiQueryMock.mockReset();
   });
 
+  it.each([
+    ["loading", makeInfiniteQueryResult([], { isLoading: true }), true, false],
+    ["disabled", makeInfiniteQueryResult([]), false, false],
+    ["failed", makeInfiniteQueryResult([], { isError: true, error: new Error("unavailable") }), true, false],
+    ["no pages", { ...makeInfiniteQueryResult([]), data: { pages: [] } }, true, false],
+    ["empty success", makeInfiniteQueryResult([{ data: { ...TAPE_TERMINAL_PAGE.data, events: [] } }]), true, true],
+    ["retained terminal", makeInfiniteQueryResult([TAPE_TERMINAL_PAGE], { error: new Error("refresh failed") }), true, true],
+    ["retained cursor", makeInfiniteQueryResult([TAPE_FIRST_PAGE], { error: new Error("refresh failed") }), true, false],
+  ] as const)("reports completeness from admitted pages: %s", (_state, query, enabled, complete) => {
+    useInfiniteQueryMock.mockReturnValue(query);
+    const { result } = renderHook(() => useEvents({}, { enabled }));
+    expect(result.current.isFullyLoaded).toBe(complete);
+  });
+
   it("auto-loads the outstanding cursor page exactly once and flattens the result", async () => {
     const fetchNextPage = vi.fn(async () => undefined);
     // The first render still has a cursor; after the fetch the query reports both

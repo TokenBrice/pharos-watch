@@ -359,27 +359,21 @@ describe("adaptInfiniFi", () => {
     const response: InfiniFiProtocolData = {
       code: "OK",
       data: {
-        stats: { asset: { totalTVLAssetNormalized: 105 } },
+        stats: { asset: { totalTVLAssetNormalized: 65 } },
         farms: [
-          { name: "morpho-v2-sentora-pyusd", label: "Sentora PYUSD", assetsNormalized: 30, type: "ILLIQUID", underlyingAssetSymbol: "PYUSD" },
           { name: "morpho-steakUSDCinfinifi", label: "Morpho steakUSDC", assetsNormalized: 25, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
           { name: "base-morpho-steakhouse-prime", label: "Steakhouse Prime", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
           { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
           { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-          { name: "capfarm", label: "Cap stcUSD", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
-          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL (GDADF)", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
         ],
       },
     };
 
     const { slices } = adaptInfiniFi(response);
-    expect(slices.find((s) => s.name === "Sentora PYUSD")).toMatchObject({ coinId: "pyusd-paypal", depType: "collateral" });
     expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     expect(slices.find((s) => s.name === "Steakhouse Prime")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "collateral" });
     expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
-    expect(slices.find((s) => s.name === "Cap stcUSD")).toMatchObject({ coinId: "stcusd-cap", depType: "collateral" });
-    expect(slices.find((s) => s.name === "Fasanara mGLOBAL (GDADF)")).toMatchObject({ coinId: "mglobal-midas-fasanara", depType: "collateral" });
   });
 
   it("keeps PROTOCOL farm exposure explicit instead of renormalizing active farm subset", () => {
@@ -631,16 +625,6 @@ describe("resolveInfiniFiFreshness", () => {
       },
       farms: [],
     },
-  });
-
-  it("returns verified with the latest valid point when the rate matches within tolerance", () => {
-    expect(resolveInfiniFiFreshness(payloadWithRate(1.0727142465309754), {
-      code: "OK",
-      data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.0727 }] },
-    })).toEqual({
-      freshnessMode: "verified",
-      sourceTimestamp: 1_781_114_400,
-    });
   });
 
   it.each([

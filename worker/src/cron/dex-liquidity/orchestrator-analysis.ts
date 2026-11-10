@@ -1,3 +1,6 @@
+import { assessPoolRejectionCoverage, getDexPoolRejectionCandidates } from "./process-pools";
+import type { PoolProcessingRejection } from "./process-pool-types";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata, type DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
@@ -289,6 +292,7 @@ export interface DexLiquidityPostScoreAnalysis {
     valueBaselineGlobalTvl: number | null;
     ignoredPersistedGlobalTvl: number | null;
     nearValueGuard: boolean;
+    poolRejectionCoverage: NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["poolRejectionCoverage"]>;
     coinTvlStepCount150: number;
     coinTvlStepCount25: number;
     coinTvlStepIds150: string[];
@@ -335,6 +339,7 @@ export interface DexLiquidityPostScoreAnalysis {
 export async function analyzeDexLiquidityPostScoring(params: {
   db: D1Database;
   currentGenerationId?: string;
+  poolRejections?: PoolProcessingRejection[];
   scoreResults: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
@@ -506,6 +511,55 @@ export async function analyzeDexLiquidityPostScoring(params: {
   }
 
   const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows ?? []);
+
+  const previousProductive = parsedPreviousCronRows.find(isProductiveCronRow)?.metadata;
+  const previousRejectionCoverage = previousProductive?.sourceCoverage.poolRejectionCoverage;
+  const carriedRejectionCoverage = previousRejectionCoverage == null || (previousRejectionCoverage.reason === null
+    && Object.keys(previousRejectionCoverage.baselineTvlUsdByCoin).length === 0) ? undefined : {
+    ...previousRejectionCoverage,
+    baselineTvlUsdByCoin: Object.fromEntries(Object.entries(previousRejectionCoverage.baselineTvlUsdByCoin)
+      .filter(([id]) => ACTIVE_IDS.has(id))),
+  };
+  const rejectionBaselineBeforeSec = carriedRejectionCoverage?.baselineBeforeSec ?? Math.floor(Date.now() / 1000);
+  let rejectionBaseline = coinTvlRead.status === "fulfilled" && coinTvlRead.value.success
+    && (previousCoinTvlRows ?? []).every((row) => isFiniteNonNegative(row.total_tvl_usd))
+    && ((previousCoinTvlRows?.length ?? 0) > 0 || (globalRead.status === "fulfilled" && previousGlobalRow == null))
+    ? new Map((previousCoinTvlRows ?? []).map((row) => [row.stablecoin_id, row.total_tvl_usd])) : null;
+  const attributedRejections = getDexPoolRejectionCandidates(params.poolRejections ?? []).some((row) => Object.keys(row.tvlUsdByStablecoin ?? {}).length > 0);
+  // At rollout the latest publication may already exclude the rejected pools.
+  // Only a retained accepted, rejection-free generation can recover that lost anchor.
+  if (Object.values(carriedRejectionCoverage?.baselineTvlUsdByCoin ?? {}).some((tvl) => tvl === null)
+    || (attributedRejections && !Object.keys(carriedRejectionCoverage?.baselineTvlUsdByCoin ?? {}).length
+      && (previousProductive == null || (previousProductive.poolRejectionMateriality?.candidateRejectedPoolCount ?? previousProductive.rowsDropped) !== 0))) {
+    rejectionBaseline = null;
+    try {
+      const clean = await runWithOverloadRetry(() => params.db.prepare(
+        `SELECT stablecoin_id, total_tvl_usd FROM dex_liquidity_run_rows
+         WHERE stablecoin_id != '__global__' AND generation_id = (
+           SELECT g.generation_id FROM cron_runs c
+           JOIN dex_liquidity_publication_generations g
+             ON g.generation_id = json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.persistence.generationId')
+           WHERE c.job = 'sync-dex-liquidity' AND c.status IN ('ok', 'degraded') AND g.state = 'published'
+             AND c.started_at < ?
+             AND COALESCE(
+               json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.poolRejectionMateriality.candidateRejectedPoolCount'),
+               json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.rowsDropped')
+             ) = 0
+             AND json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.persistence.skipped') = 0
+           ORDER BY c.started_at DESC LIMIT 1
+         )`,
+      ).bind(rejectionBaselineBeforeSec).all<{ stablecoin_id: string; total_tvl_usd: number }>());
+      if (clean.success && clean.results.length > 0 && clean.results.every((row) => isFiniteNonNegative(row.total_tvl_usd))) {
+        rejectionBaseline = new Map(clean.results.map((row) => [row.stablecoin_id, row.total_tvl_usd]));
+      }
+    } catch (err) {
+      logWorkerEventArgs("handler", "warn", "[dex-liquidity] rejection coverage baseline unavailable:", toErrorMessage(err));
+    }
+  }
+  const poolRejectionCoverage = assessPoolRejectionCoverage(
+    params.poolRejections ?? [], rejectionBaseline,
+    new Map([...params.scoreResults].map(([id, score]) => [id, score.tvl])), carriedRejectionCoverage, rejectionBaselineBeforeSec,
+  );
 
   // Compare observed coverage on the price-only ticker policy. The current
   // published rows can be normalized exactly from their scored source mix;
@@ -818,6 +872,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       valueBaselineGlobalTvl: valueBaseline.valueBaselineGlobalTvl,
       ignoredPersistedGlobalTvl: valueBaseline.ignoredPersistedGlobalTvl,
       nearValueGuard,
+      poolRejectionCoverage,
       coinTvlStepCount150,
       coinTvlStepCount25,
       coinTvlStepIds150,

@@ -192,9 +192,9 @@ describe("address price providers", () => {
 
   it("collects successful quotes through the live single-provider path", async () => {
     const target = makeTarget();
-    mockFetch([{
+    const fetchMock = mockFetch([{
       match: () => true,
-      respond: () => coingeckoResponse(target.address, "1.001", "75000"),
+      respond: () => coingeckoResponse(target.address, "1.001", "75000", "10000"),
     }]);
 
     const result = await collectAddressPriceProviderQuotes({
@@ -205,28 +205,8 @@ describe("address price providers", () => {
     });
 
     expect(result.providerOutcome).toBe("success");
-    expect(result.quotesByStablecoinId.get(target.stablecoinId)).toEqual([
-      expect.objectContaining({ source: LIVE_PROVIDER, priceUsd: 1.001 }),
-    ]);
-  });
-
-  it("fetches the retained exact-address provider with local-fetch provenance", async () => {
-    const target = makeTarget();
-    const fetchMock = mockFetch([{
-      match: () => true,
-      respond: () => coingeckoResponse(target.address, "1.001", "75000", "10000"),
-    }]);
-
-    const result = await runCoingeckoOnchainAddressProvider(
-      [target],
-      "cg-key",
-      undefined,
-      1_800_000_000,
-      Date.now() + 60_000,
-    );
-
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result.quotes).toEqual([expect.objectContaining({
+    expect(result.quotesByStablecoinId.get(target.stablecoinId)).toEqual([expect.objectContaining({
       stablecoinId: "fixture-usd",
       source: "coingecko-onchain-address",
       priceUsd: 1.001,

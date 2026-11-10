@@ -350,16 +350,6 @@ describe("stablecoins pricing metadata", () => {
     expect(metadata.quality).toEqual({ reason });
   });
 
-  it.each([Infinity, 1])("retains supply quality findings through metadata compaction (budget=%s)", (budget) => {
-    const { guard } = allMissingSizeGuardFixture();
-    const quality = {
-      reason: "supply-chain-dropout-quarantine", quarantinedAssetCount: 1, unavailableAssetCount: 1,
-    };
-    guard.metadata.quality = quality;
-    const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget));
-    expect(metadata.quality).toEqual(quality);
-  });
-
   describe("depeg observation census", () => {
     const census = {
       scope: "psi-non-nav-before-supply-floor" as const,
@@ -369,6 +359,8 @@ describe("stablecoins pricing metadata", () => {
       unavailableCount: 1,
       belowFloorCount: 1,
       reasonCounts: { "supply-unavailable": 1 },
+      unavailableAssets: [{ id: "gap", reason: "supply-unavailable" as const, reviewedNominalReference: false }],
+      unavailableIdsTruncated: false,
     };
     const assets = (): PeggedAsset[] => ACTIVE_STABLECOINS.map((asset) => ({
       id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
@@ -424,8 +416,12 @@ describe("stablecoins pricing metadata", () => {
       const { guard } = allMissingSizeGuardFixture();
       const quality = { reason: "depeg-observation-incomplete", depegObservation: { ...census, syncStartSec: 1 } };
       guard.metadata.quality = quality;
-      expect(JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget)).quality).toEqual(quality);
+      const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget));
+      expect(metadata.quality).toEqual(budget === 2_000 ? { ...quality, depegObservation: {
+        ...quality.depegObservation, unavailableAssets: undefined, unavailableIdsDropped: true,
+      } } : quality);
     });
+
   });
 
   it.each(["kava-pricefeed"])(

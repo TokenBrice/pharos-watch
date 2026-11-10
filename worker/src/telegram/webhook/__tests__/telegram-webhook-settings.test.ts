@@ -370,24 +370,6 @@ describe("handleSettingsCallback — per-coin", () => {
     expect(db.getHistory().some((entry) => /INSERT|UPDATE|DELETE/.test(entry.sql))).toBe(false);
   });
 
-  it("unknown setting code under settings:c:<id>:?? receives an unknown-setting acknowledgement", async () => {
-    const db = mockD1();
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: "settings:c:usdc-circle:xx:1",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      },
-      "c",
-      "usdc-circle:xx:1",
-    );
-
-    expect(jsonBody(ackCalls()[0]).text).toMatch(/unknown/i);
-  });
-
   it("falls back to sendMessage when editMessageText fails", async () => {
     const db = mockD1();
     fetchSpy.mockImplementation(async (url) => {

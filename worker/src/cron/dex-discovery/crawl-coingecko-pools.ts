@@ -10,6 +10,7 @@ import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import {
   cgPoolVolume24hReading,
+  CG_ONCHAIN_MIN_RESERVE_USD,
   fetchCgTokenPoolsWithStatus,
   type CgPool,
   type CgPoolsByAddressResult,
@@ -159,7 +160,7 @@ export function admitCgOnchainPool({
   if (!side) return { reason: "untracked-leg" };
   const priceRaw = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
   const tvlUsd = parsed.tvlUsd;
-  if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) return { reason: "min-tvl" };
+  if (!Number.isFinite(tvlUsd) || tvlUsd < CG_ONCHAIN_MIN_RESERVE_USD) return { reason: "min-tvl" };
 
   if (!coherence.admits(side, parsed)) return { reason: "incoherent-price" };
 

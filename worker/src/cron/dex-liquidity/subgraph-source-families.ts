@@ -153,44 +153,6 @@ function normalizeMessariUniV3Pool(pool: UniV3MessariSubgraphPool): UniV3Subgrap
   };
 }
 
-function mapTrackedSubgraphPriceObservations(config: {
-  chain: string;
-  protocol: "uniswap-v3";
-  tvl: number;
-  tokenEntries: Array<{ symbol: string; address: string; usdPrice: number; tvl?: number }>;
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  references?: PriceValidationReferences;
-  identity: ReturnType<typeof buildPoolIdentity>;
-}): SubgraphPriceObservation[] {
-  const mapped: SubgraphPriceObservation[] = [];
-  const { chain, protocol, tvl, tokenEntries, chainAddressToId, symbolToChainScopedIds, references, identity } = config;
-
-  for (const { symbol, address, usdPrice, tvl: observationTvl } of tokenEntries) {
-    const resolved = resolveTrackedStablecoinId(
-      { chain, address, symbol },
-      { chainAddressToId, symbolToChainScopedIds },
-    );
-    if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
-    if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
-    mapped.push({
-      stablecoinId: resolved.stablecoinId,
-      obs: {
-        price: usdPrice,
-        // These queries expose current state, but no upstream quote timestamp.
-        observedAt: Math.floor(Date.now() / 1000),
-        tvl: observationTvl ?? tvl,
-        chain,
-        protocol,
-        ...buildDexPriceObservationIdentity(identity),
-        sourceFamily: "dl",
-      },
-    });
-  }
-
-  return mapped;
-}
-
 export async function fetchUniV3Data(
   graphApiKey: string | null,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
@@ -327,16 +289,29 @@ export async function fetchUniV3Data(
             tokenAddresses: [pool.token0.id, pool.token1.id],
             feeTierBps: feeTier / 100,
           });
-          return mapTrackedSubgraphPriceObservations({
-            chain,
-            protocol: "uniswap-v3",
-            tvl,
-            tokenEntries: pricedTokens,
-            chainAddressToId,
-            symbolToChainScopedIds,
-            references,
-            identity,
-          });
+          const mapped: SubgraphPriceObservation[] = [];
+          for (const { symbol, address, usdPrice } of pricedTokens) {
+            const resolved = resolveTrackedStablecoinId(
+              { chain, address, symbol },
+              { chainAddressToId, symbolToChainScopedIds },
+            );
+            if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
+            if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
+            mapped.push({
+              stablecoinId: resolved.stablecoinId,
+              obs: {
+                price: usdPrice,
+                // These queries expose current state, but no upstream quote timestamp.
+                observedAt: Math.floor(Date.now() / 1000),
+                tvl,
+                chain,
+                protocol: "uniswap-v3",
+                ...buildDexPriceObservationIdentity(identity),
+                sourceFamily: "dl",
+              },
+            });
+          }
+          return mapped;
         },
       };
     },

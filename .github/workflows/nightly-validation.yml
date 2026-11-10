@@ -203,7 +203,7 @@ jobs:
     # order-dependent file that a PR run happens not to expose fails here, and
     # the isolated result separates a real regression from shared-state leakage.
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -274,9 +274,11 @@ jobs:
         env:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
           # Presence opts this job into the audit; the PR lane omits it.
-          # Advisory for two weeks; ratchet from measured p50 before switching to "1".
+          # "1" blocks on the ratcheted routes (/depeg/, /safety-scores/, /stablecoins/;
+          # thresholds live in run-pages-artifact-lane.ts). "/" and the USDC profile
+          # stay advisory at this threshold.
           PHAROS_LIGHTHOUSE_THRESHOLD: "70"
-          PHAROS_LIGHTHOUSE_ENFORCE: "0"
+          PHAROS_LIGHTHOUSE_ENFORCE: "1"
       - name: Retain Lighthouse reports
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

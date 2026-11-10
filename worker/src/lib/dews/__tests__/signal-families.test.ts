@@ -372,8 +372,9 @@ describe("DEWS signal family curves", () => {
     // Unpriced baseline burns understate the baseline and would overstate the surge.
     expect(computeFlowSignal(makeDewsInput({ ...scored, flowBurnBaselineValuation: "partial" })))
       .toEqual(unavailable("mint-burn-baseline-valuation-partial"));
-    // Unknown pre-completeness baseline coverage is tolerated while legacy buckets age out.
-    expect(computeFlowSignal(makeDewsInput({ ...scored, flowBurnBaselineValuation: "unknown" })).available).toBe(true);
+    // A historical baseline cannot authorize a score without complete valuation.
+    expect(computeFlowSignal(makeDewsInput({ ...scored, flowBurnBaselineValuation: "unknown" })))
+      .toEqual(unavailable("mint-burn-baseline-valuation-unknown"));
     // Genuine empty activity stays a measured zero.
     expect(computeFlowSignal(makeDewsInput({ ...scored, burnVolume24hUsd: 0 }))).toMatchObject({ available: true, value: 0 });
   });

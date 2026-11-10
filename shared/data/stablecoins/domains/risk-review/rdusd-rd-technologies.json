@@ -1,0 +1,10 @@
+{
+  "id": "rdusd-rd-technologies",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "The verdict follows the centralized bank-issued stablecoin model in Anchorage Digital's RDUSD announcement. RDUSD-specific holder-control powers have not yet been documented or verified on-chain.",
+    "evidence": "Issuer-model inference only. Anchorage Digital Bank N.A. is the announced issuer and will operate minting, redemption, reserve management and custody. No verified public RDUSD deployment or token-specific freeze or blacklist authority was established in this review. The reviewed Yes records the announced centralized issuer model, not an observed exercise of holder controls.",
+    "reviewer": "Codex weekly pre-launch sweep",
+    "reviewedAt": "2026-11-08"
+  }
+}

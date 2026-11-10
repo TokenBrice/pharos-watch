@@ -153,6 +153,10 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   // contradicted cap when a leg is unreadable.
   // https://bscscan.com/token/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311
   "usyc-hashnote",
+  // Reviewed 2026-11-07: Centrifuge's complete issuance is 55,613,550.471566
+  // JTRSY; CoinGecko counts only Ethereum's 42,075,827.831111 shares.
+  // https://docs.centrifuge.io/developer/centrifuge-api/#tokens
+  "jtrsy-anemoy",
   // Reviewed 2026-11-02: USG's circulating stock is its issuer-native Ethereum
   // totalSupply less the two PegKeeper balances Tangent's own UI excludes
   // (`CURATED_ONCHAIN_SUPPLY_EXCLUSIONS`). The CoinGecko market cap counts that
@@ -175,6 +179,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
   "cdp-enosys": [supplyProbeChain("flare")],
+  // Reviewed issuer-native registers (risk-review sidecar); no bridge/inventory subtraction.
+  // 2026-11-07 pinned seven-chain stock: 487,442,380 units. Read every leg to clear ambiguity.
+  "rwausdi-multipli": [
+    { chain: "ethereum" }, { chain: "base" }, supplyProbeChain("monad"), { chain: "arbitrum" },
+    supplyProbeChain("xlayer"), supplyProbeChain("robinhood"),
+    supplyProbeChain("pharos", { rpcUrl: "https://rpc.pharos.xyz", fallbackRpcUrl: undefined }),
+  ],
   // Curve satellites lock Ethereum shares; reallocate, never add their stock.
   // Reviewed 2026-11-04: canonical stock / CG cap = 0.953799 at $1.11/share.
   "scrvusd-curve": [
@@ -385,8 +396,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "solana" },
     { chain: "arc", allowZeroSupply: true },
   ],
-  // Reviewed 2026-10-25: Centrifuge V3 Spoke burn/reissue shares sum, including
-  // Pharos; the issuer issuance API reconciles the EVM stock. Solana is zero.
+  // Reviewed 2026-11-08: Centrifuge Spoke burn/reissue stocks sum; X Layer/Arc
+  // are required observed-zero legs. Stellar is already in Ethereum's issuer escrow.
   // https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/
   "jtrsy-anemoy": [
     { chain: "ethereum" },
@@ -398,6 +409,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("monad"),
     { chain: "solana", allowZeroSupply: true },
     supplyProbeChain("pharos"),
+    supplyProbeChain("xlayer", { allowZeroSupply: true }),
+    supplyProbeChain("arc", { allowZeroSupply: true }),
   ],
   // Reviewed 2026-10-25: Nest local BoringVault shares and source-debited OFTs
   // sum across the complete issuer roster. Plasma is a verified live zero leg.

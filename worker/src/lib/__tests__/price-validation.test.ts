@@ -22,19 +22,10 @@ import {
   isReasonablePrice,
   isSevereFixedPegDownside,
   loadPriceValidationReferences,
-  normalizePegTypeFromCurrency,
   validatePriceCandidate,
   validatePriceCandidateAgainstReference,
   type PriceValidationReferences,
 } from "../price-validation";
-
-describe("normalizePegTypeFromCurrency", () => {
-  it("normalizes BRL to peggedREAL and drops VAR", () => {
-    expect(normalizePegTypeFromCurrency("BRL")).toBe("peggedREAL");
-    expect(normalizePegTypeFromCurrency("JPY")).toBe("peggedJPY");
-    expect(normalizePegTypeFromCurrency("VAR")).toBeUndefined();
-  });
-});
 
 describe("buildPriceValidationContext", () => {
   it("does not let provider NAV flags override an omitted tracked false flag", () => {

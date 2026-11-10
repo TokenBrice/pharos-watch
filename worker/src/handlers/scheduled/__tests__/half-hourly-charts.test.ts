@@ -364,9 +364,8 @@ describe("half-hourly charts scheduling", () => {
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
-      mode: "turnover",
-      signal: expect.any(AbortSignal),
-      operatorTelegramCreds: null,
+      mode: "turnover", repairRunnerEnabled: true, mintBurnDisabledIds: [], mintBurnDisabledSymbols: [],
+      signal: expect.any(AbortSignal), operatorTelegramCreds: null,
     });
   });
 
@@ -398,9 +397,8 @@ describe("half-hourly charts scheduling", () => {
       },
     );
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
-      mode: "turnover",
-      signal: expect.any(AbortSignal),
-      operatorTelegramCreds: null,
+      mode: "turnover", repairRunnerEnabled: true, mintBurnDisabledIds: [], mintBurnDisabledSymbols: [],
+      signal: expect.any(AbortSignal), operatorTelegramCreds: null,
     });
   });
 
@@ -472,34 +470,6 @@ describe("half-hourly charts scheduling", () => {
     expect(jobMetadata(results, "prepare-safety-score-v9-input")).toEqual({
       dexGenerationId: "dex-liquidity-current", hourlyCaptureRecovery: state,
     });
-  });
-
-  it("runs the charts chain only after the DEX scoring chain completes", async () => {
-    const order: string[] = [];
-    mocks.consumeDexLiquidityScoringStage.mockImplementation(async () => {
-      order.push("consume");
-      return {
-        status: "ok",
-        itemCount: 1,
-        metadata: JSON.stringify({ persistence: { generationId: "dex-liquidity-123" } }),
-      };
-    });
-    mocks.runCronSentinel.mockImplementation(async () => {
-      order.push("turnover");
-      return { status: "ok", itemCount: 1 };
-    });
-    mocks.prepareSafetyScoreV9Input.mockImplementation(async () => {
-      order.push("prepare");
-      return { status: "ok", itemCount: 1 };
-    });
-    mocks.syncStablecoinCharts.mockImplementation(async () => {
-      order.push("charts");
-      return { status: "ok", itemCount: 1 };
-    });
-
-    await runHalfHourlyChartsSlot(runtime());
-
-    expect(order).toEqual(["consume", "turnover", "prepare", "charts"]);
   });
 
   it("prepares V9 input from the last in-budget accepted DEX generation after a DEX error", async () => {

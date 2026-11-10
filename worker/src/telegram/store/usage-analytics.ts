@@ -365,7 +365,8 @@ async function upsertTelegramLifecycleSnapshot(
         `INSERT INTO telegram_watcher_lifecycle_daily (${columns.map(([column]) => column).join(", ")})
          VALUES (${columns.map(() => "?").join(", ")})
          ON CONFLICT(day) DO UPDATE SET ${columns.slice(1)
-           .map(([column]) => `${column} = excluded.${column}`).join(",\n           ")}`,
+           .map(([column]) => `${column} = excluded.${column}`).join(",\n           ")}
+         WHERE excluded.snapshot_at >= telegram_watcher_lifecycle_daily.snapshot_at`,
       )
       .bind(...columns.map(([, value]) => value))
       .run();

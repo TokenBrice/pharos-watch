@@ -38,6 +38,10 @@ const candidate: CurveStableswapRateInputExecutionCandidate = {
   ],
 };
 
+function ok(label: string, returnData: `0x${string}`) {
+  return { label, success: true, returnData };
+}
+
 function stateResults(calls: readonly { label: string }[], overrides: {
   balances?: bigint[];
   rates?: bigint[];
@@ -51,60 +55,36 @@ function stateResults(calls: readonly { label: string }[], overrides: {
   const coinAddresses = overrides.coinAddresses ?? [SFRXUSD, FRXUSD];
   return calls.map((call) => {
     if (call.label.endsWith("-balances")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "get_balances",
-          result: overrides.balances ?? PINNED_BALANCES,
-        }),
-      };
+      return ok(call.label, encodeFunctionResult({
+        abi: POOL_ABI,
+        functionName: "get_balances",
+        result: overrides.balances ?? PINNED_BALANCES,
+      }));
     }
     if (call.label.endsWith("-rates")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "stored_rates", result: rates }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "stored_rates", result: rates }));
     }
     if (call.label.endsWith("-A")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "A", result: PINNED_AMPLIFICATION }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "A", result: PINNED_AMPLIFICATION }));
     }
     if (call.label.endsWith("-fee")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "fee", result: fee }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "fee", result: fee }));
     }
     if (call.label.endsWith("-offpeg-fee-multiplier")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "offpeg_fee_multiplier",
-          result: offpegFeeMultiplier,
-        }),
-      };
+      return ok(call.label, encodeFunctionResult({
+        abi: POOL_ABI,
+        functionName: "offpeg_fee_multiplier",
+        result: offpegFeeMultiplier,
+      }));
     }
     const match = call.label.match(/-coin-(\d+)$/);
     if (!match) throw new Error(`unexpected call ${call.label}`);
     const index = Number(match[1]);
-    return {
-      label: call.label,
-      success: true,
-      returnData: encodeFunctionResult({
-        abi: POOL_ABI,
-        functionName: "coins",
-        result: coinAddresses[index]!,
-      }),
-    };
+    return ok(call.label, encodeFunctionResult({
+      abi: POOL_ABI,
+      functionName: "coins",
+      result: coinAddresses[index]!,
+    }));
   });
 }
 
@@ -237,6 +217,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
@@ -365,50 +346,8 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
-    });
-  });
-
-  it("keeps the rate-bearing gate when a base-only capture has an invalid rate array", async () => {
-    const state = dependencies({ rates: [10n ** 18n] });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
-    });
-  });
-
-  it("keeps the rate-bearing gate when a base-only capture is stale", async () => {
-    const state = dependencies({
-      rates: [10n ** 18n, 10n ** 18n],
-      header: { timestamp: BLOCK_TIMESTAMP - CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC - 1, hash: BLOCK_HASH },
-    });
-    const pool = poolEntry();
-    await run(pool, state, BLOCK_TIMESTAMP);
-
-    expect(state.fetchMulticall).not.toHaveBeenCalled();
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
-    });
-  });
-
-  it("keeps the rate-bearing gate when a base-only capture drifts coin order", async () => {
-    const state = dependencies({ rates: [10n ** 18n, 10n ** 18n], coinAddresses: [FRXUSD, SFRXUSD] });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
       reason: "rate-bearing-inputs",
@@ -438,6 +377,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
 
     expect(state.fetchMulticall).not.toHaveBeenCalled();
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",

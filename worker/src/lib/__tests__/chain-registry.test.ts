@@ -250,16 +250,6 @@ describe("buildChainRpcs", () => {
     expect(logScanRpcEndpoints(admitted).slice(1)).toEqual(logScanRpcEndpoints(baseline));
   });
 
-  it.each(["chiliz", "viction"])("keeps new %s coverage supplemental without a registry incumbent", (chainId) => {
-    expect(buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).has(chainId)).toBe(false);
-    const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
-    expect(admitted?.endpoints).toHaveLength(1);
-    expect(admitted?.endpoints[0]).toMatchObject({ operator: "dwellir", position: "supplemental" });
-    expect(registryRpcUrls(admitted)).toEqual([]);
-    expect(primaryRpcUrl(admitted)).toBeUndefined();
-    expect(logScanRpcEndpoints(admitted)).toEqual([]);
-  });
-
   it.each(["linea", "scroll", "unichain", "worldchain", "megaeth", "stable"])(
     "promotes %s Dwellir while leaving census Alchemy supplemental", (chainId) => {
       const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
@@ -339,7 +329,7 @@ describe("buildChainRpcs", () => {
   it("keeps every excluded chain supplemental", () => {
     const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_KEY });
 
-    for (const chainId of ["hyperevm", "xdc", "flow", "chiliz", "viction"]) {
+    for (const chainId of ["hyperevm", "xdc", "flow"]) {
       const config = chainRpcs.get(chainId);
       expect(config, chainId).toBeDefined();
       expect(hasRegistryRpc(config), chainId).toBe(false);
@@ -359,6 +349,7 @@ describe("buildChainRpcs", () => {
     expect([...DWELLIR_ONLY_REGISTRY_CHAINS]).toEqual([
       "linea", "zksync", "stable", "megaeth", "worldchain", "scroll", "unichain",
       "blast", "manta", "cronos", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko",
+      "chiliz", "viction",
     ]);
     for (const { alchemyApiKey, drpcApiKey } of KEY_COMBINATIONS) {
       const admitted = buildChainRpcs(alchemyApiKey, drpcApiKey, { dwellirApiKey: DWELLIR_KEY });
@@ -469,17 +460,12 @@ describe("buildChainRpcs", () => {
     ["mantle", "Mantle", "https://rpc.mantle.xyz", "https://mantlescan.xyz"],
     ["morph-l2", "Morph", "https://rpc.morphl2.io", "https://explorer.morphl2.io"],
     ["abcore", "AB Core", "https://rpc.core.ab.org", "https://explorer.core.ab.org"],
-    ["xlayer", "X Layer", "https://rpc.xlayer.tech", "https://www.oklink.com/xlayer"],
-  ])("includes public-only %s RPC resolution for usd1 supply aggregation", (chainId, chainName, rpcUrl, explorerUrl) => {
+    ["xlayer", "X Layer", "https://rpc.xlayer.tech", "https://www.oklink.com/xlayer", "https://xlayer.drpc.org"],
+  ])("includes public-only %s RPC resolution for usd1 supply aggregation", (chainId, chainName, rpcUrl, explorerUrl, ...fallbackUrls) => {
     const config = buildChainRpcs().get(chainId);
 
-    expect(config).toMatchObject({
-      chainId,
-      chainName,
-      type: "evm",
-      explorerUrl,
-    });
-    expect(registryRpcUrls(config)).toEqual([rpcUrl]);
+    expect(config).toMatchObject({ chainId, chainName, type: "evm", explorerUrl });
+    expect(registryRpcUrls(config)).toEqual([rpcUrl, ...fallbackUrls]);
     expect(primaryRpcUrl(config)).toBe(rpcUrl);
     expect(registryRpcEndpoints(config).every((endpoint) => endpoint.operator === "public")).toBe(true);
   });

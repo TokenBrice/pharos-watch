@@ -14,6 +14,10 @@ import {
 } from "./depeg-resolver-store-validators";
 import { sha256Hex } from "./hash";
 
+// Older frozen/no_call rows predate published accounting and are expected history.
+export const DDR_LOCK_ACCOUNTING_START_AT = Date.UTC(2026, 10, 1) / 1000;
+export const DDR_LOCK_RECONCILIATION_LIMIT = 25;
+
 export type DdrLockState =
   | "pending_lock"
   | "lock_deferred"
@@ -52,6 +56,34 @@ export interface RecordLockDeferralInput {
   readinessThreshold?: number | null;
   backstopAt?: number | null;
   backstopDelaySec?: number | null;
+}
+
+export async function loadUnfinishedSealedLocks(
+  db: D1Database,
+): Promise<(Omit<RecordLockDeferralInput, "runAt"> & { publicPredictionId: number; publishedAt: number })[]> {
+  const result = await db.prepare(
+    `SELECT ls.incident_key AS incidentKey, ls.event_id AS eventId,
+            ls.prediction_policy_version AS predictionPolicyVersion, ls.eligible_at AS eligibleAt,
+            ls.lock_trigger AS lockTrigger, ls.forecast_readiness_score AS forecastReadinessScore,
+            ls.forecast_readiness_version AS forecastReadinessVersion, ls.readiness_threshold AS readinessThreshold,
+            ls.backstop_at AS backstopAt, ls.backstop_delay_sec AS backstopDelaySec,
+            p.id AS publicPredictionId, publication.published_at AS publishedAt
+     FROM depeg_resolver_prediction_lock_state ls
+     JOIN depeg_resolver_public_predictions p ON p.incident_key = ls.incident_key AND p.event_id = ls.event_id
+     JOIN (
+       SELECT public_prediction_id, incident_key, published_at FROM depeg_resolver_first_publications_v2
+       UNION
+       SELECT r.public_prediction_id, r.incident_key, s.published_at
+       FROM depeg_resolver_publication_snapshot_rows r
+       JOIN depeg_resolver_publication_snapshots s ON s.snapshot_token = r.snapshot_token
+       JOIN depeg_resolver_publication_snapshot_finalizations f ON f.snapshot_token = r.snapshot_token
+       WHERE r.first_published = 1
+     ) publication ON publication.public_prediction_id = p.id AND publication.incident_key = ls.incident_key
+     WHERE ls.last_state IN ('frozen', 'no_call', 'publication_retry_pending') AND publication.published_at >= ?
+     ORDER BY publication.published_at ASC, p.id ASC LIMIT ?`,
+  ).bind(DDR_LOCK_ACCOUNTING_START_AT, DDR_LOCK_RECONCILIATION_LIMIT)
+    .all<Omit<RecordLockDeferralInput, "runAt"> & { publicPredictionId: number; publishedAt: number }>();
+  return result.results ?? [];
 }
 
 function assertLockInput(input: RecordLockDeferralInput): void {

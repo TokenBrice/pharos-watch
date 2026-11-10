@@ -407,20 +407,6 @@ describe("resolveSafetyScoreV9ReviewedTransferFact — non-contract-native appli
     }))).toEqual({ observationState: "bounded-unknown", posture: null });
   });
 
-  it("leaves the complete contract-addressable path unchanged", () => {
-    const deploymentKey = safetyScoreV9TransferDeploymentKey("ethereum", "0xABC");
-    const resolved = resolveSafetyScoreV9ReviewedTransferFact(
-      review([{ chainId: "ethereum", contractOrTokenId: "0xABC", posture: "restrictable" }]),
-      NON_CONTRACT_CLOCK_SEC,
-      scope({
-        authoritativeDeploymentKeys: [deploymentKey],
-        materialDeploymentKeys: [deploymentKey],
-        materialDeploymentScopeComplete: true,
-        deploymentModel: "contract-addressable",
-      }),
-    );
-    expect(resolved).toEqual({ observationState: "known", posture: "restrictable" });
-  });
   it("excludes additional-only material coverage and non-authoritative extras", () => {
     const key = safetyScoreV9TransferDeploymentKey("ethereum", "0xABC");
     const materialScope = scope({

@@ -1,6 +1,7 @@
 # Runbook: Review Renewal
 
 Triggered by `StatusCause.code`:
+- `depeg_blind_event_reviews_expiring`
 - `price_gap_reviews_expiring`
 - `price_gap_reviews_expired`
 - `price_gap_reviews_invalid`
@@ -14,7 +15,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-An operational review that acknowledges a missing live price, matched stale/erroring reserve feed or carried supply value is approaching expiry, has expired, or is invalid. The `*_expiring` causes are admin-only informational watches: they fire only while a review is currently acknowledging a gap, feed or carry, with `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, in `shared/lib/status-thresholds.ts`). The message lists stablecoin IDs by soonest expiry, the UTC ISO expiry, and whole hours left; its metric records the exact remaining seconds for the soonest review.
+An operational review that acknowledges a missing live price, matched stale/erroring reserve feed, carried supply value or blind open-event coverage is approaching expiry, has expired, or is invalid. The `*_expiring` causes are admin-only informational watches: they fire only while a review is currently acknowledging a gap, feed or carry, with `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, in `shared/lib/status-thresholds.ts`). The message lists stablecoin IDs by soonest expiry, the UTC ISO expiry, and whole hours left; its metric records the exact remaining seconds for the soonest review.
 
 These notices do not change health status, create a status transition, or enter public incident history. An acknowledgement is not a price, fresh reserve evidence, a successful sync, or a scoring exception. Existing missing-price, reserve-health and supply-carry gates remain independent.
 
@@ -44,9 +45,9 @@ Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-co
 
 ### Market-hours calendars
 
-Mento's standing source calendar is separate from `STABLECOIN_PRICE_GAP_REVIEWS`; do not recreate monthly weekend acknowledgements. Inspect `/api/health.activePriceCoverage.scheduledClosureGapIds` and `missingActiveAssets[].scheduledClosure` for `market-closed`, lane, owner, sources, review date and `reviewDeadline`. The five assets remain in `missingActiveIds` and retain their missing streaks. Health reads recompute calendar applicability. At reopening, the gap remains ineligible until `ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS × CRON_INTERVALS["sync-stablecoins"]` has elapsed since the most recent closure end (currently 30 minutes); then the ordinary persistence gate applies. This excludes closure-only misses without changing measured streaks. Missing/Markets tiles retain producer counts until the next sync. These are not prices, acknowledgements or publication waivers; public breadth still counts them.
+Mento's standing source calendar is separate from `STABLECOIN_PRICE_GAP_REVIEWS`; do not recreate monthly weekend acknowledgements. Inspect `/api/health.activePriceCoverage.scheduledClosureGapIds` and `missingActiveAssets[].scheduledClosure` for `market-closed`, lane, owner, sources, review date and `reviewDeadline`. Calendar scope, closure windows, the reopening gate, tile counts and invalid/expired calendar behaviour are owned by [ADR-43](../architecture.md#adr-43); this section owns only the annual revalidation.
 
-At the annual source-review deadline, re-read the pinned `MarketHoursBreaker` and `OracleAdapter` sources plus `BreakerBox`/`BiPoolManager` for broker lanes and `FPMM` for FPMM lanes, verify the current deployed route and exact asset/lane mapping, and update all five HTTPS source URLs to the newly verified mento-core commit together with `reviewedAt`/`reviewDeadline` only after review. The registry owns the dates; it does not use `price_gap_reviews_expiring`/`expired` notices. Track its annual deadline in operator review planning. Future, malformed or overdue calendar reviews suppress nothing; inspect `invalidMarketHoursCalendarIds` / `expiredMarketHoursCalendarIds` and their `price_market_hours_calendars_invalid` / `price_market_hours_calendars_expired` info causes. Verify Friday 20:59/21:00 and Sunday 22:59/23:00 UTC, December 24/31 21:59/22:00, December 25 and January 1; retain no DST adjustment or substitute holiday, and verify the post-reopen gate at 0, one and two producer intervals. If rules or routes drift, remove the unsupported scope and let missing prices alert normally. Acceptance requires the first production closure and reopening with unchanged raw missing counts and restored off-calendar alert eligibility.
+At the annual source-review deadline, re-read the pinned `MarketHoursBreaker` and `OracleAdapter` sources plus `BreakerBox`/`BiPoolManager` for broker lanes and `FPMM` for FPMM lanes, verify the current deployed route and exact asset/lane mapping, and update all five HTTPS source URLs to the newly verified mento-core commit together with `reviewedAt`/`reviewDeadline` only after review. The registry owns the dates; it does not use `price_gap_reviews_expiring`/`expired` notices. Track its annual deadline in operator review planning. Inspect `invalidMarketHoursCalendarIds` / `expiredMarketHoursCalendarIds` and their `price_market_hours_calendars_invalid` / `price_market_hours_calendars_expired` info causes. Verify Friday 20:59/21:00 and Sunday 22:59/23:00 UTC, December 24/31 21:59/22:00, December 25 and January 1; retain no DST adjustment or substitute holiday, and verify the post-reopen gate at 0, one and two producer intervals. If rules or routes drift, remove the unsupported scope and let missing prices alert normally. Acceptance requires the first production closure and reopening with unchanged raw missing counts and restored off-calendar alert eligibility.
 
 ### Reserve-feed reviews
 
@@ -59,9 +60,15 @@ Edit `RESERVE_FEED_REVIEWS` in `worker/src/lib/reserve-feed-reviews.ts`:
 - A snapshot-writing `degraded` finding may use `failureCategory: null` only with its exact nonempty warning-code set and null error. To review a stalled clock, pin its positive `sourceTimestamp`; the current `ok` or `degraded` attempt must still report that same verified source clock strictly beyond its configured age budget. Empty warning sets are permitted only with a matched error/class or this pinned stalled clock. Added warnings, a changed category/class or an advanced clock require a new review.
 - Leave stale/erroring evidence quarantined. Do not rewrite source timestamps, admit an unreviewed report, raise source-age ceilings, or turn the review into scoring-grade evidence.
 
-This is a status-model change, owner-approved 2026-11-04: matched acknowledgements remove current sentinel alert reasons, including for previously raised conditions, while retained findings and alert state remain inspectable. The [live-reserve status contract](../status-dashboard.md#live-reserve-sync-health) owns execution treatment; expiry still re-arms the unchanged alert predicates and the 48-hour reminder remains unchanged.
+Matched acknowledgements remove current sentinel alert reasons, including for previously raised conditions, while retained findings and alert state remain inspectable. The [live-reserve status contract](../status-dashboard.md#live-reserve-sync-health) owns execution treatment; expiry still re-arms the unchanged alert predicates and the 48-hour reminder remains unchanged.
 
 Run the owning registry and status suites for any renewal, review the changed evidence, and deploy the approved registry before expiry through the normal release process. Never mutate production review state or reset leases/checkpoints as a renewal shortcut.
+
+### Blind-event reviews
+
+Edit `DEPEG_BLIND_EVENT_REVIEWS` in `worker/src/lib/canary-checks-depeg.ts` only after checking that the event remains open and blind and that its primary still needs corroboration without an authoritative alternative or an admitted $1M/two-family DEX aggregate. Name one positive-integer `eventId` and its exact `stablecoinId`; another blind event for the same coin re-alerts and needs its own review. Record the actual source family, priced-contributor TVL, family count and displayed deviation with HTTPS evidence, `owner: "ops"`, a nonfuture `reviewedAt`, and `reviewedAt < expiresAt <= reviewedAt + 14 days`. Malformed, duplicate, future or expired reviews acknowledge nothing. Never infer trusted coverage or recovery from the displayed quote.
+
+Inspect `canaries.checks["depeg-open-coverage"].metadata`: raw blind counts stay truthful, while acknowledged/actionable counts grade only unreviewed blindness. `acknowledgedBlindReviewIds` lists event IDs and is complete even when event details are truncated; notices and reminders name `coin(event)`. The status standing notice and 48-hour reminder require fresh completed canary evidence and a review valid at read time; recovered events use neither. Expiry re-arms the next canary finding without changing events, DDR, DEWS, closure or alerts. Renew only from fresh coverage evidence.
 
 ### Supply-carry reviews
 

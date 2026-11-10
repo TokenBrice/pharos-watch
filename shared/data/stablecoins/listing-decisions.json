@@ -334,7 +334,7 @@
     "cadc-cad-coin": "core-stablecoin",
     "qcad-stablecorp": "core-stablecoin",
     "cadd-cad-digital": "core-stablecoin",
-    "pht-pht": "core-stablecoin",
+    "pht-pht": "excluded",
     "cetes-etherfuse": "cash-equivalent",
     "syrupusdc-maple": "stablecoin-variant",
     "syrupusdt-maple": "stablecoin-variant",
@@ -497,6 +497,8 @@
     "swanusd-swan": "core-stablecoin",
     "dotusd-polkadot": "core-stablecoin",
     "usdrf-realfi": "stable-value-investment",
-    "zlusd-zelle": "core-stablecoin"
+    "zlusd-zelle": "core-stablecoin",
+    "eurgh-gatehub": "core-stablecoin",
+    "rdusd-rd-technologies": "core-stablecoin"
   }
 }

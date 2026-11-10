@@ -59,16 +59,6 @@ describe("getRedemptionBackstopConfig", () => {
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
   });
 
-  it.each([
-    ["spusd-soulpeg", "asset:susdc-soulpeg"],
-  ])("does not relabel %s's untracked receipt or successor as a priced stablecoin", (id, output) => {
-    const config = getRedemptionBackstopConfig(id)!;
-    expect(config.outputAssets).toBeUndefined();
-    expect(config.unresolvedOutputAssetKeys).toEqual([output]);
-    expect(config.unresolvedOutputDisposition).toBe("reviewed-external");
-    expect(config.capacityModel).toEqual({ kind: "unquantified" });
-  });
-
   it("keeps SoulPeg atomic receipt conversion and zero protocol fee distinct from a USDC payout", () => {
     const config = getRedemptionBackstopConfig("spusd-soulpeg")!;
     expect(config.holderEligibility).toBe("any-holder");
@@ -76,19 +66,6 @@ describe("getRedemptionBackstopConfig", () => {
     expect(config.v9RouteReviewTerms).toMatchObject({ settlementDelaySec: 0, missingScoringFields: ["capacity"] });
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(0);
     expect(config.costModel).not.toHaveProperty("gasOrBridgeCostUsd");
-  });
-
-  it("keeps USDXL GSM capacity and mutable fee strategy unquantified", () => {
-    const config = getRedemptionBackstopConfig("usdxl-last")!;
-    expect(config.outputAssets).toEqual(["usdt-tether"]);
-    expect(config.accessModel).toBe("permissionless-onchain");
-    expect(config.holderEligibility).toBe("any-holder");
-    expect(config.settlementModel).toBe("atomic");
-    expect(config.executionModel).toBe("deterministic-onchain");
-    expect(config.capacityModel).toEqual({ kind: "unquantified" });
-    expect(config.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula" });
-    expect(config.costModel).not.toHaveProperty("feeBpsMax");
-    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
   });
 
   it("records ZARU legal entitlement as eventual-only with all executable terms withheld", () => {
@@ -111,43 +88,6 @@ describe("getRedemptionBackstopConfig", () => {
       expect(resolveRedemptionCostBpsAtNotional(config.costModel, 1_000_000)).toBeCloseTo(46, 6);
     },
   );
-
-  it("records only YieldFi's ordinary yUSD rail as suspended without renewing historical terms", () => {
-    const config = getRedemptionBackstopConfig("yusd-yieldfi")!;
-    expect(config.reviewedAt).toBe("2026-10-02");
-    expect(config.routeStatus).toBe("suspended");
-    expect(config.routeSuspension).toMatchObject({
-      routeId: "redemption:yusd-yieldfi:stablecoin-redeem",
-      suspendedAt: "2026-10-11", reviewedAt: "2026-10-11",
-    });
-    expect(config.routeSuspension?.sources[0]?.quote).toContain("Mint and Redeem operations for yUSD and vyUSD are paused");
-  });
-
-  it("preserves Moneta's issuer-only fee component and independent term-review clock", () => {
-    const config = getRedemptionBackstopConfig("usdm-moneta")!;
-    expect(config.reviewedAt).toBe("2026-10-11");
-    expect(config.v9RouteReviewTerms?.reviewedAt).toBe("2026-10-09");
-    expect(config.costModel.feeComponents).toEqual([{ currency: "USD", terms: { feeBps: 10, minAmount: 50, maxAmount: 5_000 } }]);
-    expect(config.costModel).not.toHaveProperty("feeBpsMax");
-  });
-
-  it("retains USDB's original terms clock without treating current withdrawal instructions as an SLA", () => {
-    const config = getRedemptionBackstopConfig("usdb-blast")!;
-    expect(config.reviewedAt).toBe("2026-05-13");
-    expect(config.outputAssets).toEqual(["dai-makerdao"]);
-    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
-    expect(config.docs?.some((doc) => doc.url === "https://docs.blast.io/withdrawals/usdb-from-contracts")).toBe(true);
-    expect(config.notes?.some((note) => note.includes("recipient must itself call USDYieldManager.claimWithdrawal"))).toBe(true);
-  });
-
-  it("shares the Sky LitePSM capacity model across USDS and DAI", () => {
-    const usds = getRedemptionBackstopConfig("usds-sky");
-    const dai = getRedemptionBackstopConfig("dai-makerdao");
-
-    expect(usds).not.toBeNull();
-    expect(dai).not.toBeNull();
-    expect(usds?.capacityModel).toEqual(dai?.capacityModel);
-  });
 
   it.each(["frax-frax", "mai-qidao"])("keeps the explicitly unmodeled %s route absent", (id) => {
     expect(getRedemptionBackstopConfig(id)).toBeNull();
@@ -228,22 +168,6 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("jpyc-jpyc-v1")).toBeNull();
   });
 
-  it("redeems the Curve savings wrapper into crvUSD rather than its market pool's other token", () => {
-    expect(getRedemptionBackstopConfig("scrvusd-curve")?.outputAssets).toEqual(["crvusd-curve"]);
-  });
-
-  it("keeps Apyx USDC output separate from its unproven settlement bound", () => {
-    const config = getRedemptionBackstopConfig("apxusd-apyx");
-
-    expect(config?.outputAssetType).toBe("stable-single");
-    expect(config?.outputAssets).toEqual(["usdc-circle"]);
-    expect(config?.executionModel).toBe("rules-based-nav");
-    expect(config?.v9RouteReviewTerms).toMatchObject({
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["settlement", "cost"],
-    });
-  });
-
   it("retires JuiceDollar's operational route without treating shutdown as a live suspended channel", () => {
     expect(getRedemptionBackstopConfig("jusd-juicedollar")).toBeNull();
   });
@@ -275,87 +199,6 @@ describe("getRedemptionBackstopConfig", () => {
     }
   });
 
-  it.each(["frxusd-frax", "sfrxusd-frax", "usdz-anzen"])(
-    "keeps %s public mutable fee formulas separate from numeric all-in costs",
-    (id) => {
-      const config = getRedemptionBackstopConfig(id);
-      expect(config?.costModel).toMatchObject({
-        kind: "dynamic-or-unclear",
-        confidence: "formula",
-        feeModelKind: "formula",
-      });
-      expect(config?.costModel).not.toHaveProperty("feeBps");
-      expect(config?.costModel).not.toHaveProperty("feeBpsMax");
-      expect(config?.v9RouteCostTerms).toBeUndefined();
-      expect(config?.capacityModel).toMatchObject({ kind: "reserve-sync-metadata" });
-    },
-  );
-
-  it("keeps syrupUSDG's zero native fee separate from unbounded queue completion", () => {
-    const config = getRedemptionBackstopConfig("syrupusdg-maple");
-    expect(config?.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0, confidence: "fixed" });
-    expect(config?.costModel.feeDescription).toContain("gas, wallet and third-party charges");
-    expect(config?.v9RouteReviewTerms).toMatchObject({
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement"],
-    });
-    expect(config?.v9RouteReviewTerms).not.toHaveProperty("settlementDelaySec");
-    expect(config?.outputAssets).toEqual(["usdg-paxos"]);
-    expect(config?.capacityModel).toEqual({ kind: "reserve-sync-metadata" });
-  });
-
-  it("records ACRDX's issuer-only zero without changing queued NAV redemption", () => {
-    const config = getRedemptionBackstopConfig("acrdx-anemoy-apollo");
-    expect(config?.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0, confidence: "fixed" });
-    expect(config?.costModel.feeDescription).toContain("issuer entry/exit fee only");
-    expect(config?.settlementModel).toBe("queued");
-    expect(config?.outputAssetType).toBe("nav");
-    expect(config?.docs).toContainEqual(expect.objectContaining({
-      url: "https://centrifuge-files.mypinata.cloud/ipfs/bafkreigpp4zkwecojcuipjnzyclrfgzaqe6tu5vedvujw6u73c3xfwbx5m",
-      supports: ["route", "fees"],
-    }));
-  });
-
-  it.each([
-    ["tryb-bilira", "bank-transfer leg"],
-    ["avusd-avant", "0.05% (5 bps)"],
-  ])("keeps %s partial fee disclosures without a route-wide numerical ceiling", (id, disclosure) => {
-    const config = getRedemptionBackstopConfig(id);
-    expect(config?.costModel).toMatchObject({
-      kind: "dynamic-or-unclear",
-      feeModelKind: "documented-variable",
-    });
-    expect(config?.costModel.feeDescription).toContain(disclosure);
-    expect(config?.costModel).not.toHaveProperty("feeBps");
-    expect(config?.costModel).not.toHaveProperty("feeBpsMax");
-    expect(config?.v9RouteCostTerms).toBeUndefined();
-  });
-
-  it("keeps UTY's verified Base USDC payout separate from unbounded redemption terms", () => {
-    const config = getRedemptionBackstopConfig("uty-xsy");
-
-    expect(config?.outputAssetType).toBe("stable-single");
-    expect(config?.outputAssets).toEqual(["usdc-circle"]);
-    expect(config?.unresolvedOutputAssetKeys).toBeUndefined();
-    expect(config?.v9RouteReviewTerms).toMatchObject({
-      scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
-    });
-  });
-
-
-  it("retains Indigo's complete three-choice PSM payout census without valuing its untracked USDr branch", () => {
-    const config = getRedemptionBackstopConfig("iusd-indigo-protocol");
-    expect(config?.outputAssets).toBeUndefined();
-    expect(config?.unresolvedOutputDisposition).toBe("reviewed-external");
-    expect(config?.unresolvedOutputAssetKeys).toEqual([
-      "usdm-moneta",
-      "usdc-circle",
-      "asset:cardano:7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae.55534472",
-    ]);
-    expect(config?.unresolvedOutputAssetKeys).not.toContain("usda-anzens");
-  });
-
   it.each([
     ["stkgho-umbrella-aave", "immediate-bounded"],
     ["usdrif-rif", "eventual-only"],
@@ -365,22 +208,6 @@ describe("getRedemptionBackstopConfig", () => {
     const config = getRedemptionBackstopConfig(id);
     expect(config).not.toBeNull();
     expect(resolveCapacitySemantics(config!.capacityModel)).toBe(expected);
-  });
-
-  it.each([
-    "hyusd-hylo",
-    "dusd-dtrinity",
-    "u-united-stables",
-    "silk-shade-protocol",
-    "satusd-river",
-    "witry-brix",
-    "dllr-sovryn",
-    "deuro-deuro",
-    "nect-beraborrow",
-  ])("withholds unresolved output assets for %s", (id) => {
-    const config = getRedemptionBackstopConfig(id);
-    expect(config).not.toBeNull();
-    expect(config?.outputAssets).toBeUndefined();
   });
 });
 

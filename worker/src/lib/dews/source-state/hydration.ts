@@ -23,15 +23,25 @@ import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
 } from "../../blacklist-contracts";
-import { getDexTrustPolicy, isTrustedDexPriceRow } from "../../depeg-trust-policy";
+import { getDexAggregateObservedAt, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
 import { readMintBurnWindowContext } from "../../mint-burn-flows-service";
+import { hasMintBurnClassificationReview } from "../../mint-burn-classification";
 import {
+  addMintBurnClassificationTally,
+  emptyMintBurnClassificationTally,
+  summarizeMintBurnClassification,
+  type MintBurnClassificationTally,
+} from "@shared/lib/mint-burn-classification";
+import {
+  MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL,
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
+  type MintBurnClassificationTallyRow,
   type MintBurnValuationTallyRow,
+  readMintBurnClassificationTallyRow,
   readMintBurnValuationTallyRow,
 } from "../../mint-burn-hourly-valuation";
 import {
@@ -300,19 +310,36 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
   let succeeded = false;
   try {
     const dexPriceRows = await ctx.db
-      .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number }>();
+      .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
+      .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number; price_sources_json: string | null }>();
     for (const row of dexPriceRows.results ?? []) {
-      const ageSec = getRowAgeSec(row.updated_at, ctx.nowSec);
+      const decoded = decodeJsonString<number, PersistedJsonDecodeReason>(row.price_sources_json, {
+        updatedAt: row.updated_at, missingReason: "missing", parseErrorReason: "json-parse-failed",
+        normalize: (payload) => {
+          const clock = getDexAggregateObservedAt(payload, ctx.nowSec);
+          return clock.aggregateClockReason != null
+            ? { ok: false, reason: clock.aggregateClockReason }
+            : { ok: true, payload: clock.aggregateObservedAt! };
+        },
+      });
+      if (!decoded.ok) ctx.registerMalformedPersistedInput({
+        source: "dex_prices", context: "dex_prices.price_sources_json", stablecoinId: row.stablecoin_id,
+        updatedAt: row.updated_at, reason: decoded.reason, degradesRun: false,
+      });
+      const aggregateObservedAt = decoded.ok ? decoded.payload : null;
+      const ageSec = getRowAgeSec(aggregateObservedAt, ctx.nowSec);
+      const publicationAgeSec = getRowAgeSec(row.updated_at, ctx.nowSec);
       if (ageSec != null) dexPriceAgeSecById.set(row.stablecoin_id, ageSec);
-      if (ageSec == null || ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec) {
+      // An unreadable aggregate or publication clock is never fresh evidence.
+      if (ageSec == null || publicationAgeSec == null || ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec ||
+        publicationAgeSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec) {
         dexPriceStaleIds.add(row.stablecoin_id);
       }
-      if (!isTrustedDexPriceRow(row, ctx.nowSec, "depeg")) continue;
+      if (!isAffirmativeDexPriceRow({ ...row, aggregateObservedAt }, ctx.nowSec, "depeg")) continue;
       dexPriceMap.set(row.stablecoin_id, {
         dexPriceUsd: row.dex_price_usd,
         sourceTotalTvl: row.source_total_tvl,
-        updatedAt: row.updated_at,
+        updatedAt: aggregateObservedAt!,
       });
     }
     succeeded = true;
@@ -556,7 +583,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window != null
       ? published.gauge.coins.filter((coin) => admittedCoinIds.has(coin.id))
         .map((coin) => [coin.id, coin.scanCoverage] as const) : []);
-    type FlowRow = MintBurnValuationTallyRow & {
+    type FlowRow = MintBurnValuationTallyRow & MintBurnClassificationTallyRow & {
       stablecoin_id: string;
       chain_id: string;
       total_burn: number;
@@ -571,6 +598,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
                 ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL},
+                ${MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL},
                 MAX(hour_ts) as latest_hour_ts
          FROM mint_burn_hourly INDEXED BY idx_mbh_ts
          WHERE hour_ts >= ? AND hour_ts < ? AND (stablecoin_id, chain_id) IN (
@@ -585,6 +613,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
                 ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL},
+                ${MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL},
                 MAX(hour_ts) as latest_hour_ts
          FROM mint_burn_hourly INDEXED BY idx_mbh_ts
          WHERE hour_ts >= ? AND hour_ts < ? AND (stablecoin_id, chain_id) IN (
@@ -607,14 +636,16 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       total_mint: number;
       latest_hour_ts: number | null;
       valuation: MintBurnValuationTally;
+      classification: MintBurnClassificationTally;
     }>();
     for (const row of mb24h.results) {
       if (!admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb24hMap.get(row.stablecoin_id)
-        ?? { total_burn: 0, total_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally() };
+        ?? { total_burn: 0, total_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
       aggregate.total_burn += row.total_burn;
       aggregate.total_mint += row.total_mint;
       addMintBurnValuationTally(aggregate.valuation, readMintBurnValuationTallyRow(row));
+      addMintBurnClassificationTally(aggregate.classification, readMintBurnClassificationTallyRow(row, hasMintBurnClassificationReview(row.stablecoin_id)));
       if (row.latest_hour_ts != null && (aggregate.latest_hour_ts == null || row.latest_hour_ts > aggregate.latest_hour_ts)) {
         aggregate.latest_hour_ts = row.latest_hour_ts;
       }
@@ -628,15 +659,17 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       avg_mint: number;
       latest_hour_ts: number | null;
       valuation: MintBurnValuationTally;
+      classification: MintBurnClassificationTally;
     }>();
     for (const row of mb30d.results) {
       if (!admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb30dMap.get(row.stablecoin_id)
-        ?? { avg_burn: 0, avg_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally() };
+        ?? { avg_burn: 0, avg_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
       // A proven 30-day scan includes quiet days, not only event-bearing days.
       aggregate.avg_burn += row.total_burn / 30;
       aggregate.avg_mint += row.total_mint / 30;
       addMintBurnValuationTally(aggregate.valuation, readMintBurnValuationTallyRow(row));
+      addMintBurnClassificationTally(aggregate.classification, readMintBurnClassificationTallyRow(row, hasMintBurnClassificationReview(row.stablecoin_id)));
       if (row.latest_hour_ts != null && (aggregate.latest_hour_ts == null || row.latest_hour_ts > aggregate.latest_hour_ts)) {
         aggregate.latest_hour_ts = row.latest_hour_ts;
       }
@@ -654,6 +687,8 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
         || dirtyIds.has(stablecoinId)) continue;
       const latestWindow = mb24hMap.get(stablecoinId);
       const baseline = mb30dMap.get(stablecoinId);
+      if (summarizeMintBurnClassification(latestWindow?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete"
+        || summarizeMintBurnClassification(baseline?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete") continue;
       const latestHourTs = end;
       const ageSec = getRowAgeSec(latestHourTs, ctx.nowSec);
       if (ageSec != null) mintBurnAgeSecById.set(stablecoinId, ageSec);

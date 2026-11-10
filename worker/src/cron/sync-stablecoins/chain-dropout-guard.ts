@@ -73,12 +73,35 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     reviewedAt: Date.parse("2026-10-16T06:18:46Z") / 1000,
     evidenceUrl: "https://polygonscan.com/token/0xe111178a87a3bff0c8d18decba5798827539ae99",
   },
-  // 2026-10-29 10:50 UTC: finalized Polygon block 96377093 confirms
-  // 365,027.867025281274675608 SBC, matching the list's lower 365,027 stock.
+  // 2026-11-06: Polygon block 96823850 confirms 363,068.694747281274675608 SBC
+  // at the held baseline's own clock. Block 96856472 has 463,068.694747281274675608;
+  // both disprove the held $1.846M level. Accept the provider's lower observation unchanged.
   {
     assetId: "sbc-brale", chainId: "polygon",
-    reviewedAt: Date.parse("2026-10-29T10:50:19Z") / 1000,
+    reviewedAt: Date.parse("2026-11-06T18:42:00Z") / 1000,
     evidenceUrl: "https://polygonscan.com/token/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+  },
+  // Finalized Solana slot 466634085 confirms 7,808,083.761641852 SBC, matching
+  // the price-adjusted list's $7.798M rather than the held $15.916M baseline.
+  {
+    assetId: "sbc-brale", chainId: "solana",
+    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
+    evidenceUrl: "https://solscan.io/token/DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
+  },
+  // Ethereum block 26365071: 1,001,981.18 GBPA total; Etherscan holders confirms
+  // the detail feed's 1,001,879.18 unreleased balance, leaving 102 circulating.
+  {
+    assetId: "gbpa-agant", chainId: "ethereum",
+    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
+    evidenceUrl: "https://etherscan.io/token/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b#balances",
+  },
+  // Finalized Solana slot 466212454 confirms 2,153,029.477071 EUROP, matching
+  // detail native supply. Ethereum block 26357578 has 9,824,599.672717 tokens;
+  // the lower Solana stock is real, without claiming a matched cross-chain migration.
+  {
+    assetId: "europ-schuman", chainId: "solana",
+    reviewedAt: Date.parse("2026-11-06T18:42:00Z") / 1000,
+    evidenceUrl: "https://solscan.io/token/euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA",
   },
   // 2026-11-03 10:09 UTC: BOB block 40419289 (rpc.gobob.xyz) confirms
   // 1,322,822.22 satUSD, matching the lower list level after River's BOB
@@ -147,6 +170,14 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     reviewedAt: Date.parse("2026-11-04T09:03:53Z") / 1000,
     excludeOmittedUntil: Date.parse("2026-11-18T09:03:53Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0x20c000000000000000000000850e533bd762b72c",
+  },
+  // HyperEVM block 50654180 reads 43,067.502661 frxUSD, already included under
+  // the provider's Hyperliquid L1 row; exclude the omitted old $3.749M identity.
+  {
+    assetId: "frxusd-frax", chainId: "hyperevm",
+    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-11-21T19:45:46Z") / 1000,
+    evidenceUrl: "https://purrsec.com/token/0x80eede496655fb9047dd39d9f418d5483ed600df",
   },
 ];
 
@@ -238,7 +269,7 @@ function setChainCurrent(candidate: Candidate, value: number | null): void {
   const weights = candidate.labels.map((label) => normalizeChainSupplyValue(rows[label].circulatingPrevDay) ?? 0);
   const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
   candidate.labels.forEach((label, index) => {
-    rows[label].current = value == null ? null : weightTotal > 0 ? value * weights[index] / weightTotal : index === 0 ? value : 0;
+    rows[label].current = value == null ? null : weightTotal > 0 ? value * (weights[index] / weightTotal) : index === 0 ? value : 0;
   });
 }
 type ChainHistoryBucket = "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth";
@@ -276,7 +307,8 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
   const { assetId, chainId } = candidate.state;
   if (!CHAIN_DROPOUT_ONCHAIN_ROSTER.some((entry) => entry.assetId === assetId && entry.chainId === chainId)) return null;
   if (!chainId || !CHAIN_META[chainId]) return null;
-  const contracts = ACTIVE_META_BY_ID.get(assetId)?.contracts?.filter((contract) => contract.chain === chainId) ?? [];
+  const meta = ACTIVE_META_BY_ID.get(assetId);
+  const contracts = meta?.contracts?.filter((contract) => contract.chain === chainId) ?? [];
   const config = chainRpcs.get(chainId);
   // Reviewed Pharos state-only routes are admitted solely for this roster's supply reads.
   const endpoints = assetId === "rwausdi-multipli" && chainId === "pharos"
@@ -284,6 +316,9 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
       && endpoint.logsHistory === "none" && !endpoint.routingDisabled) ?? []
     : registryRpcEndpoints(config);
   const urls = endpoints.filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
+  const supplyFallback = meta && selectCuratedAggregateOnchainSupplyProbeContracts(meta)
+    ?.find(({ config: profile }) => profile.chain === chainId)?.config.fallbackRpcUrl;
+  const fallbackUrl = urls[1] ?? (supplyFallback !== urls[0] ? supplyFallback : undefined);
   const priceUsd = getPegReferencePriceUsd(assetId, candidate.pegKey);
   if (contracts.length !== 1 || urls.length === 0 || priceUsd == null) return null;
   const contract = contracts[0];
@@ -294,8 +329,8 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
       ? AbortSignal.any([parentSignal, AbortSignal.timeout(CHAIN_DROPOUT_POLICY.solanaReadTimeoutMs)])
       : parentSignal;
     const raw = chainId === "solana"
-      ? await fetchSolanaTokenSupply(contract.address, readSignal, undefined, urls[0], urls[1])
-      : await fetchErc20TotalSupply({ kind: "onchain-evm", chain: chainId, rpcMode: "public-rpc" }, contract.address, readSignal, undefined, urls[0], urls[1]);
+      ? await fetchSolanaTokenSupply(contract.address, readSignal, undefined, urls[0], fallbackUrl)
+      : await fetchErc20TotalSupply({ kind: "onchain-evm", chain: chainId, rpcMode: "public-rpc" }, contract.address, readSignal, undefined, urls[0], fallbackUrl);
     throwIfAborted(readSignal);
     if (raw == null) return null;
     const usd = Number(raw) / 10 ** contract.decimals * priceUsd;
@@ -400,7 +435,7 @@ export async function guardChainDropouts(input: {
   if (input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
   const result: SupplyChainGuardResult = { flagged: 0, repaired: 0, quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0, stateReadFailed: input.stateReadFailed ?? false, state };
   const candidates: Candidate[] = [];
-  const fillDefaultAssets = new Set<PeggedAsset>();
+  const fillDefaultAssets = new Map<PeggedAsset, number>();
   // Per asset: same-run gains on healthy chains, and the pre-run vetted whole-asset total
   // (each chain at its persisted/seed/prev-day reference, before this run moves any baseline).
   const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number; vettedComplete: boolean }>();
@@ -418,7 +453,7 @@ export async function guardChainDropouts(input: {
     if (!pegKey) continue;
     if (getCirculatingRawOrNull(asset) == null) continue;
     if (meta.flags.pegCurrency === "USD" && asset.priceListFillDefault
-      && asset.priceListFillDefault.value < FIXED_PEG_SEVERE_DOWNSIDE_RATIO) fillDefaultAssets.add(asset);
+      && asset.priceListFillDefault.value < FIXED_PEG_SEVERE_DOWNSIDE_RATIO) fillDefaultAssets.set(asset, getCirculatingRawOrNull(asset)!);
     conservation.set(asset, { gains: 0, vettedTotal: 0, vettedComplete: true });
     const rows = asset.chainCirculating ?? (asset.chainCirculating = {});
     const groups = new Map<string, { chainId?: string; labels: string[] }>();
@@ -667,7 +702,7 @@ export async function guardChainDropouts(input: {
     const material = deficit > 0 && deficit >= CHAIN_DROPOUT_POLICY.quarantineDeficitRatio * (aggregate + deficit);
     // Only immaterial chain-only holds can accept a later low daily observation. Assess materiality
     // before any release so same-provider history can never release a quarantined aggregate.
-    if (!material) {
+    if (!material && !fillDefaultAssets.has(asset)) {
       for (const candidate of unrepaired) {
         const point = candidate.state.chartPoint;
         const firstFlaggedAt = candidate.state.quarantinedSince!;
@@ -775,8 +810,8 @@ export async function guardChainDropouts(input: {
     };
   }
   // The same fill price rescales every list bucket, including history. A sub-$1M chain or an
-  // already-rescaled baseline cannot detect that collapse; only complete native evidence can admit it.
-  for (const asset of fillDefaultAssets) {
+  // already-rescaled baseline cannot detect that collapse; admit only native evidence or bounded guard carry.
+  for (const [asset, listTotal] of fillDefaultAssets) {
     asset.circulatingPrevDay = null;
     asset.circulatingPrevWeek = null;
     asset.circulatingPrevMonth = null;
@@ -792,6 +827,32 @@ export async function guardChainDropouts(input: {
         && chain.repairedCurrentUsd != null && chain.repairedCurrentUsd === normalizeChainSupplyValue(row.current)))
       && Math.abs(rows.reduce((sum, [, row]) => sum + normalizeChainSupplyValue(row.current)!, 0) - getCirculatingRawOrNull(asset)!) <= 0.01);
     if (nativeComplete) continue;
+    // A reviewed census may lose a small leg; publish only its native remainder, never the rescaled list residue.
+    const affected = candidates.filter((candidate) => candidate.asset === asset);
+    const native = affected.filter((candidate) => candidate.evidence.resolution === "onchain-total-supply");
+    const missing = affected.filter((candidate) => !candidate.resolved);
+    const meta = ACTIVE_META_BY_ID.get(String(asset.id));
+    const selected = meta && selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    const nativeTotal = native.reduce((sum, candidate) => sum + candidate.evidence.repairedCurrentUsd!, 0);
+    const missingBaseline = missing.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd, 0);
+    const missingListShare = listTotal > 0 && missing.every((candidate) => candidate.evidence.listCurrentUsd != null)
+      ? missing.reduce((sum, candidate) => sum + candidate.evidence.listCurrentUsd!, 0) / listTotal
+      : null;
+    if (asset.supplyChainGuard?.status === "chains-unavailable" && asset.supplyChainGuard.concurrentGainUsd == null
+      && selected?.length === affected.length && rows.length === affected.length
+      && selected.every(({ config }) => affected.some((candidate) => candidate.state.chainId === config.chain))
+      && missing.length > 0 && native.length + missing.length === affected.length && nativeTotal > 0
+      && missingListShare != null && missingListShare <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio
+      && missingBaseline <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (nativeTotal + missingBaseline)) {
+      asset.circulating = { [affected[0].pegKey]: nativeTotal };
+      asset.supplyObservedAt = Math.min(...native.map((candidate) => candidate.evidence.observedAt!));
+      asset.supplyChainGuard.partialCoverage = true;
+      asset.supplyChainGuard.quarantinedSince = Math.min(...missing.map((candidate) => candidate.firstFlaggedAt));
+      warn("supply-list-fill-default-partial-native", "Publishing only the observed native remainder of a fill-default asset", {
+        assetId: asset.id, missingChainIds: missing.map((candidate) => candidate.state.chainId), missingListShare,
+      });
+      continue;
+    }
     asset.circulating = {};
     for (const [, row] of rows) row.current = null;
     delete asset.supplyRestored;

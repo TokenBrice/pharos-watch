@@ -6,10 +6,11 @@ import { admitSupplyBuckets } from "@shared/lib/supply";
 import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
+import { hasUsableCurrentPrice } from "../../lib/current-peg-observations";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 
 /** Enrich the response only; historical detail cache generations stay provider-owned. */
-export async function enrichMissingDetailPrice(
+export async function overlayCanonicalDetail(
   db: D1Database,
   stablecoinId: string,
   response: Response,
@@ -20,10 +21,11 @@ export async function enrichMissingDetailPrice(
   try {
     const detail = await response.clone().json() as Record<string, unknown> | null;
     if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
-    // Only the admitted canonical publication can set restoration or unavailability provenance.
+    // Only the admitted canonical publication can set restoration, unavailability or price-reference provenance.
     if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
-      || "priceDerivation" in detail) {
+      || "priceDerivation" in detail || "nominalPriceReference" in detail) {
       delete detail.priceDerivation;
+      delete detail.nominalPriceReference;
       delete detail.currentSupplyRestored;
       delete detail.currentSupplyUnavailableReason;
       delete detail.currentSupplyExcludedChains;
@@ -50,8 +52,6 @@ export async function enrichMissingDetailPrice(
       headers.delete("Content-Length");
       response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
     }
-    const hasDetailPrice = typeof detail.price === "number" && Number.isFinite(detail.price) && detail.price > 0;
-
     // Read the publication, not price_cache: a last-good replay could resurrect
     // a quote that the current pricing pipeline deliberately withheld.
     const canonical = publication ?? await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
@@ -95,12 +95,11 @@ export async function enrichMissingDetailPrice(
     }
     if (coin?.nominalPriceReference) detail.nominalPriceReference = coin.nominalPriceReference;
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;
-    const canEnrichPrice = !hasDetailPrice && coin != null && !coin.frozen && isObservedPrice(coin) &&
-      isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources) &&
-      typeof coin.price === "number" && Number.isFinite(coin.price) && coin.price > 0 &&
-      !!coin.priceSource && coin.priceSource !== "cached" &&
-      (coin.priceConfidence === "high" || coin.priceConfidence === "single-source") &&
-      typeof observedAt === "number" && Number.isFinite(observedAt) && observedAt > 0 && observedAt <= now;
+    // One price authority (R5): the quote peg summary measures replaces any provider
+    // quote, with its own confidence and clocks, so a hero price never sits beside a
+    // deviation measured from another quote. A provider quote survives only without one.
+    const canEnrichPrice = coin != null && !coin.frozen && hasUsableCurrentPrice(coin) &&
+      isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources);
     if (!hasCurrentSupply && !supplyUnavailable && !coin?.nominalPriceReference && !canEnrichPrice) return response;
 
     const headers = new Headers(response.headers);

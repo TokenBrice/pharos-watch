@@ -9,6 +9,7 @@ import { clamp } from "@shared/lib/math";
 import { mintBurnSignedNetRange } from "@shared/lib/mint-burn-valuation";
 import { PRESSURE_SHIFT_MIN_BASELINE_DAYS } from "@shared/lib/mint-burn-signals";
 import type {
+  MintBurnClassification,
   MintBurnFtqUnavailableReason,
   MintBurnPublication,
   MintBurnValuation,
@@ -163,6 +164,7 @@ export interface ValuedNetFlow24h {
    * the publication carries no window evidence (legacy payload).
    */
   window24hComplete?: boolean | null;
+  classification?: MintBurnClassification;
 }
 
 /** The published leg statuses that decide whether a classified coin's flow is in scope. */
@@ -228,8 +230,12 @@ export function getFlightToQualityUnavailableReason(
   cohorts: Pick<FlightToQualityCohorts, "safe" | "risky" | "unpublishedIds">,
 ): MintBurnFtqUnavailableReason {
   if (cohorts.unpublishedIds.length > 0) return "cohort-member-unpublished";
+  const unresolved = [...cohorts.safe, ...cohorts.risky].find((coin) => coin.classification?.completeness === "partial");
+  if (unresolved) return "classification-unresolved";
+  const unknown = [...cohorts.safe, ...cohorts.risky].find((coin) => coin.classification?.completeness === "unknown");
+  if (unknown) return "classification-unknown";
   const windowIncomplete = [...cohorts.safe, ...cohorts.risky]
-    .some((coin) => coin.knownNetUsd === null && coin.window24hComplete !== true);
+    .some((coin) => coin.window24hComplete === false || (coin.knownNetUsd === null && coin.window24hComplete !== true));
   return windowIncomplete ? "flow-window-unavailable" : "valuation-incomplete";
 }
 
@@ -244,12 +250,13 @@ export function detectFlightToQualityFromValuedNets(input: {
   safe: readonly ValuedNetFlow24h[];
   risky: readonly ValuedNetFlow24h[];
 }): (FlightToQualityResult & { safeNet24h: number; riskyNet24h: number; exact: boolean }) | null {
+  if ([...input.safe, ...input.risky].some((coin) => coin.classification && coin.classification.completeness !== "complete")) return null;
   const sum = (coins: readonly ValuedNetFlow24h[]) => {
     let knownUsd = 0;
     let lowerUsd = 0;
     let upperUsd = 0;
     for (const coin of coins) {
-      if (coin.knownNetUsd === null) {
+      if (coin.knownNetUsd === null || coin.window24hComplete === false) {
         lowerUsd = Number.NEGATIVE_INFINITY;
         upperUsd = Number.POSITIVE_INFINITY;
         continue;

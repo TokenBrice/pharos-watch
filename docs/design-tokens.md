@@ -5,13 +5,13 @@ Pharos uses a 3-layer design token architecture that separates raw values from m
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Component Tokens  (card, table, chart, sidebar) │  ← Components reference these
-├─────────────────────────────────────────────────┤
-│  Semantic Tokens   (surfaces, text, severity)    │  ← Purpose-driven aliases
-├─────────────────────────────────────────────────┤
-│  Primitives        (color scales, spacing, type) │  ← Raw, theme-agnostic values
-└─────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│  Component Tokens  (card, table, chart, code surface) │  ← Components reference these
+├───────────────────────────────────────────────────────┤
+│  Semantic Tokens   (surfaces, text, severity)         │  ← Purpose-driven aliases
+├───────────────────────────────────────────────────────┤
+│  Primitives        (color scales, spacing, type)      │  ← Raw, theme-agnostic values
+└───────────────────────────────────────────────────────┘
 ```
 
 ### Layer 1: Primitives (`src/styles/tokens/primitives.css`)
@@ -32,7 +32,10 @@ Choose semantic roles by meaning: surfaces/text/borders for hierarchy; [UI state
 #### Contrast and interaction baseline
 
 - Metadata and helper text must remain readable on pale surfaces. Use semantic text roles, not unscoped light palette stops; dark-only surfaces are explicit exceptions.
-- Keyboard focus uses the shared visible ring in both themes. DEWS radar guides use theme-tuned `--dews-radar-*` tokens; dark mode must not make spokes disappear.
+- Keyboard focus uses full-opacity `focus-visible:ring-ring` in `.pharos-focus-ring`, source-list links, prose links and the Digest archive controls. The design-invariant suite checks every ring in that scope, resolves the actual `--ring` and surface aliases in both themes and requires at least 3:1 against base (`--background`), card (`--card`) and raised (`--surface-raised`) surfaces.
+- The high and single-source confidence labels require at least 4.5:1 against base and card surfaces in both themes. Their shared classification entries use emerald-700 and amber-700 in light mode and retain the 400 stops in dark mode; tests read the Pharos palette overrides rather than stock Tailwind values. Source calculations do not replace rendered focus/clipping and tinted/hover-background checks.
+- Navigable tables retain native row semantics; link/button roles belong on controls inside cells, not `tr`, `TableRow` or `InteractiveTableRow`. The design-invariant scan checks these row elements throughout `src/**/*.tsx` for role overrides, static tab stops and key handlers, with a narrow exception for the directory's active virtual-cursor tabindex. Cursor props supplied by `useRowCursor().getRowProps` retain the same roving pattern. After rows shrink, keyboard navigation continues from the bounded visible cursor.
+- DEWS radar guides use theme-tuned `--dews-radar-*` tokens; dark mode must not make spokes disappear.
 - Dense controls use `--control-pill-*`. `.pharos-control-pill-active`, on-state toggle pills and `.pharos-pill-tab-active` share elevated-neutral active fill, primary text and a hairline ring; never solid ink or a local `.dark` hex override. Navigation's frost-lit rail is separate.
 - Secondary mode/view/window switches use `.pharos-segmented` with `.pharos-segmented-item`, selection exposed through `aria-pressed` / `aria-selected`; `ControlPillToggle` supports `variant="segmented"`.
 - Sticky table headers and anchor scroll padding use `--table-header-top`, the bottom edge of site chrome, rather than independent offsets.
@@ -74,7 +77,7 @@ DOM SVG and Recharts paths rendered by the browser can use CSS variables. Litera
 --psi-bedrock-hex: #22c55e; /* JS/Recharts usage */
 ```
 
-Chart accent literals in `chart-colors.ts` match `--chart-*-hex`. Its re-exported `THREAT_BAND_HEX` uses the shared classification palette, not theme-switched `--dews-*-hex`. `severity-colors.ts` emits Tailwind classes; severity hex companions are consumed directly through CSS. Runtime exports do not each have a CSS companion.
+Chart accent literals in `chart-colors.ts` match `--chart-*-hex`. Its re-exported `THREAT_BAND_HEX` uses the shared classification palette, not theme-switched `--dews-*-hex`. `severity-colors.ts` emits Tailwind classes; severity colours are consumed through the `--severity-*` CSS variables (no `-hex` companion is read). Runtime exports do not each have a CSS companion.
 
 ### Layer 3: Component Tokens (in `semantic.css`)
 
@@ -86,7 +89,7 @@ The `--p-text-*` primitives are the single source for Tailwind's `text-*` sizes:
 
 | Utility | Size | Line height | Use |
 | --- | --- | --- | --- |
-| `text-3xs` | 10px | 14px | Dense chart, legend and axis annotations only |
+| `text-3xs` | 10px | 14px | Dense chart, legend and axis annotations; the smallest badges and table meta |
 | `text-2xs` | 11px | 16px | Compact chips, table meta, uppercase eyebrows |
 | `text-xs` | 12px | 16px | Labels (`.pharos-label`), captions, `.pharos-meta` |
 | `text-sm` | 14px | 20px | Body and UI text |
@@ -123,9 +126,9 @@ Label and figure utilities are indexed under [Type scale](#label-and-figure-util
 
 ## JS Token Maps
 
-Use `src/lib/chart-colors.ts` for runtime chart colors/heights/tooltips, `src/lib/severity-colors.ts` for severity/score Tailwind class helpers, and `shared/lib/classification.ts` for published bands and category descriptors. These source exports are the inventory.
+Use `src/lib/chart-colors.ts` for runtime chart colors and heights, and `src/lib/chart-theme.ts` for axis, grid and tooltip-surface values, `src/lib/severity-colors.ts` for severity/score Tailwind class helpers, and `shared/lib/classification.ts` for published bands and category descriptors. These source exports are the inventory.
 
-Chart accents in `chart-colors.ts` match `--chart-*-hex`; its `THREAT_BAND_HEX` comes from classification rather than theme-switched DEWS companions. Freeze-event labels, badges and chart fills derive from one classification descriptor (`EVENT_LABELS`, `EVENT_BADGE_STYLES`, `EVENT_CHART_COLORS`) in both themes. Runtime-only palettes need not acquire a CSS twin without a CSS consumer.
+Runtime-only palettes need not acquire a CSS twin without a CSS consumer.
 
 ## Usage Guidelines
 

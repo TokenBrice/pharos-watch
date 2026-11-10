@@ -59,16 +59,17 @@ export function resolveExecutableObserverCapacity(
       !Number.isFinite(observation.settlementDelaySec) || observation.settlementDelaySec < 0) {
     return { ...facts, capacityRejectionReason: "settlement-bound-unproven" };
   }
+  // A missing cost probe remains an evidence-model limit even when output pricing is unavailable.
+  if (observation.allInFeeBps == null || !Number.isFinite(observation.allInFeeBps) ||
+      observation.allInFeeBps < 0 || observation.allInFeeBps > 10_000) {
+    return { ...facts, capacityRejectionReason: "all-in-cost-unobserved", notes: ["all-in-cost-unobserved"] };
+  }
   const valuation = context.options.executableObserverValuation;
   if (required.length !== 1 || !valuation || valuation.outputAssetKey !== required[0] ||
       !Number.isFinite(valuation.priceUsd) || valuation.priceUsd <= 0 ||
       !Number.isSafeInteger(valuation.observedAt) || valuation.observedAt <= 0 ||
       valuation.observedAt > context.now || context.now - valuation.observedAt > STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC) {
     return { ...facts, capacityRejectionReason: "output-valuation-unobserved", notes: ["output-valuation-unobserved"] };
-  }
-  if (observation.allInFeeBps == null || !Number.isFinite(observation.allInFeeBps) ||
-      observation.allInFeeBps < 0 || observation.allInFeeBps > 10_000) {
-    return { ...facts, capacityRejectionReason: "all-in-cost-unobserved", notes: ["all-in-cost-unobserved"] };
   }
   if (observation.capacityRaw < 0n || !Number.isInteger(observation.underlyingDecimals) ||
       observation.underlyingDecimals < 0 || observation.underlyingDecimals > 36 ||

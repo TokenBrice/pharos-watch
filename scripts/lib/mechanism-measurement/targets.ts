@@ -1,3 +1,5 @@
+import { HYPEREVM_HISTORY_RPC_URL } from "@shared/lib/evm-rpc-capabilities";
+
 export interface CdpMeasurementTargetBase {
   assetId: string;
   chain: { key: string; evmChainId: number };
@@ -545,7 +547,7 @@ export const CDP_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
     assetId: "feusd-felix",
     family: "liquity-v2",
     chain: { key: "hyperevm", evmChainId: 999 },
-    rpcs: ["https://rpc.hyperliquid.xyz/evm"],
+    rpcs: [HYPEREVM_HISTORY_RPC_URL],
     contracts: {
       token: "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
       collateralRegistry: "0x9de1e57049c475736289cb006212f3e1dce4711b",

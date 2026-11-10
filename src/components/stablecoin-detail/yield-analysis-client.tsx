@@ -407,6 +407,8 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     let cancelled = false;
     void loadClientStablecoinDetail(id).then((detail) => {
       if (!cancelled) setCoinDetail(detail);
+    }).catch(() => {
+      // Optional enrichment failure leaves the generic fallback and workbench available.
     });
     return () => {
       cancelled = true;

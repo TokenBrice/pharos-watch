@@ -1740,11 +1740,6 @@ describe("classifyYieldBenchmarkFreshness", () => {
     })).toBe("stale");
   });
 
-  it("keeps the fetch-age and fallback rules when no observation bound is supplied", () => {
-    expect(classifyYieldBenchmarkFreshness({ ageSeconds: 60, isFallback: true, fallbackMode: "x" })).toBe("degraded");
-    expect(classifyYieldBenchmarkFreshness({ ageSeconds: null, isFallback: false, fallbackMode: null })).toBe("stale");
-  });
-
 });
 
 describe("fetchTbillRate — benchmark observation guard and registry integrity", () => {

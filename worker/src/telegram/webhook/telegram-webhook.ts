@@ -1,4 +1,4 @@
-import { handleMyChatMember } from "./telegram-webhook-group-welcome";
+import { handleMyChatMember, TelegramGroupWelcomeBusyError } from "./telegram-webhook-group-welcome";
 import {
   claimTelegramProcessedUpdate,
   markTelegramProcessedUpdateProcessed,
@@ -105,6 +105,7 @@ async function dispatchTelegramUpdate(
         action: "my_chat_member",
         errorClass: classifyTelegramLogError(err),
       });
+      if (err instanceof TelegramGroupWelcomeBusyError || isRetriableD1OverloadError(err)) throw err;
       return "my_chat_member";
     }
   }
@@ -218,6 +219,9 @@ export const handleTelegramWebhook = withErrorHandler(
             errorClass: classifyTelegramLogError(releaseErr),
           });
         }
+      }
+      if (err instanceof TelegramGroupWelcomeBusyError) {
+        return new Response("retry", { status: 503, headers: { "Retry-After": String(err.retryAfterSec) } });
       }
       throw err;
     }

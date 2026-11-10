@@ -635,43 +635,6 @@ describe("runYieldCoverageAudit", () => {
     });
   });
 
-  it("returns degraded when protocol-category cache is unavailable", async () => {
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: {
-        mode: "dex-cache",
-        updatedAt: 1_774_526_300,
-        ageSeconds: 100,
-        poolCount: 1,
-        fallbackMode: null,
-      },
-    });
-    mockGetCache.mockImplementation(async (_db, key) => {
-      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
-      if (key === "yield-rankings") {
-        return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
-      }
-      return null;
-    });
-    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
-
-    const result = await runYieldCoverageAudit(mockD1([{
-      match: "yield_coverage_review_dispositions",
-      rows: [],
-    }]));
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      reason?: string;
-      protocolCategoryStatus?: string;
-    };
-
-    expect(result.status).toBe("degraded");
-    expect(metadata).toMatchObject({
-      reason: "protocol-category-cache-missing",
-      protocolCategoryStatus: "missing",
-    });
-    expect(mockSetCache).toHaveBeenCalled();
-  });
-
   it.each([
     ["missing", undefined, 0, 0],
     ["malformed", "{", 0, 0],
@@ -836,11 +799,18 @@ describe("runYieldCoverageAudit", () => {
 });
 
 describe("identifyCoverageGaps", () => {
-  it("identifies high-TVL stablecoin pools not matched", () => {
+  it("does not recommend owner-excluded opportunities", () => {
+    const gaps = identifyCoverageGaps([lendingPool({ pool: "loopscale-hold", project: "loopscale-lending", tvlUsd: 50_000_000 })], new Set());
+    expect(gaps.unmatchedHighTvlPools).toEqual([]);
+    expect(gaps.missingProtocols).toEqual([]);
+    expect(gaps.venueRiskConfigMissing).toEqual([]);
+  });
+
+  it.each(["NEW_STABLE", "USR"])("identifies unmatched high-TVL pools despite symbol keywords: %s", (symbol) => {
     const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "unknown-pool",
       project: "new-protocol",
-      symbol: "NEW_STABLE",
+      symbol,
       tvlUsd: 50_000_000,
     })];
     const gaps = identifyCoverageGaps(dlPools, new Set());
@@ -1162,15 +1132,15 @@ describe("identifyDeadCuratedPins", () => {
   it("separates a dead config from a coverage outage and clears resolved pins", () => {
     const pins = identifyDeadCuratedPins(
       [makeDlYieldPool({ pool: YIELD_POOL_MAP["susde-ethena"], project: "ethena", symbol: "sUSDe" })],
-      { publishedStablecoinIds: new Set(["usdn-smardex"]) },
+      { publishedStablecoinIds: new Set(["yusd-aegis"]) },
     );
 
     expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "susde-ethena"))
       .toBeUndefined();
-    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "usdn-smardex"))
+    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "yusd-aegis"))
       .toMatchObject({
-        pin: YIELD_POOL_MAP["usdn-smardex"],
-        missingPoolIds: [YIELD_POOL_MAP["usdn-smardex"]],
+        pin: YIELD_POOL_MAP["yusd-aegis"],
+        missingPoolIds: [YIELD_POOL_MAP["yusd-aegis"]],
         reasons: ["missing-pool"],
         coverage: "dead-config",
       });

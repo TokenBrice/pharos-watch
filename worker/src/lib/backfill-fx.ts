@@ -11,7 +11,8 @@ import {
 } from "@shared/lib/rate-series";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
-import { getCache, setCache } from "./db-cache";
+import { getCache } from "./db-cache";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { FrankfurterTimeSeriesSchema, SecondaryFxResponseSchema } from "./external-api-schemas";
 import { rethrowIfAborted } from "./abort";
 import { mapWithConcurrency } from "./concurrency";
@@ -235,7 +236,7 @@ export async function fetchHistoricalSecondaryFxRates(
     const cacheKey = `fx-history-secondary:${year}`;
     let yearCache: Record<string, Record<string, number>> = {};
     let cacheChanged = false;
-    const cached = await getCache(db, cacheKey);
+    let cached = await getCache(db, cacheKey, signal);
     if (cached) {
       const decoded = decodeJsonString<Record<string, Record<string, number>>, "json-parse-failed">(
         cached.value,
@@ -282,8 +283,27 @@ export async function fetchHistoricalSecondaryFxRates(
       }
     }
 
-    if (cacheChanged) {
-      await setCache(db, cacheKey, JSON.stringify(yearCache));
+    while (cacheChanged) {
+      const write = await runWithOverloadRetry(() => db.prepare(
+        `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+         WHERE cache.value = ? AND cache.updated_at = ?`,
+      ).bind(cacheKey, JSON.stringify(yearCache), Math.floor(Date.now() / 1000),
+        cached?.value ?? null, cached?.updatedAt ?? null).run(), 3, signal);
+      if (write.meta.changes === 1) break;
+
+      // Another backfill won; retain its evidence before retrying the inspected-row fence.
+      cached = await getCache(db, cacheKey, signal);
+      if (!cached) continue;
+      const decoded = decodeJsonString(cached.value, {
+        parseErrorReason: "json-parse-failed",
+        normalize: (parsed) => ({ ok: true, payload: normalizeSecondaryFxYearCache(parsed, year) }),
+      });
+      if (decoded.ok) {
+        for (const [date, rates] of Object.entries(decoded.payload)) {
+          mergeDateRates(yearCache, date, rates);
+        }
+      }
     }
 
     for (const date of wantedDates) {

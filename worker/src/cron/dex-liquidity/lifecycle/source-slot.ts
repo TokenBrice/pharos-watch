@@ -10,6 +10,11 @@ export type DexLiquidityStageRecoveryReason =
   | "stage-unconsumed";
 
 export const DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON = "scoring-stage-producer-running";
+export const DEX_SCORING_STAGE_READY_WAIT_MS = 90_000;
+
+export function dexLiquidityStageReadyDeadlineMs(sourceSlotStartedAt: number): number {
+  return (sourceSlotStartedAt + DEX_LIQUIDITY_STAGE_LEAD_SEC) * 1_000 + DEX_SCORING_STAGE_READY_WAIT_MS;
+}
 
 /** The existing readiness deadline expired while the source lease was live. */
 export class DexScoringStageProducerRunningError extends Error {

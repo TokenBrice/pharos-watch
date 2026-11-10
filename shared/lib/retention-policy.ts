@@ -1,5 +1,6 @@
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "./request-attribution";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "./safety-score-capture-archive";
+import { MINT_BURN_RECONCILIATION_POLICY } from "./mint-burn-reconciliation-policy";
 
 const DAY = 86_400;
 export const WORKER_CANARY_RUN_RETENTION_SEC = 14 * DAY;
@@ -80,13 +81,16 @@ export function cronHistoryRetentionPolicies(
     }),
     selectorSnapshotDailyQuota: policy("selector_snapshot_daily_quota", "quota_date", 2 * DAY, { clockFormat: "utc-date" }),
     blockTimestampCache: policy("block_timestamp_cache", "updated_at", 14 * DAY),
+    mintBurnSupplyReconciliation: policy("mint_burn_supply_reconciliation", "day_ts", MINT_BURN_RECONCILIATION_POLICY.retentionSec, {
+      batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
     slotExecutions: policy("cron_slot_executions", "slot_started_at", CRON_SLOT_EXECUTIONS_RETENTION_SEC),
     reserveContinuationExecutions: policy("reserve_continuation_executions", "finished_at", 14 * DAY, {
       predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
     }),
-    apiRequestConsumerStats: policy("api_request_consumer_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
-    siteDataRequestStats: policy("site_data_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
-    apiKeyRequestStats: policy("api_key_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
+    apiRequestConsumerStats: policy("api_request_consumer_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
+    siteDataRequestStats: policy("site_data_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
+    apiKeyRequestStats: policy("api_key_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
     safetyScoreJournal: policy("safety_score_publication_journal", "published_at", evidence.safetyScoreJournalSec),
     safetyScoreAttempts: policy("safety_score_publication_attempts", "attempted_at", evidence.safetyScoreJournalSec),
     safetyScoreCaptureArchive: policy("safety_score_capture_archive", "published_at", SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC, {
@@ -109,22 +113,23 @@ export function cronHistoryRetentionPolicies(
   };
 }
 
-/** Only registry-owned identifiers/fragments may reach this builder; values stay bound. */
-export function retentionDeleteStatement(policy: WindowedRetentionPolicy, nowSec: number): {
+/** Registry-owned SQL only; callers drain windows under one shared budget. Values stay bound. */
+export function retentionDeleteStatement(
+  policy: WindowedRetentionPolicy,
+  nowSec: number,
+  window: Pick<WindowedRetentionPolicy, "windowSec" | "predicate"> = policy.windows?.[0] ?? policy,
+): {
   sql: string;
   bindsForLimit: (limit: number) => unknown[];
   batchLimit: number;
   runLimit: number;
 } {
-  const windows = policy.windows ?? [{ windowSec: policy.windowSec, predicate: policy.predicate }];
-  const cutoffs = windows.map(({ windowSec }) => {
-    const cutoff = nowSec - windowSec;
-    return policy.clockFormat === "utc-date" ? new Date(cutoff * 1000).toISOString().slice(0, 10) : cutoff;
-  });
-  const where = windows.map(({ predicate }) => `(${predicate} AND ${policy.timestampColumn} < ?)`).join(" OR ");
+  const cutoff = nowSec - window.windowSec;
+  const boundCutoff = policy.clockFormat === "utc-date" ? new Date(cutoff * 1000).toISOString().slice(0, 10) : cutoff;
+  const where = `(${window.predicate} AND ${policy.timestampColumn} < ?)`;
   return {
     sql: `DELETE FROM ${policy.table} WHERE rowid IN (SELECT rowid FROM ${policy.table} WHERE ${where} ORDER BY ${policy.orderBy ?? `${policy.timestampColumn} ASC`} LIMIT ?)`,
-    bindsForLimit: (limit) => [...cutoffs, limit],
+    bindsForLimit: (limit) => [boundCutoff, limit],
     batchLimit: policy.batchLimit,
     runLimit: policy.runLimit,
   };
@@ -234,6 +239,7 @@ const OWNER_MANAGED_TABLES = [
   ["reserve_sync_attempt_history", "attempted_at", "worker/src/lib/live-reserves/store-write.ts", "LIVE_RESERVE_HISTORY_RETENTION_SEC (30 days)", "protect frozen IDs and current/referenced attempts; bounded batches"],
   ["mint_burn_events", "timestamp", "worker/src/cron/mint-burn/retention.ts", "8 days", "finalized pricing, Tape cursor and aggregate/frontier guards"],
   ["mint_burn_hourly", "hour_ts", "worker/src/cron/mint-burn/retention.ts", "95 days", "only once corresponding source rows are gone"],
+  ["mint_burn_supply_proofs", "checked_at", "worker/src/cron/mint-burn/retention.ts", "8 days", "range end older than raw retention and no retained event references"],
   ["report_card_evidence_journal", "recorded_at", "worker/src/lib/bounded-journal-store.ts", "BOUNDED_JOURNAL_RETENTION_SEC (45 days)", "age plus 32 rows per asset"],
   ["safety_score_v9_supply_attribution_journal", "recorded_at", "worker/src/lib/bounded-journal-store.ts", "BOUNDED_JOURNAL_RETENTION_SEC (45 days)", "age plus 32 rows per asset"],
   ["dependency_scenario_payload_chunks", "created_at", "worker/scripts/compute-dependency-scenarios.ts", "DEPENDENCY_SCENARIO_ORPHAN_GRACE_SEC (24 hours)", "protect latest/recent payloads, live writers and cached manifests; 500 chunks per run"],
@@ -327,6 +333,7 @@ export const RETENTION_NON_APPEND_TABLES: Readonly<Record<string, string>> = {
   mint_burn_publication_policy: "singleton publication kill-switch and pause policy",
   mint_burn_run_state: "current per-job cursor",
   mint_burn_sync_state: "current per-config cursor",
+  mint_burn_supply_proof_configs: "durable current per-config supply-law fingerprint and removed-config tombstone; survives proof pruning",
   onchain_supply: "current per-chain supply state",
   price_cache: "current per-asset price state",
   pricing_provider_negative_cache: "retired current provider response state",
