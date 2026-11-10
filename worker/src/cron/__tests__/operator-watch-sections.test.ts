@@ -8,7 +8,7 @@ import type { BluechipRating } from "@shared/types/market";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { BLACKLIST_CONFIG_STALE_AGE_SEC, loadBlacklistConfigWatchConditions } from "../operator-watch-blacklist";
 import { loadCanaryOperatorWatch } from "../operator-watch-canary";

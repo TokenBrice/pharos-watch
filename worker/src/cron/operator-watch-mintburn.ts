@@ -1,6 +1,6 @@
 import { getCache } from "../lib/db-cache";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../lib/mint-burn-contract-identity";
 import type { OperatorWatchCondition } from "./operator-watch-types";
 import { MINT_BURN_EXTENDED_STUCK_STREAK } from "./mint-burn/run-state";
 

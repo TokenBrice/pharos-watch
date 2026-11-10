@@ -36,7 +36,7 @@ import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
   deriveCronFreshnessProducers,

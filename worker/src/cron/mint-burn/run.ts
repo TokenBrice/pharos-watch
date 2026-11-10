@@ -12,7 +12,8 @@ import { createBudget } from "../../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../../lib/mint-burn-pipeline/context";
 import type { MintBurnAffectedHour, MintBurnLane, SyncMintBurnStatus } from "../../lib/mint-burn-pipeline/types";
-import { ensureMintBurnSyncStateRows, mintBurnConfigKey, readMintBurnSyncStateBatch, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { ensureMintBurnSyncStateRows, readMintBurnSyncStateBatch, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/d1-primitives";
 import type { CronProgressReporter } from "../../lib/cron-logger";
@@ -23,7 +24,8 @@ import { pruneMintBurnRetention } from "./retention";
 import { runMintBurnSupplyReconciliation } from "../../lib/mint-burn-supply-reconciliation";
 import { completeMintBurnRun } from "./run-completion";
 import { mintBurnPublicationMetadata } from "./publication-metadata";
-import { configKey, configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./run-configs";
+import { mintBurnConfigKey as configKey } from "../../lib/mint-burn-contract-identity";
+import { configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./run-configs";
 import {
   getMintBurnRunState,
   normalizeDisabledConfigIdSet,

@@ -5,7 +5,8 @@ import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@sha
 import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
 import { sumMcapForTrackedChains } from "../../lib/mint-burn-mcap-weighting";
-import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { readPublishedMintBurnGauge } from "../../lib/mint-burn-published-gauge";

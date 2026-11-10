@@ -6,7 +6,7 @@ import {
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts-types";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import type { MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 
 type MockRows = MockTableConfig["rows"];

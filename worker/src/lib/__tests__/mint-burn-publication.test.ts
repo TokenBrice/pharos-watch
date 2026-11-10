@@ -7,7 +7,8 @@ import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS, type MintBurnContra
 import { ACTIVE_MINT_BURN_CONFIGS } from "../../api/mint-burn-flows/aggregate";
 import { handleMintBurnFlows } from "../../api/mint-burn-flows";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
-import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, readMintBurnWindowContext as readContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
 import {

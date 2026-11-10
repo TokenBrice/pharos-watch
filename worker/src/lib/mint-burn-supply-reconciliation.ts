@@ -13,7 +13,7 @@ import { fetchEvmBlockHeader, fetchEvmUint256AtBlock, resolveClosestBlockAtOrBef
 import { getMintBurnConservationEligibility, getMintBurnConservationRuntimeEntry, getMintBurnRangeProofEligibility,
   mintBurnConservationFingerprint } from "./mint-burn-conservation";
 import type { MintBurnContractConfig } from "./mint-burn-contracts";
-import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "./mint-burn-contract-identity";
 import { mintBurnScanCoverageAdmits, decodeMintBurnScanCoverage, prepareMintBurnScanCoverage,
   mintBurnScanFingerprint, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
 import { resolveMintBurnEventPrice, type loadMintBurnPriceContextBatch } from "./mint-burn-pipeline/context";

@@ -61,7 +61,7 @@ import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
 import { reconcileAtomicRoundtripGroups } from "../mint-burn-pipeline/roundtrip-detection";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import { MINT_BURN_CONFIGS, type MintBurnEventDef } from "../mint-burn-contracts";
-import { mintBurnConfigKey } from "../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";

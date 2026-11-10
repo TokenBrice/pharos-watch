@@ -6,7 +6,7 @@ import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config
 import { mintBurnPublicationMetadata } from "../mint-burn/publication-metadata";
 import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
 import type { MintBurnPublication } from "@shared/types/mint-burn";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { setMintBurnRunState } from "../mint-burn/run-state";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";

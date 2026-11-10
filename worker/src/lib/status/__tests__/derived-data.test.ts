@@ -10,7 +10,7 @@ import { DatasetFreshnessSchema } from "@shared/types/status/core";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data";
 import { makeMintBurnScanSegments } from "../../../test-helpers/__shared/mint-burn";
-import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../mint-burn-publication";

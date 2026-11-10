@@ -15,7 +15,7 @@ import { projectPsiBandShifts } from "../psi";
 import { projectScoreDowngraded, projectScoreUpgraded } from "../score";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
-import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 
 const SEC = 1_700_000_000;

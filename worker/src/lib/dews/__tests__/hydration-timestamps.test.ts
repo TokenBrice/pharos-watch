@@ -11,7 +11,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 import { aggregateFlowCacheKey } from "../../mint-burn-flow-cache-keys";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
-import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
 
 const RUN_AT = 1_800_000_000;
 const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]

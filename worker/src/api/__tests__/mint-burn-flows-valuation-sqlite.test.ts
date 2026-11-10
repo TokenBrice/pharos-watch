@@ -18,7 +18,7 @@ import { makeDewsInput } from "../../lib/__tests__/dews.test-support";
 import { rebuildRetainedLegacyValuationHours } from "../../cron/mint-burn/valuation-rebuild";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "../../cron/mint-burn/retention";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { checkMintBurnPublicationCoverage } from "../../lib/canary-checks-mintburn";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";

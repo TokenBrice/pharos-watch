@@ -8,7 +8,7 @@ import {
   ETHEREUM_CHAIN_ID,
   readMintBurnCronSnapshot,
 } from "../mint-burn-flows-service";
-import { mintBurnConfigKey } from "../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
 import type { MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";

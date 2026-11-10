@@ -7,7 +7,7 @@ import type { AlchemyLogEntry, AlchemyTopicFilter } from "./alchemy-logs";
 import { createMintBurnLogIdentityValidator, mintBurnLogQuantity as quantity, MINT_BURN_TRANSFER_TOPIC as TRANSFER } from "./mint-burn-log-identity";
 import { readDataWord, type SubrequestBudget } from "./evm-logs";
 import type { MintBurnRow } from "./mint-burn-pipeline/types";
-import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "./mint-burn-contract-identity";
 import { decimalNumberFromBigInt } from "./bigint";
 import { fetchEvmRpcBatchDetailed, type EvmRpcBatchCall } from "./evm-rpc";
 import { getCaches } from "./db-cache";

@@ -1,9 +1,11 @@
+import { COVERAGE_REPAIR_MAX_BLOCKS } from "../mint-burn/repair-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
-import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import { hasMintBurnScanCoverage, mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { loadMintBurnCoverageGaps as loadGaps, repairMintBurnCoverage, COVERAGE_REPAIR_MAX_BLOCKS } from "../mint-burn/repair-coverage";
+import { loadMintBurnCoverageGaps as loadGaps, repairMintBurnCoverage } from "../mint-burn/repair-coverage";
 import { createMintBurnConfigSummary as configSummary, syncMintBurnConfig } from "../mint-burn/sync-config";
 import type { runMintBurnConfigPhase } from "../mint-burn/run-configs";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";

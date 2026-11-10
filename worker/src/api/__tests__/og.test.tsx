@@ -16,7 +16,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeAsset, makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";

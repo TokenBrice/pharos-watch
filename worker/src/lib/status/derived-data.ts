@@ -4,7 +4,8 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type MintBurnSupplyReconciliationLeg, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { buildCoinCoverageMap, readMintBurnCronSnapshot, readMintBurnWindowContext, withExtendedLaneHeads, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
-import { mintBurnConfigKey, readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
 import { conservationIdentityAddress, mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";

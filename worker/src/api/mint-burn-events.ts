@@ -10,7 +10,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getMintBurnConfigsForStablecoin, type MintBurnTier } from "../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
-import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../lib/mint-burn-contract-identity";
 import { ACTIVE_MINT_BURN_CONFIGS } from "./mint-burn-flows/aggregate";
 import { buildInClause } from "../lib/db";
 import { mintBurnSupplyProofAcceptedSql } from "../lib/mint-burn-supply-proofs";
