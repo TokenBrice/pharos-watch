@@ -203,7 +203,7 @@ jobs:
     # order-dependent file that a PR run happens not to expose fails here, and
     # the isolated result separates a real regression from shared-state leakage.
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

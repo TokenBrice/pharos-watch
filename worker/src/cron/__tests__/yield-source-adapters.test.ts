@@ -28,6 +28,45 @@ import {
   type LiquityV2SpSourceConfig,
 } from "../yield-sync/sources-optional";
 
+const mockMorpho = (items: unknown[]) => mockYieldSourceRoutes([{ match: "api.morpho.org", body: { data: { vaults: { items } } } }]);
+
+const morphoVault = (overrides: Record<string, unknown> = {}) => ({
+  address: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
+  name: "Gauntlet USDC Prime",
+  asset: { symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+  chain: { id: 1 },
+  state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
+  ...overrides,
+});
+
+const pendleMarket = (overrides: Record<string, unknown> = {}) => ({
+  id: "1-0xabc",
+  address: "0xAbC",
+  chainId: 1,
+  isActive: true,
+  expiry: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+  impliedApy: 0.052,
+  underlyingApy: 0.031,
+  aggregatedApy: 0.052,
+  underlyingAsset: { symbol: "USDG", address: "0xdef" },
+  assetRepresentation: "USDG",
+  protocol: "Global Dollar",
+  liquidity: { usd: 82_000_000 },
+  categoryIds: ["stables"],
+  ...overrides,
+});
+
+const kongVault = (overrides: Record<string, unknown> = {}) => ({
+  address: "0xabc",
+  name: "USDC yVault",
+  yearn: true,
+  asset: { symbol: "USDC" },
+  tvl: { close: 50_000_000 },
+  apy: { net: 0.03, monthlyNet: 0.03 },
+  meta: { category: "Stablecoin", isRetired: false },
+  ...overrides,
+});
+
 describe("fetchBeefySources", () => {
   afterEach(cleanupYieldSourceTest);
 
@@ -461,28 +500,8 @@ describe("fetchMorphoVaultSources", () => {
 
   it("returns yield sources for stablecoin vaults", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_790_121_600_000);
-    const fetchSpy = mockYieldSourceRoutes([
-      {
-        match: "api.morpho.org",
-        body: {
-          data: {
-            vaults: {
-              items: [
-                {
-                  address: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
-                  name: "Gauntlet USDC Prime",
-                  asset: {
-                    symbol: "USDC",
-                    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                  },
-                  chain: { id: 1 },
-                  state: { netApy: 0.02968, totalAssetsUsd: 142_917_322, fee: 0 },
-                },
-              ],
-            },
-          },
-        },
-      },
+    const fetchSpy = mockMorpho([
+      morphoVault({ state: { netApy: 0.02968, totalAssetsUsd: 142_917_322, fee: 0 } }),
     ]);
 
     const { candidates: results } = await fetchMorphoVaultSources();
@@ -525,25 +544,8 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it.each([0, 0.03])("accepts the tracked vault only with positive APY (%s)", async (netApy) => {
-    mockYieldSourceRoutes([
-      {
-        match: "api.morpho.org",
-        body: {
-          data: {
-            vaults: {
-              items: [
-                {
-                  address: "0xabc",
-                  name: "Empty Vault",
-                  asset: { symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
-                  chain: { id: 1 },
-                  state: { netApy, totalAssetsUsd: 1_000_000, fee: 0 },
-                },
-              ],
-            },
-          },
-        },
-      },
+    mockMorpho([
+      morphoVault({ address: "0xabc", name: "Empty Vault", state: { netApy, totalAssetsUsd: 1_000_000, fee: 0 } }),
     ]);
 
     const { candidates: results } = await fetchMorphoVaultSources();
@@ -553,37 +555,9 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it("skips a malformed item but keeps a valid one on the same page", async () => {
-    mockYieldSourceRoutes([
-      {
-        match: "api.morpho.org",
-        body: {
-          data: {
-            vaults: {
-              items: [
-                {
-                  name: "Missing address",
-                  asset: {
-                    symbol: "USDC",
-                    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                  },
-                  chain: { id: 1 },
-                  state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
-                },
-                {
-                  address: "0x9eF4cb75FeD5b3913219E881E0FF0b10a6761CF3",
-                  name: "Gauntlet USDC Prime",
-                  asset: {
-                    symbol: "USDC",
-                    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                  },
-                  chain: { id: 1 },
-                  state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
-                },
-              ],
-            },
-          },
-        },
-      },
+    mockMorpho([
+      morphoVault({ name: "Missing address", address: undefined }),
+      morphoVault(),
     ]);
 
     const { candidates: results } = await fetchMorphoVaultSources();
@@ -592,35 +566,9 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it("skips vaults whose asset address is missing or not tracked", async () => {
-    mockYieldSourceRoutes([
-      {
-        match: "api.morpho.org",
-        body: {
-          data: {
-            vaults: {
-              items: [
-                {
-                  address: "0xabc",
-                  name: "Missing Asset Address",
-                  asset: { symbol: "USDC" },
-                  chain: { id: 1 },
-                  state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
-                },
-                {
-                  address: "0xdef",
-                  name: "Spoofed Asset Address",
-                  asset: {
-                    symbol: "USDC",
-                    address: "0xdead000000000000000000000000000000000000",
-                  },
-                  chain: { id: 1 },
-                  state: { netApy: 0.42, totalAssetsUsd: 1_000_000, fee: 0 },
-                },
-              ],
-            },
-          },
-        },
-      },
+    mockMorpho([
+      morphoVault({ address: "0xabc", name: "Missing Asset Address", asset: { symbol: "USDC" } }),
+      morphoVault({ address: "0xdef", name: "Spoofed Asset Address", asset: { symbol: "USDC", address: "0xdead000000000000000000000000000000000000", }, state: { netApy: 0.42, totalAssetsUsd: 1_000_000, fee: 0 } }),
     ]);
 
     const { candidates: results } = await fetchMorphoVaultSources();
@@ -628,28 +576,8 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it("uses tracked chain/address identity before returned symbols", async () => {
-    mockYieldSourceRoutes([
-      {
-        match: "api.morpho.org",
-        body: {
-          data: {
-            vaults: {
-              items: [
-                {
-                  address: "0xabc",
-                  name: "Wrong USDC",
-                  asset: {
-                    symbol: "USDC",
-                    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-                  },
-                  chain: { id: 1 },
-                  state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
-                },
-              ],
-            },
-          },
-        },
-      },
+    mockMorpho([
+      morphoVault({ address: "0xabc", name: "Wrong USDC", asset: { symbol: "USDC", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", } }),
     ]);
 
     const { candidates: results } = await fetchMorphoVaultSources();
@@ -663,11 +591,7 @@ describe("fetchMorphoVaultSources", () => {
   });
 
   it.each(["http", "parse"] as const)("preserves %s failure's pagination retention policy", async (failure) => {
-    const vault = {
-      address: "0xAbC", name: "USDC", chain: { id: 1 },
-      asset: { symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
-      state: { netApy: 0.03, totalAssetsUsd: 1_000_000, fee: 0 },
-    };
+    const vault = morphoVault({ address: "0xAbC", name: "USDC" });
     let page = 0;
     mockYieldSourceRoutes([{
       match: "api.morpho.org", matchBody: '"USDC"',
@@ -768,21 +692,7 @@ describe("fetchPendleMarketSources", () => {
           limit: 100,
           skip: 0,
           results: [
-            {
-              id: "1-0xabc",
-              address: "0xAbC",
-              chainId: 1,
-              isActive: true,
-              expiry: futureExpiry,
-              impliedApy: 0.052,
-              underlyingApy: 0.031,
-              aggregatedApy: 0.052,
-              underlyingAsset: { symbol: "USDG", address: "0xdef" },
-              assetRepresentation: "USDG",
-              protocol: "Global Dollar",
-              liquidity: { usd: 82_000_000 },
-              categoryIds: ["stables", "rwa"],
-            },
+            pendleMarket({ expiry: futureExpiry, categoryIds: ["stables", "rwa"] }),
           ],
         },
       },
@@ -813,21 +723,7 @@ describe("fetchPendleMarketSources", () => {
           limit: 100,
           skip: 0,
           results: [
-            {
-              id: "1-0xabc",
-              address: "0xabc",
-              chainId: 1,
-              isActive: true,
-              expiry: futureExpiry,
-              impliedApy: 0.1,
-              underlyingApy: 0.05,
-              aggregatedApy: 0.1,
-              underlyingAsset: { symbol: "ETH", address: "0xdef" },
-              assetRepresentation: "ETH",
-              protocol: "Lido",
-              liquidity: { usd: 200_000_000 },
-              categoryIds: ["eth-staking"],
-            },
+            pendleMarket({ address: "0xabc", expiry: futureExpiry, impliedApy: 0.1, underlyingApy: 0.05, aggregatedApy: 0.1, underlyingAsset: { symbol: "ETH", address: "0xdef" }, assetRepresentation: "ETH", protocol: "Lido", liquidity: { usd: 200_000_000 }, categoryIds: ["eth-staking"] }),
           ],
         },
       },
@@ -848,36 +744,8 @@ describe("fetchPendleMarketSources", () => {
           limit: 100,
           skip: 0,
           results: [
-            {
-              id: "1-0xexpired",
-              address: "0xexpired",
-              chainId: 1,
-              isActive: true,
-              expiry: new Date(Date.now() - 86400 * 1000).toISOString(),
-              impliedApy: 0.052,
-              underlyingApy: 0.031,
-              aggregatedApy: 0.052,
-              underlyingAsset: { symbol: "USDG", address: "0xdef" },
-              assetRepresentation: "USDG",
-              protocol: "Global Dollar",
-              liquidity: { usd: 82_000_000 },
-              categoryIds: ["stables"],
-            },
-            {
-              id: "1-0xhigh",
-              address: "0xhigh",
-              chainId: 1,
-              isActive: true,
-              expiry: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
-              impliedApy: 1.5,
-              underlyingApy: 0.031,
-              aggregatedApy: 1.5,
-              underlyingAsset: { symbol: "USDG", address: "0xdef" },
-              assetRepresentation: "USDG",
-              protocol: "Global Dollar",
-              liquidity: { usd: 82_000_000 },
-              categoryIds: ["stables"],
-            },
+            pendleMarket({ id: "1-0xexpired", address: "0xexpired", expiry: new Date(Date.now() - 86400 * 1000).toISOString() }),
+            pendleMarket({ id: "1-0xhigh", address: "0xhigh", impliedApy: 1.5, aggregatedApy: 1.5 }),
           ],
         },
       },
@@ -891,13 +759,7 @@ describe("fetchPendleMarketSources", () => {
   it("keeps same-address markets on distinct chains", async () => {
     mockYieldSourceRoutes([1, 42161, 8453].map((chainId) => ({
       match: `/core/v1/${chainId}/markets?`,
-      body: { results: [{
-        address: "0xabc", chainId, isActive: true,
-        expiry: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
-        impliedApy: 0.05, underlyingAsset: { symbol: "USDC", address: "0xdef" },
-        assetRepresentation: "USDC", protocol: "Test", liquidity: { usd: 2_000_000 },
-        categoryIds: ["stables"],
-      }] },
+      body: { results: [pendleMarket({ address: "0xabc", chainId, impliedApy: 0.05, underlyingAsset: { symbol: "USDC", address: "0xdef" }, assetRepresentation: "USDC", protocol: "Test", liquidity: { usd: 2_000_000 }, id: undefined, underlyingApy: undefined, aggregatedApy: undefined })] },
     })), { requireMatch: true });
     expect((await fetchPendleMarketSources()).candidates.map((result) => result.yield.sourceKey)).toEqual([
       "protocol-api:pendle:ethereum:0xabc",
@@ -917,13 +779,7 @@ describe("fetchPendleMarketSources", () => {
   });
 
   it("keeps first-chain rows and continues after a second-chain parse failure", async () => {
-    const market = {
-      address: "0xAbC", chainId: 1, isActive: true,
-      expiry: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
-      impliedApy: 0.05, underlyingAsset: { symbol: "USDC", address: "0xdef" },
-      assetRepresentation: "USDC", protocol: "Test", liquidity: { usd: 2_000_000 },
-      categoryIds: ["stables"],
-    };
+    const market = pendleMarket({ impliedApy: 0.05, underlyingAsset: { symbol: "USDC", address: "0xdef" }, assetRepresentation: "USDC", protocol: "Test", liquidity: { usd: 2_000_000 }, id: undefined, underlyingApy: undefined, aggregatedApy: undefined });
     const fetch = mockYieldSourceRoutes([
       { match: "/core/v1/1/markets?", body: { results: [market] } },
       { match: "/core/v1/42161/markets?", respond: () => new Response("{") },
@@ -1113,15 +969,7 @@ describe("fetchYearnKongSources", () => {
         body: {
           data: {
             vaults: [
-              {
-                address: "0x123",
-                name: "Old USDC",
-                yearn: true,
-                asset: { symbol: "USDC" },
-                tvl: { close: 1_000_000 },
-                apy: { net: 0.02, monthlyNet: 0.02 },
-                meta: { category: "Stablecoin", isRetired: true },
-              },
+              kongVault({ address: "0x123", name: "Old USDC", tvl: { close: 1_000_000 }, apy: { net: 0.02, monthlyNet: 0.02 }, meta: { category: "Stablecoin", isRetired: true } }),
             ],
           },
         },
@@ -1140,15 +988,7 @@ describe("fetchYearnKongSources", () => {
         body: {
           data: {
             vaults: [
-              {
-                address: "0xabc",
-                name: "Steakhouse USDC",
-                yearn: false,
-                asset: { symbol: "USDC" },
-                tvl: { close: 50_000_000 },
-                apy: { net: 0.03, monthlyNet: 0.03 },
-                meta: { category: "Stablecoin", isRetired: false },
-              },
+              kongVault({ name: "Steakhouse USDC", yearn: false }),
             ],
           },
         },
@@ -1176,15 +1016,7 @@ describe("fetchYearnKongSources", () => {
         body: {
           data: {
             vaults: [
-              {
-                address: "0xabc",
-                name: "USDC yVault",
-                yearn: true,
-                asset: { symbol: "USDC" },
-                tvl: { close: 50_000_000 },
-                apy: { net: 0.025, monthlyNet: 0.1 },
-                meta: { category: "Stablecoin", isRetired: false },
-              },
+              kongVault({ apy: { net: 0.025, monthlyNet: 0.1 } }),
             ],
           },
         },
@@ -1205,18 +1037,7 @@ describe("fetchYearnKongSources", () => {
         body: {
           data: {
             vaults: [
-              {
-                address: "0x23346B04a7f55b8760E5860AA5A77383D63491cD",
-                name: "Staked yBOLD",
-                yearn: true,
-                asset: {
-                  symbol: "yBOLD",
-                  address: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
-                },
-                tvl: { close: 4_434_056 },
-                apy: { net: 0.0316603818860981, monthlyNet: 0.0316603818860981 },
-                meta: { category: "Stablecoin", isRetired: false },
-              },
+              kongVault({ address: "0x23346B04a7f55b8760E5860AA5A77383D63491cD", name: "Staked yBOLD", asset: { symbol: "yBOLD", address: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8", }, tvl: { close: 4_434_056 }, apy: { net: 0.0316603818860981, monthlyNet: 0.0316603818860981 } }),
             ],
           },
         },
@@ -1247,11 +1068,7 @@ describe("fetchYearnKongSources", () => {
       .mockReturnValueOnce(1_790_121_600_000)
       .mockReturnValueOnce(1_790_121_601_000)
       .mockReturnValue(1_790_121_602_000);
-    const vault = {
-      address: "0xAbC", name: "USDC yVault", yearn: true, asset: { symbol: "USDC" },
-      tvl: { close: 50_000_000 }, apy: { net: 0.03 },
-      meta: { category: "Stablecoin", isRetired: false },
-    };
+    const vault = kongVault({ address: "0xAbC", apy: { net: 0.03 } });
     mockYieldSourceRoutes([
       ...[1, 8453].map((chainId) => ({
         match: "kong.yearn.fi", matchBody: `"chainId":${chainId}}`,
@@ -1273,10 +1090,7 @@ describe("fetchYearnKongSources", () => {
   });
 
   it("keeps first-chain rows and continues after a second-chain parse failure", async () => {
-    const vault = {
-      address: "0xAbC", name: "USDC yVault", yearn: true, asset: { symbol: "USDC" },
-      tvl: { close: 1_000_000 }, apy: { net: 0.03 }, meta: { category: "Stablecoin" },
-    };
+    const vault = kongVault({ address: "0xAbC", tvl: { close: 1_000_000 }, apy: { net: 0.03 }, meta: { category: "Stablecoin" } });
     const fetch = mockYieldSourceRoutes([
       { match: "kong.yearn.fi", matchBody: '"chainId":1}', body: { data: { vaults: [vault] } } },
       { match: "kong.yearn.fi", matchBody: '"chainId":10}', respond: () => new Response("{") },
