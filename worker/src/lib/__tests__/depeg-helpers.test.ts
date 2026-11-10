@@ -9,6 +9,7 @@ import {
   type DepegRow,
 } from "../depeg-helpers";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { getDexAggregateRejectionReason, isAffirmativeDexPriceRow } from "../depeg-trust-policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegUpsertParams } from "../depeg-pending";
@@ -195,6 +196,20 @@ describe("original DEX source observation admission", () => {
   const now = 1_700_000_000;
   const database = (row: Record<string, unknown>) =>
     makeNoopD1({ prepare: () => ({ all: async () => ({ results: [row] }) }) });
+  it.each([[null, "aggregate-clock-unavailable"], [0, "aggregate-clock-invalid"],
+    [now + 30, "aggregate-clock-future"]] as const)("preserves rejection reason for aggregate clock %s", async (clock, reason) => {
+    for (const payload of [[{ aggregateObservedAt: clock }], { aggregateObservedAt: clock, sources: [] }]) {
+      const loaded = await loadDexPrices(database({
+        stablecoin_id: "usdt-tether", updated_at: now, source_total_tvl: 4_000_000, dex_price_usd: 1,
+        price_sources_json: JSON.stringify(payload),
+      }), now);
+      const row = loaded.dexPriceRows.get("usdt-tether")!;
+      expect(row).toMatchObject({ aggregateObservedAt: null, aggregateClockReason: reason });
+      expect(getDexAggregateRejectionReason(row, now, "depeg")).toBe(reason);
+      expect(isAffirmativeDexPriceRow(row, now, "depeg")).toBe(false);
+      expect(loaded.dexPriceSources.size).toBe(0);
+    }
+  });
   it.each(["confirm", "recover"] as const)("admits %s groups using their original clock, never a compatibility clock", async (mode) => {
     const observedAt = now - 60;
     const price = mode === "confirm" ? 0.98 : 1;
