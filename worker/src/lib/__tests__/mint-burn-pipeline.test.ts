@@ -254,8 +254,8 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
   });
 
-  it("retains request-denied context reasons when the scan requires a matching block hash", async () => {
-    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map([
+  it.each([undefined, 0])("retains unavailable context reasons (deadline=%s)", async (deadlineMs) => {
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(new Map([
       ["0xdenied", { tx: null, receipt: null, unavailableReason: "rpc-request-not-started" }],
     ]));
     const counters = await classifyBridgeBurnRows(
@@ -264,7 +264,7 @@ describe("mint-burn shared pipeline modules", () => {
         protocol: "ccip", knownBridgePoolAddresses: [], tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
       } }),
       [mintBurnAlchemyEndpoint("https://rpc.invalid")], { count: 0, limit: 10 }, new Map(), undefined,
-      { blockHashesByTx: new Map([["0xdenied", `0x${"1".repeat(64)}`]]) },
+      { deadlineMs, blockHashesByTx: new Map([["0xdenied", `0x${"1".repeat(64)}`]]) },
     );
     expect(counters).toMatchObject({ txContextShortfalls: 1, txContextRequestsNotStarted: 1, deferredTxHashes: ["0xdenied"] });
   });

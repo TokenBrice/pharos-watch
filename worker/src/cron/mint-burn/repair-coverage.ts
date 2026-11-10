@@ -141,10 +141,13 @@ export async function repairMintBurnCoverage(
   // Rotate independently of the live frontier; one failing source must not pin
   // every healthy repair behind it on successive scheduled runs.
   const offset = gaps.length ? Math.floor(input.runTimestamp / (30 * 60)) % gaps.length : 0;
-  for (let i = 0; i < gaps.length; i++) {
+  const pending = (gap: MintBurnCoverageGap) => input.pendingAdmissionKeys?.has(mintBurnConfigKey(gap.config)) === true;
+  const ordered = [...gaps.slice(offset), ...gaps.slice(0, offset)]
+    .sort((a, b) => Number(pending(a)) - Number(pending(b)));
+  for (let i = 0; i < ordered.length; i++) {
     if (!stopped && i >= COVERAGE_REPAIR_MAX_CONFIGS) break;
     throwIfAborted(input.signal);
-    const gap = gaps[(offset + i) % gaps.length]!;
+    const gap = ordered[i]!;
     const { config, fromBlock } = gap;
     const key = mintBurnConfigKey(config);
     const configDeadlineMs = input.pendingAdmissionKeys?.has(key)
@@ -231,13 +234,13 @@ export async function repairMintBurnCoverage(
       }
       // Scheduling state is not certified progress. Keep the cursor behind the
       // caller's materialization fence, including after partially persisted work.
-      const deadlineOnly = !summary.conservationFailure && !result.rpcEvidenceIncomplete && summary.errors > 0
+      const capacityOnly = !summary.conservationFailure && !result.rpcEvidenceIncomplete && summary.errors > 0
         && summary.failedEventDefs.length > 0 && summary.failedEventDefs.every((reason) =>
-          reason === "range-proof:persisted-event-readback-deadline");
+          reason === "range-proof:persisted-event-readback-deadline" || /^tx-context(?:-request-not-started)?:\d+$/.test(reason));
       const span = toBlock - fromBlock + 1;
-      maxBlocks = deadlineOnly ? Math.max(1, Math.floor(span / 2))
+      maxBlocks = capacityOnly ? Math.max(1, Math.floor(span / 2))
         : summary.repairReason === "proof-staged" ? Math.min(COVERAGE_REPAIR_MAX_BLOCKS,
-          (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) * 2) : null;
+          Math.max((cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) + 1, Math.floor((cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) * 1.25))) : null;
     } catch (error) {
       rethrowIfAborted(error, input.signal);
       // An exception can hide consumed requests; conservatively charge the cap.
