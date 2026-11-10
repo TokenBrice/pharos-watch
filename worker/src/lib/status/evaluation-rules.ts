@@ -1191,14 +1191,14 @@ function formatPersistentStaleIndependentFeeds(
 export function evaluateDepegBlindReviewCauses(canaries: Pick<CanaryStatus, "checks" | "maxAgeSec"> | null | undefined, nowSec: number): StatusCause[] {
   if (!canaries) return [];
   const check = canaries.checks["depeg-open-coverage"];
-  const ids = check?.metadata?.acknowledgedBlindReviewIds;
+  const ids: unknown = check?.metadata?.acknowledgedBlindReviewIds;
   if (!check || check.executionStatus !== "completed" || !["ok", "degraded"].includes(check.status)
     || !Number.isFinite(check.observedAt) || check.observedAt <= 0 || check.observedAt > nowSec
     || !Number.isFinite(canaries.maxAgeSec) || canaries.maxAgeSec <= 0 || nowSec - check.observedAt > canaries.maxAgeSec
-    || !Array.isArray(ids) || !ids.every((id) => typeof id === "number" && Number.isSafeInteger(id) && id > 0)) return [];
+    || !Array.isArray(ids) || !(ids as unknown[]).every((id) => typeof id === "number" && Number.isSafeInteger(id) && id > 0)) return [];
   // Re-resolve at read time: retained canary metadata cannot renew an expired review.
   const active = resolveDepegBlindEventReviews(nowSec);
-  const reviews = [...new Set(ids)].flatMap((id) => {
+  const reviews = [...new Set(ids as number[])].flatMap((id) => {
     const review = active.get(id);
     return review ? [review] : [];
   });

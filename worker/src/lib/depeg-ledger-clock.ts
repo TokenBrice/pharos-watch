@@ -84,11 +84,15 @@ export function parseDepegObservationCensus(parsed: unknown): DepegObservationCe
   ) {
     return null;
   }
-  const assets = record.unavailableAssets;
+  const assets: unknown = record.unavailableAssets;
   const unavailableAssets = Array.isArray(assets) && assets.length <= DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT
-    && assets.every((asset) => asset != null && typeof asset === "object"
-      && typeof asset.id === "string" && asset.id.trim().length > 0
-      && CENSUS_GAP_REASONS.includes(asset.reason) && typeof asset.reviewedNominalReference === "boolean")
+    && (assets as unknown[]).every((entry) => {
+      if (entry == null || typeof entry !== "object") return false;
+      const asset = entry as Record<string, unknown>;
+      return typeof asset.id === "string" && asset.id.trim().length > 0
+        && (CENSUS_GAP_REASONS as readonly unknown[]).includes(asset.reason)
+        && typeof asset.reviewedNominalReference === "boolean";
+    })
     ? assets as NonNullable<DepegObservationCensus["unavailableAssets"]> : undefined;
   return {
     scope: record.scope,
