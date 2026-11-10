@@ -55,10 +55,13 @@ describe("cron job schedule metadata", () => {
       .toBe(Date.parse("2026-10-19T04:21:00Z") / 1000);
   });
 
-  it("accounts for optional concurrent D1 telemetry without changing status aliases or the later peak", () => {
-    expect(findJob("status-self-check")).toMatchObject({ maxConnections: 2 });
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "price-corroboration")).toMatchObject({ maxConnections: 4 });
+  it.each([
+    ["status-self-check", 2], ["price-corroboration", 4], ["sync-dex-discovery", 2],
+    ["sync-dex-liquidity-stage", 4], ["sync-dex-liquidity", 4],
+    ["sync-mint-burn", 3], ["sync-mint-burn-extended", 3],
+  ] as const)("declares the real connection peak for %s", (job, maxConnections) => {
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === job)).toMatchObject({ maxConnections });
+    if (job !== "price-corroboration") expect(findJob(job)).toMatchObject({ maxConnections });
   });
   it("reserves one project-tape service-binding connection without adding a trigger", () => {
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "project-tape")).toMatchObject({
@@ -69,13 +72,6 @@ describe("cron job schedule metadata", () => {
     expect(CRON_GROWTH_HEADROOM_POLICY.maxHeadroomFullTriggersBeforeRebalance).toBe(2);
   });
 
-
-  it("declares the bounded nested Curve discovery fan-out", () => {
-    expect(findJob("sync-dex-discovery")).toMatchObject({ maxConnections: 2 });
-  });
-  it.each(["sync-dex-liquidity-stage", "sync-dex-liquidity"])("reserves peak four for %s", (job) => {
-    expect(findJob(job)).toMatchObject({ maxConnections: 4 });
-  });
 
   it("requires an explicit CPU placement policy on every logical schedule", () => {
     expect(Object.keys(CRON_SCHEDULE_DEFINITIONS)).toEqual(Object.keys(CRON_SCHEDULES));
@@ -122,6 +118,8 @@ describe("cron job schedule metadata", () => {
       ["depegResolverOffset", "58", "04"],
       ["v9PublicationOffset", "22", "04"],
       ["statusSelfCheckOffset", "24", "07"],
+      ["dewsPsiOffset", "26", "30"],
+      ["dewsPsiOffset", "56", "05"],
     ] as const) {
       expect(getCronSlotStartedAtForSchedule(key, Date.parse(`2026-08-21T19:${minute}:${second}Z`)))
         .toBe(Date.parse(`2026-08-21T19:${minute}:00Z`) / 1000);
@@ -137,18 +135,6 @@ describe("cron job schedule metadata", () => {
       .toBe(Date.parse("2026-10-23T16:22:00Z") / 1000);
     expect(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC.v9PublicationOffset).toBe(0);
 
-  });
-
-  it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {
-    const firstSlot = Date.parse("2026-04-19T16:26:30Z");
-    const secondSlot = Date.parse("2026-04-19T16:56:05Z");
-
-    expect(getCronSlotStartedAtForSchedule("dewsPsiOffset", firstSlot)).toBe(
-      Math.floor(Date.parse("2026-04-19T16:26:00Z") / 1000),
-    );
-    expect(getCronSlotStartedAtForSchedule("dewsPsiOffset", secondSlot)).toBe(
-      Math.floor(Date.parse("2026-04-19T16:56:00Z") / 1000),
-    );
   });
 
   it.each(["2026-09", "2027-01", "2027-02", "2027-03", "2028-02", "2028-03"])(

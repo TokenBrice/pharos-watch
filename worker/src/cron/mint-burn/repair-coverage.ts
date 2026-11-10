@@ -6,14 +6,16 @@ import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { setCacheIfNewer } from "../../lib/db-cache";
 import { loadMintBurnSupplyProofRepairCursor, mintBurnSupplyProofRepairCursorKey } from "./repair-supply-proofs";
-import { MINT_BURN_PENDING_RUNTIME_BUDGET_MS, type runMintBurnConfigPhase } from "./run-configs";
+import { MINT_BURN_PENDING_RUNTIME_BUDGET_MS, MINT_BURN_REQUEST_RESERVE, type runMintBurnConfigPhase } from "./run-configs";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
-export const COVERAGE_REPAIR_REQUEST_LIMIT = 40;
+// At 20 transactions/POST, leave room for roughly 100 context batches plus evidence reads.
+const COVERAGE_REPAIR_MAX_REQUESTS = 120;
 const COVERAGE_REPAIR_MAX_CONFIGS = 4;
 export const COVERAGE_REPAIR_MAX_BLOCKS = 10_000;
-export const COVERAGE_REPAIR_WINDOW_MS = 60_000;
+const COVERAGE_REPAIR_WINDOW_MS = 120_000;
+const COVERAGE_REPAIR_TERMINAL_RESERVE_MS = 60_000;
 
 export async function idleMintBurnRepairD1(deadlineMs: number, signal?: AbortSignal,
   idleMs = D1_RESOURCE_WINDOW_MS): Promise<boolean> {
@@ -35,6 +37,7 @@ export interface MintBurnCoverageGap {
   config: MintBurnContractConfig;
   fromBlock: number;
   toBlock: number;
+  backward?: boolean;
 }
 
 export function mintBurnRetainedHourlyFloor(now: number): number {
@@ -90,6 +93,17 @@ export async function loadMintBurnCoverageGaps(
     const retainedFloor = Math.max(config.startBlock, segments[0]!.from_block, fromBlock);
     const fingerprint = mintBurnScanFingerprint(config);
     const current = segments.filter((segment) => segment.config_fingerprint === fingerprint);
+    const liveIndex = current.findIndex((segment) => segment.from_block <= lastBlock && segment.to_block >= lastBlock);
+    if (liveIndex >= 0) {
+      const end = current[liveIndex]!.from_block - 1;
+      const start = Math.max(retainedFloor, (current[liveIndex - 1]?.to_block ?? retainedFloor - 1) + 1);
+      if (start <= end) {
+        // Close the nearest internal hole, then grow the live segment into older history.
+        (liveIndex > 0 ? gaps : leadingGaps).push({ config, fromBlock: Math.max(start, end - COVERAGE_REPAIR_MAX_BLOCKS + 1),
+          toBlock: end, backward: true });
+        continue;
+      }
+    }
     const findGap = (start: number): MintBurnCoverageGap | null => {
       let from = start;
       let end = lastBlock;
@@ -114,7 +128,7 @@ export async function loadMintBurnCoverageGaps(
       if (leading) leadingGaps.push(leading);
     }
   }
-  return gaps.length ? gaps : leadingGaps;
+  return [...gaps, ...leadingGaps];
 }
 
 export interface MintBurnCoverageRepairSummary extends MintBurnConfigSummary {
@@ -154,11 +168,13 @@ export async function repairMintBurnCoverage(
 ): Promise<MintBurnCoverageRepairSummary[]> {
   if (gaps.length === 0) return [];
   const summaries: MintBurnCoverageRepairSummary[] = [];
-  const deadlineMs = Math.min(input.deadlineMs ?? Infinity, Date.now() + COVERAGE_REPAIR_WINDOW_MS);
-  const runDeadlineMs = input.deadlineMs ?? deadlineMs;
+  const runDeadlineMs = (input.deadlineMs ?? Date.now() + COVERAGE_REPAIR_WINDOW_MS + COVERAGE_REPAIR_TERMINAL_RESERVE_MS)
+    - COVERAGE_REPAIR_TERMINAL_RESERVE_MS;
+  // A slow D1 batch may outlast the scan allowance; retain time to save its smaller retry span.
+  const deadlineMs = Math.min(runDeadlineMs - 2 * D1_RESOURCE_WINDOW_MS, Date.now() + COVERAGE_REPAIR_WINDOW_MS);
   let stopped = false;
   let idleMs = input.affectedHours.size > 0 ? D1_RESOURCE_WINDOW_MS : 0;
-  const repairBudget = { count: 0, limit: Math.min(COVERAGE_REPAIR_REQUEST_LIMIT, input.budget.limit - input.budget.count) };
+  const repairBudget = { count: 0, limit: Math.max(0, input.budget.limit - input.budget.count - MINT_BURN_REQUEST_RESERVE) };
   // Rotate independently of the live frontier; one failing source must not pin
   // every healthy repair behind it on successive scheduled runs.
   const offset = gaps.length ? Math.floor(input.runTimestamp / (30 * 60)) % gaps.length : 0;
@@ -169,10 +185,13 @@ export async function repairMintBurnCoverage(
     if (!stopped && i >= COVERAGE_REPAIR_MAX_CONFIGS) break;
     throwIfAborted(input.signal);
     const gap = ordered[i]!;
-    const { config, fromBlock } = gap;
+    const { config } = gap;
+    let fromBlock = gap.fromBlock;
     const key = mintBurnConfigKey(config);
+    const remainingConfigs = Math.max(1, Math.min(COVERAGE_REPAIR_MAX_CONFIGS, ordered.length) - i);
+    const fairDeadlineMs = Date.now() + Math.floor((deadlineMs - Date.now()) / remainingConfigs);
     const configDeadlineMs = input.pendingAdmissionKeys?.has(key)
-      ? Math.min(deadlineMs, input.runTimestamp * 1000 + MINT_BURN_PENDING_RUNTIME_BUDGET_MS) : deadlineMs;
+      ? Math.min(fairDeadlineMs, input.runTimestamp * 1000 + MINT_BURN_PENDING_RUNTIME_BUDGET_MS) : fairDeadlineMs;
     const summary: MintBurnCoverageRepairSummary = {
       ...createMintBurnConfigSummary(config, key, config.tier ?? "critical", { scanFrom: fromBlock, scanTo: gap.toBlock }),
       repairReason: "scan-coverage-unproven",
@@ -195,7 +214,10 @@ export async function repairMintBurnCoverage(
       summary.repairReason = "repair-runtime-exhausted";
       continue;
     }
-    const limit = Math.min(input.extendedConfigBudgetLimit, repairBudget.limit - repairBudget.count);
+    const remainingRequests = repairBudget.limit - repairBudget.count;
+    // Preserve a scanner-sized share for each peer; cheap work leaves its remainder to the next.
+    const peerAllowance = Math.min(input.extendedConfigBudgetLimit, Math.floor(remainingRequests / remainingConfigs));
+    const limit = Math.min(COVERAGE_REPAIR_MAX_REQUESTS, remainingRequests - peerAllowance * (remainingConfigs - 1));
     if (limit < config.events.length + 2) {
       summary.repairReason = "repair-budget-exhausted";
       break;
@@ -220,7 +242,10 @@ export async function repairMintBurnCoverage(
       idleMs = D1_RESOURCE_WINDOW_MS;
       continue;
     }
-    const toBlock = Math.min(gap.toBlock, fromBlock + (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) - 1);
+    const spanLimit = cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS;
+    const toBlock = gap.backward ? gap.toBlock : Math.min(gap.toBlock, fromBlock + spanLimit - 1);
+    if (gap.backward) fromBlock = Math.max(fromBlock, toBlock - spanLimit + 1);
+    summary.scanFrom = fromBlock;
     summary.scanTo = toBlock;
     if (context.chainHead < toBlock) {
       summary.repairReason = "finality-head-unavailable";

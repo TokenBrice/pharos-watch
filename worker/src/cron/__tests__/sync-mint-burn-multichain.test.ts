@@ -79,6 +79,7 @@ import * as supplyRepair from "../mint-burn/repair-supply-proofs";
 import { mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
 import * as cache from "../../lib/db-cache";
 import * as abort from "../../lib/abort";
+import * as phases from "../mint-burn/run-configs";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -87,6 +88,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     resetMintBurnMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-16T12:00:00Z"));
+    vi.spyOn(phases, "runMintBurnConfigPhase");
   });
 
   afterEach(() => {
@@ -113,6 +115,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
       new Map(blocks.map((block) => [block, timestamp])));
     const result = await syncMintBurn(db, "alchemy-key");
+    expect(vi.mocked(phases.runMintBurnConfigPhase).mock.calls[0]![0].budget.limit).toBe(200);
     expect(result.status).toBe("ok");
     expect(new Set(vi.mocked(buildAlchemyUrl).mock.calls.map(([chain]) => chain))).toEqual(new Set(["ethereum", "arbitrum"]));
     expect(JSON.parse(result.metadata).chainHeads).toEqual({ ethereum: heads[0], arbitrum: heads[1] });
@@ -249,12 +252,13 @@ describe("syncMintBurn — multi-chain invariant", () => {
     }
     const result = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
     const metadata = JSON.parse(result.metadata);
+    expect(vi.mocked(phases.runMintBurnConfigPhase).mock.calls[0]![0].budget.limit).toBe(200);
     if (outcome.endsWith("overload")) {
       expect(result.status).toBe("degraded");
       expect(metadata.reason).toBe("mint-burn-source-coverage-degraded");
       expect(metadata.coverageRepairs[0]).toMatchObject({ errors: 1, repairReason: "repair-runtime-exhausted" });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 2 });
-      if (outcome === "cursor-overload") expect(metadata.coverageRepairs.map((r: { attempted: boolean }) => r.attempted)).toEqual([false, false]);
+      if (outcome === "cursor-overload") expect(metadata.coverageRepairs.map((r: { attempted: boolean }) => r.attempted)).toEqual([false]);
       if (outcome === "commit-overload") expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()).toEqual({ count: 1 });
       return;
     }

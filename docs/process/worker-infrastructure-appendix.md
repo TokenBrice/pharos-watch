@@ -589,9 +589,9 @@ Chain/task positions below are one-based. Separate chains run independently; tas
 | `statusSelfCheckOffset` | `cron-sentinel` | chain 2, task 2 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
 | `statusSelfCheckOffset` | `price-corroboration` | side stage, task 1 | budget-only | 4 | 300 | not leased by the scheduled wrapper | every occurrence |
 | `sixHourlyBlacklist` | `sync-blacklist` | chain 1, task 1 | scheduled-job | 1 | 720 | 30 / 3 | every occurrence |
-| `halfHourlyMintBurnCritical` | `sync-mint-burn` | chain 1, task 1 | scheduled-job | 1 | 600 | 30 / 3 | every occurrence |
+| `halfHourlyMintBurnCritical` | `sync-mint-burn` | chain 1, task 1 | scheduled-job | 3 | 600 | 30 / 3 | every occurrence |
 | `twoHourlyDexDiscovery` | `sync-dex-discovery` | chain 1, task 1 | scheduled-job | 2 | 780 | 30 / 3 | every occurrence |
-| `halfHourlyMintBurnExtended` | `sync-mint-burn-extended` | chain 1, task 1 | scheduled-job | 1 | 600 | 30 / 3 | every occurrence |
+| `halfHourlyMintBurnExtended` | `sync-mint-burn-extended` | chain 1, task 1 | scheduled-job | 3 | 600 | 30 / 3 | every occurrence |
 | `halfHourlyMeasuredExecution` | `sync-cl-exit-depth` | chain 1, task 1 | scheduled-job | 3 | 540 | 30 / 3 | every occurrence |
 | `halfHourlyMeasuredExecutionSupplemental` | `sync-cl-exit-depth` | chain 1, task 1 | scheduled-job | 3 | 540 | 30 / 3 | every occurrence |
 | `halfHourlyOffset` | `sync-dex-liquidity-stage` | chain 1, task 1 | scheduled-job | 4 | 780 | 30 / 3 | every occurrence |
