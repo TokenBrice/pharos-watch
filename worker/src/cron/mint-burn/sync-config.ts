@@ -59,6 +59,8 @@ export interface MintBurnConfigSummary {
   supplyProofStatus?: "proven" | "residual" | "unavailable";
   supplyProofReason?: string;
   conservationFailure?: boolean;
+  /** Missing required RPC evidence before local deadline/budget attribution. */
+  rpcEvidenceIncomplete?: boolean;
   conservationStatus?: MintBurnConservationRecord["status"];
   conservationReason?: string;
   failedEventDefs: string[];
@@ -114,6 +116,8 @@ export interface SyncMintBurnConfigInput {
   conservationBoundary?: ConservationBoundaryEvidence;
   tronReader?: TronJsonRpcReader;
   supplyProofRepair?: boolean;
+  /** Keep repair diagnostics visible even if a subsequent D1 operation throws. */
+  summary?: MintBurnConfigSummary;
 }
 
 export interface SyncMintBurnConfigResult {
@@ -246,12 +250,12 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   const scanTo = Math.min(input.scanTo, chainHead);
   const configBudget = createBudget(configBudgetLimit);
   const tronReader = input.tronReader?.withBudget(configBudget, deadlineMs);
-  const summary = createMintBurnConfigSummary(config, key, tier, {
+  const summary = Object.assign(input.summary ?? {}, createMintBurnConfigSummary(config, key, tier, {
     attempted: true,
     scanFrom: fromBlock,
     scanTo,
     requestBudgetLimit: configBudget.limit,
-  });
+  }));
   const requiresSupplyProof = requiresReviewedSupplyBurnProof(config);
   if (requiresSupplyProof) await invalidateMintBurnSupplyProofs(db, key, mintBurnConservationFingerprint(config), { signal });
 
@@ -481,6 +485,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     boundary: input.conservationBoundary,
   }) : null;
   if (rangeSupplyProof) {
+    summary.supplyProofStatus = rangeSupplyProof.status;
+    summary.supplyProofReason = rangeParsedMismatch ? "parsed-raw-event-correspondence-failed" : rangeSupplyProof.reason;
     const conflicts = await invalidateConflictingMintBurnSupplyProofs(db, rangeSupplyProof, { signal });
     conservationFence = rangeParsedMismatch || [
       "invalid-rpc-quantity", "unsafe-rpc-quantity", "invalid-raw-log", "inconsistent-log-block-hash",
@@ -488,17 +494,17 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       "range-supply-assumptions-inconsistent",
       "removed-log-reorg",
     ].includes(rangeSupplyProof.reason ?? "") || conflicts.reason != null;
-    if (["boundary-reorg", "closing-log-hash-mismatch", "removed-log-reorg"].includes(rangeSupplyProof.reason ?? "")) {
-      await invalidateMintBurnSupplyProofRange(db, key, Math.max(1, fromBlock - 1), Number.MAX_SAFE_INTEGER,
-        rangeSupplyProof.reason!, runTimestamp, { signal });
-    }
-    await persistMintBurnSupplyProof(db, rangeSupplyProof, { signal });
     summary.supplyProofStatus = conflicts.reason ? "unavailable" : rangeSupplyProof.status;
     summary.supplyProofReason = conflicts.reason ?? (rangeParsedMismatch ? "parsed-raw-event-correspondence-failed" : rangeSupplyProof.reason);
     if (conservationFence) {
       summary.errors++;
       summary.failedEventDefs.push(`range-proof:${summary.supplyProofReason}`);
     }
+    if (["boundary-reorg", "closing-log-hash-mismatch", "removed-log-reorg"].includes(rangeSupplyProof.reason ?? "")) {
+      await invalidateMintBurnSupplyProofRange(db, key, Math.max(1, fromBlock - 1), Number.MAX_SAFE_INTEGER,
+        rangeSupplyProof.reason!, runTimestamp, { signal });
+    }
+    await persistMintBurnSupplyProof(db, rangeSupplyProof, { signal });
   }
 
   const burnCounts = await withRpcRequestOperation(key, "transaction-context", () => classifyBridgeBurnRows(
@@ -528,6 +534,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     }
     summary.bridgeClassificationDeferredRows = deferredRows.length;
   }
+  summary.rpcEvidenceIncomplete = rpcEvidenceIncomplete;
   effectiveBurns += burnCounts.effectiveBurns;
   bridgeBurns += burnCounts.bridgeBurns;
   reviewBurns += burnCounts.reviewBurns;
@@ -569,14 +576,15 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       audit.reason = "incomplete-event-persistence-context";
     }
     conservationAudit = audit;
-    // Publish a verified discrepancy even if the subsequent row write fails.
-    if (audit.status === "mismatch") await persistMintBurnConservation(db, audit, signal);
     summary.conservationStatus = audit.status;
     summary.conservationReason = audit.reason;
+    summary.conservationFailure = conservationFence;
     if (conservationFence) {
       summary.errors++;
       summary.failedEventDefs.push(`conservation:${audit.reason ?? audit.status}`);
     }
+    // Publish a verified discrepancy even if the subsequent row write fails.
+    if (audit.status === "mismatch") await persistMintBurnConservation(db, audit, signal);
   }
   let persistResult;
   try {
@@ -754,6 +762,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.advanceReason = "scan-coverage-unproven";
   }
   // Maintenance consumes the same budget but cannot establish a failed scan's provider cause.
+  summary.rpcEvidenceIncomplete = rpcEvidenceIncomplete;
   rpcEvidenceIncomplete &&= !conservationFence && !budgetExhausted(configBudget)
     && (deadlineMs == null || Date.now() < deadlineMs);
   if (!input.supplyProofRepair && rangeSupplyProof?.status !== "proven") await reconcileReviewedSupplyBurns(db, config, rpcEndpoints, configBudget, txContextCache,

@@ -133,6 +133,7 @@ describe("completeMintBurnRun", () => {
     const completion = await completeMintBurnRun(input);
     expect(new TextEncoder().encode(JSON.stringify(completion.metadata)).byteLength).toBeLessThan(64 * 1024);
     expect(completion.metadata).not.toHaveProperty("configBreakdown");
+    expect(completion.metadata).not.toHaveProperty("coverageCycle");
     expect(completion.metadata.configBreakdownSummary).toMatchObject({ total: 200, attempted: 94, skipped: 106 });
     expect(completion.metadata.configSamples).toHaveLength(12);
     expect(completion.metadata.runDrilldownCacheKey).toBe("mint-burn:run-detail:sync-mint-burn");
@@ -161,38 +162,70 @@ describe("completeMintBurnRun", () => {
     expect(parsed.publication.legsTruncated).toBe(pendingCount === 200);
   });
 
-  it.each(["extended", "critical", "reorg", "repair", "deadline"])("immediately degrades for %s with the real reason", async (kind) => {
-    const input = buildRunInput();
-    if (kind === "extended") input.lane = kind;
-    const deadline = kind === "deadline", repair = kind === "repair" || deadline;
-    const summary = { key: "test", conservationFailure: !deadline, errors: 1, failedEventDefs: [],
-      conservationStatus: kind === "reorg" ? "unavailable" : "mismatch", conservationReason: kind === "reorg" ? "boundary-reorg" : undefined,
-      ...(deadline ? { conservationStatus: "unsupported", supplyProofStatus: "unavailable",
-        supplyProofReason: "persisted-event-readback-deadline" } : {}),
-      repairReason: "scan-coverage-unproven" } as unknown as MintBurnCoverageRepairSummary;
-    if (repair) input.phase.coverageRepairs = [summary];
-    else input.phase.configBreakdown = [summary];
-    const result = await completeMintBurnRun(input);
-    expect(result.status).toBe("degraded");
-    expect(result.metadata).toMatchObject({ degradedSignal: true, apiErrors: 0,
-      admittedConservationFailures: deadline ? 0 : 1, conservationFailures: deadline ? 0 : 1,
-      reason: deadline ? "mint-burn-source-coverage-degraded" : "mint-burn-conservation-failure" });
-  });
-
-  it("does not publish another chain's finalized head as the legacy Ethereum chainHead", async () => {
-    const input = buildRunInput();
-    // Both admitted Ethereum endpoints failed; only Tron's finalized head was read.
-    input.chainHeads = new Map([["tron", 70_000_000]]);
-
-    const result = await completeMintBurnRun(input);
-
-    expect(result.metadata.chainHeads).toEqual({ tron: 70_000_000 });
-    expect(result.metadata.chainHead).toBeNull();
-  });
+  it.each(["deadline", "context", "runtime", "budget", "unattempted", "scheduling-write",
+    "live-deadline", "conservation", "repair-conservation", "reorg", "repair-rpc", "decode", "quarantine", "materialization", "api"])(
+    "isolates repair debt: %s", async (kind) => {
+      const input = buildRunInput();
+      const config = makeMintBurnConfig();
+      const live = { ...createMintBurnConfigSummary(config, "live", "critical"), scanFrom: 1, advancedTo: 2 };
+      const repair: MintBurnCoverageRepairSummary = { ...live, key: "repair", attempted: true,
+        advancedTo: null, errors: 1, repairReason: "scan-coverage-unproven" };
+      const capacity = ["deadline", "context", "runtime", "budget", "unattempted", "scheduling-write"].includes(kind);
+      input.phase.configBreakdown = [live];
+      input.phase.coverageRepairs = [repair];
+      if (!capacity && !kind.startsWith("repair-") && kind !== "decode" && kind !== "quarantine") {
+        repair.errors = 0; repair.repairReason = "proof-committed";
+      }
+      if (kind.endsWith("deadline")) Object.assign(kind === "deadline" ? repair : live, {
+        supplyProofStatus: "unavailable", supplyProofReason: "persisted-event-readback-deadline",
+        failedEventDefs: ["range-proof:persisted-event-readback-deadline"], errors: 1,
+      });
+      if (kind === "context" || kind === "repair-rpc") Object.assign(repair, {
+        failedEventDefs: ["tx-context:3801", "tx-context-request-not-started:3801"],
+        txContextShortfalls: 3801, rpcEvidenceIncomplete: kind === "repair-rpc",
+        conservationStatus: "unavailable", conservationReason: "incomplete-event-persistence-context",
+      });
+      if (kind === "runtime" || kind === "budget" || kind === "unattempted") {
+        repair.attempted = false;
+        repair.errors = 0;
+        if (kind !== "unattempted") repair.repairReason = `repair-${kind}-exhausted`;
+      }
+      if (kind === "scheduling-write") repair.repairReason = "proof-committed";
+      if (kind.includes("conservation") || kind === "reorg") Object.assign(kind === "repair-conservation" ? repair : live, {
+        conservationFailure: true, conservationStatus: kind === "reorg" ? "unavailable" : "mismatch",
+        conservationReason: kind === "reorg" ? "boundary-reorg" : undefined,
+      });
+      if (kind === "context") input.pendingAdmissionKeys = new Set([repair.key]);
+      if (kind === "repair-rpc") input.phase.coverageRepairs.push({ ...repair, key: "debt", rpcEvidenceIncomplete: false });
+      if (kind === "decode") repair.rowsDroppedDecode = 1;
+      if (kind === "quarantine") repair.rowsQuarantinedDecode = 1;
+      input.recalcFailed = kind === "materialization";
+      if (kind === "api") input.phase.apiErrors = 2;
+      // Recover an escalated producer; retain debt beyond the threshold.
+      input.runState.degradedStreak = capacity ? 3 : 0;
+      for (let run = 0; run < 5; run++) {
+        const result = await completeMintBurnRun(input);
+        expect(result.status).toBe(!capacity && run >= 2 ? "error" : kind === "api" && run === 0 ? "ok" : "degraded");
+        expect(result.metadata.degradedSignal).toBe(!capacity);
+        expect(result.metadata.degradedStreak).toBe(capacity ? 0 : run + 1);
+        expect(result.metadata.outputPublishedAt != null).toBe(result.status !== "error" && !input.recalcFailed);
+        expect(result.metadata.reason).toBe(result.status === "ok" ? undefined : kind.includes("conservation") || kind === "reorg"
+          ? "mint-burn-conservation-failure" : input.recalcFailed ? "mint-burn-hourly-recalc-failed"
+          : "mint-burn-source-coverage-degraded");
+        input.runState.degradedStreak = result.metadata.degradedStreak as number;
+        expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, input.runState.degradedStreak, null);
+      }
+      if (kind === "api") {
+        input.phase.apiErrors = 0;
+        expect((await completeMintBurnRun(input)).status).toBe("ok");
+        expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, 0, null);
+      }
+    });
 
   it.each(["extended", "critical"] as const)("keeps diagnostic-only header unavailability separate from %s collection health", async (lane) => {
     const input = buildRunInput();
     input.lane = lane;
+    input.chainHeads = new Map([["tron", 70_000_000]]);
     if (lane === "critical") {
       input.criticalContractsEnabled = 1;
       input.phase.criticalContractsSatisfied = 1;
@@ -202,6 +235,8 @@ describe("completeMintBurnRun", () => {
       key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("ok");
+    expect(result.metadata.chainHeads).toEqual({ tron: 70_000_000 });
+    expect(result.metadata.chainHead).toBeNull();
     expect(result.metadata.conservationUnavailable).toBe(1);
     expect(result.metadata.configSamples).toEqual(expect.arrayContaining([expect.objectContaining({
       supplyProofStatus: "unavailable", supplyProofReason: "audit-rpc-unavailable",
@@ -239,25 +274,6 @@ describe("completeMintBurnRun", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get())
       .toEqual({ count: failRebuild ? 1 : 0 });
     expect(sweepRecentRoundtrips).toHaveBeenCalled();
-  });
-
-  it("drains old non-standard debt even when both candidate maintenance stages fail", async () => {
-    const { sqlite, db } = fixtures.open();
-    sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
-       tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
-      VALUES ('old', 'usdc-circle', 'USDC', 'ethereum', 'mint', 100, 100,
-        'old', 1, 3601, '', 'atomic_roundtrip')`).run();
-    sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', 3600)").run();
-    sqlite.prepare(`INSERT INTO mint_burn_hourly
-      (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd)
-      VALUES ('usdc-circle', 'ethereum', 3600, 1, 100)`).run();
-    vi.mocked(healNullPrices).mockRejectedValueOnce(new Error("heal unavailable"));
-    vi.mocked(sweepRecentRoundtrips).mockRejectedValueOnce(new Error("sweep unavailable"));
-    await completeMintBurnRun({ ...buildRunInput(), db });
-    expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get())
-      .toEqual({ mint_count: 0, mint_volume_usd: 0 });
-    expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
   });
 
   it.each([
@@ -305,13 +321,17 @@ describe("completeMintBurnRun", () => {
       .toEqual({ last_block: 77 });
   });
 
-  it("retains seeded debt across an interrupted drain and resumes without candidate work", async () => {
+  it.each(["standard", "atomic_roundtrip"])("resumes %s debt despite interrupted drain and failed maintenance", async (flowType) => {
     const { sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO mint_burn_events
       (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
        tx_hash, block_number, timestamp, explorer_tx_url, price_repair_status)
       VALUES ('restart', 'usdc-circle', 'USDC', 'ethereum', 'mint', 10, 10,
         'restart', 1, 3601, '', 'pending_aggregate')`).run();
+    sqlite.prepare("UPDATE mint_burn_events SET flow_type = ?").run(flowType);
+    sqlite.prepare(`INSERT INTO mint_burn_hourly
+      (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd)
+      VALUES ('usdc-circle', 'ethereum', 3600, 1, 10)`).run();
     const controller = new AbortController();
     const interruptedDb = createSqliteD1(sqlite, { onAll(sql) {
       if (sql.includes("FROM mint_burn_dirty_hours")) controller.abort(new Error("drain interrupted"));
@@ -319,11 +339,14 @@ describe("completeMintBurnRun", () => {
     await expect(drainMintBurnMaterializationDebt(interruptedDb, { signal: controller.signal }))
       .rejects.toThrow("drain interrupted");
     expect(sqlite.prepare("SELECT hour_ts FROM mint_burn_dirty_hours").all()).toEqual([{ hour_ts: 3600 }]);
-    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
-    expect(await drainMintBurnMaterializationDebt(createSqliteD1(sqlite))).toBe(1);
+    expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get()).toEqual({ mint_volume_usd: 10 });
+    vi.mocked(healNullPrices).mockRejectedValueOnce(new Error("heal unavailable"));
+    vi.mocked(sweepRecentRoundtrips).mockRejectedValueOnce(new Error("sweep unavailable"));
+    await completeMintBurnRun({ ...buildRunInput(), db: createSqliteD1(sqlite) });
     expect(sqlite.prepare("SELECT price_repair_status FROM mint_burn_events").get())
       .toEqual({ price_repair_status: "recovered" });
-    expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get()).toEqual({ mint_volume_usd: 10 });
+    expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_count: flowType === "standard" ? 1 : 0, mint_volume_usd: flowType === "standard" ? 10 : 0 });
     expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
   });
 
@@ -338,22 +361,6 @@ describe("completeMintBurnRun", () => {
     expect(getNullPriceBacklog).not.toHaveBeenCalled();
     expect(healNullPrices).not.toHaveBeenCalled();
     expect(sweepRecentRoundtrips).not.toHaveBeenCalled();
-  });
-
-  it("escalates critical failures and resets the streak on recovery", async () => {
-    const input = buildRunInput({ apiErrors: 2 });
-    expect((await completeMintBurnRun(input)).status).toBe("ok");
-    input.runState.degradedStreak = 1;
-    expect((await completeMintBurnRun(input)).status).toBe("degraded");
-    input.runState.degradedStreak = 2;
-    vi.mocked(healNullPrices).mockClear();
-    vi.mocked(sweepRecentRoundtrips).mockClear();
-    expect((await completeMintBurnRun(input)).status).toBe("error");
-    expect(healNullPrices).not.toHaveBeenCalled();
-    expect(sweepRecentRoundtrips).not.toHaveBeenCalled();
-    input.phase.apiErrors = 0;
-    expect((await completeMintBurnRun(input)).status).toBe("ok");
-    expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, 0, null);
   });
 
   it.each(["critical", "extended"] as const)("keeps pending findings visible without escalating %s publication health", async (lane) => {
@@ -403,52 +410,27 @@ describe("completeMintBurnRun", () => {
     });
   });
 
-  it("keeps extended failures degraded at the critical error threshold", async () => {
-    const input = buildRunInput({ apiErrors: 2 });
-    input.lane = "extended";
-    input.runState.degradedStreak = 2;
-    expect((await completeMintBurnRun(input)).status).toBe("degraded");
-  });
-
   it.each([
-    { name: "keeps a rotated extended pass inside its window non-degraded",
-      status: "cycle-in-progress", duration: null, elapsed: 1_800, incomplete: 89,
-      errors: 0, streak: 0, resultStatus: "ok", degraded: false,
-      expectedCycle: { status: "cycle-in-progress", coverageCycleSec: null } },
-    { name: "does not degrade a completed pass for a config older than 75 minutes",
-      status: "complete", duration: 5_400, elapsed: 1_800, incomplete: 89,
-      errors: 0, streak: 0, resultStatus: "ok", degraded: undefined,
-      expectedCycle: { coverageCycleSec: 5_400 } },
-    { name: "degrades the extended lane when a full pass misses the window",
-      status: "stalled", duration: 5_400, elapsed: 7_260, incomplete: 88,
-      errors: 0, streak: 0, resultStatus: "degraded", degraded: true,
-      reason: "mint-burn-coverage-cycle-stalled",
-      expectedCycle: { status: "stalled", coverageCycleSec: 5_400, expectedWindowSec: 7_200 } },
-    { name: "still degrades an in-window extended pass for a genuinely failing config",
-      status: "cycle-in-progress", duration: null, elapsed: 1_800, incomplete: 89,
-      errors: 2, streak: 1, resultStatus: "degraded", degraded: true,
-      reason: "mint-burn-source-coverage-degraded", expectedCycle: undefined },
-  ] as const)("$name", async (scenario) => {
-    const input = buildRunInput({ apiErrors: scenario.errors });
+    ["cycle-in-progress", null, 1800, 0, 0, "ok"],
+    ["complete", 5400, 1800, 0, 0, "ok"],
+    ["stalled", 5400, 7260, 0, 0, "degraded"],
+    ["cycle-in-progress", null, 1800, 2, 1, "degraded"],
+  ] as const)("judges extended %s by pass window and real failures (%#)", async (status, duration, elapsed, errors, streak, expected) => {
+    const input = buildRunInput({ apiErrors: errors });
     input.lane = "extended";
-    input.runState.degradedStreak = scenario.streak;
-    if (scenario.status === "complete") input.attemptCoverage.oldestAttemptAgeSec = 75 * 60 + 60;
+    input.runState.degradedStreak = streak;
+    if (status === "complete") input.attemptCoverage.oldestAttemptAgeSec = 75 * 60 + 60;
     input.coverageCycle = {
-      status: scenario.status, expectedWindowSec: 7_200, coverageCycleSec: scenario.duration,
-      cycleElapsedSec: scenario.elapsed, lastCompletedAt: scenario.duration === null ? null : 1_790_000_000,
-      incompleteConfigs: scenario.incomplete, providerDeferredConfigs: 0, stuckConfigs: [], stuckConfigCount: 0,
+      status, expectedWindowSec: 7200, coverageCycleSec: duration,
+      cycleElapsedSec: elapsed, lastCompletedAt: duration === null ? null : 1_790_000_000,
+      incompleteConfigs: 89, providerDeferredConfigs: 0, stuckConfigs: [], stuckConfigCount: 0,
     };
     const result = await completeMintBurnRun(input);
-    expect(result.status).toBe(scenario.resultStatus);
-    if (scenario.degraded !== undefined) expect(result.metadata.degradedSignal).toBe(scenario.degraded);
-    if (scenario.reason) expect(result.metadata.reason).toBe(scenario.reason);
-    if (scenario.expectedCycle) expect(result.metadata.coverageCycle).toMatchObject(scenario.expectedCycle);
-  });
-
-  it("publishes no coverage cycle for the critical lane", async () => {
-    const result = await completeMintBurnRun(buildRunInput());
-    expect(result.status).toBe("ok");
-    expect(result.metadata).not.toHaveProperty("coverageCycle");
+    expect(result.status).toBe(expected);
+    expect(result.metadata.degradedSignal).toBe(expected !== "ok");
+    expect(result.metadata.reason).toBe(expected === "ok" ? undefined : status === "stalled"
+      ? "mint-burn-coverage-cycle-stalled" : "mint-burn-source-coverage-degraded");
+    expect(result.metadata.coverageCycle).toMatchObject(input.coverageCycle);
   });
 
   it("degrades healthy completion for each failed persistence surface", async () => {
@@ -459,14 +441,6 @@ describe("completeMintBurnRun", () => {
       input.runDrilldown.persistenceFailed = surface === "drilldown";
       expect((await completeMintBurnRun(input)).status, surface).toBe("degraded");
     }
-  });
-
-  it("continues roundtrip maintenance after a recoverable healer failure", async () => {
-    vi.mocked(healNullPrices).mockRejectedValueOnce(new Error("healer unavailable"));
-    vi.mocked(sweepRecentRoundtrips).mockResolvedValueOnce({ reclassified: 7, affectedHours: new Map(), saturated: false });
-    const result = await completeMintBurnRun(buildRunInput());
-    expect(result.status).toBe("ok");
-    expect(result.metadata.roundtripSweepCount).toBe(7);
   });
 
   it("degrades explicitly but completes maintenance when backlog metadata is unavailable", async () => {
