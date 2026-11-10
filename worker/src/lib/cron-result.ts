@@ -1,4 +1,25 @@
 import type { CronResult } from "./cron-logger";
+import { confirmedCronOutputAt } from "./cron-output";
+import { parseJsonObject } from "./json-parse";
+
+export const COMMITTED_PUBLICATION_ABORT_REASON = "aborted-after-publication";
+
+/** Only an opted-in, confirmed publication survives cancellation; completion stays degraded. */
+export function retainCommittedCronResultAfterAbort(result: CronResult | void): CronResult | undefined {
+  if (result?.abortResultPolicy !== "preserve-committed-publication"
+    || !result.productivity?.productive || !result.productivity.publications?.length) return undefined;
+  const metadata = parseJsonObject(result.metadata);
+  if (confirmedCronOutputAt(result, metadata, Math.floor(Date.now() / 1000)) == null) return undefined;
+  return {
+    ...result,
+    status: "degraded",
+    metadata: JSON.stringify({
+      ...metadata,
+      ...(metadata?.reason && metadata.reason !== COMMITTED_PUBLICATION_ABORT_REASON ? { preAbortReason: metadata.reason } : {}),
+      reason: COMMITTED_PUBLICATION_ABORT_REASON,
+    }),
+  };
+}
 
 export type CronMetadataPrimitive = string | number | boolean | null;
 

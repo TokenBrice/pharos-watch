@@ -142,6 +142,21 @@ describe("syncStablecoins", () => {
     vi.restoreAllMocks();
   });
 
+  it.each(["cache-write", "depeg-pipeline", "complete", "fallback-cache-write", "fallback-depeg-pipeline"])("retains committed publication after cancellation at %s", async (stage) => {
+    const db = makeSyncDb(); const writes = trackCacheWrites(db); const controller = new AbortController();
+    if (stage.startsWith("fallback")) vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== CIRCUIT_SOURCE.DL_STABLECOINS);
+    mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60), stage.startsWith("fallback") ? fallbackCoinGeckoData() : {}));
+    const result = await syncStablecoins(db, controller.signal, {
+      reportProgress: async (update) => { if (update.stage === stage) controller.abort("cancelled"); },
+    });
+    expect(result).toMatchObject({ status: "degraded", itemCount: stage.startsWith("fallback") ? 50 : 60, abortResultPolicy: "preserve-committed-publication",
+      productivity: { productive: true, publications: [{ surface: "stablecoins", generationId: expect.any(String) }] } });
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "aborted-after-publication", cacheWriteMode: "published",
+      ...(stage === "complete" ? {} : { quality: { depegObservation: null, depegObservationUnavailableReason: "aborted" } }),
+      capabilities: { stablecoinsCache: true, depegPipeline: stage === "complete" } });
+    expect(writes.some((write) => write.key === "stablecoins")).toBe(true);
+  });
+
   it("publishes the DefiLlama snapshot and runs the downstream depeg workflow", async () => {
     const db = makeSyncDb();
     const assertCost = observeMockD1Cost(db);
