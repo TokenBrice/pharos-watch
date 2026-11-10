@@ -20,6 +20,14 @@ function mockD1(tables: MockTableConfig[] = []) {
   ]);
 }
 
+function eventResponse(db: D1Database, query = "") {
+  return handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether${query}`));
+}
+
+function oneEventDb(row = makeMintBurnRow()) {
+  return mockD1([{ match: "COUNT", rows: [{ total: 1 }] }, { match: "mint_burn_events", rows: [row] }]);
+}
+
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
@@ -72,33 +80,19 @@ describe("handleMintBurnEvents", () => {
     sqlite.prepare(`INSERT INTO mint_burn_events (${Object.keys(event).join(",")}, supply_proof_id)
       VALUES (${Object.keys(event).map(() => "?").join(",")}, 'proof')`).run(...Object.values(event));
     for (const scope of ["all", "counted"]) {
-      const body = await readJsonResponse(await handleMintBurnEvents(db,
-        new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&scope=${scope}`)), 200) as { events: unknown[]; total: number };
+      const body = await readJsonResponse(await eventResponse(db, `&scope=${scope}`), 200) as { events: unknown[]; total: number };
       expect(body.events).toHaveLength(lifecycle === "accepted" ? 1 : 0);
       expect(body.total).toBe(lifecycle === "accepted" ? 1 : 0);
     }
   });
 
   it("maps snake_case to camelCase", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [row] },
-    ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
+    const db = oneEventDb(row);
+    const res = await eventResponse(db);
     const body = (await res.json()) as { events: Array<Record<string, unknown>> };
     const event = body.events[0];
-    expect(event).toHaveProperty("stablecoinId");
-    expect(event).toHaveProperty("chainId");
-    expect(event).toHaveProperty("amountUsd");
-    expect(event).toHaveProperty("priceUsed");
-    expect(event).toHaveProperty("priceTimestamp");
-    expect(event).toHaveProperty("priceSource");
-    expect(event).toHaveProperty("flowType");
-    expect(event).toHaveProperty("burnType");
-    expect(event).toHaveProperty("burnReviewReason");
-    expect(event).toHaveProperty("txHash");
-    expect(event).toHaveProperty("blockNumber");
-    expect(event).toHaveProperty("explorerTxUrl");
+    for (const field of ["stablecoinId", "chainId", "amountUsd", "priceUsed", "priceTimestamp", "priceSource",
+      "flowType", "burnType", "burnReviewReason", "txHash", "blockNumber", "explorerTxUrl"]) expect(event).toHaveProperty(field);
     expect(event).not.toHaveProperty("stablecoin_id");
   });
 
@@ -109,18 +103,12 @@ describe("handleMintBurnEvents", () => {
     ["rejects invalid scope with 400", "scope=debug"],
   ])("%s", async (_name, query) => {
     const db = mockD1([]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&${query}`),
-    );
+    const res = await eventResponse(db, `&${query}`);
     expect(res.status).toBe(400);
   });
 
   it("accepts Arbitrum as the canonical USDai mint/burn chain", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [makeMintBurnRow({ stablecoin_id: "usdai-usd-ai", chain_id: "arbitrum", symbol: "USDai" })] },
-    ]) as MockD1Database;
+    const db = oneEventDb(makeMintBurnRow({ stablecoin_id: "usdai-usd-ai", chain_id: "arbitrum", symbol: "USDai" })) as MockD1Database;
 
     const res = await handleMintBurnEvents(
       db,
@@ -157,56 +145,17 @@ describe("handleMintBurnEvents", () => {
     });
   });
 
-  it("accepts valid bridge_burn filter", async () => {
-    const bridgeRow = makeMintBurnRow({
-      direction: "burn",
-      burn_type: "bridge_burn",
-    });
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [bridgeRow] },
-    ]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&burnType=bridge_burn"),
-    );
-    const body = (await readJsonResponse(res, 200)) as { events: Array<{ burnType: string | null }> };
-    expect(body.events[0]?.burnType).toBe("bridge_burn");
-  });
-
-  it("maps flowType from snake_case and preserves atomic roundtrip rows", async () => {
-    const atomicRow = makeMintBurnRow({
-      direction: "burn",
-      flow_type: "atomic_roundtrip",
-      burn_type: "effective_burn",
-    });
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [atomicRow] },
-    ]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"),
-    );
-    const body = (await readJsonResponse(res, 200)) as { events: Array<{ flowType: string }> };
-    expect(body.events[0]?.flowType).toBe("atomic_roundtrip");
-  });
-
-  it("preserves bridge_transfer flow types for bridge noise rows", async () => {
-    const bridgeRow = makeMintBurnRow({
-      direction: "mint",
-      flow_type: "bridge_transfer",
-    });
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [bridgeRow] },
-    ]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"),
-    );
-    const body = (await readJsonResponse(res, 200)) as { events: Array<{ flowType: string }> };
-    expect(body.events[0]?.flowType).toBe("bridge_transfer");
+  it.each([
+    { name: "accepts valid bridge_burn filter", row: makeMintBurnRow({ direction: "burn", burn_type: "bridge_burn" }),
+      query: "&burnType=bridge_burn", field: "burnType", value: "bridge_burn" },
+    { name: "maps flowType from snake_case and preserves atomic roundtrip rows",
+      row: makeMintBurnRow({ direction: "burn", flow_type: "atomic_roundtrip", burn_type: "effective_burn" }),
+      query: "", field: "flowType", value: "atomic_roundtrip" },
+    { name: "preserves bridge_transfer flow types for bridge noise rows",
+      row: makeMintBurnRow({ direction: "mint", flow_type: "bridge_transfer" }), query: "", field: "flowType", value: "bridge_transfer" },
+  ])("$name", async ({ row, query, field, value }) => {
+    const body = await readJsonResponse<{ events: Record<string, unknown>[] }>(await eventResponse(oneEventDb(row), query), 200);
+    expect(body.events[0]?.[field]).toBe(value);
   });
 
   it.each([
@@ -224,7 +173,7 @@ describe("handleMintBurnEvents", () => {
       makeMintBurnRow({ id: "mint-review", amount_usd: 2_000_000, burn_type: "review_required" }),
     ]);
     const body = await readJsonResponse<{ events: { id: string }[]; total: number }>(
-      await handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&${query}`)), 200);
+      await eventResponse(db, `&${query}`), 200);
     expect(body.events.map((event) => event.id).sort()).toEqual([...expected].sort());
     expect(body.total).toBe(expected.length);
   });
@@ -235,10 +184,7 @@ describe("handleMintBurnEvents", () => {
     ["rejects offsets above the endpoint cap", "offset=25001", "Invalid offset: must be between 0 and 25000"],
   ])("%s", async (_name, query, error) => {
     const db = mockD1([]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&${query}`),
-    );
+    const res = await eventResponse(db, `&${query}`);
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error });
   });
@@ -248,10 +194,7 @@ describe("handleMintBurnEvents", () => {
       { match: "mint_burn_events", rows: [row] },
     ]) as MockD1Database;
 
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&includeTotal=false"),
-    );
+    const res = await eventResponse(db, "&includeTotal=false");
 
     const body = (await readJsonResponse(res, 200)) as { events: unknown[]; total: number; totalExact: boolean };
     expect(body.events).toHaveLength(1);
@@ -281,15 +224,6 @@ describe("handleMintBurnEvents", () => {
     expect(ids).toEqual(["mb-b", "mb-a", "mb-c", "mb-d"]);
   });
 
-  it("includes X-Data-Age header", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [row] },
-    ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
-    expect(res.headers.has("X-Data-Age")).toBe(true);
-  });
-
   it("uses sync-mint-burn cron timestamp for freshness metadata", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -297,7 +231,8 @@ describe("handleMintBurnEvents", () => {
       { match: "mint_burn_events", rows: [makeMintBurnRow({ timestamp: now - 10 * 86400 })] },
       { match: "cron_runs", rows: [], first: { started_at: now - 20 } },
     ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
+    const res = await eventResponse(db);
+    expect(res.headers.has("X-Data-Age")).toBe(true);
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeLessThan(120);
   });

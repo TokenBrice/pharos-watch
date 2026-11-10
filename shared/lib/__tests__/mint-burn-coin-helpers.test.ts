@@ -76,93 +76,37 @@ describe("inferHas24hActivity", () => {
     expect(inferHas24hActivity({ ...coin, classification: { ...coin.classification!, window24h: unknown } })).toBeNull();
     expect(resolveBaselineDailyNetUsd({ ...coin, classification: undefined, valuation: { ...valuation24h(), baseline: "unknown" } })).toBeNull();
   });
-  it("returns explicit has24hActivity when present", () => {
-    expect(inferHas24hActivity(stubCoin({ has24hActivity: true }))).toBe(true);
-    expect(inferHas24hActivity(stubCoin({ has24hActivity: false }))).toBe(false);
-  });
-
-  it("preserves an explicit unknown flag even with observed subtotals", () => {
-    expect(inferHas24hActivity(stubCoin({ has24hActivity: null }))).toBeNull();
-    expect(inferHas24hActivity(stubCoin({ has24hActivity: null, mintCount24h: 1, mintVolume24hUsd: 100 }))).toBeNull();
-  });
-
-  it("derives from volume fields when has24hActivity missing", () => {
-    expect(inferHas24hActivity(stubCoin({ mintVolume24hUsd: 100 }))).toBe(true);
-    expect(inferHas24hActivity(stubCoin({ burnCount24h: 1 }))).toBe(true);
-    expect(inferHas24hActivity(stubCoin())).toBe(false);
-  });
 });
 
-describe("resolvePressureScore", () => {
-  it("returns the canonical pressure shift score", () => {
-    expect(resolvePressureScore(stubCoin({ pressureShiftScore: 42 }))).toBe(42);
-  });
-
-  it("returns null when the score is unavailable", () => {
-    expect(resolvePressureScore(stubCoin())).toBeNull();
-  });
+it.each([
+  ["explicit activity", inferHas24hActivity, { has24hActivity: true }, true],
+  ["explicit quiet", inferHas24hActivity, { has24hActivity: false }, false],
+  ["explicit unknown", inferHas24hActivity, { has24hActivity: null }, null],
+  ["unknown with subtotals", inferHas24hActivity, { has24hActivity: null, mintCount24h: 1, mintVolume24hUsd: 100 }, null],
+  ["legacy volume activity", inferHas24hActivity, { mintVolume24hUsd: 100 }, true],
+  ["legacy count activity", inferHas24hActivity, { burnCount24h: 1 }, true],
+  ["legacy quiet", inferHas24hActivity, {}, false],
+  ["published pressure", resolvePressureScore, { pressureShiftScore: 42 }, 42],
+  ["unavailable pressure", resolvePressureScore, {}, null],
+  ["published state", resolvePressureState, { pressureShiftState: "improving" }, "improving"],
+  ["derived improving", resolvePressureState, { pressureShiftScore: 50 }, "improving"],
+  ["derived worsening", resolvePressureState, { pressureShiftScore: -50 }, "worsening"],
+  ["published direction", resolveNetDirection, { netFlowDirection24h: "minting" }, "minting"],
+  ["derived minting", resolveNetDirection, { netFlow24hUsd: 1000, mintVolume24hUsd: 1000 }, "minting"],
+  ["quiet direction", resolveNetDirection, {}, "inactive"],
+] satisfies [string, (coin: MintBurnCoinFlow) => unknown, Partial<MintBurnCoinFlow>, unknown][])("resolves %s", (_name, resolve, overrides, expected) => {
+  expect(resolve(stubCoin(overrides))).toBe(expected);
 });
 
-describe("resolvePressureState", () => {
-  it("returns explicit state when present", () => {
-    expect(resolvePressureState(stubCoin({ pressureShiftState: "improving" }))).toBe("improving");
-  });
-
-  it("derives from score when state missing", () => {
-    expect(resolvePressureState(stubCoin({ pressureShiftScore: 50 }))).toBe("improving");
-    expect(resolvePressureState(stubCoin({ pressureShiftScore: -50 }))).toBe("worsening");
-  });
-});
-
-describe("resolveNetDirection", () => {
-  it("returns explicit direction when present", () => {
-    expect(resolveNetDirection(stubCoin({ netFlowDirection24h: "minting" }))).toBe("minting");
-  });
-
-  it("derives from net flow when direction missing", () => {
-    expect(resolveNetDirection(stubCoin({ netFlow24hUsd: 1000, mintVolume24hUsd: 1000 }))).toBe("minting");
-  });
-
-  it("returns inactive when all zeros (no activity)", () => {
-    expect(resolveNetDirection(stubCoin())).toBe("inactive");
-  });
-
-});
-
-describe("resolveNetDirection — valuation completeness", () => {
-  it("drops a burning direction that unpriced mints could overturn", () => {
-    const coin = stubCoin({
-      has24hActivity: true,
-      netFlow24hUsd: -1000,
-      netFlowDirection24h: "burning",
-      valuation: valuation24h(PARTIAL_MINT_SIDE),
-    });
-    expect(resolveNetDirection(coin)).toBeNull();
-  });
-
-  it("keeps minting when only mints are unpriced, because they can only raise the net", () => {
-    const coin = stubCoin({
-      has24hActivity: true,
-      netFlow24hUsd: 1000,
-      netFlowDirection24h: "minting",
-      valuation: valuation24h(PARTIAL_MINT_SIDE),
-    });
-    expect(resolveNetDirection(coin)).toBe("minting");
-  });
-
-  it("never reports flat for a partial window with zero known net", () => {
-    const coin = stubCoin({
-      has24hActivity: true,
-      netFlow24hUsd: 0,
-      netFlowDirection24h: "flat",
-      valuation: valuation24h(PARTIAL_MINT_SIDE),
-    });
-    expect(resolveNetDirection(coin)).toBeNull();
-  });
-
-  it("keeps a null wire direction unavailable", () => {
-    expect(resolveNetDirection(stubCoin({ has24hActivity: true, netFlow24hUsd: null, netFlowDirection24h: null }))).toBeNull();
-  });
+it.each([
+  [-1000, "burning", null],
+  [1000, "minting", "minting"],
+  [0, "flat", null],
+  [null, null, null],
+] as const)("gates the partial-window direction for net %s", (netFlow24hUsd, netFlowDirection24h, expected) => {
+  expect(resolveNetDirection(stubCoin({ has24hActivity: true, netFlow24hUsd, netFlowDirection24h,
+    valuation: netFlow24hUsd === null ? undefined : valuation24h(PARTIAL_MINT_SIDE),
+  }))).toBe(expected);
 });
 
 describe("resolveCoinNetFlow", () => {

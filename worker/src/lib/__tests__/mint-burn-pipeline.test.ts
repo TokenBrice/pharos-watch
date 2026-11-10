@@ -1,14 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mintBurnAlchemyEndpoint } from "../mint-burn-pipeline/rpc";
 
-vi.mock("../db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../db")>();
-  return {
-    ...actual,
-    batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
-  };
-});
-
 const alchemyMockHelpers = vi.hoisted(() => ({
   makeAlchemyContext: (txHash: string) => ({
     tx: {
@@ -50,7 +42,6 @@ vi.mock("../mint-burn-bridge-classifier", () => ({
 
 import { getAlchemyTransactionContextBatchMany } from "../alchemy-logs";
 import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
-import { batchExecute } from "../db";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import { applySupplyExcludedProtocolInternalFlows } from "../mint-burn-pipeline/reviewed-protocol-flows";
@@ -80,7 +71,6 @@ import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/material
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
-const realDb = await vi.importActual<{ batchExecute: typeof batchExecute }>("../db");
 
 function makeRow(overrides: Partial<MintBurnRow> = {}): MintBurnRow {
   return makeMintBurnRow({
@@ -312,7 +302,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("retains split dust burns so a 15000 mint and three 5000 burns conserve zero", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const config = makeMintBurnConfig({ asset: { stablecoinId: "split", startBlock: 1 } });
     const rows = [15000, 5000, 5000, 5000].flatMap((amount, index) => parseMintBurnLogs(config, {
       signature: "Transfer(address,address,uint256)", topicHash: "0x0", direction: index ? "burn" : "mint", amountEncoding: "transfer-value",
@@ -328,7 +317,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("requires accepted proof before an exact persisted burn can neutralize its mint", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     sqlite.exec(`INSERT INTO mint_burn_supply_proofs
       (proof_id, config_key, config_fingerprint, from_block, to_block, status, evidence_json, checked_at)
       VALUES ('proof', 'config', 'fingerprint', 1, 1, 'proven', '{}', 1)`);
@@ -348,7 +336,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("accounts for dust normally while excluding atomic, bridge and unresolved legs", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
     const rows = [
       makeRow({ id: "mint-standard", direction: "mint", amount_usd: 100, timestamp: 3_605, tx_hash: "0xmint-standard" }),
@@ -420,7 +407,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("keeps a tagged atomic roundtrip when a later scan re-observes only its burn", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const timestamp = 3_610;
     const insert = sqlite.prepare(`INSERT INTO mint_burn_events
       (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, amount_usd, burn_type, tx_hash, block_number,
@@ -455,7 +441,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("waits for every shared-bucket config and uses the whole persisted transaction", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const [first, second] = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock"
       && config.chain.chainId === "ethereum");
     const block = Math.max(first.startBlock, second.startBlock) + 1;
@@ -488,7 +473,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("removes stale hourly rows when an affected bucket has no rows left after recompute", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
     const burnRow = makeRow({
       id: "burn-effective",
@@ -523,7 +507,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("records unpriced counted events beside known subtotals instead of zero dollars", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     // Mixed hour: one unpriced standard mint and one priced $1M effective burn.
     const unpricedMint = { ...makeRow({ id: "mint-unpriced", direction: "mint", timestamp: 3_605, tx_hash: "0xmint" }), amount_usd: null };
     const pricedBurn = makeRow({
@@ -565,7 +548,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("ignores duplicate IDs, excludes unclassified burns, and persists reclassification", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const mint = makeRow({ id: "mint", timestamp: 3605 });
     const burn = makeRow({ id: "burn", direction: "burn", burn_type: null, timestamp: 3610 });
     expect(await insertMintBurnRows(db, [mint, burn, mint])).toEqual({ inserted: 2, ignored: 1 });
@@ -582,7 +564,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("replays a reviewed protocol-internal burn out of counted flow and fails closed on amount drift", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const reviewedId = "arbitrum-0x46dc4ae95582c3d92d2ada242fc7445b6f4408284d271f69e2f98668993559d7-4";
     const base = {
       stablecoin_id: "usdai-usd-ai",
@@ -639,7 +620,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("replays stored PegKeeper mints and burns out of hourly aggregates without removing ledger rows", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const exclusion = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS["usg-tangent"];
     const base = { stablecoin_id: "usg-tangent", chain_id: exclusion.chain, timestamp: 3_610 };
     const mint = makeRow({ ...base, id: "pegkeeper-mint", counterparty: exclusion.holderAddresses[0], amount: 20_000_000, amount_usd: 20_000_000 });
@@ -666,7 +646,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("atomically invalidates every classification change, reverses mint exclusions, and settles debt only with the hour", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const mint = makeRow({ id: "mint-replay", timestamp: 3605 });
     const burn = makeRow({ id: "burn-replay", direction: "burn", timestamp: 3610, burn_type: "effective_burn", amount_usd: 25 });
     await insertMintBurnRows(db, [mint, burn]);
@@ -704,7 +683,6 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("skips identical classification rewrites and still lands genuine changes", async () => {
     const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const burn = makeRow({ id: "burn-rewrite", direction: "burn", burn_type: "effective_burn" });
     const stored = () => sqlite.prepare(
       "SELECT burn_type, burn_review_reason, flow_type FROM mint_burn_events WHERE id = 'burn-rewrite'").get();

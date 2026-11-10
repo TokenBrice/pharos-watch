@@ -1,3 +1,4 @@
+import { handleMintBurnFlows } from "../mint-burn-flows";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 
 export function makeFlowHourlyRow(nowSec: number) {
@@ -48,4 +49,8 @@ export function makeFlowFallbackScenario(nowSec: number, value: string, hours = 
     return statement;
   };
   return { db, state };
+}
+
+export function flowResponse(db: D1Database, query = "") {
+  return handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows${query}`));
 }

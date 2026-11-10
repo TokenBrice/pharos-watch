@@ -3,6 +3,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import {
   mintBurnEventInsertBinds,
   makeMintBurnDb,
+  mintBurnScanResult,
   mintBurnTestHash,
   makeMintBurnMintLog as makeMintLog,
   resetMintBurnMocks,
@@ -18,6 +19,13 @@ const CCIP_BURNED_TOPIC = "0x696de425f79f4a40bc6d2122ca50507f0efbeabbff86a84871b
 vi.mock("../../lib/mint-burn-contracts", async () => {
   // The hoisted factory runs before static bindings; use the registry-free builder to avoid a mock import cycle.
   const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn-config");
+  const transferEvent = (direction: "mint" | "burn") => ({
+    signature: "Transfer(address,address,uint256)",
+    topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+    direction, amountEncoding: "transfer-value" as const,
+    filterTopic: { index: direction === "mint" ? 1 : 2,
+      value: "0x0000000000000000000000000000000000000000000000000000000000000000" },
+  });
   return {
     buildMintBurnScope: vi.fn((configs: Array<{ chain: { chainId: string } }>) => ({
       chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
@@ -46,26 +54,8 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
         },
         adapter: "mixed",
         events: [
-          {
-            signature: "Transfer(address,address,uint256)",
-            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-            direction: "mint",
-            amountEncoding: "transfer-value",
-            filterTopic: {
-              index: 1,
-              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
-            },
-          },
-          {
-            signature: "Transfer(address,address,uint256)",
-            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-            direction: "burn",
-            amountEncoding: "transfer-value",
-            filterTopic: {
-              index: 2,
-              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
-            },
-          },
+          transferEvent("mint"),
+          transferEvent("burn"),
         ],
         bridgeDetection: {
           protocol: "ccip",
@@ -84,16 +74,7 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
         },
         adapter: "transfer-zero-address",
         events: [
-          {
-            signature: "Transfer(address,address,uint256)",
-            topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-            direction: "mint",
-            amountEncoding: "transfer-value",
-            filterTopic: {
-              index: 1,
-              value: "0x0000000000000000000000000000000000000000000000000000000000000000",
-            },
-          },
+          transferEvent("mint"),
         ],
       }),
     ],
@@ -137,29 +118,30 @@ function makeDb(options: MintBurnDbOptions = {}) {
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
+function scanConfig(overrides: Pick<Parameters<typeof syncMintBurnConfig>[0], "db" | "config" | "fromBlock" | "scanTo">) {
+  return syncMintBurnConfig({
+    key: USDT_CONFIG_KEY, tier: "critical", chainHead: 22_000_000,
+    rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
+    configBudgetLimit: 200, runTimestamp: 1_718_650_752,
+    priceContext: {
+      priceObservations: new Map([["usdt-tether", { price: 1, observedAt: 1_718_650_752, source: "binance", observedAtMode: "local_fetch" }]]),
+      priceHistory: new Map(),
+    },
+    chainTimestampCache: new Map(), txContextCache: new Map(), affectedHours: new Map(),
+    ...overrides,
+  });
+}
+
+
 function topicAddress(address: string): string {
   const raw = address.toLowerCase().replace(/^0x/, "");
   return `0x${"0".repeat(24)}${raw}`;
 }
 
 function makeBurnLog(opts: { blockNumber?: number; txHash?: string; logIndex?: number; sender?: string } = {}) {
-  const block = opts.blockNumber ?? 22_000_000;
   const sender = opts.sender ?? "0x1234000000000000000000000000000000000000";
-  return {
-    address: USDT_CONTRACT,
-    topics: [
-      TRANSFER_TOPIC,
-      topicAddress(sender),
-      ZERO_TOPIC,
-    ],
-    data: "0x00000000000000000000000000000000000000000000000000000002540be400",
-    blockNumber: "0x" + block.toString(16),
-    transactionHash: opts.txHash ?? mintBurnTestHash(10),
-    transactionIndex: "0x0",
-    blockHash: mintBurnTestHash(2),
-    logIndex: "0x" + (opts.logIndex ?? 0).toString(16),
-    removed: false,
-  };
+  return { ...makeMintLog({ ...opts, txHash: opts.txHash ?? mintBurnTestHash(10) }),
+    topics: [TRANSFER_TOPIC, topicAddress(sender), ZERO_TOPIC] };
 }
 
 function makeReceiptLog(txHash: string, topics: string[]) {
@@ -194,9 +176,9 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [makeMintLog(), makeMintLog({ txHash: mintBurnTestHash(11), logIndex: 1 })], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeMintLog(), makeMintLog({ txHash: mintBurnTestHash(11), logIndex: 1 })]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
@@ -295,41 +277,11 @@ describe("syncMintBurn", () => {
     const config = MINT_BURN_CONFIGS[0]!;
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [makeMintLog({ blockNumber: 21_910_000 })],
-        complete: true,
-        scannedToBlock: 21_949_999,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: true,
-        scannedToBlock: 21_949_999,
-        calls: 1,
-        maxDepth: 0,
-      });
+      .mockResolvedValueOnce(mintBurnScanResult(21_949_999, [makeMintLog({ blockNumber: 21_910_000 })]))
+      .mockResolvedValueOnce(mintBurnScanResult(21_949_999));
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_910_000, 1_718_650_752]]));
 
-    const result = await syncMintBurnConfig({
-      db,
-      config,
-      key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-      tier: "critical",
-      fromBlock: 21_900_000,
-      scanTo: 21_949_999,
-      chainHead: 22_000_000,
-      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
-      configBudgetLimit: 200,
-      runTimestamp: 1_718_650_752,
-      priceContext: {
-        priceObservations: new Map([["usdt-tether", { price: 1, observedAt: 1_718_650_752, source: "binance", observedAtMode: "local_fetch" }]]),
-        priceHistory: new Map(),
-      },
-      chainTimestampCache: new Map(),
-      txContextCache: new Map(),
-      affectedHours: new Map(),
-    });
+    const result = await scanConfig({ db, config, fromBlock: 21_900_000, scanTo: 21_949_999 });
 
     expect(result.summary.maxBlockSeen).toBe(21_910_000);
     expect(result.summary.advanceReason).toBe("full-success-events");
@@ -342,43 +294,13 @@ describe("syncMintBurn", () => {
     const config = MINT_BURN_CONFIGS[0]!;
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [makeMintLog({ blockNumber: 21_910_000 })],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      });
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000, [makeMintLog({ blockNumber: 21_910_000 })]))
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000));
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([
       [21_955_001, 1_718_650_750], [21_960_000, 1_718_650_752],
     ]));
 
-    const result = await syncMintBurnConfig({
-      db,
-      config,
-      key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-      tier: "critical",
-      fromBlock: 21_955_001,
-      scanTo: 21_960_000,
-      chainHead: 22_000_000,
-      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
-      configBudgetLimit: 200,
-      runTimestamp: 1_718_650_752,
-      priceContext: {
-        priceObservations: new Map([["usdt-tether", { price: 1, observedAt: 1_718_650_752, source: "binance", observedAtMode: "local_fetch" }]]),
-        priceHistory: new Map(),
-      },
-      chainTimestampCache: new Map(),
-      txContextCache: new Map(),
-      affectedHours: new Map(),
-    });
+    const result = await scanConfig({ db, config, fromBlock: 21_955_001, scanTo: 21_960_000 });
 
     expect(result.summary.rowsRead).toBe(0);
     expect(result.summary.rowsParsed).toBe(0);
@@ -396,40 +318,10 @@ describe("syncMintBurn", () => {
     const failedBlock = 21_910_000;
     vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(null);
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [makeMintLog({ blockNumber: failedBlock })],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      });
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000, [makeMintLog({ blockNumber: failedBlock })]))
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000));
 
-    const result = await syncMintBurnConfig({
-      db,
-      config,
-      key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-      tier: "critical",
-      fromBlock: 21_900_000,
-      scanTo: 21_960_000,
-      chainHead: 22_000_000,
-      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
-      configBudgetLimit: 200,
-      runTimestamp: 1_718_650_752,
-      priceContext: {
-        priceObservations: new Map([["usdt-tether", { price: 1, observedAt: 1_718_650_752, source: "binance", observedAtMode: "local_fetch" }]]),
-        priceHistory: new Map(),
-      },
-      chainTimestampCache: new Map(),
-      txContextCache: new Map(),
-      affectedHours: new Map(),
-    });
+    const result = await scanConfig({ db, config, fromBlock: 21_900_000, scanTo: 21_960_000 });
 
     expect(result.summary.rowsDropped).toBe(0);
     expect(result.summary.rowsDroppedDecode).toBe(1);
@@ -443,40 +335,10 @@ describe("syncMintBurn", () => {
     const config = MINT_BURN_CONFIGS[0]!;
     const malformedBlock = 21_910_000;
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [{ ...makeMintLog({ blockNumber: malformedBlock }), logIndex: "0x" }],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      });
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000, [{ ...makeMintLog({ blockNumber: malformedBlock }), logIndex: "0x" }]))
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000));
 
-    const result = await syncMintBurnConfig({
-      db,
-      config,
-      key: USDT_CONFIG_KEY,
-      tier: "critical",
-      fromBlock: 21_900_000,
-      scanTo: 21_960_000,
-      chainHead: 22_000_000,
-      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
-      configBudgetLimit: 200,
-      runTimestamp: 1_718_650_752,
-      priceContext: {
-        priceObservations: new Map([["usdt-tether", { price: 1, observedAt: 1_718_650_752, source: "binance", observedAtMode: "local_fetch" }]]),
-        priceHistory: new Map(),
-      },
-      chainTimestampCache: new Map(),
-      txContextCache: new Map(),
-      affectedHours: new Map(),
-    });
+    const result = await scanConfig({ db, config, fromBlock: 21_900_000, scanTo: 21_960_000 });
 
     // Identity is rejected at the fetch boundary, before decoding or parsing.
     expect(result.summary.rowsRead).toBe(0);
@@ -502,40 +364,10 @@ describe("syncMintBurn", () => {
     });
     vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(null);
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [failedLog],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: true,
-        scannedToBlock: 21_960_000,
-        calls: 1,
-        maxDepth: 0,
-      });
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000, [failedLog]))
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000));
 
-    const result = await syncMintBurnConfig({
-      db,
-      config,
-      key: USDT_CONFIG_KEY,
-      tier: "critical",
-      fromBlock: failedBlock,
-      scanTo: 21_960_000,
-      chainHead: 22_000_000,
-      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
-      configBudgetLimit: 200,
-      runTimestamp: 1_718_650_752,
-      priceContext: {
-        priceObservations: new Map([["usdt-tether", { price: 1, observedAt: 1_718_650_752, source: "binance", observedAtMode: "local_fetch" }]]),
-        priceHistory: new Map(),
-      },
-      chainTimestampCache: new Map(),
-      txContextCache: new Map(),
-      affectedHours: new Map(),
-    });
+    const result = await scanConfig({ db, config, fromBlock: failedBlock, scanTo: 21_960_000 });
 
     expect(result.newLastBlock).toBeNull();
     expect(result.summary.rowsDroppedDecode).toBe(1);
@@ -606,8 +438,7 @@ describe("syncMintBurn", () => {
     const scanStarts: number[] = [];
     vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, _contract, topics, fromBlock) => {
       scanStarts.push(fromBlock);
-      return { logs: topics.some((topic) => topic.index === 1 && topic.value === ZERO_TOPIC) ? [makeMintLog()] : [],
-        complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 };
+      return mintBurnScanResult(22_000_000, topics.some((topic) => topic.index === 1 && topic.value === ZERO_TOPIC) ? [makeMintLog()] : []);
     });
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[21_950_001, timestamp], [22_000_000, timestamp + 1]]));
     vi.mocked(recalcAffectedHours)
@@ -718,8 +549,8 @@ describe("syncMintBurn", () => {
 
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce(null as unknown as never)
-      .mockResolvedValueOnce({ logs: [makeBurnLog()], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeBurnLog()]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
@@ -737,21 +568,9 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: false,
-        scannedToBlock: 21_960_000,
-        calls: 3,
-        maxDepth: 1,
-      })
-      .mockResolvedValueOnce({
-        logs: [makeBurnLog({ blockNumber: 22_000_000 })],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce(mintBurnScanResult(21_960_000, [], { complete: false, calls: 3, maxDepth: 1 }))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeBurnLog({ blockNumber: 22_000_000 })]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
@@ -768,18 +587,12 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [
           makeMintLog({ blockNumber: 21_950_002, txHash: mintBurnTestHash(12), logIndex: 0 }),
           makeMintLog({ blockNumber: 22_000_000, txHash: mintBurnTestHash(13), logIndex: 1 }),
-        ],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+        ]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
@@ -799,20 +612,8 @@ describe("syncMintBurn", () => {
 
     vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(1);
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [{ ...makeMintLog({ blockNumber: 21_950_001 }), data: `0x${(1_000_000n).toString(16).padStart(64, "0")}` }],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [{ ...makeBurnLog({ blockNumber: 21_950_002 }), data: `0x${(1_000_000n).toString(16).padStart(64, "0")}` }],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [{ ...makeMintLog({ blockNumber: 21_950_001 }), data: `0x${(1_000_000n).toString(16).padStart(64, "0")}` }]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [{ ...makeBurnLog({ blockNumber: 21_950_002 }), data: `0x${(1_000_000n).toString(16).padStart(64, "0")}` }]));
 
     const result = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
     const meta = JSON.parse(result.metadata);
@@ -879,9 +680,8 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({
-        logs: [
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [
           makeBurnLog({
             txHash: mintBurnTestHash(14),
             sender: "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
@@ -891,13 +691,8 @@ describe("syncMintBurn", () => {
             sender: "0x1234000000000000000000000000000000000000",
             logIndex: 1,
           }),
-        ],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+        ]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
     vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(async (_url, txHashes: string[]) =>
@@ -944,15 +739,9 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [makeMintLog({ txHash: mintBurnTestHash(16) })],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeMintLog({ txHash: mintBurnTestHash(16) })]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map());
 
@@ -979,10 +768,9 @@ describe("syncMintBurn", () => {
     const actualAlchemy = await vi.importActual<typeof import("../../lib/alchemy-logs")>("../../lib/alchemy-logs");
     vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(actualAlchemy.getAlchemyTransactionContextBatchMany);
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [makeMintLog({ txHash: mintBurnTestHash(17) })], complete: true,
-        scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeMintLog({ txHash: mintBurnTestHash(17) })]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
@@ -1017,28 +805,10 @@ describe("syncMintBurn", () => {
     vi.mocked(fetchAlchemyLogs)
       .mockImplementationOnce(async (_url, _contract, _topics, fromBlock, _toBlock, budget) => {
         budget.count = budget.limit;
-        return {
-          logs: [],
-          complete: false,
-          scannedToBlock: fromBlock - 1,
-          calls: budget.limit,
-          maxDepth: 0,
-        };
+        return mintBurnScanResult(fromBlock - 1, [], { complete: false, calls: budget.limit });
       })
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
@@ -1055,13 +825,7 @@ describe("syncMintBurn", () => {
 
     vi.mocked(fetchAlchemyLogs).mockImplementation(async () => {
       vi.setSystemTime(new Date("2026-03-04T12:08:31Z"));
-      return {
-        logs: [],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      };
+      return mintBurnScanResult(22_000_000);
     });
 
     const result = await syncMintBurn(db, "alchemy-key");
@@ -1080,17 +844,11 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: Array.from({ length: 70 }, (_, index) =>
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, Array.from({ length: 70 }, (_, index) =>
           makeMintLog({ blockNumber: 21_960_000, txHash: mintBurnTestHash(100 + index), logIndex: index }),
-        ),
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+        )))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[21_960_000, 1_718_650_752]]));
 
     const result = await syncMintBurn(db, "alchemy-key");
@@ -1150,21 +908,9 @@ describe("syncMintBurn", () => {
     });
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({
-        logs: [makeMintLog({ txHash: mintBurnTestHash(18), logIndex: 0 })],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({
-        logs: [makeBurnLog({ txHash: mintBurnTestHash(18), logIndex: 1 })],
-        complete: true,
-        scannedToBlock: 22_000_000,
-        calls: 1,
-        maxDepth: 0,
-      })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeMintLog({ txHash: mintBurnTestHash(18), logIndex: 0 })]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeBurnLog({ txHash: mintBurnTestHash(18), logIndex: 1 })]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
@@ -1194,9 +940,9 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [makeMintLog()], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeMintLog()]))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
+      .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
     // Insert path must succeed so affectedHours gets populated before recalc runs.

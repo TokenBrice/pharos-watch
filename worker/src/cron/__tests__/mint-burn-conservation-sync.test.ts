@@ -55,6 +55,10 @@ const conservationEventDef: ConservationEventDef = {
   topicArity: 1,
   emitter: `0x${"b".repeat(40)}`,
 };
+function expectBefore(first: { mock: { invocationCallOrder: number[] } }, second: { mock: { invocationCallOrder: number[] } }) {
+  expect(first.mock.invocationCallOrder[0]).toBeLessThan(second.mock.invocationCallOrder[0]);
+}
+
 function mintLog() {
   return { address: config.contractAddress,
     topics: [config.events[0]!.topicHash, `0x${"0".repeat(64)}`, `0x${"0".repeat(63)}1`],
@@ -91,8 +95,8 @@ beforeEach(() => {
 describe("conservation producer publication and cursor fences", () => {
   it("publishes pass only after row write and persisted readback", async () => {
     expect((await run()).newLastBlock).toBe(102);
-    expect(vi.mocked(persistMintBurnRows).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(persistMintBurnConservation).mock.invocationCallOrder[0]);
-    expect(vi.mocked(verifyPersistedMintBurnConservation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(persistMintBurnConservation).mock.invocationCallOrder[0]);
+    expectBefore(vi.mocked(persistMintBurnRows), vi.mocked(persistMintBurnConservation));
+    expectBefore(vi.mocked(verifyPersistedMintBurnConservation), vi.mocked(persistMintBurnConservation));
   });
   it("fences the cursor when a shorter passing audit cannot replace the stored mismatch", async () => {
     // The guarded upsert kept an unresolved stored mismatch this clean pass does
@@ -260,7 +264,7 @@ describe("conservation producer publication and cursor fences", () => {
     vi.mocked(persistMintBurnRows).mockRejectedValue(new Error("write failed"));
     await expect(run()).rejects.toThrow("write failed");
     expect(persistMintBurnConservation).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(persistMintBurnConservation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(persistMintBurnRows).mock.invocationCallOrder[0]);
+    expectBefore(vi.mocked(persistMintBurnConservation), vi.mocked(persistMintBurnRows));
   });
   it.each(["invalid-raw-log", "boundary-reorg", "closing-log-hash-mismatch"])("fences %s and suppresses its row write", async (reason) => {
     vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "unavailable", reason });
@@ -292,14 +296,10 @@ describe("conditional supply proof ordering and acceptance fences", () => {
     expect(result.newLastBlock).toBe(102);
     expect(classifyBridgeBurnRows).toHaveBeenCalledWith(expect.anything(), config, expect.anything(), expect.anything(),
       expect.anything(), undefined, expect.objectContaining({ rangeSupplyProof: proof }));
-    expect(vi.mocked(completeMintBurnRangeSupplyProof).mock.invocationCallOrder[0])
-      .toBeLessThan(vi.mocked(classifyBridgeBurnRows).mock.invocationCallOrder[0]);
-    expect(vi.mocked(persistMintBurnSupplyProof).mock.invocationCallOrder[0])
-      .toBeLessThan(vi.mocked(persistMintBurnRows).mock.invocationCallOrder[0]);
-    expect(vi.mocked(verifyPersistedMintBurnConservation).mock.invocationCallOrder[0])
-      .toBeLessThan(vi.mocked(acceptMintBurnSupplyProof).mock.invocationCallOrder[0]);
-    expect(vi.mocked(acceptMintBurnSupplyProof).mock.invocationCallOrder[0])
-      .toBeLessThan(vi.mocked(reconcileAtomicRoundtripGroups).mock.invocationCallOrder[0]);
+    expectBefore(vi.mocked(completeMintBurnRangeSupplyProof), vi.mocked(classifyBridgeBurnRows));
+    expectBefore(vi.mocked(persistMintBurnSupplyProof), vi.mocked(persistMintBurnRows));
+    expectBefore(vi.mocked(verifyPersistedMintBurnConservation), vi.mocked(acceptMintBurnSupplyProof));
+    expectBefore(vi.mocked(acceptMintBurnSupplyProof), vi.mocked(reconcileAtomicRoundtripGroups));
     expect(reconcileReviewedSupplyBurns).not.toHaveBeenCalled();
     expect(vi.mocked(persistMintBurnRows).mock.calls[0][1][0]).toMatchObject({ supply_proof_id: proof.proofId, amount_raw: "10000" });
   });
@@ -335,8 +335,7 @@ describe("conditional supply proof ordering and acceptance fences", () => {
     const result = await run();
     expect(result.newLastBlock).toBeNull();
     expect(result.summary.supplyProofReason).toBe("range-supply-proof-canonical-conflict");
-    expect(vi.mocked(invalidateMintBurnSupplyProofs).mock.invocationCallOrder[0])
-      .toBeLessThan(vi.mocked(fetchAlchemyLogs).mock.invocationCallOrder[0]);
+    expectBefore(vi.mocked(invalidateMintBurnSupplyProofs), vi.mocked(fetchAlchemyLogs));
     expect(acceptMintBurnSupplyProof).not.toHaveBeenCalled();
   });
   it.each(["proof-write", "event-write", "readback", "acceptance"])("cannot accept or advance after %s failure", async (stage) => {

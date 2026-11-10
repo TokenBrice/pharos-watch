@@ -231,3 +231,14 @@ export function makeMintBurnMintLog(
     removed: false,
   };
 }
+
+export function mintBurnScanResult(
+  scannedToBlock: number, logs: AlchemyLogsModule.AlchemyLogEntry[] = [],
+  overrides: { complete?: boolean; calls?: number; maxDepth?: number } = {},
+) {
+  return { logs, complete: true, scannedToBlock, calls: 1, maxDepth: 0, ...overrides };
+}
+
+export async function restoreMintBurnBatch(): Promise<void> {
+  vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof import("../../lib/db")>("../../lib/db")).batchExecute);
+}

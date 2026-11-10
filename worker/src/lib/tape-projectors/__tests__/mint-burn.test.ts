@@ -1,3 +1,4 @@
+import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
@@ -53,6 +54,14 @@ function makeFlow(overrides: Partial<Record<string, unknown>> = {}): Record<stri
   };
 }
 
+function insertFlow(sqlite: DatabaseSync, overrides: Record<string, unknown>) {
+  const row = { amount: 15_000_000, tx_hash: "0xtest", block_number: 1,
+    explorer_tx_url: "https://example.com", ...makeFlow(overrides) };
+  const entries = Object.entries(row);
+  sqlite.prepare(`INSERT INTO mint_burn_events (${entries.map(([key]) => key).join(", ")})
+    VALUES (${entries.map(() => "?").join(", ")})`).run(...entries.map(([, value]) => value as SQLInputValue));
+}
+
 describe("mint_burn projector", () => {
   it.each(["pending", "accepted", "invalidated"])("withholds unaccepted range-proof Tape claims (%s)", (lifecycle) => {
     const { sqlite } = fixtures.open();
@@ -74,15 +83,13 @@ describe("mint_burn projector", () => {
     const pending = { ...configs[0], chain: { ...configs[0].chain, chainId: "synthetic-pending" } };
     MINT_BURN_CONFIGS.push(pending);
     try {
-      const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
-         flow_type, tx_hash, block_number, explorer_tx_url)
-        VALUES (?, 'usdt-tether', 'USDT', ?, 'mint', 15000000, 15000000, ?, 'standard', '0xtest', 1, 'https://example.com')`);
-      insert.run("pending", pending.chain.chainId, SEC - 1);
-      insert.run("admitted", configs[0].chain.chainId, SEC);
+      const insert = (id: string, chain_id: string, timestamp: number) =>
+      insertFlow(sqlite, { id, chain_id, timestamp });
+      insert("pending", pending.chain.chainId, SEC - 1);
+      insert("admitted", configs[0].chain.chainId, SEC);
       expect(await projectMintBurnLargeFlows(db, { maxRows: 1 })).toEqual({ projected: 1, advanced: SEC });
       expect(sqlite.prepare("SELECT source_row_id FROM tape_events").all()).toEqual([{ source_row_id: "admitted" }]);
-      insert.run("disabled", configs[0].chain.chainId, SEC + 1);
+      insert("disabled", configs[0].chain.chainId, SEC + 1);
       sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)")
         .run(JSON.stringify(configs.map(mintBurnConfigKey)), SEC);
       expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 0, advanced: null });
@@ -92,7 +99,7 @@ describe("mint_burn projector", () => {
         .run(mintBurnConfigKey(pending), mintBurnScanFingerprint(pending), SEC, SEC - 90 * 86400, SEC);
       // Admission enables current events without announcing the completed backfill.
       expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 0, advanced: null });
-      insert.run("newly-admitted", pending.chain.chainId, SEC + 1);
+      insert("newly-admitted", pending.chain.chainId, SEC + 1);
       expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC + 1 });
       expect(sqlite.prepare("SELECT source_row_id FROM tape_events ORDER BY source_row_id").all())
         .toEqual([{ source_row_id: "admitted" }, { source_row_id: "newly-admitted" }]);
@@ -106,11 +113,7 @@ describe("mint_burn projector", () => {
     { timestamp: 1792540800, version: "6.29" },
   ])("persists the flow methodology at source time $timestamp under later replay clocks", async ({ timestamp, version }) => {
     const { db, sqlite } = fixtures.open();
-    sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
-       flow_type, tx_hash, block_number, explorer_tx_url)
-      VALUES ('historical', 'usdt-tether', 'USDT', 'ethereum', 'mint', 15000000, 15000000, ?,
-              'standard', '0xtest', 1, 'https://example.com')`).run(timestamp);
+    insertFlow(sqlite, { id: "historical", timestamp });
     for (const clock of [1792497600, 1824033600]) {
       vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
       await projectMintBurnLargeFlows(db, { since: timestamp - 1, until: timestamp });
@@ -134,14 +137,7 @@ describe("mint_burn projector", () => {
       makeFlow({ id: "burn-unknown", direction: "burn", burn_type: "legacy-unknown" }),
       makeFlow({ id: "dust", amount_usd: 1e12, below_display_threshold: 1 }),
     ];
-    for (const row of rows) {
-      sqlite.prepare(`INSERT INTO mint_burn_events
-        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, counterparty, timestamp, flow_type, burn_type, below_display_threshold, tx_hash, block_number, explorer_tx_url)
-        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, '0xtest', 1, 'https://example.com')`)
-        .run(row.id as string, row.stablecoin_id as string, row.symbol as string, row.chain_id as string,
-          row.direction as string, row.amount_usd as number | null, row.counterparty as null,
-          row.timestamp as number, row.flow_type as string, row.burn_type as string | null, row.below_display_threshold as number);
-    }
+    for (const row of rows) insertFlow(sqlite, { ...row, amount: 1 });
     await projectMintBurnLargeFlows(db);
     const select = sqlite.prepare("SELECT event_id, source_row_id, type, severity FROM tape_events ORDER BY source_row_id");
     const events = select.all();
@@ -163,15 +159,13 @@ describe("mint_burn projector", () => {
     const prepare = vi.spyOn(db, "prepare");
     const oldTime = SEC - 365 * 86400;
     const recentTime = SEC - 30 * 86400;
-    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
-       flow_type, burn_type, tx_hash, block_number, explorer_tx_url)
-      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 20000000, ?, ?, 'standard', ?, '0xtest', 1, 'https://example.com')`);
-    insert.run("old-unpriced", "mint", null, oldTime, null);
-    insert.run("old-review", "burn", 20_000_000, oldTime + 1, "review_required");
-    insert.run("recent-unpriced", "mint", null, recentTime, null);
-    insert.run("recent-review", "burn", 20_000_000, recentTime + 1, "review_required");
-    insert.run("newer-priced", "mint", 20_000_000, SEC, null);
+    const insert = (id: string, direction: string, amount_usd: number | null, timestamp: number, burn_type: string | null) =>
+      insertFlow(sqlite, { id, direction, amount: 20000000, amount_usd, timestamp, burn_type });
+    insert("old-unpriced", "mint", null, oldTime, null);
+    insert("old-review", "burn", 20_000_000, oldTime + 1, "review_required");
+    insert("recent-unpriced", "mint", null, recentTime, null);
+    insert("recent-review", "burn", 20_000_000, recentTime + 1, "review_required");
+    insert("newer-priced", "mint", 20_000_000, SEC, null);
 
     expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC });
     const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes(MATCH_FETCH_FLOWS));
@@ -216,12 +210,10 @@ describe("mint_burn projector", () => {
 
   it("retracts claims whose source became ineligible and republishes eligible corrections in place", async () => {
     const { db, sqlite } = fixtures.open();
-    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
-       flow_type, burn_type, tx_hash, block_number, explorer_tx_url)
-      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 1, 20000000, ?, 'standard', ?, '0xtest', 1, 'https://example.com')`);
+    const insert = (id: string, direction: string, timestamp: number, burn_type: string | null) =>
+      insertFlow(sqlite, { id, direction, amount: 1, amount_usd: 20000000, timestamp, burn_type });
     for (const id of ["internal", "small", "unpriced", "review", "bridge", "amount", "same", "pruned", "dust"]) {
-      insert.run(id, id === "review" ? "burn" : "mint", SEC - 100, id === "review" ? "effective_burn" : null);
+      insert(id, id === "review" ? "burn" : "mint", SEC - 100, id === "review" ? "effective_burn" : null);
     }
     await projectMintBurnLargeFlows(db);
     const claim = (id: string) => sqlite.prepare(
@@ -268,19 +260,16 @@ describe("mint_burn projector", () => {
 
   it("still publishes newly eligible flows when one stored claim payload is not valid JSON", async () => {
     const { db, sqlite } = fixtures.open();
-    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
-       flow_type, tx_hash, block_number, explorer_tx_url)
-      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', 'mint', 20000000, 20000000, ?,
-              'standard', '0xtest', 1, 'https://example.com')`);
-    insert.run("damaged-claim", SEC - 100);
+    const insert = (id: string, timestamp: number) =>
+      insertFlow(sqlite, { id, amount: 20000000, amount_usd: 20000000, timestamp });
+    insert("damaged-claim", SEC - 100);
     expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC - 100 });
 
     // The read boundary models an unparsable stored payload as
     // `payload-json-invalid`; one such row must not halt the rest of the class.
     sqlite.prepare("UPDATE tape_events SET payload_json = 'not json' WHERE source_row_id = 'damaged-claim'").run();
 
-    insert.run("fresh-flow", SEC);
+    insert("fresh-flow", SEC);
     const result = await projectMintBurnLargeFlows(db);
 
     expect(result.advanced).toBe(SEC);
@@ -301,15 +290,12 @@ describe("mint_burn projector", () => {
 
   it("expands a full batch to include all rows at the cutoff timestamp before advancing", async () => {
     const { db, sqlite } = fixtures.open();
-    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
-       flow_type, tx_hash, block_number, explorer_tx_url)
-      VALUES (?, 'usdt-tether', 'USDT', ?, 'mint', 15000000, 15000000, ?,
-              'standard', '0xtest', 1, 'https://example.com')`);
+    const insert = (id: string, chain_id: string, timestamp: number) =>
+      insertFlow(sqlite, { id, chain_id, timestamp });
     for (const id of ["ethereum-0xa-0", "ethereum-0xb-0", "ethereum-0xc-0"]) {
-      insert.run(id, "ethereum", SEC);
+      insert(id, "ethereum", SEC);
     }
-    insert.run("tron-pending", "tron", SEC);
+    insert("tron-pending", "tron", SEC);
 
     const result = await projectMintBurnLargeFlows(db, { maxRows: 2 });
 

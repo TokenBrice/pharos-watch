@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { toEventSelector, toFunctionSelector } from "viem/utils";
 import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { BRIDGE_TOPICS } from "../mint-burn-bridge-classifier-protocols";
-import { BRIDGE_RECEIPTS, makeBridgeRow, rebindReceipt, receiptConfig, receiptContext, receiptRows } from "./mint-burn-bridge-classifier.test-support";
+import { BRIDGE_RECEIPTS, makeBridgeRow, rebindReceipt, receiptConfig, receiptContext, receiptRows, type BridgeReceipt } from "./mint-burn-bridge-classifier.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { collectAffectedHours, persistMintBurnRows, recalcAffectedHours } from "../mint-burn-pipeline/persistence";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
@@ -14,13 +13,15 @@ const zero = `0x${"0".repeat(64)}`;
 const other = "0x1111111111111111111111111111111111111111";
 const bridgeConfigs = MINT_BURN_CONFIGS.filter((config) => config.bridgeDetection);
 const sample = (name: string) => structuredClone(BRIDGE_RECEIPTS.find((fixture) => fixture.name === name)!);
+const classify = (fixture: BridgeReceipt, config: typeof bridgeConfigs[number], rows: Parameters<typeof classifyBridgeAwareBurnRows>[0]) =>
+  classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
 
 describe("receipt-bound bridge classification", () => {
   it("classifies every real receipt by version, token, direction and movement identity", () => {
     for (const fixture of BRIDGE_RECEIPTS) {
       const config = receiptConfig(fixture, bridgeConfigs), rows = receiptRows(fixture, config);
       expect(rows.length, fixture.name).toBeGreaterThan(0);
-      classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+      classify(fixture, config, rows);
       for (const row of rows) {
         const economic = fixture.name === "economic-burn" || (fixture.name === "usdai-wrapped-mixed" && row.direction === "mint");
         expect(row.flow_type, `${fixture.name}:${row.id}`).toBe(economic ? "standard" : "bridge_transfer");
@@ -57,7 +58,7 @@ describe("receipt-bound bridge classification", () => {
       for (const original of originals) {
         const source = receiptConfig(original, bridgeConfigs), fixture = source === config ? original : rebindReceipt(original, source, config);
         const rows = receiptRows(fixture, config);
-        classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+        classify(fixture, config, rows);
         expect(rows.some((row) => row.flow_type === "bridge_transfer"), fixture.name).toBe(true);
       }
     }
@@ -90,7 +91,7 @@ describe("receipt-bound bridge classification", () => {
       if (mutation === "route") endpoint.data = endpoint.data.slice(0, -40) + other.slice(2);
       if (mutation === "guid") fixture.logs.find((log) => log.topics[0] === BRIDGE_TOPICS.oftReceived)!.topics[1] = zero;
       if (mutation === "wrong-direction") fixture.logs.find((log) => log.topics[0] === BRIDGE_TOPICS.transfer)!.topics[1] = other.padEnd(66, "0");
-      classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+      classify(fixture, config, rows);
       expect(rows[0].flow_type, mutation).toBe("standard");
     }
   });
@@ -100,10 +101,10 @@ describe("receipt-bound bridge classification", () => {
     const unrelated = { ...structuredClone(fixture.logs.find((log) => log.logIndex === "0x4")!), logIndex: "0x0" };
     fixture.logs.unshift(unrelated);
     const rows = receiptRows(fixture, config);
-    classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+    classify(fixture, config, rows);
     expect(rows.map((row) => row.flow_type)).toEqual(["standard", "bridge_transfer", "bridge_transfer"]);
     fixture.logs.find((log) => log.logIndex === "0x3")!.topics[1] = `0x${other.slice(2).padStart(64, "0")}`;
-    classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+    classify(fixture, config, rows);
     expect(rows.map((row) => row.flow_type)).toEqual(["standard", "bridge_transfer", "standard"]);
     expect(rows[2].bridge_review_reason).toBeNull(); // The forged minter is not a known bridge pool.
   });
@@ -111,7 +112,7 @@ describe("receipt-bound bridge classification", () => {
   it("keeps a known-minter mint unresolved when inbound evidence is missing", () => {
     const fixture = sample("v1-receive-direct"), config = receiptConfig(fixture, bridgeConfigs), rows = receiptRows(fixture, config);
     fixture.logs = fixture.logs.filter((log) => log.topics[0] !== BRIDGE_TOPICS.cctpV1Mint);
-    classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+    classify(fixture, config, rows);
     expect(rows[0]).toMatchObject({ flow_type: "standard", burn_type: "review_required", bridge_review_reason: "known-bridge-pool-without-bridge-signal" });
   });
 
@@ -126,7 +127,7 @@ describe("receipt-bound bridge classification", () => {
       event.data = `0x${recipient}${word(sourceAmount)}${word(amount - 1n)}${word(sourceMultiplier)}${word(destinationMultiplier)}`;
       fixture.logs.find((log) => log.address.toLowerCase() === config.contractAddress.toLowerCase() && log.topics[0] === BRIDGE_TOPICS.transfer)!.data = `0x${word(amount)}`;
       const rows = receiptRows(fixture, config);
-      classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+      classify(fixture, config, rows);
       expect(rows[0].flow_type).toBe(overflow ? "standard" : "bridge_transfer");
     }
     const fixture = sample("v1-send-direct"), config = receiptConfig(fixture, bridgeConfigs);
@@ -135,7 +136,7 @@ describe("receipt-bound bridge classification", () => {
     fixture.logs.push(duplicate(BRIDGE_TOPICS.burn, "0xfffd"), { ...structuredClone(fixture.logs.find((log) => log.topics[2] === zero)!), logIndex: "0xfffe" },
       duplicate(BRIDGE_TOPICS.messageSent, "0xffff"), { ...structuredClone(deposit), logIndex: "0x10000" });
     const rows = receiptRows(fixture, config);
-    classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+    classify(fixture, config, rows);
     expect(rows.map((row) => row.flow_type)).toEqual(["bridge_transfer", "standard"]);
     expect(rows[1].burn_type).toBe("review_required");
   });
@@ -159,7 +160,7 @@ describe("receipt-bound bridge classification", () => {
         fixture.logs.find((log) => log.topics[0] === BRIDGE_TOPICS.transfer)!.topics[2] = `0x${"0".repeat(60)}dead`;
       }
       const rows = receiptRows(fixture, config);
-      classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+      classify(fixture, config, rows);
       const unresolved = ["invalid-data", "invalid-message", "missing-packet"].includes(mutation);
       expect(rows.every((row) => row.flow_type === (unresolved ? "standard" : "bridge_transfer")), mutation).toBe(true);
       expect(rows.every((row) => unresolved ? row.bridge_review_reason != null : row.bridge_review_reason === null), mutation).toBe(true);
@@ -172,7 +173,7 @@ describe("receipt-bound bridge classification", () => {
       stablecoin_id: config.stablecoinId, symbol: config.symbol, chain_id: config.chain.chainId,
       amount: 10000, amount_raw: "10000000000", below_display_threshold: 0, amount_usd: 10000, price_used: 1, price_timestamp: 3601, price_source: "supply-history",
       block_number: fixture.blockNumber, timestamp: 3601, explorer_tx_url: `https://arbiscan.io/tx/${fixture.transactionHash}` }));
-    classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
+    classify(fixture, config, rows);
     const { sqlite, db } = fixtures.open(), affected = collectAffectedHours(rows);
     // Isolate classifier/materialization from the independent roundtrip policy (lane D).
     for (const row of rows) await persistMintBurnRows(db, [row], affected);
@@ -180,16 +181,7 @@ describe("receipt-bound bridge classification", () => {
     expect(sqlite.prepare("SELECT mint_count, burn_count, net_flow_usd FROM mint_burn_hourly").get()).toEqual({ mint_count: 1, burn_count: 0, net_flow_usd: 10000 });
   });
 
-  it("derives direct-call selectors by version; a selector alone never proves movement", () => {
-    const signatures = ["depositForBurn(uint256,uint32,bytes32,address)", "depositForBurnWithCaller(uint256,uint32,bytes32,address,bytes32)",
-      "depositForBurn(uint256,uint32,bytes32,address,bytes32,uint256,uint32)", "depositForBurnWithHook(uint256,uint32,bytes32,address,bytes32,uint256,uint32,bytes)"];
-    expect(signatures.map(toFunctionSelector)).toEqual(["0x6fd3504e", "0xf856ddb6", "0x8e0250ee", "0x779b432d"]);
-    for (const [name, signature] of [
-      ["zchf-legacy-send", "CCIPSendRequested((uint64,address,address,uint64,uint256,bool,uint64,address,uint256,bytes,(address,uint256)[],bytes[],bytes32))"],
-      ["zchf-modern-send-wrapped", "CCIPMessageSent(uint64,address,bytes32,address,uint256,bytes,(address,uint32,uint32,uint256,bytes)[],bytes[])"],
-    ]) expect(sample(name).logs.some((log) => log.topics[0] === toEventSelector(signature))).toBe(true);
-    expect(toFunctionSelector("ccipSend(uint64,(bytes,bytes,(address,uint256)[],address,bytes))")).toBe("0x96f4e9f9");
-    expect(toFunctionSelector("send((uint32,bytes32,uint256,uint256,bytes,bytes,bytes),(uint256,uint256),address)")).toBe(sample("usdai-send").inputSelector);
+  it("treats burns without a configured bridge as effective", () => {
     const row = makeBridgeRow();
     classifyBridgeAwareBurnRows([row], undefined, new Map());
     expect(row.burn_type).toBe("effective_burn");

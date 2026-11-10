@@ -1,10 +1,10 @@
+import { flowResponse } from "./mint-burn-flows.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
 import { buildMintBurnLegacySpans, MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint, mintBurnWindowAdmits, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, mintBurnWindowCoverage, resolveMintBurnWatermark, cachedFlowFallbackResponse } from "../../lib/mint-burn-flows-service";
-import { handleMintBurnFlows } from "../mint-burn-flows";
 import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { hydrateMintBurn } from "../../lib/dews/source-state/hydration";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
@@ -176,7 +176,7 @@ describe("bounded legacy transition and common scan watermark", () => {
       baseline: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: Math.floor(END / DAY) * DAY - DAY,
         daily_net: 100_000, daily_abs: 100_000 }],
     } });
-    const response = await handleMintBurnFlows(db, new URL("https://example.test/api/mint-burn-flows"));
+    const response = await flowResponse(db);
     const body = await response.json() as { gauge: { score: number | null; scoreScope: string; scanCoverage: { complete: boolean; excludedCoins: number } } };
     expect(body.gauge.score).not.toBeNull();
     expect(body.gauge).toMatchObject({ scoreScope: "admitted-coins", scanCoverage: { complete: false, excludedCoins: 1 } });

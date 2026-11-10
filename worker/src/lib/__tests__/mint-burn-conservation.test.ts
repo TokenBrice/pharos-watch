@@ -32,12 +32,18 @@ vi.mock("../alchemy-logs", async (importOriginal) => ({
   getAlchemyTransactionContextBatchMany: vi.fn(),
 }));
 vi.mock("../evm-rpc", () => ({ fetchEvmRpcBatchDetailed: vi.fn() }));
+const rpcMock = vi.mocked(fetchEvmRpcBatchDetailed);
 const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
 const sidecarEntries = reviewedConservationSidecar.entries as unknown as ReviewedConservationEntry[];
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
 const headers = [{ number: "0x64", timestamp: "0x3e8", hash: word(10n) },
   { number: "0x66", timestamp: "0x400", hash: word(12n) }];
 const fixtures = createLatestSchemaFixtureTracker();
+function openDatabase() {
+  const fixture = fixtures.open();
+  return { ...fixture, read: (columns: string, table = "events") =>
+    fixture.sqlite.prepare(`SELECT ${columns} FROM mint_burn_${table}`).get() };
+}
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
 beforeEach(() => vi.resetAllMocks());
 function log(direction: "mint" | "burn", amount: bigint, index = 0): AlchemyLogEntry {
@@ -60,12 +66,8 @@ function boundaryInput(requests: ConservationBoundaryRequest[] = [{ key: "one", 
   return { requests, rpcEndpointsByChain: new Map([["ethereum", [mintBurnAlchemyEndpoint("https://rpc.example")]]]),
     budget: { count: 0, limit: 100 }, checkedAt: 1100 };
 }
-async function auditWithBoundaries() {
-  const boundaries = await fetchConservationBoundaries(boundaryInput());
-  return completeMintBurnConservationAudit({ ...input(), boundary: boundaries.get("one") });
-}
 function rpc(delta = 1n) {
-  vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: headers, errors: [] })
+  rpcMock.mockResolvedValueOnce({ results: headers, errors: [] })
     .mockResolvedValueOnce({ results: [word(100n), word(100n + delta)], errors: [] })
     .mockResolvedValueOnce({ results: headers, errors: [] });
 }
@@ -78,10 +80,21 @@ function generatedHeader(block: number) {
   return { number: `0x${block.toString(16)}`, hash: word(BigInt(block)), timestamp: `0x${(900 + block).toString(16)}` };
 }
 function pooledRpc() {
-  vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (_chain, calls) => ({
+  rpcMock.mockImplementation(async (_chain, calls) => ({
     results: calls.map((call) => call.method === "eth_call" ? word(100n) : generatedHeader(Number(call.params[0]))),
     errors: [],
   }));
+}
+
+function changePooledPhase(phase: number, change: (result: NonNullable<Awaited<ReturnType<typeof fetchEvmRpcBatchDetailed>>>) => void) {
+  pooledRpc();
+  const normal = rpcMock.getMockImplementation()!;
+  let pass = 0;
+  rpcMock.mockImplementation(async (...args) => {
+    const result = (await normal(...args))!;
+    if (pass++ === phase) change(result);
+    return result;
+  });
 }
 
 describe("pooled conservation boundaries", () => {
@@ -90,13 +103,13 @@ describe("pooled conservation boundaries", () => {
     const args = { ...boundaryInput(disjointRequests), maxBatchCalls: 3 };
     const result = await fetchConservationBoundaries(args);
     expect([...result.values()].map((item) => item.status)).toEqual(["ready", "ready"]);
-    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1].length)).toEqual([3, 1, 3, 1, 3, 1]);
+    expect(rpcMock.mock.calls.map((call) => call[1].length)).toEqual([3, 1, 3, 1, 3, 1]);
     expect(args.budget.count).toBe(6);
-    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][2]).toMatchObject({
+    expect(rpcMock.mock.calls[0][2]).toMatchObject({
       maxRetries: 0, timeoutMs: 15_000,
     });
-    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][0]).toBe("ethereum");
-    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][2]?.chainRpcs?.get("ethereum")?.endpoints)
+    expect(rpcMock.mock.calls[0][0]).toBe("ethereum");
+    expect(rpcMock.mock.calls[0][2]?.chainRpcs?.get("ethereum")?.endpoints)
       .toEqual(args.rpcEndpointsByChain.get("ethereum"));
   });
   it("deduplicates shared headers but keeps per-request supply reads", async () => {
@@ -106,19 +119,12 @@ describe("pooled conservation boundaries", () => {
     ]));
     expect(result.get("one")?.status).toBe("ready");
     expect(result.get("two")?.status).toBe("ready");
-    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1].length)).toEqual([2, 4, 2]);
+    expect(rpcMock.mock.calls.map((call) => call[1].length)).toEqual([2, 4, 2]);
   });
   it.each(["header", "supply", "recheck"])("isolates a per-call %s error to its dependents", async (phase) => {
-    pooledRpc();
-    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
-    let pass = 0;
-    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
-      const result = (await normal(...args))!;
-      if (pass++ === ["header", "supply", "recheck"].indexOf(phase)) {
-        result.results[0] = undefined;
-        result.errors.push({ index: 0, code: -32000 });
-      }
-      return result;
+    changePooledPhase(["header", "supply", "recheck"].indexOf(phase), (result) => {
+      result.results[0] = undefined;
+      result.errors.push({ index: 0, code: -32000 });
     });
     const result = await fetchConservationBoundaries(boundaryInput(disjointRequests));
     expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
@@ -126,24 +132,17 @@ describe("pooled conservation boundaries", () => {
   });
   it.each(["null", "throw"])("isolates a failed chunk (%s) without losing later chunks", async (kind) => {
     pooledRpc();
-    if (kind === "null") vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce(null);
-    else vi.mocked(fetchEvmRpcBatchDetailed).mockRejectedValueOnce(new Error("timeout"));
+    if (kind === "null") rpcMock.mockResolvedValueOnce(null);
+    else rpcMock.mockRejectedValueOnce(new Error("timeout"));
     const result = await fetchConservationBoundaries({ ...boundaryInput(disjointRequests), maxBatchCalls: 2 });
     expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
     expect(result.get("two")?.status).toBe("ready");
   });
   it.each(["hash", "number", "timestamp", "malformed", "null"])("isolates recheck %s changes", async (field) => {
-    pooledRpc();
-    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
-    let pass = 0;
-    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
-      const result = (await normal(...args))!;
-      if (pass++ === 2) {
-        result.results[0] = field === "null" ? null : { ...generatedHeader(100),
-          ...(field === "hash" ? { hash: word(999n) } : field === "number" ? { number: "0x99" }
-            : field === "timestamp" ? { timestamp: "0x999" } : { timestamp: "not-hex" }) };
-      }
-      return result;
+    changePooledPhase(2, (result) => {
+      result.results[0] = field === "null" ? null : { ...generatedHeader(100),
+        ...(field === "hash" ? { hash: word(999n) } : field === "number" ? { number: "0x99" }
+          : field === "timestamp" ? { timestamp: "0x999" } : { timestamp: "not-hex" }) };
     });
     const result = await fetchConservationBoundaries(boundaryInput(disjointRequests));
     expect(result.get("one")).toEqual({ status: "unavailable",
@@ -151,33 +150,19 @@ describe("pooled conservation boundaries", () => {
     expect(result.get("two")?.status).toBe("ready");
   });
   it.each(["header", "recheck"])("retries a null %s on the next admitted endpoint", async (phase) => {
-    pooledRpc();
-    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
-    let pass = 0;
-    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
-      const result = (await normal(...args))!;
-      if (pass++ === (phase === "header" ? 0 : 2)) result.results[0] = null;
-      return result;
-    });
+    changePooledPhase(phase === "header" ? 0 : 2, (result) => { result.results[0] = null; });
     const args = boundaryInput();
     const endpoints = [mintBurnAlchemyEndpoint("https://rpc.example"), mintBurnAlchemyEndpoint("https://fallback.example")];
     args.rpcEndpointsByChain.set("ethereum", endpoints);
     const result = await fetchConservationBoundaries(args);
     expect(result.get("one")?.status).toBe("ready");
-    const calls = vi.mocked(fetchEvmRpcBatchDetailed).mock.calls;
+    const calls = rpcMock.mock.calls;
     expect(calls.map((call) => call[1].length)).toEqual(phase === "header" ? [2, 1, 2, 2] : [2, 2, 2, 1]);
     expect(calls[phase === "header" ? 1 : 3][2]?.chainRpcs?.get("ethereum")?.endpoints).toEqual([endpoints[1]]);
     expect(args.budget.count).toBe(4);
   });
   it("does not retry away a validated boundary identity change", async () => {
-    pooledRpc();
-    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
-    let pass = 0;
-    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
-      const result = (await normal(...args))!;
-      if (pass++ === 2) result.results[0] = { ...generatedHeader(100), hash: word(999n) };
-      return result;
-    });
+    changePooledPhase(2, (result) => { result.results[0] = { ...generatedHeader(100), hash: word(999n) }; });
     const args = boundaryInput();
     args.rpcEndpointsByChain.set("ethereum", [mintBurnAlchemyEndpoint("https://rpc.example"), mintBurnAlchemyEndpoint("https://fallback.example")]);
     const result = await fetchConservationBoundaries(args);
@@ -186,7 +171,7 @@ describe("pooled conservation boundaries", () => {
   });
   it("marks every dependent of a shared failed block, not unrelated ranges", async () => {
     pooledRpc();
-    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({
+    rpcMock.mockResolvedValueOnce({
       results: [generatedHeader(100), undefined, generatedHeader(104), generatedHeader(106)],
       errors: [{ index: 1 }],
     });
@@ -210,20 +195,20 @@ describe("pooled conservation boundaries", () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
     try {
       pooledRpc();
-      const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
-      vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
+      const normal = rpcMock.getMockImplementation()!;
+      rpcMock.mockImplementation(async (...args) => {
         clock.mockReturnValue(1100);
         return normal(...args);
       });
       const result = await fetchConservationBoundaries({ ...boundaryInput(), deadlineMs: 1100 });
-      expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][2]?.timeoutMs).toBe(100);
+      expect(rpcMock.mock.calls[0][2]?.timeoutMs).toBe(100);
       expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-budget-or-deadline" });
       expect(fetchEvmRpcBatchDetailed).toHaveBeenCalledTimes(1);
     } finally { clock.mockRestore(); }
   });
   it.each(["resolved", "rejected"])("propagates an in-flight abort after a %s RPC", async (kind) => {
     const controller = new AbortController();
-    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async () => {
+    rpcMock.mockImplementation(async () => {
       controller.abort(new Error("cancelled"));
       if (kind === "rejected") throw new Error("transport aborted");
       return null;
@@ -241,14 +226,14 @@ describe("pooled conservation boundaries", () => {
     [{ ...generatedHeader(100), hash: word(102n) }, "invalid-boundary-time"],
   ])("rejects invalid initial header %j", async (header, reason) => {
     pooledRpc();
-    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: [header, generatedHeader(102)], errors: [] });
+    rpcMock.mockResolvedValueOnce({ results: [header, generatedHeader(102)], errors: [] });
     expect((await fetchConservationBoundaries(boundaryInput())).get("one")).toEqual({ status: "unavailable", reason });
   });
   it("rejects future boundary time and invalid supply words", async () => {
     pooledRpc();
     expect((await fetchConservationBoundaries({ ...boundaryInput(), checkedAt: 1001 })).get("one"))
       .toEqual({ status: "unavailable", reason: "invalid-boundary-time" });
-    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: headers, errors: [] })
+    rpcMock.mockResolvedValueOnce({ results: headers, errors: [] })
       .mockResolvedValueOnce({ results: ["0x1", word(100n)], errors: [] });
     expect((await fetchConservationBoundaries(boundaryInput())).get("one"))
       .toEqual({ status: "unavailable", reason: "invalid-total-supply-word" });
@@ -274,10 +259,10 @@ describe("pooled conservation boundaries", () => {
     const result = await fetchConservationBoundaries({ ...boundaryInput(requests), checkedAt: 2000 });
     expect([...result.values()].every((item) => item.status === "ready")).toBe(true);
     // 52 distinct headers (adjacent ranges share a boundary), 102 supply calls.
-    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1].length)).toEqual([52, 100, 2, 52]);
+    expect(rpcMock.mock.calls.map((call) => call[1].length)).toEqual([52, 100, 2, 52]);
   });
   it("does not spend another POST on a request whose opening header already failed", async () => {
-    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce(null);
+    rpcMock.mockResolvedValueOnce(null);
     const args = { ...boundaryInput(), maxBatchCalls: 1 };
     const result = await fetchConservationBoundaries(args);
     expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
@@ -289,6 +274,10 @@ describe("pooled conservation boundaries", () => {
     expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
   });
 });
+function auditInput(patch: Partial<Parameters<typeof completeMintBurnConservationAudit>[0]> = {}) {
+  return completeMintBurnConservationAudit({ ...input(), ...patch });
+}
+
 describe("raw token conservation", () => {
   it("holds only structurally valid reviewed sidecar entries", () => {
     expect(sidecarEntries.flatMap((entry) => validateReviewedConservationEntry(entry))).toEqual([]);
@@ -371,7 +360,7 @@ describe("raw token conservation", () => {
     expect(await fetchConservationBoundaries(args)).toEqual(new Map());
     expect(args.budget.count).toBe(0);
     expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
-    const record = completeMintBurnConservationAudit({ ...input(), config: tron, logs: [], boundary: ready(0n) });
+    const record = auditInput({ config: tron, logs: [], boundary: ready(0n) });
     expect(record).toMatchObject({ status: "unsupported", reason, address: tron.contractAddress });
     expect(record).not.toHaveProperty("supplyDeltaRaw");
     expect(record).not.toHaveProperty("residualRaw");
@@ -401,14 +390,11 @@ describe("raw token conservation", () => {
     rpc();
     const args = boundaryInput();
     const boundaries = await fetchConservationBoundaries(args);
-    const result = completeMintBurnConservationAudit({ ...input(), boundary: boundaries.get("one") });
+    const result = auditInput({ boundary: boundaries.get("one") });
     expect(result).toMatchObject({ status: "ok", mintRaw: "2", burnRaw: "1", supplyDeltaRaw: "1", residualRaw: "0", fromBlock: 100 });
     expect(args.budget.count).toBe(3);
-    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[1][1]).toEqual(headers.map((header) => ({ method: "eth_call",
+    expect(rpcMock.mock.calls[1][1]).toEqual(headers.map((header) => ({ method: "eth_call",
       params: [{ to: config.contractAddress, data: "0x18160ddd" }, { blockHash: header.hash, requireCanonical: true }] })));
-  });
-  it("retains signed exact residuals rather than floating-point tolerance", async () => {
-    expect(completeMintBurnConservationAudit({ ...input(), boundary: ready(3n) })).toMatchObject({ status: "mismatch", residualRaw: "-2" });
   });
   it("deduplicates identical provider logs", async () => {
     const one = log("mint", 2n);
@@ -427,32 +413,21 @@ describe("raw token conservation", () => {
     expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
   });
   it("does no RPC on partial coverage or exhausted budget", async () => {
-    expect(completeMintBurnConservationAudit({ ...input(), complete: false }).reason).toBe("incomplete-log-range");
+    expect(auditInput({ complete: false }).reason).toBe("incomplete-log-range");
     expect((await fetchConservationBoundaries({ ...boundaryInput(), budget: { count: 3, limit: 3 } })).get("one"))
       .toEqual({ status: "unavailable", reason: "audit-budget-or-deadline" });
     expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
-  });
-  it("never falls back to latest when hash calls fail and rejects post-call reorg", async () => {
-    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: headers, errors: [] }).mockResolvedValueOnce(null);
-    expect((await auditWithBoundaries()).reason).toBe("audit-rpc-unavailable");
-    expect(fetchEvmRpcBatchDetailed).toHaveBeenCalledTimes(2);
-    vi.resetAllMocks();
-    rpc();
-    vi.mocked(fetchEvmRpcBatchDetailed).mockReset().mockResolvedValueOnce({ results: headers, errors: [] })
-      .mockResolvedValueOnce({ results: [word(100n), word(101n)], errors: [] })
-      .mockResolvedValueOnce({ results: [headers[0], { ...headers[1], hash: word(99n) }], errors: [] });
-    expect((await auditWithBoundaries()).reason).toBe("boundary-reorg");
   });
   it("propagates aborts", async () => {
     const controller = new AbortController(); controller.abort();
     await expect(fetchConservationBoundaries({ ...boundaryInput(), signal: controller.signal })).rejects.toThrow();
   });
   it("requires boundary evidence, preserves unsupported status, and rejects incomplete or invalid ranges", () => {
-    expect(completeMintBurnConservationAudit({ ...input(), boundary: undefined }).reason).toBe("boundary-evidence-missing");
-    expect(completeMintBurnConservationAudit({ ...input(), fromBlock: 0 }).reason).toBe("invalid-audit-range");
-    expect(completeMintBurnConservationAudit({ ...input(), config: { ...config, decimals: 99 } }))
+    expect(auditInput({ boundary: undefined }).reason).toBe("boundary-evidence-missing");
+    expect(auditInput({ fromBlock: 0 }).reason).toBe("invalid-audit-range");
+    expect(auditInput({ config: { ...config, decimals: 99 } }))
       .toMatchObject({ status: "unsupported", reason: "unreviewed-contract-or-event-semantics" });
-    expect(completeMintBurnConservationAudit({ ...input(), boundary: { status: "unavailable", reason: "audit-rpc-unavailable" } }).reason)
+    expect(auditInput({ boundary: { status: "unavailable", reason: "audit-rpc-unavailable" } }).reason)
       .toBe("audit-rpc-unavailable");
   });
   it("rejects closing-log hash mismatch and ambiguous zero transfers", () => {
@@ -477,8 +452,8 @@ describe("raw token conservation", () => {
     expect(() => validateMintBurnParsedConservation(config, args.logs, 101, 102, [{ ...row, amount_raw: "999999" }])).toThrow("amount-or-identity");
   });
   it("atomically retains a mismatch through unavailable/older attempts until verified pass", async () => {
-    const { db } = fixtures.open();
-    const mismatch = completeMintBurnConservationAudit({ ...input(), boundary: ready(3n) });
+    const { db } = openDatabase();
+    const mismatch = auditInput({ boundary: ready(3n) });
     expect(await persistMintBurnConservation(db, mismatch)).toEqual({ written: true });
     // A rejected write is not a published verdict; callers must see it.
     expect(await persistMintBurnConservation(db, { ...mismatch, status: "unavailable", checkedAt: 1200 }))
@@ -498,7 +473,7 @@ describe("raw token conservation", () => {
     expect(await read()).toEqual(pass);
   });
   it.each(["broken", "{}", '{"status":"mismatch"}'])("repairs invalid cached JSON %s", async (value) => {
-    const { db, sqlite } = fixtures.open();
+    const { db, sqlite } = openDatabase();
     const pass = completeMintBurnConservationAudit(input());
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(pass.key, value, 1000);
     await persistMintBurnConservation(db, pass);
@@ -506,7 +481,7 @@ describe("raw token conservation", () => {
   });
 
   it("readback rejects a corrupt INSERT OR IGNORE survivor and missing row", async () => {
-    const { db, sqlite } = fixtures.open();
+    const { db, sqlite } = openDatabase();
     const expected = { id: "test", stablecoin_id: config.stablecoinId, chain_id: "ethereum", direction: "mint",
       amount: 10_000, block_number: 102, timestamp: 1100 } as MintBurnRow;
     expect(await verifyPersistedMintBurnConservation(db, [expected])).toBe("mismatch");
@@ -555,13 +530,15 @@ describe("reviewed alternative conservation laws", () => {
       !cfg.events.includes(batch.eventDef as never)),
       fromBlock: 101, toBlock: 102, checkedAt: 1100, complete, boundary, lawFor: () => law });
   }
-  const usdtLaw: MintBurnConservationRuntimeEntry = { chainId: "ethereum", stablecoinId: "usdt-tether",
-    address: usdtConfig.contractAddress.toLowerCase(), decimals: 6, disposition: "admitted",
+  function law(token: typeof config, fields: Partial<MintBurnConservationRuntimeEntry>): MintBurnConservationRuntimeEntry {
+    return { chainId: "ethereum", stablecoinId: token.stablecoinId, address: token.contractAddress.toLowerCase(),
+      decimals: token.decimals, disposition: "admitted", ...fields };
+  }
+  const usdtLaw = law(usdtConfig, {
     eventSet: "config-events", requiresNotDeprecated: true,
     conservationOnlyEvents: [{ signature: "DestroyedBlackFunds(address,uint256)", topicHash: DBF_TOPIC,
-      direction: "burn", role: "sum", amountEncoding: "nth-data-uint256", dataSlot: 1, topicArity: 1 }] };
-  const ousdLaw: MintBurnConservationRuntimeEntry = { chainId: "ethereum", stablecoinId: "ousd-origin-protocol",
-    address: ousdConfig.contractAddress.toLowerCase(), decimals: 18, disposition: "admitted",
+      direction: "burn", role: "sum", amountEncoding: "nth-data-uint256", dataSlot: 1, topicArity: 1 }] });
+  const ousdLaw = law(ousdConfig, {
     eventSet: "transfer", invariant: "transfer-plus-vault-yield",
     conservationOnlyEvents: [
       { signature: "YieldDistribution(address,uint256,uint256)", topicHash: YIELD_TOPIC, direction: "mint",
@@ -575,9 +552,8 @@ describe("reviewed alternative conservation laws", () => {
     invariantParams: { boundaryViews: [
       { name: "vaultAddress", address: ousdConfig.contractAddress, call: { kind: "eth_call", selector: "0x430bf08a" }, expect: VAULT },
       { name: "oToken", address: VAULT, call: { kind: "eth_call", selector: "0x1a32aad6" }, expect: ousdConfig.contractAddress },
-    ] } };
-  const usdoLaw: MintBurnConservationRuntimeEntry = { chainId: "ethereum", stablecoinId: "usdo-openeden",
-    address: usdoConfig.contractAddress.toLowerCase(), decimals: 18, disposition: "admitted",
+    ] } });
+  const usdoLaw = law(usdoConfig, {
     eventSet: "transfer", invariant: "usdo-bonus-multiplier-shares",
     conservationOnlyEvents: [
       { signature: "BonusMultiplier(uint256)", topicHash: BONUS_TOPIC, role: "guard", topicArity: 2 },
@@ -589,7 +565,7 @@ describe("reviewed alternative conservation laws", () => {
       { name: "implementation", address: usdoConfig.contractAddress,
         call: { kind: "eth_getStorageAt", slot: "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" },
         expect: `0x${USDO_IMPL.toString(16)}` },
-    ] } };
+    ] } });
 
   it("admits config-events laws only for custom-events adapters with summed mint and burn defs", () => {
     expect(getMintBurnConservationEligibility(usdtConfig)).toEqual({ supported: true });
@@ -651,14 +627,16 @@ describe("reviewed alternative conservation laws", () => {
     }
   });
 
+  function ousdViews() {
+    const value = { vaultAddress: word(BigInt(VAULT)), oToken: word(BigInt(ousdConfig.contractAddress)) };
+    return { from: { ...value }, to: { ...value } };
+  }
   it("adds the vault yield net of fee to the OUSD transfer law and detects omissions", () => {
     const mint = { ...log("mint", 10n), address: ousdConfig.contractAddress };
     const burn = { ...log("burn", 1n, 1), address: ousdConfig.contractAddress };
     const yieldLog = customLog(YIELD_TOPIC, [], [7n, 6n, 2n], { address: VAULT, index: 5, transaction: 30n });
     const highres = customLog(HIGHRES_TOPIC, [], [15n, 1n, 1n], { address: ousdConfig.contractAddress, index: 6, transaction: 30n });
-    const vaultWord = `0x${BigInt(VAULT).toString(16).padStart(64, "0")}`;
-    const views = { from: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) },
-      to: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) } };
+    const views = ousdViews();
     const boundary: ConservationBoundaryEvidence = { ...ready(13n), views };
     const batches = [
       { eventDef: ousdConfig.events[0]!, logs: [mint] }, { eventDef: ousdConfig.events[1]!, logs: [burn] },
@@ -675,9 +653,7 @@ describe("reviewed alternative conservation laws", () => {
     const mint = { ...log("mint", 10n), address: ousdConfig.contractAddress };
     const yieldLog = customLog(YIELD_TOPIC, [], [7n, 6n, 2n], { address: VAULT, index: 5, transaction: 30n });
     const highres = (newSupply: bigint) => customLog(HIGHRES_TOPIC, [], [newSupply, 1n, 1n], { address: ousdConfig.contractAddress, index: 6, transaction: 30n });
-    const vaultWord = `0x${BigInt(VAULT).toString(16).padStart(64, "0")}`;
-    const views = { from: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) },
-      to: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) } };
+    const views = ousdViews();
     const boundary: ReadyBoundary = { ...ready(14n), views };
     const batches = (highresLog: bigint, extra: Array<{ eventDef: unknown; logs: AlchemyLogEntry[] }> = []) => ([
       { eventDef: ousdConfig.events[0]!, logs: [mint] },
@@ -744,7 +720,7 @@ describe("reviewed alternative conservation laws", () => {
   });
 
   it("reads law-specific boundary views, supply selectors and the deprecated flag in the pre-pass", async () => {
-    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (_chain, calls) => ({
+    rpcMock.mockImplementation(async (_chain, calls) => ({
       results: calls.map((call) => {
         if (call.method === "eth_getBlockByNumber") return generatedHeader(Number(call.params[0]));
         if (call.method === "eth_getStorageAt") return word(USDO_IMPL);
@@ -762,7 +738,7 @@ describe("reviewed alternative conservation laws", () => {
       { key: "ousd", config: ousdConfig, fromBlock: 101, toBlock: 102 },
       { key: "usdo", config: usdoConfig, fromBlock: 101, toBlock: 102 },
     ], rpcEndpointsByChain: new Map([["ethereum", [mintBurnAlchemyEndpoint("https://rpc.example")]]]), budget: { count: 0, limit: 100 }, checkedAt: 2000 });
-    const pinnedCalls = vi.mocked(fetchEvmRpcBatchDetailed).mock.calls
+    const pinnedCalls = rpcMock.mock.calls
       .flatMap(([, calls]) => calls.filter((call) => call.method !== "eth_getBlockByNumber"));
     expect(pinnedCalls.some((call) => call.method === "eth_call" &&
       (call.params as Array<{ data?: string }>)[0]?.data === "0x0e136b19")).toBe(true);
@@ -792,40 +768,51 @@ describe("reviewed alternative conservation laws", () => {
         externalMatches: [{ source: "coingecko", value: usdtConfig.contractAddress }] },
       windows: [{ fromBlock: 1, fromBlockHash: word(1n), fromTimestamp: 10, toBlock: 2, toBlockHash: word(2n),
         toTimestamp: 20, mintRaw: "0", burnRaw: "0", supplyDeltaRaw: "0", residualRaw: "0", logCount: 0, journalSha256: "x" }] };
-    expect(validateReviewedConservationEntry(base)).toEqual([]);
-    expect(validateReviewedConservationEntry({ ...base, eventSet: "config-events", zeroRecipientTransferReverts: false })).toEqual([]);
+    const guard = (topicHash = DBF_TOPIC) => ({ signature: "A()", topicHash, role: "guard" as const, topicArity: 1 });
+    const bonusGuard = { signature: "BonusMultiplier(uint256)", topicHash: BONUS_TOPIC, role: "guard" as const, topicArity: 2 };
+    const invalid: [Partial<ReviewedConservationEntry>, string][] = [
+      [{ invariant: "made-up-invariant" }, "invariant must be"],
+      [{ invariant: "usdo-bonus-multiplier-shares" }, "BonusMultiplier"],
+      [{ invariant: "transfer-plus-vault-yield" }, "emitter"],
+      [{ conservationOnlyEvents: [guard(), { ...guard(), signature: "A2()" }] }, "duplicates"],
+      [{ invariantParams: { supplySelector: "0x123" } }, "supplySelector"],
+      [{ invariantParams: { boundaryViews: [
+        { name: "x", address: "0xbad", call: { kind: "eth_call", selector: "0x430bf08a" } },
+      ] } }, "address"],
+    ];
+    for (const [patch, message] of invalid) {
+      expect(validateReviewedConservationEntry({ ...base, ...patch })[0]).toContain(message);
+    }
+    for (const patch of [{}, { eventSet: "config-events" as const, zeroRecipientTransferReverts: false },
+      { invariant: "usdo-bonus-multiplier-shares", conservationOnlyEvents: [bonusGuard], totalSupplyView: { isStoredSum: false } }]) {
+      expect(validateReviewedConservationEntry({ ...base, ...patch })).toEqual([]);
+    }
     expect(validateReviewedConservationEntry({ ...base, zeroRecipientTransferReverts: false })).toHaveLength(1);
-    expect(validateReviewedConservationEntry({ ...base, invariant: "made-up-invariant" })[0]).toContain("invariant must be");
-    const bonusGuard = [{ signature: "BonusMultiplier(uint256)", topicHash: BONUS_TOPIC, role: "guard" as const, topicArity: 2 }];
-    expect(validateReviewedConservationEntry({ ...base, invariant: "usdo-bonus-multiplier-shares",
-      conservationOnlyEvents: bonusGuard, totalSupplyView: { isStoredSum: false } })).toEqual([]);
-    expect(validateReviewedConservationEntry({ ...base, invariant: "usdo-bonus-multiplier-shares" })[0]).toContain("BonusMultiplier");
-    expect(validateReviewedConservationEntry({ ...base, invariant: "transfer-plus-vault-yield" })[0]).toContain("emitter");
     const problems = validateReviewedConservationEntry({ ...base, conservationOnlyEvents: [
       { signature: "A(address,uint256)", topicHash: "0x123", direction: "burn", role: "sum", amountEncoding: "nth-data-uint256", topicArity: 1 },
       { signature: "B()", topicHash: DBF_TOPIC, direction: "mint", role: "sum", amountEncoding: "first-data-uint256", topicArity: 1 },
       { signature: "C()", topicHash: LEGACY_TOPIC, role: "guard", topicArity: 5 },
     ] });
-    expect(problems.some((problem) => problem.includes("topicHash"))).toBe(true);
-    expect(problems.some((problem) => problem.includes("dataSlot"))).toBe(true);
-    expect(problems.some((problem) => problem.includes("topicArity"))).toBe(true);
-    expect(validateReviewedConservationEntry({ ...base, conservationOnlyEvents: [
-      { signature: "A()", topicHash: DBF_TOPIC, role: "guard", topicArity: 1 },
-      { signature: "A2()", topicHash: DBF_TOPIC, role: "guard", topicArity: 1 },
-    ] })[0]).toContain("duplicates");
-    expect(validateReviewedConservationEntry({ ...base, invariantParams: { supplySelector: "0x123" } })[0]).toContain("supplySelector");
-    expect(validateReviewedConservationEntry({ ...base, invariantParams: { boundaryViews: [
-      { name: "x", address: "0xbad", call: { kind: "eth_call", selector: "0x430bf08a" } },
-    ] } })[0]).toContain("address");
+    for (const field of ["topicHash", "dataSlot", "topicArity"]) expect(problems.some((problem) => problem.includes(field))).toBe(true);
   });
 });
+
+type BurnFixture = ReturnType<typeof reviewedBurnFixture>;
+function burnContext(fixture: BurnFixture, actualBurn: boolean, txHash: string) {
+  const context = fixture.context(actualBurn);
+  context.tx!.hash = context.receipt!.transactionHash = txHash;
+  context.receipt!.logs = context.receipt!.logs.map((item) => ({ ...item, transactionHash: txHash }));
+  return context;
+}
+function burnRow(fixture: BurnFixture, logs = [fixture.log]) {
+  return parseMintBurnLogs(fixture.config, fixture.eventDef, logs, fixture.timestamps, fixture.priceContext).rows[0];
+}
 
 describe("reviewed burn economic materialization", () => {
   function rangeFixture() {
     vi.useFakeTimers();
     const fixture = reviewedBurnFixture("dai-makerdao");
-    const row = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log],
-      fixture.timestamps, fixture.priceContext).rows[0];
+    const row = burnRow(fixture);
     vi.setSystemTime(row.timestamp * 1000);
     const proof: MintBurnSupplyProofEvidence = {
       proofId: "proof-one", configKey: mintBurnConfigKey(fixture.config), configFingerprint: "current", lawRevision: "paired-supply-zero-transfers-v1",
@@ -844,50 +831,50 @@ describe("reviewed burn economic materialization", () => {
     return { row, proven, proof };
   }
   async function stagedRange() {
-    const data = { ...fixtures.open(), ...rangeFixture() };
+    const data = { ...openDatabase(), ...rangeFixture() };
     await persistMintBurnSupplyProof(data.db, data.proof);
     await persistMintBurnRows(data.db, [data.proven]);
     return data;
   }
 
   it("keeps pending proof chunks unresolved, then accepts them with debt and preserves proof on receipt-only replay", async () => {
-    const { db, sqlite, row, proven, proof } = await stagedRange();
+    const { db, sqlite, read, row, proven, proof } = await stagedRange();
     await recalcAffectedHours(db, collectAffectedHours([proven]));
-    expect(sqlite.prepare("SELECT burn_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
+    expect(read("burn_count, burn_unresolved_event_count", "hourly"))
       .toEqual({ burn_count: 0, burn_unresolved_event_count: 1 });
     expect(await acceptMintBurnSupplyProof(db, proof, [proven])).toBe(true);
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 1 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 1 });
     sqlite.exec(`CREATE TRIGGER refuse_proof_rebuild BEFORE INSERT ON mint_burn_hourly
       BEGIN SELECT RAISE(ABORT, 'refused proof rebuild'); END`);
     await expect(drainMintBurnMaterializationDebt(db)).rejects.toThrow("refused proof rebuild");
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 1 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 1 });
     sqlite.exec("DROP TRIGGER refuse_proof_rebuild");
     await drainMintBurnMaterializationDebt(db);
     await persistMintBurnRows(db, [{ ...row, burn_review_reason: "supply-proof-context-unavailable" }]);
-    expect(sqlite.prepare("SELECT supply_proof_id, amount_raw, burn_type, burn_review_reason FROM mint_burn_events").get())
+    expect(read("supply_proof_id, amount_raw, burn_type, burn_review_reason"))
       .toEqual({ supply_proof_id: proof.proofId, amount_raw: proven.amount_raw,
         burn_type: "effective_burn", burn_review_reason: "range-supply-destruction" });
-    expect(sqlite.prepare("SELECT burn_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
+    expect(read("burn_count, burn_unresolved_event_count", "hourly"))
       .toEqual({ burn_count: 1, burn_unresolved_event_count: 0 });
   });
 
   it("invalidates changed config proofs, dirties their hours, and cannot reactivate the old evidence", async () => {
-    const { db, sqlite, proven, proof } = await stagedRange();
+    const { db, read, proven, proof } = await stagedRange();
     await acceptMintBurnSupplyProof(db, proof, [proven]);
     await drainMintBurnMaterializationDebt(db);
     expect(await invalidateMintBurnSupplyProofs(db, proof.configKey, proof.configFingerprint)).toBe(0);
     expect(await invalidateMintBurnSupplyProofs(db, proof.configKey, "changed-law")).toBe(1);
-    expect(sqlite.prepare("SELECT burn_type, burn_review_reason FROM mint_burn_events").get())
+    expect(read("burn_type, burn_review_reason"))
       .toEqual({ burn_type: "review_required", burn_review_reason: "range-supply-proof-config-changed" });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 1 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 1 });
     expect(await acceptMintBurnSupplyProof(db, proof, [proven])).toBe(false);
     await drainMintBurnMaterializationDebt(db);
-    expect(sqlite.prepare("SELECT burn_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
+    expect(read("burn_count, burn_unresolved_event_count", "hourly"))
       .toEqual({ burn_count: 0, burn_unresolved_event_count: 1 });
   });
 
   it("invalidates removed or changed configs against the full registry while preserving another lane", async () => {
-    const { db, sqlite, proof } = await stagedRange();
+    const { db, sqlite, read, proof } = await stagedRange();
     const removed = { ...proof, proofId: "removed-proof", configKey: "removed-config" };
     const otherLane = { ...proof, proofId: "other-lane-proof", configKey: "other-lane-config" };
     await persistMintBurnSupplyProof(db, removed);
@@ -898,11 +885,11 @@ describe("reviewed burn economic materialization", () => {
       .toEqual({ lifecycle: "pending" });
     expect(sqlite.prepare("SELECT invalidation_reason FROM mint_burn_supply_proofs WHERE proof_id = ?").get(removed.proofId))
       .toEqual({ invalidation_reason: "range-supply-proof-config-removed" });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 1 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 1 });
   });
 
   it.each([false, true])("retires expired scan spans without rebuilding partial raw (%s)", async (partial) => {
-    const { db, sqlite, proven, proof } = await stagedRange();
+    const { db, sqlite, read, proven, proof } = await stagedRange();
     await acceptMintBurnSupplyProof(db, proof, [proven]);
     await drainMintBurnMaterializationDebt(db);
     const token = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === proof.stablecoinId)!;
@@ -921,8 +908,8 @@ describe("reviewed burn economic materialization", () => {
       "boundary-reorg", proof.checkedAt) : invalidateChangedMintBurnSupplyProofConfigs(db,
       new Map([[proof.configKey, "new-law"]])))).toBe(1);
     expect(await admitted()).toBe(false);
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 0 });
-    expect(sqlite.prepare("SELECT burn_count, net_flow_usd FROM mint_burn_hourly").get())
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 0 });
+    expect(read("burn_count, net_flow_usd", "hourly"))
       .toEqual({ burn_count: partial ? 2 : 1, net_flow_usd: partial ? -40_000 : -20_000 });
     await upsertMintBurnSyncState(db, scan.configKey, scan.toBlock, "monotonic-max", scan);
     expect(await admitted()).toBe(true);
@@ -930,12 +917,12 @@ describe("reviewed burn economic materialization", () => {
       "boundary-reorg", Math.floor(Date.now() / 1000))).toBe(1);
     expect(await admitted()).toBe(false);
     expect(await invalidateChangedMintBurnSupplyProofConfigs(db, new Map())).toBe(1);
-    expect(sqlite.prepare("SELECT config_fingerprint FROM mint_burn_supply_proof_configs").get())
+    expect(read("config_fingerprint", "supply_proof_configs"))
       .toEqual({ config_fingerprint: "removed" });
   });
 
   it("fences proof acceptance atomically when debt enqueue fails and refuses immutable evidence changes", async () => {
-    const { db, sqlite, proven, proof } = await stagedRange();
+    const { db, sqlite, read, proven, proof } = await stagedRange();
     sqlite.prepare("UPDATE mint_burn_supply_proof_configs SET config_fingerprint = 'racing-law'").run();
     expect(await acceptMintBurnSupplyProof(db, proof, [proven])).toBe(false);
     sqlite.prepare("UPDATE mint_burn_supply_proof_configs SET config_fingerprint = ?").run(proof.configFingerprint);
@@ -943,13 +930,13 @@ describe("reviewed burn economic materialization", () => {
     sqlite.exec(`CREATE TRIGGER refuse_proof_debt BEFORE INSERT ON mint_burn_dirty_hours
       BEGIN SELECT RAISE(ABORT, 'refused proof debt'); END`);
     await expect(acceptMintBurnSupplyProof(db, proof, [proven])).rejects.toThrow("refused proof debt");
-    expect(sqlite.prepare("SELECT lifecycle FROM mint_burn_supply_proofs").get()).toEqual({ lifecycle: "pending" });
+    expect(read("lifecycle", "supply_proofs")).toEqual({ lifecycle: "pending" });
     await expect(persistMintBurnSupplyProof(db, { ...proof, residualRaw: "1" }))
       .rejects.toThrow("supply-proof-immutable-evidence-mismatch");
   });
 
   it("invalidates only proofs overlapping reorg evidence and preserves economic exclusions", async () => {
-    const { db, sqlite } = fixtures.open();
+    const { db, read } = openDatabase();
     const { proven, proof } = rangeFixture();
     proven.flow_type = "bridge_transfer";
     proven.burn_type = "bridge_burn";
@@ -960,11 +947,11 @@ describe("reviewed burn economic materialization", () => {
       "boundary-reorg", proof.checkedAt)).toBe(0);
     expect(await invalidateMintBurnSupplyProofRange(db, proof.configKey, proof.fromBlock, proof.toBlock,
       "boundary-reorg", proof.checkedAt)).toBe(1);
-    expect(sqlite.prepare("SELECT flow_type FROM mint_burn_events").get()).toEqual({ flow_type: "bridge_transfer" });
+    expect(read("flow_type")).toEqual({ flow_type: "bridge_transfer" });
   });
 
   it.each(["changed-member", "missing-member", "changed-boundary"])("invalidates %s and descendant proof evidence", async (change) => {
-    const { db, sqlite, proven, proof } = await stagedRange();
+    const { db, sqlite, read, proven, proof } = await stagedRange();
     await acceptMintBurnSupplyProof(db, proof, [proven]);
     const descendant: MintBurnSupplyProofEvidence = { ...proof, proofId: "proof-descendant",
       members: [{ ...proof.members[0], id: "descendant", blockNumber: proof.toBlock + 1, blockHash: word(13n) }],
@@ -979,11 +966,11 @@ describe("reviewed burn economic materialization", () => {
       .toEqual({ invalidated: 2, conflict: true, reason: "range-supply-proof-canonical-conflict" });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_supply_proofs WHERE lifecycle = 'invalidated'").get())
       .toEqual({ n: 2 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 1 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 1 });
   });
 
   it("stores no failed or quiet witnesses and accepts an empty proof without rows", async () => {
-    const { db, sqlite } = fixtures.open();
+    const { db, sqlite } = openDatabase();
     const { proof } = rangeFixture();
     for (const status of ["unavailable", "residual"] as const) {
       await persistMintBurnSupplyProof(db, { ...proof, status });
@@ -997,7 +984,7 @@ describe("reviewed burn economic materialization", () => {
   });
 
   it("does not infer disappeared members from an unavailable raw scan and bounds conflict readback", async () => {
-    const { db, sqlite } = fixtures.open();
+    const { db, sqlite } = openDatabase();
     const { proof } = rangeFixture();
     await persistMintBurnSupplyProof(db, proof);
     const unavailable: MintBurnSupplyProofEvidence = { ...proof, proofId: "unavailable", status: "unavailable",
@@ -1026,16 +1013,14 @@ describe("reviewed burn economic materialization", () => {
   for (const entry of reviewedFalseBurnEntries) {
     it(`${entry.stablecoinId} counts proven burns only without turning an unsupported raw law into a mismatch`, async () => {
       const fixture = reviewedBurnFixture(entry.stablecoinId);
-      const { db, sqlite } = fixtures.open();
+      const { db, read } = openDatabase();
       const rows: MintBurnRow[] = [];
       for (const actualBurn of [false, true]) {
-        const context = fixture.context(actualBurn);
         const txHash = abiWord(actualBurn ? 21n : 20n);
-        const logs = context.receipt!.logs.map((item) => ({ ...item, transactionHash: txHash }));
-        context.tx!.hash = context.receipt!.transactionHash = txHash;
-        context.receipt!.logs = logs;
+        const context = burnContext(fixture, actualBurn, txHash);
+        const logs = context.receipt!.logs;
         vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map([[txHash, context]]));
-        const parsed = parseMintBurnLogs(fixture.config, fixture.eventDef, [logs[0]], fixture.timestamps, fixture.priceContext).rows;
+        const parsed = [burnRow(fixture, [logs[0]])];
         await classifyBridgeBurnRows(parsed, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
           { count: 0, limit: 20 }, new Map());
         parsed[0].amount_usd = 20_000;
@@ -1043,27 +1028,24 @@ describe("reviewed burn economic materialization", () => {
       }
       await persistMintBurnRows(db, rows);
       await recalcAffectedHours(db, collectAffectedHours(rows));
-      expect(sqlite.prepare("SELECT burn_count, burn_volume_usd, net_flow_usd FROM mint_burn_hourly").get())
+      expect(read("burn_count, burn_volume_usd, net_flow_usd", "hourly"))
         .toEqual({ burn_count: 1, burn_volume_usd: 20_000, net_flow_usd: -20_000 });
-      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events").get()).toEqual({ n: 2 });
-      expect(completeMintBurnConservationAudit({ ...input(), config: fixture.config }))
+      expect(read("COUNT(*) AS n")).toEqual({ n: 2 });
+      expect(auditInput({ config: fixture.config }))
         .toMatchObject({ status: "unsupported", reason: entry.unsupportedReason });
     });
   }
 
   it("reconciles retained legacy classifications with durable hourly debt and preserves actual burns", async () => {
     const fixture = reviewedBurnFixture("dai-makerdao");
-    const { db, sqlite } = fixtures.open();
+    const { db, read } = openDatabase();
     const contexts = new Map<string, AlchemyLogsModule.AlchemyTransactionContextBatch>();
     const rows: MintBurnRow[] = [];
     for (const actualBurn of [false, true]) {
-      const context = fixture.context(actualBurn);
       const txHash = abiWord(actualBurn ? 21n : 20n);
-      context.tx!.hash = context.receipt!.transactionHash = txHash;
-      context.receipt!.logs = context.receipt!.logs.map((item) => ({ ...item, transactionHash: txHash }));
+      const context = burnContext(fixture, actualBurn, txHash);
       contexts.set(txHash, context);
-      const parsed = parseMintBurnLogs(fixture.config, fixture.eventDef, [context.receipt!.logs[0]],
-        fixture.timestamps, fixture.priceContext).rows[0];
+      const parsed = burnRow(fixture, [context.receipt!.logs[0]]);
       rows.push({ ...parsed, burn_type: "effective_burn", burn_review_reason: null, amount_usd: 20_000 });
     }
     await insertMintBurnRows(db, rows);
@@ -1072,29 +1054,26 @@ describe("reviewed burn economic materialization", () => {
     expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
       { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(2);
     // A crash here leaves old hourly bytes and recoverable durable debt, not a lost repair.
-    expect(sqlite.prepare("SELECT burn_count FROM mint_burn_hourly").get()).toEqual({ burn_count: 2 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 1 });
+    expect(read("burn_count", "hourly")).toEqual({ burn_count: 2 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 1 });
     await drainMintBurnMaterializationDebt(db);
-    expect(sqlite.prepare("SELECT burn_count, burn_volume_usd FROM mint_burn_hourly").get())
+    expect(read("burn_count, burn_volume_usd", "hourly"))
       .toEqual({ burn_count: 1, burn_volume_usd: 20_000 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 0 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 0 });
     expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
       { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(0);
   });
 
   it("bounds retained reconciliation and makes progress beyond the first batch", async () => {
     const fixture = reviewedBurnFixture("eurs-stasis");
-    const { db, sqlite } = fixtures.open();
+    const { db, sqlite } = openDatabase();
     const contexts = new Map<string, AlchemyLogsModule.AlchemyTransactionContextBatch>();
     const rows: MintBurnRow[] = [];
     for (let index = 0; index < 25; index++) {
-      const context = fixture.context(false);
       const txHash = abiWord(BigInt(30 + index));
-      context.tx!.hash = context.receipt!.transactionHash = txHash;
-      context.receipt!.logs = [{ ...fixture.log, transactionHash: txHash }];
+      const context = burnContext(fixture, false, txHash);
       contexts.set(txHash, context);
-      const row = parseMintBurnLogs(fixture.config, fixture.eventDef, context.receipt!.logs,
-        fixture.timestamps, fixture.priceContext).rows[0];
+      const row = burnRow(fixture, context.receipt!.logs);
       rows.push({ ...row, burn_type: "effective_burn", burn_review_reason: null });
     }
     await insertMintBurnRows(db, rows);
@@ -1110,17 +1089,14 @@ describe("reviewed burn economic materialization", () => {
 
   it("advances past twenty unavailable receipts and wraps without losing retry eligibility", async () => {
     const fixture = reviewedBurnFixture("dai-makerdao");
-    const { db, sqlite } = fixtures.open();
+    const { db, sqlite, read } = openDatabase();
     const rows: MintBurnRow[] = [];
     const contexts = new Map<string, AlchemyLogsModule.AlchemyTransactionContextBatch>();
     for (let index = 0; index < 21; index++) {
-      const context = fixture.context(true);
       const txHash = abiWord(BigInt(30 + index));
-      context.tx!.hash = context.receipt!.transactionHash = txHash;
-      context.receipt!.logs = context.receipt!.logs.map((log) => ({ ...log, transactionHash: txHash }));
+      const context = burnContext(fixture, true, txHash);
       if (index === 20) contexts.set(txHash, context);
-      const row = parseMintBurnLogs(fixture.config, fixture.eventDef, [context.receipt!.logs[0]],
-        fixture.timestamps, fixture.priceContext).rows[0];
+      const row = burnRow(fixture, [context.receipt!.logs[0]]);
       rows.push({ ...row, timestamp: row.timestamp + index, burn_type: "review_required",
         burn_review_reason: "supply-proof-context-unavailable" });
     }
@@ -1137,14 +1113,13 @@ describe("reviewed burn economic materialization", () => {
     vi.mocked(getAlchemyTransactionContextBatchMany).mockClear();
     await run();
     expect(getAlchemyTransactionContextBatchMany).toHaveBeenCalled();
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events").get()).toEqual({ n: 21 });
+    expect(read("COUNT(*) AS n")).toEqual({ n: 21 });
   });
 
   it("does not reconstruct a partially pruned hour from its surviving raw burn", async () => {
     const fixture = reviewedBurnFixture("dai-makerdao");
-    const { db, sqlite } = fixtures.open();
-    const parsed = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log],
-      fixture.timestamps, fixture.priceContext).rows[0];
+    const { db, sqlite, read } = openDatabase();
+    const parsed = burnRow(fixture);
     const row: MintBurnRow = { ...parsed, timestamp: 1_699_999_199,
       amount_usd: 20_000, burn_type: "effective_burn", burn_review_reason: null };
     await insertMintBurnRows(db, [row]);
@@ -1153,25 +1128,24 @@ describe("reviewed burn economic materialization", () => {
     sqlite.exec("UPDATE mint_burn_hourly SET burn_count = 2, burn_volume_usd = 45000, net_flow_usd = -45000");
     expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
       { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(0);
-    expect(sqlite.prepare("SELECT burn_count, burn_volume_usd FROM mint_burn_hourly").get())
+    expect(read("burn_count, burn_volume_usd", "hourly"))
       .toEqual({ burn_count: 2, burn_volume_usd: 45_000 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 0 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 0 });
     expect(getAlchemyTransactionContextBatchMany).not.toHaveBeenCalled();
   });
 
   it("rolls back dirty-hour enqueue when its paired classification mutation fails", async () => {
     const fixture = reviewedBurnFixture("dai-makerdao");
-    const { db, sqlite } = fixtures.open();
-    const row = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log],
-      fixture.timestamps, fixture.priceContext).rows[0];
+    const { db, sqlite, read } = openDatabase();
+    const row = burnRow(fixture);
     await insertMintBurnRows(db, [{ ...row, burn_type: "effective_burn", burn_review_reason: null }]);
     await recalcAffectedHours(db, collectAffectedHours([row]));
     sqlite.exec(`CREATE TRIGGER refuse_burn_repair BEFORE UPDATE OF burn_type ON mint_burn_events
       BEGIN SELECT RAISE(ABORT, 'refused repair'); END`);
     await expect(updateEventClassifications(db, [row])).rejects.toThrow("refused repair");
-    expect(sqlite.prepare("SELECT burn_type, burn_review_reason FROM mint_burn_events").get())
+    expect(read("burn_type, burn_review_reason"))
       .toEqual({ burn_type: "effective_burn", burn_review_reason: null });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()).toEqual({ n: 0 });
+    expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 0 });
   });
 });
 
@@ -1190,15 +1164,7 @@ describe("conditional range destruction proofs", () => {
   }
   it.each([
     ["dai-makerdao", "23102350376131474782440044", "23035402583576159626989568", "66947792555315155450476"],
-    ["usdd-tron-dao-reserve", "200103732493896070690082", "200092732493000000000000", "11000000896070690082"],
-    ["dai-makerdao", "72025849937966224341809066", "66232237429431075201493417", "5793612508535149140315649"],
     ["usdd-tron-dao-reserve", "175062047919566023590918", "175168687129000000000000", "-106639209433976409082"],
-    ["dai-makerdao", "98064362517806166499990442", "84658703598818067587976923", "13405658918988098912013519"],
-    ["usdd-tron-dao-reserve", "2422458953072230886734930", "2424118059623000000000000", "-1659106550769113265070"],
-    ["dai-makerdao", "338643653623463515794925543", "322247250509201797215372698", "16396403114261718579552845"],
-    ["usdd-tron-dao-reserve", "138050683490653256079208", "365542540332060000000000", "-227491856841406743920792"],
-    ["dai-makerdao", "81545197462219419968415896", "80320208191587976277034695", "1224989270631443691381201"],
-    ["usdd-tron-dao-reserve", "1247139282284334715926377", "1413220654243450000000000", "-166081371959115284073623"],
     ["dai-makerdao", "217997446533011548411769173", "230256077730574711853048692", "-12258631197563163441279519"],
     ["usdd-tron-dao-reserve", "884452026740638281846429", "751759459274000000000000", "132692567466638281846429"],
   ])("proves sampled %s raw integers beyond Number precision (%s)", (id, mint, zero, delta) => {

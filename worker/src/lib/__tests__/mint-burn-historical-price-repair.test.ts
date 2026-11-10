@@ -1,8 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { D1Database } from "@cloudflare/workers-types";
-import { describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/materialization-debt";
 import {
@@ -13,15 +13,16 @@ import {
 } from "../mint-burn-historical-price-repair";
 
 const DAY = 86_400;
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 
 interface SqliteD1 extends D1Database {
   sqlite: DatabaseSync;
-  close(): void;
 }
 
 function makeSqliteD1(): SqliteD1 {
-  const { sqlite, db } = createLatestSchemaSqlite();
-  return Object.assign(db, { sqlite, close: () => sqlite.close() }) as SqliteD1;
+  const { sqlite, db } = fixtures.open();
+  return Object.assign(db, { sqlite }) as SqliteD1;
 }
 
 function insertEvent(
@@ -90,51 +91,43 @@ describe("historical mint/burn price repair", () => {
   ])("falls back to providers for a supply snapshot with $name without overwriting valued peers", async ({ price, clock, assessedAtSec }) => {
     const db = makeSqliteD1();
     const timestamp = 1_800_000_000;
-    try {
-      insertEvent(db, { id: "needs-repair", stablecoinId: "usdc-circle", timestamp, amount: 20 });
-      insertEvent(db, { id: "already-valued", stablecoinId: "usdc-circle", timestamp, amount: 100 });
-      db.sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 99, price_timestamp = ? WHERE id = 'already-valued'")
-        .run(timestamp - 100);
-      db.sqlite.prepare(`INSERT INTO supply_history
-        (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES ('usdc-circle', ?, 1000, ?, ?)`)
-        .run(Math.floor(timestamp / DAY) * DAY, price, clock);
-      const loader = availableLoader(1, timestamp - 60);
-      const sourceLoader = { ...loader, loadCoinGecko: vi.fn(loader.loadCoinGecko) };
-      const result = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false, operatorRunId: "clock-repair", timeTravelBookmark: "clock-bookmark",
-        sourceLoader, nowSec: assessedAtSec ?? timestamp + DAY,
-      });
-      expect(sourceLoader.loadCoinGecko).toHaveBeenCalledOnce();
-      expect(result).toMatchObject({ recovered: 1, classifiedIrreducible: 0, aggregateVerificationPassed: true });
-      expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp FROM mint_burn_events WHERE id = 'needs-repair'").get())
-        .toEqual({ amount_usd: 20, price_timestamp: timestamp - 60 });
-      expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp FROM mint_burn_events WHERE id = 'already-valued'").get())
-        .toEqual({ amount_usd: 99, price_timestamp: timestamp - 100 });
-    } finally {
-      db.close();
-    }
+    insertEvent(db, { id: "needs-repair", stablecoinId: "usdc-circle", timestamp, amount: 20 });
+    insertEvent(db, { id: "already-valued", stablecoinId: "usdc-circle", timestamp, amount: 100 });
+    db.sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 99, price_timestamp = ? WHERE id = 'already-valued'")
+      .run(timestamp - 100);
+    db.sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES ('usdc-circle', ?, 1000, ?, ?)`)
+      .run(Math.floor(timestamp / DAY) * DAY, price, clock);
+    const loader = availableLoader(1, timestamp - 60);
+    const sourceLoader = { ...loader, loadCoinGecko: vi.fn(loader.loadCoinGecko) };
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false, operatorRunId: "clock-repair", timeTravelBookmark: "clock-bookmark",
+      sourceLoader, nowSec: assessedAtSec ?? timestamp + DAY,
+    });
+    expect(sourceLoader.loadCoinGecko).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ recovered: 1, classifiedIrreducible: 0, aggregateVerificationPassed: true });
+    expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp FROM mint_burn_events WHERE id = 'needs-repair'").get())
+      .toEqual({ amount_usd: 20, price_timestamp: timestamp - 60 });
+    expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp FROM mint_burn_events WHERE id = 'already-valued'").get())
+      .toEqual({ amount_usd: 99, price_timestamp: timestamp - 100 });
   });
 
   it("uses an adjacent snapshot only through its admitted actual clock, including the 24h boundary", async () => {
     const db = makeSqliteD1();
     const timestamp = 1_800_000_000;
-    try {
-      insertEvent(db, { id: "clocked-snapshot", stablecoinId: "usdc-circle", timestamp });
-      db.sqlite.prepare(`INSERT INTO supply_history
-        (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES ('usdc-circle', ?, 1000, 1, ?)`)
-        .run(Math.floor(timestamp / DAY) * DAY - DAY, timestamp - DAY);
-      const sourceLoader: HistoricalMintPriceSourceLoader = { loadCoinGecko: vi.fn(), loadDefiLlama: vi.fn() };
-      await repairHistoricalMintBurnPrices(db, {
-        dryRun: false, operatorRunId: "valid-clock", timeTravelBookmark: "valid-clock-bookmark",
-        sourceLoader, nowSec: timestamp + DAY,
-      });
-      expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
-      expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
-      expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp, price_source FROM mint_burn_events").get())
-        .toEqual({ amount_usd: 100, price_timestamp: timestamp - DAY, price_source: "repair:supply-history-event-day" });
-    } finally {
-      db.close();
-    }
+    insertEvent(db, { id: "clocked-snapshot", stablecoinId: "usdc-circle", timestamp });
+    db.sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES ('usdc-circle', ?, 1000, 1, ?)`)
+      .run(Math.floor(timestamp / DAY) * DAY - DAY, timestamp - DAY);
+    const sourceLoader: HistoricalMintPriceSourceLoader = { loadCoinGecko: vi.fn(), loadDefiLlama: vi.fn() };
+    await repairHistoricalMintBurnPrices(db, {
+      dryRun: false, operatorRunId: "valid-clock", timeTravelBookmark: "valid-clock-bookmark",
+      sourceLoader, nowSec: timestamp + DAY,
+    });
+    expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
+    expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
+    expect(db.sqlite.prepare("SELECT amount_usd, price_timestamp, price_source FROM mint_burn_events").get())
+      .toEqual({ amount_usd: 100, price_timestamp: timestamp - DAY, price_source: "repair:supply-history-event-day" });
   });
 
   it("chooses the nearest valid point on the event day and never uses an adjacent-day spot", () => {
@@ -199,7 +192,7 @@ describe("historical mint/burn price repair", () => {
     const lateTimestamp = lateDay + 12 * 3600;
     const latePriceTimestamp = lateDay + 11 * 3600;
     const geckoWindows: Array<{ start: number; span: number }> = [];
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const requestUrl = input instanceof Request ? input.url : String(input);
       const url = new URL(requestUrl);
       if (url.pathname.includes("/coins/tether/market_chart/range")) {
@@ -229,470 +222,425 @@ describe("historical mint/burn price repair", () => {
       throw new Error(`Unexpected historical repair URL: ${requestUrl}`);
     });
 
-    try {
-      insertEvent(db, { id: "event-before-800", stablecoinId: "usdt-tether", timestamp: earlyTimestamp });
-      insertEvent(db, { id: "event-after-800", stablecoinId: "usdt-tether", timestamp: lateTimestamp });
+    insertEvent(db, { id: "event-before-800", stablecoinId: "usdt-tether", timestamp: earlyTimestamp });
+    insertEvent(db, { id: "event-after-800", stablecoinId: "usdt-tether", timestamp: lateTimestamp });
 
-      const result = await repairHistoricalMintBurnPrices(db, {
-        dryRun: true,
-        limit: 2,
-        nowSec: lateDay + DAY,
-      });
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun: true,
+      limit: 2,
+      nowSec: lateDay + DAY,
+    });
 
-      expect(geckoWindows).toEqual([
-        { start: earlyDay, span: 800 },
-        { start: earlyDay + 800 * DAY, span: 102 },
-      ]);
-      expect(result).toMatchObject({
-        selected: 2,
-        recovered: 1,
-        classifiedIrreducible: 1,
-        deferredForRetry: 0,
-      });
-      expect(result.dispositions.find((row) => row.eventId === "event-after-800")).toMatchObject({
-        disposition: "recover",
-        price: 0.999,
-        priceTimestamp: latePriceTimestamp,
-        priceSource: "repair:defillama-gecko-chart-event-day:tether",
-        reason: null,
-      });
-      expect(result.dispositions.find((row) => row.eventId === "event-before-800")).toMatchObject({
-        disposition: "irreducible",
-      });
-    } finally {
-      fetchSpy.mockRestore();
-      db.close();
-    }
+    expect(geckoWindows).toEqual([
+      { start: earlyDay, span: 800 },
+      { start: earlyDay + 800 * DAY, span: 102 },
+    ]);
+    expect(result).toMatchObject({
+      selected: 2,
+      recovered: 1,
+      classifiedIrreducible: 1,
+      deferredForRetry: 0,
+    });
+    expect(result.dispositions.find((row) => row.eventId === "event-after-800")).toMatchObject({
+      disposition: "recover",
+      price: 0.999,
+      priceTimestamp: latePriceTimestamp,
+      priceSource: "repair:defillama-gecko-chart-event-day:tether",
+      reason: null,
+    });
+    expect(result.dispositions.find((row) => row.eventId === "event-before-800")).toMatchObject({
+      disposition: "irreducible",
+    });
   });
 
   it("returns an unavailable source instead of querying beyond the bounded DefiLlama window budget", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    try {
-      const sourceResult = await productionHistoricalMintPriceSourceLoader.loadDefiLlama({
-        coinId: "coingecko:tether",
-        source: "repair:defillama-gecko-chart-event-day:tether",
-        startSec: 0,
-        endSec: 7_000 * DAY,
-      });
+    const sourceResult = await productionHistoricalMintPriceSourceLoader.loadDefiLlama({
+      coinId: "coingecko:tether",
+      source: "repair:defillama-gecko-chart-event-day:tether",
+      startSec: 0,
+      endSec: 7_000 * DAY,
+    });
 
-      expect(sourceResult).toMatchObject({
-        status: "unavailable",
-        points: [],
-        detail: "range-exceeds-window-budget:8x800d",
-      });
-      expect(fetchSpy).not.toHaveBeenCalled();
-      expect(resolveHistoricalMintPrice({
-        meta: TRACKED_META_BY_ID.get("usdt-tether")!,
-        eventTimestamp: 6_900 * DAY,
-        sourceResults: [sourceResult],
-      })).toMatchObject({
-        resolution: null,
-        disposition: "retry",
-      });
-    } finally {
-      fetchSpy.mockRestore();
-    }
+    expect(sourceResult).toMatchObject({
+      status: "unavailable",
+      points: [],
+      detail: "range-exceeds-window-budget:8x800d",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(resolveHistoricalMintPrice({
+      meta: TRACKED_META_BY_ID.get("usdt-tether")!,
+      eventTimestamp: 6_900 * DAY,
+      sourceResults: [sourceResult],
+    })).toMatchObject({
+      resolution: null,
+      disposition: "retry",
+    });
   });
 
   it("rebuilds and verifies hourly aggregates before finalizing recovery, then reruns idempotently", async () => {
     const db = makeSqliteD1();
-    try {
-      const timestamp = 1_800_000_000;
-      const repairedHour = Math.floor(timestamp / 3600) * 3600;
-      const preservedHour = repairedHour - 30 * DAY;
-      insertEvent(db, { id: "event-1", stablecoinId: "usdt-tether", timestamp });
-      db.sqlite.exec(`
-        INSERT INTO mint_burn_hourly
-          (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-           mint_volume_usd, burn_volume_usd, net_flow_usd)
-        VALUES
-          ('usdt-tether', 'ethereum', ${repairedHour}, 1, 0, 0, 0, 0),
-          ('usdt-tether', 'ethereum', ${preservedHour}, 7, 3, 700, 300, 400);
-      `);
+    const timestamp = 1_800_000_000;
+    const repairedHour = Math.floor(timestamp / 3600) * 3600;
+    const preservedHour = repairedHour - 30 * DAY;
+    insertEvent(db, { id: "event-1", stablecoinId: "usdt-tether", timestamp });
+    db.sqlite.exec(`
+      INSERT INTO mint_burn_hourly
+        (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+         mint_volume_usd, burn_volume_usd, net_flow_usd)
+      VALUES
+        ('usdt-tether', 'ethereum', ${repairedHour}, 1, 0, 0, 0, 0),
+        ('usdt-tether', 'ethereum', ${preservedHour}, 7, 3, 700, 300, 400);
+    `);
 
-      const first = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false,
-        operatorRunId: "repair-run-1",
-        timeTravelBookmark: "bookmark-1",
-        sourceLoader: availableLoader(0.997, timestamp - 60),
-        nowSec: timestamp + DAY,
-      });
-      expect(first).toMatchObject({
-        selected: 1,
-        recovered: 1,
-        classifiedIrreducible: 0,
-        aggregateCoinsRebuilt: ["usdt-tether"],
-        aggregateVerificationPassed: true,
-      });
-      expect(
-        db.sqlite
-          .prepare(
-            `SELECT amount_usd, price_used, price_timestamp, price_source, price_repair_status
-             FROM mint_burn_events WHERE id = 'event-1'`,
-          )
-          .get(),
-      ).toEqual({
-        amount_usd: 99.7,
-        price_used: 0.997,
-        price_timestamp: timestamp - 60,
-        price_source: "repair:coingecko-market-chart-event-day",
-        price_repair_status: "recovered",
-      });
-      expect(
-        db.sqlite
-          .prepare(
-            `SELECT mint_count, mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, net_flow_usd
-             FROM mint_burn_hourly
-             WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${repairedHour}`,
-          )
-          .get(),
-      ).toEqual({
-        mint_count: 1,
-        mint_unpriced_event_count: 0,
-        burn_unpriced_event_count: 0,
-        mint_volume_usd: 99.7,
-        net_flow_usd: 99.7,
-      });
-      expect(db.sqlite.prepare(`SELECT mint_unresolved_event_count, burn_unresolved_event_count
-        FROM mint_burn_hourly WHERE hour_ts = ?`).get(repairedHour))
-        .toEqual({ mint_unresolved_event_count: null, burn_unresolved_event_count: null });
-      // The untouched legacy bucket keeps unrecorded (unknown) coverage; nothing defaults it to complete.
-      expect(
-        db.sqlite
-          .prepare(
-            `SELECT mint_count, burn_count, mint_unpriced_event_count, burn_unpriced_event_count,
-                    mint_volume_usd, burn_volume_usd, net_flow_usd
-             FROM mint_burn_hourly
-             WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${preservedHour}`,
-          )
-          .get(),
-      ).toEqual({
-        mint_count: 7,
-        burn_count: 3,
-        mint_unpriced_event_count: null,
-        burn_unpriced_event_count: null,
-        mint_volume_usd: 700,
-        burn_volume_usd: 300,
-        net_flow_usd: 400,
-      });
+    const first = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false,
+      operatorRunId: "repair-run-1",
+      timeTravelBookmark: "bookmark-1",
+      sourceLoader: availableLoader(0.997, timestamp - 60),
+      nowSec: timestamp + DAY,
+    });
+    expect(first).toMatchObject({
+      selected: 1,
+      recovered: 1,
+      classifiedIrreducible: 0,
+      aggregateCoinsRebuilt: ["usdt-tether"],
+      aggregateVerificationPassed: true,
+    });
+    expect(
+      db.sqlite
+        .prepare(
+          `SELECT amount_usd, price_used, price_timestamp, price_source, price_repair_status
+           FROM mint_burn_events WHERE id = 'event-1'`,
+        )
+        .get(),
+    ).toEqual({
+      amount_usd: 99.7,
+      price_used: 0.997,
+      price_timestamp: timestamp - 60,
+      price_source: "repair:coingecko-market-chart-event-day",
+      price_repair_status: "recovered",
+    });
+    expect(
+      db.sqlite
+        .prepare(
+          `SELECT mint_count, mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, net_flow_usd
+           FROM mint_burn_hourly
+           WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${repairedHour}`,
+        )
+        .get(),
+    ).toEqual({
+      mint_count: 1,
+      mint_unpriced_event_count: 0,
+      burn_unpriced_event_count: 0,
+      mint_volume_usd: 99.7,
+      net_flow_usd: 99.7,
+    });
+    expect(db.sqlite.prepare(`SELECT mint_unresolved_event_count, burn_unresolved_event_count
+      FROM mint_burn_hourly WHERE hour_ts = ?`).get(repairedHour))
+      .toEqual({ mint_unresolved_event_count: null, burn_unresolved_event_count: null });
+    // The untouched legacy bucket keeps unrecorded (unknown) coverage; nothing defaults it to complete.
+    expect(
+      db.sqlite
+        .prepare(
+          `SELECT mint_count, burn_count, mint_unpriced_event_count, burn_unpriced_event_count,
+                  mint_volume_usd, burn_volume_usd, net_flow_usd
+           FROM mint_burn_hourly
+           WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${preservedHour}`,
+        )
+        .get(),
+    ).toEqual({
+      mint_count: 7,
+      burn_count: 3,
+      mint_unpriced_event_count: null,
+      burn_unpriced_event_count: null,
+      mint_volume_usd: 700,
+      burn_volume_usd: 300,
+      net_flow_usd: 400,
+    });
 
-      const second = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false,
-        operatorRunId: "repair-run-2",
-        timeTravelBookmark: "bookmark-1",
-        sourceLoader: availableLoader(1.1, timestamp),
-        nowSec: timestamp + 2 * DAY,
-      });
-      expect(second).toMatchObject({ selected: 0, recovered: 0, aggregateCoinsRebuilt: [] });
-      expect(db.sqlite.prepare("SELECT amount_usd FROM mint_burn_events WHERE id = 'event-1'").get()).toEqual({
-        amount_usd: 99.7,
-      });
-      expect(
-        db.sqlite
-          .prepare("SELECT price_repair_run_id, price_repair_bookmark FROM mint_burn_events WHERE id = 'event-1'")
-          .get(),
-      ).toEqual({ price_repair_run_id: "repair-run-1", price_repair_bookmark: "bookmark-1" });
-    } finally {
-      db.close();
-    }
+    const second = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false,
+      operatorRunId: "repair-run-2",
+      timeTravelBookmark: "bookmark-1",
+      sourceLoader: availableLoader(1.1, timestamp),
+      nowSec: timestamp + 2 * DAY,
+    });
+    expect(second).toMatchObject({ selected: 0, recovered: 0, aggregateCoinsRebuilt: [] });
+    expect(db.sqlite.prepare("SELECT amount_usd FROM mint_burn_events WHERE id = 'event-1'").get()).toEqual({
+      amount_usd: 99.7,
+    });
+    expect(
+      db.sqlite
+        .prepare("SELECT price_repair_run_id, price_repair_bookmark FROM mint_burn_events WHERE id = 'event-1'")
+        .get(),
+    ).toEqual({ price_repair_run_id: "repair-run-1", price_repair_bookmark: "bookmark-1" });
   });
 
   it("recovers and rebuilds through a nonreturning operator D1 client", async () => {
     const db = makeSqliteD1();
-    try {
-      const timestamp = 1_800_000_000;
-      insertEvent(db, { id: "event-1", stablecoinId: "usdt-tether", timestamp });
-      insertEvent(db, { id: "review-burn", stablecoinId: "usdt-tether", timestamp: timestamp + 1 });
-      db.sqlite.exec(`UPDATE mint_burn_events SET direction = 'burn', burn_type = 'review_required', amount_usd = 100
-        WHERE id = 'review-burn'`);
-      db.sqlite.prepare(`INSERT INTO mint_burn_hourly
-        (stablecoin_id, chain_id, hour_ts, mint_unresolved_event_count, burn_unresolved_event_count)
-        VALUES ('usdt-tether', 'ethereum', ?, 0, 1)`).run(Math.floor(timestamp / 3600) * 3600);
-      // The operator backfill facade rejects RETURNING writes in its batches.
-      const prepare = db.prepare.bind(db);
-      db.prepare = ((sql: string) => {
-        if (/\bRETURNING\b/i.test(sql)) throw new Error("backfill-d1-batch-requires-nonreturning-writes");
-        return prepare(sql);
-      }) as typeof db.prepare;
-      const result = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false,
-        operatorRunId: "operator-run",
-        timeTravelBookmark: "operator-bookmark",
-        sourceLoader: availableLoader(0.997, timestamp - 60),
-        nowSec: timestamp + DAY,
-      });
-      expect(result).toMatchObject({
-        recovered: 1,
-        aggregateCoinsRebuilt: ["usdt-tether"],
-        aggregateVerificationPassed: true,
-      });
-      expect(db.sqlite.prepare("SELECT mint_unresolved_event_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
-        .toEqual({ mint_unresolved_event_count: 0, burn_unresolved_event_count: 1 });
-    } finally {
-      db.close();
-    }
+    const timestamp = 1_800_000_000;
+    insertEvent(db, { id: "event-1", stablecoinId: "usdt-tether", timestamp });
+    insertEvent(db, { id: "review-burn", stablecoinId: "usdt-tether", timestamp: timestamp + 1 });
+    db.sqlite.exec(`UPDATE mint_burn_events SET direction = 'burn', burn_type = 'review_required', amount_usd = 100
+      WHERE id = 'review-burn'`);
+    db.sqlite.prepare(`INSERT INTO mint_burn_hourly
+      (stablecoin_id, chain_id, hour_ts, mint_unresolved_event_count, burn_unresolved_event_count)
+      VALUES ('usdt-tether', 'ethereum', ?, 0, 1)`).run(Math.floor(timestamp / 3600) * 3600);
+    // The operator backfill facade rejects RETURNING writes in its batches.
+    const prepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      if (/\bRETURNING\b/i.test(sql)) throw new Error("backfill-d1-batch-requires-nonreturning-writes");
+      return prepare(sql);
+    }) as typeof db.prepare;
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false,
+      operatorRunId: "operator-run",
+      timeTravelBookmark: "operator-bookmark",
+      sourceLoader: availableLoader(0.997, timestamp - 60),
+      nowSec: timestamp + DAY,
+    });
+    expect(result).toMatchObject({
+      recovered: 1,
+      aggregateCoinsRebuilt: ["usdt-tether"],
+      aggregateVerificationPassed: true,
+    });
+    expect(db.sqlite.prepare("SELECT mint_unresolved_event_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
+      .toEqual({ mint_unresolved_event_count: 0, burn_unresolved_event_count: 1 });
   });
 
   it("resumes an interrupted pending-aggregate repair without refetching historical prices", async () => {
     const db = makeSqliteD1();
-    try {
-      const timestamp = 1_800_000_000;
-      insertEvent(db, { id: "event-resume", stablecoinId: "usdt-tether", timestamp, amount: 10 });
-      db.sqlite
-        .prepare(
-          `UPDATE mint_burn_events
-           SET amount_usd = 9.9,
-               price_used = 0.99,
-               price_timestamp = ?,
-               price_source = 'repair:coingecko-market-chart-event-day',
-               price_repair_status = 'pending_aggregate'
-           WHERE id = 'event-resume'`,
-        )
-        .run(timestamp - 30);
-      const sourceLoader: HistoricalMintPriceSourceLoader = {
-        loadCoinGecko: vi.fn(),
-        loadDefiLlama: vi.fn(),
-      };
+    const timestamp = 1_800_000_000;
+    insertEvent(db, { id: "event-resume", stablecoinId: "usdt-tether", timestamp, amount: 10 });
+    db.sqlite
+      .prepare(
+        `UPDATE mint_burn_events
+         SET amount_usd = 9.9,
+             price_used = 0.99,
+             price_timestamp = ?,
+             price_source = 'repair:coingecko-market-chart-event-day',
+             price_repair_status = 'pending_aggregate'
+         WHERE id = 'event-resume'`,
+      )
+      .run(timestamp - 30);
+    const sourceLoader: HistoricalMintPriceSourceLoader = {
+      loadCoinGecko: vi.fn(),
+      loadDefiLlama: vi.fn(),
+    };
 
-      const result = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false,
-        operatorRunId: "repair-resume",
-        timeTravelBookmark: "bookmark-resume",
-        sourceLoader,
-        nowSec: timestamp + DAY,
-      });
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false,
+      operatorRunId: "repair-resume",
+      timeTravelBookmark: "bookmark-resume",
+      sourceLoader,
+      nowSec: timestamp + DAY,
+    });
 
-      expect(result).toMatchObject({
-        selected: 0,
-        recovered: 0,
-        aggregateCoinsRebuilt: ["usdt-tether"],
-        aggregateVerificationPassed: true,
-        backlog: { pendingAggregate: 0 },
-      });
-      expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
-      expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
-      expect(
-        db.sqlite.prepare("SELECT price_repair_status FROM mint_burn_events WHERE id = 'event-resume'").get(),
-      ).toEqual({ price_repair_status: "recovered" });
-    } finally {
-      db.close();
-    }
+    expect(result).toMatchObject({
+      selected: 0,
+      recovered: 0,
+      aggregateCoinsRebuilt: ["usdt-tether"],
+      aggregateVerificationPassed: true,
+      backlog: { pendingAggregate: 0 },
+    });
+    expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
+    expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
+    expect(
+      db.sqlite.prepare("SELECT price_repair_status FROM mint_burn_events WHERE id = 'event-resume'").get(),
+    ).toEqual({ price_repair_status: "recovered" });
   });
 
   it("rebuilds the seeded durable page when legacy hour order differs from coin order", async () => {
     const db = makeSqliteD1();
-    try {
-      const firstHour = 1_799_996_400;
-      for (let index = 0; index < 500; index++) {
-        insertEvent(db, { id: `old-${index}`, stablecoinId: "usdt-tether", timestamp: firstHour + index * 3600 + 1 });
-      }
-      insertEvent(db, { id: "newer", stablecoinId: "usdc-circle", timestamp: firstHour + 500 * 3600 + 1 });
-      db.sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 100, price_repair_status = 'pending_aggregate'").run();
-      const options = {
-        dryRun: false, operatorRunId: "bounded-resume", timeTravelBookmark: "bounded-bookmark",
-        nowSec: firstHour + 501 * 3600,
-      };
-      const first = await repairHistoricalMintBurnPrices(db, options);
-      expect(first.aggregateCoinsRebuilt).toEqual(["usdt-tether"]);
-      expect(first.backlog.pendingAggregate).toBe(1);
-      expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()).toEqual({ count: 500 });
-      expect(db.sqlite.prepare("SELECT price_repair_status FROM mint_burn_events WHERE id = 'newer'").get())
-        .toEqual({ price_repair_status: "pending_aggregate" });
-      expect(db.sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
-      const second = await repairHistoricalMintBurnPrices(db, options);
-      expect(second.aggregateCoinsRebuilt).toEqual(["usdc-circle"]);
-      expect(second.backlog.pendingAggregate).toBe(0);
-      expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()).toEqual({ count: 501 });
-    } finally {
-      db.close();
+    const firstHour = 1_799_996_400;
+    for (let index = 0; index < 500; index++) {
+      insertEvent(db, { id: `old-${index}`, stablecoinId: "usdt-tether", timestamp: firstHour + index * 3600 + 1 });
     }
+    insertEvent(db, { id: "newer", stablecoinId: "usdc-circle", timestamp: firstHour + 500 * 3600 + 1 });
+    db.sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 100, price_repair_status = 'pending_aggregate'").run();
+    const options = {
+      dryRun: false, operatorRunId: "bounded-resume", timeTravelBookmark: "bounded-bookmark",
+      nowSec: firstHour + 501 * 3600,
+    };
+    const first = await repairHistoricalMintBurnPrices(db, options);
+    expect(first.aggregateCoinsRebuilt).toEqual(["usdt-tether"]);
+    expect(first.backlog.pendingAggregate).toBe(1);
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()).toEqual({ count: 500 });
+    expect(db.sqlite.prepare("SELECT price_repair_status FROM mint_burn_events WHERE id = 'newer'").get())
+      .toEqual({ price_repair_status: "pending_aggregate" });
+    expect(db.sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
+    const second = await repairHistoricalMintBurnPrices(db, options);
+    expect(second.aggregateCoinsRebuilt).toEqual(["usdc-circle"]);
+    expect(second.backlog.pendingAggregate).toBe(0);
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()).toEqual({ count: 501 });
   });
 
   it.each(["source", "rebuild"])("retains recoverable state after a historical %s transaction fails", async (failure) => {
     const db = makeSqliteD1();
     const timestamp = 1_800_000_000;
-    try {
-      insertEvent(db, { id: "interrupted", stablecoinId: "usdt-tether", timestamp });
-      const failingDb = createSqliteD1(db.sqlite, { onRun(sql) {
-        if ((failure === "source" && sql.includes("SET amount_usd = ?"))
-          || (failure === "rebuild" && sql.includes("DELETE FROM mint_burn_dirty_hours"))) {
-          throw new Error("interrupted repair");
-        }
-      } });
-      await expect(repairHistoricalMintBurnPrices(failingDb, {
-        dryRun: false, operatorRunId: "original-run", timeTravelBookmark: "original-bookmark",
-        sourceLoader: availableLoader(1, timestamp), nowSec: timestamp + DAY,
-      })).rejects.toThrow("interrupted repair");
-      expect(db.sqlite.prepare("SELECT amount_usd, price_repair_status FROM mint_burn_events").get())
-        .toEqual({ amount_usd: failure === "source" ? null : 100,
-          price_repair_status: failure === "source" ? null : "pending_aggregate" });
-      expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get())
-        .toEqual({ count: failure === "source" ? 0 : 1 });
-      expect(db.sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
-      if (failure === "rebuild") {
-        await drainMintBurnMaterializationDebt(db);
-        expect(db.sqlite.prepare(`SELECT price_repair_status, price_repair_run_id, price_repair_bookmark,
-          price_timestamp, price_source FROM mint_burn_events`).get())
-          .toEqual({ price_repair_status: "recovered", price_repair_run_id: "original-run",
-            price_repair_bookmark: "original-bookmark", price_timestamp: timestamp,
-            price_source: "repair:coingecko-market-chart-event-day" });
-        expect(db.sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get())
-          .toEqual({ mint_volume_usd: 100 });
-        expect(db.sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
+    insertEvent(db, { id: "interrupted", stablecoinId: "usdt-tether", timestamp });
+    const failingDb = createSqliteD1(db.sqlite, { onRun(sql) {
+      if ((failure === "source" && sql.includes("SET amount_usd = ?"))
+        || (failure === "rebuild" && sql.includes("DELETE FROM mint_burn_dirty_hours"))) {
+        throw new Error("interrupted repair");
       }
-    } finally {
-      db.close();
+    } });
+    await expect(repairHistoricalMintBurnPrices(failingDb, {
+      dryRun: false, operatorRunId: "original-run", timeTravelBookmark: "original-bookmark",
+      sourceLoader: availableLoader(1, timestamp), nowSec: timestamp + DAY,
+    })).rejects.toThrow("interrupted repair");
+    expect(db.sqlite.prepare("SELECT amount_usd, price_repair_status FROM mint_burn_events").get())
+      .toEqual({ amount_usd: failure === "source" ? null : 100,
+        price_repair_status: failure === "source" ? null : "pending_aggregate" });
+    expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get())
+      .toEqual({ count: failure === "source" ? 0 : 1 });
+    expect(db.sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
+    if (failure === "rebuild") {
+      await drainMintBurnMaterializationDebt(db);
+      expect(db.sqlite.prepare(`SELECT price_repair_status, price_repair_run_id, price_repair_bookmark,
+        price_timestamp, price_source FROM mint_burn_events`).get())
+        .toEqual({ price_repair_status: "recovered", price_repair_run_id: "original-run",
+          price_repair_bookmark: "original-bookmark", price_timestamp: timestamp,
+          price_source: "repair:coingecko-market-chart-event-day" });
+      expect(db.sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get())
+        .toEqual({ mint_volume_usd: 100 });
+      expect(db.sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
     }
   });
 
   it("persists an explicit irreducible classification without inventing a current price", async () => {
     const db = makeSqliteD1();
-    try {
-      const timestamp = 1_800_000_000;
-      insertEvent(db, { id: "event-2", stablecoinId: "usdt-tether", timestamp });
-      const emptyLoader: HistoricalMintPriceSourceLoader = {
-        loadCoinGecko: async () => ({ source: "cg", status: "empty", points: [] }),
-        loadDefiLlama: async ({ source }) => ({ source, status: "empty", points: [] }),
-      };
+    const timestamp = 1_800_000_000;
+    insertEvent(db, { id: "event-2", stablecoinId: "usdt-tether", timestamp });
+    const emptyLoader: HistoricalMintPriceSourceLoader = {
+      loadCoinGecko: async () => ({ source: "cg", status: "empty", points: [] }),
+      loadDefiLlama: async ({ source }) => ({ source, status: "empty", points: [] }),
+    };
 
-      const result = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false,
-        operatorRunId: "repair-irreducible",
-        timeTravelBookmark: "bookmark-irreducible",
-        sourceLoader: emptyLoader,
-        nowSec: timestamp + DAY,
-      });
-      expect(result).toMatchObject({
-        selected: 1,
-        recovered: 0,
-        classifiedIrreducible: 1,
-        aggregateCoinsRebuilt: [],
-        backlog: { unclassified: 0, irreducible: 1, totalNullUsd: 1 },
-      });
-      const row = db.sqlite
-        .prepare(
-          `SELECT amount_usd, price_used, price_source, price_repair_status, price_repair_reason
-           FROM mint_burn_events WHERE id = 'event-2'`,
-        )
-        .get();
-      expect(row).toMatchObject({
-        amount_usd: null,
-        price_used: null,
-        price_source: null,
-        price_repair_status: "irreducible",
-      });
-      expect(String(row?.price_repair_reason)).toContain("no-valid-event-day-price");
-    } finally {
-      db.close();
-    }
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false,
+      operatorRunId: "repair-irreducible",
+      timeTravelBookmark: "bookmark-irreducible",
+      sourceLoader: emptyLoader,
+      nowSec: timestamp + DAY,
+    });
+    expect(result).toMatchObject({
+      selected: 1,
+      recovered: 0,
+      classifiedIrreducible: 1,
+      aggregateCoinsRebuilt: [],
+      backlog: { unclassified: 0, irreducible: 1, totalNullUsd: 1 },
+    });
+    const row = db.sqlite
+      .prepare(
+        `SELECT amount_usd, price_used, price_source, price_repair_status, price_repair_reason
+         FROM mint_burn_events WHERE id = 'event-2'`,
+      )
+      .get();
+    expect(row).toMatchObject({
+      amount_usd: null,
+      price_used: null,
+      price_source: null,
+      price_repair_status: "irreducible",
+    });
+    expect(String(row?.price_repair_reason)).toContain("no-valid-event-day-price");
   });
 
   it("keeps dry-run read-only while reporting the bounded repair plan", async () => {
     const db = makeSqliteD1();
-    try {
-      const timestamp = 1_800_000_000;
-      insertEvent(db, { id: "event-3", stablecoinId: "usdt-tether", timestamp });
-      const result = await repairHistoricalMintBurnPrices(db, {
-        dryRun: true,
-        limit: 1,
-        sourceLoader: availableLoader(1, timestamp),
-      });
-      expect(result).toMatchObject({
-        dryRun: true,
-        limit: 1,
-        selected: 1,
-        recovered: 1,
-        aggregateCoinsRebuilt: ["usdt-tether"],
-      });
-      expect(
-        db.sqlite.prepare("SELECT amount_usd, price_repair_status FROM mint_burn_events WHERE id = 'event-3'").get(),
-      ).toEqual({ amount_usd: null, price_repair_status: null });
-    } finally {
-      db.close();
-    }
+    const timestamp = 1_800_000_000;
+    insertEvent(db, { id: "event-3", stablecoinId: "usdt-tether", timestamp });
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun: true,
+      limit: 1,
+      sourceLoader: availableLoader(1, timestamp),
+    });
+    expect(result).toMatchObject({
+      dryRun: true,
+      limit: 1,
+      selected: 1,
+      recovered: 1,
+      aggregateCoinsRebuilt: ["usdt-tether"],
+    });
+    expect(
+      db.sqlite.prepare("SELECT amount_usd, price_repair_status FROM mint_burn_events WHERE id = 'event-3'").get(),
+    ).toEqual({ amount_usd: null, price_repair_status: null });
   });
 
   it("repairs a limit=500 page spanning 101 coins without exceeding D1's bound-parameter limit", async () => {
     const db = makeSqliteD1();
     const timestamp = 1_800_000_000;
     const snapshotDate = Math.floor(timestamp / DAY) * DAY;
-    try {
-      const coinIds = [...TRACKED_META_BY_ID.values()]
-        .filter((meta) => meta.flags.pegCurrency === "USD")
-        .slice(0, 101)
-        .map((meta) => meta.id);
-      expect(coinIds).toHaveLength(101);
-      for (const [index, stablecoinId] of coinIds.entries()) {
-        insertEvent(db, { id: `wide-page-${index}`, stablecoinId, timestamp });
-        db.sqlite.prepare(`INSERT INTO supply_history
-          (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
-          VALUES (?, ?, 1000, 1, ?)`).run(stablecoinId, snapshotDate, timestamp - 60);
-      }
-      const sourceLoader: HistoricalMintPriceSourceLoader = { loadCoinGecko: vi.fn(), loadDefiLlama: vi.fn() };
-
-      const result = await repairHistoricalMintBurnPrices(db, {
-        dryRun: true, limit: 500, sourceLoader, nowSec: timestamp + DAY,
-      });
-
-      expect(result).toMatchObject({
-        limit: 500, selected: 101, recovered: 101, classifiedIrreducible: 0, deferredForRetry: 0,
-      });
-      expect(result.dispositions.every((entry) => entry.disposition === "recover"
-        && entry.price === 1 && entry.priceSource === "repair:supply-history-event-day")).toBe(true);
-      expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
-      expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
-    } finally {
-      db.close();
+    const coinIds = [...TRACKED_META_BY_ID.values()]
+      .filter((meta) => meta.flags.pegCurrency === "USD")
+      .slice(0, 101)
+      .map((meta) => meta.id);
+    expect(coinIds).toHaveLength(101);
+    for (const [index, stablecoinId] of coinIds.entries()) {
+      insertEvent(db, { id: `wide-page-${index}`, stablecoinId, timestamp });
+      db.sqlite.prepare(`INSERT INTO supply_history
+        (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
+        VALUES (?, ?, 1000, 1, ?)`).run(stablecoinId, snapshotDate, timestamp - 60);
     }
+    const sourceLoader: HistoricalMintPriceSourceLoader = { loadCoinGecko: vi.fn(), loadDefiLlama: vi.fn() };
+
+    const result = await repairHistoricalMintBurnPrices(db, {
+      dryRun: true, limit: 500, sourceLoader, nowSec: timestamp + DAY,
+    });
+
+    expect(result).toMatchObject({
+      limit: 500, selected: 101, recovered: 101, classifiedIrreducible: 0, deferredForRetry: 0,
+    });
+    expect(result.dispositions.every((entry) => entry.disposition === "recover"
+      && entry.price === 1 && entry.priceSource === "repair:supply-history-event-day")).toBe(true);
+    expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
+    expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
   });
 
   it("records a retry-irreducible attempt clock, run id, bookmark and reason on the re-opened row", async () => {
     const db = makeSqliteD1();
     const eventTimestamp = 1_800_000_000;
     const priorAttemptAt = eventTimestamp - 5 * DAY;
-    try {
-      insertEvent(db, { id: "irreducible-head", stablecoinId: "usdt-tether", timestamp: eventTimestamp });
-      insertEvent(db, { id: "irreducible-next", stablecoinId: "usdt-tether", timestamp: eventTimestamp + 60 });
-      for (const [id, attemptedAt] of [["irreducible-head", priorAttemptAt], ["irreducible-next", priorAttemptAt + 60]] as const) {
-        db.sqlite.prepare(`UPDATE mint_burn_events
-          SET price_repair_status = 'irreducible',
-              price_repair_reason = 'no-valid-event-day-price:repair:coingecko-market-chart-event-day',
-              price_repair_attempted_at = ?, price_repair_run_id = 'prior-run', price_repair_bookmark = 'prior-bookmark'
-          WHERE id = ?`).run(attemptedAt, id);
-      }
-      const transientlyUnavailableLoader: HistoricalMintPriceSourceLoader = {
-        loadCoinGecko: async ({ startSec, endSec }) => ({
-          source: "repair:coingecko-market-chart-event-day:usdt",
-          status: "unavailable", points: [], detail: `http-503:${startSec}:${endSec}`,
-        }),
-        loadDefiLlama: async ({ source }) => ({ source, status: "unavailable", points: [], detail: "http-503" }),
-      };
-
-      const retry = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false, limit: 1, retryIrreducible: true,
-        operatorRunId: "retry-run", timeTravelBookmark: "retry-bookmark",
-        sourceLoader: transientlyUnavailableLoader, nowSec: eventTimestamp + DAY,
-      });
-
-      expect(retry.dispositions[0]).toMatchObject({ eventId: "irreducible-head", disposition: "retry" });
-      expect(db.sqlite.prepare(`SELECT amount_usd, price_used, price_repair_status, price_repair_attempted_at,
-          price_repair_run_id, price_repair_bookmark, price_repair_reason
-        FROM mint_burn_events WHERE id = 'irreducible-head'`).get()).toMatchObject({
-        amount_usd: null,
-        price_used: null,
-        price_repair_attempted_at: eventTimestamp + DAY,
-        price_repair_run_id: "retry-run",
-        price_repair_bookmark: "retry-bookmark",
-        price_repair_reason: expect.stringContaining("event-day-source-temporarily-unavailable"),
-      });
-      const next = await repairHistoricalMintBurnPrices(db, {
-        dryRun: false, limit: 1, retryIrreducible: true,
-        operatorRunId: "retry-run-2", timeTravelBookmark: "retry-bookmark-2",
-        sourceLoader: transientlyUnavailableLoader, nowSec: eventTimestamp + DAY + 60,
-      });
-      expect(next.dispositions[0]?.eventId).toBe("irreducible-next");
-    } finally {
-      db.close();
+    insertEvent(db, { id: "irreducible-head", stablecoinId: "usdt-tether", timestamp: eventTimestamp });
+    insertEvent(db, { id: "irreducible-next", stablecoinId: "usdt-tether", timestamp: eventTimestamp + 60 });
+    for (const [id, attemptedAt] of [["irreducible-head", priorAttemptAt], ["irreducible-next", priorAttemptAt + 60]] as const) {
+      db.sqlite.prepare(`UPDATE mint_burn_events
+        SET price_repair_status = 'irreducible',
+            price_repair_reason = 'no-valid-event-day-price:repair:coingecko-market-chart-event-day',
+            price_repair_attempted_at = ?, price_repair_run_id = 'prior-run', price_repair_bookmark = 'prior-bookmark'
+        WHERE id = ?`).run(attemptedAt, id);
     }
+    const transientlyUnavailableLoader: HistoricalMintPriceSourceLoader = {
+      loadCoinGecko: async ({ startSec, endSec }) => ({
+        source: "repair:coingecko-market-chart-event-day:usdt",
+        status: "unavailable", points: [], detail: `http-503:${startSec}:${endSec}`,
+      }),
+      loadDefiLlama: async ({ source }) => ({ source, status: "unavailable", points: [], detail: "http-503" }),
+    };
+
+    const retry = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false, limit: 1, retryIrreducible: true,
+      operatorRunId: "retry-run", timeTravelBookmark: "retry-bookmark",
+      sourceLoader: transientlyUnavailableLoader, nowSec: eventTimestamp + DAY,
+    });
+
+    expect(retry.dispositions[0]).toMatchObject({ eventId: "irreducible-head", disposition: "retry" });
+    expect(db.sqlite.prepare(`SELECT amount_usd, price_used, price_repair_status, price_repair_attempted_at,
+        price_repair_run_id, price_repair_bookmark, price_repair_reason
+      FROM mint_burn_events WHERE id = 'irreducible-head'`).get()).toMatchObject({
+      amount_usd: null,
+      price_used: null,
+      price_repair_attempted_at: eventTimestamp + DAY,
+      price_repair_run_id: "retry-run",
+      price_repair_bookmark: "retry-bookmark",
+      price_repair_reason: expect.stringContaining("event-day-source-temporarily-unavailable"),
+    });
+    const next = await repairHistoricalMintBurnPrices(db, {
+      dryRun: false, limit: 1, retryIrreducible: true,
+      operatorRunId: "retry-run-2", timeTravelBookmark: "retry-bookmark-2",
+      sourceLoader: transientlyUnavailableLoader, nowSec: eventTimestamp + DAY + 60,
+    });
+    expect(next.dispositions[0]?.eventId).toBe("irreducible-next");
   });
 });
