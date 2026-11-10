@@ -1565,7 +1565,19 @@ function validateSafetyScoresPreview(pageRecords, errors, warnings, expectation)
     entry.route === SAFETY_SCORES_ROUTE && entry.filePath && fs.existsSync(entry.filePath));
   if (!record) return;
   const route = record.route;
-  const html = stripNonElementMarkup(fs.readFileSync(record.filePath, "utf8"));
+  const document = fs.readFileSync(record.filePath, "utf8");
+  const head = collectElementTags(document.slice(0, document.indexOf("</head>")));
+  const scripts = head.filter((tag) => tag.name === "script" && tag.attrs.get("src")?.startsWith("/_next/static/"));
+  const preload = head.find((tag) => tag.name === "link" && tag.attrs.get("rel") === "preload"
+    && tag.attrs.get("as") === "image" && tag.attrs.get("href") === "/safety-scores/map.webp"
+    && tag.attrs.get("fetchpriority") === "high");
+  if (!preload || (scripts[0] && preload.start > scripts[0].start)) {
+    errors.push(`${route}: high-priority map preload must precede head script chunks`);
+  }
+  if (scripts.some((tag) => tag.attrs.get("src").includes("/recharts-vendor-"))) {
+    errors.push(`${route}: live card charts must not be eager head scripts`);
+  }
+  const html = stripNonElementMarkup(document);
   const tags = collectElementTags(html);
 
   // The client's pending render lands in the streamed segment Next swaps in on
