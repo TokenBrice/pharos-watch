@@ -162,7 +162,8 @@ it.each(["head","branch","detach","async","filter","attrs","gen-branch","gen-sou
 const attr=j(f.t,"..","attrs")
 if(k==="attrs"){put(attr,"");f.git(f.t,"config","core.attributesFile",attr)}
 let n=0;const gen=k.startsWith("gen-"),scope=gen||["async","filter","attrs","output","plan","ignored-write"].includes(k)
-f.rt.planArtifacts=()=>({...empty,ids:["f"],outputs:gen?[]:[k==="plan"&&n++ > 2?"other" :k.startsWith("ignored")?"out" :"i"]})
+if(k==="plan"){f.w("a",base.replace("f","t"),f.t);f.commit()}
+f.rt.planArtifacts=(root=f.t)=>({...empty,ids:["f"],outputs:gen?[]:[k==="plan"&&r(j(root,"a"),"utf8")===lane.replace("f","t")?"other" :k.startsWith("ignored")?"out" :"i"]})
 const path=k==="index"?f.index(f.t) :k==="message"?f.msg :k==="review"?f.av[5] :j(f.t,k==="v"?"v" :k==="outputs"||k==="ignored-validator"?"i" :"a")
 const state=()=>k==="head"?f.sha() :r(path)
 let kept:ReturnType<typeof state>
