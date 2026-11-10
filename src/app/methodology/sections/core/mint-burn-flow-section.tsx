@@ -95,6 +95,11 @@ export function MintBurnFlowMethodologySection() {
             changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.mintBurnFlow.changelogHover}
           >
               <p>
+                Every closed hour appears in the chart: only proven quiet hours are zero. Missing evidence withholds
+                daily nets and rolling means, and stops cumulative net at the first unavailable hour. Operator replay
+                requires complete raw hours before it can replace aggregates.
+              </p>
+              <p>
                 Pharos tracks on-chain mint and burn events for major stablecoins via JSON-RPC (Transfer mints/burns
                 plus USDT Issue/Redeem). EVM reads use admitted Dwellir with Alchemy fallback; Tron uses admitted Dwellir
                 with TronGrid JSON-RPC fallback. These raw events are aggregated into hourly buckets and exposed as two separate
@@ -103,6 +108,19 @@ export function MintBurnFlowMethodologySection() {
                 protocol-internal movements such as an issuer deploying reserves into its own loan book. Mints to
                 and burns from addresses curated as non-circulating on the same chain are also protocol-internal;
                 all other internal-flow exclusions require per-event review. These rows remain in the event ledger.
+              </p>
+              <p>
+                Atomic roundtrips require exactly equal mint and burn sums in raw token units among resolved standard
+                rows for the complete transaction, coin and chain. Unequal groups remain counted with their real net
+                residual; bridge, internal and unproven legs cannot establish neutrality. Historical groups without
+                recorded raw amounts retain their existing classification until separately repaired.
+              </p>
+              <p>
+                Positive events below the native display threshold remain priced and classified accounting rows.
+                Counted dust contributes to volumes, nets, counts and activity; event feeds, Tape and largest-event
+                ranking hide it. Dust-inclusive accounting starts with fully scanned hours from the v6.41 writer.
+                Previously materialized hours keep the earlier cutoff, so windows spanning activation mix accounting
+                scopes and a count increase alone does not establish an activity change.
               </p>
               <p>
                 Reviewed issuance coverage includes Ethereum BRSRV, CHFSAFO and GLDon. Exact start blocks and
@@ -114,15 +132,16 @@ export function MintBurnFlowMethodologySection() {
                 An N-hour flow window covers N closed UTC hours ending at the common fully scanned hour
                 across admitted sources, within the published freshness budget, not a rolling window ending now.
                 The response exposes that watermark; pressure, largest events, baselines and longer net-flow windows
-                share it. Verified CCTP V2 destination recipient and fee mints are bridge transfers, while unrelated issuance in that transaction
-                stays counted. Historical valuation requires an actual observation within the inclusive 24-hour
+                share it. CCTP v1/v2, CCIP pools and LayerZero OFT routes require token-bound receipt proofs
+                for each bridge mint or burn, including separately matched CCTP fee mints. Unrelated issuance in that transaction
+                stays counted; a selector or shared endpoint alone cannot exclude it. Historical valuation requires an actual observation within the inclusive 24-hour
                 distance from the event; retention preserves all hourly siblings until repair and aggregation settle.
               </p>
               <p>
                 A new issuance leg joins published flows only after contiguous scan proof for its current
                 configuration covers 90 days through the publication watermark, its frontier is fresh,
                 and that baseline passes the existing valuation-completeness rules. Missing or unknown
-                valuation keeps it pending; a proven zero-event baseline can qualify without prices.
+                valuation keeps it pending; incomplete classification does too. A proven zero-event baseline can qualify without prices.
                 Supported new legs keep catching up, with their reason and progress disclosed, while the coin&apos;s
                 admitted legs keep publishing. Pending or operator-disabled legs contribute neither totals nor
                 gauge weights. Existing contracts sharing a chain bucket must be disabled together; a new
@@ -148,9 +167,19 @@ export function MintBurnFlowMethodologySection() {
                 treatment applies without additional captions.
               </p>
               <p>
-                A coin whose classification is proven to drop one side of real supply movements is
-                held: its signed nets, baseline and pressure are withheld and it reads as partial scope
-                until its classifier fix and history repair land. Gross observed subtotals stay published.
+                Classification completeness is independent of scan and price coverage. Unresolved events
+                withhold exact net, direction, bounds, baseline and pressure; the affected gross side remains
+                an observed lower-bound subtotal. Historical hours with unrecorded classification are unknown
+                when the current configuration can produce unresolved events. Retention preserves their entire
+                coin/chain/hour for later proof, and classification corrections atomically mark the hour dirty.
+                Largest valued events rank counted events on admitted tracked chains; they do not rank unpriced
+                or unresolved candidates.
+              </p>
+              <p>
+                DAI and USDD use reviewed range proof and retained repair. Their exact windows remain unavailable
+                while unresolved or historically unknown hours are present; recent windows can recover before
+                longer ones as old hours are repaired or age out. Changed bridge-decoder fingerprints separately
+                exclude hours classified under earlier evidence. Gross observed subtotals stay published.
               </p>
               <p>
                 USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;
@@ -176,6 +205,20 @@ export function MintBurnFlowMethodologySection() {
                 burn exclusions. Retained-hour repairs track materialization debt; per-config reconciliation
                 advances through retained burns and revisits unavailable receipts when its cursor wraps, preserving
                 their named reason. Pruned history needs audited replay rather than an invented exact repair.
+              </p>
+              <p>
+                Reviewed range proof can admit exact internal-burn event IDs when all raw mint and zero-recipient
+                Transfer amounts reconcile exactly to hash-pinned total-supply change. Dust, bridge and atomic
+                legs enter that integer equation before economic exclusions. Source law must exclude counterfeit
+                mints, or the range must contain no positive mint events; USYC requires the latter. Proxy and
+                delegate eras need pinned implementation state and an in-range change check. Negative source-only
+                residuals and unavailable evidence keep candidates unresolved; positive residuals, ambiguous
+                zero-to-zero events and inconsistent evidence fence the range. Proof never overrides bridge,
+                atomic or protocol-internal exclusions. Proof verifies the parser&apos;s exact raw amounts, and
+                pending proof-backed burns cannot neutralize mints in roundtrip reconciliation. Proven rows use
+                normal eight-day retention; old unreferenced proof records are pruned. Durable configuration
+                fingerprints withdraw stale scan coverage even after raw and proof records expire. Retained range
+                repair has a separate cursor from live ingestion and rebuilds only complete raw-retained hours.
               </p>
               <p>
                 Every closed window requires admitted scan coverage, using durable current-fingerprint proof
@@ -302,7 +345,8 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Coverage and valuation gates</span> &mdash; pressure is NR,
                       and the coin leaves gauge weighting, unless current-fingerprint scan proof covers the window,
-                      the 24h window is fully valued and the baseline has no known unpriced events. Legacy scan
+                      the 24h window and baseline are fully valued and classification-complete. An unknown
+                      baseline cannot score or display as an exact daily average. Legacy scan
                       coverage remains unknown, not proof of quiet activity. Omitted coin counts and market-cap
                       weight remain disclosed; observed gross subtotals cannot establish a signed net or pressure
                     </li>
@@ -336,7 +380,7 @@ export function MintBurnFlowMethodologySection() {
                   <h3 className="text-foreground font-medium">Bank Run Gauge</h3>
                   <p>
                     Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
-                    ecosystem-wide admitted issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s admitted tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
+                    ecosystem-wide admitted issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s admitted tracked-chain circulating supply. Every admitted chain must have observed supply when a chain breakdown is used; a missing chain withholds the whole weight, while observed zero counts. The gauge score maps to one of seven condition bands:
                   </p>
                   <ContentTable
                     tableId="methodology-mint-burn-bank-run-gauge"

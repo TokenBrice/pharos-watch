@@ -108,7 +108,17 @@ describe("completeMintBurnRun", () => {
     }));
     input.configs = input.enabledConfigs = configs;
     input.contractsTotal = configs.length;
-    input.phase.configBreakdown = configs.map((config) => createMintBurnConfigSummary(config, mintBurnConfigKey(config), "critical"));
+    input.phase.configBreakdown = configs.map((config, index) => ({
+      ...createMintBurnConfigSummary(config, mintBurnConfigKey(config), "critical", {
+        attempted: index < 94, scanFrom: 1, scanTo: 2, requestBudgetLimit: 25,
+      }),
+      skippedReason: index < 94 ? null : "runtime-budget-exhausted",
+      advancedTo: index < 94 ? 2 : null, maxBlockSeen: 2, coverageFrontier: 2,
+      advanceReason: index < 94 ? "full-success-empty" : "no-safe-frontier",
+      requestBudgetUsed: index < 94 ? 1 : 0,
+    } satisfies MintBurnConfigSummary));
+    input.attemptCoverage = { ...input.attemptCoverage, expectedConfigs: 200,
+      attemptedThisRun: 94, neverAttemptedCount: 106 };
     const publication: MintBurnPublication = {
       evaluatedAt: 1_793_232_000, requiredBaselineSec: 90 * 86400, freshnessBudgetSec: 3600,
       legs: configs.map((config, index) => ({
@@ -121,6 +131,11 @@ describe("completeMintBurnRun", () => {
       })),
     };
     const completion = await completeMintBurnRun(input);
+    expect(new TextEncoder().encode(JSON.stringify(completion.metadata)).byteLength).toBeLessThan(64 * 1024);
+    expect(completion.metadata).not.toHaveProperty("configBreakdown");
+    expect(completion.metadata.configBreakdownSummary).toMatchObject({ total: 200, attempted: 94, skipped: 106 });
+    expect(completion.metadata.configSamples).toHaveLength(12);
+    expect(completion.metadata.runDrilldownCacheKey).toBe("mint-burn:run-detail:sync-mint-burn");
     const providerOutcomes = [{ provider: "alchemy", circuitSource: "alchemy", successes: 12, failures: 0 }];
     const metadata = {
       ...completion.metadata, publication: mintBurnPublicationMetadata(publication), providerOutcomes,
@@ -207,10 +222,14 @@ describe("completeMintBurnRun", () => {
       input.phase.criticalContractsSatisfied = 1;
     }
     input.phase.configBreakdown = [{ conservationFailure: false, conservationStatus: "unavailable",
-      conservationReason: "invalid-boundary-header", key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
+      conservationReason: "invalid-boundary-header", supplyProofStatus: "unavailable", supplyProofReason: "audit-rpc-unavailable",
+      key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("ok");
     expect(result.metadata.conservationUnavailable).toBe(1);
+    expect(result.metadata.configSamples).toEqual(expect.arrayContaining([expect.objectContaining({
+      supplyProofStatus: "unavailable", supplyProofReason: "audit-rpc-unavailable",
+    })]));
     expect(result.metadata.conservationFailures).toBe(0);
     expect(result.metadata.reason).toBeUndefined();
     expect(result.metadata.apiErrors).toBe(0);
@@ -345,59 +364,6 @@ describe("completeMintBurnRun", () => {
     expect(sweepRecentRoundtrips).not.toHaveBeenCalled();
   });
 
-  it("persists a bounded summary instead of all 127 config details", async () => {
-    vi.mocked(setMintBurnRunState).mockResolvedValue(true);
-    vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
-    vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
-    vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
-    const input = buildRunInput();
-    input.phase.configBreakdown = Array.from({ length: 127 }, (_, index) => ({
-      key: `ethereum-0x${index.toString(16).padStart(40, "0")}`,
-      symbol: `COIN${index}`,
-      chainId: "ethereum",
-      tier: "extended",
-      attempted: index < 94,
-      skippedReason: index < 94 ? null : "runtime-budget-exhausted",
-      scanFrom: 1,
-      scanTo: 2,
-      advancedTo: index < 94 ? 2 : null,
-      maxBlockSeen: 2,
-      rowsRead: 0,
-      rowsParsed: 0,
-      rowsInserted: 0,
-      rowsIgnored: 0,
-      rowsDropped: 0,
-      rowsDroppedDecode: 0,
-      earliestDecodeFailureBlock: null,
-      errors: 0,
-      failedEventDefs: [],
-      eventCoverage: [],
-      coverageFrontier: 2,
-      advanceReason: index < 94 ? "full-success-empty" : "no-safe-frontier",
-      missingTimestampCount: 0,
-      earliestMissingTimestampBlock: null,
-      txContextShortfalls: 0,
-      bridgeClassificationDeferredRows: 0,
-      requestBudgetLimit: 25,
-      requestBudgetUsed: index < 94 ? 1 : 0,
-    } satisfies MintBurnConfigSummary));
-    input.attemptCoverage = {
-      ...input.attemptCoverage,
-      expectedConfigs: 127,
-      attemptedThisRun: 94,
-      neverAttemptedCount: 33,
-    };
-
-    const result = await completeMintBurnRun(input);
-    const serialized = JSON.stringify(result.metadata);
-
-    expect(new TextEncoder().encode(serialized).byteLength).toBeLessThan(64 * 1024);
-    expect(result.metadata).not.toHaveProperty("configBreakdown");
-    expect(result.metadata.configBreakdownSummary).toMatchObject({ total: 127, attempted: 94, skipped: 33 });
-    expect(result.metadata.configSamples).toHaveLength(12);
-    expect(result.metadata.runDrilldownCacheKey).toBe("mint-burn:run-detail:sync-mint-burn");
-  });
-
   it("escalates critical failures and resets the streak on recovery", async () => {
     const input = buildRunInput({ apiErrors: 2 });
     expect((await completeMintBurnRun(input)).status).toBe("ok");
@@ -468,93 +434,39 @@ describe("completeMintBurnRun", () => {
     expect((await completeMintBurnRun(input)).status).toBe("degraded");
   });
 
-  it("keeps a rotated extended pass inside its window non-degraded", async () => {
-    const input = buildRunInput();
+  it.each([
+    { name: "keeps a rotated extended pass inside its window non-degraded",
+      status: "cycle-in-progress", duration: null, elapsed: 1_800, incomplete: 89,
+      errors: 0, streak: 0, resultStatus: "ok", degraded: false,
+      expectedCycle: { status: "cycle-in-progress", coverageCycleSec: null } },
+    { name: "does not degrade a completed pass for a config older than 75 minutes",
+      status: "complete", duration: 5_400, elapsed: 1_800, incomplete: 89,
+      errors: 0, streak: 0, resultStatus: "ok", degraded: undefined,
+      expectedCycle: { coverageCycleSec: 5_400 } },
+    { name: "degrades the extended lane when a full pass misses the window",
+      status: "stalled", duration: 5_400, elapsed: 7_260, incomplete: 88,
+      errors: 0, streak: 0, resultStatus: "degraded", degraded: true,
+      reason: "mint-burn-coverage-cycle-stalled",
+      expectedCycle: { status: "stalled", coverageCycleSec: 5_400, expectedWindowSec: 7_200 } },
+    { name: "still degrades an in-window extended pass for a genuinely failing config",
+      status: "cycle-in-progress", duration: null, elapsed: 1_800, incomplete: 89,
+      errors: 2, streak: 1, resultStatus: "degraded", degraded: true,
+      reason: "mint-burn-source-coverage-degraded", expectedCycle: undefined },
+  ] as const)("$name", async (scenario) => {
+    const input = buildRunInput({ apiErrors: scenario.errors });
     input.lane = "extended";
+    input.runState.degradedStreak = scenario.streak;
+    if (scenario.status === "complete") input.attemptCoverage.oldestAttemptAgeSec = 75 * 60 + 60;
     input.coverageCycle = {
-      status: "cycle-in-progress",
-      expectedWindowSec: 7_200,
-      coverageCycleSec: null,
-      cycleElapsedSec: 1_800,
-      lastCompletedAt: null,
-      incompleteConfigs: 89,
-      providerDeferredConfigs: 0,
-      stuckConfigs: [],
-      stuckConfigCount: 0,
+      status: scenario.status, expectedWindowSec: 7_200, coverageCycleSec: scenario.duration,
+      cycleElapsedSec: scenario.elapsed, lastCompletedAt: scenario.duration === null ? null : 1_790_000_000,
+      incompleteConfigs: scenario.incomplete, providerDeferredConfigs: 0, stuckConfigs: [], stuckConfigCount: 0,
     };
     const result = await completeMintBurnRun(input);
-    expect(result.status).toBe("ok");
-    expect(result.metadata.degradedSignal).toBe(false);
-    expect(result.metadata.coverageCycle).toMatchObject({
-      status: "cycle-in-progress",
-      coverageCycleSec: null,
-    });
-  });
-
-  it("does not degrade a completed pass for a config older than 75 minutes", async () => {
-    const input = buildRunInput();
-    input.lane = "extended";
-    input.attemptCoverage = { ...input.attemptCoverage, oldestAttemptAgeSec: 75 * 60 + 60 };
-    input.coverageCycle = {
-      status: "complete",
-      expectedWindowSec: 7_200,
-      coverageCycleSec: 5_400,
-      cycleElapsedSec: 1_800,
-      lastCompletedAt: 1_790_000_000,
-      incompleteConfigs: 89,
-      providerDeferredConfigs: 0,
-      stuckConfigs: [],
-      stuckConfigCount: 0,
-    };
-    const result = await completeMintBurnRun(input);
-    expect(result.status).toBe("ok");
-    expect(result.metadata.coverageCycle).toMatchObject({ coverageCycleSec: 5_400 });
-  });
-
-  it("degrades the extended lane when a full pass misses the window", async () => {
-    const input = buildRunInput();
-    input.lane = "extended";
-    input.coverageCycle = {
-      status: "stalled",
-      expectedWindowSec: 7_200,
-      coverageCycleSec: 5_400,
-      cycleElapsedSec: 7_260,
-      lastCompletedAt: 1_790_000_000,
-      incompleteConfigs: 88,
-      providerDeferredConfigs: 0,
-      stuckConfigs: [],
-      stuckConfigCount: 0,
-    };
-    const result = await completeMintBurnRun(input);
-    expect(result.status).toBe("degraded");
-    expect(result.metadata.degradedSignal).toBe(true);
-    expect(result.metadata.reason).toBe("mint-burn-coverage-cycle-stalled");
-    expect(result.metadata.coverageCycle).toMatchObject({
-      status: "stalled",
-      coverageCycleSec: 5_400,
-      expectedWindowSec: 7_200,
-    });
-  });
-
-  it("still degrades an in-window extended pass for a genuinely failing config", async () => {
-    const input = buildRunInput({ apiErrors: 2 });
-    input.lane = "extended";
-    input.runState.degradedStreak = 1;
-    input.coverageCycle = {
-      status: "cycle-in-progress",
-      expectedWindowSec: 7_200,
-      coverageCycleSec: null,
-      cycleElapsedSec: 1_800,
-      lastCompletedAt: null,
-      incompleteConfigs: 89,
-      providerDeferredConfigs: 0,
-      stuckConfigs: [],
-      stuckConfigCount: 0,
-    };
-    const result = await completeMintBurnRun(input);
-    expect(result.status).toBe("degraded");
-    expect(result.metadata.degradedSignal).toBe(true);
-    expect(result.metadata.reason).toBe("mint-burn-source-coverage-degraded");
+    expect(result.status).toBe(scenario.resultStatus);
+    if (scenario.degraded !== undefined) expect(result.metadata.degradedSignal).toBe(scenario.degraded);
+    if (scenario.reason) expect(result.metadata.reason).toBe(scenario.reason);
+    if (scenario.expectedCycle) expect(result.metadata.coverageCycle).toMatchObject(scenario.expectedCycle);
   });
 
   it("publishes no coverage cycle for the critical lane", async () => {

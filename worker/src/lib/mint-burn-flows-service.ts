@@ -8,7 +8,10 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-config";
 import { MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC } from "../cron/mint-burn/run-state";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
-import { isMintBurnClassificationHeld } from "./mint-burn-classification-holds";
+import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification,
+  tallyMintBurnClassificationBucket, type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "./mint-burn-classification";
+import type { MintBurnClassification, MintBurnHourlyBucket } from "@shared/types/mint-burn";
 import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 
 /** Same effective fresh budget returned by buildCronFreshnessMeta, not its base cadence. */
@@ -31,7 +34,7 @@ import {
 import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnCoinCoverage, type MintBurnScanWindow, type MintBurnValuationCompleteness, type MintBurnWatermark } from "@shared/types/mint-burn";
 import { mintBurnScanCoverageAdmits, mintBurnWindowAdmits, buildMintBurnLegacySpans, decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, prepareMintBurnLegacyEvidence, MINT_BURN_LEGACY_CUTOVER, type MintBurnLegacySpan, type MintBurnLegacyRow, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
-import { MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
+import { MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL, type MintBurnClassificationTallyRow, readMintBurnClassificationTallyRow, MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import {
@@ -145,16 +148,20 @@ export async function readMintBurnWindowContext(
     const candidateKeys = new Set(scope.newAdmissions.map((row) => row.config_key));
     const candidates = scope.configs.filter((config) => candidateKeys.has(mintBurnConfigKey(config)));
     const baseline = scope.newAdmissions[0];
-    const valuation = await db.prepare(`SELECT stablecoin_id, chain_id, ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
+    const valuation = await db.prepare(`SELECT stablecoin_id, chain_id, ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}, ${MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL}
       FROM mint_burn_hourly WHERE (stablecoin_id, chain_id) IN (
         SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
       ) AND hour_ts >= ? AND hour_ts < ? GROUP BY stablecoin_id, chain_id`)
       .bind(JSON.stringify(candidates.map((config) => [config.stablecoinId, config.chain.chainId])),
         baseline.baseline_from, baseline.baseline_to)
-      .all<MintBurnValuationTallyRow & { stablecoin_id: string; chain_id: string }>();
-    const incompletePairs = new Set(valuation.results.filter((row) =>
-      summarizeMintBurnValuation(readMintBurnValuationTallyRow(row)).completeness !== "complete")
+      .all<MintBurnValuationTallyRow & MintBurnClassificationTallyRow & { stablecoin_id: string; chain_id: string }>();
+    const classificationIncompletePairs = new Set(valuation.results.filter((row) =>
+      summarizeMintBurnClassification(readMintBurnClassificationTallyRow(row,
+        hasMintBurnClassificationReview(row.stablecoin_id))).completeness !== "complete")
       .map((row) => `${row.stablecoin_id}|${row.chain_id}`));
+    const incompletePairs = new Set([...classificationIncompletePairs, ...valuation.results.filter((row) =>
+      summarizeMintBurnValuation(readMintBurnValuationTallyRow(row)).completeness !== "complete")
+      .map((row) => `${row.stablecoin_id}|${row.chain_id}`)]);
     const blockedKeys = new Set(candidates.filter((config) => incompletePairs.has(`${config.stablecoinId}|${config.chain.chainId}`))
       .map(mintBurnConfigKey));
     scope.configs = scope.configs.filter((config) => !blockedKeys.has(mintBurnConfigKey(config)));
@@ -162,7 +169,7 @@ export async function readMintBurnWindowContext(
     for (const leg of scope.publication.legs) {
       if (!blockedKeys.has(leg.configKey)) continue;
       leg.status = "pending-admission";
-      leg.reason = "valuation-incomplete";
+      leg.reason = classificationIncompletePairs.has(`${leg.stablecoinId}|${leg.chainId}`) ? "classification-incomplete" : "valuation-incomplete";
       leg.admittedAt = null;
     }
   }
@@ -174,17 +181,14 @@ export async function readMintBurnWindowContext(
   await persistMintBurnAdmissions(db, scope.newAdmissions);
   await persistMintBurnQuarantines(db, [...quarantineKeys], policy);
   await persistMintBurnResumptions(db, scope.resumedKeys, policy);
-  // Classification holds are publication-only: admission and the watermark above ignore them.
-  const partialScopeLegs = [...partialLegs,
-    ...scope.configs.filter((config) => isMintBurnClassificationHeld(config.stablecoinId))];
   return {
     watermark: resolveMintBurnWatermark(nowSec, scope.configs, segments, legacy),
     segments,
     legacy,
     configs: scope.configs,
-    partialCoinIds: new Set(partialScopeLegs.map((config) => config.stablecoinId)),
-    /** Chains whose aggregate nets lost an established leg or carry a held coin. */
-    partialChainIds: new Set(partialScopeLegs.map((config) => config.chain.chainId)),
+    partialCoinIds: new Set(partialLegs.map((config) => config.stablecoinId)),
+    /** Chains whose aggregate nets lost an established leg. */
+    partialChainIds: new Set(partialLegs.map((config) => config.chain.chainId)),
     // Automatic pauses withhold flows, never unresolved operator conservation evidence.
     diagnosticConfigs: configs.filter((config) => scope.configs.includes(config)
       || (mintBurnPreviouslyAdmitted(config, admissions)
@@ -218,13 +222,15 @@ export interface HourlyRow {
   /** NULL: bucket aggregated before valuation coverage was recorded. */
   mint_unpriced_event_count: number | null;
   burn_unpriced_event_count: number | null;
+  mint_unresolved_event_count?: number | null;
+  burn_unresolved_event_count?: number | null;
   /** Known-valuation subtotals; exact only when the matching unpriced count is 0. */
   mint_volume_usd: number;
   burn_volume_usd: number;
   net_flow_usd: number;
 }
 
-export interface DailyBaselineRow extends MintBurnValuationTallyRow {
+export interface DailyBaselineRow extends MintBurnValuationTallyRow, Partial<MintBurnClassificationTallyRow> {
   stablecoin_id: string;
   chain_id: string;
   day_ts: number;
@@ -310,6 +316,7 @@ export interface FlowAggregate {
   burnCount: number;
   netFlow: number;
   valuation: MintBurnValuationTally;
+  classification: MintBurnClassificationTally;
 }
 
 export function bucketDay(ts: number): number {
@@ -329,6 +336,7 @@ function aggregateHourlyRowsBy<K>(rows: HourlyRow[], keyOf: (row: HourlyRow) => 
         burnCount: 0,
         netFlow: 0,
         valuation: emptyMintBurnValuationTally(),
+        classification: emptyMintBurnClassificationTally(),
       };
       aggregates.set(key, aggregate);
     }
@@ -337,6 +345,10 @@ function aggregateHourlyRowsBy<K>(rows: HourlyRow[], keyOf: (row: HourlyRow) => 
     aggregate.mintCount += row.mint_count;
     aggregate.burnCount += row.burn_count;
     aggregate.netFlow += row.net_flow_usd;
+    addMintBurnClassificationTally(aggregate.classification, tallyMintBurnClassificationBucket({
+      unresolvedMintEventCount: row.mint_unresolved_event_count,
+      unresolvedBurnEventCount: row.burn_unresolved_event_count,
+    }, hasMintBurnClassificationReview(row.stablecoin_id)));
     addMintBurnValuationTally(aggregate.valuation, tallyMintBurnHourlyBucket({
       mintCount: row.mint_count,
       burnCount: row.burn_count,
@@ -363,28 +375,43 @@ export function mintBurnScanWindow(complete: boolean): MintBurnScanWindow {
  * Hourly series. A partial hour publishes `netFlowUsd: null` (a partial net is
  * not a bound); volumes stay known subtotals and `valuation` qualifies them.
  */
-export function buildHourlyFlowSeries(rows: HourlyRow[], admitsHour: (hourTs: number) => boolean): Array<{
-  hourTs: number;
-  netFlowUsd: number | null;
-  mintVolumeUsd: number;
-  burnVolumeUsd: number;
-  valuation: MintBurnValuationCompleteness;
-  scanCoverage: MintBurnScanWindow;
-}> {
-  return [...aggregateHourlyRowsBy(rows, (row) => row.hour_ts).entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([ts, value]) => {
-      const valuation = summarizeMintBurnValuation(value.valuation).completeness;
-      const scanCoverage = mintBurnScanWindow(admitsHour(ts));
-      return {
-        hourTs: ts,
-        netFlowUsd: !scanCoverage.complete || valuation === "partial" ? null : value.netFlow,
-        mintVolumeUsd: value.mintVolume,
-        burnVolumeUsd: value.burnVolume,
-        valuation,
-        scanCoverage,
-      };
-    });
+export function buildHourlyFlowSeries(
+  rows: HourlyRow[], coverageForHour: (hourTs: number) => MintBurnScanWindow,
+  window: { start: number; end: number }, reviewedPairs: ReadonlySet<string>,
+): MintBurnHourlyBucket[] {
+  const byHour = aggregateHourlyRowsBy(rows, (row) => row.hour_ts);
+  const recordedPairs = new Map<number, Set<string>>();
+  for (const row of rows) {
+    const pairs = recordedPairs.get(row.hour_ts) ?? new Set<string>();
+    pairs.add(mintBurnPairKey(row.stablecoin_id, row.chain_id));
+    recordedPairs.set(row.hour_ts, pairs);
+  }
+  return Array.from({ length: (window.end - window.start) / 3600 }, (_, index) => {
+    const ts = window.start + index * 3600;
+    const value = byHour.get(ts);
+    const valuation = summarizeMintBurnValuation(value?.valuation ?? emptyMintBurnValuationTally()).completeness;
+    let scanCoverage = coverageForHour(ts);
+    // Durable scan proof certifies an absent row as quiet. Legacy assurance
+    // cannot recover unrecorded classification evidence for reviewed tokens.
+    const missingReview = scanCoverage.provenance !== "durable-v2"
+      && [...reviewedPairs].some((pair) => !recordedPairs.get(ts)?.has(pair));
+    const tally = value?.classification ?? emptyMintBurnClassificationTally();
+    if (missingReview || (!value && !scanCoverage.complete)) {
+      tally.unknownMintHours++;
+      tally.unknownBurnHours++;
+    }
+    const classification = summarizeMintBurnClassification(tally);
+    if ((!value || missingReview) && classification.completeness !== "complete") scanCoverage = mintBurnScanWindow(false);
+    return {
+      hourTs: ts,
+      netFlowUsd: !scanCoverage.complete || valuation === "partial" || classification.completeness !== "complete" ? null : value?.netFlow ?? 0,
+      mintVolumeUsd: value?.mintVolume ?? 0,
+      burnVolumeUsd: value?.burnVolume ?? 0,
+      valuation,
+      classification,
+      scanCoverage,
+    };
+  });
 }
 
 export function resolveFlowUpdatedAt(rows: HourlyRow[], fallbackTs: number): number {
@@ -743,6 +770,7 @@ export interface FlowBaseline {
   dataDays: number;
   /** Valuation completeness of the baseline days: a partial baseline understates its known averages. */
   valuation: MintBurnValuationCompleteness;
+  classification: MintBurnClassification;
 }
 
 export function buildBaselineMap(
@@ -752,18 +780,20 @@ export function buildBaselineMap(
 ): Map<string, FlowBaseline> {
   const nowDayTs = bucketDay(nowSec);
   const baselineEndDayTs = nowDayTs - DAY_SECONDS;
-  const byCoinDay = new Map<string, Map<number, { net: number; abs: number; valuation: MintBurnValuationTally }>>();
+  const byCoinDay = new Map<string, Map<number, { net: number; abs: number; valuation: MintBurnValuationTally; classification: MintBurnClassificationTally }>>();
   const firstSeenByCoin = new Map<string, number>();
 
   for (const row of dailyRows) {
     if (!Number.isFinite(row.day_ts)) continue;
     const dayTs = bucketDay(row.day_ts);
     const perDay = byCoinDay.get(row.stablecoin_id)
-      ?? new Map<number, { net: number; abs: number; valuation: MintBurnValuationTally }>();
-    const prev = perDay.get(dayTs) ?? { net: 0, abs: 0, valuation: emptyMintBurnValuationTally() };
+      ?? new Map<number, { net: number; abs: number; valuation: MintBurnValuationTally; classification: MintBurnClassificationTally }>();
+    const prev = perDay.get(dayTs) ?? { net: 0, abs: 0, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
     prev.net += row.daily_net;
     prev.abs += row.daily_abs;
     addMintBurnValuationTally(prev.valuation, readMintBurnValuationTallyRow(row));
+    addMintBurnClassificationTally(prev.classification, readMintBurnClassificationTallyRow(
+      row as MintBurnClassificationTallyRow, hasMintBurnClassificationReview(row.stablecoin_id)));
     perDay.set(dayTs, prev);
     byCoinDay.set(row.stablecoin_id, perDay);
   }
@@ -790,6 +820,7 @@ export function buildBaselineMap(
     let sumNet = 0;
     let sumAbs = 0;
     const valuation = emptyMintBurnValuationTally();
+    const classification = emptyMintBurnClassificationTally();
 
     for (let dayTs = startDayTs; dayTs <= baselineEndDayTs; dayTs += DAY_SECONDS) {
       const bucket = perDay?.get(dayTs);
@@ -797,6 +828,7 @@ export function buildBaselineMap(
       sumNet += bucket.net;
       sumAbs += bucket.abs;
       addMintBurnValuationTally(valuation, bucket.valuation);
+      addMintBurnClassificationTally(classification, bucket.classification);
     }
 
     baselineMap.set(stablecoinId, {
@@ -804,6 +836,7 @@ export function buildBaselineMap(
       avgAbs: sumAbs / dataDays,
       dataDays,
       valuation: summarizeMintBurnValuation(valuation).completeness,
+      classification: summarizeMintBurnClassification(classification),
     });
   }
 
@@ -927,10 +960,6 @@ export function buildCoinCoverageMap(
   }
 
   return coverageMap;
-}
-
-export async function readCachedFlow(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
-  return getCache(db, key);
 }
 
 /**

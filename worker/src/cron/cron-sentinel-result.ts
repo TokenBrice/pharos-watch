@@ -33,7 +33,7 @@ type StoredSourceResult = CronResult & {
 
 const SOURCES_BY_MODE: Record<CronSentinelMode, readonly CronSentinelRuleSource[]> = {
   status: ["freshness", "digest-publication"],
-  daily: ["growth", "duration", "repair-debt"],
+  daily: ["supply-reconciliation", "growth", "duration", "repair-debt"],
   turnover: ["turnover"],
   "reserve-post-sync": ["reserve-post-sync"],
 };
@@ -47,6 +47,7 @@ const SOURCE_INTERVAL_SEC: Record<CronSentinelRuleSource, number> = {
   freshness: CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec,
   "digest-publication": CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec,
   growth: CRON_SCHEDULE_CADENCES.daily0300Utc.intervalSec,
+  "supply-reconciliation": CRON_SCHEDULE_CADENCES.daily0300Utc.intervalSec,
   duration: CRON_SCHEDULE_CADENCES.daily0300Utc.intervalSec,
   "repair-debt": CRON_SCHEDULE_CADENCES.daily0300Utc.intervalSec,
   turnover: TURNOVER_INTERVAL_SEC,

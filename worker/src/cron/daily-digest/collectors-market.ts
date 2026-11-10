@@ -540,6 +540,7 @@ export async function collectMintBurnFlows(
         id: coin.id,
         knownNetUsd: coin.net24hUsd,
         valuation: coin.valuation24h,
+        classification: coin.classification24h,
         window24hComplete: coin.scanCoverage?.window24h.complete ?? null,
       })),
       // The producer publication that decided which coins have a published flow.
@@ -550,9 +551,7 @@ export async function collectMintBurnFlows(
       else degradedReasons.push(`mint-burn-ftq:${ftqFlows.reason}`);
     }
 
-    // Pressure and nets need a complete 24h window; a partial baseline also
-    // skews the pressure. Unknown (pre-completeness) baselines are tolerated
-    // until legacy hourly buckets age out of the 30-day window.
+    // Pressure needs complete baseline evidence as well as the current window.
     const pressureCoins = gauge.coins
       .filter(
         (coin): coin is PublishedGaugeCoin & { intensity: number; net24hUsd: number } =>
@@ -560,7 +559,9 @@ export async function collectMintBurnFlows(
           && Math.abs(coin.intensity) > 20
           && coin.net24hUsd !== null
           && coin.valuation24h.completeness === "complete"
-          && coin.baselineValuation !== "partial",
+          && coin.baselineValuation === "complete"
+          && (!coin.classification24h || coin.classification24h.completeness === "complete")
+          && (!coin.baselineClassification || coin.baselineClassification.completeness === "complete"),
       );
     const supplyById = new Map<string, Map<number, DigestFlowSupplySnapshot>>();
     const supplyWindow = gauge.window && gauge.window.end <= ctx.nowSec ? gauge.window : null;

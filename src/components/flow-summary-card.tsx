@@ -87,10 +87,18 @@ function UnreportedStat() {
 }
 
 function describeMintingPressureUnavailable(
-  reason: LiteralMintingPressureUnavailableReason | "window-unavailable",
+  reason: LiteralMintingPressureUnavailableReason | "window-unavailable" | "classification-unresolved" | "classification-unknown",
   window24h: ReturnType<typeof resolveMintBurnValuation>,
 ): { title: string; description: string } {
   switch (reason) {
+    case "classification-unresolved":
+    case "classification-unknown":
+      return {
+        title: "Minting pressure not rated",
+        description: reason === "classification-unresolved"
+          ? "Events in the 24h window require classification review, so no minting-pressure reading is published."
+          : "Classification completeness of historical hours is unknown, so no minting-pressure reading is published.",
+      };
     case "window-unavailable":
       return {
         title: "Minting pressure not rated",
@@ -162,7 +170,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   // with either side not fully valued (a balance of lower bounds is no bound,
   // v6.27), the quadrant takes the same empty-state treatment the flow-history
   // feed two modules below already uses, naming why.
-  const mintingPressure = coin.has24hActivity === null
+  const mintingPressure = coin.classification?.window24h.unavailableReason
+    ? { score: null, unavailableReason: coin.classification.window24h.unavailableReason }
+    : coin.has24hActivity === null
     || coin.coverage?.windows?.window24h.complete === false
     || (coin.netFlow24hUsd === null && window24h.completeness === "complete")
     ? { score: null, unavailableReason: "window-unavailable" as const }

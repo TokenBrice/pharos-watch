@@ -1,4 +1,3 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -12,14 +11,17 @@ import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { mintBurnSupplyProofAcceptedSql } from "../../lib/mint-burn-supply-proofs";
+import { MINT_BURN_EVENT_RETENTION_SEC, MINT_BURN_HOURLY_RETENTION_SEC } from "../../lib/mint-burn-retention-config";
 
-export const MINT_BURN_EVENT_RETENTION_SEC = 8 * DAY_SECONDS;
-export const MINT_BURN_HOURLY_RETENTION_SEC = 95 * DAY_SECONDS;
+export { MINT_BURN_EVENT_RETENTION_SEC, MINT_BURN_HOURLY_RETENTION_SEC };
 
 const MINT_BURN_TAPE_CURSOR_KEY = tapeProjectorCursorKey("mint_burn.large_flow");
 const DEFAULT_DELETE_BATCH_LIMIT = 10_000;
 const DEFAULT_EVENT_DELETE_RUN_LIMIT = 50_000;
 const DEFAULT_HOURLY_DELETE_RUN_LIMIT = 25_000;
+const PROOF_DELETE_BATCH_LIMIT = 1_000;
+const PROOF_DELETE_RUN_LIMIT = 5_000;
 const DEFAULT_REPAIR_CANDIDATE_EVENT_LIMIT = 50_000;
 const DEFAULT_HOURLY_REPAIR_RUN_LIMIT = 5_000;
 
@@ -123,12 +125,24 @@ function mintBurnRepairableEventSql(frontiersSql: string, pendingProtectionSql: 
 
 /**
  * Deletable event: retention-eligible and its hour is already aggregated. Bind
- * order: cutoff, MINT_BURN_TAPE_CURSOR_KEY. Shared by the delete and the
+ * order: cutoff, MINT_BURN_TAPE_CURSOR_KEY, hourly cutoff. Shared by the delete and the
  * oldest-eligible backlog probe.
  */
 function mintBurnAggregatedEventSql(frontiersSql: string, pendingProtectionSql: string): string {
   return `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
   AND ${mintBurnFinalHourSql(frontiersSql, pendingProtectionSql)}
+  AND ((event.timestamp / 3600) * 3600 < ? OR NOT EXISTS (
+    SELECT 1 FROM mint_burn_events sibling
+     WHERE sibling.stablecoin_id = event.stablecoin_id
+       AND sibling.chain_id = event.chain_id
+       AND sibling.timestamp >= (event.timestamp / 3600) * 3600
+       AND sibling.timestamp < ((event.timestamp / 3600) * 3600) + 3600
+       AND sibling.flow_type = 'standard'
+       AND (NOT ${mintBurnSupplyProofAcceptedSql("sibling")}
+         OR (sibling.direction = 'mint' AND sibling.burn_type = 'review_required')
+         OR (sibling.direction = 'burn'
+           AND (sibling.burn_type IS NULL OR sibling.burn_type NOT IN ('effective_burn', 'bridge_burn'))))
+  ))
   AND EXISTS (
     SELECT 1
       FROM mint_burn_hourly hourly
@@ -167,6 +181,7 @@ export interface MintBurnRetentionResult {
   aggregationRepair: MintBurnAggregationRepairResult;
   eventRows: MintBurnRetentionFamilyResult;
   hourlyRows: MintBurnRetentionFamilyResult;
+  proofRows: MintBurnRetentionFamilyResult;
   frontierProtection: MintBurnFrontierProtectionResult;
   durationMs: number;
   error: string | null;
@@ -208,6 +223,8 @@ interface MintBurnRetentionOptions {
   eventRunLimit?: number;
   hourlyBatchLimit?: number;
   hourlyRunLimit?: number;
+  proofBatchLimit?: number;
+  proofRunLimit?: number;
 }
 
 async function repairMissingHourlyRows(
@@ -310,7 +327,7 @@ async function pruneEventRows(
            ORDER BY event.timestamp ASC
            LIMIT ?
         )`,
-        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, limit],
+        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC, limit],
         batchLimit,
         runLimit,
       },
@@ -324,7 +341,7 @@ async function pruneEventRows(
             WHERE ${mintBurnAggregatedEventSql(frontiersSql, pendingProtectionSql)}
             ORDER BY event.timestamp ASC
             LIMIT 1`,
-        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY],
+        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC],
       },
     },
   });
@@ -387,6 +404,33 @@ async function pruneHourlyRows(
     durationMs: family.durationMs,
     error: family.error,
   };
+}
+
+/** Raw references own proof lifetime; pruned financial hours depend on scan coverage. */
+async function pruneProofRows(db: D1Database, nowSec: number, signal: AbortSignal | undefined,
+  batchLimit: number, runLimit: number): Promise<MintBurnRetentionFamilyResult> {
+  const cutoff = nowSec - MINT_BURN_EVENT_RETENTION_SEC;
+  const rangeEnd = `COALESCE(json_extract(CASE WHEN json_valid(proof.evidence_json)
+    THEN proof.evidence_json ELSE '{}' END, '$.closingTimestamp'), proof.checked_at)`;
+  const eligible = `${rangeEnd} < ? AND NOT EXISTS (
+    SELECT 1 FROM mint_burn_events event WHERE event.supply_proof_id = proof.proof_id)`;
+  const family = await runCappedPruneFamily({
+    db, signal,
+    statements: { proofs: {
+      sql: `/* pharos:mint-burn:proof-retention-delete */ DELETE FROM mint_burn_supply_proofs WHERE proof_id IN (
+        SELECT proof.proof_id FROM mint_burn_supply_proofs proof WHERE ${eligible}
+        ORDER BY proof.checked_at, proof.proof_id LIMIT ?)`,
+      bindsForLimit: (limit) => [cutoff, limit], batchLimit, runLimit,
+    } },
+    probes: {
+      oldestRemaining: { sql: `SELECT MIN(${rangeEnd}) AS oldest_remaining_at FROM mint_burn_supply_proofs proof` },
+      oldestEligible: { sql: `SELECT MIN(${rangeEnd}) AS oldest_eligible_at FROM mint_burn_supply_proofs proof WHERE ${eligible}`, binds: [cutoff] },
+    },
+  });
+  return { cutoff, deletedRows: family.changedRows,
+    oldestRemainingAt: family.probes.oldestRemaining.oldest_remaining_at ?? null,
+    oldestEligibleAt: family.probes.oldestEligible.oldest_eligible_at ?? null,
+    cappedAtLimit: family.cappedAtLimit, durationMs: family.durationMs, error: family.error };
 }
 
 async function loadFrontierProtection(
@@ -508,12 +552,17 @@ export async function pruneMintBurnRetention(
     signal,
   );
   throwIfAborted(signal);
+  const proofRunLimit = options.proofRunLimit ?? PROOF_DELETE_RUN_LIMIT;
+  const proofRows = await pruneProofRows(db, nowSec, signal,
+    Math.min(options.proofBatchLimit ?? PROOF_DELETE_BATCH_LIMIT, proofRunLimit), proofRunLimit);
+  throwIfAborted(signal);
   const frontierProtection = await loadFrontierProtection(db, nowSec, frontiersSql, signal);
 
   const errors = [
     aggregationRepair.error ? `aggregationRepair: ${aggregationRepair.error}` : null,
     eventRows.error ? `eventRows: ${eventRows.error}` : null,
     hourlyRows.error ? `hourlyRows: ${hourlyRows.error}` : null,
+    proofRows.error ? `proofRows: ${proofRows.error}` : null,
     frontierProtection.error ? `frontierProtection: ${frontierProtection.error}` : null,
   ].filter((error): error is string => error !== null);
 
@@ -521,6 +570,7 @@ export async function pruneMintBurnRetention(
     aggregationRepair,
     eventRows,
     hourlyRows,
+    proofRows,
     frontierProtection,
     durationMs: Math.max(0, Date.now() - startedAtMs),
     error: errors.length > 0 ? errors.join("; ").slice(0, 500) : null,

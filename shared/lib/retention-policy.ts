@@ -1,5 +1,6 @@
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "./request-attribution";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "./safety-score-capture-archive";
+import { MINT_BURN_RECONCILIATION_POLICY } from "./mint-burn-reconciliation-policy";
 
 const DAY = 86_400;
 export const WORKER_CANARY_RUN_RETENTION_SEC = 14 * DAY;
@@ -80,6 +81,9 @@ export function cronHistoryRetentionPolicies(
     }),
     selectorSnapshotDailyQuota: policy("selector_snapshot_daily_quota", "quota_date", 2 * DAY, { clockFormat: "utc-date" }),
     blockTimestampCache: policy("block_timestamp_cache", "updated_at", 14 * DAY),
+    mintBurnSupplyReconciliation: policy("mint_burn_supply_reconciliation", "day_ts", MINT_BURN_RECONCILIATION_POLICY.retentionSec, {
+      batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
     slotExecutions: policy("cron_slot_executions", "slot_started_at", CRON_SLOT_EXECUTIONS_RETENTION_SEC),
     reserveContinuationExecutions: policy("reserve_continuation_executions", "finished_at", 14 * DAY, {
       predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
@@ -235,6 +239,7 @@ const OWNER_MANAGED_TABLES = [
   ["reserve_sync_attempt_history", "attempted_at", "worker/src/lib/live-reserves/store-write.ts", "LIVE_RESERVE_HISTORY_RETENTION_SEC (30 days)", "protect frozen IDs and current/referenced attempts; bounded batches"],
   ["mint_burn_events", "timestamp", "worker/src/cron/mint-burn/retention.ts", "8 days", "finalized pricing, Tape cursor and aggregate/frontier guards"],
   ["mint_burn_hourly", "hour_ts", "worker/src/cron/mint-burn/retention.ts", "95 days", "only once corresponding source rows are gone"],
+  ["mint_burn_supply_proofs", "checked_at", "worker/src/cron/mint-burn/retention.ts", "8 days", "range end older than raw retention and no retained event references"],
   ["report_card_evidence_journal", "recorded_at", "worker/src/lib/bounded-journal-store.ts", "BOUNDED_JOURNAL_RETENTION_SEC (45 days)", "age plus 32 rows per asset"],
   ["safety_score_v9_supply_attribution_journal", "recorded_at", "worker/src/lib/bounded-journal-store.ts", "BOUNDED_JOURNAL_RETENTION_SEC (45 days)", "age plus 32 rows per asset"],
   ["dependency_scenario_payload_chunks", "created_at", "worker/scripts/compute-dependency-scenarios.ts", "DEPENDENCY_SCENARIO_ORPHAN_GRACE_SEC (24 hours)", "protect latest/recent payloads, live writers and cached manifests; 500 chunks per run"],
@@ -328,6 +333,7 @@ export const RETENTION_NON_APPEND_TABLES: Readonly<Record<string, string>> = {
   mint_burn_publication_policy: "singleton publication kill-switch and pause policy",
   mint_burn_run_state: "current per-job cursor",
   mint_burn_sync_state: "current per-config cursor",
+  mint_burn_supply_proof_configs: "durable current per-config supply-law fingerprint and removed-config tombstone; survives proof pruning",
   onchain_supply: "current per-chain supply state",
   price_cache: "current per-asset price state",
   pricing_provider_negative_cache: "retired current provider response state",

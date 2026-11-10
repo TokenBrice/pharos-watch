@@ -13,6 +13,7 @@ vi.mock("../../../lib/mint-burn-conservation", () => ({
   fetchConservationBoundaries: vi.fn(),
   conservationOnlyEventDefsFor: () => [],
   getMintBurnConservationEligibility: () => ({ supported: true }),
+  needsMintBurnConservationBoundaries: () => true,
   MINT_BURN_CONSERVATION_PREPASS_MAX_MS: 45_000,
 }));
 vi.mock("../run-state", () => ({

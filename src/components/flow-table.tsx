@@ -99,7 +99,7 @@ function buildFlowTableColumns(unknown: UnknownCounts, total: number): readonly 
       sortKey: "net90d",
       className: unknown["90d"] > 0 ? "hidden w-[188px] text-right xl:table-cell" : "hidden w-[112px] text-right xl:table-cell",
     },
-    { id: "largest", label: "Largest event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
+    { id: "largest", label: "Largest valued event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
   ];
 }
 
@@ -155,6 +155,7 @@ function FlowNetCell({
 function hasNoObserved24hActivity(coin: MintBurnCoinFlow): boolean {
   const window24h = resolveMintBurnValuation(coin.valuation?.window24h);
   return (
+    (coin.classification?.window24h.completeness == null || coin.classification.window24h.completeness === "complete") &&
     inferHas24hActivity(coin) === false &&
     coin.mintVolume24hUsd === 0 &&
     coin.burnVolume24hUsd === 0 &&
@@ -307,6 +308,8 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
                   <FlowVolumeValue
                     valueUsd={coin.mintVolume24hUsd}
+                    classificationCompleteness={coin.classification?.window24h.mintCompleteness}
+                    unresolvedEventCount={coin.classification?.window24h.unresolvedMintEventCount}
                     completeness={window24h.mintCompleteness}
                     unpricedEventCount={window24h.unpricedMintEventCount}
                     scanComplete={hasCompleteCoinScan(coin, "24h")}
@@ -316,6 +319,8 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
                   <FlowVolumeValue
                     valueUsd={coin.burnVolume24hUsd}
+                    classificationCompleteness={coin.classification?.window24h.burnCompleteness}
+                    unresolvedEventCount={coin.classification?.window24h.unresolvedBurnEventCount}
                     completeness={window24h.burnCompleteness}
                     unpricedEventCount={window24h.unpricedBurnEventCount}
                     scanComplete={hasCompleteCoinScan(coin, "24h")}
@@ -343,6 +348,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="hidden text-right pharos-numeric xl:table-cell">
                   {coin.largestEvent24h ? (
                     <span
+                      title="Largest USD-valued counted event in the admitted tracked-chain scope over 24h"
                       className={
                         coin.largestEvent24h.direction === "mint"
                           ? "text-state-positive"

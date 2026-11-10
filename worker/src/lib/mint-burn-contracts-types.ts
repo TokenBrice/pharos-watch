@@ -6,8 +6,26 @@ export type MintBurnType = "effective_burn" | "bridge_burn" | "review_required";
 export type MintBurnAdapterKind = "transfer-zero-address" | "custom-events" | "mixed";
 export type MintBurnStartBlockConfidence = "high" | "medium" | "low";
 
+/** Conditional source law; a required guard is never an implicit implementation approval. */
+export interface MintBurnSupplyRangeProof {
+  law: "paired-supply-zero-transfers-v1";
+  mintEvidence: "source-only" | "require-empty";
+  guard?: {
+    kind: "implementation" | "delegate";
+    status: "required-unavailable";
+    reason: string;
+  } | {
+    kind: "implementation" | "delegate";
+    status: "pinned";
+    slot: string;
+    expected: string;
+    changeTopic: string;
+  };
+}
+
 /** Source-reviewed evidence needed before a burn-shaped Transfer changes supply. */
 export interface MintBurnSupplyBurnProof {
+  range?: MintBurnSupplyRangeProof;
   receiptEvent?: {
     signature: string;
     topicHash: string;
@@ -27,30 +45,33 @@ export interface MintBurnSupplyBurnProof {
 
 export interface MintBurnCcipBridgeDetectionConfig {
   protocol: "ccip";
+  tokenAddress: string;
   knownBridgePoolAddresses: string[];
-  knownBridgeRouterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
+  externalMinterAddress?: string;
+  poolKind?: "usdo";
 }
 
 export interface MintBurnLayerZeroOftBridgeDetectionConfig {
   protocol: "layerzero-oft";
+  tokenAddress: string;
   knownBridgeContractAddresses: string[];
-  bridgeSignalEmitterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
+  endpointAddress: string;
+  /** Endpoint receiver/sender can be a shared messenger distinct from the token OFT. */
+  oappAddress: string;
+  endpointId: number;
+  zeroRecipientAddress?: string;
 }
 
 export interface MintBurnCctpBridgeDetectionConfig {
   protocol: "cctp";
+  tokenAddress: string;
   knownBridgePoolAddresses: string[];
-  knownBridgeRouterAddresses: string[];
-  bridgeSignalTopics: string[];
-  bridgeSignalSelectors: string[];
-  messageTransmitterAddress: string;
-  mintTokenAddress: string;
-  messageReceivedTopic: string;
-  mintAndWithdrawTopic: string;
+  deployments: Array<{
+    version: 1 | 2;
+    tokenMessenger: string;
+    tokenMinter: string;
+    messageTransmitter: string;
+  }>;
 }
 
 export type MintBurnBridgeDetectionConfig =

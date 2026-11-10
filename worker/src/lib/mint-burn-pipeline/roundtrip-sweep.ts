@@ -1,11 +1,13 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { throwIfAborted } from "../abort";
-import { executeMintBurnMaintenanceMutations, rebuildMintBurnMaterializationHours } from "./materialization-debt";
-import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "./roundtrip-detection";
+import { getCache, setCache } from "../db-cache";
+import { rebuildMintBurnMaterializationHours } from "./materialization-debt";
+import { discoverRoundtripGroups, parseRoundtripCursor, reconcileAtomicRoundtripGroups } from "./roundtrip-detection";
 import type { MintBurnAffectedHour } from "./types";
 
-const SWEEP_LOOKBACK_SEC = 7 * 24 * 3600; // 7 days; capped by SWEEP_LIMIT per run
-const SWEEP_LIMIT = 200; // keep it lightweight per cron run
+const SWEEP_LOOKBACK_SEC = 7 * 24 * 3600;
+const SWEEP_LIMIT = 200;
+const SWEEP_CURSOR_KEY = "mint-burn-roundtrip-sweep:v2";
 
 export interface RoundtripSweepResult {
   reclassified: number;
@@ -13,12 +15,7 @@ export interface RoundtripSweepResult {
   saturated: boolean;
 }
 
-/**
- * Lightweight post-cron sweep for cross-run atomic roundtrips.
- * Finds (tx_hash, stablecoin_id, chain_id) groups within the recent window where
- * both directions exist but flow_type is still 'standard'. Reclassifies
- * and recalculates affected hourly buckets.
- */
+/** Bounded keyset sweep; nonmatching groups cannot starve later exact groups. */
 export async function sweepRecentRoundtrips(
   db: D1Database,
   nowSec: number,
@@ -26,52 +23,14 @@ export async function sweepRecentRoundtrips(
   signal?: AbortSignal,
 ): Promise<RoundtripSweepResult> {
   throwIfAborted(signal);
-  const cutoff = nowSec - lookbackSec;
-
-  const { results: candidates } = await db.prepare(
-    `SELECT tx_hash, stablecoin_id, chain_id
-     FROM mint_burn_events
-     WHERE flow_type = 'standard' AND timestamp >= ?
-     GROUP BY tx_hash, stablecoin_id, chain_id
-     HAVING COUNT(DISTINCT direction) > 1
-        AND ${ROUNDTRIP_TOLERANCE_HAVING_SQL}
-     ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
-     LIMIT ?`,
-  ).bind(cutoff, SWEEP_LIMIT).all<{
-    tx_hash: string;
-    stablecoin_id: string;
-    chain_id: string;
-  }>();
-  throwIfAborted(signal);
-
-  if (candidates.length === 0) {
-    return { reclassified: 0, affectedHours: new Map(), saturated: false };
-  }
-
+  const cached = await getCache(db, SWEEP_CURSOR_KEY, signal);
+  const cursor = cached ? parseRoundtripCursor(cached.value) : null;
+  const candidates = await discoverRoundtripGroups(db, nowSec - lookbackSec, SWEEP_LIMIT, { cursor, signal });
   const saturated = candidates.length === SWEEP_LIMIT;
-  if (saturated) {
-    logWorkerEventArgs("lib", "warn", `[roundtrip-sweep] Hit limit (${SWEEP_LIMIT}), backlog may remain`);
-  }
-
-  const mutations = candidates.map((row) => ({
-    enqueue: db.prepare(
-      `INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
-       SELECT DISTINCT stablecoin_id, chain_id, (timestamp / 3600) * 3600
-       FROM mint_burn_events
-       WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'
-       RETURNING stablecoin_id, chain_id, hour_ts`,
-    ).bind(row.tx_hash, row.stablecoin_id, row.chain_id),
-    update: db.prepare(
-      `UPDATE mint_burn_events
-       SET flow_type = 'atomic_roundtrip'
-       WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'`,
-    ).bind(row.tx_hash, row.stablecoin_id, row.chain_id),
-  }));
-  const { changed: reclassified, affectedHours } = await executeMintBurnMaintenanceMutations(db, mutations, { signal });
-
-  if (affectedHours.size > 0) {
-    await rebuildMintBurnMaterializationHours(db, affectedHours, { signal });
-  }
-
+  const { changed: reclassified, affectedHours } = await reconcileAtomicRoundtripGroups(db, candidates, { signal });
+  if (affectedHours.size > 0) await rebuildMintBurnMaterializationHours(db, affectedHours, { signal });
+  // Checkpoint only after source writes and rebuilds succeed. NULL wraps the next run.
+  await setCache(db, SWEEP_CURSOR_KEY, JSON.stringify(saturated ? candidates[candidates.length - 1] : null), signal);
+  if (saturated) logWorkerEventArgs("lib", "warn", `[roundtrip-sweep] Hit limit (${SWEEP_LIMIT}), backlog may remain`);
   return { reclassified, affectedHours, saturated };
 }

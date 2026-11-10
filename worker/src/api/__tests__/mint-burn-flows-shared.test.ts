@@ -6,7 +6,6 @@ import {
   cachedFlowFallbackResponse,
   finalizeMintBurnFlowResponse,
   ETHEREUM_CHAIN_ID,
-  readCachedFlow,
   readMintBurnCronSnapshot,
   readMintBurnCronSnapshotResult,
   selectLargestEvents,
@@ -14,25 +13,13 @@ import {
 } from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
+import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
 
 function proofMap(end: number, days: number, config: typeof MINT_BURN_CONFIGS[number]) {
   return new Map(makeMintBurnScanSegments(Math.floor(end / 3600) * 3600, days,
     MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === config.stablecoinId))
     .map((segment) => [segment.config_key, [segment]]));
 }
-
-describe("readCachedFlow", () => {
-  it("returns only the requested cached window and rejects missing entries", async () => {
-    const db = mintBurnScenario({ flowCache: [
-      { key: "mint-burn-flows:v4:aggregate:24", value: '{"windowHours":24}', updatedAt: 100 },
-      { key: "mint-burn-flows:v4:aggregate:48", value: '{"windowHours":48}', updatedAt: 200 },
-    ] });
-    await expect(readCachedFlow(db, "mint-burn-flows:v4:aggregate:48"))
-      .resolves.toEqual({ value: '{"windowHours":48}', updatedAt: 200 });
-    await expect(readCachedFlow(db, "mint-burn-flows:v4:aggregate:72")).resolves.toBeNull();
-  });
-});
 
 describe("cachedFlowFallbackResponse", () => {
   beforeEach(() => {
@@ -108,50 +95,17 @@ describe("cachedFlowFallbackResponse", () => {
 });
 
 describe("selectLargestEvents", () => {
+  function event(id: string, amount: number, amountUsd: number | null, block: number, timestamp: number,
+    idSuffix = id, stablecoinId = "usdt-tether", symbol = "USDT", direction = "mint") {
+    return { id, stablecoin_id: stablecoinId, symbol, chain_id: ETHEREUM_CHAIN_ID, direction,
+      amount, amount_usd: amountUsd, counterparty: null, tx_hash: `0x${idSuffix}`, block_number: block,
+      timestamp, explorer_tx_url: `https://example.com/${idSuffix}` };
+  }
   it("prefers larger USD value, then newer timestamp, then newer block, then lexicographically later id", () => {
     const selected = selectLargestEvents([
-      {
-        id: "a",
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        chain_id: ETHEREUM_CHAIN_ID,
-        direction: "mint",
-        amount: 100,
-        amount_usd: 100,
-        counterparty: null,
-        tx_hash: "0x1",
-        block_number: 10,
-        timestamp: 1000,
-        explorer_tx_url: "https://example.com/1",
-      },
-      {
-        id: "b",
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        chain_id: ETHEREUM_CHAIN_ID,
-        direction: "mint",
-        amount: 80,
-        amount_usd: 200,
-        counterparty: null,
-        tx_hash: "0x2",
-        block_number: 9,
-        timestamp: 999,
-        explorer_tx_url: "https://example.com/2",
-      },
-      {
-        id: "c",
-        stablecoin_id: "usdc-circle",
-        symbol: "USDC",
-        chain_id: ETHEREUM_CHAIN_ID,
-        direction: "burn",
-        amount: 50,
-        amount_usd: 50,
-        counterparty: null,
-        tx_hash: "0x3",
-        block_number: 12,
-        timestamp: 1001,
-        explorer_tx_url: "https://example.com/3",
-      },
+      event("a", 100, 100, 10, 1000, "1"),
+      event("b", 80, 200, 9, 999, "2"),
+      event("c", 50, 50, 12, 1001, "3", "usdc-circle", "USDC", "burn"),
     ]);
 
     expect(selected.get("usdt-tether")?.id).toBe("b");
@@ -160,34 +114,8 @@ describe("selectLargestEvents", () => {
 
   it("does not let unpriced raw token amounts outrank priced largest events", () => {
     const selected = selectLargestEvents([
-      {
-        id: "unpriced",
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        chain_id: ETHEREUM_CHAIN_ID,
-        direction: "mint",
-        amount: 100_000_000,
-        amount_usd: null,
-        counterparty: null,
-        tx_hash: "0xunpriced",
-        block_number: 11,
-        timestamp: 1001,
-        explorer_tx_url: "https://example.com/unpriced",
-      },
-      {
-        id: "priced",
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        chain_id: ETHEREUM_CHAIN_ID,
-        direction: "mint",
-        amount: 100,
-        amount_usd: 100,
-        counterparty: null,
-        tx_hash: "0xpriced",
-        block_number: 10,
-        timestamp: 1000,
-        explorer_tx_url: "https://example.com/priced",
-      },
+      event("unpriced", 100_000_000, null, 11, 1001),
+      event("priced", 100, 100, 10, 1000),
     ]);
 
     expect(selected.get("usdt-tether")?.id).toBe("priced");
@@ -195,42 +123,13 @@ describe("selectLargestEvents", () => {
 });
 
 describe("readMintBurnCronSnapshot", () => {
-  it("returns null chainHead when cron metadata is malformed", async () => {
-    const db = mockD1([
-      {
-        match: "SELECT started_at, status, metadata",
-        rows: [],
-        first: {
-          started_at: 1_700_000_000,
-          status: "ok",
-          metadata: "{bad-json",
-        },
-      },
-    ]);
-
-    await expect(readMintBurnCronSnapshot(db)).resolves.toEqual({
-      startedAt: 1_700_000_000,
-      status: "ok",
-      chainHead: null,
-      chainHeads: new Map(),
-    });
-  });
-
-  it("returns null fields when no cron row exists", async () => {
-    const db = mockD1([
-      {
-        match: "SELECT started_at, status, metadata",
-        rows: [],
-        first: null,
-      },
-    ]);
-
-    await expect(readMintBurnCronSnapshot(db)).resolves.toEqual({
-      startedAt: null,
-      status: null,
-      chainHead: null,
-      chainHeads: new Map(),
-    });
+  it.each([
+    { name: "returns null chainHead when cron metadata is malformed",
+      first: { started_at: 1_700_000_000, status: "ok", metadata: "{bad-json" }, startedAt: 1_700_000_000, status: "ok" },
+    { name: "returns null fields when no cron row exists", first: null, startedAt: null, status: null },
+  ])("$name", async ({ first, startedAt, status }) => {
+    const db = mockD1([{ match: "SELECT started_at, status, metadata", rows: [], first }]);
+    await expect(readMintBurnCronSnapshot(db)).resolves.toEqual({ startedAt, status, chainHead: null, chainHeads: new Map() });
   });
 
   it("preserves a typed D1 snapshot failure and marks coverage unavailable", async () => {
@@ -287,55 +186,27 @@ describe("buildBaselineMap", () => {
     unpriced_burn_event_count: 0,
     unknown_mint_hours: 0,
     unknown_burn_hours: 0,
+    unresolved_mint_event_count: 0, unresolved_burn_event_count: 0,
+    classification_unknown_mint_hours: 0, classification_unknown_burn_hours: 0,
     ...tally,
   });
 
-  it("averages across tracked days, including days with no activity", () => {
-    const nowSec = 4 * DAY_SECONDS + 1;
-    const baseline = buildBaselineMap(
-      nowSec,
-      [
-        day("usdt-tether", ETHEREUM_CHAIN_ID, 1, 30, 50),
-        day("usdt-tether", ETHEREUM_CHAIN_ID, 2, -15, 25),
-      ],
-      [
-        { stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 1 * DAY_SECONDS + 3600 },
-      ],
-    );
-
-    expect(baseline.get("usdt-tether")).toEqual({
-      avgNet: 5,
-      avgAbs: 25,
-      dataDays: 3,
-      valuation: "complete",
-    });
-  });
-
-  it("cross-chain-aggregates daily_net and daily_abs before averaging across days", () => {
-    // Day 1: chain A nets +100 abs 200, chain B nets -40 abs 60 → combined net=60, abs=260
-    // Day 2: chain A nets +20 abs 30 → combined net=20, abs=30
-    // nowSec in day 3 → baselineEndDayTs = day 2, firstDayTs = day 1, dataDays = 2
-    const nowSec = 3 * DAY_SECONDS + 1;
-    const baseline = buildBaselineMap(
-      nowSec,
-      [
-        day("usdc-circle", "ethereum", 1, 100, 200),
-        day("usdc-circle", "arbitrum", 1, -40, 60),
-        day("usdc-circle", "ethereum", 2, 20, 30),
-      ],
-      [
-        { stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: 1 * DAY_SECONDS },
-        { stablecoin_id: "usdc-circle", chain_id: "arbitrum", first_hour_ts: 1 * DAY_SECONDS + 7200 },
-      ],
-    );
-
-    // sumNet = 60 + 20 = 80, sumAbs = 260 + 30 = 290, dataDays = 2
-    expect(baseline.get("usdc-circle")).toEqual({
-      avgNet: 40,
-      avgAbs: 145,
-      dataDays: 2,
-      valuation: "complete",
-    });
+  it.each([
+    { name: "averages across tracked days, including days with no activity", id: "usdt-tether", now: 4 * DAY_SECONDS + 1,
+      days: [day("usdt-tether", ETHEREUM_CHAIN_ID, 1, 30, 50), day("usdt-tether", ETHEREUM_CHAIN_ID, 2, -15, 25)],
+      first: [{ stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: DAY_SECONDS + 3600 }],
+      expected: { avgNet: 5, avgAbs: 25, dataDays: 3, valuation: "complete" } },
+    { name: "cross-chain-aggregates daily_net and daily_abs before averaging across days", id: "usdc-circle", now: 3 * DAY_SECONDS + 1,
+      days: [day("usdc-circle", "ethereum", 1, 100, 200), day("usdc-circle", "arbitrum", 1, -40, 60), day("usdc-circle", "ethereum", 2, 20, 30)],
+      first: [{ stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: DAY_SECONDS },
+        { stablecoin_id: "usdc-circle", chain_id: "arbitrum", first_hour_ts: DAY_SECONDS + 7200 }],
+      expected: { avgNet: 40, avgAbs: 145, dataDays: 2, valuation: "complete" } },
+    { name: "caps dataDays at 30 when coin has been tracked for exactly 30 days", id: "old-coin", now: 31 * DAY_SECONDS + 1,
+      days: [day("old-coin", ETHEREUM_CHAIN_ID, 1, 300, 300)],
+      first: [{ stablecoin_id: "old-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: DAY_SECONDS }],
+      expected: { avgNet: 10, avgAbs: 10, dataDays: 30, valuation: "complete" } },
+  ])("$name", ({ id, now, days, first, expected }) => {
+    expect(buildBaselineMap(now, days, first).get(id)).toMatchObject(expected);
   });
 
   it("qualifies the baseline with the valuation of its own days only", () => {
@@ -354,7 +225,7 @@ describe("buildBaselineMap", () => {
 
     expect(partial.get("partial-coin")?.valuation).toBe("partial");
     expect(unknown.get("legacy-coin")?.valuation).toBe("unknown");
-    expect(todayOnly.get("today-coin")).toEqual({ avgNet: 0, avgAbs: 0, dataDays: 3, valuation: "complete" });
+    expect(todayOnly.get("today-coin")).toMatchObject({ avgNet: 0, avgAbs: 0, dataDays: 3, valuation: "complete" });
   });
 
   it("produces no entry when coin is first seen today (firstDayTs > baselineEndDayTs)", () => {
@@ -374,26 +245,6 @@ describe("buildBaselineMap", () => {
     expect(baseline.has("new-coin")).toBe(false);
   });
 
-  it("caps dataDays at 30 when coin has been tracked for exactly 30 days", () => {
-    // firstDayTs = day 1, baselineEndDayTs = day 30 → trackedDays = 30, dataDays = 30
-    const nowSec = 31 * DAY_SECONDS + 1;
-    const baseline = buildBaselineMap(
-      nowSec,
-      [
-        day("old-coin", ETHEREUM_CHAIN_ID, 1, 300, 300),
-      ],
-      [
-        { stablecoin_id: "old-coin", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 1 * DAY_SECONDS },
-      ],
-    );
-
-    expect(baseline.get("old-coin")).toEqual({
-      avgNet: 10,
-      avgAbs: 10,
-      dataDays: 30,
-      valuation: "complete",
-    });
-  });
 
 });
 
@@ -406,108 +257,34 @@ describe("buildCoinCoverageMap", () => {
     return config!;
   }
 
-  it("marks a well-synced long-history coin as full coverage", () => {
-    const config = pickSingleConfigCoin();
-    const referenceHead = config.startBlock + 1_000_000;
-    const coverage = buildCoinCoverageMap(
-      200 * DAY_SECONDS,
-      proofMap(200 * DAY_SECONDS, 150, config),
-      new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
-      new Map([[config.chain.chainId, referenceHead]]),
-    );
-
-    expect(coverage.get(config.stablecoinId)).toMatchObject({
-      startBlock: config.startBlock,
-      lastSyncedBlock: referenceHead,
-      lagBlocks: 0,
-      has24hWindow: true,
-      has30dWindow: true,
-      has90dWindow: true,
-      isPartial: false,
-      status: "full",
-    });
-  });
-
-  it("returns unknown when a recent cursor has no durable scan proof", () => {
-    const config = pickSingleConfigCoin();
-    // Cursor distance alone cannot certify the duration or continuity of a scan.
-    const lastSynced = config.startBlock + 50;
-    const chainHead = config.startBlock + 1_000_000;
-    const coverage = buildCoinCoverageMap(
-      200 * DAY_SECONDS,
-      new Map(),
-      new Map([[`${config.chain.chainId}-${config.contractAddress}`, lastSynced]]),
-      new Map([[config.chain.chainId, chainHead]]),
-    );
-
-    expect(coverage.get(config.stablecoinId)).toMatchObject({
-      status: "unknown",
-      isPartial: true,
-      has24hWindow: false,
-    });
-  });
-
-  it("keeps fully scanned quiet XAUT coverage mature after retained event rows expire", () => {
-    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "xaut-tether");
+  it.each([
+    { name: "marks a well-synced long-history coin as full coverage", days: 150,
+      expected: { lagBlocks: 0, has24hWindow: true, has7dWindow: true, has30dWindow: true, has90dWindow: true, isPartial: false, status: "full" } },
+    { name: "returns unknown when a recent cursor has no durable scan proof", days: 0, cursorOffset: 50,
+      expected: { status: "unknown", isPartial: true, has24hWindow: false } },
+    { name: "keeps fully scanned quiet XAUT coverage mature after retained event rows expire", days: 90,
+      coinId: "xaut-tether", now: 1_785_243_764, head: 25_631_350, lag: 5,
+      expected: { historyStartAt: Math.floor(1_785_243_764 / 3600) * 3600 - 90 * DAY_SECONDS,
+        has24hWindow: true, has30dWindow: true, has90dWindow: true, lagBlocks: 5, isPartial: false, status: "full" } },
+    { name: "uses a quiet scanned range to distinguish partial history from bootstrapping", days: 10,
+      headOffset: Math.ceil((10 * DAY_SECONDS) / 12),
+      expected: { historyStartAt: 190 * DAY_SECONDS, has24hWindow: true, has30dWindow: false,
+        has90dWindow: false, isPartial: true, status: "partial-history" } },
+    { name: "returns lagging when lastSyncedBlock is beyond the cadence-derived chain threshold", days: 150, lag: 301,
+      expected: { status: "lagging", isPartial: true, lagBlocks: 301 } },
+    { name: "returns unknown for established coverage when chain-head metadata is missing", days: 150, headPresent: false,
+      expected: { status: "unknown", isPartial: true, lagBlocks: null, has30dWindow: true } },
+  ])("$name", (row) => {
+    const options = { now: 200 * DAY_SECONDS, coinId: null, head: null, headOffset: 1_000_000,
+      cursorOffset: null, lag: 0, headPresent: true, ...row };
+    const config = options.coinId ? MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === options.coinId)! : pickSingleConfigCoin();
     expect(config).toBeDefined();
-
-    const chainHead = 25_631_350;
-    const coverage = buildCoinCoverageMap(
-      1_785_243_764,
-      proofMap(1_785_243_764, 90, config!),
-      new Map([[`${config!.chain.chainId}-${config!.contractAddress}`, chainHead - 5]]),
-      new Map([[config!.chain.chainId, chainHead]]),
-    );
-
-    expect(coverage.get(config!.stablecoinId)).toMatchObject({
-      historyStartAt: Math.floor(1_785_243_764 / 3600) * 3600 - 90 * DAY_SECONDS,
-      has24hWindow: true,
-      has30dWindow: true,
-      has90dWindow: true,
-      lagBlocks: 5,
-      isPartial: false,
-      status: "full",
-    });
-  });
-
-  it("uses a quiet scanned range to distinguish partial history from bootstrapping", () => {
-    const config = pickSingleConfigCoin();
-    const tenDaysOfBlocks = Math.ceil((10 * DAY_SECONDS) / 12);
-    const chainHead = config.startBlock + tenDaysOfBlocks;
-    const coverage = buildCoinCoverageMap(
-      200 * DAY_SECONDS,
-      proofMap(200 * DAY_SECONDS, 10, config),
-      new Map([[`${config.chain.chainId}-${config.contractAddress}`, chainHead]]),
-      new Map([[config.chain.chainId, chainHead]]),
-    );
-
-    expect(coverage.get(config.stablecoinId)).toMatchObject({
-      historyStartAt: 190 * DAY_SECONDS,
-      has24hWindow: true,
-      has30dWindow: false,
-      has90dWindow: false,
-      isPartial: true,
-      status: "partial-history",
-    });
-  });
-
-  it("returns lagging when lastSyncedBlock is beyond the cadence-derived chain threshold", () => {
-    const config = pickSingleConfigCoin();
-    const chainHead = config.startBlock + 1_000_000;
-    // Ethereum threshold is 60 minutes of expected blocks: 3,600 / 12 = 300.
-    const lastSynced = chainHead - 301;
-    const coverage = buildCoinCoverageMap(
-      200 * DAY_SECONDS,
-      proofMap(200 * DAY_SECONDS, 150, config),
+    const head = options.head ?? config.startBlock + options.headOffset;
+    const lastSynced = options.cursorOffset === null ? head - options.lag : config.startBlock + options.cursorOffset;
+    const coverage = buildCoinCoverageMap(options.now, options.days ? proofMap(options.now, options.days, config) : new Map(),
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, lastSynced]]),
-      new Map([[config.chain.chainId, chainHead]]),
-    );
-
-    expect(coverage.get(config.stablecoinId)).toMatchObject({
-      status: "lagging",
-      isPartial: true,
-      lagBlocks: 301,
-    });
+      options.headPresent ? new Map([[config.chain.chainId, head]]) : new Map());
+    expect(coverage.get(config.stablecoinId)).toMatchObject({ startBlock: config.startBlock, lastSyncedBlock: lastSynced, ...row.expected });
   });
 
   it.each([
@@ -546,25 +323,5 @@ describe("buildCoinCoverageMap", () => {
     expect(withExtendedLaneHeads(100_000 - DAY_SECONDS, critical, extended)).toEqual(critical);
   });
 
-  it("returns unknown for established coverage when chain-head metadata is missing", () => {
-    const config = pickSingleConfigCoin();
-    const referenceHead = config.startBlock + 1_000_000;
-    const coverage = buildCoinCoverageMap(
-      200 * DAY_SECONDS,
-      proofMap(200 * DAY_SECONDS, 150, config),
-      new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
-      new Map(),
-    );
 
-    expect(coverage.get(config.stablecoinId)).toMatchObject({
-      status: "unknown",
-      isPartial: true,
-      lagBlocks: null,
-      has30dWindow: true,
-    });
-  });
-
-  // Note: no MINT_BURN_CONFIGS entry has `enabled: false` today, so testing
-  // the "disabled" status would require mocking the module import. Skipped
-  // to avoid brittle coupling; the status branch is trivially readable.
 });

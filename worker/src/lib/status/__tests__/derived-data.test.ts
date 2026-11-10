@@ -14,6 +14,9 @@ import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../mint-burn-publication";
+import { readMintBurnSupplyReconciliation } from "../../mint-burn-supply-reconciliation";
+
+vi.mock("../../mint-burn-supply-reconciliation", () => ({ readMintBurnSupplyReconciliation: vi.fn(async () => new Map()) }));
 
 const NOW = 1_800_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -116,6 +119,19 @@ describe("conservation compatibility schema", () => {
 });
 
 describe("getMintBurnReconciliation verified conservation", () => {
+  it("projects daily ledger findings without changing the raw scan verdict", async () => {
+    const config = byId("usds-sky")[0];
+    const leg = { configKey: mintBurnConfigKey(config), chainId: config.chain.chainId,
+      address: config.contractAddress, decimals: config.decimals, latestDay: NOW - 86400, checkedAt: NOW,
+      status: "unavailable" as const, reason: "incomplete-scan-coverage", windows: [],
+      activeFindings: [{ day: NOW - 172800, status: "review-suppression" as const, reason: "material-review-suppression" }] };
+    vi.mocked(readMintBurnSupplyReconciliation).mockResolvedValueOnce(new Map([[leg.configKey, leg]]));
+    const result = await reconcile();
+    expect(result.rows[0].dailyReconciliation).toEqual([leg]);
+    expect(result.rows[0].status).toBe("ok");
+    expect(MintBurnReconciliationSummarySchema.safeParse(result).success).toBe(true);
+  });
+
   it.each(["tbill-openeden"])("excludes inactive %s just like the producer", async (id) => {
     expect(MINT_BURN_CONFIGS.some((config) => config.stablecoinId === id)).toBe(true);
     expect(ACTIVE_IDS.has(id)).toBe(false);

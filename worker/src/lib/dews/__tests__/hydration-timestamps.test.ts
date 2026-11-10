@@ -19,7 +19,7 @@ const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
 afterEach(() => vi.useRealTimers());
 
 describe("DEWS hydration timestamp admission", () => {
-  it.each(["missing", "scope-missing", "scope-missing-disabled", "scope-missing-new", "pending", "disabled", "incomplete", "wrong-window", "quiet", "eventful", "compact", "compact-missing-pairs", "materialization-debt"] as const)(
+  it.each(["missing", "scope-missing", "scope-missing-disabled", "scope-missing-new", "pending", "disabled", "incomplete", "wrong-window", "quiet", "eventful", "compact", "compact-missing-pairs", "materialization-debt", "classification-unresolved", "classification-unknown"] as const)(
     "keeps mint/burn scan admission distinct from observed data: %s", async (state) => {
       const { sqlite, db } = createLatestSchemaSqlite();
       const end = Math.floor(RUN_AT / 3600) * 3600;
@@ -49,6 +49,16 @@ describe("DEWS hydration timestamp admission", () => {
           sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
             mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
             VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 3600);
+        }
+        if (state === "classification-unknown") {
+          MINT_BURN_CONFIGS[configIndex] = { ...originalConfig,
+            bridgeDetection: getMintBurnConfigsForStablecoin("eurc-circle")[0].bridgeDetection };
+        }
+        if (state === "classification-unresolved" || state === "classification-unknown") {
+          sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+            mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+            VALUES ('usdt-tether', 'ethereum', ?, 1, 0, 0, 0, 700000, 0, 700000)`).run(end - 3600);
+          if (state === "classification-unresolved") sqlite.exec("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 1");
         }
         if (state === "materialization-debt") {
           sqlite.prepare("INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts) VALUES ('usdt-tether', 'ethereum', ?)")

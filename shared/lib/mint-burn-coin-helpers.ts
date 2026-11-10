@@ -26,7 +26,10 @@ const PRESSURE_PARTIAL_VALUATION_NOTE =
 
 /** Preserve explicit unknown activity; only older payloads without a flag infer from fields. */
 export function inferHas24hActivity(coin: MintBurnCoinFlow): boolean | null {
+  const classification = coin.classification?.window24h;
+  if (classification && (classification.unresolvedMintEventCount > 0 || classification.unresolvedBurnEventCount > 0)) return true;
   if (coin.observed24hActivity === true) return true;
+  if (classification && classification.completeness !== "complete") return null;
   if (coin.has24hActivity !== undefined) return coin.has24hActivity;
   return Boolean(
     coin.mintCount24h
@@ -45,6 +48,10 @@ export function hasCompleteCoinScan(coin: MintBurnCoinFlow, window: MintBurnNetW
 
 /** Window net gated by valuation; partial coverage is opt-in only for cells rendering a partial qualifier. */
 export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWindow, allowPartialCoverage = false): MintBurnSignedNetView {
+  const classification = coin.classification?.[window === "24h" ? "window24h" : window === "7d" ? "netFlow7d" : window === "30d" ? "netFlow30d" : "netFlow90d"];
+  if (classification && classification.completeness !== "complete") {
+    return resolveMintBurnSignedNet(null, coin.valuation?.window24h.completeness, null, null, classification);
+  }
   const scanWindow = coin.coverage?.windows?.[
     window === "24h" ? "window24h" : window === "7d" ? "window7d" : window === "30d" ? "window30d" : "window90d"
   ];
@@ -92,8 +99,14 @@ export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWi
  * pressure shift; `null` when the published score stands.
  */
 export function resolvePressureUnavailableNote(coin: MintBurnCoinFlow): string | null {
+  const classification = [coin.classification?.window24h, coin.classification?.baseline]
+    .find((verdict) => verdict && verdict.completeness !== "complete");
+  if (classification) return classification.unavailableReason === "classification-unresolved"
+    ? "Unresolved flow classification in the 24h window or baseline; pressure shift unavailable"
+    : "Historical flow classification unknown in the 24h window or baseline; pressure shift unavailable";
   if (coin.coverage?.windows?.window24h.complete === false) return "24h scan coverage incomplete; pressure shift unavailable";
   if (coin.has24hActivity === null) return "24h scan coverage unknown; pressure shift unavailable";
+  if (coin.valuation?.baseline === "unknown") return "Baseline valuation unknown; pressure shift unavailable";
   return coin.valuation?.window24h.completeness === "partial" || coin.valuation?.baseline === "partial"
     ? PRESSURE_PARTIAL_VALUATION_NOTE
     : null;
@@ -108,9 +121,12 @@ export function resolvePressureState(coin: MintBurnCoinFlow): PressureShiftState
   return coin.pressureShiftState ?? getPressureShiftState(coin.pressureShiftScore);
 }
 
-/** Average daily baseline net; withheld when the baseline valuation is partial (not a bound). */
+/** Average daily baseline net requires complete evidence over the whole coin scope. */
 export function resolveBaselineDailyNetUsd(coin: MintBurnCoinFlow): number | null {
-  return coin.valuation?.baseline === "partial" ? null : coin.baselineDailyNetUsd;
+  if (coin.coverage?.isPartial || coin.coverage?.windows?.window30d.complete === false
+    || (coin.classification?.baseline && coin.classification.baseline.completeness !== "complete")
+    || coin.valuation?.baseline !== "complete") return null;
+  return coin.baselineDailyNetUsd;
 }
 
 /**
@@ -119,6 +135,7 @@ export function resolveBaselineDailyNetUsd(coin: MintBurnCoinFlow): number | nul
  * proven-direction helper; a `null` wire direction is never replaced by a derived one.
  */
 export function resolveNetDirection(coin: MintBurnCoinFlow): NetFlowDirection24h | null {
+  if (coin.classification?.window24h && coin.classification.window24h.completeness !== "complete") return null;
   if (coin.coverage?.windows?.window24h.complete === false) return null;
   const has24hActivity = inferHas24hActivity(coin);
   if (has24hActivity === null) return null;
@@ -144,6 +161,10 @@ export interface MintBurnCoinsAggregate24h {
   burnVolumeUsd: number;
   mintCompleteness: MintBurnValuationCompleteness;
   burnCompleteness: MintBurnValuationCompleteness;
+  mintClassificationCompleteness: MintBurnValuationCompleteness;
+  burnClassificationCompleteness: MintBurnValuationCompleteness;
+  unresolvedMintEventCount: number;
+  unresolvedBurnEventCount: number;
   /** Independent of valuation: false means gross volumes are observed subtotals. */
   scanComplete: boolean;
   unpricedMintEventCount: number;
@@ -165,6 +186,10 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
       burnVolumeUsd: 0,
       mintCompleteness: "unknown",
       burnCompleteness: "unknown",
+      mintClassificationCompleteness: "unknown",
+      burnClassificationCompleteness: "unknown",
+      unresolvedMintEventCount: 0,
+      unresolvedBurnEventCount: 0,
       scanComplete: false,
       unpricedMintEventCount: 0,
       unpricedBurnEventCount: 0,
@@ -177,15 +202,27 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
   let burnVolumeUsd = 0;
   let unpricedMintEventCount = 0;
   let unpricedBurnEventCount = 0;
+  let unresolvedMintEventCount = 0;
+  let unresolvedBurnEventCount = 0;
   let knownNetUsd: number | null = 0;
   let has24hActivity: boolean | null = false;
   let activityUnknown = false;
   const mintSides: MintBurnValuationCompleteness[] = [];
   const burnSides: MintBurnValuationCompleteness[] = [];
+  const mintClassificationSides: MintBurnValuationCompleteness[] = [];
+  const burnClassificationSides: MintBurnValuationCompleteness[] = [];
   const nets: MintBurnSignedNetView[] = [];
 
   for (const coin of coins) {
     const valuation = resolveMintBurnValuation(coin.valuation?.window24h);
+    const classification = coin.classification?.window24h;
+    mintClassificationSides.push(classification?.mintCompleteness ?? "complete");
+    burnClassificationSides.push(classification?.burnCompleteness ?? "complete");
+    if (classification) {
+      unresolvedMintEventCount += classification.unresolvedMintEventCount;
+      unresolvedBurnEventCount += classification.unresolvedBurnEventCount;
+      if (classification.completeness !== "complete") activityUnknown = true;
+    }
     mintVolumeUsd += coin.mintVolume24hUsd;
     burnVolumeUsd += coin.burnVolume24hUsd;
     unpricedMintEventCount += valuation.unpricedMintEventCount;
@@ -236,6 +273,10 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
     burnVolumeUsd,
     mintCompleteness,
     burnCompleteness,
+    mintClassificationCompleteness: combineMintBurnValuationCompleteness(...mintClassificationSides),
+    burnClassificationCompleteness: combineMintBurnValuationCompleteness(...burnClassificationSides),
+    unresolvedMintEventCount,
+    unresolvedBurnEventCount,
     scanComplete: coins.every((coin) => hasCompleteCoinScan(coin, "24h")),
     unpricedMintEventCount,
     unpricedBurnEventCount,

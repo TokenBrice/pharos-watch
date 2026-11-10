@@ -1,15 +1,13 @@
+import { flowResponse } from "./mint-burn-flows.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
 import { buildMintBurnLegacySpans, MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint, mintBurnWindowAdmits, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, mintBurnWindowCoverage, resolveMintBurnWatermark, cachedFlowFallbackResponse } from "../../lib/mint-burn-flows-service";
-import { handleMintBurnFlows } from "../mint-burn-flows";
 import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { hydrateMintBurn } from "../../lib/dews/source-state/hydration";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
-// These suites use held coins as fixtures for unrelated contracts.
-vi.mock("../../lib/mint-burn-classification-holds", () => ({ isMintBurnClassificationHeld: () => false }));
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
@@ -17,7 +15,7 @@ const HOUR = 3600;
 const DAY = 24 * HOUR;
 const CUTOVER = MINT_BURN_LEGACY_CUTOVER;
 const END = CUTOVER + 8 * HOUR;
-const config = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdc-circle")!;
+const config = ACTIVE_MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "pyusd-paypal")!;
 const key = mintBurnConfigKey(config);
 
 function openTransition() {
@@ -33,8 +31,8 @@ function openTransition() {
     cursor.run(mintBurnConfigKey(source), from + 10_000);
   }
   const hourly = fixture.sqlite.prepare(`INSERT INTO mint_burn_hourly
-    (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count)
-    VALUES (?, ?, ?, 1, 0, ?, 0, ?, 0, 0)`);
+    (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count,mint_unresolved_event_count,burn_unresolved_event_count)
+    VALUES (?, ?, ?, 1, 0, ?, 0, ?, 0, 0, 0, 0)`);
   // History survives raw-event retention. Empty intervening hours are genuine quiet intervals.
   for (let days = 1; days <= 30; days++) hourly.run(config.stablecoinId, config.chain.chainId,
     Math.floor(CUTOVER / DAY) * DAY - days * DAY, 100_000, 100_000);
@@ -178,7 +176,7 @@ describe("bounded legacy transition and common scan watermark", () => {
       baseline: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: Math.floor(END / DAY) * DAY - DAY,
         daily_net: 100_000, daily_abs: 100_000 }],
     } });
-    const response = await handleMintBurnFlows(db, new URL("https://example.test/api/mint-burn-flows"));
+    const response = await flowResponse(db);
     const body = await response.json() as { gauge: { score: number | null; scoreScope: string; scanCoverage: { complete: boolean; excludedCoins: number } } };
     expect(body.gauge.score).not.toBeNull();
     expect(body.gauge).toMatchObject({ scoreScope: "admitted-coins", scanCoverage: { complete: false, excludedCoins: 1 } });
@@ -193,8 +191,8 @@ describe("bounded legacy transition and common scan watermark", () => {
         window30d: { complete: true, provenance: "legacy-pre-cutover" },
       });
     const hourly = sqlite.prepare(`INSERT INTO mint_burn_hourly
-      (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count)
-      VALUES (?,?,?,1,0,?,0,?,0,0)`);
+      (stablecoin_id,chain_id,hour_ts,mint_count,burn_count,mint_volume_usd,burn_volume_usd,net_flow_usd,mint_unpriced_event_count,burn_unpriced_event_count,mint_unresolved_event_count,burn_unresolved_event_count)
+      VALUES (?,?,?,1,0,?,0,?,0,0,0,0)`);
     for (const [hour, amount] of [
       [end - DAY, 1111], [end - DAY - HOUR, 2222],
       [end - 30 * DAY, 3333], [end - 30 * DAY - HOUR, 4444],

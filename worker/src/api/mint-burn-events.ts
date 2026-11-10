@@ -13,6 +13,7 @@ import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/sync-state";
 import { ACTIVE_MINT_BURN_CONFIGS } from "./mint-burn-flows/aggregate";
 import { buildInClause } from "../lib/db";
+import { mintBurnSupplyProofAcceptedSql } from "../lib/mint-burn-supply-proofs";
 
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);
@@ -85,7 +86,10 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
     const chainInClause = queryChainIds.length > 0 ? buildInClause(queryChainIds) : { sql: "NULL", binds: [] };
 
     // Build WHERE conditions
-    const conditions: string[] = ["stablecoin_id = ?", `chain_id IN (${chainInClause.sql})`];
+    const conditions: string[] = ["stablecoin_id = ?", `chain_id IN (${chainInClause.sql})`, "below_display_threshold = 0"];
+    // Pending proof chunks cannot publish effective destruction before atomic acceptance.
+    const supplyAccepted = mintBurnSupplyProofAcceptedSql();
+    conditions.push(`(${supplyAccepted} OR burn_type = 'review_required')`);
     const filterBindings: (string | number)[] = [stablecoinId, ...queryChainIds];
 
     if (direction) {
@@ -97,8 +101,9 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
       filterBindings.push(burnType);
     }
     if (scope === "counted") {
+      conditions.push(supplyAccepted);
       conditions.push("flow_type = 'standard'");
-      conditions.push("(direction = 'mint' OR burn_type = 'effective_burn')");
+      conditions.push("((direction = 'mint' AND burn_type IS NOT 'review_required') OR (direction = 'burn' AND burn_type = 'effective_burn'))");
     }
     if (minAmount > 0) {
       conditions.push("amount_usd IS NOT NULL AND amount_usd >= ?");

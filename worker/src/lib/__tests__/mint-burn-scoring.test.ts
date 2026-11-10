@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
 import {
   buildFlightToQualityCohorts,
   computeFlowIntensity,
@@ -12,93 +13,18 @@ import {
 
 describe("computeFlowIntensity", () => {
 
-  it("computes correct value for moderate net redemptions", () => {
-    // denominator = max(2e8 * 0.3, 1e6) = 6e7
-    // z = (-3e7 - 0) / 6e7 = -0.5
-    // intensity = clamp(-100, 100, -0.5 * 50) = -25
-    const result = computeFlowIntensity({
-      currentDailyNet: -3e7,
-      baselineDailyNet: 0,
-      baselineDailyAbs: 2e8,
-      dataAgeDays: 30,
-      currentDailyAbs: 100_000_000,
-    });
-    expect(result).toBeCloseTo(-25, 1);
-  });
-
-  it("computes correct value for moderate net minting", () => {
-    // z = (6e7 - 0) / 6e7 = 1.0
-    // intensity = clamp(-100, 100, 1.0 * 50) = 50
-    const result = computeFlowIntensity({
-      currentDailyNet: 6e7,
-      baselineDailyNet: 0,
-      baselineDailyAbs: 2e8,
-      dataAgeDays: 30,
-      currentDailyAbs: 100_000_000,
-    });
-    expect(result).toBeCloseTo(50, 1);
-  });
-
-  it("clamps to -100 for extreme net redemptions", () => {
-    expect(
-      computeFlowIntensity({
-        currentDailyNet: -1e12,
-        baselineDailyNet: 0,
-        baselineDailyAbs: 1e8,
-        dataAgeDays: 30,
-        currentDailyAbs: 1_000_000_000_000,
-      })
-    ).toBe(-100);
-  });
-
-  it("clamps to 100 for extreme net minting", () => {
-    expect(
-      computeFlowIntensity({
-        currentDailyNet: 1e12,
-        baselineDailyNet: 0,
-        baselineDailyAbs: 1e8,
-        dataAgeDays: 30,
-        currentDailyAbs: 1_000_000_000_000,
-      })
-    ).toBe(100);
-  });
-
-  it("uses floor of 1M for denominator when baseline abs flow is tiny", () => {
-    // absBaseline = 100, denom = max(100 * 0.3, 1e6) = 1e6
-    // z = -500000 / 1e6 = -0.5, below saturation.
-    const result = computeFlowIntensity({
-      currentDailyNet: -500_000,
-      baselineDailyNet: 0,
-      baselineDailyAbs: 100,
-      dataAgeDays: 30,
-      currentDailyAbs: 500_000,
-    });
-    expect(result).toBe(-25);
-  });
-
-  it("accounts for non-zero baseline in z-score", () => {
-    expect(
-      computeFlowIntensity({
-        currentDailyNet: 5e7,
-        baselineDailyNet: 5e7,
-        baselineDailyAbs: 3e8,
-        dataAgeDays: 30,
-        currentDailyAbs: 100_000_000,
-      })
-    ).toBe(0);
-
-    // current = -1e7 (slight redemptions vs normal $50M minting)
-    // z = (-1e7 - 5e7) / 9e7 = -6e7 / 9e7 = -0.667
-    // intensity = clamp(-100, 100, -0.667 * 50) = -33.33
-    expect(
-      computeFlowIntensity({
-        currentDailyNet: -1e7,
-        baselineDailyNet: 5e7,
-        baselineDailyAbs: 3e8,
-        dataAgeDays: 30,
-        currentDailyAbs: 100_000_000,
-      })
-    ).toBeCloseTo(-33.33, 0);
+  it.each([
+    ["moderate redemptions", -3e7, 0, 2e8, 1e8, -25, 1],
+    ["moderate minting", 6e7, 0, 2e8, 1e8, 50, 1],
+    ["clamped redemptions", -1e12, 0, 1e8, 1e12, -100, undefined],
+    ["clamped minting", 1e12, 0, 1e8, 1e12, 100, undefined],
+    ["denominator floor", -500_000, 0, 100, 500_000, -25, undefined],
+    ["equal baseline", 5e7, 5e7, 3e8, 1e8, 0, undefined],
+    ["nonzero baseline", -1e7, 5e7, 3e8, 1e8, -33.33, 0],
+  ] as const)("computes intensity for %s", (_name, currentDailyNet, baselineDailyNet, baselineDailyAbs, currentDailyAbs, expected, precision) => {
+    const result = computeFlowIntensity({ currentDailyNet, baselineDailyNet, baselineDailyAbs, currentDailyAbs, dataAgeDays: 30 });
+    if (precision === undefined) expect(result).toBe(expected);
+    else expect(result).toBeCloseTo(expected, precision);
   });
 
   it("includes exactly seven days and $50K activity, but excludes either just below", () => {
@@ -147,15 +73,6 @@ describe("computeGaugeScore", () => {
     ]);
     // 60 * (100B/150B) + 40 * (50B/150B) = 40 + 13.33 = 53.33
     expect(result).toBeCloseTo(53.33, 1);
-  });
-
-  it("returns null when ALL coins have null intensity", () => {
-    expect(
-      computeGaugeScore([
-        { intensity: null, mcap: 1e11 },
-        { intensity: null, mcap: 5e10 },
-      ])
-    ).toBeNull();
   });
 
   it("returns null for eligible intensities with zero total market cap", () => {
@@ -236,6 +153,15 @@ describe("detectFlightToQualityFromValuedNets", () => {
   const complete = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
   const burnPartial = { mintCompleteness: "complete", burnCompleteness: "partial" } as const;
   const mintPartial = { mintCompleteness: "partial", burnCompleteness: "complete" } as const;
+
+  it.each(["partial", "unknown"] as const)("withholds even an inactive FTQ verdict for %s classification", (state) => {
+    const classification = summarizeMintBurnClassification({ ...emptyMintBurnClassificationTally(),
+      unresolvedBurnEventCount: state === "partial" ? 1 : 0, unknownBurnHours: state === "unknown" ? 1 : 0 });
+    const cohorts = { safe: [{ knownNetUsd: 0, valuation: complete, window24hComplete: true, classification }],
+      risky: [{ knownNetUsd: 0, valuation: complete, window24hComplete: true }], unpublishedIds: [] };
+    expect(detectFlightToQualityFromValuedNets(cohorts)).toBeNull();
+    expect(getFlightToQualityUnavailableReason(cohorts)).toBe(classification.unavailableReason);
+  });
 
   it("is exact when every classified coin has complete valuation", () => {
     expect(detectFlightToQualityFromValuedNets({

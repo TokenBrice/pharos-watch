@@ -282,15 +282,21 @@ If `configKey` is omitted, the job auto-selects one tracked EVM config using a c
 | `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                                   |
 | `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                                    |
 
-Successful chunks materialize hours before committing a safe cursor. Both eventful and quiet chunks advance through the complete requested range capped to CHAIN's validated `finalized` header; explicit historical chunks retain full-range advancement below that ceiling. A missing, refused or unsupported finalized head returns `502` with `finality-head-unavailable: <chain>`, without tip fallback or ingestion writes. `done`/`nextFromBlock` reflect committed finalized coverage, not the provisional tip; a later request can resume when finality advances.
+Every EVM response uses the cron's shared identity validator regardless of conservation-law support. Removed logs, wrong emitters or topics/direction, out-of-range blocks, inconsistent block hashes and conflicting duplicate identities fail the chunk with `502` before ingestion writes; retry the range after the provider response is corrected.
 
-Decode failures count in `rowsDropped` and `rowsDroppedDecode`; valid peers persist while the cursor holds below `earliestDecodeFailureBlock`. Shared per-log retries quarantine on observation three (`rowsQuarantinedDecode`, `decodeQuarantines[]`, reason `amount-decode-retry-exhausted`), then release the frontier. A held chunk ends the request; retry with a new observation.
+The job scans all chunks and resolves their boundary timestamps before event writes, hourly materialization or cursor advancement. A touched hour is rebuildable only when it is a closed whole UTC hour inside the complete retained-raw window, or a complete interior hour of this invocation's scan for **every** config sharing that coin/chain bucket. Chunk boundaries cannot publish half-scanned hours. The first scan boundary's hour and any incomplete final hour outside retention are refused. This single-config job cannot rebuild expired shared buckets (notably either BUIDL share class alone).
+
+Any unsafe touched hour refuses the entire write phase, leaving raw events, existing hourly rows, materialization debt and the cursor untouched. This is stricter than inserting a partial raw subset: shared persistence automatically queues rebuild debt, which could otherwise destroy the old aggregate later. The response reports `hoursRebuilt: 0`, `done: false`, `nextFromBlock` at the invocation start, and `skippedHours[]` with coin, chain, hour and machine-readable `reason`: `raw-hour-incomplete`, `shared-bucket-configs-not-scanned` or `scan-range-incomplete`. A safe hour withheld by another unsafe hour is reported as `job-write-refused`. `scannedToBlock` is diagnostic scan progress, never committed coverage. Retrying an unsafe range unchanged does not repair it; use a retained complete hour or a separately reviewed historical repair.
+
+Decode failures count in `rowsDropped` / `rowsDroppedDecode`. Shared per-log retry observations still report third-observation quarantine (`rowsQuarantinedDecode`, `decodeQuarantines[]`, `amount-decode-retry-exhausted`), but quarantine never releases this job's frontier or permits materialization. An incomplete chunk ends scanning with `incompleteRange: true`; valid peers are not persisted. Correct the source response before retrying. Fetch, timestamp and transaction-context shortfalls return `502` before event writes, including earlier chunks from this invocation.
+
+Complete accepted jobs rebuild once and commit the finalized cursor afterward. A missing, refused or unsupported finalized head returns `502` with `finality-head-unavailable: <chain>`, without tip fallback. The operator writes **no scan proof**: `done=true` is ingestion completion, not public exactness. A staged whole-hour/all-config historical replay store, scan-proof publication, coordinated lease and history acceptance remain a separate, deferred operator campaign. No migration or production replay is included here.
 
 ## reclassify-atomic-roundtrips
 
-Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using the shared amount-match tolerance. Apply migration `0280_mint_burn_dirty_hours.sql` and the compatible maintenance writers/drain before running this job; production writes still require a coordinated maintenance window and `--execute --allow-atomic-import`.
+Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using exact BigInt equality of raw token-unit sums among resolved standard legs. Excluded bridge/internal legs and unproven burns cannot prove neutrality. Complete source-config cursors are required for every shared-bucket sibling; differently scaled share classes are skipped. Groups containing candidate or existing atomic rows with NULL raw amounts are left unchanged, so this cannot repair pre-`0300` tags from REAL amounts. Apply migrations `0300_mint_burn_raw_amount.sql` and `0280_mint_burn_dirty_hours.sql` and the compatible maintenance writers/drain before running this job; production writes still require a coordinated maintenance window and `--execute --allow-atomic-import`.
 
-Every tag update atomically enqueues all matching source hours in `mint_burn_dirty_hours`, including hours beyond the discovery group's earliest timestamp. Source writes use bounded atomic batches; they are not one whole-job transaction. The job drains persisted debt on entry and after both passes, independently of `since` and `stablecoinId`, so an interrupted run is repairable even when its changed transactions no longer match either scan. Each shared drain atomically rebuilds current hourly totals, finalizes eligible priced `pending_aggregate` repairs and removes that hour's debt. A concurrent mutation either enters that rebuild or leaves fresh debt afterward; it is never cleared against a stale pre-read aggregate.
+Every tag update atomically enqueues all matching source hours in `mint_burn_dirty_hours`, including hours beyond the discovery group's earliest timestamp. Source writes use bounded atomic batches; they are not one whole-job transaction. The job drains persisted debt on entry and after the group pass, independently of `since` and `stablecoinId`, so an interrupted run is repairable even when its changed transactions no longer match either scan. Each shared drain atomically rebuilds current hourly totals, finalizes eligible priced `pending_aggregate` repairs and removes that hour's debt. A concurrent mutation either enters that rebuild or leaves fresh debt afterward; it is never cleared against a stale pre-read aggregate.
 
 After any failure, reconcile uncertain atomic-import receipts using [Interruption and cleanup](#interruption-and-cleanup) before an explicitly authorized retry. Keep every dirty-hour row and the additive table through code rollback; do not manually delete debt or rely on process cleanup to repair aggregates.
 
@@ -298,8 +304,9 @@ After any failure, reconcile uncertain atomic-import receipts using [Interruptio
 
 | Param          | Type      | Default         | Description                                                                                                                                 |
 | -------------- | --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `since`        | `integer` | `now - 90 days` | Unix seconds cutoff for both forward and reverse scans; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
-| `stablecoinId` | `string`  | —               | Optional Pharos stablecoin ID filter applied to both scans                                                                                  |
+| `since`        | `integer` | `now - 90 days` | Unix seconds cutoff for group discovery; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
+| `stablecoinId` | `string`  | —               | Optional Pharos stablecoin ID filter applied to group discovery                                                                                  |
+| `cursor` | `string` | — | JSON string returned as `nextCursor`; continue with the same `since` and `stablecoinId` |
 
 **Response**
 
@@ -308,6 +315,7 @@ After any failure, reconcile uncertain atomic-import receipts using [Interruptio
   "done": false,
   "since": 1765218367,
   "stablecoinId": "usdt-tether",
+  "nextCursor": "{\"timestamp\":1765221967,\"stablecoin_id\":\"usdt-tether\",\"tx_hash\":\"0xabc\",\"chain_id\":\"ethereum\"}",
   "updated": 428,
   "toRoundtrip": 420,
   "toStandard": 8,
@@ -316,7 +324,7 @@ After any failure, reconcile uncertain atomic-import receipts using [Interruptio
 }
 ```
 
-Each forward and reverse pass processes up to 1000 `(tx_hash, stablecoin_id, chain_id)` groups. Repeat until `done=true`: both scans must return fewer than 1000 groups and the final durable-debt read must be empty. Entry/exit drains process bounded chunks until the selected backlog is exhausted; `hoursRecalculated` counts completed hour rebuilds, including debt from prior runs and other discovery scopes, rather than newly changed transaction groups. A failed read, write or rebuild fails the job, not an empty-success response. New debt observed after the final drain keeps `done=false` for the next run.
+Each request processes up to 1000 `(tx_hash, stablecoin_id, chain_id)` groups. Pass `nextCursor` back as `cursor`, preserving `since` and `stablecoinId`; unchanged unequal and legacy groups advance too. Repeat until `done=true`: group discovery must be exhausted and the final durable-debt read empty. `nextCursor=null` means discovery is exhausted; if debt alone keeps `done=false`, repeat the same scope after reconciling the debt. A malformed cursor returns 400. Entry/exit drains process bounded chunks until the selected backlog is exhausted; `hoursRecalculated` counts completed hour rebuilds, including debt from prior runs and other discovery scopes, rather than newly changed transaction groups. A failed read, write or rebuild fails the job, not an empty-success response. New debt observed after the final drain keeps `done=false` for the next run.
 
 ## audit-depeg-history
 

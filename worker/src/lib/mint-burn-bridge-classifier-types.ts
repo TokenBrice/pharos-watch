@@ -36,4 +36,6 @@ export interface MintBurnBridgeClassifiableRow {
   counterparty: string | null;
   burn_type: MintBurnType | null;
   burn_review_reason: string | null;
+  /** Direction-neutral unresolved verdict; mint persistence is owned by classification accounting. */
+  bridge_review_reason?: "tx-context-unavailable" | "known-bridge-pool-without-bridge-signal" | null;
 }

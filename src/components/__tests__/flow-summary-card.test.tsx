@@ -48,6 +48,26 @@ describe("FlowSummaryCard", () => {
     if (!established) expect(screen.queryByTitle(/90-day window is incomplete/)).toBeNull();
   });
 
+  it.each(["partial", "unknown"] as const)("withholds the dial and exact baseline for %s classification", (completeness) => {
+    const classification = { completeness, mintCompleteness: "complete" as const, burnCompleteness: completeness,
+      unresolvedMintEventCount: 0, unresolvedBurnEventCount: completeness === "partial" ? 1 : 0,
+      unavailableReason: completeness === "partial" ? "classification-unresolved" as const : "classification-unknown" as const };
+    useMintBurnFlowsMock.mockReturnValue({
+      data: { coins: [makeMintBurnFlowCoin({ classification: {
+        window24h: classification, baseline: classification, netFlow7d: classification,
+        netFlow30d: classification, netFlow90d: classification,
+      } })] },
+      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
+    });
+    const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
+    expect(screen.getByText("Direction unavailable")).toBeTruthy();
+    expect(container.querySelector(`[data-reason-codes="${classification.unavailableReason}"]`)).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /Minting pressure gauge at/ })).toBeNull();
+    expect(container.textContent).not.toContain("+$1.00M");
+    expect(container.textContent).not.toContain("-$3.00M");
+    expect(container.textContent).toMatch(/classification/i);
+  });
+
   it("renders a partial 24h window as unavailable instead of a burning net and pressure reading", () => {
     useMintBurnFlowsMock.mockReturnValue({
       data: {

@@ -1,3 +1,4 @@
+import { handleMintBurnFlows } from "../mint-burn-flows";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 
 export function makeFlowHourlyRow(nowSec: number) {
@@ -23,7 +24,7 @@ export function makeValidCachedAggregateFixture(updatedAt: number, safetyScoreId
 }
 
 export function makeFlowFallbackScenario(nowSec: number, value: string, hours = 24) {
-  const flowCache = { key: `mint-burn-flows:v6:aggregate:${hours}`, value, updatedAt: nowSec };
+  const flowCache = { key: `mint-burn-flows:v8:aggregate:${hours}`, value, updatedAt: nowSec };
   const state = { cacheReads: 0, hourlyFailed: false };
   const queryFailure = new Error("simulated hourly execution failure");
   const db = mintBurnScenario({ nowSec, flowCache, overrides: [{
@@ -48,4 +49,8 @@ export function makeFlowFallbackScenario(nowSec: number, value: string, hours = 
     return statement;
   };
   return { db, state };
+}
+
+export function flowResponse(db: D1Database, query = "") {
+  return handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows${query}`));
 }

@@ -84,6 +84,24 @@ describe("buildRunLineModel", () => {
     expect(selectRunLineDrivers(model)).toEqual({ down: [], up: [] });
   });
 
+  it("names classification debt independently of valuation and discloses the withheld weight", () => {
+    const classification = { completeness: "partial" as const, mintCompleteness: "complete" as const,
+      burnCompleteness: "partial" as const, unresolvedMintEventCount: 0, unresolvedBurnEventCount: 1,
+      unavailableReason: "classification-unresolved" as const };
+    const coin = makeMintBurnFlowCoin({ stablecoinId: "not-held", gaugeWeightUsd: 80,
+      classification: { window24h: classification, baseline: classification, netFlow7d: classification,
+        netFlow30d: classification, netFlow90d: classification } });
+    const model = buildRunLineModel(gauge({ partialValuationInputs: 1, partialValuationMcapUsd: 80 }), [coin]);
+    expect(model.ticks).toEqual([]);
+    expect(model.stubs).toMatchObject([{ reason: "classification-unresolved", weightUsd: 80 }]);
+    expect(model.withheldForValuation).toBe(1);
+    const unknown = { ...classification, completeness: "unknown", burnCompleteness: "unknown",
+      unresolvedBurnEventCount: 0, unavailableReason: "classification-unknown" } as const;
+    expect(buildRunLineModel(gauge(), [{ ...coin, has24hActivity: false, observed24hActivity: false,
+      classification: { ...coin.classification!, window24h: unknown } }]).stubs)
+      .toMatchObject([{ reason: "classification-unknown", weightUsd: 80 }]);
+  });
+
   it("does not encode height or pull when the payload predates per-coin weights", () => {
     const legacy = makeMintBurnFlowCoin({ pressureShiftScore: -20 });
     delete (legacy as { gaugeWeightUsd?: number | null }).gaugeWeightUsd;

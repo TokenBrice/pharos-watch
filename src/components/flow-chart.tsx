@@ -20,7 +20,7 @@ import type { ChartDataTableColumn } from "@/components/chart-primitives/data-ta
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
-import type { MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types";
+import type { MintBurnClassification, MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types";
 import {
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,
@@ -54,6 +54,8 @@ interface ChartDatum {
   rollingNet: number | null;
   /** Bucket valuation completeness; `null` for an interpolated gap. */
   valuation: MintBurnValuationCompleteness | null;
+  mintClassification: MintBurnClassification["completeness"];
+  burnClassification: MintBurnClassification["completeness"];
   /** Wire hourly scan coverage for the bucket. */
   scanComplete: boolean;
   /** The bucket covers less than its full period at a published-window edge. */
@@ -63,9 +65,9 @@ interface ChartDatum {
 
 const PARTIAL_BUCKET_NOTE = "Partial valuation: net unavailable";
 
-function formatBucketVolume(value: number | null, valuation: MintBurnValuationCompleteness | null, decimals: number, scanComplete: boolean): string {
+function formatBucketVolume(value: number | null, valuation: MintBurnValuationCompleteness | null, decimals: number, scanComplete: boolean, classification?: MintBurnClassification["completeness"]): string {
   if (value == null) return "—";
-  return formatMintBurnVolume(value, valuation, (v) => formatCurrency(v, decimals), scanComplete);
+  return formatMintBurnVolume(value, valuation, (v) => formatCurrency(v, decimals), scanComplete, classification);
 }
 
 /** A gross volume is complete only when the wire scan is complete and the bucket covers its full period. */
@@ -90,11 +92,13 @@ const FLOW_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
 
 const FLOW_TABLE_COLUMNS: ChartDataTableColumn<ChartDatum>[] = [
   { id: "time", label: "Time (UTC)", format: (row) => FLOW_TABLE_DATE_FMT.format(new Date(row.ts)) },
-  { id: "mint", label: "Minted (USD)", format: (row) => formatBucketVolume(row.mint, row.valuation, 0, isVolumeComplete(row)) },
-  { id: "burn", label: "Burned (USD)", format: (row) => formatBucketVolume(row.burn, row.valuation, 0, isVolumeComplete(row)) },
+  { id: "mint", label: "Minted (USD)", format: (row) => formatBucketVolume(row.mint, row.valuation, 0, isVolumeComplete(row), row.mintClassification) },
+  { id: "burn", label: "Burned (USD)", format: (row) => formatBucketVolume(row.burn, row.valuation, 0, isVolumeComplete(row), row.burnClassification) },
   { id: "net", label: "Net flow (USD)", format: (row) => row.net == null ? "—" : formatCurrency(row.net, 0) },
   { id: "cumulative", label: "Cumulative (USD)", format: (row) => row.cumulative == null ? "—" : formatCurrency(row.cumulative, 0) },
-  { id: "valuation", label: "Valuation", format: (row) => describeBucketValuation(row.valuation) },
+  { id: "valuation", label: "Completeness", format: (row) => row.isInterpolated ? "—"
+    : row.mintClassification !== "complete" || row.burnClassification !== "complete"
+      ? "Classification incomplete: signed net unavailable" : describeBucketValuation(row.valuation) },
   { id: "scan", label: "Gross totals", format: (row) => row.isInterpolated || isVolumeComplete(row) ? "—" : "Observed subtotals" },
 ];
 
@@ -126,6 +130,8 @@ interface AggregatedBucket {
   burn: number | null;
   net: number | null;
   valuation: MintBurnValuationCompleteness | null;
+  mintClassification: MintBurnClassification["completeness"];
+  burnClassification: MintBurnClassification["completeness"];
   scanComplete: boolean;
   periodPartial: boolean;
   isInterpolated: boolean;
@@ -139,16 +145,19 @@ function aggregateBuckets(
   if (sorted.length === 0) return [];
   const byBucket = new Map<
     number,
-    { mint: number; burn: number; net: number | null; valuation: MintBurnValuationCompleteness; scanComplete: boolean }
+    { hours: number; mint: number; burn: number; net: number | null; valuation: MintBurnValuationCompleteness; scanComplete: boolean; mintClassification: MintBurnClassification["completeness"]; burnClassification: MintBurnValuationCompleteness }
   >();
   for (const b of sorted) {
     const bucketTs = Math.floor(b.hourTs / bucketSeconds) * bucketSeconds;
-    const entry = byBucket.get(bucketTs) ?? { mint: 0, burn: 0, net: 0, valuation: "complete", scanComplete: true };
+    const entry = byBucket.get(bucketTs) ?? { hours: 0, mint: 0, burn: 0, net: 0, valuation: "complete", scanComplete: true, mintClassification: "complete", burnClassification: "complete" };
+    entry.hours++;
     const valuation = resolveMintBurnValuationCompleteness(b.valuation);
     entry.mint += b.mintVolumeUsd;
     entry.burn += b.burnVolumeUsd;
     // A null or partial hourly net makes the re-bucketed net unavailable, never 0.
-    entry.net = entry.net == null || b.netFlowUsd == null || valuation === "partial" ? null : entry.net + b.netFlowUsd;
+    entry.net = entry.net == null || b.netFlowUsd == null || b.scanCoverage?.complete === false || valuation === "partial" || (b.classification != null && b.classification.completeness !== "complete") ? null : entry.net + b.netFlowUsd;
+    entry.mintClassification = combineMintBurnValuationCompleteness(entry.mintClassification, b.classification?.mintCompleteness ?? "complete");
+    entry.burnClassification = combineMintBurnValuationCompleteness(entry.burnClassification, b.classification?.burnCompleteness ?? "complete");
     entry.valuation = combineMintBurnValuationCompleteness(entry.valuation, valuation);
     entry.scanComplete = entry.scanComplete && b.scanCoverage?.complete !== false;
     byBucket.set(bucketTs, entry);
@@ -163,13 +172,18 @@ function aggregateBuckets(
     const coveredSeconds = publishedWindow
       ? Math.min(bucketTs + bucketSeconds, publishedWindow.end) - Math.max(bucketTs, publishedWindow.start)
       : bucketSeconds;
+    const expectedHours = (Math.min(bucketTs + bucketSeconds, publishedWindow?.end ?? sorted.at(-1)!.hourTs + HOUR_SECONDS)
+      - Math.max(bucketTs, publishedWindow?.start ?? sorted[0].hourTs)) / HOUR_SECONDS;
+    const missingHours = (entry?.hours ?? 0) < expectedHours;
     result.push({
       ts: bucketTs * 1000,
       mint: entry?.mint ?? null,
       burn: entry?.burn ?? null,
-      net: entry?.net ?? null,
+      net: missingHours ? null : entry?.net ?? null,
       valuation: entry?.valuation ?? null,
-      scanComplete: entry?.scanComplete ?? false,
+      mintClassification: entry?.mintClassification ?? "unknown",
+      burnClassification: entry?.burnClassification ?? "unknown",
+      scanComplete: !missingHours && (entry?.scanComplete ?? false),
       periodPartial: coveredSeconds < bucketSeconds,
       isInterpolated: entry == null,
     });
@@ -225,14 +239,14 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
     for (let i = 0; i < buckets.length; i += 1) {
       const b = buckets[i];
       const hasObservation = b.net != null;
-      if (!b.isInterpolated && b.net == null) cumulativeUnavailable = true;
+      if (b.net == null) cumulativeUnavailable = true;
       if (b.net != null) cumulative += b.net;
       const start = Math.max(0, i - (window - 1));
       let rolling = 0;
       let rollingCount = 0;
       for (let j = start; j <= i; j += 1) {
         const value = buckets[j].net;
-        if (value == null) continue;
+        if (value == null) break;
         rolling += value;
         rollingCount += 1;
       }
@@ -244,8 +258,10 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
         burn: b.burn,
         net: b.net,
         cumulative: hasObservation && !cumulativeUnavailable ? cumulative : null,
-        rollingNet: hasObservation && rollingCount > 0 ? rolling / rollingCount : null,
+        rollingNet: hasObservation && rollingCount === i - start + 1 ? rolling / rollingCount : null,
         valuation: b.valuation,
+        mintClassification: b.mintClassification,
+        burnClassification: b.burnClassification,
         scanComplete: b.scanComplete,
         periodPartial: b.periodPartial,
         isInterpolated: b.isInterpolated,
@@ -262,7 +278,7 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
   const partialBucketCount = partialBuckets.length;
   // Where the running total stops being proven: the last plotted cumulative
   // point before the first partial bucket. Labelled in the plot, not only below it.
-  const firstPartialIndex = chartData.findIndex((d) => !d.isInterpolated && d.net == null);
+  const firstPartialIndex = chartData.findIndex((d) => d.net == null);
   const lastProven = firstPartialIndex > 0
     ? chartData.slice(0, firstPartialIndex).findLast((d) => d.cumulative != null)
     : undefined;
@@ -495,12 +511,12 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
       />
       {hasInterpolated && (
         <p className="mt-1 text-xs text-muted-foreground">
-          Gaps in {useDailyBuckets ? "daily" : "hourly"} data are shown as breaks and excluded from rolling averages.
+          Gaps in {useDailyBuckets ? "daily" : "hourly"} data stop cumulative net and withhold rolling averages until the window is complete.
         </p>
       )}
       {partialBucketCount > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">
-          Partial valuation: {partialBucketCount} {useDailyBuckets ? "daily" : "hourly"}{" "}
+          Incomplete flow evidence: {partialBucketCount} {useDailyBuckets ? "daily" : "hourly"}{" "}
           {partialBucketCount === 1 ? "bucket has" : "buckets have"} a withheld net. Hatched columns mark the
           withheld nets, and the cumulative line stops before the first one. Mint and burn volumes there are lower bounds.
         </p>
@@ -531,8 +547,11 @@ function FlowTooltip({
       <TooltipLabel>{time}</TooltipLabel>
       {datum ? (
         <>
-          <TooltipRow color={CHART_GREEN} label="Mint" value={formatBucketVolume(datum.mint, datum.valuation, 2, isVolumeComplete(datum))} />
-          <TooltipRow color={CHART_RED} label="Burn" value={formatBucketVolume(datum.burn, datum.valuation, 2, isVolumeComplete(datum))} />
+          <TooltipRow color={CHART_GREEN} label="Mint" value={formatBucketVolume(datum.mint, datum.valuation, 2, isVolumeComplete(datum), datum.mintClassification)} />
+          <TooltipRow color={CHART_RED} label="Burn" value={formatBucketVolume(datum.burn, datum.valuation, 2, isVolumeComplete(datum), datum.burnClassification)} />
+          {datum.mintClassification !== "complete" || datum.burnClassification !== "complete" ? (
+            <TooltipRow label="Classification" value="Incomplete: signed net unavailable" />
+          ) : null}
           {!datum.scanComplete && !datum.isInterpolated ? (
             <TooltipRow label="Scan coverage" value="Incomplete: observed subtotals" />
           ) : null}

@@ -1,5 +1,95 @@
 [
   {
+    "version": "6.43",
+    "title": "Complete-hour backfill guards and explicit chart gaps",
+    "date": "2026-11-10",
+    "effectiveAt": 1794369352,
+    "summary": "Operator replay refuses incomplete raw hours; dense hourly series distinguishes proven quiet from missing evidence and withholds derived statistics across gaps.",
+    "impact": [
+      "Backfill scans all chunks before writing. It requires a closed retained whole hour or a complete interior hour scanned for every constituent config. This single-config operator refuses historical shared buckets, partial range edges and decode-incomplete invocations without writing events, queuing materialization debt or advancing the cursor. Skipped hours carry machine-readable reasons; no historical scan proof or staged replay store is added.",
+      "Aggregate and per-coin hourly series include every requested closed UTC hour. Missing rows become zero only with per-hour scan admission and complete classification. Legacy assurance cannot recover unknown classification for reviewed tokens. Unproved hours carry null nets and incomplete scan coverage; zero gross values remain observed subtotals. Flow caches move to v8 to exclude sparse fallback payloads.",
+      "Daily re-bucketing withholds net for any missing or unproved hour; cumulative net stops permanently at the first unavailable bucket, and rolling means resume only when their entire trailing window is available."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.42",
+    "title": "Reviewed range supply proof for zero-transfer burns",
+    "date": "2026-11-10",
+    "effectiveAt": 1794365752,
+    "summary": "Source-reviewed exact-range proofs recover internal burns with immutable provenance, bounded retention and retained repair.",
+    "impact": [
+      "The reviewed zero-transfer family retains its unsupported-law findings and receipt proofs while gaining a conditional paired-supply-zero-transfers-v1 capability. Source-only laws require exact integer mint-minus-zero-transfer equality to pinned supply change; USYC additionally requires no positive mint-shaped events. Proxy and delegate eras require reviewed boundary identity and complete in-range change guards.",
+      "All raw events enter proof arithmetic, including dust, bridge and atomic legs. Exact member IDs can be promoted only from complete passing evidence. A negative source-only residual leaves ambiguous rows unresolved while ingestion advances; positive residuals, positive zero-to-zero events and inconsistent evidence fence the range. Missing archive, logs, guards or capacity remains named unavailable evidence. Supply proof precedes per-burn receipts and never overrides economic exclusions.",
+      "Additive migration 0301 stores immutable range evidence with a separate acceptance lifecycle and nullable proof references on event rows, reusing migration 0300's exact raw amounts. The proof verifies parser-recorded raw amounts against exact members. Proof/member changes enqueue retained whole hours atomically, persisted readback checks proof correspondence, receipt-only replay preserves valid proof, and config/law/reorg invalidation withdraws scan coverage independently of surviving proof rows. Retained replay uses a separate cursor and never rebuilds pruned hours from a subset.",
+      "Each affected window withholds exact net and derived signals while it contains unresolved events or legacy unknown hours, so recent repaired DAI and USDD windows may recover before longer windows. Pruned historical hours require separately audited replay or age-out. Bridge decoder fingerprints independently gate their earlier history; admission, watermark, valuation and scoring formulas remain unchanged.",
+      "Proven rows follow normal eight-day raw retention; unresolved hours retain their existing whole-hour protection. Only proven nonempty witnesses are stored, and the bounded retention job prunes them after their range is older than raw retention and no retained event references them. Durable per-config fingerprint tombstones and scan-ledger invalidation keep expired history fail-closed after proof evidence is pruned."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.41",
+    "title": "Exact roundtrip conservation and dust-inclusive accounting",
+    "date": "2026-11-10",
+    "effectiveAt": 1794362152,
+    "summary": "Atomic suppression requires exact raw-unit equality among resolved standard legs; positive sub-threshold events join accounting while display cutoffs remain.",
+    "impact": [
+      "Nullable decimal-string raw amounts are written for every new event. BigInt comparisons replace the 0.5% tolerance; unequal groups stay standard so their full signed residual remains counted, without invented partial rows.",
+      "Ingestion, the recent sweep and the operator use one resolved-standard candidate rule over all persisted transaction peers. Bridge, internal and unproven legs cannot establish neutrality. Shared-bucket source cursors, the one-sided replay guard and concurrent-population fences preserve complete-group evidence.",
+      "Legacy rows without raw amounts keep their existing atomic tags and cannot be newly tagged by the sweep. Complete raw history is required for a separate repair; pruned hourly history is not reconstructed. The sweep advances past unchanged groups, and operator batches expose an explicit continuation cursor.",
+      "Every positive decodable event becomes a priced/classified ledger row, flagged below_display_threshold when its exact raw amount is below the native display cutoff. Counted dust contributes to hourly/window volumes, nets, counts and activity; bridge/internal exclusions and unresolved/valuation gates apply normally. Event lists in every scope, Tape eligibility and largest-event ranking hide flagged rows.",
+      "Dust-inclusive accounting is prospective from the v6.41 writer activation and fully scanned hours; the first whole UTC hour after activation is the conservative fresh-ingestion boundary. Previously materialized hours retain their original cutoff and are not fabricated or backfilled. Windows spanning that boundary mix scopes, so changes in counts/volumes do not alone establish an activity anomaly.",
+      "A complete 2026-11-08 UTC census of all 135 configured contracts used 585 serial requests: 3,700 rows/day at the old cutoff plus 8,254 additions/day, led by USDC 4,642, USDS 1,549 and DAI 1,125. Context/header batching and existing certified-prefix retries fit measured demand without raising request or connection caps. The absolute growth watchdog remains at 2.3M retained rows; protected debt can outlive nominal eight-day retention."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.40",
+    "title": "Complete admitted-chain gauge weights and validated EVM log identities",
+    "date": "2026-11-10",
+    "effectiveAt": 1794275752,
+    "summary": "Gauge weights require observed supply for every admitted chain when a chain breakdown is used; EVM ingestion validates response identity before certifying a scan, independently of conservation-law support.",
+    "impact": [
+      "A partially observed admitted-chain breakdown now makes the coin's gauge weight unavailable, just like an explicit null chain supply. For example, admitted USDT Ethereum plus Tron cannot silently use Ethereum alone when Tron is absent. Explicit zero supply remains observed, and unavailable weights leave the gauge and tracked market-cap denominator with the existing mcapUnavailableCoins disclosure.",
+      "The existing global circulating-supply fallback remains limited to full configured publication scope with no tracked-chain entries at all. A partially observed breakdown cannot use that fallback or sum only its observed subset.",
+      "Every EVM cron and operator-backfill scan validates removal state, emitter, requested topics and direction, block range, block-hash consistency and duplicate identity before parsing. A corrupt response withholds scan proof and cursor advancement through the existing retry fence. Conservation reuses this validator and retains its reviewed amount and law checks; Tron retains its separate validation boundary."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.39",
+    "title": "Receipt-bound bridge decoding by version and direction",
+    "date": "2026-11-10",
+    "effectiveAt": 1794272152,
+    "summary": "CCTP, CCIP and LayerZero exclusions now bind exact token movements in both directions instead of tagging every row in a transaction.",
+    "impact": [
+      "CCTP v1/v2 send and receive use their reviewed deployments and canonical ABIs. Principal and fee mints require their own minter-authorized token Transfers; unrelated issuance stays standard.",
+      "CCIP authenticates legacy and modern sends and destination mints through reviewed pool actions, including USD1 external-minter and USDO rebasing-pool variants. LayerZero OFT evidence binds the token route, endpoint packet and GUID to exact raw debit/credit rows; selector-only and transaction-wide topic matching are removed.",
+      "A mint from a known pool, a receipt-identified Circle minter or an exact OFT movement without recognized inbound proof is stored as unresolved (standard flow, review_required) and counts as classification debt under v6.38, exactly like an unresolved burn. Forward decoding does not repair hours classified under the earlier rules. The decoder change gives the eight bridge configs (USDC, EURC, ZCHF, USD1, avUSD, USDO, GLDon, USDai) new scan fingerprints, so earlier scan proof no longer certifies them: the coins leave publication until their first complete hour under the new evidence, then each window returns once it lies entirely after activation (24h after one day, 7d, 30d and 90d as coverage accrues; pressure after seven baseline days). This replaces the static USDC and ZCHF holds, which are removed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.38",
+    "title": "Classification completeness gates counted net-flow claims",
+    "date": "2026-11-09",
+    "effectiveAt": 1794269167,
+    "summary": "Unresolved standard-flow events persist as side-specific classification debt, withholding exact nets and derived signals independently of scan and price coverage.",
+    "impact": [
+      "Hourly buckets now retain nullable unresolved mint and burn event counts. NULL marks an hour predating this accounting contract; zero is an observed absence of unresolved events. Legacy unknown hours with a current supply-proof or bridge-review producer withhold exact net claims. Unaffected configurations retain their structural classification completeness.",
+      "Every exact net, direction, bound, baseline and pressure contribution requires classification completeness. Gross counted volumes remain observed subtotals, with affected sides labelled incomplete; unresolved events cannot become complete zero burns. The gauge discloses incomplete-input weight through its existing withheld-weight fields, and classification-unknown inputs cannot establish FTQ.",
+      "Classification writes enqueue dirty hours atomically, including replay reversals and roundtrip changes. Bounded retained-hour rebuilds materialize the new counts, and retention protects unresolved events and their complete hourly siblings until hourly expiry. Pruned legacy hours remain unknown until separately audited replay.",
+      "Whole-coin long-window bounds are withheld for partial scope, unknown baseline valuation no longer scores or displays as an exact average, and largest-event output is explicitly scoped to valued counted events on admitted tracked chains. The v6.37 holds remain until classifier and historical repairs land."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.37",
     "title": "Classification holds withhold known-wrong coin nets",
     "date": "2026-11-09",

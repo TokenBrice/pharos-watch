@@ -16,8 +16,9 @@ export async function executeMintBurnMaintenanceMutations(
   db: D1Database,
   mutations: MaintenanceMutation[],
   options: { signal?: AbortSignal } = {},
-): Promise<{ changed: number; affectedHours: Map<string, MintBurnAffectedHour> }> {
+): Promise<{ changed: number; changesByMutation: number[]; affectedHours: Map<string, MintBurnAffectedHour> }> {
   let changed = 0;
+  const changesByMutation: number[] = [];
   const affectedHours = new Map<string, MintBurnAffectedHour>();
   // 40 pairs = 80 statements, below executeAtomicBatch's 100-statement ceiling.
   for (let offset = 0; offset < mutations.length; offset += 40) {
@@ -30,14 +31,16 @@ export async function executeMintBurnMaintenanceMutations(
     }
     const results = await executeAtomicBatch(db, statements, { signal: options.signal, returnResults: true });
     for (let index = 0; index < results.length; index += 2) {
-      changed += Number(results[index + 1]?.meta?.changes ?? 0);
+      const sourceChanges = Number(results[index + 1]?.meta?.changes ?? 0);
+      changed += sourceChanges;
+      changesByMutation.push(sourceChanges);
       for (const row of results[index].results as Array<{ stablecoin_id: string; chain_id: string; hour_ts: number }>) {
         const hour = { stablecoinId: row.stablecoin_id, chainId: row.chain_id, hourTs: row.hour_ts };
         affectedHours.set(`${hour.stablecoinId}-${hour.chainId}-${hour.hourTs}`, hour);
       }
     }
   }
-  return { changed, affectedHours };
+  return { changed, changesByMutation, affectedHours };
 }
 
 export async function seedMintBurnLegacyMaterializationDebt(
@@ -86,6 +89,14 @@ export async function rebuildMintBurnMaterializationHours(
   const rebuiltHours: MintBurnAffectedHour[] = [];
   const debtExistsSql = `EXISTS (SELECT 1 FROM mint_burn_dirty_hours
     WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?)`;
+  // A legacy hour may already have lost raw siblings. Maintenance can update
+  // observed subtotals, but only the retained-hour rebuild can certify its NULLs.
+  const updateColumnsSql = MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL.split(",").map((column) => {
+    const name = column.trim();
+    return `${name} = ${name === "mint_unresolved_event_count" || name === "burn_unresolved_event_count"
+      ? `CASE WHEN mint_burn_hourly.${name} IS NULL THEN NULL ELSE excluded.${name} END`
+      : `excluded.${name}`}`;
+  }).join(", ");
   for (const hour of affectedHours.values()) {
     throwIfAborted(options.signal);
     const { stablecoinId, chainId, hourTs } = hour;
@@ -93,10 +104,6 @@ export async function rebuildMintBurnMaterializationHours(
     // prunes raw siblings. Gate every write on debt inside this same transaction;
     // a later maintenance mutation re-enqueues and remains eligible to rebuild.
     const results = await executeAtomicBatch(db, [
-      db.prepare(`DELETE FROM mint_burn_hourly
-        WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?
-          AND ${debtExistsSql}`)
-        .bind(stablecoinId, chainId, hourTs, stablecoinId, chainId, hourTs),
       db.prepare(`INSERT INTO mint_burn_hourly
         (stablecoin_id, chain_id, hour_ts, ${MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL})
         SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600 AS hour_ts,
@@ -104,8 +111,15 @@ export async function rebuildMintBurnMaterializationHours(
         FROM mint_burn_events
         WHERE stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ?
           AND ${debtExistsSql}
-        GROUP BY stablecoin_id, chain_id, hour_ts`)
+        GROUP BY stablecoin_id, chain_id, hour_ts
+        ON CONFLICT(stablecoin_id, chain_id, hour_ts) DO UPDATE SET ${updateColumnsSql}`)
         .bind(stablecoinId, chainId, hourTs, hourTs + 3600, stablecoinId, chainId, hourTs),
+      db.prepare(`DELETE FROM mint_burn_hourly
+        WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?
+          AND ${debtExistsSql}
+          AND NOT EXISTS (SELECT 1 FROM mint_burn_events
+            WHERE stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ?)`)
+        .bind(stablecoinId, chainId, hourTs, stablecoinId, chainId, hourTs, stablecoinId, chainId, hourTs, hourTs + 3600),
       db.prepare(`UPDATE mint_burn_events
         SET price_repair_status = 'recovered', price_repair_reason = NULL
         WHERE stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ?

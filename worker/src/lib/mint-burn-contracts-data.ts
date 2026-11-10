@@ -113,7 +113,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
     dustThreshold: 10_000,
     bridgeDetection: ccipBridgeDetection([
       "0x81b72171642fab457aa815c0b8412a22b63a6af8",
-    ]),
+    ], "avusd-avant"),
   },
   { stablecoinId: "pmusd-precious-metals", dustThreshold: 10_000 },
   { stablecoinId: "usdz-anzen", dustThreshold: 10_000 },
@@ -124,7 +124,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
     dustThreshold: 10_000,
     bridgeDetection: ccipBridgeDetection([
       "0x500d4882938020e939a5666c1b4200873da7efd3",
-    ]),
+    ], "usdo-openeden", undefined, "usdo"),
   },
   { stablecoinId: "eurcv-societe-generale-forge", dustThreshold: 10_000 },
   { stablecoinId: "reusd-resupply", dustThreshold: 10_000 },
@@ -384,7 +384,7 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
     bridgeDetection: ccipBridgeDetection([
       "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
-    ]),
+    ], "zchf-frankencoin"),
   },
   {
     chain: ETHEREUM,
@@ -433,7 +433,7 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
     bridgeDetection: ccipBridgeDetection([
       "0x36a72ed0096b414521c45e3ddc9ed657d1d9c141",
-    ]),
+    ], "usd1-world-liberty-financial", "0xee9b1a09aedaced9dcda74964ea447feb93861c2"),
   },
 
   // --- Top-50 supported expansion (Ethereum only) ---
@@ -513,7 +513,7 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     tier: "extended",
     bridgeDetection: layerZeroOftBridgeDetection([
       "0x6d119ebada730583ef8dc7b8506fa317a374796a",
-    ]),
+    ], "gldon-ondo", "ethereum", "0xff2baba46df92919705e60120c477ae5b7341eb3", "0x000000000000000000000000000000000000dead"),
     startBlockSource: "exact-gldon-initialization-2025-12-10-etherscan-0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1",
     startBlockConfidence: "high",
     events: transferMintBurn(),
@@ -539,8 +539,7 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     tier: "extended",
     bridgeDetection: layerZeroOftBridgeDetection([
       "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-      "0x31cae3b7fb82d847621859fb1585353c5720660d",
-    ]),
+    ], "usdai-usd-ai", "arbitrum"),
     startBlockSource: "reviewed-arbitrum-deployment-2025-05-13",
     startBlockConfidence: "high",
     events: transferMintBurn(),

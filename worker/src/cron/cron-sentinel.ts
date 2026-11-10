@@ -1,4 +1,3 @@
-import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { DailyCronSentinelOptions } from "./cron-sentinel-daily";
 import type { CronResult } from "../lib/cron-logger";
 import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
@@ -14,7 +13,6 @@ export type CronSentinelDispatchMode = Exclude<CronSentinelMode, "daily">;
 export interface CronSentinelOptions extends Omit<DailyCronSentinelOptions, "nowSec"> {
   mode: CronSentinelDispatchMode;
   nowSec?: number;
-  operatorTelegramCreds?: TelegramCreds | null;
   /** Active canary cohort read by the status-mode freshness watchdog. */
   workerCanaryMode?: WorkerCanaryMode;
 }

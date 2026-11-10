@@ -9,7 +9,10 @@ import {
   summarizeMintBurnValuation,
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
-import type { MintBurnCoinFlow, MintBurnValuation, MintBurnWatermark } from "@shared/types/mint-burn";
+import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification,
+  type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../../lib/mint-burn-classification";
+import type { MintBurnClassification, MintBurnCoinFlow, MintBurnValuation, MintBurnWatermark } from "@shared/types/mint-burn";
 import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, mintBurnWindowAdmits, type MintBurnLegacySpan, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../../lib/api-freshness";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
@@ -34,6 +37,9 @@ import {
 } from "../../lib/mint-burn-scoring";
 import type { MintBurnFtqUnavailableReason } from "@shared/types/mint-burn";
 import {
+  MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL,
+  readMintBurnClassificationTallyRow,
+  type MintBurnClassificationTallyRow,
   MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL,
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
   type MintBurnValuationTallyRow,
@@ -60,7 +66,6 @@ import {
   readMintBurnWindowContext,
   withExtendedLaneHeads,
 } from "../../lib/mint-burn-flows-service";
-import { isMintBurnClassificationHeld } from "../../lib/mint-burn-classification-holds";
 
 /** Candidate roster only; readMintBurnWindowContext owns the admitted, enabled publication scope. */
 export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
@@ -71,6 +76,7 @@ export type CoinFlowSummary = MintBurnCoinFlow & Required<Pick<MintBurnCoinFlow,
 interface WindowNetFlow {
   netUsd: number;
   valuation: MintBurnValuationTally;
+  classification: MintBurnClassificationTally;
 }
 
 export interface AggregateQueryParams {
@@ -109,7 +115,7 @@ export interface AggregateData {
   watermark: MintBurnWatermark;
 }
 
-interface GroupedNetFlowRow extends MintBurnValuationTallyRow {
+interface GroupedNetFlowRow extends MintBurnValuationTallyRow, MintBurnClassificationTallyRow {
   stablecoin_id: string;
   chain_id: string;
   net_flow_usd: number;
@@ -137,11 +143,12 @@ function buildGroupedNetFlowMap(
     if (!trackedPairs.has(mintBurnPairKey(row.stablecoin_id, row.chain_id))) continue;
     let entry = netMap.get(row.stablecoin_id);
     if (!entry) {
-      entry = { netUsd: 0, valuation: emptyMintBurnValuationTally() };
+      entry = { netUsd: 0, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
       netMap.set(row.stablecoin_id, entry);
     }
     entry.netUsd += row.net_flow_usd;
     addMintBurnValuationTally(entry.valuation, readMintBurnValuationTallyRow(row));
+    addMintBurnClassificationTally(entry.classification, readMintBurnClassificationTallyRow(row, hasMintBurnClassificationReview(row.stablecoin_id)));
   }
   return netMap;
 }
@@ -199,7 +206,8 @@ export async function fetchAggregateData(
         `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:${tag} */
                   SUM(net_flow_usd) as net_flow_usd,
-                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
+                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL},
+                  ${MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
              AND hour_ts >= ? AND hour_ts < ?
@@ -230,7 +238,8 @@ export async function fetchAggregateData(
                   (hour_ts / 86400) * 86400 as day_ts,
                   SUM(net_flow_usd) as daily_net,
                   SUM(mint_volume_usd + burn_volume_usd) as daily_abs,
-                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
+                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL},
+                  ${MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL}
            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
            WHERE ${hourlyPairFilter}
              AND hour_ts >= ? AND hour_ts < ?
@@ -249,8 +258,9 @@ export async function fetchAggregateData(
              FROM mint_burn_events AS e INDEXED BY idx_mbe_coin_chain_ts
              WHERE ${eventPairFilter}
                AND e.timestamp >= ? AND e.timestamp < ?
-               AND (e.direction = 'mint' OR e.burn_type = 'effective_burn')
+               AND ((e.direction = 'mint' AND e.burn_type IS NOT 'review_required') OR e.burn_type = 'effective_burn')
                AND e.flow_type = 'standard'
+               AND e.below_display_threshold = 0
                AND e.amount_usd IS NOT NULL
            )
            SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
@@ -332,8 +342,7 @@ export async function fetchAggregateData(
  * published as `null` (a partial net is not a bound); `unknown` legacy windows
  * keep their known-valuation net, labelled through `valuation`. Direction and
  * flight-to-quality are published only when missing valuation cannot alter
- * them. Pressure needs a complete 24h window and a baseline that is not
- * partial. A weighted coin whose pressure is withheld for that reason (and
+ * them. Pressure needs complete 24h valuation/classification and a complete baseline. A weighted coin whose pressure is withheld for that reason (and
  * could otherwise score: observed or unproven activity and the minimum baseline
  * history) leaves the gauge, which then re-weights over the scored coins. An
  * established leg outside publication also withholds pressure and makes the
@@ -392,11 +401,13 @@ export function buildCoinSummaries(
     const coverage = data.coverageMap.get(id);
     const has24hWindow = coverage?.has24hWindow === true;
     const partialScope = data.partialCoinIds.has(id);
-    // A classification hold makes every signed net and baseline of this coin unknown.
-    const held = isMintBurnClassificationHeld(id);
+    const classification24h = summarizeMintBurnClassification(agg?.classification ?? emptyMintBurnClassificationTally());
+    const baselineClassification = baseline?.classification ?? summarizeMintBurnClassification(emptyMintBurnClassificationTally());
+    const classificationComplete = classification24h.completeness === "complete";
     const complete24hWindow = has24hWindow && !partialScope;
     const knownNetFlow24h = agg?.netFlow ?? 0;
-    const observedActivity = (agg?.mintCount ?? 0) > 0
+    const observedActivity = classification24h.unresolvedMintEventCount > 0 || classification24h.unresolvedBurnEventCount > 0
+      || (agg?.mintCount ?? 0) > 0
       || (agg?.burnCount ?? 0) > 0
       || (agg?.mintVolume ?? 0) > 0
       || (agg?.burnVolume ?? 0) > 0;
@@ -404,7 +415,8 @@ export function buildCoinSummaries(
     const valuation24h = summarizeMintBurnValuation(agg?.valuation ?? emptyMintBurnValuationTally());
     // No baseline means no pressure input from it: vacuously complete.
     const baselineValuation = baseline?.valuation ?? "complete";
-    const inputsAdmitPressure = !partialScope && valuation24h.completeness === "complete" && baselineValuation !== "partial";
+    const inputsAdmitPressure = !partialScope && classificationComplete && baselineClassification.completeness === "complete"
+      && valuation24h.completeness === "complete" && baselineValuation === "complete";
     const pressureShiftScore = has24hWindow && has24hActivity && baseline && inputsAdmitPressure
       ? computeFlowIntensity({
           currentDailyNet: knownNetFlow24h,
@@ -419,7 +431,7 @@ export function buildCoinSummaries(
       gaugeInputs.push({ intensity: pressureShiftScore, mcap });
       if (pressureShiftScore !== null) scoredMcapUsd += mcap;
       // A baseline shorter than the minimum history is NR whatever the valuation.
-      if (has24hWindow && (has24hActivity || partialScope) && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !inputsAdmitPressure) {
+      if (has24hWindow && (has24hActivity || partialScope || !classificationComplete) && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !inputsAdmitPressure) {
         partialValuationInputs += 1;
         partialValuationMcapUsd += mcap;
       }
@@ -430,6 +442,7 @@ export function buildCoinSummaries(
         knownNetUsd: complete24hWindow ? knownNetFlow24h : null,
         valuation: valuation24h,
         window24hComplete: complete24hWindow,
+        classification: classification24h,
       };
       if (gradeClassification.safeIds.has(id) || gradeClassification.riskyIds.has(id)) {
         classifiedFlowsById.set(id, flow);
@@ -445,40 +458,43 @@ export function buildCoinSummaries(
     const net7dSummary = summarizeMintBurnValuation(net7d?.valuation ?? emptyMintBurnValuationTally());
     const net30dSummary = summarizeMintBurnValuation(net30d?.valuation ?? emptyMintBurnValuationTally());
     const net90dSummary = summarizeMintBurnValuation(net90d?.valuation ?? emptyMintBurnValuationTally());
+    const net7dClassification = summarizeMintBurnClassification(net7d?.classification ?? emptyMintBurnClassificationTally());
+    const net30dClassification = summarizeMintBurnClassification(net30d?.classification ?? emptyMintBurnClassificationTally());
+    const net90dClassification = summarizeMintBurnClassification(net90d?.classification ?? emptyMintBurnClassificationTally());
     const net7dValuation = net7dSummary.completeness;
     const net30dValuation = net30dSummary.completeness;
     const net90dValuation = net90dSummary.completeness;
     // A withheld (partial) net publishes only its proven one-sided bound, never the known net itself.
-    const windowBound = (window: WindowNetFlow | undefined, summary: MintBurnValuation, admitted: boolean) =>
-      !held && admitted && window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
+    const windowBound = (window: WindowNetFlow | undefined, summary: MintBurnValuation, classification: MintBurnClassification, admitted: boolean) =>
+      !partialScope && classification.completeness === "complete" && admitted && window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
       pressureShiftScore,
       pressureShiftState: getPressureShiftState(pressureShiftScore),
-      netFlowDirection24h: complete24hWindow ? provenNetFlowDirection24h({
+      netFlowDirection24h: complete24hWindow && classificationComplete ? provenNetFlowDirection24h({
         knownNetUsd: knownNetFlow24h,
         has24hActivity: has24hActivity === true,
         valuation: valuation24h,
       }) : null,
       // PR-B readers use this null gate before reconstructing bounds from gross subtotals.
-      has24hActivity: complete24hWindow ? has24hActivity : null,
+      has24hActivity: complete24hWindow && classificationComplete ? has24hActivity : null,
       observed24hActivity: observedActivity,
-      baselineDailyNetUsd: held ? null : baseline?.avgNet ?? null,
-      baselineDailyAbsUsd: held ? null : baseline?.avgAbs ?? null,
+      baselineDailyNetUsd: partialScope || baselineValuation !== "complete" || baselineClassification.completeness !== "complete" ? null : baseline?.avgNet ?? null,
+      baselineDailyAbsUsd: partialScope || baselineValuation !== "complete" || baselineClassification.completeness !== "complete" ? null : baseline?.avgAbs ?? null,
       baselineDataDays: baseline?.dataDays ?? null,
       gaugeWeightUsd: mcap,
-      netFlow24hUsd: held || !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
+      netFlow24hUsd: !classificationComplete || !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
       mintVolume24hUsd: agg?.mintVolume ?? 0,
       burnVolume24hUsd: agg?.burnVolume ?? 0,
       mintCount24h: agg?.mintCount ?? 0,
       burnCount24h: agg?.burnCount ?? 0,
       totalsSemantics: "observed-subtotals",
-      netFlow7dUsd: held || !coverage.has7dWindow || net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
-      netFlow30dUsd: held || !coverage.has30dWindow || net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
-      netFlow90dUsd: held || !coverage.has90dWindow || net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
-      largestEvent24h: largest && largest.amount_usd != null && (largest.direction === "mint" || largest.direction === "burn")
-        ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp }
+      netFlow7dUsd: net7dClassification.completeness !== "complete" || !coverage.has7dWindow || net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
+      netFlow30dUsd: net30dClassification.completeness !== "complete" || !coverage.has30dWindow || net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
+      netFlow90dUsd: net90dClassification.completeness !== "complete" || !coverage.has90dWindow || net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
+      largestEvent24h: complete24hWindow && classificationComplete && largest && largest.amount_usd != null && (largest.direction === "mint" || largest.direction === "burn")
+        ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp, scope: "valued-counted-admitted-scope" }
         : null,
       coverage: partialScope ? {
         ...coverage,
@@ -491,15 +507,19 @@ export function buildCoinSummaries(
           window30d: mintBurnScanWindow(false), window90d: mintBurnScanWindow(false),
         },
       } : coverage,
+      classification: {
+        window24h: classification24h, baseline: baselineClassification,
+        netFlow7d: net7dClassification, netFlow30d: net30dClassification, netFlow90d: net90dClassification,
+      },
       valuation: {
         window24h: valuation24h,
         baseline: baselineValuation,
         netFlow7d: net7dValuation,
         netFlow30d: net30dValuation,
         netFlow90d: net90dValuation,
-        netFlow7dBound: windowBound(net7d, net7dSummary, coverage.has7dWindow === true),
-        netFlow30dBound: windowBound(net30d, net30dSummary, coverage.has30dWindow),
-        netFlow90dBound: windowBound(net90d, net90dSummary, coverage.has90dWindow),
+        netFlow7dBound: windowBound(net7d, net7dSummary, net7dClassification, coverage.has7dWindow === true),
+        netFlow30dBound: windowBound(net30d, net30dSummary, net30dClassification, coverage.has30dWindow),
+        netFlow90dBound: windowBound(net90d, net90dSummary, net90dClassification, coverage.has90dWindow),
       },
     });
   }

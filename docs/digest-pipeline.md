@@ -103,7 +103,7 @@ The digest intelligence pass runs after editorial candidates are built and befor
 
 Digest pillar reads use the accepted cohort; identity/FTQ use the score index. Both bind publication and health. Missing or mismatched cohorts are unavailable with a machine-readable reason. Held/unavailable states stay explicit; public bytes stay unchanged.
 
-The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, matching `/api/mint-burn-flows`. Only an unproved 24h window degrades it; valuation-only gaps use the bounded detector.
+The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, matching `/api/mint-burn-flows`. An unproved 24h scan window degrades it; unresolved or unknown flow classification withholds FTQ with its classification reason. Valuation-only gaps use the bounded detector.
 
 See [Bank Run Gauge producer contract](#bank-run-gauge-producer-contract) for publication consumption and freshness handling.
 
@@ -534,6 +534,8 @@ These deterministic evidence and publication contracts are not a scoring-formula
 ### Bank Run Gauge producer contract
 
 **Bank Run Gauge — one producer, one universe** ([owner](./mint-burn-flows.md#bank-run-gauge-composite)). The digest reads that publication through `worker/src/lib/mint-burn-published-gauge.ts` and re-bins it; it never recomputes from `mint_burn_hourly`. Malformed, future-dated or >24h-old publications are dropped and degrade the run (`mint-burn-gauge-malformed` / `mint-burn-gauge-future-timestamp` / `mint-burn-gauge-expired`); >2h-old publications (≈4 missed 30-minute producer runs) remain usable but mark `mint-burn-gauge-stale`. Missing rows omit the section and record quality finding `mint-burn-gauge-missing` in `dataQuality.degradedSources` without independently degrading cron health, and the missing-input regime floor still applies.
+
+The versioned flow cache separates classification-aware publications from older payloads. The published-gauge reader retains classification verdicts for digest FTQ and rejects a numeric pressure input whose baseline valuation is unknown. Classification uncertainty withholds pressure and chain nets; its withheld weight uses the same disclosed cohort-weight interval as missing valuation.
 
 ### DEX liquidity admission gate
 

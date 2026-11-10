@@ -1,8 +1,10 @@
 import type { MintBurnConservationRecord } from "@shared/types/status";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
+import { sha256Hex } from "@shared/lib/sha256";
 import type { MintBurnContractConfig, MintBurnEventDef } from "./mint-burn-contracts";
 import type { MintBurnSupplyBurnProof } from "./mint-burn-contracts-types";
-import type { AlchemyLogEntry } from "./alchemy-logs";
+import type { AlchemyLogEntry, AlchemyTopicFilter } from "./alchemy-logs";
+import { createMintBurnLogIdentityValidator, mintBurnLogQuantity as quantity, MINT_BURN_TRANSFER_TOPIC as TRANSFER } from "./mint-burn-log-identity";
 import { readDataWord, type SubrequestBudget } from "./evm-logs";
 import type { MintBurnRow } from "./mint-burn-pipeline/types";
 import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
@@ -14,12 +16,10 @@ import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import conservationRuntimeLookup from "./mint-burn-conservation-runtime.generated.json";
 import type { RpcEndpoint } from "./chain-registry";
+import type { MintBurnSupplyProofEvidence } from "./mint-burn-supply-proofs";
 
-const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO = `0x${"0".repeat(64)}`;
 const WORD = /^0x[0-9a-fA-F]{64}$/;
-const ADDRESS_WORD = /^0x0{24}[0-9a-fA-F]{40}$/;
-const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/;
 const SELECTOR = /^0x[0-9a-f]{8}$/;
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 // TetherToken.deprecated() — when true the configured address forwards totalSupply() to upgradedAddress.
@@ -258,9 +258,51 @@ export function getMintBurnConservationEligibility(config: MintBurnContractConfi
   return resolveMintBurnConservationEligibility(getMintBurnConservationRuntimeEntry(config), config);
 }
 
+/** Conditional destruction proof never grants unconditional conservation admission. */
+export function resolveMintBurnRangeProofEligibility(entry: MintBurnConservationRuntimeEntry | undefined,
+  config: MintBurnContractConfig): MintBurnConservationEligibility {
+  const range = entry?.supplyBurnProof?.range;
+  if (entry?.disposition !== "unsupported" ||
+    !entry.unsupportedReason?.startsWith("zero-address-transfer-without-supply-change:") ||
+    (entry.eventSet != null && entry.eventSet !== "transfer") ||
+    (entry.invariant != null && entry.invariant !== "transfer-supply") ||
+    config.chain.chainId !== "ethereum" || config.adapterKind !== "transfer-zero-address" ||
+    !canonicalTransferPairSupported(config) || range?.law !== "paired-supply-zero-transfers-v1" ||
+    !["source-only", "require-empty"].includes(range.mintEvidence) ||
+    reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals) !==
+      reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals)) {
+    return { supported: false, reason: "range-law-unreviewed" };
+  }
+  if (range.guard?.status === "required-unavailable") return { supported: false, reason: range.guard.reason };
+  if (range.guard && (range.guard.status !== "pinned" || !WORD.test(range.guard.slot) ||
+    !/^0x[0-9a-f]{40}$/.test(range.guard.expected) || !WORD.test(range.guard.changeTopic))) {
+    return { supported: false, reason: "range-guard-unreviewed" };
+  }
+  return { supported: true };
+}
+
+export function getMintBurnRangeProofEligibility(config: MintBurnContractConfig): MintBurnConservationEligibility {
+  return resolveMintBurnRangeProofEligibility(getMintBurnConservationRuntimeEntry(config), config);
+}
+
+export function needsMintBurnConservationBoundaries(config: MintBurnContractConfig): boolean {
+  return getMintBurnConservationEligibility(config).supported || getMintBurnRangeProofEligibility(config).supported;
+}
+
+function rangeBoundaryViews(entry: MintBurnConservationRuntimeEntry | undefined): ConservationBoundaryView[] {
+  const guard = entry?.supplyBurnProof?.range?.guard;
+  return guard?.status === "pinned" ? [{ name: "rangeImplementation", address: entry!.address,
+    call: { kind: "eth_getStorageAt", slot: guard.slot }, expect: guard.expected }] : [];
+}
+
 /** Sidecar conservation-only event defs for an eligible config; empty otherwise. */
 export function conservationOnlyEventDefsFor(config: MintBurnContractConfig): ConservationEventDef[] {
   const entry = getMintBurnConservationRuntimeEntry(config);
+  if (resolveMintBurnRangeProofEligibility(entry, config).supported) {
+    const guard = entry?.supplyBurnProof?.range?.guard;
+    return guard?.status === "pinned" ? [{ signature: "RangeImplementationChanged(address)",
+      topicHash: guard.changeTopic, role: "guard", topicArity: 2 }] : [];
+  }
   return entry?.disposition === "admitted" && resolveMintBurnConservationEligibility(entry, config).supported
     ? entry.conservationOnlyEvents ?? [] : [];
 }
@@ -296,6 +338,20 @@ export function validateReviewedConservationEntry(entry: ReviewedConservationEnt
     }
   } else if (!/^0x[0-9a-f]{40}$/.test(entry.address)) return [`${label}: address must be a lowercase 0x-hex value`];
   if (!Number.isSafeInteger(entry.decimals) || entry.decimals < 0) return [`${label}: decimals must be a non-negative integer`];
+  const range = entry.supplyBurnProof?.range;
+  if (range) {
+    if (entry.disposition !== "unsupported" ||
+      entry.chainId !== "ethereum" || entry.identity?.sourceVerified !== true || entry.totalSupplyView?.isStoredSum !== true ||
+      !entry.unsupportedReason?.startsWith("zero-address-transfer-without-supply-change:") ||
+      range.law !== "paired-supply-zero-transfers-v1" || !["source-only", "require-empty"].includes(range.mintEvidence) ||
+      (entry.eventSet != null && entry.eventSet !== "transfer") ||
+      (entry.invariant != null && entry.invariant !== "transfer-supply")) return [`${label}: invalid conditional range law`];
+    if (entry.identity?.proxy?.isProxy === true && !range.guard) return [`${label}: range law requires a proxy guard`];
+    if (range.guard?.status === "pinned" && (!WORD.test(range.guard.slot) ||
+      !/^0x[0-9a-f]{40}$/.test(range.guard.expected) || !WORD.test(range.guard.changeTopic))) {
+      return [`${label}: invalid conditional range guard`];
+    }
+  }
   if (entry.disposition === "unsupported") {
     return isMintBurnConservationUnsupportedReason(entry.unsupportedReason)
       ? [] : [`${label}: unsupported requires a reason from the fixed vocabulary`];
@@ -453,7 +509,8 @@ export function mintBurnConservationCacheKey(config: MintBurnContractConfig): st
   return `mint-burn:conservation:${mintBurnConfigKey(config)}`;
 }
 
-export function mintBurnConservationFingerprint(config: MintBurnContractConfig): string {
+export function mintBurnConservationFingerprint(config: MintBurnContractConfig,
+  lawFor: MintBurnConservationLawResolver = getMintBurnConservationRuntimeEntry): string {
   const base = [1, config.stablecoinId, config.chain.chainId, conservationIdentityAddress(config.chain.chainId, config.contractAddress),
     config.decimals, config.adapterKind, config.startBlock, config.dustThreshold,
     config.events.map((event) => {
@@ -465,8 +522,7 @@ export function mintBurnConservationFingerprint(config: MintBurnContractConfig):
     })];
   // Reviewer-law parameters join the fingerprint only when present, so the plain Transfer law's
   // fingerprint stays byte-identical for existing entries and cached proof is not invalidated.
-  const entry = REVIEWED_CONSERVATION_INDEX.get(
-    reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals));
+  const entry = lawFor(config);
   const law: unknown[] = [];
   if (entry?.eventSet != null && entry.eventSet !== "transfer") law.push(["eventSet", entry.eventSet]);
   if (entry?.invariant != null && entry.invariant !== "transfer-supply") law.push(["invariant", entry.invariant]);
@@ -477,6 +533,7 @@ export function mintBurnConservationFingerprint(config: MintBurnContractConfig):
     def.filterTopic?.index ?? null, def.filterTopic?.value.toLowerCase() ?? null,
     def.emitter?.toLowerCase() ?? null])]);
   if (entry?.invariantParams != null) law.push(["invariantParams", entry.invariantParams]);
+  if (entry?.supplyBurnProof?.range != null) law.push(["range", entry.supplyBurnProof.range]);
   return JSON.stringify(law.length === 0 ? base : [...base, law]);
 }
 
@@ -505,13 +562,6 @@ export interface ConservationRawEvent {
 export interface ConservationGuardEvent {
   eventDef: ConservationEventDef;
   log: AlchemyLogEntry;
-}
-
-function quantity(value: unknown): number {
-  if (typeof value !== "string" || !QUANTITY.test(value)) throw new Error("invalid-rpc-quantity");
-  const parsed = Number(BigInt(value));
-  if (!Number.isSafeInteger(parsed)) throw new Error("unsafe-rpc-quantity");
-  return parsed;
 }
 
 /**
@@ -546,40 +596,25 @@ function conservationAmount(eventDef: ConservationEventDef, log: AlchemyLogEntry
  */
 export function collectConservationRawEvents(config: MintBurnContractConfig,
   batches: readonly ConservationLogBatch[], fromBlock: number, toBlock: number) {
-  const seen = new Map<string, string>();
-  const blockHashes = new Map<number, string>();
+  const identity = createMintBurnLogIdentityValidator();
+  const { blockHashes } = identity;
   const events: ConservationRawEvent[] = [];
   const guardEvents: ConservationGuardEvent[] = [];
   for (const { eventDef, logs } of batches) {
     const arity = eventDef.topicArity ?? 3;
     const topic0 = eventDef.topicHash.toLowerCase();
-    const emitter = (eventDef.emitter ?? config.contractAddress).toLowerCase();
-    // Address-topic validation and the ambiguity check only apply to Transfer-shaped defs.
+    const emitter = eventDef.emitter ?? config.contractAddress;
+    const topics: AlchemyTopicFilter[] = [{ index: 0, value: topic0 }];
+    if (eventDef.filterTopic) topics.push(eventDef.filterTopic);
     const transferShaped = arity === 3 && topic0 === TRANSFER;
     const guard = eventDef.role === "guard";
     for (const log of logs) {
-      const block = quantity(log.blockNumber);
-      quantity(log.transactionIndex);
-      const index = quantity(log.logIndex);
-      const data = log.data.slice(2);
-      if (log.removed !== false || log.address.toLowerCase() !== emitter ||
-        block <= fromBlock || block > toBlock || !WORD.test(log.blockHash) || log.blockHash === ZERO ||
-        !WORD.test(log.transactionHash) || log.transactionHash === ZERO ||
-        data.length % 64 !== 0 || !/^[0-9a-fA-F]*$/.test(data) ||
-        log.topics.length !== arity || log.topics[0].toLowerCase() !== topic0) throw new Error("invalid-raw-log");
-      if (eventDef.filterTopic != null && (eventDef.filterTopic.index < 1 || eventDef.filterTopic.index >= arity ||
-        log.topics[eventDef.filterTopic.index]?.toLowerCase() !== eventDef.filterTopic.value.toLowerCase())) throw new Error("invalid-raw-log");
-      if (transferShaped && (!ADDRESS_WORD.test(log.topics[1]!) || !ADDRESS_WORD.test(log.topics[2]!))) throw new Error("invalid-raw-log");
-      const hash = log.blockHash.toLowerCase();
-      if (blockHashes.has(block) && blockHashes.get(block) !== hash) throw new Error("inconsistent-log-block-hash");
-      blockHashes.set(block, hash);
-      const key = `${log.transactionHash.toLowerCase()}:${index}`;
-      const identity = JSON.stringify([block, hash, quantity(log.transactionIndex), log.topics.map((topic) => topic.toLowerCase()), log.data.toLowerCase()]);
-      if (seen.has(key)) {
-        if (seen.get(key) !== identity) throw new Error("conflicting-duplicate-log");
-        continue;
+      if (eventDef.filterTopic != null && (eventDef.filterTopic.index < 1 || eventDef.filterTopic.index >= arity)) {
+        throw new Error("invalid-raw-log");
       }
-      seen.set(key, identity);
+      const data = log.data.slice(2);
+      if (data.length % 64 !== 0 || !/^[0-9a-fA-F]*$/.test(data)) throw new Error("invalid-raw-log");
+      if (!identity.validate(log, emitter, topics, fromBlock + 1, toBlock, arity)) continue;
       if (guard) {
         guardEvents.push({ eventDef, log });
         continue;
@@ -603,7 +638,8 @@ export function validateMintBurnParsedConservation(config: MintBurnContractConfi
   if (actual.size !== rows.length) throw new Error("duplicate-parsed-event");
   for (const { log, direction, raw } of expected) {
     const row = actual.get(`${config.chain.chainId}-${log.transactionHash}-${quantity(log.logIndex)}`);
-    if (!row || row.direction !== direction || row.amount !== decimalNumberFromBigInt(raw, config.decimals)) {
+    if (!row || row.direction !== direction || row.amount !== decimalNumberFromBigInt(raw, config.decimals)
+      || row.amount_raw !== raw.toString()) {
       throw new Error("parsed-event-amount-or-identity-mismatch");
     }
   }
@@ -683,7 +719,9 @@ export async function fetchConservationBoundaries(input: {
   const evidence = new Map<string, ConservationBoundaryEvidence>();
   const groups = new Map<string, ConservationBoundaryRequest[]>();
   for (const request of input.requests) {
-    if (!resolveMintBurnConservationEligibility(lawFor(request.config), request.config).supported) continue;
+    const entry = lawFor(request.config);
+    if (!resolveMintBurnConservationEligibility(entry, request.config).supported &&
+      !resolveMintBurnRangeProofEligibility(entry, request.config).supported) continue;
     if (!validAuditRange(request.fromBlock, request.toBlock)) {
       evidence.set(request.key, { status: "unavailable", reason: "invalid-audit-range" });
       continue;
@@ -848,7 +886,7 @@ export async function fetchConservationBoundaries(input: {
           });
         }
       }
-      const boundaryViews = entry?.invariantParams?.boundaryViews ?? [];
+      const boundaryViews = [...entry?.invariantParams?.boundaryViews ?? [], ...rangeBoundaryViews(entry)];
       if (boundaryViews.length > 0) {
         const names = new Set<string>();
         let malformed = false;
@@ -908,6 +946,102 @@ export async function fetchConservationBoundaries(input: {
     }
   }
   return evidence;
+}
+
+/** Exact raw witness, independent of dust, prices and economic exclusions. */
+export function completeMintBurnRangeSupplyProof(input: {
+  config: MintBurnContractConfig; logs: ConfigLogs; conservationLogs?: readonly ConservationLogBatch[];
+  fromBlock: number; toBlock: number; checkedAt: number; complete: boolean;
+  boundary: ConservationBoundaryEvidence | undefined; lawFor?: MintBurnConservationLawResolver;
+}): MintBurnSupplyProofEvidence {
+  const { config, fromBlock, toBlock, checkedAt, boundary } = input;
+  const lawFor = input.lawFor ?? getMintBurnConservationRuntimeEntry;
+  const entry = lawFor(config);
+  const range = entry?.supplyBurnProof?.range;
+  const evidence: MintBurnSupplyProofEvidence = {
+    proofId: "", configKey: mintBurnConfigKey(config), configFingerprint: mintBurnConservationFingerprint(config, lawFor),
+    fromBlock, toBlock, openingBlock: fromBlock - 1, closingBlock: toBlock, checkedAt,
+    lawRevision: range?.law ?? "unreviewed", chainId: config.chain.chainId, stablecoinId: config.stablecoinId,
+    tokenAddress: config.contractAddress.toLowerCase(), decimals: config.decimals,
+    mintEvidence: range?.mintEvidence ?? "require-empty", status: "unavailable", members: [],
+  };
+  try {
+    const eligibility = resolveMintBurnRangeProofEligibility(entry, config);
+    if (!eligibility.supported) throw new Error(eligibility.reason);
+    if (input.logs.some(({ logs }) => logs.some((log) => log.removed === true))) throw new Error("removed-log-reorg");
+    if (!input.complete) throw new Error("incomplete-log-range");
+    if (!validAuditRange(fromBlock, toBlock)) throw new Error("invalid-audit-range");
+    // Validate raw identities even when archive state is unavailable; malformed logs still fence writes.
+    const raw = collectConservationRawEvents(config, input.logs, fromBlock - 1, toBlock);
+    evidence.members = raw.events.map(({ log, direction, raw: amount }) => ({
+      id: `${config.chain.chainId}-${log.transactionHash}-${quantity(log.logIndex)}`,
+      direction, amountRaw: amount.toString(), blockNumber: quantity(log.blockNumber), blockHash: log.blockHash.toLowerCase(),
+    })).sort((a, b) => a.id.localeCompare(b.id));
+    evidence.eventSetDigest = sha256Hex(JSON.stringify(raw.events.map(({ log, direction, raw: amount }) =>
+      [log.transactionHash.toLowerCase(), quantity(log.logIndex), quantity(log.blockNumber), log.blockHash.toLowerCase(),
+        quantity(log.transactionIndex), direction, amount.toString(), log.topics.map((topic) => topic.toLowerCase())])
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))));
+    let mint = 0n;
+    let zero = 0n;
+    for (const event of raw.events) { if (event.direction === "mint") mint += event.raw; else zero += event.raw; }
+    evidence.mintRaw = mint.toString();
+    evidence.zeroRaw = zero.toString();
+    if (!boundary) throw new Error("boundary-evidence-missing");
+    if (boundary.status !== "ready") throw new Error(boundary.reason);
+    if (!WORD.test(boundary.fromBlockHash) || !WORD.test(boundary.toBlockHash) ||
+      boundary.fromBlockHash === boundary.toBlockHash || !/^\d+$/.test(boundary.fromSupplyRaw) ||
+      !/^\d+$/.test(boundary.toSupplyRaw)) throw new Error("invalid-boundary-header");
+    if (raw.blockHashes.has(toBlock) && raw.blockHashes.get(toBlock) !== boundary.toBlockHash) {
+      throw new Error("closing-log-hash-mismatch");
+    }
+    Object.assign(evidence, { openingHash: boundary.fromBlockHash, closingHash: boundary.toBlockHash,
+      openingTimestamp: boundary.fromTimestamp, closingTimestamp: boundary.toTimestamp,
+      openingSupplyRaw: boundary.fromSupplyRaw, closingSupplyRaw: boundary.toSupplyRaw,
+      ...(boundary.views ? { guardValues: boundary.views } : {}) });
+    for (const view of rangeBoundaryViews(entry)) {
+      const from = boundary.views?.from[view.name];
+      const to = boundary.views?.to[view.name];
+      if (!from || !to || !WORD.test(from) || !WORD.test(to)) throw new Error("range-guard-evidence-missing");
+      if (BigInt(from) !== BigInt(view.expect!) || BigInt(to) !== BigInt(view.expect!)) throw new Error("range-guard-mismatch");
+      // An empty *complete* change-event query is required, including change-and-back upgrades.
+      const guard = range!.guard!;
+      if (guard.status !== "pinned") throw new Error("range-guard-unreviewed");
+      if ((input.conservationLogs ?? []).some(({ eventDef, logs }) =>
+        eventDef.topicHash.toLowerCase() === guard.changeTopic && logs.length > 0)) throw new Error("range-implementation-changed");
+    }
+    const delta = BigInt(boundary.toSupplyRaw) - BigInt(boundary.fromSupplyRaw);
+    const residual = mint - zero - delta;
+    Object.assign(evidence, { deltaRaw: delta.toString(), residualRaw: residual.toString() });
+    if (residual > 0n) throw new Error("range-supply-assumptions-inconsistent");
+    if (range!.mintEvidence === "require-empty" && mint !== 0n) throw new Error("range-mint-evidence-required");
+    evidence.status = residual === 0n ? "proven" : "residual";
+    if (residual !== 0n) evidence.reason = "false-zero-transfer-residual";
+  } catch (error) {
+    evidence.reason = error instanceof Error ? error.message : "range-proof-unavailable";
+  }
+  evidence.proofId = sha256Hex(JSON.stringify({ ...evidence, proofId: undefined }));
+  return evidence;
+}
+
+export function applyMintBurnRangeSupplyProof(rows: MintBurnRow[], proof: MintBurnSupplyProofEvidence): void {
+  const members = new Map(proof.members.map((member) => [member.id, member]));
+  for (const row of rows) {
+    const member = members.get(row.id);
+    if (proof.status === "proven" && member && member.direction === row.direction && member.blockNumber === row.block_number) {
+      if (row.amount_raw !== member.amountRaw) throw new Error("range-proof-member-raw-mismatch");
+      row.supply_proof_id = proof.proofId;
+      if (row.direction === "burn") {
+        // A proof admits destruction, never the economics of an excluded movement.
+        if (row.flow_type === "bridge_transfer") row.burn_type = "bridge_burn";
+        else if (row.burn_type !== "review_required" || !row.burn_review_reason ||
+          ["unproven-supply-destruction", "supply-proof-context-unavailable"].includes(row.burn_review_reason)) row.burn_type = "effective_burn";
+        if (row.burn_type !== "review_required") row.burn_review_reason = "range-supply-destruction";
+      }
+    } else if (proof.mintEvidence === "require-empty" && row.direction === "mint") {
+      row.burn_type = "review_required";
+      row.burn_review_reason = "range-mint-evidence-required";
+    }
+  }
 }
 
 export function completeMintBurnConservationAudit(input: {
@@ -1079,11 +1213,20 @@ export async function verifyPersistedMintBurnConservation(db: D1Database, rows: 
     if (deadlineMs != null && Date.now() >= deadlineMs) return "deadline";
     const expected = rows.slice(offset, offset + D1_SAFE_IN_CLAUSE_BIND_LIMIT);
     const clause = buildInClause(expected.map((row) => row.id));
-    const result = await db.prepare(`SELECT id, stablecoin_id, chain_id, direction, amount, block_number, timestamp
+    const result = await db.prepare(`SELECT id, stablecoin_id, chain_id, direction, amount, block_number, timestamp,
+      burn_type, burn_review_reason, flow_type, supply_proof_id, amount_raw
       FROM mint_burn_events WHERE id IN (${clause.sql})`).bind(...clause.binds).all<MintBurnRow>();
     throwIfAborted(signal);
     const actual = new Map((result.results ?? []).map((row) => [row.id, row]));
     if (actual.size !== expected.length || expected.some((row) => fields.some((field) => actual.get(row.id)?.[field] !== row[field]))) return "mismatch";
+    if (expected.some((row) => (actual.get(row.id)?.amount_raw ?? null) !== (row.amount_raw ?? null))) return "mismatch";
+    for (const row of expected) {
+      if (!row.supply_proof_id) continue;
+      const stored = actual.get(row.id)!;
+      if (["burn_type", "burn_review_reason", "supply_proof_id", "amount_raw"].some((field) =>
+        stored[field as keyof MintBurnRow] !== row[field as keyof MintBurnRow]) ||
+        (stored.flow_type !== row.flow_type && !(stored.flow_type === "atomic_roundtrip" && row.flow_type === "standard"))) return "mismatch";
+    }
   }
   if (deadlineMs != null && Date.now() >= deadlineMs) return "deadline";
   return "ok";

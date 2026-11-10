@@ -6,8 +6,10 @@ import { PRESSURE_SHIFT_MIN_BASELINE_DAYS, resolvePublishedGaugeBand } from "@sh
 
 /** Why a tracked coin does not move the gauge this window (machine codes, R4). */
 export type RunLineExclusionReason =
-  /** Pressure withheld: the 24h window is not fully valued or the baseline is partial (counted in `gauge.partialValuationInputs`). */
+  /** Pressure withheld: the 24h window or baseline is not fully valued or classified (counted in `gauge.partialValuationInputs`). */
   | "valuation-partial"
+  | "classification-unresolved"
+  | "classification-unknown"
   /** Missing scan evidence cannot establish activity or quiet. */
   | "activity-unknown"
   | "scan-coverage-incomplete"
@@ -20,7 +22,9 @@ export type RunLineExclusionReason =
 
 /** Plain-language labels for the exclusion codes (run-line table, per-coin table NR cells). */
 export const RUN_LINE_EXCLUSION_LABELS: Record<RunLineExclusionReason, string> = {
-  "valuation-partial": "Withheld: partial valuation",
+  "valuation-partial": "Withheld: incomplete valuation",
+  "classification-unresolved": "Withheld: classification review required",
+  "classification-unknown": "Withheld: classification completeness unknown",
   "activity-unknown": "24h activity unknown",
   "scan-coverage-incomplete": "24h scan coverage incomplete",
   "no-24h-activity": "No 24h mint or burn",
@@ -51,7 +55,7 @@ export interface RunLineModel {
   score: number | null;
   /** The published band, only while withheld weight cannot move it; otherwise `null` (see `bandUnsettled`). */
   band: GaugeBand | null;
-  /** A score exists, but weight withheld for valuation could carry it across a band edge. */
+  /** A score exists, but weight withheld for incomplete inputs could carry it across a band edge. */
   bandUnsettled: boolean;
   /** Full-cohort score bounds under the withheld weight; `null` when nothing is withheld or the weights are unpublished. */
   scoreInterval: readonly [number, number] | null;
@@ -63,23 +67,25 @@ export interface RunLineModel {
   weightsPublished: boolean;
   /** Largest weight drawn (scored or not); the height scale's ceiling. */
   maxWeightUsd: number | null;
-  /** Weighted coins withheld for valuation (`gauge.partialValuationInputs`). */
+  /** Weighted coins withheld for incomplete inputs (`gauge.partialValuationInputs`). */
   withheldForValuation: number;
 }
 
 /**
  * Mirrors the producer's order (`buildCoinSummaries`): a coin counts as
- * withheld for valuation only when it has 24h activity and enough baseline
+ * withheld for incomplete inputs only when it has 24h activity and enough baseline
  * history to score at all, so the stub count matches `partialValuationInputs`.
  */
 export function resolveRunLineExclusionReason(coin: MintBurnCoinFlow): RunLineExclusionReason {
   const activity = inferHas24hActivity(coin);
-  if (activity === null) return "activity-unknown";
+  if (activity === null) return coin.classification?.window24h.unavailableReason ?? "activity-unknown";
   if (coin.coverage?.windows?.window24h.complete === false) return "scan-coverage-incomplete";
   if (!activity) return "no-24h-activity";
   if (coin.baselineDataDays == null || coin.baselineDataDays < PRESSURE_SHIFT_MIN_BASELINE_DAYS) return "below-scoring-floor";
+  const classificationReason = coin.classification?.window24h.unavailableReason ?? coin.classification?.baseline.unavailableReason;
+  if (classificationReason) return classificationReason;
   const valuationAdmitsPressure =
-    resolveMintBurnValuation(coin.valuation?.window24h).completeness === "complete" && coin.valuation?.baseline !== "partial";
+    resolveMintBurnValuation(coin.valuation?.window24h).completeness === "complete" && coin.valuation?.baseline === "complete";
   return valuationAdmitsPressure ? "below-scoring-floor" : "valuation-partial";
 }
 

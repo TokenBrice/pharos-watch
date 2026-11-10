@@ -1,14 +1,17 @@
 import { batchExecute, executeAtomicBatch } from "../db";
 import { throwIfAborted } from "../abort";
-import { detectAtomicRoundtrips } from "./roundtrip-detection";
+import { reconcileAtomicRoundtripGroups } from "./roundtrip-detection";
 import { applyReviewedProtocolInternalFlows, applySupplyExcludedProtocolInternalFlows } from "./reviewed-protocol-flows";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
+import { mintBurnSupplyProofAcceptedSql } from "../mint-burn-supply-proofs";
 
 const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
 
 export interface MintBurnPersistenceOptions {
   signal?: AbortSignal;
+  /** Only supplied for a complete, decoded and classified current-config scan. */
+  knownCompleteConfigKey?: string;
 }
 
 export async function insertMintBurnRows(
@@ -19,12 +22,16 @@ export async function insertMintBurnRows(
   if (rows.length === 0) return { inserted: 0, ignored: 0 };
   throwIfAborted(options.signal);
 
-  const insertStmts = rows.map((row) =>
+  const mutations = rows.map((row) => [
+    db.prepare(`INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+      SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM mint_burn_events WHERE id = ?)`)
+      .bind(row.stablecoin_id, row.chain_id, Math.floor(row.timestamp / 3600) * 3600, row.id),
     db.prepare(
       `INSERT OR IGNORE INTO mint_burn_events
        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
-        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type, amount_raw,
+        below_display_threshold, supply_proof_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       row.id,
       row.stablecoin_id,
@@ -44,14 +51,21 @@ export async function insertMintBurnRows(
       row.timestamp,
       row.explorer_tx_url,
       row.flow_type,
+      row.amount_raw,
+      row.below_display_threshold,
+      row.supply_proof_id ?? null,
     ),
-  );
+  ]);
 
-  // Each insert binds 18 values; keep D1 batch writes well below the bind-variable ceiling.
-  const inserted = await batchExecute(db, insertStmts, {
-    chunkSize: MINT_BURN_EVENT_INSERT_BATCH_SIZE,
-    signal: options.signal,
-  });
+  // Enqueue before inserting: only new rows invalidate their hour, including an
+  // admitted replay interrupted before the in-memory affected-hour registration.
+  let inserted = 0;
+  for (let offset = 0; offset < mutations.length; offset += MINT_BURN_EVENT_INSERT_BATCH_SIZE) {
+    const results = await executeAtomicBatch(db, mutations.slice(offset, offset + MINT_BURN_EVENT_INSERT_BATCH_SIZE).flat(), {
+      signal: options.signal, returnResults: true,
+    });
+    for (let index = 1; index < results.length; index += 2) inserted += Number(results[index]?.meta?.changes ?? 0);
+  }
   const ignored = Math.max(0, rows.length - inserted);
   return { inserted, ignored };
 }
@@ -68,58 +82,63 @@ export async function updateEventClassifications(
   rows: MintBurnRow[],
   options: MintBurnPersistenceOptions = {},
 ): Promise<ClassificationUpdateCounters> {
-  // Any burn row participates in the classification write; mint rows
-  // only participate when the classifier produced a non-standard flow_type.
-  const needsUpdate = rows.filter(
-    (row) => row.direction === "burn" || row.flow_type !== "standard",
-  );
+  // Standard mint replays also revoke stale bridge/internal exclusions.
+  const needsUpdate = rows;
   if (needsUpdate.length === 0) {
     return { flowTypeChanges: 0, burnTypeChanges: 0, rowsUpdated: 0 };
   }
   throwIfAborted(options.signal);
 
-  const stmts = needsUpdate.map((row) =>
-    db.prepare(
-      // `atomic_roundtrip` is a transaction-group classification: a replay that
-      // observes only one side cannot revoke it, because the peer may be absent
-      // from this batch. Only a group-wide sweep, the reviewed classification
-      // rules or the operator reverse pass may change it.
-      // The WHERE guard skips rows whose stored classification already equals
-      // the classifier output: scan windows re-observe already-persisted rows
-      // every run, and rewriting identical values is pure D1 write volume.
-      `UPDATE mint_burn_events
-       SET burn_type = ?, burn_review_reason = ?,
-           flow_type = CASE WHEN ? = 'standard' AND flow_type = 'atomic_roundtrip' THEN flow_type ELSE ? END
-       WHERE id = ?
-         AND (burn_type IS NOT ? OR burn_review_reason IS NOT ?
-           OR flow_type IS NOT CASE WHEN ? = 'standard' AND flow_type = 'atomic_roundtrip'
-                                    THEN flow_type ELSE ? END)`,
-    ).bind(
-      row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type, row.id,
-      row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type,
-    ),
-  );
+  const mutations = needsUpdate.map((row) => {
+    // `atomic_roundtrip` is a transaction-group classification: a replay that
+    // observes only one side cannot revoke it, because the peer may be absent
+    // from this batch. Only a group-wide sweep or the operator reverse pass may
+    // change it. Identical replay rows neither rewrite source nor enqueue debt.
+    const accepted = `EXISTS (SELECT 1 FROM mint_burn_supply_proofs proof
+      WHERE proof.proof_id = mint_burn_events.supply_proof_id
+        AND proof.status = 'proven' AND proof.lifecycle = 'accepted')`;
+    const keepSupply = `? IS NULL AND ${accepted}`;
+    const proofId = row.supply_proof_id ?? null;
+    const supplyReview = `? = 'review_required' AND ? IN ('unproven-supply-destruction', 'supply-proof-context-unavailable')`;
+    const supplyReviewBinds = [row.burn_type, row.burn_review_reason];
+    const assignments = [
+      { column: "burn_type", sql: `CASE WHEN ${keepSupply} AND ${supplyReview}
+          THEN CASE WHEN direction = 'mint' THEN NULL WHEN flow_type = 'bridge_transfer' THEN 'bridge_burn'
+            ELSE 'effective_burn' END ELSE ? END`,
+        binds: [proofId, ...supplyReviewBinds, row.burn_type] },
+      { column: "burn_review_reason", sql: `CASE WHEN ${keepSupply} AND ${supplyReview}
+          THEN 'range-supply-destruction' ELSE ? END`, binds: [proofId, ...supplyReviewBinds, row.burn_review_reason] },
+      { column: "flow_type", sql: `CASE WHEN ? = 'standard' AND (flow_type = 'atomic_roundtrip'
+          OR (${keepSupply} AND ${supplyReview} AND flow_type IN ('bridge_transfer', 'protocol_internal')))
+          THEN flow_type ELSE ? END`,
+        binds: [row.flow_type, proofId, ...supplyReviewBinds, row.flow_type] },
+      { column: "supply_proof_id", sql: `CASE WHEN ${keepSupply} THEN supply_proof_id ELSE ? END`, binds: [proofId, proofId] },
+      { column: "amount_raw", sql: `CASE WHEN ${keepSupply} THEN amount_raw ELSE COALESCE(amount_raw, ?) END`,
+        binds: [proofId, row.amount_raw ?? null] },
+    ];
+    const changedSql = `(${assignments.map(({ column, sql }) => `${column} IS NOT (${sql})`).join(" OR ")})`;
+    const changedBinds = assignments.flatMap(({ binds }) => binds);
+    return [
+      db.prepare(`INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+        SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
+        FROM mint_burn_events WHERE id = ? AND ${changedSql}`)
+        .bind(row.id, ...changedBinds),
+      db.prepare(`UPDATE mint_burn_events
+       SET ${assignments.map(({ column, sql }) => `${column} = ${sql}`).join(", ")}
+       WHERE id = ? AND ${changedSql}`)
+        .bind(...changedBinds, row.id, ...changedBinds),
+    ];
+  });
   let rowsUpdated = 0;
-  const standardStmts: D1PreparedStatement[] = [];
-  for (let index = 0; index < needsUpdate.length; index++) {
-    const row = needsUpdate[index];
-    if (row.burn_review_reason === "reviewed-supply-destruction"
-      || row.burn_review_reason === "unproven-supply-destruction"
-      || row.burn_review_reason === "supply-proof-context-unavailable") {
-      // Reviewed burn repair must survive a crash before the hourly rebuild.
-      const results = await executeAtomicBatch(db, [
-        db.prepare(`INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
-          SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
-          FROM mint_burn_events WHERE id = ?`).bind(row.id),
-        stmts[index],
-      ], { signal: options.signal, returnResults: true });
-      rowsUpdated += Number(results[1]?.meta?.changes ?? 0);
-    } else {
-      standardStmts.push(stmts[index]);
+  // Every classification revision carries debt in the same atomic batch.
+  // Forty pairs stay below D1's 100-statement batch ceiling.
+  for (let offset = 0; offset < mutations.length; offset += 40) {
+    const results = await executeAtomicBatch(db, mutations.slice(offset, offset + 40).flat(), {
+      signal: options.signal, returnResults: true,
+    });
+    for (let index = 1; index < results.length; index += 2) {
+      rowsUpdated += Number(results[index]?.meta?.changes ?? 0);
     }
-  }
-  if (standardStmts.length > 0) {
-    rowsUpdated += await batchExecute(db, standardStmts, { signal: options.signal });
   }
 
   // Per-column counters derived from classifier output rather than D1
@@ -164,13 +183,17 @@ export function collectAffectedHours<T extends AffectedHourCandidate>(
  */
 export function mintBurnHourlyBucketAggregatesSql(eventAlias = ""): string {
   const e = eventAlias;
-  const mint = `${e}direction = 'mint' AND ${e}flow_type = 'standard'`;
-  const burn = `${e}direction = 'burn' AND ${e}burn_type = 'effective_burn' AND ${e}flow_type = 'standard'`;
+  const supply = mintBurnSupplyProofAcceptedSql(e ? e.slice(0, -1) : "mint_burn_events");
+  const mint = `${e}direction = 'mint' AND ${e}flow_type = 'standard' AND ${e}burn_type IS NOT 'review_required' AND ${supply}`;
+  const burn = `${e}direction = 'burn' AND ${e}burn_type = 'effective_burn' AND ${e}flow_type = 'standard' AND ${supply}`;
   // SAFETY: only the fixed predicates above and a caller-supplied literal alias are interpolated.
   return `SUM(CASE WHEN ${mint} THEN 1 ELSE 0 END) AS mint_count,
       SUM(CASE WHEN ${burn} THEN 1 ELSE 0 END) AS burn_count,
       SUM(CASE WHEN ${mint} AND ${e}amount_usd IS NULL THEN 1 ELSE 0 END) AS mint_unpriced_event_count,
       SUM(CASE WHEN ${burn} AND ${e}amount_usd IS NULL THEN 1 ELSE 0 END) AS burn_unpriced_event_count,
+      SUM(CASE WHEN ${e}direction = 'mint' AND ${e}flow_type = 'standard' AND (${e}burn_type = 'review_required' OR NOT ${supply}) THEN 1 ELSE 0 END) AS mint_unresolved_event_count,
+      SUM(CASE WHEN ${e}direction = 'burn' AND ${e}flow_type = 'standard'
+        AND (${e}burn_type IS NULL OR ${e}burn_type NOT IN ('effective_burn', 'bridge_burn') OR NOT ${supply}) THEN 1 ELSE 0 END) AS burn_unresolved_event_count,
       COALESCE(SUM(CASE WHEN ${mint} THEN ${e}amount_usd ELSE 0 END), 0) AS mint_volume_usd,
       COALESCE(SUM(CASE WHEN ${burn} THEN ${e}amount_usd ELSE 0 END), 0) AS burn_volume_usd,
       COALESCE(SUM(CASE WHEN ${mint} THEN ${e}amount_usd WHEN ${burn} THEN -${e}amount_usd ELSE 0 END), 0) AS net_flow_usd`;
@@ -205,17 +228,18 @@ export async function recalcAffectedHours(
   const aggStmt = db.prepare(
     hourlyAggSql("stablecoin_id = ? AND chain_id = ? AND timestamp >= ? AND timestamp < ?"),
   );
+  const settleStmt = db.prepare(`DELETE FROM mint_burn_dirty_hours
+    WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?`);
 
-  // Interleave delete+insert per hour so each pair lands in the same db.batch()
-  // call, keeping hourly recalc atomic within each chunk. D1_BATCH_SIZE (100) is
-  // even, so pairs are never split across chunk boundaries.
+  // Keep each delete+insert+debt settlement in one batch, including chunk edges.
   const interleaved: D1PreparedStatement[] = [];
   for (const hour of affectedHours.values()) {
     throwIfAborted(options.signal);
     interleaved.push(deleteStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs));
     interleaved.push(aggStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs, hour.hourTs + 3600));
+    interleaved.push(settleStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs));
   }
-  await batchExecute(db, interleaved, { signal: options.signal });
+  await batchExecute(db, interleaved, { chunkSize: 99, signal: options.signal });
 }
 
 
@@ -233,8 +257,7 @@ export async function persistMintBurnRows(
   roundtripsDetected: number;
   reviewedProtocolInternal: number;
 }> {
-  const roundtripsDetected = detectAtomicRoundtrips(rows);
-  // Curated non-circulating inventory and reviewed internal events win over heuristic tagging.
+  // Excluded legs cannot establish the neutrality of a standard-flow group.
   applySupplyExcludedProtocolInternalFlows(rows);
   const reviewedProtocolInternal = applyReviewedProtocolInternalFlows(rows);
   if (rows.length === 0) {
@@ -244,7 +267,7 @@ export async function persistMintBurnRows(
       flowTypeChanges: 0,
       burnTypeChanges: 0,
       rowsUpdated: 0,
-      roundtripsDetected,
+      roundtripsDetected: 0,
       reviewedProtocolInternal,
     };
   }
@@ -252,19 +275,21 @@ export async function persistMintBurnRows(
 
   const insertResult = await insertMintBurnRows(db, rows, options);
   const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows, options);
+  const roundtrips = await reconcileAtomicRoundtripGroups(db, rows, options);
   // A held cursor replays already-persisted rows after a failed hourly rebuild.
   // Their buckets still need materialization even when every insert is ignored.
   if (affectedHours) {
     throwIfAborted(options.signal);
     collectAffectedHours(rows, affectedHours);
+    for (const [key, hour] of roundtrips.affectedHours) affectedHours.set(key, hour);
   }
   return {
     inserted: insertResult.inserted,
     ignored: insertResult.ignored,
-    flowTypeChanges,
+    flowTypeChanges: flowTypeChanges + roundtrips.changed,
     burnTypeChanges,
-    rowsUpdated,
-    roundtripsDetected,
+    rowsUpdated: rowsUpdated + roundtrips.changed,
+    roundtripsDetected: roundtrips.toRoundtrip,
     reviewedProtocolInternal,
   };
 }

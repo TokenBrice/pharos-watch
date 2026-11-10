@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildChainRpcs, type RpcEndpoint } from "../chain-registry";
 import { createBudget } from "../evm-logs";
 import { fetchMintBurnLogs, getMintBurnFinalizedHead, mintBurnRpcEndpoints, resolveMintBurnBlockTimestamps } from "../mint-burn-pipeline/rpc";
-import { fetchConservationBoundaries, getMintBurnConservationRuntimeEntry } from "../mint-burn-conservation";
+import { fetchConservationBoundaries, getMintBurnConservationEligibility, getMintBurnConservationRuntimeEntry } from "../mint-burn-conservation";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
@@ -12,6 +12,9 @@ import { syncMintBurnConfig } from "../../cron/mint-burn/sync-config";
 import { loadMintBurnChainContexts } from "../../cron/mint-burn/chain-context";
 
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
+import type { AlchemyLogEntry } from "../alchemy-logs";
+import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
+import { MINT_BURN_TRANSFER_TOPIC } from "../mint-burn-log-identity";
 import { buildAlchemyUrl } from "../alchemy-logs";
 type Call = { id: number; method: string; params: unknown[] };
 const word = (value: number) => `0x${value.toString(16).padStart(64, "0")}`;
@@ -37,6 +40,81 @@ function admitted(chainId = "base"): readonly RpcEndpoint[] {
   return mintBurnRpcEndpoints(chainId, "alchemy-test", buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test" }));
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+describe("mint/burn EVM response identity", () => {
+  const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "dai-makerdao")!;
+  const mint = config.events.find((event) => event.direction === "mint")!;
+  const topics = [{ index: 0, value: mint.topicHash }, mint.filterTopic!];
+  const endpoints = mintBurnRpcEndpoints("ethereum", "alchemy-test");
+  const validLog = (): AlchemyLogEntry => ({ address: config.contractAddress,
+    topics: [MINT_BURN_TRANSFER_TOPIC, word(0), word(1)],
+    data: `0x${(20_000n * 10n ** BigInt(config.decimals)).toString(16).padStart(64, "0")}`,
+    blockNumber: "0x66", blockHash: word(12), transactionHash: word(20),
+    transactionIndex: "0x0", logIndex: "0x0", removed: false });
+
+  it.each(["removed", "emitter", "direction", "topic0", "range", "duplicate", "block-hash"])(
+    "fences and retries %s corruption without a supported conservation law", async (kind) => {
+      expect(getMintBurnConservationEligibility(config).supported).toBe(false);
+      const log = validLog();
+      const logs = [log];
+      if (kind === "removed") log.removed = true;
+      if (kind === "emitter") log.address = `0x${"1".repeat(40)}`;
+      if (kind === "direction") log.topics = [mint.topicHash, word(1), word(0)];
+      if (kind === "topic0") log.topics[0] = word(99);
+      if (kind === "range") log.blockNumber = "0x67";
+      if (kind === "duplicate") logs.push({ ...log, data: word(1) });
+      if (kind === "block-hash") logs.push({ ...log, transactionHash: word(21), blockHash: word(13) });
+      let corrupted = true;
+      recorder((_, call) => {
+        if (call.method === "eth_getLogs") {
+          const filter = call.params[0] as { topics: (string | null)[] };
+          return { result: filter.topics[1] === word(0) ? corrupted ? logs : [validLog()] : [] };
+        }
+        return { result: { number: call.params[0], timestamp: RECENT_TIMESTAMP_HEX, hash: word(12) } };
+      });
+      const input = {
+        db: mockD1([{ match: "cache", rows: [] }, { match: "mint_burn_events", rows: [] },
+          { match: "mint_burn_supply_proof_configs", rows: [] }, { match: "mint_burn_supply_proofs", rows: [] }]), config, key: "dai-identity", tier: "critical" as const,
+        fromBlock: 101, scanTo: 102, chainHead: 102, rpcEndpoints: endpoints, configBudgetLimit: 60,
+        runTimestamp: RECENT_TIMESTAMP + 60, priceContext: { priceObservations: new Map(), priceHistory: new Map() },
+        chainTimestampCache: new Map(), txContextCache: new Map(), affectedHours: new Map(),
+      };
+      const failed = await syncMintBurnConfig(input);
+      expect(failed.newLastBlock).toBeNull();
+      expect(failed.scanCoverage).toBeUndefined();
+      expect(failed.summary.rowsParsed).toBe(0);
+      expect(failed.summary.eventCoverage.find((coverage) => coverage.eventDef.includes(":mint")))
+        .toMatchObject({ complete: false, scannedToBlock: 100 });
+      expect(failed.summary.sourceFailureReason).toBe(kind === "duplicate" ? "conflicting-duplicate-log"
+        : kind === "block-hash" ? "inconsistent-log-block-hash" : "invalid-raw-log");
+      corrupted = false;
+      const retry = await syncMintBurnConfig(input);
+      expect(retry.newLastBlock).toBe(102);
+      expect(retry.scanCoverage).toMatchObject({ fromBlock: 101, toBlock: 102 });
+      expect(retry.summary.rowsParsed).toBe(1);
+    });
+
+  it("rejects conflicting identities across directional queries", async () => {
+    const prior = validLog();
+    const burn = { ...prior, topics: [mint.topicHash, word(1), word(0)] };
+    recorder(() => ({ result: [burn] }));
+    const fetched = await fetchMintBurnLogs(endpoints, config.contractAddress,
+      [{ index: 0, value: mint.topicHash }, { index: 2, value: word(0) }],
+      101, 102, createBudget(20), undefined, { priorLogs: [prior] });
+    expect(fetched).toMatchObject({ logs: [], complete: false, scannedToBlock: 100,
+      failureReason: "conflicting-duplicate-log" });
+  });
+
+  it("deduplicates clean identities before parsing a standard event", async () => {
+    recorder(() => ({ result: [validLog(), validLog()] }));
+    const fetched = await fetchMintBurnLogs(endpoints, config.contractAddress, topics, 101, 102, createBudget(20));
+    expect(fetched).toMatchObject({ complete: true, scannedToBlock: 102 });
+    expect(fetched!.logs).toHaveLength(1);
+    const parsed = parseMintBurnLogs(config, mint, fetched!.logs, new Map([[102, RECENT_TIMESTAMP]]),
+      { priceObservations: new Map(), priceHistory: new Map() });
+    expect(parsed.rows).toMatchObject([{ direction: "mint", amount: 20_000, flow_type: "standard" }]);
+  });
+});
 
 describe("mint/burn ordered RPC fallback", () => {
   it.each(["ethereum", "arbitrum", "base"])("keeps unadmitted %s contexts and 50k windows byte-identical", async (chain) => {
@@ -289,7 +367,7 @@ describe("mint/burn ordered RPC fallback", () => {
     const txHash = word(20);
     const row: MintBurnRow = {
       id: "event", stablecoin_id: config.stablecoinId, symbol: config.symbol, chain_id: "base",
-      tx_hash: txHash, direction: "burn", counterparty: null, amount: 1, amount_usd: null,
+      tx_hash: txHash, direction: "burn", counterparty: null, amount: 1, amount_raw: null, below_display_threshold: 0, amount_usd: null,
       price_used: null, price_timestamp: null, price_source: null, burn_type: null,
       burn_review_reason: null, flow_type: "standard", block_number: 102, timestamp: 1024,
       explorer_tx_url: "https://basescan.org/tx/" + txHash,

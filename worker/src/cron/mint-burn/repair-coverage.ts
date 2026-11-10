@@ -27,6 +27,10 @@ export interface MintBurnCoverageGap {
   toBlock: number;
 }
 
+export function mintBurnRetainedHourlyFloor(now: number): number {
+  return Math.ceil((now - MINT_BURN_EVENT_RETENTION_SEC) / 3600) * 3600;
+}
+
 /** The replay floor is a whole raw-retained hour, not the 95-day hourly retention.
  * Rebuilding older hours from a partial surviving raw set would erase history.
  * Old-fingerprint boundaries locate work only; only a fresh scan can certify it.
@@ -35,7 +39,7 @@ export async function loadMintBurnCoverageGaps(
   db: D1Database, configs: readonly MintBurnContractConfig[], cursors: ReadonlyMap<string, number>, now: number,
 ): Promise<MintBurnCoverageGap[]> {
   if (configs.length === 0) return [];
-  const cutoff = Math.ceil((now - MINT_BURN_EVENT_RETENTION_SEC) / 3600) * 3600;
+  const cutoff = mintBurnRetainedHourlyFloor(now);
   const rows = await db.prepare(`
     WITH retained AS (
       SELECT chain_id, MIN(block_number) AS from_block FROM block_timestamp_cache
@@ -115,6 +119,7 @@ export interface MintBurnCoverageRepairSummary extends MintBurnConfigSummary {
 export async function repairMintBurnCoverage(
   input: Parameters<typeof runMintBurnConfigPhase>[0], gaps: readonly MintBurnCoverageGap[],
   pendingProofs: MintBurnScanCoverage[], deferred: ReadonlyMap<string, number>,
+  options: { supplyProofRepair?: boolean } = {},
 ): Promise<MintBurnCoverageRepairSummary[]> {
   const summaries: MintBurnCoverageRepairSummary[] = [];
   const deadlineMs = Math.min(input.deadlineMs ?? Infinity, Date.now() + COVERAGE_REPAIR_WINDOW_MS);
@@ -167,6 +172,7 @@ export async function repairMintBurnCoverage(
         priceContext: input.priceContext, chainTimestampCache: context.chainTimestampCache,
         txContextCache: context.txContextCache, affectedHours: input.affectedHours, deadlineMs: configDeadlineMs,
         conservationBoundary: boundaries.get(key),
+        supplyProofRepair: options.supplyProofRepair,
       });
       budget.count += result.summary.requestBudgetUsed;
       Object.assign(summary, result.summary);
