@@ -316,7 +316,7 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
       .bind(key, Math.max(state.firstDay, lastDay - MINT_BURN_EVENT_RETENTION_SEC), lastDay).all<StoredRow>();
     const receipts = new Map(stored.results.flatMap((row) => { const r = admitStored(row, config, now); return r ? [[r.day, r] as const] : []; }));
     const settledDays = new Set(stored.results.filter((row) => {
-      try { return JSON.parse(row.receipt_json).status !== "unavailable"; } catch { return true; }
+      try { return (JSON.parse(row.receipt_json) as { status?: unknown }).status !== "unavailable"; } catch { return true; }
     }).map((row) => row.day_ts));
     const floor = Math.max(state.firstDay, Math.ceil((now - MINT_BURN_EVENT_RETENTION_SEC) / POLICY.daySec) * POLICY.daySec);
     // Missing days take priority; unavailable attempts retry while every raw sibling is retained.
