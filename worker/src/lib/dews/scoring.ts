@@ -115,7 +115,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   let insufficientDataCount = 0;
   const noCurrentSupplyIds: string[] = [];
 
-  const scored: Array<{ meta: (typeof DEWS_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult }> =
+  const scored: Array<{ meta: (typeof DEWS_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult; contagionEligible: boolean }> =
     [];
   for (const meta of DEWS_ELIGIBLE_STABLECOINS) {
     const asset = assetById.get(meta.id);
@@ -220,6 +220,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       hasBlacklistTracking,
       blacklistSourceOk: sourceState.blacklistSourceOk,
       burnVolume24hUsd: mintBurn?.burn24h ?? null,
+      flowIsolated: mintBurn?.isolated === true,
       mintVolume24hUsd: mintBurn?.mint24h ?? null,
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,
       flowDataAgeDays: mintBurnAgeSec == null ? 9999 : mintBurnAgeSec / DAY_SECONDS,
@@ -258,7 +259,9 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       insufficientDataCount++;
       continue;
     }
-    scored.push({ meta, input, firstPass });
+    const contagionBase = input.flowIsolated ? computeDEWS({ ...input, burnVolume24hUsd: null }) : firstPass;
+    const contagionEligible = contagionBase != null && contagionBase.band !== "DANGER" && contagionBase.band !== "WARNING";
+    scored.push({ meta, input, firstPass, contagionEligible });
   }
 
   const amplifiers: ContagionAmplifiers = { byPegType: {}, triggeringIds: [] };
@@ -274,11 +277,14 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     amplifiers.triggeringIds.push(input.stablecoinId);
   }
 
-  // A first-pass DANGER/WARNING coin keeps its first-pass result (contagion = 1)
-  // so it never amplifies itself.
-  for (const { meta, input, firstPass } of scored) {
-    const contagion = input.pegType == null ? 1 : amplifiers.byPegType[input.pegType] ?? 1;
-    const applicable = contagion > 1 && firstPass.band !== "DANGER" && firstPass.band !== "WARNING";
+  // Isolated flow cannot remove peer amplification by crossing WARNING itself.
+  for (const { meta, input, firstPass, contagionEligible } of scored) {
+    const contagion = input.pegType == null ? 1 : input.flowIsolated && contagionEligible
+      ? Math.max(1, ...scored.filter((peer) => peer.meta.id !== meta.id && peer.input.pegType === input.pegType)
+        .map((peer) => peer.firstPass.band === "DANGER" ? CONTAGION_BUMP_DANGER
+          : peer.firstPass.band === "WARNING" ? CONTAGION_BUMP_WARNING : 1))
+      : amplifiers.byPegType[input.pegType] ?? 1;
+    const applicable = contagion > 1 && contagionEligible;
     const finalResult = applicable ? computeDEWS({ ...input, contagionAmplifier: contagion }) : firstPass;
     if (!finalResult) {
       insufficientDataCount++;

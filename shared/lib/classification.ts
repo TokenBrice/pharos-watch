@@ -39,6 +39,7 @@ export * from "./classification/verdict";
 export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
+export const FLOW_COVERAGE_LABELS = { tracked: "Tracked", lagging: "Lagging" } as const;
 /** Reserve-access diagnostics never describe local holder-transfer restrictions. */
 export const ACCESS_LOOKTHROUGH_COVERAGE_LABELS: Record<string, string> = {
   complete: "Complete",

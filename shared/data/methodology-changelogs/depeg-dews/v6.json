@@ -2,14 +2,29 @@
   {
     "version": "6.46",
     "title": "Lone Mento Broker quotes cannot establish DEWS escalation evidence",
-    "date": "2026-11-10",
-    "effectiveAt": 1794355200,
+    "date": "2026-11-11",
+    "effectiveAt": 1794358800,
     "summary": "A spread-bearing Mento Broker observation without independent confirmation retains its raw price and divergence but cannot alone release the existing DEWS WATCH cap.",
     "impact": [
       "The live DEWS projection preserves primary source and agreeing-source provenance. Any mento-broker-priced asset without a registered independent observed agreeing source uses only individually admitted, registered non-Mento DEX protocol marks for market-price escalation evidence. Same-family Mento observations, cached/search/nominal references and protocol overrides do not establish independent primary confirmation; an opaque aggregate, at-par DEX or previous mixed divergence cannot authenticate Broker spread. Protocol marks retain their original clocks and existing source-age/TVL gates.",
       "The published quote, deviation, raw divergence sub-signal and preliminary weighted score remain unchanged. The existing WATCH_MAX_SCORE authority caps the final score when this removes the only qualifying escalation evidence; independently stressed admitted DEX evidence or an independent agreeing primary source restores ordinary behaviour. Lone Broker rows without other qualifying evidence serialize their evidence limit even when already at or below WATCH, preserving the numerical score. Telegram honors every serialized producer evidence cap before exit hysteresis, so capped WATCH35 cannot inherit a prior ALERT and complete a pending escalation. Uncapped hysteresis, the two-computation persistence, liquidity and severe issuer-control bypasses, weights, thresholds and depeg confirmation are unchanged. Other source classes retain their DEWS scoring treatment.",
       "The rule is source-wide, including existing AUDm/CADm/COPm Broker routes as well as XOFm/ZARm. Reviewed-fee fixtures change XOFm from ALERT39 to WATCH35 while retaining the other twelve Mento bands. At the admitted 200-bps envelope, existing AUDm/CADm/COPm and XOFm/ZARm change from ALERT39 to WATCH35 with calm supply and no other evidence. These are deterministic source-route fixtures, not current production-band claims.",
-      "Provisional activation is 2026-11-11 00:00 UTC (1794355200), to be re-dated after activation. Pricing remains v6.76; production acceptance requires a new affected DEWS publication and Telegram evaluation."
+      "Provisional activation is 2026-11-11 01:00 UTC (1794358800), provisional until re-dated after activation. Pricing remains v6.76; production acceptance requires a new affected DEWS publication and Telegram evaluation."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.45",
+    "title": "Independently proven isolated flow legs may raise DEWS stress",
+    "date": "2026-11-11",
+    "effectiveAt": 1794355200,
+    "summary": "DEWS may use an established isolated canonical leg's independently proven outflow as stress-only evidence, without treating partial flow as a full-coin net or letting it dilute other stress.",
+    "impact": [
+      "A published reactivation-pending leg must match an enabled current configuration. DEWS keeps its canonical-chain scope and proves that canonical bucket's full 30-day window, including the latest 24 hours, using current-fingerprint durable scan evidence in the same batch as hourly rows and materialization debt. This also permits a proven admitted canonical leg when a different established chain is isolated. Pending first admissions and disabled legs remain excluded; missing or failed proof never establishes quiet zero.",
+      "Both windows retain complete classification, 24-hour valuation, burn-baseline valuation and original published-watermark freshness gates. An isolated leg contributes only for net outflow, when the other signals already satisfy the minimum available weight and its stress exceeds their weighted mean. Otherwise flow is unavailable and its weight stays redistributed, so isolated evidence never lowers stress or creates a score from insufficient coverage. Contagion eligibility uses the no-isolated-flow band and the multiplier excludes self, preserving peer amplification across a WARNING crossing.",
+      "Isolated evidence carries flowScope isolated-canonical-leg and isolatedNet24hUsd rather than a full-coin net24hUsd. Full-coin flow direction, pressure, Bank Run Gauge and flight-to-quality remain governed by Mint/Burn publication gates. Weights, signal curves and evidence caps are unchanged; retained scores and sealed history are not relabeled.",
+      "Provisional activation is 2026-11-11 00:00 UTC (1794355200), provisional until re-dated after activation. Production-history replay, owner review, fresh affected executions and production resource evidence remain unverified release prerequisites."
     ],
     "commits": [],
     "reconstructed": false
@@ -315,7 +330,7 @@
       "The primary-recovery pool veto (`derivePoolRecoveryVeto` in `worker/src/cron/depeg-detection/decision-engine.ts`) fires only when the diverging challenger groups reach `POOL_CHALLENGE_CONFIRM_MIN` and are at least as numerous as the challenger groups inside the trigger threshold that corroborate the recovered price; the single-pool `>= $5M` TVL carve-out is unchanged",
       "Pool-only pending-depeg confirmation applies the same majority test against the groups contradicting the pending direction (opposite-direction or back inside the bar), so two diverging groups no longer confirm while four independent protocols sit at the reference rate",
       "The rule is one exported authority, `divergingProtocolGroupsOutvote` plus its complement `corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, shared with the pricing pool challenge (`selectReplacementProtocolGroups` and its confidence downgrade, pricing v6.32) so the pricing and depeg lanes cannot drift; it keeps the shared `POOL_CHALLENGE_CONFIRM_MIN` = 2 independent-group bar",
-      "Reproduction: live event 90792 (`vchf-vnx`) opened 2026-09-18 from a +640 bps print that two dormant venues carried — the Celo Uniswap v3 VCHF/USD₮ pool (last trade 2026-03-15, provider-reported $4.7M reserve against ~$141 on-chain, 24h volume 0) and the ICP kongswap VCHF/ICP pool (24h volume 0) — against four live protocols at the ECB CHF rate; the veto had blocked the primary recovery on every subsequent detection run",
+      "Reproduction: live event 90792 (`vchf-vnx`) opened 2026-09-18 from a +640 bps print that two dormant venues carried \u2014 the Celo Uniswap v3 VCHF/USD\u20ae pool (last trade 2026-03-15, provider-reported $4.7M reserve against ~$141 on-chain, 24h volume 0) and the ICP kongswap VCHF/ICP pool (24h volume 0) \u2014 against four live protocols at the ECB CHF rate; the veto had blocked the primary recovery on every subsequent detection run",
       "Trigger thresholds, recovery window timing, pool TVL minimums, the aggregate-DEX corroboration rule, and every DEWS formula are unchanged; only protocol-group precedence in the two pool-challenger decisions moves"
     ],
     "commits": [],
@@ -329,7 +344,7 @@
     "summary": "A recomputed backfill episode is no longer persisted when a reviewed suppression window covers it or when an existing live row already covers the same coin and direction, so reviewed artifact removals survive future admin replays and one market episode is never counted twice.",
     "impact": [
       "Replay skips a recomputed `source='backfill'` episode when its inclusive `[startedAt, endedAt]` interval overlaps a reviewed entry for the same coin and direction in `shared/data/depegs/backfill-replay-suppressions.ts`; that registry is validated at module load and guarded by the registry-integrity suite in `shared/data/depegs/__tests__/`",
-      "Replay also skips an episode when an existing `source='live'` row for the same coin and direction overlaps it (`episodeStart <= liveEnd && liveStart <= episodeEnd`, inclusive; open rows collapse to their start second) — the two detectors read the same price series at minutes and hourly granularity, so same-side overlapping windows are one episode counted twice, while one second apart stays disjoint",
+      "Replay also skips an episode when an existing `source='live'` row for the same coin and direction overlaps it (`episodeStart <= liveEnd && liveStart <= episodeEnd`, inclusive; open rows collapse to their start second) \u2014 the two detectors read the same price series at minutes and hourly granularity, so same-side overlapping windows are one episode counted twice, while one second apart stays disjoint",
       "Both skips run in `executeBackfillForCoin` before the dry-run/apply split, so the preview, the run fingerprint (`expectedEventCount`/`expectedFingerprint`), and the inserted rows stay mutually consistent; each skip is ledgered as `backfill-depegs-episode-skipped` with `skipReason: reviewed-suppression` or `live-overlap`",
       "The four seeded suppression windows cover the Noon USN upside artifacts for 2025-10-07, 2025-12-27/28, 2026-02-14, and 2026-03-02, whose on-chain forensics found no economic-size USN trade above 1.0011; the ledgered 14 Feb live/backfill pair is caught by both rules",
       "Live detection, thresholds, confirmation policy, price extraction, and the PegScore/DEWS formulas are unchanged; a one-off read-only production dry-run found 85 overlapping live/backfill pairs across 52 distinct backfill rows on 21 coins, and each affected coin drops at most its distinct backfill-row count at its next window replay"
@@ -361,7 +376,7 @@
     "impact": [
       "Pool and divergence smoothing now requires the previous generation's signal to have been available; after a cycle without pool or DEX-price evidence the next fresh reading is published un-dampened instead of halved",
       "An absent, blank or unrecognised `priceConfidence` scores as the worst known tier (80) rather than the best (0), and the signal carries a `price-confidence-unmapped` marker",
-      "Yield warnings that sum to no scored stress — an unrecognised key, or the recognised non-stress `zero-yield` flag — mark the yield signal unavailable instead of publishing a clean zero",
+      "Yield warnings that sum to no scored stress \u2014 an unrecognised key, or the recognised non-stress `zero-yield` flag \u2014 mark the yield signal unavailable instead of publishing a clean zero",
       "A tracked coin whose cache row carries no circulating buckets at all is skipped for the cycle; only an explicitly present zero supply retires its current and 7-day stress rows",
       "Signal weights and the CALM/WATCH/WARNING/DANGER band ladder are unchanged; every effect moves scores in the conservative direction or removes a signal from the weighted average"
     ],

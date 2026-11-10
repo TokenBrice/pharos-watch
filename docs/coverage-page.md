@@ -9,6 +9,7 @@ The base is `CLIENT_ACTIVE_STABLECOINS`. Static classification is joined to cano
 - Peg summary owns observed pricing/depeg coverage; NAV assets intentionally have price-only semantics. Headline corroboration requires source depth, not merely a row.
 - Report-card publication owns overall rating, live-reserve use, dependency graph/coverage and mint score components. Static mint summaries independently own curation breadth.
 - DEX, redemption, yield and mint/burn resolvers use their respective published snapshots. Yield means current ranking inclusion, not theoretical eligibility. Mature flow windows may be proved by completed scan span even when event retention empties.
+  Mint/burn `lagging` is an operator-only sync advisory: public coverage presents it as **Tracked**, which proves the published 24-hour scan window without claiming full 30-day history. The API status remains unchanged; `/status` owns the Lagging chip.
 - Reviewed freeze status owns exposure; event-tracker membership only upgrades directly freezable assets to Live. All reviewed exposure states count as assessed, including No, not just direct controls.
 - Generated compliance sidecar projection owns MiCA/GENIUS assessments. Reviewed Unknown/out-of-scope/noncompliant states count as assessed; absent metadata is Not Assessed and implies no legal verdict.
 - Supply weights come from `/api/stablecoins` with `getCirculatingRawOrNull()`. Missing assets/buckets are unavailable, never a valid zero. Labels derive from shared classification.

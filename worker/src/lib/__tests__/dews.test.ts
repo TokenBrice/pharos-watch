@@ -14,6 +14,18 @@ function computeDews(input: DEWSInput) {
 
 describe("computeDEWS", () => {
   const broker = { price: 0.98, priceSource: "mento-broker", priceConfidence: "fallback", circulatingCurrent: 5e9, circulatingPrevWeek: 5e9 };
+  it.each([[0, 100, true], [0, 0, false], [100, 0, false], [1, 2, false]])(
+    "isolated flow cannot lower stress (%s/%s)", (mint, burn, admitted) => {
+      const input = makeDewsInput({ price: null, flowIsolated: true, mintVolume24hUsd: mint, burnVolume24hUsd: burn,
+        burnBaseline30dUsd: 10, flowBaselineDays: 30 });
+      const base = computeDews({ ...input, burnVolume24hUsd: null });
+      const result = computeDews(input);
+      expect(result.signals.flow.available).toBe(admitted);
+      expect(result.baseScore).toBeGreaterThanOrEqual(base.baseScore);
+      expect(result.score).toBeGreaterThanOrEqual(base.score);
+      expect(result.signals.flow.net24hUsd).toBeUndefined();
+      expect(result.signals.flow.flowScope).toBe("isolated-canonical-leg");
+    });
   it.each([
     ["uncorroborated", {}, false],
     ["market-price", { dexPriceUsd: 0.9 }, true],
@@ -177,25 +189,8 @@ describe("computeDEWS", () => {
     expect(result.signals.pool.value).toBeGreaterThan(50);
   });
 
-  it("treats NaN weightedBalanceRatio as unavailable", () => {
-    const result = computeDews(
-      makeDewsInput({
-        weightedBalanceRatio: NaN,
-        avgPoolStress: 0,
-        topPools: [],
-      }),
-    );
-    expect(result.signals.pool.available).toBe(false);
-  });
-
-  it("treats NaN avgPoolStress as unavailable", () => {
-    const result = computeDews(
-      makeDewsInput({
-        weightedBalanceRatio: 0.95,
-        avgPoolStress: NaN,
-        topPools: [],
-      }),
-    );
+  it.each(["weightedBalanceRatio", "avgPoolStress"] as const)("treats NaN %s as unavailable", (field) => {
+    const result = computeDews(makeDewsInput({ weightedBalanceRatio: 0.95, avgPoolStress: 0, topPools: [], [field]: NaN }));
     expect(result.signals.pool.available).toBe(false);
   });
 

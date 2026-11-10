@@ -15,6 +15,7 @@ interface FlowWeekReceiptProps {
   coins: MintBurnCoinFlow[];
   weeklyHourly?: MintBurnHourlyBucket[];
   scopeLabel: string;
+  hourlyScopeLabel?: string;
   isLoading?: boolean;
 }
 
@@ -52,7 +53,7 @@ function statusLabel(status: string): string {
  * nested cards. Labels describe observed configured-chain events, never
  * market-wide issuance.
  */
-export function FlowWeekReceipt({ coins, weeklyHourly, scopeLabel, isLoading }: FlowWeekReceiptProps) {
+export function FlowWeekReceipt({ coins, weeklyHourly, scopeLabel, hourlyScopeLabel = "Configured issuance chains", isLoading }: FlowWeekReceiptProps) {
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading the weekly receipt…</p>;
   }
@@ -106,7 +107,8 @@ export function FlowWeekReceipt({ coins, weeklyHourly, scopeLabel, isLoading }: 
       </dl>
 
       <p className="text-xs text-muted-foreground">
-        Scope: {model.scopeLabel}. Observed configured-chain events, not market-wide supply creation or redemption.
+        Hourly volume scope: {hourlyScopeLabel}. Net and leaders: {model.scopeLabel}.
+        Observed configured-chain events, not market-wide supply creation or redemption.
       </p>
     </div>
   );

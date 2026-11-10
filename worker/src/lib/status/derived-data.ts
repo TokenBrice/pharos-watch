@@ -341,8 +341,7 @@ export async function getMintBurnReconciliation(
   const criticalHeads = criticalAgeSec != null && criticalAgeSec <= MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC
     ? cronSnapshot.chainHeads : new Map<string, number>();
   const freshHeads = withExtendedLaneHeads(now, criticalHeads, extendedSnapshot);
-  const conservationConfigs = diagnosticConfigs.filter((config) => getMintBurnConservationEligibility(config).supported);
-  const coverageMap = buildCoinCoverageMap(now, scanSegments, lastBlocks, freshHeads, null, conservationConfigs);
+  const coverageMap = buildCoinCoverageMap(now, scanSegments, lastBlocks, freshHeads, null, diagnosticConfigs);
 
   const rows = [...configsByStablecoin.entries()]
     .map<MintBurnReconciliationRow>(([stablecoinId, configs]) => {

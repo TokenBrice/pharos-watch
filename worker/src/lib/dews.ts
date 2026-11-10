@@ -123,9 +123,20 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   const weightedContributions: DewsTopContributor[] = [];
 
   for (const [key, signal] of Object.entries(signals) as Array<[DewsSignalKey, SignalResult]>) {
-    if (signal.available) {
+    if (signal.available && !(key === "flow" && input.flowIsolated)) {
       totalWeight += DEWS_SIGNAL_WEIGHTS[key];
       weightedSum += DEWS_SIGNAL_WEIGHTS[key] * signal.value;
+    }
+  }
+
+  // Partial-coin evidence must not dilute stress or establish sufficient coverage.
+  if (input.flowIsolated && signals.flow.available) {
+    if (totalWeight >= MIN_AVAILABLE_WEIGHT && signals.flow.value > weightedSum / totalWeight) {
+      totalWeight += DEWS_SIGNAL_WEIGHTS.flow;
+      weightedSum += DEWS_SIGNAL_WEIGHTS.flow * signals.flow.value;
+    } else {
+      signals.flow = { ...signals.flow, value: 0, available: false,
+        unavailableReason: "mint-burn-isolated-no-stress-increase" };
     }
   }
 

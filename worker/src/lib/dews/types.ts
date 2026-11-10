@@ -70,6 +70,9 @@ export interface SignalResult {
   burnSurge?: number;
   burnToMintRatio?: number;
   net24hUsd?: number;
+  /** Partial-coin evidence never describes the full coin's net. */
+  flowScope?: "isolated-canonical-leg";
+  isolatedNet24hUsd?: number;
   baselineDays?: number;
   warnings?: string[];
   unavailableReason?: string;
@@ -126,6 +129,8 @@ export interface DEWSInput {
   hasBlacklistTracking: boolean;
   blacklistSourceOk?: boolean;
   // Mint/burn flow (optional — from mint_burn_hourly)
+  /** Only an independently proven canonical leg; may raise stress, never dilute it. */
+  flowIsolated?: boolean;
   burnVolume24hUsd: number | null;
   mintVolume24hUsd: number | null;
   burnBaseline30dUsd: number | null;

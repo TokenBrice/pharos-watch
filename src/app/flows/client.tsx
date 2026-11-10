@@ -126,10 +126,12 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   const gauge = summaryData?.gauge ?? null;
   const coins = summaryData?.coins ?? [];
   const hourly = chartData?.hourly ?? [];
-  const weeklyHourly = (isWeeklyFromChart ? chartData?.hourly : weeklyData?.hourly) ?? [];
+  const weeklyFlowData = isWeeklyFromChart ? chartData : weeklyData;
+  const weeklyHourly = weeklyFlowData?.hourly ?? [];
   const error = summaryError ?? chartError ?? (!isWeeklyFromChart ? weeklyError : null);
   const hasData = !!summaryData || !!chartData;
   const scopeLabel = summaryData?.scope?.label ?? "Configured issuance chains";
+  const chartScopeLabel = chartData?.hourlyScope?.label ?? "Configured issuance chains";
   const sync = summaryData?.sync ?? chartData?.sync ?? null;
   const freshnessQueries: StaleQuery[] = [
     {
@@ -219,6 +221,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         <div className="mt-3 pharos-chart-stage">
           <FlowChart hourly={hourly} isLoading={isChartLoading} publishedWindow={chartData?.window} />
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">Hourly scope: {chartScopeLabel}.</p>
       </section>
 
       <div className={MODULE_FOLD_RHYTHM_CLASS}>
@@ -227,6 +230,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
             coins={coins}
             weeklyHourly={weeklyHourly}
             scopeLabel={scopeLabel}
+            hourlyScopeLabel={weeklyFlowData?.hourlyScope?.label ?? "Configured issuance chains"}
             isLoading={isSummaryLoading || isWeeklyLoading}
           />
         </ModuleDisclosure>
@@ -249,7 +253,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
 
       <footer className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-4 text-xs text-muted-foreground">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>Source: on-chain mint and burn events, {scopeLabel.toLowerCase()}</span>
+          <span>Source: admitted on-chain mint and burn totals, {scopeLabel.toLowerCase()}</span>
           <span aria-hidden="true">·</span>
           <span>Critical-lane sync every {SYNC_CADENCE_MIN} min</span>
           {sync?.lastSuccessfulSyncAt != null ? (

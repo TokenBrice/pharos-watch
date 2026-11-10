@@ -186,6 +186,8 @@ export async function readMintBurnWindowContext(
     segments,
     legacy,
     configs: scope.configs,
+    // Historical hours can recover an isolated leg only with that leg's own proof and rows.
+    hourlyConfigs: [...scope.configs, ...partialLegs],
     partialCoinIds: new Set(partialLegs.map((config) => config.stablecoinId)),
     /** Chains whose aggregate nets lost an established leg. */
     partialChainIds: new Set(partialLegs.map((config) => config.chain.chainId)),

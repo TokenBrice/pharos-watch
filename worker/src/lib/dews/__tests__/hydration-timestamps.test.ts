@@ -12,6 +12,7 @@ import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 import { aggregateFlowCacheKey } from "../../mint-burn-flow-cache-keys";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
+import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 
 const RUN_AT = 1_800_000_000;
 const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
@@ -19,6 +20,42 @@ const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
 afterEach(() => vi.useRealTimers());
 
 describe("DEWS hydration timestamp admission", () => {
+  it.each(["ethereum", "tron", "both", "gap", "debt", "unpriced", "unresolved", "fingerprint", "disabled"])(
+    "proves isolated canonical flow: %s", async (state) => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const end = Math.floor(RUN_AT / 3600) * 3600;
+      const configs = getMintBurnConfigsForStablecoin("usdt-tether");
+      try {
+        insertAdmittedMintBurnGauge(sqlite, end, RUN_AT);
+        const value = JSON.parse(sqlite.prepare("SELECT value FROM cache").get()!.value as string);
+        value.coins[0].coverage.windows.window24h = { complete: false, unavailableReason: "scan-coverage-incomplete" };
+        value.publication.legs = configs.map((config) => {
+          const admitted = state === "tron" && config.chain.chainId === "ethereum"
+            || state === "ethereum" && config.chain.chainId === "tron";
+          return { ...value.publication.legs[0],
+          configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
+          status: admitted ? "admitted" : "pending-admission", reason: admitted ? null : "reactivation-pending" };
+        });
+        if (state === "disabled") value.publication.legs[0].status = "disabled";
+        if (state === "fingerprint") value.publication.legs[0].configFingerprint = "old";
+        sqlite.prepare("UPDATE cache SET value = ?").run(JSON.stringify(value));
+        const config = configs.find((c) => c.chain.chainId === "ethereum")!;
+        await db.batch(mintBurnScanCoverageStatements(db, { configKey: mintBurnConfigKey(config),
+          configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum", fromBlock: 1, toBlock: 2,
+          fromTimestamp: end - (state === "gap" ? 29 : 30) * 86400, toTimestamp: end,
+          finalizedBlock: 2, acceptedAt: end }));
+        insertBurnHour(sqlite, end - 3600);
+        if (state === "debt") sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdt-tether', 'ethereum', ?)").run(end - 3600);
+        if (state === "unpriced") sqlite.exec("UPDATE mint_burn_hourly SET burn_unpriced_event_count = 1");
+        if (state === "unresolved") sqlite.exec("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 1");
+        const result = await hydrateMintBurn({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+        const snapshot = result.mintBurnMap.get("usdt-tether");
+        if (["ethereum", "tron", "both", "unpriced"].includes(state)) {
+          expect(snapshot).toMatchObject({ isolated: true, burn24h: 700000,
+            valuation24h: state === "unpriced" ? "partial" : "complete" });
+        } else expect(snapshot).toBeUndefined();
+      } finally { sqlite.close(); }
+    });
   it.each(["missing", "scope-missing", "scope-missing-disabled", "scope-missing-new", "pending", "disabled", "incomplete", "wrong-window", "quiet", "eventful", "compact", "compact-missing-pairs", "materialization-debt", "classification-unresolved", "classification-unknown"] as const)(
     "keeps mint/burn scan admission distinct from observed data: %s", async (state) => {
       const { sqlite, db } = createLatestSchemaSqlite();
@@ -46,9 +83,7 @@ describe("DEWS hydration timestamp admission", () => {
           sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24), JSON.stringify(value), RUN_AT);
         }
         if (["eventful", "compact", "compact-missing-pairs", "missing", "incomplete", "pending", "disabled"].includes(state) || state.startsWith("scope-missing")) {
-          sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-            mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
-            VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 3600);
+          insertBurnHour(sqlite, end - 3600);
         }
         if (state === "classification-unknown") {
           MINT_BURN_CONFIGS[configIndex] = { ...originalConfig,
@@ -354,9 +389,7 @@ describe("DEWS hydration timestamp admission", () => {
     const end = Math.floor(RUN_AT / 3600) * 3600;
     try {
       insertAdmittedMintBurnGauge(sqlite, end, RUN_AT);
-      sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-        mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
-        VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 25 * 3600);
+      insertBurnHour(sqlite, end - 25 * 3600);
       const registerSourceFailure = vi.fn();
       const hydrated = await hydrateMintBurn({
         db, nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
@@ -376,9 +409,7 @@ describe("DEWS hydration timestamp admission", () => {
     const end = Math.floor(RUN_AT / 3600) * 3600 - 26 * 3600;
     try {
       insertAdmittedMintBurnGauge(sqlite, end, RUN_AT - 3600);
-      sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-        mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
-        VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 3600);
+      insertBurnHour(sqlite, end - 3600);
       const registerSourceFailure = vi.fn();
       const hydrated = await hydrateMintBurn({
         db, nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
@@ -425,4 +456,10 @@ function insertAdmittedMintBurnGauge(
   };
   sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
     .run(aggregateFlowCacheKey(24), JSON.stringify(value), cacheUpdatedAt);
+}
+
+function insertBurnHour(sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"], hour: number): void {
+  sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+    mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+    VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(hour);
 }

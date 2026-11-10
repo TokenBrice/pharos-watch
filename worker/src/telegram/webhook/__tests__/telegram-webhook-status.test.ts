@@ -42,6 +42,13 @@ afterEach(() => {
 });
 
 describe("loadStatusForCoin", () => {
+  it.each([false, true])("gates zero flow on scan completeness %s", async (complete) => {
+    const row = { value: JSON.stringify({ netFlowUsd: 0, scanCoverage: { complete } }), updated_at: Date.now() / 1000 };
+    const status = await loadStatusForCoin(mockD1([
+      { match: "SELECT value, updated_at FROM cache", rows: [], first: row },
+    ]), "usdc-circle");
+    expect(status.flow?.netFlowUsd ?? null).toBe(complete ? 0 : null);
+  });
   it("withholds invalid DEX coverage with an explicit reason", async () => {
     const row = { liquidity_score: 91, total_tvl_usd: 100, updated_at: 123,
       coverage_class: "primary", coverage_confidence: 1.1 };

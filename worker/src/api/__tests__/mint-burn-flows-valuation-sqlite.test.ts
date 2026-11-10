@@ -328,7 +328,8 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
     const incomplete = { complete: false, unavailableReason: "scan-coverage-incomplete" };
     await produce(db, [event("mint", NOW - HOUR, 200_000_000, id),
       event("mint", NOW - HOUR, 400_000_000, id, "tron"),
-      event("burn", NOW - HOUR, 200_000_000, risk, "arbitrum")]);
+      event("burn", NOW - HOUR, 200_000_000, risk, "arbitrum"),
+      event("mint", NOW - 12 * HOUR, 70, id, chain)]);
     const classification = { safeIds: new Set([id]), riskyIds: new Set([risk]),
       safetyScoreIdentity: makeWorkerReportCardsV9Response().safetyScoreIdentity };
     const data = () => aggregateData(db);
@@ -355,7 +356,26 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
     expect(aggregateCoinFlows24h([coin, complete]).net.valueUsd).toBeNull();
     const detail = MintBurnPerCoinResponseSchema.parse(await (await flowResponse(db, `?stablecoin=${id}`)).json());
     expect(detail).toMatchObject({ netFlowUsd: net, scanCoverage: incomplete });
-    expect(detail.hourly[0]?.scanCoverage).toEqual(incomplete);
+    expect(detail.scope?.chainIds).not.toContain(chain);
+    expect(detail.hourlyScope?.chainIds).toEqual(expect.arrayContaining(["ethereum", "tron"]));
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
+      .run(JSON.stringify({ peggedAssets: [{ id, symbol: "USDT", circulating: { peggedUSD: 100 } }] }), NOW);
+    const aggregate = MintBurnFlowsResponseSchema.parse(await (await flowResponse(db)).json());
+    expect(aggregate.hourlyScope?.chainIds).toEqual(expect.arrayContaining(["ethereum", "tron"]));
+    const end = Math.floor(NOW / HOUR) * HOUR;
+    for (const series of [aggregate.hourly, detail.hourly]) {
+      expect(series[0]).toMatchObject({ netFlowUsd: 0, scanCoverage: { complete: true } });
+      expect(series.find((b) => b.hourTs === end - 12 * HOUR))
+        .toMatchObject({ netFlowUsd: 70, scanCoverage: { complete: true } });
+      expect(series.filter((b) => b.hourTs >= end - 9 * HOUR).every((b) => b.netFlowUsd === null && !b.scanCoverage?.complete)).toBe(true);
+    }
+    sqlite.prepare("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 1 WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?")
+      .run(id, chain, end - 12 * HOUR);
+    sqlite.exec("DELETE FROM cache WHERE key LIKE 'mint-burn-flows:%'");
+    const unresolved = MintBurnFlowsResponseSchema.parse(await (await flowResponse(db)).json());
+    expect(unresolved.hourly.find((b) => b.hourTs === end - 12 * HOUR))
+      .toMatchObject({ netFlowUsd: null, classification: { completeness: "partial" } });
+    expect(unresolved.hourly[0]?.netFlowUsd).toBe(0);
   });
   it("per-coin totals carry partial valuation, then complete after a heal rebuild", async () => {
     const { db, sqlite } = await provenFixture();

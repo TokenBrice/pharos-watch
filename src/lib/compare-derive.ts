@@ -88,6 +88,7 @@ export interface FlowSeriesEntry {
   id: string;
   label: string;
   color: string;
+  hourlyScopeLabel?: string;
   /** Hours whose net is available; null or partial-valuation hours are omitted (missing points, never 0). */
   data: { ts: number; netFlowUsd: number }[];
   /** Hourly buckets omitted because their signed net is unavailable. */
@@ -286,6 +287,7 @@ export function deriveFlowSeries({
         data,
         unavailableHours: detail.hourly.length - data.length,
         unknownCoverageHours,
+        hourlyScopeLabel: detail.hourlyScope?.label ?? "Configured issuance chains",
       };
     })
     .filter((series): series is NonNullable<typeof series> => series != null);

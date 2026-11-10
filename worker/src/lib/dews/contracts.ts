@@ -72,6 +72,8 @@ export interface DexPriceSnapshot {
 }
 
 export interface MintBurnSnapshot {
+  /** Independently proven canonical leg of a partially/fully isolated coin; stress-only. */
+  isolated?: boolean;
   /** Known-valuation subtotals (see `mint_burn_hourly`). */
   burn24h: number;
   mint24h: number;

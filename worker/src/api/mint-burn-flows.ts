@@ -157,10 +157,9 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const gaugeScore = computeGaugeScore(gaugeInputs);
   const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
   const hourly = buildHourlyFlowSeries(data.hourlyRows, (ts) =>
-    data.partialCoinIds.size > 0 ? mintBurnScanWindow(false)
-      : mintBurnWindowCoverage(data.configs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark),
+    mintBurnWindowCoverage(data.hourlyConfigs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark),
     { start: data.windowEnd - hours * 3600, end: data.windowEnd },
-    new Set(data.configs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
+    new Set(data.hourlyConfigs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
       .map((config) => mintBurnPairKey(config.stablecoinId, config.chain.chainId))));
   const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
   // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
@@ -211,6 +210,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     windowHours: hours,
     window: { ...mintBurnHourlyWindow(data.windowEnd, hours), watermark: data.watermark },
     scope: buildAggregateScope(data.configs),
+    hourlyScope: buildAggregateScope(data.hourlyConfigs),
     publication: compactMintBurnPublication(data.publication),
     sync: {
       ...data.sync,
@@ -397,9 +397,11 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       ? ACTIVE_MINT_BURN_CONFIGS : configured;
     const context = await readMintBurnWindowContext(db, nowSec, roster);
     const configs = context.configs.filter((config) => config.stablecoinId === stablecoinId);
+    const hourlyConfigs = context.hourlyConfigs.filter((config) => config.stablecoinId === stablecoinId);
     const symbol = configured[0]!.symbol;
     const trackedChainIds = [...new Set(configs.map((config) => config.chain.chainId))];
-    const chainInClause = trackedChainIds.length > 0 ? buildInClause(trackedChainIds) : { sql: "NULL", binds: [] };
+    const hourlyChainIds = [...new Set(hourlyConfigs.map((config) => config.chain.chainId))];
+    const chainInClause = hourlyChainIds.length > 0 ? buildInClause(hourlyChainIds) : { sql: "NULL", binds: [] };
     const syncStartSec = nowSec;
     const window = {
       ...mintBurnHourlyWindow(context.watermark.timestamp ?? nowSec, hours),
@@ -416,13 +418,14 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
            ORDER BY hour_ts ASC`,
         )
           .bind(...chainInClause.binds, stablecoinId, window.start, window.end),
-        prepareMintBurnScanCoverage(db, configs, window.start, window.end),
+        prepareMintBurnScanCoverage(db, hourlyConfigs, window.start, window.end),
       ]),
       readMintBurnCronSnapshot(db),
       getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB),
     ]);
 
-    const rows = ((snapshot[0].results ?? []) as HourlyRow[]).map((row) => ({ ...row, stablecoin_id: stablecoinId }));
+    const hourlyRows = ((snapshot[0].results ?? []) as HourlyRow[]).map((row) => ({ ...row, stablecoin_id: stablecoinId }));
+    const rows = hourlyRows.filter((row) => trackedChainIds.includes(row.chain_id));
     const scanSegments = decodeMintBurnScanCoverage(snapshot[1] as D1Result<MintBurnScanSegment>);
     const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp;
     const freshnessLookupWarning =
@@ -455,10 +458,9 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       };
     });
 
-    const hourly = buildHourlyFlowSeries(rows, (ts) => context.partialCoinIds.has(stablecoinId)
-      ? mintBurnScanWindow(false)
-      : mintBurnWindowCoverage(configs, scanSegments, context.legacy, ts, ts + 3600, context.watermark),
-      window, new Set(configs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
+    const hourly = buildHourlyFlowSeries(hourlyRows, (ts) =>
+      mintBurnWindowCoverage(hourlyConfigs, scanSegments, context.legacy, ts, ts + 3600, context.watermark),
+      window, new Set(hourlyConfigs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
         .map((config) => mintBurnPairKey(config.stablecoinId, config.chain.chainId))));
 
     // Totals
@@ -504,6 +506,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
         chainIds: trackedChainIds,
         label: buildMintBurnScope(configs).label,
       },
+      hourlyScope: buildMintBurnScope(hourlyConfigs),
       sync: {
         ...sync,
         warning: appendSyncWarning(sync.warning, freshnessLookupWarning),

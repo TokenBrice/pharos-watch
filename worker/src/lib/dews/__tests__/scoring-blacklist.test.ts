@@ -49,6 +49,25 @@ function createSourceState(): DewsSourceState {
 }
 
 describe("buildDewsScoringResult peg reference admission", () => {
+  it("retains peer contagion across an isolated-flow WARNING crossing", () => {
+    const sourceState = createSourceState();
+    const assets = ["usdt-tether", "usdc-circle"].map<StablecoinData>((id, i) => ({ ...createAsset(id),
+      priceConfidence: i ? "low" : "fallback", circulating: { peggedUSD: 1e10 },
+      circulatingPrevDay: { peggedUSD: i ? 1.08e10 : 1e11 }, circulatingPrevWeek: { peggedUSD: i ? 1.08e10 : 1e11 } }));
+    assets.forEach((a, i) => sourceState.dexPriceMap.set(a.id, { dexPriceUsd: i ? 0.99 : 0.9, sourceTotalTvl: 2e6, updatedAt: 1 }));
+    const score = () => buildDewsScoringResult({ assetById: new Map(assets.map((a) => [a.id, a])),
+      sourceState, pegRates: {}, registerMalformedPersistedInput: () => {} }).results.find((r) => r.stablecoinId === "usdc-circle")!;
+    const base = score();
+    sourceState.mintBurnAgeSecById.set("usdc-circle", 0);
+    sourceState.mintBurnMap.set("usdc-circle", { isolated: true, burn24h: 3e6, mint24h: 5e5,
+      burnBaseline: 7e5, mintBaseline: 0, baselineDays: 30, valuation24h: "complete", burnBaselineValuation: "complete" });
+    expect(base.score).toBe(63);
+    const raised = score();
+    expect(raised.score).toBe(65);
+    expect(raised.signals.flow.flowScope).toBe("isolated-canonical-leg");
+    assets.shift();
+    expect(score().amplifiers.contagion).toBe(1);
+  });
   it("fails a missing peg type closed instead of scoring a non-USD coin against $1", () => {
     const eurc = {
       ...createAsset("eurc-circle"),

@@ -1,4 +1,5 @@
 import type { MintBurnCoverageStatus } from "@shared/types";
+import { FLOW_COVERAGE_LABELS } from "@shared/lib/classification";
 import type { CoverageStatus } from "@/lib/coverage-types";
 import {
   createDataUnavailableStatus,
@@ -26,13 +27,13 @@ const FLOW_STATUS_PRESETS = {
     sortRank: 3,
     detail: "Configured issuance-chain mint/burn tracking exists, but the full history window is not yet complete.",
   },
-  lagging: {
-    kind: "lagging",
-    label: "Lagging",
-    tone: "amber",
+  tracked: {
+    kind: "tracked",
+    label: FLOW_COVERAGE_LABELS.tracked,
+    tone: "sky",
     available: true,
     sortRank: 2,
-    detail: "Configured issuance-chain mint/burn tracking exists, but sync progress is currently lagging.",
+    detail: "Configured issuance-chain mint/burn tracking has a proved 24-hour scan window; full 30-day history is not implied.",
   },
   bootstrapping: {
     kind: "bootstrapping",
@@ -78,14 +79,15 @@ function resolveFlow(
     return createDataUnavailableStatus("Mint/burn flow");
   }
 
-  return createPresetStatus(FLOW_STATUS_PRESETS[flowCoverageStatus ?? "none"] ?? FLOW_STATUS_PRESETS.none);
+  const status = flowCoverageStatus === "lagging" ? "tracked" : flowCoverageStatus ?? "none";
+  return createPresetStatus(FLOW_STATUS_PRESETS[status] ?? FLOW_STATUS_PRESETS.none);
 }
 
 const FLOWS_LEGEND: readonly CoverageLegendItem[] = [
   {
-    term: "Full / Partial / Lagging / Bootstr.",
-    description: "Mint/burn flow coverage maturity and sync state for configured assets.",
-    kinds: ["full", "partial-history", "lagging"],
+    term: "Full / Partial / Tracked",
+    description: "Mint/burn flow coverage maturity for configured assets. Tracked proves a 24-hour scan window without implying full 30-day history.",
+    kinds: ["full", "partial-history", "tracked"],
   },
   {
     term: "Bootstr.",
@@ -110,7 +112,7 @@ export const coverageFeature = definePresetCoverageFeature({
   breakdown: [
     { key: "full", label: "full" },
     { key: "partial-history", label: "partial" },
-    { key: "lagging", label: "lagging" },
+    { key: "tracked", label: "tracked" },
     { key: "bootstrapping", label: "bootstrapping" },
     { key: "unknown", label: "unknown" },
     { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },

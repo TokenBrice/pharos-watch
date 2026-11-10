@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MintBurnReconciliationSummary, MintBurnSupplyReconciliationLeg, StatusSectionError } from "@shared/types";
+import { FLOW_COVERAGE_BADGE_CLASSES, FLOW_COVERAGE_LABELS } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 import { CountValue, StatusCardEmptyState, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { LazyDetails } from "@/components/status/lazy-details";
@@ -176,6 +177,12 @@ export function MintBurnReconciliationCard({ summary, error }: {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{row.symbol}</span>
                   <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", statusTone(status))}>{status}</span>
+                  {row.coverageStatus === "lagging" ? (
+                    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-semibold", FLOW_COVERAGE_BADGE_CLASSES.lagging)}
+                      title="Scan progress trails its lane cadence; published flows remain bounded by the common watermark.">
+                      {FLOW_COVERAGE_LABELS.lagging}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">Audit coverage: {status === "Verified" ? "All supported contracts verified" : "See contract audit status below"}</p>
                 {!records?.length ? <p className="mt-3 text-xs text-muted-foreground">No matched-block audit available.</p> : records.map((record) => {

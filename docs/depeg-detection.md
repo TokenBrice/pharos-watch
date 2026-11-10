@@ -11,6 +11,8 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
+DEWS v6.45 admits independently proven isolated canonical-leg outflows only when they raise stress; v6.46 caps a lone Mento Broker observation at WATCH unless independent qualifying evidence releases the cap. See [DEWS](./dews.md) for both evidence rules.
+
 Pending release obligations are tracked by [DEWS](./dews.md#methodology-versioning).
 
 DEWS supply/liquidity composites renormalize their existing internal weights over readable legs and persist explicit component coverage; missing component deltas remain null. This changes prospective DEWS scores and potentially bands, not detector onset, confirmation, recovery or PegScore thresholds. The [DEWS component contracts](./dews.md#sub-signal-details) govern full, partial, unavailable and legacy-unknown coverage; retained historical rows keep their original bytes and methodology identity.
