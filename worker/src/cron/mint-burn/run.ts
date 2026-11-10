@@ -41,7 +41,6 @@ import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { getCircuitRecordForAdmission } from "../../lib/circuit-breaker";
 import {
-  COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
   idleMintBurnRepairD1, loadMintBurnCoverageGaps, repairMintBurnCoverage,
 } from "./repair-coverage";
 import { commitMintBurnSupplyProofRepair, loadMintBurnSupplyProofRepairRanges } from "./repair-supply-proofs";
@@ -514,7 +513,6 @@ export class MintBurnRun {
     const pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }> = [];
     const repairProofs: MintBurnScanCoverage[] = [];
     const supplyRepairRanges = new Map<string, { config: MintBurnContractConfig; toBlock: number }>();
-    const repairRangeKey = (key: string, from: number, to: number) => `${key}:${from}:${to}`;
     const deadlineMs = input.deadlineMs ?? Date.now() + 9 * 60_000;
     try {
       const discoveries = await Promise.allSettled([
@@ -534,22 +532,10 @@ export class MintBurnRun {
       for (const range of supplyRanges) {
         supplyRepairRanges.set(`${configKey(range.config)}:${range.fromBlock}`, range);
       }
-      // Both repair queues share one existing 40-request/60-second reserve.
-      const repairs = [...new Map((Math.floor(input.runTimestamp / 1800) % 2 === 0
-        ? [...gaps, ...supplyRanges] : [...supplyRanges, ...gaps]).map((range) =>
-        [repairRangeKey(configKey(range.config), range.fromBlock, range.toBlock), range])).values()];
-      const liveBudget = {
-        count: input.budget.count,
-        limit: repairs.length ? Math.max(input.budget.count, input.budget.limit - COVERAGE_REPAIR_REQUEST_LIMIT) : input.budget.limit,
-      };
-      try {
-        phaseResult = await runMintBurnConfigPhase({
-          ...input, budget: liveBudget,
-          deadlineMs: repairs.length ? deadlineMs - COVERAGE_REPAIR_WINDOW_MS : deadlineMs,
-        });
-      } finally {
-        input.budget.count = liveBudget.count;
-      }
+      // One attempt per config: a window's coverage hole precedes its independent supply replay.
+      const repairs = [...new Map([...supplyRanges, ...gaps].map((range) => [configKey(range.config), range])).values()];
+      // Repairs consume leftovers only; discovery must never reduce live requests or runtime.
+      phaseResult = await runMintBurnConfigPhase({ ...input, deadlineMs });
       phaseResult.coverageRepairs = discoveryFailed ? input.configs.map((config) => ({
         ...createMintBurnConfigSummary(config, configKey(config), config.tier ?? "critical"),
         errors: 1, skippedReason: "repair-runtime-exhausted", repairReason: "repair-runtime-exhausted" as const,

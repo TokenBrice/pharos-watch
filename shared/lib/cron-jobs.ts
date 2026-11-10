@@ -550,7 +550,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "halfHourlyMintBurnCritical",
     triggerMode: "isolated",
     statusImpact: "critical",
-    maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
+    maxConnections: 3, // Three concurrent transaction-context POSTs; other RPC work is serial
   },
   {
     job: "sync-mint-burn-extended",
@@ -558,7 +558,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "hourly",
     scheduleKey: "halfHourlyMintBurnExtended",
     triggerMode: "isolated",
-    maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
+    maxConnections: 3, // Three concurrent transaction-context POSTs; other RPC work is serial
   },
   {
     job: "sync-dex-discovery",

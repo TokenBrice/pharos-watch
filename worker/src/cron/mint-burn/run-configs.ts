@@ -21,6 +21,7 @@ import {
 
 const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
 export const MINT_BURN_PENDING_RUNTIME_BUDGET_MS = 6 * 60_000;
+export const MINT_BURN_REQUEST_RESERVE = 10;
 const MINT_BURN_MIN_CONFIG_WINDOW_MS = 60_000;
 const MINT_BURN_PENDING_MAX_SCAN_RANGE = 500_000;
 
@@ -386,10 +387,10 @@ export async function runMintBurnConfigPhase(input: {
     const configBudgetLimit = Math.max(
       1,
       Math.min(
-        input.budget.limit - input.budget.count - (tier === "extended" ? 10 : 0),
+        input.budget.limit - input.budget.count - (tier === "extended" ? MINT_BURN_REQUEST_RESERVE : 0),
         tierBudgetLimit,
         input.lane === "extended"
-          ? Math.max(minimumScanRequests + retryReserve, input.budget.limit - input.budget.count - 10 - reservedScanRequests[i + 1]!)
+          ? Math.max(minimumScanRequests + retryReserve, input.budget.limit - input.budget.count - MINT_BURN_REQUEST_RESERVE - reservedScanRequests[i + 1]!)
           : tierBudgetLimit,
       ),
     );
