@@ -64,6 +64,8 @@ export interface DexLiquidityPoolState {
   fallback: { weakCoverageCoinsBeforeFallback: number };
   metrics: Map<string, SourcePoolGraph>;
   poolRejections: PoolProcessingRejection[];
+  /** Hold legacy unscoped stages without turning rollout compatibility into a cron error. */
+  legacyRejectionScopes?: boolean;
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   stagedMergedCount: number;

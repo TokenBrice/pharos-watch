@@ -23,6 +23,7 @@ import {
 } from "./fetch-primary";
 import { publishDexPriceChallengerSnapshots } from "./challenger-publish";
 import {
+  assessPoolRejectionCoverage,
   buildPoolRejectionMetadata,
   scopePoolRejections,
   processPoolMetrics,
@@ -65,6 +66,7 @@ import {
 } from "./pool-identity";
 import { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
 import {
+  boundDexLiquidityPriceRefreshMetadata,
   buildDexLiquidityCronMetadata,
   dexLiquidityDegradedReason,
   getDexLiquiditySourceQualityReasons,
@@ -258,7 +260,7 @@ export async function stageDexLiquidityScoring(
       d1Cost: d1Cost.snapshot(),
       phaseTimingsMs,
       stagedWritebackRows: poolState.stagedWritebackRows ?? null,
-      priceRefresh: poolState.priceRefresh,
+      priceRefresh: boundDexLiquidityPriceRefreshMetadata(poolState.priceRefresh),
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,
       syncStartSec,
@@ -309,6 +311,17 @@ async function consumeLoadedDexLiquidityScoringStage(
   signal: AbortSignal | undefined,
   recovery: DexLiquidityStageRecoveryOutcome | null,
 ): Promise<CronResult> {
+  if (staged.poolState.legacyRejectionScopes) {
+    // Preserve the previous publication; never seed sticky unknown coverage from an old header.
+    const reason = "pool-rejection-scope-unavailable";
+    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({
+      reason, sourceSlotStartedAt: staged.sourceSlotStartedAt, sourceState: "ready", acceptedGeneration: null,
+      failedSources: staged.sourceState.failedSources, subgraphFailures: staged.sourceState.subgraphFailures,
+      ...buildPoolRejectionMetadata(staged.poolState.poolRejections,
+        assessPoolRejectionCoverage(staged.poolState.poolRejections, null, new Map())),
+      persistence: { generationId: null, skipped: true, skippedReason: reason },
+    }) };
+  }
   const ctx: DexLiquidityRunContext = {
     db,
     graphApiKey: null,
@@ -800,6 +813,7 @@ async function buildDexLiquidityPoolState(
   });
   const poolRejections = scopePoolRejections(
     [...sourceState.dataSources.poolRejections, ...rejections], sourceState.dataSources.dexProjects,
+    sourceState.dataSources.nonDexProjects,
   );
 
   // Primary pools and display-only enrichment maps have been projected into

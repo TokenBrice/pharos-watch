@@ -649,9 +649,11 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
   if (!decoder.sourceHeader || !decoder.poolHeader) {
     throw new Error("DEX liquidity scoring stage is missing its header record");
   }
-  if (decoder.poolHeader.poolRejections?.some((row) => row.scope == null)) {
-    throw new Error("pool-rejection-scope-unavailable");
-  }
+  const legacyRejectionScopes = decoder.poolHeader.poolRejections?.some((row) => row.scope == null);
+  const poolRejections = (decoder.poolHeader.poolRejections ?? []).map((row) => row.scope == null
+    ? { ...row, scope: "unknown-project" as const, attributionUnavailable: true,
+      details: row.details?.map((detail) => ({ ...detail, scope: "unknown-project" as const })) }
+    : row);
   const { stablecoinPrices = [], primaryPrices, ...sourceHeader } = decoder.sourceHeader;
   const stablecoinPriceById = new Map<string, number>();
   for (const entry of stablecoinPrices) {
@@ -691,7 +693,8 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
     },
     poolState: {
       ...decoder.poolHeader,
-      poolRejections: decoder.poolHeader.poolRejections ?? [],
+      poolRejections,
+      ...(legacyRejectionScopes ? { legacyRejectionScopes: true } : {}),
       metrics: decoder.metrics,
       pancakeMeasuredExecutionTargets: decoder.pancakeMeasuredExecutionTargets,
       slipstreamMeasuredExecutionTargets: decoder.slipstreamMeasuredExecutionTargets,

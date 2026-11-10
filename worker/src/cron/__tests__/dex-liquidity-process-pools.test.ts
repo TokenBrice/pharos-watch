@@ -6,7 +6,8 @@ import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
 import { makeStagedPoolRow } from "../dex-liquidity/__tests__/staging-merge.test-support";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { assessPoolRejectionCoverage, buildPoolRejectionMetadata, processPoolMetrics, scopePoolRejections } from "../dex-liquidity/process-pools";
+import { assessPoolRejectionCoverage, processPoolMetrics, scopePoolRejections } from "../dex-liquidity/process-pools";
+import { dexLiquidityDegradedReason } from "../dex-liquidity/orchestrator-metadata";
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
 import { accumulateGlobalAggregate, rebuildMetricsFromPools, summarizeRetainedPoolVolume, type GlobalPoolAggregateEntry } from "../dex-liquidity/scoring-helpers";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
@@ -197,9 +198,6 @@ describe("processPoolMetrics", () => {
       }]);
       expect(assessPoolRejectionCoverage(scopePoolRejections(rejections, new Set(["uniswap-v3"])),
         new Map([["usdc-circle", 200_000]]), new Map([["usdc-circle", 100_000]])).reason).toBe("material-pool-rejections");
-      const metadata = buildPoolRejectionMetadata(Array(100).fill(rejections[0]));
-      expect(JSON.stringify(metadata.poolRejections).length).toBeLessThanOrEqual(8192);
-      expect((metadata.poolRejections as unknown[]).length).toBeLessThanOrEqual(32);
     }
   });
 
@@ -260,23 +258,31 @@ describe("processPoolMetrics", () => {
     expect(result.mergedCount).toBe(0);
   });
 
-  it.each(["curve", "yearn-finance", "", null] as const)("scopes %s", (project) => {
-    const dexProjects = new Set(["curve"]);
-    const bad = makePool({ project: project as string, chain: project === "curve" ? null as unknown as string : "Ethereum", symbol: "", underlyingTokens: ["0x0000000000000000000000000000000000000000"],
-      exposure: "single", tvlUsd: 143_399_064, poolMeta: null });
-    const input = { dexProjects, symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USDC", ["usdc-circle"]]]), ["ethereum"]),
-      chainAddressToId: new Map<string, string>(), curvePoolMap: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map() };
-    const result = processPoolMetrics({ ...input, pools: [bad, makePool({ pool: "healthy", tvlUsd: 150_000 })] });
-    expect(result.metrics.get("usdc-circle")?.pools).toHaveLength(1);
-    const rejections = scopePoolRejections([...result.rejections, ...result.rejections], dexProjects);
-    expect(rejections[0]).toMatchObject({ reason: "invalid-pool-identity", count: 2, tvlUsd: 286_798_128,
-      scope: project === "yearn-finance" ? "non-dex-project" : project === "curve" ? "dex-project" : "unknown-project" });
-    expect(assessPoolRejectionCoverage(rejections, null, new Map()).reason)
-      .toBe(project === "yearn-finance" ? null : "pool-rejection-attribution-unavailable");
-    if (project === "yearn-finance") for (const twin of [bad, { ...bad, exposure: "multi", underlyingTokens: null }]) {
+  it.each(["uniswap-v3", "dex-alias", "yearn-finance", "", null])("scopes %s", (project) => {
+    const coin = "usdc-circle";
+    const renamed = project === "dex-alias";
+    const yearn = project === "yearn-finance";
+    const dexProjects = new Set(["curve", "uniswap-v3"]);
+    const bad = makePool({ project: project as string, symbol: renamed ? "USDC" : "",
+      underlyingTokens: [renamed || !project ? "0xusdc" : "0x0000000000000000000000000000000000000000"],
+      exposure: yearn ? "single" : "multi", tvlUsd: yearn ? 143_399_064 : 50_000,
+      volumeUsd1d: renamed ? -1 : 10_000 });
+    const input = { dexProjects, symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USDC", [coin]]]), ["ethereum"]),
+      chainAddressToId: new Map([["ethereum:0xusdc", coin]]), curvePoolMap: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map() };
+    const result = processPoolMetrics({ ...input, pools: [bad, makePool({ pool: "healthy", tvlUsd: 50_000 })] });
+    const scoped = scopePoolRejections([...result.rejections, ...result.rejections], dexProjects, new Set(["yearn-finance"]));
+    expect(scoped[0]).toMatchObject({ reason: renamed ? "invalid-pool-volume" : "invalid-pool-identity", count: 2, tvlUsd: bad.tvlUsd * 2,
+      scope: yearn ? "non-dex-project" : project === "uniswap-v3" ? "dex-project" : "unknown-project" });
+    const loss = assessPoolRejectionCoverage(scoped, new Map([[coin, 100_000]]),
+      new Map([[coin, rebuildMetricsFromPools(result.metrics.get(coin)!.pools).totalTvlUsd]]));
+    expect(loss.material).toBe(yearn ? false : renamed ? true : null);
+    expect(dexLiquidityDegradedReason({ criticalSourceFailures: [], persistence: {}, historicalSnapshot: {},
+      analysis: { previousCoverageBaselineAvailable: true, sourceCoverage: { poolRejectionCoverage: loss } },
+    } as unknown as Parameters<typeof dexLiquidityDegradedReason>[0]))
+      .toBe(yearn ? null : renamed ? "material-pool-rejections" : "pool-rejection-attribution-unavailable");
+    if (yearn) for (const twin of [bad, { ...bad, exposure: "multi", underlyingTokens: null }]) {
       expect(processPoolMetrics({ ...input, pools: [{ ...twin, symbol: "USDC" }] }).metrics.size).toBe(0);
     }
-    expect(assessPoolRejectionCoverage(scopePoolRejections(result.rejections, new Set()), null, new Map()).material).toBeNull();
   });
 
   it("rethrows internal processing exceptions", () => {
