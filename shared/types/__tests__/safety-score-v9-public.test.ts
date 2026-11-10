@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { V9ReasonCodeSchema } from "../safety-score-v9";
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentCardBaseSchema,
@@ -21,7 +22,7 @@ import { SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9ScoreTraceSchema 
 import { evaluateV9AccessLookthrough } from "../../lib/safety-score-v9/access-lookthrough";
 import { makeAccessGraph } from "../../lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 
-import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse, partialResponse } from "./safety-score-v9-public.test-support";
+import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse, partialResponse, PRE_DUST_REASON_CODES, previousReader } from "./safety-score-v9-public.test-support";
 import { SafetyGradesResponseSchema } from "../report-cards-v9";
 import { projectV9CompactPartialEvidence } from "../safety-score-v9-causes";
 import { resolveCauseGapId } from "../safety-score-v9-public-cause-gaps";
@@ -30,6 +31,16 @@ import { resolveV9EffectiveScoringWeight } from "../safety-score-v9-public-cause
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "../../lib/__tests__/safety-score-v9-fixtures.test-support";
 
 describe("Compact public cause contracts", () => {
+  it("keeps the pre-dust reader vocabulary and strict object contract", async () => {
+    const reader = await previousReader();
+    const payload = boundedResponse();
+    expect(reader.response.safeParse(payload).success).toBe(true);
+    const card = payload.cards[0]!;
+    expect(reader.card.safeParse({ ...card, negligibleDexRoute: true }).success).toBe(false);
+    card.pillars.backing.reasons[0] = { ...card.pillars.backing.reasons[0]!, negligibleDexRoute: true } as typeof card.pillars.backing.reasons[0];
+    expect(reader.card.safeParse(card).success).toBe(false);
+    expect(V9ReasonCodeSchema.options).toEqual(PRE_DUST_REASON_CODES);
+  });
   it("validates distinct obligation summaries independently of the retained witness count", () => {
     const response = boundedResponse();
     const evidence = response.cards[0]!.scoreTrace.evidenceResponsibility;

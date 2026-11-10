@@ -46,7 +46,7 @@ import type { V9AccessPostureResult } from "./access-posture";
 import type { V9BackingResult } from "./backing-primitives";
 import type { V9EconomicControlResult, V9MintPosture } from "./control-primitives";
 import type { V9CommonModeGroup, V9ResolvedDependencyInputs } from "./dependencies";
-import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
+import { isV9NegligibleDexDiagnostic, type V9ExitEvaluationResult, type V9ExitHolderEligibility } from "./exit";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
 import { computeV9CompactResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
@@ -372,7 +372,9 @@ function projectExitBreakdown(
       key: route.routeKey,
       routeId: route.routeId,
       lane: route.lane,
-      label: routeLabel(input, route),
+      label: isV9NegligibleDexDiagnostic(route)
+        ? `Negligible measured DEX route: ${routeLabel(input, route).slice(0, 120)}`
+        : routeLabel(input, route),
       routeFamily: route.routeFamily,
       score: route.score,
       included: route.included,

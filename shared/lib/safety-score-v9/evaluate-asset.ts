@@ -34,6 +34,7 @@ import {
 } from "./dependencies";
 import {
   evaluateV9Exit,
+  isV9NegligibleDexDiagnostic,
   projectV9ExitEvaluationRoute,
   resolveV9ExitSupplySizing,
   type V9ExitEvaluationResult,
@@ -416,7 +417,6 @@ const REASON_EVIDENCE_LEVEL: Partial<Record<V9ReasonCode, V9EvidenceLevel>> = {
   "missing-reserve-composition": "limited",
   "missing-runtime-route-evidence": "limited",
   "missing-same-notional-route": "limited",
-  "negligible-dex-route": "limited",
   "unproven-settlement-bound": "limited",
   "missing-upgrade-control": "limited",
   "missing-upgradeability-review": "limited",
@@ -775,6 +775,22 @@ function exitPillar(
   envelope: V9ValidatedPolicyEnvelope,
   gapIndex: V9EvaluationGapIndex,
 ): V9PillarEvaluation {
+  const negligible = result.routes.filter(isV9NegligibleDexDiagnostic);
+  if (negligible.length > 0) {
+    const keys = new Set(negligible.map((route) => route.routeKey));
+    const diagnosticGapIds = new Set(asset.exitRoutes.filter((route) => keys.has(route.routeKey)).flatMap((route) => [
+      ...route.status.gapIds, ...Object.values(route.factorStatuses ?? {}).flatMap((status) => status?.gapIds ?? []),
+    ]));
+    asset = { ...asset, exitRoutes: asset.exitRoutes.filter((route) => !keys.has(route.routeKey)) };
+    result = { ...result, routes: result.routes.filter((route) => !keys.has(route.routeKey)) };
+    const retainedGapIds = new Set([...asset.exitStatus.gapIds, ...asset.exitRoutes.flatMap((route) => [
+      ...route.status.gapIds, ...Object.values(route.factorStatuses ?? {}).flatMap((status) => status?.gapIds ?? []),
+    ])]);
+    gapIndex = createV9GapIndex(asset.gaps.filter((gap) => {
+      const routeKey = gap.causeScope?.routeKey ?? (gap.path.kind === "optional-exit" ? gap.path.routeKey : null);
+      return retainedGapIds.has(gap.gapId) || (!diagnosticGapIds.has(gap.gapId) && (routeKey === null || !keys.has(routeKey)));
+    }));
+  }
   const mechanismExitFacts = asset.mechanismExitFacts ?? [];
   const hasRetainedRuntimeRoute = result.routes.some((trace) => {
     if (!trace.included) return false;
@@ -985,6 +1001,9 @@ function exitPillar(
   };
   const evidence = reasonClassifiedEvidence(result.score, pillar.reasons, primaryStrong ? "strong" : "adequate", result.aggregationDisposition === "excluded-a-b");
   return Object.assign(pillar, evidence, {
+    reasons: pillar.reasons.map((reason) => negligible.length > 0 &&
+      (reason.code === "missing-same-notional-route" || reason.code === "missing-runtime-route-evidence")
+      ? { ...reason, message: `${reason.message} Measured DEX capacity is negligible and remains diagnostic.` } : reason),
     // The scorer owns the causes actually priced; diagnostic reasons cannot
     // replace them with a different whole-pillar unknown classification.
     limitedEvidenceCauses: result.limitedEvidenceCauses,
@@ -1822,7 +1841,8 @@ export function evaluateV9Asset({
   };
   // A default price is not evidence that an economic subject was reviewed.
   const hasExitSubject = asset.exitStatus.evidenceRefIds.length > 0 ||
-    asset.exitRoutes.some((route) => route.status.evidenceRefIds.length > 0) ||
+    asset.exitRoutes.some((route) => route.status.evidenceRefIds.length > 0 &&
+      !exit.routes.some((trace) => trace.routeKey === route.routeKey && isV9NegligibleDexDiagnostic(trace))) ||
     (asset.mechanismExitFacts?.some((fact) => fact.evidenceRefIds.length > 0) ?? false);
   const hasControlSubject = asset.controls.some((control) => control.status.evidenceRefIds.length > 0) ||
     Object.values(asset.economicControlReview).some((review) => review.status.evidenceRefIds.length > 0);

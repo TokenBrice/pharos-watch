@@ -231,8 +231,8 @@ describe("configured redemption channel census", () => {
           included: false, capacityPoint: null,
         });
         if (scenario === "measured-zero-dex") {
-          expect(evaluated.reasons).toContain("negligible-dex-route");
-          expect(evaluated.routes.find((route) => route.lane === "dex")).toMatchObject({ included: true, score: 0 });
+          expect(evaluated.routes.find((route) => route.lane === "dex")!.exclusionReason).toBe("missing-same-notional-route");
+          expect(evaluated.routes.find((route) => route.lane === "dex")).toMatchObject({ included: false, score: 0 });
         }
       } finally {
         getConfig.mockRestore();
@@ -532,8 +532,8 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       gaps: asset.gaps, portfolioFactStatus: asset.exitStatus,
       routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
     }, V9_CANDIDATE_POLICY_V1);
-    expect(result.score).toBe(50);
-    expect(result.aggregationDisposition).toBe("included");
+    expect(result.score).toBe(emptyDex ? 50 : null);
+    expect(result.aggregationDisposition).toBe(emptyDex ? "included" : "excluded-a-b");
     if (emptyDex) expect(result.limitedEvidenceCauses).toContain("U");
     expect(result.routes.find((route) => route.routeKey === missing.routeKey)).toMatchObject({
       score: null, included: false, capacityPoint: null,
@@ -827,22 +827,14 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
         portfolioFactStatus: asset.exitStatus,
         routes: [projectV9ExitEvaluationRoute(route)],
       }, V9_CANDIDATE_POLICY_V1);
-      if (coverageClass === "exact-complete") {
-        expect(result.routes[0]).toMatchObject({
-          included: true, score: 0, capacityPoint: { executableUsd: 13 },
-          capsApplied: ["immaterial-executable-capacity"],
-        });
-        expect(result.score).toBe(0);
-        expect(result.reasons).toContain("no-viable-exit-path");
-      } else {
-        expect(result.routes[0]).toMatchObject({
-          included: false, score: null, capacityPoint: null,
-          exclusionReason: "missing-same-notional-route",
-        });
-        expect(result.primaryRouteKey).toBeNull();
-        expect(result.score).toBe(50);
-        expect(result.reasons).not.toContain("no-viable-exit-path");
-      }
+      expect(result.routes[0]).toMatchObject({ included: false,
+        score: coverageClass === "exact-complete" ? 0 : null,
+        capacityPoint: { executableUsd: 13 }, capsApplied: ["immaterial-executable-capacity"],
+        exclusionReason: "missing-same-notional-route",
+      });
+      expect(result.primaryRouteKey).toBeNull();
+      expect(result.score).toBe(0);
+      expect(result.reasons).toContain("no-viable-exit-path");
     },
   );
 

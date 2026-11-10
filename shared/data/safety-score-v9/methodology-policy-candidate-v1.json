@@ -2358,13 +2358,6 @@
       "boundedness": "not-applicable", "permittedTreatments": ["diagnostic"], "defaultTreatment": "diagnostic",
       "releaseSeverity": "diagnostic", "auditClassification": "unresolved-methodology",
       "publicLabel": "Score below the F threshold without a measured adverse fact"
-    },
-    {
-      "code": "negligible-dex-route", "ownerDomain": "exit",
-      "archetypes": ["*"], "pathKinds": ["optional-exit"], "defaultFactClass": "known-current",
-      "boundedness": "globally-bounded", "permittedTreatments": ["diagnostic"], "defaultTreatment": "diagnostic",
-      "releaseSeverity": "diagnostic", "auditClassification": "unresolved-methodology",
-      "publicLabel": "Measured DEX capacity is negligible; other exits remain unmeasured"
     }
   ]
 }

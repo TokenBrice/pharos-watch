@@ -154,6 +154,10 @@ export interface V9ExitEvaluationResult {
   routes: readonly V9ExitRouteTrace[];
 }
 
+export function isV9NegligibleDexDiagnostic(route: V9ExitRouteTrace): boolean {
+  return route.lane === "dex" && !route.included && route.capsApplied.includes("immaterial-executable-capacity");
+}
+
 /**
  * The pillar uses the clamped supply share continuously. The observation grid
  * sizes producer measurements, not the liability the holder needs to exit.
@@ -431,6 +435,7 @@ function resolveIncludedRouteCapacity(
   route: V9ExitEvaluationRoute,
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
+  includeDiagnosticZero = false,
 ):
   | { state: "included"; capacityPoint: V9ExitCapacityPoint; valuedExecutableUsd: number; costEvidence: "measured" | "upper-bound" }
   | { state: "excluded"; exclusionReason: V9ReasonCode | null }
@@ -455,7 +460,7 @@ function resolveIncludedRouteCapacity(
   if (capacityPoint === null) return { state: "incomparable" };
   // A modeled zero is not an exhaustion measurement. A missing settlement
   // bound also cannot turn a zero lower bound into executable recovery.
-  if (capacityPoint.executableUsd === 0 && !isExhaustionMeasurement(route)) {
+  if (capacityPoint.executableUsd === 0 && !isExhaustionMeasurement(route) && !includeDiagnosticZero) {
     return { state: "excluded", exclusionReason: route.settlementBoundUnproven
       ? "unproven-settlement-bound" : "missing-same-notional-route" };
   }
@@ -1119,6 +1124,30 @@ export function evaluateV9Exit(
       supportedComponentCeiling: null, exclusionReason: null,
     };
   });
+  const negligible = new Map<string, V9ExitRouteTrace>();
+  for (const [index, route] of routes.entries()) {
+    if (route.lane !== "dex") continue;
+    // Read raw capacity, before valuation/rounding; zero lower bounds are diagnostic only.
+    const capacity = resolveIncludedRouteCapacity(route, stressRequest, envelope, true);
+    if (capacity.state !== "included" || hasMaterialExitCapacity({
+      executableCapacityUsd: capacity.capacityPoint.executableUsd,
+      requestedNotionalUsd: stressRequest.rawSupplyRequestUsd,
+    }, envelope.policy.semantic.exit)) continue;
+    const trace = traces[index]!;
+    negligible.set(route.routeKey, { ...trace, included: false, effectiveScoringWeight: 0,
+      capacityPoint: trace.capacityPoint ?? { ...capacity.capacityPoint,
+        executableUsd: roundTo(capacity.valuedExecutableUsd, 2),
+        completionRatio: roundTo(capacity.valuedExecutableUsd / stressRequest.requestedNotionalUsd, 2),
+      }, exclusionReason: "missing-same-notional-route",
+      capsApplied: uniqueSorted([...trace.capsApplied, "immaterial-executable-capacity"]),
+    });
+  }
+  if (negligible.size > 0) {
+    // Dust is evidence about its own route, never a change to the dust-free verdict or its pricing provenance.
+    const withoutDust = evaluateV9Exit({ ...args, routes: args.routes.filter((route) => !negligible.has(route.routeKey)) }, envelope);
+    const retained = new Map(withoutDust.routes.map((route) => [route.routeKey, route]));
+    return { ...withoutDust, routes: routes.map((route) => negligible.get(route.routeKey) ?? retained.get(route.routeKey)!) };
+  }
   let evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
     .sort((left, right) => right.score - left.score || compareText(left.route.routeKey, right.route.routeKey));
@@ -1135,32 +1164,18 @@ export function evaluateV9Exit(
         : routeCause(route, "capacity").cause !== null ? routeCause(route, "capacity") : routeCause(route);
   };
   const excludedGap = (trace: V9ExitRouteTrace) => excludedCause(trace).excluded;
-  const negligibleDexRoutes = new Set(evaluated.filter(({ route }) => {
-    if (route.lane !== "dex") return false;
-    // Traces contain rounded, valued recovery; materiality uses raw capacity.
-    const capacity = resolveIncludedRouteCapacity(route, stressRequest, envelope);
-    return capacity.state === "included" && !hasMaterialExitCapacity({
-      executableCapacityUsd: capacity.capacityPoint.executableUsd,
-      requestedNotionalUsd: stressRequest.rawSupplyRequestUsd,
-    }, envelope.policy.semantic.exit);
-  }).map(({ route }) => route.routeKey));
-  const onlyNegligibleDex = evaluated.length > 0 && negligibleDexRoutes.size === evaluated.length;
-  // Local DEX exhaustion, including measured zero, proves nothing about an
-  // unmeasured rail or incomplete census. Keep the measurement diagnostic.
+  // A submaterial redemption measurement cannot establish exhaustion beside an unmeasured rail.
   if (evaluated.length > 0 &&
-    evaluated.every((candidate) => candidate.trace.capsApplied.includes("immaterial-executable-capacity") ||
-      negligibleDexRoutes.has(candidate.route.routeKey)) &&
+    evaluated.every((candidate) => candidate.trace.capsApplied.includes("immaterial-executable-capacity")) &&
     (inventoryCause.cause === "A" || inventoryCause.cause === "C" || inventoryCause.cause === "U" ||
-      (onlyNegligibleDex && (args.portfolioStatus !== "reviewed-complete" || inventoryCause.cause === "B")) ||
       traces.some((trace, index) => {
         if (trace.included || trace.exclusionReason === null ||
           routes[index]!.applicability === "not-applicable" || routes[index]!.routeSuspension) return false;
         const causal = excludedCause(trace);
-        return causal.cause !== "D" && (!causal.excluded || causal.cause === "A" || onlyNegligibleDex);
+        return causal.cause !== "D" && (!causal.excluded || causal.cause === "A");
       }))) {
     evaluated = [];
     pillarMetadata.supportedComponentKeys = [];
-    if (negligibleDexRoutes.size > 0) diagnosticReasons.push("negligible-dex-route");
   }
   if (evaluated.length === 0) {
     const hasBoundedMissingRoute = diagnosticReasons.includes("missing-same-notional-route") ||

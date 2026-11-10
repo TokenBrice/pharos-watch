@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import type { V9AssetFactsBase, V9FactStatusV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
-import { createV9FactGapV3 } from "../safety-score-v9/reasons";
+import type { V9AssetFactsBase } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9Exit,
   isV9CreditableNonAtomicRedemption,
@@ -14,6 +13,7 @@ import {
 
 import {
   makeExitRoute,
+  makeExitGap as gap,
   makeDocumentedRedemption,
   makeNormalizedExitRoute,
 } from "./safety-score-v9-exit.test-support";
@@ -979,43 +979,22 @@ describe("evaluateV9Exit", () => {
   });
 
   it("floors a zero-capacity route to zero instead of letting an undisclosed cost carry it", () => {
-    // The exact shape that scored 35.61 before the floor: capacity carries 25%
-    // of the ladder, so access/settlement/execution/output plus a
-    // boundedCostScore awarded *because* the cost is undisclosed used to carry
-    // a route that provably clears $0 at the stress cost. A DEX route exercises
-    // this general zero-capacity floor independently of the discounted
-    // redemption-credit path.
+    // Missing cost cannot grant credit to a measured zero, even when the route is diagnostic.
     const zeroCapacity = route({
       routeKey: "dex:undisclosed-cost",
       lane: "dex",
       routeFamily: "dex-amm",
       evidenceKind: "measured-executable-depth",
-      access: "issuer-api",
-      holderEligibility: "verified-customer",
-      settlement: "same-day",
       settlementDelaySec: 86_400,
       modelConfidence: "medium",
-      capacityCurve: [
-        {
-          requestedNotionalUsd: 1_000_000,
-          maxCostBps: 200,
-          executableUsd: 0,
-          completionRatio: 0,
-          // At or above the request bound, so the cost component is the
-          // bounded-unknown midpoint rather than a measurement.
-          executionCostBps: 200,
-        },
-      ],
+      capacityCurve: route().capacityCurve.map((point) => ({ ...point, executableUsd: 0, completionRatio: 0, executionCostBps: 200 })),
     });
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCapacity] }, V9_CANDIDATE_POLICY_V1);
     const trace = result.routes.find((entry) => entry.routeKey === "dex:undisclosed-cost");
-    expect(trace?.included).toBe(true);
+    expect(trace?.included).toBe(false);
     expect(trace?.capacityPoint?.executableUsd).toBe(0);
-    // The non-capacity ladder is untouched — the floor, not a component change,
-    // is what removes the score.
     expect(trace?.components?.cost).toBe(50);
     expect(trace?.components?.capacity).toBe(0);
-    expect(trace?.score).not.toBeCloseTo(35.61, 2);
     expect(trace?.score).toBe(0);
     expect(trace?.capsApplied).toContain("zero-executable-capacity");
   });
@@ -1039,14 +1018,13 @@ describe("evaluateV9Exit", () => {
       evaluateV9Exit({ circulatingUsd: 1_000_000_000, routes: [shoulder(executableUsd)] }, V9_CANDIDATE_POLICY_V1)
         .routes.find((entry) => entry.routeKey === "dex:thin-depth");
     const immaterial = evaluate(13.93);
-    expect(immaterial?.included).toBe(true);
+    expect(immaterial?.included).toBe(false);
     expect(immaterial?.score).toBe(0);
     expect(immaterial?.capsApplied).toContain("immaterial-executable-capacity");
     const exit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit;
     const absoluteFloor = exit.absoluteCapacityBreakpoints.find(
       (point) => point.value > 0 && point.score > 0,
     )!.value;
-    expect(absoluteFloor).toBe(100_000);
     const material = evaluate(absoluteFloor);
     expect(material?.score).toBeGreaterThan(0);
     expect(material?.score).toBeLessThanOrEqual(50);
@@ -1527,29 +1505,6 @@ describe("issuer payout output quality", () => {
 });
 
 describe("cause-aware Exit and max-feasible portfolios", () => {
-  function gap(cause: "A" | "B" | "C" | "U", id: string): { status: V9FactStatusV2; gap: V9FactGapV3 } {
-    const proof = cause === "A" ? {
-      cause, producerState: "stale-producer" as const, sourceId: "route-producer", sourceGenerationId: "captured",
-      observedAtSec: 100, rejectionCode: "route-observation-stale", evidenceRefIds: ["attempt"],
-    } : cause === "U" ? { cause, reason: "not-yet-researched" as const, evidenceRefIds: [] as [] }
-      : cause === "B" ? {
-        cause, proofOrigin: "typed-review" as const, classificationId: id, reviewedAt: "2026-10-01",
-        sources: [{ url: "https://issuer.example/terms", assertion: "The exact route datum is public." }],
-        evidenceRefIds: ["review"], assertion: "required-data-public" as const,
-      } : {
-        cause, proofOrigin: "typed-review" as const, classificationId: id, reviewedAt: "2026-10-01",
-        sources: [{ url: "https://issuer.example/terms", assertion: "The exact route datum was researched." }],
-        evidenceRefIds: ["review"], assertion: "researched-nondisclosure" as const,
-        rationale: "The required current datum is not published.",
-      };
-    return {
-      status: { applicability: { state: "required", policyRuleId: "route-factor", rationale: null, gapId: null },
-        observationState: "bounded-unknown", evidenceRefIds: [], gapIds: [id] },
-      gap: createV9FactGapV3({ gapId: id, reasonCode: "missing-same-notional-route", ownerDomain: "exit",
-        policyRuleId: "route-factor", responsibility: "unresearched", observationState: "bounded-unknown",
-        path: { kind: "optional-exit", routeKey: "route" }, message: "Scoped datum gap.", causeProof: proof }),
-    };
-  }
   const evaluate = (routes: V9ExitEvaluationRoute[], policy = V9_CANDIDATE_POLICY_V1) =>
     evaluateV9Exit({ circulatingUsd: 20_000_000, routes }, policy);
 
@@ -1730,13 +1685,14 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
       });
       for (const routes of [[tiny, unavailable], [unavailable, tiny]]) {
         const result = evaluate(routes);
-        expect(result).toMatchObject({ score: 50, primaryRouteKey: null, supportedComponentKeys: [] });
-        expect(result.limitedEvidenceCauses).toEqual(cause === "B" ? [] : [cause]);
+        const baseline = evaluate([unavailable]);
+        expect(result).toMatchObject({ score: baseline.score, aggregationDisposition: baseline.aggregationDisposition,
+          limitedEvidenceCauses: baseline.limitedEvidenceCauses, primaryRouteKey: null, supportedComponentKeys: [] });
         expect(result.causeGapIds).toContain(missing.gap.gapId);
-        expect(result.reasons).toEqual(expect.arrayContaining(["missing-same-notional-route", "negligible-dex-route"]));
+        expect(result.reasons).toEqual(expect.arrayContaining(["missing-same-notional-route"]));
         expect(result.reasons).not.toContain("no-viable-exit-path");
         expect(result.routes.find((trace) => trace.routeKey === tiny.routeKey)).toMatchObject({
-          score: 0, capacityPoint: { executableUsd },
+          score: 0, included: false, capacityPoint: { executableUsd },
         });
       }
       const exhausted = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
@@ -1752,7 +1708,9 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
       const inventory = evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
         portfolioFactStatus: missing.status, gaps: [missing.gap], routes: [tiny],
       }, V9_CANDIDATE_POLICY_V1);
-      expect(inventory.score).toBe(50);
+      expect(inventory.score).toBe(evaluateV9Exit({ circulatingUsd: 20_000_000, portfolioStatus: "reviewed-complete",
+        portfolioFactStatus: missing.status, gaps: [missing.gap], routes: [],
+      }, V9_CANDIDATE_POLICY_V1).score);
       expect(inventory.reasons).not.toContain("no-viable-exit-path");
     }
   });

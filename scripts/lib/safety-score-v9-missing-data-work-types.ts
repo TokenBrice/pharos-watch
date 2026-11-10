@@ -326,7 +326,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       ],
       // Route and portfolio diagnostics add no curation obligation; the
       // missing-route reasons above own the unresolved work.
-      "non-curation": ["correlated-exit-routes", "no-viable-exit-path", "negligible-dex-route"],
+      "non-curation": ["correlated-exit-routes", "no-viable-exit-path"],
     }),
     context: exitContext,
     touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
