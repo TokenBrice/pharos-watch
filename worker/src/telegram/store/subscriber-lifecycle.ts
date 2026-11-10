@@ -1,6 +1,11 @@
 import { executeAtomicBatch } from "../../lib/db";
 import { unixNowSec as unixNow } from "@shared/lib/time-constants";
-import { TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX } from "../common/constants";
+import {
+  TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX,
+  TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC,
+  TELEGRAM_GROUP_WELCOME_PENDING_PREFIX,
+  TELEGRAM_PROCESSING_STALE_SEC,
+} from "../common/constants";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
@@ -195,6 +200,12 @@ const CHAT_MIGRATION_CACHE_KEY_BUILDERS = [
   (chatId: string) => `telegram:group-welcome:${chatId}`,
 ] as const;
 
+/** Pending ownership expires quickly; legacy and confirmed sent markers suppress for a day. */
+export function telegramGroupWelcomeDeadlineSql(row: "cache" | "excluded"): string {
+  return `${row}.updated_at + CASE WHEN ${row}.value GLOB '${TELEGRAM_GROUP_WELCOME_PENDING_PREFIX}*'
+    THEN ${TELEGRAM_PROCESSING_STALE_SEC} ELSE ${TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC} END`;
+}
+
 function prepareChatMigrationCacheStatements(
   db: D1Database,
   oldChatId: string,
@@ -212,6 +223,10 @@ function prepareChatMigrationCacheStatements(
     ...CHAT_MIGRATION_CACHE_KEY_BUILDERS.flatMap((buildKey) => {
       const oldKey = buildKey(oldChatId);
       const newKey = buildKey(newChatId);
+      const deadlineSql = oldKey.startsWith("telegram:group-welcome:")
+        ? telegramGroupWelcomeDeadlineSql
+        : (row: "cache" | "excluded") => `${row}.updated_at`;
+      const incomingWins = `${deadlineSql("cache")} <= ${deadlineSql("excluded")}`;
       return [
         db.prepare(`
           INSERT INTO cache (key, value, updated_at)
@@ -220,10 +235,10 @@ function prepareChatMigrationCacheStatements(
            WHERE key = ?
           ON CONFLICT(key) DO UPDATE SET
             value = CASE
-              WHEN cache.updated_at <= excluded.updated_at THEN excluded.value
+              WHEN ${incomingWins} THEN excluded.value
               ELSE cache.value
             END,
-            updated_at = MAX(cache.updated_at, excluded.updated_at)
+            updated_at = CASE WHEN ${incomingWins} THEN excluded.updated_at ELSE cache.updated_at END
         `).bind(newKey, oldKey),
         db.prepare("DELETE FROM cache WHERE key = ?").bind(oldKey),
       ];

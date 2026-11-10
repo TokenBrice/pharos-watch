@@ -76,9 +76,17 @@ The ingress flood cap is one 20 actions / 60 seconds counter per chat, shared
 by commands, callbacks and pending replies. Commands have no separate
 cooldowns; the Mini App keeps its own cooldown rows.
 
-Group welcome idempotency is stamped only when the audited welcome reply reports
-success; the webhook does not perform a second diagnostics read to infer whether
-the send succeeded.
+Group welcomes atomically acquire a short-lived `pending:<attempt owner>` marker
+in the existing cache row. Acquisition and the send-start renewal are retry-idempotent
+for that exact owner; renewal also fences out an expired or replaced owner. A busy
+pending welcome returns `503 retry` and releases the ingress claim without marking
+the update processed, so crash redelivery waits for the welcome lease to expire.
+Only an audited successful send stamps the day-long sent marker (`1`, also the
+legacy format); failure cleanup is owner-fenced. A crash after sending but before
+that stamp can still repeat a welcome on redelivery. Chat migration keeps the
+marker with the later effective suppression deadline, preserving its value and
+clock together; pending markers use the ingress stale window, sent markers the
+welcome cache TTL.
 
 ### Supported Commands
 
