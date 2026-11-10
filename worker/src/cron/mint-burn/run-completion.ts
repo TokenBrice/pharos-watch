@@ -80,6 +80,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     .filter((summary) => summary.conservationFailure).length;
   const admittedConservationFailures = [...admittedBreakdown, ...(phase.coverageRepairs ?? [])]
     .filter((summary) => !isPending(summary.key) && summary.conservationFailure).length;
+  const readbackDeadline = [...admittedBreakdown, ...(phase.coverageRepairs ?? [])].some((summary) =>
+    !isPending(summary.key) && summary.supplyProofReason === "persisted-event-readback-deadline");
   const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
   const scanCoverageUnproven = phase.configBreakdown.filter((summary) =>
     summary.advanceReason === "scan-coverage-unproven").length;
@@ -98,7 +100,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   // window. `cycle-in-progress` (no completed pass yet) stays neutral.
   const coverageCycleStalled = input.coverageCycle?.status === "stalled";
   const coverageCycleStuck = (input.coverageCycle?.stuckConfigCount ?? 0) > 0;
-  const degradedSignal = admittedScanCoverageUnproven > 0 || admittedFinalityUnavailableChains.length > 0 || admittedConservationFailures > 0 || (
+  const degradedSignal = readbackDeadline || admittedScanCoverageUnproven > 0 || admittedFinalityUnavailableChains.length > 0 || admittedConservationFailures > 0 || (
     input.lane === "extended"
       ? admittedApiErrors > 1 || coverageCycleStalled || coverageCycleStuck
       : criticalCoverageRatio < 1 || admittedApiErrors > 1);
@@ -119,6 +121,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     status === "ok"
     && (
       admittedConservationFailures > 0
+      || readbackDeadline
       || admittedFinalityUnavailableChains.length > 0
       || coverageCycleStalled
       || coverageCycleStuck

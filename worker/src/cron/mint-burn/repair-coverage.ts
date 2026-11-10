@@ -3,6 +3,8 @@ import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
+import { setCacheIfNewer } from "../../lib/db-cache";
+import { loadMintBurnSupplyProofRepairCursor, mintBurnSupplyProofRepairCursorKey } from "./repair-supply-proofs";
 import { MINT_BURN_PENDING_RUNTIME_BUDGET_MS, type runMintBurnConfigPhase } from "./run-configs";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
@@ -130,8 +132,10 @@ export async function repairMintBurnCoverage(
   for (let i = 0; i < Math.min(gaps.length, COVERAGE_REPAIR_MAX_CONFIGS); i++) {
     throwIfAborted(input.signal);
     const gap = gaps[(offset + i) % gaps.length]!;
-    const { config, fromBlock, toBlock } = gap;
+    const { config, fromBlock } = gap;
     const key = mintBurnConfigKey(config);
+    const cursor = await loadMintBurnSupplyProofRepairCursor(input.db, config);
+    const toBlock = Math.min(gap.toBlock, fromBlock + (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) - 1);
     const configDeadlineMs = input.pendingAdmissionKeys?.has(key)
       ? Math.min(deadlineMs, input.runTimestamp * 1000 + MINT_BURN_PENDING_RUNTIME_BUDGET_MS) : deadlineMs;
     const summary: MintBurnCoverageRepairSummary = {
@@ -179,6 +183,19 @@ export async function repairMintBurnCoverage(
       if (result.scanCoverage?.toBlock === toBlock && result.newLastBlock === toBlock) {
         pendingProofs.push(result.scanCoverage);
         summary.repairReason = "proof-staged";
+      }
+      // Scheduling state is not certified progress. Keep the cursor behind the
+      // caller's materialization fence, including after partially persisted work.
+      const deadlineOnly = !summary.conservationFailure && !result.rpcEvidenceIncomplete && summary.errors > 0
+        && summary.failedEventDefs.length > 0 && summary.failedEventDefs.every((reason) =>
+          reason === "range-proof:persisted-event-readback-deadline");
+      const span = toBlock - fromBlock + 1;
+      const maxBlocks = deadlineOnly ? Math.max(1, Math.floor(span / 2))
+        : summary.repairReason === "proof-staged" ? Math.min(COVERAGE_REPAIR_MAX_BLOCKS,
+          (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) * 2) : null;
+      if (maxBlocks != null && maxBlocks !== (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS)) {
+        await setCacheIfNewer(input.db, mintBurnSupplyProofRepairCursorKey(key),
+          JSON.stringify({ ...cursor, maxBlocks }), input.runTimestamp, input.signal);
       }
     } catch (error) {
       rethrowIfAborted(error, input.signal);

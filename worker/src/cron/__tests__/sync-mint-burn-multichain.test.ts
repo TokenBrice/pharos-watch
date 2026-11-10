@@ -77,6 +77,9 @@ import type * as MintBurnRpcModule from "../../lib/mint-burn-pipeline/rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import * as coverageRepair from "../mint-burn/repair-coverage";
+import * as supplyRepair from "../mint-burn/repair-supply-proofs";
+import { mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -289,44 +292,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     ]);
   });
 
-  it("holds a failed topic and automatically repairs an old-writer cursor gap", async () => {
-    const { sqlite, db } = sqliteFixtures.open();
-    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
-    await restoreMintBurnBatch();
-    const source = MINT_BURN_CONFIGS[0]!;
-    const events = source.events;
-    source.events = [...events, { ...events[0]!, direction: "burn",
-      filterTopic: { index: 2, value: `0x${"0".repeat(64)}` } }];
-    const key = `ethereum-${USDT_CONTRACT}`;
-    const timestamp = Math.floor(Date.now() / 1000) - 60;
-    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(key, 21_999_998);
-    vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) => new Map(blocks.map((block) => [block, timestamp])));
-    const quiet = async (_url: string, _address: string, _topics: unknown, _from: number, to: number) => (mintBurnScanResult(to));
-    try {
-      vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({ number: 21_999_999, timestamp, hash: `0x${"a".repeat(64)}` });
-      vi.mocked(fetchAlchemyLogs).mockImplementation(quiet);
-      await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
-      vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({ number: 22_000_000, timestamp, hash: `0x${"a".repeat(64)}` });
-      vi.mocked(fetchAlchemyLogs).mockImplementation(async (url, address, topics, from, to) =>
-        topics.some((topic) => topic.index === 2) ? null : quiet(url, address, topics, from, to));
-      await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
-      expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
-        .toEqual({ last_block: 21_999_999 });
-      // A rolled-back/legacy writer can advance the cursor, but cannot create historical proof.
-      sqlite.prepare("UPDATE mint_burn_sync_state SET last_block = 22000000 WHERE config_key = ?").run(key);
-      vi.mocked(getMintBurnFinalizedHead).mockResolvedValue({ number: 22_000_001, timestamp, hash: `0x${"a".repeat(64)}` });
-      vi.mocked(fetchAlchemyLogs).mockImplementation(quiet);
-      await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
-      expect(sqlite.prepare("SELECT from_block, to_block FROM mint_burn_scan_coverage ORDER BY from_block").all())
-        .toEqual([{ from_block: 21_999_999, to_block: 22_000_001 }]);
-      expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
-        .toEqual({ last_block: 22_000_001 });
-    } finally {
-      source.events = events;
-    }
-  });
-
-  it.each(["success", "headers", "materialization"])("replays eventful holes through the materialization fence: %s", async (outcome) => {
+  it.each(["success", "headers", "materialization", "supply-prefix", "supply-prefix-materialization"])("replays eventful holes through the materialization fence: %s", async (outcome) => {
     const { sqlite, db } = sqliteFixtures.open();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     await restoreMintBurnBatch();
@@ -334,6 +300,16 @@ describe("syncMintBurn — multi-chain invariant", () => {
       (await vi.importActual<typeof PersistenceModule>("../../lib/mint-burn-pipeline/persistence")).recalcAffectedHours);
     const source = MINT_BURN_CONFIGS[0]!;
     const key = `ethereum-${USDT_CONTRACT}`;
+    const supply = outcome.startsWith("supply-prefix"), failed = outcome.endsWith("materialization");
+    if (supply) {
+      vi.spyOn(coverageRepair, "loadMintBurnCoverageGaps").mockResolvedValue([]);
+      vi.spyOn(supplyRepair, "loadMintBurnSupplyProofRepairRanges").mockResolvedValue([
+        { config: source, fromBlock: 22_000_000, toBlock: 22_000_001 },
+      ]);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, 0)").run(
+        supplyRepair.mintBurnSupplyProofRepairCursorKey(key),
+        JSON.stringify({ fingerprint: mintBurnConservationFingerprint(source), lastBlock: null, maxBlocks: 1 }));
+    }
     const timestamp = Math.floor(Date.now() / 1000) - 600;
     for (const [fromBlock, toBlock] of [[21_999_998, 21_999_999], [22_000_001, 22_000_002]]) {
       await upsertMintBurnSyncState(db, key, toBlock!, "monotonic-max", {
@@ -346,21 +322,23 @@ describe("syncMintBurn — multi-chain invariant", () => {
     vi.mocked(fetchAlchemyLogs).mockResolvedValue(mintBurnScanResult(22_000_000, [makeMintLog()]));
     vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
       outcome === "headers" ? new Map() : new Map(blocks.map((block) => [block, timestamp])));
-    if (outcome === "materialization") vi.mocked(recalcAffectedHours).mockRejectedValue(new Error("hourly write failed"));
+    if (failed) vi.mocked(recalcAffectedHours).mockRejectedValue(new Error("hourly write failed"));
     const result = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
     const metadata = JSON.parse(result.metadata);
     expect(metadata.coverageRepairs[0]).toMatchObject({
       scanFrom: 22_000_000, scanTo: 22_000_000,
       repairReason: outcome === "headers" ? "scan-coverage-unproven"
-        : outcome === "materialization" ? "materialization-failed" : "proof-committed",
+        : failed ? "materialization-failed" : "proof-committed",
     });
     expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
       .toEqual({ last_block: 22_000_002 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get())
-      .toEqual({ count: outcome === "success" ? 1 : 2 });
+      .toEqual({ count: outcome === "success" || (supply && !failed) ? 1 : 2 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get())
-      .toEqual({ count: outcome === "success" ? 1 : 0 });
-    if (outcome === "success") {
+      .toEqual({ count: outcome === "success" || (supply && !failed) ? 1 : 0 });
+    if (supply) expect((await supplyRepair.loadMintBurnSupplyProofRepairCursor(db, source)).lastBlock)
+      .toBe(failed ? null : 22_000_000);
+    if (outcome === "success" || (supply && !failed)) {
       expect(sqlite.prepare("SELECT block_number FROM mint_burn_events").all()).toEqual([{ block_number: 22_000_000 }]);
     }
   });

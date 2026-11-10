@@ -520,7 +520,7 @@ export class MintBurnRun {
     let recalcError: string | null = null;
     const pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }> = [];
     const repairProofs: MintBurnScanCoverage[] = [];
-    const supplyRepairRanges = new Map<string, MintBurnContractConfig>();
+    const supplyRepairRanges = new Map<string, { config: MintBurnContractConfig; toBlock: number }>();
     const repairRangeKey = (key: string, from: number, to: number) => `${key}:${from}:${to}`;
     const deadlineMs = input.deadlineMs ?? Date.now() + 9 * 60_000;
     try {
@@ -529,7 +529,7 @@ export class MintBurnRun {
         loadMintBurnSupplyProofRepairRanges(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp),
       ]);
       for (const range of supplyRanges) {
-        supplyRepairRanges.set(repairRangeKey(configKey(range.config), range.fromBlock, range.toBlock), range.config);
+        supplyRepairRanges.set(`${configKey(range.config)}:${range.fromBlock}`, range);
       }
       // Both repair queues share one existing 40-request/60-second reserve.
       const repairs = [...new Map((Math.floor(input.runTimestamp / 1800) % 2 === 0
@@ -597,9 +597,10 @@ export class MintBurnRun {
         for (const proof of repairProofs) {
           if (!includesKey(proof.configKey)) continue;
           throwIfAborted(input.signal);
-          const supplyConfig = supplyRepairRanges.get(repairRangeKey(proof.configKey, proof.fromBlock, proof.toBlock));
-          if (supplyConfig) await commitMintBurnSupplyProofRepair(this.db, supplyConfig, proof);
-          else {
+          const supplyRange = supplyRepairRanges.get(`${proof.configKey}:${proof.fromBlock}`);
+          if (supplyRange && proof.toBlock <= supplyRange.toBlock) {
+            await commitMintBurnSupplyProofRepair(this.db, supplyRange.config, proof);
+          } else {
             await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
             this.lastBlocksAfterRun.set(proof.configKey,
               Math.max(this.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));

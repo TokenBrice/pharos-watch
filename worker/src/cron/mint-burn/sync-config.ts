@@ -468,6 +468,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     // observed event that no row carries, so the range is not exhaustively covered.
     rowsDroppedMalformed === 0;
   let conservationFence = false;
+  let readbackDeadline = false;
   let rangeParsedMismatch = false;
   if (requiresSupplyProof && fullEventCoverage && summary.missingTimestampCount === 0) {
     try { validateMintBurnParsedConservation({ ...config, dustThreshold: 0 }, allConfigLogs, fromBlock, scanTo, allParsedRows); }
@@ -599,7 +600,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     const correspondence = await verifyPersistedMintBurnConservation(db, persistableRows, signal, deadlineMs);
     const accepted = correspondence === "ok" && await acceptMintBurnSupplyProof(db, rangeSupplyProof, persistableRows, { signal });
     if (!accepted) {
-      conservationFence = true;
+      readbackDeadline = correspondence === "deadline";
+      conservationFence = !readbackDeadline;
       summary.supplyProofStatus = "unavailable";
       summary.supplyProofReason = correspondence === "deadline" ? "persisted-event-readback-deadline" : "range-proof-acceptance-failed";
       summary.errors++;
@@ -700,7 +702,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   }
 
   summary.conservationFailure = conservationFence;
-  if (conservationFence) {
+  if (conservationFence || readbackDeadline) {
     newLastBlock = null;
     summary.advanceReason = "no-safe-frontier";
   }

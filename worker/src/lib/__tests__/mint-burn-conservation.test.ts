@@ -496,6 +496,9 @@ describe("raw token conservation", () => {
     sqlite.prepare("UPDATE mint_burn_events SET amount_raw = ? WHERE id = 'test'").run(expected.amount_raw);
     expect(await verifyPersistedMintBurnConservation(db, [expected])).toBe("ok");
     expect(await verifyPersistedMintBurnConservation(db, [expected], undefined, 0)).toBe("deadline");
+    const clock = vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(2);
+    expect(await verifyPersistedMintBurnConservation(db, [expected], undefined, 1)).toBe("deadline");
+    clock.mockRestore();
   });
 
 });
