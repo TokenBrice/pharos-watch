@@ -831,7 +831,7 @@ describe("CI workflow scope", () => {
     const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
     const job = nightly.jobs["worker-shared-stability"];
     expect(job.needs).toBeUndefined();
-    expect(job["timeout-minutes"]).toBe(20);
+    expect(job["timeout-minutes"]).toBe(30);
     expect(job.steps?.filter((step) => step.run).map((step) => step.run)).toEqual([
       "npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}",
       "npm test -- --project worker-shared --isolate",

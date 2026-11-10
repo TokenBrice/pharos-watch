@@ -1073,8 +1073,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       // Before 9.46 the DVN row had no expressible authorityType, so it compiled
       // to `unknown` and dragged the whole route's merged authority with it,
       // publishing an unresolved-control-identity gap on every route it covered.
-      expect(bridge.authority?.model).toBe("validator-quorum");
-      expect(bridge.status.observationState).toBe("known");
+      expect(bridge).toMatchObject({ authority: { model: "validator-quorum" }, status: { observationState: "known" } });
       expect(compiled.assets[0]!.gaps.map((gap) => gap.reasonCode)).not.toContain("unresolved-control-identity");
     });
 
@@ -1442,40 +1441,29 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
   });
 
   it.each([
-    ["id", "fixture-bridge-control"],
-    ["label", "Fixture structured bridge controller"],
-    ["controllerChain:controllerAddress", "base:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
-  ])("marks a bridge control named by a fresh scoped question via its %s", (_kind, controlRef) => {
+    { label: "id", controlRef: "fixture-bridge-control" },
+    { label: "label", controlRef: "Fixture structured bridge controller" },
+    { label: "controllerChain:controllerAddress", controlRef: "base:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+    { label: "expired question", controlRef: "fixture-bridge-control", stale: true },
+    { label: "unnamed unresolved sibling", controlRef: "fixture-bridge-control", sibling: true },
+  ])("binds bridge scoped questions via $label without softening unnamed siblings", ({ controlRef, stale, sibling }) => {
     const metadata = meta("fixture-bridge-scoped-question", {
       bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)], {
-        controls: [
-          bridgeControl({
-            authorityType: "unknown",
-          }),
-        ],
-        scopedQuestions: [
-          {
-            controlRef,
-            question: "Which entity operates the fixture bridge controller?",
-            reviewedAt: "1970-01-01",
-            reviewer: "Fixture reviewer",
-            sources: [SOURCE],
-          },
-        ],
+        controls: [bridgeControl({ authorityType: "unknown" }), ...(sibling ? [bridgeControl({
+          id: "fixture-bridge-control-sibling", label: "Fixture sibling bridge controller",
+          authorityType: "unknown", controllerAddress: "0xcccccccccccccccccccccccccccccccccccccccc",
+        })] : [])],
+        scopedQuestions: [{ controlRef, question: "Which entity operates the fixture bridge controller?",
+          reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources: [SOURCE] }],
       }),
     });
-    const { compiled } = compileFixture(metadata);
-    const asset = compiled.assets[0]!;
-    const unresolved = asset.controls.filter(
-      (control) =>
-        control.controlKey.startsWith("bridge-meta:fixture-bridge-scoped-question:") &&
-        control.status.observationState !== "known",
-    );
-
+    const asset = compileFixture(metadata, { clockSec: stale ? 91 * 86_400 : 10_000 }).compiled.assets[0]!;
+    const unresolved = asset.controls.filter((control) =>
+      control.controlKey.startsWith(`bridge-meta:${metadata.id}:`) && control.status.observationState !== "known");
     expect(unresolved).toHaveLength(1);
-    expect(unresolved[0]!.scopedQuestionFresh).toBe(true);
-    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
-    expect(controlGap?.reasonCode).toBe("scoped-control-question");
+    expect(unresolved[0]!.scopedQuestionFresh === true).toBe(!stale && !sibling);
+    const gap = asset.gaps.find((row) => row.gapId === unresolved[0]!.status.gapIds[0]);
+    expect(gap?.reasonCode).toBe(stale || sibling ? "unresolved-control-identity" : "scoped-control-question");
   });
 
   it.each([
@@ -1507,8 +1495,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(asset.controlStatus.observationState).toBe(custodyOnly ? "known" : "bounded-unknown");
     expect(control.economicLossScope).toBe(accessOnly ? "access-only" : "deployment");
     if (custodyOnly) {
-      expect(control.keyCustody).toBe("unknown");
-      expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
+      expect(control).toMatchObject({ keyCustody: "unknown", factorStatuses: { keyCustody: { observationState: "missing" } } });
       expect(asset.gaps.some((gap) => gap.reasonCode === "scoped-control-question")).toBe(false);
     } else {
       expect(asset.gaps).toContainEqual(expect.objectContaining({ reasonCode: "scoped-control-question" }));
@@ -1577,76 +1564,6 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(asset.controls[0]!.scopedQuestionFresh).not.toBe(true);
     expect(asset.controlStatus.observationState).toBe("bounded-unknown");
     expect(asset.gaps.some((gap) => gap.reasonCode === "scoped-control-question")).toBe(false);
-  });
-
-  it("drops the bridge scoped-question marker once the question ages past the freshness window", () => {
-    const metadata = meta("fixture-bridge-scoped-question-stale", {
-      bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)], {
-        controls: [
-          bridgeControl({
-            authorityType: "unknown",
-          }),
-        ],
-        scopedQuestions: [
-          {
-            controlRef: "fixture-bridge-control",
-            question: "Which entity operates the fixture bridge controller?",
-            reviewedAt: "1970-01-01",
-            reviewer: "Fixture reviewer",
-            sources: [SOURCE],
-          },
-        ],
-      }),
-    });
-    const { compiled } = compileFixture(metadata, { clockSec: 91 * 86_400 });
-    const asset = compiled.assets[0]!;
-    const unresolved = asset.controls.filter(
-      (control) =>
-        control.controlKey.startsWith("bridge-meta:fixture-bridge-scoped-question-stale:") &&
-        control.status.observationState !== "known",
-    );
-
-    expect(unresolved).toHaveLength(1);
-    expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
-    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
-    expect(controlGap?.reasonCode).toBe("unresolved-control-identity");
-  });
-
-  it("keeps a route's merged bridge overlay hard when an unresolved sibling control lacks a scoped question", () => {
-    const metadata = meta("fixture-bridge-scoped-question-mixed", {
-      bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE), representationRoute(BASE_ROUTE)], {
-        controls: [
-          bridgeControl({
-            authorityType: "unknown",
-          }),
-          bridgeControl({
-            id: "fixture-bridge-control-sibling",
-            label: "Fixture sibling bridge controller",
-            authorityType: "unknown",
-            controllerAddress: "0xcccccccccccccccccccccccccccccccccccccccc",
-          }),
-        ],
-        scopedQuestions: [
-          {
-            controlRef: "fixture-bridge-control",
-            question: "Which entity operates the fixture bridge controller?",
-            reviewedAt: "1970-01-01",
-            reviewer: "Fixture reviewer",
-            sources: [SOURCE],
-          },
-        ],
-      }),
-    });
-    const { compiled } = compileFixture(metadata);
-    const asset = compiled.assets[0]!;
-    const unresolved = asset.controls.filter(
-      (control) =>
-        control.controlKey.startsWith("bridge-meta:fixture-bridge-scoped-question-mixed:") &&
-        control.status.observationState !== "known",
-    );
-
-    expect(unresolved).toHaveLength(1);
-    expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
   });
 
   it.each(["reach", "activation", "economic-loss"] as const)("keeps partial unknown %s bounded without a redundant scoped question", (unknownField) => {
@@ -1760,138 +1677,34 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
   });
 
-  it("marks a control named by a fresh scoped question and routes its gaps to scoped-control-question", () => {
-    const scopedAddress = "mintauthority1solana";
+  it.each([
+    { label: "address", chain: "solana", address: "mintauthority1solana", controlLabel: "Fixture Solana token authority" },
+    { label: "non-addressable label", chain: "hedera", controlLabel: "Fixture Hedera supply key",
+      evidence: "The Hedera supply key is a 2-of-5 multisig whose member attribution is unresolved." },
+    { label: "expired address question", chain: "solana", address: "mintauthority1solana",
+      controlLabel: "Fixture Solana token authority", stale: true },
+  ])("binds mint scoped questions by $label with their original freshness", ({ chain, address, controlLabel, evidence, stale }) => {
+    const controlRef = address ? `${chain}:${address}` : controlLabel;
     const metadata = meta("fixture-scoped-question", {
       mintAuthority: mintProfile({
-        controls: [
-          mintControl(),
-          mintControl({
-            chain: "solana",
-            address: scopedAddress,
-            label: "Fixture Solana token authority",
-            authorityType: "unknown",
-          }),
-        ],
-        review: {
-          sources: [SOURCE],
+        controls: [mintControl(), mintControl({ chain, address, label: controlLabel, authorityType: "unknown", evidence })],
+        review: { ...mintProfile().review,
           evidence: "The fixture review identifies the native issuance authority on two chains.",
-          reviewer: "Fixture reviewer",
-          reviewedAt: "1970-01-01",
-          scopedQuestions: [
-            {
-              controlRef: `solana:${scopedAddress}`,
-              question: "Which entity controls the Solana token mint authority?",
-              reviewedAt: "1970-01-01",
-              reviewer: "Fixture reviewer",
-              sources: [SOURCE],
-            },
-          ],
+          scopedQuestions: [{ controlRef, question: "Which entities hold the token mint authority?",
+            reviewedAt: "1970-01-01", reviewer: "Fixture reviewer", sources: [SOURCE] }],
         },
       }),
     });
-    const { compiled } = compileFixture(metadata);
-    const asset = compiled.assets[0]!;
-    const unresolved = asset.controls.filter(
-      (control) =>
-        control.controlKey.startsWith("mint-meta:fixture-scoped-question:") &&
-        control.status.observationState !== "known",
-    );
-
+    const asset = compileFixture(metadata, { clockSec: stale ? 91 * 86_400 : 10_000 }).compiled.assets[0]!;
+    const unresolved = asset.controls.filter((control) =>
+      control.controlKey.startsWith(`mint-meta:${metadata.id}:`) && control.status.observationState !== "known");
     expect(unresolved).toHaveLength(1);
-    expect(unresolved[0]!.scopedQuestionFresh).toBe(true);
-    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
-    expect(controlGap?.reasonCode).toBe("scoped-control-question");
-    const inventoryGap = asset.gaps.find((gap) => gap.gapId.endsWith(":gap:deployment-controls"));
-    expect(inventoryGap?.reasonCode).toBe("scoped-control-question");
-  });
-
-  it("matches a scoped question to a non-addressable control by its label", () => {
-    const metadata = meta("fixture-scoped-question-label", {
-      mintAuthority: mintProfile({
-        controls: [
-          mintControl(),
-          mintControl({
-            chain: "hedera",
-            address: undefined,
-            label: "Fixture Hedera supply key",
-            authorityType: "unknown",
-            evidence: "The Hedera supply key is a 2-of-5 multisig whose member attribution is unresolved.",
-          }),
-        ],
-        review: {
-          sources: [SOURCE],
-          evidence: "The fixture review identifies the native issuance authority on two chains.",
-          reviewer: "Fixture reviewer",
-          reviewedAt: "1970-01-01",
-          scopedQuestions: [
-            {
-              controlRef: "Fixture Hedera supply key",
-              question: "Which entities hold the Hedera supply key shares?",
-              reviewedAt: "1970-01-01",
-              reviewer: "Fixture reviewer",
-              sources: [SOURCE],
-            },
-          ],
-        },
-      }),
-    });
-    const { compiled } = compileFixture(metadata);
-    const asset = compiled.assets[0]!;
-    const unresolved = asset.controls.filter(
-      (control) =>
-        control.controlKey.startsWith("mint-meta:fixture-scoped-question-label:") &&
-        control.status.observationState !== "known",
-    );
-
-    expect(unresolved).toHaveLength(1);
-    expect(unresolved[0]!.scopedQuestionFresh).toBe(true);
-  });
-
-  it("drops the scoped-question marker once the question ages past the freshness window", () => {
-    const scopedAddress = "mintauthority1solana";
-    const metadata = meta("fixture-scoped-question-stale", {
-      mintAuthority: mintProfile({
-        controls: [
-          mintControl(),
-          mintControl({
-            chain: "solana",
-            address: scopedAddress,
-            label: "Fixture Solana token authority",
-            authorityType: "unknown",
-          }),
-        ],
-        review: {
-          sources: [SOURCE],
-          evidence: "The fixture review identifies the native issuance authority on two chains.",
-          reviewer: "Fixture reviewer",
-          reviewedAt: "1970-01-01",
-          scopedQuestions: [
-            {
-              controlRef: `solana:${scopedAddress}`,
-              question: "Which entity controls the Solana token mint authority?",
-              reviewedAt: "1970-01-01",
-              reviewer: "Fixture reviewer",
-              sources: [SOURCE],
-            },
-          ],
-        },
-      }),
-    });
-    const { compiled } = compileFixture(metadata, { clockSec: 91 * 86_400 });
-    const asset = compiled.assets[0]!;
-    const unresolved = asset.controls.filter(
-      (control) =>
-        control.controlKey.startsWith("mint-meta:fixture-scoped-question-stale:") &&
-        control.status.observationState !== "known",
-    );
-
-    expect(unresolved).toHaveLength(1);
-    expect(unresolved[0]!.scopedQuestionFresh).not.toBe(true);
-    const controlGap = asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0]);
-    expect(controlGap?.reasonCode).toBe("unresolved-control-identity");
-    const inventoryGap = asset.gaps.find((gap) => gap.gapId.endsWith(":gap:deployment-controls"));
-    expect(inventoryGap?.reasonCode).toBe("unresolved-control-identity");
+    expect(unresolved[0]!.scopedQuestionFresh === true).toBe(!stale);
+    if (address) {
+      const reason = stale ? "unresolved-control-identity" : "scoped-control-question";
+      expect(asset.gaps.find((gap) => gap.gapId === unresolved[0]!.status.gapIds[0])?.reasonCode).toBe(reason);
+      expect(asset.gaps.find((gap) => gap.gapId.endsWith(":gap:deployment-controls"))?.reasonCode).toBe(reason);
+    }
   });
 
   it("keeps compiled control keys stable when Mint Authority and bridge controls are reordered", () => {
@@ -1938,34 +1751,6 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(
       original.assets[0]!.controls.map((control) => control.controlKey),
     ).toEqual(reversed.assets[0]!.controls.map((control) => control.controlKey));
-  });
-
-  it("treats an all-native reviewed inventory with structured controls as no bridge exposure", () => {
-    const nativeRoutes = [route(ETHEREUM_ROUTE), route(BASE_ROUTE)];
-    const nativeOnly = meta("fixture-all-native-with-controls", {
-      status: "active",
-      contracts: nativeRoutes.map((candidate) => ({
-        chain: candidate.destinationChain,
-        address: candidate.contractAddress,
-        decimals: 18,
-      })),
-      bridgeRouteRisk: bridgeProfile(nativeRoutes, {
-        controls: [
-          bridgeControl({
-            id: "fixture-canonical-adapter",
-            routeRefs: [BASE_ROUTE],
-            capabilities: ["bridge-mint"],
-          }),
-        ],
-      }),
-    });
-
-    const adapted = adaptBridgeFixture(nativeOnly, null);
-
-    expect(adapted.review.status.applicability.state).toBe("not-applicable");
-    expect(adapted.review.routes).toEqual([]);
-    // The relocated control facts must survive in the umbrella inventory.
-    expect(adapted.controls.length).toBeGreaterThan(0);
   });
 
   it.each([0, 1e-5])("admits exhaustively reviewed native inventory with unmatched share %s without rewriting supply", (share) => {
@@ -2096,185 +1881,59 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(supplyReview).toEqual(before);
   });
 
-  it("keeps a reviewed representation route bridge-applicable", () => {
-    const mixedRoutes = [route(ETHEREUM_ROUTE), representationRoute(BASE_ROUTE)];
-    const mixed = meta("fixture-mixed-native-and-representation", {
-      status: "active",
-      contracts: mixedRoutes.map((candidate) => ({
-        chain: candidate.destinationChain,
-        address: candidate.contractAddress,
-        decimals: 18,
-      })),
-      bridgeRouteRisk: bridgeProfile(mixedRoutes, {
-        controls: [bridgeControl({ routeRefs: [BASE_ROUTE] })],
-      }),
-    });
+  it.each(["native", "representation", "unresolved"] as const)(
+    "preserves bridge applicability for a structured %s deployment", (kind) => {
+      const satellite = kind === "representation" ? representationRoute(BASE_ROUTE) : route(BASE_ROUTE,
+        kind === "unresolved" ? { routeClass: "unknown", issuanceModel: "unknown", semantics: "unknown",
+          scope: "unknown", riskTier: "opaque-or-unknown", reviewDisposition: "unresolved" } : {});
+      const routes = [route(ETHEREUM_ROUTE), satellite];
+      const metadata = meta(`fixture-bridge-applicability-${kind}`, {
+        status: "active",
+        contracts: routes.map((deployment) => ({ chain: deployment.destinationChain,
+          address: deployment.contractAddress, decimals: 18 })),
+        bridgeRouteRisk: bridgeProfile(routes, { controls: [bridgeControl({
+          id: kind === "unresolved" ? "fixture-oft-admin" : "fixture-canonical-adapter",
+          routeRefs: kind === "unresolved" ? [ETHEREUM_ROUTE, BASE_ROUTE] : [BASE_ROUTE],
+        })] }),
+      });
+      const adapted = adaptBridgeFixture(metadata, null);
+      expect(adapted.review.status.applicability.state).toBe(kind === "native" ? "not-applicable" : "required");
+      if (kind === "native") {
+        expect(adapted.review.routes).toEqual([]);
+        expect(adapted.controls.length).toBeGreaterThan(0);
+      } else if (kind === "representation") expect(adapted.review.routes).toHaveLength(1);
+    },
+  );
 
-    const adapted = adaptBridgeFixture(mixed, null);
-
-    expect(adapted.review.status.applicability.state).toBe("required");
-    expect(adapted.review.routes.length).toBe(1);
-  });
-
-  it("stays bridge-applicable when an unresolved deployment carries structured controls", () => {
-    // Repro of the cash-phantom / wclp-ripio shape: reviewed native routes plus one
-    // deployment the reviewer could not classify, governed by real bridge controls at
-    // zero attributed share. An unresolved deployment is not proof of no bridge.
-    const unresolvedDeployment = route(BASE_ROUTE, {
-      routeClass: "unknown",
-      issuanceModel: "unknown",
-      semantics: "unknown",
-      scope: "unknown",
-      riskTier: "opaque-or-unknown",
-      reviewDisposition: "unresolved",
-    });
-    const withUnresolved = meta("fixture-unresolved-deployment", {
-      status: "active",
-      contracts: [
-        {
-          chain: "ethereum",
-          address: ETHEREUM_ROUTE.slice(ETHEREUM_ROUTE.indexOf(":") + 1),
-          decimals: 18,
-        },
-        {
-          chain: unresolvedDeployment.destinationChain,
-          address: unresolvedDeployment.contractAddress,
-          decimals: 18,
-        },
-      ],
-      bridgeRouteRisk: bridgeProfile([route(ETHEREUM_ROUTE), unresolvedDeployment], {
-        controls: [
-          bridgeControl({
-            id: "fixture-oft-admin",
-            routeRefs: [ETHEREUM_ROUTE, BASE_ROUTE],
-          }),
-        ],
-      }),
-    });
-
-    const adapted = adaptBridgeFixture(withUnresolved, null);
-
-    expect(adapted.review.status.applicability.state).toBe("required");
-  });
-
-  it("compiles a reviewed external-only representation as a not-applicable mint section", () => {
-    const representation = representationRoute(BASE_ROUTE);
-    const externalOnly = meta("fixture-external-only-representation", {
-      status: "active",
-      contracts: [
-        {
-          chain: representation.destinationChain,
-          address: representation.contractAddress,
-          decimals: 18,
-        },
-      ],
-      mintAuthority: mintProfile({
-        mintPath: "unknown",
-        controls: [],
-        review: {
-          sources: [SOURCE],
-          evidence: "The fixture has no local canonical issuance.",
-          reviewer: "Fixture reviewer",
-          reviewedAt: "1970-01-01",
-          noLocalIssuance: {
-            kind: "external-only-representation",
-            reviewedAt: "1970-01-01",
-            reviewer: "Fixture reviewer",
-            rationale: "Every authored deployment is an external representation.",
+  it.each(["external-only", "inherited-without-edge", "authored-controls"] as const)(
+    "admits a no-local-issuance exception only for a closed %s profile", (kind) => {
+      const inherited = kind === "inherited-without-edge";
+      const representation = representationRoute(BASE_ROUTE);
+      const deployment = inherited ? route(ETHEREUM_ROUTE) : representation;
+      const metadata = meta(`fixture-no-local-issuance-${kind}`, {
+        status: "active",
+        contracts: [{ chain: deployment.destinationChain, address: deployment.contractAddress, decimals: 18 }],
+        mintAuthority: mintProfile({
+          mintPath: inherited ? "wrapped-or-variant-inherited" : "unknown",
+          ...(inherited ? { inheritedFrom: "usdc-circle" } : {}),
+          controls: kind === "authored-controls" ? [mintControl({
+            chain: "base", role: "proxy-admin", directMintAbility: "upgrade-only",
+          })] : [],
+          review: { ...mintProfile().review, evidence: "The fixture has no local canonical issuance.",
+            noLocalIssuance: {
+              kind: inherited ? "inherited-parent-issuance" : "external-only-representation",
+              reviewedAt: "1970-01-01", reviewer: "Fixture reviewer",
+              rationale: "Every authored deployment is an external representation.",
+            },
           },
-        },
-      }),
-      bridgeRouteRisk: bridgeProfile([representation]),
-    });
-
-    const { extension } = compileFixture(externalOnly);
-    const mint = extension.assets[0]!.economicControlReview!.mint;
-
-    expect(mint.status.applicability.state).toBe("not-applicable");
-    expect(mint.controlKey).toBeNull();
-    expect(mint.reconciliation).toBe("not-applicable");
-  });
-
-  it("refuses a not-applicable mint section for an inherited claim with no serial dependency", () => {
-    const nativeRoute = route(ETHEREUM_ROUTE);
-    const inheritedWithoutEdge = meta("fixture-inherited-without-edge", {
-      status: "active",
-      contracts: [
-        {
-          chain: nativeRoute.destinationChain,
-          address: nativeRoute.contractAddress,
-          decimals: 18,
-        },
-      ],
-      mintAuthority: mintProfile({
-        mintPath: "wrapped-or-variant-inherited",
-        inheritedFrom: "usdc-circle",
-        controls: [],
-        review: {
-          sources: [SOURCE],
-          evidence: "The fixture inherits issuance from its parent.",
-          reviewer: "Fixture reviewer",
-          reviewedAt: "1970-01-01",
-          noLocalIssuance: {
-            kind: "inherited-parent-issuance",
-            reviewedAt: "1970-01-01",
-            reviewer: "Fixture reviewer",
-            rationale: "Issuance is the parent's; this deployment holds no local minter.",
-          },
-        },
-      }),
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)]),
-    });
-
-    const { extension } = compileFixture(inheritedWithoutEdge);
-    const mint = extension.assets[0]!.economicControlReview!.mint;
-
-    // No compiled serial-claim edge to the parent means the parent's mint risk
-    // lands nowhere. The section must stay required and fail closed.
-    expect(mint.status.applicability.state).toBe("required");
-  });
-
-  it("refuses a not-applicable mint section when the profile still authors controls", () => {
-    const representation = representationRoute(BASE_ROUTE);
-    const withControls = meta("fixture-external-only-with-controls", {
-      status: "active",
-      contracts: [
-        {
-          chain: representation.destinationChain,
-          address: representation.contractAddress,
-          decimals: 18,
-        },
-      ],
-      mintAuthority: mintProfile({
-        mintPath: "unknown",
-        controls: [
-          mintControl({
-            chain: "base",
-            role: "proxy-admin",
-            directMintAbility: "upgrade-only",
-          }),
-        ],
-        review: {
-          sources: [SOURCE],
-          evidence: "The fixture authors a local upgrade control alongside its exception.",
-          reviewer: "Fixture reviewer",
-          reviewedAt: "1970-01-01",
-          noLocalIssuance: {
-            kind: "external-only-representation",
-            reviewedAt: "1970-01-01",
-            reviewer: "Fixture reviewer",
-            rationale: "Every authored deployment is an external representation.",
-          },
-        },
-      }),
-      bridgeRouteRisk: bridgeProfile([representation]),
-    });
-
-    const { extension } = compileFixture(withControls);
-    const mint = extension.assets[0]!.economicControlReview!.mint;
-
-    expect(mint.status.applicability.state).toBe("required");
-  });
+        }),
+        bridgeRouteRisk: bridgeProfile([representation]),
+      });
+      const mint = compileFixture(metadata).extension.assets[0]!.economicControlReview!.mint;
+      expect(mint.status.applicability.state).toBe(kind === "external-only" ? "not-applicable" : "required");
+      if (kind === "external-only") expect(mint).toMatchObject({ controlKey: null, reconciliation: "not-applicable" });
+    },
+  );
 });
 
 describe("native external-validation transfer tiers", () => {
@@ -2316,9 +1975,7 @@ describe("native external-validation transfer tiers", () => {
       .not.toContain(`${metadata.id}:gap:economic-control:bridge::tier`);
     const control = asset.controls.find((row) => row.controlKey === bridge.routes[0]!.controlKey)!;
     expect(control.capabilities).toEqual(["parameter-change"]);
-    expect(control.materialSupplyShare).toBeNull();
-    expect(control.authority?.model).toBe("unknown");
-    expect(control.claimImpairment).toBe("unknown");
+    expect(control).toMatchObject({ materialSupplyShare: null, authority: { model: "unknown" }, claimImpairment: "unknown" });
     expect(asset.gaps.some((gap) => gap.reasonCode === "unresolved-control-identity")).toBe(true);
     expect(metadata.bridgeRouteRisk!.routes![0]!.issuanceModel).toBe("native-issuance");
     const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
