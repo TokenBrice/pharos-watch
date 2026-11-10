@@ -254,6 +254,7 @@ describe("Pages artifact input profile", () => {
         "/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/",
       ]);
       expect(probes[0][1]).toContain("75");
+      expect(probes[2][1]).toContain("65");
     } finally {
       vi.unstubAllEnvs();
       rmSync(root, { recursive: true, force: true });
