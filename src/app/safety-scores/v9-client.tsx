@@ -1,9 +1,10 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
 import { useReportCardsV9Table } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -33,6 +34,11 @@ import {
   type PegFilter,
   type V9SortKey,
 } from "./v9-view-model";
+
+// Live cards need charts; the first-paint hero and dated preview do not.
+const ReportCardMiniV9 = dynamic(() => import("@/components/report-card-mini-v9").then((m) => m.ReportCardMiniV9), {
+  loading: () => <Skeleton className="h-[274px] w-full rounded-xl" aria-label="Loading safety card" />,
+});
 
 const SORT_OPTIONS: ReadonlyArray<{ key: V9SortKey; label: string }> = [
   { key: "overall", label: "Overall" },
