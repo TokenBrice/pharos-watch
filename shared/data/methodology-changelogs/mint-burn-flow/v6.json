@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.43",
+    "title": "Complete-hour backfill guards and explicit chart gaps",
+    "date": "2026-11-10",
+    "effectiveAt": 1794369352,
+    "summary": "Operator replay refuses incomplete raw hours; dense hourly series distinguishes proven quiet from missing evidence and withholds derived statistics across gaps.",
+    "impact": [
+      "Backfill scans all chunks before writing. It requires a closed retained whole hour or a complete interior hour scanned for every constituent config. This single-config operator refuses historical shared buckets, partial range edges and decode-incomplete invocations without writing events, queuing materialization debt or advancing the cursor. Skipped hours carry machine-readable reasons; no historical scan proof or staged replay store is added.",
+      "Aggregate and per-coin hourly series include every requested closed UTC hour. Missing rows become zero only with per-hour scan admission and complete classification. Legacy assurance cannot recover unknown classification for reviewed tokens. Unproved hours carry null nets and incomplete scan coverage; zero gross values remain observed subtotals. Flow caches move to v8 to exclude sparse fallback payloads.",
+      "Daily re-bucketing withholds net for any missing or unproved hour; cumulative net stops permanently at the first unavailable bucket, and rolling means resume only when their entire trailing window is available."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.42",
     "title": "Reviewed range supply proof for zero-transfer burns",
     "date": "2026-11-10",

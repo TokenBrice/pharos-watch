@@ -11,7 +11,7 @@ import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification,
   tallyMintBurnClassificationBucket, type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
 import { hasMintBurnClassificationReview } from "./mint-burn-classification";
-import type { MintBurnClassification } from "@shared/types/mint-burn";
+import type { MintBurnClassification, MintBurnHourlyBucket } from "@shared/types/mint-burn";
 import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 
 /** Same effective fresh budget returned by buildCronFreshnessMeta, not its base cadence. */
@@ -375,31 +375,43 @@ export function mintBurnScanWindow(complete: boolean): MintBurnScanWindow {
  * Hourly series. A partial hour publishes `netFlowUsd: null` (a partial net is
  * not a bound); volumes stay known subtotals and `valuation` qualifies them.
  */
-export function buildHourlyFlowSeries(rows: HourlyRow[], admitsHour: (hourTs: number) => boolean): Array<{
-  hourTs: number;
-  netFlowUsd: number | null;
-  mintVolumeUsd: number;
-  burnVolumeUsd: number;
-  valuation: MintBurnValuationCompleteness;
-  scanCoverage: MintBurnScanWindow;
-  classification: MintBurnClassification;
-}> {
-  return [...aggregateHourlyRowsBy(rows, (row) => row.hour_ts).entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([ts, value]) => {
-      const valuation = summarizeMintBurnValuation(value.valuation).completeness;
-      const scanCoverage = mintBurnScanWindow(admitsHour(ts));
-      const classification = summarizeMintBurnClassification(value.classification);
-      return {
-        hourTs: ts,
-        netFlowUsd: !scanCoverage.complete || valuation === "partial" || classification.completeness !== "complete" ? null : value.netFlow,
-        mintVolumeUsd: value.mintVolume,
-        burnVolumeUsd: value.burnVolume,
-        valuation,
-        classification,
-        scanCoverage,
-      };
-    });
+export function buildHourlyFlowSeries(
+  rows: HourlyRow[], coverageForHour: (hourTs: number) => MintBurnScanWindow,
+  window: { start: number; end: number }, reviewedPairs: ReadonlySet<string>,
+): MintBurnHourlyBucket[] {
+  const byHour = aggregateHourlyRowsBy(rows, (row) => row.hour_ts);
+  const recordedPairs = new Map<number, Set<string>>();
+  for (const row of rows) {
+    const pairs = recordedPairs.get(row.hour_ts) ?? new Set<string>();
+    pairs.add(mintBurnPairKey(row.stablecoin_id, row.chain_id));
+    recordedPairs.set(row.hour_ts, pairs);
+  }
+  return Array.from({ length: (window.end - window.start) / 3600 }, (_, index) => {
+    const ts = window.start + index * 3600;
+    const value = byHour.get(ts);
+    const valuation = summarizeMintBurnValuation(value?.valuation ?? emptyMintBurnValuationTally()).completeness;
+    let scanCoverage = coverageForHour(ts);
+    // Durable scan proof certifies an absent row as quiet. Legacy assurance
+    // cannot recover unrecorded classification evidence for reviewed tokens.
+    const missingReview = scanCoverage.provenance !== "durable-v2"
+      && [...reviewedPairs].some((pair) => !recordedPairs.get(ts)?.has(pair));
+    const tally = value?.classification ?? emptyMintBurnClassificationTally();
+    if (missingReview || (!value && !scanCoverage.complete)) {
+      tally.unknownMintHours++;
+      tally.unknownBurnHours++;
+    }
+    const classification = summarizeMintBurnClassification(tally);
+    if ((!value || missingReview) && classification.completeness !== "complete") scanCoverage = mintBurnScanWindow(false);
+    return {
+      hourTs: ts,
+      netFlowUsd: !scanCoverage.complete || valuation === "partial" || classification.completeness !== "complete" ? null : value?.netFlow ?? 0,
+      mintVolumeUsd: value?.mintVolume ?? 0,
+      burnVolumeUsd: value?.burnVolume ?? 0,
+      valuation,
+      classification,
+      scanCoverage,
+    };
+  });
 }
 
 export function resolveFlowUpdatedAt(rows: HourlyRow[], fallbackTs: number): number {

@@ -157,7 +157,8 @@ to_timestamp, finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 2,
       new URL(`https://api.test/api/mint-burn-flows?stablecoin=${id}`))).json());
     expect(detail).toMatchObject({ netFlowUsd: null, classification: { unavailableReason: "classification-unresolved" } });
     expect(detail.chains[0]).toMatchObject({ netFlowUsd: null, classification: { completeness: "partial" } });
-    expect(detail.hourly[0]).toMatchObject({ netFlowUsd: null, classification: { completeness: "partial" } });
+    expect(detail.hourly.find((hour) => hour.hourTs === Math.floor((NOW - 2 * HOUR) / HOUR) * HOUR))
+      .toMatchObject({ netFlowUsd: null, classification: { completeness: "partial" } });
   });
 
   it("distinguishes legacy classification capability and withholds unknown baselines and partial-scope bounds", async () => {
@@ -227,7 +228,7 @@ to_timestamp, finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 2,
     expect(coin).toMatchObject({ mintCount24h: 2, burnCount24h: 1, mintVolume24hUsd: 10,
       netFlow24hUsd: null, largestEvent24h: { amountUsd: 10 },
       valuation: { window24h: { completeness: "partial", unpricedMintEventCount: 1 } } });
-    expect(aggregate.hourly.map((bucket) => bucket.hourTs)).toEqual([start, end - HOUR]);
+    expect(aggregate.hourly.map((bucket) => bucket.hourTs)).toEqual(Array.from({ length: 24 }, (_, i) => start + i * HOUR));
     for (const hours of [1, 24, 168, 720]) {
       const params = buildAggregateQueryParams(NOW, hours);
       expect(params.windowEnd).toBe(end);
@@ -365,10 +366,10 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
     const partial = await read();
     expect(partial.valuation).toMatchObject({ completeness: "partial", unpricedMintEventCount: 1 });
     expect(partial.chains[0]?.valuation?.completeness).toBe("partial");
-    expect(partial.hourly.map((bucket) => bucket.valuation)).toEqual(["partial"]);
+    expect(partial.hourly.filter((bucket) => bucket.valuation === "partial")).toHaveLength(1);
     expect(partial.netFlowUsd).toBeNull();
     expect(partial.chains[0]?.netFlowUsd).toBeNull();
-    expect(partial.hourly[0]?.netFlowUsd).toBeNull();
+    expect(partial.hourly.find((bucket) => bucket.hourTs === Math.floor(mint.timestamp / HOUR) * HOUR)?.netFlowUsd).toBeNull();
     expect(partial.burnVolumeUsd).toBe(1_000_000);
     sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 3000000 WHERE id = ?").run(mint.id);
     await recalcAffectedHours(db, collectAffectedHours([mint]));

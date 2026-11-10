@@ -82,14 +82,14 @@ function tooltipMarkup(): string {
 }
 
 describe("FlowChart", () => {
-  it("preserves missing hourly buckets as gaps and excludes them from the rolling mean", () => {
+  it("preserves missing hourly buckets and withholds dependent statistics", () => {
     const firstHour = 3_600_000;
     render(
       <FlowChart
         isLoading={false}
         hourly={[
-          { hourTs: firstHour, mintVolumeUsd: 7, burnVolumeUsd: 0, netFlowUsd: 7 },
-          { hourTs: firstHour + 7_200, mintVolumeUsd: 14, burnVolumeUsd: 0, netFlowUsd: 14 },
+          { hourTs: firstHour, mintVolumeUsd: 100, burnVolumeUsd: 0, netFlowUsd: 100 },
+          { hourTs: firstHour + 7_200, mintVolumeUsd: 0, burnVolumeUsd: 50, netFlowUsd: -50 },
         ]}
       />,
     );
@@ -104,7 +104,7 @@ describe("FlowChart", () => {
       cumulative: null,
       rollingNet: null,
     });
-    expect(chartState.data[2]).toMatchObject({ cumulative: 21, rollingNet: 10.5 });
+    expect(chartState.data[2]).toMatchObject({ net: -50, cumulative: null, rollingNet: null });
     expect(chartState.connectNulls).toBe(false);
 
     const missingRow = screen.getAllByRole("row")[2];
@@ -116,7 +116,7 @@ describe("FlowChart", () => {
       "—",
       "—",
     ]);
-    expect(screen.getByText(/shown as breaks and excluded from rolling averages/i)).toBeTruthy();
+    expect(screen.getByText(/stop cumulative net and withhold rolling averages/i)).toBeTruthy();
   });
 
   it("withholds classification-incomplete nets and qualifies only the affected gross side", () => {
@@ -207,11 +207,10 @@ describe("FlowChart", () => {
       <FlowChart
         isLoading={false}
         publishedWindow={{ start: windowStart, end: windowEnd }}
-        hourly={[
-          { hourTs: windowStart, mintVolumeUsd: 10, burnVolumeUsd: 0, netFlowUsd: 10, valuation: "complete" },
-          { hourTs: windowStart + 2 * 86_400, mintVolumeUsd: 20, burnVolumeUsd: 0, netFlowUsd: 20, valuation: "complete" },
-          { hourTs: windowEnd - 3_600, mintVolumeUsd: 30, burnVolumeUsd: 0, netFlowUsd: 30, valuation: "complete" },
-        ]}
+        hourly={Array.from({ length: 720 }, (_, i) => {
+          const net = i === 0 ? 10 : i === 48 ? 20 : i === 719 ? 30 : 0;
+          return { hourTs: windowStart + i * 3600, mintVolumeUsd: net, burnVolumeUsd: 0, netFlowUsd: net, valuation: "complete" as const };
+        })}
       />,
     );
 
@@ -249,7 +248,7 @@ describe("FlowChart", () => {
     expect(tooltipMarkup()).not.toContain("Scan coverage");
   });
 
-  it("leaves daily edge buckets complete without a published window", () => {
+  it("withholds sparse daily buckets without a published window", () => {
     const windowStart = Date.UTC(2026, 9, 2, 16) / 1000;
     const windowEnd = windowStart + 30 * 86_400;
     render(
@@ -262,8 +261,21 @@ describe("FlowChart", () => {
       />,
     );
 
-    expect(chartState.data[0]).toMatchObject({ net: 10, scanComplete: true, periodPartial: false });
-    expect(chartState.data.at(-1)).toMatchObject({ net: 30, scanComplete: true, periodPartial: false });
+    expect(chartState.data[0]).toMatchObject({ net: null, scanComplete: false, periodPartial: false });
+    expect(chartState.data.at(-1)).toMatchObject({ net: null, scanComplete: false, periodPartial: false });
+  });
+
+  it("withholds a daily net containing an unproved hour", () => {
+    const hourTs = Date.UTC(2026, 9, 1) / 1000;
+    render(<FlowChart isLoading={false} hourly={[
+      { hourTs, mintVolumeUsd: 100, burnVolumeUsd: 0, netFlowUsd: 100 },
+      { hourTs: hourTs + 3600, mintVolumeUsd: 0, burnVolumeUsd: 0, netFlowUsd: null,
+        scanCoverage: { complete: false, unavailableReason: "scan-coverage-incomplete" } },
+      { hourTs: hourTs + 7200, mintVolumeUsd: 0, burnVolumeUsd: 50, netFlowUsd: -50 },
+      { hourTs: hourTs + 30 * 86400, mintVolumeUsd: 0, burnVolumeUsd: 0, netFlowUsd: 0 },
+    ]} />);
+    expect(chartState.data[0]).toMatchObject({ mint: 100, burn: 50, net: null, scanComplete: false, cumulative: null, rollingNet: null });
+    expect(chartState.data.at(-1)?.cumulative).toBeNull();
   });
 
   it("renders daily bucket labels in UTC regardless of the viewer timezone", () => {

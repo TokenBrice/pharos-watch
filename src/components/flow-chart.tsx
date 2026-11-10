@@ -145,16 +145,17 @@ function aggregateBuckets(
   if (sorted.length === 0) return [];
   const byBucket = new Map<
     number,
-    { mint: number; burn: number; net: number | null; valuation: MintBurnValuationCompleteness; scanComplete: boolean; mintClassification: MintBurnClassification["completeness"]; burnClassification: MintBurnValuationCompleteness }
+    { hours: number; mint: number; burn: number; net: number | null; valuation: MintBurnValuationCompleteness; scanComplete: boolean; mintClassification: MintBurnClassification["completeness"]; burnClassification: MintBurnValuationCompleteness }
   >();
   for (const b of sorted) {
     const bucketTs = Math.floor(b.hourTs / bucketSeconds) * bucketSeconds;
-    const entry = byBucket.get(bucketTs) ?? { mint: 0, burn: 0, net: 0, valuation: "complete", scanComplete: true, mintClassification: "complete", burnClassification: "complete" };
+    const entry = byBucket.get(bucketTs) ?? { hours: 0, mint: 0, burn: 0, net: 0, valuation: "complete", scanComplete: true, mintClassification: "complete", burnClassification: "complete" };
+    entry.hours++;
     const valuation = resolveMintBurnValuationCompleteness(b.valuation);
     entry.mint += b.mintVolumeUsd;
     entry.burn += b.burnVolumeUsd;
     // A null or partial hourly net makes the re-bucketed net unavailable, never 0.
-    entry.net = entry.net == null || b.netFlowUsd == null || valuation === "partial" || (b.classification != null && b.classification.completeness !== "complete") ? null : entry.net + b.netFlowUsd;
+    entry.net = entry.net == null || b.netFlowUsd == null || b.scanCoverage?.complete === false || valuation === "partial" || (b.classification != null && b.classification.completeness !== "complete") ? null : entry.net + b.netFlowUsd;
     entry.mintClassification = combineMintBurnValuationCompleteness(entry.mintClassification, b.classification?.mintCompleteness ?? "complete");
     entry.burnClassification = combineMintBurnValuationCompleteness(entry.burnClassification, b.classification?.burnCompleteness ?? "complete");
     entry.valuation = combineMintBurnValuationCompleteness(entry.valuation, valuation);
@@ -171,15 +172,18 @@ function aggregateBuckets(
     const coveredSeconds = publishedWindow
       ? Math.min(bucketTs + bucketSeconds, publishedWindow.end) - Math.max(bucketTs, publishedWindow.start)
       : bucketSeconds;
+    const expectedHours = (Math.min(bucketTs + bucketSeconds, publishedWindow?.end ?? sorted.at(-1)!.hourTs + HOUR_SECONDS)
+      - Math.max(bucketTs, publishedWindow?.start ?? sorted[0].hourTs)) / HOUR_SECONDS;
+    const missingHours = (entry?.hours ?? 0) < expectedHours;
     result.push({
       ts: bucketTs * 1000,
       mint: entry?.mint ?? null,
       burn: entry?.burn ?? null,
-      net: entry?.net ?? null,
+      net: missingHours ? null : entry?.net ?? null,
       valuation: entry?.valuation ?? null,
       mintClassification: entry?.mintClassification ?? "unknown",
       burnClassification: entry?.burnClassification ?? "unknown",
-      scanComplete: entry?.scanComplete ?? false,
+      scanComplete: !missingHours && (entry?.scanComplete ?? false),
       periodPartial: coveredSeconds < bucketSeconds,
       isInterpolated: entry == null,
     });
@@ -235,14 +239,14 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
     for (let i = 0; i < buckets.length; i += 1) {
       const b = buckets[i];
       const hasObservation = b.net != null;
-      if (!b.isInterpolated && b.net == null) cumulativeUnavailable = true;
+      if (b.net == null) cumulativeUnavailable = true;
       if (b.net != null) cumulative += b.net;
       const start = Math.max(0, i - (window - 1));
       let rolling = 0;
       let rollingCount = 0;
       for (let j = start; j <= i; j += 1) {
         const value = buckets[j].net;
-        if (value == null) continue;
+        if (value == null) break;
         rolling += value;
         rollingCount += 1;
       }
@@ -254,7 +258,7 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
         burn: b.burn,
         net: b.net,
         cumulative: hasObservation && !cumulativeUnavailable ? cumulative : null,
-        rollingNet: hasObservation && rollingCount > 0 ? rolling / rollingCount : null,
+        rollingNet: hasObservation && rollingCount === i - start + 1 ? rolling / rollingCount : null,
         valuation: b.valuation,
         mintClassification: b.mintClassification,
         burnClassification: b.burnClassification,
@@ -274,7 +278,7 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
   const partialBucketCount = partialBuckets.length;
   // Where the running total stops being proven: the last plotted cumulative
   // point before the first partial bucket. Labelled in the plot, not only below it.
-  const firstPartialIndex = chartData.findIndex((d) => !d.isInterpolated && d.net == null);
+  const firstPartialIndex = chartData.findIndex((d) => d.net == null);
   const lastProven = firstPartialIndex > 0
     ? chartData.slice(0, firstPartialIndex).findLast((d) => d.cumulative != null)
     : undefined;
@@ -507,7 +511,7 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
       />
       {hasInterpolated && (
         <p className="mt-1 text-xs text-muted-foreground">
-          Gaps in {useDailyBuckets ? "daily" : "hourly"} data are shown as breaks and excluded from rolling averages.
+          Gaps in {useDailyBuckets ? "daily" : "hourly"} data stop cumulative net and withhold rolling averages until the window is complete.
         </p>
       )}
       {partialBucketCount > 0 && (

@@ -1118,8 +1118,8 @@ describe("syncMintBurn", () => {
     const invalidation = history.find(
       (entry) =>
         entry.sql.includes("DELETE FROM cache")
-        && entry.binds[0] === "mint-burn-flows:v7:"
-        && entry.binds[1] === "mint-burn-flows:v7:\uffff",
+        && entry.binds[0] === "mint-burn-flows:v8:"
+        && entry.binds[1] === "mint-burn-flows:v8:\uffff",
     );
     expect(invalidation).toBeDefined();
   });
@@ -1127,8 +1127,8 @@ describe("syncMintBurn", () => {
   it("keeps the published aggregate gauge cache row when the extended lane invalidates", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
-    const aggregateKey = "mint-burn-flows:v7:aggregate:24";
-    const coinKey = "mint-burn-flows:v7:coin:usdt-tether:24";
+    const aggregateKey = "mint-burn-flows:v8:aggregate:24";
+    const coinKey = "mint-burn-flows:v8:coin:usdt-tether:24";
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
     insert.run(aggregateKey, Math.floor(Date.now() / 1000));
     insert.run(coinKey, Math.floor(Date.now() / 1000));

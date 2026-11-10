@@ -28,7 +28,7 @@ function payload(overrides: Record<string, unknown> = {}): Record<string, unknow
 function cacheTable(value: string, ageSec: number) {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v7:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v8:aggregate:24"],
     rows: [],
     first: { value, updated_at: NOW_SEC - ageSec },
   };
@@ -190,7 +190,7 @@ describe("readPublishedMintBurnGauge", () => {
     const result = await readPublishedMintBurnGauge(mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["mint-burn-flows:v7:aggregate:24"],
+        matchBinds: ["mint-burn-flows:v8:aggregate:24"],
         rows: [],
         first: null,
       },
@@ -234,7 +234,7 @@ describe("readPublishedMintBurnGauge", () => {
     // until that clock passes. The reader must fail closed rather than pinning it.
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["mint-burn-flows:v7:aggregate:24"],
+      matchBinds: ["mint-burn-flows:v8:aggregate:24"],
       rows: [],
       first: { value: JSON.stringify(payload()), updated_at: NOW_SEC + 6 * 3600 },
     }], { assertMatchesUsed: true });

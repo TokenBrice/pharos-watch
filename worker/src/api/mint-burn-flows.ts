@@ -37,6 +37,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import type { ApiDependencyMeta } from "@pharos/contracts/api-meta";
 import { tryParseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
+import { hasMintBurnClassificationReview } from "../lib/mint-burn-classification";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import {
@@ -48,6 +49,7 @@ import {
   type HourlyRow,
   MINT_BURN_CRON_JOB,
   mintBurnHourlyWindow,
+  mintBurnPairKey,
   mintBurnScanWindow,
   mintBurnWindowCoverage,
   readMintBurnWindowContext,
@@ -155,8 +157,11 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const gaugeScore = computeGaugeScore(gaugeInputs);
   const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
   const hourly = buildHourlyFlowSeries(data.hourlyRows, (ts) =>
-    data.partialCoinIds.size === 0
-      && mintBurnWindowCoverage(data.configs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark).complete);
+    data.partialCoinIds.size > 0 ? mintBurnScanWindow(false)
+      : mintBurnWindowCoverage(data.configs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark),
+    { start: data.windowEnd - hours * 3600, end: data.windowEnd },
+    new Set(data.configs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
+      .map((config) => mintBurnPairKey(config.stablecoinId, config.chain.chainId))));
   const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
   // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
   // consumers of the published payload (daily digest) never re-derive a chain
@@ -450,8 +455,11 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       };
     });
 
-    const hourly = buildHourlyFlowSeries(rows, (ts) => !context.partialCoinIds.has(stablecoinId)
-      && mintBurnWindowCoverage(configs, scanSegments, context.legacy, ts, ts + 3600, context.watermark).complete);
+    const hourly = buildHourlyFlowSeries(rows, (ts) => context.partialCoinIds.has(stablecoinId)
+      ? mintBurnScanWindow(false)
+      : mintBurnWindowCoverage(configs, scanSegments, context.legacy, ts, ts + 3600, context.watermark),
+      window, new Set(configs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
+        .map((config) => mintBurnPairKey(config.stablecoinId, config.chain.chainId))));
 
     // Totals
     let totalMint = 0;

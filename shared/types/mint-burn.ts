@@ -299,8 +299,9 @@ export const MintBurnCoinFlowSchema = z.object({
 });
 export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
+/** Every requested closed hour appears; missing evidence withholds net and scan completeness. */
 const MintBurnHourlyBucketSchema = z.object({
-  hourTs: z.number().int().nonnegative(),
+  hourTs: z.number().int().nonnegative().describe("Dense closed UTC hour in [window.start, window.end); no stored row is zero only with scan and classification proof."),
   netFlowUsd: z.number().finite().nullable(),
   mintVolumeUsd: z.number().finite().nonnegative(),
   burnVolumeUsd: z.number().finite().nonnegative(),

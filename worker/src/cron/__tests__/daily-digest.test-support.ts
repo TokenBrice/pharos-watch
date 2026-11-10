@@ -254,7 +254,7 @@ export function publishedGaugeTable(
   const nowSec = Math.floor(Date.now() / 1000);
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v7:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v8:aggregate:24"],
     rows: [],
     first: {
       value: options.value ?? JSON.stringify(publishedGaugePayload()),
@@ -266,7 +266,7 @@ export function publishedGaugeTable(
 export function missingPublishedGaugeTable(): MockTableConfig {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v7:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v8:aggregate:24"],
     rows: [],
     first: null,
   };

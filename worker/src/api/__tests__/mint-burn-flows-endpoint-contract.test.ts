@@ -116,8 +116,10 @@ describe("handleMintBurnFlows contract tests", () => {
       .run(JSON.stringify(configs.map(mintBurnConfigKey)), nowSec);
     const response = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${id}`));
     const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
-    expect(body).toMatchObject({ stablecoinId: id, netFlowUsd: null, mintVolumeUsd: 0, chains: [], hourly: [],
+    expect(body).toMatchObject({ stablecoinId: id, netFlowUsd: null, mintVolumeUsd: 0, chains: [],
       scanCoverage: { complete: false } });
+    expect(body.hourly).toHaveLength(24);
+    expect(body.hourly.every((hour) => hour.netFlowUsd === null && !hour.scanCoverage?.complete)).toBe(true);
     expect(body.publication?.legs.every((leg) => leg.status === "disabled")).toBe(true);
   });
 

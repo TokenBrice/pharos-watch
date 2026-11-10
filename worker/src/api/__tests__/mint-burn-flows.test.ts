@@ -298,7 +298,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.coins.some((coin) => coin.stablecoinId === "usdc-circle")).toBe(true);
   });
 
-  it.each([[168, 48, 1], [1, 3, 4]] as const)(
+  it.each([[720, 48, 1], [168, 48, 1], [1, 3, 4]] as const)(
     "keeps fixed 24h coin fields and indexed reads at hours=%s", async (hours, olderHour, multiplier) => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-03-10T12:00:00Z"));
@@ -319,7 +319,7 @@ describe("handleMintBurnFlows contract tests", () => {
         await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?hours=${hours}`)), 200));
       const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
       expect(body.windowHours).toBe(hours);
-      expect(body.hourly).toHaveLength(hours === 1 ? 1 : 2);
+      expect(body.hourly).toHaveLength(hours);
       if (hours === 1) expect(body.hourly).toMatchObject([{
         hourTs: oneHourStart, netFlowUsd: 10_000_000, mintVolumeUsd: 15_000_000, burnVolumeUsd: 5_000_000,
         valuation: "unknown", scanCoverage: { complete: true, unavailableReason: null },
@@ -358,7 +358,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const cachedDb = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: "mint-burn-flows:v7:aggregate:24",
+        key: "mint-burn-flows:v8:aggregate:24",
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -425,7 +425,7 @@ describe("handleMintBurnFlows contract tests", () => {
     });
     const db = mintBurnScenario({
       nowSec: now,
-      flowCache: { key: `mint-burn-flows:v7:aggregate:${hours}`, value, updatedAt: now },
+      flowCache: { key: `mint-burn-flows:v8:aggregate:${hours}`, value, updatedAt: now },
     });
 
     const res = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?hours=${hours}`));
@@ -538,7 +538,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: `mint-burn-flows:v7:aggregate:${hours}`,
+        key: `mint-burn-flows:v8:aggregate:${hours}`,
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -600,7 +600,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: "mint-burn-flows:v7:aggregate:24",
+        key: "mint-burn-flows:v8:aggregate:24",
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },
@@ -928,7 +928,7 @@ describe("handleMintBurnFlows contract tests", () => {
       const cachedDb = mintBurnScenario({
         nowSec: now,
         flowCache: {
-          key: "mint-burn-flows:v7:aggregate:24",
+          key: "mint-burn-flows:v8:aggregate:24",
           value: JSON.stringify(materialized),
           updatedAt: now,
         },
@@ -970,7 +970,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const cachedBody = makeValidCachedAggregateFixture(now, snapshot.safetyScoreIdentity);
     const db = mintBurnScenario({
       nowSec: now,
-      flowCache: { key: "mint-burn-flows:v7:aggregate:24", value: JSON.stringify(cachedBody), updatedAt: now },
+      flowCache: { key: "mint-burn-flows:v8:aggregate:24", value: JSON.stringify(cachedBody), updatedAt: now },
     });
     const url = new URL("https://x/api/mint-burn-flows");
     const admitted = MintBurnFlowsResponseSchema.parse(await readJsonResponse(await handleMintBurnFlows(db, url), 200));
@@ -1015,7 +1015,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mintBurnScenario({
       nowSec: now,
       flowCache: {
-        key: "mint-burn-flows:v7:aggregate:24",
+        key: "mint-burn-flows:v8:aggregate:24",
         value: JSON.stringify(cachedBody),
         updatedAt: now,
       },

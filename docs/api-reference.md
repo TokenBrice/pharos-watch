@@ -1074,7 +1074,7 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ### `GET /api/mint-burn-flows`
 
-Mint/burn flow aggregates and pressure for closed UTC hours, with bridge exclusions bound to individual token movements. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1mint-burn-flows/get).
+Mint/burn flow aggregates and pressure for closed UTC hours, with token-bound bridge exclusions and a dense `hourly` series: proven quiet hours are zero, while unproved gaps carry `netFlowUsd: null` and incomplete `scanCoverage`. [Full endpoint contract](https://pharos.watch/openapi.json#/paths/~1api~1mint-burn-flows/get).
 
 - **Operation ID:** `mintBurnFlows`
 - **Path:** `/api/mint-burn-flows`

@@ -3,6 +3,8 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import {
   buildCoinCoverageMap,
+  buildHourlyFlowSeries,
+  mintBurnScanWindow,
   ETHEREUM_CHAIN_ID,
   readMintBurnCronSnapshot,
 } from "../mint-burn-flows-service";
@@ -105,5 +107,22 @@ describe("readMintBurnCronSnapshot chain heads", () => {
     // not a lagging verdict measured in another chain's block units.
     expect(coverage).toMatchObject({ status: "unknown", lagBlocks: null, isPartial: true });
     expect(snapshot.chainHeads.has(ETHEREUM_CHAIN_ID)).toBe(false);
+  });
+});
+
+describe("dense hourly series", () => {
+  it.each(["gap", "quiet", "legacy-quiet", "legacy-review", "legacy-review-with-peer"])("emits an explicit %s hour", (kind) => {
+    const complete = kind !== "gap";
+    const quiet = kind.endsWith("quiet");
+    const rows = kind.endsWith("peer") ? [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", hour_ts: END - 3600,
+      mint_count: 0, burn_count: 0, mint_volume_usd: 0, burn_volume_usd: 0, net_flow_usd: 0,
+      mint_unpriced_event_count: 0, burn_unpriced_event_count: 0 }] : [];
+    const series = buildHourlyFlowSeries(rows, () => ({ ...mintBurnScanWindow(complete),
+      provenance: kind.startsWith("legacy") ? "legacy-pre-cutover" : "durable-v2" }),
+      { start: END - 3 * 3600, end: END }, new Set(kind === "legacy-quiet" ? [] : ["review|ethereum"]));
+    expect(series.map((b) => b.hourTs)).toEqual([END - 3 * 3600, END - 2 * 3600, END - 3600]);
+    for (const bucket of series) expect(bucket).toMatchObject({ netFlowUsd: quiet ? 0 : null,
+      mintVolumeUsd: 0, burnVolumeUsd: 0, scanCoverage: { complete: quiet },
+      classification: { completeness: quiet ? "complete" : "unknown" } });
   });
 });

@@ -95,6 +95,11 @@ export function MintBurnFlowMethodologySection() {
             changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.mintBurnFlow.changelogHover}
           >
               <p>
+                Every closed hour appears in the chart: only proven quiet hours are zero. Missing evidence withholds
+                daily nets and rolling means, and stops cumulative net at the first unavailable hour. Operator replay
+                requires complete raw hours before it can replace aggregates.
+              </p>
+              <p>
                 Pharos tracks on-chain mint and burn events for major stablecoins via JSON-RPC (Transfer mints/burns
                 plus USDT Issue/Redeem). EVM reads use admitted Dwellir with Alchemy fallback; Tron uses admitted Dwellir
                 with TronGrid JSON-RPC fallback. These raw events are aggregated into hourly buckets and exposed as two separate
