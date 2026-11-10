@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "ce26ac843463739ca78edd0feb620368431867aeb647f4ad2b3c524abbb0536b"
+      "sha256": "bb81efaa9dfda1f73a9622247362636477c5468ab97f2f88423a9af66193fa58"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "d5a9b23d517081dc2249f8c34f20840cf9a98cc574fefea3acf99672955d397b"
+      "sha256": "c42d0f819e603f87b2953be2cb7ca23ae52c3600fc79279c40b6f623db2f5363"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "773536bc5483da2ab667c6e71b222501622a5e405adc1899c149dfa195460678"
+      "sha256": "212e01a00abc0ec3e97b3e47a40316b08d220acca100c59bd427cca5f6dfc45d"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -146,7 +146,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "d627eaa308fb9f21e2bacb77c002a3fcee02c8af55503d5c8ec87c04458d2a92"
+      "sha256": "5de1a38ecb91a264581bfdd0017975d91de9c1dc9d7ee9321dd348ad83daaa78"
     },
     {
       "path": "shared/lib/curve-composite-identities.ts",
@@ -558,7 +558,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/exit.ts",
-      "sha256": "28b3f9640b9dc91e7328f5cff73553266c0b363bcdfcde7cde38c81945910d30"
+      "sha256": "db11e2d38d1b8d9e11d368ff66abe40c317048bf276c41fee744f0e769b8ca51"
     },
     {
       "path": "shared/lib/safety-score-v9/fact-shard.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-09-block-26377132-shock-coverage.json.gz"
     }
   ],
-  "digest": "23fe46f91554962bd142b91cc51c85349f1c3dc1cac9f37d287da7e3ee1a38b5"
+  "digest": "3c71c43ad6522e0ca323daf51ce079d596e7e87dfd99f232779e5781115266e7"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

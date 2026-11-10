@@ -1142,8 +1142,20 @@ export function evaluateV9Exit(
       capsApplied: uniqueSorted([...trace.capsApplied, "immaterial-executable-capacity"]),
     });
   }
-  if (negligible.size > 0) {
-    // Dust is evidence about its own route, never a change to the dust-free verdict or its pricing provenance.
+  const completeNonViableSuspensionPortfolio = args.portfolioStatus === "reviewed-complete" &&
+    inventoryCause.causes.every((cause) => cause === "D") &&
+    routes.some((route) => route.applicability === "required" && route.routeSuspension !== undefined) &&
+    routes.every((route, index) => {
+      if (route.applicability === "not-applicable" || superseded.has(route.routeKey)) return true;
+      const causes = resolveV9StatusCauses([route.status, route.factorStatuses?.capacity, route.factorStatuses?.output], route.gaps);
+      if (route.applicability !== "required" || causes.causes.some((cause) => cause !== "D")) return false;
+      const trace = traces[index]!;
+      return route.routeSuspension !== undefined && trace.cause === "D" ||
+        isExhaustionMeasurement(route) && trace.included && trace.score === 0 &&
+          trace.capsApplied.some((cap) => cap === "zero-executable-capacity" || cap === "immaterial-executable-capacity");
+    });
+  if (negligible.size > 0 && !completeNonViableSuspensionPortfolio) {
+    // Preserve unknown pricing, but never erase an exhaustive census beside known closed channels.
     const withoutDust = evaluateV9Exit({ ...args, routes: args.routes.filter((route) => !negligible.has(route.routeKey)) }, envelope);
     const retained = new Map(withoutDust.routes.map((route) => [route.routeKey, route]));
     return { ...withoutDust, routes: routes.map((route) => negligible.get(route.routeKey) ?? retained.get(route.routeKey)!) };
