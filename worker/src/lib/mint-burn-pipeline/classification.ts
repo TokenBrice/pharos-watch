@@ -153,7 +153,7 @@ async function resolveTxContextBatch(
   if (uncached.length === 0) return resolutions;
   if (budgetExhausted(budget) || !hasRuntimeWindow(options) || signal?.aborted) {
     for (const txHash of uncached) {
-      resolutions.set(txHash, { context: null, shortfall: true });
+      resolutions.set(txHash, { context: null, shortfall: true, unavailableReason: "rpc-request-not-started" });
     }
     return resolutions;
   }
@@ -186,7 +186,8 @@ async function resolveTxContextBatch(
     pending = unresolved;
   }
   for (const txHash of pending) {
-    if (!resolutions.has(txHash)) resolutions.set(txHash, { context: null, shortfall: true });
+    if (!resolutions.has(txHash)) resolutions.set(txHash, { context: null, shortfall: true,
+      ...((budgetExhausted(budget) || !hasRuntimeWindow(options)) ? { unavailableReason: "rpc-request-not-started" as const } : {}) });
   }
 
   return resolutions;
