@@ -116,11 +116,14 @@ export async function commitMintBurnSupplyProofRepair(
 ): Promise<void> {
   const key = mintBurnConfigKey(config);
   if (proof.configKey !== key) throw new Error("Supply-proof repair config mismatch");
-  const cursor: SupplyProofRepairCursor = { ...await loadMintBurnSupplyProofRepairCursor(db, config), lastBlock: proof.toBlock };
+  const cursor: SupplyProofRepairCursor = { fingerprint: mintBurnConservationFingerprint(config), lastBlock: proof.toBlock };
   await runWithOverloadRetry(() => db.batch([
     ...mintBurnScanCoverageStatements(db, proof),
     db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
+      ON CONFLICT(key) DO UPDATE SET value = CASE
+        WHEN json_extract(CASE WHEN json_valid(cache.value) THEN cache.value ELSE '{}' END, '$.fingerprint') = json_extract(excluded.value, '$.fingerprint')
+          THEN json_set(cache.value, '$.lastBlock', json_extract(excluded.value, '$.lastBlock'))
+        ELSE excluded.value END, updated_at = excluded.updated_at`)
       .bind(mintBurnSupplyProofRepairCursorKey(key), JSON.stringify(cursor), proof.acceptedAt),
   ]));
 }

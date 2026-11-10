@@ -1,4 +1,5 @@
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
+import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError } from "../../lib/d1-overload-retry";
 import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
@@ -13,6 +14,13 @@ export const COVERAGE_REPAIR_REQUEST_LIMIT = 40;
 const COVERAGE_REPAIR_MAX_CONFIGS = 4;
 export const COVERAGE_REPAIR_MAX_BLOCKS = 10_000;
 export const COVERAGE_REPAIR_WINDOW_MS = 60_000;
+
+export async function idleMintBurnRepairD1(deadlineMs: number, signal?: AbortSignal,
+  idleMs = D1_RESOURCE_WINDOW_MS): Promise<boolean> {
+  if (Date.now() + idleMs + 5_000 >= deadlineMs) return false;
+  await sleepWithSignal(idleMs, signal);
+  return true;
+}
 
 interface CoverageRow {
   config_key: string;
@@ -123,28 +131,35 @@ export async function repairMintBurnCoverage(
   pendingProofs: MintBurnScanCoverage[], deferred: ReadonlyMap<string, number>,
   options: { supplyProofRepair?: boolean } = {},
 ): Promise<MintBurnCoverageRepairSummary[]> {
+  if (gaps.length === 0) return [];
   const summaries: MintBurnCoverageRepairSummary[] = [];
   const deadlineMs = Math.min(input.deadlineMs ?? Infinity, Date.now() + COVERAGE_REPAIR_WINDOW_MS);
+  const runDeadlineMs = input.deadlineMs ?? deadlineMs;
+  let stopped = false;
+  let idleMs = input.affectedHours.size > 0 ? D1_RESOURCE_WINDOW_MS : 0;
   const repairBudget = { count: 0, limit: Math.min(COVERAGE_REPAIR_REQUEST_LIMIT, input.budget.limit - input.budget.count) };
   // Rotate independently of the live frontier; one failing source must not pin
   // every healthy repair behind it on successive scheduled runs.
   const offset = gaps.length ? Math.floor(input.runTimestamp / (30 * 60)) % gaps.length : 0;
-  for (let i = 0; i < Math.min(gaps.length, COVERAGE_REPAIR_MAX_CONFIGS); i++) {
+  for (let i = 0; i < gaps.length; i++) {
+    if (!stopped && i >= COVERAGE_REPAIR_MAX_CONFIGS) break;
     throwIfAborted(input.signal);
     const gap = gaps[(offset + i) % gaps.length]!;
     const { config, fromBlock } = gap;
     const key = mintBurnConfigKey(config);
-    const cursor = await loadMintBurnSupplyProofRepairCursor(input.db, config);
-    const toBlock = Math.min(gap.toBlock, fromBlock + (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) - 1);
     const configDeadlineMs = input.pendingAdmissionKeys?.has(key)
       ? Math.min(deadlineMs, input.runTimestamp * 1000 + MINT_BURN_PENDING_RUNTIME_BUDGET_MS) : deadlineMs;
     const summary: MintBurnCoverageRepairSummary = {
-      ...createMintBurnConfigSummary(config, key, config.tier ?? "critical", { scanFrom: fromBlock, scanTo: toBlock }),
+      ...createMintBurnConfigSummary(config, key, config.tier ?? "critical", { scanFrom: fromBlock, scanTo: gap.toBlock }),
       repairReason: "scan-coverage-unproven",
     };
     summaries.push(summary);
+    if (stopped) {
+      summary.skippedReason = summary.repairReason = "repair-runtime-exhausted";
+      continue;
+    }
     const context = input.chainContexts.get(config.chain.chainId);
-    if (context?.chainHead == null || context.chainHead < toBlock) {
+    if (context?.chainHead == null) {
       summary.repairReason = "finality-head-unavailable";
       continue;
     }
@@ -161,7 +176,37 @@ export async function repairMintBurnCoverage(
       summary.repairReason = "repair-budget-exhausted";
       break;
     }
+    if (idleMs > 0) {
+      if (!await idleMintBurnRepairD1(configDeadlineMs, input.signal, idleMs)) {
+        stopped = true;
+        summary.skippedReason = summary.repairReason = "repair-runtime-exhausted";
+        continue;
+      }
+      idleMs = 0;
+    }
+    let cursor;
+    try {
+      cursor = await loadMintBurnSupplyProofRepairCursor(input.db, config);
+    } catch (error) {
+      rethrowIfAborted(error, input.signal);
+      if (!isD1ResourceWindowError(error)) throw error;
+      summary.errors++;
+      summary.skippedReason = summary.repairReason = "repair-runtime-exhausted";
+      stopped = true;
+      idleMs = D1_RESOURCE_WINDOW_MS;
+      continue;
+    }
+    const toBlock = Math.min(gap.toBlock, fromBlock + (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) - 1);
+    summary.scanTo = toBlock;
+    if (context.chainHead < toBlock) {
+      summary.repairReason = "finality-head-unavailable";
+      continue;
+    }
     const budget = { count: 0, limit };
+    let maxBlocks: number | null = null;
+    let overloaded = false;
+    const startedAtMs = Date.now();
+    summary.attempted = true;
     try {
       const boundaries = await fetchConservationBoundaries({
         requests: [{ key, config, fromBlock, toBlock }],
@@ -190,24 +235,49 @@ export async function repairMintBurnCoverage(
         && summary.failedEventDefs.length > 0 && summary.failedEventDefs.every((reason) =>
           reason === "range-proof:persisted-event-readback-deadline");
       const span = toBlock - fromBlock + 1;
-      const maxBlocks = deadlineOnly ? Math.max(1, Math.floor(span / 2))
+      maxBlocks = deadlineOnly ? Math.max(1, Math.floor(span / 2))
         : summary.repairReason === "proof-staged" ? Math.min(COVERAGE_REPAIR_MAX_BLOCKS,
           (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS) * 2) : null;
-      if (maxBlocks != null && maxBlocks !== (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS)) {
-        await setCacheIfNewer(input.db, mintBurnSupplyProofRepairCursorKey(key),
-          JSON.stringify({ ...cursor, maxBlocks }), input.runTimestamp, input.signal);
-      }
     } catch (error) {
       rethrowIfAborted(error, input.signal);
       // An exception can hide consumed requests; conservatively charge the cap.
       budget.count = limit;
       summary.errors++;
-      summary.repairReason = "repair-scan-failed";
+      overloaded = isD1ResourceWindowError(error);
+      summary.repairReason = overloaded ? "repair-runtime-exhausted" : "repair-scan-failed";
+      if (overloaded) maxBlocks = Math.max(1, Math.floor((toBlock - fromBlock + 1) / 2));
     } finally {
       repairBudget.count += budget.count;
       input.budget.count += budget.count;
       summary.requestBudgetUsed = budget.count;
     }
+    // One idle window clears prior work; no fresh scan allowance is granted.
+    idleMs = overloaded ? D1_RESOURCE_WINDOW_MS
+      : Math.min(D1_RESOURCE_WINDOW_MS, (Date.now() - startedAtMs) * D1_HEAVY_STATEMENT_IDLE_RATIO);
+    if (maxBlocks != null && maxBlocks !== (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS)) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (Date.now() + 5_000 >= runDeadlineMs
+          || ((overloaded || attempt > 0) && !await idleMintBurnRepairD1(runDeadlineMs, input.signal))) {
+          stopped = true;
+          break;
+        }
+        if (overloaded || attempt > 0) idleMs = 0;
+        try {
+          await setCacheIfNewer(input.db, mintBurnSupplyProofRepairCursorKey(key),
+            JSON.stringify({ ...cursor, maxBlocks }), input.runTimestamp, input.signal);
+          break;
+        } catch (error) {
+          rethrowIfAborted(error, input.signal);
+          if (!isD1ResourceWindowError(error)) throw error;
+          summary.errors++;
+          stopped = true;
+          idleMs = D1_RESOURCE_WINDOW_MS;
+          if (overloaded) break;
+        }
+      }
+    }
   }
+  // Also protect the caller's materialization/terminal writes after the last gap.
+  if (idleMs > 0) await idleMintBurnRepairD1(runDeadlineMs, input.signal, idleMs);
   return summaries;
 }

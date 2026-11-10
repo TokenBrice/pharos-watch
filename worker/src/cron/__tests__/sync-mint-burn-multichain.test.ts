@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
-  makeMintBurnDb,
   restoreMintBurnBatch,
   mintBurnScanResult,
   mintBurnTestHash,
   makeMintBurnMintLog as makeMintLog,
-  mintBurnEventInsertBinds,
   resetMintBurnMocks,
   seedMintBurnAdmissions,
   USDT_CONTRACT,
@@ -65,7 +63,6 @@ import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import {
   buildAlchemyUrl,
   fetchAlchemyLogs,
-  getAlchemyBlockNumber,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
 import { getMintBurnFinalizedHead, mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
@@ -80,22 +77,10 @@ import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state
 import * as coverageRepair from "../mint-burn/repair-coverage";
 import * as supplyRepair from "../mint-burn/repair-supply-proofs";
 import { mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
+import * as cache from "../../lib/db-cache";
+import * as abort from "../../lib/abort";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
-
-function makeDb(): D1Database {
-  return makeMintBurnDb({
-    admittedConfigs: MINT_BURN_CONFIGS,
-    syncRows: [
-      { config_key: `ethereum-${USDT_CONTRACT}`, last_block: 21_999_999 },
-      { config_key: "arbitrum-0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0", last_block: 249_499_999 },
-    ],
-    priceRows: [
-      { asset_id: "usdt-tether", price: 1.0 },
-      { asset_id: "usdai-usd-ai", price: 1.0 },
-    ],
-  });
-}
 
 describe("syncMintBurn — multi-chain invariant", () => {
   beforeEach(() => {
@@ -110,83 +95,36 @@ describe("syncMintBurn — multi-chain invariant", () => {
     sqliteFixtures.closeAll();
   });
 
-  it("builds per-chain Alchemy endpoints and ingests events for each chain", async () => {
-    const db = makeDb();
-
-    // One mint on Ethereum (USDT), one on Arbitrum (USDai). The remaining
-    // fetch call resolves with an empty log set.
-    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, contract) => {
-      if (contract === USDT_CONTRACT) {
-        return mintBurnScanResult(22_000_000, [
-            makeMintLog({
-              contract,
-              blockNumber: 22_000_000,
-              txHash: mintBurnTestHash(19),
-            }),
-          ]);
-      }
-      if (contract === "0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0") {
-        return mintBurnScanResult(249_500_000, [
-            makeMintLog({
-              contract,
-              blockNumber: 249_500_000,
-              txHash: mintBurnTestHash(20),
-            }),
-          ]);
-      }
-      return mintBurnScanResult(0);
-    });
-
-    vi.mocked(resolveBlockTimestamps).mockImplementation(async (url: string) => {
-      if (url.includes("ethereum")) return new Map([[22_000_000, 1_744_000_000]]);
-      return new Map([[249_500_000, 1_744_000_100]]);
-    });
-
+  it("routes and persists both chains using their own finalized ceilings", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
+    await restoreMintBurnBatch();
+    const heads = [21_999_995, 249_499_997];
+    const timestamp = Math.floor(Date.now() / 1000) - 60;
+    for (const [i, config] of MINT_BURN_CONFIGS.entries()) {
+      sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(
+        `${config.chain.chainId}-${config.contractAddress}`, heads[i]! - 5);
+    }
+    vi.mocked(getMintBurnFinalizedHead).mockImplementation(async (chain) => ({
+      number: heads[chain === "ethereum" ? 0 : 1]!, timestamp, hash: `0x${"1".repeat(64)}`,
+    }));
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, contract, _topics, _from, to) =>
+      mintBurnScanResult(to, [makeMintLog({ contract, blockNumber: to, txHash: mintBurnTestHash(to) })]));
+    vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
+      new Map(blocks.map((block) => [block, timestamp])));
     const result = await syncMintBurn(db, "alchemy-key");
     expect(result.status).toBe("ok");
-
-    // buildAlchemyUrl must be called once per distinct chain id.
-    const buildUrlChainIds = vi
-      .mocked(buildAlchemyUrl)
-      .mock.calls.map((call) => call[0]);
-    expect(new Set(buildUrlChainIds)).toEqual(new Set(["ethereum", "arbitrum"]));
-
-    // Alchemy endpoints must be queried via distinct per-chain URLs.
-    const blockNumberUrls = vi
-      .mocked(getAlchemyBlockNumber)
-      .mock.calls.map((call) => call[0] as string);
-    expect(blockNumberUrls.some((url) => url.includes("ethereum"))).toBe(true);
-    expect(blockNumberUrls.some((url) => url.includes("arbitrum"))).toBe(true);
-
-    // Log fetches must route to the correct chain's Alchemy endpoint.
-    const logFetchCallsByChain = vi
-      .mocked(fetchAlchemyLogs)
-      .mock.calls.map((call) => ({
-        url: call[0] as string,
-        contract: call[1] as string,
-      }));
-    const ethLogCall = logFetchCallsByChain.find(
-      (c) => c.contract === USDT_CONTRACT,
-    );
-    const arbLogCall = logFetchCallsByChain.find(
-      (c) => c.contract === "0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0",
-    );
-    expect(ethLogCall?.url).toContain("ethereum");
-    expect(arbLogCall?.url).toContain("arbitrum");
-
-    // The persistence layer must receive INSERT binds containing chain_id
-    // values for BOTH chains (column index 3 on the insert tuple).
-    const insertedChainIds = mintBurnEventInsertBinds.map((binds) => binds[3]);
-    expect(insertedChainIds).toContain("ethereum");
-    expect(insertedChainIds).toContain("arbitrum");
-
-    // Metadata must carry chainHeads for both chains, proving the run-completion
-    // path preserves multi-chain context rather than collapsing to Ethereum.
-    const meta = JSON.parse(result.metadata);
-    expect(meta.chainHeads).toMatchObject({
-      ethereum: 22_000_000,
-      arbitrum: 250_000_000,
-    });
+    expect(new Set(vi.mocked(buildAlchemyUrl).mock.calls.map(([chain]) => chain))).toEqual(new Set(["ethereum", "arbitrum"]));
+    expect(JSON.parse(result.metadata).chainHeads).toEqual({ ethereum: heads[0], arbitrum: heads[1] });
+    for (const [i, config] of MINT_BURN_CONFIGS.entries()) {
+      const chain = config.chain.chainId;
+      expect(vi.mocked(getMintBurnFinalizedHead).mock.calls.find(([id]) => id === chain)?.[1][0]?.url).toContain(chain);
+      expect(vi.mocked(fetchAlchemyLogs).mock.calls.find(([, contract]) => contract === config.contractAddress))
+        .toEqual([expect.stringContaining(chain), config.contractAddress, expect.anything(), heads[i]! - 4,
+          heads[i], expect.anything(), undefined, expect.anything()]);
+      expect(sqlite.prepare("SELECT chain_id, block_number FROM mint_burn_events WHERE chain_id = ?").all(chain))
+        .toEqual([{ chain_id: chain, block_number: heads[i] }]);
+    }
   });
 
   it.each([false, true])("publishes only finalized canonical rows and resumes without gaps (eventful=%s)", async (eventful) => {
@@ -264,35 +202,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
       .toEqual({ count: 0 });
   });
 
-  it("uses each chain's own finalized ceiling before querying logs", async () => {
-    const { sqlite, db } = sqliteFixtures.open();
-    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
-    await restoreMintBurnBatch();
-    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
-      .run(`ethereum-${USDT_CONTRACT}`, 21_999_990);
-    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
-      .run("arbitrum-0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0", 249_499_990);
-    vi.mocked(getMintBurnFinalizedHead).mockImplementation(async (chain) => ({
-      number: chain === "ethereum" ? 21_999_995 : 249_499_997,
-      timestamp: 1_700_000_000, hash: `0x${"a".repeat(64)}`,
-    }));
-    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, _address, _topics, _from, to) => (mintBurnScanResult(to)));
-    const result = await syncMintBurn(db, "alchemy-key");
-    expect(result.status).toBe("ok");
-    const summaries = JSON.parse(result.metadata).configSamples;
-    expect(summaries.find((row: { chainId: string }) => row.chainId === "ethereum"))
-      .toMatchObject({ scanFrom: 21_999_991, scanTo: 21_999_995, advancedTo: 21_999_995 });
-    expect(summaries.find((row: { chainId: string }) => row.chainId === "arbitrum"))
-      .toMatchObject({ scanFrom: 249_499_991, scanTo: 249_499_997, advancedTo: 249_499_997 });
-    expect(vi.mocked(fetchAlchemyLogs).mock.calls.map(([url, , , from, to]) => ({
-      chain: url.includes("ethereum") ? "ethereum" : "arbitrum", from, to,
-    }))).toEqual([
-      { chain: "ethereum", from: 21_999_991, to: 21_999_995 },
-      { chain: "arbitrum", from: 249_499_991, to: 249_499_997 },
-    ]);
-  });
-
-  it.each(["success", "headers", "materialization", "supply-prefix", "supply-prefix-materialization"])("replays eventful holes through the materialization fence: %s", async (outcome) => {
+  it.each(["success", "headers", "materialization", "supply-prefix", "supply-prefix-materialization", "cursor-overload", "discovery-overload", "commit-overload"])("replays eventful holes through the materialization fence: %s", async (outcome) => {
     const { sqlite, db } = sqliteFixtures.open();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     await restoreMintBurnBatch();
@@ -300,6 +210,8 @@ describe("syncMintBurn — multi-chain invariant", () => {
       (await vi.importActual<typeof PersistenceModule>("../../lib/mint-burn-pipeline/persistence")).recalcAffectedHours);
     const source = MINT_BURN_CONFIGS[0]!;
     const key = `ethereum-${USDT_CONTRACT}`;
+    const overload = new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
+    vi.spyOn(abort, "sleepWithSignal").mockImplementation(async (ms) => { vi.setSystemTime(Date.now() + ms); });
     const supply = outcome.startsWith("supply-prefix"), failed = outcome.endsWith("materialization");
     if (supply) {
       vi.spyOn(coverageRepair, "loadMintBurnCoverageGaps").mockResolvedValue([]);
@@ -323,8 +235,29 @@ describe("syncMintBurn — multi-chain invariant", () => {
     vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
       outcome === "headers" ? new Map() : new Map(blocks.map((block) => [block, timestamp])));
     if (failed) vi.mocked(recalcAffectedHours).mockRejectedValue(new Error("hourly write failed"));
+    if (outcome === "cursor-overload") {
+      vi.spyOn(coverageRepair, "loadMintBurnCoverageGaps").mockResolvedValue([0, 1].map((i) =>
+        ({ config: source, fromBlock: 22_000_000 + i, toBlock: 22_000_000 + i })));
+      const get = cache.getCache;
+      vi.spyOn(cache, "getCache").mockImplementation((db, k, signal) => k.startsWith("mint-burn-range-proof-repair")
+        ? Promise.reject(overload) : get(db, k, signal));
+    }
+    if (outcome === "discovery-overload") vi.spyOn(coverageRepair, "loadMintBurnCoverageGaps").mockRejectedValue(overload);
+    if (outcome === "commit-overload") {
+      // Fail the repair coverage batch only, after hourly materialization.
+      sqlite.exec("CREATE TRIGGER fail_commit BEFORE INSERT ON mint_burn_scan_coverage BEGIN SELECT RAISE(ABORT, 'D1 DB is overloaded. Too many resources consumed within a 10 second window'); END");
+    }
     const result = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
     const metadata = JSON.parse(result.metadata);
+    if (outcome.endsWith("overload")) {
+      expect(result.status).toBe("degraded");
+      expect(metadata.reason).toBe("mint-burn-source-coverage-degraded");
+      expect(metadata.coverageRepairs[0]).toMatchObject({ errors: 1, repairReason: "repair-runtime-exhausted" });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 2 });
+      if (outcome === "cursor-overload") expect(metadata.coverageRepairs.map((r: { attempted: boolean }) => r.attempted)).toEqual([false, false]);
+      if (outcome === "commit-overload") expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()).toEqual({ count: 1 });
+      return;
+    }
     expect(metadata.coverageRepairs[0]).toMatchObject({
       scanFrom: 22_000_000, scanTo: 22_000_000,
       repairReason: outcome === "headers" ? "scan-coverage-unproven"
