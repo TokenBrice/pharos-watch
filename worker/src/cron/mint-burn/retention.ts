@@ -1,6 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { mintBurnHourlyBucketAggregatesSql } from "../../lib/mint-burn-pipeline/persistence";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../../lib/mint-burn-hourly-valuation";
 import { runCappedPruneFamily } from "../shared/capped-delete";
@@ -10,7 +10,7 @@ import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-b
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
-import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError, runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { mintBurnSupplyProofAcceptedSql } from "../../lib/mint-burn-supply-proofs";
 import { MINT_BURN_EVENT_RETENTION_SEC, MINT_BURN_HOURLY_RETENTION_SEC } from "../../lib/mint-burn-retention-config";
 
@@ -68,88 +68,72 @@ const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
   )`;
 
 /**
- * Whole-hour finality: neither valuation debt nor an uncommitted scan frontier
- * may lose a sibling needed to reconstruct the bucket. Missing sync state
- * fails closed for active enabled configs. Secondary configs conservatively
- * protect siblings until every matching enabled frontier covers them.
+ * Bind order: event cutoff, Tape cursor key, hourly cutoff, event limit.
+ * Group the COMPLETE cutoff-straddling hour, including newer siblings. Tape
+ * eligibility remains per event; repair does not require settled classification.
+ * Materialization keeps every sibling/proof/frontier visit in this one pass.
+ * Limit eligible hours AFTER protections, ordered by their first eligible event:
+ * N oldest events need at most N such hours, so protected hours cannot starve
+ * newer eligible ones. Examining protected hours is still linear, not hard-capped.
  */
-function mintBurnFinalHourSql(frontiersSql: string, pendingProtectionSql: string): string {
-  return `NOT EXISTS (
-    SELECT 1 FROM mint_burn_dirty_hours dirty
-     WHERE dirty.stablecoin_id = event.stablecoin_id
-       AND dirty.chain_id = event.chain_id
-       AND dirty.hour_ts = (event.timestamp / 3600) * 3600
-  )
-  AND NOT EXISTS (
-    SELECT 1
-      FROM mint_burn_events sibling
-     WHERE sibling.stablecoin_id = event.stablecoin_id
-       AND sibling.chain_id = event.chain_id
-       AND sibling.timestamp >= (event.timestamp / 3600) * 3600
-       AND sibling.timestamp < ((event.timestamp / 3600) * 3600) + 3600
-       AND (
-         (
-           sibling.amount_usd IS NULL
-           AND COALESCE(sibling.price_repair_status, '') NOT IN ('recovered', 'irreducible')
-         )
-         OR sibling.price_repair_status = 'pending_aggregate'
-         OR EXISTS (
-           SELECT 1
-             FROM (${frontiersSql}) frontier
-            WHERE frontier.column1 = sibling.stablecoin_id
-              AND frontier.column2 = sibling.chain_id
-              AND sibling.block_number > COALESCE((
-                SELECT state.last_block FROM mint_burn_sync_state state
-                 WHERE state.config_key = frontier.column3
-              ), -1)
-         )
+function mintBurnCandidateEventsSql(frontiersSql: string, pendingProtectionSql: string, repair = false): string {
+  const tapeEligible = MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL
+    .replace("event.timestamp < ?", "event.timestamp < (SELECT cutoff FROM retention_limits)")
+    .replace("key = ?", "key = (SELECT tape_key FROM retention_limits)");
+  return `WITH retention_limits AS MATERIALIZED (
+    SELECT ? AS cutoff, ? AS tape_key, ? AS hourly_cutoff, ? AS event_limit
+  ), frontiers AS MATERIALIZED (
+    SELECT frontier.column1 AS stablecoin_id, frontier.column2 AS chain_id,
+           MIN(COALESCE(state.last_block, -1)) AS last_block
+      FROM (${frontiersSql}) frontier
+      LEFT JOIN mint_burn_sync_state state ON state.config_key = frontier.column3
+     GROUP BY frontier.column1, frontier.column2
+  ), hour_status AS MATERIALIZED (
+    SELECT event.stablecoin_id, event.chain_id,
+           (event.timestamp / 3600) * 3600 AS timestamp,
+           MIN(CASE WHEN ${tapeEligible} THEN event.timestamp END) AS oldest_at,
+           MAX(CASE WHEN (
+             (event.amount_usd IS NULL
+               AND COALESCE(event.price_repair_status, '') NOT IN ('recovered', 'irreducible'))
+             OR event.price_repair_status = 'pending_aggregate'
+             OR event.block_number > frontiers.last_block
+           ) THEN 1 ELSE 0 END) AS nonfinal
+           ${repair ? "" : `, MAX(CASE WHEN event.flow_type = 'standard' AND (
+             NOT ${mintBurnSupplyProofAcceptedSql("event")}
+             OR (event.direction = 'mint' AND event.burn_type = 'review_required')
+             OR (event.direction = 'burn'
+               AND (event.burn_type IS NULL OR event.burn_type NOT IN ('effective_burn', 'bridge_burn')))
+           ) THEN 1 ELSE 0 END) AS unresolved`}
+      FROM mint_burn_events event INDEXED BY idx_mbe_coin_chain_ts
+      LEFT JOIN frontiers ON frontiers.stablecoin_id = event.stablecoin_id
+                         AND frontiers.chain_id = event.chain_id
+     WHERE event.timestamp < ((SELECT cutoff FROM retention_limits) / 3600 + 1) * 3600
+     GROUP BY event.stablecoin_id, event.chain_id, (event.timestamp / 3600) * 3600
+  ), eligible_hours AS MATERIALIZED (
+    SELECT event.* FROM hour_status event
+     WHERE event.oldest_at IS NOT NULL AND event.nonfinal = 0
+       AND NOT EXISTS (
+         SELECT 1 FROM mint_burn_dirty_hours dirty
+          WHERE dirty.stablecoin_id = event.stablecoin_id AND dirty.chain_id = event.chain_id
+            AND dirty.hour_ts = event.timestamp
+       )${pendingProtectionSql}
+       ${repair ? "" : "AND (event.timestamp < (SELECT hourly_cutoff FROM retention_limits) OR event.unresolved = 0)"}
+       AND ${repair ? "NOT" : ""} EXISTS (
+         SELECT 1 FROM mint_burn_hourly hourly
+          WHERE hourly.stablecoin_id = event.stablecoin_id AND hourly.chain_id = event.chain_id
+            AND hourly.hour_ts = event.timestamp
        )
-  )${pendingProtectionSql}`;
-}
-
-/**
- * Repair-eligible event: retention-eligible, its hour carries no aggregate row,
- * and every sibling in that hour is final. Bind order: cutoff, tape cursor.
- */
-function mintBurnRepairableEventSql(frontiersSql: string, pendingProtectionSql: string): string {
-  return `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-  AND ${mintBurnFinalHourSql(frontiersSql, pendingProtectionSql)}
-  AND NOT EXISTS (
-    SELECT 1
-      FROM mint_burn_hourly hourly
-     WHERE hourly.stablecoin_id = event.stablecoin_id
-       AND hourly.chain_id = event.chain_id
-       AND hourly.hour_ts = (event.timestamp / 3600) * 3600
-  )`;
-}
-
-/**
- * Deletable event: retention-eligible and its hour is already aggregated. Bind
- * order: cutoff, MINT_BURN_TAPE_CURSOR_KEY, hourly cutoff. Shared by the delete and the
- * oldest-eligible backlog probe.
- */
-function mintBurnAggregatedEventSql(frontiersSql: string, pendingProtectionSql: string): string {
-  return `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-  AND ${mintBurnFinalHourSql(frontiersSql, pendingProtectionSql)}
-  AND ((event.timestamp / 3600) * 3600 < ? OR NOT EXISTS (
-    SELECT 1 FROM mint_burn_events sibling
-     WHERE sibling.stablecoin_id = event.stablecoin_id
-       AND sibling.chain_id = event.chain_id
-       AND sibling.timestamp >= (event.timestamp / 3600) * 3600
-       AND sibling.timestamp < ((event.timestamp / 3600) * 3600) + 3600
-       AND sibling.flow_type = 'standard'
-       AND (NOT ${mintBurnSupplyProofAcceptedSql("sibling")}
-         OR (sibling.direction = 'mint' AND sibling.burn_type = 'review_required')
-         OR (sibling.direction = 'burn'
-           AND (sibling.burn_type IS NULL OR sibling.burn_type NOT IN ('effective_burn', 'bridge_burn'))))
-  ))
-  AND EXISTS (
-    SELECT 1
-      FROM mint_burn_hourly hourly
-     WHERE hourly.stablecoin_id = event.stablecoin_id
-       AND hourly.chain_id = event.chain_id
-       AND hourly.hour_ts = (event.timestamp / 3600) * 3600
-  )`;
+     ORDER BY event.oldest_at ASC
+     LIMIT (SELECT event_limit FROM retention_limits)
+  )
+  SELECT event.id, event.stablecoin_id, event.chain_id, event.timestamp
+    FROM eligible_hours candidate
+    CROSS JOIN mint_burn_events event INDEXED BY idx_mbe_coin_chain_ts
+   WHERE event.stablecoin_id = candidate.stablecoin_id AND event.chain_id = candidate.chain_id
+     AND event.timestamp >= candidate.timestamp AND event.timestamp < candidate.timestamp + 3600
+     AND ${tapeEligible}
+   ORDER BY event.timestamp ASC
+   LIMIT (SELECT event_limit FROM retention_limits)`;
 }
 
 /**
@@ -244,15 +228,9 @@ async function repairMissingHourlyRows(
       repair: {
         sql: `/* pharos:mint-burn:aggregation-evidence-repair */
            WITH oldest_candidates AS MATERIALIZED (
-             SELECT
-               event.stablecoin_id,
-               event.chain_id,
-               (event.timestamp / 3600) * 3600 AS hour_ts,
-               event.timestamp
-             FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-             WHERE ${mintBurnRepairableEventSql(frontiersSql, pendingProtectionSql)}
-             ORDER BY event.timestamp ASC
-             LIMIT ?
+             SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600 AS hour_ts, timestamp FROM (
+               ${mintBurnCandidateEventsSql(frontiersSql, pendingProtectionSql, true)}
+             )
            ), candidate_hours AS MATERIALIZED (
              SELECT stablecoin_id, chain_id, hour_ts, MIN(timestamp) AS oldest_at
                FROM oldest_candidates
@@ -274,7 +252,7 @@ async function repairMissingHourlyRows(
               AND event.timestamp >= candidate.hour_ts
               AND event.timestamp < candidate.hour_ts + 3600
             GROUP BY event.stablecoin_id, event.chain_id, candidate.hour_ts`,
-        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, candidateEventLimit, limit],
+        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC, candidateEventLimit, limit],
         batchLimit: runLimit,
         runLimit,
       },
@@ -282,12 +260,10 @@ async function repairMissingHourlyRows(
     probes: {
       oldestRepairable: {
         sql: `/* pharos:mint-burn:aggregation-evidence-oldest-repairable */
-           SELECT event.timestamp AS oldest_repairable_at
-             FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-            WHERE ${mintBurnRepairableEventSql(frontiersSql, pendingProtectionSql)}
-            ORDER BY event.timestamp ASC
-            LIMIT 1`,
-        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY],
+           SELECT timestamp AS oldest_repairable_at FROM (
+             ${mintBurnCandidateEventsSql(frontiersSql, pendingProtectionSql, true)}
+           )`,
+        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC, 1],
       },
     },
   });
@@ -321,11 +297,9 @@ async function pruneEventRows(
         sql: `/* pharos:mint-burn:event-retention-delete */
        DELETE FROM mint_burn_events
         WHERE id IN (
-          SELECT event.id
-            FROM mint_burn_events event
-           WHERE ${mintBurnAggregatedEventSql(frontiersSql, pendingProtectionSql)}
-           ORDER BY event.timestamp ASC
-           LIMIT ?
+          SELECT id FROM (
+            ${mintBurnCandidateEventsSql(frontiersSql, pendingProtectionSql)}
+          )
         )`,
         bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC, limit],
         batchLimit,
@@ -336,12 +310,10 @@ async function pruneEventRows(
       oldestRemaining: { sql: "SELECT MIN(timestamp) AS oldest_remaining_at FROM mint_burn_events" },
       oldestEligible: {
         sql: `/* pharos:mint-burn:event-retention-oldest-eligible */
-           SELECT event.timestamp AS oldest_eligible_at
-             FROM mint_burn_events event
-            WHERE ${mintBurnAggregatedEventSql(frontiersSql, pendingProtectionSql)}
-            ORDER BY event.timestamp ASC
-            LIMIT 1`,
-        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC],
+           SELECT timestamp AS oldest_eligible_at FROM (
+             ${mintBurnCandidateEventsSql(frontiersSql, pendingProtectionSql)}
+           )`,
+        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY, nowSec - MINT_BURN_HOURLY_RETENTION_SEC, 1],
       },
     },
   });
@@ -524,6 +496,11 @@ export async function pruneMintBurnRetention(
        )
   )` : "";
 
+  // Reuse the shared D1 idle-window convention between independent families.
+  const pace = async (family: { durationMs: number; error: string | null }) => {
+    await sleepWithSignal(isD1ResourceWindowError(family.error) ? D1_RESOURCE_WINDOW_MS
+      : family.durationMs * D1_HEAVY_STATEMENT_IDLE_RATIO, signal);
+  };
   const aggregationRepair = await repairMissingHourlyRows(
     db,
     nowSec,
@@ -534,6 +511,7 @@ export async function pruneMintBurnRetention(
     signal,
   );
   throwIfAborted(signal);
+  await pace(aggregationRepair);
   const eventRows = await pruneEventRows(
     db,
     nowSec,
@@ -544,6 +522,7 @@ export async function pruneMintBurnRetention(
     signal,
   );
   throwIfAborted(signal);
+  await pace(eventRows);
   const hourlyRows = await pruneHourlyRows(
     db,
     nowSec,
@@ -552,10 +531,12 @@ export async function pruneMintBurnRetention(
     signal,
   );
   throwIfAborted(signal);
+  await pace(hourlyRows);
   const proofRunLimit = options.proofRunLimit ?? PROOF_DELETE_RUN_LIMIT;
   const proofRows = await pruneProofRows(db, nowSec, signal,
     Math.min(options.proofBatchLimit ?? PROOF_DELETE_BATCH_LIMIT, proofRunLimit), proofRunLimit);
   throwIfAborted(signal);
+  await pace(proofRows);
   const frontierProtection = await loadFrontierProtection(db, nowSec, frontiersSql, signal);
 
   const errors = [

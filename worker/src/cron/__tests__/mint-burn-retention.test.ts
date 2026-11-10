@@ -85,6 +85,73 @@ describe("mint/burn retention", () => {
   beforeEach(() => { ({ sqlite, db } = setupDb()); });
   afterEach(() => sqlite.close());
 
+  it("matches a per-event oracle across protections without per-event sibling scans", async () => {
+    const now = NOW_SEC + 123;
+    const cutoff = now - MINT_BURN_EVENT_RETENTION_SEC;
+    const hourlyCutoff = now - MINT_BURN_HOURLY_RETENTION_SEC;
+    const kinds = ["clean", "dirty", "unpriced", "pending_aggregate", "frontier", "pending", "missing",
+      "proof", "classification", "expired", "excluded", "stale", "cursor", "boundary", "recovered", "irreducible", "straddle"];
+    const rows = kinds.flatMap((kind, i) => {
+      const timestamp = kind === "expired" ? hourFor(hourlyCutoff) - HOUR_SEC
+        : kind === "straddle" ? cutoff - 3 : kind === "cursor" ? cutoff - 1 : kind === "boundary" ? cutoff : hourFor(cutoff) - (i + 2) * HOUR_SEC;
+      const coin = kind === "frontier" ? "usdc-circle" : kind === "pending" ? "dai-makerdao" : `coin-${i % 2}`;
+      const chain = ["frontier", "pending"].includes(kind) || i % 2 ? "ethereum" : "arbitrum";
+      return Array.from({ length: kind === "proof" ? 400 : 2 }, (_, j) =>
+        ({ id: `${kind}-${j}`, kind, primary: j === 0, coin, chain, timestamp: timestamp + (kind === "straddle" ? j * 4 : j) }));
+    });
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(String(cutoff - 2), TAPE_CURSOR_KEY);
+    sqlite.exec(`INSERT INTO mint_burn_supply_proofs
+      (proof_id, config_key, config_fingerprint, from_block, to_block, status, evidence_json, checked_at)
+      VALUES ('unresolved', 'test', 'test', 1, 1, 'proven', '{}', 1)`);
+    for (const row of rows) {
+      const { id, kind, primary, coin, chain, timestamp } = row;
+      const unpriced = (primary && ["unpriced", "recovered", "irreducible"].includes(kind)) || (kind === "straddle" && !primary);
+      insertEvent(id, timestamp, { withHourly: false, amountUsd: unpriced ? null : 1,
+        priceRepairStatus: primary && ["pending_aggregate", "recovered", "irreducible"].includes(kind) ? kind : null });
+      sqlite.prepare("UPDATE mint_burn_events SET stablecoin_id = ?, chain_id = ?, below_display_threshold = 1 WHERE id = ?")
+        .run(coin, chain, id);
+      if (kind !== "missing") sqlite.prepare("INSERT OR IGNORE INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts) VALUES (?, ?, ?)")
+        .run(coin, chain, hourFor(timestamp));
+      if (!primary) continue;
+      if (kind === "dirty") sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, ?, ?)").run(coin, chain, hourFor(timestamp));
+      if (kind === "frontier") sqlite.prepare("UPDATE mint_burn_events SET block_number = 101 WHERE id = ?").run(id);
+      if (["proof", "expired", "excluded"].includes(kind)) sqlite.prepare("UPDATE mint_burn_events SET supply_proof_id = 'unresolved', flow_type = ? WHERE id = ?")
+        .run(kind === "excluded" ? "bridge_transfer" : "standard", id);
+      if (kind === "classification") sqlite.prepare("UPDATE mint_burn_events SET burn_type = 'review_required' WHERE id = ?").run(id);
+      if (kind === "stale") sqlite.prepare(`INSERT INTO tape_events
+        (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
+        VALUES ('stale', 'mint_burn.large_mint', 'warning', 1, 't', 's', '{}', 'mint_burn_events', ?, 'updated', 1)`).run(id);
+    }
+    const expected = rows.filter((row) => row.timestamp < cutoff && row.timestamp <= cutoff - 2
+      && !(row.primary && row.kind === "stale") && row.kind !== "missing"
+      && !rows.some((sibling) => sibling.coin === row.coin && sibling.chain === row.chain
+        && hourFor(sibling.timestamp) === hourFor(row.timestamp)
+        && ((sibling.kind === "straddle" && !sibling.primary) || (sibling.primary
+          && (["dirty", "unpriced", "pending_aggregate", "frontier", "pending"].includes(sibling.kind)
+            || (hourFor(row.timestamp) >= hourlyCutoff && ["proof", "classification"].includes(sibling.kind)))))))
+      .map(({ id }) => id).sort();
+    const sql: string[] = [];
+    const observed = new Proxy(db, { get(target, key) {
+      if (key !== "prepare") return Reflect.get(target, key);
+      return (query: string) => { sql.push(query); return target.prepare(query); };
+    } });
+    const pending = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "dai-makerdao")!;
+    const result = await pruneMintBurnRetention(observed, now, undefined,
+      { repairRunLimit: 0, pendingAdmissionKeys: new Set([mintBurnConfigKey(pending)]) });
+    expect(result.error).toBeNull();
+    expect(rows.map(({ id }) => id).filter((id) => !eventIds().includes(id)).sort()).toEqual(expected);
+    const queries = sql.filter((query) => query.includes("hour_status AS MATERIALIZED"));
+    expect(queries).toHaveLength(3);
+    for (const query of queries) {
+      const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${query}`).all(cutoff, TAPE_CURSOR_KEY, hourlyCutoff, 1);
+      const details = plan.map((step) => String(step.detail));
+      expect(details).toContain("MATERIALIZE hour_status");
+      expect(details.filter((detail) => detail.includes("idx_mbe_coin_chain_ts"))).toHaveLength(2);
+      expect(details.some((detail) => /SEARCH event .*timestamp>\? AND timestamp<\?/.test(detail))).toBe(true);
+      expect(details.some((detail) => /(?:SCAN|SEARCH) sibling/.test(detail))).toBe(false);
+    }
+  });
+
   it("honors cutoff boundaries and protects unpriced, unaggregated, and fresh event rows", async () => {
     const eventCutoff = NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC;
     const hourlyCutoff = NOW_SEC - MINT_BURN_HOURLY_RETENTION_SEC;
@@ -745,17 +812,18 @@ describe("mint/burn retention", () => {
     expect(eventIds()).toEqual([]);
   });
 
-  it("reports a family cleanup error without preventing the other family", async () => {
+  it.each(["event-retention-delete", "aggregation-evidence-repair"])("isolates %s failure", async (stage) => {
+    insertEvent("eligible-after-error", NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - 1);
     const failingDb = {
       ...db,
       prepare(sql: string) {
-        if (!sql.includes("pharos:mint-burn:event-retention-delete")) {
+        if (!sql.includes(`pharos:mint-burn:${stage}`)) {
           return db.prepare(sql);
         }
         const statement = {
           bind: () => statement as unknown as D1PreparedStatement,
           run: async () => {
-            throw new Error("event retention unavailable");
+            throw new Error("retention unavailable");
           },
         };
         return statement as unknown as D1PreparedStatement;
@@ -764,37 +832,11 @@ describe("mint/burn retention", () => {
 
     const result = await pruneMintBurnRetention(failingDb, NOW_SEC);
 
-    expect(result.eventRows.error).toBe("event retention unavailable");
+    const failed = stage === "event-retention-delete" ? "eventRows" : "aggregationRepair";
+    expect(result[failed].error).toBe("retention unavailable");
+    expect(result.eventRows.deletedRows).toBe(stage === "event-retention-delete" ? 0 : 1);
     expect(result.hourlyRows.error).toBeNull();
-    expect(result.error).toContain("eventRows: event retention unavailable");
-  });
-
-  it("reports aggregation repair failure without preventing bounded deletion", async () => {
-    const cutoff = NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC;
-    insertEvent("eligible-after-repair-error", cutoff - 1);
-    const failingDb = {
-      ...db,
-      prepare(sql: string) {
-        if (!sql.includes("pharos:mint-burn:aggregation-evidence-repair")) {
-          return db.prepare(sql);
-        }
-        const statement = {
-          bind: () => statement as unknown as D1PreparedStatement,
-          run: async () => {
-            throw new Error("aggregation repair unavailable");
-          },
-        };
-        return statement as unknown as D1PreparedStatement;
-      },
-    } as D1Database;
-
-    const result = await pruneMintBurnRetention(failingDb, NOW_SEC);
-
-    expect(result.aggregationRepair.error).toBe("aggregation repair unavailable");
-    expect(result.eventRows.deletedRows).toBe(1);
-    expect(result.eventRows.error).toBeNull();
-    expect(result.hourlyRows.error).toBeNull();
-    expect(result.error).toContain("aggregationRepair: aggregation repair unavailable");
+    expect(result.error).toContain(`${failed}: retention unavailable`);
   });
 
   it("throws before D1 work when already aborted", async () => {
