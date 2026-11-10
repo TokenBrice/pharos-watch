@@ -1,6 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
@@ -12,6 +12,8 @@ import {
 } from "../../lib/blacklist-cache-keys";
 import { balanceRow, makeValidSummaryPayload } from "./blacklist-summary.test-support";
 
+type Summary = Required<BlacklistSummaryResponse>;
+
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   sqliteFixtures.closeAll();
@@ -20,6 +22,7 @@ afterEach(() => {
 
 function makeBlacklistSummaryFallbackTables() {
   return [
+    { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null } },
     ...["blacklist_events", "blacklist_current_balances"].map((table) => ({
       match: "SELECT value FROM cache WHERE key = ?",
       matchBinds: [`blacklist:identity-reconcile:v1:${table}`],
@@ -108,39 +111,40 @@ describe("handleBlacklistSummary", () => {
   it("serves an actual producer snapshot through the public cache reader", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    await materializeBlacklistSummarySnapshot(db, now, now - 30);
-    const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY) as { value: string };
+    expect(await materializeBlacklistSummarySnapshot(db, now, now - 30)).toEqual({ written: true });
+    const stored = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .get(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY) as { value: string; updated_at: number };
     const snapshot = JSON.parse(stored.value) as { payload: BlacklistSummaryResponse };
+    expect(JSON.parse(stored.value)).toMatchObject({
+      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: now, freshnessTs: now - 30,
+      payload: { totalEvents: 0, chart: [] },
+    });
+    expect(stored.updated_at).toBe(now);
     const response = await handleBlacklistSummary(db);
     expect(await readJsonResponse(response, 200)).toEqual(snapshot.payload);
   });
 
-  it("serves a fresh producer snapshot without live blacklist_events scans", async () => {
+  it.each([0, 60, 86400])("serves retained snapshots aged %ss without live scans, hydration or freshness rewrites", async (age) => {
     const now = Math.floor(Date.now() / 1000);
-    const payload = { ...makeValidSummaryPayload(), totalEvents: 7, additiveField: { retained: true } };
-    const db = mockD1([
-      {
-        match: "blacklist-summary-snapshot-read",
-        rows: [{
-          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
-          value: JSON.stringify({
-            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-            materializedAt: now - 60,
-            freshnessTs: now - 60,
-            payload,
-          }),
-          updated_at: now - 60,
-        }],
-      },
-    ]);
-
-    const res = await handleBlacklistSummary(db);
-    const body = await res.json() as typeof payload;
-
+    const snapshotAt = now - age;
+    const payload: Record<string, unknown> = { ...makeValidSummaryPayload(), totalEvents: 7, additiveField: { retained: true } };
+    delete payload.reconciliation;
+    const db = mockD1([{
+      match: "blacklist-summary-snapshot-read",
+      rows: [{
+        value: JSON.stringify({
+          version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION, materializedAt: snapshotAt, freshnessTs: snapshotAt, payload,
+        }),
+        updated_at: snapshotAt,
+      }],
+    }]);
+    const response = await handleBlacklistSummary(db);
+    const body = await response.json() as typeof payload;
     expect(body).toEqual(payload);
-    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(60);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
+    expect(body.reconciliation).toBeUndefined();
+    expect(Number(response.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(age);
+    expect(db.getHistory()).toHaveLength(1);
+    expect(db.getHistory()[0].sql).toContain("blacklist-summary-snapshot-read");
   });
 
   it.each(["missing", "lookup_failed"] as const)("preserves %s authority in retained summary snapshots", async (freshnessStatus) => {
@@ -161,32 +165,6 @@ describe("handleBlacklistSummary", () => {
     expect(response.headers.get("X-Data-Freshness")).toBe(freshnessStatus === "missing" ? "stale" : "unknown");
   });
 
-  it("falls back from invalid producer snapshot shapes", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "blacklist-summary-snapshot-read",
-        rows: [{
-          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
-          value: JSON.stringify({
-            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-            materializedAt: now,
-            freshnessTs: now,
-            payload: { stats: {} },
-          }),
-          updated_at: now,
-        }],
-      },
-      ...makeBlacklistSummaryFallbackTables(),
-    ]);
-
-    const res = await handleBlacklistSummary(db);
-    const body = await res.json() as { totalEvents: number };
-
-    expect(body.totalEvents).toBe(0);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
-  });
-
   it.each(["stats", "chart", "coverage"])(
     "rejects malformed nested cached %s rather than serving it",
     async (field) => {
@@ -200,8 +178,9 @@ describe("handleBlacklistSummary", () => {
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
-      const body = await readJsonResponse<{ totalEvents: number }>(await handleBlacklistSummary(db), 200);
+      const body = await readJsonResponse<Summary>(await handleBlacklistSummary(db), 200);
       expect(body.totalEvents).toBe(0);
+      expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
     },
   );
 
@@ -218,65 +197,9 @@ describe("handleBlacklistSummary", () => {
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
-      expect((await readJsonResponse<{ totalEvents: number }>(await handleBlacklistSummary(db), 200)).totalEvents).toBe(0);
+      expect((await readJsonResponse<Summary>(await handleBlacklistSummary(db), 200)).totalEvents).toBe(0);
     },
   );
-
-  it("serves a stale producer snapshot without refreshing producer freshness from the public request", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const staleAt = now - 24 * 60 * 60;
-    const payload = { ...makeValidSummaryPayload(), totalEvents: 9 };
-    const db = mockD1([
-      {
-        match: "blacklist-summary-snapshot-read",
-        rows: [{
-          key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
-          value: JSON.stringify({
-            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-            materializedAt: staleAt,
-            freshnessTs: staleAt,
-            payload,
-          }),
-          updated_at: staleAt,
-        }],
-      },
-    ]) as MockD1Database;
-
-    const res = await handleBlacklistSummary(db);
-    const body = await res.json() as typeof payload;
-
-    expect(body).toEqual(payload);
-    expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-summary-snapshot-read"))).toHaveLength(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(false);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
-  });
-
-  it("serves a current producer snapshot without the removed reconciliation compatibility read", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const payload = makeValidSummaryPayload();
-    delete payload.reconciliation;
-    const db = mockD1([
-      {
-        match: "blacklist-summary-snapshot-read",
-        rows: [{
-          value: JSON.stringify({
-            version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-            materializedAt: now,
-            freshnessTs: now,
-            payload,
-          }),
-          updated_at: now,
-        }],
-      },
-    ]);
-
-    // P3-16 item 4 / BMT-23 rider removed the migration-0181 request-time hydration branch.
-    const response = await handleBlacklistSummary(db);
-    const body = await response.json() as Record<string, unknown>;
-    expect(body.reconciliation).toBeUndefined();
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-reconciliation-status-latest"))).toBe(false);
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(false);
-  });
 
   it("falls back from corrupt producer snapshots and counts other provider coverage", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -317,38 +240,13 @@ describe("handleBlacklistSummary", () => {
       ]);
 
       const res = await handleBlacklistSummary(db);
-      const body = await res.json() as {
-        coverage: { counts: { byProviderSource: Record<string, number> } };
-      };
+      const body = await res.json() as Summary;
 
       expect(body.coverage.counts.byProviderSource.other).toBe(1);
       expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
     } finally {
       CONTRACT_CONFIGS.splice(originalConfigCount);
     }
-  });
-
-  it("materializes a producer summary snapshot into the cache table", async () => {
-    const now = 1_777_000_000;
-    const db = mockD1(makeBlacklistSummaryFallbackTables());
-
-    const result = await materializeBlacklistSummarySnapshot(db, now, now - 300);
-
-    expect(result).toEqual({ written: true });
-    const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
-    expect(write?.binds[0]).toBe(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
-    const payload = JSON.parse(String(write?.binds[1])) as {
-      version: number;
-      materializedAt: number;
-      freshnessTs: number;
-      payload: { stats: unknown; chart: unknown[]; totalEvents: number };
-    };
-    expect(payload.version).toBe(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION);
-    expect(payload.materializedAt).toBe(now);
-    expect(payload.freshnessTs).toBe(now - 300);
-    expect(payload.payload.totalEvents).toBe(0);
-    expect(Array.isArray(payload.payload.chart)).toBe(true);
-    expect(write?.binds[2]).toBe(now);
   });
 
   it("returns summary stats, chart payload, and chain options", async () => {
@@ -374,12 +272,6 @@ describe("handleBlacklistSummary", () => {
           makeBlacklistRow({
             id: "bl-usdt",
             address: "0x111",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
-            amount_native: 1000,
-            amount_usd_at_event: 1000,
             timestamp: 1_777_000_000,
           }),
           makeBlacklistRow({
@@ -420,34 +312,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const body = await readJsonResponse(res, 200) as {
-      stats: {
-        usdtBlacklisted: number;
-        usdcBlacklisted: number;
-        destroyedTotal: number;
-        recentCount24h: number;
-        activeAddressCount: number;
-        activeFrozenTotal: number;
-        trackedAddressCount: number;
-        trackedFrozenTotal: number;
-        perCoinFrozenAddressCount: Record<string, number>;
-        perCoinFrozenTotal: Record<string, number>;
-        perCoinDestroyedTotal: Record<string, number>;
-        perCoinQuarterlyEventTypes: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
-        perCoinRecentEventTypes: Record<string, { freezes: number; destroys: number; releases: number }>;
-      };
-      chart: Array<{ total: number }>;
-      chains: Array<{ id: string; name: string }>;
-      coverage: { counts: { supportedConfigs: number; byProviderSource: Record<string, number> } };
-      freezeLedgerMeta: {
-        totalRows: number;
-        statusDistribution: Record<string, number>;
-        sourceDistribution: Record<string, number>;
-        gaps: { recoverable: number; unrecoverable: number };
-      };
-      dataQuality: { status: string; coverage: { supportedConfigs: number } };
-      totalEvents: number;
-    };
+    const body = await readJsonResponse(res, 200) as Summary;
     expect(body.totalEvents).toBe(2);
     expect(body.stats.usdtBlacklisted).toBe(1);
     expect(body.stats.usdcBlacklisted).toBe(0);
@@ -502,24 +367,18 @@ describe("handleBlacklistSummary", () => {
           makeBlacklistRow({
             id: "USDC:ethereum:0xactive",
             stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
             address: "0xactive",
             timestamp: 1_777_000_000,
           }),
           makeBlacklistRow({
             id: "USDT:tron:TRdestroyed-blacklist",
-            stablecoin: "USDT",
             chain_id: "tron",
             chain_name: "Tron",
-            event_type: "blacklist",
             address: "TRdestroyed",
             timestamp: 1_777_000_000,
           }),
           makeBlacklistRow({
             id: "USDT:tron:TRdestroyed-destroy",
-            stablecoin: "USDT",
             chain_id: "tron",
             chain_name: "Tron",
             event_type: "destroy",
@@ -531,7 +390,6 @@ describe("handleBlacklistSummary", () => {
             stablecoin: "USDC",
             chain_id: "polygon",
             chain_name: "Polygon",
-            event_type: "blacklist",
             address: "0xother",
             timestamp: 1_777_000_050,
           }),
@@ -559,18 +417,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: {
-        activeAddressCount: number;
-        activeFrozenTotal: number;
-        activeAmountGapCount: number;
-        frozenAddresses: number;
-        perCoinFrozenAddressCount: Record<string, number>;
-        perCoinFrozenTotal: Record<string, number>;
-      };
-      chart: Array<{ total: number }>;
-      freezeLedgerMeta: { statusDistribution: Record<string, number>; sourceDistribution: Record<string, number> };
-    };
+    const json = await res.json() as Summary;
 
     expect(json.stats.activeAddressCount).toBe(3);
     expect(json.stats.activeFrozenTotal).toBe(525);
@@ -586,135 +433,16 @@ describe("handleBlacklistSummary", () => {
     expect(json.freezeLedgerMeta.sourceDistribution.reconciled_snapshot).toBe(1);
   });
 
-  it("does not count preserved current-balance snapshots after unblacklist events as active freezes", async () => {
-    const observedAt = 1_777_000_300;
-    const db = mockD1([
-      {
-        match: "GROUP BY stablecoin, event_type",
-        rows: [{ stablecoin: "USDC", event_type: "blacklist", n: 1, usd_sum: 100, usd_known: 1 }],
-      },
-      {
-        match: "latest_event_type",
-        rows: [
-          makeBlacklistRow({
-            id: "released-blacklist",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
-            address: "0xreleased",
-            amount_usd_at_event: 100,
-            timestamp: 1_777_000_000,
-          }),
-          makeBlacklistRow({
-            id: "released-unblacklist",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "unblacklist",
-            address: "0xreleased",
-            timestamp: 1_777_000_100,
-          }),
-        ],
-      },
-      {
-        match: "COUNT(*) AS total",
-        rows: [],
-        first: { total: 2, max_ts: 1_777_000_100, recent_30d: 0, recent_24h: 0 },
-      },
-      {
-        match: "FROM blacklist_current_balances",
-        rows: [
-          balanceRow("USDC", "ethereum", "0xreleased", 100, observedAt),
-        ],
-      },
-      { match: "quarter_sort_key", rows: [] },
-      { match: "cron_runs", rows: [], first: { started_at: observedAt } },
-      ...makeBlacklistSummaryFallbackTables(),
-    ]);
-
-    const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: {
-        activeAddressCount: number;
-        activeFrozenTotal: number;
-        frozenAddresses: number;
-        trackedAddressCount: number;
-        trackedFrozenTotal: number;
-        perCoinFrozenAddressCount: Record<string, number>;
-      };
-    };
-
-    expect(json.stats.activeAddressCount).toBe(0);
-    expect(json.stats.activeFrozenTotal).toBe(0);
-    expect(json.stats.frozenAddresses).toBe(0);
-    expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(0);
-    expect(json.stats.trackedAddressCount).toBe(1);
-    expect(json.stats.trackedFrozenTotal).toBe(100);
-  });
-
   it("derives perCoinBlacklistCounts and preserves required stats", async () => {
-    const db = mockD1([
-      {
-        match: "GROUP BY stablecoin, event_type",
-        rows: [
-          { stablecoin: "USDC", event_type: "blacklist", n: 1, usd_sum: 1000, usd_known: 1 },
-          { stablecoin: "USDC", event_type: "unblacklist", n: 1, usd_sum: 0, usd_known: 1 },
-          { stablecoin: "USDT", event_type: "destroy", n: 1, usd_sum: 500, usd_known: 1 },
-        ],
-      },
-      {
-        match: "latest_event_type",
-        rows: [
-          // Latest-per-(stablecoin,chain,address) after unblacklist is 'unblacklist'.
-          makeBlacklistRow({
-            id: "bl-usdc-u",
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "unblacklist",
-            address: "0xa",
-            amount_native: 0,
-            amount_usd_at_event: 0,
-            timestamp: 1_700_100_000,
-          }),
-          makeBlacklistRow({
-            id: "bl-usdt-d",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "destroy",
-            address: "0xb",
-            amount_native: 500,
-            amount_usd_at_event: 500,
-            timestamp: 1_700_200_000,
-          }),
-        ],
-      },
-      {
-        match: "COUNT(*) AS total",
-        rows: [],
-        first: { total: 3, max_ts: 1_700_200_000, recoverable_gap: 0, recent_30d: 0, recent_24h: 0 },
-      },
-      { match: "FROM blacklist_current_balances", rows: [] },
-      { match: "quarter_sort_key", rows: [] },
-      { match: "cron_runs", rows: [], first: { started_at: null } },
-      ...makeBlacklistSummaryFallbackTables(),
-    ]);
-
-    const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: {
-        usdcBlacklisted: number;
-        usdtBlacklisted: number;
-        destroyedTotal: number;
-        perCoinBlacklistCounts: Record<string, number>;
-        perCoinTotalEvents: Record<string, number>;
-        recoverableGapCount: number;
-        recentCount: number;
-        recentCount24h: number;
-      };
-    };
+    const { sqlite, db } = sqliteFixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, explorer_tx_url, explorer_address_url)
+      VALUES (?, ?, 'ethereum', 'Ethereum', ?, '0xa', ?, ?, ?, ?, '', '')`);
+    for (const [index, [coin, event, amount]] of [
+      ["USDC", "blacklist", 1000], ["USDC", "unblacklist", 0], ["USDT", "destroy", 500],
+    ].entries()) insert.run(String(index), coin, event, String(index), index, 1_700_000_000 + index, amount);
+    const json = await readJsonResponse<Summary>(await handleBlacklistSummary(db), 200);
     expect(json.stats.usdcBlacklisted).toBe(1);
     expect(json.stats.usdtBlacklisted).toBe(0); // only destroy, not blacklist
     expect(json.stats.destroyedTotal).toBe(500);
@@ -770,11 +498,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: { recoverableGapCount: number };
-      freezeLedgerMeta: { gaps: { recoverable: number; recentRecoverable: number } };
-      dataQuality: { amountGaps: { totalEvents: number; recoverable: number } };
-    };
+    const json = await res.json() as Summary;
     expect(json.stats.recoverableGapCount).toBe(2);
     expect(json.freezeLedgerMeta.gaps.recoverable).toBe(2);
     expect(json.freezeLedgerMeta.gaps.recentRecoverable).toBe(1);
@@ -808,19 +532,10 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      freezeLedgerMeta: {
-        freshnessDistribution: { stale: number };
-        currentFreshnessDistribution: { stale: number };
-      };
-      dataQuality: {
-        status: string;
-        freezeLedger: { providerFailedCount: number };
-      };
-    };
+    const json = await res.json() as Summary;
 
     expect(json.freezeLedgerMeta.freshnessDistribution.stale).toBe(1);
-    expect(json.freezeLedgerMeta.currentFreshnessDistribution.stale).toBe(0);
+    expect(json.freezeLedgerMeta.currentFreshnessDistribution!.stale).toBe(0);
     expect(json.dataQuality.freezeLedger).not.toHaveProperty("staleSnapshotCount");
     expect(json.dataQuality.freezeLedger.providerFailedCount).toBe(0);
     expect(json.dataQuality.status).toBe("ok");
@@ -875,20 +590,9 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      freezeLedgerMeta: {
-        currentFreshnessDistribution: { stale: number };
-      };
-      dataQuality: {
-        status: string;
-        warnings: string[];
-        amountGaps: { unrecoverable: number };
-        freezeLedger: { providerFailedCount: number };
-        coverage: { unsupportedDeferredConfigs: number };
-      };
-    };
+    const json = await res.json() as Summary;
 
-    expect(json.freezeLedgerMeta.currentFreshnessDistribution.stale).toBe(1);
+    expect(json.freezeLedgerMeta.currentFreshnessDistribution!.stale).toBe(1);
     expect(json.dataQuality.amountGaps.unrecoverable).toBe(2);
     expect(json.dataQuality.coverage.unsupportedDeferredConfigs).toBeGreaterThan(0);
     expect(json.dataQuality.freezeLedger.providerFailedCount).toBe(0);
@@ -901,6 +605,7 @@ describe("handleBlacklistSummary", () => {
     vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
     const now = Math.floor(Date.now() / 1000);
     const { sqlite, db } = sqliteFixtures.open();
+    sqlite.function("unixepoch", () => Math.floor(Date.now() / 1000));
     const insert = sqlite.prepare(`INSERT INTO blacklist_current_balances
       (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at,
        config_key, contract_address, last_successful_observed_at, attempt_count, last_attempted_at,
@@ -916,22 +621,7 @@ describe("handleBlacklistSummary", () => {
     // Fresh control row.
     insert.run("usdt:tron:fresh", "0xfresh", "current_balance", "resolved", now - 60, now - 60, null, null, null);
 
-    const json = await readJsonResponse<{
-      stats: {
-        trackedAddressCount: number;
-        trackedFrozenTotal: number;
-        perCoinFrozenTotal: Record<string, number>;
-      };
-      freezeLedgerMeta: {
-        totalRows: number;
-        freshnessDistribution: { stale: number };
-      };
-      dataQuality: {
-        status: string;
-        warnings: string[];
-        freezeLedger: { providerFailedCount: number };
-      };
-    }>(await handleBlacklistSummary(db), 200);
+    const json = await readJsonResponse<Summary>(await handleBlacklistSummary(db), 200);
     expect(json.stats.trackedAddressCount).toBe(4);
     expect(json.stats.trackedFrozenTotal).toBe(160);
     expect(json.stats.perCoinFrozenTotal.USDT).toBe(120);
@@ -947,6 +637,7 @@ describe("handleBlacklistSummary", () => {
     vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
     const now = Date.now() / 1000;
     const { sqlite, db } = sqliteFixtures.open();
+    sqlite.function("unixepoch", () => Math.floor(Date.now() / 1000));
     const insert = sqlite.prepare(`INSERT INTO blacklist_events
       (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
        timestamp, explorer_tx_url, explorer_address_url, suppression_reason)
@@ -977,68 +668,17 @@ describe("handleBlacklistSummary", () => {
       },
       {
         match: "latest_event_type",
-        rows: [
-          makeBlacklistRow({
-            id: `ethereum-0x${"11".repeat(32)}-0x10`,
-            tx_hash: `0x${"11".repeat(32)}`,
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
-            address: "0xstays-frozen",
-            timestamp: 1_700_100_000,
-          }),
-          makeBlacklistRow({
-            id: `ethereum-0x${"ff".repeat(32)}-0xf`,
-            tx_hash: `0x${"ff".repeat(32)}`,
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "unblacklist",
-            address: "0xstays-frozen",
-            timestamp: 1_700_100_000,
-          }),
-          makeBlacklistRow({
-            id: `ethereum-0x${"ff".repeat(32)}-0xf`,
-            tx_hash: `0x${"ff".repeat(32)}`,
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
-            address: "0xgets-unfrozen",
-            timestamp: 1_700_200_000,
-          }),
-          makeBlacklistRow({
-            id: `ethereum-0x${"11".repeat(32)}-0x10`,
-            tx_hash: `0x${"11".repeat(32)}`,
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "unblacklist",
-            address: "0xgets-unfrozen",
-            timestamp: 1_700_200_000,
-          }),
-          makeBlacklistRow({
-            id: `ethereum-0x${"ff".repeat(32)}-0x11`,
-            tx_hash: `0x${"ff".repeat(32)}`,
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
-            address: "0xlater-still-frozen",
-            timestamp: 1_700_050_000,
-          }),
-          makeBlacklistRow({
-            id: `ethereum-0x${"11".repeat(32)}-0x1`,
-            tx_hash: `0x${"11".repeat(32)}`,
-            stablecoin: "USDC",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
-            address: "0xlater-still-frozen",
-            timestamp: 1_700_300_000,
-          }),
-        ],
+        rows: ([
+          ["11", "0x10", "blacklist", "0xstays-frozen", 1_700_100_000],
+          ["ff", "0xf", "unblacklist", "0xstays-frozen", 1_700_100_000],
+          ["ff", "0xf", "blacklist", "0xgets-unfrozen", 1_700_200_000],
+          ["11", "0x10", "unblacklist", "0xgets-unfrozen", 1_700_200_000],
+          ["ff", "0x11", "blacklist", "0xlater-still-frozen", 1_700_050_000],
+          ["11", "0x1", "blacklist", "0xlater-still-frozen", 1_700_300_000],
+        ] as const).map(([hash, position, event_type, address, timestamp]) => makeBlacklistRow({
+          id: `ethereum-0x${hash.repeat(32)}-${position}`, tx_hash: `0x${hash.repeat(32)}`,
+          stablecoin: "USDC", event_type, address, timestamp,
+        })),
       },
       {
         match: "COUNT(*) AS total",
@@ -1052,7 +692,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as { stats: { frozenAddresses: number; perCoinFrozenAddressCount: Record<string, number> } };
+    const json = await res.json() as Summary;
     expect(json.stats.frozenAddresses).toBe(2);
     expect(json.stats.perCoinFrozenAddressCount.USDC).toBe(2);
   });
@@ -1074,29 +714,18 @@ describe("handleBlacklistSummary", () => {
         rows: [
           makeBlacklistRow({
             id: "blacklist-prior",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
-            event_type: "blacklist",
             address: "0xdestroyed",
             amount_native: 100,
             amount_usd_at_event: 100,
             timestamp: blacklistedAt,
-            config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-            contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
           }),
           makeBlacklistRow({
             id: "destroy-latest",
-            stablecoin: "USDT",
-            chain_id: "ethereum",
-            chain_name: "Ethereum",
             event_type: "destroy",
             address: "0xdestroyed",
             amount_native: 100,
             amount_usd_at_event: 100,
             timestamp: destroyedAt,
-            config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-            contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
           }),
         ],
       },
@@ -1122,10 +751,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: { activeAddressCount: number; activeFrozenTotal: number };
-      chart: Array<{ quarter: string; total: number }>;
-    };
+    const json = await res.json() as Summary;
     expect(json.stats.activeAddressCount).toBe(1);
     expect(json.stats.activeFrozenTotal).toBe(0);
     expect(json.chart[0]).toMatchObject({ quarter: "Q1 '24", total: 100 });
@@ -1148,7 +774,6 @@ describe("handleBlacklistSummary", () => {
         rows: [
           makeBlacklistRow({
             id: "bl-usdt-d1",
-            stablecoin: "USDT",
             chain_id: "tron",
             chain_name: "Tron",
             event_type: "destroy",
@@ -1157,7 +782,6 @@ describe("handleBlacklistSummary", () => {
           }),
           makeBlacklistRow({
             id: "bl-usdt-d2",
-            stablecoin: "USDT",
             chain_id: "tron",
             chain_name: "Tron",
             event_type: "destroy",
@@ -1181,14 +805,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: {
-        perCoinFrozenAddressCount: Record<string, number>;
-        perCoinFrozenTotal: Record<string, number>;
-        perCoinDestroyedTotal: Record<string, number>;
-        perCoinQuarterlyEventTypes: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
-      };
-    };
+    const json = await res.json() as Summary;
     expect(json.stats.perCoinFrozenAddressCount.USDT).toBe(0);
     expect(json.stats.perCoinFrozenTotal.USDT).toBe(0);
     expect(json.stats.perCoinDestroyedTotal.USDT).toBe(750);
@@ -1226,11 +843,7 @@ describe("handleBlacklistSummary", () => {
     ]);
 
     const res = await handleBlacklistSummary(db);
-    const json = await res.json() as {
-      stats: {
-        perCoinQuarterlyEventTypes: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
-      };
-    };
+    const json = await res.json() as Summary;
     const points = json.stats.perCoinQuarterlyEventTypes.USDC;
     expect(points).toHaveLength(3);
     expect(points[0]).toMatchObject({ blacklist: 1, unblacklist: 0, destroy: 0 });
