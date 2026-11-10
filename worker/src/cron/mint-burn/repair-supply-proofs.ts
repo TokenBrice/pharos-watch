@@ -1,4 +1,4 @@
-import { getCaches } from "../../lib/db-cache";
+import { getCache, getCaches } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getMintBurnRangeProofEligibility, mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
@@ -17,7 +17,8 @@ interface RetainedCoverageRow {
 
 interface SupplyProofRepairCursor {
   fingerprint: string;
-  lastBlock: number;
+  lastBlock: number | null;
+  maxBlocks?: number;
 }
 
 export function mintBurnSupplyProofRepairCursorKey(configKey: string): string {
@@ -30,11 +31,23 @@ function decodeCursor(value: string | undefined): SupplyProofRepairCursor | null
     const parsed: unknown = JSON.parse(value);
     if (typeof parsed !== "object" || parsed === null || !("fingerprint" in parsed) ||
         !("lastBlock" in parsed) || typeof parsed.fingerprint !== "string" ||
-        typeof parsed.lastBlock !== "number" || !Number.isSafeInteger(parsed.lastBlock) || parsed.lastBlock < 0) return null;
-    return { fingerprint: parsed.fingerprint, lastBlock: parsed.lastBlock };
+        (parsed.lastBlock !== null && (typeof parsed.lastBlock !== "number" ||
+          !Number.isSafeInteger(parsed.lastBlock) || parsed.lastBlock < 0))) return null;
+    const maxBlocks = "maxBlocks" in parsed && typeof parsed.maxBlocks === "number" &&
+      Number.isSafeInteger(parsed.maxBlocks) && parsed.maxBlocks >= 1 && parsed.maxBlocks <= COVERAGE_REPAIR_MAX_BLOCKS
+      ? parsed.maxBlocks : undefined;
+    return { fingerprint: parsed.fingerprint, lastBlock: parsed.lastBlock, ...(maxBlocks != null ? { maxBlocks } : {}) };
   } catch {
     return null;
   }
+}
+
+export async function loadMintBurnSupplyProofRepairCursor(
+  db: D1Database, config: MintBurnContractConfig,
+): Promise<SupplyProofRepairCursor> {
+  const fingerprint = mintBurnConservationFingerprint(config);
+  const cursor = decodeCursor((await getCache(db, mintBurnSupplyProofRepairCursorKey(mintBurnConfigKey(config))))?.value);
+  return cursor?.fingerprint === fingerprint ? cursor : { fingerprint, lastBlock: null };
 }
 
 /** Revisit every retained range once per law revision, independently of live ingestion.
@@ -82,7 +95,7 @@ export async function loadMintBurnSupplyProofRepairRanges(
     if (retained == null) continue;
     const cursor = decodeCursor(progress.get(mintBurnSupplyProofRepairCursorKey(key))?.value);
     const fromBlock = Math.max(config.startBlock, first.from_block, retained,
-      cursor?.fingerprint === mintBurnConservationFingerprint(config) ? cursor.lastBlock + 1 : 0);
+      cursor?.fingerprint === mintBurnConservationFingerprint(config) && cursor.lastBlock != null ? cursor.lastBlock + 1 : 0);
     // Stop at ledger gaps. Coverage repair must fill them before this independent
     // cursor can pass; otherwise a later filled hole would never be revisited.
     let coveredTo: number | null = null;
@@ -103,7 +116,7 @@ export async function commitMintBurnSupplyProofRepair(
 ): Promise<void> {
   const key = mintBurnConfigKey(config);
   if (proof.configKey !== key) throw new Error("Supply-proof repair config mismatch");
-  const cursor: SupplyProofRepairCursor = { fingerprint: mintBurnConservationFingerprint(config), lastBlock: proof.toBlock };
+  const cursor: SupplyProofRepairCursor = { ...await loadMintBurnSupplyProofRepairCursor(db, config), lastBlock: proof.toBlock };
   await runWithOverloadRetry(() => db.batch([
     ...mintBurnScanCoverageStatements(db, proof),
     db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)

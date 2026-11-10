@@ -161,46 +161,22 @@ describe("completeMintBurnRun", () => {
     expect(parsed.publication.legsTruncated).toBe(pendingCount === 200);
   });
 
-  it.each(["extended", "critical"] as const)("immediately degrades %s for one verified conservation failure", async (lane) => {
+  it.each(["extended", "critical", "reorg", "repair", "deadline"])("immediately degrades for %s with the real reason", async (kind) => {
     const input = buildRunInput();
-    input.lane = lane;
-    input.phase.configBreakdown = [{ conservationFailure: true, conservationStatus: "mismatch",
-      key: "test", failedEventDefs: [], errors: 1 } as unknown as MintBurnConfigSummary];
+    if (kind === "extended") input.lane = kind;
+    const deadline = kind === "deadline", repair = kind === "repair" || deadline;
+    const summary = { key: "test", conservationFailure: !deadline, errors: 1, failedEventDefs: [],
+      conservationStatus: kind === "reorg" ? "unavailable" : "mismatch", conservationReason: kind === "reorg" ? "boundary-reorg" : undefined,
+      ...(deadline ? { conservationStatus: "unsupported", supplyProofStatus: "unavailable",
+        supplyProofReason: "persisted-event-readback-deadline" } : {}),
+      repairReason: "scan-coverage-unproven" } as unknown as MintBurnCoverageRepairSummary;
+    if (repair) input.phase.coverageRepairs = [summary];
+    else input.phase.configBreakdown = [summary];
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("degraded");
-    expect(result.metadata.conservationFailures).toBe(1);
-    expect(result.metadata.apiErrors).toBe(0);
-  });
-
-  it("immediately degrades the critical lane for a validated boundary reorg", async () => {
-    const input = buildRunInput();
-    input.phase.configBreakdown = [{ conservationFailure: true, conservationStatus: "unavailable",
-      conservationReason: "boundary-reorg", key: "test", failedEventDefs: [], errors: 1 } as unknown as MintBurnConfigSummary];
-    const result = await completeMintBurnRun(input);
-    expect(result.status).toBe("degraded");
-    expect(result.metadata.reason).toBe("mint-burn-conservation-failure");
-    expect(result.metadata.conservationFailures).toBe(1);
-  });
-
-  it("degrades when a bounded coverage replay verifies a conservation mismatch", async () => {
-    const input = buildRunInput();
-    input.phase.coverageRepairs = [{
-      key: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      conservationFailure: true,
-      conservationStatus: "mismatch",
-      conservationReason: "raw-transfer-supply-mismatch",
-      errors: 1,
-      repairReason: "scan-coverage-unproven",
-    } as unknown as MintBurnCoverageRepairSummary];
-
-    const result = await completeMintBurnRun(input);
-    expect(result.status).toBe("degraded");
-    expect(result.metadata).toMatchObject({
-      degradedSignal: true,
-      admittedConservationFailures: 1,
-      conservationFailures: 1,
-      reason: "mint-burn-conservation-failure",
-    });
+    expect(result.metadata).toMatchObject({ degradedSignal: true, apiErrors: 0,
+      admittedConservationFailures: deadline ? 0 : 1, conservationFailures: deadline ? 0 : 1,
+      reason: deadline ? "mint-burn-source-coverage-degraded" : "mint-burn-conservation-failure" });
   });
 
   it("does not publish another chain's finalized head as the legacy Ethereum chainHead", async () => {
