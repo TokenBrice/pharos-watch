@@ -1,13 +1,14 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
+import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type MintBurnSupplyReconciliationLeg, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { buildCoinCoverageMap, readMintBurnCronSnapshot, readMintBurnWindowContext, withExtendedLaneHeads, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
-import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey, readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
 import { conservationIdentityAddress, mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
+import { readMintBurnSupplyReconciliation } from "../mint-burn-supply-reconciliation";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEvent } from "../structured-log";
 import type { MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
@@ -301,15 +302,17 @@ export async function getMintBurnReconciliation(
   let extendedSnapshot: MintBurnCronSnapshot;
   let scanSegments: Map<string, MintBurnScanSegment[]>;
   let conservationRecords: Map<string, unknown>;
+  let dailyReconciliation: Map<string, MintBurnSupplyReconciliationLeg>;
   try {
     const context = await readMintBurnWindowContext(db, now, activeConfigs);
     diagnosticConfigs = context.diagnosticConfigs;
     scanSegments = context.segments;
-    [lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
+    [lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords, dailyReconciliation] = await Promise.all([
       readMintBurnSyncStateBatch(db, diagnosticConfigs),
       readMintBurnCronSnapshot(db),
       readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
       readMintBurnConservationRecords(db, diagnosticConfigs),
+      readMintBurnSupplyReconciliation(db, diagnosticConfigs, now),
     ]);
   } catch (err) {
     logWorkerEvent({
@@ -378,6 +381,10 @@ export async function getMintBurnReconciliation(
         conservationIssue,
         // Validate against the full cached fingerprint above; never publish its bulky config JSON.
         conservation: conservation.map(({ configFingerprint: _configFingerprint, ...record }) => record),
+        dailyReconciliation: configs.flatMap((config) => {
+          const leg = dailyReconciliation.get(mintBurnConfigKey(config));
+          return leg ? [leg] : [];
+        }),
       };
     })
     .sort((a, b) => {

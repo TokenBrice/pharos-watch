@@ -5,6 +5,7 @@ import { pruneStatusProbeRuns, runPruneStatusProbeRuns } from "../prune-status-p
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { WORKER_CANARY_RUN_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
+import { MINT_BURN_RECONCILIATION_POLICY } from "@shared/lib/mint-burn-reconciliation-policy";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const createTestDb = fixtures.open;
@@ -40,20 +41,31 @@ describe("runPruneCronHistory", () => {
     const batch = vi.spyOn(db, "batch");
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     const result = await runPruneCronHistory(db);
-    expect(batch).toHaveBeenCalledTimes(21);
+    expect(batch).toHaveBeenCalledTimes(22);
     expect(batch.mock.calls.every(([statements]) => statements.length === 1)).toBe(true);
     expect(log.mock.calls.slice(0, 2).map(([, detail]) => JSON.parse(detail).completed.map(({ key }: { key: string }) => key)))
       .toEqual([["cronRuns"], ["producerHistory"]]);
     const metadata = JSON.parse(result.metadata!);
     expect(Object.keys(metadata.retentionTruncated)).toEqual(expect.arrayContaining([
       "cronRuns", "producerHistory", "repairTasks", "canaryRuns", "recoveryCheckpoints",
-      "selectorSnapshotDailyQuota", "blockTimestampCache", "slotExecutions", "reserveContinuationExecutions",
+      "selectorSnapshotDailyQuota", "blockTimestampCache", "mintBurnSupplyReconciliation", "slotExecutions", "reserveContinuationExecutions",
       "apiRequestConsumerStats", "siteDataRequestStats", "apiKeyRequestStats",
       "apiRequestSourceSamples", "siteDataRequestSamples",
       "safetyScoreJournal", "safetyScoreAttempts", "safetyScoreCaptureArchive",
       "selfServeRequestRateLimits", "selfServeIssuanceRateLimits",
     ]));
     expect(Object.values(metadata.retentionTruncated).every((flag) => flag === false)).toBe(true);
+  });
+
+  it("prunes daily reconciliation receipts by day, preserving the exact 95-day cutoff", async () => {
+    const { db, sqlite } = createTestDb();
+    const cutoff = nowSec() - MINT_BURN_RECONCILIATION_POLICY.retentionSec;
+    for (const offset of [-1, 0, 1]) insert(sqlite, `INSERT INTO mint_burn_supply_reconciliation
+      (config_key, day_ts, status, receipt_json, checked_at) VALUES ('leg', ?, 'unavailable', '{}', ?)`, cutoff + offset, nowSec());
+    const result = await runPruneCronHistory(db);
+    expect(JSON.parse(result.metadata!).mintBurnSupplyReconciliationDeleted).toBe(1);
+    expect(select(sqlite, "SELECT day_ts FROM mint_burn_supply_reconciliation ORDER BY day_ts"))
+      .toEqual([{ day_ts: cutoff }, { day_ts: cutoff + 1 }]);
   });
 
   it("retains producer boundaries and counters across slices", async () => {

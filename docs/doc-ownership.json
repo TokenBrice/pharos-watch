@@ -1334,6 +1334,9 @@
       "risk": "high",
       "sources": [
         "worker/src/lib/status/**",
+        "worker/src/lib/mint-burn-supply-reconciliation.ts",
+        "worker/src/cron/mint-burn-reconciliation-watchdog.ts",
+        "shared/lib/mint-burn-reconciliation-policy.ts",
         "worker/src/lib/status-evaluation.ts",
         "worker/src/lib/status-reliability-shared.ts",
         "worker/src/lib/public-health-assessment.ts",
@@ -1372,6 +1375,11 @@
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
       "reading": [
+        {
+          "sources": ["worker/src/lib/mint-burn-supply-reconciliation.ts", "worker/src/cron/mint-burn-reconciliation-watchdog.ts", "shared/lib/mint-burn-reconciliation-policy.ts"],
+          "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "daily-operator-invariant" }, { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }],
+          "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "daily-operator-invariant" }, { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }]
+        },
         {
           "sources": ["src/lib/status/**", "src/lib/status-dashboard-model.ts"],
           "local": [

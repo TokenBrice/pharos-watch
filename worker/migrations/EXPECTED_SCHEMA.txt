@@ -168,6 +168,7 @@ index	idx_mbh_ts
 index	idx_mbh_valuation_unrecorded
 index	idx_mbsp_config_lifecycle
 index	idx_mbsp_config_range
+index	idx_mbsr_day
 index	idx_onchain_supply_updated
 index	idx_pricing_provider_negative_cache_expiry
 index	idx_public_snapshots_listing
@@ -455,6 +456,7 @@ table	mint_burn_run_state
 table	mint_burn_scan_coverage
 table	mint_burn_supply_proof_configs
 table	mint_burn_supply_proofs
+table	mint_burn_supply_reconciliation
 table	mint_burn_sync_state
 table	onchain_supply
 table	price_cache

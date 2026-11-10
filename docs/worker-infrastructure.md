@@ -212,6 +212,8 @@ Charts-offset preparation derives the due stablecoins slot from logical time. It
 
 V9 compute returns neutral `v9-capture-already-accepted` before compilation when the capture clock is no newer than `current` publication health's attempt clock, retaining both clocks in metadata. Failed health reads continue through the existing compute path. The [canonical publication contract](process/report-cards-appendix.md#canonical-publication) owns this guard; recovery-only `:52` materialization still runs before compute admission.
 
+The critical mint/burn producer also hosts the [daily operator supply invariant](./mint-burn-flows.md#daily-operator-invariant) as a serialized resumable maintenance phase inside its existing request cap; no trigger or concurrent connection is added. The daily `cron-sentinel` reads those durable receipts as source `supply-reconciliation`, sends changed residual/review-suppression findings through operator Telegram, and leaves unsupported/unavailable legs as diagnostics. `prune-cron-history` bounds receipt storage to the shared 95-day horizon.
+
 ### Event-entry lifecycle and admission
 
 `runScheduledSlotWithFence()` arms the inherited absolute deadline before the first D1 await, not after claim or child-protocol stamping. Same-key presweeps no longer precede admission; same-slot stale takeover remains CAS-fenced. Mandatory await boundaries recheck expiry before admitting the next stage. Replay keeps the executing event's deadline and its separate producer/source identity.

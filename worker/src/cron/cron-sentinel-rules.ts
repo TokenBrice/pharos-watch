@@ -7,6 +7,7 @@ export type CronSentinelRuleSource =
   | "turnover"
   | "reserve-post-sync"
   | "growth"
+  | "supply-reconciliation"
   | "repair-debt";
 
 /**
@@ -66,6 +67,8 @@ export type CronSentinelRuleSource =
  *   `mint-burn-activity-collapse` (an enabled leg with a 30-day baseline records
  *   no counted event for a full week).
  * - `repair-debt`: `repair-debt-due`, `repair-debt-stale-claim`.
+ * - `supply-reconciliation`: `mint-burn-unexplained-residual` and
+ *   `mint-burn-review-suppression` (daily exact supply/ledger receipts).
  */
 export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly string[]> = {
   freshness: [
@@ -123,6 +126,7 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "reserve-composition-census-drift",
   ],
   growth: ["mint-burn-row-growth", "mint-burn-activity-collapse"],
+  "supply-reconciliation": ["mint-burn-unexplained-residual", "mint-burn-review-suppression"],
   "repair-debt": ["repair-debt-due", "repair-debt-stale-claim"],
 };
 

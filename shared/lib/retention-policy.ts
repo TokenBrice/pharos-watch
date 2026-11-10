@@ -1,5 +1,6 @@
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "./request-attribution";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "./safety-score-capture-archive";
+import { MINT_BURN_RECONCILIATION_POLICY } from "./mint-burn-reconciliation-policy";
 
 const DAY = 86_400;
 export const WORKER_CANARY_RUN_RETENTION_SEC = 14 * DAY;
@@ -80,6 +81,9 @@ export function cronHistoryRetentionPolicies(
     }),
     selectorSnapshotDailyQuota: policy("selector_snapshot_daily_quota", "quota_date", 2 * DAY, { clockFormat: "utc-date" }),
     blockTimestampCache: policy("block_timestamp_cache", "updated_at", 14 * DAY),
+    mintBurnSupplyReconciliation: policy("mint_burn_supply_reconciliation", "day_ts", MINT_BURN_RECONCILIATION_POLICY.retentionSec, {
+      batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
+    }),
     slotExecutions: policy("cron_slot_executions", "slot_started_at", CRON_SLOT_EXECUTIONS_RETENTION_SEC),
     reserveContinuationExecutions: policy("reserve_continuation_executions", "finished_at", 14 * DAY, {
       predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,

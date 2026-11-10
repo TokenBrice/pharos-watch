@@ -20,6 +20,7 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./chain-context";
 import { recalcMintBurnAffectedHours } from "./recalc";
 import { pruneMintBurnRetention } from "./retention";
+import { runMintBurnSupplyReconciliation } from "../../lib/mint-burn-supply-reconciliation";
 import { completeMintBurnRun } from "./run-completion";
 import { mintBurnPublicationMetadata } from "./publication-metadata";
 import { configKey, configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./run-configs";
@@ -279,19 +280,38 @@ export class MintBurnRun {
       deadlineMs,
     };
     const chainContexts = await loadMintBurnChainContexts({
-      configs: configs.filter((config) => !pendingAdmissionKeys.has(configKey(config))),
+      configs: configs.filter((config) => !pendingAdmissionKeys.has(configKey(config)))
+        .concat(lane === "critical" ? publicationContext.diagnosticConfigs : []),
       apiKey,
       budget,
       signal,
       chainRpcs: options.chainRpcs,
       ...tronOptions,
     });
-    const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
+    const stablecoinIds = [...new Set([...configs, ...(lane === "critical" ? publicationContext.diagnosticConfigs : [])]
+      .map((config) => config.stablecoinId))];
     const priceContext = await loadMintBurnPriceContextBatch(
       db,
       stablecoinIds,
       D1_SAFE_IN_CLAUSE_BIND_LIMIT,
     );
+
+    // Daily operator evidence shares the serialized producer and its 200-request cap.
+    // Reserve this bounded slice before scans can consume the remaining budget.
+    let dailyReconciliation: Awaited<ReturnType<typeof runMintBurnSupplyReconciliation>> | undefined;
+    if (lane === "critical" || lane === "all") {
+      try {
+        dailyReconciliation = await runMintBurnSupplyReconciliation({
+          db, configs: publicationContext.diagnosticConfigs, now: runTimestamp, budget, signal, deadlineMs,
+          rpcEndpointsByChain: new Map([...chainContexts].map(([chainId, context]) => [chainId, context.rpcEndpoints])),
+          heads: new Map([...chainContexts].flatMap(([chainId, context]) => context.chainHead == null ? [] : [[chainId, context.chainHead]])),
+          priceContext,
+        });
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        dailyReconciliation = { processed: 0, requests: 0, reason: "daily-reconciliation-maintenance-failed" };
+      }
+    }
 
     await reportCronProgress(reportProgress, {
       stage: lane === "extended" ? "extended-queue" : lane === "critical" ? "critical-queue" : "queue",
@@ -432,6 +452,7 @@ export class MintBurnRun {
       (await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs)).publication,
     );
     completion.metadata.coverageRepairs = phaseResult.coverageRepairs ?? [];
+    if (dailyReconciliation) completion.metadata.dailyReconciliation = dailyReconciliation;
     const tronReader = chainContexts.get("tron")?.tronReader;
     if (tronReader) {
       completion.metadata.tronRpc = { calls: tronReader.calls, failures: tronReader.failures,
