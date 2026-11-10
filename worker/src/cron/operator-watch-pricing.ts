@@ -8,7 +8,7 @@ import type { CacheStatus } from "@shared/types/status";
 import { getCache } from "../lib/db-cache";
 import { readBluechipRatingsCache } from "../lib/bluechip-cache";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
-import type { OperatorWatchCondition } from "./cron-staleness-watchdog";
+import type { OperatorWatchCondition } from "./operator-watch-types";
 
 /**
  * Pricing and FX operator conditions for the freshness sentinel.

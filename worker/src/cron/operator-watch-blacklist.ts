@@ -1,6 +1,6 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
-import type { OperatorWatchCondition } from "./cron-staleness-watchdog";
+import type { OperatorWatchCondition } from "./operator-watch-types";
 import { loadBlacklistConfigStates } from "./blacklist/sync-support";
 
 /**

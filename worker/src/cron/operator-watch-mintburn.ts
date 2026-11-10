@@ -1,7 +1,7 @@
 import { getCache } from "../lib/db-cache";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/sync-state";
-import type { OperatorWatchCondition } from "./cron-staleness-watchdog";
+import type { OperatorWatchCondition } from "./operator-watch-types";
 import { MINT_BURN_EXTENDED_STUCK_STREAK } from "./mint-burn/run-state";
 
 export const MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY =
