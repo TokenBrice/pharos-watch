@@ -2,7 +2,7 @@ type RowActivationEvent = Pick<MouseEvent,
   "defaultPrevented" | "target" | "currentTarget" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey" | "button"
 >;
 
-const INTERACTIVE = 'a,button,input,select,textarea,summary,[role="button"],[role="link"],[role="textbox"],[role="combobox"],[role="slider"],[role="checkbox"],[role="switch"],[contenteditable]:not([contenteditable="false"]),[tabindex]';
+const INTERACTIVE = 'a,button,input,select,textarea,summary,[role="button"],[role="link"],[role="textbox"],[role="combobox"],[role="slider"],[role="checkbox"],[role="switch"],[contenteditable]:not([contenteditable="false"]),[tabindex]:not([tabindex="-1"])';
 
 export function isRowActivation(event: RowActivationEvent): boolean {
   if (event.defaultPrevented || event.button !== 0 ||

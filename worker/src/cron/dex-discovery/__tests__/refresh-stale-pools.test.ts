@@ -72,6 +72,21 @@ function registryRows(sqlite: { prepare(sql: string): { all(): unknown[] } }) {
 }
 
 describe("refreshStaleRegistryPools", () => {
+  it.each([false, true])("does not back off locally rejected ids (mixed=%s)", async (mixed) => {
+    const { sqlite, db } = fixtures.open(), good = addr("aa", 1), bad = "bad/id";
+    await seed(db, ["bad-id", ...(mixed ? [good] : [])].map((id) => ({ poolId: `ethereum:${id}`, refreshedAt: NOW - 48 * HOUR })));
+    sqlite.prepare("UPDATE dex_pool_registry SET pool_id = ? WHERE pool_id = ?").run(`ethereum:${bad}`, "ethereum:bad-id");
+    const previous = JSON.stringify({ [`ethereum:${bad}`]: { misses: 1, at: NOW - 24 * HOUR, reason: "notReturned" } });
+    sqlite.prepare("INSERT INTO kv_config (key, value) VALUES ('dex_stale_pool_refresh_backoff', ?)").run(previous);
+    const deps = makeDeps(async () => ({ transportOk: true, schemaDegraded: false, rejectedAddresses: [bad], pools: mixed ? [usdcPool("ethereum", good)] : [] }));
+    const summary = await refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: deps,
+    });
+    expect(summary).toMatchObject({ requests: Number(mixed), refreshed: Number(mixed), failures: { unaddressableId: 1, invalidRow: 0 } });
+    expect(deps.recordOutcome).toHaveBeenCalledTimes(Number(mixed));
+    expect(sqlite.prepare("SELECT value FROM kv_config WHERE key = 'dex_stale_pool_refresh_backoff'").get()!.value).toBe(previous);
+  });
+
   it("refreshes due CG-family and Slipstream pools stale-first by retained TVL", async () => {
     const { sqlite, db } = fixtures.open();
     const p = (index: number) => addr("aa", index);

@@ -246,6 +246,8 @@ describe("source-stage exact-pool price refresh", () => {
     const p = pool(0, { poolId: `ethereum:${id}` });
     const before = structuredClone(p), fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
+    expect(measurePriceRefreshDemand(context(graph([p])))).toMatchObject({ pools: 0, requests: 0, networks: [], unsupportedAttributions: 1 });
+    expect(measurePriceRefreshDemand(context(graph([p, pool(1)])))).toMatchObject({ pools: 1, requests: 1 });
     expect(await run(graph([p]))).toMatchObject({ requests: 0, unchangedByReason: { "unaddressable-pool": 1 } });
     expect(fetch).not.toHaveBeenCalled();
     expect(p).toEqual(before);

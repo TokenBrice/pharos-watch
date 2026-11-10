@@ -11,6 +11,19 @@ export function isComponentSourceFile(path: string): boolean {
 
 const COMPILER_OPTIONS: ts.CompilerOptions = { noLib: true, noResolve: true };
 
+function unparenthesized(node: ts.Expression): ts.Expression {
+  return ts.isParenthesizedExpression(node) ? unparenthesized(node.expression) : node;
+}
+
+function isRovingTabIndex(value: ts.Node | undefined): boolean {
+  if (!value || !ts.isExpression(value)) return false;
+  const node = unparenthesized(value);
+  if (!ts.isConditionalExpression(node)) return false;
+  const condition = unparenthesized(node.condition), yes = unparenthesized(node.whenTrue), no = unparenthesized(node.whenFalse);
+  return ts.isIdentifier(condition) && condition.text === "isCursor" &&
+    ts.isNumericLiteral(yes) && yes.text === "0" && ts.isIdentifier(no) && no.text === "undefined";
+}
+
 function inspectSourceFile(sourceFile: ts.SourceFile, checker: ts.TypeChecker): ComponentStyleViolation[] {
   const violations = new Set<ComponentStyleViolation>();
   const classBuilders = new Set(["cn", "clsx", "cva", "twMerge"]);
@@ -54,16 +67,27 @@ function inspectSourceFile(sourceFile: ts.SourceFile, checker: ts.TypeChecker): 
     if (/^src\/.*\.tsx$/.test(sourceFile.fileName) &&
       (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
       /^(tr|TableRow|InteractiveTableRow)$/.test(node.tagName.getText(sourceFile))) {
+      function inspectProp(name: string, value?: ts.Node, roving = false, rowRole = false) {
+        if ((name === "tabIndex" && !roving) || name === "onKeyDown" ||
+          (name === "role" && !rowRole && (!value || !ts.isStringLiteralLike(value) || value.text !== "row"))) {
+          violations.add("interactive-row");
+        }
+      }
       for (const attr of node.attributes.properties) {
+        if (ts.isJsxSpreadAttribute(attr)) {
+          for (const prop of checker.getTypeAtLocation(attr.expression).getProperties()) {
+            const declaration = prop.valueDeclaration;
+            const value = declaration && ts.isPropertyAssignment(declaration) ? declaration.initializer : undefined;
+            const type = checker.getTypeOfSymbolAtLocation(prop, attr.expression);
+            inspectProp(prop.name, value, false, type.isStringLiteral() && type.value === "row");
+          }
+        }
         if (!ts.isJsxAttribute(attr)) continue;
-        const name = attr.name.getText(sourceFile);
+        const value = attr.initializer && ts.isJsxExpression(attr.initializer) ? attr.initializer.expression : attr.initializer;
         // Only the directory's active virtual cursor gets a roving row tab stop.
         const roving = sourceFile.fileName === "src/components/stablecoin-table-row.tsx" &&
-          attr.initializer?.getText(sourceFile) === "{isCursor ? 0 : undefined}";
-        if ((name === "tabIndex" && !roving) || name === "onKeyDown") violations.add("interactive-row");
-        if (name !== "role") continue;
-        const value = attr.initializer && ts.isJsxExpression(attr.initializer) ? attr.initializer.expression : attr.initializer;
-        if (!value || !ts.isStringLiteralLike(value) || value.text !== "row") violations.add("interactive-row");
+          node.tagName.getText(sourceFile) === "TableRow" && isRovingTabIndex(value);
+        inspectProp(attr.name.getText(sourceFile), value, roving);
       }
     }
     if (ts.isJsxAttribute(node) && /className$/i.test(node.name.getText(sourceFile)) && node.initializer) {

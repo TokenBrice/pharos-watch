@@ -7,7 +7,7 @@ import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/typ
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { CG_ONCHAIN_MIN_RESERVE_USD, fetchCgPoolsByAddressesWithStatus, fitsCgPoolBatch, onchainRateLimit, type CgPoolsByAddressResult } from "../../lib/coingecko-onchain";
+import { CG_ONCHAIN_MIN_RESERVE_USD, fetchCgPoolsByAddressesWithStatus, fitsCgPoolBatch, isAddressableCgPoolId, onchainRateLimit, type CgPoolsByAddressResult } from "../../lib/coingecko-onchain";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { SlotDeadline } from "../../lib/cron-timeouts";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -148,7 +148,7 @@ function planPriceRefresh(input: RefreshGraph) {
       const address = canonicalPoolId(chain, id);
       const key = `${chain}:${address}`;
       const reason = !network ? "unmapped-network"
-        : (address.length > 200 || /^orderbook(?:[:.-]|$)/i.test(address))
+        : (address.length > 200 || /^orderbook(?:[:.-]|$)/i.test(address) || !isAddressableCgPoolId(network, address))
           ? "unaddressable-pool" : null;
       if (reason || !network) {
         unsupported.push({ ...contributor, reason: reason! });

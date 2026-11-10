@@ -260,6 +260,8 @@ describe("InteractiveTableRow", () => {
     render(<div tabIndex={-1}><table><tbody>
       <InteractiveTableRow id="coin-row" onActivate={activate} onHover={hover}>
         <td>Coin<a href="#coin">Open</a><button><svg><path /></svg></button>
+          <span tabIndex={-1}>Passive</span><span tabIndex={0}>Focusable</span>
+          <span tabIndex={-1} role="button">Custom control</span>
           <span onClick={(event) => event.preventDefault()}>Prevented</span>
           {createPortal(<p>Dialog<button>Close</button></p>, document.body)}
         </td>
@@ -271,8 +273,11 @@ describe("InteractiveTableRow", () => {
     fireEvent.click(row);
     expect(activate).toHaveBeenCalledTimes(1);
     activate.mockClear();
+    fireEvent.click(screen.getByText("Passive"));
+    expect(activate).toHaveBeenCalledTimes(1);
+    activate.mockClear();
     for (const options of [{ button: 1 }, { button: 2 }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }]) fireEvent.click(row, options);
-    for (const target of row.querySelectorAll("td > *, svg, path")) expect(fireEvent.click(target)).toBe(target.textContent !== "Prevented");
+    for (const target of row.querySelectorAll("td > *:not([tabindex='-1']), [role='button'], svg, path")) expect(fireEvent.click(target)).toBe(target.textContent !== "Prevented");
     for (const key of ["Enter", " ", "ArrowDown"]) expect(fireEvent.keyDown(row, { key })).toBe(true);
     expect(fireEvent.contextMenu(row)).toBe(true);
     const selection = window.getSelection()!, range = document.createRange();
