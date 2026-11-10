@@ -4,6 +4,7 @@ import { reconcileAtomicRoundtripGroups } from "./roundtrip-detection";
 import { applyReviewedProtocolInternalFlows, applySupplyExcludedProtocolInternalFlows } from "./reviewed-protocol-flows";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
+import { mintBurnSupplyProofAcceptedSql } from "../mint-burn-supply-proofs";
 
 const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
 
@@ -29,8 +30,8 @@ export async function insertMintBurnRows(
       `INSERT OR IGNORE INTO mint_burn_events
        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
         burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type, amount_raw,
-        below_display_threshold)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        below_display_threshold, supply_proof_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       row.id,
       row.stablecoin_id,
@@ -52,6 +53,7 @@ export async function insertMintBurnRows(
       row.flow_type,
       row.amount_raw,
       row.below_display_threshold,
+      row.supply_proof_id ?? null,
     ),
   ]);
 
@@ -92,20 +94,39 @@ export async function updateEventClassifications(
     // observes only one side cannot revoke it, because the peer may be absent
     // from this batch. Only a group-wide sweep or the operator reverse pass may
     // change it. Identical replay rows neither rewrite source nor enqueue debt.
-    const changedSql = `(burn_type IS NOT ? OR burn_review_reason IS NOT ?
-      OR flow_type IS NOT CASE WHEN ? = 'standard' AND flow_type = 'atomic_roundtrip'
-                               THEN flow_type ELSE ? END)`;
-    const changedBinds = [row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type];
+    const accepted = `EXISTS (SELECT 1 FROM mint_burn_supply_proofs proof
+      WHERE proof.proof_id = mint_burn_events.supply_proof_id
+        AND proof.status = 'proven' AND proof.lifecycle = 'accepted')`;
+    const keepSupply = `? IS NULL AND ${accepted}`;
+    const proofId = row.supply_proof_id ?? null;
+    const supplyReview = `? = 'review_required' AND ? IN ('unproven-supply-destruction', 'supply-proof-context-unavailable')`;
+    const supplyReviewBinds = [row.burn_type, row.burn_review_reason];
+    const assignments = [
+      { column: "burn_type", sql: `CASE WHEN ${keepSupply} AND ${supplyReview}
+          THEN CASE WHEN direction = 'mint' THEN NULL WHEN flow_type = 'bridge_transfer' THEN 'bridge_burn'
+            ELSE 'effective_burn' END ELSE ? END`,
+        binds: [proofId, ...supplyReviewBinds, row.burn_type] },
+      { column: "burn_review_reason", sql: `CASE WHEN ${keepSupply} AND ${supplyReview}
+          THEN 'range-supply-destruction' ELSE ? END`, binds: [proofId, ...supplyReviewBinds, row.burn_review_reason] },
+      { column: "flow_type", sql: `CASE WHEN ? = 'standard' AND (flow_type = 'atomic_roundtrip'
+          OR (${keepSupply} AND ${supplyReview} AND flow_type IN ('bridge_transfer', 'protocol_internal')))
+          THEN flow_type ELSE ? END`,
+        binds: [row.flow_type, proofId, ...supplyReviewBinds, row.flow_type] },
+      { column: "supply_proof_id", sql: `CASE WHEN ${keepSupply} THEN supply_proof_id ELSE ? END`, binds: [proofId, proofId] },
+      { column: "amount_raw", sql: `CASE WHEN ${keepSupply} THEN amount_raw ELSE COALESCE(amount_raw, ?) END`,
+        binds: [proofId, row.amount_raw ?? null] },
+    ];
+    const changedSql = `(${assignments.map(({ column, sql }) => `${column} IS NOT (${sql})`).join(" OR ")})`;
+    const changedBinds = assignments.flatMap(({ binds }) => binds);
     return [
       db.prepare(`INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
         SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
         FROM mint_burn_events WHERE id = ? AND ${changedSql}`)
         .bind(row.id, ...changedBinds),
       db.prepare(`UPDATE mint_burn_events
-       SET burn_type = ?, burn_review_reason = ?,
-           flow_type = CASE WHEN ? = 'standard' AND flow_type = 'atomic_roundtrip' THEN flow_type ELSE ? END
+       SET ${assignments.map(({ column, sql }) => `${column} = ${sql}`).join(", ")}
        WHERE id = ? AND ${changedSql}`)
-        .bind(row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type, row.id, ...changedBinds),
+        .bind(...changedBinds, row.id, ...changedBinds),
     ];
   });
   let rowsUpdated = 0;
@@ -162,16 +183,17 @@ export function collectAffectedHours<T extends AffectedHourCandidate>(
  */
 export function mintBurnHourlyBucketAggregatesSql(eventAlias = ""): string {
   const e = eventAlias;
-  const mint = `${e}direction = 'mint' AND ${e}flow_type = 'standard' AND ${e}burn_type IS NOT 'review_required'`;
-  const burn = `${e}direction = 'burn' AND ${e}burn_type = 'effective_burn' AND ${e}flow_type = 'standard'`;
+  const supply = mintBurnSupplyProofAcceptedSql(e ? e.slice(0, -1) : "mint_burn_events");
+  const mint = `${e}direction = 'mint' AND ${e}flow_type = 'standard' AND ${e}burn_type IS NOT 'review_required' AND ${supply}`;
+  const burn = `${e}direction = 'burn' AND ${e}burn_type = 'effective_burn' AND ${e}flow_type = 'standard' AND ${supply}`;
   // SAFETY: only the fixed predicates above and a caller-supplied literal alias are interpolated.
   return `SUM(CASE WHEN ${mint} THEN 1 ELSE 0 END) AS mint_count,
       SUM(CASE WHEN ${burn} THEN 1 ELSE 0 END) AS burn_count,
       SUM(CASE WHEN ${mint} AND ${e}amount_usd IS NULL THEN 1 ELSE 0 END) AS mint_unpriced_event_count,
       SUM(CASE WHEN ${burn} AND ${e}amount_usd IS NULL THEN 1 ELSE 0 END) AS burn_unpriced_event_count,
-      SUM(CASE WHEN ${e}direction = 'mint' AND ${e}flow_type = 'standard' AND ${e}burn_type = 'review_required' THEN 1 ELSE 0 END) AS mint_unresolved_event_count,
+      SUM(CASE WHEN ${e}direction = 'mint' AND ${e}flow_type = 'standard' AND (${e}burn_type = 'review_required' OR NOT ${supply}) THEN 1 ELSE 0 END) AS mint_unresolved_event_count,
       SUM(CASE WHEN ${e}direction = 'burn' AND ${e}flow_type = 'standard'
-        AND (${e}burn_type IS NULL OR ${e}burn_type NOT IN ('effective_burn', 'bridge_burn')) THEN 1 ELSE 0 END) AS burn_unresolved_event_count,
+        AND (${e}burn_type IS NULL OR ${e}burn_type NOT IN ('effective_burn', 'bridge_burn') OR NOT ${supply}) THEN 1 ELSE 0 END) AS burn_unresolved_event_count,
       COALESCE(SUM(CASE WHEN ${mint} THEN ${e}amount_usd ELSE 0 END), 0) AS mint_volume_usd,
       COALESCE(SUM(CASE WHEN ${burn} THEN ${e}amount_usd ELSE 0 END), 0) AS burn_volume_usd,
       COALESCE(SUM(CASE WHEN ${mint} THEN ${e}amount_usd WHEN ${burn} THEN -${e}amount_usd ELSE 0 END), 0) AS net_flow_usd`;

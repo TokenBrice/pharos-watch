@@ -17,8 +17,6 @@ import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-he
 import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-flows/aggregate";
 import { handleMintBurnEvents } from "../mint-burn-events";
 import type { MockD1Database } from "@shared/test-utils/mock-d1";
-// These suites use held coins as fixtures for unrelated contracts.
-vi.mock("../../lib/mint-burn-classification-holds", () => ({ isMintBurnClassificationHeld: () => false }));
 
 const fixtures = createLatestSchemaFixtureTracker();
 

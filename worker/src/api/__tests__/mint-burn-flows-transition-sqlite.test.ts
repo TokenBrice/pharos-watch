@@ -8,8 +8,6 @@ import { handleMintBurnFlows } from "../mint-burn-flows";
 import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { hydrateMintBurn } from "../../lib/dews/source-state/hydration";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
-// These suites use held coins as fixtures for unrelated contracts.
-vi.mock("../../lib/mint-burn-classification-holds", () => ({ isMintBurnClassificationHeld: () => false }));
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });

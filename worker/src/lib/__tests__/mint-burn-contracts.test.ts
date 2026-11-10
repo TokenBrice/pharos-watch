@@ -13,6 +13,7 @@ import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-contracts-data";
 import { MINT_BURN_COVERED_COIN_IDS } from "../../cron/depeg-resolver/mint-burn-coverage";
 import { getMintBurnConservationRuntimeEntry, requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
 import { reviewedBurnFixture, reviewedFalseBurnEntries } from "./mint-burn-supply-proof.test-support";
+import { projectMintBurnConservationRuntime } from "../../../../scripts/maintenance/generate-mint-burn-conservation-runtime";
 
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -400,13 +401,30 @@ describe("BUIDL Ethereum supply scope", () => {
 
 describe("reviewed false-burn identity admission", () => {
   it("derives its complete guard set from the reviewed sidecar, not generic conservation support", () => {
+    expect(reviewedFalseBurnEntries).toHaveLength(11);
     for (const entry of reviewedFalseBurnEntries) {
       const { config, source } = reviewedBurnFixture(entry.stablecoinId);
       expect(getMintBurnConfigsForStablecoin(entry.stablecoinId)
         .filter((item) => item.chain.chainId === entry.chainId), entry.stablecoinId).toHaveLength(1);
       expect(requiresReviewedSupplyBurnProof(config), entry.stablecoinId).toBe(true);
-      expect(getMintBurnConservationRuntimeEntry(config)?.supplyBurnProof, entry.stablecoinId).toEqual(entry.supplyBurnProof);
-      expect(source.eventTopic ?? source.selector, entry.stablecoinId).toBeTruthy();
+      const runtime = getMintBurnConservationRuntimeEntry(config)!;
+      expect(runtime.supplyBurnProof).toEqual(entry.supplyBurnProof);
+      expect(source.eventTopic ?? source.selector).toBeTruthy();
+      const range = runtime.supplyBurnProof!.range;
+      expect(range).toMatchObject({ law: "paired-supply-zero-transfers-v1",
+        mintEvidence: entry.stablecoinId === "usyc-hashnote" ? "require-empty" : "source-only" });
+      if (entry.identity?.proxy?.isProxy) {
+        expect(range?.guard).toBeDefined();
+        if (range?.guard?.status === "pinned") expect(range.guard.expected).toBe(entry.identity.proxy.implementation);
+      } else expect(range?.guard).toBeUndefined();
+      const project = (patch = {}) => projectMintBurnConservationRuntime({ version: 1, entries: [{ ...entry, ...patch }] });
+      expect(project().entries[0]).toMatchObject({ disposition: "unsupported", supplyBurnProof: entry.supplyBurnProof });
+      for (const [patch, reason] of [
+        [{ unsupportedReason: "rebasing-supply-without-events" }, "reviewed zero-address Transfer family"],
+        [{ supplyBurnProof: { range: { ...range, law: "unreviewed-law" } } }, "invalid law"],
+        ...(entry.identity?.proxy?.isProxy ? [[{ supplyBurnProof: { range: { ...range, guard: undefined } } },
+          "explicit implementation/delegate guard"] as const] : []),
+      ] as const) expect(() => project(patch)).toThrow(reason);
       expect(requiresReviewedSupplyBurnProof({ ...config, decimals: config.decimals + 1 })).toBe(false);
       expect(requiresReviewedSupplyBurnProof({ ...config, contractAddress: "0x1111111111111111111111111111111111111111" })).toBe(false);
     }
@@ -414,6 +432,7 @@ describe("reviewed false-burn identity admission", () => {
       const reason = getMintBurnConservationRuntimeEntry(config)?.unsupportedReason;
       if (!reason?.startsWith("zero-address-transfer-without-supply-change:")) {
         expect(requiresReviewedSupplyBurnProof(config), config.stablecoinId).toBe(false);
+        expect(getMintBurnConservationRuntimeEntry(config)?.supplyBurnProof?.range, config.stablecoinId).toBeUndefined();
       }
     }
   });

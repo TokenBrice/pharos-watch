@@ -16,6 +16,7 @@ describe("detectAtomicRoundtrips", () => {
     [row("mint"), row("burn", 100, { stablecoin_id: "other" })],
     [row("mint"), row("burn", 100, { chain_id: "arbitrum" })],
     [row("mint", 100, { tx_hash: "" }), row("burn", 100, { tx_hash: "" })],
+    [row("mint"), row("burn", 100, { supply_proof_id: "pending-proof" })],
   ])("keeps one-sided or separately identified groups standard (%#)", (...rows) => {
     expect(detectAtomicRoundtrips(rows)).toBe(0);
     expect(rows.every((r) => r.flow_type === "standard")).toBe(true);

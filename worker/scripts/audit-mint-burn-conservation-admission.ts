@@ -133,6 +133,7 @@ interface SemanticReview {
   conservationOnlyEvents?: unknown;
   requiresNotDeprecated?: unknown;
   invariantParams?: unknown;
+  supplyBurnProof?: ReviewedConservationEntry["supplyBurnProof"];
 }
 
 interface ConfigAudit {
@@ -279,6 +280,8 @@ function parseSemanticReview(path: string, config: MintBurnContractConfig): Sema
     `semantic file ${path} has malformed requiresNotDeprecated`);
   assertCliUsage(review.invariantParams === undefined || (typeof review.invariantParams === "object" && review.invariantParams !== null),
     `semantic file ${path} has malformed invariantParams`);
+  assertCliUsage(review.supplyBurnProof === undefined || (typeof review.supplyBurnProof === "object" && review.supplyBurnProof !== null),
+    `semantic file ${path} has malformed supplyBurnProof`);
   return review;
 }
 // Semantic verdict -> reviewed conservation law. One authority: the verdict names the law.
@@ -297,7 +300,9 @@ function candidateEntryFor(review: SemanticReview | undefined, config: MintBurnC
   const base = { chainId: config.chain.chainId, stablecoinId: config.stablecoinId,
     address: conservationIdentityAddress(config.chain.chainId, config.contractAddress), decimals: config.decimals };
   if (review?.semanticVerdict === "unsupported") {
-    return { ...base, disposition: "unsupported", unsupportedReason: review.unsupportedReason, eventSet: "transfer" };
+    return { ...base, disposition: "unsupported", unsupportedReason: review.unsupportedReason, eventSet: "transfer",
+      ...(review.unsupportedReason?.startsWith("zero-address-transfer-without-supply-change:")
+        ? { supplyBurnProof: review.supplyBurnProof ?? committed?.supplyBurnProof } : {}) };
   }
   if (review?.semanticVerdict === "needs-review" &&
     (review.identity?.sourceVerified === false || review.identity?.proxy?.implementationSourceVerified === false)) {
@@ -364,6 +369,8 @@ function buildSidecarEntry(review: SemanticReview, config: MintBurnContractConfi
     unsupportedReason: disposition === "unsupported" ? review.unsupportedReason : null,
     eventSet: law?.eventSet ?? "transfer",
     invariant: law?.invariant ?? "transfer-supply",
+    ...(disposition === "unsupported" && review.unsupportedReason?.startsWith("zero-address-transfer-without-supply-change:")
+      ? { supplyBurnProof: review.supplyBurnProof ?? getMintBurnConservationRuntimeEntry(config)?.supplyBurnProof } : {}),
     ...(Array.isArray(review.conservationOnlyEvents) ? { conservationOnlyEvents: review.conservationOnlyEvents as ReviewedConservationEntry["conservationOnlyEvents"] } : {}),
     ...(typeof review.requiresNotDeprecated === "boolean" ? { requiresNotDeprecated: review.requiresNotDeprecated } : {}),
     ...(review.invariantParams != null && typeof review.invariantParams === "object" ? { invariantParams: review.invariantParams as ReviewedConservationEntry["invariantParams"] } : {}),

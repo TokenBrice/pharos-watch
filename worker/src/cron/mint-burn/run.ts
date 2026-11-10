@@ -43,6 +43,9 @@ import {
   COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
   loadMintBurnCoverageGaps, repairMintBurnCoverage,
 } from "./repair-coverage";
+import { commitMintBurnSupplyProofRepair, loadMintBurnSupplyProofRepairRanges } from "./repair-supply-proofs";
+import { mintBurnConservationFingerprint, requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-conservation";
+import { invalidateChangedMintBurnSupplyProofConfigs } from "../../lib/mint-burn-supply-proofs";
 
 const MAX_SCAN_RANGE = 50_000;
 
@@ -100,6 +103,9 @@ export class MintBurnRun {
     const deadlineMs = Date.now() + 9 * 60_000;
 
     throwIfAborted(signal);
+    const invalidatedSupplyProofs = await invalidateChangedMintBurnSupplyProofConfigs(db, new Map(MINT_BURN_CONFIGS.filter(requiresReviewedSupplyBurnProof).map((config) =>
+      [mintBurnConfigKey(config), mintBurnConservationFingerprint(config)])), { signal });
+    if (invalidatedSupplyProofs > 0) await invalidateMintBurnFlowCaches(db);
     const budget = createBudget(GLOBAL_BUDGET_LIMIT);
     const allActiveConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
     const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
@@ -493,23 +499,35 @@ export class MintBurnRun {
     let recalcError: string | null = null;
     const pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }> = [];
     const repairProofs: MintBurnScanCoverage[] = [];
+    const supplyRepairRanges = new Map<string, MintBurnContractConfig>();
+    const repairRangeKey = (key: string, from: number, to: number) => `${key}:${from}:${to}`;
     const deadlineMs = input.deadlineMs ?? Date.now() + 9 * 60_000;
     try {
-      const gaps = await loadMintBurnCoverageGaps(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp);
+      const [gaps, supplyRanges] = await Promise.all([
+        loadMintBurnCoverageGaps(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp),
+        loadMintBurnSupplyProofRepairRanges(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp),
+      ]);
+      for (const range of supplyRanges) {
+        supplyRepairRanges.set(repairRangeKey(configKey(range.config), range.fromBlock, range.toBlock), range.config);
+      }
+      // Both repair queues share one existing 40-request/60-second reserve.
+      const repairs = [...new Map((Math.floor(input.runTimestamp / 1800) % 2 === 0
+        ? [...gaps, ...supplyRanges] : [...supplyRanges, ...gaps]).map((range) =>
+        [repairRangeKey(configKey(range.config), range.fromBlock, range.toBlock), range])).values()];
       const liveBudget = {
         count: input.budget.count,
-        limit: gaps.length ? Math.max(input.budget.count, input.budget.limit - COVERAGE_REPAIR_REQUEST_LIMIT) : input.budget.limit,
+        limit: repairs.length ? Math.max(input.budget.count, input.budget.limit - COVERAGE_REPAIR_REQUEST_LIMIT) : input.budget.limit,
       };
       try {
         phaseResult = await runMintBurnConfigPhase({
           ...input, budget: liveBudget,
-          deadlineMs: gaps.length ? deadlineMs - COVERAGE_REPAIR_WINDOW_MS : deadlineMs,
+          deadlineMs: repairs.length ? deadlineMs - COVERAGE_REPAIR_WINDOW_MS : deadlineMs,
         });
       } finally {
         input.budget.count = liveBudget.count;
       }
       phaseResult.coverageRepairs = await repairMintBurnCoverage(
-        { ...input, deadlineMs }, gaps, repairProofs, phaseResult.activeProviderDeferrals,
+        { ...input, deadlineMs }, repairs, repairProofs, phaseResult.activeProviderDeferrals, { supplyProofRepair: true },
       );
       for (const repair of phaseResult.coverageRepairs) {
         phaseResult.rowsRead += repair.rowsRead;
@@ -558,9 +576,13 @@ export class MintBurnRun {
         for (const proof of repairProofs) {
           if (!includesKey(proof.configKey)) continue;
           throwIfAborted(input.signal);
-          await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
-          this.lastBlocksAfterRun.set(proof.configKey,
-            Math.max(this.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));
+          const supplyConfig = supplyRepairRanges.get(repairRangeKey(proof.configKey, proof.fromBlock, proof.toBlock));
+          if (supplyConfig) await commitMintBurnSupplyProofRepair(this.db, supplyConfig, proof);
+          else {
+            await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
+            this.lastBlocksAfterRun.set(proof.configKey,
+              Math.max(this.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));
+          }
           const repair = phaseResult?.coverageRepairs?.find((summary) =>
             summary.key === proof.configKey && summary.scanFrom === proof.fromBlock);
           if (repair) repair.repairReason = "proof-committed";

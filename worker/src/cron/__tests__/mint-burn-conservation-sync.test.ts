@@ -4,11 +4,13 @@ import { syncMintBurnConfig } from "../mint-burn/sync-config";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
-import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
+import { classifyBridgeBurnRows, reconcileReviewedSupplyBurns } from "../../lib/mint-burn-pipeline/classification";
 import { persistMintBurnRows } from "../../lib/mint-burn-pipeline/persistence";
-import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, persistMintBurnConservation,
+import { reconcileAtomicRoundtripGroups } from "../../lib/mint-burn-pipeline/roundtrip-detection";
+import { completeMintBurnRangeSupplyProof, requiresReviewedSupplyBurnProof, completeMintBurnConservationAudit, conservationOnlyEventDefsFor, persistMintBurnConservation,
   readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
   type ConservationEventDef } from "../../lib/mint-burn-conservation";
+import { acceptMintBurnSupplyProof, invalidateConflictingMintBurnSupplyProofs, invalidateMintBurnSupplyProofs, invalidateMintBurnSupplyProofRange, persistMintBurnSupplyProof, type MintBurnSupplyProofEvidence } from "../../lib/mint-burn-supply-proofs";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnConservationRecord } from "@shared/types/status";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -23,13 +25,26 @@ vi.mock("../../lib/mint-burn-pipeline/classification", () => ({
   classifyBridgeBurnRows: vi.fn(), reconcileReviewedSupplyBurns: vi.fn(async () => 0),
 }));
 vi.mock("../../lib/mint-burn-pipeline/persistence", () => ({ persistMintBurnRows: vi.fn() }));
-vi.mock("../../lib/mint-burn-conservation", () => ({ getMintBurnConservationEligibility: () => ({ supported: true }),
-  requiresReviewedSupplyBurnProof: () => false,
+vi.mock("../../lib/mint-burn-pipeline/roundtrip-detection", () => ({ reconcileAtomicRoundtripGroups: vi.fn() }));
+vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/mint-burn-conservation")>(),
+  getMintBurnConservationEligibility: () => ({ supported: true }),
+  needsMintBurnConservationBoundaries: () => true,
+  requiresReviewedSupplyBurnProof: vi.fn(() => false),
+  completeMintBurnRangeSupplyProof: vi.fn(),
   conservationOnlyEventDefsFor: vi.fn(() => []),
   completeMintBurnConservationAudit: vi.fn(), persistMintBurnConservation: vi.fn(), validateMintBurnParsedConservation: vi.fn(),
   readMintBurnConservationRecords: vi.fn(), verifyPersistedMintBurnConservation: vi.fn() }));
+vi.mock("../../lib/mint-burn-supply-proofs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/mint-burn-supply-proofs")>()),
+  persistMintBurnSupplyProof: vi.fn(async () => {}), acceptMintBurnSupplyProof: vi.fn(async () => true),
+  invalidateMintBurnSupplyProofs: vi.fn(async () => 0),
+  invalidateMintBurnSupplyProofRange: vi.fn(async () => 0),
+  invalidateConflictingMintBurnSupplyProofs: vi.fn(async () => ({ invalidated: 0, conflict: false })),
+}));
 const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
-const row = { id: "event", tx_hash: "tx", direction: "mint", amount: 10_000, block_number: 102, timestamp: 1100 } as MintBurnRow;
+const row = { id: "event", tx_hash: "tx", direction: "mint", amount: 10_000, amount_raw: "10000",
+  below_display_threshold: 0, block_number: 102, timestamp: 1100 } as MintBurnRow;
 const audit = { key: "conservation-key", status: "ok", checkedAt: 1200 } as MintBurnConservationRecord;
 const conservationEventDef: ConservationEventDef = {
   signature: "DestroyedBlackFunds(address,uint256)",
@@ -67,7 +82,8 @@ beforeEach(() => {
   });
   vi.mocked(classifyBridgeBurnRows).mockResolvedValue({ effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
     txContextShortfalls: 0, deferredTxHashes: [] });
-  vi.mocked(persistMintBurnRows).mockResolvedValue({ inserted: 1, ignored: 0, roundtripsDetected: 0 } as never);
+  vi.mocked(persistMintBurnRows).mockResolvedValue({ inserted: 1, ignored: 0, roundtripsDetected: 0, flowTypeChanges: 0, rowsUpdated: 0 } as never);
+  vi.mocked(reconcileAtomicRoundtripGroups).mockResolvedValue({ changed: 0, toRoundtrip: 0, toStandard: 0, affectedHours: new Map() });
   vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit });
   vi.mocked(persistMintBurnConservation).mockResolvedValue({ written: true });
   vi.mocked(verifyPersistedMintBurnConservation).mockResolvedValue("ok");
@@ -256,5 +272,86 @@ describe("conservation producer publication and cursor fences", () => {
   it("propagates cache write failure without returning an advanced cursor", async () => {
     vi.mocked(persistMintBurnConservation).mockRejectedValue(new Error("cache write failed"));
     await expect(run()).rejects.toThrow("cache write failed");
+  });
+});
+
+describe("conditional supply proof ordering and acceptance fences", () => {
+  function enable(status: MintBurnSupplyProofEvidence["status"] = "proven", reason?: string) {
+    vi.mocked(requiresReviewedSupplyBurnProof).mockReturnValue(true);
+    const proof = { proofId: "supply-proof", status, reason, mintEvidence: "source-only",
+      members: [{ id: row.id, direction: row.direction, amountRaw: "10000", blockNumber: row.block_number }] } as MintBurnSupplyProofEvidence;
+    vi.mocked(completeMintBurnRangeSupplyProof).mockReturnValue(proof);
+    vi.mocked(persistMintBurnSupplyProof).mockResolvedValue();
+    vi.mocked(acceptMintBurnSupplyProof).mockResolvedValue(true);
+    vi.mocked(invalidateConflictingMintBurnSupplyProofs).mockResolvedValue({ invalidated: 0, conflict: false });
+    return proof;
+  }
+  it("proves before receipt classification, accepts after exact readback, and skips the supply sweep", async () => {
+    const proof = enable();
+    const result = await run();
+    expect(result.newLastBlock).toBe(102);
+    expect(classifyBridgeBurnRows).toHaveBeenCalledWith(expect.anything(), config, expect.anything(), expect.anything(),
+      expect.anything(), undefined, expect.objectContaining({ rangeSupplyProof: proof }));
+    expect(vi.mocked(completeMintBurnRangeSupplyProof).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(classifyBridgeBurnRows).mock.invocationCallOrder[0]);
+    expect(vi.mocked(persistMintBurnSupplyProof).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(persistMintBurnRows).mock.invocationCallOrder[0]);
+    expect(vi.mocked(verifyPersistedMintBurnConservation).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(acceptMintBurnSupplyProof).mock.invocationCallOrder[0]);
+    expect(vi.mocked(acceptMintBurnSupplyProof).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(reconcileAtomicRoundtripGroups).mock.invocationCallOrder[0]);
+    expect(reconcileReviewedSupplyBurns).not.toHaveBeenCalled();
+    expect(vi.mocked(persistMintBurnRows).mock.calls[0][1][0]).toMatchObject({ supply_proof_id: proof.proofId, amount_raw: "10000" });
+  });
+  it("advances a complete residual range without promoting its candidates", async () => {
+    enable("residual", "false-zero-transfer-residual");
+    const result = await run();
+    expect(result.newLastBlock).toBe(102);
+    expect(result.summary.supplyProofStatus).toBe("residual");
+    expect(acceptMintBurnSupplyProof).not.toHaveBeenCalled();
+    expect(reconcileAtomicRoundtripGroups).not.toHaveBeenCalled();
+    expect(vi.mocked(persistMintBurnRows).mock.calls[0][1][0].supply_proof_id).toBeUndefined();
+  });
+  it.each(["range-supply-assumptions-inconsistent", "ambiguous-zero-transfer", "removed-log-reorg"])("hard fences %s before canonical writes", async (reason) => {
+    enable("unavailable", reason);
+    const result = await run();
+    expect(result.newLastBlock).toBeNull();
+    if (reason === "removed-log-reorg") expect(invalidateMintBurnSupplyProofRange).toHaveBeenCalledWith(
+      expect.anything(), "key", 100, Number.MAX_SAFE_INTEGER, reason, 1200, expect.anything());
+    expect(vi.mocked(persistMintBurnRows).mock.calls[0][1]).toEqual([]);
+    expect(acceptMintBurnSupplyProof).not.toHaveBeenCalled();
+  });
+  it("keeps an unavailable archive read unresolved while allowing ordinary scan progress", async () => {
+    enable("unavailable", "audit-rpc-unavailable");
+    const result = await run();
+    expect(result.newLastBlock).toBe(102);
+    expect(result.summary.supplyProofReason).toBe("audit-rpc-unavailable");
+    expect(acceptMintBurnSupplyProof).not.toHaveBeenCalled();
+  });
+  it("invalidates config state before fetching and fences a conflicting prior canonical proof", async () => {
+    enable();
+    vi.mocked(invalidateConflictingMintBurnSupplyProofs).mockResolvedValue({ invalidated: 1, conflict: true,
+      reason: "range-supply-proof-canonical-conflict" });
+    const result = await run();
+    expect(result.newLastBlock).toBeNull();
+    expect(result.summary.supplyProofReason).toBe("range-supply-proof-canonical-conflict");
+    expect(vi.mocked(invalidateMintBurnSupplyProofs).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(fetchAlchemyLogs).mock.invocationCallOrder[0]);
+    expect(acceptMintBurnSupplyProof).not.toHaveBeenCalled();
+  });
+  it.each(["proof-write", "event-write", "readback", "acceptance"])("cannot accept or advance after %s failure", async (stage) => {
+    enable();
+    if (stage === "proof-write") vi.mocked(persistMintBurnSupplyProof).mockRejectedValue(new Error("proof-write"));
+    if (stage === "event-write") vi.mocked(persistMintBurnRows).mockRejectedValue(new Error("event-write"));
+    if (stage === "readback") vi.mocked(verifyPersistedMintBurnConservation).mockResolvedValue("mismatch");
+    if (stage === "acceptance") vi.mocked(acceptMintBurnSupplyProof).mockResolvedValue(false);
+    if (stage.endsWith("write")) {
+      await expect(run()).rejects.toThrow(stage);
+      expect(acceptMintBurnSupplyProof).not.toHaveBeenCalled();
+    } else {
+      const result = await run();
+      expect(result.newLastBlock).toBeNull();
+      expect(result.summary.supplyProofStatus).toBe("unavailable");
+    }
   });
 });

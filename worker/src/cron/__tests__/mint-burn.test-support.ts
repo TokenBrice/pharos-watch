@@ -163,6 +163,12 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
     ? { degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null }
     : null;
   const db = mockD1([
+    { match: "SELECT config_key, config_fingerprint FROM mint_burn_supply_proof_configs", rows: [] },
+    { match: "SELECT config_fingerprint FROM mint_burn_supply_proof_configs", rows: [] },
+    { match: "INSERT OR IGNORE INTO mint_burn_supply_proof_configs", rows: [] },
+    { match: "pharos:mint-burn:proof-retention-delete", rows: [], runMeta: { changes: 0 } },
+    { match: "oldest_remaining_at FROM mint_burn_supply_proofs proof", rows: [{ oldest_remaining_at: null }] },
+    { match: "oldest_eligible_at FROM mint_burn_supply_proofs proof", rows: [{ oldest_eligible_at: null }] },
     { match: "mint_burn_admission", rows: admissionRows(options.admittedConfigs ?? []) },
     { match: "mint_burn_publication_policy", rows: [] },
     { match: "pharos:mint-burn-scan-coverage:read", rows: [] },

@@ -27,6 +27,7 @@ export interface MintBurnRow {
   block_number: number;
   timestamp: number;
   explorer_tx_url: string;
+  supply_proof_id?: string | null;
 }
 
 export interface BurnClassificationCounters {

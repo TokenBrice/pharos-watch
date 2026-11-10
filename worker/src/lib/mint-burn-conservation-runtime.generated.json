@@ -85,6 +85,15 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only",
+          "guard": {
+            "kind": "implementation",
+            "status": "required-unavailable",
+            "reason": "agora-packed-implementation-dispatch-guard-not-reviewed"
+          }
+        },
         "receiptEvent": {
           "signature": "Burned(address,address,uint256)",
           "topicHash": "0x6ab368f832c266c8eb942b84fbcaa20aedc24a699d2a05fae2568028733b1d09",
@@ -241,6 +250,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "directCalls": [
           {
             "signature": "burn(address,uint256)",
@@ -280,6 +293,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "directCalls": [
           {
             "signature": "burn(uint256)",
@@ -373,6 +390,17 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only",
+          "guard": {
+            "kind": "delegate",
+            "status": "pinned",
+            "slot": "0x000000000000000000000000000000000000000000000000000000000000000c",
+            "expected": "0x25d772b21b0e5197f2dc8169e3aa976b16be04ac",
+            "changeTopic": "0x600005b3559a025151f4a40f36d9939d94cf5194016895d4ef6362b211e4c3b5"
+          }
+        },
         "directCalls": [
           {
             "signature": "burnTokens(uint256)",
@@ -475,6 +503,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "directCalls": [
           {
             "signature": "burn(uint256)",
@@ -756,6 +788,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "receiptEvent": {
           "signature": "Exit(address,address,uint256,address,uint256)",
           "topicHash": "0xe0c82280a1164680e0cf43be7db4c4c9f985423623ad7a544fb76c772bdc6043",
@@ -885,6 +921,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "directCalls": [
           {
             "signature": "burn(uint256)",
@@ -906,6 +946,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "receiptEvent": {
           "signature": "Withdraw(address,address,address,uint256,uint256)",
           "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db",
@@ -926,6 +970,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "receiptEvent": {
           "signature": "Withdraw(address,address,address,uint256,uint256)",
           "topicHash": "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db",
@@ -1092,6 +1140,10 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "source-only"
+        },
         "directCalls": [
           {
             "signature": "burn(address,uint256)",
@@ -1355,6 +1407,17 @@
       "eventSet": "transfer",
       "invariant": "transfer-supply",
       "supplyBurnProof": {
+        "range": {
+          "law": "paired-supply-zero-transfers-v1",
+          "mintEvidence": "require-empty",
+          "guard": {
+            "kind": "implementation",
+            "status": "pinned",
+            "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+            "expected": "0xbf0f2f3aad6b99893d80c550fbacec915545eb92",
+            "changeTopic": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b"
+          }
+        },
         "directCalls": [
           {
             "signature": "burn(uint256)",

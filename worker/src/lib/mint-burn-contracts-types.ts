@@ -6,8 +6,26 @@ export type MintBurnType = "effective_burn" | "bridge_burn" | "review_required";
 export type MintBurnAdapterKind = "transfer-zero-address" | "custom-events" | "mixed";
 export type MintBurnStartBlockConfidence = "high" | "medium" | "low";
 
+/** Conditional source law; a required guard is never an implicit implementation approval. */
+export interface MintBurnSupplyRangeProof {
+  law: "paired-supply-zero-transfers-v1";
+  mintEvidence: "source-only" | "require-empty";
+  guard?: {
+    kind: "implementation" | "delegate";
+    status: "required-unavailable";
+    reason: string;
+  } | {
+    kind: "implementation" | "delegate";
+    status: "pinned";
+    slot: string;
+    expected: string;
+    changeTopic: string;
+  };
+}
+
 /** Source-reviewed evidence needed before a burn-shaped Transfer changes supply. */
 export interface MintBurnSupplyBurnProof {
+  range?: MintBurnSupplyRangeProof;
   receiptEvent?: {
     signature: string;
     topicHash: string;

@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.42",
+    "title": "Reviewed range supply proof for zero-transfer burns",
+    "date": "2026-11-10",
+    "effectiveAt": 1794365752,
+    "summary": "Source-reviewed exact-range proofs recover internal burns with immutable provenance, bounded retention and retained repair.",
+    "impact": [
+      "The reviewed zero-transfer family retains its unsupported-law findings and receipt proofs while gaining a conditional paired-supply-zero-transfers-v1 capability. Source-only laws require exact integer mint-minus-zero-transfer equality to pinned supply change; USYC additionally requires no positive mint-shaped events. Proxy and delegate eras require reviewed boundary identity and complete in-range change guards.",
+      "All raw events enter proof arithmetic, including dust, bridge and atomic legs. Exact member IDs can be promoted only from complete passing evidence. A negative source-only residual leaves ambiguous rows unresolved while ingestion advances; positive residuals, positive zero-to-zero events and inconsistent evidence fence the range. Missing archive, logs, guards or capacity remains named unavailable evidence. Supply proof precedes per-burn receipts and never overrides economic exclusions.",
+      "Additive migration 0301 stores immutable range evidence with a separate acceptance lifecycle and nullable proof references on event rows, reusing migration 0300's exact raw amounts. The proof verifies parser-recorded raw amounts against exact members. Proof/member changes enqueue retained whole hours atomically, persisted readback checks proof correspondence, receipt-only replay preserves valid proof, and config/law/reorg invalidation withdraws scan coverage independently of surviving proof rows. Retained replay uses a separate cursor and never rebuilds pruned hours from a subset.",
+      "Each affected window withholds exact net and derived signals while it contains unresolved events or legacy unknown hours, so recent repaired DAI and USDD windows may recover before longer windows. Pruned historical hours require separately audited replay or age-out. Bridge decoder fingerprints independently gate their earlier history; admission, watermark, valuation and scoring formulas remain unchanged.",
+      "Proven rows follow normal eight-day raw retention; unresolved hours retain their existing whole-hour protection. Only proven nonempty witnesses are stored, and the bounded retention job prunes them after their range is older than raw retention and no retained event references them. Durable per-config fingerprint tombstones and scan-ledger invalidation keep expired history fail-closed after proof evidence is pruned."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.41",
     "title": "Exact roundtrip conservation and dust-inclusive accounting",
     "date": "2026-11-10",

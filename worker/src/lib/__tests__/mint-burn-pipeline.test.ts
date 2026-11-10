@@ -67,6 +67,7 @@ import {
   upsertMintBurnSyncState,
 } from "../mint-burn-pipeline/sync-state";
 import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
+import { reconcileAtomicRoundtripGroups } from "../mint-burn-pipeline/roundtrip-detection";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import { MINT_BURN_CONFIGS, type MintBurnEventDef } from "../mint-burn-contracts";
 import { mintBurnConfigKey } from "../mint-burn-pipeline/sync-state";
@@ -323,6 +324,26 @@ describe("mint-burn shared pipeline modules", () => {
     await recalcAffectedHours(db, hours);
     expect(sqlite.prepare("SELECT COUNT(*) AS events, SUM(below_display_threshold) AS dust FROM mint_burn_events").get()).toEqual({ events: 4, dust: 3 });
     expect(sqlite.prepare("SELECT net_flow_usd FROM mint_burn_hourly").get()).toEqual({ net_flow_usd: 0 });
+  });
+
+  it("requires accepted proof before an exact persisted burn can neutralize its mint", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    sqlite.exec(`INSERT INTO mint_burn_supply_proofs
+      (proof_id, config_key, config_fingerprint, from_block, to_block, status, evidence_json, checked_at)
+      VALUES ('proof', 'config', 'fingerprint', 1, 1, 'proven', '{}', 1)`);
+    const rows = [makeRow({ id: "mint", direction: "mint" }),
+      makeRow({ id: "burn", direction: "burn", burn_type: "effective_burn", supply_proof_id: "proof" })];
+    await insertMintBurnRows(db, rows);
+    for (const lifecycle of ["pending", "accepted", "invalidated"]) {
+      sqlite.prepare("UPDATE mint_burn_supply_proofs SET lifecycle = ?").run(lifecycle);
+      await reconcileAtomicRoundtripGroups(db, rows, { configs: [] });
+      await recalcAffectedHours(db, collectAffectedHours(rows));
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events WHERE flow_type = 'atomic_roundtrip'").get())
+        .toEqual({ n: lifecycle === "accepted" ? 2 : 0 });
+      expect(sqlite.prepare("SELECT mint_count, burn_unresolved_event_count FROM mint_burn_hourly").get())
+        .toEqual({ mint_count: lifecycle === "accepted" ? 0 : 1, burn_unresolved_event_count: lifecycle === "accepted" ? 0 : 1 });
+    }
   });
 
   it("accounts for dust normally while excluding atomic, bridge and unresolved legs", async () => {

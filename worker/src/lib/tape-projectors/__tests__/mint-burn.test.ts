@@ -7,6 +7,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { mintBurnTapeEligibleSql } from "../../mint-burn-tape-claim";
 import { projectMintBurnLargeFlows } from "../mint-burn";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds, tapeInsertBindsForType } from "./test-support";
 import { projectPsiBandShifts } from "../psi";
@@ -53,6 +54,20 @@ function makeFlow(overrides: Partial<Record<string, unknown>> = {}): Record<stri
 }
 
 describe("mint_burn projector", () => {
+  it.each(["pending", "accepted", "invalidated"])("withholds unaccepted range-proof Tape claims (%s)", (lifecycle) => {
+    const { sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_supply_proofs
+      (proof_id, config_key, config_fingerprint, from_block, to_block, status, evidence_json, checked_at, lifecycle)
+      VALUES ('proof', 'config', 'fingerprint', 1, 1, 'proven', '{}', 1, ?)`).run(lifecycle);
+    sqlite.exec(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
+        flow_type, burn_type, tx_hash, block_number, explorer_tx_url, supply_proof_id)
+      VALUES ('event', 'dai-makerdao', 'DAI', 'ethereum', 'burn', 15000000, 15000000, 1700000000,
+        'standard', 'effective_burn', 'tx', 1, 'https://example.com', 'proof')`);
+    expect(sqlite.prepare(`SELECT id FROM mint_burn_events m WHERE ${mintBurnTapeEligibleSql("m")}`).all())
+      .toEqual(lifecycle === "accepted" ? [{ id: "event" }] : []);
+  });
+
   it("projects admitted legs only and honors the operator disable policy before limiting rows", async () => {
     const { db, sqlite } = fixtures.open();
     const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");

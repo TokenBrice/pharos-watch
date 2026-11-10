@@ -73,7 +73,8 @@ describe("mint/burn EVM response identity", () => {
         return { result: { number: call.params[0], timestamp: RECENT_TIMESTAMP_HEX, hash: word(12) } };
       });
       const input = {
-        db: mockD1([{ match: "cache", rows: [] }, { match: "mint_burn_events", rows: [] }]), config, key: "dai-identity", tier: "critical" as const,
+        db: mockD1([{ match: "cache", rows: [] }, { match: "mint_burn_events", rows: [] },
+          { match: "mint_burn_supply_proof_configs", rows: [] }, { match: "mint_burn_supply_proofs", rows: [] }]), config, key: "dai-identity", tier: "critical" as const,
         fromBlock: 101, scanTo: 102, chainHead: 102, rpcEndpoints: endpoints, configBudgetLimit: 60,
         runTimestamp: RECENT_TIMESTAMP + 60, priceContext: { priceObservations: new Map(), priceHistory: new Map() },
         chainTimestampCache: new Map(), txContextCache: new Map(), affectedHours: new Map(),

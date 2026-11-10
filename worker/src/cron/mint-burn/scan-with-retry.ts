@@ -1,6 +1,6 @@
 import { throwIfAborted } from "../../lib/abort";
 import { withRpcRequestScope } from "../../lib/rpc-request-observer";
-import { conservationOnlyEventDefsFor, fetchConservationBoundaries, getMintBurnConservationEligibility } from "../../lib/mint-burn-conservation";
+import { conservationOnlyEventDefsFor, fetchConservationBoundaries, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { syncMintBurnConfig, type SyncMintBurnConfigInput, type SyncMintBurnConfigResult } from "./sync-config";
 import { TRON_RPC_MAX_BLOCK_SPAN } from "@shared/lib/tron-jsonrpc";
 
@@ -27,7 +27,7 @@ export function mintBurnScanRequestFloor(input: Pick<SyncMintBurnConfigInput,
 export async function syncMintBurnConfigWithRetries(input: SyncMintBurnConfigInput): Promise<SyncMintBurnConfigResult> {
   let scanTo = Math.min(input.scanTo, input.chainHead);
   let used = 0;
-  const boundaryRequests = getMintBurnConservationEligibility(input.config).supported ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0;
+  const boundaryRequests = needsMintBurnConservationBoundaries(input.config) ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0;
   const attempts: NonNullable<SyncMintBurnConfigResult["summary"]["scanAttemptRanges"]> = [];
   const totals = { rowsRead: 0, rowsParsed: 0, rowsInserted: 0, rowsIgnored: 0, rowsDropped: 0,
     rowsDroppedDecode: 0, rowsQuarantinedDecode: 0, errors: 0, missingTimestampCount: 0,

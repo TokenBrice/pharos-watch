@@ -115,6 +115,7 @@ export interface MintBurnCoverageRepairSummary extends MintBurnConfigSummary {
 export async function repairMintBurnCoverage(
   input: Parameters<typeof runMintBurnConfigPhase>[0], gaps: readonly MintBurnCoverageGap[],
   pendingProofs: MintBurnScanCoverage[], deferred: ReadonlyMap<string, number>,
+  options: { supplyProofRepair?: boolean } = {},
 ): Promise<MintBurnCoverageRepairSummary[]> {
   const summaries: MintBurnCoverageRepairSummary[] = [];
   const deadlineMs = Math.min(input.deadlineMs ?? Infinity, Date.now() + COVERAGE_REPAIR_WINDOW_MS);
@@ -167,6 +168,7 @@ export async function repairMintBurnCoverage(
         priceContext: input.priceContext, chainTimestampCache: context.chainTimestampCache,
         txContextCache: context.txContextCache, affectedHours: input.affectedHours, deadlineMs: configDeadlineMs,
         conservationBoundary: boundaries.get(key),
+        supplyProofRepair: options.supplyProofRepair,
       });
       budget.count += result.summary.requestBudgetUsed;
       Object.assign(summary, result.summary);

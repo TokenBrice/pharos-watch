@@ -2,10 +2,11 @@ import { throwIfAborted } from "../abort";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
 import { executeMintBurnMaintenanceMutations } from "./materialization-debt";
 import { mintBurnConfigKey } from "./sync-state";
+import { mintBurnSupplyProofAcceptedSql } from "../mint-burn-supply-proofs";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 
 type RoundtripRow = Pick<MintBurnRow, "id" | "tx_hash" | "stablecoin_id" | "chain_id" | "direction"
-  | "flow_type" | "burn_type" | "amount_raw" | "block_number" | "timestamp">;
+  | "flow_type" | "burn_type" | "amount_raw" | "block_number" | "timestamp" | "supply_proof_id"> & { supply_proof_accepted?: number };
 export type RoundtripIdentity = Pick<RoundtripRow, "tx_hash" | "stablecoin_id" | "chain_id">;
 export interface RoundtripCursor extends RoundtripIdentity { timestamp: number }
 
@@ -14,8 +15,9 @@ function groupKey(row: RoundtripIdentity): string {
 }
 
 /** This is the candidate authority for ingestion, maintenance and the operator job. */
-function isAtomicRoundtripCandidate(row: Pick<RoundtripRow, "flow_type" | "direction" | "burn_type">): boolean {
-  return row.flow_type === "standard" && (row.burn_type === "effective_burn"
+function isAtomicRoundtripCandidate(row: Pick<RoundtripRow, "flow_type" | "direction" | "burn_type" | "supply_proof_id" | "supply_proof_accepted">): boolean {
+  return (row.supply_proof_id == null || row.supply_proof_accepted === 1)
+    && row.flow_type === "standard" && (row.burn_type === "effective_burn"
     || (row.direction === "mint" && row.burn_type == null));
 }
 
@@ -47,7 +49,8 @@ function groupRows<T extends RoundtripIdentity>(rows: readonly T[]): Map<string,
 /** Only exactly cancelling, resolved standard legs can leave the accounting net. */
 export function detectAtomicRoundtrips(rows: MintBurnRow[]): number {
   let flagged = 0;
-  for (const group of groupRows(rows.filter(isAtomicRoundtripCandidate)).values()) {
+  // A proof reference needs the persisted acceptance read below.
+  for (const group of groupRows(rows.filter((row) => row.supply_proof_id == null && isAtomicRoundtripCandidate(row))).values()) {
     if (!hasExactRawBalance(group)) continue;
     for (const row of group) {
       row.flow_type = "atomic_roundtrip";
@@ -75,7 +78,8 @@ export async function reconcileAtomicRoundtripGroups(
   throwIfAborted(options.signal);
   const keys = [...groupRows(identities).values()].map(([row]) => [row.tx_hash, row.stablecoin_id, row.chain_id]);
   const { results: rows } = await db.prepare(`SELECT e.id, e.tx_hash, e.stablecoin_id, e.chain_id,
-      e.direction, e.flow_type, e.burn_type, e.amount_raw, e.block_number, e.timestamp
+      e.direction, e.flow_type, e.burn_type, e.amount_raw, e.block_number, e.timestamp, e.supply_proof_id,
+      CASE WHEN ${mintBurnSupplyProofAcceptedSql("e")} THEN 1 ELSE 0 END AS supply_proof_accepted
     FROM mint_burn_events e JOIN json_each(?) k
       ON e.tx_hash = json_extract(k.value, '$[0]')
       AND e.stablecoin_id = json_extract(k.value, '$[1]') AND e.chain_id = json_extract(k.value, '$[2]')`)
@@ -113,14 +117,16 @@ export async function reconcileAtomicRoundtripGroups(
     const forward = exact ? group.filter((row) => row.flow_type === "standard" && candidateIds.has(row.id)).map((row) => row.id) : [];
     const reverse = completeSides ? existing.filter((row) => !exact || !candidateIds.has(row.id)).map((row) => row.id) : [];
     if (forward.length === 0 && reverse.length === 0) continue;
-    const snapshot = JSON.stringify(group.map((row) => [row.id, row.flow_type, row.burn_type, row.amount_raw]));
+    const snapshot = JSON.stringify(group.map((row) => [row.id, row.flow_type, row.burn_type, row.amount_raw,
+      row.supply_proof_id ?? null, row.supply_proof_accepted]));
     // Fence the complete population as well as each row: a concurrent sibling insert
     // or classifier revision must not validate a stale BigInt comparison.
     const unchangedSql = `(SELECT COUNT(*) FROM mint_burn_events WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ?) = ?
       AND NOT EXISTS (SELECT 1 FROM mint_burn_events e WHERE e.tx_hash = ? AND e.stablecoin_id = ? AND e.chain_id = ?
         AND NOT EXISTS (SELECT 1 FROM json_each(?) s WHERE e.id = json_extract(s.value, '$[0]')
           AND e.flow_type IS json_extract(s.value, '$[1]') AND e.burn_type IS json_extract(s.value, '$[2]')
-          AND e.amount_raw IS json_extract(s.value, '$[3]')))`;
+          AND e.amount_raw IS json_extract(s.value, '$[3]') AND e.supply_proof_id IS json_extract(s.value, '$[4]')
+          AND (CASE WHEN ${mintBurnSupplyProofAcceptedSql("e")} THEN 1 ELSE 0 END) IS json_extract(s.value, '$[5]')))`;
     const keyBinds = [identity.tx_hash, identity.stablecoin_id, identity.chain_id];
     const unchangedBinds = [...keyBinds, group.length, ...keyBinds, snapshot];
     const selectedIds = JSON.stringify([...forward, ...reverse]);

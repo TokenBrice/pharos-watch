@@ -207,10 +207,14 @@ describe("completeMintBurnRun", () => {
       input.phase.criticalContractsSatisfied = 1;
     }
     input.phase.configBreakdown = [{ conservationFailure: false, conservationStatus: "unavailable",
-      conservationReason: "invalid-boundary-header", key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
+      conservationReason: "invalid-boundary-header", supplyProofStatus: "unavailable", supplyProofReason: "audit-rpc-unavailable",
+      key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("ok");
     expect(result.metadata.conservationUnavailable).toBe(1);
+    expect(result.metadata.configSamples).toEqual(expect.arrayContaining([expect.objectContaining({
+      supplyProofStatus: "unavailable", supplyProofReason: "audit-rpc-unavailable",
+    })]));
     expect(result.metadata.conservationFailures).toBe(0);
     expect(result.metadata.reason).toBeUndefined();
     expect(result.metadata.apiErrors).toBe(0);

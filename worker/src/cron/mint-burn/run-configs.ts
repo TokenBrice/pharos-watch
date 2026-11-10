@@ -15,7 +15,7 @@ import type { MintBurnChainContext } from "./chain-context";
 import { TronRpcError } from "../../lib/tron-jsonrpc";
 import type { MintBurnCoverageRepairSummary } from "./repair-coverage";
 import {
-  conservationOnlyEventDefsFor, fetchConservationBoundaries, getMintBurnConservationEligibility, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
+  conservationOnlyEventDefsFor, fetchConservationBoundaries, needsMintBurnConservationBoundaries, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
   type ConservationBoundaryRequest,
 } from "../../lib/mint-burn-conservation";
 
@@ -178,7 +178,7 @@ export async function runMintBurnConfigPhase(input: {
     const range = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead,
       input.maxScanRange, chainContext, configBudgetLimitFor(config));
     scanRanges.set(key, range);
-    if (range.fromBlock <= chainContext.chainHead && getMintBurnConservationEligibility(config).supported) {
+    if (range.fromBlock <= chainContext.chainHead && needsMintBurnConservationBoundaries(config)) {
       boundaryRequests.set(key, { key, config, fromBlock: range.fromBlock, toBlock: range.scanTo });
     }
   }
@@ -350,7 +350,7 @@ export async function runMintBurnConfigPhase(input: {
     }
 
     const tierBudgetLimit = configBudgetLimitFor(config);
-    const boundaryReserve = pending && getMintBurnConservationEligibility(config).supported
+    const boundaryReserve = pending && needsMintBurnConservationBoundaries(config)
       ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0;
     const availableBudget = Math.min(tierBudgetLimit, remainingBudget - (tier === "extended" ? 10 : 0));
     const plannedRange = scanRanges.get(key);
@@ -379,7 +379,7 @@ export async function runMintBurnConfigPhase(input: {
     }
     const retryReserve = mintBurnScanRequestFloor({
       ...scanBudgetInput, scanTo: fromBlock + Math.floor((scanTo - fromBlock) / 2),
-    }) + (getMintBurnConservationEligibility(config).supported ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0);
+    }) + (needsMintBurnConservationBoundaries(config) ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0);
 
     summary.attempted = true;
     contractsProcessed++;

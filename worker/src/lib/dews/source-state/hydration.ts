@@ -30,7 +30,6 @@ import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
 import { readMintBurnWindowContext } from "../../mint-burn-flows-service";
 import { hasMintBurnClassificationReview } from "../../mint-burn-classification";
-import { isMintBurnClassificationHeld } from "../../mint-burn-classification-holds";
 import {
   addMintBurnClassificationTally,
   emptyMintBurnClassificationTally,
@@ -688,8 +687,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
         || dirtyIds.has(stablecoinId)) continue;
       const latestWindow = mb24hMap.get(stablecoinId);
       const baseline = mb30dMap.get(stablecoinId);
-      if (isMintBurnClassificationHeld(stablecoinId)
-        || summarizeMintBurnClassification(latestWindow?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete"
+      if (summarizeMintBurnClassification(latestWindow?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete"
         || summarizeMintBurnClassification(baseline?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete") continue;
       const latestHourTs = end;
       const ageSec = getRowAgeSec(latestHourTs, ctx.nowSec);

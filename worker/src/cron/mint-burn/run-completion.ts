@@ -276,7 +276,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   const sampledConfigs = [
     ...phase.configBreakdown.slice(0, 6),
     ...phase.configBreakdown.filter(
-      (summary) => summary.errors > 0 || summary.skippedReason != null || summary.rowsInserted > 0,
+      (summary) => summary.errors > 0 || summary.skippedReason != null || summary.rowsInserted > 0
+        || summary.supplyProofStatus === "residual" || summary.supplyProofStatus === "unavailable",
     ),
   ].filter((summary) => {
     if (sampledConfigKeys.has(summary.key)) return false;
@@ -300,6 +301,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       conservationStatus: summary.conservationStatus,
       conservationReason: summary.conservationReason,
       conservationFailure: summary.conservationFailure,
+      supplyProofStatus: summary.supplyProofStatus,
+      supplyProofReason: summary.supplyProofReason,
       scanFrom: summary.scanFrom,
       scanTo: summary.scanTo,
       advancedTo: summary.advancedTo,

@@ -12,7 +12,6 @@ import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summa
   tallyMintBurnClassificationBucket, type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
 import { hasMintBurnClassificationReview } from "./mint-burn-classification";
 import type { MintBurnClassification } from "@shared/types/mint-burn";
-import { isMintBurnClassificationHeld } from "./mint-burn-classification-holds";
 import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 
 /** Same effective fresh budget returned by buildCronFreshnessMeta, not its base cadence. */
@@ -182,17 +181,14 @@ export async function readMintBurnWindowContext(
   await persistMintBurnAdmissions(db, scope.newAdmissions);
   await persistMintBurnQuarantines(db, [...quarantineKeys], policy);
   await persistMintBurnResumptions(db, scope.resumedKeys, policy);
-  // Classification holds are publication-only: admission and the watermark above ignore them.
-  const partialScopeLegs = [...partialLegs,
-    ...scope.configs.filter((config) => isMintBurnClassificationHeld(config.stablecoinId))];
   return {
     watermark: resolveMintBurnWatermark(nowSec, scope.configs, segments, legacy),
     segments,
     legacy,
     configs: scope.configs,
-    partialCoinIds: new Set(partialScopeLegs.map((config) => config.stablecoinId)),
-    /** Chains whose aggregate nets lost an established leg or carry a held coin. */
-    partialChainIds: new Set(partialScopeLegs.map((config) => config.chain.chainId)),
+    partialCoinIds: new Set(partialLegs.map((config) => config.stablecoinId)),
+    /** Chains whose aggregate nets lost an established leg. */
+    partialChainIds: new Set(partialLegs.map((config) => config.chain.chainId)),
     // Automatic pauses withhold flows, never unresolved operator conservation evidence.
     diagnosticConfigs: configs.filter((config) => scope.configs.includes(config)
       || (mintBurnPreviouslyAdmitted(config, admissions)

@@ -63,6 +63,22 @@ describe("handleMintBurnEvents", () => {
     }
   });
 
+  it.each(["pending", "accepted", "invalidated"])("publishes proof-backed counted events only after acceptance (%s)", async (lifecycle) => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_supply_proofs
+      (proof_id, config_key, config_fingerprint, from_block, to_block, status, evidence_json, checked_at, lifecycle)
+      VALUES ('proof', 'config', 'fingerprint', 1, 1, 'proven', '{}', 1, ?)`).run(lifecycle);
+    const event = makeMintBurnRow({ direction: "burn", burn_type: "effective_burn" });
+    sqlite.prepare(`INSERT INTO mint_burn_events (${Object.keys(event).join(",")}, supply_proof_id)
+      VALUES (${Object.keys(event).map(() => "?").join(",")}, 'proof')`).run(...Object.values(event));
+    for (const scope of ["all", "counted"]) {
+      const body = await readJsonResponse(await handleMintBurnEvents(db,
+        new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&scope=${scope}`)), 200) as { events: unknown[]; total: number };
+      expect(body.events).toHaveLength(lifecycle === "accepted" ? 1 : 0);
+      expect(body.total).toBe(lifecycle === "accepted" ? 1 : 0);
+    }
+  });
+
   it("maps snake_case to camelCase", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },

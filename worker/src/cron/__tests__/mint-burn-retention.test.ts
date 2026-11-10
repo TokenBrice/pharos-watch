@@ -167,7 +167,7 @@ describe("mint/burn retention", () => {
     expect(MINT_BURN_EVENT_RETENTION_SEC).toBeGreaterThan(7 * 24 * HOUR_SEC);
   });
 
-  it("protects every priced sibling of dirty and unresolved hours until rebuilt or hourly expiry", async () => {
+  it("protects every priced sibling of dirty and unresolved hours while pruning proven rows normally", async () => {
     const { sqlite, db } = setupDb();
     openDb = sqlite;
     const hour = hourFor(NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - 2 * HOUR_SEC);
@@ -219,6 +219,30 @@ describe("mint/burn retention", () => {
     expect(expired.eventRows.deletedRows).toBe(8);
     expect(expired.hourlyRows.deletedRows).toBe(4);
     expect(eventIds(sqlite)).toEqual([]);
+
+    for (const [index, lifecycle] of ["pending", "accepted", "invalidated"].entries()) {
+      const proofHour = hour - index * HOUR_SEC;
+      const proofId = `proof-${lifecycle}`;
+      sqlite.prepare(`INSERT INTO mint_burn_supply_proofs
+        (proof_id, config_key, config_fingerprint, from_block, to_block, status, evidence_json, checked_at, lifecycle)
+        VALUES (?, 'proof-config', 'old', 1, 1, 'proven', '{}', ?, ?)`)
+        .run(proofId, proofHour, lifecycle);
+      insertEvent(sqlite, { id: proofId, timestamp: proofHour + 1, withHourly: false });
+      insertEvent(sqlite, { id: `proof-sibling-${index}`, timestamp: proofHour + 2, withHourly: false });
+      sqlite.prepare("UPDATE mint_burn_events SET supply_proof_id = ?, flow_type = ? WHERE id = ?")
+        .run(proofId, lifecycle === "accepted" ? "bridge_transfer" : "standard", proofId);
+    }
+    const proofProtected = await pruneMintBurnRetention(db, NOW_SEC);
+    expect(proofProtected.error).toBeNull();
+    expect(proofProtected.aggregationRepair.repairedRows).toBe(3);
+    expect(proofProtected.eventRows.deletedRows).toBe(2);
+    expect(proofProtected.proofRows.deletedRows).toBe(1);
+    expect(eventIds(sqlite)).toHaveLength(4);
+    const proofExpired = await pruneMintBurnRetention(db, NOW_SEC + MINT_BURN_HOURLY_RETENTION_SEC);
+    expect(proofExpired.error).toBeNull();
+    expect(proofExpired.eventRows.deletedRows).toBe(4);
+    expect(proofExpired.proofRows.deletedRows).toBe(2);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_supply_proofs").get()).toEqual({ n: 0 });
   });
 
   it.each([
@@ -368,24 +392,31 @@ describe("mint/burn retention", () => {
       });
     }
 
+    const proofInsert = sqlite.prepare(`INSERT INTO mint_burn_supply_proofs
+      (proof_id, config_key, config_fingerprint, from_block, to_block, status, evidence_json, checked_at)
+      VALUES (?, 'cap', 'law', 1, 1, 'proven', ?, ?)`);
+    for (let index = 0; index < 5; index++) proofInsert.run(`proof-${index}`,
+      JSON.stringify({ closingTimestamp: cutoff - 100 + index }), NOW_SEC);
     const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
       eventBatchLimit: 2,
-      eventRunLimit: 3,
+      eventRunLimit: 3, proofBatchLimit: 2, proofRunLimit: 3,
       hourlyBatchLimit: 2,
       hourlyRunLimit: 2,
     });
     expect(first.eventRows.deletedRows).toBe(3);
+    expect(first.proofRows).toMatchObject({ deletedRows: 3, cappedAtLimit: true });
     expect(first.eventRows.cappedAtLimit).toBe(true);
     expect(first.eventRows.oldestEligibleAt).not.toBeNull();
     expect(eventIds(sqlite)).toHaveLength(2);
 
     const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
       eventBatchLimit: 2,
-      eventRunLimit: 3,
+      eventRunLimit: 3, proofBatchLimit: 2, proofRunLimit: 3,
       hourlyBatchLimit: 2,
       hourlyRunLimit: 2,
     });
     expect(second.eventRows.deletedRows).toBe(2);
+    expect(second.proofRows).toMatchObject({ deletedRows: 2, cappedAtLimit: false });
     expect(second.eventRows.cappedAtLimit).toBe(false);
     expect(second.eventRows.oldestEligibleAt).toBeNull();
     expect(eventIds(sqlite)).toEqual([]);

@@ -66,7 +66,6 @@ import {
   readMintBurnWindowContext,
   withExtendedLaneHeads,
 } from "../../lib/mint-burn-flows-service";
-import { isMintBurnClassificationHeld } from "../../lib/mint-burn-classification-holds";
 
 /** Candidate roster only; readMintBurnWindowContext owns the admitted, enabled publication scope. */
 export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
@@ -402,8 +401,6 @@ export function buildCoinSummaries(
     const coverage = data.coverageMap.get(id);
     const has24hWindow = coverage?.has24hWindow === true;
     const partialScope = data.partialCoinIds.has(id);
-    // A classification hold makes every signed net and baseline of this coin unknown.
-    const held = isMintBurnClassificationHeld(id);
     const classification24h = summarizeMintBurnClassification(agg?.classification ?? emptyMintBurnClassificationTally());
     const baselineClassification = baseline?.classification ?? summarizeMintBurnClassification(emptyMintBurnClassificationTally());
     const classificationComplete = classification24h.completeness === "complete";
@@ -469,7 +466,7 @@ export function buildCoinSummaries(
     const net90dValuation = net90dSummary.completeness;
     // A withheld (partial) net publishes only its proven one-sided bound, never the known net itself.
     const windowBound = (window: WindowNetFlow | undefined, summary: MintBurnValuation, classification: MintBurnClassification, admitted: boolean) =>
-      !held && !partialScope && classification.completeness === "complete" && admitted && window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
+      !partialScope && classification.completeness === "complete" && admitted && window && summary.completeness === "partial" ? mintBurnSignedNetBound(window.netUsd, summary) : null;
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
@@ -483,20 +480,20 @@ export function buildCoinSummaries(
       // PR-B readers use this null gate before reconstructing bounds from gross subtotals.
       has24hActivity: complete24hWindow && classificationComplete ? has24hActivity : null,
       observed24hActivity: observedActivity,
-      baselineDailyNetUsd: held || partialScope || baselineValuation !== "complete" || baselineClassification.completeness !== "complete" ? null : baseline?.avgNet ?? null,
-      baselineDailyAbsUsd: held || partialScope || baselineValuation !== "complete" || baselineClassification.completeness !== "complete" ? null : baseline?.avgAbs ?? null,
+      baselineDailyNetUsd: partialScope || baselineValuation !== "complete" || baselineClassification.completeness !== "complete" ? null : baseline?.avgNet ?? null,
+      baselineDailyAbsUsd: partialScope || baselineValuation !== "complete" || baselineClassification.completeness !== "complete" ? null : baseline?.avgAbs ?? null,
       baselineDataDays: baseline?.dataDays ?? null,
       gaugeWeightUsd: mcap,
-      netFlow24hUsd: held || !classificationComplete || !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
+      netFlow24hUsd: !classificationComplete || !has24hWindow || valuation24h.completeness === "partial" ? null : knownNetFlow24h,
       mintVolume24hUsd: agg?.mintVolume ?? 0,
       burnVolume24hUsd: agg?.burnVolume ?? 0,
       mintCount24h: agg?.mintCount ?? 0,
       burnCount24h: agg?.burnCount ?? 0,
       totalsSemantics: "observed-subtotals",
-      netFlow7dUsd: held || net7dClassification.completeness !== "complete" || !coverage.has7dWindow || net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
-      netFlow30dUsd: held || net30dClassification.completeness !== "complete" || !coverage.has30dWindow || net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
-      netFlow90dUsd: held || net90dClassification.completeness !== "complete" || !coverage.has90dWindow || net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
-      largestEvent24h: complete24hWindow && classificationComplete && !held && largest && largest.amount_usd != null && (largest.direction === "mint" || largest.direction === "burn")
+      netFlow7dUsd: net7dClassification.completeness !== "complete" || !coverage.has7dWindow || net7dValuation === "partial" ? null : net7d?.netUsd ?? 0,
+      netFlow30dUsd: net30dClassification.completeness !== "complete" || !coverage.has30dWindow || net30dValuation === "partial" ? null : net30d?.netUsd ?? 0,
+      netFlow90dUsd: net90dClassification.completeness !== "complete" || !coverage.has90dWindow || net90dValuation === "partial" ? null : net90d?.netUsd ?? 0,
+      largestEvent24h: complete24hWindow && classificationComplete && largest && largest.amount_usd != null && (largest.direction === "mint" || largest.direction === "burn")
         ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp, scope: "valued-counted-admitted-scope" }
         : null,
       coverage: partialScope ? {

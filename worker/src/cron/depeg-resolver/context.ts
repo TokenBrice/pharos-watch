@@ -30,7 +30,6 @@ import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@sh
 import { tallyMintBurnHourlyBucket, type MintBurnValuationTally } from "@shared/lib/mint-burn-valuation";
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification, tallyMintBurnClassificationBucket } from "@shared/lib/mint-burn-classification";
 import { hasMintBurnClassificationReview } from "../../lib/mint-burn-classification";
-import { isMintBurnClassificationHeld } from "../../lib/mint-burn-classification-holds";
 import {
   loadRedemptionBackstopLiveSignalRows,
   RedemptionBackstopSnapshotUnavailableError,
@@ -463,7 +462,7 @@ export async function loadDdrContext(
   const scanCoverageError = mintBurnResult.error;
   const mintBurnCoveredEventIds = new Set(active.filter((event) => {
     const end = Math.floor(event.startedAt / 3600) * 3600;
-    if (partialMintBurnCoinIds.has(event.stablecoinId) || isMintBurnClassificationHeld(event.stablecoinId)) return false;
+    if (partialMintBurnCoinIds.has(event.stablecoinId)) return false;
     const classification = emptyMintBurnClassificationTally();
     for (const row of mintBurnResult.rows) {
       if (row.stablecoin_id !== event.stablecoinId || row.hour_ts < end - 7 * DAY || row.hour_ts >= end) continue;

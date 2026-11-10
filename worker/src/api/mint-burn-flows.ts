@@ -37,7 +37,6 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import type { ApiDependencyMeta } from "@pharos/contracts/api-meta";
 import { tryParseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
-import { isMintBurnClassificationHeld } from "../lib/mint-burn-classification-holds";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import {
@@ -428,7 +427,6 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
     const scanCoverage = mintBurnWindowCoverage(configs, scanSegments, context.legacy, window.start, window.end, context.watermark);
-    const held = isMintBurnClassificationHeld(stablecoinId);
     // Per-chain breakdown
     const chainMap = aggregateHourlyRowsByChain(rows);
 
@@ -445,7 +443,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
         burnVolumeUsd: v.burnVolume,
         mintCount: v.mintCount,
         burnCount: v.burnCount,
-        netFlowUsd: held || !chainScanCoverage.complete || classification.completeness !== "complete" || valuation.completeness === "partial" ? null : v.netFlow,
+        netFlowUsd: !chainScanCoverage.complete || classification.completeness !== "complete" || valuation.completeness === "partial" ? null : v.netFlow,
         valuation,
         classification,
         scanCoverage: chainScanCoverage,
@@ -482,7 +480,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
         legs: context.publication.legs.filter((leg) => leg.stablecoinId === stablecoinId) }),
       mintVolumeUsd: totalMint,
       burnVolumeUsd: totalBurn,
-      netFlowUsd: held || !scanCoverage.complete || classification.completeness !== "complete" || valuation.completeness === "partial" ? null : totalMint - totalBurn,
+      netFlowUsd: !scanCoverage.complete || classification.completeness !== "complete" || valuation.completeness === "partial" ? null : totalMint - totalBurn,
       mintCount: totalMintCount,
       burnCount: totalBurnCount,
       chains,

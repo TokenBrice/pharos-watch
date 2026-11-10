@@ -371,7 +371,7 @@ async function readOgMintBurnFlow(db: D1Database, id: string, now: number): Prom
   try {
     const flowScope = await readMintBurnWindowContext(db, now,
       MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)));
-    // Partial or classification-held coins have no publishable signed net (v6.35/v6.37).
+    // Partial scope or unresolved classification has no publishable signed net.
     if (flowScope.partialCoinIds.has(id)) return null;
     const flowConfigs = flowScope.configs.filter((config) => config.stablecoinId === id);
     const flowEnd = Math.floor(now / 3600) * 3600;

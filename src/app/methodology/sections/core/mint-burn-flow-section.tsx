@@ -171,9 +171,10 @@ export function MintBurnFlowMethodologySection() {
                 or unresolved candidates.
               </p>
               <p>
-                A coin whose classification is proven to drop one side of real supply movements is
-                held: its signed nets, baseline and pressure are withheld and it reads as partial scope
-                until its classifier fix and history repair land. Gross observed subtotals stay published.
+                DAI and USDD use reviewed range proof and retained repair. Their exact windows remain unavailable
+                while unresolved or historically unknown hours are present; recent windows can recover before
+                longer ones as old hours are repaired or age out. Changed bridge-decoder fingerprints separately
+                exclude hours classified under earlier evidence. Gross observed subtotals stay published.
               </p>
               <p>
                 USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;
@@ -199,6 +200,20 @@ export function MintBurnFlowMethodologySection() {
                 burn exclusions. Retained-hour repairs track materialization debt; per-config reconciliation
                 advances through retained burns and revisits unavailable receipts when its cursor wraps, preserving
                 their named reason. Pruned history needs audited replay rather than an invented exact repair.
+              </p>
+              <p>
+                Reviewed range proof can admit exact internal-burn event IDs when all raw mint and zero-recipient
+                Transfer amounts reconcile exactly to hash-pinned total-supply change. Dust, bridge and atomic
+                legs enter that integer equation before economic exclusions. Source law must exclude counterfeit
+                mints, or the range must contain no positive mint events; USYC requires the latter. Proxy and
+                delegate eras need pinned implementation state and an in-range change check. Negative source-only
+                residuals and unavailable evidence keep candidates unresolved; positive residuals, ambiguous
+                zero-to-zero events and inconsistent evidence fence the range. Proof never overrides bridge,
+                atomic or protocol-internal exclusions. Proof verifies the parser&apos;s exact raw amounts, and
+                pending proof-backed burns cannot neutralize mints in roundtrip reconciliation. Proven rows use
+                normal eight-day retention; old unreferenced proof records are pruned. Durable configuration
+                fingerprints withdraw stale scan coverage even after raw and proof records expire. Retained range
+                repair has a separate cursor from live ingestion and rebuilds only complete raw-retained hours.
               </p>
               <p>
                 Every closed window requires admitted scan coverage, using durable current-fingerprint proof

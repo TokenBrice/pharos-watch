@@ -4,7 +4,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import type { DatabaseSync } from "node:sqlite";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { conservationOnlyEventDefsFor, fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
+import { conservationOnlyEventDefsFor, fetchConservationBoundaries,
+  getMintBurnConservationEligibility, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import {
   createMintBurnConfigSummary,
@@ -530,6 +531,43 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     await runMintBurnConfigPhase(args);
     expect(vi.mocked(fetchConservationBoundaries).mock.calls[0][0].requests).toEqual([]);
     expect(syncMintBurnConfig).toHaveBeenCalledTimes(kind === "unsupported" ? 1 : 0);
+  });
+
+  it.each([false, true])("funds exact conditional-only DAI and USDD boundaries within unchanged caps (pending=%s)", async (pending) => {
+    const { db } = fixtures.open();
+    const configs = ["dai-makerdao", "usdd-tron-dao-reserve"].map((id) => ({
+      ...MINT_BURN_CONFIGS.find((candidate) => candidate.stablecoinId === id)!, startBlock: 101,
+    }));
+    for (const config of configs) {
+      expect(getMintBurnConservationEligibility(config).supported).toBe(false);
+      expect(needsMintBurnConservationBoundaries(config)).toBe(true);
+    }
+    const keys = configs.map((config) => `ethereum-${config.contractAddress}`);
+    const args = { ...makePhaseInput({ db, configs }), criticalConfigBudgetLimit: 60,
+      extendedConfigBudgetLimit: 25, pendingAdmissionKeys: pending ? new Set(keys) : new Set<string>() };
+    args.chainContexts.get("ethereum")!.chainHead = 160;
+    const boundary = { status: "unavailable" as const, reason: "audit-rpc-unavailable" as const };
+    vi.mocked(fetchConservationBoundaries).mockImplementation(async ({ requests, budget }) => {
+      if (requests.length) budget.count += 3;
+      return new Map(requests.map(({ key }) => [key, boundary]));
+    });
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (scan) => {
+      expect(scan.conservationBoundary).toBe(boundary);
+      expect(scan.configBudgetLimit).toBeLessThanOrEqual(scan.tier === "critical" ? 60 : 25);
+      return { summary: makeSummary({ key: scan.key, requestBudgetUsed: 2 }), apiErrors: 0,
+        effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0,
+        newLastBlock: scan.scanTo, scanCoverage: { configKey: scan.key, configFingerprint: "conditional",
+          chainId: "ethereum", fromBlock: scan.fromBlock, toBlock: scan.scanTo,
+          fromTimestamp: NOW_SEC - 60, toTimestamp: NOW_SEC, finalizedBlock: 160, acceptedAt: NOW_SEC } };
+    });
+    await runMintBurnConfigPhase(args);
+    const boundaryRequests = vi.mocked(fetchConservationBoundaries).mock.calls.flatMap(([request]) => request.requests);
+    expect(boundaryRequests.map(({ key, fromBlock, toBlock }) => ({ key, fromBlock, toBlock }))).toEqual(
+      keys.map((key) => ({ key, fromBlock: 101, toBlock: 160 })),
+    );
+    if (pending) expect(vi.mocked(fetchConservationBoundaries).mock.calls[0][0].requests).toEqual([]);
+    expect(args.budget.count).toBe(pending ? 10 : 7);
+    expect(args.pendingCursorUpdates).toEqual(new Map(keys.map((key) => [key, 160])));
   });
 
   it("does not pair a changed scan range with the earlier boundary evidence", async () => {

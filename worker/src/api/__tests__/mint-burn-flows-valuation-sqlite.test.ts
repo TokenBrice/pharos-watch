@@ -23,8 +23,6 @@ import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../..
 import { checkMintBurnPublicationCoverage } from "../../lib/canary-checks-mintburn";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 import { drainMintBurnMaterializationDebt } from "../../lib/mint-burn-pipeline/materialization-debt";
-// These suites use held coins as fixtures for unrelated contracts.
-vi.mock("../../lib/mint-burn-classification-holds", () => ({ isMintBurnClassificationHeld: () => false }));
 // Frozen at origin/main 49da34e78 so shallow CI clones and later releases retain this oracle.
 const prB = createRequire(import.meta.url)("./fixtures/pr-b-mint-burn-readers.cjs") as
   Pick<typeof FlowSchemas, "MintBurnFlowsResponseSchema" | "MintBurnPerCoinResponseSchema">
@@ -135,7 +133,7 @@ to_timestamp, finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 2,
       .toMatchObject({ mintCount24h: 2, mintVolume24hUsd: 1e12 + 10, largestEvent24h: { amountUsd: 10 } });
   });
 
-  it("withholds generic unresolved classification independently of static holds and discloses its gauge weight", async () => {
+  it("withholds unresolved classification and discloses its gauge weight", async () => {
     const { db } = await provenFixture();
     const id = "gho-aave";
     const burn = event(id, "ethereum", "burn", NOW - 2 * HOUR + 60, 2_000_000);
