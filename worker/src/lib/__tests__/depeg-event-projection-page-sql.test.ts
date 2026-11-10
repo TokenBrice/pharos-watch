@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
-import { DISPUTED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { handleDepegEvents } from "../../api/depeg-events";
@@ -98,7 +97,6 @@ const ALIAS_F = incidentKey("3");
 const ALIAS_G = incidentKey("4");
 const ACTIVE_POINTING_H = incidentKey("5");
 const ACTIVE_POINTING_I = incidentKey("6");
-const DISPUTED_VERDICT_SQL = DISPUTED_AUDIT_VERDICTS.map((verdict) => `'${verdict}'`).join(", ");
 
 type Fixture = { sqlite: DatabaseSync; db: ReturnType<typeof createSqliteD1> };
 
@@ -315,8 +313,9 @@ describe("public depeg page effective onset", () => {
     }
   });
 
-  it("preserves handler pages and dispute-adjusted counts", async () => {
+  it("keeps cached counts equal to the handler's real page membership", async () => {
     const fixture = seed();
+    insertProvenance(fixture, 12, "false_positive");
     for (const stablecoinId of [null, "usdt-tether", "usdc-circle", "absent"]) {
       for (const active of [false, true]) {
         const conditions = [EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL];
@@ -326,10 +325,9 @@ describe("public depeg page effective onset", () => {
           bindings.push(stablecoinId);
         }
         if (active) conditions.push("ended_at IS NULL");
-        const expected = fixture.sqlite.prepare(`SELECT COUNT(*) AS total,
-          COUNT(CASE WHEN provenance_audit_verdict IN (${DISPUTED_VERDICT_SQL}) THEN 1 END) AS disputed
+        const expected = fixture.sqlite.prepare(`SELECT COUNT(*) AS total
           FROM depeg_events_with_provenance WHERE ${conditions.join(" AND ")}`)
-          .get(...bindings) as { total: number; disputed: number };
+          .get(...bindings) as { total: number };
         const legacy = rows(fixture, LEGACY_PUBLIC_DEPEG_EVENTS_SQL, { conditions, bindings }, 1000, 0);
         for (const source of [null, PUBLIC_DEPEG_EVENTS_SQL]) {
           expect(rows(fixture, source, { conditions, bindings }, 1000, 0)).toEqual(legacy);
@@ -338,15 +336,15 @@ describe("public depeg page effective onset", () => {
         const countBatch = await fixture.db.batch<{ total: number }>(
           prepareDepegEventsCountStatements(fixture.db, stablecoinId, active),
         );
-        expect(countBatch[1]!.results[0]!.total).toBe(expected.total - expected.disputed);
+        expect(countBatch[1]!.results[0]!.total).toBe(legacy.length);
         if (stablecoinId === "absent") continue;
         for (const limit of [1, 1000]) {
           const response = await handleDepegEvents(fixture.db, new URL(`https://x/api/depeg-events?limit=${limit}&active=${active}${stablecoinId ? `&stablecoin=${stablecoinId}` : ""}`));
           const body = await response.json() as { events: { id: number }[]; total: number };
           expect(response.status).toBe(200);
           expect(body.events.map((row) => row.id)).toEqual(legacy.slice(0, limit).map((row) => row.id));
-          // Pre-existing: pages include disputes; exact totals subtract them.
-          expect(body.total).toBe(expected.total - expected.disputed);
+          expect(body.total).toBe(legacy.length);
+          if (limit === 1000) expect(body.total).toBe(body.events.length);
         }
       }
     }
@@ -436,6 +434,6 @@ describe("public depeg page effective onset", () => {
     expect(countSql).toHaveLength(1);
     const countPlan = queryPlan(fixture, countSql[0]!);
     expect(countPlan.some((detail) => detail === "SCAN alias")).toBe(false);
-    expect(countPlan).toContain(`SEARCH alias USING INDEX ${ALIAS_INDEX} (superseded_by_incident_key=? AND incident_state=?)`);
+    expect(countPlan.some((detail) => detail.includes("depeg_events"))).toBe(false);
   });
 });

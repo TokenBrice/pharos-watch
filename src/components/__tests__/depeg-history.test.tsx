@@ -70,14 +70,14 @@ describe("DepegHistory provenance badges", () => {
     expect(screen.getByText("Recorded recovery").parentElement?.textContent).toContain("Depegged now");
   });
 
-  it("excludes disputed rows from incident and threshold-crossing counts while keeping them listed", () => {
+  it.each([false, true])("excludes disputed rows from statistics while keeping them listed (totalExact=%s)", (totalExact) => {
     const events = [
       makeEvent({ id: 1, provenance: { auditVerdict: "disputed" }, constituentEventCount: 2 }),
       makeEvent({ id: 2, provenance: { auditVerdict: "false_positive" }, constituentEventCount: 3 }),
       makeEvent({ id: 3, provenance: { auditVerdict: "confirmed" }, constituentEventCount: 4 }),
       makeEvent({ id: 4, provenance: { auditVerdict: "legacy_unknown" } as never, constituentEventCount: 5 }),
     ];
-    mockEvents(events, { data: { events, total: 2, totalExact: false } });
+    mockEvents(events, { data: { events, total: events.length, totalExact } });
     render(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.getByText("Incidents").parentElement?.textContent).toContain("2");
     expect(screen.getByText("Threshold crossings").parentElement?.textContent).toContain("9");
