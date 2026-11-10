@@ -6,7 +6,7 @@ import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
 import { makeStagedPoolRow } from "../dex-liquidity/__tests__/staging-merge.test-support";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { processPoolMetrics } from "../dex-liquidity/process-pools";
+import { assessPoolRejectionCoverage, buildPoolRejectionMetadata, processPoolMetrics, scopePoolRejections } from "../dex-liquidity/process-pools";
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
 import { accumulateGlobalAggregate, rebuildMetricsFromPools, summarizeRetainedPoolVolume, type GlobalPoolAggregateEntry } from "../dex-liquidity/scoring-helpers";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
@@ -189,10 +189,17 @@ describe("processPoolMetrics", () => {
         chainAddressToId: new Map(), curvePoolMap: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(),
       });
       expect(metrics.get("usdc-circle")?.pools.map((pool) => pool.poolId)).toEqual(["ethereum:defillama:healthy-provider-uuid"]);
-      expect(rejections).toEqual([{
+      expect(rejections).toMatchObject([{
         reason: "conflicting-pool-observations", poolIds: ["same-provider-uuid"],
         count: 2, tvlUsd: field === "tvlUsd" ? 300_000 : 200_000,
+        details: [expect.objectContaining({ source: "defillama-yields", protocol: "uniswap-v3",
+          chain: "ethereum", poolId: first.pool, stablecoinIds: ["usdc-circle"] }), expect.anything()],
       }]);
+      expect(assessPoolRejectionCoverage(scopePoolRejections(rejections, new Set(["uniswap-v3"])),
+        new Map([["usdc-circle", 200_000]]), new Map([["usdc-circle", 100_000]])).reason).toBe("material-pool-rejections");
+      const metadata = buildPoolRejectionMetadata(Array(100).fill(rejections[0]));
+      expect(JSON.stringify(metadata.poolRejections).length).toBeLessThanOrEqual(8192);
+      expect((metadata.poolRejections as unknown[]).length).toBeLessThanOrEqual(32);
     }
   });
 
@@ -253,50 +260,26 @@ describe("processPoolMetrics", () => {
     expect(result.mergedCount).toBe(0);
   });
 
-  it("reports a malformed upstream pool and keeps processing later pools", () => {
-    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
-
-    const result = processPoolMetrics({
-      pools: [
-        makePool({
-          pool: "0xmalformed",
-          symbol: "USDC-USDC",
-          chain: null as unknown as string,
-          tvlUsd: 100_000,
-        }),
-        makePool({
-          pool: "0xvalid",
-          symbol: "USDC-USDC",
-          tvlUsd: 150_000,
-          count: 5,
-        }),
-      ],
-      dexProjects: new Set(["curve"]),
-      symbolToChainScopedIds: symbolToChainScopedIds,
-      chainAddressToId: new Map(),
-      curvePoolMap: new Map(),
-      uniV3PoolFees: new Map(),
-      uniV3SymbolFees: new Map(),
-    });
-
-    expect(result.rejections).toEqual([
-      {
-        reason: "invalid-pool-identity",
-        poolIds: ["0xmalformed"],
-        count: 1,
-        tvlUsd: 100_000,
-      },
-    ]);
-    const { metrics } = result;
-    expect(metrics.get("usdc-circle")?.pools).toHaveLength(1);
-    expect(metrics.get("usdc-circle")?.pools[0]?.poolId).toBe("ethereum:defillama:0xvalid");
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[dex-liquidity] Matched 1 stablecoins with DEX liquidity"));
+  it.each(["curve", "yearn-finance", "", null] as const)("scopes %s", (project) => {
+    const dexProjects = new Set(["curve"]);
+    const bad = makePool({ project: project as string, chain: project === "curve" ? null as unknown as string : "Ethereum", symbol: "", underlyingTokens: ["0x0000000000000000000000000000000000000000"],
+      exposure: "single", tvlUsd: 143_399_064, poolMeta: null });
+    const input = { dexProjects, symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USDC", ["usdc-circle"]]]), ["ethereum"]),
+      chainAddressToId: new Map<string, string>(), curvePoolMap: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map() };
+    const result = processPoolMetrics({ ...input, pools: [bad, makePool({ pool: "healthy", tvlUsd: 150_000 })] });
+    expect(result.metrics.get("usdc-circle")?.pools).toHaveLength(1);
+    const rejections = scopePoolRejections([...result.rejections, ...result.rejections], dexProjects);
+    expect(rejections[0]).toMatchObject({ reason: "invalid-pool-identity", count: 2, tvlUsd: 286_798_128,
+      scope: project === "yearn-finance" ? "non-dex-project" : project === "curve" ? "dex-project" : "unknown-project" });
+    expect(assessPoolRejectionCoverage(rejections, null, new Map()).reason)
+      .toBe(project === "yearn-finance" ? null : "pool-rejection-attribution-unavailable");
+    if (project === "yearn-finance") for (const twin of [bad, { ...bad, exposure: "multi", underlyingTokens: null }]) {
+      expect(processPoolMetrics({ ...input, pools: [{ ...twin, symbol: "USDC" }] }).metrics.size).toBe(0);
+    }
+    expect(assessPoolRejectionCoverage(scopePoolRejections(result.rejections, new Set()), null, new Map()).material).toBeNull();
   });
 
   it("rethrows internal processing exceptions", () => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
     const invariant = new Error("metric invariant failed");
     const pool = makePool({
       pool: "0xinvariant",
@@ -327,7 +310,6 @@ describe("processPoolMetrics", () => {
   });
 
   it("does not apply Curve symbol fallback enrichment to non-Curve DeFiLlama rows", () => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
 
     const symbolToIds = new Map<string, string[]>([
       ["USDT", ["usdt-tether"]],
@@ -703,50 +685,13 @@ describe("processPoolMetrics", () => {
     expect(metrics.size).toBe(0);
   });
 
-  it("ignores organicFraction when apyBase is NaN", () => {
-    const pool = makePool({ apyBase: NaN, apy: 5, symbol: "USDT-USDC" });
-    const metrics = processPoolMetrics({
-      pools: [pool],
-      dexProjects: new Set(["curve"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(
-        new Map([
-          ["USDT", ["usdt-tether"]],
-          ["USDC", ["usdc-circle"]],
-        ]),
-        ["ethereum"],
-      ),
-      chainAddressToId: new Map(),
-      curvePoolMap: new Map(),
-      uniV3PoolFees: new Map(),
-      uniV3SymbolFees: new Map(),
-    }).metrics;
-    const m = metrics.get("usdt-tether");
-    expect(m).toBeDefined();
-    // NaN apyBase should not mark organic fraction as measured
-    expect(rebuildMetricsFromPools(m!.pools).totalTvlForOrganic).toBe(0);
-  });
-
-  it("uses apyBase fallback when apy is Infinity (avoids NaN from division)", () => {
-    const pool = makePool({ apyBase: 3, apy: Infinity, symbol: "USDT-USDC" });
-    const metrics = processPoolMetrics({
-      pools: [pool],
-      dexProjects: new Set(["curve"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(
-        new Map([
-          ["USDT", ["usdt-tether"]],
-          ["USDC", ["usdc-circle"]],
-        ]),
-        ["ethereum"],
-      ),
-      chainAddressToId: new Map(),
-      curvePoolMap: new Map(),
-      uniV3PoolFees: new Map(),
-      uniV3SymbolFees: new Map(),
-    }).metrics;
-    const m = metrics.get("usdt-tether");
-    expect(m).toBeDefined();
-    // apyBase is finite and positive → else-if branch sets organicFraction=1.0
-    expect(rebuildMetricsFromPools(m!.pools).totalTvlForOrganic).toBe(100_000);
+  it.each([[NaN, 5, 0], [3, Infinity, 100_000]])("handles organic inputs %s/%s", (apyBase, apy, organicTvl) => {
+    const { metrics } = processPoolMetrics({
+      pools: [makePool({ apyBase, apy })], dexProjects: new Set(["curve"]),
+      symbolToChainScopedIds: buildSymbolToChainScopedIds(new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]), ["ethereum"]),
+      chainAddressToId: new Map(), curvePoolMap: new Map(), uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(),
+    });
+    expect(rebuildMetricsFromPools(metrics.get("usdt-tether")!.pools).totalTvlForOrganic).toBe(organicTvl);
   });
 
   it("normalizes top-pool project labels for DeFiLlama Orca rows", () => {

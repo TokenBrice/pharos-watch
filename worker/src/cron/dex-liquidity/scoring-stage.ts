@@ -649,6 +649,9 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
   if (!decoder.sourceHeader || !decoder.poolHeader) {
     throw new Error("DEX liquidity scoring stage is missing its header record");
   }
+  if (decoder.poolHeader.poolRejections?.some((row) => row.scope == null)) {
+    throw new Error("pool-rejection-scope-unavailable");
+  }
   const { stablecoinPrices = [], primaryPrices, ...sourceHeader } = decoder.sourceHeader;
   const stablecoinPriceById = new Map<string, number>();
   for (const entry of stablecoinPrices) {

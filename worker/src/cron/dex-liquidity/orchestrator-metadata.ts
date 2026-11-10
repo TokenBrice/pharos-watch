@@ -2,10 +2,8 @@ import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persi
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 import type { DeadPoolExclusionSummary, DexPricePersistenceDiagnostics } from "./scoring";
 import {
-  POOL_REJECTION_MATERIAL_TVL_USD,
-  hasMaterialPoolRejections,
+  buildPoolRejectionMetadata,
 } from "./process-pools";
-import type { PoolProcessingRejection } from "./process-pool-types";
 import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters } from "./types";
 import type { MeasuredTargetFunnel } from "./route-telemetry";
 import type { DexLiquidityScoringSourceState, DexLiquidityPoolState } from "./scoring-stage-contract";
@@ -27,14 +25,14 @@ export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidi
  */
 export function dexLiquidityDegradedReason(params: {
   criticalSourceFailures: string[];
-  poolRejections?: PoolProcessingRejection[];
   analysis: DexLiquidityPostScoreAnalysis;
   persistence: PersistScoresResult;
   dexPriceDiagnostics?: DexPricePersistenceDiagnostics;
   historicalSnapshot: HistoricalSnapshotWriteResult;
 }): string | null {
   if (params.criticalSourceFailures.length > 0) return "critical-source-failures";
-  if (hasMaterialPoolRejections(params.poolRejections)) return "material-pool-rejections";
+  const rejectionReason = params.analysis.sourceCoverage?.poolRejectionCoverage?.reason;
+  if (rejectionReason) return rejectionReason;
   if (!params.analysis.previousCoverageBaselineAvailable) return "previous-coverage-baseline-unavailable";
   if (params.analysis.requiredBaselineUnavailable) return "required-baseline-unavailable";
   if (params.analysis.nearCoverageGuard) return "near-coverage-guard";
@@ -47,10 +45,6 @@ export function dexLiquidityDegradedReason(params: {
   if (params.historicalSnapshot.writeFailed) return "historical-snapshot-write-failed";
   if (params.historicalSnapshot.retentionPruneFailed) return "historical-snapshot-retention-prune-failed";
   return null;
-}
-
-export function isDexLiquidityDegraded(params: Parameters<typeof dexLiquidityDegradedReason>[0]): boolean {
-  return dexLiquidityDegradedReason(params) !== null;
 }
 
 export function buildDexLiquidityCronMetadata(params: {
@@ -91,7 +85,6 @@ export function buildDexLiquidityCronMetadata(params: {
   const { sourceState, poolState, scoreState } = params;
   const { persistence, historicalSnapshot, challengerPublication, dexPriceDiagnostics } = params.persistenceState;
   const rejectedPoolCount = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.count, 0);
-  const rejectedPoolTvlUsd = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.tvlUsd, 0);
   // Chain TVL can fall with complete inputs; retained source-pool loss is coverage evidence.
   const sourceFamilyDriftFlags = (scoreState.analysis.sourceCoverage.cohortDriftFlags ?? [])
     .filter((flag) => flag.startsWith(SOURCE_FAMILY_DROP_FLAG_PREFIX));
@@ -128,13 +121,7 @@ export function buildDexLiquidityCronMetadata(params: {
     registryRowsRead: poolState.registryRowsRead,
     registryMultiSourcePools: poolState.registryMultiSourcePools,
     registryFamilyBySource: poolState.registryFamilyBySource,
-    poolRejections: poolState.poolRejections,
-    poolRejectionMateriality: {
-      thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD,
-      rejectedPoolCount,
-      rejectedPoolTvlUsd,
-      material: hasMaterialPoolRejections(poolState.poolRejections),
-    },
+    ...buildPoolRejectionMetadata(poolState.poolRejections, scoreState.analysis.sourceCoverage.poolRejectionCoverage),
     directApiSourceSummary: {
       acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,
       excludedByReason: poolState.directApiIntegration.excludedByReason,

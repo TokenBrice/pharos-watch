@@ -542,18 +542,21 @@ describe("dex liquidity scoring stage cycle", () => {
       }
     },
   );
-  it.each([1, 10_000])("preserves compaction quarantine through stage persistence and materiality (TVL=%s)", async (tvlUsd) => {
-    const rejection = { reason: "invalid-pool-identity" as const, poolIds: ["malformed-primary"], count: 1, tvlUsd };
-    phaseFixtures.current.primary.poolRejections = [rejection];
-    const result = await stageSource();
-    expect(result.status).toBe(tvlUsd >= 10_000 ? "degraded" : "ok");
-    expect(readMetadata(result)).toMatchObject({
-      poolRejections: [rejection],
-      poolRejectionMateriality: { rejectedPoolCount: 1, rejectedPoolTvlUsd: tvlUsd, material: tvlUsd >= 10_000 },
-    });
-    const persisted = vi.mocked(persistStage).mock.calls[0][1];
-    expect(persisted.poolState.poolRejections).toEqual([rejection]);
-    expect(persisted.sourceState.dlYieldsAvailable).toBe(true);
+  it("scopes Yearn vaults", async () => {
+    const real = await vi.importActual<typeof import("../dex-liquidity/process-pools")>("../dex-liquidity/process-pools");
+    const pools = Array.from({ length: 67 }, (_, i) => llamaPool({ pool: `yearn-${i}`, project: "yearn-finance", chain: "Ethereum",
+      symbol: "", poolMeta: null, underlyingTokens: ["0x0000000000000000000000000000000000000000"], exposure: "single",
+      tvlUsd: i ? 2_000_000 : 11_399_064 }));
+    vi.mocked(processPoolMetrics).mockImplementationOnce(real.processPoolMetrics);
+    Object.assign(phaseFixtures.current.primary, { pools, rawPoolCount: 67, dexProjects: new Set(["uniswap-v3"]) });
+    for (const result of [await stageSource(), await consumeScoringStage(db)]) {
+      expect(result.status).toBe("ok");
+      const metadata = readMetadata(result);
+      expect(metadata.reason).toBeUndefined();
+      expect(metadata.poolRejections[0]).toMatchObject({ scope: "non-dex-project", protocol: "yearn-finance" });
+      expect(metadata.poolRejectionMateriality).toMatchObject({ rejectedPoolCount: 67, rejectedPoolTvlUsd: 143_399_064,
+        outOfScopeRejectedPoolCount: 67, candidateRejectedPoolCount: 0, candidateRejectedPoolTvlUsd: 0, material: false });
+    }
   });
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
@@ -1524,8 +1527,8 @@ describe("dex liquidity stage same-hour recovery", () => {
     });
     expect(result.status).toBe(tvlUsd >= 10_000 ? "degraded" : "ok");
     expect(readMetadata(result)).toMatchObject({
-      poolRejections: [rejection],
-      poolRejectionMateriality: { rejectedPoolCount: 1, rejectedPoolTvlUsd: tvlUsd, material: tvlUsd >= 10_000 },
+      poolRejections: [],
+      poolRejectionMateriality: { rejectedPoolCount: 1, rejectedPoolTvlUsd: tvlUsd, material: tvlUsd >= 10_000 ? null : false },
     });
   });
 

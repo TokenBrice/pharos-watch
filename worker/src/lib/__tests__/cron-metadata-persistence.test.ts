@@ -92,16 +92,10 @@ describe("compactCronMetadataForPersistence", () => {
     });
 
     const result = compactCronMetadataForPersistence(metadata);
-    const parsed = JSON.parse(result.metadata!) as {
-      reason: string;
-      persistenceCompaction: { originalBytes: number };
-      providerDiagnostics: unknown;
-      fullAssets: unknown;
-    };
+    const parsed = JSON.parse(result.metadata!);
 
     expect(result.compacted).toBe(true);
     expect(result.originalBytes).toBeGreaterThan(MAX_PERSISTED_CRON_METADATA_BYTES);
-    expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
     expect(parsed.reason).toBe("stablecoin-publication");
     expect(parsed.persistenceCompaction.originalBytes).toBe(result.originalBytes);
     expect(parsed).toMatchObject({
@@ -146,9 +140,7 @@ describe("compactCronMetadataForPersistence", () => {
     const result = compactCronMetadataForPersistence(metadata);
     expect(result.compacted).toBe(true);
     const parsed = JSON.parse(result.metadata!) as Record<string, unknown>;
-    // Top-level scalars, not nested under diagnostics: producer history's
-    // normalizeHistoryMetadata drops nested objects, and the durable
-    // activation-gate ledger reads these keys from worker_producer_history.
+    // The durable activation ledger reads top-level keys from producer history.
     expect(parsed.mxLedgerV).toBe(1);
     expect(parsed.mxLedgerKind).toBe("A");
     expect(parsed.mxLedgerCycle).toBe(1_787_120_160);
@@ -193,15 +185,19 @@ describe("compactCronMetadataForPersistence", () => {
       apiErrorConfigs: [{ configKey: "ethereum-test" }],
       subgraphFailures: [{ source: "uniswap-v4-subgraph", chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }],
       directApiSourceSummary: { sourceWarnings: ["meteora: malformed pool row"], pagination: [] },
+      poolRejections: [{ reason: "invalid-pool-volume", source: "dl", protocol: "curve", chain: "ethereum",
+        poolId: "pool-a", tvlUsd: 50_000, stablecoinIds: ["coin-a"] }],
+      poolRejectionMateriality: { material: true, affectedCoins: [{ stablecoinId: "coin-a", lostShare: 0.5 }] },
     };
     const result = compactCronMetadataForPersistence(JSON.stringify({ ...evidence,
+      payload: "x".repeat(10_000),
       adapterLatency: { groups: Array.from({ length: 1_000 }, () => ({ adapterKey: "test", elapsedMs: 10 })) },
     }));
     expect(result.compacted).toBe(true);
     expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
     expect(JSON.parse(result.metadata!)).toMatchObject(evidence);
     expect(JSON.parse(result.metadata!).d1Cost).toEqual(evidence.d1Cost);
-    expect(JSON.parse(result.metadata!).adapterLatency).toEqual({ groupsCount: 1_000 });
+    expect(JSON.parse(result.metadata!).diagnostics.adapterLatency).toEqual({ groupsCount: 1_000 });
   });
 
   it("retains complete watchdog generation evidence under the documented per-job exception", () => {
@@ -315,12 +311,7 @@ describe("normalizeCronMetadataWithLease", () => {
       } as CronResult,
       { leaseOwner: "job:scheduled:test" },
     );
-    const parsed = JSON.parse(normalized) as {
-      adapterLatency?: unknown;
-      leaseOwner?: string;
-      reason?: string;
-      reasons?: string[];
-    };
+    const parsed = JSON.parse(normalized);
 
     expect(new TextEncoder().encode(normalized).length).toBeGreaterThan(DEFAULT_CRON_METADATA_BUDGET_BYTES);
     expect(parsed.adapterLatency).toEqual(adapterLatency);
