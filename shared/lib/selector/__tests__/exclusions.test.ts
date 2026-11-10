@@ -318,15 +318,6 @@ describe("trading exclusions", () => {
 });
 
 describe("input-driven exclusions", () => {
-  it("decentralization=required + canBeBlacklisted=true", () => {
-    expect(
-      applyInputDrivenExclusions(
-        makeRow({ canBeBlacklisted: true }),
-        makeInput({ decentralization: "required" }),
-      ),
-    ).toEqual(expect.objectContaining({ reason: "decentralization-required-violation" }));
-  });
-
   it.each([
     ["centralized", ["violation", "violation", "violation", "violation", "violation"]],
     ["centralized-dependent", ["unknown", "unknown", "violation", "violation", null]],

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { UniverseChip } from "@/components/universe-chip";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { useFlashOnChange } from "@/hooks/use-flash-on-change";
+import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -30,25 +31,6 @@ interface ActiveRow {
   ageSec: number | null;
   evidence: OpenIncidentEvidence;
 }
-
-/**
- * Hydration-safe minute clock: zero (no evidence, no age) until mounted, then
- * the viewer's clock — never query receipt time, which freezes between polls.
- */
-function useMinuteClockSec(): number {
-  const [nowSec, setNowSec] = useState(0);
-  useEffect(() => {
-    const tick = () => setNowSec(Math.floor(Date.now() / 1000));
-    const timer = setTimeout(tick, 0);
-    const interval = setInterval(tick, 60_000);
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
-  }, []);
-  return nowSec;
-}
-
 
 export function ActiveDepegsCard(): React.JSX.Element {
   const activeQuery = useActiveDepegEvents();
@@ -170,7 +152,7 @@ function DepegRow({
       >
         <CoinCell logoSrc={logoSrc} />
         <span className="flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
+          <span className="truncate tracking-tight text-foreground">{row.symbol}</span>
           <span className="sr-only">{`, ${OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence]}`}</span>
           <span aria-hidden="true" className="text-muted-foreground/40">
             ·

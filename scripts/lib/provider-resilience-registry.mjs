@@ -150,6 +150,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/lib/__tests__/authoritative-price-sources-replay.test.ts",
       "worker/src/lib/__tests__/authoritative-price-sources-vaults.test.ts",
       "worker/src/lib/__tests__/authoritative-price-sources-supply.test.ts",
+      "worker/src/lib/__tests__/authoritative-price-sources-providers.test.ts",
     ],
     allowBareFetch: false,
     resilience: {
@@ -240,7 +241,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/telegram/delivery/__tests__/telegram.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-routing-safety.test.ts",
-      "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-backoff-transitions.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-snooze-presets.test.ts",
       "worker/src/telegram/delivery/__tests__/telegram-jobs-sqlite.test.ts",
     ],
@@ -272,7 +272,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
     tests: [
       "worker/src/lib/__tests__/digest-safety-map.test.ts",
-      "worker/src/cron/__tests__/daily-digest-generation.test.ts",
+      "worker/src/cron/__tests__/daily-digest.test.ts",
       "worker/src/cron/__tests__/digest-publication-watchdog.test.ts",
       "worker/src/cron/__tests__/safety-map-producer-kick.test.ts",
     ],
@@ -399,7 +399,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     tests: [
       "worker/src/api/__tests__/status-snapshots-core.test.ts",
       "worker/src/api/__tests__/status-data-loaders.test.ts",
-      "worker/src/api/__tests__/status-cron-telegram.test.ts",
       "worker/src/api/__tests__/status-data-quality-state.test.ts",
     ],
     allowBareFetch: true,

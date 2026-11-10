@@ -77,8 +77,12 @@ export const PSI_BEACON_COMPONENT_LABELS: Record<PsiBeaconComponentKey, string> 
 
 /** Display floor for a nonzero fog bank, in score points. Never published as a value (R7). */
 export const PSI_BEACON_SLIVER_FLOOR = 0.3;
-/** Score is published at one decimal; components at more. Allow rounding plus float noise. */
-const RECONCILE_TOLERANCE = 0.06;
+/**
+ * Score is published at one decimal; components at more. Compare on the
+ * published cent grid: a 6-cent rounding residual is valid, and quantizing
+ * keeps binary float noise from flipping the boundary.
+ */
+const RECONCILE_TOLERANCE_CENTS = 6;
 
 export function derivePsiBeaconState(input: PsiBeaconStateInput): PsiBeaconState {
   const { current } = input;
@@ -262,10 +266,11 @@ function decompose(reading: PsiBeaconReading): Pick<PsiBeaconModel, "gain" | "dr
   }
 
   if (missing.length === 0) {
-    const reconciled = Math.abs(clampRuler(rawScore) - score) <= RECONCILE_TOLERANCE;
+    const cents = (value: number) => Math.round(value * 100);
+    const reconciled = Math.abs(cents(clampRuler(rawScore)) - cents(score)) <= RECONCILE_TOLERANCE_CENTS;
     if (reconciled) {
-      if (rawScore > 100 + RECONCILE_TOLERANCE) clamp = { at: 100, rawScore };
-      else if (rawScore < -RECONCILE_TOLERANCE) clamp = { at: 0, rawScore };
+      if (cents(rawScore) > 10000 + RECONCILE_TOLERANCE_CENTS) clamp = { at: 100, rawScore };
+      else if (cents(rawScore) < -RECONCILE_TOLERANCE_CENTS) clamp = { at: 0, rawScore };
       return { fog, drag, gain, unknown: null, clamp, dashedTip: false };
     }
     // Components that do not sum to the published score are not drawn as an explanation.

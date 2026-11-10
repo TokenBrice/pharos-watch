@@ -39,4 +39,16 @@ describe("DEWSAlertFeed", () => {
     expect(screen.getByText(/Contagion 1.08x/i)).toBeTruthy();
   });
 
+  it("omits the module when the DEWS aggregate is empty or unreadable", () => {
+    const { container } = render(<DEWSAlertFeed signals={{}} />);
+
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByText(/below ALERT/)).toBeNull();
+  });
+
+  it("keeps the all-clear only for a census whose assets were actually observed", () => {
+    render(<DEWSAlertFeed signals={{ "test-coin": makeSignal({ band: "CALM" }) }} />);
+
+    expect(screen.getByText("All peg-catalog assets with DEWS coverage are below ALERT.")).toBeTruthy();
+  });
 });

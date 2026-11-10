@@ -1,6 +1,7 @@
 import { emptyReserveCompositionOverview, ReserveContinuationExecutionStatusSchema } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
+import { LIVE_RESERVE_STRUCTURAL_SCORE_INELIGIBLE_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
 import { percentileNearestRank } from "@shared/lib/stats";
 import { WORKER_TRACKED_META_BY_ID, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./store-shared";
@@ -8,6 +9,7 @@ import {
   getConfiguredLiveReserveCoins,
   LIVE_RESERVE_FRESHNESS_SEC,
   PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
+  selectScoringDegradedWarnings,
   type AuthoritativeReserveSnapshot,
   type LiveReserveScoringMap,
   type ReserveCompositionRow,
@@ -116,6 +118,7 @@ interface CoinStatusCounts {
   staleCoins: number;
   missingCoins: number;
   degradedCoins: number;
+  healthDegradedCoins: number;
   errorCoins: number;
   corruptCoins: number;
   independentFreshEligible: number;
@@ -146,6 +149,21 @@ function* iterateReserveSnapshots(
   }
 }
 
+function isStructuralOnlyReserveDegradation(
+  record: ReserveCompositionRecord,
+  syncState: ReserveSyncStateRecord | null,
+  admission: LiveReserveAdmissionResult,
+): boolean {
+  const structuralCodes: readonly string[] = LIVE_RESERVE_STRUCTURAL_SCORE_INELIGIBLE_WARNING_CODES;
+  return syncState?.lastStatus === "degraded" && syncState.lastAttemptedAt === syncState.lastSuccessAt
+    && syncState.lastError == null && syncState.metadata.failureCategory == null
+    && !hasUncertainWriteState(syncState) && !syncState.warningIntegrityIssue
+    && syncState.warningCount === syncState.warnings.length
+    && admission.reasons.length === 1 && admission.reasons[0] === "degraded-snapshot"
+    && [...record.warnings, ...syncState.warnings].every((warning) =>
+      warning.effect === "info" || (warning.effect === "degraded" && structuralCodes.includes(warning.code)));
+}
+
 function countCoinsByStatus(
   configuredCoins: readonly WorkerLiveReserveStablecoinMeta[],
   syncById: Map<string, ReserveSyncStateRecord>,
@@ -157,6 +175,7 @@ function countCoinsByStatus(
   let staleCoins = 0;
   let missingCoins = 0;
   let degradedCoins = 0;
+  let healthDegradedCoins = 0;
   let errorCoins = 0;
   let corruptCoins = 0;
   let independentFreshEligible = 0;
@@ -250,6 +269,7 @@ function countCoinsByStatus(
 
     if (syncState && syncState.lastStatus !== "ok") {
       degradedCoins++;
+      if (!isStructuralOnlyReserveDegradation(record, syncState, admission)) healthDegradedCoins++;
       if (uncertainWrite) writeTimeoutUncertain++;
       continue;
     }
@@ -280,6 +300,7 @@ function countCoinsByStatus(
     staleCoins,
     missingCoins,
     degradedCoins,
+    healthDegradedCoins,
     errorCoins,
     corruptCoins,
     independentFreshEligible,
@@ -299,6 +320,9 @@ export async function computeReserveCompositionOverview(
   now: number,
   checkpointLiveness: { readonly slotSilenceSec: number; readonly hardDeadSec: number },
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+  // The 30-day reliability rollup is the heaviest read here; review-applicability
+  // checks that never show it skip it (no rows, availability left unset).
+  options: { readonly adapterReliability?: boolean } = {},
 ): Promise<ReserveCompositionOverview> {
   const configuredCoins = getConfiguredLiveReserveCoins();
   if (configuredCoins.length === 0) {
@@ -310,7 +334,7 @@ export async function computeReserveCompositionOverview(
     loadReserveCompositionRowMap(db),
     loadLatestLiveReserveResumePointer(db),
     loadReserveCohortCompletions(db, now),
-    loadReserveSyncReliabilityRollup(db, now).then((rows) => ({
+    options.adapterReliability === false ? { rows: [], availability: undefined } : loadReserveSyncReliabilityRollup(db, now).then((rows) => ({
       rows,
       availability: { status: "available" as const },
     })).catch((error) => {
@@ -412,6 +436,7 @@ export async function computeReserveCompositionOverview(
     adapterReliability: adapterReliability.rows,
     adapterReliabilityAvailability: adapterReliability.availability,
     healthConfiguredCoins: configuredCoins.length - acknowledgedFeedIds.length,
+    healthDegradedCoins: healthCounts.healthDegradedCoins,
     healthFreshCoins: healthCounts.freshCoins,
     healthAuthoritativeFreshCoins: healthCounts.independentFreshEligible
       + healthCounts.independentFreshUnverified + healthCounts.staticValidatedFresh,
@@ -421,6 +446,62 @@ export async function computeReserveCompositionOverview(
     invalidFeedReviewIds: reviews.invalidIds,
     unacknowledgedPersistentlyStaleIndependentCoins: healthCounts.persistentlyStaleIndependentCoins,
   };
+}
+
+export interface PublishedReserveScoringEvidence {
+  /** Published snapshot warnings the coin's scoring policy does not excuse. */
+  scoreIneligibleIds: Set<string>;
+  /** Current, readable snapshots whose only admission rejection is structural warnings. */
+  structuralOnlyIds: Set<string>;
+  /** A configured independent adapter publishes no decodable, consistent snapshot. */
+  unknownIds: Set<string>;
+}
+
+/**
+ * Score ineligibility of the published composition, not of the latest attempt:
+ * a withheld fallback or a failed attempt writes no snapshot and says nothing
+ * about the retained one. A row that cannot be decoded leaves the verdict
+ * unknown rather than admitting the coin.
+ */
+export async function loadPublishedReserveScoringEvidence(
+  db: D1Database,
+  syncById: ReadonlyMap<string, ReserveSyncStateRecord>,
+  stablecoinIds: readonly string[],
+  now = Math.floor(Date.now() / 1000),
+): Promise<PublishedReserveScoringEvidence> {
+  const scopedIds = new Set(stablecoinIds);
+  const compositionById = await loadReserveCompositionRowMap(db, [...scopedIds]);
+  const evidence: PublishedReserveScoringEvidence = {
+    scoreIneligibleIds: new Set(),
+    structuralOnlyIds: new Set(),
+    unknownIds: new Set(),
+  };
+  for (const coin of getConfiguredLiveReserveCoins()) {
+    if (!scopedIds.has(coin.id)) continue;
+    const config = coin.liveReservesConfig;
+    const adapter = getLiveReserveAdapterDefinition(config.adapter);
+    if (adapter?.evidenceClass !== "independent") continue;
+    const syncState = syncById.get(coin.id) ?? null;
+    const row = compositionById.get(coin.id);
+    const record = row && hasConsistentSnapshotState(syncState, {
+      fetchedAt: row.fetched_at,
+      attemptId: row.attempt_id ?? null,
+    })
+      ? parseReserveCompositionRow(row, syncState).record
+      : null;
+    if (!record) {
+      evidence.unknownIds.add(coin.id);
+      continue;
+    }
+    if (selectScoringDegradedWarnings(record.warnings, config).length > 0) {
+      evidence.scoreIneligibleIds.add(coin.id);
+      const admission = evaluateLiveReserveAdmission(record, syncState, coin, now);
+      if (isStructuralOnlyReserveDegradation(record, syncState, admission)) {
+        evidence.structuralOnlyIds.add(coin.id);
+      }
+    }
+  }
+  return evidence;
 }
 
 async function loadFreshAuthoritativeReserveSnapshots(

@@ -3,7 +3,7 @@ import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@sh
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { parseBluechipRatingsCache } from "../../lib/bluechip-cache";
+import { parseBluechipRatingsCache, readBluechipRatingsCache } from "../../lib/bluechip-cache";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { bluechipResponse } from "./sync-bluechip.test-support";
@@ -107,7 +107,12 @@ describe("syncBluechip", () => {
   });
   it("retains valid cached ratings when one record is invalid", () => {
     const valid = makeUnreportedBluechipRating();
-    expect(parseBluechipRatingsCache(JSON.stringify({ valid, invalid: null }), "sync-bluechip:test-cache")).toEqual({ valid });
+    const raw = JSON.stringify({ valid, invalid: null });
+    expect(parseBluechipRatingsCache(raw, "sync-bluechip:test-cache")).toEqual({ valid });
+    expect(readBluechipRatingsCache(raw, "sync-bluechip:test-cache")).toEqual({
+      ratings: { valid },
+      droppedIds: ["invalid"],
+    });
   });
 
 
@@ -495,6 +500,18 @@ describe("syncBluechip", () => {
       });
       expect(row?.updated_at).toBe(Math.floor(Date.now() / 1000));
     }
+  });
+
+  it("refreshes instead of trusting a future-dated cache clock", async () => {
+    const { db, sqlite } = fixtures.open();
+    const futureAt = Math.floor(Date.now() / 1000) + 86_400;
+    sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)").run("bluechip-ratings", "{}", futureAt);
+    const fetch = mockFetch([{ match: () => true, body: { data: [{ grade: "A" }] } }]);
+    const result = await syncBluechip(db);
+    expect(JSON.parse(result.metadata ?? "{}")).not.toMatchObject({ reason: "cache-fresh" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'bluechip-ratings'").get())
+      .toEqual({ updated_at: Math.floor(Date.now() / 1000) });
   });
 
   it("preserves cache without HTTP when the circuit is open", async () => {

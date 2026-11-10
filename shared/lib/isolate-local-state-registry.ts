@@ -40,6 +40,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The D1 daily quota reservation is authoritative; this is a best-effort local throttle.",
   },
   {
+    sourcePath: "functions/lib/site-data-rate-limit.ts",
+    stateNames: ["siteDataRequestTimestampsByIpHash"],
+    owner: "Pages site-data read limiter",
+    kind: "limiter",
+    resetOrTtl: "60-second sliding window, 1,200 requests per IP hash, capped at 5,000 tracked hashes; resets with the isolate.",
+    durableTruth: "No durable counter: this is a best-effort local read throttle; Worker edge caching and the lane secret remain authoritative.",
+  },
+  {
     sourcePath: "shared/lib/cloudflare-access-jwt.ts",
     stateNames: ["jwksCache"],
     owner: "Cloudflare Access JWT verification",

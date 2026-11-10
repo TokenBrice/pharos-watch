@@ -10,6 +10,7 @@ import {
   countDepegAuthoritativeSources,
   getPriceCacheMaxAgeSec,
   hasDepegAuthoritativeSource,
+  isListAggregatorOnlyPair,
   isPoolChallengeEligibleConsensus,
   isReplaySafePriceSource,
 } from "../pricing-source-policy";
@@ -71,5 +72,13 @@ describe("pricing source registry", () => {
     expect(hasDepegAuthoritativeSource(["coingecko+geckoterminal"])).toBe(false);
     expect(countDepegAuthoritativeSources(["coingecko+pyth"])).toBe(1);
     expect(isPoolChallengeEligibleConsensus(["coingecko+geckoterminal"])).toBe(true);
+  });
+
+  it("treats only a two-source list-aggregator pair as non-independent agreement", () => {
+    expect(isListAggregatorOnlyPair(["coingecko", "defillama-list"])).toBe(true);
+    expect(isListAggregatorOnlyPair(["coingecko+defillama-list"])).toBe(true);
+    expect(isListAggregatorOnlyPair(["coingecko", "binance"])).toBe(false);
+    expect(isListAggregatorOnlyPair(["coingecko", "defillama", "defillama-list"])).toBe(false);
+    expect(isListAggregatorOnlyPair(["coingecko"])).toBe(false);
   });
 });

@@ -25,7 +25,7 @@ import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/regist
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
-import { buildInClause, chunkArray } from "../db";
+import { chunkArray } from "../db";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
   finalizeProjectorBatch,
@@ -191,18 +191,20 @@ async function fetchPriorWarningSignals(
   const map = new Map<string, WarningBaseline>();
   if (coinIds.length === 0 || since <= 0) return map;
   for (const chunk of chunkArray([...new Set(coinIds)])) {
-    const inClause = buildInClause(chunk);
+    // Seek each requested coin's latest best row; a DISTINCT over the table
+    // read every history row of the chunk's coins.
     const rows = await db
       .prepare(
-        `SELECT h.stablecoin_id, h.source_key, h.recorded_at, h.warning_signals
-           FROM (SELECT DISTINCT stablecoin_id FROM yield_history WHERE stablecoin_id IN (${inClause.sql})) c
+        `WITH warning_coins(stablecoin_id) AS (VALUES ${chunk.map(() => "(?)").join(", ")})
+         SELECT h.stablecoin_id, h.source_key, h.recorded_at, h.warning_signals
+           FROM warning_coins c
            JOIN yield_history h ON h.rowid = (
              SELECT h.rowid FROM yield_history h
               WHERE h.stablecoin_id = c.stablecoin_id
                 AND h.is_best = 1 AND h.recorded_at <= ?
               ORDER BY h.recorded_at DESC, h.source_key DESC LIMIT 1)`,
       )
-      .bind(...inClause.binds, since)
+      .bind(...chunk, since)
       .all<YieldHistoryRow>();
     for (const row of rows.results ?? []) {
       map.set(row.stablecoin_id, { status: "unavailable" });
@@ -377,20 +379,22 @@ async function fetchPriorPysScores(
   const map = new Map<string, number | null>();
   if (coinIds.length === 0 || since <= 0) return map;
   for (const chunk of chunkArray([...new Set(coinIds)])) {
-    const inClause = buildInClause(chunk);
+    // Seek each requested coin's latest scored decision; a DISTINCT over the
+    // table read every decision row of the chunk's coins (~95K rows per chunk).
     const rows = await db
       .prepare(
-        `SELECT c.stablecoin_id,
+        `WITH pys_coins(stablecoin_id) AS (VALUES ${chunk.map(() => "(?)").join(", ")})
+         SELECT r.stablecoin_id,
                 (SELECT d.selected_score
                    FROM yield_source_decisions d
-                  WHERE d.stablecoin_id = c.stablecoin_id
+                  WHERE d.stablecoin_id = r.stablecoin_id
                     AND d.created_at <= ?
                     AND d.selected_score IS NOT NULL
                   ORDER BY d.created_at DESC, d.generation_id DESC
                   LIMIT 1) AS selected_score
-           FROM (SELECT DISTINCT stablecoin_id FROM yield_source_decisions WHERE stablecoin_id IN (${inClause.sql})) c`,
+           FROM pys_coins r`,
       )
-      .bind(since, ...inClause.binds)
+      .bind(...chunk, since)
       .all<{ stablecoin_id: string; selected_score: number | null }>();
     for (const row of rows.results ?? []) {
       const score = row.selected_score;

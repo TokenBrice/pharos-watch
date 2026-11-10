@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { isFallbackBackedTrackedBaseline, queueTrackedAdditionsNotice } from "../telegram-tracked-additions";
 import { getCache } from "../../../lib/db-cache";
 import { prepareTelegramDigestAppendices } from "../../../telegram/digest/digest-appendices";
 import { validateAndWriteStablecoinsCache } from "../cache-publication";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
-import { loadPreviousStablecoinsById } from "../shared";
+import { loadPreviousStablecoinsById, restoreMissingTrackedAssets } from "../shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makePeggedAsset } from "./_fixtures";
 
@@ -86,8 +87,8 @@ describe("tracked additions after a degraded fallback publication", () => {
     const mainIds = await publishCohort(db, mainCohort, MAIN_SYNC_SEC, "main");
     expect(mainIds).toEqual(mainCohort.map((asset) => asset.id));
 
-    // DefiLlama outage: the CoinGecko fallback can only price ACTIVE_STABLECOINS
-    // with a fresh market cap, and that smaller cohort replaces the canonical cache.
+    // A CoinGecko-only cohort (outage publications cached before tracked-coverage
+    // restoration) replaces the canonical cache with only the coins it could price.
     const cgData: Record<string, { usd: number; usd_market_cap: number; last_updated_at: number }> = {};
     for (const meta of ACTIVE_STABLECOINS) {
       if (!meta.geckoId) continue;
@@ -116,5 +117,39 @@ describe("tracked additions after a degraded fallback publication", () => {
     expect(digest.metadata.trackedDetected).toBe(0);
     expect(digest.metadata.trackedSymbols).toEqual([]);
     expect(digest.appendixHtml ?? "").not.toContain("Newly tracked stablecoins");
+  });
+
+  it("keeps a restored outage publication out of the tracked-set baseline", async () => {
+    const { db } = fixtures.open();
+    // One tracked coin's last observation is past the restore ceiling, so the outage cannot vouch for it.
+    const expired = ACTIVE_STABLECOINS.find((meta) => meta.detailProvider !== "coingecko" && !meta.flags.navToken)!;
+    const mainCohort = makeMainPublishedCohort().map((asset) => asset.id === expired.id
+      ? { ...asset, supplyObservedAt: MAIN_SYNC_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1 }
+      : asset);
+    await publishCohort(db, mainCohort, MAIN_SYNC_SEC, "main");
+    const { previousAssetsById: mainById } = await loadPreviousStablecoinsById(db);
+    expect(isFallbackBackedTrackedBaseline(mainById.values())).toBe(false);
+
+    // The outage feed prices only CoinGecko-detail coins; the rest is restored from the main publication.
+    const cgData: Record<string, { usd: number; usd_market_cap: number; last_updated_at: number }> = {};
+    for (const meta of ACTIVE_STABLECOINS) {
+      if (meta.geckoId && meta.detailProvider === "coingecko") {
+        cgData[meta.geckoId] = { usd: 1, usd_market_cap: 100_000_000, last_updated_at: FALLBACK_SYNC_SEC - 60 };
+      }
+    }
+    const coingeckoRows = buildFallbackAssetsFromCoinGecko({ cgData, syncStartSec: FALLBACK_SYNC_SEC });
+    const restored = restoreMissingTrackedAssets(coingeckoRows, mainById, FALLBACK_SYNC_SEC);
+    expect(restored.droppedIds).toContain(expired.id);
+    await publishCohort(db, [...coingeckoRows, ...restored.assets], FALLBACK_SYNC_SEC, "fallback");
+
+    const { previousAssetsById } = await loadPreviousStablecoinsById(db);
+    expect(coingeckoRows.length * 2).toBeLessThan(previousAssetsById.size);
+    expect(previousAssetsById.has(expired.id)).toBe(false);
+    const previousBaselineFallbackBacked = isFallbackBackedTrackedBaseline(previousAssetsById.values());
+    expect(previousBaselineFallbackBacked).toBe(true);
+
+    // Recovery must not announce the coin the outage could not restore as newly tracked.
+    await queueTrackedAdditionsNotice(db, new Set(previousAssetsById.keys()), mainCohort, { previousBaselineFallbackBacked });
+    expect(await getCache(db, "telegram:tracked-stablecoins-pending")).toBeNull();
   });
 });

@@ -2,8 +2,11 @@ import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
-import { isHardPricingTrustTier, isPoolChallengeEligibleConsensus } from "@shared/lib/pricing-source-policy";
-import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import {
+  isHardPricingTrustTier,
+  isListAggregatorOnlyPair,
+  isPoolChallengeEligibleConsensus,
+} from "@shared/lib/pricing-source-policy";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPriceValidationContext,
@@ -29,12 +32,7 @@ export function applyListAggregatorDowngrade(
 ): void {
   for (const result of results.values()) {
     if (result.confidence !== "high") continue;
-    const agreeSources = normalizePricingSourceKeys(result.agreeSources);
-    if (agreeSources.length !== 2) continue;
-    const allListAggregator = agreeSources.every(
-      (source) => getPricingSourceRegistryEntry(source)?.isListAggregator === true,
-    );
-    if (!allListAggregator) continue;
+    if (!isListAggregatorOnlyPair(result.agreeSources)) continue;
     result.confidence = "single-source";
     stats.high--;
     stats.singleSource++;
@@ -186,6 +184,11 @@ export function applyPoolChallenge(
           })),
         );
         if (replacementPrice != null) {
+          // `candidateSources` also keeps co-leg-held lanes for source-depth
+          // provenance; they never voted, so only priced candidates disagree.
+          const preReplacementVotingSources = result.allPrices
+            ? Object.keys(result.allPrices)
+            : result.candidateSources;
           result.price = replacementPrice;
           result.source = "pool-tvl-weighted";
           result.selectedSource = "pool-tvl-weighted";
@@ -199,7 +202,7 @@ export function applyPoolChallenge(
           result.observedAtMode = "local_fetch";
           result.candidateSources = [...new Set([...result.candidateSources, "pool-tvl-weighted"])];
           result.agreeSources = ["pool-tvl-weighted"];
-          result.disagreeSources = result.candidateSources.filter((source) => source !== "pool-tvl-weighted");
+          result.disagreeSources = preReplacementVotingSources.filter((source) => source !== "pool-tvl-weighted");
           result.allPrices = { "pool-tvl-weighted": replacementPrice };
           result.observedAtBySource = {
             "pool-tvl-weighted": poolObservedAts.length > 0 ? Math.min(...poolObservedAts) : result.observedAt ?? null,

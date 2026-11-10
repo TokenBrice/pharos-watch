@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../stablecoins/registry";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import {
   AQUARIUS_SUPPORTED_TOKEN_IDS,
+  CURVE_NATIVE_DISCOVERY_CHAINS,
   DEX_COVERAGE_WAIVERS,
   DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
   getActiveDexCoverageWaiver,
@@ -40,8 +42,7 @@ const REVIEW_AT_SEC = Date.UTC(2026, 6, 10) / 1000;
 
 describe("DEX deployment coverage ownership", () => {
 
-  it("pins the six new provider and source-family identities", () => {
-    expect(Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)).toHaveLength(9);
+  it("pins which provider censuses may certify an empty scope", () => {
     expect(DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS).toMatchObject({
       aquarius: false,
       tezos: true,
@@ -57,8 +58,11 @@ describe("DEX deployment coverage ownership", () => {
 
   it("registers the exact new provider deployment identities", () => {
     const aquariusToken = Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)[0]!;
-    const tezosAddress = "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW";
-    const iconAddress = "cx88fd7df7ddff82f7cc735c871dc519838cb235bb";
+    // The catalog owns the reviewed identity; this asserts the routing shape.
+    const tezosAddress = TRACKED_STABLECOINS.find((coin) => coin.id === "uusd-youves")!
+      .contracts!.find((contract) => contract.chain === "tezos")!.address;
+    const iconAddress = TRACKED_STABLECOINS.find((coin) => coin.id === "bnusd-balanced")!
+      .contracts!.find((contract) => contract.chain === "icon")!.address;
 
     expect(isAquariusSorobanDeployment("stellar", `EUTBL-${aquariusToken}`)).toBe(true);
     expect(getDexDiscoveryProviders("stellar", `EUTBL-${aquariusToken}`)).toEqual(["aquarius"]);
@@ -84,27 +88,26 @@ describe("DEX deployment coverage ownership", () => {
     ]);
   });
 
-  it.each([
-    "eursafo-spiko", "eutbl-spiko", "safo-spiko-usd", "ustbl-spiko", "gbpsafo-spiko",
-    "eurspkcc-spiko", "uktbl-spiko", "chfsafo-spiko", "spkcc-spiko",
-  ])("registers the reviewed Spiko Soroban deployment without exhaustive authority: %s", (assetId) => {
-    const deployment = TRACKED_STABLECOINS.find((coin) => coin.id === assetId)
-      ?.contracts?.find((contract) => contract.chain === "stellar");
-    expect(deployment, `${assetId} must retain its reviewed Stellar deployment`).toBeDefined();
-    expect(getDexDiscoveryProviders("stellar", deployment!.address)).toEqual(["aquarius"]);
-    expect(isAquariusSorobanDeployment("stellar", deployment!.address)).toBe(true);
+  it("registers every reviewed Spiko Soroban deployment without exhaustive authority", () => {
+    const spiko = TRACKED_STABLECOINS.filter((coin) => coin.id.includes("spiko"));
+    expect(spiko.length).toBeGreaterThan(0);
+    for (const coin of spiko) {
+      const deployment = coin.contracts?.find((contract) => contract.chain === "stellar");
+      expect(deployment, `${coin.id} must retain its reviewed Stellar deployment`).toBeDefined();
+      expect(getDexDiscoveryProviders("stellar", deployment!.address), coin.id).toEqual(["aquarius"]);
+      expect(isAquariusSorobanDeployment("stellar", deployment!.address), coin.id).toBe(true);
+    }
     expect(DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS.aquarius).toBe(false);
   });
 
-  it("pins CHFSAFO's exact Soroban identity and invalidates its old unsupported provider snapshot", () => {
-    const address = "CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4";
-    const deployment = TRACKED_STABLECOINS.find((coin) => coin.id === "chfsafo-spiko")
-      ?.contracts?.find((contract) => contract.chain === "stellar");
-    expect(deployment).toMatchObject({ address, decimals: 5 });
-    expect(getDexDiscoveryProviders("stellar", address)).toEqual(["aquarius"]);
+  it("invalidates an old unsupported provider snapshot on the reviewed Soroban identity", () => {
+    const address = TRACKED_STABLECOINS.find((coin) => coin.id === "chfsafo-spiko")
+      ?.contracts?.find((contract) => contract.chain === "stellar")?.address;
+    expect(address).toBeDefined();
+    expect(getDexDiscoveryProviders("stellar", address!)).toEqual(["aquarius"]);
     expect(getDexDiscoveryProviders("stellar", `chfSAFO-${address}`)).toEqual(["aquarius"]);
-    expect(isCensusProviderSetSupersededByRegistry("stellar", address, [])).toBe(true);
-    expect(getDexDiscoveryProviders("ethereum", address)).not.toContain("aquarius");
+    expect(isCensusProviderSetSupersededByRegistry("stellar", address!, [])).toBe(true);
+    expect(getDexDiscoveryProviders("ethereum", address!)).not.toContain("aquarius");
   });
 
   it("registers the Cosmos census providers by chain and denom shape", () => {
@@ -235,6 +238,16 @@ describe("DEX deployment coverage ownership", () => {
       ]),
     ).toBe(true);
     expect(isCensusProviderSetSupersededByRegistry("kava", "usdx", ["curve", "kava-swap"])).toBe(false);
+  });
+
+  it("names only chains the chain registry knows in the Curve native discovery set", () => {
+    // `curve.supports` is this very set (`shared/lib/dex-deployment-coverage.ts`),
+    // so resolving the provider from it proves nothing; the independent
+    // invariant is that every chain in the set is a registered chain id.
+    expect(CURVE_NATIVE_DISCOVERY_CHAINS.size).toBeGreaterThan(0);
+    for (const chain of CURVE_NATIVE_DISCOVERY_CHAINS) {
+      expect(CHAIN_META[chain], `${chain} must be a registered chain`).toBeDefined();
+    }
   });
 
   it("gives every exclusively inaccessible coin an owned, unexpired waiver", () => {

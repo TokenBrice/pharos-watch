@@ -6,12 +6,20 @@ vi.mock("../fetch-retry", () => ({
 }));
 
 import { fetchJsonWithRetry } from "../fetch-retry";
+import { isValidFxRate } from "../fx-config";
 import { loadCommodityPeerMedianReference, resolveMetalReferenceRates, type MetalPegKey } from "../fx-metals";
 
 const validateMetalRate = (pegKey: MetalPegKey, rate: number): boolean =>
   pegKey === "peggedGOLD"
     ? rate >= 500 && rate <= 10_000
     : rate >= 5 && rate <= 500;
+
+const validateWithPriorDelta = (pegKey: MetalPegKey, rate: number, prevRate: number | undefined): boolean =>
+  isValidFxRate(pegKey, rate, prevRate, "[fx-metals-test]");
+
+function okResult(body: Record<string, unknown>) {
+  return { response: new Response(JSON.stringify(body), { status: 200 }), body };
+}
 
 describe("resolveMetalReferenceRates", () => {
   beforeEach(() => {
@@ -23,7 +31,7 @@ describe("resolveMetalReferenceRates", () => {
 
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 100, peggedSILVER: 1_000 },
-      commodityPeerMedian: { rates: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -45,7 +53,7 @@ describe("resolveMetalReferenceRates", () => {
 
     const live = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -57,7 +65,7 @@ describe("resolveMetalReferenceRates", () => {
     vi.mocked(fetchJsonWithRetry).mockReset().mockResolvedValue(null);
     const peer = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: { peggedGOLD: 2_900 }, updatedAt: null },
+      commodityPeerMedian: { rates: { peggedGOLD: 2_900 }, counts: { peggedGOLD: 3 }, updatedAt: null },
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -79,13 +87,185 @@ describe("resolveMetalReferenceRates", () => {
     });
     const result = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: {}, updatedAt: null },
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
       syncStartSec: 1_790_095_300,
       validateRate: validateMetalRate,
     });
     expect(result.resolvedByPeg.peggedGOLD).toMatchObject({
       source: "gold-api.com",
       updatedAt: expected,
+    });
+  });
+
+  it("re-anchors silver from a corroborated fresh spot when the cached reference is stale", async () => {
+    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce(okResult({ price: 2_900, updatedAt: "2026-11-02T10:44:00Z" }))
+      .mockResolvedValueOnce(okResult({ price: 50.378, updatedAt: "2026-11-02T10:42:22Z" }));
+
+    const result = await resolveMetalReferenceRates({
+      prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
+      prevRateIsFresh: (pegKey) => pegKey !== "peggedSILVER",
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      freshChainlinkRates: { peggedSILVER: 50.39 },
+      syncStartSec,
+      validateRate: validateWithPriorDelta,
+    });
+
+    expect(result.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 50.378,
+      source: "gold-api.com",
+      updatedAt: Math.floor(Date.parse("2026-11-02T10:42:22Z") / 1000),
+    });
+  });
+
+  it("keeps gold live and falls back to the clocked cache when silver fails", async () => {
+    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce(okResult({ price: 2_900, updatedAt: "2026-11-02T10:44:00Z" }))
+      .mockResolvedValueOnce(null);
+
+    const result = await resolveMetalReferenceRates({
+      prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
+      prevRateIsFresh: () => true,
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      syncStartSec,
+      validateRate: validateWithPriorDelta,
+    });
+
+    expect(result.resolvedByPeg.peggedGOLD).toMatchObject({ source: "gold-api.com", rate: 2_900 });
+    expect(result.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 40.448374,
+      source: "cached",
+      updatedAt: null,
+    });
+    expect(result.sources).toMatchObject({
+      "gold-api.com": "partial",
+      "commodity-peer-median": "unavailable",
+    });
+  });
+
+  it("still vetoes a spot jump against a fresh previous reference", async () => {
+    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce(okResult({ price: 2_900, updatedAt: "2026-11-02T10:44:00Z" }))
+      .mockResolvedValueOnce(okResult({ price: 50.378, updatedAt: "2026-11-02T10:42:22Z" }));
+
+    const result = await resolveMetalReferenceRates({
+      prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
+      prevRateIsFresh: () => true,
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      syncStartSec,
+      validateRate: validateWithPriorDelta,
+    });
+
+    expect(result.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 40.448374,
+      source: "cached",
+    });
+  });
+
+  it("keeps a non-fresh incumbent when a dated spot move has no fresh corroboration", async () => {
+    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce(okResult({ price: 5_000, updatedAt: "2026-11-02T10:44:00Z" }))
+      .mockResolvedValueOnce(okResult({ price: 5.0378, updatedAt: "2026-11-02T10:44:00Z" }));
+
+    const result = await resolveMetalReferenceRates({
+      prevRates: { peggedGOLD: 5_000, peggedSILVER: 40.448374 },
+      prevRateIsFresh: () => false,
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      freshChainlinkRates: {},
+      syncStartSec,
+      validateRate: validateWithPriorDelta,
+    });
+
+    expect(result.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 40.448374,
+      source: "cached",
+      updatedAt: null,
+    });
+  });
+
+  it("accepts a >20% spot move corroborated by a three-contributor peer median", async () => {
+    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce(okResult({ price: 2_900, updatedAt: "2026-11-02T10:44:00Z" }))
+      .mockResolvedValueOnce(okResult({ price: 50.39, updatedAt: "2026-11-02T10:44:00Z" }));
+
+    const result = await resolveMetalReferenceRates({
+      prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
+      prevRateIsFresh: () => false,
+      commodityPeerMedian: {
+        rates: { peggedSILVER: 50.5 },
+        counts: { peggedSILVER: 3 },
+        updatedAt: syncStartSec - 120,
+      },
+      freshChainlinkRates: {},
+      syncStartSec,
+      validateRate: validateWithPriorDelta,
+    });
+
+    expect(result.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 50.39,
+      source: "gold-api.com",
+    });
+  });
+
+  it("rejects an undated spot move against a stale incumbent", async () => {
+    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce(okResult({ price: 2_900 }))
+      .mockResolvedValueOnce(okResult({ price: 30 }));
+
+    const result = await resolveMetalReferenceRates({
+      prevRates: { peggedGOLD: 2_900, peggedSILVER: 50 },
+      prevRateIsFresh: () => false,
+      commodityPeerMedian: { rates: {}, counts: {}, updatedAt: null },
+      freshChainlinkRates: {},
+      syncStartSec,
+      validateRate: validateWithPriorDelta,
+    });
+
+    expect(result.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 50,
+      source: "cached",
+      updatedAt: null,
+    });
+  });
+
+  it("does not admit a commodity peer median with fewer than three contributors", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(null);
+    const syncStartSec = Math.floor(Date.parse("2026-11-02T10:45:00Z") / 1000);
+
+    const thin = await resolveMetalReferenceRates({
+      prevRates: {},
+      prevRateIsFresh: () => true,
+      commodityPeerMedian: {
+        rates: { peggedSILVER: 50.5 },
+        counts: { peggedSILVER: 2 },
+        updatedAt: syncStartSec - 120,
+      },
+      syncStartSec,
+      validateRate: validateMetalRate,
+    });
+    expect(thin.resolvedByPeg.peggedSILVER).toBeUndefined();
+
+    const broad = await resolveMetalReferenceRates({
+      prevRates: {},
+      prevRateIsFresh: () => true,
+      commodityPeerMedian: {
+        rates: { peggedSILVER: 50.5 },
+        counts: { peggedSILVER: 3 },
+        updatedAt: syncStartSec - 120,
+      },
+      syncStartSec,
+      validateRate: validateMetalRate,
+    });
+    expect(broad.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 50.5,
+      source: "commodity-peer-median",
+      updatedAt: syncStartSec - 120,
     });
   });
 });
@@ -102,7 +282,7 @@ describe("commodity peer observation provenance", () => {
     const db = mockD1([{ match: "cache", rows: [], first: {
       value: JSON.stringify({ peggedAssets: [asset], fxFallbackRates: {} }), updated_at: now,
     } }]);
-    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({ rates: {}, updatedAt: null });
+    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({ rates: {}, counts: {}, updatedAt: null });
   });
 
   it("preserves the oldest admitted quote time instead of cache publication time", async () => {
@@ -115,6 +295,55 @@ describe("commodity peer observation provenance", () => {
     const db = mockD1([{ match: "cache", rows: [], first: {
       value: JSON.stringify({ peggedAssets, fxFallbackRates: {} }), updated_at: now,
     } }]);
-    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({ rates: { peggedGOLD: 2900 }, updatedAt: now - 120 });
+    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({
+      rates: { peggedGOLD: 2900 },
+      counts: { peggedGOLD: 2 },
+      updatedAt: now - 120,
+    });
+  });
+
+  it("rejects a two-coin silver median and accepts three coins", async () => {
+    const now = 1_800_000_000;
+    vi.mocked(fetchJsonWithRetry).mockReset().mockResolvedValue(null);
+    const silverAsset = (id: string, price: number) => ({
+      id, name: "Silver", symbol: id.toUpperCase(), pegType: "peggedSILVER",
+      price, priceSource: "coingecko", priceObservedAt: now - 60, priceObservedAtMode: "upstream",
+      circulating: { peggedSILVER: 10_000_000 },
+    });
+    const load = async (assets: ReturnType<typeof silverAsset>[]) => {
+      const db = mockD1([{ match: "cache", rows: [], first: {
+        value: JSON.stringify({ peggedAssets: assets, fxFallbackRates: {} }), updated_at: now,
+      } }]);
+      return await loadCommodityPeerMedianReference(db, now);
+    };
+
+    const thin = await load([silverAsset("silver-a", 50), silverAsset("silver-b", 51)]);
+    expect(thin).toEqual({ rates: { peggedSILVER: 50.5 }, counts: { peggedSILVER: 2 }, updatedAt: now - 60 });
+    const thinResolved = await resolveMetalReferenceRates({
+      prevRates: {},
+      prevRateIsFresh: () => true,
+      commodityPeerMedian: thin,
+      syncStartSec: now,
+      validateRate: validateMetalRate,
+    });
+    expect(thinResolved.resolvedByPeg.peggedSILVER).toBeUndefined();
+
+    const broad = await load([
+      silverAsset("silver-a", 50),
+      silverAsset("silver-b", 50.5),
+      silverAsset("silver-c", 51),
+    ]);
+    const broadResolved = await resolveMetalReferenceRates({
+      prevRates: {},
+      prevRateIsFresh: () => true,
+      commodityPeerMedian: broad,
+      syncStartSec: now,
+      validateRate: validateMetalRate,
+    });
+    expect(broadResolved.resolvedByPeg.peggedSILVER).toMatchObject({
+      rate: 50.5,
+      source: "commodity-peer-median",
+      updatedAt: now - 60,
+    });
   });
 });

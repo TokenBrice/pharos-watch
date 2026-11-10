@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-09-30",
+    "kind": "governance",
+    "label": "Open USD launches on Base, Ethereum, Solana and Tempo",
+    "severity": "med",
+    "href": "https://joinopenstandard.com/blog/ousd-is-live",
+    "note": "Open Standard announced that Bridge-issued OUSD was live on four networks with minting and redemption paths. This records the operating launch separately from the earlier founding-partner and launch-liquidity announcement."
+  }
+]

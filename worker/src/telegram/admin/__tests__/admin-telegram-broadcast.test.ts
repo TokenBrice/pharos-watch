@@ -92,6 +92,19 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     expect(await readJsonResponse(response, 422)).toMatchObject({ error: expect.stringContaining(error) });
   });
 
+  it("rejects an unsplittable HTML body as a validation failure without a side effect", async () => {
+    const { sqlite, db } = latestDb();
+    const response = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: "<b>\n</b>", scope: "all", dryRun: true }, "broadcast-empty-0001"),
+      trustedAdmin: true,
+    });
+    expect(await readJsonResponse(response, 422)).toMatchObject({ reason: "message-not-splittable" });
+    expect(sqlite.prepare(
+      "SELECT COUNT(*) AS n FROM admin_idempotency_keys WHERE response_status = -2",
+    ).get()).toMatchObject({ n: 0 });
+  });
+
   it("preserves global and deliverable-watcher scope semantics", async () => {
     const { sqlite, db } = latestDb();
     sqlite.prepare(

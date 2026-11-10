@@ -6,6 +6,7 @@ import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEK
 import { logWorkerEvent } from "../lib/structured-log";
 
 type DigestPromoRow = {
+  digest_rowid: number;
   digest_title: string | null;
   digest_text: string | null;
   digest_extended: string | null;
@@ -28,23 +29,24 @@ export async function handleDigestPromo(db: D1Database): Promise<Response> {
     const rows = await db.prepare(
       // Number the full non-blocked daily history, including internal sentinels,
       // before hiding internal rows and bounding this presentation-only read.
+      // The numbering window reads only generated_at/rowid/digest_meta, which the
+      // daily_digest numbering index covers; titles and copy come from the joined
+      // body for the three visible editions.
       `WITH numbered AS (
-         SELECT rowid AS digest_rowid, digest_title, generated_at, digest_meta,
-           ROW_NUMBER() OVER (ORDER BY generated_at ASC) AS edition_number,
+         SELECT rowid AS digest_rowid, generated_at, digest_meta,
+           ROW_NUMBER() OVER (ORDER BY generated_at ASC, rowid ASC) AS edition_number,
            COUNT(*) OVER () AS daily_count
          FROM daily_digest
          WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ), visible AS (
-         SELECT digest_rowid, digest_title, generated_at, edition_number, daily_count,
-           ROW_NUMBER() OVER (ORDER BY generated_at DESC) AS visible_order
+         SELECT digest_rowid, generated_at, edition_number, daily_count
          FROM numbered WHERE (${NON_INTERNAL_DIGEST_SQL_FILTER})
-         ORDER BY generated_at DESC LIMIT 3
+         ORDER BY generated_at DESC, digest_rowid DESC LIMIT 3
        )
-       SELECT visible.digest_title, visible.generated_at, visible.edition_number, visible.daily_count,
-         body.digest_text, body.digest_extended
-       FROM visible LEFT JOIN daily_digest body
-         ON body.rowid = visible.digest_rowid AND visible.visible_order = 1
-       ORDER BY visible.generated_at DESC`,
+       SELECT visible.digest_rowid, visible.generated_at, visible.edition_number, visible.daily_count,
+         body.digest_title, body.digest_text, body.digest_extended
+       FROM visible LEFT JOIN daily_digest body ON body.rowid = visible.digest_rowid
+       ORDER BY visible.generated_at DESC, visible.digest_rowid DESC`,
     ).all<DigestPromoRow>();
     if (!rows.success) throw new Error("Digest promo read failed");
 
@@ -61,7 +63,7 @@ export async function handleDigestPromo(db: D1Database): Promise<Response> {
         excerpt: digestText || firstParagraph || null,
       } : null,
       previousEditions: previous
-        .filter((row) => row.generated_at !== current?.generated_at && row.edition_number !== current?.daily_count)
+        .filter((row) => row.digest_rowid !== current?.digest_rowid && row.edition_number !== current?.daily_count)
         .map(projectEdition),
     });
 

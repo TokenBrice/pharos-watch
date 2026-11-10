@@ -1,139 +1,85 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import {join} from "node:path"
+import fs from "node:fs"
+import cp from "node:child_process"
+import {syncBuiltinESMExports as sync} from "node:module"
+import {afterEach,expect as e,it,vi} from "vitest"
+import {withTempRepo} from "./helpers/test-state"
+import pkg from "../../package.json"
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+const launch=vi.hoisted(()=>vi.fn())
+vi.mock("playwright",()=>({chromium:{launch}}))
+import {parseFreezeStablecoinArgs as freeze} from "../maintenance/freeze-stablecoin"
+import {parseD1InsightsArgs as d1} from "../maintenance/capture-d1-insights.mjs"
+import {parseSeoRenderBudgetArgs as seo,runSeoRenderBudget as runSeo} from "../maintenance/audit-seo-render-budget.mjs"
+import {parseAgentLandArgs as land,runAgentLand as runLand} from "../maintenance/agent-land"
+import {parseAgentWorktreeArgs as worktree,runAgentWorktree as runTree} from "../maintenance/agent-worktree"
+import {run as wait} from "../maintenance/wait-pages-release-marker.ts"
 
-const launchBrowser = vi.hoisted(() => vi.fn());
-vi.mock("playwright", () => ({ chromium: { launch: launchBrowser } }));
+const args=(line:string)=>line?line.split(" "):[]
+const lane="--lane /lane --target /target --review /review.json --message-file /message",boot="--path lane --base HEAD"
+const invalid=(line:string,flag:string,other:string)=>["",flag,...args(line).flatMap((_,i,av)=>i%2?[]:[[...av.slice(0,i),...av.slice(i+2)].join(" ")]),
+...["--unknown","extra",`${flag} ${other}`].map(extra=>`${line} ${extra}`)]
+afterEach(()=>{vi.unstubAllEnvs();vi.restoreAllMocks();sync();})
 
-import { parseFreezeStablecoinArgs } from "../maintenance/freeze-stablecoin";
-import { parseD1InsightsArgs } from "../maintenance/capture-d1-insights.mjs";
-import { parseSeoRenderBudgetArgs, runSeoRenderBudget } from "../maintenance/audit-seo-render-budget.mjs";
+it.each([runLand,runTree].flatMap(run=>["-h","--help"].map(flag=>[run,flag] as const)))("runner help %s %s",(run,flag)=>{
+const out=vi.fn(),spies=[vi.spyOn(cp,"spawnSync"),...([
+"exists","lstat","readdir","readFile","readlink","realpath",
+"close","mkdir","mkdtemp","open","write",
+] as const).map(name=>vi.spyOn(fs,`${name}Sync`))]
+for(const spy of spies) spy.mockImplementation(()=>{throw Error("Unexpected I/O");})
+sync();e(run([flag],{log:out,output:out})).toBeUndefined()
+e(out).toHaveBeenCalledWith(e.stringMatching(/^(Usage: )?agent:(land|worktree) /))
+for(const spy of spies) e(spy).not.toHaveBeenCalled()
+})
+it.each([
+["land","scripts/maintenance/agent-land.ts"],["worktree","scripts/maintenance/agent-worktree.ts"],
+] as const)("agent command %s",(name,path)=>e(pkg.scripts[`agent:${name}`]).toBe(`node --import tsx ${path}`))
 
-import {
-  run as waitForReleaseMarker,
-} from "../maintenance/wait-pages-release-marker.ts";
-
-const tempDirs: string[] = [];
-
-afterEach(() => {
-  for (const path of tempDirs.splice(0)) rmSync(path, { force: true, recursive: true });
-  vi.unstubAllEnvs();
-});
-
-describe("priority operator CLI parsers", () => {
-  it("preserves SEO audit defaults and accepts strict route/wait/replay options", () => {
-    expect(parseSeoRenderBudgetArgs([])).toMatchObject({ waitMs: 4000, json: false, help: false, apiFailureReplay: false });
-    expect(parseSeoRenderBudgetArgs(["--routes=/,/api/", "--wait-ms=0", "--json"]))
-      .toMatchObject({ routes: ["/", "/api/"], waitMs: 0, json: true });
-    expect(parseSeoRenderBudgetArgs(["--url=https://example.test", "--api-failure-replay"]))
-      .toMatchObject({ baseUrl: "https://example.test", apiFailureReplay: true });
-    expect(parseSeoRenderBudgetArgs(["-h"]).help).toBe(true);
-  });
-
-  it.each([
-    ["--unknown"], ["--url"], ["--wait-ms=invalid"], ["--wait-ms=-1"],
-    ["--url=one", "--url=two"], ["extra"], ["--routes=,"],
-    ["--api-failure-replay", "--api-failure-replay"],
-  ])("rejects invalid SEO audit usage %j", (...argv) => {
-    expect(() => parseSeoRenderBudgetArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
-  });
-
-  it("prints SEO audit help without launching a browser", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    launchBrowser.mockReset();
-    try {
-      await expect(runSeoRenderBudget(["--help"])).resolves.toBeUndefined();
-      expect(log).toHaveBeenCalledWith(expect.stringContaining("--api-failure-replay"));
-      expect(log).toHaveBeenCalledWith(expect.stringContaining(
-        "Replay selected profile, Alt-Pegs and seed-pilot routes with API reads returning an injected 503.",
-      ));
-      expect(launchBrowser).not.toHaveBeenCalled();
-    } finally {
-      log.mockRestore();
-    }
-  });
-
-  it.each([
-    [undefined, undefined, { headless: true }],
-    [" /browser/chromium ", undefined, { executablePath: "/browser/chromium", headless: true }],
-    [undefined, " chrome-beta ", { channel: "chrome-beta", headless: true }],
-    [" /browser/chromium ", " chrome-beta ", { executablePath: "/browser/chromium", headless: true }],
-  ])("preserves SEO launch options for executable=%s channel=%s", async (executablePath, channel, expected) => {
-    vi.stubEnv("SEO_AUDIT_BROWSER_EXECUTABLE_PATH", executablePath);
-    vi.stubEnv("SEO_AUDIT_BROWSER_CHANNEL", channel);
-    vi.stubEnv("GITHUB_ACTIONS", "true");
-    vi.stubEnv("SMOKE_UI_BROWSER_CHANNEL", "chrome");
-    vi.stubEnv("SMOKE_UI_BROWSER_EXECUTABLE_PATH", "/unrelated/smoke-browser");
-    const failure = new Error("Executable doesn't exist");
-    launchBrowser.mockReset().mockRejectedValue(failure);
-    await expect(runSeoRenderBudget(["--routes=/", "--wait-ms=0"])).rejects.toBe(failure);
-    expect(launchBrowser).toHaveBeenCalledExactlyOnceWith(expected);
-  });
-
-  it("preserves D1 capture defaults and repeatable period/sort selection", () => {
-    expect(parseD1InsightsArgs([])).toMatchObject({
-      database: "stablecoin-db", config: "worker/wrangler.toml", limit: 50,
-      periods: [], sortBy: [], output: null, dryRun: false,
-    });
-    expect(parseD1InsightsArgs([
-      "--period=7d", "--period", "30d", "--sort-by=reads", "--sort-by", "time", "--dry-run",
-    ])).toMatchObject({ periods: ["7d", "30d"], sortBy: ["reads", "time"], dryRun: true });
-  });
-
-  it.each([
-    ["--unknown"], ["--database"], ["--limit=2x"], ["--limit=0"],
-    ["--database=one", "--database=two"], ["extra"],
-  ])("rejects invalid D1 insights usage %j", (...argv) => {
-    expect(() => parseD1InsightsArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
-  });
-
-  it.each(["--database", "--config", "--limit", "--period", "--sort-by", "--output"])(
-    "rejects flag-like values for D1 insights option %s", (flag) => {
-      for (const argv of [[flag, "--dry-run"], [`${flag}=--dry-run`]]) {
-        expect(() => parseD1InsightsArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
-      }
-    },
-  );
-
-  it("requires exactly one freeze target and rejects option-like typos", () => {
-    expect(parseFreezeStablecoinArgs(["--dry-run", "usdc-circle"])).toEqual({
-      coinId: "usdc-circle",
-      dryRun: true,
-      help: false,
-    });
-    expect(() => parseFreezeStablecoinArgs([])).toThrow("exactly one <coinId>");
-    expect(() => parseFreezeStablecoinArgs(["one", "two"])).toThrow("exactly one <coinId>");
-    expect(() => parseFreezeStablecoinArgs(["--coin", "usdc-circle"])).toThrow("Unknown option");
-  });
-
-  it("accepts the first cache-busted matching release marker", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "pharos-release-marker-"));
-    tempDirs.push(directory);
-    const markerPath = join(directory, "marker.json");
-    writeFileSync(markerPath, JSON.stringify({ commit: "target" }));
-    const commits = ["old", "target"];
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      expect(new URL(String(input)).searchParams.get("expected")).toBe("target");
-      const commit = commits.shift();
-      return new Response(JSON.stringify({ commit }), {
-        headers: { "content-type": "application/json" },
-        status: 200,
-      });
-    });
-
-    try {
-      await waitForReleaseMarker([
-        "--url", "https://one.test/marker.json",
-        "--marker", markerPath,
-        "--attempts", "2",
-        "--delay-ms", "0",
-      ]);
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-    } finally {
-      fetchMock.mockRestore();
-    }
-  });
-});
-
+it.each([
+[land,lane,{lane:"/lane",target:"/target",review:"/review.json",messageFile:"/message",apply:false,help:false}],
+[worktree,boot,{path:"lane",base:"HEAD",apply:false,help:false}],
+[seo,"",{waitMs:4000,json:false,help:false,apiFailureReplay:false}],
+[seo,"--routes=/,/api/ --wait-ms=0 --json",{routes:["/","/api/"],waitMs:0,json:true}],
+[seo,"--url=https://x.test --api-failure-replay",{baseUrl:"https://x.test",apiFailureReplay:true}],
+...[seo,land,worktree].flatMap(parse=>["-h","--help"].map(flag=>[parse,flag,{help:true}] as const)),
+[d1,"",{database:"stablecoin-db",config:"worker/wrangler.toml",limit:50,periods:[],sortBy:[],output:null,dryRun:false}],
+[d1,"--period=7d --period 30d --sort-by=reads --sort-by time --dry-run",{periods:["7d","30d"],sortBy:["reads","time"],dryRun:true}],
+] as const)("accepts %s %s",(parse,av,want)=>e(parse(args(av))).toMatchObject(want))
+it.each([
+[seo,["--unknown","--url","--wait-ms=invalid","--wait-ms=-1","--url=one --url=two","extra","--routes=,","--api-failure-replay --api-failure-replay"]],
+[land,invalid(lane,"--lane","/other")],[worktree,invalid(boot,"--path","other")],
+[d1,["--unknown","--database","--limit=2x","--limit=0","--database=one --database=two","extra",
+..."database config limit period sort-by output".split(" ").flatMap(f=>[`--${f} --dry-run`,`--${f}=--dry-run`])]],
+])("rejects %s usage",(parse,rows)=>{
+for(const av of rows) e(()=>parse(args(av))).toThrow(e.objectContaining({exitCode:2}))
+})
+it("freeze targets",()=>{
+e(freeze(args("--dry-run usdc-circle"))).toEqual({coinId:"usdc-circle",dryRun:true,help:false})
+for(const av of ["","one two"]) e(()=>freeze(args(av))).toThrow("exactly one <coinId>")
+e(()=>freeze(args("--coin usdc-circle"))).toThrow("Unknown option")
+})
+it("SEO help avoids browser launch",async()=>{
+const log=vi.spyOn(console,"log").mockImplementation(()=>{})
+launch.mockReset();await e(runSeo(["--help"])).resolves.toBeUndefined()
+for(const text of ["--api-failure-replay","Replay selected profile, Alt-Pegs and seed-pilot routes with API reads returning an injected 503."])
+e(log).toHaveBeenCalledWith(e.stringContaining(text))
+e(launch).not.toHaveBeenCalled()
+})
+const executablePath="/browser"
+it.each([
+[undefined,undefined,{}],[" /browser ",undefined,{executablePath}],
+[undefined," chrome-beta ",{channel:"chrome-beta"}],[" /browser "," chrome-beta ",{executablePath}],
+])("SEO launch %s %s",async(exe,channel,want)=>{
+for(const [name,value] of Object.entries({SEO_AUDIT_BROWSER_EXECUTABLE_PATH:exe,SEO_AUDIT_BROWSER_CHANNEL:channel,
+GITHUB_ACTIONS:"true",SMOKE_UI_BROWSER_CHANNEL:"chrome",SMOKE_UI_BROWSER_EXECUTABLE_PATH:"/other"})) vi.stubEnv(name,value)
+const err=Error();launch.mockReset().mockRejectedValue(err)
+await e(runSeo(args("--routes=/ --wait-ms=0"))).rejects.toBe(err)
+e(launch).toHaveBeenCalledExactlyOnceWith({headless:true,...want})
+})
+it("cache-busted marker retry",()=>withTempRepo("release-marker",{"m.json":'{"commit":"target"}'},async dir=>{
+const commits=["old","target"],fetch=vi.spyOn(globalThis,"fetch").mockImplementation(async input=>{
+e(new URL(String(input)).searchParams.get("expected")).toBe("target");return Response.json({commit:commits.shift()})
+})
+await wait(["--url","https://one.test/m.json","--marker",join(dir,"m.json"),"--attempts","2","--delay-ms","0"])
+e(fetch).toHaveBeenCalledTimes(2)
+}))

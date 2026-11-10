@@ -111,6 +111,36 @@ describe("NonUsdShareChart", () => {
     expect(screen.getByRole("table").textContent).toContain("Partial value coverage");
   });
 
+  it("never prints a partial coverage shortfall as complete", () => {
+    const saved = useNonUsdShareMock();
+    useNonUsdShareMock.mockReturnValue({
+      ...saved,
+      data: saved.data.map((point: object) => ({ ...point,
+        coverage: { basis: "interior-gap-prior-value", total: 0.9996, commodity: 0.9999, fiatNonUsd: 0.9998 },
+      })),
+    });
+    const { container } = render(<NonUsdShareChart />);
+
+    expect(container.textContent).toContain("Partial value coverage");
+    expect(container.textContent).toContain("<100%");
+    expect(container.textContent).not.toContain("100.0%");
+    expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("<100%");
+  });
+
+  it("keeps exact full coverage printed as 100.0%", () => {
+    const saved = useNonUsdShareMock();
+    useNonUsdShareMock.mockReturnValue({
+      ...saved,
+      data: saved.data.map((point: object) => ({ ...point,
+        coverage: { basis: "interior-gap-prior-value", total: 1, commodity: 1, fiatNonUsd: 1 },
+      })),
+    });
+    render(<NonUsdShareChart />);
+
+    expect(screen.getByRole("figure").getAttribute("aria-label"))
+      .toContain("Interior-gap value coverage: total 100.0%, commodities 100.0%, non-commodity 100.0%");
+  });
+
   it("marks legacy history without value coverage as unknown rather than complete", () => {
     render(<NonUsdShareChart />);
     expect(screen.getByRole("table").textContent).toContain("Value coverage unavailable");

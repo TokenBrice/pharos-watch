@@ -36,9 +36,12 @@ describe("BlacklistFilters", () => {
     expect(screen.getByRole("button", { name: "USDT", pressed: true })).toBeTruthy();
 
     view.rerender(<BlacklistFilters {...props} perCoinTotalEvents={{ USDT: 0 }} />);
+    const disclosure = screen.getByRole("button", { expanded: true });
+    fireEvent.click(disclosure);
+    expect(disclosure.hasAttribute("disabled")).toBe(true);
     const zeroCounts = within(screen.getByRole("group", { name: "Filter by stablecoin without recorded events" }));
     expect(zeroCounts.getByRole("button", { name: "USDT", pressed: true })).toBeTruthy();
-    expect(screen.getByRole("button", { expanded: true })).toBeTruthy();
+    expect(screen.getByRole("button", { expanded: true }).textContent).toBe("Hide tracked without events yet (1)");
 
     view.rerender(<BlacklistFilters {...props} perCoinTotalEvents={{ USDC: 0 }} />);
     const primary = within(screen.getByRole("group", { name: "Filter by stablecoin" }));

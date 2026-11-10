@@ -450,6 +450,12 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
   const delayValues = (profile.branches ?? [])
     .map((branch) => branch.liquidationDelaySec)
     .filter((value): value is number => value != null);
+  // An uncallable branch's wait is unbounded and an unreviewed one has no
+  // bounded value, so neither can be summarized by the observed delays below
+  // (R1: unavailable is not zero).
+  const hasUnboundedDelay = (profile.branches ?? []).some(
+    (branch) => branch.liquidationState === "uncallable" || branch.liquidationState === "unknown",
+  );
   const stalenessBounds = new Set(
     (profile.branches ?? [])
       .flatMap((branch) => branch.feeds ?? [])
@@ -509,7 +515,8 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
     maxStalenessLabel,
     worstMaxLtvPct: maxLtvValues.length > 0 ? Math.max(...maxLtvValues) : null,
     worstMinCrPct: minCrValues.length > 0 ? Math.min(...minCrValues) : null,
-    maxLiquidationDelayLabel: delayValues.length > 0 ? formatOracleDurationSec(Math.max(...delayValues)) : null,
+    maxLiquidationDelayLabel:
+      !hasUnboundedDelay && delayValues.length > 0 ? formatOracleDurationSec(Math.max(...delayValues)) : null,
     priceDelayLabel: notApplicable ? null : resolvePriceDelayLabel(tier, branches),
     branches,
     sources,

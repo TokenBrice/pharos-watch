@@ -12,6 +12,7 @@
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "sofiusd",
+  "llamaId": "430",
   "links": [
     {
       "label": "Website",

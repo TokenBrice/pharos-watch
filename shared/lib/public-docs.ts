@@ -168,9 +168,31 @@ function rewritePublicDocLinks(markdown: string, { absolute = false }: { absolut
   });
 }
 
+/**
+ * Internal-vocabulary redaction must not rewrite link destinations, inline
+ * code spans or fenced blocks: those bytes are executable commands, URLs or
+ * identifiers, and rewriting them produces broken links and examples.
+ */
+const REDACTION_PROTECTED_SEGMENT = /```[\s\S]*?```|`[^`\n]*`|https?:\/\/[^\s)<>]+/g;
+
+function replaceOutsideProtectedSegments(text: string, transform: (segment: string) => string): string {
+  let output = "";
+  let cursor = 0;
+  for (const match of text.matchAll(REDACTION_PROTECTED_SEGMENT)) {
+    const index = match.index ?? 0;
+    output += transform(text.slice(cursor, index));
+    output += match[0];
+    cursor = index + match[0].length;
+  }
+  return output + transform(text.slice(cursor));
+}
+
 function redactRunbookText(text: string): string {
-  return text.replace(/\brunbooks?\b/gi, (match) =>
-    match.toLowerCase().endsWith("s") ? "operator procedures" : "operator procedure",
+  return replaceOutsideProtectedSegments(text, (segment) =>
+    segment.replace(/\boperator\s+runbooks?\b|\brunbooks?\b/gi, (match) => {
+      const noun = /s$/i.test(match) ? "procedures" : "procedure";
+      return `${/^[A-Z]/.test(match) ? "Operator" : "operator"} ${noun}`;
+    }),
   );
 }
 
@@ -179,9 +201,11 @@ function redactPublicDocSource(markdown: string): string {
     /\[([^\]]+)\]\((?:\.\/)?runbooks\/[^)]+\)/gi,
     (_full, label: string) => redactRunbookText(label),
   );
-  return redactRunbookText(withoutRunbookLinks)
-    .replace(/agents\/[^\s)`]+/g, "internal working notes")
-    .replace(/AGENTS\.md/g, "agent instructions");
+  return replaceOutsideProtectedSegments(redactRunbookText(withoutRunbookLinks), (segment) =>
+    segment
+      .replace(/agents\/[^\s)`]+/g, "internal working notes")
+      .replace(/AGENTS\.md/g, "agent instructions"),
+  );
 }
 
 export function preparePublicDocMarkdown(

@@ -20,11 +20,60 @@ const EXPECTED_MARKET_ORDER = [
   "susdt-spark",
 ] as const;
 
+const USDT_ID = "usdt-tether";
+const PEG_PREMIUM_WEIGHT = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegPremiumWeight;
+
+function evaluateCapture(fixedInput: ReturnType<typeof createReportCardsFixedInput>) {
+  const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {
+    metaById: capturedAccessMetaById,
+    // Freeze optional transfer overlays as well as blacklist evidence.
+    reviewedTransferFacts: new Map(),
+  });
+  const facts = compileSafetyScoreV9FactSetFromNormalizedInput(fixedInput, extension);
+  const evaluated = evaluateV9FactSet(facts, V9_CANDIDATE_POLICY_V1);
+  return {
+    factsById: new Map(facts.assets.map((asset) => [asset.assetId, asset])),
+    evaluatedById: new Map(evaluated.assets.map((asset) => [asset.assetId, asset])),
+  };
+}
+
+/**
+ * The production capture with an open USDT event, expressed the v10.42 way: the
+ * any-direction peak witnesses `activeDepeg`, and only a discount feeds the caps.
+ */
+function directionalCapture(openEvent: { discountPeakBps: number | null }) {
+  const draft = structuredClone(productionCapture.draft) as unknown as ReportCardsFixedInputDraft;
+  const usdt = draft.pegDataById[USDT_ID]!;
+  const anyDirectionPeakBps = openEvent.discountPeakBps ?? 1_619;
+  return createReportCardsFixedInput({
+    ...draft,
+    pegDataById: {
+      ...draft.pegDataById,
+      [USDT_ID]: {
+        ...usdt,
+        activeDepeg: true,
+        lastEventAt: draft.clockSec - 3 * 86_400,
+        eventCount: Math.max(1, usdt.eventCount),
+      },
+    },
+    activeDepegPeakBpsById: { [USDT_ID]: anyDirectionPeakBps },
+    safetyScoreV9DirectionalPeg: {
+      premiumWeight: PEG_PREMIUM_WEIGHT,
+      pegScoreById: Object.fromEntries(
+        Object.entries(draft.pegDataById).map(([assetId, row]) => [assetId, row.pegScore]),
+      ),
+      // Keyed by the witness id; null records a premium-only open event.
+      activeDiscountPeakBpsById: { [USDT_ID]: openEvent.discountPeakBps },
+    },
+  });
+}
+
 // Scoped from the recovered 2026-07-24 exact production capture so the
 // integration test retains USDT's measured Curve routes and real wrapper facts.
-// Producer epochs retain their relative ages at the 2026-10-23 scoring clock,
-// after the live registry's 2026-10-22 oracle review. Access reviews are captured
-// separately so later catalog reviews cannot quarantine this historical input.
+// Producer epochs retain their relative ages at the 2026-11-02 scoring clock,
+// past the registry's 2026-10-30 USDT BDO Q3 attestation pin and the
+// 2026-11-01 custody recheck. Access reviews are captured separately so later
+// catalog reviews cannot quarantine this historical input.
 // susdt-spark live rows are refreshed to the erc4626-single-asset adapter's
 // current keyed two-slice emission so the capture tracks the 2026-09-29
 // spUSDT re-curation instead of the retired single unkeyed row.
@@ -119,6 +168,30 @@ describe("Safety Score v9 USDT premium production integration", () => {
     expect(child.trace.wrapperParentLimit).toMatchObject({ parentScore: usdt.trace.inheritableScore });
     expect(child.trace.scoreAdjustments).not.toContainEqual(
       expect.objectContaining({ kind: "market-anchor-longevity" }),
+    );
+  });
+
+  it("retains the market-anchor premium while USDT's only open event is a premium", () => {
+    const { factsById, evaluatedById } = evaluateCapture(directionalCapture({ discountPeakBps: null }));
+
+    expect(factsById.get(USDT_ID)!.peg).toMatchObject({ activeDepeg: false, activeDepegBps: null });
+    const usdt = evaluatedById.get(USDT_ID)!;
+    expect(usdt.trace.scoreAdjustments).toContainEqual(
+      expect.objectContaining({ kind: "market-anchor-longevity", configuredPoints: 12, appliedPoints: 12 }),
+    );
+    expect(usdt.trace.caps.map((cap) => cap.source)).not.toContain("active-depeg");
+  });
+
+  it("withholds the market-anchor premium when USDT's open event is a discount", () => {
+    const { factsById, evaluatedById } = evaluateCapture(directionalCapture({ discountPeakBps: 1_200 }));
+
+    expect(factsById.get(USDT_ID)!.peg).toMatchObject({ activeDepeg: true, activeDepegBps: 1_200 });
+    const usdt = evaluatedById.get(USDT_ID)!;
+    expect(usdt.trace.scoreAdjustments ?? []).not.toContainEqual(
+      expect.objectContaining({ kind: "market-anchor-longevity" }),
+    );
+    expect(usdt.trace.caps).toContainEqual(
+      expect.objectContaining({ source: "active-depeg", kind: "active-depeg:d", limit: 49 }),
     );
   });
 });

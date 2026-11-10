@@ -23,7 +23,6 @@ import {
   findBestLendingPool,
   isBlockedYieldOpportunitySource,
 } from "../yield-helpers";
-import { computeTvlWeightedMedianApy } from "../yield-sync/evaluation";
 import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
 import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config-lending-protocols";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
@@ -505,12 +504,12 @@ describe("matchAllDlPools", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("does not accept Layer 3 substring-only symbol matches", () => {
+  it.each([["usdh-test", "USDH", "FEUSDH"], ["usdn-smardex", "USDN", "USDN"]])("rejects substring/gap matches: %s", (id, symbol, poolSymbol) => {
     const pools = [
-      makeDlYieldPool({ pool: "p1", symbol: "FEUSDH", project: "test", tvlUsd: 5e6, apy: 3, apyBase: 3, stablecoin: true }),
+      makeDlYieldPool({ pool: "p1", symbol: poolSymbol, project: "test", tvlUsd: 5e6, apy: 3, apyBase: 3, stablecoin: true }),
     ];
 
-    const result = matchAllDlPools("usdh-test", "USDH", pools, {}, {});
+    const result = matchAllDlPools(id, symbol, pools, {}, {});
     expect(result).toHaveLength(0);
   });
 
@@ -722,6 +721,18 @@ describe("findBestLendingPool", () => {
 });
 
 describe("isBlockedYieldOpportunitySource", () => {
+  it.each([
+    ["radiant-v2", "any", true], ["sovryn-dex", "any", true],
+    ["loopscale", "any", true], ["loopscale-lending", "any", true],
+    ["truefi", "ca6ed758-967b-46ec-9e88-8fe50d7cc188", true], ["truefi", "replacement", false],
+    ["brila", "replacement", false],
+    ["brila", "ca6ed758-967b-46ec-9e88-8fe50d7cc188", true],
+    ["blend-pools-v2", "ecf788e3-d2ef-4fdd-9ece-8a2d96226ddf", true],
+    ["blend-pools-v2", "v2.1", false],
+  ] as const)("scopes the reviewed %s hold to pool %s", (project, pool, blocked) => {
+    expect(isBlockedYieldOpportunitySource({ project, pool })).toBe(blocked);
+  });
+
   it("matches Resolv and USR aliases", () => {
     expect(isBlockedYieldOpportunitySource({ yieldSource: "Morpho: Resolv USDC" })).toBe(true);
     expect(isBlockedYieldOpportunitySource({ yieldSource: "Vault using stUSR" })).toBe(true);
@@ -731,56 +742,6 @@ describe("isBlockedYieldOpportunitySource", () => {
   it("does not block unrelated venues", () => {
     expect(isBlockedYieldOpportunitySource({ yieldSource: "Aave v3 (ethereum)" })).toBe(false);
     expect(isBlockedYieldOpportunitySource({ poolMeta: "Core USDC" })).toBe(false);
-  });
-});
-
-describe("computeTvlWeightedMedianApy", () => {
-  it("returns null for empty input", () => {
-    expect(computeTvlWeightedMedianApy([])).toBeNull();
-  });
-
-  it("returns null when all rows have null TVL", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: null },
-      { apy_30d: 3, source_tvl_usd: null },
-    ])).toBeNull();
-  });
-
-  it("returns null when all rows have zero TVL", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: 0 },
-    ])).toBeNull();
-  });
-
-  it("returns the APY of a single valid row", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-    ])).toBe(5);
-  });
-
-  it("returns TVL-weighted median, not simple median", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 10, source_tvl_usd: 100_000 },
-      { apy_30d: 3, source_tvl_usd: 10_000_000 },
-    ]);
-    expect(result).toBe(3);
-  });
-
-  it("filters out rows with zero or negative APY", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 0, source_tvl_usd: 100_000_000 },
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-    ]);
-    expect(result).toBe(5);
-  });
-
-  it("picks median from sorted valid rows for balanced TVL", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 2, source_tvl_usd: 1_000_000 },
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-      { apy_30d: 8, source_tvl_usd: 1_000_000 },
-    ]);
-    expect(result).toBe(5);
   });
 });
 

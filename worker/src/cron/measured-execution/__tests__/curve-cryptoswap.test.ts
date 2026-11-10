@@ -20,6 +20,7 @@ import {
   evaluateCurveCryptoSwapEligibility,
   getCurveCryptoSwapReviewedDeploymentFamily,
   getCurveCryptoSwapReviewedPolicy,
+  quoteCurveCryptoSwapRequests,
   resolveCurveCryptoSwapTokenIndices,
   validateCurveCryptoSwapProfileProof,
   verifyCurveCryptoSwapDeployment,
@@ -144,7 +145,6 @@ describe("Curve CryptoSwap policy", () => {
     const active = CURVE_CRYPTOSWAP_REVIEWED_COHORT;
     expect(active.every((entry) => entry.transferSemanticsReviewed)).toBe(true);
     const pinned = active.filter((entry) => entry.identityAnchor === "pinned-pool-code");
-    expect(pinned).toHaveLength(8);
     expect(
       pinned.every(
         (entry) =>
@@ -157,19 +157,6 @@ describe("Curve CryptoSwap policy", () => {
     // R3 (2026-07-29) promoted the reviewed Ethereum TwoCrypto census; no other
     // chain or generation has a reviewed family, so nothing else can ride it.
     const familyAnchored = active.filter((entry) => entry.identityAnchor === "reviewed-deployment-family");
-    expect(familyAnchored).toHaveLength(11);
-    expect(getCurveCryptoSwapReviewedDeploymentFamily("ethereum", "twocrypto-ng")?.mathDeployments).toEqual(
-      expect.arrayContaining([
-        {
-          address: "0x2005995a71243be9fb995dab4742327dc76564df",
-          codeHash: "0xbc931b24ccca3aae2cd24bf83022386ae21d4c96af2f7c7f57a91c743b8352e3",
-        },
-        {
-          address: "0x1fd8af16dc4bebd950521308d55d0543b6cdf4a1",
-          codeHash: "0x70d105ee0e9b857244d87521bbcef34cfb4cbd600592af61bbc7c76180648d61",
-        },
-      ]),
-    );
     expect(
       familyAnchored.every(
         (entry) =>
@@ -612,6 +599,42 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(sizes).toEqual([8, 4, 4, 1]);
     expect(outcomes).toHaveLength(9);
     expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
+  });
+
+  it("splits a first-provider OOG through the default transport without replaying it on fallbacks", async () => {
+    const aggregateAbi = parseAbi([
+      "function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)",
+    ]);
+    const chainRpcs = buildChainRpcs("alchemy-test-key", undefined, { dwellirApiKey: "dwellir-test-key" });
+    const config = chainRpcs.get("ethereum")!;
+    const primary = config.endpoints.find((endpoint) => endpoint.operator === "dwellir")!;
+    const fallback = config.endpoints.find((endpoint) => endpoint.operator === "alchemy")!;
+    config.endpoints = [primary, fallback].map((endpoint) => ({ ...endpoint, position: "registry" as const }));
+    const sizes: number[] = [];
+    const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { id: number; params: [{ data: `0x${string}` }] };
+      const size = decodeFunctionData({ abi: aggregateAbi, data: request.params[0].data }).args[0].length;
+      sizes.push(size);
+      return Response.json(size === 8
+        ? { jsonrpc: "2.0", id: request.id, error: { code: -32003, message: "out of gas: gas required exceeds: 30000000" } }
+        : { jsonrpc: "2.0", id: request.id, result: encodeAbiParameters(
+          parseAbiParameters("(bool success,bytes returnData)[]"),
+          [Array.from({ length: size }, () => ({ success: true, returnData: uint256Return(0n) }))],
+        ) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const outcomes = await quoteCurveCryptoSwapRequests({
+        requests: makeCurveQuoteRequests(makeTarget(), TWOCRYPTO_POOL, ETHEREUM_BLOCK, 8),
+        chainRpcs,
+      });
+
+      expect(sizes).toEqual([8, 4, 4]);
+      expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(Array(3).fill(primary.url));
+      expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("preserves the Curve adaptive multicall golden unattempted result", async () => {

@@ -14,3 +14,18 @@ export const LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES = [
   // portfolio but never verifies its composition.
   "nav-portfolio-composition-unverified",
 ] as const;
+
+/**
+ * Structural score-ineligibility for the completed post-sync observer only
+ * (owner ruling 2026-11-04): a completed reserve observation whose degraded
+ * warnings are all in this list is a correct steady-state outcome, kept as
+ * quality metadata instead of degrading the observer. It adds reviewed
+ * economic findings to the by-design source limits above; it never feeds the
+ * 30-day reliability rollup, sync status, scoring admission or feed reviews.
+ */
+export const LIVE_RESERVE_STRUCTURAL_SCORE_INELIGIBLE_WARNING_CODES = [
+  ...LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES,
+  "self-referential-reserve",
+  "undercollateralized",
+  "usdai-composition-unverified",
+] as const;

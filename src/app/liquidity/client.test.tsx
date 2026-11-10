@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import { createElement } from "react";
 import { within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -21,6 +20,8 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 
+const renderClient = () => renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><LiquidityClient /></QueryClientProvider>);
+
 describe("LiquidityClient evidence cohorts", () => {
   it.each([false, true])("keeps positive-pool quarantine unavailable with no-market cohort present=%s", (includeUnobserved) => {
     const [observedNr, quarantined, unobserved] = CLIENT_ACTIVE_STABLECOINS;
@@ -38,7 +39,7 @@ describe("LiquidityClient evidence cohorts", () => {
       } : {}),
     };
     const root = document.createElement("div");
-    root.innerHTML = renderToStaticMarkup(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(LiquidityClient)));
+    root.innerHTML = renderClient();
     const unavailable = root.querySelector("#unavailable");
     expect(unavailable?.querySelector("summary")?.textContent).toMatch(/DEX evidence unavailable/);
     expect(unavailable?.querySelector("li")?.getAttribute("data-unavailable-reason")).toBe("invalid-coverage-evidence");
@@ -47,8 +48,7 @@ describe("LiquidityClient evidence cohorts", () => {
     // TableSurface exposes the shared table identity as data-table-id, not id.
     const table = root.querySelector('[data-table-id="liquidity-leaderboard"]');
     expect(table).not.toBeNull();
-    // Leaderboard navigation is owned by the accessible link-role row.
-    const observedRow = within(table as HTMLElement).getByRole("link", { name: `Open ${observedNr.symbol} liquidity detail` });
+    const observedRow = within(table as HTMLElement).getByRole("link", { name: `Open ${observedNr.symbol} liquidity detail` }).closest("tr")!;
     expect(observedRow.querySelector('[data-reason-code="activity-missing"]')).not.toBeNull();
     expect(within(table as HTMLElement).queryByRole("link", { name: `Open ${quarantined.symbol} liquidity detail` })).toBeNull();
     const noMarket = root.querySelector("#unrated");
@@ -65,7 +65,7 @@ describe("LiquidityClient pool quality fold", () => {
   it("labels the TVL-weighted base-yield share and its map threshold", () => {
     const [coin] = CLIENT_ACTIVE_STABLECOINS;
     response.data = { [coin.id]: makeDexLiquidityData({ totalTvlUsd: 100, poolCount: 1, coverageClass: "primary", liquidityEvidenceClass: "measured" }) };
-    const html = renderToStaticMarkup(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(LiquidityClient)));
+    const html = renderClient();
     const text = (html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
     expect(text).toContain("Base-yield share, TVL-weighted");
     expect(text).toContain(

@@ -46,6 +46,12 @@ const PUBLIC_IMPACT_LABELS: Record<IncidentPublicImpact, string> = {
 interface TransitionTimelineProps {
   transitions: readonly StatusTransition[];
   nowSeconds: number;
+  /**
+   * Clock used only for elapsed durations (rows and incident episodes). A
+   * retained read ends durations at its own response clock while "ago" labels
+   * stay on the live `nowSeconds`.
+   */
+  durationNowSeconds?: number;
   transitionsLast24h: number | null;
   window: StatusHistoryWindow;
   filters: IncidentHistoryFilters;
@@ -55,6 +61,8 @@ interface TransitionTimelineProps {
   evidenceScope?: "loaded-window" | "recent-status-fallback";
   /** The transition read failed or returned no completeness marker: an empty list is not "nothing happened" (R2). */
   readFailed?: boolean;
+  /** The data is a retained response: the newest row is not "Current state"; durations end at `durationNowSeconds`, while `nowSeconds` stays the live clock. */
+  retainedClock?: boolean;
   onRetry?: () => void;
   isRetrying?: boolean;
 }
@@ -80,11 +88,23 @@ function SubjectLinks({ subjects }: { subjects: readonly string[] }) {
   );
 }
 
-function RecurrenceSummary({ groups, window }: { groups: readonly IncidentRecurrenceGroup[]; window: StatusHistoryWindow }) {
+function RecurrenceSummary({
+  groups,
+  window,
+  evidenceScope,
+}: {
+  groups: readonly IncidentRecurrenceGroup[];
+  window: StatusHistoryWindow;
+  evidenceScope: "loaded-window" | "recent-status-fallback";
+}) {
   if (groups.length === 0) return null;
   return (
     <div className="space-y-2 rounded-md border border-state-warn bg-state-warn-subtle px-3 py-2.5">
-      <h4 className="text-sm font-medium text-state-warn">Recurring causes in the loaded {window} window</h4>
+      <h4 className="text-sm font-medium text-state-warn">
+        {evidenceScope === "loaded-window"
+          ? `Recurring causes in the loaded ${window} window`
+          : "Recurring causes in the recent status fallback"}
+      </h4>
       <ul className="space-y-1.5 text-xs text-foreground">
         {groups.map((group) => (
           <li key={group.key} className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
@@ -126,7 +146,7 @@ function IncidentList({ episodes, nowSeconds }: { episodes: readonly IncidentEpi
                   : `${episode.ongoing ? "Held for" : "Lasted"} ${formatElapsedSeconds(episode.durationSec)}`}
               </span>
               <span className="min-w-0 break-words font-mono text-muted-foreground">
-                {episode.causeCodes.join(", ") || "No persisted causes"}
+                {episode.causeCodes == null ? "—" : episode.causeCodes.join(", ") || "No persisted causes"}
               </span>
             </div>
             <div className="shrink-0 text-muted-foreground">
@@ -172,12 +192,23 @@ function publicImpactPill(publicImpact: IncidentPublicImpact) {
   );
 }
 
-function TransitionDuration({ row, nowSeconds }: { row: IncidentTransitionView; nowSeconds: number }) {
+function TransitionDuration({
+  row,
+  nowSeconds,
+  retainedClock,
+  isNewest,
+}: {
+  row: IncidentTransitionView;
+  nowSeconds: number;
+  retainedClock: boolean;
+  isNewest: boolean;
+}) {
   const transition = row.transition;
   return (
     <div className="min-w-[13rem] space-y-1 text-xs">
       <p className="font-medium text-foreground">
-        {row.ongoing ? "Current state" : "State duration"}: {formatElapsedSeconds(row.durationSec)}
+        {row.ongoing ? (retainedClock && isNewest ? "Last known state" : "Current state") : "State duration"}:{" "}
+        {formatElapsedSeconds(row.durationSec)}
       </p>
       {row.resolution === "resolved" && row.resolvedAt != null ? (
         <p className="whitespace-normal text-muted-foreground">
@@ -239,6 +270,7 @@ function CauseDetails({ transition }: { transition: StatusTransition }) {
 export function TransitionTimeline({
   transitions,
   nowSeconds,
+  durationNowSeconds = nowSeconds,
   transitionsLast24h,
   window,
   filters,
@@ -247,15 +279,19 @@ export function TransitionTimeline({
   isLoading,
   evidenceScope = "loaded-window",
   readFailed = false,
+  retainedClock = false,
   onRetry,
   isRetrying = false,
 }: TransitionTimelineProps) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const view = useMemo(
-    () => buildIncidentHistoryView(transitions, nowSeconds, transitionsLast24h, filters),
-    [filters, nowSeconds, transitions, transitionsLast24h],
+    () => buildIncidentHistoryView(transitions, durationNowSeconds, transitionsLast24h, filters),
+    [durationNowSeconds, filters, transitions, transitionsLast24h],
   );
-  const episodes = useMemo(() => foldIncidentEpisodes(transitions, nowSeconds), [transitions, nowSeconds]);
+  const episodes = useMemo(
+    () => foldIncidentEpisodes(transitions, durationNowSeconds),
+    [durationNowSeconds, transitions],
+  );
   const recurrence = useMemo(() => buildIncidentRecurrence(transitions), [transitions]);
   const hasActiveFilters =
     filters.severity !== "all" ||
@@ -314,7 +350,7 @@ export function TransitionTimeline({
         <p className="text-sm text-muted-foreground">Recent transition count unavailable; flapping cannot be assessed.</p>
       )}
 
-      <RecurrenceSummary groups={recurrence} window={window} />
+      <RecurrenceSummary groups={recurrence} window={window} evidenceScope={evidenceScope} />
 
       {view.isFlapping ? (
         <div className="rounded-md border border-state-warn-solid/40 bg-state-warn-solid/[0.06] px-3 py-2.5 text-sm text-state-warn-ink">
@@ -460,7 +496,7 @@ export function TransitionTimeline({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {view.rows.map((row) => {
+            {view.rows.map((row, rowIndex) => {
               const transition = row.transition;
               const isExpanded = expanded[transition.id] ?? false;
               const causesId = `transition-causes-${transition.id}`;
@@ -489,7 +525,12 @@ export function TransitionTimeline({
                     </TableCell>
                     <TableCell className="py-2 align-top">{publicImpactPill(row.publicImpact)}</TableCell>
                     <TableCell className="whitespace-normal py-2 align-top">
-                      <TransitionDuration row={row} nowSeconds={nowSeconds} />
+                      <TransitionDuration
+                        row={row}
+                        nowSeconds={nowSeconds}
+                        retainedClock={retainedClock}
+                        isNewest={rowIndex === 0}
+                      />
                     </TableCell>
                     <TableCell className="max-w-[22rem] whitespace-normal py-2 align-top text-xs text-muted-foreground">
                       <p className="break-words">{transition.reason}</p>

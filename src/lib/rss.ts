@@ -108,6 +108,8 @@ interface RssRouteConfig {
   feedUrl: string;
   description: string;
   language?: string;
+  /** Explicit channel build time; defaults to the newest item's pubDate. */
+  lastBuildDate?: string | (() => string);
   items: () => RssItem[] | Promise<RssItem[]>;
 }
 
@@ -118,6 +120,7 @@ export function createRssRoute({
   feedUrl,
   description,
   language = "en-US",
+  lastBuildDate,
   items,
 }: RssRouteConfig): () => Promise<Response> {
   return async () => rssResponse({
@@ -126,6 +129,7 @@ export function createRssRoute({
     feedUrl,
     description,
     language,
+    lastBuildDate: typeof lastBuildDate === "function" ? lastBuildDate() : lastBuildDate,
     items: await items(),
   });
 }

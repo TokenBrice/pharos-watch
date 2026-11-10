@@ -56,6 +56,7 @@ vi.mock("../persistence", () => ({
   cleanupStaging: vi.fn(async () => {}),
   incrementRunSeq: vi.fn(async () => 1),
   readDiscoveryCensusSummaries: vi.fn(async () => new Map()),
+  readDiscoveryDeploymentOutcomes: vi.fn(async () => []),
   readDiscoveryMeta: vi.fn(async () => new Map()),
   readDiscoveryRunCheckpoint: vi.fn(async () => null),
   readDiscoveryTargetCursors: vi.fn(async () => new Map(cursorStore)),

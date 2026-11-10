@@ -91,7 +91,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <CountTile label="Fresh" value={health.freshCoins} tone="text-state-positive" />
           <CountTile label="Error" value={health.errorCoins} tone="text-state-danger" />
           <CountTile label="Corrupt" value={health.corruptCoins} tone="text-state-danger" />
-          <CountTile label="Degraded" value={health.degradedCoins} tone="text-state-warn" />
+          <CountTile label="Degraded" value={health.healthDegradedCoins ?? health.degradedCoins} tone="text-state-warn" />
           <CountTile label="Stale" value={health.staleCoins} tone="text-state-warn" />
           <CountTile label="Missing" value={health.missingCoins} tone="text-state-danger" />
           <CountTile label="Deferred" value={health.deferredCoins} tone="text-state-warn" />
@@ -149,7 +149,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
         </div>
 
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
-          <div className="text-xs font-medium text-foreground">Fresh Evidence Mix</div>
+          <div className="text-xs font-medium text-foreground">Snapshot evidence mix</div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div>
               <div className="text-muted-foreground">Independent eligible</div>

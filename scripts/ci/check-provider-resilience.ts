@@ -14,6 +14,11 @@ import {
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs"]);
 const DEFAULT_DIRECT_FETCH_ROOTS = ["worker/src"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
+// A bare fetch finding needs the `fetch` identifier (or a unicode escape that
+// can spell it). Files without either token cannot produce a call, so the scan
+// skips their parse and checker work.
+const FETCH_TOKEN = /\bfetch\b/;
+const UNICODE_ESCAPE = /\\u(?:[0-9a-f]{4}|\{[0-9a-f]{1,6}\})/i;
 
 interface ProviderResilienceEntry {
   id?: string;
@@ -51,13 +56,52 @@ interface FetchCall {
 }
 
 
-export function findBareFetchCalls(source: string, file = "<source>"): FetchCall[] {
-  const scanFile = file === "<source>" ? "scan.ts" : file;
-  const sourceFile = ts.createSourceFile(scanFile, source, ts.ScriptTarget.Latest, true);
+function mayContainBareFetch(source: string): boolean {
+  return FETCH_TOKEN.test(source) || UNICODE_ESCAPE.test(source);
+}
+
+/** Bind the supplied source files in one program so the scan pays one checker
+ * build instead of one per file. Script files stay out of the shared bind
+ * (their top-level declarations are global) and get their own checker. */
+function createSourceChecker(sourceFiles: readonly ts.SourceFile[]): ts.TypeChecker {
   const options: ts.CompilerOptions = { noLib: true, noResolve: true, allowJs: true };
   const host = ts.createCompilerHost(options);
-  host.getSourceFile = (name) => name === scanFile ? sourceFile : undefined;
-  const checker = ts.createProgram([scanFile], options, host).getTypeChecker();
+  const sourcesByName = new Map(sourceFiles.map((sourceFile) => [sourceFile.fileName, sourceFile]));
+  host.getSourceFile = (name) => sourcesByName.get(name);
+  host.fileExists = (name) => sourcesByName.has(name);
+  return ts.createProgram(sourceFiles.map((sourceFile) => sourceFile.fileName), options, host).getTypeChecker();
+}
+
+/** True when the declaration makes the name a global: an ambient (`declare`)
+ * declaration, a `declare global { … }` augmentation, or — handled by the
+ * caller — a declaration in another file. A single shared program resolves
+ * `fetch` in every module to such a symbol, so symbol presence alone cannot
+ * mean "shadowed locally". */
+function isAmbientDeclaration(declaration: ts.Declaration): boolean {
+  for (let node: ts.Node | undefined = declaration; node && !ts.isSourceFile(node); node = node.parent) {
+    if (ts.isModuleDeclaration(node) && (node.flags & ts.NodeFlags.GlobalAugmentation) !== 0) return true;
+    if (ts.canHaveModifiers(node)
+      && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.DeclareKeyword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isGlobalFetchSymbol(symbol: ts.Symbol, sourceFile: ts.SourceFile): boolean {
+  if (symbol.getName() !== "fetch") return false;
+  const declarations = symbol.getDeclarations() ?? [];
+  if (declarations.length === 0) return true;
+  return declarations.some((declaration) =>
+    declaration.getSourceFile() !== sourceFile || isAmbientDeclaration(declaration));
+}
+
+function collectBareFetchCalls(
+  sourceFile: ts.SourceFile,
+  source: string,
+  checker: ts.TypeChecker,
+  file: string,
+): FetchCall[] {
   const aliases = new Set<ts.Symbol>();
   const calls: FetchCall[] = [];
   const lines = source.split("\n");
@@ -66,7 +110,8 @@ export function findBareFetchCalls(source: string, file = "<source>"): FetchCall
     if (ts.isParenthesizedExpression(expression)) return isGlobalFetch(expression.expression);
     if (!ts.isIdentifier(expression)) return false;
     const symbol = checker.getSymbolAtLocation(expression);
-    return symbol ? aliases.has(symbol) : expression.text === "fetch";
+    if (!symbol) return expression.text === "fetch";
+    return aliases.has(symbol) || isGlobalFetchSymbol(symbol, sourceFile);
   }
 
   function assign(name: ts.Identifier, value: ts.Expression | undefined): void {
@@ -98,6 +143,12 @@ export function findBareFetchCalls(source: string, file = "<source>"): FetchCall
 
   visit(sourceFile);
   return calls;
+}
+
+export function findBareFetchCalls(source: string, file = "<source>"): FetchCall[] {
+  const scanFile = file === "<source>" ? "scan.ts" : file;
+  const sourceFile = ts.createSourceFile(scanFile, source, ts.ScriptTarget.Latest, true);
+  return collectBareFetchCalls(sourceFile, source, createSourceChecker([sourceFile]), file);
 }
 
 function readRelFile(cwd: string, relPath: string): string {
@@ -236,12 +287,45 @@ export function scanProviderResilience({
     }
   }
 
+  const candidates: Array<{ relPath: string; source: string; sourceFile: ts.SourceFile }> = [];
   for (const relPath of collectSourceFilesUnderRoots(directFetchRoots, cwd, {
     extensions: SOURCE_EXTENSIONS,
     excludedDirs: EXCLUDED_DIRS,
   })) {
     const source = readRelFile(cwd, relPath);
-    const calls = findBareFetchCalls(source, relPath);
+    if (!mayContainBareFetch(source)) continue;
+    candidates.push({
+      relPath,
+      source,
+      sourceFile: ts.createSourceFile(relPath, source, ts.ScriptTarget.Latest, true),
+    });
+  }
+  const moduleCandidates = candidates.filter((candidate) => ts.isExternalModule(candidate.sourceFile));
+  const scriptCandidates = candidates.filter((candidate) => !ts.isExternalModule(candidate.sourceFile));
+  const moduleChecker = moduleCandidates.length > 0
+    ? createSourceChecker(moduleCandidates.map((candidate) => candidate.sourceFile))
+    : undefined;
+  const callsByFile = new Map<string, FetchCall[]>();
+  for (const candidate of moduleCandidates) {
+    callsByFile.set(
+      candidate.relPath,
+      collectBareFetchCalls(candidate.sourceFile, candidate.source, moduleChecker!, candidate.relPath),
+    );
+  }
+  for (const candidate of scriptCandidates) {
+    callsByFile.set(
+      candidate.relPath,
+      collectBareFetchCalls(
+        candidate.sourceFile,
+        candidate.source,
+        createSourceChecker([candidate.sourceFile]),
+        candidate.relPath,
+      ),
+    );
+  }
+
+  for (const { relPath } of candidates) {
+    const calls = callsByFile.get(relPath) ?? [];
     if (calls.length === 0) continue;
 
     const entries = entriesByFile.get(relPath) ?? [];

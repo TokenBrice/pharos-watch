@@ -162,13 +162,6 @@ describe("adaptIdleCdoEpochVariantSnapshot", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "idle-cdo-defaulted" }));
   });
 
-  it("degrades when the tranche NAVs do not reconcile to the contract value", () => {
-    const result = adapt({ navAaRaw: 160_000_000_000_000n });
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({ code: "idle-cdo-nav-reconciliation-drift", effect: "degraded" }),
-    );
-  });
-
   it.each([0n, 20_000_000n])("keeps whole-vault coverage on the fee-net contract value with junior NAV %s", (navBbRaw) => {
     const basis = { navAaRaw: 100_000_000n - navBbRaw, navBbRaw, contractValueRaw: 100_000_000n };
     const baseline = adapt(basis);

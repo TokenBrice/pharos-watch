@@ -790,7 +790,8 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveGetDyQuote
 }
 
 export const quoteCurveCryptoSwapRequests = createCurveCryptoSwapQuoteExecutor({
-  executeMulticall: executeCurveGetDyMulticall,
+  // CryptoSwap's adaptive split replaces provider replay of a deterministic OOG.
+  executeMulticall: (input) => executeCurveGetDyMulticall({ ...input, splitOnExecutionBudgetError: true }),
 });
 
 /** Exact ABI-bound validation; score eligibility is checked separately. */

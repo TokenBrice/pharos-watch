@@ -90,6 +90,20 @@ describe("buildMechanismBackingView", () => {
     expect(note?.label).toBe(measured?.label);
   });
 
+  it("keeps reviewed buffer and loss-absorption readings free of an invented supply denominator", () => {
+    for (const assetId of ["usdm-monetrix", "srusde-strata"]) {
+      const metric = buildMechanismBackingView(assetId)?.metrics.find((entry) => entry.key === "marginBufferPct");
+      expect(metric).toBeDefined();
+      expect(metric!.label).not.toMatch(/backing/i);
+      expect(metric!.hint).not.toMatch(/supply/i);
+    }
+    const lossAbsorption = buildMechanismBackingView("usdn-smardex")?.metrics.find(
+      (entry) => entry.key === "lossAbsorptionShare",
+    );
+    expect(lossAbsorption).toBeDefined();
+    expect(lossAbsorption!.hint).not.toMatch(/supply/i);
+  });
+
   it("omits internal quality fields while preserving legitimate rationale words", () => {
     useOverlay({
       components: {

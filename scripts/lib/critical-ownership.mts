@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { dirname, extname, isAbsolute, join, matchesGlob, relative, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
-import { collectSourceFilesUnderRoot } from "./source-files.mts";
+import { collectSourceFilesUnderRoot, collectSourceFilesUnderRoots } from "./source-files.mts";
+import { cachedGlobMatcher } from "./glob-matcher.mts";
 import { resolveLocalPackageImport } from "./package-imports.mts";
 
 const TEST_SCAN_ROOTS = [
@@ -16,6 +17,10 @@ const TEST_FILE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".ts
 const RESOLVABLE_SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"] as const;
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
+// Declared before the worker-shared classification below, which reads support
+// modules through this filesystem while the module graph initializes.
+const ownershipFs: CriticalOwnershipFs = { existsSync, readFileSync, realpathSync, statSync };
+
 export const ISOLATED_NODE_TESTS = [
   // The route's cached import must not retain this suite's evidence-free
   // recomputer mock when canonical snapshot integration tests run afterward.
@@ -25,6 +30,9 @@ export const ISOLATED_NODE_TESTS = [
   // runner first; under isolate:false a sibling suite that already imported
   // run-pr-checks leaves the real git-backed implementation cached.
   "scripts/__tests__/run-pr-checks-execution.test.ts",
+  // Its vi.mock("node:fs") read patch must reach the router's fs binding, which
+  // only happens when this file loads the router first in its own module cache.
+  "scripts/__tests__/pharos-change-contract.test.ts",
   "scripts/__tests__/serve-static-export.test.ts",
   "shared/lib/__tests__/psi-eligible.test.ts",
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",
@@ -36,24 +44,163 @@ export const ISOLATED_NODE_TESTS = [
 export const THREADED_WORKER_TESTS = [
   "worker/src/lib/__tests__/safety-score-v9-native-input-pipeline.test.ts",
 ];
+
+// Phased non-isolated worker project: `worker/src/{cron,lib}` suites that own
+// no per-file module state run in the shared `worker-shared` project (the
+// reserve-adapter pilot directory was the first tranche). Everything else stays
+// in the isolated `worker` project, so the classifier is deliberately
+// fail-closed: an unknown input (unreadable file, new mock or global-stub
+// pattern) runs isolated.
+const WORKER_SHARED_TEST_ROOTS = ["worker/src/cron", "worker/src/lib"] as const;
+// Every `process.env` write form: plain/compound assignment on the object or a
+// key, increment/decrement, `delete`, and an in-place `Object.assign`.
+const PROCESS_ENV_WRITE_PATTERNS = [
+  // eslint-disable-next-line security/detect-unsafe-regex -- bounded single-line match over repo-controlled test sources
+  /process\.env(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])?\s*(?:\*\*|&&|\|\||\?\?|[-+*/%])?=(?!=)/,
+  /process\.env(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])\s*(?:\+\+|--)/,
+  /delete\s+process\.env\b/,
+  /Object\.assign\s*\(\s*process\.env\b/,
+] as const;
+const WORKER_SHARED_INELIGIBLE_PATTERNS = [
+  /vi\.mock\s*\(/,
+  /vi\.doMock\s*\(/,
+  /vi\.resetModules\s*\(/,
+  /vi\.hoisted\s*\(/,
+  ...PROCESS_ENV_WRITE_PATTERNS,
+] as const;
+
+// Module-scope mutable state that one shared module cache would carry into the
+// next test file. Matching stays textual because `vitest.config.ts` imports
+// this module before install, so no TypeScript parser is available.
+const MODULE_SCOPE_LET =
+  // eslint-disable-next-line security/detect-unsafe-regex -- bounded single-line match over repo-controlled support modules
+  /^(?:export\s+)?(?:let|var)\s+[A-Za-z_$][\w$]*/m;
+const MODULE_SCOPE_COLLECTION =
+  // eslint-disable-next-line security/detect-unsafe-regex -- bounded single-line match over repo-controlled support modules
+  /^(?:export\s+)?(?:const|let|var)\s+[A-Za-z_$][\w$]*[^=\n]*=\s*new\s+(?:Map|Set|WeakMap|WeakSet)\s*[<(]/m;
+const MODULE_SCOPE_LITERAL =
+  // eslint-disable-next-line security/detect-unsafe-regex -- bounded single-line match over repo-controlled support modules
+  /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=\n]+)?=\s*[[{]/gm;
+
+function moduleScopeLiteralIsWritten(source: string, name: string): boolean {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- interpolates a captured identifier name, not caller input
+  return new RegExp(
+    `(?<!const\\s)(?<!let\\s)(?<!var\\s)\\b${name}\\b\\s*(?:\\[[^\\]]*\\]|\\.\\w+)?\\s*(?:[-+*/%]?=(?!=)|\\+\\+|--|\\.(?:push|pop|shift|unshift|splice|sort|reverse|fill|copyWithin|set|add|delete|clear)\\s*\\()`,
+  ).test(source);
+}
+
+// eslint-disable-next-line security/detect-non-literal-regexp -- the hook name comes from the reviewed WORKER_SHARED_RESET_HOOKS map
+const RESET_HOOK_EXPORT = (hook: string) => new RegExp(`export\\s+(?:async\\s+)?(?:function|const|let)\\s+${hook}\\b`);
+// eslint-disable-next-line security/detect-non-literal-regexp -- the hook name comes from the reviewed WORKER_SHARED_RESET_HOOKS map
+const RESET_HOOK_CALL = (hook: string) => new RegExp(`\\b${hook}\\s*\\(`);
+
+/** True when a module keeps mutable state a shared module cache would carry
+ * into the next test file. */
+export function hasModuleScopeMutableState(source: string): boolean {
+  if (MODULE_SCOPE_LET.test(source) || MODULE_SCOPE_COLLECTION.test(source)) return true;
+  for (const match of source.matchAll(MODULE_SCOPE_LITERAL)) {
+    if (match[1] && moduleScopeLiteralIsWritten(source, match[1])) return true;
+  }
+  return false;
+}
+
+// Local helper/support modules own part of a test file's state.
+const SUPPORT_MODULE_PATH = /(?:^|\/)(?:test-helpers|test-utils|__mocks__)\/|\.test-support\.[cm]?[jt]sx?$/;
+// A support module's state is safe only when it exports the reset hook the
+// shared-isolation setup runs after every test.
+const WORKER_SHARED_RESET_HOOKS: Readonly<Record<string, string>> = {
+  "worker/src/cron/reserve-adapters/__tests__/erc4626-single-asset.test-support.ts": "resetErc4626NetworkForTests",
+};
+const WORKER_SHARED_ISOLATION_SETUP_PATH = "worker/src/test-helpers/setup-shared-isolation.ts";
+
+/** True when a `worker/src/{cron,lib}` test source can share one module cache. */
+export function isWorkerSharedTestEligible(source: string): boolean {
+  if (WORKER_SHARED_INELIGIBLE_PATTERNS.some((pattern) => pattern.test(source))) return false;
+  if (/vi\.stubGlobal\s*\(/.test(source) && !/vi\.unstubAllGlobals\s*\(/.test(source)) return false;
+  if (/vi\.stubEnv\s*\(/.test(source) && !/vi\.unstubAllEnvs\s*\(/.test(source)) return false;
+  return true;
+}
+
+// Files that pass the source scan but failed a shuffled shared-process run.
+// Each keeps per-file isolation (the value names the observed failure); remove
+// the entry only after the cause is fixed and the stability protocol passes
+// again.
+export const WORKER_SHARED_ISOLATED_OVERRIDES: Readonly<Record<string, string>> = {
+  "worker/src/cron/reserve-adapters/__tests__/frax.test.ts":
+    "Asserts the complete request URL set immediately after a rejection; a stray in-flight retry from an earlier shared file can append a URL.",
+  "worker/src/cron/reserve-adapters/__tests__/request.test.ts":
+    "Asserts exact fetch call counts; a preceding shared file's pending retry can consume its scripted mock.",
+  "worker/src/cron/reserve-adapters/__tests__/usdd-data-platform.test.ts":
+    "Asserts a real 5 s abort wait completes within 9 s; CPU contention under default shared-process parallelism made that timing assertion flaky.",
+  "worker/src/lib/__tests__/safety-score-v9-extension-reserves.test.ts":
+    "Its executed cases leave module-singleton state that suppresses the route-compilation spy in safety-score-v9-fact-set-exit-coverage.test.ts > \"resolves one policy per fixed input without leaking another capture's clock\"; an import-only run of this file leaves that suite green.",
+  "worker/src/lib/__tests__/safety-score-v9-fact-set-exit-coverage.test.ts":
+    "Asserts exact route-compiler spy call counts; once any earlier shared file has compiled a route the compiler's module-level caches are warm, so the spy records no call. Passes as the only file in its fork.",
+};
+
+/** Classify the current `worker/src/{cron,lib}` candidate files once per process. */
+export function collectWorkerSharedTestFiles(cwd = process.cwd()): string[] {
+  return collectSourceFilesUnderRoots(WORKER_SHARED_TEST_ROOTS, cwd, {
+    extensions: TEST_FILE_EXTENSIONS,
+    excludedDirs: ["node_modules", "dist"],
+    skipDotEntries: true,
+  })
+    .filter((file) => file.split("/").includes("__tests__") && TEST_FILE_PATTERN.test(file))
+    .filter((file) => !THREADED_WORKER_TESTS.includes(file))
+    .filter((file) => !Object.hasOwn(WORKER_SHARED_ISOLATED_OVERRIDES, file))
+    .filter((file) => {
+      try {
+        const source = readFileSync(resolve(cwd, file), "utf8");
+        return isWorkerSharedTestEligible(source)
+          && findUnresetMutableSupportImports(file, source, cwd).length === 0;
+      } catch {
+        return false;
+      }
+    })
+    .sort();
+}
+
+export const WORKER_SHARED_TEST_FILES = collectWorkerSharedTestFiles();
+
 export const EXECUTABLE_TEST_PROJECTS = [
   { name: "node", include: ["{functions,scripts,shared}/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: ISOLATED_NODE_TESTS },
   { name: "node-isolated", include: ISOLATED_NODE_TESTS, exclude: [] },
-  { name: "worker", include: ["worker/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: THREADED_WORKER_TESTS },
+  { name: "worker", include: ["worker/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: [...THREADED_WORKER_TESTS, ...WORKER_SHARED_TEST_FILES] },
+  ...(WORKER_SHARED_TEST_FILES.length > 0
+    ? [{ name: "worker-shared", include: WORKER_SHARED_TEST_FILES, exclude: [] }]
+    : []),
   { name: "worker-threads", include: THREADED_WORKER_TESTS, exclude: [] },
   { name: "src", include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: [] },
 ];
+
+interface CompiledTestProject {
+  include: ((file: string) => boolean)[];
+  exclude: ((file: string) => boolean)[];
+}
+
+/** Compile the constant project patterns once: `matchesGlob` parses per call, not per pattern. */
+function compileTestProjects(
+  projects: readonly { include: readonly string[]; exclude: readonly string[] }[],
+): CompiledTestProject[] {
+  return projects.map((project) => ({
+    include: project.include.map(cachedGlobMatcher),
+    exclude: project.exclude.map(cachedGlobMatcher),
+  }));
+}
+
+const EXECUTABLE_TEST_MATCHERS = compileTestProjects(EXECUTABLE_TEST_PROJECTS);
 
 export function assertExecutableTestFiles(
   files: readonly string[],
   { cwd = process.cwd(), exists = (path: string) => existsSync(path) && statSync(path).isFile(), projects = EXECUTABLE_TEST_PROJECTS } = {},
 ): void {
   if (files.length === 0) throw new Error("Empty executable test selection");
+  const matchers = projects === EXECUTABLE_TEST_PROJECTS ? EXECUTABLE_TEST_MATCHERS : compileTestProjects(projects);
   for (const input of files) {
     const file = normalizeOwnershipPath(isAbsolute(input) ? relative(cwd, input) : input);
-    const owners = projects.filter((project) =>
-      project.include.some((pattern) => matchesGlob(file, pattern))
-      && !project.exclude.some((pattern) => matchesGlob(file, pattern)));
+    const owners = matchers.filter((project) =>
+      project.include.some((matcher) => matcher(file))
+      && !project.exclude.some((matcher) => matcher(file)));
     if (!TEST_FILE_PATTERN.test(file) || owners.length !== 1 || !exists(resolve(cwd, file))) {
       throw new Error(`Invalid executable test ${file}: expected an existing file owned by exactly one project (found ${owners.length})`);
     }
@@ -68,8 +215,6 @@ export interface CriticalOwnershipFs {
   statSync?(path: string): { isFile(): boolean };
   realpathSync?(path: string): string;
 }
-
-const ownershipFs: CriticalOwnershipFs = { existsSync, readFileSync, realpathSync, statSync };
 
 export interface CriticalOwnershipOptions {
   cwd?: string;
@@ -183,6 +328,57 @@ function collectImportSpecifiers(source: string): string[] {
     if (specifier) specifiers.add(specifier.slice(1, -1));
   }
   return [...specifiers];
+}
+
+/** Support modules the test imports (one level) that keep module-scope state no
+ * reset hook restores. An unreadable or unresolvable local import is treated as
+ * stateful so the caller keeps per-file isolation. */
+export function findUnresetMutableSupportImports(
+  testFile: string,
+  source: string,
+  cwd = process.cwd(),
+  fsImpl: CriticalOwnershipFs = ownershipFs,
+): string[] {
+  const unreset = new Set<string>();
+  let isolationSetup: string | null | undefined;
+  for (const specifier of collectImportSpecifiers(source)) {
+    if (!specifier.startsWith("./") && !specifier.startsWith("../")) continue;
+    const resolved = resolveCriticalImport(specifier, testFile, cwd, fsImpl);
+    if (!resolved) {
+      unreset.add(specifier);
+      continue;
+    }
+    if (!SUPPORT_MODULE_PATH.test(resolved)) continue;
+    let moduleSource: string;
+    try {
+      moduleSource = fsImpl.readFileSync(resolve(cwd, resolved), "utf8");
+    } catch {
+      unreset.add(resolved);
+      continue;
+    }
+    // A support module that registers mocks or writes process.env at module
+    // scope keeps that registration in the shared module cache for every later
+    // file in the process, so its importers stay isolated.
+    if (WORKER_SHARED_INELIGIBLE_PATTERNS.some((pattern) => pattern.test(moduleSource))) {
+      unreset.add(resolved);
+      continue;
+    }
+    if (!hasModuleScopeMutableState(moduleSource)) continue;
+    const hook = WORKER_SHARED_RESET_HOOKS[resolved];
+    if (!hook || !RESET_HOOK_EXPORT(hook).test(moduleSource)) {
+      unreset.add(resolved);
+      continue;
+    }
+    if (isolationSetup === undefined) {
+      try {
+        isolationSetup = fsImpl.readFileSync(resolve(cwd, WORKER_SHARED_ISOLATION_SETUP_PATH), "utf8");
+      } catch {
+        isolationSetup = null;
+      }
+    }
+    if (isolationSetup === null || !RESET_HOOK_CALL(hook).test(isolationSetup)) unreset.add(resolved);
+  }
+  return [...unreset];
 }
 
 /** Derive source → importing test files from each test's static or dynamic imports. */

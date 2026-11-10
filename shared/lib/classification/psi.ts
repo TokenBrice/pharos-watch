@@ -22,8 +22,6 @@ const PSI_BAND_DESCRIPTORS = {
 
 export const PSI_HEX_COLORS = projectDescriptors(PSI_BAND_DESCRIPTORS, (descriptor) => descriptor.hex);
 export const PSI_BAND_CLASSES = projectDescriptors(PSI_BAND_DESCRIPTORS, (descriptor) => descriptor.textClassName);
-/** Faster sweeps encode urgency; chart and text colors intentionally differ by medium. */
-export const PSI_SWEEP_DURATION = projectDescriptors(PSI_BAND_DESCRIPTORS, (descriptor) => descriptor.sweep);
 
 /** PSI beam-dimmer lane fills: support reads positive, stress lanes escalate by severity. */
 export const PSI_LANE_TONE_CLASSES = {

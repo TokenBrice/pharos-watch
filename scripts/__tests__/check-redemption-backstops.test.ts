@@ -1,8 +1,9 @@
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
+import { main } from "../ci/check-redemption-backstops";
 import { defineRecordEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
@@ -16,6 +17,35 @@ afterEach(() => {
 });
 
 const GATE_LOAD_TIMEOUT_MS = 15_000;
+const TSX_LOADER = import.meta.resolve("tsx");
+const TSCONFIG = resolve("tsconfig.json");
+
+function captureStdio() {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    stdout.push(String(chunk));
+    return true;
+  });
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  return { stdout: () => stdout.join(""), stderr: () => stderr.join("") };
+}
+
+function prepareDocsMismatchFixture() {
+  const root = makeRoot();
+  mkdirSync(join(root, "docs"));
+  writeFileSync(join(root, "docs/redemption-backstops.md"), "");
+  writeFileSync(join(root, "docs/api-reference.md"), "");
+  cpSync(
+    join(process.cwd(), "shared/lib/redemption-backstop-configs"),
+    join(root, "shared/lib/redemption-backstop-configs"),
+    { recursive: true },
+  );
+  return { root, reportPath: join(root, "nested", "report.json") };
+}
 
 const baseConfig: RedemptionBackstopConfig = {
   routeFamily: "offchain-issuer",
@@ -51,18 +81,13 @@ function validateFixture(
 }
 
 describe("check-redemption-backstops CLI", () => {
-  it("serializes a valid production registry to stdout and a nested report file", () => {
+  it("serializes a valid production registry to stdout and a nested report file", async () => {
     const reportPath = join(makeRoot(), "nested", "reports", "report.json");
-    const result = spawnSync("node_modules/.bin/tsx", [
-      "scripts/ci/check-redemption-backstops.ts", "--json", "--report", reportPath,
-    ], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stderr).toBe("");
-    const stdout = result.stdout;
+    const output = captureStdio();
+    const status = await main(["--json", "--report", reportPath]);
+    expect(status).toBe(0);
+    expect(output.stderr()).toBe("");
+    const stdout = output.stdout();
 
     expect(readFileSync(reportPath, "utf8")).toBe(stdout);
     const report = JSON.parse(stdout) as {
@@ -76,23 +101,12 @@ describe("check-redemption-backstops CLI", () => {
     expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   }, GATE_LOAD_TIMEOUT_MS);
 
-  it.each([false, true])("retains failed status and report output (json=%s)", (json) => {
-    const root = makeRoot();
-    mkdirSync(join(root, "docs"));
-    writeFileSync(join(root, "docs/redemption-backstops.md"), "");
-    writeFileSync(join(root, "docs/api-reference.md"), "");
-    cpSync(
-      join(process.cwd(), "shared/lib/redemption-backstop-configs"),
-      join(root, "shared/lib/redemption-backstop-configs"),
-      { recursive: true },
-    );
-    const reportPath = join(root, "nested", "report.json");
-    const result = spawnSync(join(process.cwd(), "node_modules/.bin/tsx"), [
-      "--tsconfig", join(process.cwd(), "tsconfig.json"),
-      join(process.cwd(), "scripts/ci/check-redemption-backstops.ts"),
-      ...(json ? ["--json"] : []), "--report", reportPath,
-    ], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-    expect(result.status, result.stderr || result.stdout).toBe(1);
+  it.each([false, true])("retains failed status and report output (json=%s)", async (json) => {
+    const { root, reportPath } = prepareDocsMismatchFixture();
+    vi.spyOn(process, "cwd").mockReturnValue(root);
+    const output = captureStdio();
+    const status = await main([...(json ? ["--json"] : []), "--report", reportPath]);
+    expect(status).toBe(1);
     const reportText = readFileSync(reportPath, "utf8");
     const report = JSON.parse(reportText) as {
       findings: Array<{ severity: string; code: string; message: string }>;
@@ -101,9 +115,28 @@ describe("check-redemption-backstops CLI", () => {
       severity: "error", code: "docs-configured-owner-missing",
     }));
     const errors = report.findings.filter((finding) => finding.severity === "error");
-    expect(result.stdout).toBe(json ? reportText : "");
-    expect(result.stderr).toBe(json ? "" :
+    expect(output.stdout()).toBe(json ? reportText : "");
+    expect(output.stderr()).toBe(json ? "" :
       `Redemption backstop registry checks failed:\n${errors.map((error) => `  ${error.message}\n`).join("")}`);
+  }, GATE_LOAD_TIMEOUT_MS);
+
+  it("returns the validator failure through the spawned entrypoint", () => {
+    // One real process keeps the exit-code/stream contract; every other case
+    // runs the same main() in-process.
+    const { root, reportPath } = prepareDocsMismatchFixture();
+    const result = spawnSync(process.execPath, [
+      "--import", TSX_LOADER,
+      resolve(process.cwd(), "scripts/ci/check-redemption-backstops.ts"),
+      "--json", "--report", reportPath,
+    ], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, TSX_TSCONFIG_PATH: TSCONFIG },
+    });
+    expect(result.status, result.stderr || result.stdout).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toBe(readFileSync(reportPath, "utf8"));
   }, GATE_LOAD_TIMEOUT_MS);
 
   it.each(["krusdc-keyrock", "steakusdg-steakhouse", "steakeurcv-steakhouse"])(

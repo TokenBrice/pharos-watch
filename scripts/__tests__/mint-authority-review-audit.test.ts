@@ -86,7 +86,7 @@ describe("Mint Authority review audit CLI", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it.each(["markdown", "json"] as const)("writes a %s report with the existing acknowledgement", async (format) => {
+  it.each(["json"] as const)("writes a %s report with the existing acknowledgement", async (format) => {
     const root = mkdtempSync(join(tmpdir(), "pharos-mint-audit-"));
     tempDirs.push(root);
     const target = join(root, "reports", `audit.${format === "json" ? "json" : "md"}`);

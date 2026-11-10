@@ -1,6 +1,10 @@
 import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "../d1-overload-retry";
-import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
+import {
+  CONFIRMED_CRON_OUTPUT_AT_SQL,
+  confirmedCronOutputReachesSql,
+  newestConfirmedCronOutputSql,
+} from "../cron-output";
 import { assessFreshnessTimestamp, type FreshnessTimestampReason } from "../api-freshness-age";
 
 export type FreshnessThreshold =
@@ -15,6 +19,8 @@ export interface FreshnessPolicy {
 export interface ProducerFreshnessFact {
   job: string;
   lastSuccessAt: number | null;
+  /** Newest `started_at` of a completed (non-`not_started`) run. */
+  lastLivenessAt?: number | null;
   lastRunAt: number | null;
   expectedIntervalSec: number;
   lastStatus: string | null;
@@ -32,6 +38,7 @@ export interface FreshnessClassification {
 interface ProducerFreshnessRow {
   job: string;
   last_success_at: number | null;
+  last_liveness_at: number | null;
   last_run_at: number;
   last_status: string;
 }
@@ -79,6 +86,8 @@ export function classifyFreshness(
 /**
  * Load the latest attempt and latest confirmed output clock for every producer in
  * one D1 statement. Missing or unproven output remains an explicit null clock.
+ * Every per-job read is an index seek or a floor-pruned range: parsing each job's
+ * whole retained metadata here took 3-4 s per call and overloaded D1 (2026-11-03).
  */
 export async function loadProducerFreshnessFacts(
   db: D1Database,
@@ -87,30 +96,32 @@ export async function loadProducerFreshnessFacts(
 ): Promise<ProducerFreshnessFact[]> {
   if (definitions.length === 0) return [];
   const jobs = definitions.map((definition) => definition.job);
-  const placeholders = jobs.map(() => "?").join(", ");
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT job,
-                started_at AS last_run_at,
-                status AS last_status,
-                last_success_at
-           FROM (
-             SELECT job,
-                    started_at,
-                    status,
-                    MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL})
-                      OVER (PARTITION BY job) AS last_success_at,
-                    ROW_NUMBER() OVER (
-                      PARTITION BY job
-                      ORDER BY started_at DESC, id DESC
-                    ) AS row_number
-               FROM cron_runs
-              WHERE job IN (${placeholders})
-           )
-          WHERE row_number = 1`,
+        `WITH requested(job) AS (SELECT value FROM json_each(?1)),
+         floors AS MATERIALIZED (
+           SELECT requested.job AS job, ${newestConfirmedCronOutputSql("requested.job")} AS floor_at
+             FROM requested
+         )
+         SELECT floors.job AS job,
+                (SELECT latest.started_at FROM cron_runs AS latest WHERE latest.job = floors.job
+                  ORDER BY latest.started_at DESC, latest.id DESC LIMIT 1) AS last_run_at,
+                (SELECT latest.status FROM cron_runs AS latest WHERE latest.job = floors.job
+                  ORDER BY latest.started_at DESC, latest.id DESC LIMIT 1) AS last_status,
+                (SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) FROM cron_runs
+                  WHERE cron_runs.job = floors.job
+                    AND ${confirmedCronOutputReachesSql("floors.floor_at")}) AS last_success_at,
+                (SELECT live.started_at FROM cron_runs AS live
+                  WHERE live.job = floors.job AND live.status IN ('ok', 'degraded')
+                    AND COALESCE(json_extract(
+                      CASE WHEN json_valid(live.metadata) THEN live.metadata ELSE '{}' END,
+                      '$.childDisposition'
+                    ), '') != 'not_started'
+                  ORDER BY live.started_at DESC LIMIT 1) AS last_liveness_at
+           FROM floors`,
       )
-      .bind(...jobs)
+      .bind(JSON.stringify(jobs))
       .all<ProducerFreshnessRow>(),
   );
   const rowByJob = new Map((rows.results ?? []).map((row) => [row.job, row]));
@@ -119,6 +130,7 @@ export async function loadProducerFreshnessFacts(
     return {
       job: definition.job,
       lastSuccessAt: row?.last_success_at ?? null,
+      lastLivenessAt: row?.last_liveness_at ?? null,
       lastRunAt: row?.last_run_at ?? null,
       expectedIntervalSec: definition.intervalSec,
       lastStatus: row?.last_status ?? null,

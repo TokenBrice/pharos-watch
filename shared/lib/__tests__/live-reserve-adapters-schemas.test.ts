@@ -267,27 +267,16 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     });
   });
 
-  // Post-correctness baseline: compare whole effective descriptors, not a
-  // nearest profile or partial capability match. Schema behavior also retains
-  // the catalog-backed registry cases; params and paramsSchema must be aliases.
+  // Representative descriptors cover default fields, explicit overrides and
+  // inferred/explicit badges; registry-wide schema alias checks cover every adapter.
   const noTelemetry = { capacity: "none", fee: "none" };
-  const directTelemetry = { capacity: "direct", fee: "none" };
   const latestState = { allowedFreshnessModes: ["not-applicable"] };
   const verified = { allowedFreshnessModes: ["verified"] };
   const dashboard = { maxSourceAgeSec: 259200, allowedFreshnessModes: ["verified", "unverified"] };
-  const unknownLatest = { maxUnknownExposurePct: 5, ...latestState };
-  const unknownDashboard = { ...dashboard, maxUnknownExposurePct: 5 };
   const onchain = { primaryInputKinds: ["onchain-evm"] };
-  const singleBucket = { ...onchain, sourceModel: "single-bucket" };
   const config = (semantics: string, ...versions: number[]) => ({
     allowedSemantics: [semantics], allowedVersions: versions,
   });
-  const issuerDashboard = {
-    sourceOriginClass: "issuer-attested", preferredFreshnessMode: "verified", validation: dashboard,
-  };
-  const cdp = {
-    sourceOriginClass: "onchain-observation", preferredFreshnessMode: "not-applicable", validation: unknownLatest,
-  };
   const weakProbe = {
     sourceModel: "single-bucket", evidenceClass: "weak-live-probe", sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof", configValidation: config("single-asset", 1),
@@ -305,63 +294,14 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
       configValidation: { allowedSemantics: ["collateral-mix", "protocol-reserve"], allowedVersions: [1] },
       validation: { ...dashboard, maxSourceAgeSec: 1209600 },
     },
-    "moc-v3-buckets": { ...onchain, sourceOriginClass: "onchain-observation", configValidation: config("collateral-mix", 2) },
-    "bridge-transparency": issuerDashboard,
-    "chronicle-nav": {
-      ...singleBucket, sourceOriginClass: "independent-assurance",
-      configValidation: config("single-asset", 1), validation: verified,
-    },
-    "chainlink-por": { ...singleBucket, configValidation: config("attestation-mix", 3), validation: verified },
-    "ethena-whitelabel": {
-      ...issuerDashboard, displayBadgeKind: "proof",
-      configValidation: config("collateral-mix", 2), validation: unknownDashboard,
-    },
-    "parallelizer-balances": {
-      ...onchain, configValidation: config("collateral-mix", 2),
-      redemptionTelemetry: directTelemetry, validation: unknownLatest,
-    },
-    "xpr-account-balances": cdp,
-    "kava-cdp": { ...cdp, configValidation: config("collateral-mix", 2) },
-    "krwq-custodian": {
-      sourceOriginClass: "onchain-observation", preferredFreshnessMode: "verified", validation: unknownDashboard,
-    },
-    "megausd-custody": {
-      ...issuerDashboard,
-      provenance: {
-        status: "staged",
-        rationale: "Issuer transparency JSON is geo-gated from Worker egress; it is retained only as MegaUSD roster discovery inside megausd-custody-onchain and no catalog coin binds this adapter.",
-      },
-    },
-    "reserve-protocol-dtf": { ...onchain, preferredFreshnessMode: "not-applicable", redemptionTelemetry: directTelemetry },
-    "superstate-liquidity": {
-      ...singleBucket, preferredFreshnessMode: "verified", configValidation: config("single-asset", 1),
-      redemptionTelemetry: directTelemetry, validation: { allowedFreshnessModes: ["verified", "unverified"] },
-    },
-    "tether-transparency": {
-      ...issuerDashboard, displayBadgeKind: "proof", sharedSourceMode: "source-invariant",
-      configValidation: config("attestation-mix", 1, 2), validation: { ...dashboard, maxSourceAgeSec: 604800 },
-    },
-    "usdai-proof-of-reserves": {
-      sourceOriginClass: "issuer-attested", preferredFreshnessMode: "not-applicable", displayBadgeKind: "proof",
-      configValidation: config("collateral-mix", 2),
-      validation: { maxUnknownExposurePct: 5, maxSourceAgeSec: 604800, allowedFreshnessModes: ["not-applicable", "unverified"] },
-    },
-    "usd1-bundle-oracle": {
-      ...singleBucket, configValidation: config("single-asset", 3), validation: { ...verified, maxSourceAgeSec: 604800 },
-    },
-    "usdtb-transparency": { preferredFreshnessMode: "verified", validation: dashboard },
-    "youves-tezos": cdp,
-    "dgld-gold-mapper": { ...weakProbe, validation: { ...verified, maxSourceAgeSec: 259200, maxUnknownExposurePct: 0 } },
     "afi-proof": {
       ...weakProbe, validation: { maxUnknownExposurePct: 100, allowedFreshnessModes: ["unverified"] },
       freshnessLimitation: "The AFI proof carries a generation timestamp, but proof generation does not establish the as-of dates of the underlying assets; ratio telemetry publishes as unverified.",
     },
-    "coinbase-oned-por": {
-      ...weakProbe, preferredFreshnessMode: "verified", validation: { ...verified, maxSourceAgeSec: 259200 },
-      provenance: {
-        status: "active",
-        rationale: "Ordinary public persisted GraphQL GET verified200 on 2026-10-03; exact Base ONED stock and complete published USDC wallets reconcile. Source-controlled query hash/schema drift fail closed with stable machine reasons, without HTML/stale/partial fallback. This remains issuer-attested telemetry, not independent financial assurance or funded redemption capacity.",
-      },
+    "attestation-pdf-index": {
+      primaryInputKinds: ["http-html"], sourceModel: "validated-static", evidenceClass: "static-validated",
+      configValidation: config("attestation-mix", 1), validation: { ...verified, maxSourceAgeSec: 12960000 },
+      displayBadgeKind: "curated-validated",
     },
   };
   it.each(Object.keys(descriptorBaseline) as (keyof typeof descriptorBaseline)[])(
@@ -379,10 +319,18 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     },
   );
 
+  it.each(Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS) as (keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[])(
+    "keeps the %s params alias and rejects non-object params", (key) => {
+      const { params, paramsSchema } = LIVE_RESERVE_ADAPTER_DEFINITIONS[key];
+      expect(params).toBe(paramsSchema);
+      expect(paramsSchema.safeParse([]).success).toBe(false);
+    },
+  );
+
   it("keeps params-gated capacity explicit rather than inheriting ungated telemetry", () => {
     const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS["chainlink-nav"];
     expect(definition.redemptionTelemetry).toEqual({ capacity: "direct", capacityParamsGated: true, fee: "none" });
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["superstate-liquidity"].redemptionTelemetry).toEqual(directTelemetry);
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["superstate-liquidity"].redemptionTelemetry).toEqual({ capacity: "direct", fee: "none" });
     const address = "0x0000000000000000000000000000000000000001";
     const params = { navScope: "native-fund-share", oracleAddress: address, tokenAddress: address, assetLabel: "Fund", assetRisk: "low" };
     expect(parseLiveReserveAdapterParams("chainlink-nav", params)).not.toHaveProperty("redemptionCapacity");

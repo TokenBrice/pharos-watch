@@ -3,6 +3,17 @@
   "name": "Avalon USDa",
   "symbol": "USDA",
   "oneLiner": "USDa is Avalon's CeDeFi stablecoin, discontinued across all supported chains in October 2026 with a separate holder claim-and-withdrawal process.",
+  "status": "frozen",
+  "frozenAt": "2026-11-02",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-10",
+    "epitaph": "Avalon closed its dollar and opened a claims desk",
+    "obituary": "Avalon Labs discontinued USDa across every supported chain after concluding that bad actors had been extracting USDa liquidity through on-chain mechanisms. The October 3, 2026 notice told holders to submit a claim form and complete withdrawal by October 10 UTC, imposed a 5% monthly custodial fee on balances left unredeemed after that date, and asked contract, multisig and exchange-address holders to contact Avalon before claiming. The ordinary USDa-to-USDT conversion facility is closed. No observed market survives: the largest Ethereum USDa/USDT pool holds about $141K with zero 24-hour trades and quotes near $0.85, the other pools hold under $4K, CoinGecko lists no tickers, and about $145.6M was still recorded as circulating, almost unchanged over 30 days. Pharos freezes USDa as an archived discontinued asset; the issuer's recovery-claims desk is not a live redemption promise.",
+    "peakMcap": 317500082,
+    "sourceUrl": "https://medium.com/@avalonlabs/important-notice-regarding-recent-asset-adjustments-1c2831aae329",
+    "sourceLabel": "Avalon Labs: Important Notice Regarding Recent Asset Adjustments"
+  },
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
@@ -24,8 +35,8 @@
       "url": "https://x.com/avalonfinance_"
     },
     {
-      "label": "USDa discontinuation notice in Avalon's official publication feed",
-      "url": "https://medium.com/feed/@avalonlabs"
+      "label": "USDa discontinuation notice (October 3, 2026)",
+      "url": "https://medium.com/@avalonlabs/important-notice-regarding-recent-asset-adjustments-1c2831aae329"
     },
     {
       "label": "Docs",

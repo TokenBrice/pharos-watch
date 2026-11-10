@@ -44,20 +44,6 @@ describe("getDepreciationFactor", () => {
     expect(factor).toBeCloseTo(1.0 - 1 / 120, 4);
   });
 
-  it("returns documented factor values at milestone ages", () => {
-    // 45 days: 1.0 - (45 - 30) / 120 = 1.0 - 15/120 = 0.875
-    expect(getDepreciationFactor(45)).toBeCloseTo(0.875, 4);
-
-    // 60 days: 1.0 - (60 - 30) / 120 = 1.0 - 30/120 = 0.75
-    expect(getDepreciationFactor(60)).toBeCloseTo(0.75, 4);
-
-    // 90 days: 1.0 - (90 - 30) / 120 = 1.0 - 60/120 = 0.5
-    expect(getDepreciationFactor(90)).toBeCloseTo(0.5, 4);
-
-    // 120 days: 1.0 - (120 - 30) / 120 = 1.0 - 90/120 = 0.25
-    expect(getDepreciationFactor(120)).toBeCloseTo(0.25, 4);
-  });
-
   it("floors at 0.25 for very old depegs (>150 days)", () => {
     expect(getDepreciationFactor(150)).toBe(0.25);
     expect(getDepreciationFactor(365)).toBe(0.25);

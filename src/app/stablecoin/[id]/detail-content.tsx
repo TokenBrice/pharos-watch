@@ -367,8 +367,8 @@ function DetailSummaryRail({
         {hasPriceTransparency ? (
           <PriceTransparencyCard
             coinData={viewModel.coinData}
-            consensusSources={viewModel.consensusSources ?? []}
-            agreeSources={viewModel.agreeSources ?? []}
+            consensusSources={viewModel.consensusSources}
+            agreeSources={viewModel.agreeSources}
             dexPriceCheck={viewModel.dexPriceCheck}
             compact
           />

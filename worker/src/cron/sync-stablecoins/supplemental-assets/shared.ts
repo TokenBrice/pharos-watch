@@ -295,38 +295,6 @@ export async function resolveCuratedAggregateSupplementalSupply(
   };
 }
 
-function buildPricedSupplementalAsset(
-  meta: StablecoinMeta,
-  priceData: SupplementalDefiLlamaPriceData,
-  cgData: CoinGeckoMcapData,
-  input: {
-    mcap: number;
-    supplySource: string;
-    supplyObservedAt?: number | null;
-    chainCirculating?: PeggedAsset["chainCirculating"];
-    circulatingPrevDay?: number | null;
-    circulatingPrevWeek?: number | null;
-    circulatingPrevMonth?: number | null;
-  },
-): PeggedAsset | null {
-  const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
-  // Price coverage is independent from row publication: positive upstream
-  // market cap stays publishable with null price, while empty rows fail closed.
-  if (!priceResolution && !(Number.isFinite(input.mcap) && input.mcap > 0)) return null;
-
-  return buildSupplementalAsset({
-    meta,
-    priceResolution,
-    mcap: input.mcap,
-    supplyObservedAt: input.supplyObservedAt,
-    supplySource: input.supplySource,
-    chainCirculating: input.chainCirculating,
-    circulatingPrevDay: input.circulatingPrevDay,
-    circulatingPrevWeek: input.circulatingPrevWeek,
-    circulatingPrevMonth: input.circulatingPrevMonth,
-  });
-}
-
 /**
  * Build commodity rows serially. Commodity rows fail closed when neither a
  * curated aggregate nor a trusted upstream source provides positive mcap.
@@ -352,8 +320,14 @@ export async function fetchCommodityTokens(
       logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] No positive mcap for ${meta.symbol}, skipping`);
       continue;
     }
-    const token = buildPricedSupplementalAsset(meta, options.priceData, options.cgData, supply);
-    if (token) tokens.push(token);
+    tokens.push(buildSupplementalAsset({
+      meta,
+      priceResolution: resolveSupplementalPrice(options.priceData, options.cgData, meta.geckoId),
+      mcap: supply.mcap,
+      supplyObservedAt: supply.supplyObservedAt,
+      supplySource: supply.supplySource,
+      chainCirculating: supply.chainCirculating,
+    }));
   }
   return tokens;
 }

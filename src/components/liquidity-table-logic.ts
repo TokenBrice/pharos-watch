@@ -3,7 +3,7 @@ import { createTableComparator } from "@/lib/table-comparator";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityData } from "@shared/types";
 import type { LiquidityScoreUnavailableReason } from "@shared/types/market";
-import { dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
+import { DEX_VOLUME_BOUND_MIN_USD, dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
 
 export type LiquiditySortKey =
   | "score"
@@ -57,7 +57,7 @@ export function informativeVolumeLowerBound(volume: {
   view: { partialGrossUsd: number | null };
   lowerBound: { text: string } | null;
 }): string | null {
-  return volume.lowerBound != null && (volume.view.partialGrossUsd ?? 0) >= 0.005 ? volume.lowerBound.text : null;
+  return volume.lowerBound != null && (volume.view.partialGrossUsd ?? 0) >= DEX_VOLUME_BOUND_MIN_USD ? volume.lowerBound.text : null;
 }
 
 /** NR rows sit after every rated row in both directions and on every column (owner decision). */

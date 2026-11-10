@@ -8,7 +8,7 @@ To disable a default-on flag locally, set that flag to the literal string `false
 
 To enable in prod: set the env var as a GitHub repository Variable. The Pages build runs in GitHub Actions, so Cloudflare Pages dashboard variables are runtime-only for this app and are not inlined into the static bundle.
 
-Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage sites by name; they are intentionally not registered in any `.env` file or `next.config.*`.
+Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage sites by name. Their names are declared with empty values in the generated `.env.example` from `shared/lib/env-contract/registry.ts`; no `.env` value or `next.config.*` entry sets a default.
 
 ## Flags
 
@@ -64,7 +64,7 @@ The overlay, its flag/getter, chart legends and exclusive browser Tape reads hav
 
 Lifecycle expiry dates are review deadlines, not automatic evidence or removal authority.
 
-After acceptance, remove each flag, getter, alternate branch and matching Pages build input in the same change. Retain permanent `heroVerdict`, shared query infrastructure and backend chronology. The generic inlining/stale guards currently cover the four remaining temporary flags; accepting a valid inventory with no temporary entries is the final shared-checker cutover after all four close, not permission to skip missing-source or lifecycle validation.
+After acceptance, remove each flag, getter, alternate branch and matching Pages build input in the same change. Retain permanent `heroVerdict`, shared query infrastructure and backend chronology. The generic inlining guard covers every remaining temporary flag read; the stale-flags guard was retired, so dates and the final retirement stay manual reviews, and an empty temporary inventory must not skip missing-source or lifecycle validation.
 
 ### `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`
 
@@ -109,7 +109,8 @@ build.
 After release, verify the relevant UI and the `Rebuild Pages` result. The
 release path runs `check:feature-flag-inlining` against the built bundle.
 Adding, renaming, or removing a flag also requires updating
-`src/lib/feature-flags.ts`, the env block in
+`src/lib/feature-flags.ts`, `shared/lib/env-contract/registry.ts` (which
+generates `.env.example`), the env block in
 `.github/workflows/pages-release.yml`, this inventory, and the
 inlining check as applicable.
 

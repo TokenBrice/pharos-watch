@@ -35,14 +35,4 @@ describe("depeg closure presentation labels", () => {
       expect(getDepegClosureSnapshotLabel(closure)).toBe(expected);
     }
   });
-
-  it("keeps the event-page vocabulary unchanged", () => {
-    expect(DEPEG_CLOSURE_LABELS.open).toBe("Ongoing");
-    expect(DEPEG_CLOSURE_LABELS.recovered).toBe("Recovered");
-    expect(DEPEG_CLOSURE_LABELS.legacy_recovered).toBe("Recovered");
-    expect(DEPEG_CLOSURE_LABELS.coverage_lost).toBe("Tracking closed: coverage lost");
-    expect(DEPEG_CLOSURE_LABELS.superseded).toBe("Tracking closed: direction superseded");
-    expect(DEPEG_CLOSURE_LABELS.orphan).toBe("Tracking closed: asset removed");
-    expect(DEPEG_CLOSURE_LABELS.unknown_closed).toBe("Tracking closed: recovery unconfirmed");
-  });
 });

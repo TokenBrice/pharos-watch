@@ -1,5 +1,157 @@
 [
   {
+    "version": "6.75",
+    "title": "Reviewed MOVEUSD Orca pool read directly on Solana",
+    "date": "2026-11-08",
+    "effectiveAt": 1794127086,
+    "summary": "MOVEUSD can recover a missing price from its reviewed Orca MOVEUSD/USDC pool without a DexScreener request.",
+    "impact": [
+      "The exact finalized pool, both six-decimal SPL mints and both initialized vaults must match the reviewed identities in one atomic bank. The Whirlpool square-root price supplies the market mark; actual vault inventory valued through the trusted USDC parent must meet the unchanged $50,000 total-liquidity floor. This is a pool mark, not an executable sell quote.",
+      "The pool block time and trusted USDC observation must each be younger than the existing exact-address 15-minute budget, rechecked after reads. Publication retains the older input clock and its observation mode, fallback confidence, no replay or standalone depeg authority, and all existing weak-source, peg-bound and temporal-jump guards. Failed or rejected reads withhold the quote and never substitute par or a stale price.",
+      "The registered missing-only provider runs within the existing bounded authoritative stage without a new trigger or increased connection peak. MOVEUSD's dated price-gap acknowledgement is retired; renewed gaps remain actionable. Production acceptance requires the first successful post-deploy read and stablecoins publication."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.74",
+    "title": "Bounded native remainders during DefiLlama fill defaults",
+    "date": "2026-11-07",
+    "effectiveAt": 1794092005,
+    "summary": "A complete reviewed native roster may publish only its observed native remainder during a DefiLlama fill default when unresolved legs stay within the existing 5% bound by both frozen baseline and current list share. Missing supply is never added.",
+    "impact": [
+      "This extends v6.70 current-supply admission beyond complete native corroboration or an existing bounded vetted carry. Every reviewed deployment must be flagged and resolve either to an admitted native repair or an unresolved leg; attribution ambiguity, any chart repair, an unaccounted deployment or a leg below the $1M flagging floor rejects the exception. Unresolved baselines must be at most 5% of native repairs plus those baselines, and their observed current list amounts must be at most 5% of the original list aggregate. Missing list amounts or a nonpositive list total cannot establish that bound.",
+      "The published aggregate is exactly the native-repaired sum, dated by its oldest read, with chains-unavailable, partialCoverage and the original unresolved quarantine clock. Unreadable chains stay null; no frozen baseline or fill-priced list residue is added. Fill-scaled historical buckets remain unavailable. The operator warning names the asset, missing chain IDs and current list missing share.",
+      "Single-chain native repairs preserve their exact observed value rather than a subtract-and-add rounding residue. Per-pair native reads may use the existing reviewed supply-profile fallback when a second registry RPC route is absent. Fill-default incidents cannot release low baselines using the same provider's rescaled chart. Price admission, supply units, native-roster accounting, carry ceilings and the 5% policy bound are unchanged. Production acceptance requires the first qualifying stablecoins publication after deployment."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.73",
+    "title": "Original DEX and AZND dependency clocks govern price admission",
+    "date": "2026-11-06",
+    "effectiveAt": 1793962500,
+    "summary": "Aggregate DEX medians use plausible contributors younger than the existing 75-minute depeg budget, then apply the existing outlier filter. The selected subset retains its oldest original clock through primary consensus, co-leg admission and public comparisons. AZND's Curve cross-rate also inherits its older USDC parent or block clock and enforces the route's existing five-minute budget on both.",
+    "impact": [
+      "The publisher selects deduplicated plausible contributors with valid, non-future original clocks strictly younger than DEX_FRESHNESS_SEC (75 minutes), then applies the existing outlier filter within that subset. Price-source count, source TVL and displayed protocol provenance describe the actual median inputs. Diagnostics record in-budget and total contributor counts and no-in-budget-contributors when none qualify; that fallback preserves the full-blend median and its oldest clock for conservative vetoes. Refreshing a pool cannot renew an exchange ticker clock. Affirmative aggregate admission validates original clock evidence in price_sources_json before protocol filtering. Nonempty legacy source arrays retain repeated aggregateObservedAt values and reduce them to the oldest; when no display lane qualifies, the writer stores {aggregateObservedAt,sources:[]} without inventing a protocol source. Missing, invalid, nonpositive, nonfinite or future clock evidence withholds the quote. Publication updated_at and surviving protocol lanes cannot renew it; public priceSources projects the empty envelope as [].",
+      "The existing strict freshness and TVL gates remain: depeg aggregates need age below 75 minutes and at least $1M source TVL; public comparisons and the reviewed VUSD primary tier need age below two hourly producer intervals plus the stage lead and at least $250K. Beside other primary legs, the original aggregate clock also governs the existing co-leg budget. Protocol-source 35/75-minute inclusive gates, weights, corroboration and independence are unchanged.",
+      "AZND keeps its reviewed Curve pool, pinned calldata, inventory, impact and incumbent protections. The USDC parent must also fit the existing five-minute route budget, checked again after awaited reads; the result carries the older dependency clock and its observation mode rather than a fresh block timestamp.",
+      "Peg-summary adds optional nullable price from the same admitted live observation used for current deviation and provenance, including retained-history paths. Unavailable or nominal live observations emit null even if the raw asset contains a positive number; an observed NAV quote can remain present while current deviation is null. Invalid or nonpositive prices emit null, and legacy responses without price remain accepted. Historical analytics are not rewritten.",
+      "Conservative aggregate and challenger vetoes retain their separate policies; rejected old evidence cannot become a new vote, confirmation, recovery, coverage claim or public agreement. Original-clock refusals retain machine-readable primary and pending diagnostics, and malformed DEWS evidence retains decoder telemetry. Public readers apply cheap freshness and TVL gates before parsing; pending availability reads only candidate IDs. Fixed-clock producer replay and qualifying production observations remain required; this entry claims neither."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.72",
+    "title": "Separate observed DEX comparison anchors from trusted quote valuation; bound Reserve USD3 pool recovery by a trusted baseline",
+    "date": "2026-11-05",
+    "effectiveAt": 1793836800,
+    "summary": "Measured DEX prices can publish against a fresh observed single-source primary comparison price without admitting that primary as a trusted quote-token valuation or depeg confirmer. Reserve USD3's missing-only Curve USD3/scrvUSD fallback must remain within 3% of a recent trusted published USD3 observation. Its own soft quote cannot create or renew that baseline.",
+    "impact": [
+      "The DEX source stage keeps a separate target-only primary comparison map. Positive observed high or single-source prices with an original clock inside the existing 1,800-second primary budget may anchor outlier, deviation and display-ratio guards; missing, nominal, cached, fallback, low-confidence, invalid, future and stale observations still withhold. The existing trusted quote-token map and provenance are unchanged.",
+      "The comparison map survives the scoring-stage handoff. Stages written before this additive field keep the previous trusted-map behavior. DEX pool prices, retained price-evidence TVL, original observation clocks, protocol corroboration, source-family independence and detector floors are unchanged; a comparison anchor contributes no vote and cannot recover or close a depeg event.",
+      "The Celo USDT symbol USD₮ is normalized to USDT through the existing alias registry, allowing the already-mapped wARS/USDT Uniswap V3 market to enter normal source extraction. It remains subject to the existing price and liquidity gates. MAI market disagreement, USDa Alpha's single Pancake family and pathUSD's unreviewed native Tempo orderbook are not waived.",
+      "The exact Ethereum USD3/scrvUSD pool retains token-identity, 1,000-unit inventory floors, 1-versus-10-USD3 quote-impact checks and the five-minute pool-block and trusted scrvUSD-parent budgets. The older input clock dates the derived USD price, which retains curve-thin-onchain fallback confidence with no replay-safe or standalone depeg authority.",
+      "Before admitting that quote, the route selects the newest eligible original USD3 observation from the previous publication or the existing replay-safe price cache. Each candidate needs explicit valid observation and publication-sync clocks, must have qualified as authoritative under the existing depeg-trust policy at its original publication time, and must retain an original observation no older than 24 hours. Reusing or republishing retained cache evidence never refreshes those clocks.",
+      "The pool-derived USD value must be within 3% of that baseline, a bounded allowance for slow NAV movement rather than independent pool corroboration. Missing, stale, malformed or untrusted baseline evidence and excessive divergence withhold the fallback with a machine-readable no-quote reason. A curve-thin-onchain observation cannot qualify as or renew its own baseline.",
+      "No RToken oracle-range midpoint is promoted to executable NAV, no usable incumbent is replaced, and supply and market-cap preference remain unchanged. Activation is 2026-11-05 00:00 UTC (1793836800). Local checks and this version entry do not establish production acceptance; acceptance requires observing a qualifying production execution."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.71",
+    "title": "Cadence-bounded previous-payload parents for vault supply NAV",
+    "date": "2026-11-04",
+    "effectiveAt": 1793750400,
+    "summary": "Pre-intake vault NAV supply valuation admits a trusted previous-payload parent observation within two stablecoins producer intervals, while same-run and live-price source budgets remain unchanged.",
+    "impact": [
+      "Pre-intake vault NAV supply valuation admits a trusted parent read from the previous published payload when its original price observation is at most two stablecoins producer intervals old (1,800 seconds). Confidence, replay-safe source parts, parent identity, timestamp validity and future-skew checks remain unchanged. Same-run single-source quotes still require the existing vault opt-in, and live price publication keeps its source budgets.",
+      "The trust verdict names the supply-parent budget, its maximum age, the previous-payload generation, the parent price-sync time when available, the original observation time and the rejection reason. Re-publishing an old price never renews its observation.",
+      "sUSDf, AA FalconX/MEV Capital and sGHO can resume fresh native supply when their parent and vault reads pass. sAID remains unavailable without an admissible AID/USD parent; no nominal or FX reference substitutes for NAV."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.70",
+    "title": "Reject fill-priced supply and publish reviewed chain remainders explicitly",
+    "date": "2026-11-04",
+    "effectiveAt": 1793750400,
+    "summary": "DefiLlama fill-default prices cannot make rescaled supply observable without complete native corroboration. Reviewed native repair routes expand, confirmed collapses release their obsolete baselines, and dated omitted-chain reviews publish the observed remainder as partial supply.",
+    "impact": [
+      "For USD assets with a detected DefiLlama list fill default below the existing severe-downside ratio, the guard withholds current and historical supply unless complete native evidence admits current supply or an existing bounded quarantine carry preserves the vetted packet. A sub-$1M chain or already-rescaled baseline cannot bypass this refusal; fill-scaled historical buckets remain unavailable even when current native supply is recovered.",
+      "MOVEUSD on Solana and rwaUSDi on Ethereum, Base, Monad, Arbitrum, X Layer, Robinhood and Pharos join the reviewed issuer-native repair roster. The rwaUSDi/Pharos route uses only registered supplemental state-only archive endpoints with no log capability, solely for this supply read; it does not activate general chain routing or log access. Unreadable legs stay unavailable.",
+      "Dated 2026-11-04 reviews release the confirmed USDQ/Quantoz Ethereum and USDGLO Base collapses at observed list current. BUIDL and fxUSD Tempo omissions instead receive scoped exclusions through 2026-11-18 09:03:53 UTC: the list aggregate remains unchanged, Tempo stays null, and chains-unavailable plus partialCoverage marks the observed remainder in both list and detail. No par-NAV valuation or additive bridge stock is invented.",
+      "CoinGecko-fallback supplemental assets gain reviewed native supply perimeters: UTY (Base canonical stock with Avalanche/Katana escrow conservation) and MXNe (Base, Solana and Stellar native registers) can recover from on-chain stock when the CoinGecko cap clock is stale; any unreadable required leg withholds the aggregate. MXNe joins the prefer-on-chain list, restating its supply from the contradicted CoinGecko cap (~1.43M) to measured native stock (~8.79M MXNe). strUSD's reviewed escrow moves to Tori's current lockbox.",
+      "Reviewed omitted-chain exclusions preserve their incident clock and vetted baseline for expiry and recovery. Expiry re-arms the guard; later incidents cannot inherit an older review. Price weights, freshness limits, supply units and ordinary carry ceilings are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.69",
+    "title": "USG gains its CoinGecko identity; its keeper-adjusted stock outranks the CoinGecko cap",
+    "date": "2026-11-02",
+    "effectiveAt": 1793750400,
+    "summary": "Tangent USG gains its verified CoinGecko identity (`tangent-usg`, Ethereum `0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1`, 18 decimals), so the ordinary CoinGecko supplemental price lane can read it instead of the lone Curve on-chain quote. Its published supply now comes only from the issuer-native Ethereum `totalSupply` less the two PegKeeper balances Tangent's own UI excludes; a CoinGecko market cap, which counts that keeper inventory, can never replace it.",
+    "impact": [
+      "`shared/data/stablecoins/coins/usg-tangent.json`: `geckoId: \"tangent-usg\"` adds the CoinGecko price route and the CoinGecko ticker cohort. Price admission, freshness, peg-aware bounds and the existing source families are unchanged.",
+      "`shared/lib/onchain-supply-probe.ts`: `usg-tangent` joins `PREFER_ONCHAIN_SUPPLY_MCAP_IDS`. The preferred read is the existing single-deployment probe over its one Ethereum register, adjusted by `CURATED_ONCHAIN_SUPPLY_EXCLUSIONS` (PegKeeper balances), and the CoinGecko cap is skipped. A failed read restores the prior observation within the seven-day carry ceiling with its original clock and provenance, or withholds; it never republishes the cap.",
+      "`worker/src/cron/sync-stablecoins/fallback-intake.ts`: the outage overlay reads a preferred asset through the single-deployment probe when it has no curated aggregate roster, forwarding the run's RPC map so the pinned-block keeper adjustment can execute, so a pin on a one-register asset publishes its provable native stock instead of `onchain-supply-withheld`. Multi-contract footprints still refuse the single-contract reader.",
+      "v6.68 shipped on 2026-11-02 before its edge-case corrections landed, so they are recorded here with the published price and confidence they change. A CoinGecko + DefiLlama-list pair is not independent fresh-leg agreement and can no longer hold a stale DEX lane out; a degraded-run lane rejoins only when it lands in the hard leg's agreement group rather than a larger list cluster; and pool replacement derives `disagreeSources` from the voting roster, so a co-leg-held lane never counts as disagreement.",
+      "Reviewed 2026-11-02 and left unchanged: `mai-qidao`, `usda-alpha-partner`, `pathusd-bridge` and `wars-argentine-peso` still admit no primary DEX leg. Each has one mapped protocol family, or families more than 50 bps apart, and no hard source; the existing `lacked_corroboration` and aggregate-withholding rules therefore apply, and the $50,000 lane floor excludes pathUSD's Uniswap V4 Tempo pools. The ARS peg is not the blocker: wARS quotes pass the peg-aware bounds. No corroboration threshold, lane floor or trust tier was changed.",
+      "Trust tiers, weights, thresholds and the depeg detector are unchanged. Provisional activation is 2026-11-04 00:00 UTC (1793750400), to be re-dated at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.68",
+    "title": "DEX protocol lanes bounded by the co-leg freshness budget",
+    "date": "2026-11-02",
+    "effectiveAt": 1793577600,
+    "summary": "A promoted per-protocol DEX lane (`curve-dex`, `aero-dex`, `orca-dex`, ...) now joins a primary consensus beside other legs only while it fits the same co-leg budget as the DEX aggregate: the 30-minute primary budget and the strictest co-leg registry window minus a 180-second run margin. When the fresh legs cannot agree on their own, a lane up to 30 minutes old that agrees with a fresh hard leg still joins and dates the result by its own clock. Consensus stamps a cluster with its oldest agreeing leg, so a lane inside its own 35-minute source budget had been ageing fresh hard agreement past the depeg-trust budget.",
+    "impact": [
+      "`worker/src/lib/primary-price-collector.ts`: lanes are judged against the co-leg budget before corroboration, so only lanes inside it corroborate one another. A held lane records `outside_co_leg_budget` with its `coLegBudgetSec` and `ageSec`, and stays in `consensusSources` as an available, non-voting candidate, so source depth and the corroboration-probe cohorts are unchanged. The $50,000 lane floor and aggregate withholding are unchanged; lanes that are the only kind of leg keep their own window.",
+      "Degraded runs: if the fresh legs do not form an agreeing cluster (CoinGecko missing, or more than 50 bps from Curve on-chain), a lane at most 1,800 s old that agrees with a fresh hard leg rejoins. The composite is dated by that lane, never by a fresh leg's clock, so Curve-backed assets keep their pre-6.68 high, authoritative result in that state.",
+      "Why: at the 2026-11-02 06:45 UTC run all 14 assets with a lane in their agreeing cluster (pmUSD, RLUSD, BOLD, LUSD, reUSD, ...) published composite clocks 2,011-2,054 s old, past the 1,800 s depeg-trust budget. Thirteen become authoritative at such runs; CASH stays `confirm_required` because its remaining CoinGecko and Kraken pair is not depeg-authoritative. pmUSD's open depeg had recorded blind coverage about once an hour. The same composites also failed each co-leg's own window in authoritative parent checks, the failure mode already fixed for the aggregate leg.",
+      "Trust tiers, weights, thresholds and the depeg detector are unchanged. Activation is 2026-11-02 00:00 UTC (1793577600)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.67",
+    "title": "Observed chain history survives a chain-dropout carry",
+    "date": "2026-11-02",
+    "effectiveAt": 1793577600,
+    "summary": "When a chain-dropout carry publishes the frozen vetted baseline, a provider aggregate history bucket is now kept only if every carried chain's own packet row still reports that bucket at the baseline; an absent, zero or divergent bucket keeps the window unavailable, and attribution ambiguity still withholds all three.",
+    "impact": [
+      "A carried chain's own 1d/7d/30d bucket equal to the carried baseline makes the provider aggregate history describe the same composition as the carried total: its window change is zero, so `change1d`/`change7d`/`change30d` stay observable on the carried row instead of publishing unavailable.",
+      "An absent chain row (for example BUIDL/TRYB), a null or zero bucket, a bucket that has aged away from the frozen baseline, or an attribution-ambiguous held total leaves that aggregate bucket null. Pairing the provider history with a carried total that re-adds a differently measured chain would publish a synthetic move (R1).",
+      "Current supply, the seven-day carry ceiling, partial coverage, repair and release paths, and `supplyChainGuard` provenance are unchanged. Activation is 2026-11-02 00:00 UTC (1793577600)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.66",
+    "title": "Wide CEX bid/ask spreads are rejected",
+    "date": "2026-11-01",
+    "effectiveAt": 1793577600,
+    "summary": "A CEX two-sided book wider than 100 bps of its midpoint, or crossed, no longer contributes a quote: the midpoint is not a price, so the symbol is rejected without a last-trade fallback while a missing book side keeps the existing fallback.",
+    "impact": [
+      "Kraken, Bitstamp and Coinbase quotes share one 100-bps spread gate. The 2026-11-01 review measured every configured book at most about 33 bps, so healthy NAV, gold and non-USD pairs stay admitted; the production USD1 Kraken book (about 445 bps, published at $0.97775) is now rejected.",
+      "Each rejected symbol increments a `wide-spread` rejection count in that provider's diagnostics. A missing bid or ask, or a single-sided quote, still falls back to the last trade.",
+      "Consensus clustering, trust tiers, weights and the other admission gates are unchanged. Activation is 2026-11-02 00:00 UTC (1793577600)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.65",
     "title": "DefiLlama per-response fill prices are rejected; STBT priced from its Curve pool",
     "date": "2026-10-31",

@@ -105,16 +105,19 @@ describe("agent engine integration", () => {
   });
 
   it("does not run PR tests after failed Git selection or pass missing test paths", () => {
+    // Git change selection is the planner's first input now: a failed diff must
+    // abort before any selection or test process starts.
     const failed = vi.fn((file: string) => ({ status: file === "git" ? 128 : 0, stdout: "", stderr: "missing ref" }));
     expect(() => runPrTests({ argv: [], env: { NODE_ENV: "test" }, spawn: failed as never })).toThrow("Git change selection failed");
-    expect(failed).toHaveBeenCalledTimes(2);
+    expect(failed).toHaveBeenCalledTimes(1);
     const successful = vi.fn((file: string, args: string[]) => ({ status: 0,
       stdout: file === "git" ? "worker/src/deleted.ts\0" : args[0] === "list" ? "missing/deleted.test.ts\nscripts/__tests__/agent-engine-contract.test.ts" : "",
       stderr: "" }));
     expect(runPrTests({ argv: [], env: { NODE_ENV: "test" }, spawn: successful as never })).toBe(0);
-    expect(successful.mock.calls[1]?.[1]).toContain("--no-renames");
-    expect(successful.mock.calls[2]?.[1]).not.toContain("missing/deleted.test.ts");
-    expect(successful.mock.calls[2]?.[1]).toContain("scripts/__tests__/agent-engine-contract.test.ts");
+    expect(successful.mock.calls[0]?.[1]).toContain("--no-renames");
+    const run = successful.mock.calls.find(([, args]) => args[0] === "run")?.[1] ?? [];
+    expect(run).not.toContain("missing/deleted.test.ts");
+    expect(run.length).toBeGreaterThan(1);
   });
 
   it("keeps deletions and both rename owners in staged and committed classification", () => {

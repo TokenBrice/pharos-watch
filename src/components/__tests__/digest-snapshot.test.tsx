@@ -64,7 +64,7 @@ describe("DigestSnapshot", () => {
 
   it.each([
     { cause: "C", score: 35, reason: "undisclosed by issuer" },
-    { cause: "U", score: 50, reason: "not yet researched" },
+    { cause: "U", score: 50, reason: "unresolved" },
   ])("describes archived $cause priced unknowns without a pipeline label", ({ cause, score, reason }) => {
     mockSnapshot({ safetyScores: { model: "v9", mentionedCoins: [{
       symbol: "TEST", grade: "C", score: 48, ratingStatus: "rated",
@@ -185,6 +185,7 @@ describe("DigestSnapshot", () => {
     ["unobserved", 0, { complete: false, observedCount: 0, unavailableCount: 2 }, null, "Not captured for this edition"],
     // Currency labels follow the shared two-decimal compact formatter.
     ["partial", 100e9, { complete: false, observedCount: 1, unavailableCount: 1 }, "$100.00B", "1/2 coins observed"],
+    ["carried", 100e9, { complete: false, observedCount: 1, unavailableCount: 1, carriedCount: 1 }, "$100.00B", "1/3 coins observed"],
     ["legacy", 100e9, undefined, "$100.00B", "coverage unproven"],
     ["observed zero", 0, { complete: true, observedCount: 2, unavailableCount: 0 }, "$0", "2/2 coins observed"],
   ])("qualifies %s supply without inventing a complete total or delta", (_name, totalMcapUsd, supplyCoverage, amount, qualifier) => {

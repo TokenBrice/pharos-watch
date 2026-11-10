@@ -44,30 +44,48 @@ export function DataHealthBanner({
   const merged = mergeHealthStates(publicEntries);
   // Narrows the type; `isPublicWarning` already excludes both.
   if (merged.state === "fresh" || merged.state === "degraded") return null;
-  const affected = formatAffectedLabels(merged.affectedLabels);
-  const plural = merged.affectedLabels.length !== 1;
-  const worstAge = publicEntries.reduce<number | null>((max, item) => {
+  const worstAge = (group: DataHealthInfo[]) => group.reduce<number | null>((max, item) => {
     if (item.ageMs == null) return max;
     if (max == null) return item.ageMs;
     return Math.max(max, item.ageMs);
   }, null);
 
-  let title = "";
-  let message = "";
-  if (merged.state === "stale") {
-    const age = worstAge != null ? formatElapsedSeconds(worstAge / 1000) : "unknown";
-    title = "Showing an older snapshot";
-    message = `${affected} last refreshed over ${age} ago.`;
-  } else if (merged.state === "unavailable") {
-    title = "Waiting for initial data";
-    message = `${affected} ${plural ? "have" : "has"} not populated yet.`;
-  } else {
-    title = "Refresh failed";
-    message = `Could not refresh ${affected}.`;
+  // One claim per state group: a lane that retains an old snapshot and a lane
+  // with nothing retained are different findings, and the worst state must not
+  // re-label the others.
+  const errorEntries = publicEntries.filter((entry) => entry.state === "error");
+  const unavailableEntries = publicEntries.filter((entry) => entry.state === "unavailable");
+  const staleEntries = publicEntries.filter((entry) => entry.state === "stale");
+  const messages: string[] = [];
+  if (errorEntries.length > 0) {
+    const affected = formatAffectedLabels(errorEntries.map((entry) => entry.label));
+    messages.push(`Could not refresh ${affected}.`);
   }
+  if (unavailableEntries.length > 0) {
+    const labels = unavailableEntries.map((entry) => entry.label);
+    const affected = formatAffectedLabels(labels);
+    messages.push(`${affected} ${labels.length === 1 ? "has" : "have"} not populated yet.`);
+  }
+  if (staleEntries.length > 0) {
+    const age = worstAge(staleEntries);
+    messages.push(
+      `${formatAffectedLabels(staleEntries.map((entry) => entry.label))} last refreshed over ${age != null ? formatElapsedSeconds(age / 1000) : "unknown"} ago.`,
+    );
+  }
+  // The banner keeps one title and one tone: those of the worst state.
+  const title =
+    merged.state === "error"
+      ? "Refresh failed"
+      : merged.state === "unavailable"
+        ? "Waiting for initial data"
+        : "Showing an older snapshot";
+  const message = messages.join(" ");
 
+  // A stamp belongs to its own group; with mixed findings it would read as the
+  // unpopulated lane's last success.
+  const stateGroups = [errorEntries, unavailableEntries, staleEntries].filter((group) => group.length > 0);
   const lastSuccessfulText =
-    merged.latestUpdatedAt != null
+    stateGroups.length === 1 && merged.latestUpdatedAt != null
       ? `Last successful update: ${formatTimestamp(merged.latestUpdatedAt)}`
       : null;
 

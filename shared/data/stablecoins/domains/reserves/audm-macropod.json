@@ -18,10 +18,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol decision wave 2026-10-02 (DwAudm)",
+    "reviewedAt": "2026-11-04",
+    "reviewer": "Issue resolver reserve renewals 2026-11-04",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Macropod AUDM Reserve Verification Report as at 31 October 2026",
+        "url": "https://docs.macropod.com/legal/reserve-verification-report-31st-october-2026.pdf"
+      },
       {
         "label": "Macropod AUDM Reserve Verification Report as at 30 September 2026",
         "url": "https://docs.macropod.com/legal/reserve-verification-report-2026-09-30.pdf"
@@ -31,11 +35,11 @@
         "url": "https://www.macropod.com/transparency"
       }
     ],
-    "rationale": "Macropod's issuer self-verification report under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867 covers the full reserve at 30 September 2026. It identifies AUD 3,322,783.88 of cash at Westpac Banking Corporation in the named 'AUDM Trust Class A Reserve' account held by Macropod as trustee for the AUDM Trust. The report reconciles that balance against AUD 3,322,070.88 of AUDM across Ethereum, Redbelly, Solana and Base, leaving AUD 713.00 of excess reserves. The issuer states that it reviewed bank statements, transaction and withdrawal records, blockchain transactions, contract addresses, and transfers between the reserve account and the blockchains. The report is issuer-signed self-verification rather than an independent audit. The transparency index links this report as the current monthly report; the separate quarterly reconciliation remains the June 2026 Hall Chadwick agreed-upon-procedures report. The new PDF's filename creation-date prefix is not evidence of its publication date.",
-    "compositionBasis": "Macropod issuer self-verification report as at 30 September 2026",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "Macropod's issuer self-verification report under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867 covers the full reserve at 31 October 2026. It identifies AUD 3,487,442.07 of cash across four Westpac Banking Corporation reserve accounts, held by Catena Digital Pty Ltd as trustee for the AUDM Trust in the named 'AUDM Trust Class A Reserve'. The report reconciles that balance against AUD 3,486,694.37 of AUDM across Ethereum, Redbelly, Solana and Base, leaving AUD 747.70 of excess reserves. The issuer states that it reviewed bank statements, transaction and withdrawal records, blockchain transactions, contract addresses, and transfers between the reserve accounts and the blockchains. Drew Bradford signs for the issuer; this is self-verification, not an independent audit. The transparency index links the October report as the current monthly report. Its publication date is undisclosed; PDF creation metadata does not establish publication. The older September report and June Hall Chadwick agreed-upon-procedures engagement remain historical sources and do not attest the October composition.",
+    "compositionBasis": "Macropod issuer self-verification report as at 31 October 2026",
+    "compositionAsOf": "2026-10-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report classifies the entire reserve as cash, identifies Westpac and the named trust reserve account, and reconciles the full reserve balance to supply on all four supported networks. The account number remains masked, and the report does not disclose whether reserve cash may be rehypothecated.",
+    "knownUnknownExposure": "The October report classifies the entire reserve as cash, identifies Westpac and the named trust reserve accounts, and reconciles the full reserve balance to supply on all four supported networks. Account numbers remain masked. The report does not disclose a contractual deposit maturity maximum or whether reserve cash may be rehypothecated; the existing custody review and its original date remain unchanged.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

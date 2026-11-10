@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -6,7 +7,8 @@ import { z } from "zod";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, SCHEDULED_TASK_DESCRIPTORS } from "../../shared/lib/scheduled-runner-registry";
 import { getCronSlotStartedAtForTrigger } from "../../shared/lib/cron-jobs";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
-import { buildScheduledInvocationQuery } from "./cron-delivery.mjs";
+import { parseAssignments } from "../lib/wrangler-toml.mjs";
+import { parseWranglerCronTriggers } from "../ci/check-cron-schedule-sync";
 
 export const WORKER_MEMORY_TELEMETRY_POLICY = {
   schemaVersion: 1, scheduleIntervalSec: 3600, ingestionLagAllowanceSec: 900,
@@ -14,9 +16,46 @@ export const WORKER_MEMORY_TELEMETRY_POLICY = {
   initialSliceSec: 21600, minSliceSec: 1, queryRowLimit: 10000, maxRequests: 240,
   collectionDeadlineSec: 360, requestTimeoutSec: 30, minRequestSpacingMs: 1000,
   cpuMatchToleranceUsExclusive: 2,
+  telemetryRowLimit: 2000, logsRetentionSec: 7 * 86400,
+} as const;
+/** Cloudflare's Cron CPU-class ceilings; the configured Worker cpu_ms can only lower them. */
+const PLATFORM_CPU_CLASS_LIMIT_US = { "sub-hourly": 30_000_000, "hourly-or-longer": 900_000_000 } as const;
+const WORKER_CPU_LIMIT_CONFIGS = ["../../worker/wrangler.toml", "../../worker/wrangler.heavy.toml"] as const;
+function readConfiguredCpuLimitUs(): number {
+  return Math.min(...WORKER_CPU_LIMIT_CONFIGS.map((path) => {
+    const url = new URL(path, import.meta.url);
+    const raw = parseAssignments(readFileSync(url, "utf8"))
+      .find((assignment) => assignment.section === "limits" && assignment.key === "cpu_ms")?.value;
+    if (!raw || !/^\d+$/.test(raw)) throw new Error(`Missing numeric [limits] cpu_ms in ${url.pathname}.`);
+    return Number(raw) * 1000;
+  }));
+}
+const configuredCpuLimitUs = readConfiguredCpuLimitUs();
+const configuredLogSampling = Object.fromEntries(WORKER_CPU_LIMIT_CONFIGS.map((path) => [path.includes("heavy") ? "heavy" : "public",
+  Number(parseAssignments(readFileSync(new URL(path, import.meta.url), "utf8")).find((assignment) => assignment.section === "observability" && assignment.key === "head_sampling_rate")?.value),
+]));
+/**
+ * One authority for resource limits and the headroom threshold. CPU classes are
+ * Cloudflare's Cron ceilings (30 s below a one-hour interval, 15 min
+ * hourly-or-longer; docs/worker-and-api-limits.md#per-job-resource-evidence),
+ * bounded by the lower configured `[limits] cpu_ms`; the isolate memory limit
+ * is 128 MiB per isolate.
+ */
+export const WORKER_CAPACITY_POLICY = {
+  warnRatio: 0.70,
+  minSamples: 20,
+  cpuLimitUs: {
+    "sub-hourly": Math.min(PLATFORM_CPU_CLASS_LIMIT_US["sub-hourly"], configuredCpuLimitUs),
+    "hourly-or-longer": Math.min(PLATFORM_CPU_CLASS_LIMIT_US["hourly-or-longer"], configuredCpuLimitUs),
+  },
+  memoryLimitBytes: 128 * 1048576,
 } as const;
 const TARGETS = { heavy: "stablecoin-heavy", public: "stablecoin-api" } as const;
 type Role = keyof typeof TARGETS;
+const configuredTriggers = {
+  public: parseWranglerCronTriggers(readFileSync(new URL(WORKER_CPU_LIMIT_CONFIGS[0], import.meta.url), "utf8")),
+  heavy: parseWranglerCronTriggers(readFileSync(new URL(WORKER_CPU_LIMIT_CONFIGS[1], import.meta.url), "utf8")),
+};
 type Kind = "kills" | "scheduled" | "samples" | "role-day";
 const numeric = z.number().finite().nonnegative();
 const metric = numeric.nullish().transform((value) => value ?? null);
@@ -40,7 +79,20 @@ const adaptiveSchema = z.object({
   avg: z.object({ sampleInterval: metric }).nullish().transform((value) => value ?? { sampleInterval: null }),
   quantiles: metricsSchema,
 });
-const scheduledSchema = z.object({ datetime: timestamp, scheduledDatetime: timestamp, cron: z.string(), status: z.string(), cpuTimeUs: numeric });
+const scheduledSchema = z.object({ datetime: timestamp, scheduledDatetime: timestamp.nullable(), cron: z.string(), status: z.string(), cpuTimeUs: numeric });
+const telemetrySchema = z.object({
+  success: z.literal(true), errors: z.array(z.unknown()).max(0),
+  result: z.object({
+    run: z.object({ status: z.literal("COMPLETED") }),
+    statistics: z.object({ abr_level: z.number().positive().optional() }).optional(),
+    events: z.object({ count: numeric.optional(), events: z.array(z.object({
+      timestamp: numeric.max(8.64e15),
+      $metadata: z.object({ id: z.string().min(1), type: z.literal("cf-worker-event"), trigger: z.string().optional() }),
+      $workers: z.object({ scriptName: z.string(), eventType: z.enum(["scheduled", "cron"]), cpuTimeMs: numeric.max(Number.MAX_VALUE / 1000), outcome: z.string().min(1), truncated: z.literal(false).optional(),
+        event: z.object({ cron: z.string().optional(), scheduledTime: numeric.max(8.64e15).optional() }).optional() }),
+    })) }),
+  }),
+});
 const observationEnvelopeSchema = z.object({
   generatedAt: timestamp, window: z.object({ from: timestamp, to: timestamp, mode: z.enum(["default", "explicit"]) }),
   sources: z.array(z.object({ workerRole: z.enum(["heavy", "public"]), kind: z.enum(["kills", "scheduled", "samples", "role-day"]), from: timestamp, to: timestamp, queryComplete: z.boolean(), failures: z.array(z.object({ from: timestamp, to: timestamp, reason: z.string() })) })),
@@ -57,7 +109,7 @@ type QueryRecord = {
 type SourceRead = {
   id: string; kind: Kind; workerRole: Role; scriptName: string; dataset: string;
   from: string; to: string; fetchedAt: string; status: "available" | "partial" | "unavailable";
-  queryComplete: boolean; samplingBasis: "adaptive" | "scheduled-dataset";
+  queryComplete: boolean; samplingBasis: "adaptive" | "workers-logs-head-sampled";
   returnedRows: number | null; knownReturnedRows: number; failures: Failure[];
   samplingIntervalUnknownRows: number; samplingIntervalRange: [number, number] | null;
 };
@@ -85,6 +137,23 @@ type LaneDay = {
   basis: "empirical-nearest-rank-of-matched-row-memoryUsageBytesP50";
   sampledRowMemoryP50DistributionBytes: { p50: number; p90: number; p99: number; p999: number } | null;
 };
+type CapacityStatus = "ok" | "warn" | "unavailable" | "insufficient-samples";
+type CapacityTrigger = {
+  workerRole: Role; cron: string; cpuClass: keyof typeof WORKER_CAPACITY_POLICY.cpuLimitUs | null;
+  limitUs: number | null; samples: number; p50Us: number | null; p99Us: number | null; maxUs: number | null;
+  exceededCpu: number; p99Ratio: number | null; status: CapacityStatus; reason: string | null;
+};
+type CapacityMemory = {
+  workerRole: Role; basis: "max-of-cloudflare-sampled-role-day-p99"; limitBytes: number;
+  days: { dayUtc: string; from: string; to: string; status: string; requests: number; p99Bytes: number }[];
+  p99Bytes: number | null; p99Ratio: number | null; status: CapacityStatus; reason: string | null;
+  knownExceededMemory: number; killsComplete: boolean;
+};
+type CapacityHeadroom = {
+  status: Exclude<CapacityStatus, "insufficient-samples">; warnRatio: number; minSamples: number;
+  limits: { cpuUs: typeof WORKER_CAPACITY_POLICY.cpuLimitUs; memoryBytes: number };
+  triggers: CapacityTrigger[]; memory: CapacityMemory[]; reasons: string[];
+};
 type Verdict = {
   status: "no-observed-kills" | "observed-kills" | "unavailable"; reasons: string[];
   alertFrom: string; alertTo: string; heavyKillObserved: boolean; collectionIncomplete: boolean; freshnessFailed: boolean;
@@ -100,13 +169,14 @@ type WorkerMemoryReport = {
   laneDays: LaneDay[]; laneDescriptors: Record<string, (typeof SCHEDULED_TASK_DESCRIPTORS)[number][]>; samples: JoinedRow[];
   sampleCorrelations: { workerRole: Role; correlation: string; returnedRows: number }[];
   exceededMemory: { groups: JoinedRow[]; complete: boolean; returnedGroups: number | null; reportedRequests: number | null; knownReturnedGroups: number; knownReportedRequests: number; reasons: string[] };
+  capacity: CapacityHeadroom;
   queries: QueryRecord[]; verdict: Verdict; caveats: string[]; outputFiles: string[];
 };
 const USAGE = `Usage: npm run ops:worker-memory -- [--from <ISO timestamp> --to <ISO timestamp>] [--out-dir <path>]
 Reads sampled Cloudflare Worker isolate memory and independently filtered exceededMemory outcomes; no production mutations.
-Requires CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN (Account Analytics: Read) and CLOUDFLARE_ACCOUNT_ID in the environment.
+Requires CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN and CLOUDFLARE_ACCOUNT_ID; permissions: docs/deployment-process.md#github-deploy-inputs.
 Windows require timezone-qualified timestamps, at most 48 hours. Default: previous UTC day plus today, with 900s ingestion lag.
-Writes report.json, report.md, samples.ndjson, exceeded-memory.ndjson, queries.json under agents/worker-memory/<run>/.
+Writes report.json, report.md, capacity.md, samples.ndjson, exceeded-memory.ndjson, queries.json under agents/worker-memory/<run>/.
 Exits: 0 complete/no alert, 1 heavy kill, unavailable required evidence or stale default coverage (after writing evidence), 2 invalid usage. -h/--help: help.`;
 
 export function resolveWorkerMemoryWindow(from: string | undefined, to: string | undefined, now = new Date()) {
@@ -137,6 +207,13 @@ function adaptiveQuery(kind: Exclude<Kind, "scheduled">) {
       sum{requests subrequests} avg{sampleInterval}
       quantiles{cpuTimeP50 durationP50 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 memoryUsageBytesP999}
     }}}}`;
+}
+function telemetryQuery(scriptName: string) {
+  return { filterCombination: "and", filters: [
+    { key: "$workers.scriptName", operation: "eq", type: "string", value: scriptName },
+    { key: "$workers.eventType", operation: "in", type: "string", value: "scheduled,cron" },
+    { key: "$metadata.type", operation: "eq", type: "string", value: "cf-worker-event" },
+  ] };
 }
 function intervalRange(rows: AdaptiveRow[]) {
   let minimum: number | null = null;
@@ -180,7 +257,8 @@ export function joinScheduledMemory(adaptiveRows: AdaptiveRow[], scheduledRows: 
     const scheduled = correlation === "unique-singleton" ? candidates[0]! : null;
     if (scheduled) {
       const plan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[scheduled.cron];
-      if (!plan) correlation = "registry-unmapped";
+      if (scheduled.scheduledDatetime === null) correlation = "scheduled-clock-unavailable";
+      else if (!plan) correlation = "registry-unmapped";
       else if (plan.worker !== role) correlation = "registry-owner-mismatch";
       else lane = {
         cron: scheduled.cron, scheduledDatetime: scheduled.scheduledDatetime, scheduleKey: plan.scheduleKey,
@@ -246,6 +324,152 @@ export function buildDailyLaneSamples(samples: JoinedRow[], scheduled: { role: R
   });
 }
 
+function expandCronField(field: string, size: number, minimum = 0): number[] | null {
+  const values = new Set<number>();
+  for (const part of field.split(",")) {
+    const [range, rawStep, ...rest] = part.split("/");
+    if (rest.length || range === undefined) return null;
+    const step = rawStep === undefined ? 1 : /^\d+$/.test(rawStep) ? Number(rawStep) : 0;
+    if (step < 1) return null;
+    const bounds = range === "*" ? [String(minimum), String(size - 1)] : range.split("-");
+    if (bounds.length > 2 || !bounds.every((bound) => /^\d+$/.test(bound))) return null;
+    const from = Number(bounds[0]);
+    const to = bounds.length === 2 ? Number(bounds[1]) : rawStep === undefined ? from : null;
+    if (to === null || from < minimum || from > to || to >= size) return null;
+    for (let value = from; value <= to; value += step) values.add(value);
+  }
+  return values.size ? [...values].sort((a, b) => a - b) : null;
+}
+
+/**
+ * Cloudflare gives Cron expressions with intervals below one hour the 30-second
+ * CPU class and hourly-or-longer expressions the 15-minute class. Only the
+ * minute/hour fields set that interval; day/month/weekday restrictions can only
+ * lengthen it, so this class is conservative (never under-reports headroom use).
+ */
+export function classifyCronCpuClass(expression: string): keyof typeof WORKER_CAPACITY_POLICY.cpuLimitUs | null {
+  const fields = expression.trim().split(/\s+/);
+  if (fields.length !== 5) return null;
+  const minutes = expandCronField(fields[0]!, 60);
+  const hours = expandCronField(fields[1]!, 24);
+  if (!minutes || !hours) return null;
+  const firings = [...new Set(hours.flatMap((hour) => minutes.map((minute) => hour * 60 + minute)))].sort((a, b) => a - b);
+  const gaps = firings.map((value, index) => index === 0 ? value + 1440 - firings[firings.length - 1]! : value - firings[index - 1]!);
+  return Math.min(...gaps) < 60 ? "sub-hourly" : "hourly-or-longer";
+}
+
+function nearestRank(sorted: readonly number[], q: number) {
+  return sorted[Math.max(0, Math.ceil(q * sorted.length) - 1)]!;
+}
+
+function triggerDue(cron: string, window: { from: string; to: string }): boolean | null {
+  const fields = cron.trim().split(/\s+/);
+  if (fields.length !== 5) return null;
+  const ranges = fields.map((field, i) => expandCronField(field, [60, 24, 32, 13, 8][i]!, i < 2 ? 0 : 1));
+  if (ranges.some((range) => range === null)) return null;
+  for (let at = Math.ceil(Date.parse(window.from) / 60_000) * 60_000; at < Date.parse(window.to); at += 60_000) {
+    const date = new Date(at);
+    const values = [date.getUTCMinutes(), date.getUTCHours(), date.getUTCDate(), date.getUTCMonth() + 1, date.getUTCDay() + 1];
+    if (ranges.every((range, i) => range!.includes(values[i]!))) return true;
+  }
+  return false;
+}
+
+/**
+ * Per-trigger CPU from invocation logs; sampled role/day memory is information
+ * only. Independently filtered Adaptive outcomes are the memory warn authority.
+ */
+export function buildCapacityHeadroom(input: {
+  window: { from: string; to: string };
+  roleDays: WorkerMemoryReport["roleDays"];
+  scheduled: { workerRole: Role; rows: ScheduledRow[]; complete: boolean; reason?: string }[];
+  kills: { workerRole: Role; requests: number; complete: boolean }[];
+}): CapacityHeadroom {
+  const policy = WORKER_CAPACITY_POLICY;
+  const triggers: CapacityTrigger[] = [];
+  for (const workerRole of ["heavy", "public"] as const) {
+    const source = input.scheduled.find((read) => read.workerRole === workerRole)
+      ?? { workerRole, rows: [], complete: false, reason: "cpu-source-missing" };
+    const due = new Map(configuredTriggers[source.workerRole].map((cron) => [cron, triggerDue(cron, input.window)]));
+    const byCron = new Map<string, ScheduledRow[]>();
+    for (const row of source.rows) {
+      if (due.get(row.cron) === false) continue;
+      const bucket = byCron.get(row.cron);
+      if (bucket) bucket.push(row);
+      else byCron.set(row.cron, [row]);
+    }
+    const crons = [...byCron.keys()].sort();
+    for (const [cron, expected] of due) if (expected !== false && !byCron.has(cron)) {
+      byCron.set(cron, []);
+      crons.push(cron);
+    }
+    for (const cron of crons) {
+      const rows = byCron.get(cron)!;
+      const sorted = rows.map((row) => row.cpuTimeUs).sort((a, b) => a - b);
+      const cpuClass = classifyCronCpuClass(cron);
+      const limitUs = cpuClass === null ? null : policy.cpuLimitUs[cpuClass];
+      const p99Us = sorted.length ? nearestRank(sorted, 0.99) : null;
+      const p99Ratio = limitUs === null || p99Us === null ? null : p99Us / limitUs;
+      const exceededCpu = rows.filter((row) => row.status === "exceededCpu").length;
+      const status: CapacityStatus = !source.complete || limitUs === null || due.get(cron) === null || !sorted.length ? "unavailable"
+        : exceededCpu > 0 ? "warn"
+          : sorted.length < policy.minSamples ? "insufficient-samples"
+            : p99Ratio! > policy.warnRatio ? "warn" : "ok";
+      triggers.push({ workerRole: source.workerRole, cron, cpuClass, limitUs, samples: sorted.length,
+        p50Us: sorted.length ? nearestRank(sorted, 0.5) : null, p99Us, maxUs: sorted[sorted.length - 1] ?? null, exceededCpu, p99Ratio, status,
+        reason: status === "warn" ? (exceededCpu > 0 ? "cpu-exceeded-cpu-observed" : "cpu-p99-over-warn-threshold")
+          : status === "unavailable" ? (!source.complete ? source.reason ?? "cpu-source-error" : due.get(cron) === null ? "trigger-schedule-unsupported" : limitUs === null ? "cpu-class-unknown" : source.rows.length ? "trigger-logs-absent" : "scheduled-logs-absent")
+            : status === "insufficient-samples" ? "insufficient-samples" : null });
+    }
+  }
+  const memory: CapacityMemory[] = (["heavy", "public"] as const).map((workerRole) => {
+    const roleDays = input.roleDays.filter((day) => day.workerRole === workerRole);
+    const incomplete = !roleDays.length || roleDays.some((day) => !day.queryComplete);
+    const kills = input.kills.find((source) => source.workerRole === workerRole);
+    const knownExceededMemory = kills?.requests ?? 0;
+    const killsComplete = kills?.complete ?? false;
+    const days = roleDays.filter((day) => day.queryComplete)
+      .flatMap((day) => day.rows.flatMap((row) => row.quantiles.memoryUsageBytesP99 === null ? [] : [{
+        dayUtc: day.from.slice(0, 10), from: day.from, to: day.to, status: row.dimensions.status, requests: row.sum.requests, p99Bytes: row.quantiles.memoryUsageBytesP99,
+      }]));
+    const p99Bytes = days.length ? Math.max(...days.map((day) => day.p99Bytes)) : null;
+    const p99Ratio = p99Bytes === null ? null : p99Bytes / policy.memoryLimitBytes;
+    const warn = knownExceededMemory > 0;
+    return { workerRole, basis: "max-of-cloudflare-sampled-role-day-p99", limitBytes: policy.memoryLimitBytes, days, p99Bytes, p99Ratio, knownExceededMemory, killsComplete,
+      status: warn ? "warn" : !killsComplete || incomplete || p99Bytes === null ? "unavailable" : "ok",
+      reason: warn ? "memory-exceeded-memory-observed" : !killsComplete ? "memory-kills-source-incomplete" : incomplete ? "role-day-source-incomplete" : p99Bytes === null ? "memory-p99-unavailable" : null };
+  });
+  const rows = [...triggers, ...memory];
+  return { status: rows.some((row) => row.status === "warn") ? "warn" : rows.some((row) => row.status !== "ok") ? "unavailable" : "ok",
+    warnRatio: policy.warnRatio, minSamples: policy.minSamples, limits: { cpuUs: policy.cpuLimitUs, memoryBytes: policy.memoryLimitBytes },
+    triggers, memory, reasons: [...new Set(rows.flatMap((row) => row.reason === null ? [] : [row.reason]))] };
+}
+
+function markdownCell(value: string) {
+  return value.replace(/[|<>`\r\n]/g, " ");
+}
+
+export function renderCapacityMarkdown(capacity: CapacityHeadroom, window: WorkerMemoryReport["window"]) {
+  const seconds = (us: number | null) => us === null ? "unavailable" : (us / 1e6).toFixed(2);
+  const mib = (bytes: number | null) => bytes === null ? "unavailable" : (bytes / 1048576).toFixed(2);
+  const ratio = (value: number | null) => value === null ? "unavailable" : `${(value * 100).toFixed(1)}%`;
+  const lines = ["## Worker capacity headroom", "",
+    `Verdict: **${capacity.status}**. CPU warns above ${(capacity.warnRatio * 100).toFixed(0)}% of its limit with at least ${capacity.minSamples} samples, or on any \`exceededCpu\` outcome. Unavailable CPU evidence keeps the aggregate unavailable unless another row warns. Memory warns only on observed Adaptive \`exceededMemory\` outcomes. Effective CPU limits are ${Math.round(capacity.limits.cpuUs["sub-hourly"] / 1e6)} s below a one-hour interval and ${Math.round(capacity.limits.cpuUs["hourly-or-longer"] / 1e6)} s hourly-or-longer (Cloudflare classes bounded by configured \`cpu_ms\`); the isolate memory limit is 128 MiB.`,
+    `Window (${window.mode}): ${window.from} ≤ scheduled invocation < ${window.to}. Triggers below ${capacity.minSamples} samples report their observed values without a headroom verdict.`,
+    `CPU source: Workers Logs invocation events, configured head sampling heavy=${configuredLogSampling.heavy * 100}%, public=${configuredLogSampling.public * 100}%. N and exceededCpu are observed log counts, never extrapolated; platform ingestion sampling may further reduce coverage. Query-complete does not mean population-complete.`,
+    `Reasons: ${capacity.reasons.join(", ") || "none"}.`, "",
+    "| Role | Cron trigger | CPU class | N | p50 s | p99 s | Max s | Limit s | p99 / limit | exceededCpu | Verdict |",
+    "|---|---|---|---|---|---|---|---|---|---|---|"];
+  for (const row of capacity.triggers) lines.push(`| ${row.workerRole} | ${markdownCell(row.cron || "all triggers")} | ${row.cpuClass ?? "unknown"} | ${row.samples} | ${seconds(row.p50Us)} | ${seconds(row.p99Us)} | ${seconds(row.maxUs)} | ${seconds(row.limitUs)} | ${ratio(row.p99Ratio)} | ${row.exceededCpu} | ${row.status}${row.reason ? ` (${row.reason})` : ""} |`);
+  lines.push("", "Memory p99 is information only: the highest Cloudflare sampled role/day `memoryUsageBytesP99` per script, never a pooled percentile or a verdict threshold. Sampled isolate memory is shared across concurrent invocations, not a phase high-water mark or a headroom measurement. exceededMemory is the known request subtotal from the independently filtered Adaptive query; incomplete reads remain unavailable.", "",
+    "| Role | Sampled days | Worst day | Outcome | Requests | p99 MiB | Limit MiB | p99 / limit | exceededMemory known | Kills complete | Verdict |", "|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const row of capacity.memory) {
+    const worst = row.days.length ? row.days.reduce((a, b) => b.p99Bytes > a.p99Bytes ? b : a) : null;
+    lines.push(`| ${row.workerRole} | ${row.days.length} | ${worst?.dayUtc ?? "unavailable"} | ${markdownCell(worst?.status ?? "unavailable")} | ${worst?.requests ?? "unavailable"} | ${mib(row.p99Bytes)} | ${mib(row.limitBytes)} | ${ratio(row.p99Ratio)} | ${row.knownExceededMemory} | ${row.killsComplete} | ${row.status}${row.reason ? ` (${row.reason})` : ""} |`);
+  }
+  return `${lines.join("\n")}\n`;
+}
+
 export function evaluateMemoryObservation(report: Pick<WorkerMemoryReport, "generatedAt" | "window" | "sources" | "exceededMemory">, now = new Date()): Verdict {
   observationEnvelopeSchema.parse(report);
   const end = Date.parse(report.window.to);
@@ -288,8 +512,9 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
   const data = new Map<string, (AdaptiveRow | ScheduledRow)[]>();
   async function read(role: Role, kind: Kind, bounds = window) {
     const scriptName = TARGETS[role];
-    const dataset = kind === "scheduled" ? "workersInvocationsScheduled" : "workersInvocationsAdaptive";
-    const query = kind === "scheduled" ? buildScheduledInvocationQuery(policy.queryRowLimit) : adaptiveQuery(kind);
+    const logs = kind === "scheduled";
+    const dataset = logs ? "workers-observability-telemetry" : "workersInvocationsAdaptive";
+    const query = logs ? JSON.stringify(telemetryQuery(scriptName)) : adaptiveQuery(kind);
     const rows: (AdaptiveRow | ScheduledRow)[] = [];
     const dailyRows: { from: string; to: string; rows: AdaptiveRow[] }[] = [];
     const failures: Failure[] = [];
@@ -299,6 +524,7 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
       let reason: string | null = !token?.trim() || !accountId?.trim() ? "analytics-auth-unavailable" : null;
       if (!reason && queries.length > policy.maxRequests) reason = "analytics-request-budget";
       if (!reason && clock() - started >= policy.collectionDeadlineSec * 1000) reason = "analytics-deadline";
+      if (!reason && logs && Date.parse(f) < now.getTime() - policy.logsRetentionSec * 1000) reason = "cpu-source-outside-retention";
       if (!reason) {
         await wait(Math.max(0, policy.minRequestSpacingMs - (clock() - lastRequest)));
         if (clock() - started >= policy.collectionDeadlineSec * 1000) reason = "analytics-deadline";
@@ -306,22 +532,38 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
       if (!reason) {
         try {
           lastRequest = clock();
-          const response = await fetchImpl("https://api.cloudflare.com/client/v4/graphql", {
+          const response = await fetchImpl(logs ? `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId!)}/workers/observability/telemetry/query` : "https://api.cloudflare.com/client/v4/graphql", {
             method: "POST", redirect: "error", signal: AbortSignal.timeout(Math.min(policy.requestTimeoutSec * 1000, Math.max(1, policy.collectionDeadlineSec * 1000 - (clock() - started)))),
             headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-            body: JSON.stringify({ query, variables: { ...record.variables, a: accountId } }),
+            body: JSON.stringify(logs ? { queryId: "pharos-capacity", dry: true, view: "events", limit: policy.telemetryRowLimit,
+              timeframe: { from: Date.parse(f), to: Date.parse(t) }, parameters: JSON.parse(query) } : { query, variables: { ...record.variables, a: accountId } }),
           });
-          if (!response.ok) { await response.arrayBuffer(); reason = response.status === 401 || response.status === 403 ? "analytics-auth-unavailable" : "analytics-http-unavailable"; }
+          if (!response.ok) { await response.arrayBuffer(); reason = response.status === 401 || response.status === 403 ? (logs ? "cpu-source-permission-denied" : "analytics-auth-unavailable") : "analytics-http-unavailable"; }
           else {
             const payload = await response.json();
+            let logRows: ScheduledRow[] | undefined;
+            if (logs) {
+              const parsed = telemetrySchema.safeParse(payload);
+              if (!parsed.success) reason = "cpu-source-schema-invalid";
+              else if ((parsed.data.result.statistics?.abr_level ?? 1) > 1) reason = "cpu-source-query-sampled";
+              else {
+                const events = parsed.data.result.events.events;
+                if (events.some((event) => event.$workers.scriptName !== scriptName || !(event.$workers.event?.cron ?? event.$metadata.trigger)?.trim())) reason = "cpu-source-schema-invalid";
+                else logRows = events.map((event) => ({
+                  datetime: new Date(event.timestamp).toISOString(),
+                  scheduledDatetime: event.$workers.event?.scheduledTime === undefined ? null : new Date(event.$workers.event.scheduledTime).toISOString(),
+                  cron: event.$workers.event?.cron ?? event.$metadata.trigger!, status: event.$workers.outcome, cpuTimeUs: event.$workers.cpuTimeMs * 1000,
+                }));
+              }
+            }
             if (Array.isArray(payload.errors) && payload.errors.length) reason = "analytics-graphql-error";
-            else {
+            else if (!reason) {
               const accounts = payload.data?.viewer?.accounts;
-              const raw: unknown[] | undefined = Array.isArray(accounts) && accounts.length === 1 ? accounts[0]?.[dataset] : undefined;
+              const raw: unknown[] | undefined = logs ? logRows : Array.isArray(accounts) && accounts.length === 1 ? accounts[0]?.[dataset] : undefined;
               if (!Array.isArray(raw)) reason = "analytics-schema-invalid";
               else {
                 record.returnedRows = raw.length;
-                if (raw.length >= policy.queryRowLimit) {
+                if (raw.length >= (logs ? policy.telemetryRowLimit : policy.queryRowLimit) || (logs && payload.result.events.count > raw.length)) {
                   const midpoint = Math.floor((Date.parse(f) + Date.parse(t)) / 2000) * 1000;
                   if (Date.parse(t) - Date.parse(f) <= policy.minSliceSec * 1000 || midpoint <= Date.parse(f) || midpoint >= Date.parse(t)) reason = "analytics-result-cap";
                   else {
@@ -358,6 +600,7 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
         } catch { reason = clock() - started >= policy.collectionDeadlineSec * 1000 ? "analytics-deadline" : "analytics-http-unavailable"; }
       }
       record.finishedAt = new Date(clock()).toISOString();
+      if (logs && reason && !reason.startsWith("cpu-source-")) reason = "cpu-source-error";
       record.reason = reason;
       if (reason) failures.push({ from: f, to: t, reason });
     }
@@ -365,7 +608,7 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
     const adaptive = kind === "scheduled" ? [] : rows as AdaptiveRow[];
     const source: SourceRead = { id: `${role}-${kind}-${bounds.from}`, workerRole: role, scriptName, kind, dataset, ...bounds,
       fetchedAt: new Date(clock()).toISOString(), status: !failures.length ? "available" : rows.length ? "partial" : "unavailable", queryComplete: !failures.length,
-      samplingBasis: kind === "scheduled" ? "scheduled-dataset" : "adaptive", returnedRows: failures.length ? null : rows.length, knownReturnedRows: rows.length, failures,
+      samplingBasis: logs ? "workers-logs-head-sampled" : "adaptive", returnedRows: failures.length ? null : rows.length, knownReturnedRows: rows.length, failures,
       samplingIntervalUnknownRows: adaptive.filter((row) => row.avg.sampleInterval === null).length, samplingIntervalRange: intervalRange(adaptive) };
     sources.push(source);
     if (kind !== "role-day") data.set(`${role}-${kind}`, rows);
@@ -402,30 +645,55 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
       return [...counts].map(([correlation, returnedRows]) => ({ workerRole, correlation, returnedRows }));
     }),
     exceededMemory: { groups: kills, complete, returnedGroups: complete ? kills.length : null, reportedRequests: complete ? knownRequests : null, knownReturnedGroups: kills.length, knownReportedRequests: knownRequests, reasons: [...new Set(killSources.flatMap((source) => source.failures.map((failure) => failure.reason)))] },
+    capacity: buildCapacityHeadroom({
+      window,
+      roleDays,
+      kills: (["heavy", "public"] as const).map((workerRole) => ({ workerRole, requests: kills.filter((row) => row.workerRole === workerRole).reduce((sum, row) => sum + row.adaptive.sum.requests, 0), complete: killSources.filter((source) => source.workerRole === workerRole).every((source) => source.queryComplete) })),
+      scheduled: (["heavy", "public"] as const).map((role) => {
+        const source = sources.find((source) => source.workerRole === role && source.kind === "scheduled")!;
+        return { workerRole: role, rows: data.get(`${role}-scheduled`) as ScheduledRow[], complete: source.queryComplete, reason: source.failures[0]?.reason };
+      }),
+    }),
     queries, verdict: { status: "unavailable", reasons: [], alertFrom: window.from, alertTo: window.to, heavyKillObserved: false, collectionIncomplete: true, freshnessFailed: false, observedHeavyRequests: null, observedPublicRequests: null, knownHeavyRequests: 0, knownPublicRequests: 0, exitCode: 1 },
-    caveats: ["All memory values are sampled V8 isolate memory shared across concurrent invocations, not phase peaks or headroom.", "Query-complete is not unsampled request-population completeness. Unknown values are null, never zero-filled.", "Filtered Adaptive exceededMemory is kill authority; Scheduled status can differ. Correlation is not a request ID.", "Current collector-registry candidate jobs are not historical execution or culprit proof.", "Public kills and incomplete public broad samples are report-only; revisit after one week of baseline.", "Small-N empirical P999 can equal the largest returned P50 sample. No population confidence is claimed.", "Adaptive coloCode is the serving location of the sampled invocation group; missing colo stays unknown and is never inferred from request.cf or a self-fetch echo."],
-    outputFiles: ["report.json", "report.md", "samples.ndjson", "exceeded-memory.ndjson", "queries.json"],
+    caveats: ["All memory values are sampled V8 isolate memory shared across concurrent invocations, not phase peaks or headroom.", "Query-complete is not unsampled request-population completeness. Unknown values are null, never zero-filled.", "Filtered Adaptive exceededMemory is kill authority; Workers Logs outcomes can differ. Correlation is not a request ID.", "Current collector-registry candidate jobs are not historical execution or culprit proof.", "Public kills are report-only in the trailing kill verdict; either role can warn capacity. Incomplete public broad samples remain report-only.", "Small-N empirical P999 can equal the largest returned P50 sample. No population confidence is claimed.", "Adaptive coloCode is the serving location of the sampled invocation group; missing colo stays unknown and is never inferred from request.cf or a self-fetch echo."],
+    outputFiles: ["report.json", "report.md", "capacity.md", "samples.ndjson", "exceeded-memory.ndjson", "queries.json"],
   };
   report.verdict = evaluateMemoryObservation(report, new Date(generatedAt));
   if (report.verdict.reasons.includes("coverage-stale")) { report.freshness.status = "stale"; report.freshness.reason = "coverage-stale"; }
   return report;
 }
 
+const capacitySchema = z.object({
+  status: z.enum(["ok", "warn", "unavailable"]), warnRatio: z.number().gt(0).lte(1), minSamples: z.number().int().nonnegative(),
+  limits: z.object({ cpuUs: z.object({ "sub-hourly": numeric, "hourly-or-longer": numeric }), memoryBytes: numeric }),
+  triggers: z.array(z.object({
+    workerRole: z.enum(["heavy", "public"]), cron: z.string(), cpuClass: z.enum(["sub-hourly", "hourly-or-longer"]).nullable(),
+    limitUs: metric, samples: numeric, p50Us: metric, p99Us: metric, maxUs: metric, exceededCpu: numeric, p99Ratio: metric,
+    status: z.enum(["ok", "warn", "unavailable", "insufficient-samples"]), reason: z.string().nullable(),
+  })),
+  memory: z.array(z.object({
+    workerRole: z.enum(["heavy", "public"]), basis: z.literal("max-of-cloudflare-sampled-role-day-p99"), limitBytes: numeric,
+    days: z.array(z.object({ dayUtc: z.string(), from: timestamp, to: timestamp, status: z.string(), requests: numeric, p99Bytes: numeric })),
+    p99Bytes: metric, p99Ratio: metric, knownExceededMemory: numeric, killsComplete: z.boolean(), status: z.enum(["ok", "warn", "unavailable"]), reason: z.string().nullable(),
+  })),
+  reasons: z.array(z.string()),
+});
 function validateReport(report: WorkerMemoryReport) {
-  observationEnvelopeSchema.extend({ schemaVersion: z.literal(1), verdict: z.object({ heavyKillObserved: z.boolean(), collectionIncomplete: z.boolean(), freshnessFailed: z.boolean(), exitCode: z.union([z.literal(0), z.literal(1)]), reasons: z.array(z.string()) }) }).parse(report);
+  observationEnvelopeSchema.extend({ schemaVersion: z.literal(1), capacity: capacitySchema, verdict: z.object({ heavyKillObserved: z.boolean(), collectionIncomplete: z.boolean(), freshnessFailed: z.boolean(), exitCode: z.union([z.literal(0), z.literal(1)]), reasons: z.array(z.string()) }) }).parse(report);
   for (const row of [...report.samples, ...report.exceededMemory.groups]) adaptiveSchema.parse(row.adaptive);
 }
 export function renderWorkerMemoryMarkdown(report: WorkerMemoryReport) {
   validateReport(report);
   const mib = (value: number | null | undefined) => value == null ? "unavailable" : (value / 1048576).toFixed(2);
-  const safe = (value: string) => value.replace(/[|<>`\r\n]/g, " ");
+  const safe = markdownCell;
   const lines = ["# Worker sampled isolate memory", "", `Verdict: **${report.verdict.status}**; exit ${report.verdict.exitCode}.`,
     `Window (${report.window.mode}): ${report.window.from} ≤ invocation < ${report.window.to}. Generated: ${report.generatedAt}; generation: ${report.reportId}.`,
     `Targets: heavy=${TARGETS.heavy}, public=${TARGETS.public}. Collector/registry SHA: ${report.sourceSha ?? "unavailable"}.`,
     `Freshness: ${report.freshness.status}; coverage-lag budget 8100s (gates default windows only), ingestion allowance 900s (not an ingestion guarantee). No report-age gate is applied.`,
-    `Reasons: ${report.verdict.reasons.join(", ") || "none"}.`, "", ...report.caveats.map((text) => `- ${text}`), "",
+    `Reasons: ${report.verdict.reasons.join(", ") || "none"}.`,
+    `Capacity headroom: **${report.capacity.status}**; per-trigger CPU and sampled memory tables are in \`capacity.md\`.`, "", ...report.caveats.map((text) => `- ${text}`), "",
     "## Independently filtered exceededMemory inventory", "", `Returned groups: ${report.exceededMemory.returnedGroups ?? "unavailable"}; known subtotal ${report.exceededMemory.knownReturnedGroups}. Reported requests: ${report.exceededMemory.reportedRequests ?? "unavailable"}; known subtotal ${report.exceededMemory.knownReportedRequests}.`,
-    "Full inventory: `exceeded-memory.ndjson` (bounded display below: first 100 groups). Lane descriptors are stored once in `report.json.laneDescriptors`, keyed by each row's `lane.scheduleKey`.", "", "| Invocation | Role | Colo | Requests / sample interval | Physical / logical lane | Correlation | Adaptive / Scheduled status |", "|---|---|---|---|---|---|---|"];
+    "Full inventory: `exceeded-memory.ndjson` (bounded display below: first 100 groups). Lane descriptors are stored once in `report.json.laneDescriptors`, keyed by each row's `lane.scheduleKey`.", "", "| Invocation | Role | Colo | Requests / sample interval | Physical / logical lane | Correlation | Adaptive / Logs outcome |", "|---|---|---|---|---|---|---|"];
   for (const row of report.exceededMemory.groups.slice(0, 100)) lines.push(`| ${row.adaptive.dimensions.datetime} | ${row.workerRole} | ${safe(row.adaptive.dimensions.coloCode ?? "unknown")} | ${row.adaptive.sum.requests} / ${row.adaptive.avg.sampleInterval ?? "unknown"} | ${safe(row.lane?.cron ?? "unattributed")} / ${safe(row.lane?.scheduleKey ?? "unattributed")} | ${row.correlation} | exceededMemory / ${safe(row.scheduledStatus ?? "unavailable")} |`);
   lines.push("", "## Lane/day/colo empirical matched-row P50 distribution (MiB)", "", "Basis: empirical-nearest-rank-of-matched-row-memoryUsageBytesP50. Outcome/version/colo strata and physical/logical rollups stay separate. Counts accompany every distribution; null is unavailable.", "", "| Day / role | Lane / rollup | Outcome / version / colo | N measured / matched | p50 | p90 | p99 | p999 | Complete |", "|---|---|---|---|---|---|---|---|---|");
   for (const row of report.laneDays) {
@@ -450,6 +718,7 @@ export async function writeWorkerMemoryReport(report: WorkerMemoryReport, outDir
   await Promise.all([
     writeFile(resolve(outDir, "report.json"), `${JSON.stringify(report, null, 2)}\n`),
     writeFile(resolve(outDir, "report.md"), renderWorkerMemoryMarkdown(report)),
+    writeFile(resolve(outDir, "capacity.md"), renderCapacityMarkdown(report.capacity, report.window)),
     writeFile(resolve(outDir, "samples.ndjson"), ndjson(report.samples)),
     writeFile(resolve(outDir, "exceeded-memory.ndjson"), ndjson(report.exceededMemory.groups)),
     writeFile(resolve(outDir, "queries.json"), `${JSON.stringify(report.queries, null, 2)}\n`),

@@ -13,7 +13,7 @@ import {
   computeDdrManifestBasePayloadHash,
   computeDdrPublicRowHash,
 } from "@shared/lib/depeg-resolver/public-contract";
-import { DDR_SNAPSHOT_CACHE_GENERATION as DDR_CACHE_ENVELOPE_GENERATION } from "../../lib/depeg-resolver-snapshot-cache";
+import { DDR_SNAPSHOT_CACHE_GENERATION as DDR_CACHE_ENVELOPE_GENERATION, loadDepegResolverSnapshot } from "../../lib/depeg-resolver-snapshot-cache";
 import { DDR_DURATION_BAND_META, DdrResponseSchema } from "@shared/types/depeg-resolver";
 import type {
   DdrPredictionMeta,
@@ -288,10 +288,20 @@ function snapshotResolvingAt(computedAt: number, medianResolveAt: number): DdrRe
 }
 
 describe("handleDepegResolver", () => {
+  it.each([[NaN, "invalid-timestamp"], [2_001_000, "future-timestamp"]] as const)("rejects cache clock %s", async (updatedAt, reason) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(2_000_000 * 1000);
+    const row = cacheRows(snapshot(1_998_000, 2_001_000))[0];
+    row.rows[0].updated_at = updatedAt;
+    const db = mockD1([row]);
+    expect(await loadDepegResolverSnapshot(db)).toEqual({ kind: "error", reason, updatedAt });
+    expect(db.getHistory().every(({ sql }) => !sql.includes("DELETE"))).toBe(true);
+  });
+
   it.each([
     ["FROM depeg_resolver_prediction_errata", "errata-overlay-read-failed"],
     ["FROM depeg_resolver_prediction_lock_state", "lock-deferral-overlay-read-failed"],
-  ])("discloses failed secondary read %s without discarding frozen history", async (match, reason) => {
+  ])("retains frozen history after failed read %s", async (match, reason) => {
     vi.useFakeTimers();
     const now = 2_000_000;
     vi.setSystemTime(now * 1000);
@@ -325,7 +335,7 @@ describe("handleDepegResolver", () => {
     expect(res.headers.get("Cache-Control")).not.toBe("no-store");
   });
 
-  it("serves stale v2 snapshots as degraded while preserving frozen duration", async () => {
+  it("retains frozen duration in degraded stale snapshots", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);
     const payload = snapshot(1_998_000, 1_999_000);
@@ -354,33 +364,20 @@ describe("handleDepegResolver", () => {
     expect(body.rows[0].frozen.duration.horizons).toHaveLength(1);
   });
 
-  it("flags a fresh cached row stale once its frozen median resolve time has passed", async () => {
+  it.each([[59, false], [61, true]] as const)("checks frozen duration at %ss", async (age, stale) => {
     const computedAt = 1_998_000;
     const payload = snapshotResolvingAt(computedAt, computedAt + 60);
     vi.useFakeTimers();
-    vi.setSystemTime((computedAt + 61) * 1000);
+    vi.setSystemTime((computedAt + age) * 1000);
     const db = mockD1(cacheRows(payload));
 
     const body = (await readJsonResponse(await handleDepegResolver(db), 200)) as DdrResponse;
 
     expect(body._meta.degradedReason).toBeNull();
-    expect(body.rows[0].live.stale).toBe(true);
-    expect(body.rows[0].live.degradedReason).toBe("duration-exceeded");
+    expect(body.rows[0].live.stale).toBe(stale);
+    expect(body.rows[0].live.degradedReason).toBe(stale ? "duration-exceeded" : null);
     if (body.rows[0].kind !== "prediction") throw new Error("expected prediction row");
     expect(body.rows[0].frozen.duration.medianResolveAt).toBe(computedAt + 60);
-  });
-
-  it("keeps a fresh cached row unstale until its frozen median resolve time passes", async () => {
-    const computedAt = 1_998_000;
-    const payload = snapshotResolvingAt(computedAt, computedAt + 60);
-    vi.useFakeTimers();
-    vi.setSystemTime((computedAt + 59) * 1000);
-    const db = mockD1(cacheRows(payload));
-
-    const body = (await readJsonResponse(await handleDepegResolver(db), 200)) as DdrResponse;
-
-    expect(body.rows[0].live.stale).toBe(false);
-    expect(body.rows[0].live.degradedReason).toBeNull();
   });
 
   it("marks stale closed rows as awaiting DDRR handoff", async () => {
@@ -441,7 +438,7 @@ describe("handleDepegResolver", () => {
     expect(body._meta.basePayloadHash).toBeNull();
   });
 
-  it("overlays pending lock deferrals with v3 trigger metadata and clears the base hash", async () => {
+  it("overlays v3 lock deferrals and clears the base hash", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);
     const computedAt = 1_998_000;
@@ -482,16 +479,10 @@ describe("handleDepegResolver", () => {
       },
     };
     const pendingRow: DdrV2ResponseRow = {
-      stablecoinId: "lusd-liquity",
-      symbol: "LUSD",
-      name: "Liquity USD",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      status: null,
+      ...predictionRow(computedAt),
       eventId: 2,
       incidentKey: "ddr2:22222222222222222222222222222222",
       startedAt: 1_910_000,
-      direction: "below",
       kind: "pending",
       prediction: pendingPrediction,
       frozen: null,
@@ -536,6 +527,8 @@ describe("handleDepegResolver", () => {
     const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
     expect(body._meta.basePayloadHash).toBeNull();
+    expect(body._meta.degraded).toBe(false);
+    expect(body._meta.degradedReason).toBeNull();
     expect(body._meta.readOverlay.degradedLockDeferralIncidentKeys).toContain("ddr2:22222222222222222222222222222222");
     expect(body.rows[0].kind).toBe("pending");
     if (body.rows[0].kind !== "pending") throw new Error("expected pending row");
@@ -698,20 +691,10 @@ describe("handleDepegResolver", () => {
       source: "pending" as const,
     };
     const pendingRow: DdrV2ResponseRow = {
-      stablecoinId: "lusd-liquity",
-      symbol: "LUSD",
-      name: "Liquity USD",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      status: null,
-      eventId: 1,
-      incidentKey: "ddr2:11111111111111111111111111111111",
-      startedAt: computedAt - 27 * 3600,
-      direction: "below",
+      ...predictionRow(computedAt),
       kind: "pending",
       prediction,
       frozen: null,
-      live: live(computedAt),
     };
 
     const response = await handleDepegResolver(mockD1(cacheRows(snapshot(computedAt, computedAt + 3600, [pendingRow]))));

@@ -4,9 +4,8 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
-import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { TELEGRAM_FAQ, TELEGRAM_PAGE_DESCRIPTION } from "./telegram-content";
+import { TELEGRAM_COVERAGE_SENTENCE, TELEGRAM_FAQ, TELEGRAM_PAGE_DESCRIPTION } from "./telegram-content";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { InstrumentPanel } from "./instrument-panel";
 import { AlertFamilies } from "./alert-families";
@@ -40,9 +39,7 @@ export default function PharosWatchBotPage() {
       breadcrumbName="PharosWatchBot"
       path="/pharoswatchbot/"
       title="PharosWatchBot"
-      leadParagraphs={[
-        `Stablecoin risk alerts in your Telegram chat, free for all ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins. Five alert types watch every peg. Urgent moves arrive live; smaller ones wait for one daily message.`,
-      ]}
+      leadParagraphs={[TELEGRAM_COVERAGE_SENTENCE]}
       headerSupplement={<PrimaryActions />}
     >
       <InstrumentPanel />

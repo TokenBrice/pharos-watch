@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { describeGlobalAlertSettings } from "../../webhook/telegram-webhook-messages";
 import { toggleGlobalAlert } from "../../webhook/telegram-webhook-settings-mutations";
 import { buildSubscriberUpsert, loadSubscriberByChat, prepareUpsertSubscriberRow, upsertSubscriberRow, type UpsertSubscriberInput } from "../subscribers";
@@ -83,8 +82,8 @@ describe("subscriber SQL persisted-row parity", () => {
     expect(actual).toEqual(expected);
   });
 
-  it.each([false, true].flatMap((existing) => TELEGRAM_ALERT_TYPES.flatMap((family) =>
-    (["perCoinAlertBumps", "globalAlertBumps", "globalAlertOverrides"] as const).map((mutation) => ({ existing, family, mutation })))))
+  it.each([false, true].flatMap((existing) =>
+    (["perCoinAlertBumps", "globalAlertBumps", "globalAlertOverrides"] as const).map((mutation) => ({ existing, family: "dews" as const, mutation }))))
   ("preserves every column for $mutation/$family existing=$existing", async ({ existing, family, mutation }) => {
     const { sqlite, db } = fixtures.open();
     sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1)").run();

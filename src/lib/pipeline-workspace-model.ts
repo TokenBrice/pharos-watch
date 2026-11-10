@@ -175,7 +175,7 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
       reserve.deferredCoins +
       reserve.staleCoins +
       reserve.missingCoins +
-      reserve.degradedCoins +
+      (reserve.healthDegradedCoins ?? reserve.degradedCoins) +
       reserve.errorCoins +
       reserve.corruptCoins +
       reserve.writeTimeoutUncertain;

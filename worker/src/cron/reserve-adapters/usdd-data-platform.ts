@@ -48,7 +48,7 @@ interface UsddCollateralHistoryResponse {
 const USDD_HISTORY_LOOKBACK_MS = 86_400_000;
 // The history join only upgrades freshness, so it gets one short attempt and
 // leaves the adapter deadline to the PSM reads that follow it.
-const USDD_HISTORY_TIMEOUT_MS = 5_000;
+export const USDD_HISTORY_TIMEOUT_MS = 5_000;
 
 const USDD_UNKNOWN_VAULT_SLICE_NAME = "Unknown / unmapped collateral vaults";
 

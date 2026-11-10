@@ -69,4 +69,42 @@ describe("stablecoin taxonomy hub pages", () => {
     expect(html).not.toContain("DeFi Stablecoins");
   });
 
+  it("compares non-wrapper cohort leaders rather than the first registry variants", async () => {
+    const compareIds = (html: string): string[] => {
+      const anchor = html.match(/<a[^>]*aria-label="Compare the leading [^"]+ stablecoins"[^>]*>/)?.[0];
+      expect(anchor).toBeDefined();
+      const href = anchor!.match(/href="([^"]+)"/)?.[1];
+      expect(href).toBeDefined();
+      expect(href!.startsWith("/compare")).toBe(true);
+      const hashIndex = href!.indexOf("#coins=");
+      expect(hashIndex).toBeGreaterThan(-1);
+      return href!.slice(hashIndex + "#coins=".length).split(",").map(decodeURIComponent);
+    };
+    const variantOfById = new Map(ACTIVE_STABLECOINS.map((coin) => [coin.id, coin.variantOf ?? null]));
+    // Derived invariant: the roster is the cohort's first four non-wrapper members in registry order.
+    const leadersOf = (page: { coins: readonly { id: string; variantOf?: string | null }[] }) =>
+      page.coins.filter((coin) => (coin.variantOf ?? null) === null).slice(0, 4).map((coin) => coin.id);
+
+    const cryptoHtml = renderToStaticMarkup(
+      await backingRoute.default({ params: Promise.resolve({ backing: "crypto" }) }),
+    );
+    expect(compareIds(cryptoHtml)).toEqual(leadersOf(BACKING_TAXONOMY_PAGES.find((page) => page.slug === "crypto")!));
+
+    const cefiDependentHtml = renderToStaticMarkup(
+      await governanceRoute.default({ params: Promise.resolve({ governance: "cefi-dependent" }) }),
+    );
+    expect(compareIds(cefiDependentHtml)).toEqual(
+      leadersOf(GOVERNANCE_TAXONOMY_PAGE_BY_SLUG.get("cefi-dependent")!),
+    );
+
+    const defiIds = compareIds(
+      renderToStaticMarkup(await governanceRoute.default({ params: Promise.resolve({ governance: "defi" }) })),
+    );
+    expect(defiIds).toContain("bold-liquity");
+    expect(defiIds).not.toContain("ybold-yearn");
+    for (const id of [...compareIds(cryptoHtml), ...compareIds(cefiDependentHtml), ...defiIds]) {
+      expect(variantOfById.get(id) ?? null).toBeNull();
+    }
+  });
+
 });

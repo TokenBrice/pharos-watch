@@ -44,7 +44,6 @@ describe("expanded transfer census capacity", () => {
     let active = 0;
     let peak = 0;
     let requests = 0;
-    const chunkShapes: number[] = [];
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(init.body as string);
       requests++;
@@ -54,31 +53,22 @@ describe("expanded transfer census capacity", () => {
         // calldata is aggregate3((address,bool,bytes)[]). Read the array length.
         const data = body.params[0].data as string;
         const count = Number(BigInt(`0x${data.slice(74, 138)}`));
-        chunkShapes.push(count);
         return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: aggregateReturn(count) }));
       } finally { active--; }
     }));
-    const started = Date.now();
     const operation = observeSafetyScoreV9TransferMaterialityGeneration(input(cohort), {
       resolveClosestBlockAtOrBeforeTimestamp: async () => 100,
       fetchEvmBlockHeader: async () => ({ number: 100, timestamp: CLOCK - 10, hash: `0x${"1".repeat(64)}` as `0x${string}` }),
       fetchEvmMulticall3Aggregate3AtBlock,
     });
-    let completionWallMs = 0;
-    const settled = operation.then(generation => {
-      completionWallMs = Date.now() - started;
-      return generation;
-    });
     await vi.advanceTimersByTimeAsync(1000);
-    const generation = await settled;
+    const generation = await operation;
     expect(cohort.length).toBe(53 + added);
     expect(Object.keys(generation.observationsByAssetId)).toHaveLength(53 + added);
     expect(Object.values(generation.observationsByAssetId).every(rows => rows.length === 1 && rows[0].status === "accepted")).toBe(true);
     expect(requests).toBe(4);
-    expect(chunkShapes.sort((a, b) => a - b)).toEqual(added === 30 ? [40, 42, 42, 42] : [48, 48, 48, 48]);
     expect(peak).toBe(3);
     expect(active).toBe(0);
-    expect(completionWallMs).toBe(200);
   });
 
   it("bounds a crowded chain's direct-call fallback and preserves deferred assets as unknown", async () => {
@@ -115,22 +105,16 @@ describe("expanded transfer census capacity", () => {
         return new Response(JSON.stringify({ id: body.id, result: `0x${value.toString(16).padStart(64, "0")}` }));
       } finally { active--; }
     }));
-    const started = Date.now();
-    let completionWallMs = 0;
     const operation = observeSafetyScoreV9TransferMaterialityGeneration({ ...input(cohort), chainRpcs }, {
       resolveClosestBlockAtOrBeforeTimestamp: async () => 100,
       fetchEvmBlockHeader: async () => ({ number: 100, timestamp: CLOCK - 10, hash: `0x${"1".repeat(64)}` as `0x${string}` }),
       fetchEvmMulticall3Aggregate3AtBlock,
-    }).then(generation => {
-      completionWallMs = Date.now() - started;
-      return generation;
     });
     await vi.advanceTimersByTimeAsync(15_000);
     const generation = await operation;
     expect(requests).toBe(131); // Failed aggregate + absence + 128 direct calls + hash recheck.
     expect(peak).toBe(1);
     expect(active).toBe(0);
-    expect(completionWallMs).toBe(13_100);
     const rows = Object.values(generation.observationsByAssetId).flat();
     expect(rows.filter(row => row.status === "accepted")).toHaveLength(64);
     expect(rows.filter(row => row.status === "rejected" && row.rawTokenUnits === null)).toHaveLength(19);

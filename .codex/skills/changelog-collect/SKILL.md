@@ -29,16 +29,15 @@ git log --no-merges --abbrev=8 --since="<from> 00:00:00 +0000" --until="<to> 23:
 
 Create `src/data/changelogs/<to>.json` with the `ChangelogEntry` shape. Before writing, confirm the Monday–Sunday range, non-overlap with neighbouring entries, field-note length, summary tags/descriptions, headline length, commit hashes, manifest cap, source-backed numbers, and existing methodology routes.
 
-Regenerate rather than hand-edit the barrel and refresh the Markdown fixture:
+Regenerate rather than hand-edit the barrel, then run the editorial and renderer checks; the fixed Markdown examples do not change for a new authored week:
 
 ```bash
 node --import tsx scripts/maintenance/generate-changelog-registry.ts
 npm run check:generated-artifacts -- --only=changelog-registry
 npm run check:editorial-content
-npm run refresh:markdown-fixtures
 npm run typecheck
 npm test -- scripts/__tests__/generate-changelog-registry.test.ts
 npm test -- scripts/__tests__/generate-markdown-exports.test.ts
 ```
 
-Run `npm run check:stablecoin-data` only when citing registry counts. Default handoff reports the path, headline, field notes, labels/tags, total commits, filtered count, and warnings, then stops for review. If `--commit` was authorized and checks pass, commit only the entry, generated barrel, and refreshed fixture as one changelog change; use `pharos-release-runner` for publication.
+Run `npm run check:stablecoin-data` only when citing registry counts. Default handoff reports the path, headline, field notes, labels/tags, total commits, filtered count, and warnings, then stops for review. If `--commit` was authorized and checks pass, commit only the entry as one changelog change; the barrel is an untracked bootstrap projection, and the fixed Markdown examples do not change for a new authored week; use `pharos-release-runner` for publication.

@@ -1,3 +1,6 @@
+import { assessPoolRejectionCoverage, getDexPoolRejectionCandidates } from "./process-pools";
+import type { PoolProcessingRejection } from "./process-pool-types";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata, type DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
@@ -16,6 +19,7 @@ import {
 } from "./orchestrator-drift";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { DexLiquidityBaselineReadFailure } from "@shared/types/status/yield-liquidity";
+import { LiquiditySourceMixSchema, type LiquiditySourceMix } from "@shared/types/market";
 
 
 type ParsedPreviousCronRow = {
@@ -44,6 +48,7 @@ type PreviousCoinTvlRow = {
   stablecoin_id: string;
   total_tvl_usd: number;
   protocol_tvl_json: string | null;
+  source_mix_json: string | null;
 };
 
 type CoverageClasses = {
@@ -147,6 +152,21 @@ function parsePreviousCronRows(
     });
   }
   return parsedRows;
+}
+
+/** `chain_tvl_json` is written by persistence; malformed/absent history skips the cohort comparison. */
+function parsePreviousChainTvl(value: string | null | undefined): Record<string, number> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const entries = Object.entries(parsed as Record<string, unknown>);
+    if (entries.length === 0) return null;
+    if (!entries.every(([, tvl]) => typeof tvl === "number" && Number.isFinite(tvl) && tvl >= 0)) return null;
+    return Object.fromEntries(entries) as Record<string, number>;
+  } catch {
+    return null;
+  }
 }
 
 /** Trailing window (productive published runs) used for the coverage/value guard baselines. */
@@ -272,6 +292,7 @@ export interface DexLiquidityPostScoreAnalysis {
     valueBaselineGlobalTvl: number | null;
     ignoredPersistedGlobalTvl: number | null;
     nearValueGuard: boolean;
+    poolRejectionCoverage: NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["poolRejectionCoverage"]>;
     coinTvlStepCount150: number;
     coinTvlStepCount25: number;
     coinTvlStepIds150: string[];
@@ -318,6 +339,7 @@ export interface DexLiquidityPostScoreAnalysis {
 export async function analyzeDexLiquidityPostScoring(params: {
   db: D1Database;
   currentGenerationId?: string;
+  poolRejections?: PoolProcessingRejection[];
   scoreResults: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
@@ -361,9 +383,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .first<{ cnt: number }>(),
     params.db
       .prepare(
-        `SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+        `SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
-      .first<{ total_tvl_usd: number | null; updated_at: number | null }>(),
+      .first<{ total_tvl_usd: number | null; chain_tvl_json: string | null; updated_at: number | null }>(),
     params.db
       .prepare(
         `SELECT coverage_class, COUNT(*) as cnt
@@ -416,7 +438,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }>(),
     params.db
       .prepare(
-        `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json
+        `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json, r.source_mix_json
          FROM dex_liquidity_run_rows r
          JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
          WHERE g.state = 'published' AND r.stablecoin_id != '__global__'
@@ -459,8 +481,85 @@ export async function analyzeDexLiquidityPostScoring(params: {
   const previousWatchlistRows = watchlistRead.status === "fulfilled" ? watchlistRead.value.results : [];
   const previousCoinTvlRows = coinTvlRead.status === "fulfilled" ? coinTvlRead.value.results : [];
   const coinTvlStepBaselineUnavailable = coinTvlRead.status === "rejected";
+  const previousCoinIds = new Set((previousCoinTvlRows ?? []).map((row) => row.stablecoin_id));
+  let previousSourceMixById: Map<string, LiquiditySourceMix> | null =
+    coinTvlRead.status === "fulfilled" && coinTvlRead.value.success &&
+    previousCoinIds.size === ACTIVE_IDS.size && [...ACTIVE_IDS].every((id) => previousCoinIds.has(id))
+      ? new Map() : null;
+  for (const row of previousCoinTvlRows ?? []) {
+    if (previousSourceMixById == null) break;
+    // Published zero-TVL placeholders have no source mix or retained liquidity.
+    if (row.source_mix_json == null && row.total_tvl_usd === 0) continue;
+    try {
+      const mix = LiquiditySourceMixSchema.parse(JSON.parse(row.source_mix_json ?? ""));
+      const entries = Object.values(mix);
+      const mixTvl = entries.reduce((sum, entry) => sum + entry.tvlUsd, 0);
+      // Family grouping and pool-by-pool totals have different floating-point accumulation.
+      const tolerance = 2 * Number.EPSILON * Math.max(1, row.total_tvl_usd) *
+        Math.max(1, entries.reduce((sum, entry) => sum + entry.poolCount, 0));
+      if (!Number.isFinite(row.total_tvl_usd) || row.total_tvl_usd < 0 || !Number.isFinite(mixTvl) ||
+        Math.abs(mixTvl - row.total_tvl_usd) > tolerance ||
+        entries.some((entry) => entry.tvlUsd < 0 || !Number.isSafeInteger(entry.poolCount) || entry.poolCount < 0)) {
+        previousSourceMixById = null;
+        break;
+      }
+      previousSourceMixById.set(row.stablecoin_id, mix);
+    } catch {
+      previousSourceMixById = null;
+      break;
+    }
+  }
 
   const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows ?? []);
+
+  const previousProductive = parsedPreviousCronRows.find(isProductiveCronRow)?.metadata;
+  const previousRejectionCoverage = previousProductive?.sourceCoverage.poolRejectionCoverage;
+  const carriedRejectionCoverage = previousRejectionCoverage == null || (previousRejectionCoverage.reason === null
+    && Object.keys(previousRejectionCoverage.baselineTvlUsdByCoin).length === 0) ? undefined : {
+    ...previousRejectionCoverage,
+    baselineTvlUsdByCoin: Object.fromEntries(Object.entries(previousRejectionCoverage.baselineTvlUsdByCoin)
+      .filter(([id]) => ACTIVE_IDS.has(id))),
+  };
+  const rejectionBaselineBeforeSec = carriedRejectionCoverage?.baselineBeforeSec ?? Math.floor(Date.now() / 1000);
+  let rejectionBaseline = coinTvlRead.status === "fulfilled" && coinTvlRead.value.success
+    && (previousCoinTvlRows ?? []).every((row) => isFiniteNonNegative(row.total_tvl_usd))
+    && ((previousCoinTvlRows?.length ?? 0) > 0 || (globalRead.status === "fulfilled" && previousGlobalRow == null))
+    ? new Map((previousCoinTvlRows ?? []).map((row) => [row.stablecoin_id, row.total_tvl_usd])) : null;
+  const attributedRejections = getDexPoolRejectionCandidates(params.poolRejections ?? []).some((row) => Object.keys(row.tvlUsdByStablecoin ?? {}).length > 0);
+  // At rollout the latest publication may already exclude the rejected pools.
+  // Only a retained accepted, rejection-free generation can recover that lost anchor.
+  if (Object.values(carriedRejectionCoverage?.baselineTvlUsdByCoin ?? {}).some((tvl) => tvl === null)
+    || (attributedRejections && !Object.keys(carriedRejectionCoverage?.baselineTvlUsdByCoin ?? {}).length
+      && (previousProductive == null || (previousProductive.poolRejectionMateriality?.candidateRejectedPoolCount ?? previousProductive.rowsDropped) !== 0))) {
+    rejectionBaseline = null;
+    try {
+      const clean = await runWithOverloadRetry(() => params.db.prepare(
+        `SELECT stablecoin_id, total_tvl_usd FROM dex_liquidity_run_rows
+         WHERE stablecoin_id != '__global__' AND generation_id = (
+           SELECT g.generation_id FROM cron_runs c
+           JOIN dex_liquidity_publication_generations g
+             ON g.generation_id = json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.persistence.generationId')
+           WHERE c.job = 'sync-dex-liquidity' AND c.status IN ('ok', 'degraded') AND g.state = 'published'
+             AND c.started_at < ?
+             AND COALESCE(
+               json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.poolRejectionMateriality.candidateRejectedPoolCount'),
+               json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.rowsDropped')
+             ) = 0
+             AND json_extract(CASE WHEN json_valid(c.metadata) THEN c.metadata ELSE '{}' END, '$.persistence.skipped') = 0
+           ORDER BY c.started_at DESC LIMIT 1
+         )`,
+      ).bind(rejectionBaselineBeforeSec).all<{ stablecoin_id: string; total_tvl_usd: number }>());
+      if (clean.success && clean.results.length > 0 && clean.results.every((row) => isFiniteNonNegative(row.total_tvl_usd))) {
+        rejectionBaseline = new Map(clean.results.map((row) => [row.stablecoin_id, row.total_tvl_usd]));
+      }
+    } catch (err) {
+      logWorkerEventArgs("handler", "warn", "[dex-liquidity] rejection coverage baseline unavailable:", toErrorMessage(err));
+    }
+  }
+  const poolRejectionCoverage = assessPoolRejectionCoverage(
+    params.poolRejections ?? [], rejectionBaseline,
+    new Map([...params.scoreResults].map(([id, score]) => [id, score.tvl])), carriedRejectionCoverage, rejectionBaselineBeforeSec,
+  );
 
   // Compare observed coverage on the price-only ticker policy. The current
   // published rows can be normalized exactly from their scored source mix;
@@ -728,6 +827,11 @@ export async function analyzeDexLiquidityPostScoring(params: {
       [...(previousTopCoverageRows ?? []), ...(previousCoinTvlRows ?? [])]
         .map((row) => [row.stablecoin_id, row.total_tvl_usd]),
     ),
+    previousChainTvl: parsePreviousChainTvl(previousGlobalRow?.chain_tvl_json),
+    currentChainTvl: params.globalAgg.chainTvl,
+    previousSourceFamilyPools: previousDriftBaseline.summary?.retainedPoolCountBySourceFamily ?? null,
+    currentSourceFamilyPools: retainedPoolCountBySourceFamily,
+    previousSourceMixById,
   });
 
   return {
@@ -768,6 +872,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       valueBaselineGlobalTvl: valueBaseline.valueBaselineGlobalTvl,
       ignoredPersistedGlobalTvl: valueBaseline.ignoredPersistedGlobalTvl,
       nearValueGuard,
+      poolRejectionCoverage,
       coinTvlStepCount150,
       coinTvlStepCount25,
       coinTvlStepIds150,
@@ -802,7 +907,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
       globalProtocolOverCapUsd: params.diagnostics.globalProtocolOverCapUsd,
       protocolTvlQuarantine: { ...params.diagnostics.protocolTvlQuarantine },
       qualityDriftFlags: driftSummary.qualityDriftFlags,
+      cohortDriftFlags: driftSummary.cohortDriftFlags,
       qualityDriftCandidates: driftSummary.qualityDriftCandidates,
+      qualityDriftAccepted: driftSummary.qualityDriftAccepted,
       qualityDriftRebaselined: driftSummary.qualityDriftRebaselined,
       qualityDriftSeverity: driftSummary.qualityDriftSeverity,
       qualityDriftMetrics: driftSummary.qualityDriftMetrics,

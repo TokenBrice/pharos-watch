@@ -74,6 +74,24 @@ describe("stability index view-model", () => {
     expect(lanes.find((lane) => lane.key === "breadth")).toMatchObject({ value: 0, delta: 0, pressurePct: 0 });
   });
 
+  it("uses the last completed daily sample for beam-dimmer deltas", () => {
+    const todayMidnight = Date.parse("2026-11-01T00:00:00Z") / 1000;
+    const yesterdayMidnight = todayMidnight - 86_400;
+    const componentData = buildPsiComponentData(
+      [
+        { date: todayMidnight },
+        { date: yesterdayMidnight, components: { severity: 12, breadth: 4, stressBreadth: 1, trend: 0.2 } },
+      ],
+      { computedAt: todayMidnight + 12 * 3600, components: { severity: 15, breadth: 6, stressBreadth: 2, trend: 0.5 } },
+    );
+    const lanes = buildPsiBeamDimmers(componentData);
+
+    expect(lanes.find((lane) => lane.key === "severity")?.delta).toBe(3);
+    expect(lanes.find((lane) => lane.key === "breadth")?.delta).toBe(2);
+    expect(lanes.find((lane) => lane.key === "stressBreadth")?.delta).toBe(1);
+    expect(lanes.find((lane) => lane.key === "trend")?.delta).toBe(0.3);
+  });
+
   it("does not display unavailable fallback components as calm pressure or improving momentum", () => {
     const lanes = buildPsiBeamDimmers([
       { severity: 4, breadth: 2, stressBreadth: 1, trend: -2 },

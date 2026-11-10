@@ -14,12 +14,7 @@ import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-
 import { CONTRACT_CONFIGS } from "./blacklist-contracts";
 import { getDeferredBlacklistCoverage } from "./blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "./blacklist-current-balances";
-import {
-  BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
-  BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
-  queryBlacklistGapMetrics,
-  type BlacklistGapMetrics,
-} from "./blacklist-gaps";
+import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
 import {
   BLACKLIST_STABLECOINS,
   BlacklistSummaryResponseSchema,
@@ -44,10 +39,15 @@ import { loadBlacklistReconciliationStatus } from "./blacklist-reconciliation-st
 import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+  BLACKLIST_DERIVED_GENERATION_KEY,
 } from "./blacklist-cache-keys";
-import { claimCadenceBucket, failCadenceBucket } from "./cadence-bucket";
+import { claimCadenceBucket, failCadenceBucket, type CadenceBucketClaim } from "./cadence-bucket";
+import { captureBlacklistSummaryFence, type BlacklistSummaryFence } from "./blacklist-cache-invalidation";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { reconcileBlacklistIdentities } from "./blacklist/identity-reconciliation";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "./blacklist/shared";
+import { loadBlacklistConfigStates } from "../cron/blacklist/sync-support";
+import { getOldestBlacklistSuccessAt } from "../cron/blacklist/state";
 
 type BlacklistSummaryPayload = BlacklistSummaryResponse &
   Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
@@ -258,7 +258,13 @@ function buildFreezeLedgerMeta(
 
   for (const snapshot of currentBalances.values()) {
     const category = sourceCategory(snapshot.source);
-    const freshness = classifyLedgerFreshness(snapshot.observedAt, now);
+    // A failed first read has no successful clock: observed_at is the attempt
+    // time, not evidence the ledger row was observed.
+    const observedAt = snapshot.lastSuccessfulObservedAt
+      ?? (snapshot.status === "resolved" && (snapshot.amountNative != null || snapshot.amountUsd != null)
+        ? snapshot.observedAt
+        : null);
+    const freshness = classifyLedgerFreshness(observedAt, now);
     incrementCount(statusDistribution, snapshot.status);
     incrementCount(sourceDistribution, snapshot.source);
     sourceCategoryCounts[category]++;
@@ -270,8 +276,10 @@ function buildFreezeLedgerMeta(
     if (snapshot.lastErrorClass) incrementCount(lastErrorClassDistribution, snapshot.lastErrorClass);
     if (snapshot.configKey || snapshot.contractAddress) scopedRows++;
     else legacyRows++;
-    oldestObservedAt = oldestObservedAt == null ? snapshot.observedAt : Math.min(oldestObservedAt, snapshot.observedAt);
-    newestObservedAt = newestObservedAt == null ? snapshot.observedAt : Math.max(newestObservedAt, snapshot.observedAt);
+    if (observedAt != null) {
+      oldestObservedAt = oldestObservedAt == null ? observedAt : Math.min(oldestObservedAt, observedAt);
+      newestObservedAt = newestObservedAt == null ? observedAt : Math.max(newestObservedAt, observedAt);
+    }
   }
 
   return {
@@ -489,14 +497,26 @@ async function readBlacklistSummarySnapshot(db: D1Database): Promise<CachedBlack
   return parseBlacklistSummarySnapshot(row.value);
 }
 
-async function writeBlacklistSummarySnapshot(db: D1Database, snapshot: CachedBlacklistSummarySnapshot): Promise<void> {
-  await db
+async function writeBlacklistSummarySnapshot(
+  db: D1Database,
+  snapshot: CachedBlacklistSummarySnapshot,
+  fence: BlacklistSummaryFence,
+  claim?: CadenceBucketClaim,
+): Promise<boolean> {
+  const result = await runWithOverloadRetry(() => db
     .prepare(
-      `/* blacklist-summary-snapshot-write */ INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      `/* blacklist-summary-snapshot-write */ INSERT INTO cache (key, value, updated_at)
+        SELECT ?, ?, ? WHERE (SELECT value FROM cache WHERE key = ?) IS ?
+        ${claim ? `AND (SELECT value FROM cache WHERE key = ?) IS ?
+          AND EXISTS (SELECT 1 FROM cache WHERE key = ? AND value = ? AND updated_at > unixepoch() - ?)` : ""}
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     )
-    .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot), snapshot.materializedAt)
-    .run();
+    .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot), snapshot.materializedAt,
+      BLACKLIST_DERIVED_GENERATION_KEY, fence.generation,
+      ...(claim ? [BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, fence.summaryValue,
+        claim.key, claim.serializedClaim, BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC] : []))
+    .run(), 3, undefined, { waitOutResourceWindow: true });
+  return result.meta.changes === 1;
 }
 
 async function buildBlacklistSummaryPayload(
@@ -596,10 +616,8 @@ async function buildBlacklistSummaryPayload(
     loadBlacklistCurrentBalanceMap(db),
 
     queryLatestEventTypeHistory(db),
-    queryBlacklistGapMetrics(db, now, {
-      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
-      cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
-    }),
+    // Gap cache writers are unfenced; a delayed pre-invalidation upsert cannot be summary evidence.
+    runWithOverloadRetry(() => queryBlacklistGapMetrics(db, now), 3, undefined, { waitOutResourceWindow: true }),
     loadBlacklistReconciliationStatus(db),
   ]);
   if (aggregateRow == null) throw new Error("blacklist-summary-aggregate-missing");
@@ -755,9 +773,11 @@ async function buildBlacklistSummaryPayload(
 async function buildAndWriteBlacklistSummarySnapshot(
   db: D1Database,
   now: number,
+  fence: BlacklistSummaryFence,
   freshnessTs?: number | null,
   behindConfigs?: BlacklistSummaryRefresh["behindConfigs"],
-): Promise<CachedBlacklistSummarySnapshot> {
+  claim?: CadenceBucketClaim,
+): Promise<{ snapshot: CachedBlacklistSummarySnapshot; written: boolean }> {
   const boundedFreshnessTs = freshnessTs == null
     ? freshnessTs
     : Math.min(now, Math.max(0, Math.floor(freshnessTs)));
@@ -775,8 +795,8 @@ async function buildAndWriteBlacklistSummarySnapshot(
       ? built.payload
       : { ...built.payload, refresh: { observedAt: now, behindConfigs } },
   };
-  await writeBlacklistSummarySnapshot(db, snapshot);
-  return snapshot;
+  const written = await writeBlacklistSummarySnapshot(db, snapshot, fence, claim);
+  return { snapshot, written };
 }
 
 export async function materializeBlacklistSummarySnapshot(
@@ -784,9 +804,12 @@ export async function materializeBlacklistSummarySnapshot(
   now = Math.floor(Date.now() / 1000),
   freshnessTs: number | null = now,
   behindConfigs?: BlacklistSummaryRefresh["behindConfigs"],
-): Promise<{ written: boolean }> {
-  await buildAndWriteBlacklistSummarySnapshot(db, now, freshnessTs, behindConfigs);
-  return { written: true };
+  fence?: BlacklistSummaryFence,
+): Promise<{ written: boolean; reason?: "superseded" }> {
+  const { written } = await buildAndWriteBlacklistSummarySnapshot(
+    db, now, fence ?? await captureBlacklistSummaryFence(db), freshnessTs, behindConfigs,
+  );
+  return written ? { written } : { written, reason: "superseded" };
 }
 async function materializeBlacklistSummaryForRequest(
   db: D1Database,
@@ -801,7 +824,16 @@ async function materializeBlacklistSummaryForRequest(
     });
     if (claim.kind === "claimed") {
       try {
-        return await buildAndWriteBlacklistSummarySnapshot(db, now);
+        const fence = await captureBlacklistSummaryFence(db);
+        const incumbent = fence.summaryValue == null ? null : parseBlacklistSummarySnapshot(fence.summaryValue);
+        if (incumbent) return incumbent;
+        const { configStates } = await loadBlacklistConfigStates(db);
+        const { oldestSuccessAt } = getOldestBlacklistSuccessAt(configStates);
+        const result = await buildAndWriteBlacklistSummarySnapshot(db, now, fence, oldestSuccessAt, undefined, claim.claim);
+        if (result.written) return result.snapshot;
+        const winner = await readBlacklistSummarySnapshot(db);
+        if (winner) return winner;
+        throw new Error("blacklist-summary-superseded");
       } finally {
         await failCadenceBucket(db, claim.claim, now).catch(() => false);
       }
@@ -836,7 +868,7 @@ export const handleBlacklistSummary = async (db: D1Database): Promise<Response> 
     return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot));
   } catch (error) {
     if (error instanceof Error
-      && (error.message === "blacklist-summary-aggregate-missing" || error.message === "blacklist-gap-aggregate-missing")) {
+      && ["blacklist-summary-aggregate-missing", "blacklist-gap-aggregate-missing", "blacklist-summary-superseded"].includes(error.message)) {
       return errorResponse(503, error.message, { noStore: true });
     }
     throw error;

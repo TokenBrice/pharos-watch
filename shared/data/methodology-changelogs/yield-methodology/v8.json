@@ -1,5 +1,37 @@
 [
   {
+    "version": "8.54",
+    "title": "Layer 3 Skips Lending-Venue Pools",
+    "date": "2026-11-02",
+    "effectiveAt": 1793750400,
+    "summary": "A Layer-3 base-symbol match whose DeFiLlama project is an authored lending venue is now skipped entirely. Layer 3 never adopts a lending-venue pool: venue opportunities come only from lending discovery with its admission rules, and an issuer's own pool inside such a project must be pinned in the native pool registry.",
+    "impact": [
+      "Layer-3 matches in `LAYER3_EXCLUDED_VENUE_PROJECTS` (`LENDING_PROTOCOL_ALLOWLIST` plus reviewed non-discovery venues such as Project 0) are dropped before resolution bookkeeping, so they cannot publish under the coin's native label and cannot bypass lending discovery's admission rules (safety score, APY floor, collision and source blocks, measured size).",
+      "EURSAFO's $810k Morpho Blue market, sUSD's $60k Project 0 market and apyUSD's $784k Kamino market no longer publish rows. apxUSD still publishes no yield row because its projected native return has no measured TVL.",
+      "A skipped match no longer sets `hasAnySource` or counts toward the all-zero test, so the coin's price-derived native fallback still runs when the venue pool was its only DeFiLlama match.",
+      "OpenEden's USDO rebase pool is pinned in `YIELD_POOL_MAP` (`85d9b9d3-3ca0-410c-bde0-d8ab07fe21c3`, the BSC pool it published before) and keeps its native rebase identity. The Ethereum pool is the larger instrument and a curation follow-up. A reviewed vault share whose own venue (`YIELD_VARIANT_CHILD_VENUE_PROTOCOLS`) is the pool project is not skipped.",
+      "PYS weights, benchmarks, source-risk formulas, APY values and published yield history are unchanged. Other pinned native and configured variant pools keep their curated label, type and deployment place.",
+      "Planned activation is provisionally 2026-11-04 00:00 UTC (1793750400), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "8.53",
+    "title": "Native Unmeasured Depth Is Not Source-Posture Evidence Debt",
+    "date": "2026-11-02",
+    "effectiveAt": 1793664000,
+    "summary": "A native yield source with no measured venue TVL no longer moves its row to Watch as evidence debt; the depth lens still reports it as n/a. External opportunities with unknown depth remain evidence debt.",
+    "impact": [
+      "`classifyYieldSourcePosture()` treats `sourceDepthLens === \"unknown\"` as evidence debt only for external rows. Native rows carry `Native · depth n/a` under the v8.40 semantics, so their unmeasured depth is not a failed read and no longer adds a Watch driver; `/yield` posture membership, posture filter counts and source-risk card labels follow that classification.",
+      "External `lending-opportunity`, `fixed-yield` and `structured-tranche` rows with unknown depth still read Watch. A native row that measures venue TVL but lacks the supply-relative depth ratio remains unmeasured, and every other posture driver still applies.",
+      "PYS weights, source-risk penalties, depth-band thresholds, depth gating, benchmarks and published APY history are unchanged. This is a presentation-membership correction following v8.40; no value is rewritten or deleted.",
+      "Planned activation is provisionally 2026-11-03 00:00 UTC (1793664000), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.52",
     "title": "USDGO Reclassified as Non-Yield-Bearing",
     "date": "2026-10-25",

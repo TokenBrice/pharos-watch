@@ -83,6 +83,26 @@ const DexDeploymentSupplyCoverageSchema = z.strictObject({
 
 export type DexDeploymentSupplyCoverage = z.infer<typeof DexDeploymentSupplyCoverageSchema>;
 
+/**
+ * The v10.42 directional peg input. `activeDepegPeakBpsById` keeps its
+ * any-direction semantics as the summary's consistency witness; this object
+ * carries the premium-weighted score and the discount-only peak the caps read.
+ * Ids and the `premiumWeight` admission check are asserted by
+ * {@link assertSafetyScoreV9DirectionalPegConsistency} and the fact-set entry.
+ */
+const SafetyScoreV9DirectionalPegSchema = z.strictObject({
+  premiumWeight: z.number().finite().min(0).max(1),
+  // One row per captured peg row: a marker classifies an absent row, null is an
+  // observed "no score" (insufficient data), never a missing one.
+  pegScoreById: z.record(z.string().min(1), z.number().int().min(0).max(100).nullable()),
+  // Max |peak| over open, audit-eligible, below-peg events, or null when every
+  // open event is a premium. Keyed by exactly the `activeDepegPeakBpsById` ids
+  // so an absent entry stays distinguishable from an observed "no discount".
+  activeDiscountPeakBpsById: z.record(z.string().min(1), z.number().finite().positive().nullable()),
+});
+
+export type SafetyScoreV9DirectionalPeg = z.infer<typeof SafetyScoreV9DirectionalPegSchema>;
+
 export function createFixedInputPayloadFields<
   TPublicationHealth extends z.ZodType,
   TChainCirculating extends z.ZodType,
@@ -112,6 +132,10 @@ export function createFixedInputPayloadFields<
     navPriceById: z.record(z.string(), NavPriceObservationSchema).optional(),
     exitOutputPriceById: z.record(z.string(), ExitOutputPriceObservationSchema).optional(),
     activeDepegPeakBpsById: z.record(z.string(), z.number().finite().nonnegative()),
+    // v10.42 asymmetric depeg penalties. Optional, never defaulted: absent means
+    // the capture predates premium weighting, so its peg facts, peg source
+    // generation and base-input identity replay exactly as captured.
+    safetyScoreV9DirectionalPeg: SafetyScoreV9DirectionalPegSchema.optional(),
     redemptionBackstopMap: RedemptionBackstopMapSchema,
     ...options.afterRedemptionBackstopMap,
     liveReserveMap: z.record(z.string(), z.array(ReserveSliceSchema)),
@@ -195,12 +219,71 @@ interface CommonFixedInput {
   };
   aggregateCirculatingById: Record<string, { circulating: Record<string, number>; observedAtSec?: number | null }>;
   chainCirculatingById?: Record<string, Record<string, { current: number }>>;
+  activeDepegPeakBpsById: Record<string, number>;
+  safetyScoreV9DirectionalPeg?: SafetyScoreV9DirectionalPeg;
   safetyScoreV9SupplyAttributionById: Record<string, SafetyScoreV9SupplyAttribution>;
   evidenceJournalById: Record<string, Array<{ completedAtSec: number }>>;
   supplyAttributionJournalById: Record<string, Array<{ completedAtSec: number }>>;
   pipelineGapByAssetId?: PipelineGapByAssetId;
   pegProvenanceById: Record<string, z.infer<typeof SafetyScoreV9PegProvenanceSummarySchema>>;
   pegDataById: Record<string, z.infer<typeof PegSummaryCoinSchema>>;
+}
+
+/**
+ * Cross-field admission for the optional directional peg input.
+ *
+ * A legacy capture omits the object entirely. A capture that carries it must
+ * describe exactly the peg rows it captured (`pegScoreById`), and its discount
+ * peaks must be keyed by exactly the any-direction open-event peaks it
+ * published — each null (premiums only) or no larger than its own
+ * any-direction peak (R1/R2 producer consistency). The weighted score never
+ * claims a score where the summary reports insufficient data, and never ranks
+ * below the summary: premium weighting can only lift the score.
+ */
+function assertSafetyScoreV9DirectionalPegConsistency(input: {
+  pegDataById: Readonly<Record<string, { pegScore?: number | null }>>;
+  activeDepegPeakBpsById: Readonly<Record<string, number>>;
+  safetyScoreV9DirectionalPeg?: SafetyScoreV9DirectionalPeg;
+}): void {
+  const directionalPeg = input.safetyScoreV9DirectionalPeg;
+  if (directionalPeg === undefined) return;
+  assertSameIds(
+    Object.keys(directionalPeg.pegScoreById),
+    Object.keys(input.pegDataById),
+    "V9 directional peg score rows",
+  );
+  assertSameIds(
+    Object.keys(directionalPeg.activeDiscountPeakBpsById),
+    Object.keys(input.activeDepegPeakBpsById),
+    "V9 directional discount peak rows",
+  );
+  for (const [assetId, discountPeakBps] of Object.entries(directionalPeg.activeDiscountPeakBpsById)) {
+    if (discountPeakBps === null) continue;
+    if (discountPeakBps <= 0) {
+      throw new Error(
+        `V9 directional discount peak for ${assetId} must be positive; received ${discountPeakBps}`,
+      );
+    }
+    const anyDirectionPeakBps = input.activeDepegPeakBpsById[assetId]!;
+    if (discountPeakBps > anyDirectionPeakBps) {
+      throw new Error(
+        `V9 directional discount peak ${discountPeakBps} for ${assetId} exceeds its any-direction peak ${anyDirectionPeakBps}`,
+      );
+    }
+  }
+  for (const [assetId, directionalScore] of Object.entries(directionalPeg.pegScoreById)) {
+    const summaryScore = input.pegDataById[assetId]!.pegScore ?? null;
+    if ((directionalScore === null) !== (summaryScore === null)) {
+      throw new Error(
+        `V9 directional peg score for ${assetId} is ${directionalScore} but the captured peg row is ${summaryScore}; score availability must match`,
+      );
+    }
+    if (directionalScore !== null && summaryScore !== null && directionalScore < summaryScore) {
+      throw new Error(
+        `V9 directional peg score ${directionalScore} for ${assetId} is below its captured peg row ${summaryScore}; premium weighting can only lift the score`,
+      );
+    }
+  }
 }
 
 interface CommonConsistencyOptions {
@@ -234,6 +317,7 @@ export function assertCommonFixedInputConsistency(
     if (options.dexActiveRowsLabel) {
       assertSameIds(Object.keys(input.dexLiqMap), input.activeAssetIds, options.dexActiveRowsLabel);
     }
+    assertSafetyScoreV9DirectionalPegConsistency(input);
     return;
   }
 
@@ -392,6 +476,7 @@ interface CommonNormalizationInput {
   navPriceById?: Record<string, unknown>;
   exitOutputPriceById?: Record<string, unknown>;
   activeDepegPeakBpsById: Record<string, unknown>;
+  safetyScoreV9DirectionalPeg?: SafetyScoreV9DirectionalPeg;
   bluechipMap?: Record<string, unknown>;
   resolvedBlacklistStatuses?: Record<string, unknown>;
   liveReserveMap: Record<string, unknown>;
@@ -420,6 +505,17 @@ export function normalizeCommonFixedInputRecords<T extends CommonNormalizationIn
     ...(input.navPriceById ? { navPriceById: sortedInputRecord(input.navPriceById) } : {}),
     ...(input.exitOutputPriceById ? { exitOutputPriceById: sortedInputRecord(input.exitOutputPriceById) } : {}),
     activeDepegPeakBpsById: sortedInputRecord(input.activeDepegPeakBpsById),
+    ...(input.safetyScoreV9DirectionalPeg
+      ? {
+          safetyScoreV9DirectionalPeg: {
+            premiumWeight: input.safetyScoreV9DirectionalPeg.premiumWeight,
+            pegScoreById: sortedInputRecord(input.safetyScoreV9DirectionalPeg.pegScoreById),
+            activeDiscountPeakBpsById: sortedInputRecord(
+              input.safetyScoreV9DirectionalPeg.activeDiscountPeakBpsById,
+            ),
+          },
+        }
+      : {}),
     ...(input.bluechipMap ? { bluechipMap: sortedInputRecord(input.bluechipMap) } : {}),
     ...(input.resolvedBlacklistStatuses
       ? { resolvedBlacklistStatuses: sortedInputRecord(input.resolvedBlacklistStatuses) }

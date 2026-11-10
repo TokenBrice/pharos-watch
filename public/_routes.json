@@ -11,6 +11,7 @@
     "/api/index.txt",
     "/api/__next.*.txt",
     "/critical-css-loader.js",
+    "/portfolio-bootstrap.js",
     "/media/*",
     "/openapi.json",
     "/favicon.ico",

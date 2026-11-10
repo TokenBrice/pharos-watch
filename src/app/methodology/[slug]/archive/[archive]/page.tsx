@@ -39,6 +39,7 @@ export default async function MethodologyArchivePage({ params }: ArchivePageProp
       title={`${history.changelog.markdownTitle}: ${archive} archive`}
       lead={<>Historical release evidence. <Link href={history.changelog.publicPath} className="pharos-prose-link">Return to current versions and the complete history index.</Link></>}
       entries={history.entries}
+      archiveShard
       sections={history.changelog.key === "safety-score" ? [] : undefined}
     >
       {history.changelog.key === "safety-score" ? <ScoringChangelogContent entries={history.entries} /> : undefined}

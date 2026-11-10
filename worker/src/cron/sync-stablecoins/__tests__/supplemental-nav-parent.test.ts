@@ -10,11 +10,14 @@ import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import sbold from "@shared/data/stablecoins/coins/sbold-k3-capital.json";
 import ybold from "@shared/data/stablecoins/coins/ybold-yearn.json";
 import bold from "@shared/data/stablecoins/coins/bold-liquity.json";
+import susdc from "@shared/data/stablecoins/coins/susdc-spark-v1.json";
+import armusdcs from "@shared/data/stablecoins/coins/armusdcs-wintermute.json";
+import usdc from "@shared/data/stablecoins/coins/usdc-circle.json";
 
 const mocks = vi.hoisted(() => ({ resolveNav: vi.fn(), onChainMcap: vi.fn(), evmCall: vi.fn() }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [syzusd, yzusd, sbold, ybold, bold].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
+  stablecoins: [syzusd, yzusd, sbold, ybold, bold, susdc, armusdcs, { ...usdc, contracts: [] }].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
 }));
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
   ...(await importOriginal<typeof FetchRetry>()),
@@ -56,13 +59,10 @@ describe("fiat-cg NAV supply valuation from an admitted same-run parent (K-033)"
     }));
   });
 
-  it("requests the DefiLlama-owned parent once", () => {
+  it("admits syzUSD supply from its batched direct CoinGecko parent", async () => {
     expect(FIAT_CG_NAV_PARENT_METAS.map((meta) => [meta.id, meta.geckoId])).toEqual([
-      ["yzusd-yuzu", "yuzu-usd"], ["bold-liquity", "liquity-bold-2"],
+      ["yzusd-yuzu", "yuzu-usd"], ["bold-liquity", "liquity-bold-2"], ["usdc-circle", "usd-coin"],
     ]);
-  });
-
-  it("admits syzUSD supply on a first run from a fresh direct CoinGecko parent", async () => {
     const [asset] = await fetchFiatCoinGeckoTokens(parentQuote(60));
     expect(parentPassed().get("yzusd-yuzu")).toEqual({
       id: "yzusd-yuzu", name: yzusd.name, symbol: yzusd.symbol, price: 1, priceSource: "coingecko",
@@ -73,15 +73,20 @@ describe("fiat-cg NAV supply valuation from an admitted same-run parent (K-033)"
     expect(asset!.price ?? null).toBeNull();
   });
 
-  it("prefers the fresh current parent over a delayed previous row without mutating the previous map", async () => {
+  it("keeps each vault's parent admission separate", async () => {
     const delayed: PeggedAsset = { id: "yzusd-yuzu", name: "Yuzu USD", symbol: "YZUSD", price: 0.99,
       priceSource: "coingecko", priceConfidence: "single-source", priceObservedAt: nowSec() - 1200 };
-    const previous = new Map([["yzusd-yuzu", delayed]]);
-    await fetchFiatCoinGeckoTokens(parentQuote(900), undefined, undefined, undefined, undefined, previous);
+    const composite: PeggedAsset = { ...delayed, id: usdc.id, priceSource: "coingecko+kraken", priceConfidence: "high", priceObservedAt: nowSec() - 60 };
+    const previous = new Map([["yzusd-yuzu", delayed], [usdc.id, composite]]);
+    await fetchFiatCoinGeckoTokens({ ...parentQuote(900), "usd-coin": { usd: 1, last_updated_at: nowSec() - 60 } }, undefined, undefined, undefined, undefined, previous);
     expect(parentPassed()).not.toBe(previous);
     expect(parentPassed().get("yzusd-yuzu")).toMatchObject({ price: 1, priceObservedAt: nowSec() - 900 });
     expect(previous.get("yzusd-yuzu")).toBe(delayed);
-    expect(previous.size).toBe(1);
+    const callFor = (id: string) => mocks.resolveNav.mock.calls.find(([childId]) => childId === id)!;
+    expect(callFor(armusdcs.id)[1]).toBe(previous);
+    expect(callFor(armusdcs.id)[5]).toBe(previous);
+    expect(callFor(susdc.id)[1].get(usdc.id)).toMatchObject({ price: 1, priceConfidence: "single-source" });
+    expect(previous.get(usdc.id)).toBe(composite);
   });
 
   it("passes the unchanged previous map when no current parent is admitted", async () => {
@@ -156,7 +161,7 @@ describe.each(["sbold-k3-capital", "ybold-yearn"])("%s same-run BOLD supply valu
     if (state !== "missing") previous.set(bold.id, {
       id: bold.id, name: bold.name, symbol: bold.symbol, price: 1, priceSource: "coingecko",
       priceConfidence: state === "fallback" ? "fallback" : "high",
-      priceObservedAt: nowSec() - (state === "stale" ? 901 : 60), priceObservedAtMode: "upstream",
+      priceObservedAt: nowSec() - (state === "stale" ? 1801 : 60), priceObservedAtMode: "upstream",
       priceSyncedAt: nowSec(),
     });
     const assets = await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined, undefined, previous);

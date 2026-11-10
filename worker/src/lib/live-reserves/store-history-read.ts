@@ -1,8 +1,10 @@
 import { LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
 import { LIVE_RESERVE_WARNING_EFFECT_VALUES } from "@shared/types/live-reserve-core";
-import type { ReserveSyncAdapterReliability, ReserveSyncStatus } from "@shared/types/live-reserves";
+import { ReserveSyncAdapterReliabilitySchema, type ReserveSyncAdapterReliability, type ReserveSyncStatus } from "@shared/types/live-reserves";
+import { getCache, setCache } from "../db-cache";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import { parseJsonObject } from "../json-parse";
+import { logWorkerEvent } from "../structured-log";
 import { LIVE_RESERVE_HISTORY_RETENTION_SEC } from "./store-shared";
 
 /**
@@ -138,10 +140,55 @@ export async function loadLatestNonSkippedReserveAttempt(
     try {
       const warnings: unknown = JSON.parse(row.warnings);
       if (!Array.isArray(warnings) || warnings.some((warning: unknown) =>
-        warning == null || typeof warning !== "object" || !("code" in warning) || typeof warning.code !== "string")) return null;
+        warning == null || typeof warning !== "object" || !("code" in warning) || typeof warning.code !== "string"
+        || ("effect" in warning && (warning.effect === "fatal"
+          || !LIVE_RESERVE_WARNING_EFFECT_VALUES.some((effect) => effect === warning.effect))))) return null;
     } catch { return null; }
   }
   return mapTimelineRow(row);
+}
+
+const RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY = "reserve-sync-reliability-rollup:v1";
+const RESERVE_SYNC_RELIABILITY_ROLLUP_MAX_AGE_SEC = 3_600;
+
+interface ReliabilityRollupCachePayload {
+  computedAt: number;
+  windowSec: number;
+  rows: ReserveSyncAdapterReliability[];
+}
+
+function parseReliabilityRollupCache(value: string): ReliabilityRollupCachePayload | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const { computedAt, windowSec, rows } = parsed as Record<string, unknown>;
+  if (typeof computedAt !== "number" || !Number.isFinite(computedAt)) return null;
+  if (typeof windowSec !== "number" || !Number.isFinite(windowSec)) return null;
+  const parsedRows = ReserveSyncAdapterReliabilitySchema.array().safeParse(rows);
+  return parsedRows.success ? { computedAt, windowSec, rows: parsedRows.data } : null;
+}
+
+/** A cache read fails open: the rollup is recomputed rather than left unavailable. */
+async function readReliabilityRollupCache(
+  db: D1Database,
+  now: number,
+  windowSec: number,
+): Promise<ReserveSyncAdapterReliability[] | null> {
+  let cached: { value: string; updatedAt: number } | null;
+  try {
+    cached = await getCache(db, RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY);
+  } catch {
+    return null;
+  }
+  if (cached == null) return null;
+  const payload = parseReliabilityRollupCache(cached.value);
+  if (payload == null || payload.windowSec !== windowSec) return null;
+  const ageSec = now - payload.computedAt;
+  return ageSec >= 0 && ageSec < RESERVE_SYNC_RELIABILITY_ROLLUP_MAX_AGE_SEC ? payload.rows : null;
 }
 
 /**
@@ -152,12 +199,17 @@ export async function loadLatestNonSkippedReserveAttempt(
  * window, including breaker-skipped rows) and is `null` only when an adapter
  * has no attempts. The result feeds the admin reserve card and is cached with
  * the hourly status snapshot.
+ *
+ * The scan costs ~1 s over 30 days of attempts, so the result is memoized in
+ * the `cache` table and rescanned at most hourly.
  */
 export async function loadReserveSyncReliabilityRollup(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   windowSec = LIVE_RESERVE_HISTORY_RETENTION_SEC,
 ): Promise<ReserveSyncAdapterReliability[]> {
+  const memoized = await readReliabilityRollupCache(db, now, windowSec);
+  if (memoized !== null) return memoized;
   const cutoff = now - windowSec;
   const result = await runWithOverloadRetry(() => db
     .prepare(
@@ -226,7 +278,7 @@ export async function loadReserveSyncReliabilityRollup(
       JSON.stringify(LIVE_RESERVE_WARNING_EFFECT_VALUES),
     )
     .all<ReliabilityRow>());
-  return (result.results ?? []).map((row) => {
+  const rows = (result.results ?? []).map((row) => {
     const attempts = row.attempts;
     return {
       adapterKey: row.adapter_key,
@@ -239,4 +291,18 @@ export async function loadReserveSyncReliabilityRollup(
       successRate: attempts > 0 ? (row.ok_count + row.degraded_by_design_count) / attempts : null,
     };
   });
+  const payload: ReliabilityRollupCachePayload = { computedAt: now, windowSec, rows };
+  try {
+    await setCache(db, RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    // A memo write is an optimisation: the freshly computed rows are still the answer.
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "reserve_sync_reliability_rollup_cache_write_failed",
+      message: "Reserve sync reliability rollup cache write failed",
+      error,
+    });
+  }
+  return rows;
 }

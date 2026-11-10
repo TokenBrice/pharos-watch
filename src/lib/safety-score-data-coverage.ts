@@ -14,8 +14,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { formatProseList, formatShortDate } from "@shared/lib/format";
 import { formatV9ReasonCodeLabel } from "./safety-score-reason-code-labels";
 
-export { formatV9ReasonCodeLabel } from "./safety-score-reason-code-labels";
-
 /**
  * Documentation-reason labels are policy-owned (`semantic.evidence.documentation`
  * `reasons[].publicLabel`) so the classification and its public wording ship
@@ -162,6 +160,12 @@ function assetListLabel(assetIds: readonly string[]): string {
 }
 
 /**
+ * Producer-side cap on `publicationHealth.reasons`, one row per affected asset.
+ * Consumers must read a full list as a lower bound, never as the whole census.
+ */
+export const V9_PUBLICATION_HOLD_REASON_LIMIT = 24;
+
+/**
  * Collapses the publication hold reasons into reader-facing sentences. Producer
  * failures repeat per asset and per reason code, so they fold into a single
  * asset-scoped sentence. Assessment detail is never echoed: it carries internal
@@ -181,8 +185,11 @@ export function describeDataCoverageHoldCauses(
     ),
   ].sort();
   if (producerAssetIds.length > 0) {
+    // The producer caps this list at one row per affected asset, so a full list
+    // cannot prove the census is complete.
+    const bounded = reasons.length >= V9_PUBLICATION_HOLD_REASON_LIMIT;
     causes.push(
-      `${producerAssetIds.length} ${producerAssetIds.length === 1 ? "asset" : "assets"} (${assetListLabel(producerAssetIds)}) rely on a data feed that did not deliver.`,
+      `${bounded ? "At least " : ""}${producerAssetIds.length} ${producerAssetIds.length === 1 ? "asset" : "assets"} (${assetListLabel(producerAssetIds)}) rely on a data feed that did not deliver.`,
     );
   }
   for (const reason of reasons) {
@@ -193,6 +200,9 @@ export function describeDataCoverageHoldCauses(
     if (reason.code === "live-reserves-unavailable") causes.push("Live reserve data is unavailable.");
     if (reason.code === "live-reserves-coverage-below-floor") {
       causes.push("Live reserve coverage is below the publication floor.");
+    }
+    if (reason.code === "v9-public-materialization-pending") {
+      causes.push("The newest ratings publication is still pending.");
     }
     if (reason.code === "assessment-failed") causes.push("The latest ratings update could not be verified.");
     if (reason.code === "coverage-floor-failed") {

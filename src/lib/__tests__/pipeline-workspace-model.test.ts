@@ -53,6 +53,25 @@ describe("pipeline quality model", () => {
     });
   });
 
+  it("caps the public blacklist gap ratio at Watch because only the server classification can prove Critical", () => {
+    const base = withReadyQuality();
+    const data = degraded(base, {
+      dataQuality: {
+        ...base.dataQuality,
+        blacklistMissingAmounts: 5,
+        blacklistMissingRatio: 0.05,
+        blacklistRecentMissingAmounts: 0,
+      },
+    });
+
+    expect(buildPipelineQualityModel(data).rows.find((row) => row.id === "blacklist-gaps")).toMatchObject({
+      state: "watch",
+      // The public ratio can never prove Critical, so the Stale column names
+      // the watch cap instead of implying an attainable critical tier.
+      staleThreshold: ">=2% (watch cap)",
+    });
+  });
+
   it("keeps inactive on-chain ratio gates Unknown instead of reporting healthy zeroes", () => {
     const base = withReadyQuality();
     const data = degraded(base, {
@@ -209,19 +228,21 @@ describe("pipeline storage capacity", () => {
 
 describe("pipeline coverage summaries", () => {
   it.each([
-    ["healthy", 0, "watch"],
-    ["degraded", 0, "watch"],
-    ["stale", 0, "critical"],
-    ["healthy", 1, "critical"],
-  ] as const)("uses aggregate reserve health %s and %i conservation mismatches", (status, criticalCount, severity) => {
+    ["healthy", 0, "watch", undefined, 31],
+    ["degraded", 0, "watch", undefined, 31],
+    ["stale", 0, "critical", undefined, 31],
+    ["healthy", 1, "critical", undefined, 32],
+    ["healthy", 0, "watch", 0, 2],
+    ["healthy", 0, "watch", 3, 5],
+  ] as const)("uses aggregate reserve health %s and %i conservation mismatches", (status, criticalCount, severity, healthDegradedCoins, issueCount) => {
     const base = makeHealthyStatusResponse();
     const data = degraded(base, {
-      reserveComposition: makeReserveComposition({ status, errorCoins: 2, degradedCoins: 29 }),
+      reserveComposition: makeReserveComposition({ status, errorCoins: 2, degradedCoins: 29, healthDegradedCoins }),
       reserveDrift: [],
       mintBurnReconciliation: { checkedAt: base.timestamp, criticalCount, rows: [] },
     });
     expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "reserves"))
-      .toMatchObject({ severity, issueCount: 31 + criticalCount });
+      .toMatchObject({ severity, issueCount });
   });
 
   it.each([

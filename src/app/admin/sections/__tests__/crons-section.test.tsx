@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import type { CronStatus, CronStatusDetail, StatusCronDetailResponse, StatusResponse } from "@shared/types";
 import { CronsSection, type CronGroup } from "@/app/admin/sections/crons-section";
 import { CronDetailPanel } from "@/app/admin/sections/cron-detail-panel";
@@ -10,13 +12,19 @@ import { buildCronWorkbenchModel } from "@/lib/cron-workbench-model";
 import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { useStatusCronDetail } from "@/hooks/admin-api-hooks";
 
-vi.mock("@/hooks/admin-api-hooks", () => ({
-  useStatusCronDetail: vi.fn(),
-}));
+vi.mock("@/hooks/admin-api-hooks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/admin-api-hooks")>();
+  // Wrapped, not replaced: mockReset() falls back to the real hook for the request-gating cases.
+  return { ...actual, useStatusCronDetail: vi.fn(actual.useStatusCronDetail) };
+});
+
+const queryClients: QueryClient[] = [];
 
 afterEach(() => {
   cleanup();
+  for (const client of queryClients.splice(0)) client.clear();
   window.history.replaceState(null, "", "/");
+  vi.unstubAllGlobals();
   vi.mocked(useStatusCronDetail).mockReset();
 });
 
@@ -220,6 +228,22 @@ describe("CronsSection", () => {
     expect(within(detail).queryByText(/not measured on this runtime/i)).toBeNull();
   });
 
+  it("prints one copyable tail command per Worker lane the job runs on", () => {
+    renderCrons({
+      groups: [makeGroup([["cron-sentinel", makeCronStatus({ healthy: false, runs: [] })]])],
+    });
+
+    const actions = within(screen.getByRole("complementary", { name: /Details for/ })).getByRole("region", {
+      name: "Actions",
+    });
+    expect(
+      within(actions).getByText("wrangler tail stablecoin-api --format pretty --search cron-sentinel"),
+    ).toBeTruthy();
+    expect(
+      within(actions).getByText("wrangler tail stablecoin-heavy --format pretty --search cron-sentinel"),
+    ).toBeTruthy();
+  });
+
   it("surfaces running lease, stale artifacts, and orphaned progress evidence", () => {
     const cron = makeCronStatus({
       healthy: false,
@@ -417,4 +441,92 @@ describe("CronsSection", () => {
     expect(screen.queryByText(/not measured on this runtime/i)).toBeNull();
   });
 
+});
+
+// These cases exercise the real useStatusCronDetail (restored by mockReset) behind a QueryClient.
+describe("cron detail request gating", () => {
+  const JOBS = ["sync-blacklist", "sync-stablecoins"] as const;
+
+  function renderWorkbench() {
+    const data = makeHealthyStatusResponse();
+    const cron: CronStatus = {
+      runs: [{ startedAt: data.timestamp - 60, durationMs: 200, status: "error" }],
+      confirmedOutputAt: null,
+      healthy: false,
+      expectedIntervalSec: 60,
+    };
+    const group: CronGroup = {
+      key: "quarter-hourly",
+      title: "15-minute slot",
+      badge: "*/15",
+      description: "Core ingestion jobs.",
+      entries: JOBS.map((job) => [job, cron]),
+    };
+    const fetchSpy = mockFetch(JOBS.map((job) => ({
+      match: (request: Request) => {
+        const url = new URL(request.url);
+        return url.pathname === "/api/admin/status-cron-detail" && url.searchParams.get("job") === job;
+      },
+      body: {
+        timestamp: data.timestamp,
+        job,
+        cron: {
+          ...cron,
+          runs: [{ ...cron.runs[0]!, error: `Full detail for ${job}`, metadata: { selectedJob: job } }],
+        },
+        sectionErrors: {},
+      } satisfies StatusCronDetailResponse,
+    })), { requireMatch: true });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClients.push(queryClient);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CronsSection data={data} cronGroups={[group]} />
+      </QueryClientProvider>,
+    );
+    return fetchSpy;
+  }
+
+  it("fetches nothing before selection and requests each selected job only once", async () => {
+    const fetchSpy = renderWorkbench();
+    // The disabled detail state now explicitly includes resource evidence.
+    expect(screen.getByText("Select this job to load run history, metadata and resource evidence. Resource evidence not requested.")).toBeTruthy();
+    expect(screen.queryByText(/Loading run history and metadata/)).toBeNull();
+    // Allow mounted query effects and another event-loop tick to run before asserting network silence.
+    await act(async () => {
+      const tick = Promise.withResolvers<void>();
+      setTimeout(tick.resolve, 0);
+      await tick.promise;
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(`cron-row-${JOBS[0]}`));
+    await screen.findByText(`Full detail for ${JOBS[0]}`);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(new URL(fetchSpy.getHistory()[0]!.url).searchParams.get("job")).toBe(JOBS[0]);
+
+    fireEvent.click(screen.getByTestId(`cron-row-${JOBS[0]}`));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId(`cron-row-${JOBS[1]}`));
+    await screen.findByText(`Full detail for ${JOBS[1]}`);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.getHistory().map(({ url }) => new URL(url).searchParams.get("job"))).toEqual([...JOBS]);
+
+    fireEvent.click(screen.getByTestId(`cron-row-${JOBS[0]}`));
+    await screen.findByText(`Full detail for ${JOBS[0]}`);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    await act(async () => { window.history.replaceState(null, "", "/"); });
+    await waitFor(() => expect(screen.getByText("Select this job to load run history, metadata and resource evidence. Resource evidence not requested.")).toBeTruthy());
+    expect(screen.queryByText(`Full detail for ${JOBS[0]}`)).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("loads only the explicitly deep-linked job", async () => {
+    window.history.replaceState(null, "", `?job=${JOBS[1]}`);
+    const fetchSpy = renderWorkbench();
+    await screen.findByText(`Full detail for ${JOBS[1]}`);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(new URL(fetchSpy.getHistory()[0]!.url).searchParams.get("job")).toBe(JOBS[1]);
+  });
 });

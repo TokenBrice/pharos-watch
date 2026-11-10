@@ -1022,9 +1022,34 @@ describe("handleYieldHistory", () => {
       status: "stale", reason: "publication-cutoff-unavailable", assessedAt: nowSec,
       freshBudgetSec: 21600, degradedBudgetSec: 43200,
     });
+    // The missing cutoff is unavailable authority, not an epoch-sized age.
+    expect(body._meta?.updatedAt).toBeNull();
+    expect(body._meta?.ageSeconds).toBeNull();
+    expect(res.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(res.headers.get("X-Data-Updated-At")).toBe("unknown");
+    expect(res.headers.get("X-Data-Freshness")).toBe("stale");
+    expect(res.headers.get("X-Data-Freshness-Reason")).toBe("publication-cutoff-unavailable");
+    expect(res.headers.get("Warning") ?? "").not.toMatch(/\d+s old/);
+    expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
     expect(historyQuery?.binds).toContain(Number.MAX_SAFE_INTEGER);
+  });
+
+  it("leaves the methodology as-of unestablished with no history and no cutoff", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
+      { match: "as started_at FROM cron_runs", rows: [], first: null },
+      { match: "yield_history", rows: [] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = YieldHistoryResponseSchema.parse(await readJsonResponse(res, 200));
+
+    expect(body.history).toEqual([]);
+    expect(body.methodology.asOf).toBeNull();
   });
 
   it("surfaces a warning and uses cache metadata when the cron timestamp lookup fails", async () => {

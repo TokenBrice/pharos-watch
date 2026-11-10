@@ -22,6 +22,10 @@ export interface ParsedYieldBenchmarkMeta extends YieldBenchmarkMeta {
   lastMarketRecordDate: string | null;
   lastMarketFetchedAt: number | null;
   lastMarketSource: string | null;
+  /** Out-of-band level retained by the previous run; the next identical level confirms a shift. */
+  lastRejectedMarketRate?: number | null;
+  lastRejectedMarketRecordDate?: string | null;
+  lastRejectedMarketFetchedAt?: number | null;
 }
 
 export interface ParsedYieldBenchmarkRegistry {
@@ -156,6 +160,9 @@ export function buildHardcodedUsdBenchmark(fallbackMode: string): ParsedYieldBen
     lastMarketRecordDate: null,
     lastMarketFetchedAt: null,
     lastMarketSource: null,
+    lastRejectedMarketRate: null,
+    lastRejectedMarketRecordDate: null,
+    lastRejectedMarketFetchedAt: null,
   };
 }
 

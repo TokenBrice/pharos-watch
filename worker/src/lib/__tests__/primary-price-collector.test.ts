@@ -24,6 +24,13 @@ function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): Primary
   };
 }
 
+const protocol = (protocol: string, price: number, tvl: number, updatedAt = 1_700_000_000, chain = "ethereum") => ({
+  protocol, price, tvl, updatedAt, chain,
+});
+const aggregate = (price: number, pools: number, tvl: number, aggregateObservedAt: number | null = 1_700_000_000) => ({
+  dex_price_usd: price, source_pool_count: pools, source_total_tvl: tvl, updated_at: 1_700_000_000, aggregateObservedAt,
+});
+
 describe("buildPrimarySourceCandidates", () => {
   it("admits only fresh typed native HBD quotes and does not create a DEX confidence profile", () => {
     const nowSec = 1_800_000_000;
@@ -40,20 +47,9 @@ describe("buildPrimarySourceCandidates", () => {
       cgPrice: 1.0,
       cgObservedAt: 1_700_000_000,
       protocolSources: [
-        {
-          protocol: "balancer",
-          price: 1.0,
-          tvl: 500_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
+        protocol("balancer", 1.0, 500_000),
       ],
-      dexAggregateQuote: {
-        dex_price_usd: 1.0,
-        updated_at: 1_700_000_000,
-        source_pool_count: 3,
-        source_total_tvl: 500_000,
-      },
+      dexAggregateQuote: aggregate(1.0, 3, 500_000),
     });
 
     const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
@@ -78,13 +74,7 @@ describe("buildPrimarySourceCandidates", () => {
   it("rejects a lone promoted DEX protocol when no validated source can corroborate it", () => {
     const collected = makeCollected({
       protocolSources: [
-        {
-          protocol: "balancer",
-          price: 1.0,
-          tvl: 500_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
+        protocol("balancer", 1.0, 500_000),
       ],
     });
 
@@ -107,20 +97,9 @@ describe("buildPrimarySourceCandidates", () => {
       binancePrice: 1.0,
       binanceObservedAt: 1_700_000_000,
       protocolSources: [
-        {
-          protocol: "balancer",
-          price: 1.0,
-          tvl: 500_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
+        protocol("balancer", 1.0, 500_000),
       ],
-      dexAggregateQuote: {
-        dex_price_usd: 1.0,
-        updated_at: 1_700_000_000,
-        source_pool_count: 4,
-        source_total_tvl: 900_000,
-      },
+      dexAggregateQuote: aggregate(1.0, 4, 900_000),
     });
 
     const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
@@ -159,20 +138,9 @@ describe("buildPrimarySourceCandidates", () => {
       binancePrice: 1.0,
       binanceObservedAt: 1_700_000_000,
       protocolSources: [
-        {
-          protocol: "uniswap-v4",
-          price: 1.0001,
-          tvl: 55_000_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
+        protocol("uniswap-v4", 1.0001, 55_000_000),
       ],
-      dexAggregateQuote: {
-        dex_price_usd: 1.0001,
-        updated_at: 1_700_000_000,
-        source_pool_count: 6,
-        source_total_tvl: 55_000_000,
-      },
+      dexAggregateQuote: aggregate(1.0001, 6, 55_000_000),
     });
 
     const { sources, dexCandidateTelemetry, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
@@ -198,27 +166,10 @@ describe("buildPrimarySourceCandidates", () => {
   it("accepts multiple promoted DEX protocols and withholds the aggregate", () => {
     const collected = makeCollected({
       protocolSources: [
-        {
-          protocol: "balancer",
-          price: 1.0001,
-          tvl: 500_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
-        {
-          protocol: "uniswap-v3",
-          price: 1.0002,
-          tvl: 1_500_000,
-          updatedAt: 1_700_000_000,
-          chain: "base",
-        },
+        protocol("balancer", 1.0001, 500_000),
+        protocol("uniswap-v3", 1.0002, 1_500_000, 1_700_000_000, "base"),
       ],
-      dexAggregateQuote: {
-        dex_price_usd: 1.00015,
-        updated_at: 1_700_000_000,
-        source_pool_count: 7,
-        source_total_tvl: 2_000_000,
-      },
+      dexAggregateQuote: aggregate(1.00015, 7, 2_000_000),
     });
 
     const { sources, dexCandidateTelemetry, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
@@ -244,27 +195,9 @@ describe("buildPrimarySourceCandidates", () => {
       binancePrice: 1,
       binanceObservedAt: 1_700_000_000,
       protocolSources: [
-        {
-          protocol: "curve",
-          price: 1.0001,
-          tvl: 2_000_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
-        {
-          protocol: "balancer",
-          price: 0.9,
-          tvl: 2_000_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
-        {
-          protocol: "uniswap-v3",
-          price: 1.1,
-          tvl: 2_000_000,
-          updatedAt: 1_700_000_000,
-          chain: "base",
-        },
+        protocol("curve", 1.0001, 2_000_000),
+        protocol("balancer", 0.9, 2_000_000),
+        protocol("uniswap-v3", 1.1, 2_000_000, 1_700_000_000, "base"),
       ],
     });
 
@@ -285,20 +218,8 @@ describe("buildPrimarySourceCandidates", () => {
   it("records explicit exclusion reasons for unmapped and below-threshold DEX protocol candidates", () => {
     const collected = makeCollected({
       protocolSources: [
-        {
-          protocol: "unknown-protocol",
-          price: 1.0,
-          tvl: 500_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
-        {
-          protocol: "balancer",
-          price: 1.0,
-          tvl: 49_999,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
+        protocol("unknown-protocol", 1.0, 500_000),
+        protocol("balancer", 1.0, 49_999),
       ],
     });
 
@@ -328,13 +249,7 @@ describe("buildPrimarySourceCandidates", () => {
   it("records invalid-price telemetry for mapped fresh DEX protocol candidates", () => {
     const collected = makeCollected({
       protocolSources: [
-        {
-          protocol: "balancer",
-          price: Number.NaN,
-          tvl: 500_000,
-          updatedAt: 1_700_000_000,
-          chain: "ethereum",
-        },
+        protocol("balancer", Number.NaN, 500_000),
       ],
     });
 
@@ -358,12 +273,7 @@ describe("buildPrimarySourceCandidates", () => {
 
   it("profiles aggregate-only DEX promotion without counting it as an active protocol lane", () => {
     const collected = makeCollected({
-      dexAggregateQuote: {
-        dex_price_usd: 1.0,
-        updated_at: 1_700_000_000,
-        source_pool_count: 3,
-        source_total_tvl: 250_000,
-      },
+      dexAggregateQuote: aggregate(1.0, 3, 250_000),
     });
 
     const { sources, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
@@ -373,6 +283,7 @@ describe("buildPrimarySourceCandidates", () => {
     );
 
     expect(sources.map((source) => source.source)).toEqual(["dex-promoted"]);
+    expect(sources[0]?.observedAt).toBe(1_700_000_000);
     expect(priceSourceConfidenceProfile).toEqual({
       activeDexLanes: 0,
       freshestDexLaneAgeSec: 100,
@@ -380,25 +291,23 @@ describe("buildPrimarySourceCandidates", () => {
     });
   });
 
+  it.each([null, undefined, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, 1_700_000_001, 1_700_000_000 - 21_600])(
+    "cannot renew aggregate clock %s through fresh publication", (aggregateObservedAt) => {
+      const quote = { ...aggregate(1, 3, 2_000_000), aggregateObservedAt };
+      expect(buildPrimarySourceCandidates({ id: "test", symbol: "TEST" }, makeCollected({ dexAggregateQuote: quote }), {
+        nowSec: 1_700_000_000,
+      }).sources).toEqual([]);
+    },
+  );
+
   it("preserves Binance overlap suppression even without an accepted protocol DEX lane", () => {
     const collected = makeCollected({
       binancePrice: 0.9995,
       binanceObservedAt: 1_700_000_000,
       protocolSources: [
-        {
-          protocol: "binance",
-          price: 0.9995,
-          tvl: 8_000_000,
-          updatedAt: 1_700_000_000,
-          chain: "cex",
-        },
+        protocol("binance", 0.9995, 8_000_000, 1_700_000_000, "cex"),
       ],
-      dexAggregateQuote: {
-        dex_price_usd: 0.9995,
-        updated_at: 1_700_000_000,
-        source_pool_count: 2,
-        source_total_tvl: 8_000_000,
-      },
+      dexAggregateQuote: aggregate(0.9995, 2, 8_000_000),
     });
 
     const { sources, hasPromotedDexProtocolSource, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
@@ -508,13 +417,7 @@ describe("buildPrimarySourceCandidates", () => {
       binancePrice: 1.0,
       binanceObservedAt: 1_700_000_000,
       protocolSources: [
-        {
-          protocol: "balancer",
-          price: 1.0,
-          tvl: 500_000,
-          updatedAt: 1_699_995_400,
-          chain: "ethereum",
-        },
+        protocol("balancer", 1.0, 500_000, 1_699_995_400),
       ],
     });
 
@@ -534,14 +437,127 @@ describe("buildPrimarySourceCandidates", () => {
     ]);
   });
 
-  it("records missing and invalid DEX observation timestamps as explicit exclusions", () => {
-    const candidate = (updatedAt: number | null) => ({
-      protocol: "balancer",
-      price: 1.0,
-      tvl: 500_000,
-      updatedAt: updatedAt as number,
-      chain: "ethereum",
+  describe("co-leg budget for protocol lanes", () => {
+    // pmUSD at the 2026-11-02 06:45 UTC run: Curve on-chain (300 s window) and
+    // CoinGecko (900 s) put the co-leg budget at 300 - 180 = 120 s.
+    const nowSec = 1_793_601_977;
+    const pmusd = { id: "pmusd-precious-metals", symbol: "pmUSD" };
+    const curveLane = (ageSec: number) => ({
+      protocol: "curve", price: 0.53416, tvl: 7_684_693, updatedAt: nowSec - ageSec, chain: "ethereum",
     });
+    const freshLegs = (cgPrice: number | null) => ({
+      cgPrice,
+      cgObservedAt: cgPrice == null ? null : nowSec - 20,
+      cgObservedAtMode: cgPrice == null ? null : "upstream" as const,
+      curvePrice: 0.53416,
+      curveObservedAt: nowSec - 30,
+    });
+
+    it("keeps a lane past the strictest co-leg window out and records its budget and age", () => {
+      // A 34-minute-old curve-dex lane, inside its own 35-minute source budget.
+      const { sources, hasPromotedDexProtocolSource, coLegHeldDexSources, dexCandidateTelemetry, priceSourceConfidenceProfile } =
+        buildPrimarySourceCandidates(pmusd, makeCollected({ ...freshLegs(0.534161), protocolSources: [curveLane(2_071)] }), {
+          nowSec,
+          freshLegsAgree: () => true,
+        });
+
+      expect(sources.map((source) => source.source)).toEqual(["coingecko", "curve-onchain"]);
+      expect(hasPromotedDexProtocolSource).toBe(true);
+      expect(coLegHeldDexSources).toEqual(["curve-dex"]);
+      expect(dexCandidateTelemetry).toMatchObject([
+        { sourceKey: "curve-dex", status: "excluded", reason: "outside_co_leg_budget", coLegBudgetSec: 120, ageSec: 2_071 },
+      ]);
+      expect(priceSourceConfidenceProfile).toBeNull();
+    });
+
+    it("admits a lane exactly at the co-leg budget and holds one a second past it", () => {
+      const build = (ageSec: number) =>
+        buildPrimarySourceCandidates(pmusd, makeCollected({ ...freshLegs(0.534161), protocolSources: [curveLane(ageSec)] }), {
+          nowSec,
+          freshLegsAgree: () => true,
+        });
+
+      expect(build(120).sources.map((source) => source.source)).toEqual(["coingecko", "curve-onchain", "curve-dex"]);
+      expect(build(121).sources.map((source) => source.source)).toEqual(["coingecko", "curve-onchain"]);
+      expect(build(121).dexCandidateTelemetry).toMatchObject([{ reason: "outside_co_leg_budget", coLegBudgetSec: 120, ageSec: 121 }]);
+    });
+
+    it("lets a lane inside the primary budget rejoin when the fresh legs cannot agree", () => {
+      // CoinGecko missing: Curve on-chain alone cannot form a cluster.
+      const build = (ageSec: number) =>
+        buildPrimarySourceCandidates(pmusd, makeCollected({ ...freshLegs(null), protocolSources: [curveLane(ageSec)] }), {
+          nowSec,
+          freshLegsAgree: () => false,
+        });
+
+      const admitted = build(1_800);
+      expect(admitted.sources.map((source) => source.source)).toEqual(["curve-onchain", "curve-dex"]);
+      expect(admitted.sources.find((source) => source.source === "curve-dex")?.observedAt).toBe(nowSec - 1_800);
+      expect(admitted.coLegHeldDexSources).toEqual([]);
+      expect(admitted.dexCandidateTelemetry).toMatchObject([{ sourceKey: "curve-dex", status: "accepted" }]);
+
+      const tooOld = build(1_801);
+      expect(tooOld.sources.map((source) => source.source)).toEqual(["curve-onchain"]);
+      expect(tooOld.dexCandidateTelemetry).toMatchObject([{ reason: "outside_co_leg_budget", ageSec: 1_801 }]);
+    });
+
+    it("never lets an older lane rejoin without a consensus authority or a hard leg to agree with", () => {
+      const withoutAuthority = buildPrimarySourceCandidates(
+        pmusd,
+        makeCollected({ ...freshLegs(null), protocolSources: [curveLane(1_500)] }),
+        { nowSec },
+      );
+      expect(withoutAuthority.sources.map((source) => source.source)).toEqual(["curve-onchain"]);
+
+      // CoinGecko is soft: a lone soft leg gives the older lane nothing hard to agree with.
+      const softOnly = buildPrimarySourceCandidates(
+        pmusd,
+        makeCollected({ cgPrice: 0.53416, cgObservedAt: nowSec - 20, cgObservedAtMode: "upstream", protocolSources: [curveLane(1_500)] }),
+        { nowSec, freshLegsAgree: () => false },
+      );
+      expect(softOnly.sources.map((source) => source.source)).toEqual(["coingecko"]);
+    });
+
+    it("does not let a lane outside the budget corroborate one inside it", () => {
+      // CoinGecko alone (soft, 900 s window): budget 720 s, and no hard leg.
+      const { sources, dexCandidateTelemetry } = buildPrimarySourceCandidates(
+        { id: "dusd-test", symbol: "DUSD" },
+        makeCollected({
+          cgPrice: 1.0,
+          cgObservedAt: 1_700_000_000,
+          cgObservedAtMode: "upstream",
+          protocolSources: [
+            { protocol: "balancer", price: 1.0001, tvl: 500_000, updatedAt: 1_700_000_000 - 60, chain: "ethereum" },
+            { protocol: "uniswap-v3", price: 1.0002, tvl: 500_000, updatedAt: 1_700_000_000 - 1_000, chain: "base" },
+          ],
+        }),
+        { nowSec: 1_700_000_000, freshLegsAgree: () => false },
+      );
+
+      expect(sources.map((source) => source.source)).toEqual(["coingecko"]);
+      expect(dexCandidateTelemetry).toMatchObject([
+        { sourceKey: "balancer-dex", status: "excluded", reason: "lacked_corroboration" },
+        { sourceKey: "uniswap-v3-dex", status: "excluded", reason: "outside_co_leg_budget", coLegBudgetSec: 720, ageSec: 1_000 },
+      ]);
+    });
+  });
+
+  it("keeps protocol lanes that are the only legs on their own freshness window", () => {
+    const nowSec = 1_700_000_000;
+    const collected = makeCollected({
+      protocolSources: [
+        { protocol: "balancer", price: 1.0001, tvl: 500_000, updatedAt: nowSec - 2_000, chain: "ethereum" },
+        { protocol: "uniswap-v3", price: 1.0002, tvl: 1_500_000, updatedAt: nowSec - 2_000, chain: "base" },
+      ],
+    });
+
+    const { sources } = buildPrimarySourceCandidates({ id: "usdc-circle", symbol: "USDC" }, collected, { nowSec });
+
+    expect(sources.map((source) => source.source)).toEqual(["balancer-dex", "uniswap-v3-dex"]);
+  });
+
+  it("records missing and invalid DEX observation timestamps as explicit exclusions", () => {
+    const candidate = (updatedAt: number | null) => (protocol("balancer", 1.0, 500_000, updatedAt as number));
     const nowSec = 1_700_000_030;
 
     const missing = buildPrimarySourceCandidates(
@@ -573,13 +589,7 @@ describe("buildPrimarySourceCandidates", () => {
       coinbasePrice: 1.0,
       coinbaseObservedAt: 1_700_001_000,
       protocolSources: [
-        {
-          protocol: "balancer",
-          price: 1.0,
-          tvl: 500_000,
-          updatedAt: 1_700_001_000,
-          chain: "ethereum",
-        },
+        protocol("balancer", 1.0, 500_000, 1_700_001_000),
       ],
     });
 

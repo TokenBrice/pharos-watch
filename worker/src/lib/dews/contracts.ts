@@ -3,6 +3,7 @@ import type { StablecoinData } from "@shared/types/market";
 import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSResult } from "../dews";
+import type { DexAggregateClockReason } from "../depeg-trust-policy";
 
 export interface SourceFailure {
   source: string;
@@ -17,7 +18,7 @@ export interface StablecoinsDependencyDiagnostics {
   reason: string | null;
 }
 
-export type PersistedJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
+export type PersistedJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape" | DexAggregateClockReason;
 
 export interface MalformedPersistedInput {
   source: string;

@@ -6,6 +6,7 @@ import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   countDocumentsReferencingChunks,
   projectStaticRouteCapacity,
@@ -24,12 +25,6 @@ function formatBytes(bytes) {
   return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${unit}`;
 }
 
-// The report reads the build under the current working directory, matching the
-// sibling artifact gates (`check:phishing-signatures`, `check:seo-static`) that
-// run beside it over the same published `out/` tree.
-const root = path.resolve(".");
-const args = new Set(process.argv.slice(2));
-const check = args.has("--check");
 const MINIMUM_FILE_HEADROOM_RATIO = 0.25;
 const MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO = 0.75;
 const CLASSIC_ZOD_CHUNK_MARKER = "_zod.traits";
@@ -64,8 +59,10 @@ const DEFAULT_BUDGETS = {
   // keep about 10 KB of headroom for public schema growth.
   largestTxtBytes: 1_401_000,
   // Live mirrors, server-rendered dossiers, and failure scenarios dominate
-  // representative detail payloads. Keep about 3% headroom over release data.
-  representativeDetailHtmlBytes: 830_000,
+  // representative detail payloads. Keep about 3% headroom over release data:
+  // re-baselined 2026-11-02 from 830,000 B after the USDe profile measured
+  // 829,576 B (owner decision on #1825), so ordinary copy growth no longer fails.
+  representativeDetailHtmlBytes: 855_000,
   representativeDetailPageTxtBytes: 145_000,
   // Sum gzip sizes of all script chunks referenced by a detail page's HTML.
   // Keep narrow headroom so shared first-load chunk growth stays reviewable.
@@ -132,26 +129,49 @@ const ROUTE_EAGER_JS_BUDGETS = {
   screener: "screenerEagerJsGzipBytes",
   portfolio: "portfolioEagerJsGzipBytes",
 };
+const API_REFERENCE_ROUTE = "api/reference";
+
+/**
+ * HTML files whose bytes the blocking artifact gates measure: home, the
+ * representative detail pages, every per-route eager-JS budget entry, the
+ * cemetery payloads and the API reference. The PR critical-CSS lane narrows to
+ * this same set plus the three largest exported pages, so a scoped run still
+ * feeds every byte ceiling it can affect and `largestHtmlBytes` always measures
+ * an inlined page.
+ */
+export function gatedHtmlRoutes() {
+  return [
+    "index.html",
+    ...REPRESENTATIVE_DETAIL_ROUTES.map((route) => `${route}/index.html`),
+    ...Object.keys(ROUTE_EAGER_JS_BUDGETS).map((route) => `${route}/index.html`),
+    `${CEMETERY_ROUTE}/index.html`,
+    `${API_REFERENCE_ROUTE}/index.html`,
+  ].sort();
+}
+
 // Load in the source checkout: the inventory's TS aliases resolve relative to
 // its tsconfig, not to a separately supplied artifact working directory.
-const PUBLIC_ROUTE_PATHS = JSON.parse(execFileSync(process.execPath, [
-  "--import", "tsx", "--input-type=module", "-e",
-  'import { PUBLIC_ROUTE_PATHS } from "./src/lib/public-route-inventory.ts"; process.stdout.write(JSON.stringify(PUBLIC_ROUTE_PATHS));',
-], { cwd: fileURLToPath(new URL("../../", import.meta.url)), encoding: "utf8", timeout: 30_000 }));
-const PROSE_ROUTES = PUBLIC_ROUTE_PATHS
-  .filter((href) => /^\/(?:privacy|about|methodology|stablecoins|status)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
-  .map((href) => href.slice(1, -1));
+function loadPublicRoutePaths() {
+  return JSON.parse(execFileSync(process.execPath, [
+    "--import", "tsx", "--input-type=module", "-e",
+    'import { PUBLIC_ROUTE_PATHS } from "./src/lib/public-route-inventory.ts"; process.stdout.write(JSON.stringify(PUBLIC_ROUTE_PATHS));',
+  ], { cwd: fileURLToPath(new URL("../../", import.meta.url)), encoding: "utf8", timeout: 30_000 }));
+}
 
-function resolveBudget(key) {
-  const raw = process.env[BUDGET_ENV[key]];
+function proseRoutesFrom(publicRoutePaths) {
+  return publicRoutePaths
+    .filter((href) => /^\/(?:privacy|about|methodology|stablecoins|status)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
+    .map((href) => href.slice(1, -1));
+}
+
+function resolveBudget(key, env) {
+  const raw = env[BUDGET_ENV[key]];
   if (!raw) return DEFAULT_BUDGETS[key];
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_BUDGETS[key];
 }
 
-const budgets = Object.fromEntries(Object.keys(DEFAULT_BUDGETS).map((key) => [key, resolveBudget(key)]));
-
-function collectFiles(dir, predicate = () => true) {
+function collectFiles(root, dir, predicate = () => true) {
   const out = [];
   if (!existsSync(dir)) return out;
 
@@ -209,7 +229,7 @@ function printTopCompressed(title, files, limit = 20) {
   }
 }
 
-function readFontManifestSummary() {
+function readFontManifestSummary(root) {
   const manifestPath = path.join(root, ".next/server/next-font-manifest.json");
   if (!existsSync(manifestPath)) {
     return null;
@@ -262,8 +282,8 @@ function referenceDelta(
   };
 }
 
-function writeStepSummary(rows) {
-  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+function writeStepSummary(rows, env) {
+  const summaryPath = env.GITHUB_STEP_SUMMARY;
   if (!summaryPath) return;
   const lines = [
     "## Build size budgets",
@@ -283,277 +303,309 @@ function writeStepSummary(rows) {
   appendFileSync(summaryPath, `${lines.join("\n")}\n`);
 }
 
-const outDir = path.join(root, "out");
-const nextStaticDir = path.join(outDir, "_next/static");
-const chunksDir = path.join(nextStaticDir, "chunks");
-const cssDir = path.join(nextStaticDir, "css");
-const mediaDir = path.join(nextStaticDir, "media");
+/**
+ * In-process entry point shared by the CLI and its tests. Reads the build under
+ * `cwd`, writes the same report as a direct run, and returns the CLI exit code
+ * (1 only for a blocking `--check` failure). `publicRoutePaths` lets callers
+ * that already loaded the checked-in inventory skip the tsx child process.
+ */
+export function runReportBuildSize({
+  cwd = process.cwd(),
+  argv = process.argv.slice(2),
+  env = process.env,
+  publicRoutePaths = loadPublicRoutePaths(),
+} = {}) {
+  // The report reads the build under the current working directory, matching the
+  // sibling artifact gates (`check:phishing-signatures`, `check:seo-static`) that
+  // run beside it over the same published `out/` tree.
+  const root = path.resolve(cwd);
+  const args = new Set(argv);
+  const check = args.has("--check");
+  const budgets = Object.fromEntries(Object.keys(DEFAULT_BUDGETS).map((key) => [key, resolveBudget(key, env)]));
+  const PROSE_ROUTES = proseRoutesFrom(publicRoutePaths);
 
-if (!existsSync(outDir)) {
-  console.error("[build-size] Missing out/. Run npm run build first.");
-  process.exit(check ? 1 : 0);
-}
+  const outDir = path.join(root, "out");
+  const nextStaticDir = path.join(outDir, "_next/static");
+  const chunksDir = path.join(nextStaticDir, "chunks");
+  const cssDir = path.join(nextStaticDir, "css");
+  const mediaDir = path.join(nextStaticDir, "media");
 
-const allOutFiles = collectFiles(outDir);
-const jsFiles = collectFiles(chunksDir, (file) => file.endsWith(".js"));
-const cssFiles = collectFiles(cssDir, (file) => file.endsWith(".css"));
-const cssFilesWithGzip = withGzipSize(cssFiles);
-const mediaFiles = collectFiles(mediaDir);
-const htmlFiles = collectFiles(outDir, (file) => file.endsWith(".html"));
-const txtFiles = collectFiles(outDir, (file) => file.endsWith(".txt"));
-const routeFamilySummaries = summarizeStaticRouteFamilies(allOutFiles);
-const classicZodChunkNames = jsFiles
-  .filter((file) => readFileSync(file.path, "utf8").includes(CLASSIC_ZOD_CHUNK_MARKER))
-  .map((file) => path.basename(file.path));
-const classicZodHtmlReferenceCount = countDocumentsReferencingChunks(
-  htmlFiles.map((file) => readFileSync(file.path, "utf8")),
-  classicZodChunkNames,
-);
-const classicZodHtmlReferenceRatio = htmlFiles.length > 0 ? classicZodHtmlReferenceCount / htmlFiles.length : 0;
+  if (!existsSync(outDir)) {
+    console.error("[build-size] Missing out/. Run npm run build first.");
+    return check ? 1 : 0;
+  }
 
-console.log("# Pharos Build Size Report");
-console.log(`out total files: ${allOutFiles.length}`);
-console.log(`out total raw size: ${formatBytes(sum(allOutFiles))}`);
-console.log(`JS chunks: ${formatBytes(sum(jsFiles))} across ${jsFiles.length} files`);
-console.log(`CSS chunks: ${formatBytes(sum(cssFiles))} across ${cssFiles.length} files`);
-console.log(`static media: ${formatBytes(sum(mediaFiles))} across ${mediaFiles.length} files`);
-console.log(`HTML: ${formatBytes(sum(htmlFiles))} across ${htmlFiles.length} files`);
-console.log(`TXT/RSC helpers: ${formatBytes(sum(txtFiles))} across ${txtFiles.length} files`);
-const overallCapacity = projectStaticRouteCapacity({
-  totalFiles: allOutFiles.length,
-  fileLimit: budgets.totalOutFiles,
-  minimumHeadroomRatio: MINIMUM_FILE_HEADROOM_RATIO,
-  averageFilesPerRoute: 1,
-});
-console.log(
-  `direct-upload file headroom: ${overallCapacity.fileHeadroom} (${(overallCapacity.headroomRatio * 100).toFixed(1)}%)`,
-);
-console.log(
-  `classic Zod HTML references: ${classicZodHtmlReferenceCount}/${htmlFiles.length} ` +
-    `(${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%) across ${classicZodChunkNames.length} chunk(s)`,
-);
+  const allOutFiles = collectFiles(root, outDir);
+  const jsFiles = collectFiles(root, chunksDir, (file) => file.endsWith(".js"));
+  const cssFiles = collectFiles(root, cssDir, (file) => file.endsWith(".css"));
+  const cssFilesWithGzip = withGzipSize(cssFiles);
+  const mediaFiles = collectFiles(root, mediaDir);
+  const htmlFiles = collectFiles(root, outDir, (file) => file.endsWith(".html"));
+  const txtFiles = collectFiles(root, outDir, (file) => file.endsWith(".txt"));
+  const routeFamilySummaries = summarizeStaticRouteFamilies(allOutFiles);
+  const classicZodChunkNames = jsFiles
+    .filter((file) => readFileSync(file.path, "utf8").includes(CLASSIC_ZOD_CHUNK_MARKER))
+    .map((file) => path.basename(file.path));
+  const classicZodHtmlReferenceCount = countDocumentsReferencingChunks(
+    htmlFiles.map((file) => readFileSync(file.path, "utf8")),
+    classicZodChunkNames,
+  );
+  const classicZodHtmlReferenceRatio = htmlFiles.length > 0 ? classicZodHtmlReferenceCount / htmlFiles.length : 0;
 
-console.log("\nStatic route family capacity");
-for (const family of routeFamilySummaries) {
-  const projection = projectStaticRouteCapacity({
+  console.log("# Pharos Build Size Report");
+  console.log(`out total files: ${allOutFiles.length}`);
+  console.log(`out total raw size: ${formatBytes(sum(allOutFiles))}`);
+  console.log(`JS chunks: ${formatBytes(sum(jsFiles))} across ${jsFiles.length} files`);
+  console.log(`CSS chunks: ${formatBytes(sum(cssFiles))} across ${cssFiles.length} files`);
+  console.log(`static media: ${formatBytes(sum(mediaFiles))} across ${mediaFiles.length} files`);
+  console.log(`HTML: ${formatBytes(sum(htmlFiles))} across ${htmlFiles.length} files`);
+  console.log(`TXT/RSC helpers: ${formatBytes(sum(txtFiles))} across ${txtFiles.length} files`);
+  const overallCapacity = projectStaticRouteCapacity({
     totalFiles: allOutFiles.length,
     fileLimit: budgets.totalOutFiles,
     minimumHeadroomRatio: MINIMUM_FILE_HEADROOM_RATIO,
-    averageFilesPerRoute: family.averageFilesPerRoute,
+    averageFilesPerRoute: 1,
   });
   console.log(
-    `  ${family.family}: ${family.routeCount} routes, ${family.fileCount} files, ${formatBytes(family.totalBytes)}; ` +
-      `${family.averageFilesPerRoute.toFixed(1)} files/route, ${formatBytes(Math.round(family.averageBytesPerRoute))}/route; ` +
-      `${projection.routesUntilHeadroomFloor} routes to 25% floor, ${projection.routesUntilHardLimit} to hard limit`,
+    `direct-upload file headroom: ${overallCapacity.fileHeadroom} (${(overallCapacity.headroomRatio * 100).toFixed(1)}%)`,
   );
-}
-
-printTop("Top out files", allOutFiles, 50);
-printTop("Top JS chunks", jsFiles, 30);
-printTopCompressed("Top CSS chunks", cssFilesWithGzip, 30);
-printTop("Top HTML files", htmlFiles, 30);
-printTop("Top TXT/RSC helper files", txtFiles, 30);
-
-const fontSummary = readFontManifestSummary();
-if (fontSummary) {
-  console.log("\nFont manifest sample");
-  for (const entry of fontSummary.slice(0, 30)) {
-    console.log(`  ${entry.route}: ${entry.fonts.join(", ") || "(none)"}`);
-  }
-}
-
-const representativeDetails = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route) => {
-  const htmlPath = path.join(outDir, route, "index.html");
-  const pageTxtFiles = collectFiles(
-    path.join(outDir, route),
-    (file) => file.includes("__PAGE__") && file.endsWith(".txt"),
+  console.log(
+    `classic Zod HTML references: ${classicZodHtmlReferenceCount}/${htmlFiles.length} ` +
+      `(${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%) across ${classicZodChunkNames.length} chunk(s)`,
   );
-  return [
-    ...(existsSync(htmlPath)
-      ? [{ kind: "html", route, rel: path.relative(root, htmlPath), size: statSync(htmlPath).size }]
-      : []),
-    ...pageTxtFiles.map((file) => ({ kind: "pageTxt", route, rel: file.rel, size: file.size })),
-  ];
-});
 
-printTop("Representative stablecoin detail payloads", representativeDetails, 20);
-
-// Eager first-load JS per representative detail route: every script chunk the
-// page HTML references, gzip-summed. Catches per-route payload regressions the
-// whole-build totals can't see (one oversized shared chunk costs ×403 pages).
-const gzipSizeCache = new Map();
-function gzipSizeOf(filePath) {
-  if (!gzipSizeCache.has(filePath)) {
-    gzipSizeCache.set(filePath, gzipSync(readFileSync(filePath)).byteLength);
-  }
-  return gzipSizeCache.get(filePath);
-}
-
-function eagerJsForRoutes(routes) {
-  return routes.flatMap((route) => {
-    const htmlPath = path.join(outDir, route, "index.html");
-    if (!existsSync(htmlPath)) return [];
-    const html = readFileSync(htmlPath, "utf8");
-    const scriptSrcs = new Set([...html.matchAll(/<script[^>]+src="(\/_next\/[^"]+\.js)"/g)].map((match) => match[1]));
-    let eagerGzipBytes = 0;
-    let scriptCount = 0;
-    for (const src of scriptSrcs) {
-      const chunkPath = path.join(outDir, decodeURIComponent(src).replace(/^\//, ""));
-      if (!existsSync(chunkPath)) continue;
-      eagerGzipBytes += gzipSizeOf(chunkPath);
-      scriptCount += 1;
-    }
-    return [{ route, scriptCount, size: eagerGzipBytes, rel: `${route || "/"} (${scriptCount} scripts, gzip)` }];
-  });
-}
-const representativeDetailEagerJs = eagerJsForRoutes(REPRESENTATIVE_DETAIL_ROUTES);
-const homeEagerJs = eagerJsForRoutes([""]);
-const routeEagerJs = eagerJsForRoutes(Object.keys(ROUTE_EAGER_JS_BUDGETS));
-const homeHtmlPath = path.join(outDir, "index.html");
-const homePayloads = [
-  ...(existsSync(homeHtmlPath)
-    ? [{ label: "html", size: statSync(homeHtmlPath).size, budgetKey: "homeHtmlBytes", rel: "out/index.html" }]
-    : []),
-  ...homeEagerJs.map((row) => ({ ...row, label: "eager JS gzip", budgetKey: "homeEagerJsGzipBytes" })),
-];
-const proseScriptLeaks = PROSE_ROUTES.flatMap((route) => {
-  const htmlPath = path.join(outDir, route, "index.html");
-  if (!existsSync(htmlPath)) return [`/${route}/ expected prose HTML is missing: out/${route}/index.html`];
-  const html = readFileSync(htmlPath, "utf8");
-  return [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
-    .map((match) => match[1])
-    .filter((src) => /\/recharts-vendor-[^/]+\.js(?:\?|$)/.test(src)
-      || (route !== "status" && /\/app\/page-[^/]+\.js(?:\?|$)/.test(src)))
-    .map((src) => `/${route}/ must not reference homepage/chart script: ${src}`);
-});
-printTop("Homepage payloads", homePayloads, 10);
-printTop("Route eager JS (gzip sum of referenced scripts)", routeEagerJs, 10);
-for (const leak of proseScriptLeaks) console.log(`FAIL route invariant: ${leak}`);
-
-printTop("Representative detail eager JS (gzip sum of referenced scripts)", representativeDetailEagerJs, 10);
-
-const cemeteryHtmlPath = path.join(outDir, CEMETERY_ROUTE, "index.html");
-const cemeteryFlightPath = path.join(outDir, CEMETERY_ROUTE, "index.txt");
-const cemeteryPayloads = [
-  ...(existsSync(cemeteryHtmlPath)
-    ? [
-        { label: "html", budgetKey: "cemeteryHtmlBytes", path: cemeteryHtmlPath, size: statSync(cemeteryHtmlPath).size },
-        { label: "html gzip", budgetKey: "cemeteryHtmlGzipBytes", path: cemeteryHtmlPath, size: gzipSizeOf(cemeteryHtmlPath) },
-      ]
-    : []),
-  ...(existsSync(cemeteryFlightPath)
-    ? [{ label: "RSC flight", budgetKey: "cemeteryFlightBytes", path: cemeteryFlightPath, size: statSync(cemeteryFlightPath).size }]
-    : []),
-].map((payload) => ({ ...payload, rel: `${path.relative(root, payload.path)} (${payload.label})` }));
-
-printTop("Cemetery route payloads", cemeteryPayloads, 10);
-
-if (check) {
-  const failures = [];
-  failures.push(...proseScriptLeaks);
-  if (!existsSync(homeHtmlPath)) failures.push("homepage HTML is missing: out/index.html");
-  for (const route of Object.keys(ROUTE_EAGER_JS_BUDGETS)) {
-    if (!existsSync(path.join(outDir, route, "index.html"))) {
-      failures.push(`/${route}/ expected budgeted HTML is missing: out/${route}/index.html`);
-    }
-  }
-  console.log("\nDeploy gate (blocking)");
-  checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
-  const cssBundle = cssFiles.map((file) => readFileSync(file.path, "utf8")).join("\n");
-  if (!cssBundle.includes(".xl\\:w-\\[15rem\\]")) {
-    failures.push("compiled CSS is missing the desktop search width utility");
-  }
-
-  const referenceRows = [
-    referenceDelta(
-      "direct-upload file headroom",
-      overallCapacity.headroomRatio * 100,
-      MINIMUM_FILE_HEADROOM_RATIO * 100,
-      { format: formatPercent, direction: "floor", enforcement: "advisory" },
-    ),
-    referenceDelta(
-      "classic Zod HTML references",
-      classicZodHtmlReferenceRatio * 100,
-      MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100,
-      { format: formatPercent, enforcement: "advisory" },
-    ),
-    referenceDelta("total JS chunks", sum(jsFiles), budgets.totalJsBytes),
-    referenceDelta(
-      "largest JS chunk",
-      jsFiles[0]?.size ?? 0,
-      budgets.largestJsBytes,
-      { responsible: jsFiles[0]?.rel ?? "largest JS chunk" },
-    ),
-    referenceDelta("total CSS chunks", sum(cssFiles), budgets.totalCssBytes),
-    referenceDelta(
-      "largest CSS chunk gzip",
-      cssFilesWithGzip[0]?.gzipSize ?? 0,
-      budgets.largestCssGzipBytes,
-      { responsible: cssFilesWithGzip[0]?.rel ?? "largest CSS chunk gzip" },
-    ),
-    referenceDelta("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes),
-    referenceDelta(
-      "largest HTML file",
-      htmlFiles[0]?.size ?? 0,
-      budgets.largestHtmlBytes,
-      { responsible: htmlFiles[0]?.rel ?? "largest HTML file" },
-    ),
-    referenceDelta(
-      "largest TXT/RSC helper",
-      txtFiles[0]?.size ?? 0,
-      budgets.largestTxtBytes,
-      { responsible: txtFiles[0]?.rel ?? "largest TXT/RSC helper" },
-    ),
-    ...representativeDetails.map((detail) =>
-      referenceDelta(
-        `${detail.route} ${detail.kind}`,
-        detail.size,
-        detail.kind === "html" ? budgets.representativeDetailHtmlBytes : budgets.representativeDetailPageTxtBytes,
-        { responsible: detail.rel },
-      ),
-    ),
-    ...representativeDetailEagerJs.map((detail) =>
-      referenceDelta(
-        `${detail.route} eager JS gzip`,
-        detail.size,
-        budgets.representativeDetailEagerJsGzipBytes,
-        { responsible: detail.rel },
-      ),
-    ),
-    ...homePayloads.map((payload) =>
-      referenceDelta(`home ${payload.label}`, payload.size, budgets[payload.budgetKey], { responsible: payload.rel }),
-    ),
-    ...routeEagerJs.map((payload) =>
-      referenceDelta(`${payload.route} eager JS gzip`, payload.size, budgets[ROUTE_EAGER_JS_BUDGETS[payload.route]], {
-        responsible: payload.rel,
-      }),
-    ),
-    ...cemeteryPayloads.map((payload) =>
-      referenceDelta(`${CEMETERY_ROUTE} ${payload.label}`, payload.size, budgets[payload.budgetKey], {
-        responsible: payload.rel,
-      }),
-    ),
-  ];
-
-  console.log("\nSize budget deltas");
-  for (const row of referenceRows) {
+  console.log("\nStatic route family capacity");
+  for (const family of routeFamilySummaries) {
+    const projection = projectStaticRouteCapacity({
+      totalFiles: allOutFiles.length,
+      fileLimit: budgets.totalOutFiles,
+      minimumHeadroomRatio: MINIMUM_FILE_HEADROOM_RATIO,
+      averageFilesPerRoute: family.averageFilesPerRoute,
+    });
     console.log(
-      `${row.status === "OVER" ? "OVER" : "  ok"} ${row.label}: ${row.actual} / ${row.reference} `
-        + `(${row.delta}; ${row.enforcement})`,
+      `  ${family.family}: ${family.routeCount} routes, ${family.fileCount} files, ${formatBytes(family.totalBytes)}; ` +
+        `${family.averageFilesPerRoute.toFixed(1)} files/route, ${formatBytes(Math.round(family.averageBytesPerRoute))}/route; ` +
+        `${projection.routesUntilHeadroomFloor} routes to 25% floor, ${projection.routesUntilHardLimit} to hard limit`,
     );
-    if (row.enforcement === "blocking" && row.status === "OVER") {
-      failures.push(
-        `${row.label} exceeds its byte ceiling (${row.actual} / ${row.reference}); responsible: ${row.responsible}`,
-      );
-    }
   }
-  writeStepSummary(referenceRows);
 
-  if (failures.length > 0) {
-    console.error("\n[build-size] Deploy gate failures:");
-    for (const failure of failures) {
-      console.error(`- ${failure}`);
+  printTop("Top out files", allOutFiles, 50);
+  printTop("Top JS chunks", jsFiles, 30);
+  printTopCompressed("Top CSS chunks", cssFilesWithGzip, 30);
+  printTop("Top HTML files", htmlFiles, 30);
+  printTop("Top TXT/RSC helper files", txtFiles, 30);
+
+  const fontSummary = readFontManifestSummary(root);
+  if (fontSummary) {
+    console.log("\nFont manifest sample");
+    for (const entry of fontSummary.slice(0, 30)) {
+      console.log(`  ${entry.route}: ${entry.fonts.join(", ") || "(none)"}`);
     }
-    process.exit(1);
   }
+
+  const representativeDetails = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route) => {
+    const htmlPath = path.join(outDir, route, "index.html");
+    const pageTxtFiles = collectFiles(
+      root,
+      path.join(outDir, route),
+      (file) => file.includes("__PAGE__") && file.endsWith(".txt"),
+    );
+    return [
+      ...(existsSync(htmlPath)
+        ? [{ kind: "html", route, rel: path.relative(root, htmlPath), size: statSync(htmlPath).size }]
+        : []),
+      ...pageTxtFiles.map((file) => ({ kind: "pageTxt", route, rel: file.rel, size: file.size })),
+    ];
+  });
+
+  printTop("Representative stablecoin detail payloads", representativeDetails, 20);
+
+  // Eager first-load JS per representative detail route: every script chunk the
+  // page HTML references, gzip-summed. Catches per-route payload regressions the
+  // whole-build totals can't see (one oversized shared chunk costs ×403 pages).
+  const gzipSizeCache = new Map();
+  function gzipSizeOf(filePath) {
+    if (!gzipSizeCache.has(filePath)) {
+      gzipSizeCache.set(filePath, gzipSync(readFileSync(filePath)).byteLength);
+    }
+    return gzipSizeCache.get(filePath);
+  }
+
+  function eagerJsForRoutes(routes) {
+    return routes.flatMap((route) => {
+      const htmlPath = path.join(outDir, route, "index.html");
+      if (!existsSync(htmlPath)) return [];
+      const html = readFileSync(htmlPath, "utf8");
+      const scriptSrcs = new Set([...html.matchAll(/<script[^>]+src="(\/_next\/[^"]+\.js)"/g)].map((match) => match[1]));
+      let eagerGzipBytes = 0;
+      let scriptCount = 0;
+      for (const src of scriptSrcs) {
+        const chunkPath = path.join(outDir, decodeURIComponent(src).replace(/^\//, ""));
+        if (!existsSync(chunkPath)) continue;
+        eagerGzipBytes += gzipSizeOf(chunkPath);
+        scriptCount += 1;
+      }
+      return [{ route, scriptCount, size: eagerGzipBytes, rel: `${route || "/"} (${scriptCount} scripts, gzip)` }];
+    });
+  }
+  const representativeDetailEagerJs = eagerJsForRoutes(REPRESENTATIVE_DETAIL_ROUTES);
+  const homeEagerJs = eagerJsForRoutes([""]);
+  const routeEagerJs = eagerJsForRoutes(Object.keys(ROUTE_EAGER_JS_BUDGETS));
+  const homeHtmlPath = path.join(outDir, "index.html");
+  const homePayloads = [
+    ...(existsSync(homeHtmlPath)
+      ? [{ label: "html", size: statSync(homeHtmlPath).size, budgetKey: "homeHtmlBytes", rel: "out/index.html" }]
+      : []),
+    ...homeEagerJs.map((row) => ({ ...row, label: "eager JS gzip", budgetKey: "homeEagerJsGzipBytes" })),
+  ];
+  const proseScriptLeaks = PROSE_ROUTES.flatMap((route) => {
+    const htmlPath = path.join(outDir, route, "index.html");
+    if (!existsSync(htmlPath)) return [`/${route}/ expected prose HTML is missing: out/${route}/index.html`];
+    const html = readFileSync(htmlPath, "utf8");
+    return [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
+      .map((match) => match[1])
+      .filter((src) => /\/recharts-vendor-[^/]+\.js(?:\?|$)/.test(src)
+        || (route !== "status" && /\/app\/page-[^/]+\.js(?:\?|$)/.test(src)))
+      .map((src) => `/${route}/ must not reference homepage/chart script: ${src}`);
+  });
+  printTop("Homepage payloads", homePayloads, 10);
+  printTop("Route eager JS (gzip sum of referenced scripts)", routeEagerJs, 10);
+  for (const leak of proseScriptLeaks) console.log(`FAIL route invariant: ${leak}`);
+
+  printTop("Representative detail eager JS (gzip sum of referenced scripts)", representativeDetailEagerJs, 10);
+
+  const cemeteryHtmlPath = path.join(outDir, CEMETERY_ROUTE, "index.html");
+  const cemeteryFlightPath = path.join(outDir, CEMETERY_ROUTE, "index.txt");
+  const cemeteryPayloads = [
+    ...(existsSync(cemeteryHtmlPath)
+      ? [
+          { label: "html", budgetKey: "cemeteryHtmlBytes", path: cemeteryHtmlPath, size: statSync(cemeteryHtmlPath).size },
+          { label: "html gzip", budgetKey: "cemeteryHtmlGzipBytes", path: cemeteryHtmlPath, size: gzipSizeOf(cemeteryHtmlPath) },
+        ]
+      : []),
+    ...(existsSync(cemeteryFlightPath)
+      ? [{ label: "RSC flight", budgetKey: "cemeteryFlightBytes", path: cemeteryFlightPath, size: statSync(cemeteryFlightPath).size }]
+      : []),
+  ].map((payload) => ({ ...payload, rel: `${path.relative(root, payload.path)} (${payload.label})` }));
+
+  printTop("Cemetery route payloads", cemeteryPayloads, 10);
+
+  if (check) {
+    const failures = [];
+    failures.push(...proseScriptLeaks);
+    if (!existsSync(homeHtmlPath)) failures.push("homepage HTML is missing: out/index.html");
+    for (const route of Object.keys(ROUTE_EAGER_JS_BUDGETS)) {
+      if (!existsSync(path.join(outDir, route, "index.html"))) {
+        failures.push(`/${route}/ expected budgeted HTML is missing: out/${route}/index.html`);
+      }
+    }
+    console.log("\nDeploy gate (blocking)");
+    checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
+    const cssBundle = cssFiles.map((file) => readFileSync(file.path, "utf8")).join("\n");
+    if (!cssBundle.includes(".xl\\:w-\\[15rem\\]")) {
+      failures.push("compiled CSS is missing the desktop search width utility");
+    }
+
+    const referenceRows = [
+      referenceDelta(
+        "direct-upload file headroom",
+        overallCapacity.headroomRatio * 100,
+        MINIMUM_FILE_HEADROOM_RATIO * 100,
+        { format: formatPercent, direction: "floor", enforcement: "advisory" },
+      ),
+      referenceDelta(
+        "classic Zod HTML references",
+        classicZodHtmlReferenceRatio * 100,
+        MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100,
+        { format: formatPercent, enforcement: "advisory" },
+      ),
+      referenceDelta("total JS chunks", sum(jsFiles), budgets.totalJsBytes),
+      referenceDelta(
+        "largest JS chunk",
+        jsFiles[0]?.size ?? 0,
+        budgets.largestJsBytes,
+        { responsible: jsFiles[0]?.rel ?? "largest JS chunk" },
+      ),
+      referenceDelta("total CSS chunks", sum(cssFiles), budgets.totalCssBytes),
+      referenceDelta(
+        "largest CSS chunk gzip",
+        cssFilesWithGzip[0]?.gzipSize ?? 0,
+        budgets.largestCssGzipBytes,
+        { responsible: cssFilesWithGzip[0]?.rel ?? "largest CSS chunk gzip" },
+      ),
+      referenceDelta("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes),
+      referenceDelta(
+        "largest HTML file",
+        htmlFiles[0]?.size ?? 0,
+        budgets.largestHtmlBytes,
+        { responsible: htmlFiles[0]?.rel ?? "largest HTML file" },
+      ),
+      referenceDelta(
+        "largest TXT/RSC helper",
+        txtFiles[0]?.size ?? 0,
+        budgets.largestTxtBytes,
+        { responsible: txtFiles[0]?.rel ?? "largest TXT/RSC helper" },
+      ),
+      ...representativeDetails.map((detail) =>
+        referenceDelta(
+          `${detail.route} ${detail.kind}`,
+          detail.size,
+          detail.kind === "html" ? budgets.representativeDetailHtmlBytes : budgets.representativeDetailPageTxtBytes,
+          { responsible: detail.rel },
+        ),
+      ),
+      ...representativeDetailEagerJs.map((detail) =>
+        referenceDelta(
+          `${detail.route} eager JS gzip`,
+          detail.size,
+          budgets.representativeDetailEagerJsGzipBytes,
+          { responsible: detail.rel },
+        ),
+      ),
+      ...homePayloads.map((payload) =>
+        referenceDelta(`home ${payload.label}`, payload.size, budgets[payload.budgetKey], { responsible: payload.rel }),
+      ),
+      ...routeEagerJs.map((payload) =>
+        referenceDelta(`${payload.route} eager JS gzip`, payload.size, budgets[ROUTE_EAGER_JS_BUDGETS[payload.route]], {
+          responsible: payload.rel,
+        }),
+      ),
+      ...cemeteryPayloads.map((payload) =>
+        referenceDelta(`${CEMETERY_ROUTE} ${payload.label}`, payload.size, budgets[payload.budgetKey], {
+          responsible: payload.rel,
+        }),
+      ),
+    ];
+
+    console.log("\nSize budget deltas");
+    for (const row of referenceRows) {
+      console.log(
+        `${row.status === "OVER" ? "OVER" : "  ok"} ${row.label}: ${row.actual} / ${row.reference} `
+          + `(${row.delta}; ${row.enforcement})`,
+      );
+      if (row.enforcement === "blocking" && row.status === "OVER") {
+        failures.push(
+          `${row.label} exceeds its byte ceiling (${row.actual} / ${row.reference}); responsible: ${row.responsible}`,
+        );
+      }
+    }
+    writeStepSummary(referenceRows, env);
+
+    if (failures.length > 0) {
+      console.error("\n[build-size] Deploy gate failures:");
+      for (const failure of failures) {
+        console.error(`- ${failure}`);
+      }
+      return 1;
+    }
+  }
+  return 0;
 }
+
+function main() {
+  const exitCode = runReportBuildSize();
+  // Keep the success path a natural exit so piped stdout is never truncated.
+  if (exitCode !== 0) process.exit(exitCode);
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) main();

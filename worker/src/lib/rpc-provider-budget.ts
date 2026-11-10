@@ -40,6 +40,11 @@ export interface DwellirBudgetEnv {
 /** Pending credits retain the UTC month in which their usage was observed. */
 const pendingDwellirCredits = new Map<string, number>();
 
+/** @internal Clear per-isolate pending credit buffers so test files can share a process. */
+export function resetRpcProviderBudgetStateForTests(): void {
+  pendingDwellirCredits.clear();
+}
+
 function getUtcMonthWindow(nowSec: number): string {
   const date = new Date(nowSec * 1000);
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;

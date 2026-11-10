@@ -277,6 +277,85 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     expect(result.incomplete).toBe(true);
   });
 
+  it("treats a local deadline admission denial as incomplete, not a provider error", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
+    const fetchMock = mockFetch([{
+      match: "api.trongrid.io/v1/contracts/",
+      body: { success: true, data: [], meta: {} },
+    }], { requireMatch: true });
+    const budget = makeRunBudget();
+    const deadlineLimiter: RateLimitedFetch = (fn) => {
+      budget.deadlineMs = Date.now() - 1;
+      return fn();
+    };
+
+    const result = await fetchTronEventsIncremental(config, null, 0, budget, deadlineLimiter);
+
+    expect(result).toMatchObject({
+      apiError: false,
+      incomplete: true,
+      scannedToTimestamp: null,
+      coveredTopicCount: 0,
+      providerCalls: 0,
+      localBudgetStop: true,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not blame TronGrid when a healthy page arrives after the scan deadline", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
+    const realNow = Date.now.bind(Date);
+    let advanced = false;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => realNow() + (advanced ? 120_000 : 0));
+    const fetchMock = mockFetch([{
+      match: "api.trongrid.io/v1/contracts/",
+      respond: () => {
+        advanced = true;
+        return { body: { success: true, data: [], meta: {} }, status: 200 };
+      },
+    }], { requireMatch: true });
+
+    try {
+      const result = await fetchTronEventsIncremental(config, null, 0, makeRunBudget(), noopLimiter);
+      expect(result).toMatchObject({
+        apiError: false,
+        incomplete: true,
+        scannedToTimestamp: null,
+        providerCalls: 1,
+        localBudgetStop: true,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("fails closed when the cursor is ahead of the clock-derived safe head", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
+    const fetchMock = mockFetch([{
+      match: "api.trongrid.io/v1/contracts/",
+      body: { success: true, data: [], meta: {} },
+    }], { requireMatch: true });
+
+    const result = await fetchTronEventsIncremental(
+      config, null, Date.now() - 60_000, makeRunBudget(), noopLimiter,
+    );
+
+    expect(result).toMatchObject({
+      apiError: true,
+      incomplete: true,
+      scannedToTimestamp: null,
+      coveredTopicCount: 0,
+      providerCalls: 0,
+      coverageOutcome: "cursor_ahead",
+      failureSamples: ["cursor-ahead"],
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("marks the scan incomplete when pagination is truncated by the subrequest budget", async () => {
     const baseConfig = findConfig("usdt-tether");
     const firstEvent = baseConfig.events[0];
@@ -305,5 +384,83 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     expect(result.apiError).toBe(false);
     expect(result.incomplete).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+const errorConfigStub = {
+  configKey: "tron-test",
+  chain: { chainId: "tron", chainName: "Tron", evmChainId: null, explorerUrl: "https://tronscan.org", type: "tron" as const },
+  stablecoinId: "usdt-tether",
+  stablecoin: "USDT" as const,
+  contractAddress: "TRX...",
+  decimals: 6,
+  events: [
+    { signature: "AddedBlackList(address)", topicHash: "0x0", eventType: "blacklist" as const, hasAmount: false },
+  ],
+};
+
+describe("fetchTronEventsIncremental error propagation", () => {
+  it("returns apiError=true when TronGrid responds with HTTP 500", async () => {
+    mockFetch([{ match: "api.trongrid.io", body: "server error", status: 500 }]);
+    const result = await fetchTronEventsIncremental(
+      errorConfigStub,
+      null,
+      0,
+      makeRunBudget(),
+      noopLimiter,
+      undefined,
+    );
+    expect(result.apiError).toBe(true);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("meters each physical retry and refuses a retry beyond the shared cap", async () => {
+    const fetcher = mockFetch([{ match: "api.trongrid.io", body: "server error", status: 503 }]);
+    const budget = makeRunBudget(2);
+    const result = await fetchTronEventsIncremental(errorConfigStub, null, 0, budget, noopLimiter);
+    expect(fetcher.getHistory()).toHaveLength(2);
+    expect(budget.subrequestBudget.count).toBe(2);
+    expect(result.providerCalls).toBe(2);
+    expect(result).toMatchObject({ apiError: true, incomplete: true, scannedToTimestamp: null });
+  });
+
+  it("returns apiError=true when TronGrid returns success=false", async () => {
+    mockFetch([{ match: "api.trongrid.io", body: { success: false, data: [] }, status: 200 }]);
+    const result = await fetchTronEventsIncremental(
+      errorConfigStub,
+      null,
+      0,
+      makeRunBudget(),
+      noopLimiter,
+      undefined,
+    );
+    expect(result.apiError).toBe(true);
+  });
+
+  it("returns apiError=true when TronGrid payload fails Zod validation", async () => {
+    mockFetch([{ match: "api.trongrid.io", body: { data: "oops" }, status: 200 }]);
+    const result = await fetchTronEventsIncremental(
+      errorConfigStub,
+      null,
+      0,
+      makeRunBudget(),
+      noopLimiter,
+      undefined,
+    );
+    expect(result.apiError).toBe(true);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("returns apiError=false on success", async () => {
+    mockFetch([{ match: "api.trongrid.io", body: { success: true, data: [] }, status: 200 }]);
+    const result = await fetchTronEventsIncremental(
+      errorConfigStub,
+      null,
+      0,
+      makeRunBudget(),
+      noopLimiter,
+      undefined,
+    );
+    expect(result.apiError).toBe(false);
   });
 });

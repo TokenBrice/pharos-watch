@@ -114,12 +114,12 @@ function buildStoredDexVolumeColumns(
 }
 
 /**
- * A published row is an observed DEX row when it came from a score result: a
- * rated score, or an NR composite (DEC-19) that still retained pools. Only
- * placeholders are unscored AND unobserved.
+ * A rated score or an NR composite (DEC-19) with observed coverage counts as
+ * observed. A scored result that retained no pools is still unobserved, just
+ * like a placeholder; score-map membership alone is not evidence.
  */
-function isObservedDexRow(row: { liquidity_score: number | null; coverage_class: string | null }): boolean {
-  return row.liquidity_score != null || (row.coverage_class != null && row.coverage_class !== "unobserved");
+function hasObservedDexEvidence(liquidityScore: number | null, coverageClass: string | null): boolean {
+  return liquidityScore != null || (coverageClass != null && coverageClass !== "unobserved");
 }
 
 const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
@@ -445,7 +445,9 @@ function canReuseHistoricalSnapshot(
   const activeIds = new Set(rows.map((row) => row.stablecoin_id));
   if (!setsEqual(activeIds, expectedActiveIds)) return false;
 
-  const observedIds = new Set(rows.filter(isObservedDexRow).map((row) => row.stablecoin_id));
+  const observedIds = new Set(rows
+    .filter((row) => hasObservedDexEvidence(row.liquidity_score, row.coverage_class))
+    .map((row) => row.stablecoin_id));
   if (!setsEqual(observedIds, expectedObservedIds)) return false;
 
   const existingRouteHistoryIds = new Set(
@@ -1157,7 +1159,12 @@ export async function writeHistoricalSnapshots(
   const todayMidnight = bucketUnixSecondsToUtcDay(nowSec);
   const expectedActiveIds = new Set(ACTIVE_STABLECOINS.map((coin) => coin.id));
   const activeScoreMap = new Map([...scoreMap].filter(([id]) => expectedActiveIds.has(id)));
-  const incomingObservedIds = new Set(activeScoreMap.keys());
+  // Match the predicate used on stored rows. Counting an empty scored result
+  // here makes the reuse target impossible to satisfy after writing it.
+  const incomingObservedIds = new Set<string>();
+  for (const [id, scoreResult] of activeScoreMap) {
+    if (hasObservedDexEvidence(scoreResult.score, scoreResult.coverageClass)) incomingObservedIds.add(id);
+  }
   const incomingRouteHistoryIds = new Set(
     [...activeScoreMap]
       .filter(([, scoreResult]) => buildDexExitRouteHistoryJson(scoreResult) != null)
@@ -1198,8 +1205,9 @@ export async function writeHistoricalSnapshots(
       .all<HistoricalSnapshotRow>();
     const existingRows = existing.results ?? [];
     const existingCount = existingRows.length;
-    const existingObserved = existingRows.filter(isObservedDexRow).length;
-    const incomingObserved = activeScoreMap.size;
+    const existingObserved = existingRows
+      .filter((row) => hasObservedDexEvidence(row.liquidity_score, row.coverage_class)).length;
+    const incomingObserved = incomingObservedIds.size;
     throwIfAborted(signal);
 
     // Same-day observed rows (rated or DEC-19 NR) survive a run that lacks the
@@ -1207,7 +1215,7 @@ export async function writeHistoricalSnapshots(
     // non-complete day never becomes a legacy (unknown) number.
     const existingObservedRows = new Map<string, HistoricalSnapshotRow>();
     for (const row of existingRows) {
-      if (expectedActiveIds.has(row.stablecoin_id) && isObservedDexRow(row)) {
+      if (expectedActiveIds.has(row.stablecoin_id) && hasObservedDexEvidence(row.liquidity_score, row.coverage_class)) {
         existingObservedRows.set(row.stablecoin_id, row);
       }
     }

@@ -22,7 +22,7 @@ Access presents supporter and partner offers, the free Safety grades feed and cl
 
 ### Partner key terms
 
-Use ops-limit constants for published default rates, never the validation ceiling as capacity. Service commitments are not contractual SLA or uptime/breaking-notice promises. Free-to-users services are free; commercial terms are agreed per request. Do not name partners as endorsements. Operator-issued keys remain internal tier standard with protected-cache isolate fast path; ops authentication is not a public key.
+Use ops-limit constants for published default rates, never the validation ceiling as capacity. Service commitments are not contractual SLA or uptime/breaking-notice promises. Free-to-users services are free; commercial terms are agreed per request. Name partners only through the consented roster under Social proof. Operator-issued keys remain internal tier standard with protected-cache isolate fast path; ops authentication is not a public key.
 
 ### Qualifying coins
 
@@ -36,7 +36,7 @@ Use ops-limit constants for published default rates, never the validation ceilin
 
 ### Social proof
 
-Use `summarizeDonations().lifetimeCommunityDonorCount`, the same full population as Funding, never a displayed/capped donor count.
+Use `summarizeDonations().lifetimeCommunityDonorCount`, the same full population as Funding, never a displayed/capped donor count. The header "Used by" row and the homepage API strip read `API_PARTNERS` (`src/lib/api-partners.ts`): teams that agreed to be named, alphabetical, with local marks under `public/partners/`. Logos state usage, never endorsement or rating input; on desktop the row shares the pill line, so it adds no height above the offers.
 
 ### One Beam exception
 
@@ -48,13 +48,13 @@ Request/verify/admin-decision routes are unregistered; unknown-path auth behavio
 
 ## Supporter Key Claim Contract
 
-One key per eligible externally-owned sender wallet; direct donations count only after reconciliation into the committed ledger. Values are receipt-date USD, not claim-time prices; non-USD fiat coins use receipt-date ECB FX, not parity. Pool/Giveth/exchange withdrawals and unsupported smart-contract signatures do not qualify. Founder qualifying rows may count. [Funding](./funding-page.md#data-model) owns ledger approval/pricing; [API reference](./api-reference.md) owns request/auth and error details.
+One key per eligible externally-owned sender wallet; direct donations count only after reconciliation into the committed ledger. Receipt-date USD valuation and the ECB reference rate for non-USD fiat coins follow [Funding](./funding-page.md#data-model). Pool/Giveth/exchange withdrawals and unsupported smart-contract signatures do not qualify. Founder qualifying rows may count. [Funding](./funding-page.md#data-model) owns ledger approval/pricing; [API reference](./api-reference.md) owns request/auth and error details.
 
 Use `DONOR_API_KEY_MIN_USD` (inclusive threshold), donor rate and reviewed deployments from shared constants. Current non-held accepted Safety Score A/B-band grades determine claim-time eligibility; missing/NR/out-of-band do not count, and missing/unavailable/held publication pauses with 503. Later grade changes do not revoke issued keys. Donor keys have no expiry and re-signing never rotates them. Lost/leaked token or removal needs operator wallet verification/private rotation or deletion. Public copy states every-Sunday ledger updates and the reconciliation date, not instant claims.
 
 `src/components/donor-key-claim.tsx` uses injected-wallet account request, route/domain-pinned SIWE with short expiry, personal_sign and public claim endpoint. No wallet library or automatic wallet interaction. Rejection/account change recover. Distinct validation, forbidden, conflict, rate and unavailable responses remain actionable; already-claimed/revoked recovery points privately.
 
-The shared one-time token panel reveals plaintext once with copy/focus handling. Pending unsaved token stays in browser memory across internal/back/palette navigation via `PendingApiKeyRecovery`; copy/acknowledgment clears it. Warn before unload; never persist tokens in localStorage/sessionStorage.
+The shared one-time token panel reveals plaintext once with copy/focus handling. Pending unsaved token stays in browser memory across internal/back/palette navigation via `PendingApiKeyRecovery`; successful copy/acknowledgment clears it. Recovery copy errors belong to the affected token and disappear when it leaves recovery; late copy results for a token no longer in recovery are ignored. Warn before unload; never persist tokens in localStorage/sessionStorage.
 
 ### Activation And Rollback Acceptance
 
@@ -65,6 +65,8 @@ Before announcing, acceptance identifies both deployed versions and the accepted
 ## Reference Tab Contract
 
 Render canonical reference minus admin sections, preserving section/subsection/endpoint-directory anchors and quickstart. Lane guidance separates external `https://api.pharos.watch` plus `X-API-Key`, website `/_site-data/*`, and Access-protected ops hosts. No-key classifications derive from canonical endpoint registry, including anonymous publication reads and separately authenticated Telegram exceptions; examples run from servers/scripts, not browser-key exposure.
+
+Malformed percent-encoded initial fragments are ignored for alignment without rewriting the URL; desktop and mobile navigation remain usable.
 
 Keep the exemption roster only in canonical [Public API Auth](./api-reference.md#public-api-auth); the FAQ links there and Quick facts does not repeat it. The free-grades example remains onboarding guidance, not an exhaustive no-key list. FAQ answer links render through the reference panel's existing inline Markdown renderer; JSON-LD answers retain link text without Markdown syntax or destinations.
 

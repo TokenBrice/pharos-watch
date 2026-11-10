@@ -191,21 +191,6 @@ describe("syncRedemptionBackstops", () => {
     );
   });
 
-  it("returns an error when the stablecoins cache is unavailable", async () => {
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "error",
-      reason: "missing-cache",
-      updatedAt: null,
-    });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
-    expect(result.status).toBe("error");
-    expect(result.metadata).toContain("stablecoins-cache:missing-cache");
-    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
-  }, GATE_LOAD_TIMEOUT_MS);
-
   it.each(["reserve", "stablecoins"])("opens no manifest or rows on a global %s admission hold", async (input) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -1105,8 +1090,50 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.quality).toEqual({
       reason: "capacity-coverage-floor",
       unresolvedMissingCapacity: 3,
+      structuralMissingCapacity: 0,
+      runtimeMissingCapacity: 3,
       missingCapacityOkThreshold: 2,
     });
+  });
+
+  it("excludes structural missing capacity from the coverage floor while publishing its census", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 101 }, (_value, index) => `coin-${index + 1}`);
+    const reserveSync = { provider: "reserve-sync-metadata", capacityConfidence: "dynamic", capacitySemantics: "immediate-bounded" } as const;
+    const missing: Record<string, Partial<RedemptionBackstopEntry>> = {
+      "coin-1": { ...reserveSync, sourceMode: "static", notes: ["Live reserve metadata lacks scoring-grade freshness evidence"] },
+      "coin-7": { ...reserveSync, sourceMode: "dynamic", capacityRejectionReason: "settlement-bound-unproven",
+        notes: ["Live redemption settlement completion bound is unproven; capacity is not established"] },
+    };
+    for (const id of ["coin-2", "coin-3", "coin-4", "coin-5", "coin-6"]) {
+      missing[id] = { provider: "unquantified-model", sourceMode: "static", capacityConfidence: "heuristic",
+        capacitySemantics: "eventual-only", notes: ["redemption-capacity-unquantified"] };
+    }
+    loadStablecoinsCacheMock.mockResolvedValue({ kind: "ok", updatedAt: now, payload: {
+      peggedAssets: configuredIdsMock.map((id) => makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } })),
+    } });
+    loadDexLiquidityScoresMock.mockResolvedValue({ map: {}, latestUpdatedAt: now });
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
+      Promise.resolve(makeResolvedSnapshot(asset.id, now, missing[asset.id] && {
+        score: null, capacityScore: null, resolutionState: "missing-capacity", modelConfidence: "low",
+        immediateCapacityUsd: null, immediateCapacityRatio: null, ...missing[asset.id],
+      })));
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("ok");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata).toMatchObject({
+      unresolvedMissingCapacity: 7,
+      structuralMissingCapacity: 6,
+      structuralMissingCapacityBy: { "unquantified-model": 5, "settlement-bound-unproven": 1 },
+      providerMissingCapacityBy: { "reserve-sync-metadata": 2, "unquantified-model": 5 },
+      // 101 active minus 5 capability-structural routes -> threshold 1; the
+      // reason-based structural row stays in the denominator.
+      missingCapacityOkThreshold: 1,
+    });
+    expect(metadata.quality).toBeUndefined();
   });
 
   it("materializes failed rows instead of leaving the coin absent from the new snapshot", async () => {

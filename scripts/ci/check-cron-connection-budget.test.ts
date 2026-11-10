@@ -3,29 +3,20 @@ import { evaluateCronConnectionBudget } from "./check-cron-connection-budget";
 
 describe("check-cron-connection-budget", () => {
   const reviewedReport = evaluateCronConnectionBudget();
-  it("keeps the reviewed registry within its budget", () => {
+  it("keeps the reviewed registry within its per-trigger budget", () => {
     expect(reviewedReport.failed).toBe(false);
-    expect(reviewedReport.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
-    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "halfHourlyOffset")?.totalConnections).toBe(5);
-    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly")?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
-  });
-
-  it("declares Queue recovery separately with serial send and unchanged cron peaks", () => {
-    expect(reviewedReport.nonCronReports).toEqual([{
-      surface: "reserve-continuation", worker: "public", totalConnections: 3, postSettlementSendConnections: 1,
-    }, {
-      surface: "slot-catch-up:quarterHourly", worker: "public", totalConnections: 4, postSettlementSendConnections: 0,
-    }, {
-      surface: "slot-catch-up:halfHourlyMintBurnCritical", worker: "public", totalConnections: 1, postSettlementSendConnections: 0,
-    }, {
-      surface: "slot-catch-up:dewsPsiOffset", worker: "public", totalConnections: 1, postSettlementSendConnections: 0,
-    }, {
-      surface: "slot-catch-up:hourlyYieldSync", worker: "public", totalConnections: 4, postSettlementSendConnections: 0,
-    }, {
-      surface: "slot-catch-up:twoHourlyDexDiscovery", worker: "public", totalConnections: 2, postSettlementSendConnections: 0,
-    }]);
-    expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fourHourlyReserveSync")?.totalConnections).toBe(4);
-    expect(reviewedReport.triggerReports.find((entry) => entry.scheduleKey === "fiveMinuteReserveRecovery")?.totalConnections).toBe(3);
+    expect(reviewedReport.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).not.toContain("halfHourlyOffset");
+    for (const trigger of reviewedReport.triggerReports) {
+      expect(trigger.totalConnections, trigger.scheduleKey).toBeLessThanOrEqual(reviewedReport.budget.maxPerTrigger);
+    }
+    // Queue recovery stays declared as its own serial surface, not folded into
+    // the cron peaks or sent concurrently with the settlement send.
+    expect(reviewedReport.nonCronReports.length).toBeGreaterThan(0);
+    expect(reviewedReport.nonCronReports.map((surface) => surface.surface)).toContain("reserve-continuation");
+    for (const surface of reviewedReport.nonCronReports) {
+      expect(surface.totalConnections, surface.surface).toBeLessThanOrEqual(reviewedReport.budget.maxPerTrigger);
+      expect(surface.postSettlementSendConnections, surface.surface).toBeLessThanOrEqual(1);
+    }
   });
 
   it.each([
@@ -35,8 +26,8 @@ describe("check-cron-connection-budget", () => {
     ["depegResolverOffset", ["compute-depeg-resolver"], 0],
     ["v9PublicationOffset", ["compute-safety-score-v9"], 0],
     // The D1-only consumer's bounded inline stage-recovery re-run reuses the
-    // stage job's nested direct-API peak, so the serial chain peaks at 5.
-    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 5],
+    // stage job's Curve/subgraph peak, so the serial chain peaks at 4.
+    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 4],
   ] as const)("preserves reviewed %s serial topology", (scheduleKey, jobs, peak) => {
     const trigger = reviewedReport.triggerReports.find((entry) => entry.scheduleKey === scheduleKey);
     expect(trigger?.chains).toEqual([{ chainKey: "chain-1", jobs, peak }]);

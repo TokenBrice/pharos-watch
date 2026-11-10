@@ -228,6 +228,25 @@ describe("buildCommsWorkbenchModel", () => {
     expect(missing.delivery.retries.totalQueued).toBeNull();
   });
 
+  it("treats a skipped latest dispatch as degraded even when the runner recorded ok", () => {
+    const bot = makeCompleteTelegramBotStatus();
+    const model = buildCommsWorkbenchModel({
+      telegramBot: {
+        ...bot,
+        pendingDeliveries: 3,
+        oldestDuePendingAgeSec: 600,
+        pendingDeliveryBacklog: { ...bot.pendingDeliveryBacklog!, due: 3, claimable: 3, deferred: 0 },
+      },
+      dispatchCron: dispatchCron(makeDispatchMetadata({ skipped: "circuit-open" })),
+      nowSeconds: NOW_SECONDS,
+    });
+
+    expect(model.delivery.latestDispatch.status).toBe("ok");
+    expect(model.delivery.latestDispatch.skipped).toBe("circuit-open");
+    expect(model.delivery.health).toBe("degraded");
+    expect(model.delivery.healthReason).toContain("circuit-open");
+  });
+
   it("uses row SLI outcomes and preserves their window, freshness and mixed-family lineage", () => {
     const sli = makeAvailableTelegramDeliverySli();
     const model = buildCommsWorkbenchModel({

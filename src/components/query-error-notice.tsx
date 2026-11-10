@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, RefreshCw, WifiOff, Database, type LucideIcon } from "lucide-react";
-import { ApiFetchError } from "@/lib/api";
+import { isDatasetNotPopulatedError } from "@/lib/api";
 import { NOTICE_TONE_COLORS } from "@shared/lib/classification";
 
 interface QueryErrorNoticeProps {
@@ -29,7 +29,7 @@ export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryError
   // A failed refresh over retained data is operator signal; age-based staleness is the health banner's job.
   if (!error || hasData) return null;
 
-  const isUnavailable = error instanceof ApiFetchError && error.status === 503;
+  const isUnavailable = isDatasetNotPopulatedError(error);
   const isNetworkFetchError =
     error instanceof TypeError &&
     /failed to fetch|networkerror|load failed|network request failed/i.test(error.message);

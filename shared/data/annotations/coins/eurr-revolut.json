@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-08-26",
+    "kind": "governance",
+    "label": "Revolut rolls out Bridge-issued EURR on Ethereum and Polygon",
+    "severity": "med",
+    "href": "https://polygon.technology/blog/revolut-launches-eurr-a-euro-backed-stablecoin-on-polygon",
+    "note": "Polygon confirmed the live rollout of Revolut's euro stablecoin EURR, issued by Bridge, on Ethereum and Polygon. Initial availability was restricted; the white paper's earlier public-offer date alone did not establish this live transition."
+  }
+]

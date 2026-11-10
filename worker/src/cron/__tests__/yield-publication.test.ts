@@ -17,8 +17,9 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
 import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
-import { buildYieldRankingsPayloadFromEvaluatedSources, loadPreviousYieldPublicationSnapshot } from "../yield-sync/publication";
+import { buildYieldRankingsPayloadFromEvaluatedSources, buildYieldSourceProvenance, loadPreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import { cleanupFalseLinkedVariantSourceSwitches, materializeYieldHistoryDaily, pruneYieldTables } from "../yield-sync/history";
+import { classifyYieldSourceFreshness } from "../../lib/yield-ranking-helpers";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/publication";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
@@ -114,8 +115,9 @@ describe("publishYieldCoordinatorResults", () => {
     return JSON.parse(String(entry?.binds[index] ?? "[]")) as T;
   }
 
-  function makePublicationDb(options?: { cacheWriteError?: Error; finalizeError?: Error }) {
+  function makePublicationDb(options?: { cacheWriteError?: Error; finalizeError?: Error; pruneError?: Error }) {
     return mockD1([
+      { match: "abandoned-staged-generation-finalize", rows: [], throwError: options?.pruneError },
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
       {
         match: "INSERT INTO cache (key, value, updated_at)",
@@ -556,6 +558,11 @@ describe("publishYieldCoordinatorResults", () => {
     expect(rows[0]?.publication_state).toBe("published");
   });
 
+  it("keeps a committed publication when retention is deferred", async () => {
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db: makePublicationDb({ pruneError: Error("prune") }) }));
+    expect(result).toMatchObject({ ok: true, cacheWriteSkipped: false, degradationReasons: ["yield-retention:deferred"] });
+  });
+
   it("writes bounded selected-source decision evidence with rejected-source reasons", async () => {
     const db = makePublicationDb();
     const best = makeEvaluatedSource({
@@ -712,6 +719,12 @@ describe("publishYieldCoordinatorResults", () => {
       Math.floor(FIXED_NOW.getTime() / 1000) - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS,
     );
     expect(handoffCleanupIndex).toBeGreaterThan(historyRetentionIndex);
+    // The drain stops when a chunk reports no changes; an empty fixture must not
+    // make it repeat the same coin for the whole 250,000-row budget.
+    const handoffDeletes = history.filter((entry) =>
+      entry.sql.includes("pharos:yield-sync:ownership-handoff-delete"),
+    );
+    expect(new Set(handoffDeletes.map((entry) => entry.binds[0])).size).toBe(handoffDeletes.length);
 
     const degradedDb = makePublicationDb();
     const degradedResult = await publishYieldCoordinatorResults(
@@ -941,19 +954,9 @@ describe("publishYieldCoordinatorResults", () => {
     }));
     try {
       const result = await publishYieldCoordinatorResults({
-        db,
-        previewRankingsPayload: buildPayloadWithObservedAt(startSec),
-        evaluatedSources: [source],
+        ...makePublishParams({ db, evaluatedSources: [source],
+          bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]) }),
         anchorOnlySources: seeds,
-        publicationViews: makePublicationViews([source], new Map([[source.id, source.sourceKey]]), startSec),
-        startSec,
-        degradationReasons: [],
-        safetySnapshotHeld: false,
-        resolvedCount: 1,
-        rowsRejected: 0,
-        divergenceFlags: 0,
-        sourceSwitches: 0,
-        previousYieldPublicationSnapshot: { status: "missing", rankings: [], malformed: false },
       });
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error(`publication failed: ${result.result.status}`);
@@ -981,11 +984,6 @@ describe("publishYieldCoordinatorResults", () => {
       symbol: "sDAI",
       sourceKey: "defillama:sdai-sky",
     });
-    const publicationViews = makePublicationViews(
-      [source],
-      new Map([[source.id, source.sourceKey]]),
-      startSec,
-    );
     let batchAttempts = 0;
     // The first publication batch commits, then its response is lost; the
     // retry replays the same statements against the already-written rows.
@@ -1004,20 +1002,12 @@ describe("publishYieldCoordinatorResults", () => {
     } as unknown as D1Database;
 
     try {
-      const result = await publishYieldCoordinatorResults({
+      const result = await publishYieldCoordinatorResults(makePublishParams({
         db: retryingDb,
         previewRankingsPayload,
         evaluatedSources: [source],
-        publicationViews,
-        startSec,
-        degradationReasons: [],
-        safetySnapshotHeld: false,
-        resolvedCount: 1,
-        rowsRejected: 0,
-        divergenceFlags: 0,
-        sourceSwitches: 0,
-        previousYieldPublicationSnapshot: { status: "missing", rankings: [], malformed: false },
-      });
+        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+      }));
 
       expect(batchAttempts).toBeGreaterThanOrEqual(2);
       expect(result.ok).toBe(true);
@@ -1609,5 +1599,49 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources benchmark projection", (
     expect(payload.provenance?.benchmarks?.CAD?.maxRecordAgeSec).toBe(45 * DAY_SECONDS);
     expect(payload.provenance?.benchmark.maxFetchAgeSec).toBe(YIELD_BENCHMARK_SCORE_TTL_SEC);
     expect(payload.provenance?.benchmarks?.CAD?.maxFetchAgeSec).toBe(YIELD_BENCHMARK_SCORE_TTL_SEC);
+  });
+});
+
+const provenanceNow = 1_790_502_000;
+
+describe("yield source provenance observation authority", () => {
+  it.each(["rate-derived", "defillama"])("does not renew an old %s observation from a fresh family fetch", (dataSource) => {
+    const source = {
+      id: "test-coin",
+      sourceKey: dataSource,
+      dataSource,
+      sourceObservedAt: provenanceNow - 37 * 3600,
+      benchmarkMeta: { fetchedAt: provenanceNow - 60, ageSeconds: 60 },
+      previousBestSourceKey: null,
+    } as EvaluatedYieldSource;
+    const provenance = buildYieldSourceProvenance({
+      source,
+      isBest: false,
+      evaluatedSources: [],
+      startSec: provenanceNow,
+      dlPoolsMeta: { mode: "dex-cache", updatedAt: provenanceNow - 60, ageSeconds: 60, poolCount: 1, fallbackMode: null },
+    });
+    expect(provenance.sourceObservedAt).toBe(provenanceNow - 37 * 3600);
+    expect(provenance.sourceAgeSeconds).toBe(37 * 3600);
+    expect(classifyYieldSourceFreshness({
+      dataSource,
+      sourceKey: dataSource,
+      sourceAgeSeconds: provenance.sourceAgeSeconds as number,
+    })).toBe("stale");
+  });
+
+  it("does not synthesize a rate observation from a recent benchmark fetch", () => {
+    const source = {
+      id: "test-coin", sourceKey: "rate-derived", dataSource: "rate-derived",
+      benchmarkMeta: { fetchedAt: provenanceNow, ageSeconds: 0 },
+      previousBestSourceKey: null,
+    } as EvaluatedYieldSource;
+    const provenance = buildYieldSourceProvenance({
+      source, isBest: false, evaluatedSources: [], startSec: provenanceNow,
+      dlPoolsMeta: { mode: "unavailable", updatedAt: null, ageSeconds: null, poolCount: 0, fallbackMode: null },
+    });
+    expect(provenance.sourceObservedAt).toBeNull();
+    expect(provenance.sourceAgeSeconds).toBeNull();
+    expect(provenance.sourceMaxAgeSeconds).toBe(36 * 3600);
   });
 });

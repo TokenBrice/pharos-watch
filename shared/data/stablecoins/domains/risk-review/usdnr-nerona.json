@@ -678,5 +678,80 @@
         "evidence": "At Fluent block 13144952, Mailbox defaultIsm() returned 0x3d4b33d1841db83518fe6da91c633fdc73927a91 and moduleType() returned 2. The clone arguments encoded a threshold-2 aggregation including the PausableIsm 0xab37d331f5f862e45a20137069f8374cf43b00d8, which was unpaused and owned by 0xa7eccdb9be08178f896c26b7bbd8c3d4e844d9ba; the other module's implementation 0x12ed1bba182cbc63692f813651bd493b7445c874 remains unverified."
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDnr uses fixed-parity JMI conversion through M0’s permissioned valuation layer.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-1",
+      "rationale": "This review covers USDnr itself, proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 on Ethereum and Fluent, rather than the separate staked vault. Pinned Ethereum block 26350000 and Fluent block 20215000 bind the proxies to verified JMIExtension implementations 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0 and 0x18091d82d55f68205f7f829acadb7897a7cb7d9c. Both return mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b and swapFacility() 0xb6807116b3b1b321a390594e31ecd6e0076f6278. Verified JMIExtension assumes M and allowed assets are pegged 1:1, scales decimals rather than reading market prices, and restricts wrapping and replacement to SwapFacility; inherited unwrapping is also onlySwapFacility and is limited by M backing. Non-M caps are role-controlled; M is explicitly uncapped. M0 documents fixed-parity extension conversions and permissioned Validator collateral verification. This is one top-level internal pricing mechanism across the two deployments, with no USDnr borrower-collateral, liquidation, backstop or shutdown branch in the reviewed implementation hierarchy. It is not an independent-price or oracleless safety claim, and proves no reserve value or stressed exit bound.",
+      "sources": [
+        {
+          "label": "M0 JMI design and configurable non-M asset caps (undated standing documentation; accessed 2026-11-06)",
+          "url": "https://docs.m0.org/build/treasury-jmi-overview"
+        },
+        {
+          "label": "M0 extension conversions through SwapFacility at fixed 1:1 parity (undated standing documentation; accessed 2026-11-06)",
+          "url": "https://docs.m0.org/protocol/extensions"
+        },
+        {
+          "label": "M0 MinterGateway: permissioned Minters and Validator-verified off-chain collateral updates (undated standing documentation; accessed 2026-11-06)",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
+          "label": "Verified Ethereum JMIExtension and imported MExtension/MYieldToOne; verified 2026-03-25, accessed 2026-11-06",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0"
+        },
+        {
+          "label": "Verified Fluent JMIExtension and imported MExtension/MYieldToOne; verified 2026-04-11, accessed 2026-11-06",
+          "url": "https://fluentscan.xyz/api/v2/smart-contracts/0x18091d82d55f68205f7f829acadb7897a7cb7d9c"
+        },
+        {
+          "label": "Dwellir pinned Ethereum USDnr implementation/mToken/SwapFacility reads: block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; observed 2026-11-06T19:19:30.597Z and 2026-11-06T19:23:23.149Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Pinned Fluent USDnr implementation/mToken/SwapFacility reads via research:dwellir-rpc public provider: block 20215000, hash 0x3223cb9ca4fd9471b23e23cab3b3f1ac28daa6848573ff8a2f0c97137f3ac246, 2026-11-06T17:07:13Z; observed 2026-11-06T19:20:56.838Z and 2026-11-06T19:23:22.765Z",
+          "url": "https://rpc.fluent.xyz"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c2-1",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 JMI design and configurable non-M asset caps (undated standing documentation; accessed 2026-11-06)",
+        "url": "https://docs.m0.org/build/treasury-jmi-overview"
+      },
+      {
+        "label": "M0 extension conversions through SwapFacility at fixed 1:1 parity (undated standing documentation; accessed 2026-11-06)",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "M0 MinterGateway: permissioned Minters and Validator-verified off-chain collateral updates (undated standing documentation; accessed 2026-11-06)",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "Verified Ethereum JMIExtension and imported MExtension/MYieldToOne; verified 2026-03-25, accessed 2026-11-06",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0"
+      },
+      {
+        "label": "Verified Fluent JMIExtension and imported MExtension/MYieldToOne; verified 2026-04-11, accessed 2026-11-06",
+        "url": "https://fluentscan.xyz/api/v2/smart-contracts/0x18091d82d55f68205f7f829acadb7897a7cb7d9c"
+      },
+      {
+        "label": "Dwellir pinned Ethereum USDnr implementation/mToken/SwapFacility reads: block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; observed 2026-11-06T19:19:30.597Z and 2026-11-06T19:23:23.149Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Pinned Fluent USDnr implementation/mToken/SwapFacility reads via research:dwellir-rpc public provider: block 20215000, hash 0x3223cb9ca4fd9471b23e23cab3b3f1ac28daa6848573ff8a2f0c97137f3ac246, 2026-11-06T17:07:13Z; observed 2026-11-06T19:20:56.838Z and 2026-11-06T19:23:22.765Z",
+        "url": "https://rpc.fluent.xyz"
+      }
+    ]
   }
 }

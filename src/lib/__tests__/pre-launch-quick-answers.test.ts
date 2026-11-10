@@ -21,7 +21,7 @@ describe("buildPreLaunchQuickAnswers", () => {
     expect(items[0].answer).toBe(
       "Pharos records QEUR in the announced phase. It was announced in Sep 2025. The current launch target is Q4 2026. Targets come from issuer statements; Pharos does not estimate launch dates.",
     );
-    expect(items[1].answer).toBe("QEUR is a pre-launch euro stablecoin from Qivalis.");
+    expect(items[1].answer).toBe("QEUR is a pre-launch euro stablecoin from Qivalis, a 37-bank consortium.");
     expect(items[2].answer).toContain("Pharos lists QEUR as pre-launch (the announced phase)");
     expect(items[2].answer).not.toMatch(/\bbuy\b|exchange/i);
   });
@@ -94,11 +94,23 @@ describe("buildPreLaunchQuickAnswers for a launched row", () => {
 });
 
 describe("firstOneLinerClause", () => {
-  it("keeps the opening clause as one sentence", () => {
+  it("keeps the registry line whole as one sentence", () => {
     expect(firstOneLinerClause("HKDAP is Anchorpoint's HKMA-licensed HKD stablecoin, backed 1:1.")).toBe(
-      "HKDAP is Anchorpoint's HKMA-licensed HKD stablecoin.",
+      "HKDAP is Anchorpoint's HKMA-licensed HKD stablecoin, backed 1:1.",
+    );
+    expect(firstOneLinerClause("A pre-launch yen stablecoin planned by MUFG, Mizuho, and SMBC under a trust structure.")).toBe(
+      "A pre-launch yen stablecoin planned by MUFG, Mizuho, and SMBC under a trust structure.",
     );
     expect(firstOneLinerClause("A short line.")).toBe("A short line.");
     expect(firstOneLinerClause(undefined)).toBeNull();
+  });
+
+  it("answers the issuer question with each registry one-liner, launched rows included", () => {
+    const withOneLiner = [...TRACKED_META_BY_ID.values()].filter((coin) => coin.oneLiner?.trim());
+    expect(withOneLiner.length).toBeGreaterThan(0);
+    for (const coin of withOneLiner) {
+      const item = buildPreLaunchQuickAnswers(coin).find((entry) => entry.question === `Who issues ${coin.symbol}?`);
+      expect(item?.answer, coin.id).toBe(firstOneLinerClause(coin.oneLiner));
+    }
   });
 });

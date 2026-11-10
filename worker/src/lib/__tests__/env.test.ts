@@ -19,7 +19,7 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
     | "DB" | "CF_VERSION_METADATA" | "CORS_ORIGIN"
     | "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT"
     | "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT" | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT"
-    | "DONOR_KEY_CLAIM_RATE_LIMIT" | "SAFETY_GRADES_RATE_LIMIT"
+    | "DONOR_KEY_CLAIM_RATE_LIMIT" | "SAFETY_GRADES_RATE_LIMIT" | "FEEDBACK_PREAUTH_RATE_LIMIT"
   >();
   expectTypeOf<Pick<Env, "GITHUB_PAT" | "FEEDBACK_IP_SALT" | "BANXICO_TOKEN">>()
     .toEqualTypeOf<{ GITHUB_PAT?: string; FEEDBACK_IP_SALT?: string; BANXICO_TOKEN?: string }>();
@@ -30,7 +30,7 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
   expectTypeOf<Env["HEAVY_EXECUTOR"]>().toEqualTypeOf<Fetcher | undefined>();
   expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage | SlotCatchUpMessage> | undefined>();
   expectTypeOf<RequiredKeys<ScheduledEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA">();
-  expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT">>().toEqualTypeOf<never>();
+  expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT" | "FEEDBACK_PREAUTH_RATE_LIMIT">>().toEqualTypeOf<never>();
   expectTypeOf<RequiredKeys<HeavyEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA" | "SAFETY_CAPTURE_ARCHIVE">();
   expectTypeOf<HeavyEnv["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket>();
   expectTypeOf<Extract<keyof HeavyEnv, "M0_API_KEY">>().toEqualTypeOf<never>();

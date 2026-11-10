@@ -66,6 +66,18 @@ export async function loadDlStablecoinPools(
   let envelopeRejectedCount = 0;
   let envelopeRejectedPoolIds: string[] = [];
   const cachedPools = await getCache(db, "dl-stablecoin-pools");
+  const unavailableResult = (pools: DlPool[] = []) => ({
+    pools,
+    envelopeRejectedCount,
+    envelopeRejectedPoolIds,
+    meta: {
+      mode: "unavailable" as const,
+      updatedAt: cachedPools?.updatedAt ?? null,
+      ageSeconds: cachedPools ? Math.max(0, nowSec - cachedPools.updatedAt) : null,
+      poolCount: pools.length,
+      fallbackMode,
+    },
+  });
   if (cachedPools) {
     const parsed = parseDlStablecoinPoolsCache(cachedPools.value, cachedPools.updatedAt, nowSec);
     if (parsed) {
@@ -147,18 +159,7 @@ export async function loadDlStablecoinPools(
           });
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
           fallbackMode = "direct-fetch-invalid-payload";
-          return {
-            pools: [],
-            envelopeRejectedCount,
-            envelopeRejectedPoolIds,
-            meta: {
-              mode: "unavailable",
-              updatedAt: cachedPools?.updatedAt ?? null,
-              ageSeconds: cachedPools ? Math.max(0, nowSec - cachedPools.updatedAt) : null,
-              poolCount: 0,
-              fallbackMode,
-            },
-          };
+          return unavailableResult();
         }
         const validated = filterValidDlPools(body.data, "direct DeFiLlama yields fetch");
         envelopeRejectedCount = validated.envelopeRejectedCount;
@@ -174,18 +175,7 @@ export async function loadDlStablecoinPools(
           });
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
           fallbackMode = "direct-fetch-empty";
-          return {
-            pools: [],
-            envelopeRejectedCount,
-            envelopeRejectedPoolIds,
-            meta: {
-              mode: "unavailable",
-              updatedAt: cachedPools?.updatedAt ?? null,
-              ageSeconds: cachedPools ? Math.max(0, nowSec - cachedPools.updatedAt) : null,
-              poolCount: 0,
-              fallbackMode,
-            },
-          };
+          return unavailableResult();
         }
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
         return {
@@ -219,16 +209,5 @@ export async function loadDlStablecoinPools(
     fallbackMode = "circuit-open";
   }
 
-  return {
-    pools: dlPools,
-    envelopeRejectedCount,
-    envelopeRejectedPoolIds,
-    meta: {
-      mode: "unavailable",
-      updatedAt: cachedPools?.updatedAt ?? null,
-      ageSeconds: cachedPools ? Math.max(0, nowSec - cachedPools.updatedAt) : null,
-      poolCount: dlPools.length,
-      fallbackMode,
-    },
-  };
+  return unavailableResult(dlPools);
 }

@@ -166,4 +166,20 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it("keeps the shortcuts dialog reachable after single-key shortcuts are disabled", async () => {
+    setSingleKeyShortcutDisabled(true);
+    render(
+      <Providers>
+        <div />
+      </Providers>,
+    );
+
+    await screen.findByTestId("route-progress-bar");
+
+    const event = pressKey("?");
+
+    expect(await screen.findByTestId("keyboard-shortcuts-dialog")).toBeTruthy();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
 });

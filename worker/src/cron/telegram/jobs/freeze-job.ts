@@ -105,12 +105,14 @@ export async function detectTelegramFreezeJobs(db: D1Database, nowSec: number): 
   statements.push(...buildTelegramChangeLogStatements(db, freezeAlertsToChangeLogEntries(belowRealtimeThreshold, nowSec)));
   // A burst can exceed one D1 batch. Job and change-log inserts are INSERT OR
   // IGNORE, so they commit in bounded chunks and the cursor advance rides in the
-  // last one: a crash before it replays the page as no-ops, and the cursor never
-  // advances past an event whose job or change-log row was not written.
+  // last one with any poison-row hold cleanup: a crash retains retries and
+  // replays inserts as no-ops, without skipping unwritten jobs/change-log rows.
   if (loaded.cursor != null) {
     statements.push(prepareCacheUpsert(db, { key: FREEZE_CURSOR_KEY, value: String(loaded.cursor), updatedAt: nowSec }));
   }
-  for (const chunk of chunkArray(statements, D1_BATCH_SIZE)) {
+  const chunks = chunkArray(statements, D1_BATCH_SIZE - (loaded.holdCleanup ? 1 : 0));
+  if (loaded.holdCleanup) chunks[chunks.length - 1]!.push(loaded.holdCleanup);
+  for (const chunk of chunks) {
     await executeAtomicBatch(db, chunk);
   }
   return {
@@ -125,10 +127,13 @@ export async function detectTelegramFreezeJobs(db: D1Database, nowSec: number): 
 
 /** Source suppression wins until the send boundary: retracted claims cancel queued rows. */
 export async function cancelRetractedFreezeDeliveries(db: D1Database, nowSec: number): Promise<number> {
-  const retractedJobPredicate = `EXISTS (
+  // Strip the job prefix instead of prefixing every tape event id, so each
+  // candidate is one idx_tape_event_id seek rather than a tape_events scan
+  // (14.7M rows read in one minute on 2026-11-04 with freeze jobs planning).
+  const retractedJobPredicate = `substr(%JOB%, 1, 7) = 'freeze:' AND EXISTS (
     SELECT 1 FROM tape_events AS t
       LEFT JOIN blacklist_events AS b ON t.source_table = 'blacklist_events' AND b.id = t.source_row_id
-     WHERE 'freeze:' || t.event_id = %JOB%
+     WHERE t.event_id = substr(%JOB%, 8)
        AND (t.suppressed_at IS NOT NULL OR b.suppression_reason IS NOT NULL)
   )`;
   const results = await executeAtomicBatch(db, [
@@ -136,13 +141,13 @@ export async function cancelRetractedFreezeDeliveries(db: D1Database, nowSec: nu
       `UPDATE telegram_deliveries
           SET state = 'cancelled', done_at = ?, body = NULL, reason = 'freeze-claim-retracted'
         WHERE kind = 'freeze' AND state IN ('pending', 'retry')
-          AND ${retractedJobPredicate.replace("%JOB%", "telegram_deliveries.job_id")}`,
+          AND ${retractedJobPredicate.replaceAll("%JOB%", "telegram_deliveries.job_id")}`,
     ).bind(nowSec),
     db.prepare(
       `UPDATE telegram_jobs
           SET state = 'cancelled', completed_at = ?, error = 'freeze-claim-retracted'
         WHERE kind = 'freeze' AND state = 'planning'
-          AND ${retractedJobPredicate.replace("%JOB%", "telegram_jobs.job_id")}`,
+          AND ${retractedJobPredicate.replaceAll("%JOB%", "telegram_jobs.job_id")}`,
     ).bind(nowSec),
   ], { returnResults: true });
   return Number(results[0]?.meta?.changes ?? 0);

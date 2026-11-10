@@ -646,8 +646,8 @@ type AlertInlineButton =
  * First-chunk keyboard, identical in shape for every family:
  * [Mute SYM 24h] [Pause all 4h] / [Fewer like this] [Manage Alerts].
  * Overflow chunks keep only the chat-wide pause. Mute targets the top-ranked
- * coin; callback_data stays within Telegram's 64-byte limit for every tracked
- * stablecoin id (property-tested in `telegram-alerts.test.ts`).
+ * coin; callback_data stays within Telegram's 64-byte limit for the longest
+ * tracked stablecoin id (checked in `telegram-alerts.test.ts`).
  */
 export function buildAlertReplyMarkup(
   alerts: ConsolidatedAlerts,

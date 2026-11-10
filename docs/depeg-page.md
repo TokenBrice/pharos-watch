@@ -31,8 +31,12 @@ softening rules for discovery surfaces do not apply here.
   `buildDepegEventTitle` renders `{SYMBOL} Depeg, {Month D, YYYY}: {deviation} Below|Above Peg`
   with no clause dash; it is also the H1 of every non-curated event, while curated
   annotation labels keep their own H1. An unavailable deviation is omitted, never printed
-  as a placeholder. The description leads with `{name} ({SYMBOL}) fell|rose {deviation}
-  below|above its peg on {date}`.
+  as a placeholder. A ledger audit whose verdict is `disputed` or `false_positive`
+  (the reviewed-dispute set) appends the existing `Disputed` label in
+  parentheses to the title, description and synopsis, keeping the measured figure, and
+  prepends the shared `Disputed` badge to the provenance line in place of the raw
+  `audit: …` token; other verdicts keep that token. The
+  description leads with `{name} ({SYMBOL}) fell|rose {deviation} below|above its peg on {date}`.
   Metadata, `NewsArticle` description, synopsis and event summary use the canonical
   `classifyDepegClosure` result: only recovered and legacy-recovered records claim
   recovery. Coverage loss, superseded direction, removed tracking and unknown
@@ -63,13 +67,11 @@ With the default-on DDR/DDRR feature flags enabled, the order is deliberate:
 7. `DepegEventArchivePreview` (server) — latest month of permanent event pages
 8. `FaqSection` (server) — the depeg-event answer interpolates `DEPEG_THRESHOLD_BPS`, `DEPEG_THRESHOLD_BPS_NON_USD` and `DEPEG_PENDING_MIN_AGE_SEC`: every new event is pending first (universal minimum, not a publication SLA), and opposite-direction evidence never confirms. Visible copy and FAQPage JSON-LD share `FAQ_ITEMS`; `activeDepegs.detail` states the same minimum.
 
-The route reads answer → table to act on → evidence/audit. The board deliberately follows the
-forecast worklist rather than preceding it: a visitor arriving during an incident needs the verdict
-on the live incidents before scanning every tracked asset.
-
-Grading is audit evidence, so it follows the board rather than standing between the forecasts and
-the table a reader acts on. It is always rendered, still precedes the history handoff, and the
-hero's track-record figure links to `#forecast-grading`. See [Forecast Grading](#forecast-grading).
+The route reads answer → table to act on → evidence/audit: the board follows the forecast worklist
+so incident readers see the live verdict before scanning every tracked asset, and grading follows
+the board so audit evidence never separates the forecasts from the table a reader acts on. Grading
+is always rendered before the history handoff; the hero's track-record block links to
+`#forecast-grading`. See [Forecast Grading](#forecast-grading).
 
 ---
 
@@ -83,8 +85,10 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread); a four-cell figure grid (pending
   confirmations, DEWS ALERT-or-worse, holding peg, median deviation); **Recovery outlook · DDR** — the
   whole-book verdict split and calibration lineage; **Forecast track record · DDRR** — headline
-  recovery-call accuracy and its call fraction, with no sub-text under the figure (see [Forecast Grading](#forecast-grading)); then the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail
-  layer. Supporting figures stay neutral.
+  recovery-call accuracy and its call fraction, with only the policy-scope label and a
+  `see the grading` link beneath the figure (see [Forecast Grading](#forecast-grading)); then
+  the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail layer. Supporting
+  figures stay neutral.
 - **Right field:** `DEWSRadarPanel` (`src/components/dews-summary.tsx`) fills the full column height
   beside the rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
   band, and a **double-ring halo marks an elevated coin that also has an open confirmed incident**
@@ -240,9 +244,10 @@ per-major Wilson intervals) render only when the snapshot carries them; older sn
 them unavailable, never zero. `terminal_at_lock` rows are labelled "Terminal at lock" and are
 curation debt, not scored calls.
 
-The hero and homepage DDR card promote that headline as `Recovery calls correct: c/s (p%)`
-through `describePromotedAccuracy()` (`src/lib/ddr-promoted-accuracy.ts`); its baseline and
-version-scope lines are not rendered (owner rule: no sub-text under headline figures).
+The hero and homepage DDR card promote that headline as the accuracy percentage through
+`describePromotedAccuracy()` (`src/lib/ddr-promoted-accuracy.ts`), with
+`Recovery calls correct: c/s` as its call-fraction caption; its baseline and version-scope
+lines are not rendered (owner rule: no explanatory sub-text under headline figures).
 
 Once at least five recovery calls are scored, the ledger leads with the aggregate accuracy percentage (the homepage DDR card's track-record figure) over the `correct / scored` fraction; a thinner sample shows only the fraction.
 
@@ -299,11 +304,10 @@ Permanent is not the same as indexed. `buildNoindexDepegEventSlugs()` in
 from the sitemap and `public-route-inventory.ts`: events whose opening was held on a
 low-confidence price input (`pendingReason` includes `low-confidence`), and secondary
 events in a same-coin, same-UTC-day cluster, where the event with the largest absolute
-peak (low-confidence events excluded) stays indexed. Pages that earned Search Console impressions in the
-prior three months sit in a checked-in allowlist and are never noindexed. Noindexed pages
-stay live, keep their URL and stay listed in the archive, so the continuity gate needs no
-redirect. This replaced the former "no low-information noindex tier" rule under the
-2026-10-25 SEO plan (decision D5); events are never merged, because the producer owns the
+peak (low-confidence events excluded) stays indexed. Pages with at least one click or at
+least 10 impressions in the 16 months to 2026-10-25 sit in a checked-in allowlist and are
+never noindexed. Noindexed pages stay live, keep their URL and stay listed in the archive,
+so the continuity gate needs no redirect. Events are never merged; the producer owns the
 event vocabulary.
 
 Published slugs and slug-keyed editorial entries are reserved by event ID before naming

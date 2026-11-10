@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { ScreenerRow } from "@/lib/screener-filters";
 import type { CsvColumn } from "@/lib/exports/csv";
+import { escapeCsvField } from "@shared/lib/csv";
 
 import { ScreenerClient } from "./client";
 
@@ -159,6 +160,31 @@ describe("ScreenerClient freshness notices", () => {
     expect(view.getByTestId("selector-callout")).toBeTruthy();
   });
 
+  it.each([null, "dismissed"])("retains Picker restoration across remount with legacy %s", async (legacy) => {
+    const { SelectorCallout } = await vi.importActual<typeof import("@/components/selector/selector-callout")>("@/components/selector/selector-callout");
+    const currentKey = "pharos.selector.callout.v1";
+    const legacyKey = "pharos-selector-callout-v1";
+    localStorage.removeItem(currentKey);
+    localStorage.removeItem(legacyKey);
+    if (legacy) localStorage.setItem(legacyKey, legacy);
+    let view = render(<SelectorCallout />);
+    expect(Boolean(view.queryByRole("link", { name: "Try the Picker" }))).toBe(legacy === null);
+    if (!legacy) fireEvent.click(view.getByRole("button", { name: "Dismiss Picker callout" }));
+    fireEvent.click(view.getByRole("button", { name: /Bring back the Picker/ }));
+    expect(localStorage.getItem(currentKey)).toBe("default");
+    view.unmount();
+    view = render(<SelectorCallout />);
+    expect(view.getByRole("link", { name: "Try the Picker" })).toBeTruthy();
+    fireEvent.click(view.getByRole("button", { name: "Dismiss Picker callout" }));
+    view.unmount();
+    view = render(<SelectorCallout />);
+    expect(view.getByRole("button", { name: /Bring back the Picker/ })).toBeTruthy();
+    expect(localStorage.getItem(currentKey)).toBe("dismissed");
+    expect(localStorage.getItem(legacyKey)).toBe(legacy);
+    localStorage.removeItem(currentKey);
+    localStorage.removeItem(legacyKey);
+  });
+
   it("keeps counts and export controls at a fixed footprint across loading and ready states", () => {
     const view = render(<ScreenerClient />);
     expect(view.getByRole("region", { name: "Data table" }).contains(view.getByTestId("freshness-notices"))).toBe(true);
@@ -182,7 +208,7 @@ describe("ScreenerClient freshness notices", () => {
       dataUpdatedAt: 1_700_000_000, meta: null, refetch,
     });
     view.rerender(<ScreenerClient />);
-    const readyCount = view.getByText(/tracked/).closest("p");
+    const readyCount = view.getByText(/screenable coins/).closest("p");
     expect(readyCount?.classList.contains("min-h-12")).toBe(true);
     expect(readyCount?.classList.contains("lg:min-h-8")).toBe(true);
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
@@ -208,6 +234,29 @@ describe("ScreenerClient freshness notices", () => {
     expect(exported.data.at(-1)?.id).toBe(table.rows.at(-1)?.id);
   });
 
+  it("exports the reviewed blacklistable label, inherited upstream exposure included", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+    render(<ScreenerClient />);
+    const exported = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as {
+      data: ScreenerRow[];
+      columns: CsvColumn<ScreenerRow>[];
+    };
+    const column = exported.columns.find((entry) => entry.header === "blacklistable")!;
+    const cell = (id: string) => column.accessor(exported.data.find((row) => row.id === id)!, 0);
+
+    expect(cell("steakusdt-steakhouse")).toBe("Upstream");
+    expect(cell("usdc-circle")).toBe("Yes");
+    expect(cell("susdt-spark")).toBe("Possible");
+    expect(cell("usdu-unitas")).toBe("No");
+  });
+
 
   it.each([true, false])("withholds counts and export without primary data (loading=%s)", (isLoading) => {
     mocks.useStablecoins.mockReturnValue({
@@ -215,7 +264,7 @@ describe("ScreenerClient freshness notices", () => {
       dataUpdatedAt: 0, meta: null, refetch,
     });
     const view = render(<ScreenerClient />);
-    expect(view.queryByText(/tracked/)).toBeNull();
+    expect(view.queryByText(/screenable coins/)).toBeNull();
     expect(view.getByText(isLoading ? "Loading screener inputs…" : "Screener counts unavailable.")).toBeTruthy();
     expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0].dataState).toBe(isLoading ? "loading" : "unavailable");
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ data: [], disabled: true });
@@ -261,7 +310,7 @@ describe("ScreenerClient freshness notices", () => {
     hook.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
     view.rerender(<ScreenerClient />);
     expect(view.getByText("Screener counts unavailable.")).toBeTruthy();
-    expect(view.queryByText(/tracked/)).toBeNull();
+    expect(view.queryByText(/screenable coins/)).toBeNull();
     expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0]).toMatchObject({ dataState: "unavailable", rows: [] });
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ disabled: true, data: [] });
 
@@ -342,6 +391,43 @@ describe("ScreenerClient freshness notices", () => {
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
       asOfISO: "unknown", sourceGenerations: { ...expected, "report-cards": null }, disabled: false,
     });
+  });
+
+  it("exports an unknown mint band, not NR, when the report-card publication is unavailable", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    mocks.useReportCardsV9.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
+    render(<ScreenerClient />);
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as {
+      data: ScreenerRow[];
+      columns: CsvColumn<ScreenerRow>[];
+      disabled: boolean;
+    };
+
+    expect(props.disabled).toBe(false);
+    expect(props.data.length).toBeGreaterThan(0);
+    expect(props.data.every((row) => row.mintAuthorityScoreBand === null)).toBe(true);
+    const bandColumn = props.columns.find((column) => column.header === "mint_authority_score_band")!;
+    expect(bandColumn.accessor(props.data[0], 0)).toBeNull();
+    expect(escapeCsvField(bandColumn.accessor(props.data[0], 0))).toBe("");
+  });
+
+  it("stamps the export with the admitted publication's prefixed methodology label", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    render(<ScreenerClient />);
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as { methodologyLabel: string };
+
+    expect(props.methodologyLabel).toContain("safety-score v9.0");
+    expect(props.methodologyLabel).not.toContain("safety-score 9.0");
+  });
+
+  it("does not claim a methodology for safety columns this run did not read", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    mocks.useReportCardsV9.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
+    render(<ScreenerClient />);
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as { methodologyLabel: string };
+
+    expect(props.methodologyLabel).toContain("safety-score columns unavailable this run");
+    expect(props.methodologyLabel).not.toMatch(/safety-score v9\b/);
   });
 
   it("keeps an inadmissible report publication unavailable rather than treating it as issuer NR", () => {
@@ -430,11 +516,18 @@ describe("ScreenerClient freshness notices", () => {
       safetyBackingScore: 86,
       safetyExitScore: 88,
       safetyControlScore: 90,
-      safetyEvidence: "limited",
+      safetyEvidence: "insufficient",
       safetyWeakestPillar: "backing",
       safetyWeakestScore: 86,
       safetyBindingCapReason: bindingCap.reason,
     }));
+    const exported = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as {
+      data: ScreenerRow[];
+      columns: CsvColumn<ScreenerRow>[];
+    };
+    const exportedRow = exported.data.find((candidate) => candidate.id === "usdc-circle")!;
+    const evidenceCell = exported.columns.find((column) => column.header === "safety_evidence")!;
+    expect(evidenceCell.accessor(exportedRow, 0)).toBe("insufficient");
   });
   it("preserves technical null grades, excluded pillars and causes in rows and exports", () => {
     const response = makeReportCardsV9Response({ cards: [

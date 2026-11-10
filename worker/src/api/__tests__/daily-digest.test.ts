@@ -54,12 +54,6 @@ describe("handleDailyDigest", () => {
     expect(body.riskSignal).toMatchObject({ symbol: "PMUSD", bps: -5284, severity: "critical" });
     expect(body.riskTape).toHaveLength(1);
     expect(body.nextTriggers).toHaveLength(1);
-  });
-
-  it("includes X-Data-Age header when data exists", async () => {
-    const row = makeDigestRow();
-    const db = mockD1([{ match: "daily_digest", rows: [row], first: row }]);
-    const res = await handleDailyDigest(db);
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
 });

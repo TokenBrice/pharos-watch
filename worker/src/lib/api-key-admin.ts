@@ -27,6 +27,7 @@ import {
   type ApiKeyPublicRow,
 } from "./api-key-core";
 import { errorResponse } from "./api-response";
+import { logWorkerEvent } from "./structured-log";
 import type { MinimalD1RunResult, MinimalD1Statement } from "./minimal-d1";
 
 function apiKeyPostWriteReadbackFailure(action: "create" | "update" | "deactivate" | "rotate"): Response {
@@ -117,6 +118,32 @@ export interface TrustedApiKeyAuditInput {
 }
 
 /**
+ * The credential row is the commit point: a failed audit insert must not turn a
+ * committed create/rotate into an unknown outcome and strand the one-time token.
+ */
+async function recordApiKeyAuditOrLog(
+  db: ApiKeyDb,
+  apiKeyId: number,
+  action: Parameters<typeof recordApiKeyAudit>[2],
+  detail: Record<string, unknown> | undefined,
+  nowSec: number,
+  actor: ApiKeyAuditActor = "admin",
+): Promise<void> {
+  try {
+    await recordApiKeyAudit(db, apiKeyId, action, detail, nowSec, actor);
+  } catch (error) {
+    logWorkerEvent({
+      scope: "api",
+      level: "error",
+      event: "api_key_audit_write_failed",
+      route: action,
+      message: "API key credential write committed but its audit row was not persisted",
+      error,
+    });
+  }
+}
+
+/**
  * Prepared `INSERT ... RETURNING` for one issued key, not yet executed, so the
  * donor claim can put it in a `db.batch()` alongside its claim row. Generic over
  * the statement type: a real `D1Database` yields a batchable `D1PreparedStatement`.
@@ -180,7 +207,7 @@ async function createTrustedApiKey(
 
   clearApiKeyCache(material.keyPrefix);
   if (audit) {
-    await recordApiKeyAudit(db, createdRow.id, audit.action, audit.detail, nowSec, audit.actor);
+    await recordApiKeyAuditOrLog(db, createdRow.id, audit.action, audit.detail, nowSec, audit.actor);
   }
   return {
     key: mapRowToSummary(createdRow),
@@ -246,7 +273,7 @@ export async function updateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
-  await recordApiKeyAudit(db, id, "updated", parsed as Record<string, unknown>, nowSec);
+  await recordApiKeyAuditOrLog(db, id, "updated", parsed as Record<string, unknown>, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return apiKeyPostWriteReadbackFailure("update");
@@ -269,7 +296,7 @@ export async function deactivateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
-  await recordApiKeyAudit(db, id, "deactivated", undefined, nowSec);
+  await recordApiKeyAuditOrLog(db, id, "deactivated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return apiKeyPostWriteReadbackFailure("deactivate");
@@ -321,7 +348,7 @@ export async function rotateApiKey(
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyCache(material.keyPrefix);
   getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
-  await recordApiKeyAudit(db, id, "rotated", undefined, nowSec);
+  await recordApiKeyAuditOrLog(db, id, "rotated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return apiKeyPostWriteReadbackFailure("rotate");

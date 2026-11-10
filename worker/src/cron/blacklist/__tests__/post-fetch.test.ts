@@ -4,6 +4,7 @@ import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import { D1_BATCH_SIZE } from "../../../lib/constants";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
+import type * as CurrentBalanceCache from "../../../lib/blacklist/current-balance-cache";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makePendingBlacklistRow } from "./blacklist.test-support";
 import { ethereumConfig } from "./balance.test-support";
@@ -16,7 +17,8 @@ vi.mock("../persistence", () => ({
   insertBlacklistRows: vi.fn(),
 }));
 
-vi.mock("../../../lib/blacklist/current-balance-cache", () => ({
+vi.mock("../../../lib/blacklist/current-balance-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof CurrentBalanceCache>()),
   syncCurrentBalanceCacheForRows: vi.fn(),
 }));
 
@@ -29,7 +31,10 @@ vi.mock("../../../lib/blacklist/row-preparation", async (importOriginal) => {
 });
 
 import { enrichRowBalances } from "../../../lib/blacklist/amount-recovery";
-import { syncCurrentBalanceCacheForRows } from "../../../lib/blacklist/current-balance-cache";
+import {
+  MAX_SCAN_PHASE_BALANCE_CAPTURES,
+  syncCurrentBalanceCacheForRows,
+} from "../../../lib/blacklist/current-balance-cache";
 import { insertBlacklistRows } from "../persistence";
 import { processFetchedBlacklistRows } from "../post-fetch";
 
@@ -85,7 +90,7 @@ describe("processFetchedBlacklistRows", () => {
       vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
       vi.mocked(insertBlacklistRows).mockResolvedValue(1);
       vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
-        updated: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false,
+        updated: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false, deferredToDebt: 0,
       });
       await processFetchedBlacklistRows(postFetchOptions(db, [row]));
       expect(row.suppression_reason).toBe(amountSource === "event" ? "circle_mirror_zero_balance" : null);
@@ -153,6 +158,7 @@ describe("processFetchedBlacklistRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
 
     const result = await processFetchedBlacklistRows(postFetchOptions(db, [duplicateRow]));
@@ -168,6 +174,7 @@ describe("processFetchedBlacklistRows", () => {
       [duplicateRow],
       expect.objectContaining({
         assetPriceUsd: null,
+        captureLimit: MAX_SCAN_PHASE_BALANCE_CAPTURES,
         latestRows: [duplicateRow],
       }),
     );
@@ -187,6 +194,7 @@ describe("processFetchedBlacklistRows", () => {
       failed: 0,
       skippedDueBudget: 1,
       budgetExhausted: true,
+      deferredToDebt: 0,
     });
 
     const result = await processFetchedBlacklistRows(postFetchOptions(db, [duplicateRow]));
@@ -196,6 +204,7 @@ describe("processFetchedBlacklistRows", () => {
       failed: 0,
       skippedDueBudget: 1,
       budgetExhausted: true,
+      deferredToDebt: 0,
     });
   });
 
@@ -228,6 +237,7 @@ describe("processFetchedBlacklistRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
 
     const result = await processFetchedBlacklistRows(postFetchOptions(db, duplicateRows));
@@ -271,6 +281,7 @@ describe("processFetchedBlacklistRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
 
     const result = await processFetchedBlacklistRows(postFetchOptions(db, [blacklistRow, unblacklistRow]));
@@ -311,6 +322,7 @@ describe("processFetchedBlacklistRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
 
     const result = await processFetchedBlacklistRows(postFetchOptions(db, [blacklistRow, unblacklistRow]));

@@ -1,6 +1,13 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { invalidateMintBurnFlowCaches, readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
-import { isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
+import {
+  isGrandfatheredMintBurnConfig,
+  MintBurnPublicationPolicyDecodeError,
+  mintBurnDisabledReason,
+  readMintBurnDisabledKeys,
+  resolveMintBurnDisabledSymbolPolicy,
+  syncMintBurnPublicationPolicy,
+} from "../../lib/mint-burn-publication";
 import { createBudget } from "../../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../../lib/mint-burn-pipeline/context";
@@ -13,6 +20,7 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./chain-context";
 import { recalcMintBurnAffectedHours } from "./recalc";
 import { pruneMintBurnRetention } from "./retention";
+import { runMintBurnSupplyReconciliation } from "../../lib/mint-burn-supply-reconciliation";
 import { completeMintBurnRun } from "./run-completion";
 import { mintBurnPublicationMetadata } from "./publication-metadata";
 import { configKey, configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./run-configs";
@@ -31,11 +39,15 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { getCircuitRecord } from "../../lib/circuit-breaker";
+import { getCircuitRecordForAdmission } from "../../lib/circuit-breaker";
 import {
-  COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
-  loadMintBurnCoverageGaps, repairMintBurnCoverage,
+  idleMintBurnRepairD1, loadMintBurnCoverageGaps, repairMintBurnCoverage,
 } from "./repair-coverage";
+import { commitMintBurnSupplyProofRepair, loadMintBurnSupplyProofRepairRanges } from "./repair-supply-proofs";
+import { mintBurnConservationFingerprint, requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-conservation";
+import { invalidateChangedMintBurnSupplyProofConfigs } from "../../lib/mint-burn-supply-proofs";
+import { isD1ResourceWindowError } from "../../lib/d1-overload-retry";
+import { createMintBurnConfigSummary } from "./sync-config";
 
 const MAX_SCAN_RANGE = 50_000;
 
@@ -93,23 +105,67 @@ export class MintBurnRun {
     const deadlineMs = Date.now() + 9 * 60_000;
 
     throwIfAborted(signal);
+    const invalidatedSupplyProofs = await invalidateChangedMintBurnSupplyProofConfigs(db, new Map(MINT_BURN_CONFIGS.filter(requiresReviewedSupplyBurnProof).map((config) =>
+      [mintBurnConfigKey(config), mintBurnConservationFingerprint(config)])), { signal });
+    if (invalidatedSupplyProofs > 0) await invalidateMintBurnFlowCaches(db);
     const budget = createBudget(GLOBAL_BUDGET_LIMIT);
-    const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
-    const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
-
     const allActiveConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
+    const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
+    const operatorSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
+    let priorDisabledKeys = new Set<string>();
+    if (operatorSymbols.size > 0) {
+      try {
+        priorDisabledKeys = await readMintBurnDisabledKeys(db, signal);
+      } catch (error) {
+        // Only a stored value that cannot be decoded may proceed with no
+        // retained keys, because the policy sync below rewrites that row from
+        // the env switch. A failed read must fail the lane closed before any
+        // rewrite: treating it as "nothing disabled" would erase the durable
+        // quarantine the rollout is meant to preserve.
+        if (!(error instanceof MintBurnPublicationPolicyDecodeError)) throw error;
+        logWorkerEvent({
+          scope: "handler",
+          job: jobName,
+          level: "warn",
+          event: "mint_burn_disabled_policy_unreadable",
+          message: "Stored mint/burn disabled policy is unreadable; retaining no durable keys and rewriting it from the env switch",
+          error,
+          metadata: { configuredSymbols: [...operatorSymbols].sort() },
+        });
+      }
+    }
+    const symbolPolicy = resolveMintBurnDisabledSymbolPolicy(allActiveConfigs, operatorSymbols, priorDisabledKeys);
+    const disabledSymbols = symbolPolicy.symbols;
+    for (const ignored of symbolPolicy.ignored) {
+      logWorkerEvent({
+        scope: "handler",
+        job: jobName,
+        level: "warn",
+        event: "mint_burn_disabled_symbol_ignored",
+        message: "MINT_BURN_DISABLED_SYMBOLS entry names no single stablecoin; use MINT_BURN_DISABLED_IDS",
+        metadata: {
+          symbol: ignored.symbol,
+          reason: ignored.reason,
+          stablecoinIds: ignored.stablecoinIds,
+          retainedConfigKeys: ignored.retainedKeys,
+        },
+      });
+    }
+
     const allTrackableConfigs = allActiveConfigs.filter((config) => laneIncludesConfig(lane, config));
     let enabledConfigs: MintBurnContractConfig[] = [];
     const retentionConfigs: MintBurnContractConfig[] = [];
     const disabledConfigReasons = new Map<string, string>();
-    const disabledPublicationKeys: string[] = [];
+    const disabledPublicationKeys = new Set(symbolPolicy.retainedKeys);
 
     for (const config of allActiveConfigs) {
       const key = configKey(config);
       const reason = mintBurnDisabledReason(config, disabledConfigIds, disabledSymbols);
-      if (reason) {
-        disabledPublicationKeys.push(key);
-        if (laneIncludesConfig(lane, config)) disabledConfigReasons.set(key, reason);
+      if (reason || symbolPolicy.retainedKeys.has(key)) {
+        disabledPublicationKeys.add(key);
+        if (laneIncludesConfig(lane, config)) {
+          disabledConfigReasons.set(key, reason ?? "symbol-disabled-retained");
+        }
         continue;
       }
 
@@ -127,6 +183,8 @@ export class MintBurnRun {
     // retain the earlier protection as well.
     const pendingAdmissionKeys = new Set(publicationContext.publication.legs
       .filter((leg) => leg.status === "pending-admission").map((leg) => leg.configKey));
+    const reactivationKeys = new Set(publicationContext.publication.legs
+      .filter((leg) => leg.reason === "reactivation-pending").map((leg) => leg.configKey));
     const grandfatheredKeys = new Set(allActiveConfigs.filter(isGrandfatheredMintBurnConfig).map(configKey));
     const pendingRetentionKeys = new Set(publicationContext.publication.legs
       .filter((leg) => leg.status === "pending-admission"
@@ -212,28 +270,49 @@ export class MintBurnRun {
     const lastBlocks = await readMintBurnSyncStateBatch(db, configs);
     const lastBlocksAfterRun = this.lastBlocksAfterRun = new Map(lastBlocks);
 
+    const tronCircuit = configs.some((config) => config.chain.chainId === "tron")
+      ? await getCircuitRecordForAdmission(db, CIRCUIT_SOURCE.TRONGRID)
+      : null;
     const tronOptions = {
       dwellirNative: options.dwellirNative,
       trongridApiKey: options.trongridApiKey,
       // Native outcomes are diagnostic-only; do not acquire another job's half-open probe.
-      trongridAllowed: configs.some((config) => config.chain.chainId === "tron")
-        ? (await getCircuitRecord(db, CIRCUIT_SOURCE.TRONGRID)).state === "closed" : false,
+      trongridAllowed: tronCircuit?.record.state === "closed",
       deadlineMs,
     };
     const chainContexts = await loadMintBurnChainContexts({
-      configs: configs.filter((config) => !pendingAdmissionKeys.has(configKey(config))),
+      configs: configs.filter((config) => !pendingAdmissionKeys.has(configKey(config)))
+        .concat(lane === "critical" ? publicationContext.diagnosticConfigs : []),
       apiKey,
       budget,
       signal,
       chainRpcs: options.chainRpcs,
       ...tronOptions,
     });
-    const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
+    const stablecoinIds = [...new Set([...configs, ...(lane === "critical" ? publicationContext.diagnosticConfigs : [])]
+      .map((config) => config.stablecoinId))];
     const priceContext = await loadMintBurnPriceContextBatch(
       db,
       stablecoinIds,
       D1_SAFE_IN_CLAUSE_BIND_LIMIT,
     );
+
+    // Daily operator evidence shares the serialized producer and its 200-request cap.
+    // Reserve this bounded slice before scans can consume the remaining budget.
+    let dailyReconciliation: Awaited<ReturnType<typeof runMintBurnSupplyReconciliation>> | undefined;
+    if (lane === "critical" || lane === "all") {
+      try {
+        dailyReconciliation = await runMintBurnSupplyReconciliation({
+          db, configs: publicationContext.diagnosticConfigs, now: runTimestamp, budget, signal, deadlineMs,
+          rpcEndpointsByChain: new Map([...chainContexts].map(([chainId, context]) => [chainId, context.rpcEndpoints])),
+          heads: new Map([...chainContexts].flatMap(([chainId, context]) => context.chainHead == null ? [] : [[chainId, context.chainHead]])),
+          priceContext,
+        });
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        dailyReconciliation = { processed: 0, requests: 0, reason: "daily-reconciliation-maintenance-failed" };
+      }
+    }
 
     await reportCronProgress(reportProgress, {
       stage: lane === "extended" ? "extended-queue" : lane === "critical" ? "critical-queue" : "queue",
@@ -281,6 +360,7 @@ export class MintBurnRun {
       pendingCursorUpdates,
       pendingScanCoverage,
       pendingAdmissionKeys,
+      reactivationKeys,
       maxScanRange: MAX_SCAN_RANGE,
       criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
       criticalBridgeConfigBudgetLimit: CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT,
@@ -313,7 +393,7 @@ export class MintBurnRun {
       observedAt: runTimestamp,
       configBreakdown: phaseResult.configBreakdown as unknown as ReadonlyArray<Record<string, unknown>>,
     });
-    const resumeConfigKey = resolveMintBurnResumeConfigKey(phaseResult.configBreakdown);
+    const resumeConfigKey = resolveMintBurnResumeConfigKey(phaseResult.configBreakdown, pendingAdmissionKeys);
 
     await reportCronProgress(reportProgress, {
       stage: "recalc-hours",
@@ -349,16 +429,11 @@ export class MintBurnRun {
       attemptCoverage: attemptState.summary,
       coverageCycle: attemptState.coverageCycle,
       runDrilldown,
+      recalcFailed,
       signal,
     });
 
     let status = completion.status;
-    // Surface recalcAffectedHours failure in metadata and downgrade critical-lane
-    // runs so operators get a signal that hourly aggregates are stale.
-    if (recalcFailed && lane !== "extended" && status === "ok") {
-      status = "degraded";
-      completion.metadata.reason = "mint-burn-hourly-recalc-failed";
-    }
     completion.metadata.recalcFailed = recalcFailed;
     completion.metadata.pendingMaterialization = {
       failedCount: pendingMaterializationFailures.length,
@@ -369,10 +444,13 @@ export class MintBurnRun {
       (await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs)).publication,
     );
     completion.metadata.coverageRepairs = phaseResult.coverageRepairs ?? [];
+    if (dailyReconciliation) completion.metadata.dailyReconciliation = dailyReconciliation;
     const tronReader = chainContexts.get("tron")?.tronReader;
     if (tronReader) {
       completion.metadata.tronRpc = { calls: tronReader.calls, failures: tronReader.failures,
-        conservationReason: phaseResult.configBreakdown.find((summary) => summary.chainId === "tron")?.conservationReason ?? null };
+        conservationReason: phaseResult.configBreakdown.find((summary) => summary.chainId === "tron")?.conservationReason ?? null,
+        circuitState: tronCircuit?.record.state ?? null,
+        circuitInvalid: tronCircuit?.invalid ?? false };
     }
     if (recalcError) completion.metadata.recalcError = recalcError;
     if (lane === "critical") {
@@ -434,23 +512,35 @@ export class MintBurnRun {
     let recalcError: string | null = null;
     const pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }> = [];
     const repairProofs: MintBurnScanCoverage[] = [];
+    const supplyRepairRanges = new Map<string, { config: MintBurnContractConfig; toBlock: number }>();
     const deadlineMs = input.deadlineMs ?? Date.now() + 9 * 60_000;
     try {
-      const gaps = await loadMintBurnCoverageGaps(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp);
-      const liveBudget = {
-        count: input.budget.count,
-        limit: gaps.length ? Math.max(input.budget.count, input.budget.limit - COVERAGE_REPAIR_REQUEST_LIMIT) : input.budget.limit,
-      };
-      try {
-        phaseResult = await runMintBurnConfigPhase({
-          ...input, budget: liveBudget,
-          deadlineMs: gaps.length ? deadlineMs - COVERAGE_REPAIR_WINDOW_MS : deadlineMs,
-        });
-      } finally {
-        input.budget.count = liveBudget.count;
+      const discoveries = await Promise.allSettled([
+        loadMintBurnCoverageGaps(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp),
+        loadMintBurnSupplyProofRepairRanges(this.db, input.configs, input.lastBlocksAfterRun, input.runTimestamp),
+      ]);
+      let discoveryFailed = false;
+      for (const discovery of discoveries) {
+        if (discovery.status !== "rejected") continue;
+        rethrowIfAborted(discovery.reason, input.signal);
+        if (!isD1ResourceWindowError(discovery.reason)) throw discovery.reason;
+        discoveryFailed = true;
       }
-      phaseResult.coverageRepairs = await repairMintBurnCoverage(
-        { ...input, deadlineMs }, gaps, repairProofs, phaseResult.activeProviderDeferrals,
+      const gaps = discoveries[0].status === "fulfilled" ? discoveries[0].value : [];
+      const supplyRanges = discoveries[1].status === "fulfilled" ? discoveries[1].value : [];
+      if (discoveryFailed) await idleMintBurnRepairD1(deadlineMs, input.signal);
+      for (const range of supplyRanges) {
+        supplyRepairRanges.set(`${configKey(range.config)}:${range.fromBlock}`, range);
+      }
+      // One attempt per config: a window's coverage hole precedes its independent supply replay.
+      const repairs = [...new Map([...supplyRanges, ...gaps].map((range) => [configKey(range.config), range])).values()];
+      // Repairs consume leftovers only; discovery must never reduce live requests or runtime.
+      phaseResult = await runMintBurnConfigPhase({ ...input, deadlineMs });
+      phaseResult.coverageRepairs = discoveryFailed ? input.configs.map((config) => ({
+        ...createMintBurnConfigSummary(config, configKey(config), config.tier ?? "critical"),
+        errors: 1, skippedReason: "repair-runtime-exhausted", repairReason: "repair-runtime-exhausted" as const,
+      })) : await repairMintBurnCoverage(
+        { ...input, deadlineMs }, repairs, repairProofs, phaseResult.activeProviderDeferrals, { supplyProofRepair: true },
       );
       for (const repair of phaseResult.coverageRepairs) {
         phaseResult.rowsRead += repair.rowsRead;
@@ -499,9 +589,32 @@ export class MintBurnRun {
         for (const proof of repairProofs) {
           if (!includesKey(proof.configKey)) continue;
           throwIfAborted(input.signal);
-          await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
-          this.lastBlocksAfterRun.set(proof.configKey,
-            Math.max(this.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));
+          for (let attempt = 0; ; attempt++) {
+            try {
+              const supplyRange = supplyRepairRanges.get(`${proof.configKey}:${proof.fromBlock}`);
+              if (supplyRange && proof.toBlock <= supplyRange.toBlock) {
+                await commitMintBurnSupplyProofRepair(this.db, supplyRange.config, proof);
+              } else {
+                await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
+                this.lastBlocksAfterRun.set(proof.configKey,
+                  Math.max(this.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));
+              }
+              break;
+            } catch (error) {
+              rethrowIfAborted(error, input.signal);
+              if (!isD1ResourceWindowError(error)) throw error;
+              if (attempt === 0 && await idleMintBurnRepairD1(deadlineMs, input.signal)) continue;
+              // Materialized rows remain durable. Hold only their uncommitted
+              // proof/cursor; the next run can safely replay them.
+              for (const repair of phaseResult?.coverageRepairs ?? []) {
+                if (includesKey(repair.key) && repair.repairReason === "proof-staged") {
+                  repair.errors++;
+                  repair.repairReason = "repair-runtime-exhausted";
+                }
+              }
+              return;
+            }
+          }
           const repair = phaseResult?.coverageRepairs?.find((summary) =>
             summary.key === proof.configKey && summary.scanFrom === proof.fromBlock);
           if (repair) repair.repairReason = "proof-committed";

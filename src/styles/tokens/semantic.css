@@ -102,12 +102,6 @@
   /* Brand accent as readable text: help glyphs and in-card links. */
   --brand-accent-text: light-dark(var(--color-sky-700), var(--brand-accent));
 
-  /* ── Severity hex values (for Recharts / canvas) ──────────────── */
-  --severity-healthy-hex: #22c55e;
-  --severity-mild-hex: light-dark(#b45309, #f59e0b);
-  --severity-moderate-hex: #f97316;
-  --severity-severe-hex: #ef4444;
-
   /* ── PSI Bands ────────────────────────────────────────────────── */
   --psi-bedrock: var(--p-green-500);
   --psi-steady: var(--p-teal-400);

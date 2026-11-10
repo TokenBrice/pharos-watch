@@ -54,7 +54,14 @@ export function AddCoinsScreen({ state, canEdit, busy, pendingOperation, onApply
   const [query, setQuery] = useState("");
   const [adds, setAdds] = useState<string[]>([]);
   const [removes, setRemoves] = useState<string[]>([]);
+  const [previousSubscriptions, setPreviousSubscriptions] = useState(state.subscriptions);
   const followedIds = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
+  // Undo or a refresh can satisfy part of the draft before it is submitted.
+  if (previousSubscriptions !== state.subscriptions) {
+    setPreviousSubscriptions(state.subscriptions);
+    setAdds((current) => current.filter((id) => !followedIds.has(id)));
+    setRemoves((current) => current.filter((id) => followedIds.has(id)));
+  }
   const ranked = useMemo(
     () => [...state.catalog.searchableCoins].sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)),
     [state.catalog.searchableCoins],
@@ -90,7 +97,7 @@ export function AddCoinsScreen({ state, canEdit, busy, pendingOperation, onApply
     });
   };
 
-  const renderRow = (coin: Pick<CatalogCoin, "stablecoinId" | "symbol" | "name"> & { peg?: string | null }) => {
+  const renderRow = (coin: Pick<CatalogCoin, "stablecoinId" | "symbol" | "name" | "pegLabel"> & { peg?: string | null }) => {
     const id = coin.stablecoinId;
     const following = followedIds.has(id);
     const selected = isSelected(id);
@@ -120,7 +127,7 @@ export function AddCoinsScreen({ state, canEdit, busy, pendingOperation, onApply
           </span>
         )}
         title={<><span className="font-medium">{coin.symbol}</span> <span className="text-muted-foreground">{coin.name !== coin.symbol ? coin.name : ""}</span></>}
-        subtitle={[status, coin.peg ? `${coin.peg} peg` : null, preset ? `In ${preset}` : null].filter(Boolean).join(" · ") || undefined}
+        subtitle={[status, coin.pegLabel ?? (coin.peg ? `${coin.peg} peg` : null), preset ? `In ${preset}` : null].filter(Boolean).join(" · ") || undefined}
         onClick={() => toggle(id)}
       />
     );

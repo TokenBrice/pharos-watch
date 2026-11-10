@@ -214,6 +214,12 @@ describe("stablecoin OG card data", () => {
       const before = beforeCalls[beforeCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(before.props.data.flow7dSource).toBe("mint-burn");
       expect(before.props.data.flow7d).toBe(100);
+      sqlite.exec("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 1 WHERE chain_id = 'ethereum'");
+      expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
+      const unresolvedCalls = vi.mocked(satoriStandalone).mock.calls;
+      const unresolved = unresolvedCalls[unresolvedCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(unresolved.props.data.flow7dSource).not.toBe("mint-burn");
+      sqlite.exec("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 0 WHERE chain_id = 'ethereum'");
       sqlite.prepare("INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts) VALUES ('usdt-tether', 'ethereum', ?)")
         .run(end - 3600);
       expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
@@ -234,6 +240,39 @@ describe("stablecoin OG card data", () => {
   describe("peg-analytics cache hits", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
+    /**
+     * A peg-analytics row satisfies the published peg-summary coin shape, not
+     * merely `{ id, pegScore }`: the cache read validates every field the
+     * peg-summary route copies verbatim.
+     */
+    function makePegAnalyticsCoin(
+      id: string,
+      symbol: string,
+      pegScore: number,
+      overrides: Record<string, unknown> = {},
+    ) {
+      return {
+        id,
+        symbol,
+        name: id,
+        pegType: "peggedUSD",
+        pegCurrency: "USD",
+        governance: "centralized",
+        currentDeviationBps: 0,
+        pegScore,
+        pegPct: 99.9,
+        severityScore: 7,
+        spreadPenalty: 2,
+        eventCount: 1,
+        worstDeviationBps: -120,
+        activeDepeg: false,
+        lastEventAt: nowSec - 86_400,
+        trackingSpanDays: 400,
+        methodologyVersion: "6.08",
+        ...overrides,
+      };
+    }
+
     function makeOgDb(assets: ReturnType<typeof makeAsset>[], reportCardCache?: unknown) {
       const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
       // Nav-inclusive payload, mirroring what the report-cards pass publishes.
@@ -242,8 +281,8 @@ describe("stablecoin OG card data", () => {
         depegEventsToday: 0,
         depegEventsYesterday: 0,
         pegData: [
-          { id: "fpi-frax", pegScore: 87 },
-          { id: "usdt-tether", pegScore: 99 },
+          makePegAnalyticsCoin("fpi-frax", "FPI", 87, { name: "Frax Price Index", pegType: "peggedVAR", pegCurrency: "VAR" }),
+          makePegAnalyticsCoin("usdt-tether", "USDT", 99, { name: "Tether" }),
         ],
       });
       return mockD1([

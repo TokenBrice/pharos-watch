@@ -267,14 +267,17 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   return createCronResult({
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),
     itemCount: seeded + changed + identityBoundaryBaselines,
-    productivity: { productive: seeded + changed + identityBoundaryBaselines > 0 },
+    // A completed scan is a confirmed observation even when no grade moved:
+    // `outputPublishedAt` advances so producer freshness measures delivery,
+    // not grade volatility. The held/stale early returns above stay clockless.
+    productivity: { productive: true, reason: "grade-history-complete" },
     metadata: {
       reason: degradedReportCardInputs
         ? "degraded-report-card-inputs"
         : suppressedIdentityTransitions > 0
           ? "identity-transitions-suppressed"
           : "grade-history-completed",
-      ...(seeded + changed + identityBoundaryBaselines > 0 ? { outputPublishedAt: nowSec } : {}),
+      outputPublishedAt: nowSec,
       snapshotDay,
       methodologyVersion,
       model: identity.model,

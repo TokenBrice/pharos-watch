@@ -3,10 +3,16 @@
 import { appendFileSync } from "node:fs";
 
 import {
+  POST_DEPLOY_ROUTE_SWEEP_CONCURRENCY,
+  POST_DEPLOY_ROUTE_SWEEP_DEADLINE_MS,
+  POST_DEPLOY_ROUTE_SWEEP_PATHS,
+  POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS,
   type PostDeployAcceptanceOutcome,
   type PostDeployProbe,
+  type PostDeployRouteProbe,
   selectPostDeployProbes,
   summarizePostDeployAcceptance,
+  summarizePostDeployRouteSweep,
 } from "../lib/post-deploy-acceptance.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { collectWorkerHttpProbes, fetchJsonProbe } from "../lib/worker-http-probes.mts";
@@ -33,6 +39,68 @@ export interface PostDeployAcceptanceDependencies {
 }
 
 /**
+ * Bounded GET sweep: at most four in flight, ten seconds each, and no new
+ * request after the 105-second deadline. A single 5xx is retried once inside
+ * the deadline; a persistent 5xx fails. Routes that never ran are reported as
+ * `sweep-not-run`, never as healthy.
+ */
+async function collectRouteSweepProbes(
+  fetchJson: typeof fetchJsonProbe,
+  apiKey: string,
+): Promise<PostDeployRouteProbe[]> {
+  const results: PostDeployRouteProbe[] = new Array(POST_DEPLOY_ROUTE_SWEEP_PATHS.length);
+  const deadlineAt = Date.now() + POST_DEPLOY_ROUTE_SWEEP_DEADLINE_MS;
+  const probeArgs = {
+    apiUrl: WORKER_API_URL,
+    apiKey,
+    timeoutMs: POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS,
+    noCache: true,
+  };
+  let nextIndex = 0;
+
+  const worker = async (): Promise<void> => {
+    while (true) {
+      const index = nextIndex++;
+      const path = POST_DEPLOY_ROUTE_SWEEP_PATHS[index];
+      if (path === undefined) return;
+      if (Date.now() >= deadlineAt) {
+        results[index] = { path, status: 0, error: "sweep-deadline-exceeded" };
+        continue;
+      }
+      let retriedAfter5xx = false;
+      try {
+        let response = await fetchJson(probeArgs, path);
+        if (response.status >= 500 && response.status <= 599 && Date.now() < deadlineAt) {
+          retriedAfter5xx = true;
+          response = await fetchJson(probeArgs, path);
+        }
+        results[index] = {
+          path,
+          status: response.status,
+          ...(response.error ? { error: response.error } : {}),
+          ...(retriedAfter5xx ? { retriedAfter5xx: true } : {}),
+        };
+      } catch (error) {
+        results[index] = {
+          path,
+          status: 0,
+          error: error instanceof Error ? error.message : String(error),
+          ...(retriedAfter5xx ? { retriedAfter5xx: true } : {}),
+        };
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(POST_DEPLOY_ROUTE_SWEEP_CONCURRENCY, POST_DEPLOY_ROUTE_SWEEP_PATHS.length) },
+      worker,
+    ),
+  );
+  return results;
+}
+
+/**
  * Read-only acceptance evidence for the surfaces that finished deploying. Every
  * probe is a GET: this job never mutates production and never rolls back, so a
  * failed probe only marks the release for operator assessment.
@@ -47,6 +115,7 @@ export async function runPostDeployAcceptance({
   observedWorkerVersion,
   expectedHeavyWorkerVersion,
   observedHeavyWorkerVersion,
+  apiKey,
 }: PostDeployAcceptanceDependencies & {
   pagesDeployed?: boolean;
   workerDeployed?: boolean;
@@ -55,6 +124,7 @@ export async function runPostDeployAcceptance({
   observedWorkerVersion?: string;
   expectedHeavyWorkerVersion?: string;
   observedHeavyWorkerVersion?: string;
+  apiKey?: string;
 } = {}): Promise<PostDeployAcceptanceRun> {
   const probes = selectPostDeployProbes({ pagesDeployed, workerDeployed });
   const results: PostDeployProbeReport[] = [];
@@ -124,6 +194,22 @@ export async function runPostDeployAcceptance({
           + (warningList.length > 0 ? ` Warnings: ${warningList.join(" | ")}` : ""),
         outcome: Boolean(health?.ok) && served && identityMatches ? "passed" : "failed",
       });
+      continue;
+    }
+
+    if (probe.id === "worker-route-sweep") {
+      if (!apiKey) {
+        operationalFailures.push("worker-route-sweep: missing PHAROS_API_KEY");
+        results.push({
+          ...probe,
+          detail: "Skipped: PHAROS_API_KEY is not configured, so no public GET route was observed.",
+          outcome: "failed",
+        });
+        continue;
+      }
+      const sweep = summarizePostDeployRouteSweep(await collectRouteSweepProbes(fetchJson, apiKey));
+      if (sweep.outcome === "failed") operationalFailures.push(`worker-route-sweep: ${sweep.detail}`);
+      results.push({ ...probe, detail: sweep.detail, outcome: sweep.outcome });
     }
   }
 
@@ -167,6 +253,7 @@ export async function runPostDeployAcceptanceCli(
     observedWorkerVersion: env.OBSERVED_WORKER_VERSION,
     expectedHeavyWorkerVersion: env.EXPECTED_HEAVY_WORKER_VERSION,
     observedHeavyWorkerVersion: env.OBSERVED_HEAVY_WORKER_VERSION,
+    apiKey: env.PHAROS_API_KEY,
   });
 
   console.log(JSON.stringify({ probes: run.probes, acceptance: run.acceptance }, null, 2));

@@ -1,7 +1,7 @@
 /**
- * Shared AggregatorV3 ABI encoders for the Chainlink round-data parser owner
- * (`chainlink-round-data.test.ts`) and the reference-feed snapshot suite
- * (`chainlink-feeds.test.ts`). Adapter-level encoders stay with their adapters.
+ * Shared AggregatorV3 ABI encoders for the Chainlink round-data parser and the
+ * reference-feed snapshot suite (`chainlink-feeds.test.ts`). Adapter-level
+ * encoders stay with their adapters.
  */
 export function encodeWord(value: bigint): string {
   return value.toString(16).padStart(64, "0");

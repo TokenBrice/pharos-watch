@@ -4,13 +4,14 @@ import {
   buildPriceValidationContext,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
-import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
-import { computePriceConsensus } from "../../lib/price-consensus";
+import { getDexAggregateRejectionReason } from "../../lib/depeg-trust-policy";
+import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { isHardPricingTrustTier, isListAggregatorOnlyPair } from "@shared/lib/pricing-source-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import {
   buildPrimarySourceCandidates,
+  isDexLegWithinCoLegBudget,
   type DlListQuote,
   type PrimaryDexCandidateTelemetry,
   type PrimaryCollectedQuotes,
@@ -32,43 +33,14 @@ function isPrimaryPublicationDexAggregateEligible(
   nowSec: number,
 ): boolean {
   const trustTier = assetId === VUSD_PRIMARY_DEX_AGGREGATE_ID ? "ui" : "depeg";
-  return isTrustedDexPriceRow(row, nowSec, trustTier);
-}
-
-/**
- * Later same-run readers (authoritative parent checks) validate the composite
- * clock after consensus; this margin keeps a co-leg admitted at `nowSec` fresh
- * through the rest of the run.
- */
-const DEX_CO_LEG_RUN_LATENCY_MARGIN_SEC = 180;
-
-/**
- * Consensus stamps a cluster with its oldest agreeing leg's clock. The DEX
- * aggregate is published hourly and stays eligible for 75 minutes, so as an
- * extra leg it would pin fresh CEX/oracle agreement to the previous DEX run
- * and age the composite past the 30-minute primary budget. That stale clock
- * made the next DEX run reject its own quote legs (USDC, USDT, ...), drop their
- * DEX rows, and flip back an hour later. Composite freshness also holds every
- * part to its own registry window against that one clock, so a 15-30 minute
- * DEX leg beside 15-minute CoinGecko/DefiLlama legs failed every
- * authoritative child's parent check once an hour. Beside other legs it
- * therefore joins only while it fits the primary budget and the strictest
- * co-leg window; as the sole leg it keeps its own freshness window and
- * publishes as single-source.
- */
-function isDexAggregateWithinCoLegBudget(
-  row: DexPriceRow,
-  coLegSources: readonly { source: string }[],
-  nowSec: number,
-): boolean {
-  let maxAgeSec = DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
-  for (const { source } of coLegSources) {
-    const sourceMaxAgeSec = getPricingSourceRegistryEntry(source)?.maxTrustedAgeSec;
-    if (sourceMaxAgeSec != null && sourceMaxAgeSec > 0) {
-      maxAgeSec = Math.min(maxAgeSec, sourceMaxAgeSec - DEX_CO_LEG_RUN_LATENCY_MARGIN_SEC);
-    }
-  }
-  return nowSec - row.updated_at <= maxAgeSec;
+  const reason = getDexAggregateRejectionReason(row, nowSec, trustTier);
+  if (reason != null) logWorkerEventArgs("handler", "info",
+    `[primary-prices] dex-aggregate-filter ${JSON.stringify({
+      stablecoinId: assetId, reason, tier: trustTier, updatedAt: row.updated_at,
+      aggregateObservedAt: row.aggregateObservedAt ?? null, sourceTotalTvl: row.source_total_tvl,
+    })}`,
+  );
+  return reason == null;
 }
 
 export function buildPrimaryConsensusResults(params: {
@@ -128,26 +100,6 @@ export function buildPrimaryConsensusResults(params: {
     const dexRow = params.dexRows.get(asset.id);
     const eligibleDexAggregate =
       dexRow && isPrimaryPublicationDexAggregateEligible(asset.id, dexRow, params.nowSec) ? dexRow : undefined;
-    const sourceBuildOptions = { divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS, nowSec: params.nowSec };
-    let sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
-    if (
-      eligibleDexAggregate &&
-      (sourceBuild.sources.length === 0 ||
-        isDexAggregateWithinCoLegBudget(eligibleDexAggregate, sourceBuild.sources, params.nowSec))
-    ) {
-      collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
-      sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
-    }
-    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } = sourceBuild;
-
-    logDexCandidateTelemetry(dexCandidateTelemetry);
-
-    if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
-      logWorkerEventArgs("handler", "info", `[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`);
-    }
-
-    params.stats.attempted++;
-
     const context =
       params.validationContexts?.get(asset) ??
       buildPriceValidationContext({
@@ -157,9 +109,57 @@ export function buildPrimaryConsensusResults(params: {
         commodityOunces: asset.commodityOunces,
       });
     const pegRef = context.navToken ? null : getReferencePriceForContext(context, params.references);
-    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS, {
-      mode: context.navToken ? "nav" : "fixed",
-    });
+    const consensusMode = context.navToken ? "nav" : "fixed";
+    const sourceBuildOptions = {
+      divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
+      nowSec: params.nowSec,
+      freshLegsAgree: (legs: readonly SourcePrice[]) => {
+        const freshConsensus = computePriceConsensus([...legs], pegRef, DIVERGENCE_THRESHOLD_BPS, { mode: consensusMode });
+        // A list-aggregator pair publishes as `single-source` after hardening, so
+        // it cannot establish independent fresh-leg agreement here.
+        return freshConsensus?.confidence === "high" && !isListAggregatorOnlyPair(freshConsensus.agreeSources);
+      },
+      fallbackLaneLandsInHardGroup: (legs: readonly SourcePrice[], lane: SourcePrice) => {
+        const rejoined = computePriceConsensus([...legs], pegRef, DIVERGENCE_THRESHOLD_BPS, { mode: consensusMode });
+        if (rejoined?.confidence !== "high" || !rejoined.agreeSources.includes(lane.source)) return false;
+        return rejoined.agreeSources.some((source) =>
+          source !== lane.source &&
+          isHardPricingTrustTier(getPricingSourceRegistryEntry(source)?.trustTier));
+      },
+    };
+    let sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
+    // As the sole leg the aggregate keeps its own window and publishes as single-source.
+    if (
+      eligibleDexAggregate &&
+      (sourceBuild.sources.length === 0 ||
+        isDexLegWithinCoLegBudget(eligibleDexAggregate.aggregateObservedAt!, sourceBuild.sources, params.nowSec))
+    ) {
+      collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
+      sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
+    }
+    const {
+      sources,
+      hasPromotedDexProtocolSource,
+      coLegHeldDexSources,
+      dexCandidateTelemetry,
+      priceSourceConfidenceProfile,
+    } = sourceBuild;
+
+    logDexCandidateTelemetry(dexCandidateTelemetry);
+
+    if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
+      const suppressedReasons = [...new Set(dexCandidateTelemetry.flatMap((candidate) =>
+        candidate.status === "excluded" &&
+        (candidate.reason === "lacked_corroboration" || candidate.reason === "outside_co_leg_budget")
+          ? [`${candidate.sourceKey}:${candidate.reason}`]
+          : []))];
+      logWorkerEventArgs("handler", "info",
+        `[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) (${suppressedReasons.join(", ")})`);
+    }
+
+    params.stats.attempted++;
+
+    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS, { mode: consensusMode });
 
     if (!consensus) continue;
 
@@ -167,7 +167,9 @@ export function buildPrimaryConsensusResults(params: {
       ...consensus,
       dlPrice: dlListQuote?.price ?? null,
       cgPrice,
-      candidateSources: Object.keys(consensus.allPrices),
+      // A lane held out only by the co-leg budget was still read this run: it
+      // stays an available, non-voting candidate, so source depth is unchanged.
+      candidateSources: [...new Set([...Object.keys(consensus.allPrices), ...coLegHeldDexSources])],
       priceSourceConfidenceProfile,
     });
 
@@ -238,6 +240,8 @@ function logDexCandidateTelemetry(telemetry: PrimaryDexCandidateTelemetry[]): vo
         reason: candidate.reason,
         thresholdTvlUsd: candidate.thresholdTvlUsd,
         divergenceThresholdBps: candidate.divergenceThresholdBps,
+        coLegBudgetSec: candidate.coLegBudgetSec,
+        ageSec: candidate.ageSec,
       })}`,
     );
   }

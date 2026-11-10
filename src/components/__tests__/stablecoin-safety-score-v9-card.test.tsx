@@ -35,6 +35,34 @@ describe("StablecoinSafetyScoreV9Card", () => {
   });
 
 
+  it("discloses a held grade beside the raw score and removes the badge when the hold clears", async () => {
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    });
+    const identity = makeReportCardsV9Response().safetyScoreIdentity;
+    const held = makeV9Card({
+      score: 62,
+      grade: "B",
+      gradeHold: { rawGrade: "C+", heldFromGenerationId: "generation-1" },
+    });
+    const { rerender } = render(
+      <StablecoinSafetyScoreV9Card card={held} identity={identity} updatedAtMs={null} />,
+    );
+
+    const badge = screen.getByRole("button", { name: "Grade held" });
+    fireEvent.focus(badge);
+    expect((await screen.findByRole("tooltip")).textContent).toContain(
+      "Published letter retained; this score's raw band is C+.",
+    );
+
+    rerender(
+      <StablecoinSafetyScoreV9Card card={makeV9Card()} identity={identity} updatedAtMs={null} />,
+    );
+    expect(screen.queryByRole("button", { name: "Grade held" })).toBeNull();
+  });
+
   it.each([
     { name: "links every pillar when the page does not say which boards render", anchors: undefined, linked: ["Backing", "Exit", "Economic Control"] },
     {

@@ -14,7 +14,11 @@ vi.mock("../../../lib/blacklist/balance-providers", () => ({
   fetchTronTokenCurrentBalance: vi.fn(),
 }));
 
-import { syncCurrentBalanceCacheForRows } from "../../../lib/blacklist/current-balance-cache";
+import {
+  CURRENT_BALANCE_DEBT_PREFIX,
+  MAX_SCAN_PHASE_BALANCE_CAPTURES,
+  syncCurrentBalanceCacheForRows,
+} from "../../../lib/blacklist/current-balance-cache";
 import { upsertBlacklistCurrentBalance } from "../../../lib/blacklist-current-balances";
 import { fetchEvmTokenBalance } from "../../../lib/blacklist/balance-providers";
 
@@ -95,6 +99,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(upsertBlacklistCurrentBalance).not.toHaveBeenCalled();
   });
@@ -126,6 +131,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
@@ -170,6 +176,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(fetchEvmTokenBalance).toHaveBeenCalledWith(
       ethereumConfig, expect.any(String), "latest", null, null,
@@ -226,6 +233,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(fetchEvmTokenBalance).toHaveBeenCalledTimes(1);
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
@@ -238,6 +246,40 @@ describe("syncCurrentBalanceCacheForRows", () => {
         status: "resolved",
       }),
     );
+  });
+
+  it("admits scan-phase live captures up to the cap and keeps the remainder as durable debt", async () => {
+    vi.mocked(fetchEvmTokenBalance).mockResolvedValue(10);
+    const { sqlite, db } = fixtures.open();
+    const rows = Array.from({ length: MAX_SCAN_PHASE_BALANCE_CAPTURES + 6 }, (_, index) => makeCacheRow({
+      id: `cap-${index}`,
+      address: `0x${(index + 1).toString(16).padStart(40, "0")}`,
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+      tx_hash: `0xtx-cap-${index}`,
+      block_number: index + 1,
+      timestamp: 20 + index,
+    }));
+
+    const result = await syncCurrentBalanceCacheForRows(db, ethereumConfig, rows, {
+      ...makeContext(),
+      captureLimit: MAX_SCAN_PHASE_BALANCE_CAPTURES,
+    });
+
+    expect(result).toEqual({
+      updated: MAX_SCAN_PHASE_BALANCE_CAPTURES,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+      deferredToDebt: 6,
+    });
+    expect(fetchEvmTokenBalance).toHaveBeenCalledTimes(MAX_SCAN_PHASE_BALANCE_CAPTURES);
+    // One config's mass-freeze burst cannot consume the run: deferred rows keep
+    // their durable current-balance debt for the maintenance lane.
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM cache WHERE key GLOB ?").get(`${CURRENT_BALANCE_DEBT_PREFIX}*`))
+      .toEqual({ n: 6 });
   });
 
   it("records provider failures with scoped identity without supplying replacement amounts", async () => {
@@ -267,6 +309,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 1,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
@@ -356,6 +399,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
@@ -400,6 +444,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),
@@ -447,6 +492,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     });
     expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
       expect.anything(),

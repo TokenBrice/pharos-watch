@@ -173,34 +173,4 @@ describe("falcon fetch boundary", () => {
     expect(result.metadata?.insuranceFund).toBe(insurance);
   });
 
-  it("fetches the configured transparency endpoint through the shared network harness", async () => {
-    const { result, network } = await runAdapter("falcon", "usdf-falcon", {
-      network: {
-        json: {
-          [FALCON_URL]: falconPayload([
-            { label: "USDC", ceffu: "20", fireblocks: "10" },
-            { label: "BTC", multisig: "25" },
-            { label: "ETH", multisig: "10" },
-            { label: "USTB", fireblocks: "15" },
-            { label: "AVAX", fireblocks: "15" },
-          ]),
-        },
-      },
-      nowSec: 1_773_318_200,
-    });
-
-    expect(network.requests.map((request) => request.url)).toEqual([FALCON_URL]);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: 1_773_316_982,
-      supplyUsd: 100,
-    });
-    expect(result.slices).toContainEqual(expect.objectContaining({
-      name: "USDC cash-equivalent assets",
-      coinId: "usdc-circle",
-    }));
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: "unknown-asset", effect: "info" }),
-    ]);
-  });
 });

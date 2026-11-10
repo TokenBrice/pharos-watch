@@ -30,9 +30,9 @@ export const STABLECOIN_DETAIL_HISTORY_PILOT_IDS: ReadonlySet<string> = new Set(
 ]);
 
 /** The newest recorded incidents the compact preview shows. */
-export const HISTORY_SNAPSHOT_EVENT_LIMIT = 6;
+const HISTORY_SNAPSHOT_EVENT_LIMIT = 6;
 
-export const HISTORY_SNAPSHOT_COVERAGE = "retained-ledger";
+const HISTORY_SNAPSHOT_COVERAGE = "retained-ledger";
 
 export interface DepegHistorySnapshotEventProvenance {
   sourceKind: string | null;

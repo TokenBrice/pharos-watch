@@ -39,17 +39,62 @@ function database() {
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
-// Admitted, yet its single-row stored value exceeds D1's 2,000,000-byte value limit.
-function largePublication(generation: string, publishedAtSec: number) {
+// Chunk/reader contracts only need more than one 512 KB chunk; the writer's
+// D1-over-limit branch needs a stored envelope above 2,000,000 bytes. Few
+// cards with one incompressible witness string each reach that size without
+// building hundreds of thousands of array elements.
+const OVER_LIMIT_CARDS = 6;
+const MULTI_CHUNK_CARDS = 25;
+const OVER_LIMIT_WITNESS_BYTES = 280_000;
+
+function witnessText(index: number, words: number): string {
+  return Array.from({ length: words }, (_, word) => `floor-${index}-${word * 7919 % 104729}`).join(" ");
+}
+
+function incompressibleWitnessText(index: number, bytes: number): string {
+  const buffer = Buffer.alloc(bytes);
+  let state = (0x9e3779b9 ^ Math.imul(index, 2654435761)) >>> 0;
+  for (let offset = 0; offset < bytes; offset += 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    buffer[offset] = state >>> 24;
+  }
+  return buffer.toString("base64");
+}
+
+function largePublication(generation: string, publishedAtSec: number,
+  { cards = MULTI_CHUNK_CARDS, words = 6_000, bytes }: { cards?: number; words?: number; bytes?: number } = {}) {
   return makeWorkerSafetyScoreV9Publication({
     publishedAtSec, publicationGenerationId: `report-cards:v9:${generation}`,
-    cards: Array.from({ length: 100 }, (_, index) => {
-      const card: SafetyScoreV9CurrentCard = makeReportCardsV9Card({ id: index === 99 ? "usdc-circle" : `chunk-coin-${String(index).padStart(2, "0")}` });
-      card.witnessTexts = [Array.from({ length: 6_000 }, (_, word) => `floor-${index}-${word * 7919 % 104729}`).join(" ")];
+    cards: Array.from({ length: cards }, (_, index) => {
+      const card: SafetyScoreV9CurrentCard = makeReportCardsV9Card({
+        id: index === cards - 1 ? "usdc-circle" : `chunk-coin-${String(index).padStart(2, "0")}`,
+      });
+      card.witnessTexts = [bytes === undefined ? witnessText(index, words) : incompressibleWitnessText(index, bytes)];
       card.evidence.reasons = [{ code: "unresolved-control-identity", message: "~0", path: "control:incidentState" }];
       return card;
     }),
   });
+}
+
+// Both writer variants persist the same admitted bytes; build and serialize
+// the over-limit fixture once instead of twice.
+let overLimitFixtures: {
+  first: ReturnType<typeof largePublication>;
+  firstStored: string;
+  next: ReturnType<typeof largePublication>;
+} | undefined;
+
+async function overLimitFixturesForTest() {
+  if (!overLimitFixtures) {
+    const shape = { cards: OVER_LIMIT_CARDS, bytes: OVER_LIMIT_WITNESS_BYTES };
+    const first = largePublication("first", 120, shape);
+    overLimitFixtures = {
+      first,
+      firstStored: await serializeSafetyScoreV9Publication(first),
+      next: largePublication("next", 130, shape),
+    };
+  }
+  return overLimitFixtures;
 }
 
 const D1_MAX_VALUE_BYTES = 2_000_000;
@@ -154,6 +199,7 @@ describe("Safety Score V9 publication payload chunks", () => {
 });
 
 describe("Safety Score V9 sharded publication writer", () => {
+  // Multi-megabyte write/read validation exceeds 20s under weekly V8 coverage.
   it.each([false, true])("by default commits an over-row-limit admitted payload as bounded chunks with its envelope (deferred=%s)", async (deferred) => {
     const { sqlite, db } = database();
     enforceD1ValueLimit(sqlite);
@@ -162,8 +208,7 @@ describe("Safety Score V9 sharded publication writer", () => {
       if (deferred) await persistAndMaterialize(db, input);
       else await persistSafetyScoreV9Publication(db, input);
     };
-    const first = largePublication("first", 120);
-    const firstStored = await serializeSafetyScoreV9Publication(first);
+    const { first, firstStored, next } = await overLimitFixturesForTest();
     expect(new TextEncoder().encode(firstStored).byteLength).toBeGreaterThan(D1_MAX_VALUE_BYTES);
     // A single-row write of the same value is rejected, as D1 would reject it.
     expect(() => sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("inline-witness", firstStored, 1))
@@ -179,7 +224,6 @@ describe("Safety Score V9 sharded publication writer", () => {
     expect(await loadSafetyScoreV9Publication(db)).toEqual(first);
     expect((await handleReportCardsV9(db)).status).toBe(200);
 
-    const next = largePublication("next", 130);
     await write(next);
     const nextKeys = chunkKeys();
     expect(nextKeys.length).toBeGreaterThan(1);
@@ -189,7 +233,7 @@ describe("Safety Score V9 sharded publication writer", () => {
     // A stale writer's batch rolls back its chunk writes with its envelope.
     await expect(persistSafetyScoreV9Publication(db, currentInput(first))).rejects.toThrow();
     expect(chunkKeys()).toEqual(nextKeys);
-  });
+  }, 60_000);
 });
 
 

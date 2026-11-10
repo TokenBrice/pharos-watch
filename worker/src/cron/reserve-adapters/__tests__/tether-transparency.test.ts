@@ -25,11 +25,12 @@ const FIXTURE_NOW_SEC = 1_783_555_140 + 3_600;
 const USDT_PARAMS = parseLiveReserveAdapterParams(
   "tether-transparency", usdt.liveReservesConfig.params,
 ) as Extract<TetherTransparencyParams, { currencyIso: "usdt" }>;
-// BDO report page 4 (PDF page 9), 2026-06-30, in report row order.
+// BDO report page 4, 2026-09-30, in report row order.
 const REPORT_DOLLARS = [
-  114960963604, 18625552412, 6993428950, 22374689, 40307440,
-  8711171, 18838357171, 5801630681, 3761438892, 5244911675, 13453749726,
+  122839738995, 9518706336, 7177537907, 21981521, 20427407,
+  63881392, 19084651736, 8367170264, 4177803686, 6004074506, 14175117624,
 ];
+const REPORT_TOTAL_ASSETS = 191451091374;
 
 const XAUT_PARAMS: TetherTransparencyParams = {
   currencyIso: "xaut",
@@ -60,12 +61,12 @@ describe("adaptTetherTransparency", () => {
   it("conserves all eleven signed-report integer rows without percentage rounding", () => {
     const packet = USDT_PARAMS.reviewedComposition;
     expect(packet.rows.map((row) => row.dollars)).toEqual(REPORT_DOLLARS);
-    expect(packet.rows.reduce((sum, row) => sum + row.dollars, 0)).toBe(187751426411);
+    expect(packet.rows.reduce((sum, row) => sum + row.dollars, 0)).toBe(REPORT_TOTAL_ASSETS);
     const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
     expect(result.slices).toHaveLength(11);
     for (const slice of result.slices) {
       const row = packet.rows.find((row) => row.sourceKey === slice.sourceKey)!;
-      expect(slice.pct).toBe(row.dollars * 100 / 187751426411);
+      expect(slice.pct).toBe(row.dollars * 100 / REPORT_TOTAL_ASSETS);
       expect(slice).not.toHaveProperty("dollars");
     }
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(100);
@@ -89,13 +90,15 @@ describe("adaptTetherTransparency", () => {
     const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
     expect(result.metadata?.details).toMatchObject({
       compositionSource: "reviewed-report-dollars",
-      compositionAsOf: "2026-06-30",
+      compositionAsOf: "2026-09-30",
       compositionSourceUrl: USDT_PARAMS.reviewedComposition.sourceUrl,
-      compositionTotalAssetsUsd: 187751426411,
+      compositionTotalAssetsUsd: REPORT_TOTAL_ASSETS,
       compositionRows: USDT_PARAMS.reviewedComposition.rows.map(({ sourceKey, dollars }) => ({ sourceKey, dollars })),
     });
     expect(result.metadata?.sourceTimestamp).toBe(1783555140);
-    expect(result.metadata?.totalAssetsUsd).toBe(189761994736.8062);
+    expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
+    expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
+    expect(result.metadata).not.toHaveProperty("shareholderEquityUsd");
     const changedTotals = {
       data_formatted: TETHER_TRANSPARENCY_FIXTURE.data_formatted!.map((entry) => ({
         ...entry, total_assets: 200_000_000_000, id: 1783558740,
@@ -104,7 +107,7 @@ describe("adaptTetherTransparency", () => {
     const changed = adaptTetherTransparency(changedTotals, USDT_PARAMS);
     expect(changed.slices).toEqual(result.slices);
     expect(changed.metadata?.sourceTimestamp).toBe(1783558740);
-    expect(changed.metadata?.details?.compositionAsOf).toBe("2026-06-30");
+    expect(changed.metadata?.details?.compositionAsOf).toBe("2026-09-30");
     const xaut = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, XAUT_PARAMS);
     expect(xaut.metadata?.details?.compositionAsOf).toBeUndefined();
     expect(xaut.metadata?.sourceTimestamp).toBeDefined();
@@ -123,7 +126,7 @@ describe("adaptTetherTransparency", () => {
     ["balanced redistribution", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
       rows.map((row, index) => ({ ...row, dollars: row.dollars + (index === 0 ? 1 : index === 1 ? -1 : 0) }))],
     ["all Treasury", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
-      rows.map((row) => ({ ...row, dollars: row.sourceKey === "tether:usdt:treasury-bills" ? 187751426411 : 0 }))],
+      rows.map((row) => ({ ...row, dollars: row.sourceKey === "tether:usdt:treasury-bills" ? REPORT_TOTAL_ASSETS : 0 }))],
     ["fractional dollars", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
       rows.map((row, index) => index === 0 ? { ...row, dollars: row.dollars - 0.5 } : row)],
   ])("rejects %s instead of normalizing a partial book", (_label, changeRows) => {
@@ -138,6 +141,7 @@ describe("adaptTetherTransparency", () => {
   it.each([
     { totalAssetsUsd: 187751426410 },
     { totalAssetsUsd: 189761994736.8062 },
+    { totalAssetsUsd: 191451091375 },
     { asOf: "2026-07-01" },
     { asOf: "2026-02-30" },
     { sourceUrl: "https://tether.to/en/transparency" },
@@ -159,30 +163,43 @@ describe("adaptTetherTransparency", () => {
     })).toThrow();
   });
 
-  it("selects the usdt entry, computes the honest ratio, and persists USD-denominated totals", () => {
+  it("withholds the non-report-dated live balance sheet instead of publishing it as USDT coverage", () => {
     const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1783555140,
-      totalAssetsUsd: 189761994736.8062,
-      totalLiabilitiesUsd: 184211219230.290086,
-      shareholderEquityUsd: 5466941751.78272135,
+      ratioUnavailableReason: "not-comparable",
     });
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.030, 3);
+    expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
+    expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
+    expect(result.metadata).not.toHaveProperty("shareholderEquityUsd");
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata?.details).toMatchObject({
+      compositionSource: "reviewed-report-dollars",
+      compositionAsOf: "2026-09-30",
+      compositionTotalAssetsUsd: REPORT_TOTAL_ASSETS,
+    });
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "tether-live-balance-not-reported-balance-sheet",
+        severity: "info",
+        effect: "info",
+      }),
+    ]));
   });
 
   it("emits an info warning for the nonzero quarantined balance on Solana", () => {
     const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, USDT_PARAMS);
 
-    expect(result.warnings).toEqual([
+    expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: "quarantined-balance",
         severity: "info",
         effect: "info",
         message: expect.stringContaining("Solana"),
       }),
-    ]);
+    ]));
     const details = result.metadata?.details as { chains: Array<{ name: string; quarantined: number }> };
     const solana = details.chains.find((chain) => chain.name === "Solana");
     expect(solana?.quarantined).toBeCloseTo(3698541.306464, 3);

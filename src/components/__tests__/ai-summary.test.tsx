@@ -38,7 +38,7 @@ describe("AiSummary", () => {
     expect(document.body.textContent).not.toContain("reviewed by");
   });
 
-  it("renders current claim values with a facts-as-of badge", () => {
+  it("renders current claim values without dating them by the replaced editorial claim", () => {
     render(<AiSummary
       title="Current assessment"
       text="The current grade is {{grade}}."
@@ -54,7 +54,8 @@ describe("AiSummary", () => {
     />);
 
     expect(document.body.textContent).toContain("The current grade is B+.");
-    expect(document.body.textContent).toContain("Claims as of 2026-09-01");
+    expect(document.body.textContent).not.toContain("Claims as of 2026-09-01");
+    expect(document.body.textContent).toContain("facts as of 2026-08-09");
   });
 
   it("dates the provenance footer in ISO days, including the review date", () => {
@@ -81,8 +82,8 @@ describe("AiSummary", () => {
   it.each([
     { label: "an unresolved", claimValues: {} },
     { label: "a malicious", claimValues: { "report-card.grade": "<script>alert(1)</script>" } },
-  ])("withholds the overview for $label claim value instead of rendering N/A", ({ claimValues }) => {
-    render(<AiSummary
+  ])("omits the live card for $label claim value instead of promising another page", ({ claimValues }) => {
+    const { container } = render(<AiSummary
       title="Current assessment"
       text="The current grade is {{grade}}."
       updatedAt="2026-08-09"
@@ -95,8 +96,9 @@ describe("AiSummary", () => {
       claimValues={claimValues}
     />);
 
+    expect(container.firstChild).toBeNull();
     const text = document.body.textContent ?? "";
-    expect(text).toContain("The current Safety Score and live assessment are available on the interactive page.");
+    expect(text).not.toContain("available on the interactive page");
     expect(text).not.toContain("N/A");
     expect(text).not.toContain("Claims as of");
     expect(document.querySelector("script")).toBeNull();

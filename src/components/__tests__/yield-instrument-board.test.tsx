@@ -89,6 +89,31 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getByText(`30-day APY: ${apy30d.toFixed(2)}%`)).toBeTruthy();
   });
 
+  it("marks the current APY inside the 30-day range, not the 30-day mean", () => {
+    renderBoard({
+      ...baseRow,
+      currentApy: 9.8,
+      apy30d: 4.3,
+      apyMin30d: 4,
+      apyMax30d: 9.9,
+    });
+    const marker = screen.getByRole("img", { name: "30 day APY range 4.0% to 9.9%, current 9.8%" });
+    const dot = marker.querySelectorAll("div")[1]!;
+    expect(Number.parseFloat(dot.style.left)).toBeCloseTo(((9.8 - 4) / (9.9 - 4)) * 100, 6);
+  });
+
+  it("places the range marker at the low edge after an APY collapse", () => {
+    renderBoard({
+      ...baseRow,
+      currentApy: 4,
+      apy30d: 9,
+      apyMin30d: 4,
+      apyMax30d: 9.9,
+    });
+    const marker = screen.getByRole("img", { name: "30 day APY range 4.0% to 9.9%, current 4.0%" });
+    expect(Number.parseFloat(marker.querySelectorAll("div")[1]!.style.left)).toBe(0);
+  });
+
   it.each(rowRenderers)("routes dynamically covered USDC to the honest fallback on %s", (_name, renderRow) => {
     renderRow({ ...baseRow, id: "usdc-circle", symbol: "USDC" });
     expect(screen.getByRole("link", { name: "View yield opportunities for USDC" }).getAttribute("href"))
@@ -141,13 +166,6 @@ describe("YieldInstrumentBoard", () => {
     const dashes = screen.getAllByText("—");
     const cursorHelpDash = dashes.find((el) => el.className.includes("cursor-help"));
     expect(cursorHelpDash).toBeTruthy();
-  });
-
-  it.each(rowRenderers)("renders the deep-dive destination on %s", (_surface, renderRow) => {
-    renderRow(baseRow);
-
-    const link = screen.getByRole("link", { name: "View yield opportunities for USDT" });
-    expect(link.getAttribute("href")).toBe("/yield?workbenchFallback=usdt-tether");
   });
 
   it.each(rowRenderers)("renders material source risk on %s", (_surface, renderRow) => {
@@ -317,7 +335,9 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
     expect(strip.textContent).toContain("B+");
     expect(strip.textContent).toContain("Source risk");
     expect(strip.textContent).toContain("1.02×");
-    expect(strip.textContent).toContain("Neutral");
+    // A resolved penalty above 1× is not neutral even with no projected driver.
+    expect(strip.textContent).not.toContain("Neutral");
+    expect(strip.textContent).toContain("—");
   });
 
   it.each(rowRenderers)("hides null PYS but keeps history on %s", (_surface, renderRow) => {
@@ -371,5 +391,109 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
     expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
     expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");
     expect(screen.getByRole("group", { name: "Why this PYS" }).textContent).toContain("Benchmark unavailable");
+  });
+});
+
+// The board renders this card; the cases below drive the card's own props directly.
+const mobileCardRow = makeYieldViewModelRow({
+  benchmarkRate: 3.7,
+  altSources: [{
+    sourceKey: "morpho",
+    yieldSource: "Morpho",
+    yieldType: "lending-vault",
+    currentApy: 4.15,
+    apy30d: 4.1,
+    sourceTvlUsd: 10_000_000,
+    dataSource: "fixture",
+  }],
+});
+
+describe("YieldMobileCard", () => {
+  it.each([{ warningSignals: [] }, { warningSignals: ["reward-heavy"] }])("discloses score-only risk without manufacturing a penalty alongside $warningSignals", async ({ warningSignals }) => {
+    renderYieldMobileCard({
+      ...mobileCardRow, warningSignals, sourceRisk: { sourceRiskScore: 42, sourceRiskPenalty: null },
+    });
+    fireEvent.focus(screen.getByText(warningSignals.length ? "1 warning" : "Source-risk"));
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.textContent).toContain("Source risk 42/100 | n/a");
+    expect(tooltip.textContent).not.toMatch(/0\.00[x×]|1\.00[x×]/);
+    expect(screen.queryByText("No warnings")).toBeNull();
+  });
+
+  it("exposes mobile history and source-sheet controls", () => {
+    const onToggleExpanded = vi.fn();
+    const onOpenSourceSheet = vi.fn();
+
+    renderYieldMobileCard(mobileCardRow, { onToggleExpanded, onOpenSourceSheet });
+
+    const historyButton = screen.getByRole("button", { name: "Show history" });
+    expect(historyButton.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(historyButton);
+    fireEvent.click(screen.getByRole("button", { name: "2 sources" }));
+
+    expect(onToggleExpanded).toHaveBeenCalledWith("usdt-tether");
+    expect(onOpenSourceSheet).toHaveBeenCalledWith("usdt-tether");
+    expect(screen.getByText("Depth: Moderate")).toBeTruthy();
+  });
+
+  it("renders confidence and watchlist controls", () => {
+    renderYieldMobileCard(mobileCardRow);
+
+    expect(screen.getByText("Curated")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /USDT.*watchlist/i })).toBeTruthy();
+  });
+
+  it("falls back to bare em-dash when PYS is null without a reason", () => {
+    const fallbackRow = { ...mobileCardRow, pharosYieldScore: null } as YieldViewModelRow;
+    renderYieldMobileCard(fallbackRow);
+
+    expect(screen.getByText("PYS —")).toBeTruthy();
+  });
+
+  it("threads the payload scaling factor through the row display (E7)", () => {
+    renderYieldMobileCard(mobileCardRow, { scalingFactor: 8, expanded: true });
+    const strip = screen.getByRole("group", { name: "Why this PYS" });
+    expect(strip.textContent).toContain("+0.60 pp");
+    expect(strip.textContent).not.toContain("+0.60%");
+    expect(strip.textContent).toContain("vs USD short rate (3.70%)");
+  });
+});
+
+// The chip must resolve a missing row rate from the registry EUR entry (the
+// row's own benchmark) instead of the chart-wide USD risk-free frame.
+describe("YieldMobileCard — zone chip benchmark resolution", () => {
+  const eurRowWithoutRate = {
+    ...mobileCardRow,
+    benchmarkKey: "EUR",
+    benchmarkLabel: "EUR 3M compounded €STR",
+    benchmarkRate: undefined,
+    apy30d: 2.0,
+    safetyScore: 82,
+  } as YieldViewModelRow;
+
+  it("resolves a missing row rate from the registry EUR entry, not the USD frame", () => {
+    // 2.0% APY beats the EUR benchmark (1.94) but not the USD frame (3.5):
+    // a Sweet Spot chip proves the EUR rate was used.
+    renderYieldMobileCard(eurRowWithoutRate, { benchmarks: REGISTRY_WITH_EUR });
+    expect(screen.getByText("Sweet Spot")).toBeTruthy();
+  });
+
+  it("uses resolved EUR for history without inventing the missing published scoring hurdle", () => {
+    renderYieldMobileCard(eurRowWithoutRate, { benchmarks: REGISTRY_WITH_EUR, expanded: true });
+    const chart = screen.getByTestId("yield-history-chart");
+    expect(chart.getAttribute("data-benchmark-rate")).toBe("1.94");
+    expect(chart.getAttribute("data-benchmark-label")).toBe("EUR 3M compounded €STR");
+    expect(screen.getByRole("group", { name: "Why this PYS" }).textContent)
+      .toContain("Benchmark unavailable");
+  });
+
+  it("identifies the USD display frame without claiming it was the published PYS hurdle", () => {
+    renderYieldMobileCard(eurRowWithoutRate, { expanded: true });
+    expect(screen.getByText("Play It Safe")).toBeTruthy();
+    const chart = screen.getByTestId("yield-history-chart");
+    expect(chart.getAttribute("data-benchmark-rate")).toBe("3.5");
+    expect(chart.getAttribute("data-benchmark-label")).toBe("USD benchmark (display fallback)");
+    expect(screen.getByRole("group", { name: "Why this PYS" }).textContent)
+      .toContain("Benchmark unavailable");
   });
 });

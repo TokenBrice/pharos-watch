@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   makeWorkerReportCardsV9Response,
@@ -6,6 +6,7 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import * as activeSafetyScoreSource from "../safety-score-active-source";
 import { loadPublicationHealth } from "../publication-contract";
+import { classifyPublicationDiagnostic } from "@shared/lib/status-thresholds";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -15,6 +16,25 @@ afterEach(() => {
 });
 
 const NOW = 1_775_890_000;
+
+function makeV9Snapshot(overrides: Parameters<typeof makeWorkerReportCardsV9Response>[0] = {}) {
+  return makeWorkerReportCardsV9Response({
+    asOfSec: NOW - 240,
+    updatedAt: NOW - 180,
+    cards: [
+      makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A" }),
+      makeWorkerV9Card({ id: "usdt-tether", score: 90, grade: "A" }),
+    ],
+    ...overrides,
+  });
+}
+
+// Publication health is one six-surface read: keep the unrelated V9 surface
+// healthy unless a test overrides it with mockResolvedValueOnce.
+beforeEach(() => {
+  vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort")
+    .mockResolvedValue({ kind: "v9", snapshot: makeV9Snapshot() });
+});
 
 
 const EMPTY_PUBLICATION_TABLES: MockTableConfig[] = [
@@ -207,6 +227,82 @@ describe("loadPublicationHealth", () => {
       dependencyWatermarks: {
         reportCardCache: reportCardsAt,
       },
+    });
+  });
+
+  it("names a failed Safety Score V9 cohort read instead of inventing a generation", async () => {
+    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort).mockResolvedValueOnce({
+      kind: "error",
+      reason: "safety-cohort-read-failed",
+      detail: "Canonical Safety Score cohort unavailable: safety-cohort-read-failed",
+      snapshot: null,
+    });
+
+    const health = await loadPublicationHealth(mockPublicationD1(), NOW);
+
+    expect(health.surfaces["safety-score-v9"]).toBeUndefined();
+    expect(health.failedSurfaces).toContainEqual({
+      surface: "safety-score-v9",
+      code: "safety-cohort-read-failed",
+      message: "Publication surface source is unavailable.",
+    });
+  });
+
+  it("publishes a held Safety Score V9 sidecar as a rejected attempt over the accepted generation", async () => {
+    const snapshot = makeV9Snapshot({
+      updatedAt: NOW - 86_400,
+      publicationHealth: {
+        schemaVersion: 2,
+        status: "held",
+        acceptedPublicationGenerationId: "report-cards:v9:1",
+        acceptedAtSec: NOW - 86_400,
+        attemptedAtSec: NOW - 60,
+        heldSinceSec: NOW - 86_400,
+        reasons: [{ code: "dex-stale" }],
+      },
+    });
+    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreCohort).mockResolvedValueOnce({
+      kind: "held",
+      reason: "v9-publication-held",
+      detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+      snapshot,
+    });
+
+    const health = await loadPublicationHealth(mockPublicationD1(), NOW);
+    const surface = health.surfaces["safety-score-v9"];
+
+    expect(surface?.lastPublishedGeneration?.generationId).toBe(snapshot.safetyScoreIdentity.publicationGenerationId);
+    expect(surface?.lastAttemptedGeneration).toMatchObject({
+      state: "rejected",
+      startedAt: NOW - 60,
+      failureReason: "dex-stale",
+    });
+    expect(surface?.lastFailureReason).toBe("dex-stale");
+    expect(classifyPublicationDiagnostic(surface).status).toBe("degraded");
+  });
+
+  it("rejects a future-dated pending candidate clock instead of clamping it to age zero", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+      (generation_id, state, started_at, created_at, published_at, written_row_count, current_row_count, expected_row_count)
+      VALUES ('dex-published', 'published', ?, ?, ?, 407, 407, 407)`)
+      .run(NOW - 3_600, NOW - 3_600, NOW - 3_500);
+    sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+      (generation_id, state, started_at, created_at, written_row_count, expected_row_count)
+      VALUES ('dex-future-candidate', 'staged', ?, ?, 408, 407)`)
+      .run(NOW + 600, NOW + 600);
+
+    const surface = (await loadPublicationHealth(db, NOW)).surfaces["dex-liquidity"];
+
+    expect(surface).toMatchObject({
+      candidateAgeSec: null,
+      lastFailureReason: "candidate-clock-future-timestamp",
+      lastAttemptedGeneration: { generationId: "dex-future-candidate", state: "candidate" },
+    });
+    expect(classifyPublicationDiagnostic(surface)).toMatchObject({
+      status: "degraded",
+      reason: "candidate-clock-future-timestamp",
+      updatedAt: null,
     });
   });
 

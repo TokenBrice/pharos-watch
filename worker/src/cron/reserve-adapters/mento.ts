@@ -808,6 +808,15 @@ export async function fetchMentoReserves(
     } finally {
       redemptionTimeout.dispose();
     }
+    const suspendedReason = redemptionMetadata.redemption?.routeStatusReason;
+    if (typeof suspendedReason === "string" && suspendedReason.startsWith("TradingSuspended")) {
+      // A breaker-restricted FPMM pool is an observed, published route pause
+      // (telemetry keeps open pools measurable), not a telemetry read failure.
+      warnings.push(reserveInfoWarning(
+        "mento-fpmm-trading-suspended",
+        `Mento FPMM redemption pools paused by the rate-feed breaker: ${suspendedReason}`,
+      ));
+    }
     return {
       ...result,
       ...(warnings.length > 0 ? { warnings } : {}),

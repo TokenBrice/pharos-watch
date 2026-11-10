@@ -1,4 +1,5 @@
 import { compareCodeUnits } from "@shared/lib/compare";
+import { YIELD_SOURCE_DEPTH_BANDS } from "@shared/lib/selector/yield-source";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type {
@@ -58,6 +59,13 @@ function roundDelta(value: number | null): number | null {
   return Object.is(rounded, -0) ? 0 : rounded;
 }
 
+function sourceDepthBand(ratio: number | null): number | null {
+  if (ratio == null) return null;
+  if (ratio >= YIELD_SOURCE_DEPTH_BANDS.deep.minRatio) return 2;
+  if (ratio >= YIELD_SOURCE_DEPTH_BANDS.moderate.minRatio) return 1;
+  return 0;
+}
+
 /**
  * True when the row's score carries the USD-reference re-base term (yield
  * v8.43, B24): a benchmark quoted in another currency with a known rate. Such a
@@ -86,7 +94,8 @@ function isRebasedBenchmarkRow(row: YieldRanking): boolean {
  * labelled every unchanged row `stablecoin-safety` whenever hydration moved
  * anyone. Rows whose payload was published under a different methodology
  * version are attributed to `methodology`: their delta measures the version
- * bump, not the row's evidence.
+ * bump, not the row's evidence. The residual `apy` label likewise requires a
+ * measured score change; an unchanged row moved by a peer is not attributed.
  */
 function selectRankChangeDriver(params: {
   row: YieldRanking;
@@ -94,7 +103,8 @@ function selectRankChangeDriver(params: {
   methodologyChanged: boolean;
   pysDelta: number | null;
   sourceRiskDelta: number | null;
-}): YieldRankChangeDriver {
+  sourceDepthBandChanged: boolean;
+}): YieldRankChangeDriver | null {
   if (params.methodologyChanged) return "methodology";
   if (params.safetyChanged) return "stablecoin-safety";
   if (params.row.provenance?.sourceSwitch) return "source-switch";
@@ -103,15 +113,10 @@ function selectRankChangeDriver(params: {
   if (finiteNumber(params.row.yieldStability) != null && (params.row.yieldStability ?? 1) < 0.7) {
     return "volatility";
   }
-  if (
-    finiteNumber(params.row.sourceRisk?.sourceDepthRatio) != null &&
-    (params.row.sourceRisk?.sourceDepthRatio ?? 1) < 0.05
-  ) {
-    return "tvl-depth";
-  }
+  if (params.sourceDepthBandChanged) return "tvl-depth";
   if (params.row.benchmarkIsFallback === true || params.row.benchmarkFallbackMode) return "benchmark";
   if (isRebasedBenchmarkRow(params.row)) return "benchmark";
-  return "apy";
+  return params.pysDelta != null && params.pysDelta !== 0 ? "apy" : null;
 }
 
 export interface YieldRankChangeAttributionParams {
@@ -156,7 +161,10 @@ export function buildYieldRankChangeAttribution(
   const sourceRiskDelta = sourceRiskPenalty != null && previousSourceRiskPenalty != null
     ? roundDelta(sourceRiskPenalty - previousSourceRiskPenalty)
     : null;
-  const sourceDepthRatio = finiteNumber(params.hydratedRow.sourceRisk?.sourceDepthRatio);
+  const liveSourceDepthBand = sourceDepthBand(finiteNumber(params.hydratedRow.sourceRisk?.sourceDepthRatio));
+  const previousSourceDepthBand = sourceDepthBand(finiteNumber(params.originalRow.sourceRisk?.sourceDepthRatio));
+  const sourceDepthBandChanged =
+    previousSourceDepthBand != null && previousSourceDepthBand !== liveSourceDepthBand;
 
   const primaryDriver = selectRankChangeDriver({
     row: params.hydratedRow,
@@ -164,6 +172,7 @@ export function buildYieldRankChangeAttribution(
     methodologyChanged: params.methodologyChanged,
     pysDelta,
     sourceRiskDelta,
+    sourceDepthBandChanged,
   });
 
   return {
@@ -186,7 +195,7 @@ export function buildYieldRankChangeAttribution(
         finiteNumber(params.hydratedRow.yieldStability) != null && (params.hydratedRow.yieldStability ?? 1) < 0.7
           ? rankDelta
           : null,
-      tvlDepth: sourceDepthRatio != null && sourceDepthRatio < 0.05 ? rankDelta : null,
+      tvlDepth: sourceDepthBandChanged ? rankDelta : null,
     },
   };
 }

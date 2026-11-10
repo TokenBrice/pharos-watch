@@ -3,6 +3,7 @@ import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/t
 import { StatusResponseSchema } from "@shared/types/status";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
+import { buildTriageHeadline } from "@/lib/status/triage-inbox";
 import {
   makeActivePriceCoverage,
   makeCompleteTelegramBotStatus,
@@ -51,6 +52,15 @@ function buildModel(
   });
 }
 
+function cause(code: string, severity: StatusCause["severity"] = "info", layer: StatusCause["layer"] = "data-quality"): StatusCause {
+  return { code, severity, layer, message: code };
+}
+
+const ZERO_PIPELINE = {
+  stablecoinsCacheStatus: "ok", blacklistGapStatus: "ok", onchainSupplyQueryStatus: "ok",
+  onchainSupplyMonitoring: "active", missingPrices: 0, blacklistMissingAmounts: 0, staleOnchainSupply: 0,
+};
+
 describe("triage and detailed cache parity", () => {
   it.each([
     ["stablecoins", 3, undefined, "healthy", false],
@@ -83,7 +93,7 @@ describe("triage and detailed cache parity", () => {
 });
 
 describe("status dashboard model", () => {
-  it("uses the served blacklist component rather than treating queued proof counts as an incident", () => {
+  it("uses served blacklist health despite queued proofs", () => {
     const healthData = makeHealthyHealthResponse();
     healthData.blacklist = { ...healthData.blacklist, missingAmounts: 5, missingRatio: 0.05, recentMissingAmounts: 0 };
     Object.assign(healthData, projectPublicStatus(healthData, undefined, "healthy"));
@@ -95,7 +105,7 @@ describe("status dashboard model", () => {
   });
 
   it.each(["unattributed", "cache age", "cache quality", "unknown coverage", "served projection"])(
-    "uses canonical component summaries for warningless unhealthy health (%s)",
+    "summarizes warningless unhealthy health (%s)",
     (scenario) => {
       const healthData = makeHealthyHealthResponse();
       healthData.status = "degraded";
@@ -119,7 +129,7 @@ describe("status dashboard model", () => {
     },
   );
 
-  it.each([96_534_823.01, 500_000_000, 2_400_000_000])("keeps a single missing listing operational at a last-known cap of %s", (cap) => {
+  it.each([96_534_823.01, 500_000_000, 2_400_000_000])("keeps one missing listing operational at cap %s", (cap) => {
     const healthData = makeHealthyHealthResponse();
     healthData.stablecoinPublication = {
       status: "incomplete", missingActiveIds: ["hbd-hive"], expectedActiveCount: 396,
@@ -133,7 +143,7 @@ describe("status dashboard model", () => {
     expect(component?.state).toBe("operational");
   });
 
-  it("retains named warnings, mint/burn details and blacklist gaps before fallback summaries", () => {
+  it("retains named health warnings before fallback summaries", () => {
     const healthData = makeHealthyHealthResponse();
     healthData.status = "degraded";
     healthData.warnings = ["named-provider-warning"];
@@ -148,7 +158,7 @@ describe("status dashboard model", () => {
     expect(detail).toMatch(/\b20\b/);
   });
 
-  it("admits failed cron history as unavailable Crons attention with its named reason", () => {
+  it("admits cron history failure with its reason", () => {
     const data = makeHealthyStatusResponse();
     Object.assign(data.summary, {
       unhealthyCrons: null, availabilityImpactingUnhealthyCrons: null, watchUnhealthyCrons: null,
@@ -171,11 +181,10 @@ describe("status dashboard model", () => {
     ["blacklist", { blacklistGapStatus: "failed" }, "Blacklist gap evidence unavailable", "0 blacklist gaps"],
     ["onchain read", { onchainSupplyQueryStatus: "failed" }, "On-chain feed evidence unavailable", "0 stale on-chain feeds"],
     ["onchain monitor", { onchainSupplyMonitoring: "unavailable" }, "On-chain feed evidence unavailable", "0 stale on-chain feeds"],
-  ] as const)("keeps failed %s counts out of the Triage Pipeline summary", (_source, failure, unavailable, falseZero) => {
+  ] as const)("does not report failed %s counts as zero", (_source, failure, unavailable, falseZero) => {
     const data = makeHealthyStatusResponse();
     Object.assign(data.dataQuality!, {
-      stablecoinsCacheStatus: "ok", blacklistGapStatus: "ok", onchainSupplyQueryStatus: "ok",
-      onchainSupplyMonitoring: "active", missingPrices: 0, blacklistMissingAmounts: 0, staleOnchainSupply: 0,
+      ...ZERO_PIPELINE,
       ...failure,
     });
     const summary = buildModel(data).attentionSections.find((section) => section.id === "pipeline")?.summary;
@@ -184,12 +193,9 @@ describe("status dashboard model", () => {
     expect(summary).toContain(_source === "blacklist" ? "0 missing prices" : "0 blacklist gaps");
   });
 
-  it("retains independently observed zero Pipeline measurements", () => {
+  it("retains observed Pipeline zeroes", () => {
     const data = makeHealthyStatusResponse();
-    Object.assign(data.dataQuality!, {
-      stablecoinsCacheStatus: "ok", blacklistGapStatus: "ok", onchainSupplyQueryStatus: "ok",
-      onchainSupplyMonitoring: "active", missingPrices: 0, blacklistMissingAmounts: 0, staleOnchainSupply: 0,
-    });
+    Object.assign(data.dataQuality!, ZERO_PIPELINE);
     data.dataQualityStatus = "degraded";
     expect(buildModel(data).attentionSections.find((section) => section.id === "pipeline")?.summary)
       .toBe("0 missing prices, 0 stale on-chain feeds, 0 blacklist gaps");
@@ -227,7 +233,7 @@ describe("status dashboard model", () => {
     expect(reliability?.summary).not.toContain("failing browser probes");
   });
 
-  it("uses the oldest required query timestamp and the shared polling tolerance as the freshness floor", () => {
+  it("ages evidence from the oldest required query", () => {
     const model = buildModel(BASE_STATUS, {
       querySyncs: {
         statusUpdatedAt: 900_000,
@@ -247,7 +253,7 @@ describe("status dashboard model", () => {
     expect(model.notices.some((notice) => notice.id === "client-stale")).toBe(true);
   });
 
-  it("surfaces endpoint errors as operator notices", () => {
+  it("surfaces endpoint errors", () => {
     const model = buildModel(BASE_STATUS, {
       healthError: new Error("health down"),
       probesError: new Error("probes down"),
@@ -271,7 +277,7 @@ describe("status dashboard model", () => {
     ]);
   });
 
-  it("treats a never-loaded required query as partial evidence instead of a zero-age success", () => {
+  it("marks never-loaded required evidence partial", () => {
     const model = buildModel(BASE_STATUS, {
       healthData: null,
       querySyncs: {
@@ -286,12 +292,17 @@ describe("status dashboard model", () => {
       oldestRequiredSuccessAtMs: null,
       oldestRequiredAgeSec: null,
     });
+    // Missing required evidence is not answerable.
+    expect(model.evidence.label).not.toMatch(/^Current/);
+    expect(
+      buildTriageHeadline({ items: [], act: [], watch: [], informational: [] }, model.evidence),
+    ).toEqual({ verdict: "unavailable", text: "Cannot answer: Public health unavailable. Showing the last good read." });
     expect(model.clientDataStale).toBe(true);
     expect(model.decision.nextStep).toBe("refresh-evidence");
     expect(model.notices.some((notice) => notice.id === "client-partial")).toBe(true);
   });
 
-  it("reports evidence unavailable when the primary status query has never loaded", () => {
+  it("marks never-loaded status unavailable", () => {
     const statusSync: DashboardQuerySync = {
       key: "status",
       label: "Status API",
@@ -313,40 +324,22 @@ describe("status dashboard model", () => {
     });
   });
 
-  it("marks retained last-good data with a refresh error as partial evidence", () => {
-    const model = buildModel(BASE_STATUS, {
-      nowMs: 1_010_000,
-      healthError: new Error("refresh timed out"),
-    });
-
-    expect(model.evidence).toMatchObject({
-      state: "partial",
-      refreshErrorLabels: ["Public health"],
-    });
-    expect(model.querySyncs.find((sync) => sync.key === "health")).toMatchObject({
-      hasData: true,
-      state: "partial",
-      errorMessage: "refresh timed out",
-      updatedAtMs: 1_000_000,
-    });
-    expect(model.decision.nextStep).toBe("refresh-evidence");
-  });
-
-  it("keeps retained status data in the model when its background refresh fails", () => {
-    const model = buildModel(BASE_STATUS, {
-      nowMs: 1_010_000,
-      statusError: new Error("status refresh timed out"),
-    });
-
-    expect(model.evidence).toMatchObject({
-      state: "partial",
-      refreshErrorLabels: ["Status API"],
-    });
-    expect(model.notices.find((notice) => notice.id === "status-error")).toMatchObject({
-      title: "Operator status endpoint failed to refresh",
-      detail: "status refresh timed out",
-      tone: "critical",
-    });
+  it.each([
+    ["health", "Public health", "refresh timed out"],
+    ["status", "Status API", "status refresh timed out"],
+  ] as const)("retains %s after a failed refresh", (key, label, message) => {
+    const model = buildModel(BASE_STATUS, { nowMs: 1_010_000, [`${key}Error`]: new Error(message) });
+    expect(model.evidence).toMatchObject({ state: "partial", refreshErrorLabels: [label], missingLabels: [] });
+    expect(buildTriageHeadline({ items: [], act: [], watch: [], informational: [] }, model.evidence).verdict).toBe("unavailable");
+    if (key === "health") {
+      expect(model.querySyncs.find((sync) => sync.key === key)).toMatchObject({
+        hasData: true, state: "partial", errorMessage: message, updatedAtMs: 1_000_000,
+      });
+    } else {
+      expect(model.notices.find((notice) => notice.id === "status-error")).toMatchObject({
+        title: "Operator status endpoint failed to refresh", detail: message, tone: "critical",
+      });
+    }
     expect(model.decision.nextStep).toBe("refresh-evidence");
   });
 
@@ -365,7 +358,7 @@ describe("status dashboard model", () => {
     expect(model.decision.summary).toBe("Public service degraded. Admin state healthy. Evidence current. Investigate.");
   });
 
-  it("creates a warning triage issue for incomplete active-price coverage", () => {
+  it("warns on incomplete active-price coverage", () => {
     const rawActivePriceCause: StatusCause = {
       code: "active_price_coverage_incomplete",
       layer: "data-quality",
@@ -419,38 +412,23 @@ describe("status dashboard model", () => {
     expect(model.decision.nextStep).toBe("observe-next-run");
   });
 
-  it("does not synthesize active-price warning issues without a health warning", () => {
+  it("watches first-generation price gaps without warnings", () => {
     const healthData = {
       ...BASE_HEALTH,
-      status: "healthy" as const,
-      warnings: [],
-      activePriceCoverage: makeActivePriceCoverage([], {
-        pricedActiveCount: 189,
-        missingPriceCount: 1,
-        missingActiveIds: ["test-dollar"],
-        affectedMarketCapUsd: 500_000,
-        maxConsecutiveMissingGenerations: 1,
-      }),
+      activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset()]),
     };
 
-    const model = buildModel(BASE_STATUS, { healthData });
+    const gap = cause("active_price_coverage_incomplete");
+    const model = buildModel({ ...BASE_STATUS, causes: { overall: [gap], availability: [], dataQuality: [gap] } }, { healthData });
 
     expect(model.issueGroups.warnings.some((issue) => issue.code === "active_price_coverage_incomplete")).toBe(false);
     expect(model.issueGroups.impacting).toHaveLength(0);
+    expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual([gap.code]);
   });
 
-  it("maps unknown exact active-price coverage to the stablecoin price surface", () => {
+  it("maps unknown price coverage to Stablecoin prices", () => {
     const issues = normalizeStatusIssues({
-      overall: [
-        {
-          code: "active_price_coverage_unknown",
-          layer: "data-quality",
-          severity: "warning",
-          message: "Exact active stablecoin live-price coverage evidence is unavailable.",
-        },
-      ],
-      availability: [],
-      dataQuality: [],
+      overall: [cause("active_price_coverage_unknown", "warning")], availability: [], dataQuality: [],
     });
 
     expect(issues[0]).toMatchObject({
@@ -459,10 +437,10 @@ describe("status dashboard model", () => {
     });
   });
 
-  it.each(["healthy", "degraded"] as const)("keeps Safety divergence visible only while effective status still lags (%s)", (effectiveStatus) => {
+  it.each(["healthy", "degraded"] as const)("shows Safety divergence only while status lags (%s)", (effectiveStatus) => {
     const cause: StatusCause = {
       code: "safety_score_publication_held", layer: "availability", severity: "warning",
-      message: "Safety Score publication is held while required inputs recover (redemption-stale).",
+      message: "Safety publication held.",
     };
     const data = makeHealthyStatusResponse();
     data.overallStatus = effectiveStatus;
@@ -481,37 +459,29 @@ describe("status dashboard model", () => {
     else expect(notice?.detail).not.toContain("Public /api/health differs from /api/status");
   });
 
-  it("keeps reviewed nominal price references out of the dashboard issues and watch count", () => {
-    const nominal: StatusCause = {
-      code: "active_price_coverage_nominal_reference",
-      layer: "data-quality",
-      severity: "info",
-      message: "Reviewed nominal references, not observed market prices, cover: sBOLD. These are not missing-price gaps.",
-      metric: "nominalReferenceCount",
-      value: 1,
-    };
-    const watch: StatusCause = {
-      code: "mint_burn_public_degraded",
-      layer: "availability",
-      severity: "info",
-      message: "Fresh healthy lane; execution notice.",
-    };
-    const data: StatusResponse = {
-      ...BASE_STATUS,
-      causes: { overall: [nominal, watch], availability: [watch], dataQuality: [nominal] },
-    };
-
-    const issues = normalizeStatusIssues(data.causes);
-    expect(issues.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
-
-    const model = buildModel(data);
-    expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
-    expect(model.decision.summary).toContain("1 informational watch remains");
-    // The by-design cause stays in the status payload it was read from.
-    expect(data.causes.dataQuality).toEqual([nominal]);
+  it("excludes standing notices from watch counts", () => {
+    const watchCodes = ["depeg_blind_event_reviews_expiring", "mint_burn_public_degraded", "supply_carry_reviews_expired", "supply_carry_reviews_expiring"];
+    const watches = watchCodes.map((code) => cause(code));
+    const standing = [
+      "active_price_coverage_nominal_reference", "reserve_feed_reviews_acknowledged",
+      "supply_carry_reviews_acknowledged", "depeg_blind_event_reviews_acknowledged", "active_price_coverage_incomplete",
+    ].map((code) => cause(code));
+    const data = { ...BASE_STATUS, causes: { overall: [...standing, ...watches], availability: watches, dataQuality: standing } };
+    const healthData = makeHealthyHealthResponse();
+    healthData.activePriceCoverage = makeActivePriceCoverage(
+      ["reviewed", "closed"].map((stablecoinId) => makeMissingActiveAsset({ stablecoinId })),
+      { acknowledgedGapIds: ["reviewed"], scheduledClosureGapIds: ["closed"] },
+    );
+    const model = buildModel(data, { healthData });
+    expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(watchCodes);
+    expect(model.decision.summary).toContain("4 informational watches remain");
+    healthData.activePriceCoverage.missingActiveIds.push("first-generation-unacknowledged");
+    expect(buildModel(data, { healthData }).issueGroups.watches.map((issue) => issue.code))
+      .toEqual(["active_price_coverage_incomplete", ...watchCodes]);
+    expect(data.causes.dataQuality).toEqual(standing);
   });
 
-  it("surfaces missing Comms telemetry as Unavailable attention", () => {
+  it("marks missing Comms telemetry unavailable", () => {
     const data = { ...makeHealthyStatusResponse(), telegramBot: null };
     const model = buildModel(data);
     const comms = model.attentionSections.find((section) => section.id === "comms");
@@ -520,7 +490,7 @@ describe("status dashboard model", () => {
     expect(comms?.summary).toContain("Telegram delivery telemetry is unavailable");
   });
 
-  it("names source suppression and labels eligible chats separately from delivery counts", () => {
+  it("names suppression and distinguishes audience from delivery", () => {
     const data = makeHealthyStatusResponse();
     data.telegramBot = { ...makeCompleteTelegramBotStatus(), deliverableChats: 783 };
     data.crons["dispatch-telegram-alerts"].latestRunFacts = makeDispatchMetadata({
@@ -532,28 +502,16 @@ describe("status dashboard model", () => {
     expect(comms?.summary).not.toContain("dispatch reported a degraded outcome");
   });
 
-  it("surfaces scheduled-slot running query failures as watch-level operator notices", () => {
-    const model = buildModel(makeScheduledSlotRunningQueryFailedStatusResponse());
-
+  it.each([
+    ["running", makeScheduledSlotRunningQueryFailedStatusResponse,
+      "Status could not inspect running scheduled slots; stale-slot detection may be incomplete."],
+    ["event-marker", makeScheduledSlotEventMarkerQueryFailedStatusResponse,
+      "Status could not inspect scheduled-slot event markers; slot-abandonment diagnostics may be incomplete."],
+  ] as const)("surfaces scheduled-slot %s query failures as watches", (kind, fixture, detail) => {
+    const model = buildModel(fixture());
     expect(model.notices).toContainEqual({
-      id: "scheduled-slot-running-query-failed",
-      title: "Scheduled-slot running query failed",
-      detail: "Status could not inspect running scheduled slots; stale-slot detection may be incomplete.",
-      tone: "neutral",
+      id: `scheduled-slot-${kind}-query-failed`, title: `Scheduled-slot ${kind} query failed`, detail, tone: "neutral",
     });
     expect(model.attentionSections).toEqual([]);
   });
-
-  it("surfaces scheduled-slot event-marker query failures as watch-level operator notices", () => {
-    const model = buildModel(makeScheduledSlotEventMarkerQueryFailedStatusResponse());
-
-    expect(model.notices).toContainEqual({
-      id: "scheduled-slot-event-marker-query-failed",
-      title: "Scheduled-slot event-marker query failed",
-      detail: "Status could not inspect scheduled-slot event markers; slot-abandonment diagnostics may be incomplete.",
-      tone: "neutral",
-    });
-    expect(model.attentionSections).toEqual([]);
-  });
-
 });

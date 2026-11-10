@@ -79,8 +79,10 @@ jobs:
           fi
 
   deploy-worker:
-    needs: plan
-    if: ${{ needs.plan.outputs.worker_required == 'true' }}
+    needs:
+      - plan
+    # A cancelled run must still suppress the production deploy.
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.worker_required == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -94,6 +96,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        with:
+          # Deploy jobs hold production credentials: plain npm ci, no cache.
+          node-modules-cache: "false"
       - name: Check Worker migrations
         run: npm run check:migrations
       - name: Package both Workers before D1 mutation
@@ -228,7 +233,7 @@ jobs:
         )
       }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     permissions:
       contents: read
     steps:
@@ -265,4 +270,5 @@ jobs:
           OBSERVED_WORKER_VERSION: ${{ steps.verify-worker-identity.outputs.worker_version }}
           EXPECTED_HEAVY_WORKER_VERSION: ${{ needs.deploy-worker.outputs.heavy_worker_version }}
           OBSERVED_HEAVY_WORKER_VERSION: ${{ steps.verify-heavy-identity.outputs.worker_version }}
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-post-deploy-acceptance.ts

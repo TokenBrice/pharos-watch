@@ -1,7 +1,13 @@
+// @vitest-environment jsdom
+
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanupFrontendTest } from "@/test-utils/frontend";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
+import type { CaseStudy } from "@shared/types/editorial-content";
 import { CaseStudyBody } from "../case-study-body";
+import { CaseStudyShare } from "../case-study-share";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { metadata as hubMetadata } from "../page";
 import { generateMetadata } from "../[slug]/page";
@@ -29,9 +35,12 @@ describe("case-study publication metadata", () => {
 
   it("counts the archive and its outcomes in the hub title and description", () => {
     expect(hubMetadata.title).toBe(`Stablecoin Depeg History: ${CASE_STUDY_LIST.length} Case Studies`);
-    expect(hubMetadata.description).toContain(
+    const description = String(hubMetadata.description);
+    expect(description).toContain(
       `(${CASE_STUDY_OUTCOME_COUNTS.died} died, ${CASE_STUDY_OUTCOME_COUNTS.wounded} wounded, ${CASE_STUDY_OUTCOME_COUNTS.survived} survived)`,
     );
+    expect(description).toContain("depeg and failure case studies");
+    expect(description).not.toMatch(/reconstructed stablecoin depegs|how each ended/i);
     expect(CASE_STUDY_OUTCOME_COUNTS.died + CASE_STUDY_OUTCOME_COUNTS.wounded + CASE_STUDY_OUTCOME_COUNTS.survived).toBe(CASE_STUDY_LIST.length);
   });
 
@@ -39,6 +48,41 @@ describe("case-study publication metadata", () => {
     const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usde-oracle-2025")!;
     const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
     expect(html).toContain("Scope: Binance order-book print");
+  });
+
+  it("drops NAV-priced widgets so the archival snapshot renders instead of a $1 tape", () => {
+    for (const slug of ["usyc-nav-pricing-2025", "usd0pp-usual-2025"]) {
+      const study = CASE_STUDY_LIST.find((entry) => entry.slug === slug)!;
+      const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+      expect(html, slug).not.toContain('data-testid="case-study-chart"');
+      expect(html, slug).toContain("Event window");
+    }
+  });
+
+  it("drops a non-USD widget that would be drawn on a $1 tape", () => {
+    const base = CASE_STUDY_LIST.find((entry) => entry.slug === "usdc-svb-2023")!;
+    const study: CaseStudy = {
+      ...base,
+      dataWidgets: [
+        { kind: "peg-deviation", coinId: "eurot-token-teknoloji", caption: "EUR test" },
+      ],
+    };
+    const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+    expect(html).not.toContain('data-testid="case-study-chart"');
+    expect(html).toContain("Event window");
+  });
+
+  it("keeps a USD peg tape for a non-NAV widget", () => {
+    const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usdc-svb-2023")!;
+    const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+    expect(html).toContain('data-testid="case-study-chart"');
+  });
+
+  it("shows an unavailable archival metric as an em dash", () => {
+    const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usyc-nav-pricing-2025")!;
+    const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+    expect(html).not.toContain("n/a");
+    expect(html.match(/—/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
   it("keeps the authored Published byline and takes Article dateModified from the per-study sitemap date", () => {
@@ -60,5 +104,28 @@ describe("case-study publication metadata", () => {
       renderToStaticMarkup(<CaseStudyArticleJsonLd study={study} />).replace(/^<script[^>]*>|<\/script>$/g, ""),
     ) as { dateModified: string };
     expect(article.dateModified).toBe(study.datePublished);
+  });
+});
+
+describe("case-study sharing", () => {
+  afterEach(cleanupFrontendTest);
+
+  it("keeps confirmation until two seconds after the latest successful copy", async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    render(<CaseStudyShare />);
+    const button = screen.getByRole("button", { name: "Copy link" });
+    const status = screen.getByRole("status");
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    await act(async () => { fireEvent.click(button); });
+    expect(status.textContent).toBe("Link copied");
+    act(() => { vi.advanceTimersByTime(1900); });
+    await act(async () => { fireEvent.click(button); });
+    expect(writeText.mock.calls).toEqual([[window.location.href], [window.location.href]]);
+    act(() => { vi.advanceTimersByTime(1999); });
+    expect(status.textContent).toBe("Link copied");
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(status.textContent).toBe("");
   });
 });

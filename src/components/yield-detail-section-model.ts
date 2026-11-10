@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useYieldRankingsCoin } from "@/hooks/api-hooks";
+import type { ApiMeta } from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
   resolveYieldDisplayRebaseReferenceRate,
@@ -174,7 +175,8 @@ export function buildYieldDetailModel(
 }
 
 export interface YieldDetailSectionReadyModel extends YieldDetailReadyModel {
-  apiWarning: string | null;
+  apiMeta: ApiMeta | null;
+  dataUpdatedAt: number;
   refreshError: Error | null;
   showAllSources: boolean;
   setShowAllSources: Dispatch<SetStateAction<boolean>>;
@@ -271,7 +273,8 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
 
   return {
     ...model,
-    apiWarning: apiMeta?.warning ?? null,
+    apiMeta,
+    dataUpdatedAt,
     refreshError: error instanceof Error ? error : null,
     showAllSources,
     setShowAllSources,

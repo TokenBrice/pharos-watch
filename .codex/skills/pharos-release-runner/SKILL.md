@@ -30,9 +30,9 @@ A push/publish/release request authorizes the necessary release branch and prote
 
 ## Checks Owned By The Verifier
 
-Assigned verifier checks are authoring feedback, not release proof. Use `npm run check:pr` under [Pre-push readiness](../../../docs/testing.md#pre-push-readiness) before publishing; hosted CI is the readiness authority. Keep generated artifacts with their owning sources. Local receipts are optional diagnostics, not a push prerequisite; `check:release` is only an explicit production rehearsal. There is no pre-push test hook.
+Assigned verifier checks are authoring feedback, not release proof. Readiness and receipt rules follow [Pre-push readiness](../../../docs/testing.md#pre-push-readiness). Keep generated artifacts with their owning sources. `check:release` is only an explicit production rehearsal. There is no pre-push test hook.
 
-Use `npm run check:pr -- --explain-receipt` for read-only receipt diagnosis: local Git state only, no fetch/check execution/receipt rewrite/staging/push authorization. Diagnostic success is not readiness, even for missing/failed/stale evidence; remote-base freshness remains unknown.
+Receipt diagnosis: `npm run check:pr -- --explain-receipt`; exit success only means diagnosis completed, even for missing/failed/stale evidence; remote-base freshness remains unknown. Semantics are owned by [Pre-push readiness](../../../docs/testing.md#pre-push-readiness).
 
 ## Completion Evidence
 

@@ -502,8 +502,8 @@
         "label": "IDRX MINTER_ROLE address with no deployed code (BSC)",
         "role": "direct-minter",
         "authorityType": "safe",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
+        "directMintAbility": "none",
+        "canRaiseCap": false,
         "threshold": 2,
         "signerCount": 3,
         "safe": {
@@ -518,10 +518,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "bsc:0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
-          "reviewedAt": "2026-10-29",
-          "observedAt": "2026-10-29",
-          "expiresAt": "2026-11-28",
-          "reviewer": "R-MINT-6 renewal 2026-10-29",
+          "reviewedAt": "2026-11-06",
+          "observedAt": "2026-11-06",
+          "expiresAt": "2026-12-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — k-mia",
           "confidence": "partial",
           "sources": [
             {
@@ -531,18 +531,30 @@
             {
               "label": "BSC Safe singleton runtime pinned at block 125139388",
               "url": "https://bscscan.com/address/0x3e5c63644e683549055b9be8653de26e0b4cd36e"
+            },
+            {
+              "label": "BSC numbered block 132056582, hash 0xd970b8b20b89287a57d8c9e674bf228aa40c5003a2f9137b4162e4d50db27f62, 2026-11-06T18:27:27Z; observed 2026-11-06T18:27:43.280Z: counterfactual address code 0x, nonce 0; DEFAULT_ADMIN_ROLE, MINTER_ROLE, UPGRADER_ROLE, PAUSER_ROLE, BLACKLIST_ROLE and PLATFORM_FEE_SETTER_ROLE all false; all six getRoleAdmin values are DEFAULT_ADMIN_ROLE. Admin 0x5515be1db2a513888f5cf375bf5c7956ee93c779 retains DEFAULT_ADMIN_ROLE, PAUSER_ROLE and BLACKLIST_ROLE; proxy initialized slot 0 = 1, implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0, EIP-1967 admin slot zero, paused false, totalSupply 1383908248 raw with decimals 0. These token units are not a circulating-USD share.",
+              "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+            },
+            {
+              "label": "Successful MINTER_ROLE revocation by admin 0x5515be1db2a513888f5cf375bf5c7956ee93c779 from this counterfactual Safe; transaction 0xd5d14c82e94fb736f4d8b581c0633f820fb766e77ac0bf5a713e1ca70f060214, numbered BSC block 131940931, hash 0xf4502316c1ed145cf136a93ffc1159ff6b445c9262e1af8d2a59574c0cae123f, 2026-11-06T03:59:34Z; receipt status 1. Exact address-filtered grant/revoke scan 130515001–132056582 returned this one revocation.",
+              "url": "https://bscscan.com/tx/0xd5d14c82e94fb736f4d8b581c0633f820fb766e77ac0bf5a713e1ca70f060214"
+            },
+            {
+              "label": "Exact BSC implementation source, verified by Sourcify 2026-06-02T11:45:58Z and byte-for-byte runtime matched at block 132056582: IDRX mint/mintBridge require MINTER_ROLE; AccessControl grantRole is controlled by getRoleAdmin; DEFAULT_ADMIN can regrant the revoked role. Prior fixed-initializer evidence is retained without a new deployment or initializer replay claim.",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0?fields=all"
             }
           ],
           "pin": {
-            "position": "130515000",
-            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
-            "runtimeIdentity": "eth_getCode=0x; nonce=0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false; fixed SafeProxy singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+            "position": "132056582",
+            "hash": "0xd970b8b20b89287a57d8c9e674bf228aa40c5003a2f9137b4162e4d50db27f62",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0; DEFAULT_ADMIN_ROLE=false; MINTER_ROLE=false; UPGRADER_ROLE=false; PAUSER_ROLE=false; BLACKLIST_ROLE=false; PLATFORM_FEE_SETTER_ROLE=false; MINTER_ROLE revoked at BSC 131940931; DEFAULT_ADMIN can regrant",
             "signerIdentity": "counterfactual fixed initialized 2-of-3; not a live deployed Safe: e51b67864a38f42126231d30ed8f3e72ec7f32f4,b4fca8725a9e65b4cd1ef27d71e7c7537148061b,0f9f4cbbec64524deb0d743f9caf34be81bd1576"
           },
           "observedState": {
-            "position": "130515000",
-            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
-            "runtimeIdentity": "eth_getCode=0x; nonce=0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false; fixed SafeProxy singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+            "position": "132056582",
+            "hash": "0xd970b8b20b89287a57d8c9e674bf228aa40c5003a2f9137b4162e4d50db27f62",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0; DEFAULT_ADMIN_ROLE=false; MINTER_ROLE=false; UPGRADER_ROLE=false; PAUSER_ROLE=false; BLACKLIST_ROLE=false; PLATFORM_FEE_SETTER_ROLE=false; MINTER_ROLE revoked at BSC 131940931; DEFAULT_ADMIN can regrant",
             "signerIdentity": "counterfactual fixed initialized 2-of-3; not a live deployed Safe: e51b67864a38f42126231d30ed8f3e72ec7f32f4,b4fca8725a9e65b4cd1ef27d71e7c7537148061b,0f9f4cbbec64524deb0d743f9caf34be81bd1576"
           },
           "inventory": "partial",
@@ -574,7 +586,7 @@
               "claimImpairment": "unbounded",
               "economicLossScope": "global-claim",
               "unavoidableDelaySec": null,
-              "activation": "counterfactual",
+              "activation": "disabled-reactivatable",
               "affectedLiabilityIds": [
                 "idrx-idrx"
               ],
@@ -605,9 +617,9 @@
                 "modules": [],
                 "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
                 "accountStatePin": {
-                  "position": "130515000",
-                  "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
-                  "runtimeIdentity": "eth_getCode=0x; eth_getTransactionCount=0x0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false",
+                  "position": "132056582",
+                  "hash": "0xd970b8b20b89287a57d8c9e674bf228aa40c5003a2f9137b4162e4d50db27f62",
+                  "runtimeIdentity": "eth_getCode=0x; nonce=0; DEFAULT_ADMIN_ROLE=false; MINTER_ROLE=false; UPGRADER_ROLE=false; PAUSER_ROLE=false; BLACKLIST_ROLE=false; PLATFORM_FEE_SETTER_ROLE=false; MINTER_ROLE revoked at BSC 131940931; DEFAULT_ADMIN can regrant",
                   "signerIdentity": "undeployed; fixed initialization owners and threshold, not live signer state"
                 }
               }
@@ -635,10 +647,22 @@
           {
             "label": "Dwellir BSC role/code/implementation observations; block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z",
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "BSC numbered block 132056582, hash 0xd970b8b20b89287a57d8c9e674bf228aa40c5003a2f9137b4162e4d50db27f62, 2026-11-06T18:27:27Z; observed 2026-11-06T18:27:43.280Z: counterfactual address code 0x, nonce 0; DEFAULT_ADMIN_ROLE, MINTER_ROLE, UPGRADER_ROLE, PAUSER_ROLE, BLACKLIST_ROLE and PLATFORM_FEE_SETTER_ROLE all false; all six getRoleAdmin values are DEFAULT_ADMIN_ROLE. Admin 0x5515be1db2a513888f5cf375bf5c7956ee93c779 retains DEFAULT_ADMIN_ROLE, PAUSER_ROLE and BLACKLIST_ROLE; proxy initialized slot 0 = 1, implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0, EIP-1967 admin slot zero, paused false, totalSupply 1383908248 raw with decimals 0. These token units are not a circulating-USD share.",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Successful MINTER_ROLE revocation by admin 0x5515be1db2a513888f5cf375bf5c7956ee93c779 from this counterfactual Safe; transaction 0xd5d14c82e94fb736f4d8b581c0633f820fb766e77ac0bf5a713e1ca70f060214, numbered BSC block 131940931, hash 0xf4502316c1ed145cf136a93ffc1159ff6b445c9262e1af8d2a59574c0cae123f, 2026-11-06T03:59:34Z; receipt status 1. Exact address-filtered grant/revoke scan 130515001–132056582 returned this one revocation.",
+            "url": "https://bscscan.com/tx/0xd5d14c82e94fb736f4d8b581c0633f820fb766e77ac0bf5a713e1ca70f060214"
+          },
+          {
+            "label": "Exact BSC implementation source, verified by Sourcify 2026-06-02T11:45:58Z and byte-for-byte runtime matched at block 132056582: IDRX mint/mintBridge require MINTER_ROLE; AccessControl grantRole is controlled by getRoleAdmin; DEFAULT_ADMIN can regrant the revoked role. Prior fixed-initializer evidence is retained without a new deployment or initializer replay claim.",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0?fields=all"
           }
         ],
-        "observedAt": "2026-10-29",
-        "observedBlock": 130515000
+        "observedAt": "2026-11-06",
+        "observedBlock": 132056582
       },
       {
         "chain": "bsc",

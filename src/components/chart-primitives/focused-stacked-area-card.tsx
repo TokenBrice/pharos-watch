@@ -10,6 +10,8 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { type TimeRangeOption, useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_HEIGHT } from "@/lib/chart-colors";
+import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
+import { formatRangeTickDate } from "@/lib/chart-time-range";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 
@@ -104,21 +106,51 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
   });
   const chartHeightClass = isFocused ? focusedHeightClassName : CHART_HEIGHT;
   const domain = useMemo(() => yDomain(filteredData, range), [filteredData, range, yDomain]);
-  // An open ("auto") top resolves to the nice tick above the tallest stack.
-  const stackHeights = useMemo(
+  // Recharts offsets a band above a null stack member by the partial sum, so
+  // the missing cohort would read as a one-bucket collapse. Once a member is
+  // unavailable, every later band of that stack is a gap too; the table and
+  // tooltip keep the unmodified rows and still say "Unavailable".
+  const chartData = useMemo(
     () =>
       filteredData.map((row) => {
-        const stacks = new Map<string, number>();
+        const copy: Record<string, unknown> = { ...(row as Record<string, unknown>) };
+        const brokenStacks = new Set<string>();
         for (const item of series) {
           const value = (row as Record<string, unknown>)[item.dataKey];
+          if (brokenStacks.has(item.stackId)) {
+            copy[item.dataKey] = null;
+          } else if (typeof value !== "number" || !Number.isFinite(value)) {
+            brokenStacks.add(item.stackId);
+            copy[item.dataKey] = null;
+          }
+        }
+        return copy;
+      }),
+    [filteredData, series],
+  );
+  // An open ("auto") top resolves to the nice tick above the tallest drawn stack.
+  const stackHeights = useMemo(
+    () =>
+      chartData.map((row) => {
+        const stacks = new Map<string, number>();
+        for (const item of series) {
+          const value = row[item.dataKey];
           if (typeof value !== "number" || !Number.isFinite(value)) continue;
           const key = item.stackId;
           stacks.set(key, (stacks.get(key) ?? 0) + value);
         }
         return stacks.size > 0 ? Math.max(...stacks.values()) : null;
       }),
-    [filteredData, series],
+    [chartData, series],
   );
+  // Month-oriented labels need a matching monthly tick cadence; day-scale
+  // ranges label the auto time ticks with the day.
+  const xTicks = useMemo(() => {
+    if (range === "7d" || range === "30d" || filteredData.length === 0) return undefined;
+    const first = filteredData[0][tsKey];
+    const last = filteredData[filteredData.length - 1][tsKey];
+    return buildAdaptiveMonthlyTicks(first, last).filter((tick) => tick >= first);
+  }, [filteredData, range, tsKey]);
   const autoAxis = useNiceValueAxis(stackHeights);
   // Stacked areas fill from zero and Recharts widens a raised floor back to 0
   // with no ticks below it, so the floor is pinned at 0 and the baseline labelled.
@@ -193,7 +225,7 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
                   <AreaChart
                     width={width}
                     height={height}
-                    data={filteredData}
+                    data={chartData}
                     margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
                   >
                     <defs>
@@ -202,7 +234,12 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
                       ))}
                     </defs>
                     <TimeGrid />
-                    <TimeXAxis dataKey={String(tsKey)} minTickGap={72} />
+                    <TimeXAxis
+                      dataKey={String(tsKey)}
+                      ticks={xTicks}
+                      minTickGap={72}
+                      tickFormatter={(value) => formatRangeTickDate(Number(value), range)}
+                    />
                     <MonoYAxis tickFormatter={yTickFormatter} {...valueAxis} />
                     <DateTooltip content={tooltip} />
                     {series.map((item) => (

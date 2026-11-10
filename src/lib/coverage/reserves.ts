@@ -93,6 +93,7 @@ const RESERVES_STATUS_PRESETS = {
 type ReserveCoverageCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "collateralQuality"> & {
   liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
   liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+  hasCuratedReserves?: boolean;
 };
 
 function resolveReserve(
@@ -125,6 +126,12 @@ function resolveReserve(
     }
 
     return createPresetStatus(RESERVES_STATUS_PRESETS.proof);
+  }
+
+  // The compact client registry carries presence only; an absent `reserves`
+  // field there is not evidence that no curated composition exists.
+  if (coin.hasCuratedReserves === true) {
+    return createPresetStatus(RESERVES_STATUS_PRESETS.curated);
   }
 
   const reserves = getReserves(coin);
@@ -186,6 +193,7 @@ export const coverageFeature = definePresetCoverageFeature({
     { key: "proof", label: "proof" },
     { key: "curated", label: "curated" },
     { key: "estimated", label: "estimated" },
+    { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
   ],
   legendItems: RESERVES_LEGEND,
   resolve: resolveReserve,

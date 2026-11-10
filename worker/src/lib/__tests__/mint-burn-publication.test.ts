@@ -9,15 +9,29 @@ import { handleMintBurnFlows } from "../../api/mint-burn-flows";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
-import { MINT_BURN_WATERMARK_MAX_AGE_SEC, readMintBurnWindowContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
-import { compactMintBurnPublication, isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../mint-burn-publication";
+import { MINT_BURN_WATERMARK_MAX_AGE_SEC, readMintBurnWindowContext as readContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
+import {
+  compactMintBurnPublication,
+  isGrandfatheredMintBurnConfig,
+  mintBurnDisabledReason,
+  resolveMintBurnDisabledSymbolPolicy,
+  resolveMintBurnDisabledSymbols,
+  syncMintBurnPublicationPolicy,
+} from "../mint-burn-publication";
 import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 const end = Date.parse("2027-02-01T12:00:00Z") / 1000;
 const day = 86400;
-const config = makeMintBurnConfig();
+const config = makeMintBurnConfig({ chain: MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === "base")!.chain });
+const byId = (id: string) => getMintBurnConfigsForStablecoin(id).filter((entry) => entry.chain.chainId === "ethereum");
+const usdc = byId("usdc-circle")[0];
+const pausedKeys = (sqlite: ReturnType<typeof fixtures.open>["sqlite"]) => JSON.parse(String(
+  (sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get() as { paused_keys: string }).paused_keys));
+const readScope = (db: D1Database, now: number, configs: readonly MintBurnContractConfig[]) => readContext(db, now,
+  [...configs, ...ACTIVE_MINT_BURN_CONFIGS.filter((entry) => !configs.some((config) => mintBurnConfigKey(config) === mintBurnConfigKey(entry)))
+    .map((entry) => ({ ...entry, enabled: false }))]);
 async function proofFor(db: D1Database, entry: MintBurnContractConfig, days: number, to = end, fromBlock = 1, toBlock = 100) {
   await upsertMintBurnSyncState(db, mintBurnConfigKey(entry), toBlock, "monotonic-max", {
     configKey: mintBurnConfigKey(entry), configFingerprint: mintBurnScanFingerprint(entry), chainId: entry.chain.chainId,
@@ -32,8 +46,8 @@ describe("mint/burn durable publication admission", () => {
   it("explicitly grandfathers every pre-gate key without fabricating scan coverage", async () => {
     const { db } = fixtures.open();
     const legacy = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig);
-    expect(legacy).toHaveLength(135);
-    const scope = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
+    expect(legacy).toHaveLength(133);
+    const scope = await readContext(db, end, MINT_BURN_CONFIGS);
     expect(scope.configs).toEqual(legacy);
     expect(scope.publication.legs.filter((leg) => leg.status === "admitted")
       .every((leg) => leg.reason === "legacy-grandfathered")).toBe(true);
@@ -43,59 +57,116 @@ describe("mint/burn durable publication admission", () => {
   it("requires 90 days of current-fingerprint proof, persists admission, and retains a stalled admitted leg", async () => {
     const { db, sqlite } = fixtures.open();
     await proof(db, 31);
-    let scope = await readMintBurnWindowContext(db, end + 60, [config]);
+    let scope = await readScope(db, end + 60, [config]);
     expect(scope.configs).toEqual([]);
+    expect(scope.diagnosticConfigs).toEqual([]);
     expect(scope.publication.legs[0]).toMatchObject({ status: "pending-admission", reason: "baseline-incomplete", coveredSeconds: 31 * day });
     await proof(db, 90);
-    scope = await readMintBurnWindowContext(db, end + 60, [config]);
+    scope = await readScope(db, end + 60, [config]);
     expect(scope.configs).toEqual([config]);
     expect(sqlite.prepare("SELECT baseline_to - baseline_from AS seconds FROM mint_burn_admission").get()).toEqual({ seconds: 90 * day });
-    scope = await readMintBurnWindowContext(db, end + 10 * day, [config]);
-    // A roster-wide stall is a producer outage: no leg is quarantined and the verdict stays stale.
+    await syncMintBurnPublicationPolicy(db, [], end);
+    scope = await readScope(db, end + 10 * day, [config]);
     expect(scope.configs).toEqual([config]);
     expect(scope.watermark.unavailableReason).toBe("scan-watermark-stale");
+    expect(pausedKeys(sqlite)).toEqual([]);
+    sqlite.prepare("DELETE FROM mint_burn_scan_coverage").run();
+    scope = await readScope(db, end, [config]);
+    expect(scope.watermark.unavailableReason).toBe("scan-watermark-unavailable");
+    expect(scope.configs).toEqual([config]);
+    expect(pausedKeys(sqlite)).toEqual([]);
     const revised = { ...config, decimals: config.decimals + 1 };
-    expect((await readMintBurnWindowContext(db, end + 60, [revised])).configs).toEqual([revised]);
+    expect((await readScope(db, end + 60, [revised])).configs).toEqual([revised]);
   });
 
-  it("quarantines a stalled admitted leg and resumes it only through reactivation catch-up", async () => {
+  it.each(["stale", "missing", "edited", "grandfathered"])("quarantines %s proof only through reactivation catch-up", async (defect) => {
     const { db, sqlite } = fixtures.open();
-    const stalled = makeMintBurnConfig({
-      asset: { stablecoinId: "usdc-circle", symbol: "USDC",
-        contractAddress: "0x0000000000000000000000000000000000000002" },
-      chain: { chainId: "base", chainName: "Base", explorerUrl: "https://basescan.org", evmChainId: 8453 },
-    });
+    let stalled = defect === "grandfathered" ? usdc : { ...usdc, chain: config.chain, contractAddress: "0x0000000000000000000000000000000000000002" };
     const freshKey = mintBurnConfigKey(config);
     const stalledKey = mintBurnConfigKey(stalled);
-    const pausedKeys = () => JSON.parse(String((sqlite.prepare(
-      "SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get() as { paused_keys: string }).paused_keys));
     await proof(db, 90);
     await proofFor(db, stalled, 90);
-    expect((await readMintBurnWindowContext(db, end + 60, [config, stalled])).configs).toEqual([config, stalled]);
+    expect((await readScope(db, end + 60, [config, stalled])).configs).toEqual([config, stalled]);
     await syncMintBurnPublicationPolicy(db, [], end + 60, [freshKey, stalledKey]);
-    // Only the fresh leg keeps scanning; the other frontier falls past the shared budget.
     const now = end + MINT_BURN_WATERMARK_MAX_AGE_SEC + 3600;
     await proofFor(db, config, 1, now, 101, 200);
-    const gated = await readMintBurnWindowContext(db, now, [config, stalled]);
+    if (defect === "missing") sqlite.prepare("DELETE FROM mint_burn_scan_coverage WHERE config_key = ?").run(stalledKey);
+    if (defect === "edited") stalled = { ...stalled, decimals: stalled.decimals + 1 };
+    const gated = await readScope(db, now, [config, stalled]);
+    expect(gated.diagnosticConfigs).toEqual([config, stalled]);
     expect(gated.configs).toEqual([config]);
     expect(gated.watermark).toMatchObject({ timestamp: now, unavailableReason: null });
     expect(gated.publication.legs.find((leg) => leg.configKey === stalledKey))
       .toMatchObject({ status: "pending-admission", reason: "reactivation-pending" });
     // The quarantine is durable, so a fresher frontier alone cannot re-admit it.
-    expect(pausedKeys()).toContain(stalledKey);
+    expect(pausedKeys(sqlite)).toContain(stalledKey);
     await proofFor(db, stalled, 1, now - 3600, 101, 200);
-    expect((await readMintBurnWindowContext(db, now + 60, [config, stalled])).configs).toEqual([config]);
+    expect((await readScope(db, now + 60, [config, stalled])).configs).toEqual([config]);
     await proofFor(db, stalled, 1, now, 201, 300);
-    expect((await readMintBurnWindowContext(db, now + 120, [config, stalled])).configs).toEqual([config, stalled]);
-    expect(pausedKeys()).not.toContain(stalledKey);
+    expect((await readScope(db, now + 120, [config, stalled])).configs).toEqual([config, stalled]);
+    expect(pausedKeys(sqlite)).not.toContain(stalledKey);
   });
+
+  it.each(["shared-only", "independent", "stale-sibling", "stale", "dirty", "gapped", "non-overlapping", "partial"])(
+    "proves survivors after bucket closure: %s", async (defect) => {
+      const { db, sqlite } = fixtures.open();
+      const siblings = byId("buidl-blackrock");
+      const roster = defect === "shared-only" ? siblings : [...siblings, config];
+      if (defect === "non-overlapping" || defect === "partial") roster.push(usdc);
+      for (const entry of roster) await proofFor(db, entry, 90);
+      await readScope(db, end, roster);
+      await syncMintBurnPublicationPolicy(db, [], end, roster.map(mintBurnConfigKey));
+      const paused = pausedKeys(sqlite);
+      sqlite.prepare("DELETE FROM mint_burn_scan_coverage WHERE config_key != ?").run(mintBurnConfigKey(siblings[1]));
+      if (defect === "stale-sibling") sqlite.prepare("DELETE FROM mint_burn_scan_coverage").run();
+      else roster[1] = siblings[1] = { ...siblings[1], decimals: siblings[1].decimals + 1 };
+      await proofFor(db, siblings[0], 1);
+      if (defect === "stale") await proof(db, 1, end - day);
+      else if (defect === "dirty") {
+        await proof(db, 1);
+        for (let hour = end - 9 * 3600; hour < end; hour += 3600) sqlite.prepare(
+          "INSERT INTO mint_burn_dirty_hours VALUES (?, ?, ?)").run(config.stablecoinId, config.chain.chainId, hour);
+      } else if (defect === "gapped" || defect === "partial") {
+        await proof(db, 0.5 / 24, end - 1800, 1, 10);
+        await proof(db, 0.5 / 24, end, 12, 20);
+        if (defect === "partial") await proofFor(db, usdc, 1);
+      } else if (defect === "non-overlapping") {
+        await proofFor(db, usdc, 1 / 24, end - 3600);
+        await proof(db, 1 / 24);
+      } else if (defect === "independent" || defect === "stale-sibling") {
+        await proof(db, 1);
+        if (defect === "stale-sibling") await proofFor(db, siblings[1], 1, end - day);
+      }
+      const scope = await readScope(db, end, roster);
+      const isolated = defect === "independent" || defect === "stale-sibling";
+      expect(scope.configs).toEqual(isolated ? [config] : roster);
+      expect(scope.watermark.unavailableReason).toBe(isolated ? null : "scan-watermark-unavailable");
+      if (defect === "partial") {
+        await readContext(db, end, [...siblings, usdc]);
+        expect((await readScope(db, end, roster)).watermark.unavailableReason).toBe("scan-watermark-unavailable");
+      }
+      expect(pausedKeys(sqlite).sort()).toEqual([...paused, ...(isolated ? siblings.map(mintBurnConfigKey) : [])].sort());
+      if (defect === "independent") {
+        const later = end + 3600;
+        await proof(db, 1, later, 101, 200);
+        await proofFor(db, siblings[1], 1, later, 101, 200);
+        const held = await readScope(db, later, roster);
+        expect(held.configs).toEqual([config]);
+        expect(held.publication.legs.slice(0, 2).map((leg) => leg.reason)).toEqual(["reactivation-pending", "reactivation-pending"]);
+        expect(pausedKeys(sqlite).sort()).toEqual([...paused, ...siblings.map(mintBurnConfigKey)].sort());
+        await proofFor(db, siblings[0], 1, later, 101, 200);
+        expect((await readScope(db, later, roster)).configs).toEqual(roster);
+        expect(pausedKeys(sqlite).sort()).toEqual(paused.sort());
+      }
+    },
+  );
 
   it("compacts publication diagnostics while retaining exact admitted pairs and non-admitted reasons", async () => {
     const { db } = fixtures.open();
-    const { publication } = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
+    const { publication } = await readContext(db, end, MINT_BURN_CONFIGS);
     const compact = compactMintBurnPublication(publication);
     expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
-      admittedCount: 135, pendingAdmissionCount: 2, disabledCount: 0 });
+      admittedCount: 133, pendingAdmissionCount: 2, disabledCount: 0 });
     expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
     expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
       .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));
@@ -113,69 +184,109 @@ describe("mint/burn durable publication admission", () => {
       if (defect === "dirty") sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, ?, ?)")
         .run(config.stablecoinId, config.chain.chainId, end - 3600);
     }
-    expect((await readMintBurnWindowContext(db, end + 60, [config])).configs).toEqual([]);
+    expect((await readContext(db, end + 60, [config])).configs).toEqual([]);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_admission").get()).toEqual({ n: 0 });
   });
 
-  it("honors ID, config-key, symbol and enabled switches through one ingestion authority", () => {
+  it("honors the ID, config-key, symbol and enabled switches through one ingestion authority", () => {
     expect(mintBurnDisabledReason(config, new Set([config.stablecoinId]), new Set())).toBe("id-disabled");
     expect(mintBurnDisabledReason(config, new Set([mintBurnConfigKey(config).toLowerCase()]), new Set())).toBe("id-disabled");
     expect(mintBurnDisabledReason(config, new Set(), new Set([config.symbol.toUpperCase()]))).toBe("symbol-disabled");
     expect(mintBurnDisabledReason({ ...config, enabled: false }, new Set(), new Set())).toBe("config-disabled");
   });
 
-  it("purges disabled publications, fences old writers, and restores the durable admission on re-enable", async () => {
+  it("honors a symbol switch only when the symbol names one stablecoin", () => {
+    const idsBySymbol = new Map<string, Set<string>>();
+    for (const entry of MINT_BURN_CONFIGS) {
+      const symbol = entry.symbol.toUpperCase();
+      const ids = idsBySymbol.get(symbol) ?? new Set<string>();
+      ids.add(entry.stablecoinId);
+      idsBySymbol.set(symbol, ids);
+    }
+    expect([...idsBySymbol.values()].some((ids) => ids.size > 1)).toBe(true);
+    for (const [symbol, ids] of idsBySymbol) {
+      expect(resolveMintBurnDisabledSymbols(MINT_BURN_CONFIGS, new Set([symbol])).has(symbol), symbol).toBe(ids.size === 1);
+    }
+  });
+
+  it("retains prior durable keys for an ambiguous symbol and names why it was ignored", () => {
+    const yusd = MINT_BURN_CONFIGS.filter((entry) => entry.symbol.toUpperCase() === "YUSD");
+    const yusdKeys = yusd.map(mintBurnConfigKey);
+    const resolution = resolveMintBurnDisabledSymbolPolicy(
+      MINT_BURN_CONFIGS,
+      new Set(["YUSD", "NOT-A-COIN"]),
+      new Set([yusdKeys[0]!]),
+    );
+    expect([...resolution.symbols]).toEqual([]);
+    expect([...resolution.retainedKeys]).toEqual([yusdKeys[0]]);
+    expect(resolution.ignored).toEqual([
+      { symbol: "NOT-A-COIN", reason: "unknown-symbol", stablecoinIds: [], retainedKeys: [] },
+      {
+        symbol: "YUSD",
+        reason: "shared-symbol",
+        stablecoinIds: [...new Set(yusd.map((entry) => entry.stablecoinId.toLowerCase()))].sort(),
+        retainedKeys: [yusdKeys[0]],
+      },
+    ]);
+  });
+
+  it.each(["disabled", "inactive", "grandfathered"])("fences %s membership until reactivation catch-up", async (state) => {
     const { db, sqlite } = fixtures.open();
+    const entry = state === "grandfathered" ? usdc : config;
+    const entryKey = mintBurnConfigKey(entry), incumbentKey = mintBurnConfigKey(config);
+    const roster = entry === config ? [config] : [config, entry];
     await proof(db, 90);
-    await readMintBurnWindowContext(db, end, [config]);
+    expect((await readContext(db, end, [config])).configs).toEqual([config]);
+    if (state === "grandfathered") {
+      expect(isGrandfatheredMintBurnConfig(entry)).toBe(true);
+      await proofFor(db, entry, 390, end - 10 * day);
+    }
     const key = aggregateFlowCacheKey(24);
     sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(key, "{}", end);
-    await syncMintBurnPublicationPolicy(db, [mintBurnConfigKey(config)], end + 1);
-    const disabled = await readMintBurnWindowContext(db, end + 2, [config]);
-    expect(disabled.configs).toEqual([]);
-    expect(disabled.publication.legs[0].reason).toBe("operator-disabled");
-    const superseded = await finalizeMintBurnFlowResponse(db, key, end + 3, {}, { status: "ok", timestamp: end }, "[]");
-    expect(superseded.status).toBe(503);
-    expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
-    await syncMintBurnPublicationPolicy(db, [], end + 4);
-    const stale = await readMintBurnWindowContext(db, end + day, [config]);
-    expect(stale.configs).toEqual([]);
-    expect(stale.publication.legs[0].reason).toBe("reactivation-pending");
-    await proof(db, 1, end + day, 100, 101);
-    expect((await readMintBurnWindowContext(db, end + day + 60, [config])).configs).toEqual([config]);
-    expect((await readMintBurnWindowContext(db, end + 2 * day, [config])).configs).toEqual([config]);
+    await syncMintBurnPublicationPolicy(db, state === "disabled" ? [entryKey] : [], end + 60,
+      state === "disabled" ? undefined : state === "inactive" ? [] : [incumbentKey]);
+    if (state === "disabled") {
+      const disabled = await readContext(db, end + 61, roster);
+      expect(disabled.configs).toEqual([]);
+      expect(disabled.publication.legs[0].reason).toBe("operator-disabled");
+      expect((await finalizeMintBurnFlowResponse(db, key, end + 62, {}, { status: "ok", timestamp: end }, "[]")).status).toBe(503);
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
+    }
+    await syncMintBurnPublicationPolicy(db, [], end + 120, roster.map(mintBurnConfigKey));
+    const now = state === "grandfathered" ? end + 120 : end + day;
+    const stale = await readContext(db, now, roster);
+    expect(stale.configs).toEqual(entry === config ? [] : [config]);
+    expect(stale.publication.legs.find((leg) => leg.configKey === entryKey))
+      .toMatchObject({ status: "pending-admission", reason: "reactivation-pending" });
+    if (state === "grandfathered") expect(stale.watermark).toMatchObject({ timestamp: end, ageSec: 120, unavailableReason: null });
+    expect(pausedKeys(sqlite)).toContain(entryKey);
+    await proofFor(db, entry, 1, Math.floor(now / 3600) * 3600, 101, 200);
+    expect((await readContext(db, now + 60, roster)).configs).toEqual(roster);
+    expect(pausedKeys(sqlite)).not.toContain(entryKey);
+    expect((await readContext(db, end + 2 * day, roster)).configs).toEqual(roster);
   });
 
-  it("preserves edited grandfathered keys and both edited BUIDL siblings in scope", async () => {
+  it.each([false, true])("retains edited membership; isolates BUIDL with survivor=%s", async (survivor) => {
     const { db } = fixtures.open();
-    const existing = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdt-tether")!;
+    const existing = byId("usdt-tether")[0];
     const revised = { ...existing, decimals: existing.decimals + 1, startBlock: existing.startBlock + 1 };
     expect(isGrandfatheredMintBurnConfig(revised)).toBe(true);
-    expect((await readMintBurnWindowContext(db, end, [revised])).configs).toEqual([revised]);
-    const siblings = MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === "buidl-blackrock" && entry.chain.chainId === "ethereum");
+    expect((await readContext(db, end, [revised])).configs).toEqual([revised]);
+    const siblings = byId("buidl-blackrock");
+    for (const entry of siblings) await proofFor(db, entry, 90);
     const edited = siblings.map((entry, i) => i ? entry : { ...entry, decimals: entry.decimals + 1 });
-    const scope = await readMintBurnWindowContext(db, end, edited);
-    expect(scope.configs).toEqual(edited);
-    expect(scope.publication.legs.every((leg) => leg.status === "admitted")).toBe(true);
-  });
-
-  it("keeps a re-activated key pending without repeating its 90-day admission", async () => {
-    const { db } = fixtures.open();
-    await proof(db, 90);
-    await readMintBurnWindowContext(db, end, [config]);
-    await syncMintBurnPublicationPolicy(db, [], end + 1, []);
-    await syncMintBurnPublicationPolicy(db, [], end + day, [mintBurnConfigKey(config)]);
-    expect((await readMintBurnWindowContext(db, end + day, [config])).publication.legs[0].reason).toBe("reactivation-pending");
-    await proof(db, 1, end + day, 101, 102);
-    expect((await readMintBurnWindowContext(db, end + day + 60, [config])).configs).toEqual([config]);
+    if (survivor) { await proof(db, 90); await readContext(db, end, [config]); }
+    const scope = await readScope(db, end, [...edited, ...(survivor ? [config] : [])]);
+    expect(scope.configs).toEqual(survivor ? [config] : edited);
+    expect(scope.publication.legs.slice(0, 2).every((leg) => leg.status === (survivor ? "pending-admission" : "admitted"))).toBe(true);
   });
 
   it("holds a shared BUIDL bucket together during stale re-enable", async () => {
     const { db } = fixtures.open();
-    const siblings = MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === "buidl-blackrock" && entry.chain.chainId === "ethereum");
+    const siblings = byId("buidl-blackrock");
     await syncMintBurnPublicationPolicy(db, [mintBurnConfigKey(siblings[0])], end);
     await syncMintBurnPublicationPolicy(db, [], end + day);
-    const scope = await readMintBurnWindowContext(db, end + day, siblings);
+    const scope = await readContext(db, end + day, siblings);
     expect(scope.configs).toEqual([]);
     expect(scope.publication.legs.map((leg) => leg.reason)).toEqual(["reactivation-pending", "reactivation-pending"]);
   });
@@ -219,21 +330,23 @@ describe("mint/burn durable publication admission", () => {
 
   it("keeps new sibling contracts pending and disables an indivisible legacy shared bucket", async () => {
     const { db } = fixtures.open();
-    const legacy = MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === "buidl-blackrock" && entry.chain.chainId === "ethereum");
+    const legacy = byId("buidl-blackrock");
     expect(legacy).toHaveLength(2);
     const sibling = { ...legacy[0], contractAddress: `0x${"a".repeat(40)}` };
-    const scope = await readMintBurnWindowContext(db, end, [...legacy, sibling]);
+    const scope = await readContext(db, end, [...legacy, sibling]);
     expect(scope.configs).toEqual(legacy);
+    expect(scope.diagnosticConfigs).toEqual(legacy);
     expect(scope.publication.legs[2].reason).toBe("unsupported-shared-bucket");
     await syncMintBurnPublicationPolicy(db, [mintBurnConfigKey(legacy[0])], end);
-    const disabled = await readMintBurnWindowContext(db, end, legacy);
+    const disabled = await readContext(db, end, legacy);
     expect(disabled.configs).toEqual([]);
+    expect(disabled.diagnosticConfigs).toEqual([]);
     expect(disabled.publication.legs[1].reason).toBe("shared-bucket-disabled");
   });
 
   it("does not let a pending sibling change an incumbent's legacy coverage", async () => {
     const { db, sqlite } = fixtures.open();
-    const legacy = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdt-tether" && entry.chain.chainId === "ethereum")!;
+    const legacy = byId("usdt-tether")[0];
     const key = mintBurnConfigKey(legacy);
     const now = MINT_BURN_LEGACY_CUTOVER + 3600;
     await upsertMintBurnSyncState(db, key, legacy.startBlock + 100, "monotonic-max", {
@@ -245,9 +358,9 @@ describe("mint/burn durable publication admission", () => {
     sqlite.prepare(`INSERT INTO mint_burn_hourly
       (stablecoin_id, chain_id, hour_ts, mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
       VALUES (?, ?, ?, 1, 0, 1, 0, 1)`).run(legacy.stablecoinId, legacy.chain.chainId, MINT_BURN_LEGACY_CUTOVER - 30 * day);
-    const before = await readMintBurnWindowContext(db, now, [legacy]);
+    const before = await readContext(db, now, [legacy]);
     const sibling = { ...legacy, contractAddress: `0x${"a".repeat(40)}` };
-    const after = await readMintBurnWindowContext(db, now, [legacy, sibling]);
+    const after = await readContext(db, now, [legacy, sibling]);
     expect(before.legacy.get(key)?.start).toBe(MINT_BURN_LEGACY_CUTOVER - 30 * day);
     expect(after.legacy).toEqual(before.legacy);
     expect(after.watermark).toEqual(before.watermark);
@@ -255,8 +368,7 @@ describe("mint/burn durable publication admission", () => {
 
   it("keeps a quarantined grandfathered key readable after its operator switch is removed", async () => {
     const { db, sqlite } = fixtures.open();
-    // tbill-openeden is quarantined: it is absent from ACTIVE_MINT_BURN_CONFIGS, so the
-    // per-coin endpoint reads it through its full configured roster.
+    // Inactive coins retain per-coin history while pauses gate future re-admission.
     const quarantined = getMintBurnConfigsForStablecoin("tbill-openeden")[0]!;
     const key = mintBurnConfigKey(quarantined);
     expect(isGrandfatheredMintBurnConfig(quarantined)).toBe(true);
@@ -274,16 +386,11 @@ describe("mint/burn durable publication admission", () => {
         'standard', '0xfeed', 1, 'https://example.com')`).run(quarantined.stablecoinId, quarantined.symbol, quarantined.chain.chainId, hourTs);
 
     const activeKeys = ACTIVE_MINT_BURN_CONFIGS.map(mintBurnConfigKey);
-    // Scheduled run 1: the operator disabled this key while the coin was still active.
     await syncMintBurnPublicationPolicy(db, [key], hourTs, activeKeys);
-    // Scheduled run 2: the coin has left the active roster and the switch is gone.
     await syncMintBurnPublicationPolicy(db, [], hourTs + 60, activeKeys);
     expect(sqlite.prepare("SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1").get())
       .toEqual({ disabled_keys: "[]" });
-    // The key stays paused for its eventual re-admission, but a pause recorded while
-    // the coin is inactive never withholds its retained per-coin detail.
-    expect(JSON.parse(String((sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1")
-      .get() as { paused_keys: string }).paused_keys))).toContain(key);
+    expect(pausedKeys(sqlite)).toContain(key);
 
     const response = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${quarantined.stablecoinId}`));
     const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
@@ -293,40 +400,14 @@ describe("mint/burn durable publication admission", () => {
     expect(body.publication).toMatchObject({ admittedCount: 1, legs: [] });
   });
 
-  it("pauses a grandfathered key that leaves the active roster so re-admission waits for proof", async () => {
+  it("fails closed on an undecodable paused_keys value instead of lifting a pause", async () => {
     const { db, sqlite } = fixtures.open();
-    const legacy = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdc-circle"
-      && entry.chain.chainId === "ethereum")!;
-    const legacyKey = mintBurnConfigKey(legacy);
-    const incumbentKey = mintBurnConfigKey(config);
-    const pausedKeys = () => JSON.parse(String((sqlite.prepare(
-      "SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get() as { paused_keys: string }).paused_keys));
-    expect(isGrandfatheredMintBurnConfig(legacy)).toBe(true);
-    await proof(db, 90);
-    expect((await readMintBurnWindowContext(db, end, [config])).configs).toEqual([config]);
-    // The frozen coin's legacy cursor sits far behind the incumbent watermark.
-    await upsertMintBurnSyncState(db, legacyKey, 100, "monotonic-max", {
-      configKey: legacyKey, configFingerprint: mintBurnScanFingerprint(legacy), chainId: legacy.chain.chainId,
-      fromBlock: 1, toBlock: 100, fromTimestamp: end - 400 * day, toTimestamp: end - 10 * day,
-      finalizedBlock: 100, acceptedAt: end + day,
-    });
-    // A scheduled run observes the coin outside the active roster.
-    await syncMintBurnPublicationPolicy(db, [], end + 60, [incumbentKey]);
-    // Re-admission keeps the pause, so the stale leg cannot hold the common watermark.
-    await syncMintBurnPublicationPolicy(db, [], end + 120, [incumbentKey, legacyKey]);
-    const scope = await readMintBurnWindowContext(db, end + 120, [config, legacy]);
-    expect(scope.publication.legs.find((leg) => leg.configKey === legacyKey))
-      .toMatchObject({ status: "pending-admission", reason: "reactivation-pending" });
-    expect(scope.configs).toEqual([config]);
-    expect(scope.watermark).toMatchObject({ timestamp: end, ageSec: 120, unavailableReason: null });
-    expect(pausedKeys()).toContain(legacyKey);
-    // A fresh catch-up proof resumes it without repeating the 90-day admission.
-    await upsertMintBurnSyncState(db, legacyKey, 200, "monotonic-max", {
-      configKey: legacyKey, configFingerprint: mintBurnScanFingerprint(legacy), chainId: legacy.chain.chainId,
-      fromBlock: 101, toBlock: 200, fromTimestamp: end - day, toTimestamp: end,
-      finalizedBlock: 200, acceptedAt: end + day,
-    });
-    expect((await readMintBurnWindowContext(db, end + 180, [config, legacy])).configs).toEqual([config, legacy]);
-    expect(pausedKeys()).not.toContain(legacyKey);
+    sqlite.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
+      VALUES (1, '[]', 'not-json', ?)`).run(end);
+    // An unreadable reactivation gate cannot lift a pause.
+    await expect(readContext(db, end, [config])).rejects.toThrow("Invalid mint/burn publication policy");
+    await expect(syncMintBurnPublicationPolicy(db, [], end + 60, [mintBurnConfigKey(config)])).rejects.toThrow();
+    expect(sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get())
+      .toEqual({ paused_keys: "not-json" });
   });
 });

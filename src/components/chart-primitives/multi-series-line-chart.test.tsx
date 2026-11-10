@@ -2,12 +2,17 @@
 
 import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const lineProps = vi.hoisted(() => [] as Array<{ dataKey: string; name: string; connectNulls: boolean }>);
 
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   LineChart: ({ children }: { children: ReactNode }) => <div data-testid="line-chart">{children}</div>,
-  Line: ({ dataKey, name }: { dataKey: string; name: string }) => <span data-line-key={dataKey} data-line-name={name} />,
+  Line: (props: { dataKey: string; name: string; connectNulls: boolean }) => {
+    lineProps.push(props);
+    return <span data-line-key={props.dataKey} data-line-name={props.name} />;
+  },
   ReferenceLine: () => <span data-testid="zero-line" />,
   CartesianGrid: () => <span />,
   Tooltip: ({ content }: { content?: (props: unknown) => ReactNode }) => content
@@ -32,6 +37,10 @@ const scrambledSeries = [
 ];
 
 describe("MultiSeriesLineChart", () => {
+  beforeEach(() => {
+    lineProps.length = 0;
+  });
+
   it("merges scrambled series chronologically without changing payload ids", () => {
     expect(mergeMultiSeriesData(scrambledSeries, (datum) => datum.value)).toEqual([
       { ts: 1, alpha: 10, beta: 20 },
@@ -65,6 +74,9 @@ describe("MultiSeriesLineChart", () => {
     expect(rows[1].textContent).toBe("Date 1$10$20");
     // Beta has no ts=2 point: the missing series cell renders an em dash.
     expect(rows[2].textContent).toBe("Date 2$12—");
+    // Rows are union-merged across series, so a missing key is another series'
+    // timestamp, not an observation gap; each line connects its own samples.
+    expect(lineProps.map((props) => props.connectNulls)).toEqual([true, true]);
   });
 
   it("renders the explicit data override instead of merged series data", () => {

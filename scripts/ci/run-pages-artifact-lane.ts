@@ -13,6 +13,56 @@ import { DEPEG_LEDGER_CAPTURE_RELATIVE_PATH, depegLedgerCaptureId } from "../lib
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const PAGES_PREVIOUS_SITEMAP_URL = "https://stablecoin-dashboard.pages.dev/sitemap.xml";
 const PUBLIC_FLAGS = ["HERO_VERDICT", "QUIET_DEVIATIONS", "MOBILE_STICKY_SUMMARY", "DEPEG_RESOLVER", "DEPEG_RESOLVER_REVIEWER"];
+// prepare's history bootstrap owns these git-derived projections; the plain
+// bootstrap pass owns every bootstrap-safe artifact.
+const PREPARE_HISTORY_ARTIFACT_IDS = new Set(["sitemap-dates", "docs-metadata"]);
+const COMPILE_INPUT_ARTIFACTS = (GENERATED_ARTIFACT_REGISTRY as {
+  id: string;
+  buildLifecycle: string;
+  bootstrap?: boolean;
+  bootstrapCommand?: string;
+  outputPaths: string[];
+  sourcePaths: string[];
+}[]).filter((artifact) => artifact.buildLifecycle === "compile-input");
+
+function isReleaseDataOverlaySource(path: string): boolean {
+  return PAGES_RELEASE_DATA_PATHS.some((member) => path === member || path.startsWith(`${member}/`));
+}
+
+/**
+ * compile-input artifacts a reused prepare workspace cannot already have
+ * produced: non-bootstrap generators, bootstrap variants that differ from the
+ * full command, and generators whose sources the release-data overlay rewrites
+ * (the merged `public/_redirects` aliases).
+ */
+export function preparedWorkspaceCompileInputArtifacts(): string[] {
+  return COMPILE_INPUT_ARTIFACTS
+    .filter((artifact) => artifact.bootstrap !== true
+      || artifact.bootstrapCommand !== undefined
+      || artifact.sourcePaths.some(isReleaseDataOverlaySource))
+    .filter((artifact) => !PREPARE_HISTORY_ARTIFACT_IDS.has(artifact.id))
+    .map((artifact) => artifact.id)
+    .sort();
+}
+
+/**
+ * The reduced stage reruns the registry-derived set plus any artifact whose
+ * output the transported workspace does not contain, so an incomplete
+ * workspace adds work instead of leaving a missing build input.
+ */
+export function compileInputStageArtifacts(repoRoot: string): string[] {
+  const required = new Set(preparedWorkspaceCompileInputArtifacts());
+  return COMPILE_INPUT_ARTIFACTS
+    .filter((artifact) => required.has(artifact.id)
+      || artifact.outputPaths.some((output) => output.includes("*") || !existsSync(join(repoRoot, output))))
+    .map((artifact) => artifact.id)
+    .sort();
+}
+
+export function criticalCssScopeForLane(env: Partial<NodeJS.ProcessEnv>): "gates" | "all" {
+  return env.PHAROS_CRITICAL_CSS_FULL_PASS === "false" ? "gates" : "all";
+}
+
 // Post-refresh outputs (including ignored public/llms.txt) are regenerated
 // from the overlaid release data, so they are restored with the inputs: the
 // lane must leave no edits behind in the candidate checkout.
@@ -147,8 +197,19 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     report(`- Data status: \`${result.dataStatus}\``);
     if (retained) report(`- Release artifact: \`${retained.name}\``);
     if (retiredDepegSlugs.length > 0) report(`- Retired depeg slugs dropped from the replay: ${retiredDepegSlugs.length}`);
-    else report("- Reason: `pages-artifact-data-unavailable`; committed snapshots + offline detail bootstrap. All artifact gates remain required; empty detail lanes are weaker size evidence, not realistic release-data proof.");
-    command("compile-input", "npm", ["run", "generated:compile-input"]);
+    if (!retained) report("- Reason: `pages-artifact-data-unavailable`; committed snapshots + offline detail bootstrap. All artifact gates remain required; empty detail lanes are weaker size evidence, not realistic release-data proof.");
+    const criticalCssScope = criticalCssScopeForLane(process.env);
+    report(`- Critical CSS: ${criticalCssScope === "gates" ? "gate-measured routes only" : "full public pass"}`);
+    const reusePreparedWorkspace = process.env.PHAROS_PAGES_REUSE_PREPARED_WORKSPACE === "1";
+    const reducedCompileInput = reusePreparedWorkspace ? compileInputStageArtifacts(repoRoot) : [];
+    if (reducedCompileInput.length > 0) {
+      report(`- Compile input: reused prepared workspace; reran ${reducedCompileInput.join(", ")}`);
+      command("compile-input", process.execPath, [
+        "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts", `--only=${reducedCompileInput.join(",")}`,
+      ]);
+    } else {
+      command("compile-input", "npm", ["run", "generated:compile-input"]);
+    }
     // This generator-owned bootstrap is always offline, before replay. It also
     // removes obsolete catalog envelopes and seeds newly added coins.
     command("detail-bootstrap", process.execPath, ["--import", "tsx", "scripts/build-data/build-stablecoin-detail-snapshots.ts"], {
@@ -159,22 +220,35 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     rmSync(join(repoRoot, ".next"), { recursive: true, force: true });
     rmSync(join(repoRoot, "out"), { recursive: true, force: true });
     command("webpack-export", "npx", ["--no-install", "next", "build", "--webpack"]);
-    command("postbuild", "npm", ["run", "postbuild"]);
+    command("postbuild", "npm", ["run", "postbuild"], { PHAROS_CRITICAL_CSS_SCOPE: criticalCssScope });
     command("pages-release-artifact-gates", "npm", ["run", "check:pages-release"]);
-    const lighthouseFailures: string[] = [];
-    for (const route of ["/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/"]) {
-      try {
-        command(`lighthouse ${route}`, "npm", ["run", "lighthouse:static", "--", "--route", route,
-          "--threshold", process.env.PHAROS_LIGHTHOUSE_THRESHOLD ?? "70", "--output-dir", ".tmp/lighthouse"]);
-      } catch (error) {
-        lighthouseFailures.push(String(error));
+    // Lighthouse is an explicit opt-in so the PR lane stays off the critical
+    // path; nightly sets PHAROS_LIGHTHOUSE_ENFORCE (0 = advisory, 1 = blocking).
+    const lighthouseEnforcement = process.env.PHAROS_LIGHTHOUSE_ENFORCE;
+    if (lighthouseEnforcement === undefined) {
+      report("- Lighthouse: skipped; this lane did not opt in (nightly sets PHAROS_LIGHTHOUSE_ENFORCE).");
+    } else {
+      // Ratcheted routes carry their own blocking threshold (measured nightly
+      // p50 minus 10%, docs/testing.md#performance-guardrails); the others stay
+      // advisory at the lane threshold until their variance allows a ratchet.
+      const ratcheted: Record<string, string> = { "/depeg/": "65", "/safety-scores/": "67", "/stablecoins/": "81" };
+      const lighthouseFailures: string[] = [];
+      const blockingFailures: string[] = [];
+      for (const route of ["/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/"]) {
+        try {
+          command(`lighthouse ${route}`, "npm", ["run", "lighthouse:static", "--", "--route", route,
+            "--threshold", ratcheted[route] ?? process.env.PHAROS_LIGHTHOUSE_THRESHOLD ?? "70", "--output-dir", ".tmp/lighthouse"]);
+        } catch (error) {
+          lighthouseFailures.push(String(error));
+          if (route in ratcheted) blockingFailures.push(String(error));
+        }
       }
-    }
-    report(`- Lighthouse (${process.env.PHAROS_LIGHTHOUSE_ENFORCE === "1" ? "blocking" : "advisory"}): ${
-      lighthouseFailures.length ? lighthouseFailures.join("; ") : "all routes met the score threshold"
-    }. Static-export scores do not measure production CSP/proxy or live-data readiness.`);
-    if (process.env.PHAROS_LIGHTHOUSE_ENFORCE === "1" && lighthouseFailures.length) {
-      throw new Error(lighthouseFailures.join("; "));
+      report(`- Lighthouse (${lighthouseEnforcement === "1" ? "blocking on ratcheted routes" : "advisory"}): ${
+        lighthouseFailures.length ? lighthouseFailures.join("; ") : "all routes met the score threshold"
+      }. Static-export scores do not measure production CSP/proxy or live-data readiness.`);
+      if (lighthouseEnforcement === "1" && blockingFailures.length) {
+        throw new Error(blockingFailures.join("; "));
+      }
     }
     return result;
   } finally {

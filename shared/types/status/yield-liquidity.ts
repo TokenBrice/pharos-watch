@@ -347,6 +347,7 @@ export const MintBurnConservationRecordSchema = z.object({
   address: z.union([z.string().regex(ConservationEvmAddressPattern), z.string().regex(ConservationTronAddressPattern)]),
   decimals: z.number().int().min(0).max(255),
   checkedAt: ConservationBlockSchema,
+  maxAgeSec: z.number().positive().optional(),
   status: z.enum(["ok", "mismatch", "unavailable", "unsupported"]),
   reason: z.string().optional(),
   fromBlock: ConservationBlockSchema.nullable(),
@@ -366,6 +367,80 @@ export const MintBurnConservationRecordSchema = z.object({
 });
 export type MintBurnConservationRecord = z.output<typeof MintBurnConservationRecordSchema>;
 
+const MintBurnSupplyReconciliationStatusSchema = z.enum([
+  "ok", "unexplained-residual", "review-suppression", "unavailable", "unsupported-law",
+]);
+const MintBurnSupplyReconciliationClassSchema = z.object({
+  mintRaw: ConservationUnsignedRawSchema,
+  burnRaw: ConservationUnsignedRawSchema,
+  eventCount: ConservationBlockSchema,
+});
+const MintBurnSupplyReconciliationClassesSchema = z.object({
+  counted: MintBurnSupplyReconciliationClassSchema,
+  review: MintBurnSupplyReconciliationClassSchema,
+  bridge: MintBurnSupplyReconciliationClassSchema,
+  atomic: MintBurnSupplyReconciliationClassSchema,
+  protocol_internal: MintBurnSupplyReconciliationClassSchema,
+});
+const MintBurnSupplyReconciliationCheckpointSchema = z.object({
+  number: ConservationBlockSchema,
+  hash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+  timestamp: ConservationBlockSchema,
+  supplyRaw: ConservationUnsignedRawSchema,
+});
+export const MintBurnSupplyReconciliationReceiptSchema = z.object({
+  configKey: z.string(),
+  // Persisted evidence requires the fingerprint; status omits the internal configuration JSON.
+  configFingerprint: z.string().optional(),
+  chainId: z.string(),
+  stablecoinId: z.string(),
+  address: z.string(),
+  decimals: z.number().int().min(0).max(255),
+  law: z.string(),
+  day: ConservationBlockSchema,
+  checkedAt: ConservationBlockSchema,
+  status: MintBurnSupplyReconciliationStatusSchema,
+  reason: z.string(),
+  opening: MintBurnSupplyReconciliationCheckpointSchema.nullable(),
+  closing: MintBurnSupplyReconciliationCheckpointSchema.nullable(),
+  classes: MintBurnSupplyReconciliationClassesSchema.nullable(),
+  reviewByReason: z.record(z.string(), MintBurnSupplyReconciliationClassSchema).nullable(),
+  lawTermRaw: ConservationSignedRawSchema.nullable(),
+  residualRaw: ConservationSignedRawSchema.nullable(),
+  priceUsd: z.number().finite().positive().nullable(),
+});
+export type MintBurnSupplyReconciliationReceipt = z.output<typeof MintBurnSupplyReconciliationReceiptSchema>;
+
+const MintBurnSupplyReconciliationLegSchema = z.object({
+  configKey: z.string(),
+  chainId: z.string(),
+  address: z.string(),
+  decimals: z.number().int().min(0).max(255),
+  latestDay: ConservationBlockSchema.nullable(),
+  checkedAt: ConservationBlockSchema.nullable(),
+  status: MintBurnSupplyReconciliationStatusSchema,
+  reason: z.string(),
+  latest: MintBurnSupplyReconciliationReceiptSchema.optional(),
+  windows: z.array(z.object({
+    days: z.union([z.literal(1), z.literal(7), z.literal(30), z.literal(90)]),
+    fromDay: ConservationBlockSchema,
+    toDay: ConservationBlockSchema,
+    status: MintBurnSupplyReconciliationStatusSchema,
+    reason: z.string(),
+    supplyDeltaRaw: ConservationSignedRawSchema.optional(),
+    residualRaw: ConservationSignedRawSchema.optional(),
+    classes: MintBurnSupplyReconciliationClassesSchema.optional(),
+    reviewByReason: z.record(z.string(), MintBurnSupplyReconciliationClassSchema).optional(),
+  })),
+  activeFindings: z.array(z.object({
+    day: ConservationBlockSchema,
+    status: z.enum(["unexplained-residual", "review-suppression"]),
+    reason: z.string(),
+    residualRaw: ConservationSignedRawSchema.optional(),
+  })),
+});
+export type MintBurnSupplyReconciliationLeg = z.output<typeof MintBurnSupplyReconciliationLegSchema>;
+
 const MintBurnReconciliationRowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -373,6 +448,7 @@ const MintBurnReconciliationRowSchema = z.object({
   coverageStatus: z.union([MintBurnCoverageStatusSchema, z.literal("unknown")]),
   conservationIssue: z.string().optional(),
   conservation: z.array(MintBurnConservationRecordSchema).optional(),
+  dailyReconciliation: z.array(MintBurnSupplyReconciliationLegSchema).optional(),
 });
 export type MintBurnReconciliationRow = z.output<typeof MintBurnReconciliationRowSchema>;
 

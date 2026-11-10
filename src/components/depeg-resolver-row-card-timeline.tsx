@@ -28,16 +28,19 @@ function PastDeviationSpark({ row }: { row: DdrV2ResponseRow }) {
   if (peakDeviationBps == null) return null;
   const peak = Math.abs(peakDeviationBps);
   const currentDeviationBps = getCurrentDeviationBps(row);
-  const now = currentDeviationBps != null ? Math.abs(currentDeviationBps) : peak;
-  const max = Math.max(peak, now, 1);
+  const max = Math.max(peak, currentDeviationBps != null ? Math.abs(currentDeviationBps) : 0, 1);
   const below = row.direction === "below";
 
   const pegY = 20;
   const depthY = (frac: number) => (below ? pegY + frac * 16 : pegY - frac * 16);
   const peakY = depthY(peak / max);
-  const nowY = depthY(now / max);
-  const line = `0,${pegY} 48,${peakY} 100,${nowY}`;
-  const area = `0,${pegY} 48,${peakY} 100,${nowY} 100,${pegY}`;
+  // A missing lock-time deviation stays unobserved: draw only peg → peak
+  // instead of inventing a right-hand sample at the peak depth.
+  const observedLine = `0,${pegY} 48,${peakY}`;
+  const line = currentDeviationBps != null ? `${observedLine} 100,${depthY(Math.abs(currentDeviationBps) / max)}` : observedLine;
+  const area = currentDeviationBps != null
+    ? `0,${pegY} 48,${peakY} 100,${depthY(Math.abs(currentDeviationBps) / max)} 100,${pegY}`
+    : `0,${pegY} 48,${peakY} 48,${pegY}`;
 
   return (
     <svg

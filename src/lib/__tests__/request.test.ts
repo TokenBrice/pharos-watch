@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RequestFailure, RequestSequence, requestJson, requestJsonWithResponse, requestResponse } from "@/lib/request";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -11,7 +9,7 @@ afterEach(() => {
 });
 
 describe("request lifecycle", () => {
-  it("keeps the timeout active while the response body is being consumed", async () => {
+  it.each([200, 503])("keeps the timeout active while the status %i body is being consumed", async (status) => {
     vi.useFakeTimers();
     mockFetch([{
       match: "/slow-body",
@@ -21,7 +19,7 @@ describe("request lifecycle", () => {
               request.signal.addEventListener("abort", () => controller.error(request.signal.reason), { once: true });
             },
           }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
+          { status, headers: { "Content-Type": "application/json" } },
         ),
     }], { requireMatch: true });
 
@@ -49,13 +47,15 @@ describe("request lifecycle", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("classifies HTTP failures and preserves the consumed error body", async () => {
-    mockFetch([{ match: "/unavailable", body: '{"error":"nope"}', status: 503 }], { requireMatch: true });
+  it.each([false, true])("classifies HTTP failures and preserves the error body (unreadable: %s)", async (unreadable) => {
+    const response = new Response('{"error":"nope"}', { status: 503 });
+    if (unreadable) vi.spyOn(response, "text").mockRejectedValue(new TypeError("unreadable body"));
+    mockFetch([{ match: "/unavailable", respond: () => response }], { requireMatch: true });
 
     await expect(requestJson("/unavailable")).rejects.toMatchObject({
       kind: "http",
       status: 503,
-      bodyText: '{"error":"nope"}',
+      bodyText: unreadable ? null : '{"error":"nope"}',
     });
   });
 
@@ -110,20 +110,22 @@ describe("request lifecycle", () => {
     await rejection;
   });
 
-  it("rejects a late result when a newer request supersedes it", async () => {
+  it.each(["resolve", "reject"] as const)("rejects a late %s when a newer request supersedes it", async (settle) => {
     const sequence = new RequestSequence();
-    let resolveFirst: ((value: string) => void) | undefined;
-    const first = sequence.run(
-      () =>
-        new Promise<string>((resolve) => {
-          resolveFirst = resolve;
-        }),
-    );
+    const deferred = Promise.withResolvers<string>();
+    const first = sequence.run(() => deferred.promise);
     const second = sequence.run(async () => "second");
 
-    resolveFirst?.("first");
+    deferred[settle]("first");
 
     await expect(second).resolves.toBe("second");
     await expect(first).rejects.toBeInstanceOf(RequestFailure);
+    await expect(first).rejects.toMatchObject({ kind: "superseded" });
+    if (settle === "reject") await expect(first).rejects.toHaveProperty("cause", "first");
+  });
+
+  it("preserves a current request's rejection", async () => {
+    const error = new Error("current failure");
+    await expect(new RequestSequence().run(async () => { throw error; })).rejects.toBe(error);
   });
 });

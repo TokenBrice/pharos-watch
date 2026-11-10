@@ -31,8 +31,8 @@
       "setOn": "2026-08-05"
     }
   ],
-  "launchPhase": "testnet",
-  "launchPhaseDetail": "Public testnet open on Sepolia at testnet.polaris.finance (the earlier app.testnet.polarisfinance.io host no longer resolves); official documentation is live at docs.polaris.finance. Polaris has moved from polarisfinance.io to polaris.finance (currently a coming-soon page linking the testnet, docs, and @polarisfnd), took its earlier blog offline, and now brands the asset USDp rather than pUSD. Security review in progress with professional audits upcoming per the former polarisfinance.io roadmap; mainnet date uncommitted: the former site stated no date was set and prioritised security over speed, so the earlier 2026-Q4 expectation was retired on 2026-08-05. A $1M angel round with Ethereum Foundation, Liquity, LI.FI, Altitude, and Fusion participation was reported on September 4 2026, without a mainnet date.",
+  "launchPhase": "auditing",
+  "launchPhaseDetail": "Public testnet open on Sepolia at testnet.polaris.finance (the earlier app.testnet.polarisfinance.io host no longer resolves); official documentation is live at docs.polaris.finance. Polaris has moved from polarisfinance.io to polaris.finance (currently a coming-soon page linking the testnet, docs, and @polarisfnd), took its earlier blog offline, and now brands the asset USDp rather than pUSD. On October 26 2026 Polaris said four audits were underway, without naming auditors, publishing reports or announcing a mainnet date. The former site stated no date was set and prioritised security over speed, so the earlier 2026-Q4 expectation was retired on 2026-08-05. A $1M angel round with Ethereum Foundation, Liquity, LI.FI, Altitude, and Fusion participation was reported on September 4 2026, without a mainnet date.",
   "featuredContent": [
     {
       "type": "tweet",
@@ -110,7 +110,7 @@
       "date": "2026-08-03",
       "type": "milestone",
       "title": "Polaris docs define an immutable core with bounded Stewardship",
-      "description": "The Security Guarantees page states that the core protocol is immutable with no admin privileges, that USDp has no freeze or blacklist function, and that no privileged actor can mint outside the pETH-collateralized process. A bounded Stewardship role can still change interest rate splits, POLAR conversion parameters, flow recipients and weightings, and replace faulty oracle feeds; it cannot upgrade core contracts, add collateral, or change the bonding curve or liquidation mechanics. The docs do not say who holds Stewardship or whether a timelock applies.",
+      "description": "The Security Guarantees page states that the core protocol is immutable with no admin privileges, that USDp has no freeze or blacklist function, and that no privileged actor can mint outside the pETH-collateralized process. A bounded Stewardship role can still change interest rate splits, POLAR conversion parameters, flow recipients and weightings, and replace faulty oracle feeds; it cannot upgrade core contracts, add collateral, or change the bonding curve or liquidation mechanics. Stewardship decisions run through vePOLAR, the staked form of POLAR, which the docs renamed sPOLAR on October 14 2026. The docs do not say whether a timelock applies.",
       "sourceUrl": "https://docs.polaris.finance/risks/security-properties"
     },
     {
@@ -133,6 +133,13 @@
       "title": "Polaris docs rename the USDp Earn Vault to the Earn Pool",
       "description": "Commit 1c1b0b9 in the public polaris-docs repository replaced the Earn Vaults page with an Earn Pools page, now live at docs.polaris.finance/architecture/earn-pools. USDp deposited in the Earn Pool absorbs liquidations below the 115% minimum collateral ratio and earns a protocol-defined minimum share of minter interest, paid in USDp, plus pETH liquidation gains. As liquidations occur, a deposit's USDp balance falls while its pETH balance rises, so depositors take on ETH exposure. Deposits are transferable NFTs; auto-compounding vaults are third-party products outside the core protocol.",
       "sourceUrl": "https://github.com/Polaris-Finance/polaris-docs/commit/1c1b0b9b97c6298f4c38028d47a993de42733c12"
+    },
+    {
+      "date": "2026-10-26",
+      "type": "audit",
+      "title": "Polaris reports four audits underway",
+      "description": "Polaris said four audits were underway, without naming auditors, publishing reports or announcing a mainnet date.",
+      "sourceUrl": "https://x.com/polarisfnd/status/2114768947463799172"
     }
   ]
 }

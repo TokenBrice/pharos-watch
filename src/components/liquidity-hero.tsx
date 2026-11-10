@@ -50,7 +50,7 @@ export function LiquidityHero({
           <HeroMetricRow
             label="7d change, coins with 7d history"
             value={
-              change == null ? (
+              change == null || !Number.isFinite(change) ? (
                 <span className="text-muted-foreground">—</span>
               ) : (
                 <>

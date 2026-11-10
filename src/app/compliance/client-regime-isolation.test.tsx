@@ -116,4 +116,19 @@ describe("Compliance client regime isolation", () => {
     const geniusText = panel("compliance-genius-panel").textContent ?? "";
     expect(geniusText).toContain("Dollar Qualified");
   });
+
+  it("uses the selected regime's unfiltered row total as the workbench denominator", async () => {
+    window.history.replaceState(null, "", "/compliance/?regime=mica");
+    render(<ComplianceClient />);
+    await screen.findByRole("region", { name: "Compliance data" });
+    await waitFor(() => expect(document.querySelector(".pharos-table-toolbar")?.textContent).toContain("2 assessed regime rows"));
+    expect(document.querySelector(".pharos-table-toolbar")?.textContent).not.toContain("2/4 matching");
+
+    cleanup();
+    window.history.replaceState(null, "", "/compliance/?regime=mica&status=authorized");
+    render(<ComplianceClient />);
+    await screen.findByRole("region", { name: "Compliance data" });
+    await waitFor(() => expect(document.querySelector(".pharos-table-toolbar")?.textContent).toContain("1/2 matching"));
+    expect(document.querySelector(".pharos-table-toolbar")?.textContent).not.toContain("1/4 matching");
+  });
 });

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.41",
+  "releaseVersion": "10.43",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -74,6 +74,7 @@
         "active-control-incident": { "critical": 39 }
       },
       "pegExponent": 0.4,
+      "pegPremiumWeight": 0.25,
       "pegHistoryWindowSec": 94672800,
       "pegQuietHistoryFloor": 97,
       "activeDepegCaps": [

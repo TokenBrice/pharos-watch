@@ -62,4 +62,29 @@ describe("selectDigestRiskSignal", () => {
 
     expect(signal).toMatchObject({ symbol: "WELLFORMED", bps: -50, mcapUsd: 1_000_000_000 });
   });
+
+  it("skips malformed archived members instead of failing the whole response", () => {
+    const signal = selectDigestRiskSignal({
+      activeDepegCount: 1,
+      topDepegs: [null, { symbol: "PMUSD", bps: -5284, mcapUsd: 65_000_000 }],
+    });
+
+    expect(signal).toMatchObject({ symbol: "PMUSD", bps: -5284, mcapUsd: 65_000_000 });
+  });
+
+  it("skips malformed weekly archive members instead of failing the whole response", () => {
+    const signal = selectDigestRiskSignal({
+      dailyDigests: [
+        {
+          date: "2026-06-19",
+          inputData: {
+            activeDepegCount: 1,
+            topDepegs: [null, { symbol: "PMUSD", bps: -5284, mcapUsd: 65_000_000 }],
+          },
+        },
+      ],
+    });
+
+    expect(signal).toMatchObject({ symbol: "PMUSD", bps: -5284, date: "2026-06-19" });
+  });
 });

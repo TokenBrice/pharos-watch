@@ -156,9 +156,9 @@ export const content: ArchetypeContent = {
     },
     {
       name: "EUROe",
-      date: "2025-05",
+      date: "2026-05",
       obituary:
-        "One of the first MiCA-compliant euro stablecoins from Membrane Finance: FIN-FSA regulated, KPMG-audited, ring-fenced euro reserves. Never broke $2M in circulation. Acquired by Paxos in January 2025 and wound down two months later to make room for USDG in Europe.",
+        "One of the first MiCA-compliant euro stablecoins from Membrane Finance: FIN-FSA regulated, KPMG-audited, ring-fenced euro reserves. Peaked near $3.4M in circulation. Paxos completed its acquisition of Membrane Finance in February 2025 and wound EUROe down in May 2026 to make room for USDG in Europe.",
       coinId: "euroe-membrane",
     },
     {

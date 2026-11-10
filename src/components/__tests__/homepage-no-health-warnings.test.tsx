@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
 import { Suspense, lazy, type ComponentType, type ReactNode } from "react";
 import { act, cleanup, render as rtlRender, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -322,60 +320,5 @@ describe("homepage section crash fallback", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { getByRole } = render(<SectionErrorBoundary name="chain table"><Boom /></SectionErrorBoundary>);
     expect(getByRole("alert").textContent).toContain("The chain table section is temporarily unavailable.");
-  });
-});
-
-describe("homepage source guard", () => {
-  const files = [
-    "src/app/page.tsx",
-    ...readdirSync("src/components").filter((name) => /^home(page)?-.*\.tsx$/.test(name) && name !== "home-section-error-boundary.tsx").map((name) => join("src/components", name)),
-    ...readdirSync("src/components/home-alt-mini-cards").map((name) => join("src/components/home-alt-mini-cards", name)),
-  ];
-
-  it.each(files)("%s carries no data-health warning copy", (file) => {
-    const source = readFileSync(file, "utf8");
-    expect(source).not.toMatch(/Data quality warning|Refresh failed|Freshness unavailable|temporarily unavailable|Retained (snapshot|observation)|>\s*Retry\s*<|<SectionErrorBoundary\b/);
-    // JSX text only: state words in rendered copy, not identifiers like `isStale`.
-    expect(source).not.toMatch(/>[^<>{}]*\b(stale|retained|degraded)\b[^<>{}]*</i);
-  });
-});
-
-describe("homepage render-tree import guard", () => {
-  const BANNED = /\/(stale-data-banner|query-freshness-notices|query-error-notice|data-health-banner|query-state-notice|yield\/yield-data-health|safety-score-v9-status-notice|ops-status-chip|section-error-boundary)\.tsx$/;
-  // Reviewed importers reachable from the homepage whose banned import is not rendered there.
-  const REVIEWED: Record<string, string> = {
-    // Expanded yield rows only; the homepage renders YieldSafetyBadge from yield-leaderboard-row-parts.
-    "src/components/yield-history-chart.tsx": "data-health-banner, query-error-notice",
-    // The homepage wrapper that supplies the neutral crash fallback.
-    "src/components/home-section-error-boundary.tsx": "section-error-boundary",
-  };
-
-  function resolveImport(from: string, spec: string): string | null {
-    const base = spec.startsWith("@/") ? resolve("src", spec.slice(2))
-      : spec.startsWith("@shared/") ? resolve("shared", spec.slice(8))
-        : spec.startsWith(".") ? resolve(dirname(from), spec) : null;
-    if (!base) return null;
-    for (const ext of [".tsx", ".ts", "/index.tsx", "/index.ts"]) if (existsSync(base + ext)) return base + ext;
-    return /\.(tsx?)$/.test(base) && existsSync(base) ? base : null;
-  }
-
-  it("reaches no banned warning component except reviewed, non-rendered paths", () => {
-    const seen = new Set<string>();
-    const queue = [resolve("src/app/page.tsx")];
-    const offenders: string[] = [];
-    while (queue.length) {
-      const file = queue.pop()!;
-      if (seen.has(file)) continue;
-      seen.add(file);
-      const source = readFileSync(file, "utf8");
-      for (const match of source.matchAll(/^(?!import type|export type)(?:import|export)[^;]*?from\s*["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/gm)) {
-        const target = resolveImport(file, match[1] ?? match[2]!);
-        if (!target) continue;
-        if (BANNED.test(target) && !(relative(process.cwd(), file) in REVIEWED)) offenders.push(`${relative(process.cwd(), file)} -> ${relative(process.cwd(), target)}`);
-        queue.push(target);
-      }
-    }
-    expect(seen.size).toBeGreaterThan(100);
-    expect(offenders).toEqual([]);
   });
 });

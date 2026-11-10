@@ -11,7 +11,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useDexLiquidityCoin } from "@/hooks/api-hooks";
 import { hasMeaningfulDexData } from "@/components/dex-liquidity-card";
-import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
+import { canonicalizeChainCirculating, chainCirculatingForDisplay } from "@shared/lib/chains/circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
@@ -283,21 +283,23 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   const { data, total, categoryCount, unattributed, unavailable } = useMemo(() => {
     const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
-    if (!coin?.chainCirculating) return { data: [], total: 0, categoryCount: 0, unattributed: 0, unavailable: false };
+    // A chain-dropout carry shows each carried chain at its baseline when the rows then sum to the headline.
+    const chainCirculating = coin && chainCirculatingForDisplay(coin);
+    if (!chainCirculating) return { data: [], total: 0, categoryCount: 0, unattributed: 0, unavailable: false };
 
     const raw: Record<string, number> = {};
     // Check before canonicalization: unregistered labels are dropped there, not proven zero.
-    let unavailable = Object.values(coin.chainCirculating).some(
+    let unavailable = Object.values(chainCirculating).some(
       (point) => typeof point?.current !== "number" || !Number.isFinite(point.current) || point.current < 0,
     );
     const diagnostics = { droppedRows: 0, droppedChainIds: [] as string[] };
-    for (const [chainId, info] of canonicalizeChainCirculating(coin.chainCirculating, diagnostics)) {
+    for (const [chainId, info] of canonicalizeChainCirculating(chainCirculating, diagnostics)) {
       // An unknown balance also makes the full distribution denominator unknown.
       if (info.current == null) unavailable = true;
       else if (info.current > 0) raw[chainId] = info.current;
     }
     for (const label of diagnostics.droppedChainIds) {
-      const remainder = coin.chainCirculating[label]?.current;
+      const remainder = chainCirculating[label]?.current;
       if (typeof remainder === "number" && Number.isFinite(remainder) && remainder > 0) {
         raw.unattributed = (raw.unattributed ?? 0) + remainder;
       }

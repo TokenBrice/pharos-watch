@@ -1,16 +1,10 @@
-import incidentReviewsAsset from "../../data/safety-score-v9/incident-reviews-v1.json";
 import { describe, expect, it } from "vitest";
 import {
   V9ReviewedIncidentRegistrySchema,
   V9ReviewedIncidentSchema,
   V9NegativeIncidentReviewSchema,
-  V9AuthoredIncidentRegistryEnvelopeSchema,
 } from "../safety-score-v9-incidents";
 import { V9OperationalResilienceIncidentSchema } from "../safety-score-v9-operational-resilience-primitives";
-import { buildIncidentRuntime } from "../../../scripts/lib/safety-score-v9-incident-runtime";
-
-// Admit the authored provider-wide rows before their asset-attributed expansion.
-const incidentRuntime = buildIncidentRuntime(incidentReviewsAsset);
 
 const BASE_INCIDENT = {
   incidentId: "fixture-control-incident",
@@ -127,16 +121,43 @@ describe("Safety Score v9 researched-negative incident schema", () => {
     }
   });
 
-  it("rejects duplicate asset-scoped IDs and admits authored provider rows through the runtime boundary", () => {
-    expect(V9ReviewedIncidentRegistrySchema.safeParse(incidentReviewsAsset).success).toBe(false);
-    expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse(incidentReviewsAsset).success).toBe(true);
-    expect(incidentRuntime.negativeReviews.map((review) => review.scope.kind)).toContain("provider");
-    expect(incidentRuntime.negativeReviews.map((review) => review.scope.kind)).toContain("issuer-surface");
+  it("rejects duplicate asset-scoped IDs", () => {
     expect(V9ReviewedIncidentRegistrySchema.safeParse({
       schemaVersion: 1, incidents: [], negativeReviews: [NEGATIVE_REVIEW, NEGATIVE_REVIEW],
     }).success).toBe(false);
   });
 });
+
+// Synthetic stand-in for an authored informational-history row: the disclosure date is
+// the primary source's publication date and the resolution date is a dated confirmation.
+const SECURITY_HISTORY_INCIDENT = {
+  ...BASE_INCIDENT,
+  incidentId: "fixture-security-history",
+  domain: "security-history",
+  kind: "disclosed-remediated-vulnerability",
+  dateBasis: "public-disclosure",
+  resolutionDateBasis: "primary-confirmation",
+  status: "resolved",
+  realization: "no-reported-exploit",
+  occurredAt: "2023-04-06",
+  resolvedAt: "2023-05-27",
+  reviewedAt: "2023-06-15",
+  posture: { treatment: "informational-only" },
+  scope: {
+    kind: "contract-component",
+    deploymentKey: "ethereum:0x1111111111111111111111111111111111111111",
+    componentKey: "vault-share-accounting",
+  },
+  primarySources: [
+    { label: "Public disclosure", url: "https://example.com/disclosure", publishedAt: "2023-04-06" },
+  ],
+  remediation: {
+    state: "verified",
+    lastVerifiedAt: "2023-06-01",
+    summary: "The reviewed fix was deployed and confirmed by a dated primary source.",
+    sources: [{ label: "Primary confirmation", url: "https://example.com/confirmation", publishedAt: "2023-05-27" }],
+  },
+} as const;
 
 describe("Safety Score v9 reviewed incident schema", () => {
   it("admits exact mint and bridge control incidents without a fabricated exposure share", () => {
@@ -163,15 +184,7 @@ describe("Safety Score v9 reviewed incident schema", () => {
 
 
   it("admits only scoped, verified, non-realized informational vulnerability history", () => {
-    const history = incidentRuntime.incidents.find((incident) => incident.assetId === "xaut-tether")!;
-    expect(history).toMatchObject({
-      domain: "security-history",
-      realization: "no-reported-exploit",
-      dateBasis: "public-disclosure",
-      resolutionDateBasis: "primary-confirmation",
-      posture: { treatment: "informational-only" },
-      scope: { kind: "contract-component" },
-    });
+    const history = SECURITY_HISTORY_INCIDENT;
     for (const overrides of [
       { status: "active", resolvedAt: null },
       { realization: "realized-exploit" },

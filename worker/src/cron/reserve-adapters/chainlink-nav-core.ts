@@ -177,10 +177,6 @@ export function parseOndoPriceData(raw: string): { price: bigint; updatedAt: num
   return { price, updatedAt };
 }
 
-function readChainlinkNavParams(config: LiveReservesConfig): ChainlinkNavParams {
-  return parseLiveReserveAdapterParams("chainlink-nav", config.params);
-}
-
 /** Pure transformation from decoded NAV oracle data + params → AdapterResult. Exported for testing. */
 export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: ChainlinkNavParams): AdapterResult {
   if (data.navPerToken <= 0n) {
@@ -242,7 +238,7 @@ export async function fetchChainlinkNavCore(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "chainlink-nav");
-  const params = readChainlinkNavParams(config);
+  const params = parseLiveReserveAdapterParams("chainlink-nav", config.params);
   const method = params.oracleMethod ?? "latestRoundData";
 
   const onchain = makeOnchainCallers(input, {

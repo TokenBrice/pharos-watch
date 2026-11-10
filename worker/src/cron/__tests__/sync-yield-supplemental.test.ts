@@ -95,7 +95,7 @@ import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, f
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import { loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
-import { PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";
+import { PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalCountDropState, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalCountDropStateCacheKey, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";
 import { supplementalFamilySnapshotHash } from "../yield-sync/cache";
 import { buildYieldSupplementalRunOutcome } from "../yield-sync/cache";
 
@@ -389,14 +389,18 @@ describe("syncYieldSupplemental", () => {
       expect(result.status).toBeUndefined();
     });
 
-    it("still fetches when the lane-state read fails", async () => {
+    it("fails closed when the retained family baseline cannot be read", async () => {
       vi.mocked(getCaches).mockRejectedValueOnce(new Error("d1 unavailable"));
       vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
 
       const result = await syncYieldSupplemental({} as D1Database);
 
-      expect(fetchPendleMarketSources).toHaveBeenCalledTimes(1);
-      expect(result.status).toBeUndefined();
+      expect(fetchPendleMarketSources).not.toHaveBeenCalled();
+      expect(setCacheIfNewer).not.toHaveBeenCalled();
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        reason: "retained-family-state-unavailable",
+      });
     });
 
     it("degrades with the machine-readable reason while the stale retained row waits out an active backoff", async () => {
@@ -1390,5 +1394,160 @@ describe("syncYieldSupplemental", () => {
     expect(
       vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:beefy"),
     ).toBe(true);
+  });
+
+  describe("family count-drop detection", () => {
+    const morphoKey = getYieldSupplementalFamilyCacheKey("morpho");
+    const morphoCandidates = (count: number) => Array.from({ length: count }, (_, index) =>
+      beefyCandidate(
+        { address: `0x${(index + 1).toString(16).padStart(40, "0")}` },
+        { sourceKey: `protocol-api:morpho-vault:ethereum:vault-${index}` },
+      ));
+
+    it("retains a collapsed family read without degrading on the first strike", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [morphoKey, { value: buildYieldSupplementalFamilyCache(morphoCandidates(4), now - 14_400), updatedAt: now - 14_400 }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch(morphoCandidates(1)));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+
+      expect(result.status).toBeUndefined();
+      expect(metadata.familyCacheResults.morpho).toBe("retained-previous");
+      expect(metadata.degradedFamilies).toEqual([]);
+      expect(metadata.familyCountDrops.morpho).toEqual({
+        baseline: 4,
+        previousCount: 4,
+        candidateCount: 1,
+        strikes: 1,
+        consistentRuns: 0,
+        retained: true,
+        accepted: false,
+      });
+      expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === morphoKey)).toBe(false);
+      const stateCall = vi.mocked(setCache).mock.calls.find(
+        (call) => call[1] === getYieldSupplementalCountDropStateCacheKey(),
+      );
+      expect(JSON.parse(String(stateCall?.[2])).families).toEqual({
+        morpho: { baseline: 4, strikes: 1, consistentRuns: 0 },
+      });
+    });
+
+    it("degrades a family after two consecutive collapsed reads", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [morphoKey, { value: buildYieldSupplementalFamilyCache(morphoCandidates(4), now - 14_400), updatedAt: now - 14_400 }],
+        [getYieldSupplementalCountDropStateCacheKey(), {
+          value: buildYieldSupplementalCountDropState({
+            morpho: { baseline: 4, strikes: 1, consistentRuns: 0 },
+          }, now - 3_600),
+          updatedAt: now - 3_600,
+        }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch(morphoCandidates(1)));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+
+      expect(result.status).toBe("degraded");
+      expect(metadata.degradedFamilies).toEqual(["morpho"]);
+      expect(metadata.degradedFamilyReasons.morpho).toBe("family-count-drop");
+      expect(metadata.reason).toBe("family-count-drop:morpho");
+      expect(metadata.familyCountDrops.morpho.strikes).toBe(2);
+      expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === morphoKey)).toBe(false);
+    });
+
+    it("publishes the recovered family and clears its strike", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [morphoKey, { value: buildYieldSupplementalFamilyCache(morphoCandidates(4), now - 14_400), updatedAt: now - 14_400 }],
+        [getYieldSupplementalCountDropStateCacheKey(), {
+          value: buildYieldSupplementalCountDropState({
+            morpho: { baseline: 4, strikes: 1, consistentRuns: 0 },
+          }, now - 3_600),
+          updatedAt: now - 3_600,
+        }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch(morphoCandidates(4)));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+
+      expect(result.status).toBeUndefined();
+      expect(metadata.familyCacheResults.morpho).toBe("published");
+      expect(metadata.familyCountDrops).toBeUndefined();
+      const stateCall = vi.mocked(setCache).mock.calls.find(
+        (call) => call[1] === getYieldSupplementalCountDropStateCacheKey(),
+      );
+      expect(JSON.parse(String(stateCall?.[2])).families).toEqual({});
+    });
+
+    it("publishes the smaller snapshot with its real clock once the confirmation window closes", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [morphoKey, { value: buildYieldSupplementalFamilyCache(morphoCandidates(4), now - 7_200), updatedAt: now - 7_200 }],
+        [getYieldSupplementalCountDropStateCacheKey(), {
+          value: buildYieldSupplementalCountDropState({
+            morpho: { baseline: 4, strikes: 2, consistentRuns: 0 },
+          }, now - 3_600),
+          updatedAt: now - 3_600,
+        }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch(morphoCandidates(1)));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      const publishCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === morphoKey);
+
+      expect(result.status).toBe("degraded");
+      expect(metadata.reason).toBe("family-count-drop:morpho");
+      expect(metadata.familyCacheResults.morpho).toBe("published");
+      expect(metadata.familyCountDrops.morpho).toMatchObject({ strikes: 3, retained: false });
+      expect(publishCall?.[3]).toBe(now);
+      expect(JSON.parse(String(publishCall?.[2])).sourceCount).toBe(1);
+    });
+
+    it("never retains past the family's own freshness budget", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [morphoKey, { value: buildYieldSupplementalFamilyCache(morphoCandidates(4), now - 7 * 3_600), updatedAt: now - 7 * 3_600 }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch(morphoCandidates(1)));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+
+      expect(result.status).toBe("degraded");
+      expect(metadata.reason).toBe("family-count-drop:morpho");
+      expect(metadata.familyCountDrops.morpho).toMatchObject({ strikes: 1, retained: false });
+      expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === morphoKey)).toBe(true);
+    });
+
+    it("accepts the new level after six consistent runs", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [morphoKey, { value: buildYieldSupplementalFamilyCache(morphoCandidates(1), now - 3_600), updatedAt: now - 3_600 }],
+        [getYieldSupplementalCountDropStateCacheKey(), {
+          value: buildYieldSupplementalCountDropState({
+            morpho: { baseline: 4, strikes: 5, consistentRuns: 5 },
+          }, now - 3_600),
+          updatedAt: now - 3_600,
+        }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch(morphoCandidates(1)));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      const stateCall = vi.mocked(setCache).mock.calls.find(
+        (call) => call[1] === getYieldSupplementalCountDropStateCacheKey(),
+      );
+
+      expect(result.status).toBeUndefined();
+      expect(metadata.familyCountDrops.morpho).toMatchObject({ consistentRuns: 6, accepted: true });
+      expect(metadata.degradedFamilies).toEqual([]);
+      expect(JSON.parse(String(stateCall?.[2])).families).toEqual({});
+    });
   });
 });

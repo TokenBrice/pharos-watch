@@ -105,6 +105,33 @@ describe("stablecoin intake admission", () => {
     },
   );
 
+  it("publishes tracked registry backing in the current pegMechanism vocabulary", async () => {
+    const { db } = fixtures.open();
+    // DefiLlama labels United Stables (id 336) crypto-backed while the curated
+    // registry reviews it as rwa-backed; tracked rows publish the registry class.
+    const unitedStables = makePeggedAsset({
+      id: "336", name: "United Stables", symbol: "U", pegType: "peggedUSD",
+      pegMechanism: "crypto-backed", price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 100 },
+    });
+    const untracked = makePeggedAsset({
+      id: "intake-fixture-untracked", pegMechanism: "commodity-backed", circulating: { peggedUSD: 100 },
+    });
+    upstream({
+      peggedAssets: [
+        unitedStables,
+        untracked,
+        ...Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
+          id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
+        })),
+      ],
+    });
+    const result = await loadStablecoinsIntake({ db, syncStartSec: 1_777_000_000, fallbackToCoingecko: async () => fallbackResult });
+    if (result.kind !== "main") throw new Error("Expected main intake");
+    expect(result.assets.find((asset) => asset.id === "u-united-stables")?.pegMechanism).toBe("fiat-backed");
+    expect(result.assets.find((asset) => asset.id === "intake-fixture-untracked")?.pegMechanism).toBe("commodity-backed");
+  });
+
   it("keeps a preferred coin omitted by a deadline-skipped supplemental batch with unavailable supply", async () => {
     const nowSec = 1_777_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);

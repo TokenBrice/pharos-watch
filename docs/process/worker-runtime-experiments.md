@@ -25,9 +25,7 @@ Rollback restores both prior role dates/versions together. Cloudflare continues 
 
 ## Read-Replication Experiment
 
-**Retired 2026-08-09.** The historical benchmark bound production D1 with `workers_dev=true`; its restoration/deployment shortcut is not supported. No current benchmark implementation or production Sessions API integration is introduced by this procedure. Permanent admin `readReplicationMode` telemetry remains.
-
-Historical Git provenance is research-only, **not a deployment recipe**: `git:831d75a8f:worker/experiments/d1-read-replication-benchmark.ts`, its test in that historical directory, `git:831d75a8f:worker/experiments/tsconfig.json`, `git:831d75a8f:worker/experiments/wrangler.d1-read-replication.toml`, and `git:831d75a8f:scripts/maintenance/benchmark-d1-read-replication.mjs`. The documentation source-path check preserves these archival references.
+**Retired 2026-08-09.** The historical benchmark (`git:831d75a8f:worker/experiments`) bound production D1 with `workers_dev=true`; its restoration/deployment shortcut is not supported. This Git provenance is research-only, **not a deployment recipe**. No current benchmark implementation or production Sessions API integration is introduced here. Permanent admin `readReplicationMode` telemetry remains.
 
 Future evaluation requires a measured read-latency problem and representative benefit hypothesis, followed by approval to build/review a new authenticated Access-only harness with `workers_dev=false`, previews off, and no production request-path import. Initial trials use a dedicated copied dataset. Any production-bound trial or replication enable/disable mutation needs separate explicit operations authorization; capacity pressure alone is not justification.
 

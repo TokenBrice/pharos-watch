@@ -29,6 +29,9 @@ import { RLUSD_INDEPENDENT_ASSURANCE_PROFILE } from "./rlusd-independent-assuran
 import { SBC_INDEPENDENT_ASSURANCE_PROFILE } from "./sbc-independent-assurance-profile";
 
 const MAX_PDF_BYTES = 4 * 1024 * 1024;
+// Reviewed issuer indexes run under 300 KB; bound the anchor parser's input far
+// below the shared 16 MiB transport default.
+const MAX_INDEX_BYTES = 1024 * 1024;
 const PDF_MAGIC = "%PDF-";
 
 const formatDate = (year: number, month: number, day: number): string | null =>
@@ -322,6 +325,21 @@ function assertAllowedHost(value: string, hosts: readonly string[], label: strin
   return parsed;
 }
 
+/** PDF readers admit only reviewed report hosts; the same check runs before
+ *  body intake (redirect target) and on the final response URL. */
+function assertReportResponseHost(
+  value: string,
+  reportHosts: readonly string[],
+  adapterKey: string,
+  responseHostError?: (host: string) => string,
+): void {
+  const host = requireHttpsUrl(value, "PDF response").hostname.toLowerCase();
+  if (!reportHosts.map((allowed) => allowed.toLowerCase()).includes(host)) {
+    throw new Error(responseHostError?.(host)
+      ?? `${adapterKey}: PDF response host ${host} is not in the reviewed allowlist`);
+  }
+}
+
 function normalizeUrl(value: string, base: string): string {
   return new URL(value, base).href;
 }
@@ -352,6 +370,8 @@ async function fetchIndexHtml(
       ...profile.indexHeaders,
     },
     maxRetries: 0,
+    maxResponseBytes: MAX_INDEX_BYTES,
+    validateResponse: (res) => assertAllowedHost(res.url || url, [indexHost], "index response"),
   });
   assertAllowedHost(response.finalUrl, [indexHost], "index response");
   return response.body;
@@ -377,12 +397,10 @@ export async function verifyAssurancePdf(args: {
     },
     maxRetries: 0,
     maxResponseBytes: MAX_PDF_BYTES,
+    validateResponse: (res) =>
+      assertReportResponseHost(res.url || args.reportUrl, args.reportHosts, args.adapterKey, args.responseHostError),
   });
-  const responseHost = requireHttpsUrl(response.finalUrl, "PDF response").hostname.toLowerCase();
-  if (!args.reportHosts.map((host) => host.toLowerCase()).includes(responseHost)) {
-    throw new Error(args.responseHostError?.(responseHost)
-      ?? `${args.adapterKey}: PDF response host ${responseHost} is not in the reviewed allowlist`);
-  }
+  assertReportResponseHost(response.finalUrl, args.reportHosts, args.adapterKey, args.responseHostError);
   const bytes = response.body;
   if (bytes.length !== args.manifest.reportByteLength) {
     throw new Error(

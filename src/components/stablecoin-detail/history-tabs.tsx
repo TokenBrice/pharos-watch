@@ -25,6 +25,8 @@ type HistoryTabsProps = DepegHistoryProps & {
   depegHistoryPreview?: ReactNode;
   /** The view to select first; the route's loading and list-error branches open Depeg. */
   initialTab?: HistoryTabKey;
+  /** Whether the asset carries a grade in the current publication (`null` = unknown). */
+  currentlyRated?: boolean | null;
 };
 
 type HistoryTabKey = "grade" | "depeg" | "ddr";
@@ -122,6 +124,7 @@ export function HistoryTabs({
   historyActive,
   depegHistoryPreview = null,
   initialTab,
+  currentlyRated,
   ...depegProps
 }: HistoryTabsProps) {
   const [selected, setSelected] = useState<HistoryTabKey | null>(null);
@@ -149,7 +152,7 @@ export function HistoryTabs({
       key: "grade",
       label: "Grade",
       anchorId: "grade-history",
-      content: <LiveSafetyScoreHistorySection stablecoinId={stablecoinId} />,
+      content: <LiveSafetyScoreHistorySection stablecoinId={stablecoinId} currentlyRated={currentlyRated} />,
     });
   }
   if (!isNavToken) {
@@ -212,11 +215,10 @@ export function HistoryTabs({
     };
   }, []);
 
-  if (!active) return null;
-
   return (
     <div
       ref={rootRef}
+      hidden={!active}
       className="space-y-3"
       // The removed LazySection reserved 390px until mount; keep that reserve
       // while the live portion is still gated so the page does not jump.
@@ -237,12 +239,12 @@ export function HistoryTabs({
               type="button"
               role="tab"
               id={`history-tab-${tab.key}`}
-              aria-selected={tab.key === active.key}
+              aria-selected={tab.key === active?.key}
               aria-controls={tab.anchorId}
               onClick={() => setSelected(tab.key)}
               className={cn(
                 "pharos-focus-ring pharos-control-pill shrink-0 px-3 sm:px-2.5 sm:py-1",
-                tab.key === active.key && "pharos-control-pill-active",
+                tab.key === active?.key && "pharos-control-pill-active",
               )}
             >
               {tab.label}
@@ -251,7 +253,7 @@ export function HistoryTabs({
         </div>
       ) : null}
       {tabs.map((tab) => {
-        const showLive = historyActive && tab.key === active.key;
+        const showLive = historyActive && tab.key === active?.key;
         return (
           <div
             key={tab.key}
@@ -260,7 +262,7 @@ export function HistoryTabs({
             aria-labelledby={tabs.length > 1 ? `history-tab-${tab.key}` : undefined}
             data-history-tab={tab.key}
             data-tab-panel=""
-            hidden={tab.key !== active.key}
+            hidden={tab.key !== active?.key}
             className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
           >
             {tab.key === "depeg" && depegHistoryPreview ? (

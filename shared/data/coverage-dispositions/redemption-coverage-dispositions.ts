@@ -275,17 +275,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
   reviewedOn("2026-10-07", {
-    id: "pht-pht",
-    disposition: "defer",
-    reasonCode: "no-holder-route",
-    blocker:
-      "APACX's Redeem action repays the caller's own PHT debt and returns that borrower's own collateral; the beta Tron reserve wallet is not a public collateral claim.",
-    rationale: "Borrower debt closure does not serve an unrelated holder and a reserve wallet does not establish holder-funded redemption capacity.",
-    evidenceNeeded: "A new ordinary-holder callable redemption with complete output, fee, capacity and settlement terms, distinct from repaying one's own debt.",
-    evidenceUrls: ["https://www.apacx.io/PHT", "https://docs.apacx.io/"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
-  reviewedOn("2026-10-07", {
     id: "stusd-stoneyield",
     disposition: "needs-research",
     reasonCode: "capacity-unpublished",

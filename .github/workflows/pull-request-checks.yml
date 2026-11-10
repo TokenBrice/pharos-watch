@@ -21,7 +21,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
-          fetch-depth: 0
+          # The trusted snapshot reads only this revision's working tree.
+          fetch-depth: 1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24.16.0"
@@ -36,7 +37,12 @@ jobs:
           GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
           GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
+          # The snapshot checkout is shallow; the range scan needs full history.
+          if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+            git fetch --no-tags --unshallow origin
+          fi
           git fetch --no-tags origin "${GITLEAKS_HEAD_REF}"
+          git cat-file -e "${GITLEAKS_BASE_REF}^{commit}"
           node "$RUNNER_TEMP/trusted-gitleaks/scripts/ci/run-gitleaks.ts" --range --tree --policy-root="$RUNNER_TEMP/trusted-gitleaks"
       - name: Check changed candidate scanner and policy
         env:
@@ -47,12 +53,18 @@ jobs:
   prepare:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # Read-only access to the newest nightly test-timings artifact.
+      actions: read
     outputs:
       docs_only: ${{ steps.classify.outputs.docs_only }}
       docs_inline_succeeded: ${{ steps.docs.outcome == 'success' }}
       matrix: ${{ steps.matrix.outputs.matrix }}
+      pages_critical_css_full_pass: ${{ steps.classify.outputs.pages_critical_css_full_pass }}
       playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
       pages_artifact_required: ${{ steps.classify.outputs.pages_artifact_required }}
+      test_corpus_budget: ${{ steps.test-corpus-budget.outputs.exit-code }}
       workspace_artifact_name: ${{ steps.publish-workspace.outputs.workspace-artifact-name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -60,9 +72,51 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
+      - name: Acquire nightly test timings
+        # Advisory input to the planner. Runs before setup-workspace so the
+        # token-bearing `gh` step executes before any PR code; the token is
+        # confined here, and any failure leaves no file so planning falls back
+        # to round-robin shards.
+        id: test-timings
+        timeout-minutes: 2
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -u
+          timings=".tmp/test-timings.json"
+          rm -f "${timings}"
+          mkdir -p .tmp
+          work="$(mktemp -d "${RUNNER_TEMP}/test-timings.XXXXXX")"
+          trap 'rm -rf "${work}"' EXIT
+          cutoff="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          run_id=""
+          # The timings job publishes even when other nightly leaves fail, so
+          # take the newest completed main run that actually has the artifact.
+          if runs="$(gh run list --workflow=nightly-validation.yml --branch=main --status=completed --limit=14 --json databaseId,createdAt 2>/dev/null)"; then
+            for candidate in $(printf '%s' "${runs}" | jq -r --arg cutoff "${cutoff}" '[.[] | select(.createdAt >= $cutoff)] | sort_by(.createdAt) | reverse | .[].databaseId'); do
+              rm -rf "${work:?}"/*
+              if gh run download "${candidate}" --name test-timings --dir "${work}" >/dev/null 2>&1; then
+                source_file="$(find "${work}" -type f -name '*.json' -print -quit)"
+                if [[ -n "${source_file}" ]] && jq -e 'type == "object" and .version == 1' "${source_file}" >/dev/null 2>&1; then
+                  cp "${source_file}" "${timings}"
+                  run_id="${candidate}"
+                  break
+                fi
+              fi
+            done
+          fi
+          if [[ -s "${timings}" ]]; then
+            echo "Using nightly test timings from run ${run_id}."
+          else
+            rm -f "${timings}"
+            echo "No nightly test timings from the last 7 days; planning with round-robin shards."
+          fi
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
+          node-modules-cache: "true"
           workspace-artifact: none
       - name: Classify PR changes
         id: classify
@@ -75,12 +129,48 @@ jobs:
         if: ${{ steps.classify.outputs.docs_only != 'true' }}
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: npm run test:pr -- --base=$PR_BASE_SHA --plan-out=.tmp/pr-test-plan.json
+        run: |
+          args=(--base="${PR_BASE_SHA}" --plan-out=.tmp/pr-test-plan.json)
+          if [[ -s .tmp/test-timings.json ]]; then args+=(--timings=.tmp/test-timings.json); fi
+          npm run test:pr -- "${args[@]}"
       - name: Check incident review keys
         # Data check lane, run once per PR instead of per validation shard:
         # reads only the committed reviews, the migration artefact and the
         # authoring metadata, so there is no generated input and no network.
         run: npm run check:incident-review-keys
+      - name: Check test corpus budget
+        # Anti-creep (H2/H3), once per PR and never inside check:structural:
+        # that selection skips test-only PRs, which are exactly the ones this
+        # gate exists for. File stats plus the frozen-base ceilings, the frozen
+        # base's own sizes and the net add diff; no generated input. Base blobs
+        # the blob:none clone lacks are fetched lazily, so bound the step.
+        # Non-fatal here on purpose: its exit code is published as a step output
+        # and enforced by `PR gate`, so a budget failure cannot skip the
+        # validation lanes that say whether the PR is otherwise sound.
+        id: test-corpus-budget
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_BUDGET_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}
+        run: |
+          args=()
+          if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi
+          mkdir -p .tmp
+          set -o pipefail
+          status=0
+          npm run check:test-corpus-budget -- "${args[@]}" 2>&1 \
+            | tee .tmp/test-corpus-budget.log || status=$?
+          echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"
+          if [[ "${status}" != "0" ]]; then
+            {
+              echo "### Test corpus budget failed (exit ${status})"
+              echo ""
+              echo '```'
+              tail -n 40 .tmp/test-corpus-budget.log
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
       - name: Check new-asset evidence packet
         # One invocation on the prepared workspace, never per validation shard:
         # the receipt is bound to the post-addition registry fingerprint, so the
@@ -125,7 +215,7 @@ jobs:
     timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
-      max-parallel: 10
+      max-parallel: 14
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -164,7 +254,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # Peak fan-out: validation 10 + Pages 1 + secrets 1 = 12.
+  # Peak fan-out: validation 14 + Pages 1 + secrets 1 = 16, inside the 20-job
+  # public-repo concurrency ceiling. Matrix order still puts v9-resource first
+  # and static-compile last.
   pages-artifact:
     name: Pages artifact
     needs: prepare
@@ -201,7 +293,12 @@ jobs:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
           NODE_OPTIONS: ""
         run: |
-          if ! git show "${TRUSTED_PAGES_BASE_SHA}:scripts/lib/pages-release-data.mts" > "${TRUSTED_PAGES_MODULE_PATH}"; then
+          # A missing base object must fail here: only a base that truly lacks
+          # the helper may fall back to explicit degraded data.
+          git cat-file -e "${TRUSTED_PAGES_BASE_SHA}^{commit}"
+          if git cat-file -e "${TRUSTED_PAGES_BASE_SHA}:scripts/lib/pages-release-data.mts"; then
+            git show "${TRUSTED_PAGES_BASE_SHA}:scripts/lib/pages-release-data.mts" > "${TRUSTED_PAGES_MODULE_PATH}"
+          else
             rm -f "${TRUSTED_PAGES_MODULE_PATH}"
           fi
           node --experimental-strip-types --input-type=module <<'NODE'
@@ -232,6 +329,11 @@ jobs:
         # validation; degraded snapshots keep the production age assertion.
         env:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
+          # Only CSS-pipeline inputs select a full critical-CSS pass; other
+          # runs inline the gate-measured routes and reuse the prepared
+          # workspace outputs for everything else.
+          PHAROS_CRITICAL_CSS_FULL_PASS: ${{ needs.prepare.outputs.pages_critical_css_full_pass }}
+          PHAROS_PAGES_REUSE_PREPARED_WORKSPACE: "1"
           PR_LANE_ID: pages-artifact
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
 
@@ -249,11 +351,20 @@ jobs:
       VALIDATION_RESULT: ${{ needs.validation.result }}
       PAGES_ARTIFACT_REQUIRED: ${{ needs.prepare.outputs.pages_artifact_required }}
       PAGES_ARTIFACT_RESULT: ${{ needs.pages-artifact.result }}
+      TEST_CORPUS_BUDGET: ${{ needs.prepare.outputs.test_corpus_budget }}
     steps:
       - name: Require the manifest-selected validation path
         run: |
           if [ "${SECRETS_RESULT}" != "success" ] || [ "${PREPARE_RESULT}" != "success" ]; then
             echo "Required PR jobs failed: secrets=${SECRETS_RESULT}, prepare=${PREPARE_RESULT}."
+            exit 1
+          fi
+
+          # The corpus budget step is non-fatal in prepare so its failure cannot
+          # hide the validation lanes; its recorded exit code is enforced here.
+          if [ "${TEST_CORPUS_BUDGET:-missing}" != "0" ]; then
+            echo "Test corpus budget failed: exit=${TEST_CORPUS_BUDGET:-missing}. See the prepare job's step summary for the violations."
+            echo "Test corpus budget failed (exit=${TEST_CORPUS_BUDGET:-missing}); see the prepare job's summary." >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
             exit 1
           fi
 

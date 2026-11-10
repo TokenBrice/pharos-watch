@@ -33,13 +33,20 @@ describe("native Hive public methodology", () => {
       "500 HBD per side within 2%", "parent must be within five minutes", "earlier leg",
       "near-par direct CG quote", "SOFID uses exact-identity", "Kraken remains local-fetch",
       "Class assets are never circulating supply", "Quarantine persists",
-      "at most seven days", "Disappearing chain rows cannot release quarantine",
+      "at most seven days", "Disappearing chain rows alone cannot release quarantine",
+      "observed remainder as partial supply", "expiry re-arms the guard", "fill-scaled historical buckets remain unavailable",
       "observed zero stays zero", "14-day as-of budget", "original age",
       "observed flow × ticker confidence 0.55",
+      "separates the observed primary price used to check DEX price comparisons",
+      "within the 30-minute primary budget", "This comparison supplies no independent vote",
     ]) {
       expect(text).toContain(rule);
       expect(markdown).toContain(rule);
     }
+    const comparisonParagraph = PRICING_PIPELINE_SECTION_CONTENT.markdownParagraphs.find((paragraph) =>
+      paragraph.includes("separates the observed primary price used to check DEX price comparisons"));
+    expect(comparisonParagraph).toBeDefined();
+    expect([...root.querySelectorAll("p")].filter((node) => node.textContent === comparisonParagraph)).toHaveLength(1);
     const details = [...root.querySelectorAll("details")].find((node) => node.textContent?.includes("Current source admission and exceptions"));
     expect(details?.textContent).toContain("Hive internal market (HBD/HIVE)");
     expect(details?.textContent).toContain("SOFID uses exact-identity");

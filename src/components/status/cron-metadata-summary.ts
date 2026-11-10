@@ -80,7 +80,9 @@ function summarizeStablecoins(metadata: Record<string, unknown>): string[] {
 
 function summarizeStatusSelfCheck(metadata: Record<string, unknown>): string[] {
   const sampleCount = readNumber(metadata.sampleCount);
+  const passCount = readNumber(metadata.passCount);
   const failCount = readNumber(metadata.failCount);
+  const passedProbes = passCount ?? (sampleCount != null && failCount != null ? sampleCount - failCount : null);
   const probeStatus = readString(metadata.probeStatus);
   const rawOverallStatus = readString(metadata.rawOverallStatus);
   const effectiveStatus = readString(metadata.effectiveStatus);
@@ -94,12 +96,12 @@ function summarizeStatusSelfCheck(metadata: Record<string, unknown>): string[] {
   const slowestProbes = formatSlowestProbes(metadata.slowestProbes);
 
   return [
-    sampleCount != null && failCount != null && probeStatus
-      ? `probes ${sampleCount - failCount}/${sampleCount} ok, ${failCount} failed (${probeStatus})`
+    passedProbes != null && sampleCount != null && sampleCount > 0 && failCount != null && probeStatus
+      ? `probes ${passedProbes}/${sampleCount} ok, ${failCount} failed (${probeStatus})`
       : null,
     rawOverallStatus && effectiveStatus ? `status raw ${rawOverallStatus} -> effective ${effectiveStatus}` : null,
     probeMode ? `probe mode ${probeMode}` : null,
-    p95LatencyMs != null
+    p95LatencyMs != null && sampleCount !== 0
       ? `latency${medianLatencyMs != null ? ` median ${medianLatencyMs}ms,` : ""} p95 ${p95LatencyMs}ms${maxLatencyMs != null ? `, max ${maxLatencyMs}ms` : ""}`
       : null,
     slowestProbes,
@@ -327,6 +329,13 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
   const resolved = readNumber(metadata.resolved);
   const unresolved = readNumber(metadata.unresolved);
   const unresolvedMissingCapacity = readNumber(metadata.unresolvedMissingCapacity);
+  // The tolerance grades runtime missing capacity only; structural rows are
+  // config/capability-derived and published separately. Legacy generations
+  // without the field are graded on their total, as before.
+  const structuralMissingCapacity = readNumber(metadata.structuralMissingCapacity);
+  const runtimeMissingCapacity = unresolvedMissingCapacity == null
+    ? null
+    : unresolvedMissingCapacity - Math.min(Math.max(structuralMissingCapacity ?? 0, 0), unresolvedMissingCapacity);
   const unresolvedCritical = readNumber(metadata.unresolvedCritical);
   const availabilityDegraded = readNumber(metadata.availabilityDegraded);
   const missingCapacityOkThreshold = readNumber(metadata.missingCapacityOkThreshold);
@@ -343,8 +352,15 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
     resolved != null
       ? `resolved ${resolved}${configured != null ? `/${configured}` : ""}${coverageRatio != null ? ` (${Math.round(coverageRatio * 100)}%)` : ""}${unresolved != null && unresolved > 0 ? `, unrated ${unresolved}` : ""}`
       : null,
-    unresolvedMissingCapacity != null && unresolvedMissingCapacity > 0 && unresolvedCritical === 0 && missingCapacityOkThreshold != null
-      ? `missing-capacity tail ${unresolvedMissingCapacity}${unresolvedMissingCapacity <= missingCapacityOkThreshold ? ` within ${missingCapacityOkThreshold}-coin tolerance` : ` exceeds ${missingCapacityOkThreshold}-coin tolerance`}`
+    unresolvedMissingCapacity != null && runtimeMissingCapacity != null && unresolvedMissingCapacity > 0
+      && unresolvedCritical === 0 && missingCapacityOkThreshold != null
+      ? `missing-capacity tail ${unresolvedMissingCapacity}`
+        + (structuralMissingCapacity != null && structuralMissingCapacity > 0
+          ? ` (${structuralMissingCapacity} structural, ${runtimeMissingCapacity} runtime)`
+          : "")
+        + (runtimeMissingCapacity <= missingCapacityOkThreshold
+          ? ` within ${missingCapacityOkThreshold}-coin tolerance`
+          : ` exceeds ${missingCapacityOkThreshold}-coin tolerance`)
       : null,
     availabilityDegraded != null && availabilityDegraded > 0
       ? `availability impaired ${availabilityDegraded}`

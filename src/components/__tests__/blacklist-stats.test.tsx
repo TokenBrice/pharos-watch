@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
@@ -80,11 +80,11 @@ function bucket(
 
 describe("BlacklistStats", () => {
   it.each([
-    { amount: null, known: 0, unavailable: 1, expected: "Unavailable" },
-    { amount: 100, known: 1, unavailable: 1, expected: "$100.00 (partial)" },
-    { amount: 100, known: 1, unavailable: 0, expected: "$100.00" },
-    { amount: 0, known: 1, unavailable: 0, expected: "$0.00" },
-  ])("qualifies destroyed valuations with known=$known unavailable=$unavailable", ({ amount, known, unavailable, expected }) => {
+    { amount: null, known: 0, unavailable: 1, detail: "Unavailable", headline: "Unavailable" },
+    { amount: 100, known: 1, unavailable: 1, detail: "$100.00 (partial)", headline: "$100.00" },
+    { amount: 100, known: 1, unavailable: 0, detail: "$100.00", headline: "$100.00" },
+    { amount: 0, known: 1, unavailable: 0, detail: "$0.00", headline: "$0.00" },
+  ])("qualifies detail destroyed valuations but not the FreezeWatch headline (known=$known unavailable=$unavailable)", ({ amount, known, unavailable, detail, headline }) => {
     const stats = makeStats();
     const coverage = { knownCount: known, unavailableCount: unavailable };
     stats.destroyedTotal = amount;
@@ -95,10 +95,28 @@ describe("BlacklistStats", () => {
     stats.perCoinDestroyedTotal.USDC = amount;
     stats.valuationCoverage.perCoinFrozen.USDC = coverage;
     stats.valuationCoverage.perCoinDestroyed.USDC = coverage;
-    render(<BlacklistStats summary={{ ...makeSummary(), stats }} isLoading={false}
+    const headlineView = render(<BlacklistStats summary={{ ...makeSummary(), stats }} isLoading={false}
       blacklistStatusBuckets={[]} supportDataLoading={false} />);
-    render(<BlacklistDetailStats symbol="USDC" stats={stats} isLoading={false} />);
-    expect(screen.getAllByText(expected)).toHaveLength(3);
+    const detailView = render(<BlacklistDetailStats symbol="USDC" stats={stats} isLoading={false} />);
+    expect(within(headlineView.container).getAllByText(headline)).toHaveLength(1);
+    expect(within(detailView.container).getAllByText(detail)).toHaveLength(2);
+  });
+
+  it("shows the tracked frozen subtotal without a partial marker when snapshots lack a USD value", () => {
+    const stats = makeStats();
+    stats.trackedFrozenTotal = 1_000;
+    stats.trackedAddressCount = 10;
+    stats.trackedAmountGapCount = 4;
+    render(
+      <BlacklistStats
+        summary={{ ...makeSummary(), stats }}
+        isLoading={false}
+        blacklistStatusBuckets={[]}
+        supportDataLoading={false}
+      />,
+    );
+    expect(screen.getByText("$1.00K")).toBeTruthy();
+    expect(screen.queryByText(/partial/)).toBeNull();
   });
 
   it("renders the unfreezable market-share stat from the blacklist-status no bucket", () => {
@@ -128,7 +146,7 @@ describe("BlacklistStats", () => {
     expect(screen.queryByText("unique events")).toBeNull();
   });
 
-  it("labels a partial observed-supply denominator and withholds a share with no observed unfreezable supply", () => {
+  it("discloses a partial observed-supply denominator in the subtext only and withholds a share with no observed unfreezable supply", () => {
     const { unmount } = render(
       <BlacklistStats
         summary={{ ...makeSummary(), stats: makeStats() }}
@@ -143,11 +161,8 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    // A partial denominator qualifies the headline share; it never replaces it.
-    const partialMarker = screen.getByText("partial");
-    expect(partialMarker.closest("p")?.textContent).toBe("12.5%partial");
-    expect(partialMarker.getAttribute("title")).toBe("Observed supply only · 1 asset without supply data excluded");
-    expect(screen.queryByText("Partial")).toBeNull();
+    expect(screen.getByText("12.5%")).toBeTruthy();
+    expect(screen.queryByText(/partial/i)).toBeNull();
     expect(
       screen.getByText("2 stablecoins · $30.00B of $240.00B observed · 1 without supply data excluded"),
     ).toBeTruthy();

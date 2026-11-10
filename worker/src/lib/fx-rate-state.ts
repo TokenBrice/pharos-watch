@@ -465,6 +465,24 @@ export function getFxSourceStatus(
   ).status;
 }
 
+/**
+ * Whether an incumbent per-peg observation may veto or bound a replacement
+ * quote. An unknown clock is never fresh: missing provenance and stale
+ * evidence both lack veto authority (R1, R5).
+ */
+export function isFreshFxObservation(
+  updatedAt: number | null,
+  mode: FxRateSourceMode | undefined,
+  nowSec: number,
+  opts?: {
+    pegKey?: string;
+    cadence?: FxSourceCadence;
+    sourceDate?: string | null;
+  },
+): boolean {
+  return getFxSourceStatus(updatedAt, mode, nowSec, opts) === "fresh";
+}
+
 export interface FxPegAdmission {
   /** Cadence-aware source freshness; `none` whenever `issue` is set. */
   status: FxSourceStatus;

@@ -21,6 +21,7 @@ afterEach(() => {
 
 
 function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {}) {
+  const isFullyLoaded = overrides.isFullyLoaded ?? true;
   useInfiniteDepegEventsMock.mockReturnValue({
     data: { events, total: events.length, totalExact: true },
     isLoading: false,
@@ -28,7 +29,10 @@ function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {
     refetch: vi.fn(),
     isFetchingNextPage: false,
     loadedCount: events.length,
-    isFullyLoaded: true,
+    isFullyLoaded,
+    hasLoadedAllPages: isFullyLoaded,
+    isAutoLoadCapped: false,
+    hasNextPage: false,
     ...overrides,
   });
 }
@@ -66,14 +70,14 @@ describe("DepegHistory provenance badges", () => {
     expect(screen.getByText("Recorded recovery").parentElement?.textContent).toContain("Depegged now");
   });
 
-  it("excludes disputed rows from incident and threshold-crossing counts while keeping them listed", () => {
+  it.each([false, true])("excludes disputed rows from statistics while keeping them listed (totalExact=%s)", (totalExact) => {
     const events = [
       makeEvent({ id: 1, provenance: { auditVerdict: "disputed" }, constituentEventCount: 2 }),
       makeEvent({ id: 2, provenance: { auditVerdict: "false_positive" }, constituentEventCount: 3 }),
       makeEvent({ id: 3, provenance: { auditVerdict: "confirmed" }, constituentEventCount: 4 }),
       makeEvent({ id: 4, provenance: { auditVerdict: "legacy_unknown" } as never, constituentEventCount: 5 }),
     ];
-    mockEvents(events, { data: { events, total: 2, totalExact: false } });
+    mockEvents(events, { data: { events, total: events.length, totalExact } });
     render(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.getByText("Incidents").parentElement?.textContent).toContain("2");
     expect(screen.getByText("Threshold crossings").parentElement?.textContent).toContain("9");
@@ -114,6 +118,34 @@ describe("DepegHistory provenance badges", () => {
     render(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.getByTestId("stablecoin-depeg-history-table")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+  });
+
+  it("keeps a complete retained list paginated after a failed refresh without claiming loading", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const events = Array.from({ length: 30 }, (_, index) => makeEvent({
+      id: index + 1, startedAt: now - index * 86_400,
+    }));
+    mockEvents(events, {
+      error: new Error("refresh failed"),
+      refetch: vi.fn(),
+      isFullyLoaded: false,
+      hasLoadedAllPages: true,
+      isAutoLoadCapped: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      data: { events, total: 30, totalExact: false, nextCursor: null },
+    });
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+
+    expect(screen.queryByText(/Loading full history/)).toBeNull();
+    const incidents = screen.getByText("Incidents").parentElement!.textContent ?? "";
+    expect(incidents).toContain("30");
+    expect(incidents).not.toContain("30+");
+    // Pagination stays available, so rows beyond the first fold remain reachable.
+    fireEvent.click(screen.getByRole("button", { name: "Show all 30 incidents" }));
+    expect(tableRowCount()).toBe(25);
+    fireEvent.click(screen.getAllByRole("button", { name: "Go to next page" })[0]);
+    expect(tableRowCount()).toBe(5);
   });
 
   it("renders pending_reason and confirmation_sources badges when present", () => {
@@ -234,6 +266,35 @@ describe("DepegHistory incident fold", () => {
 
 });
 
+describe("DepegHistory coverage anchor", () => {
+  it("renders a UTC-day anchor on the reader's calendar day west of Greenwich", () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = "America/Los_Angeles";
+    try {
+      mockEvents([makeEvent()]);
+      render(<DepegHistory stablecoinId="usdc-circle" historyCoverage={{
+        startedAt: Date.UTC(2024, 2, 1) / 1000, source: "asset-age", status: "assumed",
+      }} />);
+      const anchor = screen.getByText(/Score coverage:/).textContent ?? "";
+      expect(anchor).toContain("since Mar 1, 2024");
+      expect(anchor).not.toContain("Feb 29, 2024");
+    } finally {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    }
+  });
+
+  it("publishes no second incident total beside the panel's own dispute-filtered count", () => {
+    mockEvents([makeEvent({ provenance: { auditVerdict: "disputed" } })]);
+    render(<DepegHistory stablecoinId="usdc-circle" historyCoverage={{
+      startedAt: Date.UTC(2026, 1, 11) / 1000, source: "asset-age", status: "assumed",
+    }} />);
+    const anchor = screen.getByText(/Score coverage:/).textContent ?? "";
+    expect(anchor).toContain("since Feb 11, 2026");
+    expect(anchor).not.toMatch(/incident/i);
+  });
+});
+
 describe("DepegHistory embedded preview handoff", () => {
   it("suppresses its skeleton while loading and reports that the shell preview owns the panel", () => {
     const onDisplayStateChange = vi.fn();
@@ -282,15 +343,4 @@ describe("DepegHistory embedded preview handoff", () => {
     await waitFor(() => expect(onDisplayStateChange).toHaveBeenLastCalledWith(true));
   });
 
-  it("renders no duplicate table when it owns the panel", async () => {
-    const onDisplayStateChange = vi.fn();
-    mockEvents([makeEvent()]);
-    const { container } = render(
-      <DepegHistory stablecoinId="usdc-circle" embeddedPreview onDisplayStateChange={onDisplayStateChange} />,
-    );
-
-    expect(container.querySelectorAll("table")).toHaveLength(1);
-    expect(screen.getAllByTestId("stablecoin-depeg-history-table")).toHaveLength(1);
-    await waitFor(() => expect(onDisplayStateChange).toHaveBeenLastCalledWith(true));
-  });
 });

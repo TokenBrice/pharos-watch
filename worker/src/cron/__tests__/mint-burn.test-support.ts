@@ -13,7 +13,7 @@ export const MINT_BURN_TRANSFER_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 export const USDT_CONTRACT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 
-/** `INSERT OR IGNORE INTO mint_burn_events` bind tuples seen by `batchExecute`. */
+/** `INSERT OR IGNORE INTO mint_burn_events` bind tuples seen by either batch path. */
 export const mintBurnEventInsertBinds: unknown[][] = [];
 
 // --- Module-level mocks shared by every syncMintBurn suite ---
@@ -38,7 +38,8 @@ vi.mock("../../lib/mint-burn-pipeline/rpc", async (importOriginal) => ({
   getMintBurnFinalizedHead: vi.fn(),
 }));
 
-vi.mock("../../lib/evm-logs", () => ({
+vi.mock("../../lib/evm-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/evm-logs")>()),
   createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((budget: { count: number; limit: number }) => budget.count >= budget.limit),
   decodeUint256AtSlotOrNull: vi.fn(() => 50_000),
@@ -161,7 +162,13 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
   const runStateRow = runState
     ? { degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null }
     : null;
-  return mockD1([
+  const db = mockD1([
+    { match: "SELECT config_key, config_fingerprint FROM mint_burn_supply_proof_configs", rows: [] },
+    { match: "SELECT config_fingerprint FROM mint_burn_supply_proof_configs", rows: [] },
+    { match: "INSERT OR IGNORE INTO mint_burn_supply_proof_configs", rows: [] },
+    { match: "pharos:mint-burn:proof-retention-delete", rows: [], runMeta: { changes: 0 } },
+    { match: "oldest_remaining_at FROM mint_burn_supply_proofs proof", rows: [{ oldest_remaining_at: null }] },
+    { match: "oldest_eligible_at FROM mint_burn_supply_proofs proof", rows: [{ oldest_eligible_at: null }] },
     { match: "mint_burn_admission", rows: admissionRows(options.admittedConfigs ?? []) },
     { match: "mint_burn_publication_policy", rows: [] },
     { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
@@ -188,9 +195,22 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
     { match: "INSERT OR REPLACE INTO mint_burn_config_deferral", rows: [] },
     ...(options.cacheRows ? ([{ match: "cache", rows: options.cacheRows }] satisfies MockTableConfig[]) : []),
   ]);
+  const batch = db.batch.bind(db);
+  db.batch = async <T = unknown>(statements: D1PreparedStatement[]) => {
+    for (const statement of statements) {
+      const { sql = "", boundValues = [] } = statement as unknown as { sql?: string; boundValues?: unknown[] };
+      if (sql.includes("INSERT OR IGNORE INTO mint_burn_events")) mintBurnEventInsertBinds.push([...boundValues]);
+    }
+    return batch<T>(statements);
+  };
+  return db;
 }
 
 /** A zero-address `Transfer` log (a mint) for `contract`. */
+export function mintBurnTestHash(value: number): string {
+  return `0x${value.toString(16).padStart(64, "0")}`;
+}
+
 export function makeMintBurnMintLog(
   options: { contract?: string; blockNumber?: number; txHash?: string; logIndex?: number } = {},
 ) {
@@ -204,10 +224,21 @@ export function makeMintBurnMintLog(
     ],
     data: "0x00000000000000000000000000000000000000000000000000000002540be400",
     blockNumber: "0x" + block.toString(16),
-    transactionHash: options.txHash ?? "0xabc123",
+    transactionHash: options.txHash ?? mintBurnTestHash(1),
     transactionIndex: "0x0",
-    blockHash: "0x0",
+    blockHash: mintBurnTestHash(2),
     logIndex: "0x" + (options.logIndex ?? 0).toString(16),
     removed: false,
   };
+}
+
+export function mintBurnScanResult(
+  scannedToBlock: number, logs: AlchemyLogsModule.AlchemyLogEntry[] = [],
+  overrides: { complete?: boolean; calls?: number; maxDepth?: number } = {},
+) {
+  return { logs, complete: true, scannedToBlock, calls: 1, maxDepth: 0, ...overrides };
+}
+
+export async function restoreMintBurnBatch(): Promise<void> {
+  vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof import("../../lib/db")>("../../lib/db")).batchExecute);
 }

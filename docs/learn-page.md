@@ -14,6 +14,8 @@ The `<title>` is the optional search-phrased `metaTitle` (at most 52 characters,
 
 Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays authored `datePublished` in UTC alongside reading time. Article JSON-LD agrees with organization authorship. Git modification dates are not human review or substantive-update dates; no individual reviewer is implied. The hub emits ItemList JSON-LD; articles and hub entries share `/og-editorial-learn.png`.
 
+The article's Copy link control copies the current page URL through the shared clipboard helper, including its legacy fallback. Its polite “Link copied” status lasts two seconds after the latest successful copy; repeated copies restart that window.
+
 `CASE_STUDY_BY_DEPEG_SLUG` and `caseStudySlugForEvent(coinId, tsMs)` provide reverse lookups. An optional `depegEventSlug` is a lookup key, not proof that the corresponding event route exists. Client surfaces must use generated `src/lib/case-study-client-index.ts`, not import the full content registry. Its compact coin-id and cemetery-id maps have no server-registry counterpart. Articles, chart widgets and ordinary links remain the supported surfaces; there is no live chart-annotation hook.
 
 ## Mechanisms
@@ -24,13 +26,13 @@ The hub's static comparison matrix is headed `Types of stablecoins` (`#mechanism
 
 FPI copy keeps its documented 100% collateral-ratio target distinct from dated observed reserve composition, including when the target depends on legacy-FRAX-linked balances and AMO positions. FIP-448 remains a proposal until a separately authorized evidence refresh verifies execution. A design target is never rendered as observed coverage or a completed wind-down.
 
-Tracked examples and lifecycle counts use `shared/lib/stablecoins/by-mechanism.ts`: active coins appear in canonical order with variants nested; commodity pegs participate only in their explicitly resolved `commodity-claim` family; unresolved effective archetypes are excluded. Hub counts and upcoming/frozen links use the same admission policy. Relevant case studies retain canonical study order.
+Tracked examples and lifecycle counts use `shared/lib/stablecoins/by-mechanism.ts`: active coins appear in canonical order with variants nested; commodity pegs participate in their explicitly resolved `commodity-claim` family and in any other archetype their own classification explicitly names, while inherited or absent classifications are excluded; unresolved effective archetypes are excluded. Hub counts and upcoming/frozen links use the same admission policy. Relevant case studies retain canonical study order.
 
 ### Diagram Scope
 
 `mechanismDiagramFor(archetype, "STBL")` supplies generic Learn diagrams without coin facts. Algorithmic captions scope the historical pure mint/burn example; Treasury captions scope the NAV-accreting example. Introductions and metadata cover the wider families: algorithmic members may hold collateral, and Treasury tokens may accrue NAV or hold par with separate/retained yield.
 
-Coin pages instead use `resolveMechanismFlowTemplate` and `resolveWrapperLayer`: `navToken === false` selects par redemption, `liquidationEngine === false` selects CDP reserve copy, and credit funds imply no redemption cadence. Generic precedents never become coin facts; coin stress uses its structural path or its own dated override incident.
+Coin pages instead use `resolveMechanismFlowTemplate` and `resolveWrapperLayer`: `navToken === false` selects par redemption, `liquidationEngine === false` selects CDP reserve copy, credit funds imply no redemption cadence, and `flags.backing` gives crypto-backed fiat-cash coins a neutral reserve/issuance shape with no bank rail, custody, 1:1 or issuer-redemption claim. Algorithmic coins drop the historical governance burn and collapse claims, and a synthetic coin draws the neutral collateral/hedge shape unless its override names a reviewed strategy; the funding carry follows only from an explicit `perp-short` override. Generic precedents never become coin facts; coin stress uses its structural path or its own dated override incident.
 
 Native-family explainers distinguish proportional UCITS/TRS fund shares, shared-pool operational liabilities, and bridge/vault/module position claims. Desktop and mobile diagrams must expose actual local stress paths rather than silently falling back to cash/Treasury backing. [Native-family admission and grading](./process/mechanism-overlay-evidence-standard.md#native-family-admission-and-grading) owns evidence and charged unknowns; Learn does not duplicate numeric calibration. The hub distribution cycles the non-frost palette safely as taxonomy grows.
 
@@ -56,7 +58,7 @@ Shared navigation links directly to Mechanisms and Case Studies. Mechanism pages
 ## Maintenance Checks
 
 - `src/app/__tests__/static-content-route-contracts.test.tsx`: exact registered static params; `src/app/__tests__/sitemap-frozen.test.ts`: canonical public route inventory.
-- `src/app/learn/case-studies/__tests__/content.test.ts`: coin references, chart reachability, chronology, deviation consistency, widget relationships and event lookups. `npm run check:editorial-content` owns metadata/body shapes, registration, filenames, tracked/cemetery identities and internal links.
+- `src/app/learn/case-studies/__tests__/content.test.ts`: coin references, chart reachability, chronology, deviation consistency, widget relationships and event lookups. `npm run check:editorial-content` owns metadata/body shapes, registration, filenames, tracked/cemetery identities, internal links, and every authored mechanism-explainer representative coin against the mechanism registry.
 - `src/lib/__tests__/term-markup.test.ts`: glossary marker parsing/visible labels and AI-summary corpus integrity.
 - `npm run check:generated-artifacts -- --only=case-study-client-index`: client-safe projection. The `og-editorial` artifact owns the shared Learn card's SVG/font signatures and Firefox-rendered PNG checks; legacy bespoke PNGs are inert.
 - `npm run seo:check`: sitemap, OG references and crawlability after a Pages build.

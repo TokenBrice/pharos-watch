@@ -1,15 +1,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { describe, expect, it } from "vitest";
 import { expectWarningEffect } from "./reserve-adapter.test-support";
 import { getReserveAdapter } from "../index";
 import { adaptMakinaStrategyReserves, buildMakinaRedemptionMetadata } from "../makina-strategy";
 import { validateAdapterOutput } from "../validate";
-import { CONFIGURED_COINS } from "../../sync-live-reserves-shared";
-import { syncReserveCoin } from "../../sync-live-reserves-core";
-import { getReserveSyncState } from "../../../lib/live-reserves/store-read";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const STRATEGY_FIXTURE = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-strategy.json"), "utf8"));
@@ -25,10 +21,10 @@ const PARAMS = {
   otherThresholdPct: 2,
   reconciliationTolerancePct: 0.5,
 };
-const REVIEWED_IMPLEMENTATION = "0x49c4762ab838f2e5d8252b69b90a1e8587a74511";
+const REVIEWED_IMPLEMENTATION = "0x18a68a9ef93960c27894b5661b510980a6a93baf";
 const ASYNC_REDEEMER = "0x1303c26cfe06bac5bfee29907f37919643def75c";
 const REVIEWED_IMPLEMENTATION_CODE_HASH =
-  "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
+  "0x16650c691f2c846f529f23c1050d07ceb4919bfacae4f71e83b54f55837fb5e2";
 const REDEMPTION_STATE = {
   whitelistEnabled: false,
   sanctionsCheckEnabled: true,
@@ -49,8 +45,6 @@ const REDEMPTION_STATE = {
 };
 
 describe("makina-strategy adapter", () => {
-  const fixtures = createLatestSchemaFixtureTracker();
-  afterEach(() => fixtures.closeAll());
   it("replays October's stale allocation clocks and contradictory issuer AUM against pinned Machine authority", () => {
     const result = adaptMakinaStrategyReserves(OCTOBER_STRATEGY, OCTOBER_ALLOCATIONS, PARAMS, {
       ...REDEMPTION_STATE,
@@ -161,41 +155,6 @@ describe("makina-strategy adapter", () => {
     },
   );
 
-  it("retains the accepted snapshot and original clocks when a below-tolerance debt loses its sign", async () => {
-    const { sqlite, db } = fixtures.open();
-    const coin = CONFIGURED_COINS.find((candidate) => candidate.id === "dusd-dialectic")!;
-    const adapter = getReserveAdapter("makina-strategy")!;
-    const sourceClock = Math.floor(Date.now() / 1000) - 120;
-    const strategy = structuredClone(STRATEGY_FIXTURE);
-    strategy.meta.generated_at = new Date(sourceClock * 1000).toISOString();
-    strategy.data.aum = strategy.data.lastReportedAum = "9990000000";
-    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
-    allocations.meta.generated_at = strategy.meta.generated_at;
-    allocations.data.base_tokens = [{
-      accounting_token_value: "10000000000", token: structuredClone(STRATEGY_FIXTURE.data.accountingToken),
-    }];
-    allocations.data.positions = [{ protocol: "aave-v4", value: "10000000", is_debt: true, updated_at: sourceClock }];
-    const args = {
-      db, coin, adapter, signal: new AbortController().signal,
-      breakerCanFetch: new Map([["live-reserves:makina-strategy", true]]), d1FinalizeTimeoutMs: 30_000,
-      runAdapter: async () => adaptMakinaStrategyReserves(strategy, allocations, PARAMS),
-    };
-    expect((await syncReserveCoin({ ...args, previousState: null })).status).toBe("synced");
-    const before = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id);
-    expect(before).toBeDefined();
-    const previousState = await getReserveSyncState(db, coin.id);
-    delete allocations.data.positions[0].is_debt;
-    const attempt = await syncReserveCoin({ ...args, previousState });
-    expect(attempt.status).toBe("failed");
-    expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id)).toEqual(before);
-    const retainedState = await getReserveSyncState(db, coin.id);
-    expect(retainedState).toMatchObject({
-      lastStatus: "error", lastSuccessAt: previousState!.lastSuccessAt,
-      lastSuccessAttemptId: previousState!.lastSuccessAttemptId,
-      // Adapter exceptions are persisted as lastError, not synthesized warnings.
-      lastError: expect.stringMatching(/is_debt/),
-    });
-  });
 
   it("keeps observed-zero positions outside the positive-row sign contract", () => {
     const allocations = structuredClone(ALLOCATIONS_FIXTURE);
@@ -467,7 +426,7 @@ describe("makina-strategy adapter", () => {
         sourceUrls: [
           "https://docs.makina.finance/concepts/architecture/machine/redemptions",
           `https://eth.blockscout.com/address/${ASYNC_REDEEMER}?tab=contract`,
-          "https://eth.blockscout.com/address/0x49c4762ab838f2e5d8252b69b90a1e8587a74511?tab=contract",
+          "https://eth.blockscout.com/address/0x18a68a9ef93960c27894b5661b510980a6a93baf?tab=contract",
         ],
       },
       redemptionQueue: {

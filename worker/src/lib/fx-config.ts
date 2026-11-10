@@ -69,7 +69,7 @@ export const EXPECTED_FX_PEG_KEYS = [
   ...Object.values(SECONDARY_FX_CURRENCY_TO_PEG),
 ];
 
-const MAX_FX_RATE_DELTA_PCT = 0.20;
+export const MAX_FX_RATE_DELTA_PCT = 0.20;
 
 export function invertUnitsPerUsd(unitsPerUsd: number): number {
   if (!Number.isFinite(unitsPerUsd) || unitsPerUsd <= 0) {

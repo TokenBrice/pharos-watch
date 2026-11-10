@@ -4,9 +4,11 @@
 
 Pharos serves eight classes of Open Graph / Twitter preview images. They have different generation pipelines and different renewal cadences.
 
+The shared Share menu clears prior feedback timers when an image copy or PNG download starts, keeping its trigger disabled with a loading indicator until the operation settles. Copy success and failure feedback lasts two seconds.
+
 ## 1. Route cards
 
-Route share cards replaced the weekly page screenshots on 2026-10-12. A screenshot carried a figure with no generation, and several carried live-state claims ("LIVE · AS OF …", "1 open incident", a flow verdict) that went false within hours. A route card either states one figure stamped with the generation that produced it, or states no figure at all.
+A route card either states one figure stamped with the generation that produced it, or states no figure at all; it never repeats an undated live-state claim ("LIVE · AS OF …", an open-incident count, a flow verdict) that can go false within hours.
 
 `shared/lib/og-route-cards.ts` is the single authority for the route keys, kicker, two-line promise, `public/` filename and layout shared by both variants. `OG_LIVE_PAGE_SLUGS` lists the routes that select the live card.
 
@@ -23,7 +25,7 @@ The live routes' metadata selects `buildLiveRouteOgImageUrl(slug)` (`src/lib/pag
 | `flows` | `/flows/` | Bank Run Gauge score and published band: mint-burn-flows body `gauge.score` / `gauge.band` (`formatBankRunGaugeScore`, `resolvePublishedGaugeBand`); a null score falls back to the timeless card (`figure-null`); the stamp adds "partial: N weighted coins withheld" when `partialValuationInputs > 0`; a band that withheld weight could move is omitted and the stamp reads "band unsettled: N weighted coins withheld" (`assessGaugeBandSettlement`, same rule as the digest) | — | `mintBurnFlows` |
 | `freezewatch` | `/freezewatch/` | Freezable share: stablecoins cache → `buildBlacklistStatusBuckets` → `computeFreezableSummary` | Freezable market cap; freezable coin count | `stablecoins` |
 | `liquidity` | `/liquidity/` | Total DEX TVL: `handleDexLiquidity` global row | — | `dexLiquidity` |
-| `alt-pegs` | `/alt-pegs/` | Non-USD market cap of the core universe: stablecoins cache → `buildNonUsdMarketSnapshot` (`shared/lib/alt-peg-snapshot.ts`), the same reducer as the page; a partial total shows as a known subtotal stamped `Partial · x/y non-USD coins observed` | Top three peg shares (only when every non-USD coin reports supply) | `stablecoins` |
+| `alt-pegs` | `/alt-pegs/` | Non-USD market cap of the core universe: stablecoins cache → `buildNonUsdMarketSnapshot` (`shared/lib/alt-peg-snapshot.ts`), the same reducer as the page; a partial total shows as a known subtotal stamped `Partial · x/y non-USD coins observed` | Top three peg shares (only when every non-USD coin's supply is fully observed) | `stablecoins` |
 | `yield` | `/yield/` | Ranked yields: summary projection → `dedupeYieldRankings` | Median 30D APY of A/B-graded rows (never the top APY) | `yieldRankings` |
 
 The timeline card counts the full open set the homepage reads, not the feed's windowed event page, so an incident opened before the feed window still counts (ADR-34). The `/api/og/depeg` summary card counts open `depeg_events` rows instead and labels that figure **OPEN DEPEG EVENTS**.
@@ -34,7 +36,7 @@ Fail-closed contract:
 
 - The hero source must be present, inside its admission budget, not a held publication, and published by its page. Otherwise the Worker serves the route's timeless card with `200`, `X-Og-Status: timeless` and a closed-vocabulary `X-Og-Reason` (`cache-missing`, `stale-cache`, `held-publication`, `incomplete-coverage`, `figure-null`, `owner-error`, `render-error`, `timeless-by-decision`). A card mirrors its page: where the page publishes a partial total as a labelled known subtotal (home, chains, dependency map), the card shows the same figure and names the gap in its stamp (`Partial · 266/267 assets observed`, `excl. 3 coins without supply data`); it goes timeless only where the page itself withholds the number (for example a partial FreezeWatch share).
 - The stamp names the hero's generation time (`As of 12 Oct 2026, 14:05 UTC`), never the render clock. A cached copy on a social platform is therefore self-dating. Live responses carry `X-Og-Status: live`, `X-Og-Generation`, `X-Og-As-Of`, `X-Og-Freshness-Budget` and `X-Og-Assessed-At`. After PNG rendering, the Worker reassesses the remaining admission lifetime and bounds both cache TTLs to its nonnegative whole seconds or the 15-minute `ogImage` lifetime, whichever is shorter (`buildOgImageCacheControl`), with no one-minute minimum. A figure that expires during rendering is replaced by the figure-free timeless card (`stale-cache`); the assessment header names this post-render check. Timeless responses use the 5-minute `custom` profile so the live card returns soon after its source recovers. These are origin-policy bounds: the independently configured Cloudflare browser-cache floor can lift delivered browser TTLs, so release acceptance must inspect both uncached and cached production OG responses.
-- There are no colored verdicts. The flows card states the gauge score and its band name, never a net-direction verdict. The top rule is neutral ink on every card; the only data hue is the PSI band swatch on the home card, drawn only when that render read a fresh PSI. Each card shows its route's navigation glyph (`shared/lib/og-route-glyphs.ts`, drift-tested against `src/lib/nav-config.ts`). An optional neutral share bar or pair of bars re-draws figures the card already prints, and a share bar is omitted when chain shares over-attribute (sum above 1).
+- There are no colored verdicts. The flows card states the gauge score and its band name, never a net-direction verdict. The top rule is neutral ink on every card; the only data hue is the PSI band swatch on the home card, drawn only when that render read a fresh PSI. Each card shows its route's navigation glyph (`shared/lib/og-route-glyphs.ts`, copied from the icons in `src/lib/nav-config.ts` and kept in sync by hand). An optional neutral share bar or pair of bars re-draws figures the card already prints, and a share bar is omitted when chain shares over-attribute (sum above 1).
 - Sublabels name the figure's basis: the chains hero is a share of the same core-aggregate supply as the homepage, and unavailable chain observations are named in its stamp (`Partial · N chain observations unavailable`), dependency exposure is gross, and flows cover tracked issuance chains.
 - A share card is presentation that inherits its page's methodology. It must show the page's exact published figure and needs no methodology-changelog entry of its own.
 
@@ -101,11 +103,11 @@ npm run check:generated-artifacts -- --only=og-editorial
 
 ## 3. Mechanism explainer cards (`public/og-learn-*.png`)
 
-Mechanism pages use the shared `og-editorial-learn.png` card (§2). Existing `public/og-learn-<archetype>.png` files remain unchanged inert static assets for cached HTML and external previews. They are not regenerated or freshness-checked; new archetypes need no bespoke card. On-page mechanism diagrams remain maintained independently.
+Mechanism pages use the shared `og-editorial-learn.png` card (§2). Existing `public/og-learn-<archetype>.png` files remain unchanged inert static assets for cached HTML and external previews. Their generators, artifact registrations and signature outputs are retired; they are not regenerated or freshness-checked, and new archetypes need no bespoke card. On-page mechanism diagrams remain maintained independently.
 
 ## 4. Case-study cards (`public/og-learn-case-*.png`)
 
-Case-study metadata, Article JSON-LD and hub ItemList entries use `og-editorial-learn.png` (§2). Existing `public/og-learn-case-<slug>.png` files remain unchanged inert static assets, preserving old inbound image URLs without redirects or withdrawals. Their generators, artifact registrations and signature outputs are retired; article titles, canonical URLs and content remain independent of those retained binaries.
+Case-study metadata, Article JSON-LD and hub ItemList entries use `og-editorial-learn.png` (§2). Existing `public/og-learn-case-<slug>.png` files follow the §3 inert-asset policy, preserving old inbound image URLs without redirects or withdrawals; article titles, canonical URLs and content remain independent of those retained binaries.
 
 ## 5. Stablecoin Cemetery card (`public/og-cemetery.png`)
 
@@ -124,7 +126,7 @@ npm run check:generated-artifacts -- --only=og-cemetery
 
 ### When to renew
 
-- Automatically at commit time when a source changes (a new death, a plot-map or token change, a new atlas).
+- When a registered source changes (a new death, a plot-map or token change, a new atlas) the check reports the artifact stale; regenerate it explicitly with `npm run build:og-cemetery` and commit it with the source.
 - After changing the card composition in `build-og-cemetery.ts`: bump `OG_CEMETERY_GENERATOR_VERSION`.
 
 ## 6. Selector profile cards (`public/og-selector-*.png`)

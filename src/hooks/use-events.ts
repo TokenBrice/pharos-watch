@@ -151,7 +151,7 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
     data,
     pages,
     loadedCount: events.length,
-    isFullyLoaded: nextCursor == null,
+    isFullyLoaded: pages?.[0] != null && nextCursor == null,
     meta,
     total,
     droppedRows,

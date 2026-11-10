@@ -59,6 +59,14 @@ describe("HarborHero keyboard and pin contract", () => {
     expect(card.textContent).not.toContain("0.00%");
   });
 
+  it("never renders a nonzero cargo share as 0.0% in the record card", () => {
+    const { berth } = renderHero();
+    fireEvent.keyDown(berth("hyperliquid"), { key: "Enter" });
+    const card = screen.getByRole("region", { name: /Hyperliquid/ });
+    expect(card.textContent).toContain("$3.0M · <0.1%");
+    expect(card.textContent).not.toContain("0.0%");
+  });
+
   it("has one tab stop on the largest ship and moves in rank order", () => {
     const { berth } = renderHero();
     const stops = [...document.querySelectorAll("[data-berth]")].filter((el) => el.getAttribute("tabindex") === "0");

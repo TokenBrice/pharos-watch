@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { buildChainDirectoryJsonLd, buildChainProfileJsonLd } from "@/lib/chain-json-ld";
+import { deploymentCountLabel } from "@/lib/chain-labels";
 import {
   getChainDirectoryEntries,
   getChainTrackedDeploymentCount,
@@ -17,6 +20,30 @@ describe("getChainDirectoryEntries", () => {
     for (const entry of entries) {
       expect(entry.deploymentCount).toBe(getChainTrackedDeploymentCount(entry.id));
     }
+  });
+
+  it("names the active universe it counts and omits a zero deployment clause", () => {
+    const entries = getChainDirectoryEntries();
+    const empty = entries.find((entry) => entry.deploymentCount === 0);
+    expect(empty).toBeDefined();
+    expect(deploymentCountLabel(320)).toBe("320 active deployments");
+    expect(deploymentCountLabel(1)).toBe("1 active deployment");
+
+    const serializedDirectory = JSON.stringify(buildChainDirectoryJsonLd(entries));
+    expect(serializedDirectory).not.toContain("tracked stablecoin deployment");
+    expect(serializedDirectory).not.toContain('"description":"0 active stablecoin deployment');
+
+    const ethereum = entries.find((entry) => entry.id === "ethereum")!;
+    expect(JSON.stringify(buildChainDirectoryJsonLd([ethereum]))).toContain(
+      `${ethereum.deploymentCount} active stablecoin deployments`,
+    );
+
+    const meta = CHAIN_META[empty!.id]!;
+    const serializedProfile = JSON.stringify(
+      buildChainProfileJsonLd({ chainId: empty!.id, meta, deployments: [] }),
+    );
+    expect(serializedProfile).not.toMatch(/0 active deployment/);
+    expect(serializedProfile).toContain(`Stablecoin supply, composition, and Chain Health on ${meta.name}.`);
   });
 
 });

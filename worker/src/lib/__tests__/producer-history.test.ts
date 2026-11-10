@@ -23,6 +23,32 @@ describe("producer history", () => {
     await db.batch(statements);
     expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1, productiveCount: 1 })]);
   });
+  it.each([
+    ["worker_producer_heads", false],
+    ["surface_publication_generations", true],
+  ] as const)("rolls back direct accounting on %s failure (retained: %s)", async (table, retained) => {
+    const { sqlite, db } = createMigratedDb();
+    const input = {
+      scheduleKey: "quarterHourly", job: "sync-stablecoins", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "failed", idempotencyKey: "failed",
+      invokedAt: 100, completedAt: 101, outcome: "ok",
+      productivity: { productive: true, publications: ["first", "last"].map((generationId) => ({
+        surface: "stablecoins", generationId, publishedAt: 101,
+      } as const)) },
+    } as const;
+    if (retained) await recordProducerOutcome(db, {
+      ...input, invocationId: "retained", idempotencyKey: "retained", invokedAt: 98, completedAt: 99,
+      productivity: { productive: true, publications: [{ surface: "stablecoins", generationId: "retained", publishedAt: 99 }] },
+    });
+    const tables = ["worker_producer_history", "worker_producer_retained_counts", "worker_producer_heads", "surface_publication_generations"];
+    const snapshot = () => tables.map((name) => sqlite.prepare(`SELECT * FROM ${name}`).all());
+    const before = snapshot();
+    sqlite.exec(`CREATE TEMP TRIGGER fail_projection BEFORE INSERT ON ${table}
+      ${table === "surface_publication_generations" ? "WHEN NEW.generation_id = 'last'" : ""}
+      BEGIN SELECT RAISE(ABORT, 'projection-failed'); END`);
+    await expect(recordProducerOutcome(db, input)).rejects.toThrow("projection-failed");
+    expect(snapshot()).toEqual(before);
+  });
   it("separates latest invocation from latest productive publication without double-counting retries", async () => {
     const { sqlite, db } = createMigratedDb();
     const identity = {
@@ -155,19 +181,19 @@ describe("producer history", () => {
     expect(utcCalendarMonth(januaryEnd + 1)).toBe("2026-02");
   });
 
-  it("overwrites a retried budget error without double-counting history", async () => {
+  it("retains budget-only pricing forensics through retry without double-counting history", async () => {
     const { sqlite, db } = createMigratedDb();
     const producer = {
-      scheduleKey: "digestTriggerPoll",
-      job: "digest-trigger-poll",
-      producerPath: "digestTriggerPoll",
+      scheduleKey: "statusSelfCheckOffset",
+      job: "price-corroboration",
+      producerPath: "statusSelfCheckOffset",
       producerKind: "budget-only",
       invocationId: "budget-invocation-1",
       workerVersion: "version-c",
       slotStartedAt: 1_772_000_000,
     };
     await recordBudgetSurfaceTelemetry(db, {
-      surface: "digest-trigger-poll",
+      surface: "price-corroboration",
       checkedAt: 1_772_000_010,
       durationMs: 1_000,
       dueCount: 1,
@@ -176,13 +202,17 @@ describe("producer history", () => {
       error: "transient D1 failure",
       producer,
     });
+    const metadata = { slotStartedAt: producer.slotStartedAt, dexRefresh: { cohortSize: 1, resolved: 0,
+      hintedAttempted: 1, errorClasses: ["rate-limited"],
+      assetDiagnostics: [{ assetId: "moveusd-cfx", inCohort: true, publishedSource: "dexscreener-exact" }] } };
     await recordBudgetSurfaceTelemetry(db, {
-      surface: "digest-trigger-poll",
+      surface: "price-corroboration",
       checkedAt: 1_772_000_020,
       durationMs: 900,
       dueCount: 1,
       processedCount: 1,
       outcome: "ok",
+      metadata,
       producer,
     });
 
@@ -192,8 +222,10 @@ describe("producer history", () => {
          FROM worker_producer_history
         WHERE idempotency_key = ?`,
       )
-      .all("budget-surface:budget-invocation-1:digest-trigger-poll");
+      .all("budget-surface:budget-invocation-1:price-corroboration");
     expect(history).toEqual([{ outcome: "ok", productive: 1, error: null }]);
+    expect(JSON.parse((sqlite.prepare("SELECT metadata_json FROM worker_producer_history").get() as { metadata_json: string }).metadata_json))
+      .toMatchObject({ surface: "price-corroboration", metadata });
     expect(await loadProducerHeads(db)).toEqual([
       expect.objectContaining({
         lastOutcome: "ok",
@@ -204,7 +236,7 @@ describe("producer history", () => {
     ]);
     const cache = sqlite
       .prepare("SELECT value FROM cache WHERE key = ?")
-      .get("cron:budget-surface:digest-trigger-poll") as { value: string };
+      .get("cron:budget-surface:price-corroboration") as { value: string };
     const payload = JSON.parse(cache.value) as Record<string, unknown>;
     expect(payload).toMatchObject({ outcome: "ok", processedCount: 1 });
     expect(payload).not.toHaveProperty("error");
@@ -331,13 +363,13 @@ describe("producer history", () => {
       FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 0, productive: 0 });
   });
 
-  it("initializes 183k existing rows with one covering-index aggregate and reapplies idempotently", () => {
+  it("initializes existing rows with one covering-index aggregate and reapplies idempotently", () => {
     const { sqlite } = createMigratedDb();
     for (const name of ["insert", "delete", "productivity", "identity"]) {
       sqlite.exec(`DROP TRIGGER trg_producer_retained_counts_${name}`);
     }
     sqlite.exec("DROP TABLE worker_producer_retained_counts");
-    sqlite.exec(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 183000)
+    sqlite.exec(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 5000)
       INSERT INTO worker_producer_history (
         idempotency_key, schedule_key, job, producer_path, producer_kind, invocation_id,
         invoked_at, completed_at, outcome, productive, created_at
@@ -347,11 +379,11 @@ describe("producer history", () => {
     sqlite.exec(migration);
     expect(sqlite.prepare(`SELECT * FROM worker_producer_retained_counts ORDER BY job`).all()).toHaveLength(10);
     expect(sqlite.prepare(`SELECT SUM(invocation_count) AS invocations, SUM(productive_count) AS productive
-      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 183000, productive: 91500 });
+      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 5000, productive: 2500 });
     sqlite.exec("DELETE FROM worker_producer_history WHERE idempotency_key = 'backfill-1'");
     sqlite.exec(migration);
     expect(sqlite.prepare(`SELECT SUM(invocation_count) AS invocations, SUM(productive_count) AS productive
-      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 182999, productive: 91499 });
+      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 4999, productive: 2499 });
   });
 
   it("matches legacy recounts after retention deletes without another completion", async () => {

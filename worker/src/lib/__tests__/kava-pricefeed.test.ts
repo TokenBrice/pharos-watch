@@ -5,6 +5,7 @@ import fixture from "./fixtures/kava-pricefeed-usdx.json";
 const fetchJsonWithRetryMock = vi.fn();
 
 vi.mock("../fetch-retry", () => ({
+  DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES: 16 * 1024 * 1024,
   fetchJsonWithRetry: (...args: unknown[]) => fetchJsonWithRetryMock(...args),
 }));
 

@@ -163,6 +163,10 @@ const DexSubgraphFailuresSchema = z.array(z.object({
 
 /** Dex liquidity cron metadata shape */
 export const DexLiquidityCronMetadataSchema = z.object({
+  rowsDropped: z.number().optional(),
+  poolRejectionMateriality: z.object({
+    candidateRejectedPoolCount: z.number().int().nonnegative().optional(),
+  }).passthrough().optional(),
   stagedPoolsMerged: z.number().optional(),
   stagedPoolsSkipped: z.number().optional(),
   stagedPoolsSkippedByExactIdentity: z.number().optional(),
@@ -209,6 +213,18 @@ export const DexLiquidityCronMetadataSchema = z.object({
         .optional(),
       valueBaselineGlobalTvl: z.number().nullable().optional(),
       ignoredPersistedGlobalTvl: z.number().nullable().optional(),
+      poolRejectionCoverage: z.object({
+        reason: z.enum(["material-pool-rejections", "pool-rejection-attribution-unavailable", "pool-rejection-baseline-unavailable"]).nullable(),
+        material: z.boolean().nullable(),
+        baselineBeforeSec: z.number().int().nonnegative().optional(),
+        baselineTvlUsdByCoin: z.record(z.string(), z.number().finite().nonnegative().nullable()),
+        coinsOmitted: z.number().int().nonnegative(),
+        coins: z.array(z.object({
+          stablecoinId: z.string(), baselineTvlUsd: z.number().finite().nonnegative(),
+          currentTvlUsd: z.number().finite().nonnegative(), lossUsd: z.number().finite().nonnegative(),
+          lossRatio: z.number().finite().nonnegative(), material: z.boolean(),
+        })),
+      }).optional(),
       coinTvlStepCount150: z.number().optional(),
       coinTvlStepCount25: z.number().optional(),
       coinTvlStepIds150: z.array(z.string()).optional(),
@@ -259,6 +275,7 @@ export const DexLiquidityCronMetadataSchema = z.object({
         })
         .optional(),
       qualityDriftFlags: z.array(z.string()).optional(),
+      cohortDriftFlags: z.array(z.string()).optional(),
       qualityDriftSeverity: z.enum(["none", "medium", "high"]).optional(),
       qualityDriftMetrics: z
         .object({
@@ -310,9 +327,23 @@ export const DexLiquidityCronMetadataSchema = z.object({
             consecutiveRuns: z.number(),
             baselineValue: z.number(),
             observedValue: z.number(),
+            sourceFamilyTvlEvidence: z.object({
+              explanation: z.enum(["evaluated", "unavailable"]),
+              baselineTvlUsd: z.number().nonnegative().nullable(),
+              currentTvlUsd: z.number().nonnegative(),
+              unexplainedLossUsd: z.number().nonnegative().nullable(),
+            }).optional(),
           }),
         )
         .optional(),
+      qualityDriftAccepted: z.array(z.object({
+        flag: z.string(),
+        baselineValue: z.number(),
+        reviewedAt: z.string(),
+        expiresAt: z.string().optional(),
+        evidenceUrls: z.array(z.string()).optional(),
+        reason: z.string(),
+      })).optional(),
       qualityDriftRebaselined: z
         .array(
           z.object({
@@ -320,6 +351,10 @@ export const DexLiquidityCronMetadataSchema = z.object({
             baselineValue: z.number(),
             acceptedValue: z.number(),
             runs: z.number(),
+            reviewedAt: z.string().optional(),
+            expiresAt: z.string().optional(),
+            evidenceUrls: z.array(z.string()).optional(),
+            reason: z.string().optional(),
           }),
         )
         .optional(),
@@ -357,6 +392,19 @@ export const DexLiquidityCronMetadataSchema = z.object({
     uniV3CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
     uniswapV4CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
   }).optional(),
+  curveStableswapPlainAdmissions: z
+    .array(
+      z.object({
+        stablecoinId: z.string(),
+        chain: z.string(),
+        poolId: z.string(),
+        poolAddress: z.string(),
+        sourcePriceSpreadRatio: z.number(),
+      }),
+    )
+    .max(32)
+    .optional(),
+  curveStableswapPlainAdmissionsOmitted: z.number().int().nonnegative().optional(),
   exitRouteSelection: z.object({
     baselineAvailable: z.boolean(),
     baselineUnavailableReason: z.string().nullable(),

@@ -58,6 +58,44 @@ export interface MintBurnConservationRuntimeLookup {
   entries: MintBurnConservationRuntimeEntry[];
 }
 
+function validateConditionalRangeProof(source: Record<string, unknown>, index: number): void {
+  const proof = source.supplyBurnProof as Record<string, unknown> | undefined;
+  if (proof?.range === undefined) return;
+  const fail = (reason: string): never => {
+    throw new Error(`${SIDECAR_REL}: entry ${index} range proof ${reason}`);
+  };
+  if (source.disposition !== "unsupported" || typeof source.unsupportedReason !== "string" ||
+      !source.unsupportedReason.startsWith("zero-address-transfer-without-supply-change:") ||
+      (source.eventSet !== undefined && source.eventSet !== "transfer") ||
+      (source.invariant !== undefined && source.invariant !== "transfer-supply")) {
+    fail("requires the reviewed zero-address Transfer family");
+  }
+  const range = proof.range as Record<string, unknown>;
+  if (typeof range !== "object" || range === null || Array.isArray(range) ||
+      range.law !== "paired-supply-zero-transfers-v1" ||
+      (range.mintEvidence !== "source-only" && range.mintEvidence !== "require-empty")) {
+    fail("has an invalid law or mint-evidence mode");
+  }
+  const identity = source.identity as { sourceVerified?: boolean; proxy?: { isProxy?: boolean; implementation?: string } } | undefined;
+  const supplyView = source.totalSupplyView as { isStoredSum?: boolean } | undefined;
+  if (source.chainId !== "ethereum" || identity?.sourceVerified !== true || supplyView?.isStoredSum !== true) {
+    fail("requires verified paired stored-supply source");
+  }
+  const guard = range.guard as Record<string, unknown> | undefined;
+  if (identity?.proxy?.isProxy === true && guard === undefined) fail("requires an explicit implementation/delegate guard");
+  if (guard === undefined) return;
+  if (typeof guard !== "object" || guard === null || Array.isArray(guard) ||
+      (guard.kind !== "implementation" && guard.kind !== "delegate")) fail("has an invalid guard");
+  if (guard.status === "required-unavailable") {
+    if (typeof guard.reason !== "string" || guard.reason.length === 0) fail("requires an unavailable-guard reason");
+  } else if (guard.status === "pinned") {
+    if (typeof guard.slot !== "string" || !/^0x[0-9a-f]{64}$/.test(guard.slot) ||
+        typeof guard.expected !== "string" || !/^0x[0-9a-f]{40}$/.test(guard.expected) ||
+        typeof guard.changeTopic !== "string" || !/^0x[0-9a-f]{64}$/.test(guard.changeTopic) ||
+        guard.expected !== identity?.proxy?.implementation) fail("has an invalid implementation/delegate pin");
+  } else fail("has an invalid guard status");
+}
+
 /**
  * Project one sidecar document to the runtime lookup. Sidecar entry order is
  * preserved (the sidecar is sorted by identity), keys that are absent or null
@@ -77,6 +115,7 @@ export function projectMintBurnConservationRuntime(sidecar: unknown): MintBurnCo
       throw new Error(`${SIDECAR_REL}: entry ${index} is not an object`);
     }
     const source = raw as Record<string, unknown>;
+    validateConditionalRangeProof(source, index);
     const { chainId, stablecoinId, address, decimals, disposition } = source;
     if (typeof chainId !== "string" || typeof stablecoinId !== "string" || typeof address !== "string" ||
       typeof decimals !== "number" || (disposition !== "admitted" && disposition !== "unsupported")) {

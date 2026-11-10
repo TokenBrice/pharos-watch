@@ -44,7 +44,18 @@ describe("rpc parity targets", () => {
       .map((entry) => entry.chainId)).toEqual(["arbitrum", "robinhood"]);
     expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "state-bracket")
       .map((entry) => entry.chainId)).toEqual(["xdc"]);
-    expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "multicall3-block-number")).toHaveLength(36);
+    const multicall3Chains = RPC_PARITY_TARGETS
+      .filter((entry) => entry.latestStateProbe === "multicall3-block-number")
+      .map((entry) => entry.chainId);
+    // multicall3 is the reviewed default, so it must be exactly the complement
+    // of the pinned arbsys/state-bracket chains above.
+    expect(multicall3Chains).toEqual(
+      RPC_PARITY_TARGETS.map((entry) => entry.chainId)
+        .filter((chainId) => !["arbitrum", "robinhood", "xdc"].includes(chainId)),
+    );
+    expect(new Set(RPC_PARITY_TARGETS.map((entry) => entry.latestStateProbe))).toEqual(
+      new Set(["arbsys-block-number", "state-bracket", "multicall3-block-number"]),
+    );
   });
 
   it("tracks a contract that the named coin lists on that chain", () => {

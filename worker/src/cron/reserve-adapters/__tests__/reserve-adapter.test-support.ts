@@ -733,6 +733,27 @@ export async function runAdapter(
   return { result, report, coin, config, network };
 }
 
+/**
+ * Run one adapter call whose failure path waits out retry backoff or a
+ * per-request timeout. Fake timers change only the clock: the adapter, its real
+ * retry policy and every assertion run unchanged, and no test sleeps.
+ */
+export async function runAdapterWithFakeTimers<T>(run: () => Promise<T>, advanceMs = 30_000): Promise<T> {
+  vi.useFakeTimers();
+  try {
+    const outcome = run().then(
+      (value) => ({ ok: true as const, value }),
+      (error: unknown) => ({ ok: false as const, error }),
+    );
+    await vi.advanceTimersByTimeAsync(advanceMs);
+    const settled = await outcome;
+    if (!settled.ok) throw settled.error;
+    return settled.value;
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 /** Evaluate a same-run snapshot using its real catalog config and adapter class. */
 export function evaluateAdapterSnapshotAdmission(run: AdapterRun, nowSec: number) {
   const adapter = getReserveAdapter(run.config.adapter)!;

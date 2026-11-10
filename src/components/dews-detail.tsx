@@ -159,20 +159,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   }
 
   if (!data?.current) {
-    return (
-      <Card>
-        <CardHeader>
-          <StablecoinModuleTitle>
-            <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
-          </StablecoinModuleTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No DEWS data available yet. Score will appear after the next computation cycle.
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   const { score, band, signals } = data.current;

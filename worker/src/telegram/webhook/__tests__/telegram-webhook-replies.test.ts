@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const sendToChatMock = vi.hoisted(() => vi.fn());
 
@@ -13,8 +12,6 @@ vi.mock("../../delivery/telegram", async (importOriginal) => {
 });
 
 const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
-const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
 
 describe("sendAuditedTelegramReply", () => {
   beforeEach(() => {
@@ -51,18 +48,20 @@ describe("sendAuditedTelegramReply", () => {
 
   it("stops after a retryable rate limit rather than flooding remaining chunks", async () => {
     sendToChatMock.mockResolvedValue({ ok: false, retryable: true, errorClass: "rate_limit", statusCode: 429 });
-    const { db, sqlite } = fixtures.open();
+    const db = mockD1();
     expect(await sendAuditedTelegramReply(db, "12345", "chunk ".repeat(1400), "bot-token"))
       .toEqual({ ok: false, errorClass: "rate_limit" });
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
-    expect(sqlite.prepare("SELECT event_type, failure_class, count FROM telegram_usage_daily").all())
-      .toEqual([{ event_type: "reply_failure", failure_class: "rate_limit", count: 1 }]);
+    const failures = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.binds[1]).toBe("reply_failure");
+    expect(failures[0]?.binds[6]).toBe("rate_limit");
   });
 
   it("continues after transient failure, keeps failed aggregate, and attaches markup only to the last chunk", async () => {
     sendToChatMock.mockResolvedValueOnce({ ok: false, retryable: true, errorClass: "network", statusCode: null })
       .mockResolvedValue({ ok: true, errorClass: null });
-    const { db } = fixtures.open();
+    const db = mockD1();
     const replyMarkup = { inline_keyboard: [[{ text: "Open", callback_data: "settings:home" }]] };
     expect(await sendAuditedTelegramReply(db, "12345", "chunk ".repeat(1400), "bot-token", { replyMarkup }))
       .toEqual({ ok: false, errorClass: "network" });
@@ -74,11 +73,14 @@ describe("sendAuditedTelegramReply", () => {
 
   it("can disable reply diagnostics without suppressing failure analytics", async () => {
     sendToChatMock.mockResolvedValue({ ok: false, retryable: false, errorClass: "blocked", statusCode: 403 });
-    const { db, sqlite } = fixtures.open();
+    const db = mockD1();
     expect(await sendAuditedTelegramReply(db, "12345", "reply", "bot-token", { recordReplyOutcome: false }))
       .toEqual({ ok: false, errorClass: "blocked" });
-    expect(sqlite.prepare("SELECT event_type, failure_class, count FROM telegram_usage_daily").all())
-      .toEqual([{ event_type: "reply_failure", failure_class: "blocked", count: 1 }]);
-    expect(sqlite.prepare("SELECT * FROM telegram_chat_delivery_diagnostics").all()).toEqual([]);
+    const history = db.getHistory();
+    const failures = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.binds[1]).toBe("reply_failure");
+    expect(failures[0]?.binds[6]).toBe("blocked");
+    expect(history.some((entry) => entry.sql.includes("telegram_chat_delivery_diagnostics"))).toBe(false);
   });
 });

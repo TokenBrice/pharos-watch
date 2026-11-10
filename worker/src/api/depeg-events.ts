@@ -1,4 +1,4 @@
-import { DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
@@ -8,6 +8,7 @@ import { jsonResponse } from "../lib/api-response";
 
 import {
   normalizePendingDepegRow,
+  getPendingExpiryLimitSec,
   SELECT_PENDING_DEPEGS_SQL,
   type PendingDepegRow,
 } from "../lib/depeg-pending";
@@ -32,15 +33,35 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base
 import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { DepegEvent, DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
+import { isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
 import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
+import { isExtremeMovePending } from "../lib/depeg-helpers";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
+
+/** Stored-field refusals from the shared row parser, named for the public reason. */
+const DEPEG_ROW_PARSE_FAILURE = /^\[depeg-helpers\] Invalid (direction|source|close_reason)\b/;
+
+class DepegEventRowUnreadableError extends Error {
+  constructor(
+    readonly eventId: number,
+    readonly reason: string,
+  ) {
+    super(`Unreadable depeg event row ${eventId}`);
+    this.name = "DepegEventRowUnreadableError";
+  }
+}
+
+function depegRowFailureReason(error: unknown): string {
+  const field = DEPEG_ROW_PARSE_FAILURE.exec(toErrorMessage(error))?.[1];
+  return field ? `invalid-${field.replaceAll("_", "-")}` : "unreadable-row";
+}
 
 interface DexAvailabilityRow {
   stablecoin_id: string;
   source_total_tvl: number | null;
   updated_at: number | null;
+  price_sources_json: string | null;
 }
 
 interface PoolAvailabilityRow {
@@ -59,24 +80,26 @@ function isFreshTimestamp(timestamp: number | null | undefined, nowSec: number, 
 
 async function loadDexAvailability(
   db: D1Database,
-  stablecoinId: string | null,
+  stablecoinIds: string[],
   nowSec: number,
 ): Promise<Map<string, boolean>> {
   try {
-    const where = stablecoinId ? " WHERE stablecoin_id = ?" : "";
-    const stmt = db
+    const result = await db
       .prepare(
         `SELECT /* pharos:depeg-events:dex-availability */
-           stablecoin_id, source_total_tvl, updated_at FROM dex_prices${where}`,
-      );
-    const result = stablecoinId
-      ? await stmt.bind(stablecoinId).all<DexAvailabilityRow>()
-      : await stmt.all<DexAvailabilityRow>();
+           stablecoin_id, source_total_tvl, updated_at, price_sources_json FROM dex_prices
+         WHERE stablecoin_id IN (SELECT value FROM json_each(?))`,
+      ).bind(JSON.stringify(stablecoinIds)).all<DexAvailabilityRow>();
     return new Map((result.results ?? []).map((row) => [
       row.stablecoin_id,
       typeof row.updated_at === "number" &&
         typeof row.source_total_tvl === "number" &&
-        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg"),
+        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg") &&
+        isAffirmativeDexPriceRow({
+          updated_at: row.updated_at,
+          source_total_tvl: row.source_total_tvl,
+          aggregateObservedAt: readDexAggregateObservedAt(row.price_sources_json, nowSec),
+        }, nowSec, "depeg"),
     ]));
   } catch (err) {
     const msg = toErrorMessage(err);
@@ -173,7 +196,7 @@ async function loadPendingIncidents(
   if (rows.length === 0) return [];
 
   const [dexAvailability, poolAvailability] = await Promise.all([
-    loadDexAvailability(db, stablecoinId, nowSec),
+    loadDexAvailability(db, rows.map((row) => row.stablecoin_id), nowSec),
     loadPoolAvailability(db, stablecoinId, nowSec),
   ]);
 
@@ -191,7 +214,12 @@ async function loadPendingIncidents(
       peakSeenBps: pending.peakSeenBps,
       reason: pending.reason,
       ageSec: Math.max(0, nowSec - pending.firstSeenAt),
-      expiresAt: pending.firstSeenAt + DEPEG_PENDING_EXPIRY_SEC,
+      expiresAt: pending.firstSeenAt + getPendingExpiryLimitSec({
+        primarySameDirectionDepegged: false,
+        isExtremeMove: isExtremeMovePending(pending.reason),
+        unavailableSources: categories.missing,
+        circuitOpenSources: [],
+      }),
       availableConfirmationCategories: categories.available,
       missingConfirmationCategories: categories.missing,
     };
@@ -264,7 +292,15 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
           throw new IncidentProjectionUnavailableError();
         },
       },
-      mapRow: (row) => rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections),
+      mapRow: (row) => {
+        // The shared parser stays the single admission authority; one refused
+        // row fails the whole page instead of publishing a partial ledger.
+        try {
+          return rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections);
+        } catch (error) {
+          throw new DepegEventRowUnreadableError(row.id, depegRowFailureReason(error));
+        }
+      },
       searchParams: params,
       pagination,
       parsedPagination,
@@ -291,6 +327,21 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       },
     });
     } catch (error) {
+      if (error instanceof DepegEventRowUnreadableError) {
+        // Keep the refused row visible to operators: the named 503 alone used to
+        // return without logging which row was refused.
+        logWorkerEventArgs(
+          "api",
+          "error",
+          `[depeg-events] Refused stored depeg event ${error.eventId}: ${error.reason}`,
+          { eventId: error.eventId, reason: error.reason },
+        );
+        return jsonResponse({
+          error: "Depeg event row unreadable",
+          reason: error.reason,
+          eventId: error.eventId,
+        }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
+      }
       if (!(error instanceof IncidentProjectionUnavailableError)) throw error;
       return jsonResponse({
         error: "Canonical incident history unavailable",

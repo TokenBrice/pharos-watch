@@ -173,6 +173,62 @@ describe("DDR publication payload storage", () => {
     expect(await loadLatestPublicationManifest(db)).toMatchObject({ snapshotToken: "ddrpub:test:2" });
   }));
 
+  it("stores a fresh payload instead of citing an invalidated payload snapshot", async () => withSqliteD1(async (db) => {
+    await writePublicationManifest(db, {
+      snapshotToken: "ddrpub:test:1",
+      snapshotGeneration: 2,
+      publishedAt: 200000,
+      validatorVersion: "vitest",
+      basePayload: emptyBasePayload(200000),
+    });
+    db.sqlite
+      .prepare(
+        `INSERT INTO depeg_resolver_publication_snapshot_errata
+         (snapshot_token, reason, operator_note, created_at, created_by)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run("ddrpub:test:1", "operator_invalidation", "test", 200001, "vitest");
+
+    await writePublicationManifest(db, {
+      snapshotToken: "ddrpub:test:2",
+      snapshotGeneration: 2,
+      publishedAt: 200900,
+      validatorVersion: "vitest",
+      basePayload: emptyBasePayload(200900),
+    });
+
+    expect(count(db, "depeg_resolver_publication_snapshots_v2")).toBe(2);
+    expect(count(db, "depeg_resolver_publication_snapshot_refs")).toBe(0);
+    expect(await loadLatestPublicationManifest(db)).toMatchObject({ snapshotToken: "ddrpub:test:2" });
+  }));
+
+  it("does not serve an existing reference to an invalidated payload snapshot", async () => withSqliteD1(async (db) => {
+    await writePublicationManifest(db, {
+      snapshotToken: "ddrpub:test:1",
+      snapshotGeneration: 2,
+      publishedAt: 200000,
+      validatorVersion: "vitest",
+      basePayload: emptyBasePayload(200000),
+    });
+    await writePublicationManifest(db, {
+      snapshotToken: "ddrpub:test:2",
+      snapshotGeneration: 2,
+      publishedAt: 200900,
+      validatorVersion: "vitest",
+      basePayload: emptyBasePayload(200900),
+    });
+    expect(count(db, "depeg_resolver_publication_snapshot_refs")).toBe(1);
+    db.sqlite
+      .prepare(
+        `INSERT INTO depeg_resolver_publication_snapshot_errata
+         (snapshot_token, reason, operator_note, created_at, created_by)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run("ddrpub:test:1", "operator_invalidation", "test", 200901, "vitest");
+
+    expect(await loadLatestPublicationManifest(db)).toBeNull();
+  }));
+
   it("rejects a reference whose payload does not reconstruct the published hash", async () => withSqliteD1(async (db) => {
     await writePublicationManifest(db, {
       snapshotToken: "ddrpub:test:1",

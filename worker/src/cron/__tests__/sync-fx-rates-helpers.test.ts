@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isValidFxRate } from "../../lib/fx-config";
-import type { FxRateState, FxSourceCadence } from "../../lib/fx-rate-state";
+import { getFxSourceStatus, type FxRateState, type FxSourceCadence } from "../../lib/fx-rate-state";
 import { FxSyncRunState } from "../sync-fx-rates-helpers";
 
 const syncStartSec = Math.floor(Date.parse("2025-06-15T12:00:00Z") / 1000);
@@ -113,6 +113,115 @@ describe("FxSyncRunState realtime overlays", () => {
     expect(accepted).toBe(0);
     expect(state.usableRates.peggedEUR).toBe(1.081);
     expect(state.sourceUpdatedAtByPeg.peggedEUR).toBe(oxrObservedAt);
+  });
+});
+
+describe("FxSyncRunState metal references", () => {
+  const createMetalState = (prevState: FxRateState | null) => new FxSyncRunState({
+    prevState,
+    syncStartSec,
+    expectedPegKeys: ["peggedSILVER"],
+    initialSources: {},
+    validateRate: (pegKey, rate, prevRate) => isValidFxRate(pegKey, rate, prevRate, "[sync-fx-rates:test]"),
+  });
+
+  const applyCachedSilver = (state: FxSyncRunState, rate = 40.448374) => {
+    state.applyResolvedMetals({
+      resolvedByPeg: { peggedSILVER: { rate, source: "cached", updatedAt: null } },
+      sources: { "gold-api.com": "error", "commodity-peer-median": "unavailable" },
+    });
+  };
+
+  it("keeps a cached metal fallback's original observation clock", () => {
+    const observedAt = syncStartSec - 26 * 3600;
+    const prevState = buildPrevState({ peggedSILVER: 40.448374 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = observedAt;
+    const state = createMetalState(prevState);
+
+    applyCachedSilver(state);
+
+    expect(state.usableRates.peggedSILVER).toBe(40.448374);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(observedAt);
+    expect(state.sourceModeByPeg.peggedSILVER).toBe("live");
+    expect(getFxSourceStatus(observedAt, "live", syncStartSec, { pegKey: "peggedSILVER", cadence: "intraday" }))
+      .toBe("stale");
+  });
+
+  it("lets a fresh Chainlink metal round replace a stale spot reference within the delta bound", () => {
+    const observedAt = syncStartSec - 26 * 3600;
+    const prevState = buildPrevState({ peggedSILVER: 40.448374 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = observedAt;
+    const state = createMetalState(prevState);
+    applyCachedSilver(state);
+
+    const chainlinkUpdatedAt = syncStartSec - 600;
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 45, updatedAt: chainlinkUpdatedAt, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(1);
+    expect(state.usableRates.peggedSILVER).toBe(45);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(chainlinkUpdatedAt);
+  });
+
+  it("keeps a stale incumbent when a fresh Chainlink round jumps it by more than 20% without corroboration", () => {
+    const observedAt = syncStartSec - 26 * 3600;
+    const prevState = buildPrevState({ peggedSILVER: 40.448374 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = observedAt;
+    const state = createMetalState(prevState);
+    applyCachedSilver(state);
+
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 50.378, updatedAt: syncStartSec - 600, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(0);
+    expect(state.usableRates.peggedSILVER).toBe(40.448374);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(observedAt);
+  });
+
+  it("never moves a metal clock backwards to an older Chainlink round", () => {
+    const observedAt = syncStartSec - 7 * 3600;
+    const prevState = buildPrevState({ peggedSILVER: 50 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = observedAt;
+    const state = createMetalState(prevState);
+    applyCachedSilver(state, 50);
+
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 49, updatedAt: syncStartSec - 11 * 3600, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(0);
+    expect(state.usableRates.peggedSILVER).toBe(50);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(observedAt);
+  });
+
+  it("lets an unknown-clock incumbent accept a fresh Chainlink round within the delta bound", () => {
+    const prevState = buildPrevState({ peggedSILVER: 50 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = null;
+    const state = createMetalState(prevState);
+    applyCachedSilver(state, 50);
+
+    const chainlinkUpdatedAt = syncStartSec - 600;
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 53, updatedAt: chainlinkUpdatedAt, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(1);
+    expect(state.usableRates.peggedSILVER).toBe(53);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(chainlinkUpdatedAt);
+  });
+
+  it("still rejects a Chainlink metal round that diverges from a fresh spot", () => {
+    const state = createMetalState(buildPrevState({ peggedSILVER: 40.448374 }));
+    applyCachedSilver(state);
+
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 50.378, updatedAt: syncStartSec - 600, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(0);
+    expect(state.usableRates.peggedSILVER).toBe(40.448374);
   });
 });
 

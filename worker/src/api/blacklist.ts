@@ -19,6 +19,7 @@ import {
   type BlacklistSortKey,
 } from "@shared/types/market";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
+import { blacklistCanonicalEventCountSql } from "@shared/lib/blacklist-event-order";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../lib/blacklist/shared";
 
@@ -155,6 +156,11 @@ export const handleBlacklist = async (db: D1Database, url: URL): Promise<Respons
     queryComment: "pharos:blacklist-events",
     conditions,
     filterBindings,
+    // An unfiltered exact total counts the canonical identities in one grouped
+    // index scan; any filter keeps the correlated canonical predicate.
+    countStatements: filterBindings.length === 0
+      ? [db.prepare(blacklistCanonicalEventCountSql("pharos:blacklist-events:count"))]
+      : undefined,
     mapRow: mapBlacklistEventRow,
     searchParams: params,
     pagination: {

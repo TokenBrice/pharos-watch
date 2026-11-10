@@ -134,6 +134,13 @@ export interface PegStabilityCardProps {
    * wrapper rules liquidation out locally.
    */
   parentLiquidationEngine?: boolean | null;
+  /**
+   * Parent coin's `flags.backing`, for the wrapper's parent flow. The
+   * wrapper's own flag cannot stand in for it: a wrapper over an rwa-backed
+   * fiat-cash parent inherits the bank rail, one over a crypto-backed parent
+   * does not.
+   */
+  parentBacking?: StablecoinMeta["flags"]["backing"] | null;
   variantKind?: StablecoinMeta["variantKind"] | null;
   /**
    * Reserves already draws a reviewed composition for this coin, so the
@@ -175,6 +182,7 @@ export function PegStabilityCard({
   parentArchetype,
   parentNavToken,
   parentLiquidationEngine,
+  parentBacking,
   variantKind,
   hasReviewedReserves = false,
   mechanismBacking = null,
@@ -194,6 +202,7 @@ export function PegStabilityCard({
     ? resolveMechanismFlowTemplate(parentArchetype, wrapper.parentSymbol, {
         navToken: parentNavToken ?? null,
         liquidationEngine: parentLiquidationEngine ?? null,
+        backing: parentBacking ?? null,
       }, meta.variantOf ? getCoinOverride(meta.variantOf) : undefined)
     : effectiveArchetype
       ? resolveMechanismFlowTemplate(
@@ -202,6 +211,7 @@ export function PegStabilityCard({
           {
             navToken: meta.flags?.navToken === true,
             liquidationEngine: deriveLiquidationEngine(mechanismBacking, meta.oracleRiskSummary?.role),
+            backing: meta.flags?.backing ?? null,
           },
           getCoinOverride(meta.id),
         )

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -36,6 +38,7 @@ describe("provider resilience checker", () => {
     ["function run(fetch) { const request = fetch; request(url); }", 0],
     ["import { fetch } from './adapter'; const request = fetch; request(url);", 0],
     ["const adapter = { fetch(url) {} }; adapter.fetch(url);", 0],
+    ["declare function fetch(): Promise<Response>;\nfetch(url);", 1],
     ["// fetch(url)\nconst note = 'fetch(url)'; const pattern = /fetch\\(/;", 0],
   ] as const)("discovers global fetch aliases without confusing local or inert syntax: %s", (source, count) => {
     expect(findBareFetchCalls(source)).toHaveLength(count);
@@ -124,6 +127,51 @@ describe("provider resilience checker", () => {
       });
 
       expect(report.violations.map((violation) => violation.kind)).toContain("direct-fetch-not-allowed");
+    });
+  });
+
+  it("still scans a bare fetch spelled with a unicode escape", () => {
+    withTempRepo("pharos-provider-resilience", {
+      "worker/src/escaped.ts": "export async function run() { return \\u0066etch(url); }",
+    }, (cwd) => {
+      const report = scanProviderResilience({
+        cwd,
+        registry: [],
+        requiredFamilies: [],
+        directFetchRoots: ["worker/src"],
+      });
+
+      expect(report.violations.map((violation) => violation.kind)).toContain("unregistered-direct-fetch");
+    });
+  });
+
+  // One shared program resolves `fetch` in every scanned module to a global
+  // augmentation declared elsewhere, so symbol presence must not read as a local
+  // shadow. The per-file checker never sees the augmentation and always finds
+  // the call; the scan has to agree.
+  it("keeps finding bare fetch when another scanned module augments the global", () => {
+    const files = {
+      "worker/src/global-fetch.d.ts": "declare global { var fetch: (input: string) => Promise<Response>; }\nexport {};\n",
+      "worker/src/one.ts": 'export async function one() { return fetch("https://example.test/one"); }',
+      "worker/src/two.ts": 'export async function two() { return fetch("https://example.test/two"); }',
+    };
+    withTempRepo("pharos-provider-resilience", files, (cwd) => {
+      for (const file of ["worker/src/one.ts", "worker/src/two.ts"]) {
+        expect(findBareFetchCalls(readFileSync(join(cwd, file), "utf8"), file)).toHaveLength(1);
+      }
+      const report = scanProviderResilience({
+        cwd,
+        registry: [],
+        requiredFamilies: [],
+        directFetchRoots: ["worker/src"],
+      });
+
+      expect(report.violations
+        .map((violation) => `${violation.kind}:${violation.file}:${violation.line}`)
+        .sort()).toEqual([
+        "unregistered-direct-fetch:worker/src/one.ts:1",
+        "unregistered-direct-fetch:worker/src/two.ts:1",
+      ]);
     });
   });
 

@@ -54,20 +54,20 @@ import {
  */
 
 /** One cache row per lane; the store is the certificate authority, this is the attempt log. */
-export const LANE_SCREENING_ATTEMPT_CACHE_PREFIX = "v9:lane-screening:attempt:v1:";
+const LANE_SCREENING_ATTEMPT_CACHE_PREFIX = "v9:lane-screening:attempt:v1:";
 
 /** Per-invocation lane cap. Eight lanes bound a run to at most 8 x 34 RPC batches. */
-export const LANE_SCREENING_MAX_LANES_PER_INVOCATION = 8;
+const LANE_SCREENING_MAX_LANES_PER_INVOCATION = 8;
 /** A lane is not re-attempted inside this window, which makes a rerun of the same slot a no-op. */
-export const LANE_SCREENING_REFRESH_INTERVAL_SEC = 60 * 60;
+const LANE_SCREENING_REFRESH_INTERVAL_SEC = 60 * 60;
 /** First failure backoff; consecutive failures double it up to the ceiling. */
-export const LANE_SCREENING_FAILURE_BACKOFF_SEC = 6 * 60 * 60;
-export const LANE_SCREENING_MAX_FAILURE_BACKOFF_SEC = 24 * 60 * 60;
+const LANE_SCREENING_FAILURE_BACKOFF_SEC = 6 * 60 * 60;
+const LANE_SCREENING_MAX_FAILURE_BACKOFF_SEC = 24 * 60 * 60;
 /** The screener's own page cap x its default page span: one chained certificate per invocation. */
 export const LANE_SCREENING_MAX_BLOCKS_PER_CERTIFICATE =
   LANE_ADMIN_EVENT_MAX_LOG_PAGES * LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS;
 /** Per-batch RPC timeout passed to the screener and to the finalized-head read. */
-export const LANE_SCREENING_RPC_TIMEOUT_MS = 10_000;
+const LANE_SCREENING_RPC_TIMEOUT_MS = 10_000;
 /** D1's bound-parameter limit for one cache read. */
 const ATTEMPT_READ_BATCH_SIZE = 100;
 const MAX_DETAIL_LENGTH = 240;
@@ -87,7 +87,7 @@ export interface LaneScreeningDescriptor {
   provenance: { controlIds: readonly string[] };
 }
 
-export const LaneScreeningAttemptSchema = z
+const LaneScreeningAttemptSchema = z
   .object({
     subjectDeploymentKey: z.string().min(3).max(256),
     attemptedAtSec: z.number().int().nonnegative(),

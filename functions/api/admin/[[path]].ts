@@ -156,7 +156,20 @@ async function requireValidOpsUiJwt(request: Request, env: OpsAdminProxyEnv): Pr
   return identity?.email ?? jsonError(401, "Unauthorized");
 }
 
-function requireSameOriginForMutatingRequest(request: Request, env: OpsAdminProxyEnv): Response | null {
+/**
+ * Reject browser requests initiated by another site. Access authentication
+ * only proves the session is valid, not who initiated the request: a GET
+ * carries no `Origin`, so the mutating-only rule used to admit blind
+ * cross-site reads under the operator's Access cookie. `Sec-Fetch-Site` is
+ * browser-set and page script cannot forge it; `none` is a user-initiated
+ * navigation (address bar, bookmark). Absent means a non-browser client,
+ * which cannot present the operator's Access session.
+ */
+function requireSameOriginEvidence(request: Request, env: OpsAdminProxyEnv): Response | null {
+  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.trim().toLowerCase();
+  if (secFetchSite && secFetchSite !== "same-origin" && secFetchSite !== "none") {
+    return jsonError(403, "Forbidden");
+  }
   if (!MUTATING_METHODS.has(request.method)) {
     return null;
   }
@@ -231,8 +244,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
       }
       verifiedActor = authResult;
 
-      const originError = requireSameOriginForMutatingRequest(request, env);
-      return originError;
+      return requireSameOriginEvidence(request, env);
     },
     buildUpstreamRequest: ({ request, env }, upstreamPath) => {
       const upstreamHeaders = buildUpstreamHeaders(request, env, verifiedActor);

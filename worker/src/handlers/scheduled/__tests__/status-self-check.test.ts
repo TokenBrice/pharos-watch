@@ -36,6 +36,7 @@ import type { DexRefreshSummary } from "../../../cron/sync-stablecoins/price-dex
 const dexRefreshSummary = (overrides: Partial<DexRefreshSummary> = {}): DexRefreshSummary => ({
   cohortSize: 0, resolved: 0, attemptedBatches: 0, deferredBatches: 0, unsupportedAssets: 0, missingQuotes: 0,
   acknowledgedGapsSkipped: 0, hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [],
+  assetDiagnostics: [], assetDiagnosticsTruncated: 0, providerDiagnostics: [],
   addressRefresh: { enabled: false, cohortSize: 0, targetCount: 0, resolved: 0, attemptedRequests: 0,
     successfulRequests: 0, cappedTargets: 0, failureClasses: [], circuitOpen: false, timedOut: false },
   contractRefresh: { cohortSize: 0, resolved: 0, failedPasses: [], timedOut: false },
@@ -105,7 +106,8 @@ describe("hourly corroboration before the next publication", () => {
     // queued behind it would never start. They must finish while it runs.
     let observersDoneBeforeSelfCheck = false;
     mocks.runStatusSelfCheck.mockImplementationOnce(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      // A macrotask yield lets the observers' chains start without a real delay.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       observersDoneBeforeSelfCheck = mocks.runDataInvariantCanary.mock.calls.length === 1
         && mocks.runCronSentinel.mock.calls.length === 1;
       return { status: "ok", itemCount: 1 };
@@ -208,8 +210,20 @@ describe("hourly corroboration before the next publication", () => {
     expect(JSON.stringify(mocks.recordBudgetSurfaceTelemetry.mock.calls)).not.toContain("secret-token");
   });
 
-  it.each([24])("refreshes DEX only on minute %s", async (minute) => {
-    await runStatusSelfCheckSlot(runtime([], minute));
+  it("records price-corroboration under its budget-only producer identity", async () => {
+    await runStatusSelfCheckSlot(runtime([]));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "price-corroboration",
+      producer: expect.objectContaining({
+        scheduleKey: "statusSelfCheckOffset",
+        job: "price-corroboration",
+        producerKind: "budget-only",
+      }),
+    }));
+  });
+
+  it("refreshes DEX only on minute 24", async () => {
+    await runStatusSelfCheckSlot(runtime([], 24));
     expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();
     expect(mocks.runPriceDexRefresh).toHaveBeenCalledOnce();
     expect(mocks.logCronEvent).toHaveBeenCalledOnce();

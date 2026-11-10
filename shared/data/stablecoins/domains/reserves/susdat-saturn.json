@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "STRCon note tracking Strategy Stretch Preferred (STRC)",
-      "pct": 97.13783495941495,
+      "pct": 99.67433616692452,
       "risk": "high",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Ondo Global Markets (BVI) Limited structured note; underlying preferred-equity obligor Strategy Inc.",
@@ -22,7 +22,7 @@
     },
     {
       "name": "USDat cash buffer held by the Saturn sUSDat vault",
-      "pct": 2.8621650405850545,
+      "pct": 0.3256638330754822,
       "risk": "low",
       "coinId": "usdat-saturn",
       "depType": "collateral",
@@ -40,13 +40,17 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-22",
-    "reviewer": "Pharos RESEARCH-BACKING primary-source review",
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c-nd2",
     "confidence": "verified",
-    "compositionAsOf": "2026-10-22",
+    "compositionAsOf": "2026-11-06",
     "scope": "full-composition",
     "knownUnknownExposurePct": 0,
     "sources": [
+      {
+        "label": "Saturn reserve analytics API, token=susdat; updatedAt 2026-11-06T19:59:59.000Z; source-published shares STRCon 0.9967433616692452, USDat 0.003256638330754822, legacy mirror STRC 0",
+        "url": "https://app.saturn.credit/api/analytics/reserves"
+      },
       {
         "label": "Pinned Ethereum complete native reserve census; observed 2026-10-22T13:14:59.648Z",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
@@ -76,14 +80,14 @@
         "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview/staking-and-unstaking-process.md"
       }
     ],
-    "rationale": "Genuine new whole-direct-reserve review on 2026-10-22; prior reserve review was 2026-10-15 at block 26197300 and is historical, not redated evidence. At Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z, the proxy implementation is 0x2b7074cf6681382b70e239063931ebe83c0f4e0a, asset is USDat 0x23238f20b894f29041f48d88ee91131c395aaa71, strconModule is 0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf and strcMirrorModule is 0xa2cf4b9410cebcdceb3cff772ac0219f6d1105c9. USDat balance and usdatBalance both equal 1416916359311 raw six-decimal units; STRCon recognizedValue is 48088138004059, legacy mirror recognizedValue and unvested surplus are zero. Their sum equals totalAssets exactly: 49505054363370 raw USDat-equivalent units. STRConModule.asset is 0xecabe1ff8a9e1dc55899cf58dac8497ece5ae84c and recorded STRCon balance and actual STRCon balanceOf(vault) both equal 455761492007155946840568 raw units; the actual-token read was observed 2026-10-22T13:17:48.783Z. Percentages are calculated from that exact operational accounting, not dashboard rounding. This proves native onchain composition, not offchain security sufficiency, executed Saturn legal rights, seniority, recovery or guaranteed liquidity. All existing adverse/C mechanism constraints are retained; no finite STRCon-note maturity or realization deadline is established.",
-    "compositionBasis": "Complete fixed-module Ethereum operational book: actual USDat plus STRCon recognizedValue, reconciled exactly to totalAssets plus zero unvested surplus at block 26248000",
+    "rationale": "Genuine new whole-direct-reserve review on 2026-10-22; prior reserve review was 2026-10-15 at block 26197300 and is historical, not redated evidence. At Ethereum block 26248000, hash 0xa0e29bc4e36526c9587442208ab78842dc095171147ad5f454f39a3fc7573703, 2026-10-22T11:57:35Z, the proxy implementation is 0x2b7074cf6681382b70e239063931ebe83c0f4e0a, asset is USDat 0x23238f20b894f29041f48d88ee91131c395aaa71, strconModule is 0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf and strcMirrorModule is 0xa2cf4b9410cebcdceb3cff772ac0219f6d1105c9. USDat balance and usdatBalance both equal 1416916359311 raw six-decimal units; STRCon recognizedValue is 48088138004059, legacy mirror recognizedValue and unvested surplus are zero. Their sum equals totalAssets exactly: 49505054363370 raw USDat-equivalent units. STRConModule.asset is 0xecabe1ff8a9e1dc55899cf58dac8497ece5ae84c and recorded STRCon balance and actual STRCon balanceOf(vault) both equal 455761492007155946840568 raw units; the actual-token read was observed 2026-10-22T13:17:48.783Z. Percentages are calculated from that exact operational accounting, not dashboard rounding. This proves native onchain composition, not offchain security sufficiency, executed Saturn legal rights, seniority, recovery or guaranteed liquidity. All existing adverse/C mechanism constraints are retained; no finite STRCon-note maturity or realization deadline is established. New full-composition source observation, reviewed 2026-11-06: the issuer reserve analytics API updatedAt 2026-11-06T19:59:59.000Z explicitly publishes STRCon amount 37198269.503577 with share 0.9967433616692452, USDat amount 121537.112723 with share 0.003256638330754822, and legacy mirror STRC amount 0 with share 0 for token=susdat. These source-published shares replace the historical October 22 weights after exact unit conversion to percentage points; no allocation ratio, rounding or normalization is introduced. The STRCon share is higher and the USDat buffer smaller than in the historical review; this source does not establish independent financial assurance or improve the unchanged legal, custody, maturity or realization constraints.",
+    "compositionBasis": "Saturn reserve analytics API complete token=susdat roster, updatedAt 2026-11-06T19:59:59.000Z: STRCon share 0.9967433616692452, USDat share 0.003256638330754822 and legacy mirror STRC share 0. Percentages are exact source-published fractions converted to percentage points, without normalization or dashboard rounding. The October 22 on-chain census described in the rationale remains historical evidence.",
     "knownUnknownExposure": "Zero unidentified operational NAV exposure; STRCon note terms, offchain reconciliation, Saturn-layer priority, default recovery and realizable liquidity remain unestablished. Ondo family legal safeguards do not establish equivalent sUSDat-holder rights.",
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "STRCon note tracking Strategy Stretch Preferred (STRC)",
-        "pct": 97.13783495941495,
+        "pct": 99.67433616692452,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Exact untracked Ondo structured note, whose issuer is Ondo Global Markets (BVI) Limited and underlying exposure is Strategy preferred equity. No invented catalog edge or direct STRC ownership is asserted; Saturn-holder legal/recovery constraints remain."
       }

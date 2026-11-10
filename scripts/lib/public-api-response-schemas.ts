@@ -91,6 +91,10 @@ export const StablecoinSummaryResponseSchema = z.object({
   priceUsd: z.number().nullable(),
   priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable(),
+  /** Source observation clock; null when no observed quote was published. */
+  priceObservedAt: z.number().nullable(),
+  priceSyncedAt: z.number().nullable(),
+  priceUpdatedAt: z.number().nullable(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
   nominalPriceReference: NominalPriceReferenceSchema.optional(),
   priceDerivation: PriceDerivationSchema.optional(),

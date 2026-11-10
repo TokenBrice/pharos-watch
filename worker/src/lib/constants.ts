@@ -3,6 +3,7 @@ import {
   DEPEG_THRESHOLD_BPS_NON_USD,
   DEPEG_RECOVERY_THRESHOLD_RATIO,
 } from "@shared/lib/depeg-config";
+import { CRON_INTERVALS, DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-jobs";
 
 /** Maximum open depeg events materialized by one detection, confirmation, or orphan-cleanup pass. */
 export const MAX_OPEN_DEPEG_EVENTS = 200;
@@ -25,10 +26,12 @@ export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;
 
 /**
  * UI-facing peg-summary DEX price check freshness window.
- * Dex liquidity sync runs every 30 minutes, so this allows one missed slot
- * before hiding the DEX cross-check column data.
+ * `dex_prices.updated_at` is stamped with the hourly DEX source-stage clock,
+ * so allow two producer intervals plus the stage lead before hiding the DEX
+ * cross-check column data.
  */
-export const DEX_PRICE_CHECK_FRESHNESS_SEC = 3600;
+export const DEX_PRICE_CHECK_FRESHNESS_SEC =
+  CRON_INTERVALS["sync-dex-liquidity"] * 2 + DEX_LIQUIDITY_STAGE_LEAD_SEC;
 
 /** Minimum aggregate DEX source TVL required before showing a UI-facing DEX price check. */
 export const DEX_PRICE_CHECK_UI_MIN_TVL_USD = 250_000;

@@ -41,6 +41,7 @@ import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { shouldRetainCurveCompositePoolIdentity } from "@shared/lib/curve-composite-policies";
 import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./defillama-v4-identity";
+import { recordPoolRejection } from "./process-pools";
 import { requirePoolIdentity } from "./process-pool-admission-identity";
 import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessingRejection } from "./process-pool-types";
 import { attachReviewedQuoterV2SourcePoolIdentities } from "./pool-identity";
@@ -100,16 +101,17 @@ export interface PrimaryPoolCompactionResult {
   rejectedPoolCount: number;
   rejectedPoolTvlUsd: number;
   rejectedPoolIds: string[];
+  rejections: PoolProcessingRejection[];
 }
 
-export function compactPrimaryPoolsForTrackedStablecoins(
+function compactPrimaryPoolsForTrackedStablecoins(
   pools: LlamaPool[],
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
 ): PrimaryPoolCompactionResult {
   const retainedPools: LlamaPool[] = [];
   let rejectedPoolCount = 0;
   let rejectedPoolTvlUsd = 0;
-  const rejectedPoolIds: string[] = [];
+  const rejectionMap = new Map<string, PoolProcessingRejection>();
   for (const pool of pools) {
     try {
       requirePoolIdentity(pool);
@@ -118,13 +120,10 @@ export function compactPrimaryPoolsForTrackedStablecoins(
       }
     } catch (error) {
       if (!(error instanceof ExpectedPoolInputError)) throw error;
+      recordPoolRejection(rejectionMap, pool, error, lookups);
       rejectedPoolCount++;
       if (typeof pool?.tvlUsd === "number" && Number.isFinite(pool.tvlUsd) && pool.tvlUsd > 0) {
         rejectedPoolTvlUsd += pool.tvlUsd;
-      }
-      const poolId = typeof pool?.pool === "string" ? pool.pool : "unknown";
-      if (rejectedPoolIds.length < POOL_REJECTION_POOL_ID_LIMIT && !rejectedPoolIds.includes(poolId)) {
-        rejectedPoolIds.push(poolId);
       }
       continue;
     }
@@ -137,7 +136,8 @@ export function compactPrimaryPoolsForTrackedStablecoins(
     skippedUntrackedCount: pools.length - retainedPools.length - rejectedPoolCount,
     rejectedPoolCount,
     rejectedPoolTvlUsd,
-    rejectedPoolIds,
+    rejectedPoolIds: [...new Set([...rejectionMap.values()].flatMap((row) => row.poolIds))].slice(0, POOL_REJECTION_POOL_ID_LIMIT),
+    rejections: [...rejectionMap.values()],
   };
 }
 
@@ -231,12 +231,7 @@ export async function fetchDataSources(
 
           const compacted = compactPrimaryPoolsForTrackedStablecoins(rawPools, lookups);
           if (compacted.rejectedPoolCount > 0) {
-            poolRejections.push({
-              reason: "invalid-pool-identity",
-              poolIds: compacted.rejectedPoolIds,
-              count: compacted.rejectedPoolCount,
-              tvlUsd: compacted.rejectedPoolTvlUsd,
-            });
+            poolRejections.push(...compacted.rejections);
           }
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
           pools = compacted.pools;

@@ -40,15 +40,15 @@ export class PaxosDiscoveryError extends Error {
 
 /**
  * Discover the volatile main-module filename each run, bind the reviewed page
- * module identity, then read the page's report-selection list (every literal
- * `file` report URL). Cosmetic page churn is admitted; the reviewed report must
+ * module identity, then read the page's report-selection list (literal `file`
+ * or month report URLs). Cosmetic page churn is admitted; the reviewed report must
  * stay listed, and an entry outside the reviewed archive is a newer unreviewed
  * report. Exact PDF identity remains separately pinned by the manifest.
  */
 export interface PaxosProductBinding {
   /** Reviewed Framer site origin serving the main and page modules. */
   siteOrigin: string;
-  /** Official route the index page is served at, e.g. `/pyusd-transparency`. */
+  /** Official route the index page is served at, e.g. `/transparency/pyusd`. */
   routePath: string;
   /** Reviewed Framer page identifier; not a guarantee about the fetched body. */
   pageModuleId: string;
@@ -61,17 +61,18 @@ function paxosReportDate(product: PaxosProduct, href: string): string | null {
   return href === manifest.reportUrl ? manifest.reportDate : null;
 }
 
-const PAXOS_FRAMER_SITE_ORIGIN = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl";
+const PAXOS_FRAMER_SITE_ORIGIN = "https://framerusercontent.com/sites/3LisDBBNdK504GXe51PoGF";
 
 // Only reviewed products are registered; absent products fail closed.
 const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { binding: PaxosProductBinding; profile: IndependentAssuranceProfile }>> = {
   PAXG: {
     // Reviewed 2026-10-27: official route and September 30 KPMG report selection
     // (Exhibit A adds a 235-token Base column beside Ethereum, Solana and Robinhood).
+    // Reviewed 2026-11-04: script_main.JHWnvNrQ -> XxY0esLV2L37QMcfpTbY3mX7rJ1xD_tTnPI8cztHho0.DCYmf5Zw.mjs; same report asset.
     binding: {
       siteOrigin: PAXOS_FRAMER_SITE_ORIGIN,
-      routePath: "/paxg-transparency",
-      pageModuleId: "9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU",
+      routePath: "/transparency/paxg",
+      pageModuleId: "XxY0esLV2L37QMcfpTbY3mX7rJ1xD_tTnPI8cztHho0",
       reviewedReportAssetIds: PAXOS_REVIEWED_REPORT_ARCHIVE.PAXG,
     },
     profile: {
@@ -96,10 +97,11 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { binding: PaxosProductBindin
   PYUSD: {
     // Reviewed September 2026 year-specific open variants on 2026-10-27
     // (Exhibit A adds a Stable chain column).
+    // Reviewed 2026-11-04: script_main.JHWnvNrQ -> hvQ2ClCUy80JuCQ8DW0rPlTdwALgwC46CwKznbqVAT0.CPA3W5Z-.mjs; same report asset.
     binding: {
       siteOrigin: PAXOS_FRAMER_SITE_ORIGIN,
-      routePath: "/pyusd-transparency",
-      pageModuleId: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM",
+      routePath: "/transparency/pyusd",
+      pageModuleId: "hvQ2ClCUy80JuCQ8DW0rPlTdwALgwC46CwKznbqVAT0",
       reviewedReportAssetIds: PAXOS_REVIEWED_REPORT_ARCHIVE.PYUSD,
     },
     profile: {
@@ -117,10 +119,11 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { binding: PaxosProductBindin
   USDG: {
     // Reviewed 2026-10-24: September 2026 y397A2bek / MyKpGtOFv / LghKhDIKj
     // overrides all select SKxH..., examined September 17 and 30, signed October 23.
+    // Reviewed 2026-11-04: script_main.JHWnvNrQ -> DIAUvcXOB9nOYLw3a2fyfs-NJgh1Sht8DtgV4mAgIZY.adp0H3P0.mjs; same report asset.
     binding: {
       siteOrigin: PAXOS_FRAMER_SITE_ORIGIN,
-      routePath: "/usdg-transparency",
-      pageModuleId: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo",
+      routePath: "/transparency/usdg",
+      pageModuleId: "DIAUvcXOB9nOYLw3a2fyfs-NJgh1Sht8DtgV4mAgIZY",
       reviewedReportAssetIds: PAXOS_REVIEWED_REPORT_ARCHIVE.USDG,
     },
     profile: {
@@ -137,10 +140,11 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { binding: PaxosProductBindin
   },
   USDP: {
     // Reviewed September 2026 year-specific open variants on 2026-10-27.
+    // Reviewed 2026-11-04: script_main.JHWnvNrQ -> pa_gfhekxTj99VUC6AmRAHCHBeVfp34Y82lKPKjcwRM.BBCIx3bI.mjs; same report asset.
     binding: {
       siteOrigin: PAXOS_FRAMER_SITE_ORIGIN,
-      routePath: "/usdp-transparency",
-      pageModuleId: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM",
+      routePath: "/transparency/usdp",
+      pageModuleId: "pa_gfhekxTj99VUC6AmRAHCHBeVfp34Y82lKPKjcwRM",
       reviewedReportAssetIds: PAXOS_REVIEWED_REPORT_ARCHIVE.USDP,
     },
     profile: {
@@ -416,16 +420,18 @@ function discoverPaxosRouteImport(source: string, routePath: string): string {
 }
 
 const PAXOS_REPORT_URL_PATTERN = /^https:\/\/framerusercontent\.com\/assets\/([A-Za-z0-9]+)\.pdf$/;
+// The migrated Attestation Reports component takes literal month URLs in `years`.
+const PAXOS_REPORT_PROPERTY_PATTERN = /^(?:file|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)$/;
 
 const FRAMER_ASSET_MARKER = "framerusercontent.com/assets";
 const PAXOS_FONT_ASSET_PATTERN = /^https:\/\/framerusercontent\.com\/assets\/[A-Za-z0-9]+\.woff2$/;
 
 /**
  * Read the ordered, de-duplicated report-selection list by whitelist. The only
- * accepted report definition is a plain literal `file:"<Framer PDF asset URL>"`
- * property in an object whose only spreads are Framer's literal variant-override
- * calls (`...q({variant:{file:...}},...)`). Anything else that could define or
- * override a report link is unrecognized: any other `file` occurrence (member,
+ * accepted report definition is a plain literal `file` or three-letter month
+ * property with a Framer PDF asset URL in an object whose only spreads are
+ * Framer's literal variant-override calls (`...q({variant:{file:...}},...)`). Anything else that could define or
+ * override a report link is unrecognized: any other report-key occurrence (member,
  * quoted, accessor, method or shorthand), computed or escaped keys, escaped
  * identifiers, `"file"`/escaped/concatenated computed members, dynamic
  * imports, and any Framer asset text outside an accepted literal (comments,
@@ -451,7 +457,7 @@ export function readPaxosReportSelection(source: string): string[] {
         if (isPropertyStart(previous)) throw unrecognized("computed object property key in product page module");
         const key = tokens[index + 1];
         const member = previous?.kind === "identifier" || previous?.value === ")" || previous?.value === "]";
-        if (member && key?.kind === "literal" && (!key.plain || key.value === "file" || tokens[index + 2]?.value !== "]")) {
+        if (member && key?.kind === "literal" && (!key.plain || PAXOS_REPORT_PROPERTY_PATTERN.test(key.value) || tokens[index + 2]?.value !== "]")) {
           throw unrecognized("escaped, report-named or concatenated computed member");
         }
       }
@@ -472,14 +478,14 @@ export function readPaxosReportSelection(source: string): string[] {
       continue;
     }
     if (token.kind === "literal") {
-      if (token.value === "file") throw unrecognized("quoted report file key or member");
+      if (PAXOS_REPORT_PROPERTY_PATTERN.test(token.value)) throw unrecognized("quoted report key or member");
       if (!token.plain && isPropertyStart(previous) && tokens[index + 1]?.value === ":") {
         throw unrecognized("escaped object property key in product page module");
       }
       if (token.plain && PAXOS_FONT_ASSET_PATTERN.test(token.value)) acceptedAssetText++;
       continue;
     }
-    if (token.value !== "file") continue;
+    if (!PAXOS_REPORT_PROPERTY_PATTERN.test(token.value)) continue;
     const value = tokens[index + 2];
     const end = tokens[index + 3];
     if (!isPropertyStart(previous) || tokens[index + 1]?.value !== ":" || value?.kind !== "literal" || !value.plain ||
@@ -540,6 +546,12 @@ export async function verifyPaxosDiscovery(
   const mainResponse = await fetchTextResponseWithRetry(mainUrl.href, signal, 10_000, ctx, {
     maxRetries: 0,
     maxResponseBytes: 1024 * 1024,
+    validateResponse: (res) => {
+      const finalUrl = res.url || mainUrl.href;
+      if (finalUrl !== mainUrl.href) {
+        throw new PaxosDiscoveryError("main-module-response-drifted", `main module redirected to ${finalUrl}`);
+      }
+    },
   });
   if (mainResponse.finalUrl !== mainUrl.href) {
     throw new PaxosDiscoveryError("main-module-response-drifted", `main module redirected to ${mainResponse.finalUrl}`);
@@ -566,6 +578,12 @@ export async function verifyPaxosDiscovery(
     // Product page modules embed the full month archive across locales and run
     // 250-670 KB today (USDP is the largest), so cap above that headroom.
     maxResponseBytes: 2 * 1024 * 1024,
+    validateResponse: (res) => {
+      const finalUrl = res.url || pageModuleUrl;
+      if (finalUrl !== pageModuleUrl) {
+        throw new PaxosDiscoveryError("page-module-response-drifted", `page module redirected to ${finalUrl}`);
+      }
+    },
   });
   if (pageResponse.finalUrl !== pageModuleUrl) {
     throw new PaxosDiscoveryError("page-module-response-drifted", `page module redirected to ${pageResponse.finalUrl}`);

@@ -3,6 +3,7 @@ import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DexAmmExecutionToken, StablecoinData } from "@shared/types/market";
 import {
@@ -12,6 +13,7 @@ import {
 
 export interface TrackedStablecoinMaps {
   stablecoinPriceById: Map<string, number>;
+  primaryPriceById: Map<string, number>;
   stablecoinMcapById: Map<string, number>;
   stablecoinPriceProvenanceById: Map<string, Required<Pick<DexAmmExecutionToken, "referencePriceSourceId" | "referencePriceObservedAt">>>;
 }
@@ -47,12 +49,22 @@ export async function loadTrackedStablecoinMaps(
   syncStartSec: number,
 ): Promise<TrackedStablecoinMaps> {
   const stablecoinPriceById = new Map<string, number>();
+  const primaryPriceById = new Map<string, number>();
   const stablecoinMcapById = new Map<string, number>();
   const stablecoinPriceProvenanceById: TrackedStablecoinMaps["stablecoinPriceProvenanceById"] = new Map();
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
   if (hasUsableStablecoinsPayload(stablecoinsCache)) {
     let skippedWeakTrackedPrices = 0;
     for (const asset of stablecoinsCache.payload.peggedAssets) {
+      const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
+      // A comparison anchor never values a quote token or supplies corroboration.
+      if (isObservedPrice(asset) && asset.price != null && Number.isFinite(asset.price) && asset.price > 0 &&
+        asset.priceSource && asset.priceSource !== "cached" &&
+        (asset.priceConfidence === "single-source" || asset.priceConfidence === "high") &&
+        Number.isSafeInteger(observedAt) && observedAt! > 0 && observedAt! <= syncStartSec &&
+        syncStartSec - observedAt! <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
+        primaryPriceById.set(asset.id, asset.price);
+      }
       if (
         asset.price != null &&
         Number.isFinite(asset.price) &&
@@ -64,7 +76,6 @@ export async function loadTrackedStablecoinMaps(
         )
       ) {
         stablecoinPriceById.set(asset.id, asset.price);
-        const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
         if (asset.priceSource && Number.isSafeInteger(observedAt) && observedAt! > 0 &&
           observedAt! <= syncStartSec && syncStartSec - observedAt! <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
           stablecoinPriceProvenanceById.set(asset.id, {
@@ -91,5 +102,5 @@ export async function loadTrackedStablecoinMaps(
     );
   }
 
-  return { stablecoinPriceById, stablecoinMcapById, stablecoinPriceProvenanceById };
+  return { stablecoinPriceById, primaryPriceById, stablecoinMcapById, stablecoinPriceProvenanceById };
 }

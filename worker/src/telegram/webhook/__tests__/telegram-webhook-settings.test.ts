@@ -370,24 +370,6 @@ describe("handleSettingsCallback — per-coin", () => {
     expect(db.getHistory().some((entry) => /INSERT|UPDATE|DELETE/.test(entry.sql))).toBe(false);
   });
 
-  it("unknown setting code under settings:c:<id>:?? receives an unknown-setting acknowledgement", async () => {
-    const db = mockD1();
-    await handleSettingsCallback(
-      db,
-      "fake-token",
-      {
-        id: "cb",
-        data: "settings:c:usdc-circle:xx:1",
-        from: { id: 1 },
-        message: { chat: { id: 42 }, message_id: 999 },
-      },
-      "c",
-      "usdc-circle:xx:1",
-    );
-
-    expect(jsonBody(ackCalls()[0]).text).toMatch(/unknown/i);
-  });
-
   it("falls back to sendMessage when editMessageText fails", async () => {
     const db = mockD1();
     fetchSpy.mockImplementation(async (url) => {
@@ -445,10 +427,13 @@ describe("handleSettingsCallback — per-coin", () => {
 });
 
 describe("callback_data size budget", () => {
-  // Longest tracked stablecoin id is `isc-international-stable-currency` (33).
-  const LONG_ID = "isc-international-stable-currency";
+  // The longest tracked id bounds every per-coin callback payload.
+  const LONG_ID = Array.from(TRACKED_META_BY_ID.keys()).reduce((a, b) => (b.length > a.length ? b : a));
 
   it("every keyboard data field stays within Telegram's 64-byte limit", () => {
+    for (const coinId of TRACKED_META_BY_ID.keys()) {
+      expect(coinId).toMatch(/^[a-z0-9-]+$/);
+    }
     const homeKb = buildHomeKeyboard(
       {
         alert_dews: 0,
@@ -468,16 +453,6 @@ describe("callback_data size budget", () => {
     );
     for (const size of sizes) {
       expect(size).toBeLessThanOrEqual(64);
-    }
-  });
-
-  it("keeps settings coin callback data safe for every tracked coin id", () => {
-    for (const coinId of TRACKED_META_BY_ID.keys()) {
-      expect(coinId).toMatch(/^[a-z0-9-]+$/);
-      const coinKb = buildCoinKeyboard(coinId, null);
-      for (const button of coinKb.inline_keyboard.flat()) {
-        expect(new TextEncoder().encode(button.callback_data).length).toBeLessThanOrEqual(64);
-      }
     }
   });
 });

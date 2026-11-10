@@ -4,7 +4,7 @@
     {
       "sourceKey": "reservoir:usdc",
       "name": "USDC positions",
-      "pct": 41.65844718130937,
+      "pct": 53.830395468729755,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -22,7 +22,7 @@
     {
       "sourceKey": "reservoir:usd1",
       "name": "USD1 lending markets",
-      "pct": 31.655365107742945,
+      "pct": 24.32628026852252,
       "risk": "medium",
       "coinId": "usd1-world-liberty-financial",
       "depType": "collateral",
@@ -40,7 +40,7 @@
     {
       "sourceKey": "reservoir:ausd",
       "name": "AUSD lending markets",
-      "pct": 17.84495268906073,
+      "pct": 16.677856038966468,
       "risk": "medium",
       "coinId": "ausd-agora",
       "depType": "collateral",
@@ -58,7 +58,7 @@
     {
       "sourceKey": "reservoir:gauntlet-usdg-premium",
       "name": "USDG deposited in Morpho Gauntlet USDG Premium vault",
-      "pct": 5.183559432958626,
+      "pct": 2.664356591801944,
       "risk": "high",
       "coinId": "usdg-paxos",
       "depType": "collateral",
@@ -74,24 +74,27 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "sourceKey": "reservoir:unknown",
-      "name": "Morpho Steakhouse USDG Pro vault receipt (unmapped reservoir adapter bucket)",
-      "pct": 1.5878916334750728,
+      "sourceKey": "reservoir:steakhouse-usdg-pro",
+      "name": "USDG deposited in Morpho Steakhouse USDG Pro vault",
+      "pct": 0.676978347627514,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Morpho Steakhouse USDG Pro vault (identity not reviewed)",
+      "issuerOrObligor": "Paxos (USDG) via Morpho Steakhouse USDG Pro vault on Arbitrum",
       "riskFactors": [
         "credit",
         "counterparty",
         "liquidity",
-        "smart-contract"
+        "smart-contract",
+        "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "coinId": "usdg-paxos",
+      "depType": "collateral"
     },
     {
       "sourceKey": "reservoir:agua",
       "name": "Agua Global Carry Vault (USDC-denominated ERC-4626)",
-      "pct": 1.3500047359036067,
+      "pct": 1.8241220335010542,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -103,7 +106,7 @@
     {
       "sourceKey": "reservoir:gho",
       "name": "GHO lending markets",
-      "pct": 0.7197792195496548,
+      "pct": 1.1250850745292426e-05,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "collateral",
@@ -119,8 +122,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-29",
-    "reviewer": "RenewComp3 Reservoir raw-reserves refresh 2026-10-29",
+    "reviewedAt": "2026-11-04",
+    "reviewer": "Pharos issue #1707 exact USDG-vault review 2026-11-04",
     "confidence": "verified",
     "sources": [
       {
@@ -146,23 +149,27 @@
       {
         "label": "Verified Sentora PRIME vault constructor (_asset = native Ethereum PYUSD)",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xC21b08C16458202593D4D9B26b9984Ee67b38BbD"
+      },
+      {
+        "label": "Reservoir raw reserves API captured 2026-11-04T22:01:31Z; timestamp-less issuer balance sheet",
+        "url": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw"
+      },
+      {
+        "label": "Arbitrum Dwellir pinned vault asset() and Reservoir adapter balanceOf() reads at block 521297920 (2026-11-04T21:57:16Z)",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Morpho exact Steakhouse USDG Pro vault on Arbitrum",
+        "url": "https://app.morpho.org/arbitrum/vault/0xbeeff72b77e7584a450e887125f25e8d8819016a/steakhouse-usdg-pro"
       }
     ],
-    "rationale": "The configured raw reserves API fetched 2026-10-29 reports totalAssets $115,828,521.96902596717579039 and totalLiabilities $115,580,352.796182594109878244. All positive rows are retained at unrounded precision and normalized through the reviewed adapter bucket rules: USDC positions 41.65844718130937%, USD1 lending markets 31.655365107742945%, AUSD lending markets 17.84495268906073%, USDG deposited in the Morpho Gauntlet USDG Premium vault 5.183559432958626% ($6,004,040.276582, Arbitrum vault 0x390c1bb01f3f627144a40617e287d4ce3d5abcfa), Agua Global Carry Vault 1.3500047359036067%, and GHO lending markets 0.7197792195496548%. The previous composition's Morpho Sentora PRIME PYUSD position is no longer present in the issuer balance sheet; no PRIME row was returned, so that slice is withdrawn. A new positive row, Morpho Steakhouse USDG Pro ($1,839,231.409524, Arbitrum vault 0xbeeff72b77e7584a450e887125f25e8d8819016a), has no reviewed adapter category and is retained as a 1.5878916334750728% insufficient-evidence slice rather than mapped by label. USDG is a reviewed bucket with tracked coin usdg-paxos. The $248,169.172843373065912146 equity line is retained as issuer-reported balance-sheet context, not reserve capacity. The issuer payload exposes no source composition timestamp; compositionAsOf is the 2026-10-29 retrieval date, not an issuer period end.",
-    "compositionBasis": "Reservoir raw reserves API fetched 2026-10-29; all totalBalanceValue rows normalized without rounding by the reviewed adapter bucket rules. Sentora PRIME identity joined by Ethereum chainId and exact vault address to the verified constructor; the PRIME row is absent from this snapshot.",
-    "compositionAsOf": "2026-10-29",
+    "rationale": "The raw reserves API captured 2026-11-04T22:01:31Z reports totalAssets $124073600.16780875121112909 and totalLiabilities $123799337.046365292762574656. All positive rows are normalized without rounding through the reviewed adapter categories. Morpho Gauntlet USDG Premium is $3,305,763.144757 (2.664356591801944%) and Morpho Steakhouse USDG Pro is $839,951.408258 (0.676978347627514%). At Arbitrum block 521297920 (hash 0x75165f6a788e538c08918480d9744d30e57b590963d6c62b4f355045e7ed4087, 2026-11-04T21:57:16Z), asset() on both exact vaults returned tracked native USDG 0x004b506865409877c9fa29bfb1eba929984b9bbc; the Steakhouse vault also returned a positive balanceOf() for Reservoir adapter 0x289c204b35859bfb924b9c0759a4fe80f610671c. This establishes the held-vault underlying identity, not its borrower collateral or executable liquidity. The prior unlinked Steakhouse slice is replaced by the exact chain-and-address-keyed USDG collateral mapping. Credit, concentration, smart-contract and unknown liquidity risks remain explicit. The issuer API has no composition timestamp: compositionAsOf is the retrieval date, not a certified issuer period end. Equity $274263.121443458448554434 is balance-sheet context, not reserve capacity. Prior reviewed observation (2026-10-29, retained as history): The configured raw reserves API fetched 2026-10-29 reports totalAssets $115,828,521.96902596717579039 and totalLiabilities $115,580,352.796182594109878244. All positive rows are retained at unrounded precision and normalized through the reviewed adapter bucket rules: USDC positions 41.65844718130937%, USD1 lending markets 31.655365107742945%, AUSD lending markets 17.84495268906073%, USDG deposited in the Morpho Gauntlet USDG Premium vault 5.183559432958626% ($6,004,040.276582, Arbitrum vault 0x390c1bb01f3f627144a40617e287d4ce3d5abcfa), Agua Global Carry Vault 1.3500047359036067%, and GHO lending markets 0.7197792195496548%. The previous composition's Morpho Sentora PRIME PYUSD position is no longer present in the issuer balance sheet; no PRIME row was returned, so that slice is withdrawn. A new positive row, Morpho Steakhouse USDG Pro ($1,839,231.409524, Arbitrum vault 0xbeeff72b77e7584a450e887125f25e8d8819016a), has no reviewed adapter category and is retained as a 1.5878916334750728% insufficient-evidence slice rather than mapped by label. USDG is a reviewed bucket with tracked coin usdg-paxos. The $248,169.172843373065912146 equity line is retained as issuer-reported balance-sheet context, not reserve capacity. The issuer payload exposes no source composition timestamp; compositionAsOf is the 2026-10-29 retrieval date, not an issuer period end.",
+    "compositionBasis": "Reservoir raw reserves API captured 2026-11-04T22:01:31Z; all positive totalBalanceValue rows normalized without rounding by reviewed adapter buckets. Both Arbitrum USDG vault identities independently joined to asset() at block 521297920; the issuer API is not block-pinned or source-timestamped.",
+    "compositionAsOf": "2026-11-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "All captured balance-sheet positions are attributed to reviewed adapter categories except the $1,839,231.409524 Morpho Steakhouse USDG Pro row, which has no reviewed identity and remains an explicit 1.5878916334750728% insufficient-evidence slice. The API retrieval date is not an issuer composition timestamp. Strategy credit, liquidity and custody risks remain with the protocol-position holdings.",
-    "knownUnknownExposurePct": 1.5878916334750728,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 4,
-        "reserveName": "Morpho Steakhouse USDG Pro vault receipt (unmapped reservoir adapter bucket)",
-        "pct": 1.5878916334750728,
-        "disposition": "insufficient-evidence",
-        "rationale": "The raw row label names a Morpho Steakhouse USDG Pro vault, but no reviewed adapter rule, issuer disclosure or verified vault read establishes the held instrument, its backing, or a tracked-economic identity; retain the position as bounded unknown rather than mapping it by label."
-      }
-    ]
+    "knownUnknownExposure": "Every positive captured API row maps to a reviewed adapter category. USDG vault borrower-side collateral, credit, liquidity and custody risks remain within the protocol-position claims; the timestamp-less issuer API does not prove independent freshness.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [

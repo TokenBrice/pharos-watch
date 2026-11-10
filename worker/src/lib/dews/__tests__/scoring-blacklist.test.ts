@@ -4,11 +4,11 @@ import { buildDewsScoringResult } from "../scoring";
 import type { DewsSourceState } from "../contracts";
 import { emptyDewsDependencyDiagnostics } from "./source-state.test-support";
 
-function createAsset(id: string): StablecoinData {
+function createAsset(id: string, symbol = "USDA"): StablecoinData {
   return {
     id,
     name: id,
-    symbol: "USDA",
+    symbol,
     pegType: "peggedUSD",
     price: 1,
     priceConfidence: "high",
@@ -29,7 +29,7 @@ function createSourceState(): DewsSourceState {
     dexPriceStaleIds: new Set(),
     liqHist7dMap: new Map(),
     liqHistRowsRead: 0,
-    blacklistCounts: new Map([["usda-avalon", { count24h: 10, count7d: 10 }]]),
+    blacklistCounts: new Map([["xusd-straitsx", { count24h: 10, count7d: 10 }]]),
     blacklistSourceOk: true,
     prevSignals: new Map(),
     prevSignalStaleIds: new Set(),
@@ -88,23 +88,23 @@ describe("buildDewsScoringResult blacklist attribution", () => {
   it("applies blacklist counts only to the tracker stablecoin id for same-symbol assets", () => {
     const result = buildDewsScoringResult({
       assetById: new Map([
-        ["usda-avalon", createAsset("usda-avalon")],
-        ["usda-anzens", createAsset("usda-anzens")],
+        ["xusd-straitsx", createAsset("xusd-straitsx", "XUSD")],
+        ["xusd-babelfish", createAsset("xusd-babelfish", "XUSD")],
       ]),
       pegRates: {},
       sourceState: createSourceState(),
       registerMalformedPersistedInput: () => {},
     });
 
-    const avalon = result.results.find((row) => row.stablecoinId === "usda-avalon");
-    const anzens = result.results.find((row) => row.stablecoinId === "usda-anzens");
+    const straitsx = result.results.find((row) => row.stablecoinId === "xusd-straitsx");
+    const babelfish = result.results.find((row) => row.stablecoinId === "xusd-babelfish");
 
-    expect(avalon?.signals.black).toMatchObject({
+    expect(straitsx?.signals.black).toMatchObject({
       available: true,
       events24h: 10,
       events7d: 10,
     });
-    expect(anzens?.signals.black).toMatchObject({
+    expect(babelfish?.signals.black).toMatchObject({
       available: false,
       value: 0,
     });
@@ -117,7 +117,7 @@ describe("buildDewsScoringResult blacklist attribution", () => {
     failedState.blacklistCounts = new Map();
     failedState.blacklistSourceOk = false;
 
-    const assetById = new Map([["usda-avalon", createAsset("usda-avalon")]]);
+    const assetById = new Map([["xusd-straitsx", createAsset("xusd-straitsx", "XUSD")]]);
     const observedZero = buildDewsScoringResult({
       assetById,
       pegRates: {},

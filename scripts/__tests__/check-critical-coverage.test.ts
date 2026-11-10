@@ -674,4 +674,29 @@ describe("critical coverage completeness baseline enforcement", () => {
       }
     },
   );
+
+  it.each(["measured", "completeness"] as const)(
+    "fails %s execution on a nightly-tier safety-net violation",
+    (mode) => {
+      const errors: string[] = [];
+      const exits: number[] = [];
+      const options = {
+        env: testEnv({ CRITICAL_COVERAGE_CHANGED_FILES: rebaselineSource }),
+        fsImpl: mockFsImpl({ existsSync: () => true, readFileSync: () => JSON.stringify({ files: {} }) }),
+        execFile: mockExecFileSync(() => ""),
+        completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
+        testTierViolations: [{
+          kind: "nightly-case-in-pr-tier",
+          message: "ALWAYS_RUN_TEST_FILES lists a nightly-tagged case in worker/src/api/__tests__/peg-summary.test.ts",
+        }],
+        consoleImpl: mockConsole({ log: () => {}, error: (message: string) => errors.push(message) }),
+        exit: captureProcessExit((code) => { if (code !== undefined) exits.push(code); }),
+      };
+      if (mode === "completeness") expect(runCriticalCoverageCompletenessCheck(options)).toBe(false);
+      else runCriticalCoverageCheck(options);
+      expect(exits).toEqual([1]);
+      expect(errors).toContain("[test-tier] Nightly test tier violations:");
+      expect(errors).toContainEqual(expect.stringContaining("nightly-case-in-pr-tier"));
+    },
+  );
 });

@@ -76,6 +76,7 @@ describe("dex liquidity cron metadata", () => {
     params.sourceState.failedSources = ["uni-v4:ethereum", "uni-v4:arbitrum", "uni-v4:ethereum"];
     params.sourceState.degradedSources = ["orca:solana", "orca:solana"];
     params.sourceState.directApiSourceSummary.sourceWarnings = ["orca: some pools were unavailable"];
+    params.sourceState.subgraphFailures = [{ source: "uniswap-v4-subgraph", chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }];
 
     const metadata = buildDexLiquidityCronMetadata(params);
     const reasons = [
@@ -85,12 +86,17 @@ describe("dex liquidity cron metadata", () => {
     expect(getCronQualityReasons(metadata)).toEqual(reasons);
     expect(metadata.rowsWritten).toBe(300);
     expect(metadata.persistence).toMatchObject({ skipped: false, historicalSnapshotWriteFailed: false });
+    expect((metadata.quality as { degraded?: boolean }).degraded).toBeUndefined();
 
     const compacted = compactCronMetadataForPersistence(JSON.stringify({
       ...metadata, oversizedDiagnostic: "x".repeat(MAX_PERSISTED_CRON_METADATA_BYTES),
     }));
     expect(compacted.compacted).toBe(true);
     expect(getCronQualityReasons(JSON.parse(compacted.metadata!))).toEqual(reasons);
+    expect(JSON.parse(compacted.metadata!)).toMatchObject({
+      subgraphFailures: params.sourceState.subgraphFailures,
+      directApiSourceSummary: params.sourceState.directApiSourceSummary,
+    });
   });
 
   it("omits findings for a clean publication or an ordinary fallback", () => {
@@ -98,15 +104,57 @@ describe("dex liquidity cron metadata", () => {
     Object.assign(params.scoreState.analysis.sourceCoverage, { qualityDriftSeverity: "none", qualityDriftFlags: [] });
     params.sourceState.fallbackSignals = ["gecko"];
     expect(buildDexLiquidityCronMetadata(params)).not.toHaveProperty("quality");
-  });
-
-  it("reports partial-source warnings even without confirmed drift or a failed source", () => {
-    const params = metadataParams();
     params.sourceState.directApiSourceSummary.sourceWarnings = ["orca: partial inventory"];
     expect(getCronQualityReasons(buildDexLiquidityCronMetadata(params))).toEqual(["direct-api-source-warnings"]);
   });
 
-  it("aggregates rejection groups and applies aggregate TVL materiality", () => {
+  it("retains a chain TVL drop as a warning without declaring incomplete inputs", () => {
+    const params = metadataParams();
+    Object.assign(params.scoreState.analysis.sourceCoverage, {
+      qualityDriftFlags: ["chain-tvl-drop:ink"],
+      cohortDriftFlags: ["chain-tvl-drop:ink"],
+    });
+    const metadata = buildDexLiquidityCronMetadata(params);
+    expect(metadata.quality).toEqual({ reasons: ["chain-tvl-drop:ink"] });
+  });
+
+  it.each([{ otherFlags: [] }, { otherFlags: ["chain-tvl-drop:ink"] }])(
+    "degrades for source-pool loss and leads with its cause alongside $otherFlags", ({ otherFlags }) => {
+      const params = metadataParams();
+      const flags = [...otherFlags, "source-family-drop:cg_onchain"];
+      Object.assign(params.scoreState.analysis.sourceCoverage, {
+        qualityDriftFlags: flags,
+        cohortDriftFlags: flags,
+      });
+      const metadata = buildDexLiquidityCronMetadata(params);
+      const reasons = ["source-family-drop:cg_onchain", ...otherFlags];
+      expect(metadata.quality).toEqual({ degraded: true, reasons });
+      const compacted = compactCronMetadataForPersistence(JSON.stringify({
+        ...metadata, oversizedDiagnostic: "x".repeat(MAX_PERSISTED_CRON_METADATA_BYTES),
+      }));
+      expect(JSON.parse(compacted.metadata!).quality).toEqual({ degraded: true, reasons });
+    },
+  );
+
+
+  it("publishes plain-NG admissions as non-withholding internal diagnostics", () => {
+    const params = metadataParams();
+    params.scoreState.diagnostics.curveStableswapPlainAdmissions = [{
+      stablecoinId: "eurs-stasis",
+      chain: "ethereum",
+      poolId: "ethereum:0x48edff046ebf41c6ee1895e06f3dc1629db563d4",
+      poolAddress: "0x48edff046ebf41c6ee1895e06f3dc1629db563d4",
+      sourcePriceSpreadRatio: 1.066,
+    }];
+    params.scoreState.diagnostics.curveStableswapPlainAdmissionsOmitted = 0;
+
+    const metadata = buildDexLiquidityCronMetadata(params);
+    expect(metadata.curveStableswapPlainAdmissions).toEqual(params.scoreState.diagnostics.curveStableswapPlainAdmissions);
+    expect(metadata.curveStableswapPlainAdmissionsOmitted).toBe(0);
+    expect(metadata).not.toHaveProperty("quality");
+  });
+
+  it("aggregates rejection groups without claiming accepted-liquidity loss", () => {
     const params = metadataParams();
     params.poolState.poolRejections = [
       { reason: "invalid-pool-identity", poolIds: ["a", "b"], count: 2, tvlUsd: 600_000 },
@@ -115,7 +163,7 @@ describe("dex liquidity cron metadata", () => {
     const metadata = buildDexLiquidityCronMetadata(params);
     expect(metadata).toMatchObject({
       rowsDropped: 3,
-      poolRejectionMateriality: { rejectedPoolCount: 3, rejectedPoolTvlUsd: 1_000_000, material: true },
+      poolRejectionMateriality: { rejectedPoolCount: 3, rejectedPoolTvlUsd: 1_000_000, material: null },
     });
   });
 
@@ -137,7 +185,6 @@ describe("dex liquidity cron metadata", () => {
   ): string | null {
     return dexLiquidityDegradedReason({
       criticalSourceFailures: [],
-      poolRejections: params.poolState.poolRejections,
       analysis,
       persistence: params.persistenceState.persistence,
       dexPriceDiagnostics: params.persistenceState.dexPriceDiagnostics,
@@ -153,12 +200,11 @@ describe("dex liquidity cron metadata", () => {
     }> = [
       {
         expected: "material-pool-rejections",
-        mutate: (params) => {
-          params.poolState.poolRejections = [
-            { reason: "invalid-pool-identity", poolIds: ["0xfeed"], count: 1, tvlUsd: 12_500 },
-          ];
-        },
+        analysis: analysisState({ sourceCoverage: { ...metadataParams().scoreState.analysis.sourceCoverage, poolRejectionCoverage: {
+          reason: "material-pool-rejections", material: true, coins: [], coinsOmitted: 0, baselineTvlUsdByCoin: {},
+        } } }),
       },
+      { expected: "previous-coverage-baseline-unavailable", analysis: analysisState({ previousCoverageBaselineAvailable: false }) },
       { expected: "near-value-guard", analysis: analysisState({ nearValueGuard: true }) },
       {
         expected: "orphan-cleanup-failed",

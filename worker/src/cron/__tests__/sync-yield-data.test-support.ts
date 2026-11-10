@@ -152,6 +152,7 @@ vi.mock("../../lib/yield-config/yield-config-rate-sources", async (importOrigina
 }));
 vi.mock("../../lib/yield-config/yield-config-lending-protocols", () => ({
   LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool", "aave-v3"]),
+  LAYER3_EXCLUDED_VENUE_PROJECTS: new Set(["venus-core-pool", "aave-v3", "project-0"]),
   LENDING_PROTOCOL_LABELS: {
     "venus-core-pool": "Venus Core Pool",
     "aave-v3": "Aave V3",
@@ -305,6 +306,10 @@ export function yieldFallbackTableMatches(overrides: MockTableConfig[] = []): Mo
     { match: "source_switch = 0", rows: [] },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
+    // The ownership-handoff purge drains until a statement reports zero rows.
+    // With the mock's default `changes: 1`, every full sync runs the 250,000-row
+    // loop to exhaustion; no fixture seeds handoff rows, so report none removed.
+    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], runMeta: { changes: 0 } },
     { match: "yield_history", rows: [] },
     { match: "supply_history", rows: [] },
     { match: "depeg_events", rows: [] },
@@ -320,7 +325,9 @@ function makeYieldHistoryTables(historyRows: YieldHistoryFixtureRow[]): MockTabl
     { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [], allowUnused: true },
     { match: "pharos:yield-sync:history-retention-delete", rows: [], allowUnused: true },
     { match: "pharos:yield-sync:daily-history-retention-delete", rows: [], allowUnused: true },
-    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], allowUnused: true },
+    // The purge loop stops on a zero-change DELETE; the mock default of 1 would
+    // exhaust the 250k-row budget on every healthy publication.
+    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], runMeta: { changes: 0 }, allowUnused: true },
     ...yieldSyncPruneTableMatches(),
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",

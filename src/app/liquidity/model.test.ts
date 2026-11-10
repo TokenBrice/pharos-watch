@@ -112,6 +112,22 @@ describe("liquidity page model", () => {
     });
   });
 
+  it("withholds the aggregate when a collapsed coin's prior value is non-invertible", () => {
+    const [collapsed, growing] = ACTIVE_STABLECOINS;
+    const withCollapse = buildLiquidityViewModel({
+      [DEX_GLOBAL_KEY]: makeLiquidity({ totalTvlUsd: 999, totalVolume24hUsd: 111 }),
+      [collapsed.id]: makeLiquidity({ totalTvlUsd: 10_000, tvlChange7d: -100 }),
+      [growing.id]: makeLiquidity({ totalTvlUsd: 200, tvlChange7d: 100 }),
+    }, "all", "");
+    // Dropping the collapsed member would publish +100% over the survivors.
+    expect(withCollapse.summaryStats?.agg7dChange).toBeNull();
+
+    const collapsedOnly = buildLiquidityViewModel({
+      [collapsed.id]: makeLiquidity({ totalTvlUsd: 10_000, tvlChange7d: -100 }),
+    }, "all", "");
+    expect(collapsedOnly.summaryStats?.agg7dChange).toBeNull();
+  });
+
   it.each([null, 0, 100])("weights only members with both an observed ratio and weight (%s)", (weight) => {
     const [first, second, third, fourth] = ACTIVE_STABLECOINS;
     const map: DexLiquidityMap = {

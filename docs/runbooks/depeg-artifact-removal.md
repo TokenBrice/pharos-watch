@@ -44,6 +44,12 @@ and first-publication archive stay unchanged. Existing provenance fields are
 retained; only its verdict, public JSON verdict, and update clock change.
 
 1. Review the evidence and exact event/coin/prediction/incident identities.
+   Resolve the sealed prediction and incident through
+   `depeg_resolver_incident_event_links` joined to
+   `depeg_resolver_public_predictions` on `incident_key`, filtering the link's
+   `event_id`. The tool requires exactly one linked sealed prediction whose own
+   `event_id` matches the target; a different member of a sealed incident is
+   still refused.
    Keep the nonempty reviewed evidence file in the durable repair packet.
    `--reviewed-evidence` and `--reviewed-by` attest operator review; the tool
    records its absolute path and SHA-256, not an automated economic verdict.
@@ -63,6 +69,12 @@ retained; only its verdict, public JSON verdict, and update clock change.
    guarded SQL statements, evidence hash, expiry, and readback query without
    contacting D1. Live guards are evaluated only on apply. The plan expires
    after 15 minutes; a later invocation generates fresh timestamps.
+   An open event is eligible only when its coin is in the canonical `FROZEN_IDS`
+   registry used by orphan cleanup: frozen history is never force-closed and
+   its producer no longer updates the event. Every invocation, including apply,
+   reads that registry when building the plan; a failed lookup stops before D1
+   access. Apply with a current canonical checkout using the CLI, which rebuilds
+   the plan; never apply saved preview SQL as a substitute for this frozen check.
 3. Before applying, retain a fresh D1 Time Travel bookmark and schedule the
    atomic-import maintenance window described in
    [one-shot backfills](./one-shot-backfills.md). Recheck evidence and identity,
@@ -72,8 +84,9 @@ retained; only its verdict, public JSON verdict, and update clock change.
    consumption, disputed provenance, and final guard. Existing schema triggers
    append the single-use authorization-use record. No migration is required.
 
-   Guards refuse a missing/open/wrong-coin event, mismatched prediction or
-   incident, multiple linked sealed predictions, any prior prediction erratum,
+   Guards refuse a missing/wrong-coin event, an open event on a non-frozen coin,
+   mismatched prediction or incident, multiple linked sealed predictions,
+   any prior prediction erratum,
    an already ineligible verdict in either provenance representation,
    malformed/non-object public provenance JSON, an unexpired unused repair
    grant, or an expired plan. These are reconciliation stops, not reasons to
@@ -176,31 +189,20 @@ Run the commands below from the repository root with Wrangler authentication. Hi
 
 ## Recording the verdict
 
-Entries live in `shared/data/depegs/backfill-replay-suppressions.ts`:
-
-| Field | Type | Meaning |
-| ----- | ---- | ------- |
-| `coinId` | `string` | Tracked stablecoin id, validated against the canonical order |
-| `direction` | `"above" \| "below"` | Depeg side the verdict applies to |
-| `windowStart` / `windowEnd` | `number` | Inclusive UTC bounds in Unix seconds |
-| `reason` | `string` | The artifact conclusion |
-| `evidenceUrls` | `string[]` | On-chain transaction and price-feed links (`https` only) |
-| `reviewedAt` | `string` | Review date, `YYYY-MM-DD` |
+Entries live in `shared/data/depegs/backfill-replay-suppressions.ts`; entry fields, inclusive interval-overlap matching and corpus validation are owned by [the reviewed replay suppression registry](../depeg-detection.md#reviewed-replay-suppression-registry).
 
 Set the window to the union of the stored episode and its dust/recovery
 transactions plus a ±2h margin: hourly CoinGecko samples can move an episode
 edge by up to an hour, and matching is inclusive interval overlap on
 `(coinId, direction)`.
 
-The corpus validates at import time, and
+That contract validates at import time; run this suite after every edit:
 
 ```bash
 npx vitest run shared/data/depegs/__tests__/backfill-replay-suppressions.test.ts
 ```
 
-guards tracked coin ids, the shared direction vocabulary, ordered integer
-windows, `https` evidence URLs, review dates, and non-overlapping
-same-coin/same-direction windows. A window overlapping an existing entry on the
+A window overlapping an existing entry on the
 same coin and direction is rejected by design — extend the existing window
 instead of adding a second one.
 

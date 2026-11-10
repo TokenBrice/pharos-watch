@@ -4,7 +4,8 @@ import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { getConditionBand } from "@shared/lib/psi-policy";
+import { getConditionBand, getPsiDailySampleBudget } from "@shared/lib/psi-policy";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
 
@@ -90,6 +91,8 @@ export async function snapshotPsiDaily(
 
   const score = round1(row.avg_score);
   const band = getConditionBand(score);
+  const sampleBudget = getPsiDailySampleBudget(CRON_INTERVALS["stability-index"]);
+  const sampleCoverageComplete = row.cnt >= sampleBudget.minimumSampleCount;
   const components = {
     severity: row.avg_severity == null ? null : Math.round(row.avg_severity * 100) / 100,
     breadth: row.avg_breadth == null ? null : Math.round(row.avg_breadth * 100) / 100,
@@ -121,6 +124,8 @@ export async function snapshotPsiDaily(
         JSON.stringify({
           source: "daily-avg",
           sampleCount: row.cnt,
+          expectedSampleCount: sampleBudget.expectedSampleCount,
+          minimumSampleCount: sampleBudget.minimumSampleCount,
           aggregation: "all-day",
           componentSampleCounts: {
             severity: row.severity_count,
@@ -141,9 +146,18 @@ export async function snapshotPsiDaily(
     itemCount: 1,
     metadata: {
       ...(options.completionReason ? { reason: options.completionReason } : {}),
+      ...(sampleCoverageComplete ? {} : {
+        quality: {
+          reason: "psi-daily-sample-coverage",
+          reasons: ["psi-daily-sample-coverage"],
+        },
+      }),
       avgScore: score,
       band,
       sampleCount: row.cnt,
+      expectedSampleCount: sampleBudget.expectedSampleCount,
+      minimumSampleCount: sampleBudget.minimumSampleCount,
+      sampleCoverageComplete,
     },
   });
 }

@@ -1,0 +1,130 @@
+{
+  "id": "eurxt-caceis",
+  "name": "Euro eXchange Token",
+  "symbol": "EURXT",
+  "brand": "CACEIS",
+  "oneLiner": "EURXT is CACEIS Bank's MiCA euro e-money token on Ethereum, sold to professional clients since July 2026 and awaiting a public price source.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized"
+  },
+  "collateral": "Euro funds received for issuance, held by CACEIS Bank S.A. in a separate internal account on its balance sheet and at least equal to EURXT outstanding. Crédit Agricole's launch release says the reserves are exclusively cash, and stable-xt.io says the cash sits in CACEIS's account at the central bank, while the white paper allows up to 70% in highly liquid financial instruments. The white paper treats holders as unsecured creditors of CACEIS Bank. No independent reserve attestation was found on November 1 2026, and the reserve figure on stable-xt.io is computed in the page from the token's on-chain total supply.",
+  "pegMechanism": "MiCA e-money token issued on Ethereum by CACEIS Bank S.A., a French credit institution, under a white paper notified to the ACPR. CACEIS Bank sells EURXT to professional clients against euro deposits (10,000 EURXT minimum), minting through the Taurus platform, and burns tokens returned to its redemption address. Holders may redeem at par with no issuer fee from 9:00 to 17:00 on French bank business days, and holders who are not CACEIS Bank clients must pass KYC first. Any Ethereum address that is not blacklisted can hold and transfer EURXT.",
+  "mechanismArchetype": "fiat-cash",
+  "geckoId": "euro-exchange-token",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf62dc56438f13e9cd8076b7d6cf3e616cf756cd0",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://stable-xt.io/"
+    },
+    {
+      "label": "MiCA white paper",
+      "url": "https://stable-xt.io/assets/documents/EN_CACEIS%20BANK_%20EURO%20STABLECOIN_EURXT_White_paper.pdf"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://presse.credit-agricole.com/credit-agricole-launches-eurxt-its-euro-denominated-stablecoin/?lang=eng"
+    },
+    {
+      "label": "Smart contract audit",
+      "url": "https://stable-xt.io/assets/documents/EURXT_OpenZeppelin_Audit_Report.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "ACPR",
+    "license": "Credit Institution (MiCA)"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-07-01",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "EURXT is live on Ethereum mainnet. Pharos tracks it pre-launch only because no admitted source prices it. Crédit Agricole S.A. announced the launch on July 1 2026. CACEIS issues the token, a first issuance settled a subscription to a tokenised Amundi money market fund, and the token is initially made available to CACEIS's institutional investor and corporate clients. The issuer of record is CACEIS Bank S.A. (LEI 96950023SCR9X9F3L662), an ACPR-authorised credit institution that CACEIS says is directly supervised by the European Central Bank. Its MiCA white paper, notified to the ACPR on April 3 2026, offers EURXT only to professional clients of CACEIS Bank with a 10,000 EURXT minimum, and ESMA's interim MiCA register lists the white paper with a June 30 2026 notification date. The token is the ERC-20 at 0xf62dc56438f13e9cd8076b7d6cf3e616cf756cd0 (name \"Euro eXchange Token\", 6 decimals), named in the white paper and on stable-xt.io. It was deployed behind a transparent upgradeable proxy on June 2 2026, and its implementation has not been upgraded since. The client restriction governs purchases from and redemptions with the issuer. Holding is open: the white paper says any ERC-20 wallet can hold EURXT unless sanctioned or otherwise restricted, OpenZeppelin's audit describes transfer checks limited to a pause and a sender and recipient blacklist, and simulated transfers from the current holder to two unused addresses succeeded at block 26319420. Issuance is public on chain. After a first 10,000 EURXT mint on June 12 2026, burned the same day, supply stood at 20,020,000 EURXT on launch day. Blockscout then records repeated cycles in which 25 million to 33.4 million EURXT were minted, transferred and burned at the issuer's redemption address, and supply has held at 54,366,000 EURXT since September 25 2026. At block 26319420 (November 1 2026) one externally owned account, 0x2a394a2486cf53e45d31721344acde1f3bed6398, held the entire supply. CoinGecko's euro-exchange-token entry maps the contract and reports that supply, but it is a preview listing with null price and market cap and no tickers. DefiLlama does not list EURXT, and coins.llama.fi returns no quote for the contract. On October 29 2026 CACEIS said it expects listings on several centralised exchanges against BTC, ETH and USDC by the end of 2026.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://presse.credit-agricole.com/credit-agricole-launches-eurxt-its-euro-denominated-stablecoin/?lang=eng",
+      "title": "Crédit Agricole launches EURXT, its Euro-Denominated Stablecoin",
+      "description": "Launch release naming CACEIS as issuer, the first issuance that settled a tokenised Amundi money market fund subscription, and cash reserves on CACEIS Bank's balance sheet.",
+      "source": "Crédit Agricole S.A."
+    },
+    {
+      "type": "article",
+      "url": "https://www.caceis.com/news/eurxt-a-secure-euro-settlement-asset-issued-by-caceis-for-on-chain-trades",
+      "title": "EURXT: a secure euro settlement asset issued by CACEIS for on-chain trades",
+      "description": "CACEIS on client eligibility through regulated wallet providers, fee-free purchases and sales, and planned centralised exchange listings by the end of 2026.",
+      "source": "CACEIS"
+    },
+    {
+      "type": "article",
+      "url": "https://stable-xt.io/assets/documents/EN_CACEIS%20BANK_%20EURO%20STABLECOIN_EURXT_White_paper.pdf",
+      "title": "MiCA white paper on CACEIS BANK EURO EXCHANGE TOKEN (EURXT)",
+      "description": "Issuer identity, offer terms, redemption rights, reserve rules and smart contract controls as notified to the ACPR.",
+      "source": "CACEIS Bank S.A."
+    },
+    {
+      "type": "article",
+      "url": "https://stable-xt.io/assets/documents/EURXT_OpenZeppelin_Audit_Report.pdf",
+      "title": "CACEIS EURXT Smart Contract Security Audit",
+      "description": "OpenZeppelin's May 2026 review of the role model, pause, blacklist and seizure paths, with three low-severity findings.",
+      "source": "OpenZeppelin"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-04-03",
+      "type": "regulatory",
+      "title": "CACEIS Bank notifies the EURXT white paper to the ACPR",
+      "description": "The MiCA white paper names CACEIS BANK S.A., a French credit institution, as issuer of a euro e-money token on Ethereum. It offers EURXT only to professional clients of CACEIS Bank with a 10,000 EURXT minimum subscription, gives holders par redemption with no fee from 9:00 to 17:00 on French bank business days, and lists pause, blacklist, freeze and fund-recovery functions in the token contract.",
+      "sourceUrl": "https://stable-xt.io/assets/documents/EN_CACEIS%20BANK_%20EURO%20STABLECOIN_EURXT_White_paper.pdf"
+    },
+    {
+      "date": "2026-05-22",
+      "type": "audit",
+      "title": "OpenZeppelin audit of EURXT finds three low-severity issues",
+      "description": "OpenZeppelin reviewed the EURXT contract on May 20 and 21 2026 and reported no critical, high or medium findings. The report describes six access-control roles, a global pause, a sender and recipient blacklist checked in the transfer hook, and a seizure path that moves a blacklisted balance to another address. CACEIS said fixes for the three low findings would ship in the version deployed at launch, and Deloitte issued an agreed-upon procedures report on the contract on May 29 2026.",
+      "sourceUrl": "https://stable-xt.io/assets/documents/EURXT_OpenZeppelin_Audit_Report.pdf"
+    },
+    {
+      "date": "2026-06-30",
+      "type": "regulatory",
+      "title": "ESMA's interim MiCA register lists CACEIS Bank's EURXT white paper",
+      "description": "The e-money token register entry names CACEIS BANK SA (LEI 96950023SCR9X9F3L662), a credit institution with the ACPR as competent authority, with digital token identifier 2GPH3VZ45, white paper link stable-xt.io and a notification date of June 30 2026. ESMA's comment records an ongoing additional review of the white paper's qualitative information.",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    },
+    {
+      "date": "2026-07-01",
+      "type": "announcement",
+      "title": "Crédit Agricole launches EURXT with a tokenised Amundi fund subscription",
+      "description": "Crédit Agricole S.A. announces EURXT, an ERC-20 euro e-money token issued on Ethereum by CACEIS and backed 1:1 by reserves held as cash on CACEIS Bank's balance sheet. A first issuance settled a subscription to a tokenised Luxembourg-domiciled Amundi UCITS money market fund, and the token is initially available to CACEIS's institutional investor and corporate clients.",
+      "sourceUrl": "https://presse.credit-agricole.com/credit-agricole-launches-eurxt-its-euro-denominated-stablecoin/?lang=eng"
+    },
+    {
+      "date": "2026-09-25",
+      "type": "milestone",
+      "title": "EURXT supply settles at 54.37 million after September mint cycles",
+      "description": "A 34,346,000 EURXT mint to 0x2a394a2486cf53e45d31721344acde1f3bed6398 at block 26053523 and a 66,670,000 EURXT burn at the redemption address at block 26053743 left total supply at 54,366,000 EURXT, all held at that one address. Supply was unchanged at block 26319420 on November 1 2026.",
+      "sourceUrl": "https://etherscan.io/tx/0xa4d8818001d9ee7bb93c2c92c57e7ac31a8e4a93dc2379d3f606a36a11ccb35b"
+    },
+    {
+      "date": "2026-10-29",
+      "type": "announcement",
+      "title": "CACEIS plans EURXT exchange listings against BTC, ETH and USDC",
+      "description": "CACEIS says EURXT is available to its clients that hold a wallet with a regulated crypto-asset service provider, a custody service CACEIS itself offers under MiCA, and that clients can buy or sell EURXT free of charge through its interface. It expects listings on several centralised exchanges against BTC, ETH and USDC by the end of 2026, and use as a settlement asset on permissioned DLT trading and settlement systems.",
+      "sourceUrl": "https://www.caceis.com/news/eurxt-a-secure-euro-settlement-asset-issued-by-caceis-for-on-chain-trades"
+    }
+  ],
+  "launchDate": "2026-07-01",
+  "listingStatusReview": {
+    "changedAt": "2026-11-01",
+    "reason": "Missing lane: price. CoinGecko's euro-exchange-token is a preview listing with null price and market cap and no tickers, DefiLlama does not list EURXT, and coins.llama.fi has no contract quote. Supply is observable on-chain.",
+    "reviewBy": "2026-12-31"
+  }
+}

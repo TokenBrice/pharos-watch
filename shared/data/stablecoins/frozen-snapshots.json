@@ -2399,5 +2399,384 @@
         }
       ]
     }
+  },
+  {
+    "id": "usda-avalon",
+    "capturedAt": "2026-11-02T12:17:45.716Z",
+    "peggedAssetRow": {
+      "id": "usda-avalon",
+      "name": "Avalon USDa",
+      "symbol": "USDA",
+      "geckoId": "usda-2",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.9990602715195301,
+      "priceSource": "defillama-contract",
+      "priceConfidence": "fallback",
+      "priceUpdatedAt": 1793621397,
+      "priceObservedAt": 1793621397,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1793621741,
+      "consensusSources": [
+        "defillama-contract"
+      ],
+      "agreeSources": [
+        "defillama-contract"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 145559779.41377428
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 145559779.41377428
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 145559779.41377428
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 145559863.00627926
+      },
+      "chainCirculating": {
+        "Zircuit": {
+          "current": 18.790684,
+          "circulatingPrevDay": 18.790684,
+          "circulatingPrevWeek": 18.790684,
+          "circulatingPrevMonth": 18.790684
+        },
+        "Mode": {
+          "current": 126.11391146951146,
+          "circulatingPrevDay": 126.11391146951146,
+          "circulatingPrevWeek": 126.11391146951146,
+          "circulatingPrevMonth": 182.38856427014454
+        },
+        "Mantle": {
+          "current": 6.121,
+          "circulatingPrevDay": 6.121,
+          "circulatingPrevWeek": 6.121,
+          "circulatingPrevMonth": 6.121
+        },
+        "Kaia": {
+          "current": 7505190.560912999,
+          "circulatingPrevDay": 7505190.560912999,
+          "circulatingPrevWeek": 7505190.560912999,
+          "circulatingPrevMonth": 7505392.560913
+        },
+        "Berachain": {
+          "current": 2692597.9030859997,
+          "circulatingPrevDay": 2692597.9030859997,
+          "circulatingPrevWeek": 2692597.9030859997,
+          "circulatingPrevMonth": 2692450.832508
+        },
+        "Base": {
+          "current": 48.935168,
+          "circulatingPrevDay": 48.935168,
+          "circulatingPrevWeek": 48.935168,
+          "circulatingPrevMonth": 48.935168
+        },
+        "Morph": {
+          "current": 131.42151900000002,
+          "circulatingPrevDay": 131.42151900000002,
+          "circulatingPrevWeek": 131.42151900000002,
+          "circulatingPrevMonth": 131.42151900000002
+        },
+        "BSC": {
+          "current": 11094974.687520072,
+          "circulatingPrevDay": 11094974.687520072,
+          "circulatingPrevWeek": 11094974.687520072,
+          "circulatingPrevMonth": 11094992.878920073
+        },
+        "Ethereum": {
+          "current": 86660188.39718224,
+          "circulatingPrevDay": 86660188.39718224,
+          "circulatingPrevWeek": 86660188.39718224,
+          "circulatingPrevMonth": 86654071.89188543
+        },
+        "ZKsync Era": {
+          "current": 10,
+          "circulatingPrevDay": 10,
+          "circulatingPrevWeek": 10,
+          "circulatingPrevMonth": 10
+        },
+        "Movement": {
+          "current": 36684286.080789,
+          "circulatingPrevDay": 36684286.080789,
+          "circulatingPrevWeek": 36684286.080789,
+          "circulatingPrevMonth": 36690346.311433
+        },
+        "Sei": {
+          "current": 40396.451339,
+          "circulatingPrevDay": 40396.451339,
+          "circulatingPrevWeek": 40396.451339,
+          "circulatingPrevMonth": 40396.451339
+        },
+        "BOB": {
+          "current": 22.00267,
+          "circulatingPrevDay": 22.00267,
+          "circulatingPrevWeek": 22.00267,
+          "circulatingPrevMonth": 22.00267
+        },
+        "Corn": {
+          "current": 0,
+          "circulatingPrevDay": 0,
+          "circulatingPrevWeek": 0,
+          "circulatingPrevMonth": 0
+        },
+        "Avalanche": {
+          "current": 14.416893470952594,
+          "circulatingPrevDay": 14.416893470952594,
+          "circulatingPrevWeek": 14.416893470952594,
+          "circulatingPrevMonth": 14.416893470952594
+        },
+        "Sonic": {
+          "current": 309748.1261700003,
+          "circulatingPrevDay": 309748.1261700003,
+          "circulatingPrevWeek": 309748.1261700003,
+          "circulatingPrevMonth": 309748.1261700003
+        },
+        "Nibiru": {
+          "current": 397.14053,
+          "circulatingPrevDay": 397.14053,
+          "circulatingPrevWeek": 397.14053,
+          "circulatingPrevMonth": 397.14053
+        },
+        "Taiko": {
+          "current": 533333.573118,
+          "circulatingPrevDay": 533333.573118,
+          "circulatingPrevWeek": 533333.573118,
+          "circulatingPrevMonth": 533333.573118
+        },
+        "Bitlayer": {
+          "current": 38288.691281,
+          "circulatingPrevDay": 38288.691281,
+          "circulatingPrevWeek": 38288.691281,
+          "circulatingPrevMonth": 38299.162963999996
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Movement",
+        "BSC",
+        "Kaia",
+        "Berachain",
+        "Taiko",
+        "Sonic",
+        "Sei",
+        "Bitlayer",
+        "Nibiru",
+        "Morph",
+        "Mode",
+        "Base",
+        "BOB",
+        "Zircuit",
+        "Avalanche",
+        "ZKsync Era",
+        "Mantle",
+        "Corn"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x8a60e489004ca22d775c5f2c657598278d17d9c2",
+          "decimals": 18
+        },
+        {
+          "chain": "bsc",
+          "address": "0x9356086146be5158e98ad827e21b5cf944699894",
+          "decimals": 18
+        },
+        {
+          "chain": "mantle",
+          "address": "0x075df695b8e7f4361fa7f8c1426c63f11b06e326",
+          "decimals": 18
+        },
+        {
+          "chain": "klaytn",
+          "address": "0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6",
+          "decimals": 18
+        },
+        {
+          "chain": "berachain",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        },
+        {
+          "chain": "movement",
+          "address": "0x48b904a97eafd065ced05168ec44638a63e1e3bcaec49699f6b8dabbd1424650",
+          "decimals": 8
+        },
+        {
+          "chain": "nibiru",
+          "address": "0xf4e097e36d2064e2bdca96e60439f3a369522003",
+          "decimals": 18
+        },
+        {
+          "chain": "sonic",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        },
+        {
+          "chain": "taiko",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        },
+        {
+          "chain": "sei",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        },
+        {
+          "chain": "bitlayer",
+          "address": "0x91bd7f5e328aecd1024e4118ade0ccb786f55db1",
+          "decimals": 18
+        },
+        {
+          "chain": "base",
+          "address": "0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f",
+          "decimals": 18
+        },
+        {
+          "chain": "avalanche",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        },
+        {
+          "chain": "zksync",
+          "address": "0xb8d7d88d042880ae87bb61de2dfff8441768766d",
+          "decimals": 18
+        },
+        {
+          "chain": "bob",
+          "address": "0x250fc55c82bce84c991ba25698a142b21cdc778a",
+          "decimals": 18
+        },
+        {
+          "chain": "morph-l2",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        },
+        {
+          "chain": "zircuit",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        },
+        {
+          "chain": "corn",
+          "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+          "decimals": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "usdb-blast",
+    "capturedAt": "2026-11-02T12:17:48.225Z",
+    "peggedAssetRow": {
+      "id": "usdb-blast",
+      "name": "USDB Blast",
+      "symbol": "USDB",
+      "geckoId": "usdb",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.9873073488,
+      "priceSource": "coingecko-onchain-address",
+      "priceConfidence": "fallback",
+      "priceUpdatedAt": 1793621407,
+      "priceObservedAt": 1793621407,
+      "priceObservedAtMode": "local_fetch",
+      "priceSyncedAt": 1793621741,
+      "consensusSources": [
+        "coingecko-onchain-address"
+      ],
+      "agreeSources": [
+        "coingecko-onchain-address"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 8630362.251446329
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 8630362.251446329
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 9109205.960995896
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 11211684.913594386
+      },
+      "chainCirculating": {
+        "Blast": {
+          "current": 8630362.251446329,
+          "circulatingPrevDay": 8630362.251446329,
+          "circulatingPrevWeek": 9109205.960995896,
+          "circulatingPrevMonth": 11211684.913594386
+        }
+      },
+      "chains": [
+        "Blast"
+      ],
+      "contracts": [
+        {
+          "chain": "blast",
+          "address": "0x4300000000000000000000000000000000000003",
+          "decimals": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "fxd-fathom",
+    "capturedAt": "2026-11-08T08:33:59.528Z",
+    "peggedAssetRow": {
+      "id": "fxd-fathom",
+      "name": "Fathom Dollar",
+      "symbol": "FXD",
+      "geckoId": "fathom-dollar",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.8422947409678576,
+      "priceSource": "coingecko-low-volume",
+      "priceConfidence": "fallback",
+      "priceUpdatedAt": 1794011475,
+      "priceObservedAt": 1794011475,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1794126621,
+      "consensusSources": [
+        "coingecko-low-volume"
+      ],
+      "agreeSources": [
+        "coingecko-low-volume"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 779733.801760538
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 779733.801760538
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 779733.801760538
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 779733.801760538
+      },
+      "chainCirculating": {
+        "XDC": {
+          "current": 779733.801760538,
+          "circulatingPrevDay": 779733.801760538,
+          "circulatingPrevWeek": 779733.801760538,
+          "circulatingPrevMonth": 779733.801760538
+        }
+      },
+      "chains": [
+        "XDC"
+      ],
+      "contracts": [
+        {
+          "chain": "xdc",
+          "address": "0x49d3f7543335cf38fa10889ccff10207e22110b5",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

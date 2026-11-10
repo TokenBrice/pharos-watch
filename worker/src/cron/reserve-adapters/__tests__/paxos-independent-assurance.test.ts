@@ -58,7 +58,7 @@ async function expectFailure(promise: Promise<unknown>, code: PaxosDiscoveryFail
 describe("Paxos discovered main module and report-selection list", () => {
   afterEach(() => { vi.unstubAllGlobals(); });
 
-  it("accepts the current captured live index, main and reviewed product bytes", async () => {
+  it("accepts the historical captured index, main and reviewed product bytes", async () => {
     const installed = network();
     await expect(discover()).resolves.toEqual(admitted(PAGE));
     expect(installed.fetchSpy).toHaveBeenCalledTimes(2);
@@ -81,6 +81,21 @@ describe("Paxos discovered main module and report-selection list", () => {
     expect(readPaxosReportSelection(SEPTEMBER_PAGE)).toEqual(selection.filter((url) => url !== REPORT_URL));
     expect(selection).toContain(REPORT_URL);
     expect(selection.map((url) => url.replace(/^.*\/(\w+)\.pdf$/, "$1")).sort()).toEqual([...BINDING.reviewedReportAssetIds].sort());
+  });
+
+  it("reads the migrated literal month selection and detects a newly listed month", async () => {
+    const page = fixture("reports-2026-11-04.mjs.txt");
+    network(MAIN, page);
+    await expect(discover()).resolves.toEqual(admitted(page));
+    for (const key of ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]) {
+      const monthly = `const years=[{${key}:\`${REPORT_URL}\`,year:\`2026\`}];`;
+      expect(readPaxosReportSelection(monthly)).toEqual([REPORT_URL]);
+    }
+    const newerPage = `${page}const next={oct:\`https://framerusercontent.com/assets/UnreviewedOctober.pdf\`};`;
+    network(MAIN, newerPage);
+    await expect(discover()).resolves.toEqual(admitted(newerPage, "https://framerusercontent.com/assets/UnreviewedOctober.pdf"));
+    network(MAIN, page.replace(REPORT_URL, "https://framerusercontent.com/assets/ReplacedSeptember.pdf"));
+    await expectFailure(discover(), "report-binding-missing");
   });
 
   it("rejects a re-served historical capture that predates the reviewed report", async () => {
@@ -142,6 +157,7 @@ describe("Paxos discovered main module and report-selection list", () => {
     ["concatenated computed member", beforeSourceMap('selection["fi"+"le"]=reportUrl;')],
   ])("rejects an unrecognized report selection (%s)", async (_label, page) => {
     await expectFailure(republished(page), "report-selection-unrecognized");
+    await expectFailure(republished(page.replaceAll("file", "sep")), "report-selection-unrecognized");
   });
 
   it.each(["\n", "\r", "\u2028", "\u2029"])("ignores comment decoys and recognizes executable computed paths after %j", async (terminator) => {

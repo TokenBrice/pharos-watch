@@ -97,6 +97,49 @@ describe("digest mirror publication", () => {
     ]);
   });
 
+  it("completes a two-page archive traversal beyond the 365-row response window", async () => {
+    const output = join(makeRoot(), "digests.json");
+    const start = Date.parse("2025-01-01") / 1000;
+    // The API returns at most 365 rows per response, so 366 editions need a
+    // continuation. This is the cheap PR-tier proof of cursor traversal that
+    // digest-archive.test.ts proves end to end among the nightly tier.
+    const editions = Array.from({ length: 366 }, (_, index) => ({
+      digestText: `Edition ${index + 1}`,
+      generatedAt: start + index * 86_400,
+      editionNumber: index + 1,
+    }));
+    const newestFirst = [...editions].reverse();
+    const cursor = [366, editions.length, 365, newestFirst[364].generatedAt, 1].join(".");
+    const pages = [
+      {
+        digests: newestFirst.slice(0, 365),
+        pagination: { horizon: 366, total: editions.length, scanned: 365, nextCursor: cursor },
+      },
+      {
+        digests: newestFirst.slice(365),
+        pagination: { horizon: 366, total: editions.length, scanned: editions.length, nextCursor: null },
+      },
+    ];
+    const requested: URL[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+      const url = new URL(input);
+      requested.push(url);
+      const page = pages[requested.length - 1];
+      if (!page) throw new Error(`unexpected archive request ${requested.length}`);
+      return Response.json(page);
+    }));
+
+    await runDigestSync(["--api-url", "https://api.example.com", "--output", output]);
+
+    const stored = JSON.parse(readFileSync(output, "utf8")) as DigestContentEntry[];
+    expect(stored).toHaveLength(editions.length);
+    expect(stored.map((entry) => entry.editionNumber)).toEqual(
+      editions.map((entry) => entry.editionNumber).reverse(),
+    );
+    expect(requested).toHaveLength(2);
+    expect(requested[1]!.searchParams.get("cursor")).toBe(cursor);
+  });
+
   it.each([
     { digestText: 42 },
     { digestTitle: false },

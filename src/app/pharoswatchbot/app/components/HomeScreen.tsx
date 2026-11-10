@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isPausedSentinel, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
+import { isPausedSentinel, isTelegramBlockedFailureClass, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import {
   ALERT_SHORT_LABELS,
   LIVE_ALERT_TYPES,
@@ -30,7 +30,7 @@ type StripTone = "positive" | "neutral" | "warn" | "danger";
 
 function statusStrip(state: TelegramMiniAppState, nowSec: number): { tone: StripTone; title: string; subtitle: string | null } {
   const failure = state.health.recentFailureClass;
-  if (failure === "blocked" || failure === "forbidden") {
+  if (isTelegramBlockedFailureClass(failure)) {
     return {
       tone: "danger",
       title: "Telegram stopped delivering alerts",
@@ -57,8 +57,10 @@ function statusStrip(state: TelegramMiniAppState, nowSec: number): { tone: Strip
   ].filter((part): part is string => part != null);
   return {
     tone: failure ? "warn" : "positive",
+    // Only the blocked classes name a recovery path; any other class may be
+    // permanent, so the strip never promises a retry it cannot verify.
     title: failure ? "Last delivery failed" : "Alerts on",
-    subtitle: failure ? "Alerts retry automatically." : parts.join(" · ") || null,
+    subtitle: failure ? null : parts.join(" · ") || null,
   };
 }
 

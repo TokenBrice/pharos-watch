@@ -22,9 +22,9 @@ import {
 
 export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed";
 
-const DDR_REPAIR_TASK_ACTIVE_STATE_SQL = "state IN ('open', 'claimed', 'deferred', 'failed')";
+export const DDR_REPAIR_TASK_ACTIVE_STATE_SQL = "state IN ('open', 'claimed', 'deferred', 'failed')";
 const DDR_REPAIR_TASK_CLAIMABLE_STATE_SQL = "state IN ('open', 'deferred', 'failed')";
-const DDR_REPAIR_TASK_KIND = "ddr-repair-required-event";
+export const DDR_REPAIR_TASK_KIND = "ddr-repair-required-event";
 const DDR_REPAIR_DEBT_EVENT_LIMIT = 25;
 export const DDR_REPAIR_RUNNER_BATCH_LIMIT_V1 = 5;
 const DDR_REPAIR_RUNNER_CLAIM_LEASE_SEC_V1 = 15 * 60;

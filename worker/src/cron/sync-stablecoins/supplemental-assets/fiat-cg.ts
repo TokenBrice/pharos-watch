@@ -33,7 +33,6 @@ export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoi
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
 // Measured full-roster reads need more than 20s; retain rotation under the 30s ceiling.
 export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 30_000;
-export const ONCHAIN_PARTITION_ROTATION_RUNS = 4;
 // DefiLlama-owned NAV parents absent from this batch; intake values vault supply
 // before this run's parent prices exist, so their direct CG quote rides the batch.
 export const FIAT_CG_NAV_PARENT_METAS = [...new Map(FIAT_CG_METAS.flatMap((meta) => {
@@ -138,7 +137,8 @@ export async function fetchFiatCoinGeckoTokens(
       && (selectCuratedAggregateOnchainSupplyProbeContracts(meta) || selectSupplementalOnchainSupplyProbeContract(meta)));
     partitionCandidateCount = partitionCandidates.length;
     summary.candidates = partitionCandidateCount;
-    const partitionStride = Math.ceil(partitionCandidateCount / ONCHAIN_PARTITION_ROTATION_RUNS);
+    // Only the first worker pair is guaranteed a read before the deadline.
+    const partitionStride = Math.min(partitionCandidateCount, FIAT_CG_TOKEN_CONCURRENCY);
     partitionStartOffset = partitionCandidateCount === 0 ? 0
       : (Math.floor(runNowSec / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) * partitionStride) % partitionCandidateCount;
     const carriableIds = new Set(partitionCandidates.filter((meta) => {
@@ -158,6 +158,7 @@ export async function fetchFiatCoinGeckoTokens(
     // Rotate only candidate slots; other supply paths keep their order and published rows retain catalog order.
     const processingMetas = FIAT_CG_METAS.map((meta) => partitionCandidateIds.has(meta.id)
       ? orderedCandidates[nextPartitionIndex++] : meta);
+    const partitionReads = new Map<string, () => Promise<PeggedAsset>>();
 
     const results = await mapWithConcurrency(
       processingMetas,
@@ -209,7 +210,9 @@ export async function fetchFiatCoinGeckoTokens(
           if (reserveNav && navUsdRate != null) navSupplyPrice = reserveNav.price * navUsdRate;
         }
         if (navLikeAsset && !priceResolution && navSupplyPrice == null) {
-          const navOverride = await resolveVaultNavSupplyPrice(meta.id, navParentAssetsById, db, signal, chainRpcs);
+          // A same-run single-source quote must not displace a trusted composite for stricter vaults.
+          const navParents = getFreshSingleSourceNavParentId(meta.id) ? navParentAssetsById : previousAssetsById ?? new Map();
+          const navOverride = await resolveVaultNavSupplyPrice(meta.id, navParents, db, signal, chainRpcs, previousAssetsById);
           if (navOverride) {
             navSupplyPrice = navOverride.price;
             logWorkerEventArgs(
@@ -343,75 +346,83 @@ export async function fetchFiatCoinGeckoTokens(
           chainCirculating,
         });
         if (!attachPartition || !partitionCandidateIds.has(meta.id)) return asset;
-        const diagnose = (reason: string, ratio: number | null = null) => {
-          if (reason === "ratio-out-of-band") {
-            summary.divergent++;
-            if (ratio != null && summary.divergences.length < ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT) {
-              summary.divergences.push({ id: meta.id, ratio });
-            }
-          } else if (reason === "deadline-exhausted") summary.deadlineSkipped++;
-          else summary.unreadable++;
-          logWorkerEvent({
-            scope: "handler", level: "warn", job: "sync-stablecoins", event: "onchain-partition-divergence",
-            message: `[fiat-cg] ${meta.symbol} on-chain partition unavailable`,
-            metadata: { stablecoinId: meta.id, reason, ratio },
-          });
-        };
-        const carryPartition = () => {
-          const restored = restoreCuratedAggregateChainPartition(
-            asset, previousAssetsById?.get(meta.id), Math.floor(Date.now() / 1000), true,
-          );
-          if (restored?.expired) summary.carryExpired++;
-          else if (restored?.asset.chainPartition?.admission === "carried") summary.carried++;
-          return restored?.asset ?? asset;
-        };
-        if (priceForSupply == null) {
-          diagnose(navLikeAsset ? "nav-price-unavailable" : "supply-price-unavailable");
-          return asset;
-        }
-        if (!partitionStage) {
-          partitionStage = {
-            timeout: createTimeoutSignal({ timeoutMs: ONCHAIN_PARTITION_STAGE_BUDGET_MS,
-              timeoutReason: new DOMException("On-chain partition stage deadline", "TimeoutError"), parentSignal: signal }),
-            deadlineAtMs: Date.now() + ONCHAIN_PARTITION_STAGE_BUDGET_MS,
+        partitionReads.set(meta.id, async () => {
+          const diagnose = (reason: string, ratio: number | null = null) => {
+            if (reason === "ratio-out-of-band") {
+              summary.divergent++;
+              if (ratio != null && summary.divergences.length < ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT) {
+                summary.divergences.push({ id: meta.id, ratio });
+              }
+            } else if (reason === "deadline-exhausted") summary.deadlineSkipped++;
+            else summary.unreadable++;
+            logWorkerEvent({
+              scope: "handler", level: "warn", job: "sync-stablecoins", event: "onchain-partition-divergence",
+              message: `[fiat-cg] ${meta.symbol} on-chain partition unavailable`,
+              metadata: { stablecoinId: meta.id, reason, ratio },
+            });
           };
-        }
-        if (Date.now() >= partitionStage.deadlineAtMs || partitionStage.timeout.signal.aborted) {
-          throwIfAborted(signal);
-          deadlineSkippedCount++;
-          diagnose("deadline-exhausted");
-          return carryPartition();
-        }
-        try {
-          const partition = await fetchOnChainSupplyPartition(meta, mcap, priceForSupply, previousAssetsById?.get(meta.id), chainRpcs, partitionStage.timeout.signal, dwellirNative);
-          throwIfAborted(signal);
-          if ("reason" in partition && partition.reason !== "legs-unreadable") {
-            diagnose(partition.reason, partition.ratio);
+          const carryPartition = () => {
+            const restored = restoreCuratedAggregateChainPartition(
+              asset, previousAssetsById?.get(meta.id), Math.floor(Date.now() / 1000), true,
+            );
+            if (restored?.expired) summary.carryExpired++;
+            else if (restored?.asset.chainPartition?.admission === "carried") summary.carried++;
+            return restored?.asset ?? asset;
+          };
+          if (priceForSupply == null) {
+            diagnose(navLikeAsset ? "nav-price-unavailable" : "supply-price-unavailable");
             return asset;
           }
+          if (!partitionStage) {
+            partitionStage = {
+              timeout: createTimeoutSignal({ timeoutMs: ONCHAIN_PARTITION_STAGE_BUDGET_MS,
+                timeoutReason: new DOMException("On-chain partition stage deadline", "TimeoutError"), parentSignal: signal }),
+              deadlineAtMs: Date.now() + ONCHAIN_PARTITION_STAGE_BUDGET_MS,
+            };
+          }
           if (Date.now() >= partitionStage.deadlineAtMs || partitionStage.timeout.signal.aborted) {
+            throwIfAborted(signal);
+            deadlineSkippedCount++;
             diagnose("deadline-exhausted");
             return carryPartition();
           }
-          if (!("reason" in partition)) {
-            if (partition.chainPartition?.admission === "entered") summary.entered++;
-            else if (partition.chainPartition?.admission === "retained") summary.retained++;
-            return { ...asset, ...partition };
+          try {
+            const partition = await fetchOnChainSupplyPartition(meta, mcap, priceForSupply, previousAssetsById?.get(meta.id), chainRpcs, partitionStage.timeout.signal, dwellirNative);
+            throwIfAborted(signal);
+            if ("reason" in partition && partition.reason !== "legs-unreadable") {
+              diagnose(partition.reason, partition.ratio);
+              return asset;
+            }
+            if (Date.now() >= partitionStage.deadlineAtMs || partitionStage.timeout.signal.aborted) {
+              diagnose("deadline-exhausted");
+              return carryPartition();
+            }
+            if (!("reason" in partition)) {
+              if (partition.chainPartition?.admission === "entered") summary.entered++;
+              else if (partition.chainPartition?.admission === "retained") summary.retained++;
+              return { ...asset, ...partition };
+            }
+            diagnose(partition.reason, partition.ratio);
+            return carryPartition();
+          } catch (error) {
+            throwIfAborted(signal);
+            diagnose(partitionStage.timeout.signal.aborted ? "deadline-exhausted" : "partition-invalid");
+            if (!partitionStage.timeout.signal.aborted) logWorkerEventArgs("handler", "warn", "[fiat-cg] Partition read failed:", error);
+            return partitionStage.timeout.signal.aborted ? carryPartition() : asset;
           }
-          diagnose(partition.reason, partition.ratio);
-          return carryPartition();
-        } catch (error) {
-          throwIfAborted(signal);
-          diagnose(partitionStage.timeout.signal.aborted ? "deadline-exhausted" : "partition-invalid");
-          if (!partitionStage.timeout.signal.aborted) logWorkerEventArgs("handler", "warn", "[fiat-cg] Partition read failed:", error);
-          return partitionStage.timeout.signal.aborted ? carryPartition() : asset;
-        }
+        });
+        return asset;
       },
       { signal },
     );
 
     const assetsById = new Map(results.filter((token): token is PeggedAsset => token !== null)
       .map((token) => [String(token.id), token]));
+    // Other supplemental reads must settle before the partition clock starts.
+    await mapWithConcurrency(orderedCandidates, FIAT_CG_TOKEN_CONCURRENCY, async (meta) => {
+      const read = partitionReads.get(meta.id);
+      if (read) assetsById.set(meta.id, await read());
+    }, { signal });
     summary.divergencesTruncated = summary.divergent - summary.divergences.length;
     reportPartitionSummary?.(summary);
     return FIAT_CG_METAS.flatMap((meta) => {

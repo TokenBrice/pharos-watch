@@ -116,6 +116,7 @@ export function prepareCoinSettingStatements(
   coinId: string,
   setting: string,
   value: string,
+  expectedPreferenceGeneration?: number,
 ): { description: string | null; statements: D1PreparedStatement[] } {
   assertSubscribableCoin(coinId);
   if (!normalizeCoinSetting(setting, value)) return { description: null, statements: [] };
@@ -145,6 +146,6 @@ export function prepareCoinSettingStatements(
   }
   return {
     description,
-    statements: prepareSettingToSubscriptions(db, chatId, username, [{ id: coinId }], command),
+    statements: prepareSettingToSubscriptions(db, chatId, username, [{ id: coinId }], command, expectedPreferenceGeneration),
   };
 }

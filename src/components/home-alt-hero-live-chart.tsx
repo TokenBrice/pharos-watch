@@ -19,8 +19,11 @@ export function HomeAltHeroLiveChart({ history, nowMs }: { history?: HomepageHis
   const rows = useMemo(() => query.error
     ? (query.data?.rows ?? []).map((row) => ({ ...row, usdt: null, usdc: null, sky: null, others: null }))
     : query.data?.rows ?? [], [query.data, query.error]);
-  // Loading or a failed first read: the dated build preview, or a settled neutral placeholder.
-  if (!query.data) return <HomeAltHeroStaticChart history={history} nowMs={nowMs} settled={!query.isLoading} />;
+  // Loading, a failed first read, or a settled empty history: the dated build
+  // preview, or a settled neutral placeholder.
+  if (!query.data || query.data.rows.length === 0) {
+    return <HomeAltHeroStaticChart history={history} nowMs={nowMs} settled={!query.isLoading} />;
+  }
   return (
     <div className="h-full">
       <HomeAltHeroChart rows={rows} />

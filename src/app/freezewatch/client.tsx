@@ -76,11 +76,13 @@ export default function FreezeWatchClient() {
     summaryLoading,
     summaryError,
     error,
+    pageError,
     freshnessQueries,
     sourceGenerations,
     stablecoins,
     stablecoinFxFallbackRates,
     reportCardMap,
+    reportCardsMethodologyVersion,
     blacklistStatusBuckets,
     supportDataLoading,
     stablecoinsError,
@@ -244,6 +246,7 @@ export default function FreezeWatchClient() {
             sourceGenerations={sourceGenerations}
             fxFallbackRates={stablecoinFxFallbackRates}
             reportCards={reportCardMap}
+            reportCardsMethodologyVersion={reportCardsMethodologyVersion}
             error={stablecoinsError}
             isLoading={supportDataLoading}
             onRetry={refetchSupport}
@@ -291,6 +294,7 @@ export default function FreezeWatchClient() {
           <BlacklistTable
             events={events}
             isLoading={pageLoading}
+            error={pageError}
             page={clampedPage}
             pageSize={pageSize}
             sortKey={sortKey}
@@ -348,6 +352,7 @@ export default function FreezeWatchClient() {
         <InterventionSeismograph
           stats={summary?.stats}
           chart={summary?.chart}
+          totalEvents={summary?.totalEvents}
           isLoading={summaryLoading}
           error={summaryError}
           onRetry={() => void refetchSummary()}

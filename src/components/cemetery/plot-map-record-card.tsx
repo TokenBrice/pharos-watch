@@ -17,7 +17,7 @@ import { getObituaryLead } from "@/lib/cemetery-editorial";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { digestDisplay } from "@/lib/fonts/digest";
-import { formatRegisterDeathDate } from "./cemetery-register-model";
+import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import { plotCauseClass } from "./plot-map-shapes";
 import styles from "./plot-map.module.css";
 
@@ -83,7 +83,7 @@ export function PlotMapRecordCard({ row, editorialTitle, flowers, onLeaveFlower,
         </div>
         <div>
           <dt>Peg</dt>
-          <dd>{row.pegCurrency}</dd>
+          <dd>{formatCemeteryPeg(row.pegCurrency)}</dd>
         </div>
         <div>
           <dt>Record</dt>

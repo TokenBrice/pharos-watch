@@ -672,6 +672,7 @@ function RedemptionBackstopCard({
         <div className="min-w-0 flex-1">
           <RedemptionRouteRail
             accessModel={viewModel.accessModel}
+            holderEligibility={viewModel.holderEligibility}
             accessLabel={viewModel.accessLabel}
             settlementLabel={viewModel.settlementLabel}
             outputAssetLabel={viewModel.outputAssetLabel}

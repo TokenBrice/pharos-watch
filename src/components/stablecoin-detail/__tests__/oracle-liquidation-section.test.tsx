@@ -144,7 +144,7 @@ function rolesWithOracle(role: ControlComponentRole, score: number | null = 45):
 }
 
 function ladder(container: HTMLElement): Element | null {
-  return container.querySelector('[role="img"][aria-label^="Oracle tier"]');
+  return container.querySelector('[role="img"][aria-label*="published oracle tier order"]');
 }
 
 function pricePath(container: HTMLElement): Element | null {
@@ -213,10 +213,43 @@ describe("OracleLiquidationSection", () => {
     expect(spectrum?.getAttribute("aria-label")).toContain(`band 1 of ${ORACLE_TIER_POLICY_BANDS.length}`);
   });
 
-  it("draws an empty provider list as an undisclosed source station feeding the mint / redeem quote", () => {
+  it("names the ladder the scored tier, so a mixed-tier coin's verdict keeps the reviewed tier", () => {
+    // SUMMARY is reviewed as redundant-with-failover; the Control component scores privileged-internal-pricing.
+    const { container, getAllByText } = render(
+      <OracleLiquidationSection summary={SUMMARY} controlRoles={rolesWithOracle("limiting")} />,
+    );
+    const label = ladder(container)?.getAttribute("aria-label");
+    expect(label).toMatch(/^Scored tier Privileged internal pricing: band 1 of /);
+    expect(label).not.toContain("Oracle tier");
+    // The verdict sentence is the authored review's, unchanged by the scored ladder.
+    expect(getAllByText(SUMMARY.verdict!).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("keeps the oracle tier name on a ladder that lights the review's own tier", () => {
+    for (const controlRoles of [undefined, rolesWithOracle("excluded", null)]) {
+      const view = render(<OracleLiquidationSection summary={PRICE_FEED} controlRoles={controlRoles} />);
+      expect(ladder(view.container)?.getAttribute("aria-label")).toMatch(/^Oracle tier Privileged internal pricing: band 1 of /);
+      view.unmount();
+    }
+  });
+
+  it("draws an empty provider list as a missing source station, not an undisclosed one", () => {
     const { container } = render(<OracleLiquidationSection summary={PRICE_FEED} />);
     const path = pricePath(container)!;
     expect(path).not.toBeNull();
+    expect(path.getAttribute("aria-label")).toContain("sources not itemized");
+    expect(path.getAttribute("aria-label")).not.toContain("undisclosed");
+    expect(path.textContent).toContain("—");
+    expect(path.textContent).not.toContain("Undisclosed");
+  });
+
+  it("keeps Undisclosed for an opaque review with no itemized feeds", () => {
+    const { container } = render(
+      <OracleLiquidationSection
+        summary={{ ...PRICE_FEED, tier: "opaque-or-unknown", tierLabel: "Opaque / unknown" }}
+      />,
+    );
+    const path = pricePath(container)!;
     expect(path.getAttribute("aria-label")).toContain("sources undisclosed");
     expect(path.textContent).toContain("Undisclosed");
   });

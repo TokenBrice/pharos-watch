@@ -292,11 +292,17 @@ describe("DEX liquidity history atomic identity replacement", () => {
     });
   });
 
-  it("keeps a richer exact snapshot when the incoming run is degraded", async () => {
+  it("reuses richer daily history with empty scored results but admits newly observed NR rows", async () => {
     const fixture = createHarness();
     sqlite = fixture.sqlite;
     const incomingScoredId = ACTIVE_ID_LIST[0]!;
     const richerExistingId = ACTIVE_ID_LIST[1]!;
+    const emptyScoredId = ACTIVE_ID_LIST[2]!;
+    const emptyScoredResult = makeFullScoreResult({
+      tvl: 0, effectiveTvl: 0, vol24h: 0, score: null,
+      coverageClass: "unobserved", coverageConfidence: 0, sourceMix: {},
+      liquidityScoreUnavailableReason: "no-retained-pools",
+    });
     insertSnapshotRows(sqlite, ACTIVE_ID_LIST, new Set([incomingScoredId, richerExistingId]));
     const before = loadSnapshotIdentity(sqlite);
     const retentionCutoff = NOW_SEC - 365 * 86_400;
@@ -307,7 +313,10 @@ describe("DEX liquidity history atomic identity replacement", () => {
 
     const result = await writeHistoricalSnapshots(
       fixture.db,
-      new Map([[incomingScoredId, makeScore()]]),
+      new Map([
+        [incomingScoredId, makeScore()],
+        [emptyScoredId, emptyScoredResult],
+      ]),
       undefined,
       NOW_SEC,
     );
@@ -322,6 +331,24 @@ describe("DEX liquidity history atomic identity replacement", () => {
     expect(result.historyRowsPruned).toBe(1);
     expect(sqlite.prepare("SELECT stablecoin_id FROM dex_liquidity_history WHERE snapshot_date <= ?")
       .all(retentionCutoff)).toEqual([{ stablecoin_id: "cutoff" }]);
+
+    // An empty score-map entry must not make the observed-row target
+    // impossible to satisfy. Genuine new NR coverage must still reconcile.
+    const observedNrScores = new Map([
+      [incomingScoredId, makeScore()],
+      [emptyScoredId, makeFullScoreResult({ score: null, liquidityScoreUnavailableReason: "activity-missing" })],
+    ]);
+    const enriched = await writeHistoricalSnapshots(fixture.db, observedNrScores, undefined, NOW_SEC + 3600);
+    expect(enriched).toMatchObject({
+      snapshotRowsWritten: ACTIVE_ID_LIST.length,
+      skipped: false,
+      writeFailed: false,
+    });
+    expect(sqlite.prepare(`SELECT liquidity_score, coverage_class FROM dex_liquidity_history
+      WHERE stablecoin_id = ? AND snapshot_date = ?`).get(emptyScoredId, SNAPSHOT_DATE))
+      .toEqual({ liquidity_score: null, coverage_class: "primary" });
+    expect(await writeHistoricalSnapshots(fixture.db, observedNrScores, undefined, NOW_SEC + 7200))
+      .toMatchObject({ snapshotRowsWritten: 0, skipped: true, writeFailed: false });
   });
 
   it("rolls back the date delete when any replacement insert fails", async () => {

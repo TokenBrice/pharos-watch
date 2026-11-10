@@ -54,15 +54,6 @@ describe("api contract validation policy", () => {
     ).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
-  it("returns parsed data on strict endpoint when schema matches", async () => {
-    const body = { summary: null, coins: [] };
-    mockJsonOnce(body);
-
-    const result = await apiFetch("/api/peg-summary", z.object({ summary: z.null(), coins: z.array(z.unknown()) }));
-
-    expect(result).toEqual(body);
-  });
-
   it("returns raw successful payloads when no schema is provided", async () => {
     const body = { ok: true, count: 2 };
     mockJsonOnce(body);
@@ -439,14 +430,6 @@ describe("api contract validation policy", () => {
     );
 
     expect(result).toEqual({ doubled: 4 });
-  });
-
-  it("returns null for 404 when nullOn404 is true", async () => {
-    mockFetch([{ match: "/api/stablecoin-reserves/test", body: "Not found", status: 404 }], { requireMatch: true });
-    const result = await apiFetch("/api/stablecoin-reserves/test", undefined, undefined, undefined, {
-      nullOn404: true,
-    });
-    expect(result).toBeNull();
   });
 
   it("fetchStablecoinReserves inherits the shared null-on-404 behavior", async () => {

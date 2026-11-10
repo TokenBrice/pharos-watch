@@ -13,6 +13,10 @@ const { EVENTS } = vi.hoisted(() => {
     recoveryPrice: 1,
     pegReference: 1,
     source: "live" as const,
+    confirmationSources: null,
+    pendingReason: null,
+    closeReason: null,
+    provenance: null,
   };
   return {
     EVENTS: [
@@ -40,6 +44,11 @@ function rowFor(html: string, slug: string): string {
 }
 
 describe("depeg event archive badges", () => {
+  it("states the archive deviation threshold", () => {
+    const html = renderToStaticMarkup(<DepegEventArchive />);
+    expect(html).toContain("Confirmed events at 5% deviation or worse.");
+  });
+
   it("badges disputed and false-positive events as Disputed, with no explanatory sub-text", () => {
     const html = renderToStaticMarkup(<DepegEventArchive />);
     for (const slug of ["disputed-event", "false-positive-event"]) {

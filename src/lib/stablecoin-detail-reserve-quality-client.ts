@@ -43,9 +43,15 @@ export interface ReserveQualitySliceClientRow {
 }
 
 export interface ReserveQualityClientSummary {
-  chipLabel: string;
-  chipToneClass: string;
-  lede: string;
+  /**
+   * True for a full-composition review whose authored slices miss a quality
+   * dimension: review provenance is projected alone, with no verdict, chip
+   * or ladder.
+   */
+  provenanceOnly: boolean;
+  chipLabel: string | null;
+  chipToneClass: string | null;
+  lede: string | null;
   ladder: ReserveQualityLadderClientRow[];
   /** Whole-basket aggregates are unavailable for explicitly contextual reviews. */
   liquidWithinOneDayPct: number | null;
@@ -141,10 +147,12 @@ const CHIP_TONES = {
   watch: SEVERITY_TONE_CLASS.watch.pill,
 } as const;
 
-/** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%". */
+/** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%".
+ *  A non-whole share that would round to 100 prints ">99.9%" instead of overstating the whole. */
 export function formatReserveQualityPct(value: number): string {
   if (value > 0 && value < 0.1) return "<0.1%";
-  return `${Number(value.toFixed(1))}%`;
+  const rounded = Number(value.toFixed(1));
+  return value < 100 && rounded >= 100 ? ">99.9%" : `${rounded}%`;
 }
 
 interface ChipVerdict {
@@ -182,9 +190,10 @@ function buildConvertibilityClause(liquidWithinOneDayPct: number, unknownHorizon
     return "no published exit timeline for any of the basket.";
   }
   if (unknownHorizonPct > 0) {
+    const disclosedPct = formatReserveQualityPct(liquidWithinOneDayPct);
     const disclosed =
       liquidWithinOneDayPct > 0
-        ? `at least ${formatReserveQualityPct(liquidWithinOneDayPct)} convertible within one day`
+        ? `${disclosedPct.startsWith(">") ? disclosedPct : `at least ${disclosedPct}`} convertible within one day`
         : "none of the disclosed basket converts within one day";
     return `${disclosed}; ${formatReserveQualityPct(unknownHorizonPct)} has no published exit timeline.`;
   }
@@ -209,6 +218,15 @@ function buildLede(
   return lede;
 }
 
+/**
+ * Summing authored decimal shares can land a full basket a few ULPs below 100
+ * (24.3 + 64.6 + 11.1 -> 99.99999999999999). That machine roundoff is not a
+ * sub-whole claim, so snap it back to the whole before display and branching.
+ */
+function snapWholeBasketPct(value: number, sliceCount: number): number {
+  return Math.abs(value - 100) <= Number.EPSILON * 100 * Math.max(1, sliceCount) ? 100 : value;
+}
+
 function buildLadder(slices: readonly ReserveSlice[]): ReserveQualityLadderClientRow[] {
   const shares = new Map<ReserveLiquidityHorizon, number>();
   for (const slice of slices) {
@@ -218,7 +236,7 @@ function buildLadder(slices: readonly ReserveSlice[]): ReserveQualityLadderClien
   return LADDER_ORDER.filter((horizon) => (shares.get(horizon) ?? 0) > 0).map((horizon) => ({
     key: horizon,
     label: HORIZON_LABELS[horizon],
-    pct: shares.get(horizon)!,
+    pct: snapWholeBasketPct(shares.get(horizon)!, slices.length),
   }));
 }
 
@@ -231,12 +249,49 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
   // Preserve legacy reviewless curated books; an explicit limited scope never
   // grants whole-token composition authority, even when its rows total 100%.
   const contextual = review?.scope != null && review.scope !== "full-composition";
-  if (slices.length === 0 || (!hasQualityData && !contextual)) return null;
+  if (slices.length === 0 || (!hasQualityData && !contextual && review?.scope !== "full-composition")) return null;
+
+  const confidenceLabel =
+    typeof review?.confidence === "string"
+      ? (RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] ?? review.confidence)
+      : null;
+
+  // A full-composition review still owns reviewed provenance when its slices
+  // carry only one quality dimension. Project that provenance alone: the
+  // module has no whole-basket verdict, chip or ladder to derive. Contextual
+  // reviews keep their existing contextual projection.
+  if (!hasQualityData && !contextual) {
+    return {
+      provenanceOnly: true,
+      chipLabel: null,
+      chipToneClass: null,
+      lede: null,
+      ladder: [],
+      liquidWithinOneDayPct: null,
+      unknownHorizonPct: null,
+      contextual: false,
+      unidentifiedObligorsPct: null,
+      selfExposurePct: null,
+      topPositionName: null,
+      topPositionPct: null,
+      asOf: review?.compositionAsOf ?? null,
+      sliceCount: slices.length,
+      confidenceLabel,
+      reviewedAt: review?.reviewedAt ?? null,
+      compositionBasis: review?.compositionBasis ?? null,
+      knownUnknownExposureNote: review?.knownUnknownExposure ?? null,
+      slices: [],
+      sources: review?.sources ?? [],
+    };
+  }
 
   const ladder = buildLadder(slices);
   const ladderPct = (horizon: ReserveLiquidityHorizon): number =>
     ladder.find((row) => row.key === horizon)?.pct ?? 0;
-  const liquidWithinOneDayPct = ladderPct("immediate") + ladderPct("one-day");
+  const liquidWithinOneDayPct = snapWholeBasketPct(
+    ladderPct("immediate") + ladderPct("one-day"),
+    slices.length,
+  );
   const unknownHorizonPct = ladderPct("unknown");
 
   const selfReservePct = (review?.nonLinkDispositions ?? [])
@@ -264,6 +319,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     : resolveChip(liquidWithinOneDayPct, unknownHorizonPct);
 
   return {
+    provenanceOnly: false,
     chipLabel: chip.label,
     chipToneClass: chip.toneClass,
     lede: contextual
@@ -279,8 +335,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     topPositionPct: !contextual && hasTopPosition ? round1(topSlice.pct) : null,
     asOf: review?.compositionAsOf ?? null,
     sliceCount: slices.length,
-    confidenceLabel:
-      typeof review?.confidence === "string" ? (RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] ?? review.confidence) : null,
+    confidenceLabel,
     reviewedAt: review?.reviewedAt ?? null,
     compositionBasis: review?.compositionBasis ?? null,
     knownUnknownExposureNote: review?.knownUnknownExposure ?? null,

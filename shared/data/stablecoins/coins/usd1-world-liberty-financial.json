@@ -151,8 +151,8 @@
       "fallbackRpcUrl": "https://eth.llamarpc.com",
       "liabilityScope": {
         "basis": "issuer-native-supply",
-        "reviewedAt": "2026-09-27",
-        "evidenceRef": "KPMG examination of the BitGo USD1 Reserve Report for July 2026 (https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_July_2026.pdf) Note A; worldliberty/cre-por-dashboard@109a68ae lib/contracts/usd1-token.ts native flags; https://docs.chain.link/ccip/directory/mainnet/token/USD1",
+        "reviewedAt": "2026-10-01",
+        "evidenceRef": "KPMG examination of the BitGo USD1 Reserve Report for August 2026 (https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_August_2026.pdf?version=0) Note A, signed September 24, 2026; Note A lists the six catalog deployments plus a Canton native deployment (1220b::1220bab043849b986b52bc6271edf1ae962bab03d9f0c0713f071732d2278386bd02:USD1) that is not a catalog contract or part of this readable six-chain perimeter; worldliberty/cre-por-dashboard@109a68ae lib/contracts/usd1-token.ts native flags; https://docs.chain.link/ccip/directory/mainnet/token/USD1",
         "included": [
           {
             "chain": "ethereum",

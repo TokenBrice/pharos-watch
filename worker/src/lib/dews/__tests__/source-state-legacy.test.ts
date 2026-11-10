@@ -346,12 +346,12 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
   });
 
   it("hydrates blacklist counts by tracker stablecoin id instead of bare symbol", async () => {
-    const config = CONTRACT_CONFIGS.find((entry) => entry.stablecoinId === "usda-avalon");
+    const config = CONTRACT_CONFIGS.find((entry) => entry.stablecoinId === "xusd-straitsx");
     expect(config).toBeDefined();
 
     const db = mockDbWithPrevRows([], undefined, [
       {
-        stablecoin: "USDA",
+        stablecoin: "XUSD",
         chain_id: config!.chain.chainId,
         config_key: config!.configKey,
         contract_address: config!.contractAddress,
@@ -366,9 +366,9 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       registerMalformedPersistedInput: () => {},
     });
 
-    expect(sourceState.blacklistCounts.get("usda-avalon")).toEqual({ count24h: 1, count7d: 1 });
-    expect(sourceState.blacklistCounts.has("USDA")).toBe(false);
-    expect(sourceState.blacklistCounts.has("usda-anzens")).toBe(false);
+    expect(sourceState.blacklistCounts.get("xusd-straitsx")).toEqual({ count24h: 1, count7d: 1 });
+    expect(sourceState.blacklistCounts.has("XUSD")).toBe(false);
+    expect(sourceState.blacklistCounts.has("xusd-babelfish")).toBe(false);
     expect(sourceState.blacklistSourceOk).toBe(true);
   });
 

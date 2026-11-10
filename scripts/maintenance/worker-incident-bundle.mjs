@@ -8,25 +8,39 @@ import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../li
 const DAY = 86400;
 const LIMIT = 50000;
 const WORKERS = ["stablecoin-api", "stablecoin-heavy"];
-// Only known structural fields cross the artifact boundary: no errors, arbitrary metadata, SQL or credentials.
+// Only known structural fields cross the artifact boundary; D1 failures add a redacted cause, never stderr/stack.
 const CHILD_FIELDS = ["job", "started_at", "duration_ms", "status", "slot_started_at", "schedule_key", "invocation_id", "worker_version", "productive", "publication_count", "synthetic_reason", "child_disposition", "synthetic_invocation", "output_published_at"];
 const PUBLICATION_FIELDS = ["surface", "generation_id", "state", "started_at", "published_at", "expected_rows", "published_rows"];
 const pick = (row, fields) => Object.fromEntries(fields.map((key) => [key, row[key] ?? null]));
 const label = (rows, reason = null) => ({ coverage: reason ? "partial" : rows.length >= LIMIT ? "partial" : "complete", reason: reason ?? (rows.length >= LIMIT ? "row-limit-reached" : null), rows });
+const isArchivedSource = (source) => source !== null && typeof source === "object" && !Array.isArray(source) && typeof source.coverage === "string";
+// Archived days cross an artifact boundary: reject any shape that could throw
+// or misstate coverage when the archive is merged into the rolling bundle.
+const isDayShard = (shard) => shard !== null && typeof shard === "object" && !Array.isArray(shard)
+  && shard.schemaVersion === 1 && Number.isInteger(shard.from) && shard.to === shard.from + DAY
+  && shard.sources !== null && typeof shard.sources === "object" && !Array.isArray(shard.sources)
+  && Object.values(shard.sources).every(isArchivedSource);
 
 export function assembleIncidentBundle(shards, endSec) {
   const startSec = endSec - 21 * DAY;
   const days = new Map();
+  let quarantinedDayCount = 0;
   for (const shard of shards) {
-    if (shard.schemaVersion !== 1 || !Number.isInteger(shard.from) || shard.to !== shard.from + DAY || shard.from < startSec || shard.to > endSec) continue;
+    if (shard === null || typeof shard !== "object" || Array.isArray(shard)
+      || !Number.isInteger(shard.from) || shard.to !== shard.from + DAY) { quarantinedDayCount += 1; continue; }
+    if (shard.from < startSec || shard.to > endSec) continue;
+    if (!isDayShard(shard)) { quarantinedDayCount += 1; continue; }
     days.set(shard.from, shard);
   }
   const missingDays = [];
   for (let from = startSec; from < endSec; from += DAY) if (!days.has(from)) missingDays.push(new Date(from * 1000).toISOString().slice(0, 10));
   const ordered = [...days.values()].sort((a, b) => a.from - b.from);
-  return { schemaVersion: 1, from: startSec, to: endSec, days: ordered, missingDays,
-    coverage: missingDays.length || ordered.some((day) => Object.values(day.sources).some((source) => source.coverage !== "complete")) ? "partial" : "complete",
-    reasons: missingDays.length ? ["daily-artifact-history-missing"] : [],
+  const reasons = [];
+  if (missingDays.length) reasons.push("daily-artifact-history-missing");
+  if (quarantinedDayCount) reasons.push("archived-day-quarantined");
+  return { schemaVersion: 1, from: startSec, to: endSec, days: ordered, missingDays, quarantinedDayCount,
+    coverage: missingDays.length || quarantinedDayCount || ordered.some((day) => Object.values(day.sources).some((source) => source.coverage !== "complete")) ? "partial" : "complete",
+    reasons,
     limitations: ["Deployment API is a bounded recent inventory, not an activation-time proof", "Delivered-to-child joins require singleton cron + scheduled time and explicit worker version; ambiguous matches remain unjoined", "Publication timestamps are evidence, not proof of child causality without a matching persisted generation", "No hot D1 retention extension; missing historical days cannot be reconstructed as success"],
   };
 }
@@ -54,7 +68,7 @@ export function joinIncidentEvidence(deliveries, children, deployments, publicat
 }
 
 /**
- * @param {{ outDir?: string, database?: string, remote?: boolean }} args
+ * @param {{ outDir?: string, archiveDir?: string, database?: string, remote?: boolean }} args
  * @param {{ env?: Record<string, string | undefined>, now?: Date, query?: (sql: string) => Array<Record<string, unknown>>, fetchImpl?: typeof fetch, deliveryReader?: (input: Record<string, unknown>) => Promise<unknown> }} [options]
  */
 export async function captureWorkerIncidentBundle(args, { env = process.env, now = new Date(), query, fetchImpl = fetch, deliveryReader = readCronDelivery } = {}) {
@@ -67,7 +81,18 @@ export async function captureWorkerIncidentBundle(args, { env = process.env, now
   query ??= (sql) => createD1Client(args.database, { target: args.remote ? "remote" : "local", maxBuffer: 64 * 1024 * 1024 }).query(sql);
   const select = (key, sql, fields) => {
     try { const rows = query(sql).map((row) => pick(row, fields)); sources[key] = label(rows); return rows; }
-    catch { sources[key] = label([], `${key}-read-failed`); collectionFailed = true; return []; }
+    catch (error) {
+      const detail = error && typeof error === "object" ? error : {};
+      const classification = error instanceof Error ? error.message.match(/\b(?:7429|7500|overloaded|timeout|D1_ERROR)\b/i)?.[0].toLowerCase() : undefined;
+      let cause = [error instanceof Error ? error.name : "UnknownError",
+        Number.isInteger(detail.status) ? `status=${detail.status}` : null,
+        typeof detail.signal === "string" && /^SIG[A-Z]+$/.test(detail.signal) ? `signal=${detail.signal}` : null,
+        classification ? `classification=${classification}` : null].filter(Boolean).join("; ");
+      for (const [name, value] of Object.entries(env)) if (/TOKEN|SECRET|PASSWORD|KEY|CREDENTIAL|AUTH/i.test(name) && value) cause = cause.replaceAll(value, "[redacted]");
+      cause = cause.replace(/Bearer\s+\S+/gi, "Bearer [redacted]").replace(/[\r\n]/g, " ").slice(0, 1000);
+      sources[key] = { ...label([], `${key}-read-failed`), cause };
+      collectionFailed = true; return [];
+    }
   };
   const children = select("children", `SELECT job, started_at, duration_ms, status, slot_started_at, schedule_key, invocation_id, worker_version, productive, publication_count,
     CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.reason') END AS synthetic_reason,
@@ -113,17 +138,21 @@ export async function captureWorkerIncidentBundle(args, { env = process.env, now
   if (previousPath && existsSync(previousPath)) {
     try {
       const archive = JSON.parse(readFileSync(previousPath, "utf8"));
-      if (archive.schemaVersion !== 1 || !Array.isArray(archive.days)) throw new Error();
+      // A rolling archive holds at most the 21 in-window days; a longer list is
+      // not a shape this producer writes, so treat it as unreadable rather than
+      // merging an unbounded attacker-supplied day set.
+      if (archive.schemaVersion !== 1 || !Array.isArray(archive.days) || archive.days.length > 21) throw new Error();
       previous = archive.days;
     } catch { collectionFailed = true; shard.sources.archive = label([], "previous-artifact-unreadable"); }
   }
   const bundle = assembleIncidentBundle([...previous, shard], to);
+  if (bundle.quarantinedDayCount > 0) collectionFailed = true;
   writeFileSync(resolve(outDir, "bundle.json"), `${JSON.stringify(bundle)}\n`);
-  writeFileSync(resolve(outDir, "report.md"), [`# Worker incident evidence (21-day bounded archive)`, "", `Coverage: **${bundle.coverage}**; missing UTC days: ${bundle.missingDays.join(", ") || "none"}.`, "",
+  writeFileSync(resolve(outDir, "report.md"), [`# Worker incident evidence (21-day bounded archive)`, "", `Coverage: **${bundle.coverage}**; missing UTC days: ${bundle.missingDays.join(", ") || "none"}${bundle.quarantinedDayCount ? `; quarantined archived days: ${bundle.quarantinedDayCount}` : ""}.`, "",
     ...bundle.limitations.map((limitation) => `- ${limitation}`), "", `## Latest captured day: ${new Date(from * 1000).toISOString().slice(0, 10)}`, "",
     renderWorkerEvidenceTable(shard.summary), "", ...Object.entries(sources).map(([key, source]) => `- ${key}: ${source.coverage}; ${source.reason ?? "bounded read complete"}; ${source.rows.length} rows`), "",
   ].join("\n"));
-  return { coverage: bundle.coverage, missingDays: bundle.missingDays, collectionFailed, output: outDir };
+  return { coverage: bundle.coverage, missingDays: bundle.missingDays, quarantinedDayCount: bundle.quarantinedDayCount, collectionFailed, output: outDir };
 }
 
 runDirectCli(import.meta.url, async () => {

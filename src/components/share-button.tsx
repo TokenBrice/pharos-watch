@@ -64,6 +64,7 @@ export function ShareButton({ ogPath, label = "Share", iconOnly = false }: Share
   }, [resetStatus]);
 
   const copyImage = useCallback(async () => {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
     setStatus("loading");
     try {
       const blob = await requestSequence.current.run((signal) => fetchOgBlob(ogPath, signal));
@@ -78,6 +79,7 @@ export function ShareButton({ ogPath, label = "Share", iconOnly = false }: Share
   }, [ogPath, resetStatus]);
 
   const downloadPng = useCallback(async () => {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
     setStatus("loading");
     try {
       const blob = await requestSequence.current.run((signal) => fetchOgBlob(ogPath, signal));

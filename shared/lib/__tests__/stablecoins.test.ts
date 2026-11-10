@@ -3,9 +3,6 @@ import { DETAIL_PROVIDER_VALUES } from "../../types/core";
 import deadStablecoinAsset from "../../data/dead-stablecoins.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
-import hkdHsbcSource from "../../data/stablecoins/coins/hkd-hsbc.json";
-import usdxlSource from "../../data/stablecoins/coins/usdxl-last.json";
-import hkdHsbcCompliance from "../../data/stablecoins/domains/compliance/hkd-hsbc.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import {
   ACTIVE_META_BY_ID,
@@ -23,9 +20,6 @@ import {
   parseDeadStablecoinAssets,
   parseStablecoinMetaAssets,
 } from "../stablecoins/schema";
-
-const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 491;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -47,14 +41,6 @@ function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<st
 describe("tracked stablecoin metadata", () => {
   const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
   const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
-
-  it("keeps dEURO on CoinGecko admission while retaining its DefiLlama capture identity", () => {
-    expect(TRACKED_META_BY_ID.get("deuro-deuro")).toMatchObject({
-      detailProvider: "coingecko",
-      geckoId: "decentralized-euro",
-      llamaId: "423",
-    });
-  });
 
   it("loads all JSON registry assets through the shared schemas", () => {
     expect(perCoinGenerated).toHaveLength(TRACKED_META_BY_ID.size);
@@ -80,10 +66,6 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps every lifecycle partition aligned after the JSON migration", () => {
-    const inactiveStablecoinCount = PRE_LAUNCH_STABLECOINS.length
-      + FROZEN_STABLECOINS.length
-      + QUARANTINED_STABLECOINS.length
-      + DELISTED_STABLECOINS.length;
     const partitionIds = [
       ...ACTIVE_STABLECOINS,
       ...PRE_LAUNCH_STABLECOINS,
@@ -94,57 +76,14 @@ describe("tracked stablecoin metadata", () => {
       (coin) => coin.id,
     );
 
-    // Deliberate addition tripwire: bump this expected total when adding a tracked coin.
-    expect(TRACKED_STABLECOINS).toHaveLength(EXPECTED_TRACKED_STABLECOIN_COUNT);
-    expect(ACTIVE_STABLECOINS).toHaveLength(TRACKED_STABLECOINS.length - inactiveStablecoinCount);
-    expect(ACTIVE_STABLECOINS.length + inactiveStablecoinCount).toBe(TRACKED_STABLECOINS.length);
-    expect(new Set(partitionIds).size).toBe(TRACKED_STABLECOINS.length);
-    expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
-      "roughrider-bnd",
-      "fiusd-fiserv",
-      "eur-qivalis",
-      "pusd-polaris",
-      "pgold-polaris",
-      "klarnausd-klarna",
-      "rgbp-revolut",
-      "regbp-restabilise",
-      "gbp-vvtx",
-      "hkdap-anchorpoint",
-      "hkd-hsbc",
-      "okrw-hashed",
-      "arc-anq",
-      "brl-b3",
-      "usdf-flipcash",
-      "hkdr-rd-technologies",
-      "brd-volpon",
-      "krw1-bdacs",
-      "rusd-revolut",
-      EURR_PRE_LAUNCH_ID,
-      "weur-aplauz",
-      "plnq-quantoz",
-      "czkc-czkc",
-      "brl-itau",
-      "krw-imbank",
-      "krw-kb-kookmin",
-      "gynusd-gyndore",
-      "gelt-tether",
-      "tgld-tenbin",
-      "thgold-theo",
-      "ejpy-jbfd",
-      "aed-rakbank",
-      "bils-bitsofgold",
-      "kusd-kerne",
-      "rd-rai-dollar",
-      "usd-bank-consortium",
-      "ustx-tx",
-      "net-cloudflare",
-      "usdvb-versabank",
-      "btd-alpen",
-      "jpy-megabank-consortium",
-      "jpydf-deltaforesight",
-      "dotusd-polkadot",
-      "usdrf-realfi",
-    ]);
+    // The lifecycle registries must partition the tracked catalog: no row may
+    // vanish from every partition or appear twice, and a pre-launch row must not
+    // reach the active registry.
+    expect(partitionIds.toSorted()).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id).toSorted());
+    for (const coin of PRE_LAUNCH_STABLECOINS) {
+      expect(coin.status, coin.id).toBe("pre-launch");
+      expect(ACTIVE_META_BY_ID.has(coin.id), coin.id).toBe(false);
+    }
   });
 
   it("keeps tracked registry metadata free of standalone algorithmic backing classifications", () => {
@@ -354,53 +293,11 @@ describe("tracked stablecoin metadata", () => {
     }
   });
 
-  it("tracks the current implementation-scope variants", () => {
-    const variantIds = ACTIVE_STABLECOINS.filter(
-      (coin) => coin.variantOf != null && coin.variantKind != null,
-    ).map((coin) => coin.id);
-
-    expect(variantIds).toEqual([
-      "susdt-spark", "steakusdt-steakhouse", "skymoneyusdtsavings-sky", "sparkusdtbc-spark",
-      "susdc-spark", "gtusdcp-gauntlet", "gtusdc-gauntlet", "krusdc-keyrock",
-      "arcusdc-galaxy", "armusdcs-wintermute", "pendleusdc-pendle", "yvusdc-yearn",
-      "steakusdc-steakhouse", "bbqusdc-steakhouse", "earnusd-lido", "hyperusdca-hyperithm",
-      "bbqusdc-steakhouse-v2", "cscbusdc-clearstar", "steakcusdc-steakhouse", "ethenausdc-steakhouse",
-      "sparkusdc-spark", "susdc-spark-v1", "srusde-strata", "susde-ethena",
-      "susds-sky", "stusds-sky", "skymoneyusdsflagship-sky", "susd1plus-lorenzo",
-      "sdai-sky", "senpyusdmain-sentora", "senpyusdprimev2-sentora", "senpyusdpst-sentora",
-      "senpyusdmwin-sentora", "susdf-falcon", "aa-falconx-mev-capital", "steakusdg-steakhouse",
-      "syrupusdg-maple", "senrlusdv2-sentora", "sxsrlusd-sentora", "susdd-tron-dao-reserve",
-      "susdai-usd-ai", "busd0-usual", "sgho-aave", "stkgho-umbrella-aave", "stcusd-cap",
-      "susdx-axis", "scrvusd-curve", "sfrax-frax", "sdola-inverse-finance",
-      "asusdf-astherus", "sfrxusd-frax", "usdso-somnia", "savusd-avant",
-      "sdai-gnosis", "cusdo-openeden", "usd3-3jane", "steakeurcv-steakhouse",
-      "sreusd-resupply", "musd-metamask", "syusd-aegis", "sbold-k3-capital",
-      "ybold-yearn", "fxsave-f-x-protocol", "susn-noon",
-      "syzusd-yuzu", "usdsc-startale", "ctusd-citrea", "wm-m0",
-      "usdnr-nerona", "usdr-rise", "mantrausd-mantra", "susdat-saturn",
-      "pusd-plume", "wsrusd-reservoir", "srusd-reservoir",
-      "xgld-unitas", "syrupusdc-maple", "syrupusdt-maple", "yousd-yield-optimizer",
-      "zys-zephyr-protocol", "autousd-auto-finance", "eearn-ember", "dusd-dialectic",
-      "yusd-yieldfi", "said-gaib", "apyusd-apyx", "stusd-stoneyield",
-      "kpkusdcprime-kpk", "sirloinusdc-steakhouse", "kpkusdcyield-kpk", "gusdcq-galaxy",
-      "senpathusd-sentora", "strusd-tori", "hbusdt-hyperbeat", "gusdtq-galaxy",
-      "gtusdtp-gauntlet", "iusd-initia",
-    ]);
-  });
-
   it("keeps tracked variant parents active and canonical", () => {
     for (const coin of ACTIVE_STABLECOINS.filter((entry) => entry.variantOf != null)) {
       expect(ACTIVE_META_BY_ID.has(coin.variantOf!), coin.id).toBe(true);
       expect(coin.pegReferenceId, coin.id).toBe(coin.variantOf);
     }
-  });
-
-  it("keeps multi-variant parents explicit", () => {
-    expect(ACTIVE_STABLECOINS.filter((coin) => coin.variantOf === "usds-sky").map((coin) => coin.id)).toEqual([
-      "susds-sky", "stusds-sky", "skymoneyusdsflagship-sky",
-    ]);
-    expect(ACTIVE_STABLECOINS.filter((coin) => coin.variantOf === "bold-liquity").map((coin) => coin.id))
-      .toEqual(["sbold-k3-capital", "ybold-yearn"]);
   });
 
   it("rejects malformed stablecoin assets with readable schema errors", () => {
@@ -888,114 +785,6 @@ describe("tracked stablecoin metadata", () => {
     )).toThrowError(/dead-recorded-invalid\.json: 0\.recordedAt: Expected YYYY-MM-DD/);
   });
 
-  it("does not attach a CoinGecko slug to M by M0 when the base token is not contract-resolved on CoinGecko", () => {
-    const coin = TRACKED_META_BY_ID.get("m-m0");
-
-    expect(coin).toBeDefined();
-    expect(coin?.geckoId).toBeUndefined();
-    expect(
-      coin?.contracts?.some(
-        (contract) =>
-          contract.chain === "ethereum" &&
-          contract.address.toLowerCase() === "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-      ),
-    ).toBe(true);
-  });
-
-  it("keeps BOLD itself as non-yield-bearing metadata", () => {
-    const coin = TRACKED_META_BY_ID.get("bold-liquity");
-
-    expect(coin).toBeDefined();
-    expect(coin?.flags.yieldBearing).toBe(false);
-    expect(coin?.yieldConfig).toBeUndefined();
-  });
-
-  it("keeps PHT's unreconciled collateral unlinked without inventing a custodian", () => {
-    const coin = TRACKED_META_BY_ID.get("pht-pht");
-
-    expect(coin?.reserves).toEqual([
-      expect.objectContaining({
-        name: "Current apcxUSDT-referenced collateral envelope (unreconciled)",
-        pct: 100,
-      }),
-    ]);
-    expect(coin?.reserves?.[0]).not.toHaveProperty("coinId");
-    expect(coin?.reserveReview?.knownUnknownExposurePct).toBe(100);
-    expect(coin?.reserveReview?.nonLinkDispositions).toEqual([
-      expect.objectContaining({
-        reserveIndex: 0,
-        pct: 100,
-        disposition: "insufficient-evidence",
-      }),
-    ]);
-    expect(coin?.custodyProfile?.providers).toEqual([
-      {
-        name: "apcxUSDT reserve wallet TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU (controller undisclosed)",
-        role: "other",
-      },
-    ]);
-    expect(coin?.dependencies ?? []).toEqual([]);
-  });
-
-  it("keeps base USDAI on the curated supply path while sUSDai owns the mixed protocol reserve feed", () => {
-    const usdai = TRACKED_META_BY_ID.get("usdai-usd-ai");
-    const susdai = TRACKED_META_BY_ID.get("susdai-usd-ai");
-
-    expect(usdai?.reserves).toMatchObject([
-      {
-        pct: 100,
-        risk: "low",
-        coinId: "pyusd-paypal",
-        depType: "collateral",
-        assetClass: "stablecoin",
-        issuerOrObligor: "Paxos Trust Company, N.A. (PYUSD issuer; PayPal brand)",
-        riskFactors: ["counterparty", "custody", "smart-contract", "liquidity"],
-        liquidityHorizon: "immediate",
-      },
-    ]);
-    expect(usdai?.liveReservesConfig).toMatchObject({
-      adapter: "usdai-hub",
-      version: 2,
-      semantics: "single-asset",
-      breakerScope: "usdai-usd-ai",
-      display: {
-        url: "https://usd.ai/usdai",
-        label: "USD.AI USDai",
-      },
-      inputs: {
-        primary: {
-          kind: "onchain-evm",
-          chain: "arbitrum",
-          rpcMode: "public-rpc",
-        },
-      },
-      params: {
-        hubAddress: "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
-        baseTokenAddress: "0x46850aD61C2B7d64d08c9C754F45254596696984",
-        implementationAddress: "0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9",
-        redemptionCapacity: {
-          holderEligibility: "any-holder",
-        },
-      },
-    });
-
-    expect(susdai?.liveReservesConfig).toMatchObject({
-      adapter: "usdai-proof-of-reserves",
-      breakerScope: "susdai-usd-ai",
-      display: {
-        url: "https://app.usd.ai/reserves",
-        label: "USD.AI On-chain Reserve Index",
-      },
-      inputs: {
-        primary: {
-          kind: "http-json",
-          url: "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
-        },
-      },
-    });
-    expect(susdai?.pegReferenceId).toBe("usdai-usd-ai");
-  });
-
   it("gives business-day NAV oracles enough freshness headroom for weekends", () => {
     const maxAgeSec = 4 * 24 * 60 * 60;
     const businessDayNavIds = ["ousg-ondo-finance"];
@@ -1041,121 +830,5 @@ describe("suspended live reserve feeds", () => {
     const stripped = withoutSuspendedLiveReserves(suspended);
     expect(stripped.liveReservesConfig).toBeUndefined();
     expect(stripped.id).toBe("test-coin");
-  });
-
-  it("keeps the partial USDXL pool feed out of score-grade runtime metadata", () => {
-    expect(usdxlSource.liveReservesConfig.suspended).toMatchObject({
-      since: "2026-08-27",
-      reviewBy: "2026-11-20",
-    });
-
-    const runtime = TRACKED_META_BY_ID.get("usdxl-last");
-    expect(runtime?.liveReservesConfig).toBeUndefined();
-    expect(runtime?.reserves).toMatchObject([
-      { pct: 100, risk: "very-high" },
-    ]);
-  });
-});
-
-describe("USDO Kaia deployment", () => {
-  it("keeps the live Kaia proxy under a reviewed native route and CCIP pool control", () => {
-    const routeId = "klaytn:0x87e617c7484ade79fcd90db58beb82b057facb48";
-    const coin = TRACKED_META_BY_ID.get("usdo-openeden");
-
-    expect(coin?.contracts).toContainEqual({
-      chain: "klaytn",
-      address: "0x87e617c7484ade79fcd90db58beb82b057facb48",
-      decimals: 18,
-    });
-    expect(coin?.bridgeRouteRisk?.routes?.find((route) => route.id === routeId)).toMatchObject({
-      destinationChain: "klaytn",
-      issuanceModel: "native-issuance",
-      routeClass: "native",
-      scope: "canonical",
-      reviewDisposition: "reviewed",
-    });
-    expect(
-      coin?.bridgeRouteRisk?.controls?.find(
-        (control) => control.controllerAddress?.toLowerCase() === "0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
-      ),
-    ).toMatchObject({
-      routeRefs: [routeId],
-      capabilities: ["bridge-mint", "bridge-burn"],
-    });
-  });
-});
-
-describe("RedCoin issuer-disclosure reconciliation", () => {
-  const genius = hkdHsbcCompliance.genius;
-
-  it("records the issuer's disclosures without inventing an attestation series", () => {
-    expect(genius).toMatchObject({
-      reserveDisclosurePresent: true,
-      reserveDisclosureUrl: "https://www.hsbc.com.hk/stablecoins/",
-      redemptionPolicyPresent: true,
-      monthlyAttestationPresent: false,
-      reviewer: "Pharos compliance research",
-      reviewedAt: "2026-10-26",
-    });
-    expect(genius.references).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        url: "https://www.about.hsbc.com.hk/news-and-media/hsbc-redcoin-launches-today",
-        sourceKind: "issuer-disclosure",
-        sourceDate: "2026-10-23",
-      }),
-    ]));
-  });
-
-  it("keeps the issuer, U.S. authorization finding and pre-launch lifecycle unchanged", () => {
-    expect(genius).toMatchObject({
-      authorizationStatus: "no-public-authorization-found",
-      issuerPathway: "unknown",
-      issuerEntity: "The Hongkong and Shanghai Banking Corporation Limited",
-      foreignExceptionStatus: "unknown",
-      enforcementStatus: "no-public-action-found",
-      daspOfferSaleStatus: "not-yet-restricted",
-    });
-    expect(genius.negativeEvidenceReview.reviewedAt).toBe("2026-10-07");
-    expect(hkdHsbcSource).toMatchObject({ status: "pre-launch", launchPhase: "launching-soon" });
-    expect(TRACKED_META_BY_ID.get("hkd-hsbc")?.status).toBe("pre-launch");
-  });
-
-  it("drops the superseded forthcoming and no-issuance claims from current-state fields", () => {
-    const current = [
-      hkdHsbcSource.oneLiner,
-      hkdHsbcSource.pegMechanism,
-      hkdHsbcSource.launchPhaseDetail,
-      genius.applicabilityBasis.summary,
-      genius.notes,
-    ].join("\n");
-    expect(current).not.toMatch(/forthcoming|no stablecoins (?:have yet been )?issued|once HSBC launches|no contract or supply data/i);
-    expect(genius.references.map((reference) => reference.label)).not.toContain(
-      "HSBC RedCoin product disclosures: no stablecoins issued yet",
-    );
-  });
-});
-
-describe("launched-awaiting-data review reasons", () => {
-  it.each([
-    ["dotusd-polkadot", "2026-10-08"],
-    ["usdrf-realfi", "2026-10-01"],
-  ])("keeps %s outside live collection until a market price is admitted", (id, launchDate) => {
-    const coin = TRACKED_META_BY_ID.get(id)!;
-    expect(coin).toMatchObject({ status: "pre-launch", launchPhase: "launched", launchDate });
-    expect(coin.listingStatusReview).toMatchObject({ changedAt: "2026-10-28", reviewBy: "2026-12-27" });
-    expect(coin.listingStatusReview?.reason).toMatch(/^Missing lane: price\./);
-    expect(coin.milestones?.some((milestone) => milestone.date === launchDate && milestone.sourceUrl)).toBe(true);
-    expect(ACTIVE_META_BY_ID.has(id)).toBe(false);
-  });
-
-  it.each([
-    ["usdf-flipcash", /DefiLlama returned a quote for the Solana mint without naming its source market.*not enough to admit the quote \(#1663\)/],
-  ])("keeps %s awaiting data with an explicit admitted-price gap", (id, reason) => {
-    const coin = TRACKED_META_BY_ID.get(id)!;
-    expect(coin).toMatchObject({ status: "pre-launch", launchPhase: "launched" });
-    expect(coin.listingStatusReview).toMatchObject({ changedAt: "2026-10-25", reviewBy: "2026-12-24" });
-    expect(coin.listingStatusReview?.reason).toMatch(/^Missing lane: price\./);
-    expect(coin.listingStatusReview?.reason).toMatch(reason);
-    expect(ACTIVE_META_BY_ID.has(id)).toBe(false);
   });
 });

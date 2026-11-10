@@ -20,9 +20,9 @@ import {
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { SafetyScoreV9ResponseSchema } from "\@shared/types/safety-score-v9-publication-response";
 import { explainSafetyScoreV9PillarFreshness } from "@shared/types/safety-score-v9-public-facts";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
-  buildSafetyScoreV9Candidate,
+  buildSafetyScoreV9Candidate as buildSafetyScoreV9CandidateWithPolicy,
   buildSafetyScoreV9PublicationFromNormalizedInput,
   buildSafetyScoreV9PublicationFromOwnedInput,
   type SafetyScoreV9FixedInputOwner,
@@ -55,6 +55,17 @@ import {
 const AS_OF_SEC = v9TestClockSec();
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const PUBLISHED_AT_SEC = AS_OF_SEC + 10;
+
+// One validated policy envelope for every build. The real loader re-parses the
+// 74 KB candidate policy on each call; all fixtures here share one clock, so the
+// resolved envelope is identical. An explicit per-case policy still wins.
+const V9_CANDIDATE_POLICY = loadV9CandidateMethodologyPolicy(AS_OF_SEC);
+
+function buildSafetyScoreV9Candidate(
+  input: Parameters<typeof buildSafetyScoreV9CandidateWithPolicy>[0],
+): ReturnType<typeof buildSafetyScoreV9CandidateWithPolicy> {
+  return buildSafetyScoreV9CandidateWithPolicy({ policy: V9_CANDIDATE_POLICY, ...input });
+}
 
 const FIXTURE_RESERVES = [
   {
@@ -278,6 +289,14 @@ function reserveParentCascadeFixture() {
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 
 describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  let cascadeFixture!: ReturnType<typeof reserveParentCascadeFixture>;
+  let cascadeBaseline!: ReturnType<typeof buildSafetyScoreV9Candidate>;
+
+  beforeAll(() => {
+    cascadeFixture = reserveParentCascadeFixture();
+    cascadeBaseline = buildSafetyScoreV9Candidate(cascadeFixture);
+  });
+
   it("publishes evaluation supply and captured shared-book identity without using publication time", () => {
     const fixedInput = exactFixedInput("alpha");
     fixedInput.liveReserveProvenanceMap.alpha = {
@@ -627,8 +646,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it.each(["alpha", "gamma"])("publishes %s through a quarantined reserve parent without cascading public-contract failures", (assetId) => {
-    const input = reserveParentCascadeFixture();
-    const baseline = buildSafetyScoreV9Candidate(input);
+    const input = structuredClone(cascadeFixture);
+    const baseline = cascadeBaseline;
     expect(baseline.quarantines).toEqual([]);
     const ordinaryAlpha = resolveV9PublicWitnessTexts(baseline.candidate.cards.find((card) => card.id === "alpha")!);
     expect(ordinaryAlpha.pillars.exit.score).toBe(0);
@@ -671,8 +690,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it("quarantines only a parent whose table projection alone fails, preserving its dependents' census", () => {
-    const input = reserveParentCascadeFixture();
-    const baseline = buildSafetyScoreV9Candidate(input);
+    const input = structuredClone(cascadeFixture);
+    const baseline = cascadeBaseline;
     expect(baseline.quarantines).toEqual([]);
     // Sorted projection admits alpha's table and neighborhood rows, then beta's
     // table row: give only that row a priced unknown on a scored pillar.
@@ -718,8 +737,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     }
 
     it("quarantines the expired contributor, recomputes dependents and keeps unaffected ratings", () => {
-      const input = reserveParentCascadeFixture();
-      const clean = buildSafetyScoreV9Candidate(input);
+      const input = structuredClone(cascadeFixture);
+      const clean = cascadeBaseline;
       const acceptedPublication = buildSafetyScoreV9AcceptedPublicationBaseline(clean.candidate);
       const result = buildSafetyScoreV9Candidate({
         ...input, measuredExitExpiry: { routes: expiredRoutes(input, { beta: ["dex:primary"] }), acceptedPublication },
@@ -746,7 +765,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     });
 
     it("keeps quarantining from a retained witness until the same route refreshes", () => {
-      const input = reserveParentCascadeFixture();
+      const input = structuredClone(cascadeFixture);
       const first = buildSafetyScoreV9Candidate({
         ...input, measuredExitExpiry: {
           routes: expiredRoutes(input, { beta: ["dex:primary"] }),
@@ -774,8 +793,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     });
 
     it("is monotonic: a wrapper that deteriorates after its parent quarantine loses its expired former route too", () => {
-      const input = reserveParentCascadeFixture();
-      const clean = buildSafetyScoreV9Candidate(input);
+      const input = structuredClone(cascadeFixture);
+      const clean = cascadeBaseline;
       const accepted = buildSafetyScoreV9AcceptedPublicationBaseline(clean.candidate);
       // Alpha's accepted primary was a now-expired legacy route it no longer selects.
       const alpha = accepted.cards.find((card) => card.id === "alpha")!;

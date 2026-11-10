@@ -139,7 +139,7 @@ describe("tracked optional source anchors", () => {
     const db = mockD1([
       {
         match: "pharos:yield-sync:tier1-previous-rate",
-        matchBinds: ["usde-ethena", "100", sevenDaysAgoSec],
+        matchBinds: [JSON.stringify(["usde-ethena", "100"]), sevenDaysAgoSec],
         rows: [
           {
             stablecoin_id: "usde-ethena",
@@ -161,7 +161,7 @@ describe("tracked optional source anchors", () => {
     expect(rows.get("100")).toEqual({ exchangeRate: 1.01, recordedAt: sevenDaysAgoSec - 9 });
     const queries = db.getHistory().filter((entry) => entry.sql.includes("pharos:yield-sync:tier1-previous-rate"));
     expect(queries).toHaveLength(1);
-    expect(queries[0]?.binds).toEqual(["usde-ethena", "100", sevenDaysAgoSec]);
+    expect(queries[0]?.binds).toEqual([JSON.stringify(["usde-ethena", "100"]), sevenDaysAgoSec]);
     db.assertAllMatchesUsed();
   });
 

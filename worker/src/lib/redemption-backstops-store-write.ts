@@ -162,9 +162,8 @@ function buildRunRowUpsert(
 
 function buildHistoryUpsert(
   db: D1Database,
-  record: RedemptionBackstopSnapshotRecord,
   snapshotDate: number,
-  runId?: string | null,
+  runId: string,
 ): D1PreparedStatement {
   return db
     .prepare(
@@ -177,18 +176,16 @@ function buildHistoryUpsert(
          methodology_version,
          details_json,
          snapshot_run_id
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) SELECT stablecoin_id, ?, score, dex_liquidity_score, updated_at,
+                methodology_version, details_json, snapshot_run_id
+           FROM redemption_backstop_run_rows
+          WHERE snapshot_run_id = ?
+            AND EXISTS (
+              SELECT 1 FROM redemption_backstop_runs
+               WHERE run_id = ? AND status = 'running'
+            )`,
     )
-    .bind(
-      record.stablecoinId,
-      snapshotDate,
-      record.score,
-      record.dexLiquidityScore,
-      record.updatedAt,
-      record.methodologyVersion,
-      buildDetailsJson(record),
-      runId ?? null,
-    );
+    .bind(snapshotDate, runId, runId);
 }
 
 function createRedemptionBackstopRunId(): string {
@@ -298,7 +295,7 @@ function buildRunFailedUpdate(
               written_count = ?,
               metadata_json = ?
         WHERE run_id = ?
-          AND status IN ('running', 'completed')`,
+          AND status = 'running'`,
     )
     .bind(args.completedAt, args.writtenCount, JSON.stringify(args.metadata), args.runId);
 }
@@ -650,7 +647,10 @@ export async function upsertRedemptionBackstopSnapshots(
     const minUpdatedAt = rowCount.minUpdatedAt ?? recordBounds.minUpdatedAt;
     const maxUpdatedAt = rowCount.maxUpdatedAt ?? recordBounds.maxUpdatedAt;
     writePhase = "complete-manifest";
-    const completion = await runWithOverloadRetry(() =>
+    // Copy this run's bounded cohort and admit it in one transaction so failed
+    // publication cannot destroy previous daily closes or expose an interim run.
+    const [history, completion] = await runWithOverloadRetry(() => db.batch([
+      buildHistoryUpsert(db, snapshotDate, runId),
       buildRunCompleteUpdate(db, {
         runId,
         completedAt: Math.floor(Date.now() / 1000),
@@ -662,23 +662,19 @@ export async function upsertRedemptionBackstopSnapshots(
           attemptedCount,
           expectedCount,
           runRowsWrittenCount: rowCount.rowCount,
-          historyWrittenCount,
+          historyWrittenCount: rowCount.rowCount,
           retentionRunRowsDeletedCount,
           retentionRunsDeletedCount,
           writeStatus: "completed",
           writePhase,
         }),
-      }).run(),
-    );
+      }),
+    ]));
     if ((completion.meta?.changes ?? 0) <= 0) {
       throw new Error(`Failed to mark redemption backstop run ${runId} completed`);
     }
 
-    // The daily close belongs to an admitted run only: a generation rejected
-    // after this point must not replace the day's previous close.
-    writePhase = "history";
-    const historyStatements = records.map((record) => buildHistoryUpsert(db, record, snapshotDate, runId));
-    historyWrittenCount = await batchExecute(db, historyStatements, 80);
+    historyWrittenCount = Number(history.meta?.changes ?? 0);
 
     const warnings: string[] = [];
     writePhase = "retention";
@@ -736,20 +732,6 @@ export async function upsertRedemptionBackstopSnapshots(
   } catch (error) {
     if (runStarted) {
       const message = toErrorMessage(error);
-      if (writePhase === "history") {
-        // The daily close was written for a run that is not being admitted;
-        // remove this generation's rows before recording the failed manifest.
-        try {
-          await runWithOverloadRetry(() =>
-            db
-              .prepare("DELETE FROM redemption_backstop_history WHERE snapshot_run_id = ?")
-              .bind(runId)
-              .run(),
-          );
-        } catch {
-          // Preserve the original write failure; retention still prunes these rows.
-        }
-      }
       try {
         await runWithOverloadRetry(() =>
           buildRunFailedUpdate(db, {

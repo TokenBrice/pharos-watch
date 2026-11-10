@@ -3,6 +3,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
+import { TELEGRAM_ALERT_FAMILY_SHORT_LABELS } from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_LIVE_ALERT_TYPES } from "@shared/types/status/telegram";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { makeAvailableTelegramDeliverySli, makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
 import { TelegramBotStats } from "../telegram-bot-stats";
@@ -26,6 +28,7 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
         safety: 3,
         launch: 2,
         reserve: 1,
+        freeze: 6,
         allTypes: 1,
       },
     }),
@@ -226,5 +229,65 @@ describe("TelegramBotStats", () => {
     expect(screen.getByText(/no such table with_a_long_unbroken_name/)).toBeTruthy();
     const lifecycle = screen.getByText("Lifecycle and secondary telemetry");
     expect(lifecycle.closest("details")).toBeTruthy();
+  });
+
+  it("does not read a failed coin-ranking query as zero saved subscriptions", () => {
+    const bot = telegramBot();
+    renderWorkbench({
+      bot: {
+        ...bot,
+        topStablecoins: [],
+        quality: {
+          status: "partial",
+          unavailableFields: ["topStablecoins"],
+          errors: { topStablecoins: "D1 unavailable" },
+        },
+      },
+    });
+
+    expect(screen.queryByText("No saved coin subscriptions.")).toBeNull();
+    expect(screen.getByText("Coin subscription coverage is Unknown.")).toBeTruthy();
+  });
+
+  it("names the explicit-follow denominator and the chat count behind saved follows", () => {
+    renderWorkbench();
+
+    expect(screen.getByText("Chats with coin follows").parentElement?.textContent).toContain("6");
+    expect(
+      screen.getByText("Average explicit follows / chat with explicit follows").parentElement?.textContent,
+    ).toContain("2");
+    expect(screen.queryByText("Average follows / chat")).toBeNull();
+    expect(screen.queryByText("Saved coin follows")).toBeNull();
+  });
+
+  it("renders every live alert family and omits the retired launch family", () => {
+    const alertTypeChats = {
+      dews: 11, depeg: 12, safety: 13, launch: 9, reserve: 14, freeze: 15, allTypes: 16,
+    };
+    renderWorkbench({ bot: { ...telegramBot(), alertTypeChats } });
+
+    for (const type of TELEGRAM_LIVE_ALERT_TYPES) {
+      const label = TELEGRAM_ALERT_FAMILY_SHORT_LABELS[type];
+      expect(screen.getByText(label).parentElement?.textContent).toContain(String(alertTypeChats[type]));
+    }
+    expect(screen.getByText("Freeze")).toBeTruthy();
+    expect(screen.queryByText("Launch")).toBeNull();
+  });
+
+  it("keeps measured coin rankings visible alongside an unrelated partial field", () => {
+    const bot = telegramBot();
+    renderWorkbench({
+      bot: {
+        ...bot,
+        quality: {
+          status: "partial",
+          unavailableFields: ["pendingDeliveryBacklog"],
+          errors: { pendingDeliveryBacklog: "D1 unavailable" },
+        },
+      },
+    });
+
+    expect(screen.getByText("LONG")).toBeTruthy();
+    expect(screen.queryByText("Coin subscription coverage is Unknown.")).toBeNull();
   });
 });

@@ -53,7 +53,7 @@ const GENERATED_BY = "scripts/maintenance/build-cemetery-logo-atlas.ts";
 const REFRESH_COMMAND = "npm run logos:cemetery-atlas";
 
 /** Bump when rendering or layout logic changes so the signature rotates. */
-export const ATLAS_GENERATOR_VERSION = 2;
+export const ATLAS_GENERATOR_VERSION = 3;
 
 /**
  * Cell edge in device pixels. The atlas serves logos drawn at ~12-40 CSS px
@@ -75,11 +75,13 @@ export const ATLAS_CELL_GUTTER = 2;
 
 /**
  * Measured at 48 px: q75/a100 142 KB, q70/a80 129 KB in the original cohort.
- * The 2026-10-31 freeze batch took the atlas to 153.7 KB at q70, so q66 holds
- * the 125-row atlas at 148.7 KB under the 150 KB budget.
+ * The 2026-10-31 freeze batch took the atlas to 153.7 KB at q70, so q66 held
+ * the 125-row atlas at 148.7 KB. The 2026-11-02 freeze batch needs q64 to
+ * keep the 127-row atlas under the 150 KB budget. FXD takes q64 to 150.6 KB;
+ * q63 keeps the expanded atlas within that unchanged budget.
  */
 export const ATLAS_WEBP_OPTIONS = {
-  quality: 66,
+  quality: 63,
   alphaQuality: 80,
   effort: 6,
 } as const;

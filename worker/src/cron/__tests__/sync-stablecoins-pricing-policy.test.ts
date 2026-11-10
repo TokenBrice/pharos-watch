@@ -4,6 +4,7 @@ import { restoreMissingTrackedAssets } from "../sync-stablecoins/shared";
 import { carryForwardSupplyGapFill } from "../sync-stablecoins/supply-gap-reconciliation";
 import { enrichMissingPrices, type PeggedAsset, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { makePeggedAsset, makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
 
@@ -21,6 +22,21 @@ describe("pricing application policy", () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
+
+  it.each([["coingecko", 1], ["coingecko", 0.9995], ["defillama-list", 0.9995]] as const)(
+    "distinguishes a fetched %s quote at %s from the list's attributed fill", (source, price) => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const asset = makePeggedAsset({ id: "buidl-blackrock", price: null,
+        priceListFillDefault: { value: price, upstreamSource: "coingecko" } });
+      const primaryPriceResults = new Map([[asset.id, makePrimaryPriceResultFixture({
+        price, source, agreeSources: [source], allPrices: { [source]: price }, observedAt: nowSec - 60,
+      })]]);
+      const validationContexts = createValidationContextResolver();
+      applyConsensusResults({ assets: [asset], primaryPriceResults, validationContexts, syncStartSec: nowSec, reason: "primary" });
+      prevalidatePrices({ assets: [asset], primaryPriceResults, validationContexts, logLabel: "test" });
+      expect(asset.price).toBe(source === "coingecko" ? price : null);
+    },
+  );
 
   it("lets USG reject a weak address-provider depeg and recover through exact DefiLlama contract fallback", async () => {
     const assets: PeggedAsset[] = [
@@ -99,12 +115,12 @@ describe("pricing application policy", () => {
       observedAtMode: "local_fetch",
       observedAtBySource: { bitstamp: nowSec - 40, coingecko: nowSec - 60, kraken: nowSec - 35, "uniswap-v3-dex": nowSec - 1_200 },
     };
-    // Previous-generation MXNE row: an ordinary CoinGecko quote ~40h old at restore time.
+    // Previous-generation supplemental row: an ordinary CoinGecko quote ~40h old at restore time.
     const previousMxne: PeggedAsset = {
-      id: "mxne-real-mxn", name: "MXNe", symbol: "MXNE", pegType: "peggedMXN",
-      price: 0.0567, priceSource: "coingecko", priceConfidence: "single-source",
+      id: "xmd-metal-dollar", name: "XMD", symbol: "XMD", pegType: "peggedUSD",
+      price: 0.9997, priceSource: "coingecko", priceConfidence: "single-source",
       priceObservedAt: nowSec - 144_443, priceObservedAtMode: "upstream", priceSyncedAt: nowSec - 900,
-      agreeSources: ["coingecko"], supplyObservedAt: nowSec - 900, circulating: { peggedMXN: 21_000_000 },
+      agreeSources: ["coingecko"], supplyObservedAt: nowSec - 900, circulating: { peggedUSD: 21_000_000 },
     };
     const restored = restoreMissingTrackedAssets([usdt], new Map([[previousMxne.id, previousMxne]]), nowSec).assets;
     const assets = [usdt, ...restored];

@@ -5,6 +5,7 @@ import { appendFileSync, closeSync, constants, existsSync, fstatSync, mkdirSync,
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { isRecord } from "../../shared/lib/type-guards.ts";
 
 import {
   hasDeployImpact,
@@ -265,10 +266,6 @@ function getRoutingRegistry() {
 }
 
 class ExplicitPathError extends Error {}
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values.filter(Boolean))];
@@ -1584,7 +1581,7 @@ export function formatContract(
     );
     if (context.status === "over-budget") {
       sections.push(
-        `Over budget by ${context.total.bytes - context.ceiling} B. No required references have been dropped.`,
+        `Warning: over budget by ${context.total.bytes - context.ceiling} B (advisory; nothing was dropped).`,
         context.remediation!,
         "Contributions (merged per file, largest first):",
         formatBullets([...context.files].sort((a, b) => b.bytes - a.bytes).map((file) => `${file.path}: ${file.bytes} B`), { limit: Number.POSITIVE_INFINITY }),
@@ -1877,14 +1874,20 @@ Options:
 `);
 }
 
-export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
+export interface RunCliDeps {
+  readStdin?: () => string;
+  /** Reuse one immutable Markdown snapshot when a caller runs several routes in one process. */
+  documents?: RouteContextDocumentCache;
+}
+
+export function runCli(argv: readonly string[] = process.argv.slice(2), deps: RunCliDeps = {}): void {
   const { explicitFiles, options } = parseArgs(argv);
   if (options.help) {
     printHelp();
     return;
   }
 
-  const hookRead = options.hook ? readHookInput() : { input: {}, malformed: false };
+  const hookRead = options.hook ? readHookInput(deps) : { input: {}, malformed: false };
   const hookMode = normalizeHookMode(options.hook);
 
   if (options.hook && hookRead.malformed) {
@@ -1988,8 +1991,7 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     contract.checks = [];
     process.exitCode = 1;
   }
-  const context = buildRouteContext(contract);
-  if (context.status === "over-budget") process.exitCode = 1;
+  const context = buildRouteContext(contract, deps.documents ? { documents: deps.documents } : {});
   if (options.format === "json") {
     console.log(JSON.stringify({ ...contract, context }, null, 2));
     return;

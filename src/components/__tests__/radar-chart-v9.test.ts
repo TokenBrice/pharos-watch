@@ -73,7 +73,7 @@ describe("V9 radar cohorts", () => {
     });
     const { container } = render(createElement(CompareRadarV9, { series, cohortSeries: [] }));
     expect(container.textContent).toContain("Unknown for UUSD");
-    expect(container.textContent).not.toMatch(/assumed \d|not yet researched|undisclosed/);
+    expect(container.textContent).not.toMatch(/assumed \d|unresolved|undisclosed/);
     expect(container.querySelectorAll("circle[fill='#10b981']")).toHaveLength(2);
     expect(container.querySelector("line[stroke-dasharray]")).toBeNull();
   });
@@ -85,12 +85,12 @@ describe("V9 radar cohorts", () => {
     const result = buildV9RadarDataset([{ card, identity, color: "#10b981" }]);
     if (result.status !== "available") throw new Error("Expected a plottable priced-unknown card");
     expect(result.value.unknownAxes.Exit).toEqual({
-      seriesIds: ["uusd"], missingNames: [], assumptions: ["not yet researched · assumed 50/100"],
+      seriesIds: ["uusd"], missingNames: [], assumptions: ["unresolved · assumed 50/100"],
     });
     const { container } = render(createElement(CompareRadarV9, { series: [{ card, identity, color: "#10b981" }], cohortSeries: [], size: 300 }));
     expect(container.textContent).toContain("Unknown");
     expect([...container.querySelectorAll("title")].map((title) => title.textContent).join(" "))
-      .toContain("Exit: unknown, not plotted (not yet researched · assumed 50/100)");
+      .toContain("Exit: unknown, not plotted (unresolved · assumed 50/100)");
     expect(container.querySelector("[role='figure']")?.getAttribute("aria-label")).toBe("V10 safety score pillar comparison. Exit unknown, not plotted");
     // Two measured pillars: one open segment and two dots, no filled polygon through the missing axis.
     expect(container.querySelectorAll("circle[fill='#10b981']")).toHaveLength(2);
@@ -124,7 +124,7 @@ describe("V9 radar cohorts", () => {
     const series = [{ card: uusd, identity, color: "#10b981", symbol: "UUSD" }, { card: usdc, identity, color: "#3b82f6", symbol: "USDC" }];
     const result = buildV9RadarDataset(series, []);
     if (result.status !== "available") throw new Error("Expected a plottable comparison");
-    expect(result.value.unknownAxes.Exit).toEqual({ seriesIds: ["uusd"], missingNames: ["UUSD"], assumptions: ["UUSD: not yet researched · assumed 50/100"] });
+    expect(result.value.unknownAxes.Exit).toEqual({ seriesIds: ["uusd"], missingNames: ["UUSD"], assumptions: ["UUSD: unresolved · assumed 50/100"] });
     const { container } = render(createElement(CompareRadarV9, { series, cohortSeries: [] }));
     expect(container.textContent).toContain("Unknown for UUSD");
     expect(container.querySelector("line[stroke-dasharray]")).toBeNull();

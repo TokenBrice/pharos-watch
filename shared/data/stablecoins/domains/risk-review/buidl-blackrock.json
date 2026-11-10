@@ -307,5 +307,19 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "summary": "BUIDL uses off-chain fund-administrator NAV, published by RedStone through its single-source NAV architecture.",
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c2-4",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RedStone first-party BUIDL NAV pricing disclosure, published 2026-07-06: off-chain administrator valuation and single-authoritative-source TSSO; daily NAV and interest feeds",
+        "url": "https://www.redstone.finance/blog/tokenize-the-world-redstones-role-in-the-securitize-ecosystem/"
+      }
+    ]
   }
 }

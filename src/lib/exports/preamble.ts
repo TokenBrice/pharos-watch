@@ -8,6 +8,8 @@ export interface ExportPreamble {
   endpoint: string;
   /** ISO 8601 UTC timestamp (e.g. `2026-05-16T12:00:00.000Z`). */
   asOfISO: string;
+  /** Optional response-assessment clock anchoring the exported source observations. */
+  sourceAssessedISO?: string;
   /** Full canonical page URL the export was triggered from. */
   sourceUrl: string;
   /** Methodology label, e.g. "safety-score v7.25". */
@@ -19,10 +21,11 @@ export interface ExportPreamble {
 const SITE_LABEL = "Pharos pharos.watch";
 
 function preambleLine(p: ExportPreamble): string {
+  const sourceAssessed = p.sourceAssessedISO ? ` | Source assessed: ${p.sourceAssessedISO}` : "";
   const generations = p.sourceGenerations
     ? ` | Sources: ${Object.entries(p.sourceGenerations).map(([source, generation]) => `${source}=${generation ?? "unknown"}`).join("; ")}`
     : "";
-  return `${SITE_LABEL} | Endpoint: ${p.endpoint} | As of: ${p.asOfISO} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel}${generations}`;
+  return `${SITE_LABEL} | Endpoint: ${p.endpoint} | As of: ${p.asOfISO}${sourceAssessed} | URL: ${p.sourceUrl} | Methodology: ${p.methodologyLabel}${generations}`;
 }
 
 /** CSV preamble: a single `# `-prefixed comment line; paste-into-Excel safe. */

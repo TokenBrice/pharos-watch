@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
-import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_FROZEN_IDS as FROZEN_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_V2_EFFECTIVE_AT,

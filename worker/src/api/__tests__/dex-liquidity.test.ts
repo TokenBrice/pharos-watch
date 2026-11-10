@@ -223,6 +223,7 @@ describe("handleDexLiquidity", () => {
     ["other publication", -60, 0, "publication-mismatch"],
     ["future", 120, 0, "future-timestamp"],
     ["fresh", -30, -30, null],
+    ["aggregate-only", -30, -30, null],
     ["inclusive price budget", -86_400, -86_400, null],
   ] as const)("uses the price's own clock for %s evidence", async (_label, priceOffset, liquidityOffset, reason) => {
     const now = 1_790_000_000;
@@ -233,12 +234,14 @@ describe("handleDexLiquidity", () => {
         { match: "dex_prices", rows: [{
           stablecoin_id: row.stablecoin_id, dex_price_usd: 0.81, deviation_from_primary_bps: -1900,
           source_pool_count: 2, source_total_tvl: 1_000_000,
-          price_sources_json: JSON.stringify([{ protocol: "curve", chain: "Ethereum", price: 0.81, tvl: 1_000_000 }]),
+          price_sources_json: JSON.stringify(_label === "aggregate-only" ? { aggregateObservedAt: now - 60, sources: [] }
+            : [{ protocol: "curve", chain: "Ethereum", price: 0.81, tvl: 1_000_000 }]),
           updated_at: now + priceOffset,
         }] },
         { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: now + liquidityOffset })] },
       ]);
       const res = await handleDexLiquidity(db);
+      expect(db.getHistory().find((entry) => entry.sql.includes("FROM dex_prices"))?.sql).toContain("price_sources_json");
       const coin = DexLiquidityMapSchema.parse(await res.json())[row.stablecoin_id];
       expect(coin.dexPriceUnavailableReason).toBe(reason);
       expect(coin.dexPriceUpdatedAt).toBe(now + priceOffset);
@@ -247,7 +250,7 @@ describe("handleDexLiquidity", () => {
       if (reason == null) {
         expect(coin.dexPriceUsd).toBe(0.81);
         expect(coin.priceSourceCount).toBe(2);
-        expect(coin.priceSources).toHaveLength(1);
+        expect(coin.priceSources).toHaveLength(_label === "aggregate-only" ? 0 : 1);
       } else {
         expect(coin.dexPriceUsd).toBeNull();
         expect(coin.dexDeviationBps).toBeNull();
@@ -282,6 +285,8 @@ describe("handleDexLiquidity", () => {
 
   it.each([
     ["ok", ["major-tvl-cliff:crvusd-curve"], [], false],
+    ["ok", ["major-tvl-cliff:crvusd-curve", "chain-tvl-drop:ink"], [], false],
+    ["ok", ["major-tvl-cliff:crvusd-curve", "chain-tvl-drop:ink", "source-family-drop:cg_onchain"], [], true],
     ["ok", ["major-tvl-cliff:crvusd-curve", "price-observation-drop"], [], true],
     ["ok", ["major-tvl-cliff:crvusd-curve"], ["uniswap-v4-subgraph:arbitrum"], true],
     ["degraded", ["major-tvl-cliff:crvusd-curve"], [], true],
@@ -309,6 +314,18 @@ describe("handleDexLiquidity", () => {
     // operator findings; a coin row warns only when a flag names that coin.
     expect(body["crvusd-curve"].warning).toContain("major-tvl-cliff:crvusd-curve");
     expect(body["usdt-tether"].warning).toBeNull();
+  });
+
+  it("keeps a chain-only TVL warning off the global feed", async () => {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "cron_runs", rows: [], first: { status: "ok", metadata: JSON.stringify({ sourceCoverage: {
+        qualityDriftSeverity: "high", qualityDriftFlags: ["chain-tvl-drop:ink"],
+      } }) } },
+      { match: "dex_liquidity", rows: [row] },
+    ]);
+    expect((await handleDexLiquidity(db)).headers.get("Warning")).toBeNull();
   });
 
   it("keeps a coin-scoped cliff flag off the global surface and on its own coin row", async () => {
@@ -345,21 +362,11 @@ describe("handleDexLiquidity", () => {
     const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).toHaveProperty("usdt-tether");
     const coin = body["usdt-tether"] as Record<string, unknown>;
-    expect(coin).toHaveProperty("totalTvlUsd");
-    expect(coin).toHaveProperty("liquidityScore");
-    expect(coin).toHaveProperty("poolCount");
-    expect(coin).toHaveProperty("chainCount");
-    expect(coin).toHaveProperty("protocolTvl");
-    expect(coin).toHaveProperty("topPools");
-    expect(coin).toHaveProperty("updatedAt");
-    expect(coin).toHaveProperty("methodologyVersion");
-    expect(coin).toHaveProperty("coverageClass");
-    expect(coin).toHaveProperty("coverageConfidence");
-    expect(coin).toHaveProperty("liquidityEvidenceClass");
-    expect(coin).toHaveProperty("hasMeasuredLiquidityEvidence");
-    expect(coin).toHaveProperty("trendworthy");
-    expect(coin).toHaveProperty("sourceMix");
-    expect(coin).toHaveProperty("deploymentCoverage");
+    for (const field of [
+      "totalTvlUsd", "liquidityScore", "poolCount", "chainCount", "protocolTvl", "topPools", "updatedAt",
+      "methodologyVersion", "coverageClass", "coverageConfidence", "liquidityEvidenceClass",
+      "hasMeasuredLiquidityEvidence", "trendworthy", "sourceMix", "deploymentCoverage",
+    ]) expect(coin).toHaveProperty(field);
   });
 
   it("returns null 7d volume when the producer marked 7d volume as unmeasured", async () => {

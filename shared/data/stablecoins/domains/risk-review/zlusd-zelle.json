@@ -1,0 +1,31 @@
+{
+  "id": "zlusd-zelle",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "ZLUSD Solana Token-2022 mint",
+        "url": "https://solscan.io/token/7NNkMtGACBbwJdMRYD2KchTKm2xBwnsb4bT7YSfRUWZ4"
+      },
+      {
+        "label": "Solana mainnet RPC (Token-2022 mint read)",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Freeze authority freezes a wallet's ZLUSD account on October 30 2026",
+        "url": "https://solscan.io/tx/5MT2QQ9T266PYhjMJjpvDNLh8UvSyiKhcdJD4gwtkodEr7aFuA9pKSXPFD9ewijZWHERuhL4p8V6CkBq9FdSHB3W"
+      },
+      {
+        "label": "Permanent delegate burns 13,000 ZLUSD from a holder account on October 1 2026",
+        "url": "https://solscan.io/tx/5YCBe447MC2HfdNdek86L3SnC66UXfkdJ31ckAjiyFzXAxD14WT8c1YZDwo4cAbKRoz752UgshQ4isoUFKQq8otH"
+      },
+      {
+        "label": "Anchorage Digital Bank covered stablecoin terms: transfer restrictions and freeze powers",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+      }
+    ],
+    "evidence": "Verified on Solana mainnet at finalized slot 464063902 (2026-11-01 10:47:47 UTC). ZLUSD has one deployment, the Token-2022 mint 7NNkMtGACBbwJdMRYD2KchTKm2xBwnsb4bT7YSfRUWZ4 (6 decimals, supply 137,650.11 ZLUSD), which holds 100% of supply. Its freeze authority FiV6goxf5fYfw9y7XwuG8bVAG6bqTb1sR1rrLomjkXa3 is a system-owned key account that signed freezeAccount on this mint five times between June 18 and October 30 2026, each time creating and freezing the token account of a specific wallet; no thaw has been signed. Its permanent delegate C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt, which is also the mint authority, is a system-owned key account that signed all nine burnChecked instructions on holder token accounts without the owners' signatures (20,612 ZLUSD in total, including 13,000 from one account on October 1 2026), so it can burn or move any holder's balance. The mint also carries a pausable extension (authority fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx, paused=false) and a transfer-hook extension whose authority 8N2NFYQ5VMaoDGMAcUbfzdeJqvok6LQs2E9BxDK6mMAE can set a hook program; none is set, and the default account state is initialized. The same authority set controls the Anchorage-issued USDPT and USDGO mints. Anchorage Digital Bank's covered stablecoin terms state that it may freeze, block, seize or otherwise restrict covered stablecoins held by clients and non-clients alike. This is a direct Yes control on the only material deployment. There is no parent (variantOf and mintAuthority.inheritedFrom are absent), and reserves are not the basis of this verdict.",
+    "reviewer": "Claude weekly pre-launch sweep",
+    "reviewedAt": "2026-11-01"
+  }
+}

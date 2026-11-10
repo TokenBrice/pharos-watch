@@ -58,16 +58,12 @@ export async function postTelegramBotApi(
 export { escapeHtml } from "../common/html";
 
 
-/** Build the full Telegram message for a digest. */
-export function buildTelegramMessage(
-  title: string,
-  extended: string,
-  date: string,
-  editionNumber?: number | null,
-  appendixHtml?: string | null,
-  mapAppendixHtml?: string | null,
-): string {
-  // Escape HTML first, then convert markdown bold **text** to <b>text</b>
+/**
+ * Render the model-owned digest body. A `Standing:` paragraph is lifted into
+ * the expandable blockquote, so callers that mask model copy must use these
+ * spans rather than the unrendered extended text.
+ */
+export function renderTelegramDigestBody(extended: string): { bodyHtml: string; standingHtml: string } {
   const extendedSections = extended.split("\n\n");
   let standingLine: string | null = null;
   const editorialSections: string[] = [];
@@ -79,10 +75,25 @@ export function buildTelegramMessage(
       editorialSections.push(section);
     }
   }
-  const body = escapeHtml(editorialSections.join("\n\n")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-  const standing = standingLine == null
-    ? ""
-    : `<blockquote expandable>${escapeHtml(standingLine)}</blockquote>`;
+  return {
+    bodyHtml: escapeHtml(editorialSections.join("\n\n")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"),
+    standingHtml: standingLine == null
+      ? ""
+      : `<blockquote expandable>${escapeHtml(standingLine)}</blockquote>`,
+  };
+}
+
+/** Build the full Telegram message for a digest. */
+export function buildTelegramMessage(
+  title: string,
+  extended: string,
+  date: string,
+  editionNumber?: number | null,
+  appendixHtml?: string | null,
+  mapAppendixHtml?: string | null,
+): string {
+  // Escape HTML first, then convert markdown bold **text** to <b>text</b>
+  const { bodyHtml: body, standingHtml: standing } = renderTelegramDigestBody(extended);
   const kicker = editionNumber ? `Pharos Daily Digest #${editionNumber}\n` : "";
   const sections = [
     mapAppendixHtml ?? "",

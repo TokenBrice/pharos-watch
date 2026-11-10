@@ -15,6 +15,8 @@ export const DDR_SNAPSHOT_CACHE_GENERATION = CURRENT_DDR_SNAPSHOT_CACHE_GENERATI
 
 export type DdrSnapshotCacheFailureReason =
   | "missing-cache"
+  | "future-timestamp"
+  | "invalid-timestamp"
   | "json-parse-failed"
   | "invalid-payload"
   | "invalid-envelope"
@@ -38,6 +40,7 @@ const DDR_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<DdrResponse, Ddr
   schema: DdrResponseSchema,
   reasons: {
     missingCache: "missing-cache",
+    cacheClockRejected: (reason) => reason,
     jsonParseFailed: "json-parse-failed",
     invalidPayload: "invalid-payload",
     invalidEnvelope: "invalid-envelope",

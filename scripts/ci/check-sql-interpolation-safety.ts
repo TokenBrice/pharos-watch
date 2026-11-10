@@ -8,17 +8,100 @@ export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "script
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;
 export const SQL_SAFETY_PATTERN = /\/\/\s*SAFETY:/;
 export const SQL_SAFETY_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
+// Necessary condition of INSERT_PATTERN on the cooked literal text. `\u`/`\x`
+// escapes can spell any INSERT letter, so those files are parsed as well.
+const INSERT_PREFILTER = /insert|\\[ux]/i;
+const INSERT_PATTERN =
+  /INSERT\s+(?:OR\s+(?:IGNORE|REPLACE|ABORT|FAIL|ROLLBACK)\s+|)INTO\s+[\w.]+\s*\(([^()]*)\)\s*VALUES\s*\(/gi;
 
 interface SqlSafetyViolation {
   file: string;
   line: number;
   text: string;
   root: string;
+  rule: "interpolation" | "insert-arity";
+}
+
+interface SqlInsertArityMismatch {
+  line: number;
+  columns: number;
+  values: number;
 }
 
 interface SqlSafetyReport {
   scannedFiles: string[];
   violations: SqlSafetyViolation[];
+}
+
+/** Preserve offsets but hide SQL strings, quoted identifiers and comments from structure counting. */
+function structuralSql(sql: string): string {
+  return sql.replace(/--[^\n]*|\/\*[\s\S]*?\*\/|'(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\[[^\]]*\]/g,
+    (token) => (token.startsWith("--") || token.startsWith("/*") ? " " : "x").repeat(token.length));
+}
+
+function splitTopLevel(text: string): string[] {
+  const structure = structuralSql(text);
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < structure.length; index++) {
+    const char = structure[index];
+    if (char === "(") depth++;
+    if (char === ")") depth--;
+    if (char === "," && depth === 0) {
+      parts.push(text.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts.filter((part) => structuralSql(part).trim().length > 0);
+}
+
+function readTuple(source: string, openIndex: number): string | null {
+  const structure = structuralSql(source);
+  let depth = 0;
+  for (let index = openIndex; index < structure.length; index++) {
+    if (structure[index] === "(") depth++;
+    if (structure[index] === ")" && --depth === 0) return source.slice(openIndex + 1, index);
+  }
+  return null;
+}
+
+/** Count named columns versus bound values for every static INSERT tuple. */
+export function sqlArityMismatches(sql: string): Array<{ columns: number; values: number }> {
+  const mismatches: Array<{ columns: number; values: number }> = [];
+  const structure = structuralSql(sql);
+  for (const match of structure.matchAll(INSERT_PATTERN)) {
+    const columns = splitTopLevel(match[1]!).length;
+    let open = match.index + match[0].length - 1;
+    while (structure[open] === "(") {
+      const tuple = readTuple(sql, open);
+      if (tuple === null) break;
+      const values = splitTopLevel(tuple).length;
+      if (columns !== values) mismatches.push({ columns, values });
+      const next = /^\s*,\s*(\()/.exec(structure.slice(open + tuple.length + 2));
+      if (!next) break;
+      open += tuple.length + 2 + next[0].length - 1;
+    }
+  }
+  return mismatches;
+}
+
+/** Only standalone TS string/no-substitution template literals are supported.
+ * Dynamic templates, concatenated SQL and INSERT ... SELECT require runtime
+ * SQLite coverage. */
+export function findInsertArityMismatches(source: string, file = "source.ts"): SqlInsertArityMismatch[] {
+  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false);
+  const mismatches: SqlInsertArityMismatch[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      const line = ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1;
+      for (const mismatch of sqlArityMismatches(node.text)) mismatches.push({ line, ...mismatch });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return mismatches;
 }
 
 function hasGuardedInterpolation(template: ts.TemplateExpression): boolean {
@@ -72,8 +155,22 @@ export function scanSqlInterpolationSafety(
     cwd,
     extensions: SQL_SAFETY_EXTENSIONS,
     scanFile: ({ relativePath, content, root }) => {
-      const violations: SqlSafetyViolation[] = [];
       const lines = content.split("\n");
+      const violations: SqlSafetyViolation[] = [];
+      if (content.search(INSERT_PREFILTER) >= 0) {
+        for (const mismatch of findInsertArityMismatches(content, relativePath)) {
+          violations.push({
+            file: relativePath,
+            line: mismatch.line,
+            text: `${lines[mismatch.line - 1]!.trim()} (${mismatch.columns} columns, ${mismatch.values} values)`,
+            root,
+            rule: "insert-arity",
+          });
+        }
+      }
+      // The interpolation pattern is a necessary condition for a violation;
+      // search() keeps a future global flag from carrying lastIndex state.
+      if (content.search(SQL_INTERPOLATION_PATTERN) < 0) return violations;
       const sourceFile = ts.createSourceFile(relativePath, content, ts.ScriptTarget.Latest, true);
       const templates = new Map<number, ts.TemplateExpression>();
       const visit = (node: ts.Node): void => {
@@ -100,6 +197,7 @@ export function scanSqlInterpolationSafety(
           line: lineIndex + 1,
           text: lines[lineIndex]!.trim(),
           root,
+          rule: "interpolation",
         });
       }
       return violations;
@@ -110,9 +208,10 @@ export function scanSqlInterpolationSafety(
 export function printSqlInterpolationSafetyReport(report: SqlSafetyReport): number {
   return reportViolations({
     label: "SQL interpolation safety",
-    heading: "SQL interpolation sites missing allowlist validation or SAFETY comment",
-    violations: report.violations.map((violation) => `${violation.file}:${violation.line}: ${violation.text}`),
-    hint: "Fix: guard the interpolated expression with an immediately preceding allowlist rejection, or add a site-local // SAFETY: review.",
+    heading: "SQL interpolation sites missing allowlist validation or SAFETY comment, or INSERT arity mismatches",
+    violations: report.violations.map((violation) =>
+      `${violation.file}:${violation.line}: ${violation.rule === "insert-arity" ? "[insert-arity] " : ""}${violation.text}`),
+    hint: "Fix: guard the interpolated expression with an immediately preceding allowlist rejection, or add a site-local // SAFETY: review. Static INSERT statements must bind exactly one value per named column.",
     scannedCount: report.scannedFiles.length,
   });
 }

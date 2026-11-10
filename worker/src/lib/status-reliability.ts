@@ -19,7 +19,5 @@ export {
   getProbePathIdentity,
   updateDiscrepancyObservation,
   updateProbePathFailureStreaks,
-  type StatusProbePathFailure,
-  type StatusProbePathObservation,
 } from "./status-discrepancy-store";
 export { buildDiscrepancy } from "./status-discrepancy-view";

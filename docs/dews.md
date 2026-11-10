@@ -8,7 +8,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.42`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.44`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -16,7 +16,7 @@ Each API response includes the shared `methodology` envelope with `version`, `ve
 
 Release history is published in the [shared Depeg/DEWS changelog](https://pharos.watch/methodology/depeg-changelog/), not repeated here.
 
-**Pending release obligations:** v6.34 requires owner-approved production-history replay and fixed-clock admission/band comparison, plus separate fresh admitted producer observations and production resource evidence. Activation remains provisional and must be re-dated at release; a version or passing replay does not prove production health. The v6.33 U-C20-16 production-history replay remains owner-approved prerequisite work; no completed replay result is asserted.
+**Replay prerequisites:** a DEWS admission change ships only with an owner-approved production-history replay (fixed-clock admission and band comparison), fresh admitted producer observations and production resource evidence. A version or a passing replay does not prove production health; per-version status is in the [shared Depeg/DEWS changelog](https://pharos.watch/methodology/depeg-changelog/).
 
 ---
 
@@ -132,14 +132,14 @@ Max of: primary deviation from peg, DEX deviation from peg, cross-source spread 
 
 The primary price must pass `isObservedPrice(...)`. Nominal par references are not observations and enter DEWS as `null`. Primary and independently admitted DEX deviations are evaluated separately against the admitted peg reference; cross-source spread exists only when both legs are observed, finite and positive. With neither valid leg, divergence is unavailable rather than a measured calm zero. A stressed DEX-only leg qualifies as `market-price` evidence and is not WATCH-capped merely because the primary observation is missing.
 
-- DEX input comes only from `dex_prices` rows refreshed within the live depeg trust window (`DEX_FRESHNESS_SEC = 4500`, currently 75 minutes) **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
+- DEX publisher selection and input admission follow [Stage 1 of depeg detection](./depeg-detection.md#stage-1----detection). Hydrated source ages and snapshots use the original aggregate clock, never publication time or surviving protocol lanes; clock-unavailable rows are marked stale, never fresh evidence, with `missing` or canonical `aggregate-clock-*` decoder reasons; malformed eligible JSON retains decoder telemetry.
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
 - Averaged with the previous reading only when that reading was available.
 
 Historical `stress_signal_history` rows do not retain the underlying DEX trust metadata (`source_total_tvl`, per-row freshness context) needed to replay this gate exactly. The Wave 5.9 repair path therefore refreshes current rows and prunes unrecomputable daily history from the Mar 9, 2026 trust-floor boundary onward instead of pretending those stored snapshots can be deterministically recomputed.
 
-The aggregate divergence input is distinct from affirmative protocol-family corroboration in depeg detection and pending confirmation. Those source groups require original family `observedAt` within 35 minutes and aggregate-contributor `aggregateObservedAt` within 75 minutes, not merely a fresh `dex_prices.updated_at`. Legacy unclocked sources cannot prove current corroboration or positive recovery; separately supported challenger vetoes remain conservative negative evidence, never fresh affirmative evidence. The shared Depeg/DEWS release changes new admission only and does not relabel stored scores, event history or sealed generations.
+The shared Depeg/DEWS release changes new admission only and does not relabel stored scores, event history or sealed generations.
 
 ### S_black — Blacklist Activity
 
@@ -152,7 +152,7 @@ Only public events (`suppression_reason IS NULL`) enter either window. Suppresse
 
 Mint/burn v6.31 limits hourly rows and materialization debt to admitted, enabled legs named in the published scope, intersected with DEWS's existing canonical-chain rule. Pending or disabled legs do not contribute. A retained publication without scope metadata uses only its published coins' pinned grandfathered configs after reapplying current admission and disable policy; new configs cannot inherit that fallback. Its original scan proof, watermark, valuation and debt gates remain required. Failed policy reads and an empty admitted scope never prove quiet zero.
 
-Requires complete 24h/30d coverage at one published common closed-hour watermark for windows/debt. Legacy assurance is not v2 proof. Age uses that end; reader/24h-DEWS limits stay. Requires >=7 baseline days, complete 24h USD and no partial burn-baseline valuation (unknown legacy allowed). Failed gates are unavailable; valued admitted zero is calm. Measures:
+Requires complete 24h/30d coverage at one published common closed-hour watermark for windows/debt. Legacy assurance is not v2 proof. Age uses that end; reader/24h-DEWS limits stay. Requires >=7 baseline days, complete 24h USD and complete burn-baseline valuation. Both windows require complete flow classification; unresolved events or review-capable legacy NULL hours withhold this signal. Failed gates are unavailable; valued and classified admitted zero is calm. Measures:
 
 - **Burn surge:** 24h burn volume / 30d daily average
 - **Burn-to-mint ratio:** 24h burns / 24h mints
@@ -211,9 +211,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 ## Data Pipeline
 
-DEWS publishes complete admitted generations, not whichever rows finished most recently. An interrupted or dependency-held run leaves the prior accepted generation readable at its original age; a healthy run advances publication and freshness together. Per-asset malformed inputs are quarantined before scoring/contagion while healthy peers can publish. Historical evidence and previously accepted buffers are retained, and stale latest rows cannot reintroduce a quarantined asset into a newly accepted generation.
-
-Daily snapshots are emitted only after exact generation validation and publication acceptance. A dependency hold, validation failure or refused pointer cannot seed or reseal that day's admitted history. The first accepted same-cohort result supplies the day's values; later accepted runs with identical IDs deliberately leave them unchanged. An accepted membership change still reseals the owned identity set, preserving frozen and quarantined history. A subsequent daily-write failure is reported without invalidating the already accepted current publication.
+DEWS publishes complete admitted generations, not whichever rows finished most recently: an interrupted or dependency-held run leaves the prior accepted generation readable at its original age, per-asset malformed inputs are quarantined before scoring/contagion while healthy peers publish, and stale latest rows cannot reintroduce a quarantined asset into a newly accepted generation. Daily history is resealed only from an accepted generation; identical same-day IDs keep their first accepted values, and a later daily-seal failure never undoes the accepted publication.
 
 Foundational stablecoin inputs must pass canonical timestamp checks and the producer interval-plus-runtime freshness budget (inclusive). Stale/invalid foundational inputs stop before persistence. Stale DEX-liquidity or mint/burn inputs also withhold publication. Yield-ranking generation clocks use canonical timestamp admission with read-time future-skew allowance, so a producer finishing while hydration is in flight remains usable. A generation older than the yield interval plus runtime but within the retention budget (`DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC`, three `sync-yield-data` intervals, derived from the cron cadence) is retained as last-good evidence: publication continues, `dependencies.yieldRankings` names the generation, age, budget and reason `retained-last-good`, and each asset with structured yield evidence records `sourceAges.yieldRankings` and `staleFlags.yieldRankings`. Generations beyond that budget, and missing, invalid or beyond-skew future clocks, hold publication under `yield-rankings-freshness`; readable structured evidence remains available for diagnostics rather than silently becoming zero stress.
 
@@ -227,9 +225,9 @@ Storage, retention, exact publication proofs and machine-readable run diagnostic
 
 ### `GET /api/stress-signals`
 
-**All coins (no params):** Returns current accepted-generation DEWS for active tracked stablecoins, with `signals`, newest `updatedAt`, oldest `oldestComputedAt`, malformed-row diagnostics and the shared methodology envelope. `eligibleCount` is the active-registry size; other lifecycle states are excluded. Aggregate freshness headers use `updatedAt`; the oldest row is disclosed separately, not used to stale the entire surface.
+**All coins (no params):** Returns current accepted-generation DEWS for active tracked stablecoins, with `signals`, newest `updatedAt`, oldest `oldestComputedAt`, malformed-row diagnostics and the shared methodology envelope. `eligibleCount` is the active DEWS cohort: active-registry IDs less NAV tokens, which are never scored; other lifecycle states are excluded. Aggregate freshness headers use `updatedAt`; the oldest row is disclosed separately, not used to stale the entire surface.
 
-**Single coin:** `?stablecoin=usdt-tether&days=30` returns `current` plus daily `history` (default 30 days, range 1–365). Unknown IDs return `404 Unknown stablecoin`; pre-launch IDs return `404 Stablecoin not tracked`. Quarantined, delisted and frozen tracked IDs retain single-coin history access.
+**Single coin:** `?stablecoin=usdt-tether&days=30` returns `current` plus daily `history` (default 30 days, range 1–365). Unknown and pre-launch IDs return `404 Unknown stablecoin`. Quarantined, delisted and frozen tracked IDs retain single-coin history access.
 
 Readers validate the accepted pointer's timestamp, row count and ID digest, using its exact buffered generation if latest materialization is incomplete, never a partially newer write. Telegram and smoothing share that loader. A null scoring result writes no row: if peers publish without that asset, aggregate `missingCount` increases and single-coin `current` is null. Held/zero-result runs preserve the prior accepted generation and its original age. PSI requires complete exact-generation coverage.
 
@@ -237,7 +235,7 @@ Without a valid accepted publication pointer, current API data is unavailable (`
 
 Historical missing/unavailable sub-signals are gaps (`null`) without numeric tooltips, not zero stress. Current missing signals retain their machine reason; “not applicable” requires an explicit applicability reason; observed zero remains measured `0/100`. The [public OpenAPI contract](https://pharos.watch/openapi.json#/paths/~1api~1stress-signals/get) owns response shapes and authentication.
 
-**Cache:** standard (s-maxage=300, max-age=60)
+**Cache:** standard (s-maxage=300, max-age=60) for a current response; `no-store` with `Warning: 199` when it carries no current data (single-coin `current: null` or aggregate `updatedAt: 0`).
 
 Calibration and repair are operator-only tools, not public scoring inputs. Their command, authorization and historical-reconstruction limits are documented in the [operator API reference](https://github.com/TokenBrice/pharos-watch/blob/main/docs/api-reference-admin.md#get-apibackfill-dews).
 
@@ -251,9 +249,7 @@ DEWS is visible in the [depeg outlook](https://pharos.watch/depeg/) and stableco
 
 ### Radar Layout (`DEWSRadarPanel`)
 
-The radar is center-is-danger: higher threat bands occupy inner rings and CALM coins form the peripheral ambient field. Band determines radial position; size provides supply context, not probability. Unavailable supply is disclosed rather than rendered as measured-small supply. A double halo identifies elevated coins also in a confirmed live depeg; zero confirmed events does not mean zero precursor stress.
-
-The severity-ordered legend reports live counts, while keyboard inspection and detail breakdowns provide alternatives to the visual plot. Geometry is presentation only, not another score input. The [depeg outlook](https://pharos.watch/depeg/) is the public inspection surface; `src/lib/dews-radar-utils.ts` owns layout constants.
+The radar is center-is-danger: higher threat bands occupy inner rings and CALM coins form the peripheral ambient field. Geometry is presentation only, never another score input; `src/lib/dews-radar-utils.ts` owns the layout constants. Panel composition, mark sizing, the confirmed-incident halo and unavailable-supply rendering are owned by the [depeg outlook page contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/depeg-page.md#hero-contract).
 
 ---
 

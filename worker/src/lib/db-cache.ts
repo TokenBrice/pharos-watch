@@ -217,7 +217,14 @@ export async function writeCacheWithPolicy<T>(
 export async function shouldSkipFreshCache(db: D1Database, key: string, maxAgeSec: number): Promise<boolean> {
   const cached = await getCache(db, key);
   if (!cached) return false;
-  return Date.now() / 1000 - cached.updatedAt < maxAgeSec;
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (assessFreshnessTimestamp(nowSec, cached.updatedAt).reason != null) {
+    // A future-dated clock is not freshness, and the if-newer write would keep
+    // rejecting the producer's current-clock repair, so drop the row.
+    await deleteCache(db, key);
+    return false;
+  }
+  return nowSec - cached.updatedAt < maxAgeSec;
 }
 
 export interface CacheWriteResult {
@@ -282,6 +289,7 @@ export interface PriceCacheEntry {
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
   syncedAt?: number | null;
+  hasExplicitClocks?: boolean;
   agreeSources?: string[];
   consensusSources?: string[];
 }
@@ -321,6 +329,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
       observedAt: row.observed_at ?? row.updated_at,
       observedAtMode: row.observed_at_mode ?? null,
       syncedAt: row.synced_at ?? row.updated_at,
+      hasExplicitClocks: row.observed_at != null && row.synced_at != null,
       agreeSources: parseJsonStringArray(row.agree_sources_json),
       consensusSources: parseJsonStringArray(row.consensus_sources_json),
     });

@@ -29,6 +29,10 @@ export interface ReportCardsBaseInputSourceV1 {
   navPriceById?: Readonly<Record<string, unknown>>;
   exitOutputPriceById?: Readonly<Record<string, unknown>>;
   activeDepegPeakBpsById: Readonly<Record<string, unknown>>;
+  // Optional because captures predating the v10.42 directional peg input carry no
+  // such field. Included as a score-bearing fact only when present, so a legacy
+  // capture keeps exactly one identity (the `exitOutputPriceById` pattern).
+  safetyScoreV9DirectionalPeg?: unknown;
   dexLiqMap: Readonly<Record<string, unknown>>;
   redemptionBackstopMap: Readonly<Record<string, unknown>>;
   bluechipMap: Readonly<Record<string, unknown>>;
@@ -61,6 +65,9 @@ export function projectReportCardsBaseInputIdentityV1(
     navPriceById: source.navPriceById ?? {},
     ...(source.exitOutputPriceById ? { exitOutputPriceById: source.exitOutputPriceById } : {}),
     activeDepegPeakBpsById: source.activeDepegPeakBpsById,
+    ...(source.safetyScoreV9DirectionalPeg !== undefined
+      ? { safetyScoreV9DirectionalPeg: source.safetyScoreV9DirectionalPeg }
+      : {}),
     dexLiqMap: source.dexLiqMap,
     redemptionBackstopMap: source.redemptionBackstopMap,
     bluechipMap: source.bluechipMap,

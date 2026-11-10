@@ -126,6 +126,16 @@ function renderHero(heroRows = rows, heroAsOf = asOf, heroLayout = layout) {
   return { ...view, hero, grave };
 }
 
+// The keyboard census needs the production plan; the pinning, phone and
+// responsive-continuity cases exercise the hero's interaction contract instead,
+// so they render a small plan that still carries the two named graves. Laying
+// out every registered grave per case was most of this file's cost.
+const pinCohortRows = [...rows.slice(0, 12), ...rows.filter((row) =>
+  row.id === "ust-terrausd-2022-05" || row.id === "mim-abracadabra")]
+  .filter((row, index, all) => all.findIndex((candidate) => candidate.id === row.id) === index);
+const pinCohortLayout = desktopPlotLayout(buildCemeteryPlotMap(toPlotMapInput(pinCohortRows), { asOf, preset: "desktop" }));
+const renderPinCohort = () => renderHero(pinCohortRows, asOf, pinCohortLayout);
+
 describe("PlotMapHero keyboard model", () => {
   it("gives the plan one tab stop on the newest grave and keeps the hero within eight stops", () => {
     const { hero } = renderHero();
@@ -172,7 +182,7 @@ describe("PlotMapHero keyboard model", () => {
 
 describe("PlotMapHero pinning", () => {
   it("pins on Enter (pressed state, hash, one announcement, full record card) and unpins on Esc", () => {
-    const { grave } = renderHero();
+    const { grave } = renderPinCohort();
     const ust = grave("ust-terrausd-2022-05");
     act(() => ust.focus());
     fireEvent.keyDown(ust, { key: "Enter" });
@@ -190,7 +200,7 @@ describe("PlotMapHero pinning", () => {
   });
 
   it("hands 'Read in the register' to the register's reveal", () => {
-    const { grave } = renderHero();
+    const { grave } = renderPinCohort();
     fireEvent.click(grave("ust-terrausd-2022-05"));
     fireEvent.click(screen.getByRole("link", { name: /Read in the register/ }));
     expect(selection.revealRecord).toHaveBeenCalledWith("ust-terrausd-2022-05", "hero");
@@ -210,14 +220,14 @@ describe("PlotMapHero pinning", () => {
 
   it("does not register on phones", () => {
     phone = true;
-    renderHero();
+    renderPinCohort();
     expect(selection.registerPinGrave).not.toHaveBeenCalled();
   });
 
   it("leaves the phone layer's graves and sheet to the portrait: Enter and taps open the sheet, Esc in it closes it", () => {
     phone = true;
     portrait.real = true;
-    const { grave } = renderHero();
+    const { grave } = renderPinCohort();
     const walk = document.getElementById("walk-ust-terrausd-2022-05") as HTMLElement;
     act(() => walk.focus());
     // Enter must reach the anchor's native activation (the click below), not be taken by the hidden desktop plan
@@ -248,8 +258,8 @@ describe("PlotMapHero responsive selection continuity", () => {
     selection.real = true;
     portrait.real = true;
     return render(
-      <CemeterySelectionProvider knownIds={rows.map((row) => row.id)}>
-        <PlotMapHero rows={rows} asOf={asOf} atlas={atlas} layout={layout} portraitAspectRatio="292 / 1100">
+      <CemeterySelectionProvider knownIds={pinCohortRows.map((row) => row.id)}>
+        <PlotMapHero rows={pinCohortRows} asOf={asOf} atlas={atlas} layout={pinCohortLayout} portraitAspectRatio="292 / 1100">
           <h1 id="cemetery-title">Stablecoin Cemetery</h1>
         </PlotMapHero>
       </CemeterySelectionProvider>,

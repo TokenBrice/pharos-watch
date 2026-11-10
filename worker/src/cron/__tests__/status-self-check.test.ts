@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeExecutionContext } from "../../test-helpers/__shared/auth";
 import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
@@ -73,10 +74,21 @@ function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Arra
   return { rawOverallStatus, dbHealthy: true, evidenceReadFailures: [] as string[], sectionErrors: {}, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
 }
 const computeRawStatusMock = vi.fn(async (_db: D1Database) => buildRawStatus());
-const reconcileStatusStateMock = vi.fn(async () => ({
-  effectiveStatus: "stale",
-  persistenceSucceeded: true,
-}));
+const reconcileStatusStateMock = vi.fn(async (
+  _db?: unknown,
+  _now?: number,
+  rawStatus?: StatusHealthValue,
+  _confidence?: number,
+  _causes?: unknown,
+  onIssue?: (issue: { code: string; operation: string; message: string }) => void,
+) => {
+  void onIssue;
+  void rawStatus;
+  return {
+    effectiveStatus: "stale" as StatusHealthValue,
+    persistenceSucceeded: true,
+  };
+});
 const buildDiscrepancyMock = vi.fn((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
   hasDivergence: true,
   severityDelta: 1,
@@ -124,7 +136,8 @@ vi.mock("../../lib/public-health-assessment", async (importOriginal) => ({
   ...(await importOriginal<typeof PublicHealthModule>()),
   assessPublicHealth: assessPublicHealthMock,
 }));
-vi.mock("@shared/lib/api-endpoints", () => ({
+vi.mock("@shared/lib/api-endpoints", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@shared/lib/api-endpoints")>()),
   getProbePaths: (group: "public" | "admin" | "manual") => {
     if (group === "public") return publicProbePaths;
     if (group === "admin") return adminProbePaths;
@@ -374,6 +387,48 @@ describe("runStatusSelfCheck", () => {
     });
   });
 
+  it("keeps a failed payload contract out of the health semantic verdict", async () => {
+    publicProbePaths.push("/api/redemption-backstops");
+    routeMock.mockImplementation(async ({ url }: { url: URL }) => {
+      if (url.pathname === "/api/redemption-backstops") {
+        return new Response(JSON.stringify({
+          coins: {
+            "usdc-circle": { resolutionState: "resolved" },
+            "usdt-tether": { resolutionState: "failed" },
+          },
+        }), { status: 200, headers: { "content-type": "application/json", "X-Data-Age": "60" } });
+      }
+      return buildProbeResponse(url);
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database, { ctx: makeExecutionContext().ctx });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    // Only `/api/health` owns `semanticStatus`; one unresolved redemption row
+    // waits for its per-path failure streak instead of degrading the plane.
+    expect(metadata.semanticStatus).toBe("healthy");
+    expect(metadata.probePlanes.internal.status).toBe("healthy");
+    expect(metadata.internalExternalDiscrepancy.reason).toBe("in-sync");
+  });
+
+  it("does not publish a semantic claim from a payload contract alone", async () => {
+    publicProbePaths.push("/api/redemption-backstops");
+    routeMock.mockImplementation(async ({ url }: { url: URL }) => {
+      if (url.pathname === "/api/redemption-backstops") {
+        return new Response(JSON.stringify({
+          coins: { "usdc-circle": { resolutionState: "resolved" } },
+        }), { status: 200, headers: { "content-type": "application/json", "X-Data-Age": "60" } });
+      }
+      return buildProbeResponse(url, "healthy", undefined, { status: 503 });
+    });
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
+      buildProbeResponse(input, "healthy", init, { status: 503 }));
+
+    const result = await runStatusSelfCheck({} as D1Database, { ctx: makeExecutionContext().ctx });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.semanticStatus).toBeNull();
+    expect(metadata.semanticStatusReason).toBe("probe-semantic-evidence-unavailable");
+  });
+
   it.each([
     { name: "persistence", persistenceFailed: true, evidenceFailed: false, reason: "status-self-check-persistence-failed" },
     { name: "evidence", persistenceFailed: false, evidenceFailed: true, reason: "status-self-check-evidence-read-failed" },
@@ -585,6 +640,39 @@ describe("runStatusSelfCheck", () => {
       });
     },
   );
+
+  it("does not derive a discrepancy from the raw fallback when status_state is unreadable", async () => {
+    reconcileStatusStateMock.mockImplementationOnce(async (
+      _db?: unknown,
+      _now?: number,
+      rawStatus?: StatusHealthValue,
+      _confidence?: number,
+      _causes?: unknown,
+      onIssue?: (issue: { code: string; operation: string; message: string }) => void,
+    ) => {
+      onIssue?.({ code: "status_state_read_failed", operation: "load-status-state", message: "D1 unavailable" });
+      return { effectiveStatus: rawStatus ?? "stale", persistenceSucceeded: false };
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      failedOutputs: string[];
+      discrepancyStreak: number | null;
+      discrepancy: { consecutiveDivergent: number | null };
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.failedOutputs).toEqual(["status_state", "status_discrepancy_state"]);
+    // No observation was attempted, so the durable streak is not rewritten.
+    expect(updateDiscrepancyObservationMock).not.toHaveBeenCalled();
+    expect(metadata.discrepancyStreak).toBeNull();
+    expect(metadata.discrepancy.consecutiveDivergent).toBeNull();
+    const discrepancyArgs = buildDiscrepancyMock.mock.calls[
+      buildDiscrepancyMock.mock.calls.length - 1
+    ] as unknown[];
+    expect(discrepancyArgs[0]).toBeNull();
+    expect(discrepancyArgs[4]).toBe("status-unreadable");
+  });
 
   it("fails closed on a current evidence read rather than the observed service verdict", async () => {
     computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), dbHealthy: false });
@@ -884,6 +972,26 @@ describe("runStatusSelfCheck", () => {
       hasDivergence: true,
       reason: "external-worse",
     });
+  });
+
+  it.each([200, 503])("remembers producer observations on HTTP %i after history pruning", async (status) => {
+    const onRun = vi.fn();
+    const { sqlite, db } = createLatestSchemaSqlite({ onRun });
+    try {
+      await expect(isBootstrapCacheMiss(db, "/api/usds-status", status)).resolves.toBe(status === 503);
+      sqlite.exec("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('sync-usds-status', 1, 1, 'ok')");
+      await expect(isBootstrapCacheMiss(db, "/api/usds-status", status)).resolves.toBe(false);
+      sqlite.exec("DELETE FROM cron_runs");
+      await expect(isBootstrapCacheMiss(db, "/api/usds-status", 503)).resolves.toBe(false);
+      expect(onRun).toHaveBeenCalledTimes(1);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(["cache", "cron_runs"])("does not suppress 503s when %s cannot be read", async (table) => {
+    const db = mockD1([], { failOn: { match: `FROM ${table}`, error: new Error("read failed") } });
+    await expect(isBootstrapCacheMiss(db, "/api/usds-status", 503)).resolves.toBe(false);
   });
 
   it("treats missing cache 503s as bootstrap misses only before the producer cron has ever run", async () => {

@@ -18,6 +18,8 @@ const fetchSolanaTokenSupplyMock = vi.fn();
 const fetchStarknetTotalSupplyMock = vi.fn();
 const fetchIcrcLedgerTotalSupplyMock = vi.fn();
 const fetchMoveFungibleAssetSupplyMock = vi.fn();
+const fetchStellarSupplyMock = vi.hoisted(() => vi.fn());
+vi.mock("../stellar-supply", () => ({ fetchStellarSupply: fetchStellarSupplyMock }));
 
 vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchErc20TotalSupply: (...args: unknown[]) => fetchErc20TotalSupplyMock(...args),
@@ -232,7 +234,7 @@ const SUSDE_OFT = "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2";
 const SUSDE_REPRESENTATION_CHAINS = [
   "plasma", "linea", "fraxtal", "hyperevm", "berachain", "zircuit", "metis", "xlayer",
   "base", "bsc", "morph-l2", "scroll", "kava", "swellchain", "mode", "mantle",
-  "arbitrum", "manta", "blast", "optimism", "zksync", "avalanche", "solana",
+  "arbitrum", "manta", "blast", "optimism", "zksync", "avalanche", "solana", "monad",
 ];
 
 function makeSusdeMeta(): StablecoinMeta {
@@ -586,15 +588,17 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
 
   it("splits sUSDe's canonical row into free float and an unattributed escrow remainder", async () => {
     mockSusdeLegs();
-    // The OFT adapter escrows 300, but only 230 of it is claimed by configured
-    // representation legs: TON, Aptos and unmatched escrow are the remaining 70.
+    // The OFT adapter escrows 300, but only 240 of it is claimed by configured
+    // representation legs (including Monad): TON, Aptos and unmatched escrow are
+    // the remaining 60.
     fetchOnchainUint256Mock.mockResolvedValue(300n * 10n ** 18n);
 
     const result = await fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1);
 
     expect(result?.mcap).toBe(1_000);
     expect(result?.chainCirculating?.Ethereum?.current).toBe(700);
-    expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBe(70);
+    expect(result?.chainCirculating?.Monad?.current).toBe(10);
+    expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBe(60);
     const published = Object.values(result?.chainCirculating ?? {}).reduce((sum, value) => sum + value.current, 0);
     expect(published).toBeCloseTo(1_000, 6);
     const joinedCalls = vi.mocked(evmRpc.fetchEvmUint256AtBlock).mock.calls;
@@ -610,6 +614,58 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       contract: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
       data: `0x70a08231${SUSDE_OFT.slice(2).padStart(64, "0")}`,
     });
+  });
+
+  it("values USG's keeper-adjusted issuer-native stock, never the CoinGecko cap", async () => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    probeTrackedTokenSupplyMock.mockResolvedValue(4_000_000n * 10n ** 18n);
+    fetchErc20TotalSupplyMock.mockResolvedValue(4_000_000n * 10n ** 18n);
+    // Both reviewed PegKeeper balances (CURATED_ONCHAIN_SUPPLY_EXCLUSIONS)
+    // subtract from totalSupply; CoinGecko's cap counts that inventory.
+    fetchOnchainUint256Mock
+      .mockResolvedValueOnce(300_000n * 10n ** 18n)
+      .mockResolvedValueOnce(100_000n * 10n ** 18n);
+
+    const result = await fetchOnChainMcap(meta, 1.01);
+
+    expect(result?.supplySource).toBe("onchain-circulating-supply");
+    expect(result?.mcap).toBeCloseTo(3_636_000, 6);
+    expect(result?.chainCirculating).toEqual({ Ethereum: { current: 3_636_000, chainId: "ethereum" } });
+    expect(fetchOnchainUint256Mock).toHaveBeenCalledTimes(2);
+    const holders = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[meta.id].holderAddresses;
+    expect(fetchOnchainUint256Mock.mock.calls.map(([input]) => input.contract)).toEqual([
+      meta.contracts![0]!.address, meta.contracts![0]!.address,
+    ]);
+    for (const [index, holder] of holders.entries()) {
+      expect(String(fetchOnchainUint256Mock.mock.calls[index]?.[0].data))
+        .toContain(holder.slice(2).toLowerCase());
+    }
+  });
+
+  it("admits USYC's complete native four-chain stock instead of a stale CoinGecko cap", async () => {
+    const meta = TRACKED_META_BY_ID.get("usyc-hashnote")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    probeTrackedTokenSupplyMock.mockImplementation(async (supplyMeta, input) => {
+      const chain = input?.chain ?? supplyMeta?.contracts?.[0]?.chain;
+      if (chain === "ethereum") return 30_872_668_252_824n;
+      if (chain === "bsc") return 1_929_937_727_947_452n;
+      if (chain === "solana") return 122_481_545n;
+      return null;
+    });
+    fetchErc20TotalSupplyMock.mockResolvedValue(0n);
+
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.1421542786596874);
+
+    // 1,960,810,518.68 USYC on-chain; the published CoinGecko cap implied
+    // $2,359,932,884.03 and must never be admitted once the roster is preferred.
+    expect(result?.mcap).toBeCloseTo(2_239_548_123.55, 2);
+    expect(result?.chainCirculating?.Ethereum?.current).toBeCloseTo(35_261_350.14, 2);
+    expect(result?.chainCirculating?.BSC?.current).toBeCloseTo(2_204_286_633.52, 2);
+    expect(result?.chainCirculating?.Solana?.current).toBeCloseTo(139.89, 2);
+    expect(result?.chainCirculating?.Arc?.current).toBe(0);
+    expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0))
+      .toBeCloseTo(result!.mcap, 6);
   });
 
   it("withholds an escrow partition when its canonical header changes after the escrow read", async () => {
@@ -780,7 +836,6 @@ describe("curation-expanded complete supply rosters", () => {
     {
       id: "syzusd-yuzu",
       canonical: "plasma",
-      // Synthetic complete stock includes the newly verified Base representation.
       supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25, base: 10 },
     },
     {
@@ -788,21 +843,19 @@ describe("curation-expanded complete supply rosters", () => {
       canonical: undefined,
       supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
     },
-    { id: "usyc-hashnote", supplies: { ethereum: 100, bsc: 10, solana: 20, arc: 0 } },
-    { id: "jtrsy-anemoy", supplies: { ethereum: 100, base: 10, arbitrum: 20, avalanche: 30, plume: 40, bsc: 50, monad: 60, solana: 0, pharos: 70 } },
-    { id: "nopal-nest", supplies: { ethereum: 100, plume: 10, bsc: 20, solana: 30, plasma: 0, worldchain: 40, avalanche: 50, arc: 60, monad: 70, robinhood: 80 } },
-    { id: "acred-apollo-securitize", supplies: { aptos: 10, avalanche: 20, ethereum: 100, ink: 30, polygon: 40, sei: 50, solana: 60 } },
-    { id: "brsrv-blackrock", supplies: { ethereum: 100, tempo: 0, solana: 0 } },
-    { id: "syrupusdg-maple", canonical: "ethereum", supplies: { ethereum: 100, robinhood: 10, arbitrum: 20, ink: 0, solana: 0 } },
-    { id: "susdat-saturn", canonical: "ethereum", supplies: { ethereum: 100, bsc: 10, monad: 20 } },
-    { id: "wsrusd-reservoir", canonical: "ethereum", supplies: { ethereum: 100, base: 1, berachain: 1, sonic: 1, arbitrum: 1, bsc: 1, avalanche: 1, unichain: 1, plume: 1, sei: 1, worldchain: 1, katana: 1, hyperevm: 1, linea: 1, monad: 1, pharos: 1, solana: 1, plasma: 1, megaeth: 0, tempo: 1, xdc: 1 } },
-    { id: "brlv-crown", supplies: { base: 100, ethereum: 10, tempo: 20 } },
-    { id: "chfau-allunity", supplies: { ethereum: 100, polygon: 0, base: 10, tempo: 0, solana: 20, arc: 0 } },
-    { id: "susn-noon", canonical: "ethereum", supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 } },
-    { id: "apyusd-apyx", canonical: "ethereum", supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 } },
-    { id: "susdai-usd-ai", supplies: { arbitrum: 100, ethereum: 10, base: 20, plasma: 30, solana: 40, arc: 50 } },
-    { id: "stac-securitize", supplies: { ethereum: 100, solana: 170 } },
-    { id: "jaaa-janus-henderson-anemoy", supplies: { ethereum: 100, base: 10, bsc: 20, avalanche: 30, monad: 40, arbitrum: 50, pharos: 0, xlayer: 0, arc: 0 } },
+    {
+      id: "susn-noon",
+      canonical: "ethereum",
+      supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 },
+    },
+    {
+      id: "apyusd-apyx",
+      canonical: "ethereum",
+      supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 },
+    },
+    { id: "uty-xsy", canonical: "base", supplies: { base: 100, avalanche: 10, katana: 20 } },
+    { id: "mxne-real-mxn", supplies: { base: 100, solana: 10, stellar: 0 } },
+    { id: "strusd-tori", canonical: "ethereum", supplies: { ethereum: 100, monad: 10, pharos: 5 } },
   ];
 
   beforeEach(() => {
@@ -812,6 +865,7 @@ describe("curation-expanded complete supply rosters", () => {
     fetchMoveFungibleAssetSupplyMock.mockReset();
     fetchOnchainUint256Mock.mockReset();
     fetchStarknetTotalSupplyMock.mockReset();
+    fetchStellarSupplyMock.mockReset();
   });
 
   function installSupplyReads(meta: StablecoinMeta, supplies: Record<string, number>, unreadable?: string) {
@@ -829,6 +883,7 @@ describe("curation-expanded complete supply rosters", () => {
     fetchErc20TotalSupplyMock.mockImplementation(async (input) => raw(input.chain));
     fetchSolanaTokenSupplyMock.mockImplementation(async () => raw("solana"));
     fetchStarknetTotalSupplyMock.mockImplementation(async () => raw("starknet"));
+    fetchStellarSupplyMock.mockImplementation(async () => raw("stellar"));
     if (CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id]) {
       fetchOnchainUint256Mock.mockResolvedValue(60n * 10n ** 18n);
     }
@@ -923,7 +978,7 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
-  it.each(["apyusd-apyx", "susn-noon"].flatMap((id) => [null, 20n, 100n].map((escrow) => ({ id, escrow }))))(
+  it.each(["apyusd-apyx", "susn-noon", "uty-xsy", "strusd-tori"].flatMap((id) => [null, 14n, 100n].map((escrow) => ({ id, escrow }))))(
     "withholds $id when canonical escrow is unavailable, below represented stock or at the total supply ($escrow)",
     async ({ id, escrow }) => {
       const meta = TRACKED_META_BY_ID.get(id)!;
@@ -944,61 +999,6 @@ describe("curation-expanded complete supply rosters", () => {
       expect(Object.values(result?.chainCirculating ?? {}).find((row) => row.chainId === chain)?.current).toBe(0);
     },
   );
-
-  it("conserves strUSD canonical stock while separating unprobed CCIP escrow from Ethereum float", async () => {
-    const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
-    installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 });
-    fetchOnchainUint256Mock.mockResolvedValue(20n * 10n ** 18n);
-    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
-    expect(result).toMatchObject({
-      mcap: 125,
-      chainCirculating: {
-        Ethereum: { current: 100, chainId: "ethereum" },
-        Monad: { current: 12.5, chainId: "monad" },
-        "Pharos Network": { current: 6.25, chainId: "pharos" },
-        "strUSD unattributed CCIP escrow": { current: 6.25 },
-      },
-    });
-    expect(result?.chainCirculating?.["strUSD unattributed CCIP escrow"]?.chainId).toBeUndefined();
-    expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0)).toBe(125);
-    expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
-      chain: "ethereum", contract: meta.contracts!.find(({ chain }) => chain === "ethereum")!.address,
-      data: "0x70a08231000000000000000000000000b12e0794fb2191672ba7a1811edc9713c8c2c38b",
-    });
-  });
-
-  it.each([null, 14n * 10n ** 18n, 100n * 10n ** 18n])(
-    "withholds strUSD when CCIP escrow is unreadable or inconsistent (%s)",
-    async (escrow) => {
-      const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
-      installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 });
-      fetchOnchainUint256Mock.mockResolvedValue(escrow);
-      await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
-    },
-  );
-
-  it.each(["ethereum", "monad", "pharos"])("withholds strUSD when %s cannot be read", async (unreadable) => {
-    const meta = TRACKED_META_BY_ID.get("strusd-tori")!;
-    installSupplyReads(meta, { ethereum: 100, monad: 10, pharos: 5 }, unreadable);
-    fetchOnchainUint256Mock.mockResolvedValue(20n * 10n ** 18n);
-    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
-  });
-
-  it.each([70, 110])("cannot substitute legacy gross-stock helper output (%s) for the joined sFRAX certificate", async (remote) => {
-    const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
-    const supplies = {
-      ethereum: 100, arbitrum: remote - 60, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10,
-      solana: 0.000117001,
-    };
-    installSupplyReads(meta, supplies);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
-    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
-    expect(fetchSolanaTokenSupplyMock).not.toHaveBeenCalled();
-    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
-      metadata: expect.objectContaining({ stablecoinId: meta.id, reason: "economic-float-unreconciled" }),
-    }));
-  });
 
   it.each(["decimals", "exception"])("fails syzUSD closed on Aptos %s failure", async (failure) => {
     const meta = TRACKED_META_BY_ID.get("syzusd-yuzu")!;

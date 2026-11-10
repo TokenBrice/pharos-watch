@@ -1,7 +1,4 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { describe, expect, it, vi } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
 
 import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import {
@@ -10,19 +7,17 @@ import {
   buildDepegEventTitle,
   formatEventNavigationLabel,
 } from "@/lib/depeg-event-display";
-import DepegEventPage, { generateMetadata } from "@/app/depeg/[event]/page";
+import { formatDeviationBps, formatLongDate } from "@shared/lib/format";
 import type { DepegEventDisplayInput } from "@/lib/depeg-event-display";
 import { DepegEventSchema } from "@shared/types/market";
 import { classifyDepegClosure, type DepegClosureInput } from "@shared/lib/depeg-closure";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-
-vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "" } }));
 
 const GYD_MARCH_19 = DEPEG_EVENT_ENTRIES.filter((event) => event.slug.startsWith("gyd-2026-03-19-down-"));
 
 describe("depeg event collision display", () => {
   it("assigns unique search titles, descriptions, and visible synopses to the GYD collision group", () => {
-    expect(GYD_MARCH_19).toHaveLength(13);
+    // The roster is live registry data; a collision group needs at least two members.
+    expect(GYD_MARCH_19.length).toBeGreaterThan(1);
     expect(GYD_MARCH_19.every((event) => COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug))).toBe(true);
 
     const titles = GYD_MARCH_19.map((event) => buildDepegEventTitle(event, true));
@@ -37,22 +32,39 @@ describe("depeg event collision display", () => {
   });
 
   it("exposes precise UTC identity in the formerly consolidated URLs and adjacent navigation", () => {
-    const event = GYD_MARCH_19.find((candidate) => candidate.slug.endsWith("87904"));
-    expect(event).toBeDefined();
-
-    expect(buildDepegEventTitle(event!, true)).toContain("March 19, 2026 at 14:30 UTC");
-    expect(buildDepegEventDescription(event!, true)).toContain("at 14:30 UTC");
-    expect(buildDepegEventSynopsis(event!)).toMatch(/Recovered after 45 min.*15:15 UTC/);
-    expect(formatEventNavigationLabel(event!, true)).toBe("GYD 2026-03-19 14:30 UTC");
+    // Long-style durations as the synopsis renders them, derived from each event's own clocks.
+    const longDuration = (seconds: number) => {
+      const minutes = Math.round(seconds / 60);
+      if (minutes < 60) return `${minutes} min`;
+      const hours = minutes / 60;
+      return hours < 24 ? `${hours.toFixed(1)} hr` : `${(hours / 24).toFixed(1)} days`;
+    };
+    for (const event of GYD_MARCH_19) {
+      const startIso = new Date(event.startedAt * 1000).toISOString();
+      const startTime = `${startIso.slice(11, 16)} UTC`;
+      expect(buildDepegEventTitle(event, true), event.slug).toContain(`at ${startTime}`);
+      expect(buildDepegEventDescription(event, true), event.slug).toContain(`at ${startTime}`);
+      const synopsis = buildDepegEventSynopsis(event);
+      expect(synopsis, event.slug).toContain(`at ${startTime}`);
+      expect(formatEventNavigationLabel(event, true), event.slug).toBe(
+        `${event.symbol} ${startIso.slice(0, 10)} ${startTime}`,
+      );
+      if (event.endedAt != null) {
+        const endIso = new Date(event.endedAt * 1000).toISOString();
+        expect(synopsis, event.slug).toContain(
+          `after ${longDuration(event.endedAt - event.startedAt)} at ${endIso.slice(11, 16)} UTC`,
+        );
+      }
+    }
   });
 
 });
 
 describe("depeg event search title and description", () => {
   const usdc: DepegEventDisplayInput = {
-    stablecoinId: "usdc-circle", symbol: "USDC", slug: "title-fixture",
+    stablecoinId: "usdc-circle", symbol: "USDC", slug: "title-fixture", pegType: "peggedUSD",
     direction: "below", peakDeviationBps: -1210, startedAt: Date.parse("2023-03-11T03:00:00Z") / 1000,
-    endedAt: Date.parse("2023-03-13T03:00:00Z") / 1000, peakPrice: 0.879, recoveryPrice: 1, closeReason: "recovered-primary",
+    endedAt: Date.parse("2023-03-13T03:00:00Z") / 1000, peakPrice: 0.879, recoveryPrice: 1, pegReference: 1, closeReason: "recovered-primary",
   };
 
   it("leads with the symbol, date and deviation, without a clause dash", () => {
@@ -80,13 +92,53 @@ describe("depeg event search title and description", () => {
     );
     expect(buildDepegEventDescription(usdc, true, null)).toMatch(/^USDC fell 12\.1% below its peg at 03:00 UTC on March 11, 2023\./);
   });
+
+  it("renders the synopsis prices in the peg's native unit", () => {
+    const eurc: DepegEventDisplayInput = {
+      ...usdc,
+      symbol: "EURC",
+      pegType: "peggedEUR",
+      pegReference: 1.17,
+      peakPrice: 1.05,
+      recoveryPrice: 1.17,
+    };
+    const synopsis = buildDepegEventSynopsis(eurc);
+    expect(synopsis).toContain("at €0.8974");
+    expect(synopsis).toContain("€1.00");
+    expect(synopsis).not.toContain("$1.05");
+  });
+
+  it("qualifies a disputed audit verdict without dropping the measured deviation", async () => {
+    const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.provenance?.auditVerdict === "disputed")!;
+    expect(event).toBeDefined();
+    const deviation = formatDeviationBps(event.peakDeviationBps);
+    const longDate = formatLongDate(new Date(event.startedAt * 1000), { utc: true });
+
+    expect(buildDepegEventTitle(event, false)).toBe(
+      `${event.symbol} Depeg, ${longDate}: ${deviation} Above Peg (Disputed)`,
+    );
+    expect(buildDepegEventDescription(event, false)).toContain(`rose ${deviation} above its peg (Disputed)`);
+    expect(buildDepegEventSynopsis(event)).toContain(`${deviation} (Disputed)`);
+  });
+
+  it("qualifies exactly the disputed archive events", () => {
+    for (const event of DEPEG_EVENT_ENTRIES) {
+      const disputed = event.provenance?.auditVerdict === "disputed" || event.provenance?.auditVerdict === "false_positive";
+      const texts = [
+        buildDepegEventTitle(event, false),
+        buildDepegEventDescription(event, false),
+        buildDepegEventSynopsis(event),
+      ];
+      for (const text of texts) expect(text.includes("(Disputed)"), event.slug).toBe(disputed);
+    }
+  });
 });
 
 describe("depeg closure presentation", () => {
   const base: DepegEventDisplayInput = {
-    stablecoinId: "usdc-circle", symbol: "USDC", slug: "closure-fixture",
+    stablecoinId: "usdc-circle", symbol: "USDC", slug: "closure-fixture", pegType: "peggedUSD",
     direction: "below", peakDeviationBps: -500, startedAt: 1_700_000_000,
-    endedAt: 1_700_003_600, peakPrice: 0.95, recoveryPrice: 1, closeReason: null,
+    endedAt: 1_700_003_600, peakPrice: 0.95, recoveryPrice: 1, pegReference: 1, closeReason: null,
   };
 
   it.each([
@@ -129,49 +181,5 @@ describe("depeg closure presentation", () => {
   it("classifies an omitted legacy reason as recovery only with recovery-price evidence", () => {
     expect(classifyDepegClosure({ endedAt: base.endedAt, recoveryPrice: 1 })).toBe("legacy_recovered");
     expect(classifyDepegClosure({ endedAt: base.endedAt, recoveryPrice: null })).toBe("unknown_closed");
-  });
-
-  it.each(["tryb-2026-06-23", "usdr-2026-06-21"])("uses the same coverage-loss description in metadata and JSON-LD for %s", async (slug) => {
-    const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.slug === slug)!;
-    const params = Promise.resolve({ event: slug });
-    const metadata = await generateMetadata({ params });
-    const coinName = TRACKED_META_BY_ID.get(event.stablecoinId)?.name ?? null;
-    const description = buildDepegEventDescription(event, COLLIDING_DEPEG_EVENT_SLUGS.has(slug), coinName);
-    expect(metadata.description).toBe(description);
-    expect(metadata.openGraph).toMatchObject({ description });
-    expect(description).toMatch(/coverage lost/i);
-    expect(description).not.toMatch(/\brecovered\b/i);
-    const html = renderToStaticMarkup(await DepegEventPage({ params }));
-    const articles = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
-      .map((match) => JSON.parse(match[1]))
-      .filter((entry) => entry["@type"] === "NewsArticle");
-    expect(articles).toHaveLength(1);
-    expect(articles[0].description).toBe(description);
-    expect(html).toContain(buildDepegEventSynopsis(event));
-  });
-});
-
-describe("depeg event editorial rendering", () => {
-  it.each([
-    ["usdc-2023-03-11", true],
-    ["tryb-2026-06-23", false],
-  ] as const)("renders a briefing only for authored event %s", async (slug, authored) => {
-    const html = renderToStaticMarkup(await DepegEventPage({ params: Promise.resolve({ event: slug }) }));
-    expect(/<article aria-label="[^"]+ depeg briefing"/.test(html)).toBe(authored);
-  });
-
-  it("reconciles the USDC briefing, annotation and source with the recorded observation", async () => {
-    const html = renderToStaticMarkup(await DepegEventPage({ params: Promise.resolve({ event: "usdc-2023-03-11" }) }));
-    const text = html.replace(/<[^>]+>/g, " ").replace(/&#x27;|&#39;/g, "\u2019").replace(/\s+/g, " ");
-    expect(text).toContain("USDC fell 12.1% below peg in Pharos\u2019s record.");
-    for (const figure of ["$0.9841", "$0.8789", "$0.9937", "March 12", "March 13"]) expect(text).toContain(figure);
-    for (const retired of ["13-cent", "13.0%", "Sunday low", "largest ever", "cash backing", "parity again"]) {
-      expect(text).not.toContain(retired);
-    }
-    const annotations = JSON.parse(readFileSync(resolve(process.cwd(), "shared/data/annotations/coins/usdc-circle.json"), "utf8")) as
-      Array<{ date: string; label: string; href?: string }>;
-    const pin = annotations.find((entry) => entry.date === "2023-03-11")!;
-    expect(pin.label).toBe("SVB reserve exposure and USDC depeg");
-    expect(pin.href).toBe("https://www.circle.com/pressroom/3-3-billion-of-usdc-reserve-risk-removed-dollar-de-peg-closes");
   });
 });

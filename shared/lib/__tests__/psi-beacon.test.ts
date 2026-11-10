@@ -192,6 +192,35 @@ describe("buildPsiBeaconModel (hero)", () => {
     expect(model.ariaLabel).toContain("do not reconcile");
   });
 
+  it("reconciles a rounding residual at the 6-cent boundary despite binary float noise", () => {
+    // 100 − 15.96 − 4.15 − 2.37 − 0.18 = 77.34, published as 77.4.
+    const model = hero(withComponents(77.4, "STEADY", {
+      severity: 15.96, breadth: 4.15, stressBreadth: 2.37, trend: -0.18,
+    }));
+    expect(model.unknown).toBeNull();
+    expect(model.fog.map((bank) => bank.key)).toEqual(["severity", "breadth", "stressBreadth"]);
+    expect(model.ariaLabel).not.toContain("do not reconcile");
+  });
+
+  it("reconciles a scored sample whose rounded components differ by exactly six cents", () => {
+    // 100 − 1.94 − 6.71 − 0.53 − 1.18 = 89.64, published as 89.7.
+    const model = hero(withComponents(89.7, "STEADY", {
+      severity: 1.94, breadth: 6.71, stressBreadth: 0.53, trend: -1.18,
+    }));
+    expect(model.unknown).toBeNull();
+    expect(model.clamp).toBeNull();
+    expect(model.fog).toHaveLength(3);
+  });
+
+  it("keeps rejecting a residual beyond the published rounding bound", () => {
+    // 77.33 versus a published 77.4 is a 7-cent residual, not rounding.
+    const model = hero(withComponents(77.4, "STEADY", {
+      severity: 15.96, breadth: 4.15, stressBreadth: 2.38, trend: -0.18,
+    }));
+    expect(model.fog).toEqual([]);
+    expect(model.unknown).toMatchObject({ from: 77.4, to: 100, unreconciled: true });
+  });
+
   it("marks severity as a lower bound when open depegs were unpriced", () => {
     const model = hero({ ...LIVE, inputDegradation: { openDepegNoPrice: true, openDepegsWithoutPrice: 2 } });
     expect(model.fog[0].lowerBound).toEqual({ unpricedCount: 2 });

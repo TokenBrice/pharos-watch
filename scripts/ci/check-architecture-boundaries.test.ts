@@ -322,4 +322,63 @@ describe("Telegram public surface", () => {
       "telegram-public-surface: worker/src/routes/messaging-routes.ts: unresolved dependency ../telegram/webhook/telegram-webhook",
     ]);
   });
+
+  it("rejects the full publication parser in the materialization reader", () => {
+    const root = fixture();
+    const reader = "worker/src/lib/report-cards-v9-materialization.ts";
+    writeText(root, reader, "export const value = 1;");
+    expect(checkArchitectureBoundaries(root, ["materialization-no-full-parser"])).toEqual([]);
+
+    writeText(root, reader, 'import { parseSafetyScoreV9Publication as parse } from "./codec"; export const value = parse;');
+    expect(checkArchitectureBoundaries(root, ["materialization-no-full-parser"])).toEqual([
+      `${"materialization-no-full-parser"}: ${reader}: references the full publication parser`,
+    ]);
+  });
+
+  it("keeps failure-scenario leaves registry-free below the context", () => {
+    const root = fixture();
+    const dir = "shared/lib/failure-scenario-checks";
+    writeText(root, `${dir}/context.ts`,
+      'import type { PublicClient } from "viem";\nimport type { FailureScenario } from "../../types/failure-scenarios";\nexport type Context = PublicClient;');
+    writeText(root, `${dir}/leaf.ts`,
+      'import type { Context } from "./context";\nimport data from "../../data/failure-scenarios/leaf.json";\nexport default [data, {} as Context];');
+    writeText(root, `${dir}/index.ts`,
+      'import leaf from "./leaf";\nexport const FAILURE_SCENARIO_CHECKS = { leaf };');
+    expect(checkArchitectureBoundaries(root, ["failure-scenario-checks"])).toEqual([]);
+
+    writeText(root, `${dir}/leaf.ts`, 'import { helper } from "./helper";\nexport default helper;');
+    expect(checkArchitectureBoundaries(root, ["failure-scenario-checks"])).toEqual([
+      "failure-scenario-checks: shared/lib/failure-scenario-checks/leaf.ts: imports ./helper; expected only ./context",
+    ]);
+
+    writeText(root, `${dir}/leaf.ts`, 'import type { Context } from "./context";\nexport default {} as Context;');
+    writeText(root, `${dir}/context.ts`, 'import { PublicClient } from "viem";\nexport type Context = PublicClient;');
+    expect(checkArchitectureBoundaries(root, ["failure-scenario-checks"])).toEqual([
+      "failure-scenario-checks: shared/lib/failure-scenario-checks/context.ts: imports must be type-only",
+      "failure-scenario-checks: shared/lib/failure-scenario-checks/context.ts: imports viem, expected viem, ../../types/failure-scenarios",
+    ]);
+  });
+
+  it("rejects a data-health component reachable from the homepage and keeps reviewed imports", () => {
+    const root = fixture();
+    for (let index = 0; index < 100; index++) {
+      writeText(root, `src/components/chain-${index}.ts`, `export { value } from "./chain-${index + 1}";`);
+    }
+    writeText(root, "src/components/chain-100.ts", "export const value = 1;");
+    writeText(root, "src/components/data-health-banner.tsx", "export const Banner = 1;");
+    writeText(root, "src/app/page.tsx", 'export { value } from "../components/chain-0";');
+    expect(checkArchitectureBoundaries(root, ["homepage-warning-free"])).toEqual([]);
+
+    writeText(root, "src/app/page.tsx",
+      'export { value } from "../components/chain-0";\nexport { Banner } from "../components/data-health-banner";');
+    expect(checkArchitectureBoundaries(root, ["homepage-warning-free"])).toEqual([
+      "homepage-warning-free: src/app/page.tsx -> src/components/data-health-banner.tsx: forbidden dependency",
+    ]);
+
+    // A reviewed importer reaches only the listed warnings.
+    writeText(root, "src/components/yield-history-chart.tsx", 'export { Banner } from "./data-health-banner";');
+    writeText(root, "src/app/page.tsx",
+      'export { value } from "../components/chain-0";\nexport { Banner } from "../components/yield-history-chart";');
+    expect(checkArchitectureBoundaries(root, ["homepage-warning-free"])).toEqual([]);
+  });
 });

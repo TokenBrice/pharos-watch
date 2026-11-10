@@ -344,13 +344,6 @@ interface GhoSliceValue {
   issuerOrObligor?: string;
 }
 
-interface GhoRedemptionTelemetry {
-  routeStatus: "open" | "paused" | "unknown";
-  immediateRedeemableUsd?: number;
-  immediateRedeemableRatio?: number;
-  redemptionFeeBps?: number;
-}
-
 /** Replace backing only inside the issuing parent; never spread deductions across unrelated buckets. */
 function allocateGhoExposure(data: GhoFacilitatorData) {
   const modulesByParent = new Map<string, GhoTrackedModuleSnapshot[]>();
@@ -446,23 +439,6 @@ function buildGhoSlices(
   return { values, unknownResidualRaw };
 }
 
-/** Route state is observed from flags independently of available liquidity. */
-function buildGhoRedemptionMetadata(telemetry: GhoRedemptionTelemetry) {
-  const { routeStatus, immediateRedeemableUsd, immediateRedeemableRatio, redemptionFeeBps } = telemetry;
-  return {
-    ...(immediateRedeemableUsd != null ? { capacityUsd: immediateRedeemableUsd } : {}),
-    ...(immediateRedeemableRatio != null ? { capacityRatioOfSupply: immediateRedeemableRatio } : {}),
-    capacityKind: "live-direct" as const,
-    freshnessKind: "same-run-onchain" as const,
-    routeStatus,
-    routeStatusSource: "onchain" as const,
-    holderEligibility: "any-holder" as const,
-    settlementDelaySec: 0,
-    ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
-    sourceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
-  };
-}
-
 export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
   const { coveredModules, allocations, issuedRaw, exposureRaw, coveredRaw } = allocateGhoExposure(data);
   const trackedObservationsComplete = !data.trackedModuleReadIncomplete
@@ -530,12 +506,19 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
             buyFeeBpsMax: redemptionFeeBps,
           }
         : {}),
-      redemption: buildGhoRedemptionMetadata({
+      /** Route state is observed from flags independently of available liquidity. */
+      redemption: {
+        ...(immediateRedeemableUsd != null ? { capacityUsd: immediateRedeemableUsd } : {}),
+        ...(immediateRedeemableRatio != null ? { capacityRatioOfSupply: immediateRedeemableRatio } : {}),
+        capacityKind: "live-direct" as const,
+        freshnessKind: "same-run-onchain" as const,
         routeStatus,
-        immediateRedeemableUsd,
-        immediateRedeemableRatio,
-        redemptionFeeBps,
-      }),
+        routeStatusSource: "onchain" as const,
+        holderEligibility: "any-holder" as const,
+        settlementDelaySec: 0,
+        ...(redemptionFeeBps != null ? { feeBps: redemptionFeeBps } : {}),
+        sourceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
+      },
       facilitatorLabels: activeFacilitators.map((facilitator) => facilitator.label),
       trackedGsmLabels: data.trackedModules.map((trackedModule) => trackedModule.label),
     },

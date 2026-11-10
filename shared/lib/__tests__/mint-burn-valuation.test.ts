@@ -7,6 +7,8 @@ import {
   tallyMintBurnHourlyBucket,
 } from "../mint-burn-valuation";
 
+import { summarizeMintBurnClassification, tallyMintBurnClassificationBucket } from "../mint-burn-classification";
+
 const tally = (overrides: Partial<Parameters<typeof summarizeMintBurnValuation>[0]> = {}) =>
   summarizeMintBurnValuation({ unpricedMintEventCount: 0, unpricedBurnEventCount: 0, unknownMintHours: 0, unknownBurnHours: 0, ...overrides });
 
@@ -60,5 +62,24 @@ describe("mintBurnSignedNetBound", () => {
   it("publishes no bound for an exact net or when both sides are incomplete", () => {
     expect(mintBurnSignedNetBound(10, { mintCompleteness: "complete", burnCompleteness: "complete" })).toBeNull();
     expect(mintBurnSignedNetBound(10, { mintCompleteness: "partial", burnCompleteness: "unknown" })).toBeNull();
+  });
+});
+
+describe("mint/burn classification completeness", () => {
+  it("keeps unresolved sides incomplete even when no events were counted", () => {
+    expect(summarizeMintBurnClassification(tallyMintBurnClassificationBucket({
+      unresolvedMintEventCount: 0, unresolvedBurnEventCount: 1,
+    }, false))).toEqual({
+      completeness: "partial", mintCompleteness: "complete", burnCompleteness: "partial",
+      unresolvedMintEventCount: 0, unresolvedBurnEventCount: 1, unavailableReason: "classification-unresolved",
+    });
+  });
+
+  it("admits legacy NULL only when current config has no review producer", () => {
+    const bucket = { unresolvedMintEventCount: null, unresolvedBurnEventCount: null };
+    expect(summarizeMintBurnClassification(tallyMintBurnClassificationBucket(bucket, true)))
+      .toMatchObject({ completeness: "unknown", unavailableReason: "classification-unknown" });
+    expect(summarizeMintBurnClassification(tallyMintBurnClassificationBucket(bucket, false)))
+      .toMatchObject({ completeness: "complete", unavailableReason: null });
   });
 });

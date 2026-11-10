@@ -20,7 +20,10 @@ const FxSourceDateSchema = z.string().refine(
 );
 
 const FrankfurterResponseSchema = z.object({
-  base: z.string(),
+  // `applyFrankfurterRates` inverts every quote as USD-per-unit. A payload that
+  // reports another base (or drops the field) is invalid evidence, never a
+  // silently shifted 8% reference: fail closed and let the fallback path run.
+  base: z.literal("USD"),
   date: FxSourceDateSchema,
   rates: z.record(z.string(), z.number()),
 });

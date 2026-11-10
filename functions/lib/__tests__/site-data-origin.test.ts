@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveSiteApiOrigin } from "../site-api-env";
 import { rejectIfNotSiteDataUiOrigin } from "../site-data-origin";
 
 const env = { SITE_ORIGIN: "https://pharos.watch", OPS_UI_ORIGIN: "https://ops.pharos.watch" };
@@ -7,6 +8,18 @@ const notFound = () => new Response(null, { status: 404 });
 function req(url: string, headers: Record<string, string> = {}): Request {
   return new Request(url, { headers });
 }
+
+describe("site-data env contract", () => {
+  it("returns null when SITE_API_ORIGIN is unset or malformed", () => {
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: undefined })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "not a url" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "http://site-api.pharos.watch" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "ftp://site-api.pharos.watch" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "https://attacker.example" })).toBeNull();
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: "https://site-api.pharos.watch/path" })).toBeNull();
+  });
+});
 
 describe("rejectIfNotSiteDataUiOrigin", () => {
   it("falls back from opaque UI origin overrides without crashing the request gate", () => {

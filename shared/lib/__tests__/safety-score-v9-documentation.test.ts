@@ -10,16 +10,26 @@ import {
   type V9DocumentationPillarWitness,
 } from "../safety-score-v9/documentation";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
+import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
+import { evaluateV9Exit } from "../safety-score-v9/exit";
+import { stableJsonStringifyV1 } from "../stable-json";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
-import type { V9EvidenceCauseProof } from "../../types/safety-score-v9-causes";
+import { v9EvidenceResponsibilityForCauseProof, type V9EvidenceCauseProof } from "../../types/safety-score-v9-causes";
 import type { V9MethodologyPolicy } from "../../types/safety-score-v9";
 import type {
   V9AssetFactsV3,
   V9DeploymentControlFactV2,
   V9FactGapV3,
+  V9ReserveExposureFactV2,
   V9TypedFactPath,
 } from "../../types/safety-score-v9-facts";
 import { compileNativeV3FactSet, coreFixture } from "./safety-score-v9-facts.fixture-support";
+import {
+  asset as backingAsset,
+  exposure as backingExposure,
+  knownStatus as backingKnownStatus,
+} from "./safety-score-v9-backing.test-support";
+import { makeExitRoute } from "./safety-score-v9-exit.test-support";
 
 const compiled = compileNativeV3FactSet(coreFixture());
 const baseFacts = compiled.assets.find((asset) => asset.assetId === "alpha") as V9AssetFactsV3;
@@ -66,6 +76,7 @@ function gap(overrides: {
     path,
     message: "Fixture documentation datum.",
     causeProof,
+    responsibility: v9EvidenceResponsibilityForCauseProof(causeProof),
     ...(overrides.componentKey === undefined ? {} : {
       causeScope: {
         pillar: "control",
@@ -111,6 +122,31 @@ function asset(overrides: Partial<V9DocumentationAssetFacts> = {}): V9Documentat
     exitRoutes: [],
     ...overrides,
   };
+}
+
+function reserveExposure(weight: number): V9ReserveExposureFactV2[] {
+  return [{
+    exposureKey: "reserve:row",
+    classificationKey: "class:reserve-row",
+    sourceGenerationId: "research:documentation-fixture",
+    provenance: "curated",
+    evidenceClass: "static-validated",
+    status: {
+      applicability: { state: "required", policyRuleId: "reserve.row", rationale: null, gapId: null },
+      observationState: "known",
+      evidenceRefIds: [],
+      gapIds: [],
+    },
+    name: "Fixture reserve row",
+    weight,
+    trackedAssetId: null,
+    assetClass: "cash",
+    issuerOrObligorKey: null,
+    riskFactors: [],
+    liquidityHorizon: "immediate",
+    maturityDaysMax: null,
+    failureDomains: [{ kind: "reserve-issuer", key: "issuer:fixture" }],
+  }];
 }
 
 function mintReview(overrides: { reconciliation?: string; supervision?: string }) {
@@ -274,23 +310,6 @@ describe("Safety Score v9 documentation classifier", () => {
     expect(classifyV9DocumentationGap(POLICY, facts, pillarTreated)).toBeNull();
   });
 
-  it("classifies a route-scoped diagnostic only on an already-admitted route", () => {
-    const output = gap({
-      gapId: "alpha:gap:route:redemption:redemption:r1:output",
-      reasonCode: "unresolved-exit-output",
-      path: { kind: "optional-exit", routeKey: "redemption:redemption:r1" },
-    });
-    const routeKey = "redemption:redemption:r1";
-    const admitted = asset({ gaps: [output], exitRoutes: baseFacts.exitRoutes,
-      admittedExitRouteKeys: new Set([routeKey]) });
-    expect(classifyV9DocumentationGap(POLICY, admitted, output)?.reason).toBe("unscored-diagnostic");
-    const unscored = asset({ gaps: [output], exitRoutes: baseFacts.exitRoutes,
-      admittedExitRouteKeys: new Set(["redemption:redemption:other"]) });
-    expect(classifyV9DocumentationGap(POLICY, unscored, output)).toBeNull();
-    const unknown = asset({ gaps: [output], exitRoutes: baseFacts.exitRoutes });
-    expect(classifyV9DocumentationGap(POLICY, unknown, output)).toBeNull();
-  });
-
   it("classifies the DEX coverage label only on a non-empty route inventory", () => {
     const coverage = gap({
       gapId: "alpha:gap:exit-portfolio-coverage",
@@ -311,12 +330,11 @@ describe("Safety Score v9 documentation classifier", () => {
       reasonCode: "material-reserve-slice-unstructured",
       path: { kind: "collateral-exposure", exposureKey: "reserve:row" },
     });
-    const exposure = (weight: number) => [{ exposureKey: "reserve:row", weight }];
-    const inside = asset({ gaps: [dust], reserveExposures: exposure(0.00009999) });
+    const inside = asset({ gaps: [dust], reserveExposures: reserveExposure(0.00009999) });
     const classification = classifyV9DocumentationGap(POLICY, inside, dust);
     expect(classification?.reason).toBe("reserve-dust");
     expect(classification?.threshold).toEqual({ kind: "reserve-book-share", value: 0.0001 });
-    expect(classifyV9DocumentationGap(POLICY, asset({ gaps: [dust], reserveExposures: exposure(0.0001) }), dust)).toBeNull();
+    expect(classifyV9DocumentationGap(POLICY, asset({ gaps: [dust], reserveExposures: reserveExposure(0.0001) }), dust)).toBeNull();
     expect(classifyV9DocumentationGap(POLICY, asset({ gaps: [dust], reserveExposures: [] }), dust)).toBeNull();
   });
 
@@ -333,13 +351,13 @@ describe("Safety Score v9 documentation classifier", () => {
       path: { kind: "collateral-exposure", exposureKey: "reserve:row" },
       causeProof: { cause: "D", adverseFactId: "adverse:fixture", evidenceRefIds: ["evidence:doc"] },
     });
-    const facts = asset({ gaps: [partial, dust], reserveExposures: [{ exposureKey: "reserve:row", weight: 0.000001 }] });
+    const facts = asset({ gaps: [partial, dust], reserveExposures: reserveExposure(0.000001) });
     expect(classifyV9DocumentationGap(POLICY, facts, partial)).toBeNull();
     expect(classifyV9DocumentationGap(POLICY, facts, dust)).toBeNull();
   });
 
   it("classifies nothing when the policy block is absent and exposes the same result through both helpers", () => {
-    const raw: V9MethodologyPolicy = structuredClone(candidatePolicyAsset);
+    const raw = structuredClone(candidatePolicyAsset) as unknown as V9MethodologyPolicy;
     delete raw.semantic.evidence.documentation;
     const withoutBlock = loadV9MethodologyPolicy(raw);
     const custody = gap({
@@ -403,5 +421,256 @@ describe("Safety Score v9 documentation-only pillar annotation", () => {
         ["exit", "limited", ["gamma:gap:nowhere"]],
       ),
     })).toEqual([]);
+  });
+});
+
+/**
+ * Exit/backing pricing boundaries for the documentation class: the class is
+ * derived-only, so each case checks that classification never changes what the
+ * scorer prices or which routes it admits.
+ */
+describe("Safety Score v9 documentation pricing boundaries", () => {
+  const DOCUMENTATION = POLICY.policy.semantic.evidence.documentation;
+  if (DOCUMENTATION === undefined) throw new Error("The candidate policy must author the documentation block");
+  const UNRESEARCHED = { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] as [] } satisfies V9EvidenceCauseProof;
+
+  /** The classifier reads these fields; other fixtures supply the rest. */
+  function factsFor(
+    overrides: Partial<V9DocumentationAssetFacts> & Pick<V9DocumentationAssetFacts, "gaps">,
+  ): V9DocumentationAssetFacts {
+    return {
+      assetId: baseFacts.assetId,
+      archetype: baseFacts.archetype,
+      controlStatus: baseFacts.controlStatus,
+      controls: [],
+      supply: baseFacts.supply,
+      economicControlReview: baseFacts.economicControlReview,
+      reserveExposures: [],
+      exitRoutes: baseFacts.exitRoutes,
+      ...overrides,
+    };
+  }
+
+  function reserveFactorGap(gapId: string, exposureKey: string): V9FactGapV3 {
+    return createV9FactGapV3({
+      gapId,
+      reasonCode: "material-reserve-slice-unstructured",
+      ownerDomain: "backing",
+      policyRuleId: "v9.backing.reserve-composition",
+      observationState: "missing",
+      responsibility: "unresearched",
+      path: { kind: "collateral-exposure", exposureKey },
+      message: "The exact reserve factor is missing.",
+      causeProof: UNRESEARCHED,
+      causeScope: {
+        pillar: "backing",
+        componentKey: "reserve-residual",
+        factorKey: "liquidity",
+        routeKey: null,
+        exposureId: exposureKey,
+        requiredDatum: "reserveClassification",
+      },
+    });
+  }
+
+  /** The reserve row the scorer blends, with the gap that makes the factor missing. */
+  function missingExposure(key: string, weight: number, gapId: string): V9ReserveExposureFactV2 {
+    const row = backingExposure({ key, weight });
+    return {
+      ...row,
+      status: { ...backingKnownStatus(`attempt:${key}`), observationState: "missing", evidenceRefIds: [], gapIds: [gapId] },
+    };
+  }
+
+  function coverageGap(): V9FactGapV3 {
+    return createV9FactGapV3({
+      gapId: "alpha:gap:exit-portfolio-coverage",
+      reasonCode: "incomplete-dex-route-coverage",
+      ownerDomain: "exit",
+      policyRuleId: "v9.exit.same-notional-route",
+      observationState: "bounded-unknown",
+      responsibility: "producer-failed",
+      path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
+      message: "The DEX exit surface is not fully observed.",
+      causeProof: UNRESEARCHED,
+      causeScope: {
+        pillar: "exit",
+        componentKey: "exit-portfolio-coverage",
+        factorKey: null,
+        routeKey: null,
+        exposureId: null,
+        requiredDatum: "dex-route-coverage",
+      },
+    });
+  }
+
+  function unresolvedOutputGap(routeKey: string): V9FactGapV3 {
+    return createV9FactGapV3({
+      gapId: `alpha:gap:route:${routeKey}:output`,
+      reasonCode: "unresolved-exit-output",
+      ownerDomain: "exit",
+      policyRuleId: "v9.exit.same-notional-route",
+      observationState: "missing",
+      responsibility: "unresearched",
+      path: { kind: "optional-exit", routeKey },
+      message: "The route output is unresolved.",
+      causeProof: UNRESEARCHED,
+      causeScope: {
+        pillar: "exit",
+        componentKey: `exit-route:${routeKey}`,
+        factorKey: "output",
+        routeKey,
+        exposureId: null,
+        requiredDatum: "output",
+      },
+    });
+  }
+
+  /** The routes `evaluateV9Exit` actually admitted; the 3b veto reads the same set. */
+  function admittedRouteKeys(args: Parameters<typeof evaluateV9Exit>[0]): ReadonlySet<string> {
+    return new Set(evaluateV9Exit(args, POLICY).routes
+      .filter((route) => route.included)
+      .map((route) => route.routeKey));
+  }
+
+  it("classifies strictly below 1e-4 of the book and leaves the bar itself priced", () => {
+    expect(DOCUMENTATION.reserveDustBookSharePct).toBe(0.01);
+    const dust = reserveFactorGap("alpha:gap:reserve:dust:liquidity", "exposure:dust");
+    const atBar = reserveFactorGap("alpha:gap:reserve:at-bar:liquidity", "exposure:at-bar");
+    const above = reserveFactorGap("alpha:gap:reserve:above:maturity", "exposure:above");
+    const facts = factsFor({
+      gaps: [dust, atBar, above],
+      reserveExposures: [
+        backingExposure({ key: "exposure:cash", weight: 0.9 }),
+        missingExposure("exposure:dust", 0.00009999, dust.gapId),
+        missingExposure("exposure:at-bar", 0.0001, atBar.gapId),
+        missingExposure("exposure:above", 0.0002, above.gapId),
+      ],
+    });
+
+    const classification = classifyV9DocumentationGap(POLICY, facts, dust);
+    expect(classification).toEqual({
+      reason: "reserve-dust",
+      policyRef: "semantic.evidence.documentation.reasons.reserve-dust",
+      threshold: { kind: "reserve-book-share", value: 0.0001 },
+    });
+    expect(classifyV9DocumentationGap(POLICY, facts, atBar)).toBeNull();
+    expect(classifyV9DocumentationGap(POLICY, facts, above)).toBeNull();
+    expect([...documentationGapIds(POLICY, facts).keys()]).toEqual([dust.gapId]);
+
+    // The same weight the classifier compares is the weight the blend reads.
+    const priced = evaluateV9ReserveExposures(backingAsset(facts.reserveExposures, facts.gaps), POLICY);
+    expect(priced.contributions.find((row) => row.componentKey === "reserve:exposure:dust")?.wholeAssetWeight)
+      .toBe(0.00009999);
+    expect(priced.contributions.find((row) => row.componentKey === "reserve:exposure:at-bar")?.wholeAssetWeight)
+      .toBe(0.0001);
+  });
+
+  it("keeps every reserve contribution and the input byte-identical across classification", () => {
+    const dust = reserveFactorGap("alpha:gap:reserve:dust:liquidity", "exposure:dust");
+    const known = reserveFactorGap("alpha:gap:reserve:row:liquidity", "exposure:row");
+    const reserveExposures = [
+      backingExposure({ key: "exposure:cash", weight: 0.7 }),
+      missingExposure("exposure:dust", 0.00009, dust.gapId),
+      missingExposure("exposure:row", 0.29991, known.gapId),
+    ];
+    const input = backingAsset(reserveExposures, [dust, known]);
+    const inputBefore = stableJsonStringifyV1(input);
+    const before = evaluateV9ReserveExposures(input, POLICY);
+    expect(before.contributions.map((row) => row.componentKey)).toContain("reserve:exposure:dust");
+
+    const facts = factsFor({ gaps: [dust, known], reserveExposures });
+    expect([...documentationGapIds(POLICY, facts).keys()]).toEqual([dust.gapId]);
+
+    // Deriving the class must not re-price, re-cause or re-identify the blend.
+    const after = evaluateV9ReserveExposures(input, POLICY);
+    expect(after).toEqual(before);
+    expect(stableJsonStringifyV1(input)).toBe(inputBefore);
+    expect(after.contributions.find((row) => row.componentKey === "reserve:exposure:dust"))
+      .toMatchObject({ wholeAssetWeight: 0.00009, scoringDisposition: before.contributions
+        .find((row) => row.componentKey === "reserve:exposure:dust")?.scoringDisposition });
+  });
+
+  it("never prices the coverage label and keeps the same routes scored", () => {
+    const gap = coverageGap();
+    const route = makeExitRoute();
+    const reviewed = evaluateV9Exit({
+      circulatingUsd: 5_000_000,
+      portfolioStatus: "reviewed-complete",
+      portfolioFactStatus: backingKnownStatus("dex-census"),
+      routes: [route],
+    }, POLICY);
+    const incomplete = evaluateV9Exit({
+      circulatingUsd: 5_000_000,
+      portfolioStatus: "incomplete",
+      portfolioFactStatus: {
+        ...backingKnownStatus("dex-census"),
+        observationState: "bounded-unknown",
+        evidenceRefIds: [],
+        gapIds: [gap.gapId],
+      },
+      gaps: [gap],
+      routes: [route],
+    }, POLICY);
+
+    expect(incomplete.routes).toEqual(reviewed.routes);
+    expect(incomplete.score).toBe(reviewed.score);
+    expect(incomplete.causeGapIds).toContain(gap.gapId);
+  });
+
+  it("keeps the zero-route inventory open because completing coverage there arms the adverse floor", () => {
+    const gap = coverageGap();
+    const provenEmpty = evaluateV9Exit({
+      circulatingUsd: 5_000_000,
+      portfolioStatus: "reviewed-complete",
+      portfolioFactStatus: backingKnownStatus("dex-census"),
+      routes: [],
+    }, POLICY);
+    const undocumented = evaluateV9Exit({
+      circulatingUsd: 5_000_000,
+      portfolioStatus: "incomplete",
+      portfolioFactStatus: {
+        ...backingKnownStatus("dex-census"),
+        observationState: "bounded-unknown",
+        evidenceRefIds: [],
+        gapIds: [gap.gapId],
+      },
+      gaps: [gap],
+      routes: [],
+    }, POLICY);
+
+    // A reviewed census proving no routes exist is adverse (0), not unknown:
+    // resolving the coverage datum on this asset can only add that adverse fact.
+    expect(provenEmpty.score).toBe(0);
+    expect(provenEmpty.aggregationDisposition).toBe("included");
+    expect(undocumented.score).not.toBe(0);
+    expect(classifyV9DocumentationGap(POLICY, factsFor({ gaps: [gap], exitRoutes: [] }), gap)).toBeNull();
+  });
+
+  it("classifies a route-scoped diagnostic only on a route the evaluator admitted", () => {
+    const routeKey = "redemption:issuer";
+    const gap = unresolvedOutputGap(routeKey);
+    const excluded = admittedRouteKeys({
+      circulatingUsd: 5_000_000,
+      portfolioStatus: "reviewed-complete",
+      routes: [makeExitRoute({ outputResolved: false })],
+      gaps: [gap],
+    });
+    const admitted = admittedRouteKeys({
+      circulatingUsd: 5_000_000,
+      portfolioStatus: "reviewed-complete",
+      routes: [makeExitRoute()],
+      gaps: [gap],
+    });
+
+    expect(excluded.has(routeKey)).toBe(false);
+    expect(admitted.has(routeKey)).toBe(true);
+    // On an unscored route the datum still gates admission, so it stays required.
+    expect(classifyV9DocumentationGap(POLICY, factsFor({ gaps: [gap], admittedExitRouteKeys: excluded }), gap))
+      .toBeNull();
+    expect(classifyV9DocumentationGap(POLICY, factsFor({ gaps: [gap], admittedExitRouteKeys: admitted }), gap)?.reason)
+      .toBe("unscored-diagnostic");
+    // Unknown admission fails closed.
+    expect(classifyV9DocumentationGap(POLICY, factsFor({ gaps: [gap] }), gap)).toBeNull();
   });
 });

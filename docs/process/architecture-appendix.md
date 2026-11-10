@@ -20,6 +20,10 @@ A policy-semantic change takes a numeric version even when it is provably score-
 - Unavailable live peg deviations do not erase independently available historical analytics or imply that the historical event cohort is empty; the nullable median contract is owned by [API Reference](../api-reference.md#get-apipeg-summary).
 - [Measured EVM proof admission](dex-liquidity-appendix.md#measured-evm-joining) distinguishes strict aggregate executed-member refusal from unavailable transport; the latter never proves CryptoSwap method absence.
 
+### Lifecycle transitions
+
+Guidance; enforcement lives in the owning regression tests. Persisted/published lifecycle types derive from one runtime `as const` tuple. Fence read→decide→write at its boundaries: state predicates, generation/owner CAS, monotonic `MAX()`, triggers, or workflow `concurrency` with `cancel-in-progress: false`. Prove writes through `meta.changes` or an atomic batch fence; race losers return typed `stale`/`superseded` or the existing equivalent. Exemplars: generation claim + lease guard (`worker/src/telegram/store/watchlist-import.ts`), owner CAS (`worker/src/lib/cadence-bucket.ts`), monotonic MAX (`worker/src/cron/telegram/delivery/backoff.ts`), generation CAS via atomic batch fence (`worker/src/lib/safety-score-v9/publication-store.ts`), trigger-enforced matrix (`worker/migrations/0000_baseline.sql`), and ADR-27 (`worker/src/lib/idempotency.ts`). Late fetch/import/timer/clipboard/debounced results require current-attempt ownership: use `RequestSequence` (`src/lib/request.ts`) or `useCopyToClipboard` (`src/hooks/use-copy-to-clipboard.ts`); bind feedback to its payload and settle fan-outs independently. Only admitted absence bootstraps; valid retained/legacy state survives; malformed, unreadable or newer-vocabulary state is unavailable with a machine-readable reason. Derive time-driven verdicts on read from original clocks. Regression tests reproduce races with two writers on `createLatestSchemaSqlite()`, partial commits with SQLite fault injection, and late results with deferred promises.
+
 ## ADR-30 applications
 
 - [Measured DEX history](dex-liquidity-appendix.md#curve-capture-and-measured-profiles) ages each constituent's original source quote at the consumer assessment clock; complete-cycle publication clocks cannot renew success/maturity evidence.
@@ -42,7 +46,7 @@ A policy-semantic change takes a numeric version even when it is provably score-
 
 ## ADR-35 applications
 
-- [Redemption](../redemption-backstops.md#cron-schedule) validates complete rows, persisted details and final dependency transforms before opening a run; invalid members become named failed placeholders and disclosures revalidate against that census. Global holds write no rows; post-manifest storage failure leaves an unreadable failed run. Supply repair/carry/quarantine remains solely [ADR-8(c)](../architecture.md#adr-8).
+- [Redemption](redemption-backstops-appendix.md#cron-schedule) validates complete rows, persisted details and final dependency transforms before opening a run; invalid members become named failed placeholders and disclosures revalidate against that census. Global holds write no rows; post-manifest storage failure leaves an unreadable failed run. Supply repair/carry/quarantine remains solely [ADR-8(c)](../architecture.md#adr-8).
 
 ## Shared Implementation Boundaries
 
@@ -54,7 +58,7 @@ Digest producers/archive readers import map-only `shared/types/digest-safety-map
 
 Mint/burn flow producer DTOs derive from `shared/types/mint-burn.ts`; the Worker strengthens required live coverage/valuation fields without mirroring the wire shape or declaring private reason extensions.
 
-`shared/types/status/` separates status domains; `shared/types/status.ts` remains the frontend/Worker compatibility barrel, including lazy schema loaders. Domain modules import lower-level siblings, never the barrel; internal primitives stay private.
+`shared/types/status/` separates status domains; `shared/types/status.ts` remains the frontend/Worker compatibility barrel; lazy schema loaders import status domain modules directly. Domain modules import lower-level siblings, never the barrel; internal primitives stay private.
 
 Stablecoin base records and whole-domain research sidecars merge through `scripts/lib/stablecoin-catalog-sources.ts` before full schema validation; generated registries consume only the merged projection. [Stablecoin Data](../stablecoin-data.md#source-files) owns authoring and source layout.
 

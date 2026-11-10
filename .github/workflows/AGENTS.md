@@ -13,13 +13,13 @@ Applies to GitHub Actions workflows and their shared workspace setup.
 - Protected main and the aggregate `PR gate` own releases. Require successful independent `secrets` and `prepare` jobs; selected validation and `pages-artifact` must succeed. Only docs-only inline success permits skipped validation, and only explicit unselected Pages permits that job to skip. The Pages lane is selected by the shared classifier's Pages/build-pipeline predicate, not every PR. Measured coverage runs only in weekly/manual validation, not the PR gate.
 - Both required Gitleaks scans must execute the snapshotted base scanner/helpers/policy, including `--tree` after merge checkout. A changed candidate scanner/policy is an additional check, never a replacement for trusted scanning.
 - `prepare` owns install/bootstrap/history, one test-selection plan, inline docs-only checks, and workspace publication. Validation and `pages-artifact` depend directly on preparation. Keep selected mixed-PR docs required and doc-sync single-owned.
-- Keep selection base/branch head distinct from the tested merge checkout. `scripts/lib/pr-lanes.mts` owns commands, lane timeouts and profiles; consume one frozen test plan instead of reselecting in shards.
+- Keep selection base/branch head distinct from the tested merge checkout. `scripts/lib/pr-lanes.mts` owns commands, lane timeouts, report-only lane budgets and profiles; consume one frozen test plan instead of reselecting in shards.
 - Install Firefox only when selected generated artifacts declare it through registry `requiredBrowsers`; do not use a blanket OG predicate. Keep browser setup out of the offline Pages artifact lane.
 - In `.github/workflows/deploy-cloudflare.yml`, package/check and apply D1 migrations before Worker deployment; allow secret-free Pages preparation in parallel, but gate live refresh, build, and Pages publication on any required Worker deployment.
 - PR Pages artifact jobs use production public flags, clean compiler state, no live refresh or production secrets, and read-only `actions: read` to replay successful trusted-main release data. Explicit degraded-data fallback retains every artifact gate and discloses weaker detail-size evidence; corrupt artifacts fail. Pages releases retain the allowlisted non-secret `pages-release-data-<sha>` snapshot for 14 days, separately from the one-day preparation workspace.
 - Identity re-verification failures must not suppress remaining deployment acceptance probes: preserve the `always()` acceptance step and heavy identity checks in `deploy-cloudflare.yml`, per-probe evidence, and `failureKind`. Do not mislabel `activated; operational acceptance failed` as an activation failure.
 - Grant least privilege, pin third-party actions by commit, and reference secret names only—never values; `.github/workflows/zizmor.yml` and `.github/workflows/codeql.yml` are the security backstops.
-- Workflow failures surface as red GitHub Actions runs and GitHub notifications. Use `docs/runbooks/workflow-incidents.md` to collect failed-leaf evidence and triage without changing unrelated issue-producing automation.
+- Workflow failures surface as red GitHub Actions runs and GitHub notifications; the nightly additionally keeps one `ci:nightly-red` issue up to date, and the main-only `ci-report` job keeps one `ci:weekly-report` issue up to date. That report job runs on schedule or main-branch manual dispatch, has no dependents (telemetry failure reddens only itself), keeps GitHub credentials in its fetching and issue-writing steps, and renders from workflow-fetched inputs so a missing input is named unavailable rather than reported as zero. Use `docs/runbooks/workflow-incidents.md` to collect failed-leaf evidence and triage without changing unrelated issue-producing automation.
 
 ## Entrypoints & Generation
 
@@ -32,4 +32,4 @@ Applies to GitHub Actions workflows and their shared workspace setup.
 
 ## Common Checks
 
-- Run `npm run check:pr` for focused authoring feedback before pushing; hosted CI is the readiness authority and local receipts are optional diagnostics. Artifact/profile helpers: `npm run check:pages-artifact`, `npm run check:pages-release`, `npm run check:worker-config`.
+- Artifact/profile helpers: `npm run check:pages-artifact`, `npm run check:pages-release`, `npm run check:worker-config`.

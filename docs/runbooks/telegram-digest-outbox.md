@@ -12,13 +12,7 @@ with an explicitly unavailable safety section may still deliver its unrelated
 content only when deterministic copy checks find no Safety Score, report-card,
 grade/rating, V9-pillar, or binding-cap claim.
 
-Newly enqueued editions render the separate map photo first, followed by the
-four-line map summary as the first text section. A chronic `Standing:` line is
-an expandable context blockquote, and `New Cemetery Entries` / `Tracking
-Changes` remain expandable blockquotes in that same text payload.
-These are payload changes, not in-place migrations:
-accepted photos and text chunks from an existing edition are never re-rendered
-or resent.
+Payload composition is owned by [Digest Telegram delivery](../digest-pipeline.md#telegram). Accepted photos and text chunks from an existing edition are never re-rendered or resent.
 
 | State | Meaning | Automatic action |
 |---|---|---|
@@ -128,11 +122,7 @@ After the final accepted text chunk, the next poll makes no Bot API call and com
 ## Reconcile Permanent Failure
 
 Use `last_status_code` and `last_error_class` to classify the failure.
-`retry_budget_exhausted:*` means a retryable failure exceeded the 12-claim
-budget; `edition_age_exceeded:*` means the edition was at least 24 hours old
-when retry was considered. These are not permanent Telegram rejections.
-Confirmed permanent rejection does not advance the affected photo/text cursor.
-There is no supported operator reset for a `failed_permanent` edition.
+Daily Digest and Weekly Recap retry budgets are evaluated after a retryable transport response, not as pre-send gates. The first 12 claimed retryable attempts may return to `pending`; the 13th retryable result becomes `failed_permanent` with `retry_budget_exhausted:*`. A retryable result at least 24 hours after `digest_generated_at` becomes `failed_permanent` with `edition_age_exceeded:*`. These are not permanent Telegram rejections. Ambiguous attempted transports remain `execution_unknown` and are never made replayable by the budget. Confirmed permanent rejection does not advance the affected photo/text cursor. There is no supported operator reset for a `failed_permanent` edition.
 After an external/configuration cause such as channel permissions has been
 corrected, use a new reviewed edition key unless
 a reviewed recovery script is first added. Such a script must require the exact

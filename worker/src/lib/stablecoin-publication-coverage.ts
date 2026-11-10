@@ -17,6 +17,20 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 
+/**
+ * Priced-cohort collapse at the producer (2026-11-01). Breadth grading is
+ * downstream and slow: a run that loses a tenth of its priced active cohort
+ * against the previous generation publishes as `ok` while `/status` stays green
+ * below the 5% breadth share for two generations. `sync-stablecoins` therefore
+ * degrades such a run with `stablecoin-price-coverage-collapse`. The baseline
+ * floor keeps a two-asset cohort from turning one miss into a named collapse;
+ * an empty priced cohort degrades regardless of baseline.
+ */
+export const STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE = {
+  relativeDrop: 0.1,
+  minBaselinePricedCount: 10,
+} as const;
+
 const MAX_VALID_DATE_SECONDS = 8_640_000_000_000;
 
 const ACTIVE_STABLECOIN_SYMBOL_BY_ID = new Map(
@@ -88,6 +102,9 @@ export type StablecoinActivePriceCoverage = {
 export interface PreviousStablecoinActivePriceCoverage {
   missingActiveIds: string[];
   missingActiveAssets: MissingActivePriceDetail[];
+  /** Prior generation's priced and expected active counts; null when unreadable. */
+  pricedActiveCount?: number | null;
+  expectedActiveCount?: number | null;
   observedAt?: number | null;
   unavailableReason?: "previous-coverage-read-failed" | "previous-coverage-malformed";
 }
@@ -169,46 +186,21 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 10, 27, 11) / 1000,
   },
   {
-    stablecoinId: "pht-pht",
+    stablecoinId: "bd-basedollar",
     owner: "ops",
     reason:
-      "Re-reviewed 2026-10-29 11:01 UTC: CoinGecko pht-stablecoin remains $0.01607427 dated 2026-08-14 17:36:40 UTC with zero tickers, 76 days beyond the unchanged seven-day budget. Exact Polygon DexScreener is de-indexed (empty). GeckoTerminal's Polygon read returns only QuickSwap V3 PHT/USDC 0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08 ($45,272.89 reserves, $0.0156482 mark, zero 24h trades and volume) and an empty PHT/WPOL pool; $45,272.89 stays below the unchanged $50K per-pool liquidity floor, and Balancer PHT/USDC 0x9d4d778575160653e331f1597138a71c7c9a2595 now answers HTTP 404. Ethereum and Tron exact DexScreener reads are empty; the only Ethereum GeckoTerminal pool holds $25.15. MEXC PHTUSDT has no 24h ticker (HTTP 404). APACX's on-ramp/off-ramp page still advertises redeeming PHT through MoneyBees OTC for PHP, but documents no observed acceptance, rate, depth or limit, and that advertised route is not an observed PHT market. Open holder-exit question: whether an ordinary holder can in fact convert PHT to PHP at a verifiable rate and depth; owner ops must resolve it by 2026-11-10 11:01 UTC, this review's expiry. Keep PHT active and the price missing; all admission gates preserved; sparse turnover is not an extra volume floor and an undated FX index is not a PHT price.",
+      "Reviewed 2026-11-07 19:45 UTC: the existing aerodrome-exact adapter correctly rejects inventory. At Base block 54451146 (hash 0xf15f11a772be79e3f39e6e3f684c421b8e9f621e6c6771d7605f83eec680dcd8), reviewed Aero BD/USDC pool 0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f holds 11,990.64 BD and 9,204.12 USDC with balances matching reserves, below the unchanged 10,000 USDC output-inventory floor. GeckoTerminal reports $20,999.95 pool reserves and a $0.99493853 mark; DexScreener's legacy BD/USDC pool holds only $295.25. The larger BOARDED/BD pool has no trusted dollar quote leg and cannot replace the reviewed route. CoinGecko search returns no listing. The protocol's nominal collateral-redemption entitlement is not an observed dollar quote. Keep BD active and the price missing; all admission gates preserved. Owner ops rechecks inventory or an admissible alternate market by 2026-11-21 19:45 UTC.",
     sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=pht-stablecoin&vs_currencies=usd&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/pht-stablecoin/tickers",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0xbe370ad45d44eb45174c4ec60b88839fef32c077",
-      "https://api.dexscreener.com/token-pairs/v1/polygon/0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
-      "https://api.dexscreener.com/token-pairs/v1/tron/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xbe370ad45d44eb45174c4ec60b88839fef32c077/pools",
-      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0xe75220cb014dfb2d354bb59be26d7458bb8d0706/pools",
-      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/pools/0x9d4d778575160653e331f1597138a71c7c9a2595",
-      "https://api.mexc.com/api/v3/ticker/24hr?symbol=PHTUSDT",
-      "https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md",
+      "https://basescan.org/address/0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f#readContract",
+      "https://api.coingecko.com/api/v3/search?query=base%20dollar",
+      "https://api.dexscreener.com/token-pairs/v1/base/0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      "https://api.geckoterminal.com/api/v2/networks/base/tokens/0x252d36f435582ecb01686448d21e8c9ea0b2ca65/pools",
+      "https://docs.basedollar.org/",
     ],
-    reviewedAt: Date.UTC(2026, 9, 29, 11, 1) / 1000,
-    expiresAt: Date.UTC(2026, 10, 10, 11, 1) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
+    expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
   },
   {
-    stablecoinId: "usdfc-secured-finance",
-    owner: "ops",
-    reason:
-      "Continuing-gap review from fresh GETs on 2026-10-28 09:51 UTC: CoinGecko usdfc is still $0.950358 with $4,568.26 reported 24h volume, dated 2026-10-14 18:27:04 UTC and beyond the seven-day budget; tickers are empty. DefiLlama list asset 248 has a null price and its exact Filecoin coins query returns no quote. Exact-contract DexScreener returns no pairs. GeckoTerminal and CoinGecko Onchain token/price reads return null; tokens/multi reports $105,709.42 reserves and zero 24h volume, so the address lane rejects missing-quote. Both pool lists show SushiSwap v3 USDFC/WFIL at $1.0064191704 with $180,519.60 reserves and zero 24h trades/volume, but no upstream quote clock; no exact-pool adapter or reviewed FIL/USD dependency admits that mark. The largest axlUSDC pool has only $19,097.74 reserves, below the $50K floor. No admissible market was found. Keep USDFC missing and have ops establish an admitted observed market or re-review within seven days; preserve every admission gate. Trove redemption at $1 of oracle-valued FIL is not an observed price.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=usdfc&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/usdfc/tickers",
-      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
-      "https://coins.llama.fi/prices/current/filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
-      "https://api.dexscreener.com/token-pairs/v1/filecoin/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
-      "https://api.geckoterminal.com/api/v2/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045/pools",
-      "https://api.geckoterminal.com/api/v2/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
-      "https://api.geckoterminal.com/api/v2/simple/networks/filecoin/token_price/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
-      "https://pro-api.coingecko.com/api/v3/onchain/networks/filecoin/tokens/multi/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
-      "https://pro-api.coingecko.com/api/v3/onchain/simple/networks/filecoin/token_price/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
-      "https://pro-api.coingecko.com/api/v3/onchain/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045/pools",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 28, 9, 52) / 1000,
-    expiresAt: Date.UTC(2026, 10, 4, 9, 52) / 1000,
-  },  {
     stablecoinId: "aid-gaib",
     owner: "ops",
     reason:
@@ -226,6 +218,105 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 9, 31, 12, 37) / 1000,
     expiresAt: Date.UTC(2026, 10, 14, 12, 37) / 1000,
+  },
+  {
+    stablecoinId: "deuro-deuro",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-01 17:21 UTC with fresh GETs: CoinGecko decentralized-euro still reports $1.15 with $3.49 of 24h volume dated 2026-08-03 23:52:30 UTC, about 90 days old, and its tickers are empty. DefiLlama coins returns no quote for coingecko:decentralized-euro, while DefiLlama detail 423 still resolves the coin and the protocol's own API mirrors the same $1.15 mark, so neither is an independent market. DexScreener's only Ethereum pair, Uniswap v4 dEURO/ETH 0x0b3bbdabfba873f51d464b7d6ab4d53c11a4a300b9a7fe765dcefae4c2f4f9d4, holds $2,421 of liquidity, and GeckoTerminal's largest pool holds $2,407.94; both stay below the unchanged $50K per-pool floor. The protocol-redeem EURC bridge 0xb4ff7412f08c22d7381885e8bda9ee9825092fd1 holds 0.000528 EURC, so the adapter's 1,000 dEURO minimum minted depth and full EURC coverage cannot pass. No admissible market was found. Keep dEURO active and the price missing; all admission gates preserved. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-15 17:21 UTC.",
+    sources: [
+      "https://stablecoins.llama.fi/stablecoin/423",
+      "https://coins.llama.fi/prices/current/coingecko:decentralized-euro",
+      "https://api.coingecko.com/api/v3/simple/price?ids=decentralized-euro&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/decentralized-euro/tickers",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea/pools",
+      "https://eth.blockscout.com/api/v2/addresses/0xb4ff7412f08c22d7381885e8bda9ee9825092fd1/token-balances",
+      "https://api.deuro.com/ecosystem/stablecoin/info",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 1, 17, 21) / 1000,
+    expiresAt: Date.UTC(2026, 10, 15, 17, 21) / 1000,
+  },
+  {
+    stablecoinId: "fusd-finchain",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-01 17:21 UTC with fresh GETs: DefiLlama detail 390 still resolves FUSD but reports onCoinGecko false, and coins.llama.fi returns no quote for the Ethereum, Avalanche, Sonic or Monad deployments. CoinGecko's search for finchain returns no coins, and exact-contract DexScreener reads on Ethereum and Avalanche are empty. FinChain's own API and site still report 1,225,760.62 FUSD in circulation, so the asset is live, but the API's only ratio is the FUSDLP reserve ratio, its data clock is 2026-04-21, and it publishes no FUSD market price. No admissible market was found. Keep FUSD active and the price missing; all admission gates preserved. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-15 17:21 UTC.",
+    sources: [
+      "https://stablecoins.llama.fi/stablecoin/390",
+      "https://coins.llama.fi/prices/current/ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c,avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c,sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c,monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+      "https://api.coingecko.com/api/v3/search?query=finchain",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+      "https://api.dexscreener.com/token-pairs/v1/avalanche/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+      "https://api.finchain.global/api/v0/fusd-data",
+      "https://fusd.finchain.global/",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 1, 17, 21) / 1000,
+    expiresAt: Date.UTC(2026, 10, 15, 17, 21) / 1000,
+  },
+  {
+    stablecoinId: "usdp-parallel",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-01 17:21 UTC with fresh GETs: DefiLlama coins returns no quote for coingecko:parallel-usdp or the Ethereum contract, while DefiLlama detail 291 still resolves the coin. CoinGecko parallel-usdp reports $1.001 with $997.61 of 24h volume dated 2026-10-31 07:55:26 UTC, about 33 hours old, and its only ticker, Project X USDp/USDT0, last traded 2026-10-30 23:54:16 UTC and is marked stale. Exact Ethereum DexScreener and GeckoTerminal reads are empty; the largest HyperEVM pool holds $36,177.70 with zero 24h trades and volume, and Base's USDp/frxUSD pool holds $151.85. No admissible live market was found: the CoinGecko quote is beyond the 15-minute primary budget and the asset is not in the reviewed seven-day lane. Keep USDp active and the price missing; all admission gates preserved. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-15 17:21 UTC.",
+    sources: [
+      "https://stablecoins.llama.fi/stablecoin/291",
+      "https://coins.llama.fi/prices/current/coingecko:parallel-usdp,ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459",
+      "https://api.coingecko.com/api/v3/simple/price?ids=parallel-usdp&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/parallel-usdp/tickers",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x9b3a8f7cec208e247d97dee13313690977e24459",
+      "https://api.dexscreener.com/token-pairs/v1/hyperliquid/0xbe65f0f410a72bec163dc65d46c83699e957d588",
+      "https://api.dexscreener.com/token-pairs/v1/base/0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x9b3a8f7cec208e247d97dee13313690977e24459/pools",
+      "https://api.geckoterminal.com/api/v2/networks/hyperevm/tokens/0xbe65f0f410a72bec163dc65d46c83699e957d588/pools",
+      "https://api.geckoterminal.com/api/v2/networks/base/tokens/0x76a9a0062ec6712b99b4f63bd2b4270185759dd5/pools",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 1, 17, 21) / 1000,
+    expiresAt: Date.UTC(2026, 10, 15, 17, 21) / 1000,
+  },
+  {
+    stablecoinId: "xusd-babelfish",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-01 17:21 UTC with fresh GETs: DefiLlama coins returns no quote for coingecko:xusd-babelfish or the Rootstock contract, and DefiLlama detail 162 now reports onCoinGecko false. CoinGecko xusd-babelfish reports $0.994825 with $1,976.63 of 24h volume dated 2026-10-31 13:14:42 UTC, about 28 hours old, while its only ticker, Sovryn DEX XUSD/rBTC, last traded 2026-10-31 05:13:38 UTC and is marked stale. Exact Rootstock DexScreener and GeckoTerminal reads are empty. No admissible live market was found: the CoinGecko quote is beyond the 15-minute primary budget and the asset is not in the reviewed seven-day lane. Keep XUSD active and the price missing; all admission gates preserved. BabelFish still documents the protocol, so freezing is not indicated. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-15 17:21 UTC.",
+    sources: [
+      "https://stablecoins.llama.fi/stablecoin/162",
+      "https://coins.llama.fi/prices/current/rsk:0xb5999795be0ebb5bab23144aa5fd6a02d080299f,coingecko:xusd-babelfish",
+      "https://api.coingecko.com/api/v3/simple/price?ids=xusd-babelfish&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/xusd-babelfish/tickers",
+      "https://api.dexscreener.com/token-pairs/v1/rootstock/0xb5999795be0ebb5bab23144aa5fd6a02d080299f",
+      "https://api.geckoterminal.com/api/v2/networks/rootstock/tokens/0xb5999795be0ebb5bab23144aa5fd6a02d080299f/pools",
+      "https://babelfish.money/",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 1, 17, 21) / 1000,
+    expiresAt: Date.UTC(2026, 10, 15, 17, 21) / 1000,
+  },
+  {
+    stablecoinId: "spusd-soulpeg",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-03 23:48 UTC with fresh GETs: DefiLlama detail 413 reports gecko_id soulpeg-usd but publishes no list price, and coins.llama.fi returns $1.0045316 (confidence 0.99) for both the BSC contract and coingecko:soulpeg-usd at 2026-11-03 18:24:25 UTC, about 5.4 hours old and beyond the 15-minute primary budget. CoinGecko soulpeg-usd reports $1.005 with $211.16 of 24h volume on the same clock. The only DEX market, PancakeSwap SPUSD pair 0x8e0a1c1a3b66a01dc49a0cf1c6d82c0455fe3250, holds $9,190.39 with $0.95 of 24h volume, below the $50K per-pool floor; DefiLlama reports no CMC id. No admissible live market was found and SPUSD is not in the reviewed seven-day lane. Keep SPUSD active and the price missing; all admission gates preserved. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-17 23:48 UTC.",
+    sources: [
+      "https://stablecoins.llama.fi/stablecoin/413",
+      "https://coins.llama.fi/prices/current/bsc:0x40ff3dea2eec93a7b71879874dc4407918da77a6,coingecko:soulpeg-usd",
+      "https://api.coingecko.com/api/v3/simple/price?ids=soulpeg-usd&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.dexscreener.com/token-pairs/v1/bsc/0x40ff3dea2eec93a7b71879874dc4407918da77a6",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 3, 23, 48) / 1000,
+    expiresAt: Date.UTC(2026, 10, 17, 23, 48) / 1000,
+  },
+  {
+    stablecoinId: "hbd-hive",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-04 08:53 UTC: HBD's only admitted price path is the native Hive internal market (hive-native-cg), which requires a non-self trade within 900 seconds plus spread, depth, turnover and a fresh HIVE/USD parent. The book itself is healthy: both approved nodes (api.hive.blog and api.deathwing.me, head block 111364328 at 08:53:00 UTC) return the same newest trades (08:52:45, 08:51:57 and 08:44:48 UTC) and a best bid/ask of 0.044975/0.045027 HBD per HIVE with 3,000/560 HBD on top. But trading is sparse: at 08:23 UTC both nodes' newest non-self trade was 07:53:18 UTC, and a trade-freshness replay of 2026-11-03/04 found 40 of 96 quarter-hour boundaries without a trade inside 900 seconds, so publications intermittently and correctly withhold the price. CoinGecko hive_dollar ($1.63 from Upbit-family BTC/HBD tickers) stays outside the existing $1.19 bound and is correctly rejected; HBD has no reviewed contract deployment for DEX, contract or exact-address recovery. Keep HBD active and its missing runs missing; all admission gates preserved. Owner ops re-reviews the native-trade cadence or establishes another admitted market by this review's expiry, 2026-11-18 08:53 UTC.",
+    sources: [
+      "https://api.hive.blog",
+      "https://api.deathwing.me",
+      "https://api.coingecko.com/api/v3/coins/hive_dollar/tickers",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 4, 8, 53) / 1000,
+    expiresAt: Date.UTC(2026, 10, 18, 8, 53) / 1000,
   },
 ];
 
@@ -718,7 +809,14 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
       .map((stablecoinId) => detailsById.get(stablecoinId))
       .filter((detail): detail is MissingActivePriceDetail => detail != null);
     if (missingActiveAssets.length !== missingActiveIds.length) return null;
-    return { missingActiveIds, missingActiveAssets };
+    return {
+      missingActiveIds,
+      missingActiveAssets,
+      // Persisted coverage is schema-admitted above; the priced cohort is the
+      // collapse baseline the next run compares against.
+      expectedActiveCount: numberValue(coverage.expectedActiveCount),
+      pricedActiveCount: numberValue(coverage.pricedActiveCount),
+    };
   } catch {
     return null;
   }

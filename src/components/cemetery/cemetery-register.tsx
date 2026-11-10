@@ -124,7 +124,11 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
   const foldedCount = view.filter((entry) => entry.folded).length;
   const shownCount = view.length - foldedCount;
   const total = rows.length;
-  const resultLine = filtersActive ? `Showing ${shownCount} of ${total} matching` : `Showing ${shownCount} of ${total}`;
+  // A filtered view has no fold, so `shownCount` is the whole matching set; the
+  // register total must not attach to "matching" as if it counted matches.
+  const resultLine = filtersActive
+    ? `Showing ${shownCount} matching of ${total} records`
+    : `Showing ${shownCount} of ${total}`;
 
   // The raw draft keeps spaces the URL normaliser trims; a URL change from
   // elsewhere (reset, reveal, an in-page register link) wins over a stale draft.
@@ -236,7 +240,10 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
     announcedResultRef.current = resultLine;
     if (previous === null || previous === resultLine) return;
     if (Date.now() < holdResultAnnouncementUntilRef.current) return;
-    const timer = window.setTimeout(() => setAnnouncement(`${resultLine}.`), RESULT_ANNOUNCE_DELAY_MS);
+    const timer = window.setTimeout(() => {
+      if (Date.now() < holdResultAnnouncementUntilRef.current) return;
+      setAnnouncement(`${resultLine}.`);
+    }, RESULT_ANNOUNCE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [isReady, resultLine]);
 

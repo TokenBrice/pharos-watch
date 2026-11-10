@@ -7,6 +7,7 @@ import {
   formatChartDate,
   formatChartPercent,
   formatPercent,
+  formatCoverageRatio,
   formatPegOccupancy,
   formatPercentFromRatio,
   formatPrice,
@@ -16,6 +17,7 @@ import {
   formatCurrency,
   formatCompactCount,
   formatCompactUsd,
+  formatCompactUsdOrSubDollar,
   formatCompactUsdWithOptions,
   formatCompactUsdShort,
   formatCompactUsdShortLowerK,
@@ -26,6 +28,7 @@ import {
   formatBps,
   formatEventDate,
   formatNativePrice,
+  formatUsdPriceAdaptive,
   pegCurrencySymbol,
   formatPercentChange,
   formatSupply,
@@ -91,6 +94,22 @@ describe("formatPercent", () => {
   it("returns dash for non-finite values", () => {
     expect(formatPercent(Infinity)).toBe("-");
     expect(formatPercent(NaN)).toBe("-");
+  });
+});
+
+describe("formatCoverageRatio", () => {
+  it.each([
+    [1, "100.0%"],
+    [0.99996, "<100%"],
+    [0.999, "99.9%"],
+    [0.9, "90.0%"],
+    [0, "0.0%"],
+  ])("formats coverage ratio %s as %s", (value, expected) => {
+    expect(formatCoverageRatio(value)).toBe(expected);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])("preserves unavailable coverage %s", (value) => {
+    expect(formatCoverageRatio(value)).toBe("-");
   });
 });
 
@@ -162,7 +181,6 @@ describe("formatCurrency", () => {
   it("formats millions", () => expect(formatCurrency(7.891e6)).toBe("$7.89M"));
   it("formats small values", () => expect(formatCurrency(123.456)).toBe("$123.46"));
   it("formats negative values", () => expect(formatCurrency(-3e9)).toBe("-$3.00B"));
-  it("returns N/A for NaN", () => expect(formatCurrency(NaN)).toBe("N/A"));
   it("respects custom decimals", () => expect(formatCurrency(1.2345e9, 3)).toBe("$1.234B"));
 });
 
@@ -229,7 +247,6 @@ describe.each<{
       ["formats thousands with 0 decimals", [[12_345, "$12K"]]],
       ["formats sub-thousand with 0 decimals", [[999, "$999"]]],
       ["formats negative billion", [[-2.5e9, "-$2.50B"]]],
-      ["returns N/A for NaN", [[NaN, "N/A"]]],
     ],
   },
   {
@@ -237,14 +254,12 @@ describe.each<{
     cases: [
       ["formats billions, millions, and thousands with one decimal", [[4.321e9, "$4.3B"], [8.76e6, "$8.8M"], [12_345, "$12.3K"], [1_000, "$1.0K"]]],
       ["preserves the existing short-surface negative sign placement", [[-2.5e9, "$-2.5B"], [-42, "$-42"]]],
-      ["returns N/A for non-finite values", [[NaN, "N/A"], [Infinity, "N/A"]]],
     ],
   },
   {
     name: "formatCompactUsdShortLowerK", format: formatCompactUsdShortLowerK,
     cases: [
       ["keeps one decimal for B/M and rounds thousands to a lowercase k", [[4.321e9, "$4.3B"], [8.76e6, "$8.8M"], [12_345, "$12k"], [1_000, "$1k"]]],
-      ["returns N/A for non-finite values", [[NaN, "N/A"], [Infinity, "N/A"]]],
     ],
   },
   {
@@ -253,7 +268,6 @@ describe.each<{
       ["prefixes a + for positive values and reuses formatCompactUsd tiers", [[2.5e9, "+$2.50B"], [8.76e6, "+$8.8M"], [12_345, "+$12K"]]],
       ["renders negative values with the abbreviateNumber minus sign", [[-2.5e9, "-$2.50B"], [-42, "-$42"]]],
       ["does not prefix zero", [[0, "$0"]]],
-      ["returns N/A for non-finite values", [[NaN, "N/A"]]],
     ],
   },
   {
@@ -521,6 +535,26 @@ describe("formatNativePrice", () => {
   });
 });
 
+describe("formatUsdPriceAdaptive", () => {
+  it("keeps sub-cent USD prices from rounding to a wrong display", () => {
+    expect(formatUsdPriceAdaptive(0.0000553)).toBe("0.0000553");
+    expect(formatUsdPriceAdaptive(0.0000499)).toBe("0.0000499");
+    expect(formatUsdPriceAdaptive(0.0003159)).toBe("0.000316");
+    expect(formatUsdPriceAdaptive(0.0010367)).toBe("0.001037");
+  });
+
+  it("keeps the established four-decimal display at and above a cent", () => {
+    expect(formatUsdPriceAdaptive(1.0002)).toBe("1.0002");
+    expect(formatUsdPriceAdaptive(0.089)).toBe("0.0890");
+  });
+
+  it("returns N/A for nullish or invalid values", () => {
+    expect(formatUsdPriceAdaptive(null)).toBe("N/A");
+    expect(formatUsdPriceAdaptive(undefined)).toBe("N/A");
+    expect(formatUsdPriceAdaptive(NaN)).toBe("N/A");
+  });
+});
+
 describe("non-finite formatter fallbacks", () => {
   it("does not leak Infinity or NaN from direct number formatters", () => {
     const outputs = [
@@ -566,6 +600,15 @@ describe("relative duration helpers", () => {
     expect(formatApproxDurationSeconds(90 * 60, { style: "long" })).toBe("1.5 hr");
     expect(formatApproxDurationSeconds(3 * 86_400, { style: "long" })).toBe("3.0 days");
     expect(formatApproxDurationSeconds(Number.NaN, { invalidFallback: "—" })).toBe("—");
+  });
+
+  it("keeps a positive sub-dollar supply visible instead of rounding it to $0", () => {
+    expect(formatCompactUsdOrSubDollar(0.2309)).toBe("<$1");
+    expect(formatCompactUsdOrSubDollar(0.999)).toBe("<$1");
+    expect(formatCompactUsdOrSubDollar(0)).toBe("$0");
+    expect(formatCompactUsdOrSubDollar(1)).toBe("$1");
+    expect(formatCompactUsdOrSubDollar(71_571_257.67)).toBe("$71.6M");
+    expect(formatCompactUsdOrSubDollar(Number.NaN)).toBe("N/A");
   });
 });
 

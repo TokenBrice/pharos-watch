@@ -17,7 +17,9 @@ import {
   MIN_SAFETY_OPTIONS,
   MIN_TVL_OPTIONS,
   SOURCE_CONFIDENCE_ORDER,
+  YIELD_RISK_BUDGET_SPECS,
   compareYieldPegs,
+  filtersMatchRiskBudget,
   getYieldPegLabel,
   type YieldOpportunityFilter,
   type YieldPegFilter,
@@ -39,6 +41,7 @@ import { gradeRange } from "@shared/lib/report-card-core";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegCurrency, YieldBenchmarkKey, YieldType } from "@shared/types";
 import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
+import { getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 function getYieldRankingPeg(rankingId: string): PegCurrency | null {
@@ -58,6 +61,8 @@ function getSourcePosture(row: YieldWorkbenchRanking, sourceDepthLens: YieldSour
     sourceRisk: row.sourceRisk,
     sourceTvlUsd: row.sourceTvlUsd,
     sourceDepthLens,
+    yieldType: row.yieldType,
+    sourceRole: getYieldWorkbenchSourceRole(row),
     sourceChanged: row.provenance?.sourceSwitch ?? false,
     sourceFreshness: row.provenance?.sourceFreshness,
     warningSignals: row.warningSignals,
@@ -285,6 +290,12 @@ export function getYieldComparisonLabel(filters: YieldViewModelFilters): string 
     return `${getYieldPegLabel(filters.peg)} peg`;
   }
   if (filters.benchmark !== "all") return `${filters.benchmark} benchmark`;
+  // A risk band (the landing default included) sets several axes at once, so naming
+  // one of them ("No-warning set") would hide the safety floor the view also applies.
+  const riskBudget = YIELD_RISK_BUDGET_SPECS.find(
+    (spec) => spec.key !== "all" && filtersMatchRiskBudget(filters, spec),
+  );
+  if (riskBudget) return riskBudget.label;
   if (filters.warnings === "hide") return "No-warning set";
   if (filters.warnings === "only") return "Warning set";
   if (filters.sourceConfidence !== "all") return `${filters.sourceConfidence} confidence`;

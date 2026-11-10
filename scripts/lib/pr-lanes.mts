@@ -10,6 +10,13 @@ export type PrLaneId =
   | "gate";
 
 export interface PrLaneDefinition {
+  /**
+   * Reporting threshold in seconds for the weekly lane-budget report. Never a
+   * timeout: the job keeps its `timeoutMinutes` ceiling, so an over-budget lane
+   * still finishes and the weekly report names it instead of killing it.
+   * Only moves down without an owner-approved record.
+   */
+  budgetSeconds?: number;
   commands: readonly PrLaneCommandDefinition[];
   id: PrLaneId;
   selector: PrLaneSelector;
@@ -17,6 +24,12 @@ export interface PrLaneDefinition {
   shards?: number;
   timeoutMinutes: number;
 }
+
+/**
+ * `prepare` is the PR workflow's first job rather than a manifest lane, so its
+ * report-only budget lives outside `PR_LANES` (the matrix generator iterates it).
+ */
+export const PR_PREPARE_BUDGET_SECONDS = 90;
 
 export interface PrLaneCommandDefinition {
   args: readonly string[];
@@ -40,6 +53,14 @@ export interface PrLaneCommandContext {
   shardCount?: number;
 }
 
+/** Local read-only prepare feedback; hosted prepare keeps its workflow wiring. */
+export const PR_PREPARE_COMMANDS = [
+  { id: "test-corpus-budget", program: "npm", args: ["run", "check:test-corpus-budget", "--"] },
+  { id: "incident-review-keys", program: "npm", args: ["run", "check:incident-review-keys"] },
+  { id: "new-asset-evidence-packet", program: "npm", args: ["run", "check:new-asset-evidence-packet", "--"] },
+  { id: "safety-score-v9-evaluation-build", program: "npm", args: ["run", "check:generated-artifacts", "--", "--only=safety-score-v9-evaluation-build"] },
+] as const satisfies readonly PrLaneCommandDefinition[];
+
 /** Shared by docs-only inline validation and mixed-PR static guards. */
 export const PR_DOC_COMMANDS: readonly PrLaneCommandDefinition[] = [
   { id: "verified-doc-links", program: "npm", args: ["run", "check:verified-doc-links"] },
@@ -47,6 +68,11 @@ export const PR_DOC_COMMANDS: readonly PrLaneCommandDefinition[] = [
   { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts", "scripts/__tests__/pharos-change-contract.test.ts"] },
 ];
 
+/**
+ * Lane budgets are the owner's measured PR targets (test shard 200 s, Pages
+ * 250 s, V9 220 s, guards 120 s, compile 150 s), not timeouts. `preflight` and
+ * `gate` are seconds-long bookkeeping jobs and carry none.
+ */
 export const PR_LANES: readonly PrLaneDefinition[] = [
   {
     id: "preflight",
@@ -57,36 +83,46 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
       { id: "gitleaks", program: "node", args: ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", "scripts/ci/run-gitleaks.ts", "--range"] },
     ],
   },
+  // buildPrWorkflowMatrix emits lanes in declaration order and the workflow
+  // caps validation concurrency. Keep v9-resource ahead of the test shards and
+  // static-compile last, so a queued job is the shortest lane rather than the
+  // slow resource lane.
   {
-    id: "static-compile",
-    selector: "code",
-    timeoutMinutes: 20,
-    commands: [{ id: "pr-static-compile", program: "npm", args: ["run", "check:pr:static", "--", "--group=compile"] }],
+    id: "v9-resource",
+    selector: "v9-resource",
+    budgetSeconds: 220,
+    // Faithful setup/live/natural/correctness smoke with one PR publication cycle;
+    // contagion (90s wall policy) runs only when the PR diff reaches a contagion input.
+    // Eight minutes allows CI setup, bundling and scheduling headroom without a 35-minute hang.
+    timeoutMinutes: 8,
+    commands: [{ id: "v9-resource", program: "npm", args: ["run", "test:v9-resource"] }],
   },
   {
     id: "static-guards",
     selector: "code",
+    budgetSeconds: 120,
     timeoutMinutes: 20,
     commands: [{ id: "pr-static-guards", program: "npm", args: ["run", "check:pr:static", "--", "--group=guards"] }],
   },
   {
     id: "tests",
     selector: "code",
-    shards: 8,
+    budgetSeconds: 200,
+    shards: 10,
     timeoutMinutes: 15,
     commands: [{ id: "pr-tests", program: "npm", args: ["run", "test:pr", "--"] }],
   },
   {
-    id: "v9-resource",
-    selector: "v9-resource",
-    // Faithful setup/live/natural/correctness smoke: 101s; contagion wall policy: 90s.
-    // Eight minutes allows CI setup, bundling and scheduling headroom without a 35-minute hang.
-    timeoutMinutes: 8,
-    commands: [{ id: "v9-resource", program: "npm", args: ["run", "test:v9-resource"] }],
+    id: "static-compile",
+    selector: "code",
+    budgetSeconds: 150,
+    timeoutMinutes: 20,
+    commands: [{ id: "pr-static-compile", program: "npm", args: ["run", "check:pr:static", "--", "--group=compile"] }],
   },
   {
     id: "pages-artifact",
     selector: "pages-artifact",
+    budgetSeconds: 250,
     timeoutMinutes: 20,
     commands: [{ id: "pages-artifact", program: "npm", args: ["run", "check:pages-artifact"] }],
   },
@@ -127,6 +163,8 @@ export function buildPrLaneCommandArgs(
     case "pr-static":
     case "pr-static-compile":
     case "pr-static-guards":
+    case "test-corpus-budget":
+    case "new-asset-evidence-packet":
       if (context.base) args.push(`--base=${context.base}`);
       if (context.head) args.push(`--head=${context.head}`);
       break;

@@ -96,6 +96,7 @@ export function fiddIndependentAssuranceProfile(
           "User-Agent": "Mozilla/5.0 Pharos reserve verifier",
         },
         maxRetries: 0,
+        validateResponse: (res) => assertWidenHost(res.url || viewer.url, "viewer response"),
       });
       assertWidenHost(response.finalUrl, "viewer response");
       const downloadAnchor = response.body.match(/<a\b[^>]*\bid="download"[^>]*\bhref\s*=\s*"([^"]+)"/i);

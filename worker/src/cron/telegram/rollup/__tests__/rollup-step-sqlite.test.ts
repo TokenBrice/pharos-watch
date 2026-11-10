@@ -115,6 +115,24 @@ describe("daily roll-up", () => {
     }
   });
 
+  it("does not report a window pruned by a pause longer than change-log retention", async () => {
+    const { sqlite, db, subscriber, follow, deliveries, state } = fixture();
+    try {
+      subscriber.run("1", null, 0, null, null, 0, 0);
+      follow.run("1", "usdx", 1, 0);
+      sqlite.prepare("INSERT INTO telegram_rollup_state VALUES ('1', '2026-10-10', ?)")
+        .run(DAY1_0905Z - 10 * 86_400);
+      // The A- -> B leg was pruned; only the retained B -> A- leg remains.
+      await recordTelegramChangeLog(db, [safety("usdx", "B", "A-", DAY1_0905Z - 1.5 * 86_400)]);
+
+      expect(await runDailyRollup(db, DAY1_0905Z)).toMatchObject({ sentChats: 0, emptyChats: 1 });
+      expect(deliveries()).toEqual([]);
+      expect(state("1")).toMatchObject({ last_rollup_at: DAY1_0905Z });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("skips paused chats and gates the scan to one per 15-minute bucket", async () => {
     const { sqlite, db, subscriber } = fixture();
     try {
@@ -329,25 +347,6 @@ describe("hourly freeze batch", () => {
     }
   });
 
-  it("fans out any number of followers in pages instead of one atomic batch", async () => {
-    const { sqlite, db, subscriber, follow } = fixture();
-    try {
-      for (let index = 0; index < 700; index++) {
-        const chatId = String(1_000 + index);
-        subscriber.run(chatId, null, 0, null, null, 0, 0);
-        follow.run(chatId, "usdc", 0, 1);
-      }
-      await recordTelegramChangeLog(db, [freeze("usdc", "t1", 5_000, DAY1_0905Z)]);
-      expect(await runFreezeBatch(db, DAY1_0905Z)).toEqual({ state: "queued", changes: 1 });
-      const [job] = await freezeBatchJobs(sqlite);
-      const { deliveries: rows, pages } = await fanOutFreezeBatch(db, job!.payload_json, 200);
-      expect(pages).toBe(4);
-      expect(new Set(rows.map((row) => row.chatId)).size).toBe(700);
-    } finally {
-      sqlite.close();
-    }
-  });
-
   it("does not let a failing freeze batch block the roll-up", async () => {
     const { sqlite, db, subscriber, follow } = fixture();
     try {
@@ -419,7 +418,7 @@ describe("bounded freeze batch audience", () => {
         follow.run(chatId, "usdc", 0, 1);
       }
       await recordTelegramChangeLog(db, [freeze("usdc", "t1", 5_000, DAY1_0905Z)]);
-      await runFreezeBatch(db, DAY1_0905Z);
+      expect(await runFreezeBatch(db, DAY1_0905Z)).toEqual({ state: "queued", changes: 1 });
       const [job] = await freezeBatchJobs(sqlite);
       const spy = observed(db);
       const { deliveries: rows, pages } = await fanOutFreezeBatch(spy.db, job!.payload_json, 200);

@@ -6,6 +6,7 @@ import type {
   PublicationSurfaceHealth,
   PublicationSurfaceId,
 } from "@shared/types/status";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { isMissingTableError } from "./db";
 import { parseObjectMetadata } from "./json-metadata";
@@ -42,6 +43,17 @@ interface PublicationLifecycleDescriptor {
   candidateRowsColumn: "written_row_count" | "source_row_count";
   publishedRowsColumn: "current_row_count" | "ranking_count";
   expectedRowsColumn: "expected_row_count" | "best_row_count";
+}
+
+/** A surface source refused the read; preserves its machine-readable reason. */
+class PublicationSurfaceLoadError extends Error {
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Publication surface source rejected the read: ${code}`);
+    this.name = "PublicationSurfaceLoadError";
+    this.code = code;
+  }
 }
 
 const DEX_LIQUIDITY_SURFACE: PublicationSurfaceDefinition = {
@@ -164,16 +176,21 @@ function buildSurfaceHealth(
   const lastPublishedGeneration = mapGenerationRow(latestPublishedRow, latestPublishedRow);
   const lastAttemptedGeneration = mapGenerationRow(latestAttemptedRow, latestPublishedRow);
   const latestFailedGeneration = mapGenerationRow(latestFailedRow, latestPublishedRow);
+  // A candidate clock past the shared skew allowance is rejected, not clamped
+  // to a measured zero age (ADR-34/R7); the named reason keeps the verdict
+  // from falling through to the published generation's clock.
+  const candidateClock = lastAttemptedGeneration?.state === "candidate"
+    ? assessFreshnessTimestamp(now, lastAttemptedGeneration.startedAt)
+    : null;
   return {
     surface: definition.surface,
     label: definition.label,
     sourceOfTruth: definition.sourceOfTruth,
     lastPublishedGeneration,
     lastAttemptedGeneration,
-    lastFailureReason: latestFailedGeneration?.failureReason ?? null,
-    candidateAgeSec: lastAttemptedGeneration?.state === "candidate"
-      ? Math.max(0, now - lastAttemptedGeneration.startedAt)
-      : null,
+    lastFailureReason: latestFailedGeneration?.failureReason
+      ?? (candidateClock?.reason ? `candidate-clock-${candidateClock.reason}` : null),
+    candidateAgeSec: candidateClock?.ageSeconds ?? null,
     dependencyWatermarks: extractWatermarks(lastAttemptedGeneration) ?? extractWatermarks(lastPublishedGeneration),
   };
 }
@@ -346,58 +363,49 @@ function publishedFallbackRow(
   };
 }
 
-function failedFallbackRow(
-  generationId: string,
-  reason: string,
-  attemptedAt: number,
-  metadata: Record<string, unknown>,
-): PublicationGenerationRow {
-  return {
-    generation_id: generationId,
-    source_state: "failed",
-    started_at: attemptedAt,
-    validated_at: null,
-    published_at: null,
-    failed_at: attemptedAt,
-    candidate_rows: null,
-    published_rows: null,
-    expected_rows: null,
-    failure_reason: reason,
-    metadata_json: JSON.stringify(metadata),
-  };
-}
-
 async function loadSafetyScoreV9PublicationSurface(
   db: D1Database,
   now: number,
 ): Promise<PublicationSurfaceHealth> {
   const active = await loadActiveSafetyScoreCohort(db);
-  if (active.kind !== "error") {
-    const snapshot = active.snapshot;
-    const publishedRow = publishedFallbackRow(
-      snapshot.safetyScoreIdentity.publicationGenerationId,
-      snapshot.updatedAt,
-      snapshot.cards.length,
-      {
-        inputWatermarks: {
-          reportCardCache: snapshot.updatedAt,
-        },
-        methodologyVersion: snapshot.methodology.version,
-        safetyScoreIdentity: snapshot.safetyScoreIdentity,
-        completeness: snapshot.completeness,
-        publicationHealth: snapshot.publicationHealth,
-      },
-    );
-    return buildSurfaceHealth(SAFETY_SCORE_V9_SURFACE, now, publishedRow, publishedRow, null);
+  if (active.kind === "error") {
+    // A failed cohort read is a named surface failure, never a synthetic
+    // generation at the read clock (ADR-29/R2, ADR-33/R6).
+    throw new PublicationSurfaceLoadError(active.reason);
   }
-  const attemptedAt = now;
-  const failedRow = failedFallbackRow(
-    `safety-score-v9:${attemptedAt}:${active.reason}`,
-    active.reason,
-    attemptedAt,
-    {},
+  const snapshot = active.snapshot;
+  const publishedRow = publishedFallbackRow(
+    snapshot.safetyScoreIdentity.publicationGenerationId,
+    snapshot.updatedAt,
+    snapshot.cards.length,
+    {
+      inputWatermarks: {
+        reportCardCache: snapshot.updatedAt,
+      },
+      methodologyVersion: snapshot.methodology.version,
+      safetyScoreIdentity: snapshot.safetyScoreIdentity,
+      completeness: snapshot.completeness,
+      publicationHealth: snapshot.publicationHealth,
+    },
   );
-  return buildSurfaceHealth(SAFETY_SCORE_V9_SURFACE, now, failedRow, null, failedRow);
+  if (active.kind === "held") {
+    const attemptedAt = snapshot.publicationHealth.attemptedAtSec;
+    const failedRow: PublicationGenerationRow = {
+      generation_id: `safety-score-v9:held:${snapshot.safetyScoreIdentity.publicationGenerationId}:${attemptedAt}`,
+      source_state: "rejected",
+      started_at: attemptedAt,
+      validated_at: null,
+      published_at: null,
+      failed_at: attemptedAt,
+      candidate_rows: null,
+      published_rows: null,
+      expected_rows: null,
+      failure_reason: snapshot.publicationHealth.reasons.map((reason) => reason.code).join(",") || active.reason,
+      metadata_json: JSON.stringify({ publicationHealth: snapshot.publicationHealth }),
+    };
+    return buildSurfaceHealth(SAFETY_SCORE_V9_SURFACE, now, failedRow, publishedRow, failedRow);
+  }
+  return buildSurfaceHealth(SAFETY_SCORE_V9_SURFACE, now, publishedRow, publishedRow, null);
 }
 
 const PUBLICATION_SURFACE_LOADERS: PublicationSurfaceLoader[] = [
@@ -431,6 +439,13 @@ function publicationSurfaceFailure(
   surface: PublicationSurfaceId,
   error: unknown,
 ): PublicationSurfaceFailure {
+  if (error instanceof PublicationSurfaceLoadError) {
+    return {
+      surface,
+      code: error.code,
+      message: "Publication surface source is unavailable.",
+    };
+  }
   if (isMissingTableError(error)) {
     return {
       surface,

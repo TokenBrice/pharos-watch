@@ -14,13 +14,14 @@ import {
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { isFreshnessWarningHeader, isScheduledRefreshWarning } from "@shared/lib/api-freshness";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { isSiteDataAllowedApiPath } from "@shared/lib/site-data-lane";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
 import { CRON_1MIN, CRON_15MIN } from "@/lib/cron-intervals";
 
 /** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {
-  public: getProbePaths("public"),
+  public: getProbePaths("public").filter(isSiteDataAllowedApiPath),
   admin: getProbePaths("admin"),
   manual: getProbePaths("manual"),
 } as const;
@@ -165,10 +166,14 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
     && ["missingAmounts", "missingRatio", "recentMissingAmounts"].every((key) =>
       key in blacklist && (blacklist as Record<string, unknown>)[key] === null);
   if (!blacklistUnavailable && (missingAmounts === null || missingRatio === null || recentMissingAmounts === null)) return null;
-  const blacklistComponent = "components" in body && Array.isArray(body.components)
-    ? body.components.find((component: unknown) => component != null && typeof component === "object"
-      && "id" in component && component.id === "blacklist" && "state" in component)
+  const components: readonly unknown[] | null = "components" in body && Array.isArray(body.components)
+    ? body.components
     : null;
+  const blacklistComponent = components?.find(
+    (component: unknown): component is { state: unknown } =>
+      component != null && typeof component === "object"
+        && "id" in component && component.id === "blacklist" && "state" in component,
+  );
   const blacklistDegraded = blacklistComponent
     ? blacklistComponent.state !== "operational"
     : getBlacklistGapStatus({ missingRatio }) !== "healthy";

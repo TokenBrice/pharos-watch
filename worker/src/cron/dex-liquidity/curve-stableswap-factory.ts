@@ -487,12 +487,12 @@ async function enrichDeployment(input: {
     fetchBlockHeader: input.dependencies.fetchBlockHeader,
     nowSec: input.nowSec,
     maxAgeSec: CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC,
-    verifyDeployment: async ({ blockNumber }) => {
+    verifyDeployment: async ({ blockNumber, rpcOptions: captureRpcOptions }) => {
       const factoryCode = await input.dependencies.fetchCodeAtBlock(
         deployment.chain,
         deployment.factoryAddress,
         blockNumber,
-        rpcOptions,
+        captureRpcOptions,
       );
       if (!factoryCode || input.dependencies.hashCode(factoryCode) !== deployment.expectedFactoryCodeHash) {
         return { ok: false };
@@ -501,7 +501,7 @@ async function enrichDeployment(input: {
         deployment.chain,
         deployment.expectedPoolImplementationAddress,
         blockNumber,
-        rpcOptions,
+        captureRpcOptions,
       );
       if (
         !implementationCode ||
@@ -511,11 +511,11 @@ async function enrichDeployment(input: {
       }
       return { ok: true };
     },
-    buildCalls: async ({ blockNumber, header }) => {
+    buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
       const indexed = await readIndexedPools({
         deployment,
         blockNumber,
-        rpcOptions,
+        rpcOptions: captureRpcOptions,
         signal: input.signal,
         dependencies: input.dependencies,
       });
@@ -545,7 +545,7 @@ async function enrichDeployment(input: {
               deployment,
               pool: match,
               blockNumber,
-              rpcOptions,
+              rpcOptions: captureRpcOptions,
               signal: input.signal,
               dependencies: input.dependencies,
             }),

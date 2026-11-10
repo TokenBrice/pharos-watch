@@ -4,11 +4,15 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  collectRuntimeEnvReads,
   collectSourceEnvKeys,
+  findEnvExamplePolicyErrors,
+  findUndeclaredRuntimeEnvKeys,
   findWranglerBindingContractErrors,
   getWorkerEnvBindings,
   parseWranglerWorkerConfigBindings,
 } from "../ci/check-env-contract";
+import { withTempRepo } from "./helpers/test-state";
 
 function withTempEnvSource<T>(source: string, run: (filePath: string) => T, filename = "env.ts"): T {
   const dir = mkdtempSync(join(tmpdir(), "pharos-env-contract-"));
@@ -59,7 +63,7 @@ describe("check-env-contract manifest bindings", () => {
       [[services]]
       binding = "invalid-binding"
     `)).toEqual([
-      expect.stringContaining("duplicate Worker binding keys: CORS_ORIGIN"),
+      "worker/wrangler.toml declares duplicate Worker binding keys: CORS_ORIGIN",
       expect.stringContaining("unsupported Worker binding keys: invalid-binding"),
       expect.stringContaining("CORS_ORIGIN ([[d1_databases]]) is D1Database"),
     ]);
@@ -80,6 +84,106 @@ describe("check-env-contract source references", () => {
     });
   });
 
+});
+
+describe("check-env-contract runtime env reads", () => {
+  it("collects binding reads per runtime and only NEXT_PUBLIC_* from the static frontend", () => {
+    withTempRepo("pharos-env-reads", {
+      "worker/src/runtime.ts": "export const x = env.WORKER_KEY; export const y = process.env.NODE_ENV;",
+      "worker/src/__tests__/runtime.test.ts": "export const z = env.TEST_ONLY_KEY;",
+      "functions/proxy.ts": "export const x = context.env.PAGES_KEY;",
+      "src/lib/flags.ts": "export const a = process.env.NEXT_PUBLIC_FEATURE; export const b = process.env.PHAROS_API_KEY;",
+    }, (cwd) => {
+      const reads = collectRuntimeEnvReads(cwd);
+      expect([...reads.worker]).toEqual(["WORKER_KEY"]);
+      expect([...reads.pages]).toEqual(["PAGES_KEY"]);
+      expect([...reads.frontend]).toEqual(["NEXT_PUBLIC_FEATURE"]);
+    });
+  });
+
+  it("reads computed access, destructuring and runtime.env, and ignores comments and strings", () => {
+    withTempRepo("pharos-env-reads-ast", {
+      "worker/src/computed.ts": 'export const a = env["COMPUTED_KEY"];',
+      "worker/src/destructured.ts": "const { DESTRUCTURED_KEY, ALIASED_KEY: local } = env; export { local };",
+      "worker/src/nested.ts": "export const a = runtime.env.RUNTIME_KEY;",
+      "worker/src/noise.ts": [
+        "// env.COMMENT_KEY is optional and env.ANOTHER_KEY is not read",
+        'export const note = "env.STRING_KEY";',
+        "const template = `env.TEMPLATE_KEY`;",
+        "export { note, template };",
+      ].join("\n"),
+      "worker/src/lib/dash-test-support.ts": "export const s = env.SUPPORT_ONLY_KEY;",
+      "src/app/stablecoin/[id]/client-test-support.tsx": "export const f = process.env.NEXT_PUBLIC_HELPER_FLAG;",
+    }, (cwd) => {
+      const reads = collectRuntimeEnvReads(cwd);
+      // `ALIASED_KEY: local` reads ALIASED_KEY from the binding, not the local name.
+      expect([...reads.worker].sort()).toEqual(["ALIASED_KEY", "COMPUTED_KEY", "DESTRUCTURED_KEY", "RUNTIME_KEY"]);
+      expect([...reads.frontend]).toEqual([]);
+    });
+  });
+
+  it("rejects an undeclared read or a key declared for another runtime", () => {
+    expect(findUndeclaredRuntimeEnvKeys({
+      worker: new Set(["CORS_ORIGIN"]),
+      pages: new Set(["DB"]),
+      frontend: new Set(["NEXT_PUBLIC_API_BASE"]),
+    })).toEqual([]);
+
+    expect(findUndeclaredRuntimeEnvKeys({
+      worker: new Set(["UNDECLARED_WORKER_KEY", "SITE_API_ORIGIN"]),
+      pages: new Set(),
+      frontend: new Set(),
+    })).toEqual([
+      expect.stringContaining("Worker runtime reads undeclared env key SITE_API_ORIGIN"),
+      expect.stringContaining("Worker runtime reads undeclared env key UNDECLARED_WORKER_KEY"),
+    ]);
+
+    expect(findUndeclaredRuntimeEnvKeys({
+      worker: new Set(),
+      pages: new Set(),
+      frontend: new Set(["NEXT_PUBLIC_UNDECLARED"]),
+    })).toEqual([expect.stringContaining("Frontend build reads undeclared env key NEXT_PUBLIC_UNDECLARED")]);
+  });
+});
+
+describe("check-env-contract .env.example content policy", () => {
+  it("rejects retired example keys and a non-canonical site API origin", () => {
+    const requiredEntries = [
+      "NEXT_PUBLIC_API_BASE=",
+      "SELECTOR_SNAPSHOT_IP_HASH_SECRET=",
+      "SITE_API_SHARED_SECRET=",
+    ];
+    const validEntries = [
+      ...requiredEntries,
+      "SITE_API_ORIGIN=https://site-api.pharos.watch",
+      "CORS_ORIGIN=https://pharos.watch",
+    ];
+    expect(findEnvExamplePolicyErrors(validEntries.join("\n"))).toEqual([]);
+    for (const entry of requiredEntries) {
+      expect(findEnvExamplePolicyErrors(validEntries.filter((line) => line !== entry).join("\n"))).toEqual([
+        `.env.example must document ${entry.slice(0, -1)}`,
+      ]);
+    }
+
+    expect(findEnvExamplePolicyErrors([
+      ...requiredEntries,
+      "DB=local-d1",
+      "VAULTS_FYI_TOKEN=secret",
+      "TELEGRAM_ADOPTION_IP_HASH_SECRET=secret",
+      "SITE_API_ORIGIN=http://localhost:8787",
+    ].join("\n"))).toEqual([
+      ".env.example must not document DB",
+      ".env.example must not document TELEGRAM_ADOPTION_IP_HASH_SECRET",
+      ".env.example must not document retired VAULTS_FYI_* keys (found VAULTS_FYI_TOKEN)",
+      '.env.example must document SITE_API_ORIGIN=https://site-api.pharos.watch (found "http://localhost:8787")',
+    ]);
+    expect(findEnvExamplePolicyErrors("# empty example\n")).toEqual([
+      ".env.example must document NEXT_PUBLIC_API_BASE",
+      ".env.example must document SELECTOR_SNAPSHOT_IP_HASH_SECRET",
+      ".env.example must document SITE_API_SHARED_SECRET",
+      ".env.example must document SITE_API_ORIGIN=https://site-api.pharos.watch (found no entry)",
+    ]);
+  });
 });
 
 describe("check-env-contract Wrangler binding parser", () => {
@@ -116,17 +220,5 @@ describe("check-env-contract Wrangler binding parser", () => {
     ]);
     expect([...result.duplicates]).toEqual([]);
     expect(result.unsupported).toEqual([]);
-  });
-
-  it("reports duplicate Wrangler binding keys", () => {
-    const result = parseWranglerWorkerConfigBindings(`
-      [vars]
-      CORS_ORIGIN = "https://pharos.watch"
-
-      [[d1_databases]]
-      binding = "CORS_ORIGIN"
-    `);
-
-    expect([...result.duplicates]).toEqual(["CORS_ORIGIN"]);
   });
 });

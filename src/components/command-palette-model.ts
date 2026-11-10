@@ -24,7 +24,8 @@ import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } from "@/lib/compare-links";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
-import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS } from "@shared/lib/classification";
+import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, DEPEG_AUDIT_DISPUTED_BADGE } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import depegEventSearchData from "@/generated/depeg-event-search-data.json";
 import {
   fuzzyMatch,
@@ -669,10 +670,14 @@ export function buildCommandPaletteResultDescriptors({
       (event) => {
         const href = `/depeg/${event.slug}/`;
         const dateLabel = event.startedAt ? new Date(event.startedAt * 1000).toISOString().slice(0, 10) : "";
+        // A reviewed dispute keeps the archive's badge on the palette row.
+        const disputed = isDisputedAuditVerdict(event.auditVerdict) ? ` · ${DEPEG_AUDIT_DISPUTED_BADGE.label}` : "";
         return {
           id: `depeg-${event.slug}`,
           label: `${event.symbol} ${event.direction === "below" ? "below" : "above"} ${event.pegType}`,
-          sublabel: dateLabel ? `${dateLabel} · peak ${event.peakDeviationBps}bps` : `peak ${event.peakDeviationBps}bps`,
+          sublabel: dateLabel
+            ? `${dateLabel} · peak ${event.peakDeviationBps}bps${disputed}`
+            : `peak ${event.peakDeviationBps}bps${disputed}`,
           section: "Recent depegs",
           kind: "depeg-event",
           logoId: event.stablecoinId,

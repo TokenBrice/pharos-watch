@@ -13,12 +13,17 @@ import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type {
   CollectedConfirmationEvidence,
   ConfirmationPlanReady,
+  ConfirmationEvidenceInput,
 } from "../pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
 
 const NOW_SEC = 1_700_000_000;
+const primaryAgreement = {
+  primaryStatus: "confirm" as const, primarySameDirectionDepegged: true,
+  primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"], temporalSameDirectionConfirmed: true,
+};
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 const openFixture = sqliteFixtures.open;
 
@@ -61,6 +66,14 @@ function makePlan(overrides: Partial<ConfirmationPlanReady> = {}): ConfirmationP
 
 function makeEvidence(overrides: Partial<CollectedConfirmationEvidence> = {}): CollectedConfirmationEvidence {
   return { ...emptyEvidence(), ...overrides };
+}
+
+function collectPlanEvidence(db: D1Database, plan: ConfirmationPlanReady, overrides: Partial<ConfirmationEvidenceInput> = {}) {
+  return collectConfirmationEvidence({
+    ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
+    cexAllowed: false, cexPrices: null, dexPriceRows: new Map(), dexPriceSources: new Map(),
+    poolChallengers: new Map(), ...overrides,
+  });
 }
 
 function readLifecycle(sqlite: DatabaseSync, stablecoinId: string, pendingId: number) {
@@ -109,10 +122,7 @@ describe("evaluatePromotionDecision", () => {
     const plan = makePlan({
       row,
       authoritativePrice: 0.95,
-      primaryStatus: "confirm",
-      primarySameDirectionDepegged: true,
-      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
-      temporalSameDirectionConfirmed: true,
+      ...primaryAgreement,
     });
     const evidence = makeEvidence({
       confirmingSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
@@ -165,10 +175,7 @@ describe("evaluatePromotionDecision", () => {
     const plan = makePlan({
       row,
       authoritativePrice: 0.97,
-      primaryStatus: "confirm",
-      primarySameDirectionDepegged: true,
-      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
-      temporalSameDirectionConfirmed: true,
+      ...primaryAgreement,
     });
     const evidence = makeEvidence({
       confirmingSources: ["coingecko-confirm"],
@@ -311,7 +318,11 @@ describe("evaluatePromotionDecision", () => {
     const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
     expect(state.pending).toBeUndefined();
     expect(state.events[0]).toMatchObject({ peak_deviation_bps: -242, peak_price: 0.9758, confirmation_sources: "temporal:15m+primary:oracle:pyth", pending_reason: "large-cap+native-origin" });
-    expect(state.outcomes[0]).toMatchObject({ outcome: "promoted", final_decision_reason: "confirmed-by:temporal:15m+primary:oracle:pyth" });
+    expect(state.outcomes[0]).toMatchObject({
+      outcome: "promoted",
+      confirming_sources: "primary:oracle:pyth",
+      final_decision_reason: "confirmed-by:temporal:15m+primary:oracle:pyth",
+    });
   });
 
   it("rejects the EURm native-origin spike when fresh independent USD/FX pricing remains at peg", async () => {
@@ -384,19 +395,7 @@ describe("evaluatePromotionDecision native quote plausibility bound", () => {
       temporalSameDirectionConfirmed: true,
     });
 
-    const evidence = await collectConfirmationEvidence({
-      ...plan,
-      db,
-      now: NOW_SEC,
-      coingeckoAllowed: false,
-      coingeckoApiKey: undefined,
-      signal: undefined,
-      cexAllowed: false,
-      cexPrices: null,
-      dexPriceRows: new Map(),
-      dexPriceSources: new Map(),
-      poolChallengers: new Map(),
-    });
+    const evidence = await collectPlanEvidence(db, plan);
 
     expect(evidence.offchainStatus).toBe("insufficient");
     expect(evidence.offchainPeakCandidate).toBeNull();
@@ -444,19 +443,7 @@ describe("evaluatePromotionDecision native quote plausibility bound", () => {
       temporalSameDirectionConfirmed: true,
     });
 
-    const evidence = await collectConfirmationEvidence({
-      ...plan,
-      db,
-      now: NOW_SEC,
-      coingeckoAllowed: false,
-      coingeckoApiKey: undefined,
-      signal: undefined,
-      cexAllowed: false,
-      cexPrices: null,
-      dexPriceRows: new Map(),
-      dexPriceSources: new Map(),
-      poolChallengers: new Map(),
-    });
+    const evidence = await collectPlanEvidence(db, plan);
 
     expect(evidence.offchainStatus).toBe("insufficient");
     expect(evidence.offchainPeakCandidate).toBeNull();
@@ -475,14 +462,36 @@ describe("evaluatePromotionDecision native quote plausibility bound", () => {
 });
 
 describe("evaluatePromotionDecision opposite-direction corroboration", () => {
+  it.each(["offchain", "cex"])("vetoes %s rejection with stale DEX", async (opponent) => {
+    for (const aggregateObservedAt of [null, NOW_SEC - 4500, NOW_SEC - 21_600]) {
+      const { sqlite, db } = openFixture();
+      const row = makePendingRow({ id: 206 });
+      insertPending(sqlite, row);
+      const plan = makePlan({ row, temporalSameDirectionConfirmed: true, evidence: opponent === "offchain"
+        ? makeEvidence({ offchainStatus: "contradict", opposingSources: ["coingecko-confirm"] }) : emptyEvidence() });
+      const evidence = await collectPlanEvidence(db, plan, {
+        cexAllowed: opponent === "cex", cexPrices: new Map([[row.symbol, 1.05]]),
+        dexPriceRows: new Map([[row.stablecoin_id, { stablecoin_id: row.stablecoin_id, dex_price_usd: 0.95,
+          deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 5_000_000,
+          updated_at: NOW_SEC - 30, aggregateObservedAt }]]),
+        dexPriceSources: new Map([[row.stablecoin_id, ["curve", "uniswap"].map((protocol) => ({
+          protocol, sourceFamily: protocol, chain: "ethereum", price: 0.95, tvl: 2_500_000, updatedAt: NOW_SEC - 30,
+        }))]]),
+      });
+      expect(evidence).toMatchObject({ dexStatus: "insufficient", dexConfirmationVeto: true,
+        dexConfirmationKeys: [], dexPeakCandidates: [], confirmingSources: [] });
+      await settle(db, plan, evidence);
+      expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({ pending: { id: row.id }, events: [], outcomes: [] });
+    }
+  });
+
   it("collects fresh funded opposite-direction DEX evidence without promoting", async () => {
     const { sqlite, db } = openFixture();
     const row = makePendingRow({ id: 202 });
     insertPending(sqlite, row);
     const plan = makePlan({ row });
-    const evidence = await collectConfirmationEvidence({
-      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined, cexAllowed: false, cexPrices: null,
-      dexPriceRows: new Map([[row.stablecoin_id, { stablecoin_id: row.stablecoin_id, dex_price_usd: 1.05, deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: NOW_SEC - 30 }]]),
+    const evidence = await collectPlanEvidence(db, plan, {
+      dexPriceRows: new Map([[row.stablecoin_id, { stablecoin_id: row.stablecoin_id, dex_price_usd: 1.05, deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: NOW_SEC - 30, aggregateObservedAt: NOW_SEC - 30 }]]),
       dexPriceSources: new Map([[row.stablecoin_id, [
         { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.05, tvl: 3_000_000, updatedAt: NOW_SEC - 30 },
         { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 1.04, tvl: 2_000_000, updatedAt: NOW_SEC - 30 },
@@ -575,9 +584,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     insertPending(sqlite, row);
     const plan = makePlan({
       row, pegReference: reference, authoritativePrice: price,
-      primaryStatus: "confirm", primarySameDirectionDepegged: true,
-      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
-      temporalSameDirectionConfirmed: true,
+      ...primaryAgreement,
     });
     await settle(db, plan, makeEvidence({
       offchainStatus: "confirm", offchainSourceKey: "native:eur",
@@ -608,11 +615,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       nativeSignal: deriveDepegSignal(0.94, 1),
       nativePegQuote: { stablecoinId: row.stablecoin_id, geckoId: "non-usd-coin", pegCurrency: currency, price: 0.94, updatedAt: NOW_SEC - 30 },
     });
-    const evidence = await collectConfirmationEvidence({
-      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
-      signal: undefined, cexAllowed: false, cexPrices: null,
-      dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(),
-    });
+    const evidence = await collectPlanEvidence(db, plan);
     expect(evidence.offchainPeakCandidate?.price).toBeCloseTo(reference * 0.94, 10);
     await settle(db, plan, evidence);
     const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
@@ -637,11 +640,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       row, authoritativePrice: 0.94, primaryStatus: "confirm", primarySameDirectionDepegged: true,
       primaryConfirmationSources: ["primary:oracle:pyth"], temporalSameDirectionConfirmed: true,
     });
-    const evidence = await collectConfirmationEvidence({
-      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
-      signal: undefined, cexAllowed: false, cexPrices: null,
-      dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(),
-    });
+    const evidence = await collectPlanEvidence(db, plan);
     await settle(db, plan, evidence);
     expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0])
       .toMatchObject({ start_price: 0.98, peak_price: 0.94, peg_reference: 1, peak_deviation_bps: -600 });
@@ -655,14 +654,9 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     });
     insertPending(sqlite, row);
     const plan = makePlan({
-      row, authoritativePrice: 0.98, primaryStatus: "confirm", primarySameDirectionDepegged: true,
-      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
-      temporalSameDirectionConfirmed: true,
+      row, authoritativePrice: 0.98, ...primaryAgreement,
     });
-    const evidence = await collectConfirmationEvidence({
-      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
-      signal: undefined, cexAllowed: false, cexPrices: null,
-      dexPriceRows: new Map(), dexPriceSources: new Map(),
+    const evidence = await collectPlanEvidence(db, plan, {
       poolChallengers: new Map([[row.stablecoin_id, [
         ...["curve", "uniswap"].slice(0, confirmingCount).map((protocol) => ({
           price: 0.8, tvlUsd: 1_000_000, protocol, sourceFamily: protocol, chain: "ethereum",
@@ -689,9 +683,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     const row = makePendingRow({ id: 303, first_seen_bps: -200, first_price: 0.98, peak_seen_bps: -200, peak_price: 0.98 });
     insertPending(sqlite, row);
     const plan = makePlan({
-      row, authoritativePrice: 0.98, primaryStatus: "confirm", primarySameDirectionDepegged: true,
-      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
-      temporalSameDirectionConfirmed: true,
+      row, authoritativePrice: 0.98, ...primaryAgreement,
     });
     const evidence = makeEvidence({
       poolStatus: "insufficient", poolConfirmations: [{
@@ -719,10 +711,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       row, authoritativePrice: 0.98, primaryStatus: "confirm", primarySameDirectionDepegged: true,
       temporalSameDirectionConfirmed: true,
     });
-    const evidence = await collectConfirmationEvidence({
-      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined,
-      signal: undefined, cexAllowed: false, cexPrices: null,
-      dexPriceRows: new Map(), dexPriceSources: new Map(),
+    const evidence = await collectPlanEvidence(db, plan, {
       poolChallengers: new Map([[row.stablecoin_id, [
         { price: 0.8, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
         ...["uniswap", "aerodrome"].slice(0, opposingCount).map((protocol) => ({
@@ -749,10 +738,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     const plan = makePlan({
       row,
       authoritativePrice: 0.95,
-      primaryStatus: "confirm",
-      primarySameDirectionDepegged: true,
-      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
-      temporalSameDirectionConfirmed: true,
+      ...primaryAgreement,
     });
     const evidence = makeEvidence({
       cexStatus: "confirm",

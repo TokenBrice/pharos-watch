@@ -109,6 +109,31 @@ describe("ReserveTreemap", () => {
       .toContain("Unreviewed remainder &lt;0.01%");
   });
 
+  it("keeps a near-whole share short of 100% so visible shares never sum above the whole", () => {
+    const html = render([
+      SLICE("apxUSD yield vault shares", 99.99757415980419, "high"),
+      SLICE("Vested apxUSD yield recognized by apyUSD", 0.0024258401958068463, "high"),
+    ]);
+    expect(html).toContain("apxUSD yield vault shares &lt;100%");
+    expect(html).not.toContain("· 100%");
+    // The remaining 0.0024% stays visible as positive dust, not zero.
+    expect(render([SLICE("Bills", 99.999, "very-low"), SLICE("Loans", 0.0005, "high")]))
+      .toContain("Bills &lt;100%");
+  });
+
+  it("renders a condensed group authored to the whole basket as 100%, not float dust", () => {
+    const slices = [23.5, 50.6, 13.2, 1.5, 2.3, 5.1, 3.8].map((pct, index) =>
+      SLICE(`Cash ${index}`, pct, "very-low", "Cash"));
+    const { shown, rest } = condenseReserveSlices(slices);
+    expect(shown).toHaveLength(1);
+    expect(rest).toHaveLength(0);
+
+    const html = render([...shown, ...rest]);
+    expect(html).toContain("Cash (7 slices) 100%");
+    expect(html).not.toContain("&lt;100%");
+    expect(html).not.toContain("Unreviewed remainder");
+  });
+
   it("draws a basket led by a slice at or above 90% as a bar and still labels every other share", () => {
     const html = render([SLICE("USDe staking vault shares", 92, "medium"), SLICE("Cash buffer", 8, "very-low")]);
     expect(html).toContain("USDe staking vault shares");

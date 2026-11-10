@@ -9,6 +9,7 @@ import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
+import { evaluateStatusProbePayload, hasStatusProbePayloadContract } from "./status-probe-contracts";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
 import { computeRawStatus } from "../lib/status-evaluation";
@@ -150,7 +151,6 @@ function bootstrapObservedCacheKey(producerJob: string): string {
 }
 
 export async function isBootstrapCacheMiss(db: D1Database, path: string, status: number): Promise<boolean> {
-  if (status !== 503) return false;
   const producerJob = BOOTSTRAP_CACHE_PRODUCER_BY_PATH[path];
   if (!producerJob) return false;
   try {
@@ -160,7 +160,7 @@ export async function isBootstrapCacheMiss(db: D1Database, path: string, status:
       .prepare("SELECT COUNT(*) AS cnt FROM cron_runs WHERE job = ?")
       .bind(producerJob)
       .first<{ cnt: number | null }>();
-    if ((row?.cnt ?? 0) === 0) return true;
+    if ((row?.cnt ?? 0) === 0) return status === 503;
     await setCache(db, markerKey, JSON.stringify({
       job: producerJob,
       observedAt: Math.floor(Date.now() / 1_000),
@@ -346,13 +346,20 @@ async function evaluateProbeResponse(
   response: Response,
 ): Promise<Pick<ProbeResult, "ok" | "error" | "semanticStatus">> {
   const httpOk = response.status >= 200 && response.status < 300;
-  if (path !== HEALTH_PROBE_PATH || !httpOk) {
+  const payloadContract = hasStatusProbePayloadContract(path);
+  if ((!payloadContract && path !== HEALTH_PROBE_PATH) || !httpOk) {
     await cancelResponseBodyQuietly(response);
     return { ok: httpOk };
   }
 
   try {
-    const payload = await readResponseJsonWithinLimitWithSignal<{ status?: unknown }>(response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES);
+    const payload = await readResponseJsonWithinLimitWithSignal<Record<string, unknown>>(
+      response,
+      DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
+    );
+    if (payloadContract) {
+      return evaluateStatusProbePayload(path, response.headers, payload);
+    }
     if (payload.status === "healthy") {
       return {
         ok: true,
@@ -864,8 +871,12 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
 
   await options.reportProgress?.({ stage: "raw-status" });
   const raw = await computeRawStatus(db, assessedAt);
+  let statusStateReadFailed = false;
   const persistedStatus = await reconcileStatusState(db, assessedAt, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
-    () => failedOutputs.add("status_state"));
+    (issue) => {
+      failedOutputs.add("status_state");
+      if (issue.code === "status_state_read_failed") statusStateReadFailed = true;
+    });
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
   const cloudflareD1StatusBindings = options.cloudflareD1StatusBindings
     ?? (options.d1StatusConfig
@@ -896,11 +907,22 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const publicHealthSnapshotPersistenceSucceeded = await writeStatusPublicHealthSnapshot(db, assessedAt,
     { ...publicHealthBody, ...publicStatus.projection }, publicHealthAssessment.statusExcludingCacheFreshness,
     publicHealthAssessment.statusExcludingCacheEvidence);
-  const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, assessedAt);
+  // An unreadable status_state cannot establish effective-vs-raw divergence.
+  // The raw fallback is not the persisted authority, so observing it would
+  // overwrite a real streak with an invented in-sync/zero verdict.
+  const discrepancyObserved = statusStateReadFailed ? false : hasDivergence(effectiveStatus, probeSummary, assessedAt);
 
-  const discrepancyState = await updateDiscrepancyObservation(db, assessedAt, discrepancyObserved, hasProbeFailure,
-    () => failedOutputs.add("status_discrepancy_state"));
-  const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, assessedAt, discrepancyState.consecutiveDivergent);
+  const discrepancyState = statusStateReadFailed
+    ? { consecutiveDivergent: null, consecutiveProbeFailures: null, persistenceSucceeded: false }
+    : await updateDiscrepancyObservation(db, assessedAt, discrepancyObserved, hasProbeFailure,
+      () => failedOutputs.add("status_discrepancy_state"));
+  const discrepancy = buildDiscrepancy(
+    statusStateReadFailed ? null : effectiveStatus,
+    probeSummary,
+    assessedAt,
+    discrepancyState.consecutiveDivergent,
+    "status-unreadable",
+  );
   if (!probePersistenceSucceeded) failedOutputs.add("status_probe_runs");
   if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
   if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");

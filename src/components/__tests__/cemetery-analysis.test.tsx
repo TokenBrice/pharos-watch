@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CAUSE_META, CAUSE_ORDER } from "@shared/lib/cause-of-death";
 import { formatDeathDate } from "@shared/lib/format";
@@ -57,6 +57,9 @@ describe("CemeteryAnalysis", () => {
 
   it("renders a visible data table per chart with one row per year and per cause", () => {
     const { container } = renderAnalysis();
+    expect(
+      screen.getByText("Bars count records by death year. The row under the axis is the median recorded peak market cap of that year's deaths."),
+    ).toBeTruthy();
     const [yearTable, peakTable] = tables(container);
     expect(tables(container)).toHaveLength(2);
     for (const table of [yearTable, peakTable]) expect(table.closest("details")?.querySelector("summary")?.textContent).toBe("Data table");
@@ -67,7 +70,9 @@ describe("CemeteryAnalysis", () => {
     );
     // Year, Total, five causes in CAUSE_ORDER, Tracked archive, Median peak.
     expect(yearRows[1]).toEqual(["2022", "0", "0", "0", "0", "0", "0", "0", "no records"]);
-    expect(yearRows[2]).toEqual(["2023", "2", "0", "1", "0", "0", "1", "0", formatCemeteryPeak(20e6)]);
+    expect(yearRows[2]).toEqual([
+      "2023", "2", "0", "1", "0", "0", "1", "0", `${formatCemeteryPeak(20e6)} (1 of 2 recorded)`,
+    ]);
     expect(yearRows[3].slice(-2)).toEqual(["1", formatCemeteryPeak(27.5e6)]);
 
     expect(rowHeaders(peakTable)).toEqual(CAUSE_ORDER.map((cause) => CAUSE_META[cause].label));
@@ -79,6 +84,17 @@ describe("CemeteryAnalysis", () => {
       "not recorded",
       "not recorded",
     ]);
+  });
+
+  it("qualifies a year's median peak with its recorded denominator in the tooltip", () => {
+    const { container } = renderAnalysis();
+    const yearChart = screen.getByRole("img", { name: /^Documented deaths per year by cause/ });
+    const hitAreas = yearChart.querySelectorAll('rect[fill="transparent"]');
+    fireEvent.pointerEnter(hitAreas[2]);
+
+    expect(within(container).getAllByText("Median peak").length).toBeGreaterThan(0);
+    // The data table and the hover tooltip both carry the recorded denominator.
+    expect(within(container).getAllByText(`${formatCemeteryPeak(20e6)} (1 of 2 recorded)`)).toHaveLength(2);
   });
 
   it("plots only recorded peaks in chart C, one dot each, and footnotes the rest", () => {

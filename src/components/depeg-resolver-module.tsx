@@ -66,6 +66,12 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
           <p className="text-2xs text-muted-foreground">
             Calibrated on <span className="pharos-numeric">{lineage.incidentCount.toLocaleString()}</span> historical
             incidents · <span className="pharos-numeric">{lineage.coinCount}</span> coins
+            {lineage.quarantinedCoins > 0 ? (
+              <>
+                {" ("}
+                <span className="pharos-numeric">{lineage.quarantinedCoins}</span> excluded)
+              </>
+            ) : null}
           </p>
         ) : null}
       </div>
@@ -144,7 +150,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
               aria-expanded={showAll}
               className="pharos-focus-ring pharos-control-pill"
             >
-              {showAll ? `Show only the ${DEFAULT_VISIBLE_ROWS} most urgent` : `Show all ${ordered.length} forecasts`}
+              {showAll ? `Show only the ${DEFAULT_VISIBLE_ROWS} most urgent` : `Show all ${ordered.length} incident rows`}
             </button>
           ) : null}
         </>

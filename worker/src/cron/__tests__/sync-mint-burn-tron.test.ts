@@ -133,6 +133,22 @@ describe("Tron mint/burn admission transport", () => {
     expect(network.fetcher.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(false);
   });
 
+  it("denies TronGrid on a corrupt circuit row instead of aborting the run", async () => {
+    const network = transport();
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("circuit:trongrid", "not-json", NOW - 7200);
+    const result = await syncMintBurn(db, null, {
+      lane: "critical", dwellirNative: network.native,
+      disabledConfigIds: MINT_BURN_CONFIGS.filter((config) => config.chain.chainId !== "tron").map(mintBurnConfigKey),
+    });
+    const metadata = JSON.parse(result.metadata);
+    expect(metadata.tronRpc).toMatchObject({ circuitState: "open", circuitInvalid: true });
+    expect(network.fetcher.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(false);
+    const repaired = sqlite.prepare("SELECT value FROM cache WHERE key = 'circuit:trongrid'").get() as { value: string };
+    expect(JSON.parse(repaired.value)).toMatchObject({ state: "open" });
+  });
+
   it("scopes native heads and pending scan boundaries without Alchemy evidence", async () => {
     const network = transport();
     const { db } = fixtures.open();
@@ -256,8 +272,8 @@ describe("Tron mint/burn admission transport", () => {
         return undefined;
       },
     });
-    vi.spyOn(circuit, "getCircuitRecord").mockResolvedValue({ state: "open", consecutiveFailures: 3,
-      lastFailureAt: NOW - 1, lastSuccessAt: null, openedAt: NOW - 1 });
+    vi.spyOn(circuit, "getCircuitRecordForAdmission").mockResolvedValue({ invalid: false,
+      record: { state: "open", consecutiveFailures: 3, lastFailureAt: NOW - 1, lastSuccessAt: null, openedAt: NOW - 1 } });
     const { db, sqlite } = fixtures.open();
     if (admitted) sqlite.prepare(`INSERT INTO mint_burn_admission
       (config_key, config_fingerprint, admitted_at, baseline_from, baseline_to) VALUES (?, ?, ?, ?, ?)`)

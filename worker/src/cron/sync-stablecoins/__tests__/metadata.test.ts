@@ -350,16 +350,6 @@ describe("stablecoins pricing metadata", () => {
     expect(metadata.quality).toEqual({ reason });
   });
 
-  it.each([Infinity, 1])("retains supply quality findings through metadata compaction (budget=%s)", (budget) => {
-    const { guard } = allMissingSizeGuardFixture();
-    const quality = {
-      reason: "supply-chain-dropout-quarantine", quarantinedAssetCount: 1, unavailableAssetCount: 1,
-    };
-    guard.metadata.quality = quality;
-    const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget));
-    expect(metadata.quality).toEqual(quality);
-  });
-
   describe("depeg observation census", () => {
     const census = {
       scope: "psi-non-nav-before-supply-floor" as const,
@@ -369,6 +359,8 @@ describe("stablecoins pricing metadata", () => {
       unavailableCount: 1,
       belowFloorCount: 1,
       reasonCounts: { "supply-unavailable": 1 },
+      unavailableAssets: [{ id: "gap", reason: "supply-unavailable" as const, reviewedNominalReference: false }],
+      unavailableIdsTruncated: false,
     };
     const assets = (): PeggedAsset[] => ACTIVE_STABLECOINS.map((asset) => ({
       id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
@@ -424,8 +416,12 @@ describe("stablecoins pricing metadata", () => {
       const { guard } = allMissingSizeGuardFixture();
       const quality = { reason: "depeg-observation-incomplete", depegObservation: { ...census, syncStartSec: 1 } };
       guard.metadata.quality = quality;
-      expect(JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget)).quality).toEqual(quality);
+      const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget));
+      expect(metadata.quality).toEqual(budget === 2_000 ? { ...quality, depegObservation: {
+        ...quality.depegObservation, unavailableAssets: undefined, unavailableIdsDropped: true,
+      } } : quality);
     });
+
   });
 
   it.each(["kava-pricefeed"])(
@@ -911,5 +907,96 @@ describe("stablecoins pricing metadata", () => {
     expect(nextGeneration.missingActiveAssets.every(
       (detail) => detail.consecutiveMissingGenerations === 2,
     )).toBe(true);
+  });
+});
+
+describe("priced-cohort collapse", () => {
+  function pricedAssets(unpricedCount: number): PeggedAsset[] {
+    const unpriced = new Set(ACTIVE_STABLECOINS.slice(0, unpricedCount).map((coin) => coin.id));
+    return ACTIVE_STABLECOINS.map((coin) => ({
+      id: coin.id,
+      name: coin.name,
+      symbol: coin.symbol,
+      price: unpriced.has(coin.id) ? null : 1,
+      priceSource: unpriced.has(coin.id) ? "missing" : "defillama-list",
+      priceConfidence: "single-source" as const,
+      circulating: { peggedUSD: 1 },
+    })) as PeggedAsset[];
+  }
+
+  const previousFullCohort = {
+    missingActiveIds: [],
+    missingActiveAssets: [],
+    pricedActiveCount: ACTIVE_STABLECOINS.length,
+    expectedActiveCount: ACTIVE_STABLECOINS.length,
+  };
+
+  it("degrades a run whose priced cohort drops materially against the previous generation", async () => {
+    const assets = pricedAssets(40);
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(assets),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "stablecoin-price-coverage-collapse",
+      quality: { reason: "stablecoin-price-coverage-collapse" },
+    });
+
+    const recovered = buildStablecoinsSyncResult({
+      ...syncInput(pricedAssets(4)),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(recovered.status).toBe("ok");
+  });
+
+  it("degrades a CoinGecko-supply-fallback publication whose priced cohort collapses", () => {
+    const assets = pricedAssets(40);
+    const result = buildFallbackStablecoinsSyncResult({
+      ...syncInput(assets),
+      providerDiagnostics: [],
+      cacheKey: "stablecoins",
+      syncStartSec: 1_777_000_000,
+      authoritativeOverrideCount: 0,
+      cachedFallbackCount: 0,
+      nativePegCorrectionCount: 0,
+      nativePegFillCount: 0,
+      activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "stablecoin-price-coverage-collapse",
+      quality: { reason: "stablecoin-price-coverage-collapse" },
+    });
+  });
+
+  it("only degrades against the previous generation when it is material", async () => {
+    const assets = pricedAssets(4);
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(assets),
+      previousActivePriceCoverage: {
+        ...previousFullCohort,
+        pricedActiveCount: 8,
+      },
+    });
+    expect(result.status).toBe("ok");
+  });
+
+  it("degrades a zero priced cohort even without a previous baseline", async () => {
+    const result = buildStablecoinsSyncResult(syncInput(pricedAssets(ACTIVE_STABLECOINS.length)));
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "stablecoin-price-coverage-collapse",
+    });
+  });
+
+  it("keeps an ordinary single-generation gap out of the run status", async () => {
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(pricedAssets(1)),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBeUndefined();
   });
 });

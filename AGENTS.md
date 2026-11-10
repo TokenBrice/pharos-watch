@@ -8,7 +8,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 2. In every harness (omp, Claude Code, Codex), read the router's exact `Read first` anchors and every returned scoped `AGENTS.md`; none is assumed to auto-load nested guides. More-specific instructions take precedence. Inspect entrypoints/local imports; all returned rules, checks and warnings apply.
 3. For onboarding, scratch, handoff, or commit conventions, consult `docs/process/agent-start-here.md` when relevant.
 
-`--context=auto` selects local or contract reading from the inputs; `--context=contract` upgrades explicitly, never downgrades obligations. Required refs bypass the ordinary reading cap. The enforced `context` total unions root/scoped instructions and selected sections; conditional background, source, skills and framework reads remain additional context.
+`--context=auto` selects local or contract reading from the inputs; `--context=contract` upgrades explicitly, never downgrades obligations. Required refs bypass the ordinary reading cap. The reported `context` total (an advisory budget) unions root/scoped instructions and selected sections; conditional background, source, skills and framework reads remain additional context.
 
 ## Tool routing
 
@@ -23,6 +23,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 - Code, schemas, registries, and checked runtime data are authoritative when prose disagrees.
 - Use your harness's native delegation for independent, disjoint work; never assume it exists.
 - No canonical formatter: match nearby style, no formatting-only churn, `git diff --check` clean (`docs/testing.md#source-formatting-policy`).
+- Extend the owning suite; do not add sibling test files per fix. Slow or registry-wide cases belong to the nightly tier, and the test corpus budget only moves down; only the owner applies the `test-budget-override` label (`docs/testing.md#extending-tests`).
 - Credentials: check the ignored root `.env.local` and the documented source before reporting one missing; names only, never values. Worker secrets stay Wrangler-managed.
 - Runtime: mise shims read `.nvmrc`; first run `mise settings add idiomatic_version_file_enable_tools node`, then `mise install`. `check:pr` requires the exact `.nvmrc` Node and npm 11.x.
 - Scratch lives in ignored `agents/`; delete bulky intermediates you created when done. Durable guidance in `docs/` (`docs/process/agent-artifacts.md`).
@@ -31,7 +32,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 ## Hard rules
 
 - Tailwind classes must be static strings. Classification labels/colors live only in `shared/lib/classification.ts`.
-- Supply: use `getCirculatingRawOrNull()` / historical `*OrNull` helpers from `shared/lib/supply.ts`; zero-default alternatives are deleted and banned by ESLint. Preserve unavailable values and aggregate completeness; only admitted observed members contribute numeric values, including explicit zero. DefiLlama list `circulating` is already USD — never multiply by price or apply arbitrary manual/on-chain/CMC/DEX overrides. Bounded CoinGecko aggregate gap-fill is a permitted supplemental path under ADR-8: explicit, documented, fail-closed, double-count safe, with ratio bound, hysteresis, coherent buckets, and per-asset provenance; the reviewed chain-dropout repair/quarantine path is the other permitted supplemental path ([ADR-8](docs/architecture.md#adr-8), clause (c)).
+- Supply: use `getCirculatingRawOrNull()` / historical `*OrNull` helpers from `shared/lib/supply.ts`; zero-default alternatives are deleted and banned by ESLint. Preserve unavailable values and aggregate completeness; only admitted observed members contribute numeric values, including explicit zero. DefiLlama list `circulating` is already USD — never multiply by price or apply arbitrary manual/on-chain/CMC/DEX overrides. [ADR-8](docs/architecture.md#adr-8) permits three explicit, documented, fail-closed, double-count-safe supplemental paths: bounded CoinGecko aggregate gap-fill with ratio bound, hysteresis, coherent buckets and per-asset provenance (clause (b)); the reviewed chain-dropout repair/quarantine path (clause (c)); and share-apportioned CoinGecko partitions, which split an admitted cap across chains without changing its total (clause (d)).
 - Imports across runtime boundaries: use `@shared/lib/...` / `@shared/types...` for unpackaged shared code and exact `@pharos/contracts/{api-meta,api-keys,request-source}` workspace exports (never `@shared/contracts` or physical package paths); ESLint rejects relative imports into root `shared/` from `src/`, `worker/`, and `functions/`. Within production `shared/lib/`, use relative imports for unpackaged shared code (ESLint bans `@shared/*`); root TS config excludes `worker/`, and runtime-neutral logic belongs in `shared/lib/`.
 - Cron-backed hooks: derive `staleTime = producer interval` and `refetchInterval = 2x producer interval` with `getPollingWindow()` / `createApiPollingQueryOptions()`.
 - Worker fetches: Cloudflare caps six simultaneous requests waiting on response headers per invocation; Pharos statically budgets a stricter trigger-wide six-connection model (`npm run check:cron-connections`; not runtime admission control) — consume bodies before opening more fetches (`docs/worker-and-api-limits.md#connection-budget-operating-assumption`).
@@ -42,7 +43,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 ## Verify and ship
 
 - Focused checks are authoring feedback, never readiness proof (`docs/testing.md#smallest-adequate-check-per-area`); an unmapped production path's zero-plan is a routing failure.
-- Run `npm run check:pr` for focused authoring feedback before pushing; hosted CI is the readiness authority ([Pre-push readiness](docs/testing.md#pre-push-readiness)). Local receipts are optional diagnostics, not a push prerequisite.
+- Use focused authoring checks before pushing; `npm run check:pr` is optional broader feedback ([Pre-push readiness](docs/testing.md#pre-push-readiness)). Hosted CI owns readiness; local receipts are optional diagnostics.
 - CI failures: collect every failed leaf, fix all causal defects in one revision, rerun focused checks, then push once ([workflow incidents](docs/runbooks/workflow-incidents.md)). `check:release` is only an explicit production rehearsal; GitHub Actions owns the release gate.
 - Commit thematically with a descriptive subject and a why-focused body. There are no Git hooks: regenerate affected artifacts explicitly (`npm run check:generated-artifacts` names stale ones) and commit them with their source; hosted CI enforces freshness (`docs/scripts.md#operational-notes`).
 - Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly. Merge release PRs with `gh pr merge --merge`; never squash or rebase them.
@@ -50,7 +51,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

@@ -32,6 +32,9 @@ export const MIN_DEPEG_PAGE_DEVIATION_BPS = 500;
  */
 export const DEPEG_ARCHIVE_EPOCH_SECONDS = 1_767_225_600;
 
+/** Reader-facing ISO date of the archive epoch (2026-01-01). */
+export const DEPEG_ARCHIVE_EPOCH_DATE = new Date(DEPEG_ARCHIVE_EPOCH_SECONDS * 1000).toISOString().slice(0, 10);
+
 /**
  * Durable indexability ledger for events that predate the archive epoch.
  * Pinned events are unioned into both the static page set and the indexable

@@ -262,14 +262,18 @@ export function buildHeroPassportItems({
     );
   }
 
-  items.push({
-    key: "chains",
-    category: "Chains",
-    value: String(chainCount),
-    href: (coin.contracts?.length ?? 0) > 0 ? "#contracts" : "#info",
-    chip: true,
-    ariaLabel: `Deployed on ${chainCount} chain${chainCount === 1 ? "" : "s"} — jump to contract deployments`,
-  });
+  // A chain count exists only when a curated contract record produced it:
+  // no record is unrecorded, not a measured zero (R1, ADR-28).
+  if (chainCount > 0) {
+    items.push({
+      key: "chains",
+      category: "Chains",
+      value: String(chainCount),
+      href: (coin.contracts?.length ?? 0) > 0 ? "#contracts" : "#info",
+      chip: true,
+      ariaLabel: `Deployed on ${chainCount} chain${chainCount === 1 ? "" : "s"} — jump to contract deployments`,
+    });
+  }
 
   // Cluster 2 — who stands behind it: jurisdiction, its regulatory visas,
   // reserve attestor, date of issue.

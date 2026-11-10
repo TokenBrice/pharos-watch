@@ -3,7 +3,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   getCache, getPriceCache, prepareCacheUpsert, readCacheWithPolicy, savePriceCache,
-  setCacheIfAbsent, setCacheIfNewer, setCachesAt, type CachePolicy,
+  setCacheIfAbsent, setCacheIfNewer, setCachesAt, shouldSkipFreshCache, type CachePolicy,
 } from "../db-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -49,12 +49,14 @@ describe("cache conflict updates", () => {
 
   it("retains inclusive if-newer admission and advances unchanged-payload freshness", async () => {
     const { db } = fixtures.open();
-    await setCacheIfNewer(db, "current", "initial", 200);
+    expect(await setCacheIfNewer(db, "current", "initial", 200))
+      .toEqual({ written: true, skippedBecauseNewer: false });
     expect(await setCacheIfNewer(db, "current", "older", 199))
       .toEqual({ written: false, skippedBecauseNewer: true });
     expect(await getCache(db, "current")).toEqual({ value: "initial", updatedAt: 200 });
     expect(await setCacheIfNewer(db, "current", "equal", 200))
       .toEqual({ written: true, skippedBecauseNewer: false });
+    expect(await getCache(db, "current")).toEqual({ value: "equal", updatedAt: 200 });
     expect(await setCacheIfNewer(db, "current", "equal", 201))
       .toEqual({ written: true, skippedBecauseNewer: false });
     expect(await getCache(db, "current")).toEqual({ value: "equal", updatedAt: 201 });
@@ -141,11 +143,28 @@ describe("getPriceCache", () => {
       observedAt: 1799999900,
       observedAtMode: "upstream",
       syncedAt: 1800000010,
+      hasExplicitClocks: true,
       agreeSources: ["coingecko", "defillama"],
       consensusSources: ["coingecko"],
     });
     expect(queries).toHaveLength(1);
     expect(queries[0]).toContain("source, confidence, observed_at");
+  });
+
+  it("distinguishes absent original clocks while retaining normalized timestamp fallbacks", async () => {
+    for (const [observedAt, syncedAt] of [[null, null], [null, 1800000010], [1799999900, null]] as const) {
+      const { db } = makeDb({ fullRows: [{
+        asset_id: "usdc-circle", price: 0.9998, updated_at: 1800000000,
+        source: "coingecko", confidence: "high", observed_at: observedAt,
+        observed_at_mode: "upstream", synced_at: syncedAt,
+        agree_sources_json: "[]", consensus_sources_json: "[]",
+      }] });
+      expect((await getPriceCache(db)).get("usdc-circle")).toMatchObject({
+        observedAt: observedAt ?? 1800000000,
+        syncedAt: syncedAt ?? 1800000000,
+        hasExplicitClocks: false,
+      });
+    }
   });
 
   it("falls back to empty source arrays when cached source JSON is malformed", async () => {
@@ -259,6 +278,42 @@ describe("readCacheWithPolicy", () => {
 
 });
 
+describe("shouldSkipFreshCache", () => {
+  const NOW_SEC = 1_700_000_000;
+
+  it("rejects a future-dated clock instead of treating it as fresh", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    try {
+      const { sqlite, db } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("bluechip-ratings", "{}", NOW_SEC + 86_400);
+      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(false);
+      // The if-newer producer write would keep rejecting a poisoned clock, so
+      // the rejected row is dropped rather than left to absorb the refresh.
+      expect(await getCache(db, "bluechip-ratings")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the configured budget for an admitted clock", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    try {
+      const { sqlite, db } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("bluechip-ratings", "{}", NOW_SEC - 6 * 3600 + 1);
+      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(true);
+      sqlite.prepare("UPDATE cache SET updated_at = ? WHERE key = ?")
+        .run(NOW_SEC - 6 * 3600, "bluechip-ratings");
+      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("savePriceCache", () => {
   it("bounds cache freshness timestamps to the local sync time", async () => {
     const statements: Array<{ sql: string; bindings: unknown[] }> = [];
@@ -304,6 +359,7 @@ describe("savePriceCache", () => {
     const expected = {
       price: 0.9999, updatedAt: 1800000000, source: "coingecko+pyth", confidence: "high",
       observedAt: 1800000000, observedAtMode: "upstream", syncedAt: 1800000100,
+      hasExplicitClocks: true,
       agreeSources: ["coingecko", "pyth"], consensusSources: ["coingecko", "pyth"],
     };
     await savePriceCache(db, [{
@@ -316,6 +372,7 @@ describe("savePriceCache", () => {
     expect((await getPriceCache(db)).get("usdc-circle")).toEqual({
       price: 1.01, updatedAt: 1799999999, source: "equal", confidence: null,
       observedAt: 1799999999, observedAtMode: null, syncedAt: 1800000100,
+      hasExplicitClocks: true,
       agreeSources: [], consensusSources: [],
     });
   });

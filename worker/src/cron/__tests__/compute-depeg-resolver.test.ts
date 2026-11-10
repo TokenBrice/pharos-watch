@@ -4,10 +4,14 @@ import type { DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
 import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
-import { buildDdrResponse } from "../depeg-resolver/public-projection";
-import { sealEligibleLocks } from "../depeg-resolver/publication";
+import { buildDdrResponse, buildDiagnosticSnapshot } from "../depeg-resolver/public-projection";
+import { sealEligibleLocks, writePublicationBeforeCache } from "../depeg-resolver/publication";
+import { DEFAULT_DDR_V2_STORE_CONTRACTS } from "../depeg-resolver/storage-adapters";
+import { ensureIncident, insertOpenEvent, sealPublicFixture, withSqliteD1 } from "../../lib/__tests__/depeg-resolver-ddrv2-store.test-support";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
+import { confirmedCronOutputAt } from "../../lib/cron-output";
+import { loadDepegResolverSnapshot } from "../../lib/depeg-resolver-snapshot-cache";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
   makeDdrCanonicalIncident,
@@ -401,10 +405,14 @@ describe("computeDepegResolver", () => {
     // four-year training corpus is never read. R1: that unread corpus size is
     // unavailable, not a zero-incident calibration corpus.
     expect(payload._meta.lineage).toBeNull();
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({
       incidentCount: null,
       quarantinedCoins: null,
+      outputPublishedAt: NOW_SEC,
     });
+    // A deliberately published empty board is a confirmed output generation.
+    expect(confirmedCronOutputAt(result, metadata, NOW_SEC)).toBe(NOW_SEC);
   });
 
   it.each([
@@ -681,6 +689,78 @@ describe("computeDepegResolver", () => {
     const payload = readDdrSnapshotPayload(db);
     expect(payload.rows[0].prediction.policyDelaySec).toBe(72 * 3600);
     expect(payload.rows[0].prediction.lockTrigger).toBe("readiness_backstop");
+    // A successful retry must advance the pre-seal lock state past
+    // publication_retry_pending; otherwise it contradicts first-publication membership.
+    expect(stores.recordLockDeferral).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      incidentKey: sealed.incidentKey,
+      eventId: sealed.eventId,
+      action: "published",
+      reason: null,
+    }));
+  });
+
+  it.each((["frozen", "no_call", "publication_retry_pending", "publication_failed", "published"] as const)
+    .flatMap((lastState) => [false, true].map((closed) => ({ lastState, closed, legacy: false })))
+    .concat([{ lastState: "frozen", closed: false, legacy: true }, { lastState: "frozen", closed: true, legacy: true }]))(
+    "reconciles $lastState accounting without rewriting terminal states (closed: $closed, legacy: $legacy)",
+    async ({ lastState, closed, legacy }) => withSqliteD1(async (db) => {
+      const publicationAt = Date.UTC(2026, 10, 1) / 1000 - (legacy ? 1 : 0);
+      insertOpenEvent(db);
+      const incident = await ensureIncident(db);
+      const sealed = await sealPublicFixture(db, incident.incidentKey, lastState === "no_call" ? "no_call" : "prediction", {
+        payload: { predictionExtras: { predictionMethodologyVersionLabel: "v2.0" } },
+      });
+      db.sqlite.prepare("UPDATE depeg_resolver_prediction_lock_state SET last_state = ? WHERE last_state != ?").run(lastState, lastState);
+      const stores = { ...DEFAULT_DDR_V2_STORE_CONTRACTS, recordLockDeferral: vi.fn(DEFAULT_DDR_V2_STORE_CONTRACTS.recordLockDeferral) };
+      const input: Parameters<typeof writePublicationBeforeCache>[0] = {
+        stores, db, sealed: [sealed], firstPublication: [], errata: [], incidentsByEventId: new Map(),
+        snapshot: buildDiagnosticSnapshot({ rows: [resolverRow({ eventId: 1, stablecoinId: "lusd-liquity" })], lineage: null, nowSec: publicationAt }),
+        ddrRunId: "ddr:accounting:0", nowSec: publicationAt,
+      };
+      const terminal = lastState === "publication_failed" || lastState === "published";
+      db.sqlite.exec("CREATE TEMP TRIGGER fail_publication_accounting BEFORE INSERT ON depeg_resolver_lock_opportunity_audit WHEN NEW.action = 'published' BEGIN SELECT RAISE(ABORT, 'accounting unavailable'); END");
+      for (let run = 0; run < 3; run += 1) {
+        input.nowSec = publicationAt + run;
+        input.ddrRunId = `ddr:accounting:${run}`;
+        input.incidentsByEventId = new Map((await stores.loadCanonicalIncidents(db, { eventIds: [1] }))
+          .map((row) => [row.currentEventId, row]));
+        input.firstPublication = await stores.loadFirstPublicationMembership(db, { incidentKeys: [incident.incidentKey] });
+        stores.recordLockDeferral.mockClear();
+        if (run > 0 && closed) {
+          const result = await computeDepegResolver({ db, storeContracts: stores, runAt: input.nowSec, ddrRunId: input.ddrRunId });
+          expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ activeEvents: 0, v2PublicationSucceeded: true });
+          expect(await loadDepegResolverSnapshot(db)).toMatchObject({ kind: "ok", payload: { rows: [] } });
+        } else expect(await writePublicationBeforeCache(input)).toMatchObject({ ok: true, error: null });
+        expect(await stores.loadFirstPublicationMembership(db, { incidentKeys: [incident.incidentKey] })).toHaveLength(1);
+        if (run > 0) expect(await stores.loadFirstPublicationMembership(db, { incidentKeys: [incident.incidentKey] })).toEqual(input.firstPublication);
+        expect((await stores.loadCanonicalIncidents(db, { eventIds: [1] }))[0]?.lockState?.lastState).toBe(run === 0 || terminal || legacy ? lastState : "published");
+        expect(stores.recordLockDeferral).toHaveBeenCalledTimes(!terminal && (run === 0 || (!legacy && run === 1)) ? 1 : 0);
+        if (run === 0) db.sqlite.exec("DROP TRIGGER fail_publication_accounting");
+        if (run === 0 && closed) db.sqlite.exec("UPDATE depeg_events SET ended_at = 200000, recovery_price = 1");
+      }
+      expect(await stores.loadSealedPublicPredictions(db, { incidentKeys: [incident.incidentKey] })).toEqual([sealed]);
+      if (!legacy) await expect(stores.recordLockDeferral(db, { ...sealed, runAt: publicationAt + 3, runId: "ddr:accounting:repeat",
+        action: "published", reason: null, healthStatus: "healthy" })).rejects.toThrow(/sealed lock-state/);
+    }),
+  );
+
+  it.each([26])("reconciles only the oldest 25 of %i published locks", async (count) => {
+    const { stores } = storesFor();
+    const nowSec = Date.UTC(2026, 10, 2) / 1000;
+    const sealed = Array.from({ length: count }, (_, index) => makeDdrSealedPublicPrediction({
+      id: index + 1, eventId: index + 1, incidentKey: `ddr2:accounting-${index}`,
+    }));
+    await writePublicationBeforeCache({
+      stores, db: resolverDb([{ match: "FROM depeg_resolver_prediction_lock_state", rows: [] }]), sealed, errata: [], ddrRunId: "ddr:accounting:bounded", nowSec,
+      snapshot: buildDiagnosticSnapshot({ rows: [], lineage: null, nowSec }),
+      incidentsByEventId: new Map(sealed.map((row) => [row.eventId, canonicalIncident({
+        incidentKey: row.incidentKey, lockState: { eligibleAt: row.eligibleAt, deferralCount: 0, lastDeferralReason: null, lastState: "frozen" },
+      })])),
+      firstPublication: sealed.map((row, index) => ({ publicPredictionId: row.id, incidentKey: row.incidentKey,
+        snapshotToken: "prior", snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION, publishedAt: Date.UTC(2026, 10, 1) / 1000 + count - index - 1 })),
+    });
+    expect(vi.mocked(stores.recordLockDeferral).mock.calls.map(([, lock]) => lock.incidentKey))
+      .toEqual(sealed.slice(1).reverse().map((row) => row.incidentKey));
   });
 
   it("marks the public snapshot degraded when the manifest write fails after sealing", async () => {
@@ -729,8 +809,14 @@ describe("computeDepegResolver", () => {
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toContain("publication-retry-pending:");
+    expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       v2PublicationAttempted: true, v2PublicationSucceeded: false,
+      // A carried snapshot is not this run's publication output: the confirmed
+      // clock stays frozen so the freshness watchdog pages the failed write.
+      outputPublishedAt: null,
+      reason: "ddr-publication-failed",
+      quality: { reason: "ddr-publication-failed" },
     });
   });
 
@@ -810,6 +896,57 @@ describe("computeDepegResolver", () => {
     expect(payload.rows[0].noCall).toBeTruthy();
     expect(payload.rows[0].prediction.errataHistory).toHaveLength(1);
     expect((manifestBasePayload as { rows?: Array<{ kind?: string }> }).rows?.[0]?.kind).toBe("invalidated_prediction");
+  });
+
+  it("degrades instead of finalizing an errata-free manifest when the errata read fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent();
+    const { stores, sealed } = storesFor();
+    stores.loadSealedPublicPredictions = vi.fn(async () => [sealed]);
+    stores.loadFirstPublicationMembership = vi.fn(async () => [
+      {
+        publicPredictionId: sealed.id,
+        incidentKey: sealed.incidentKey,
+        snapshotToken: "ddr-public-original",
+        snapshotGeneration: 2,
+        publishedAt: NOW_SEC - 600,
+      },
+    ]);
+    stores.loadPredictionErrata = vi.fn(async () => {
+      throw new Error("D1 errata read failed");
+    });
+    const db = resolverDb([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      ...healthyDewsPublicationTables(),
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+
+    const result = await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      storeContracts: stores,
+    });
+
+    const payload = readDdrSnapshotPayload(db);
+    expect(payload._meta.degraded).toBe(true);
+    expect(payload._meta.degradedReason).toContain("errata-overlay-unavailable:");
+    expect(payload._meta.degradedReason).toContain("D1 errata read failed");
+    expect(stores.writePublicationManifest).not.toHaveBeenCalled();
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({
+      outputPublishedAt: null,
+      reason: "ddr-errata-overlay-unavailable",
+      quality: { reason: "ddr-errata-overlay-unavailable" },
+    });
+    expect(confirmedCronOutputAt(result, metadata, NOW_SEC)).toBeNull();
   });
 
   it("uses durable pending promotion outcome time for late confirmation locks", async () => {

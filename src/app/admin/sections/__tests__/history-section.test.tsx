@@ -124,6 +124,41 @@ describe("HistorySection", () => {
     expect(screen.getByText(/Pages transition correlation is Unknown/i)).toBeTruthy();
   });
 
+  it("ends retained history durations at the retained response clock and marks the newest row last known", () => {
+    const props = baseProps();
+    render(
+      <HistorySection
+        {...props}
+        nowSeconds={transition.at + 9_000}
+        historyObservedAt={transition.at + 3_600}
+        historyEvidence={{
+          source: "history",
+          state: "stale",
+          completeness: "complete",
+          message: "History refresh failed; showing retained history data. refresh failed",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Retained history evidence")).toBeTruthy();
+    expect(screen.getByText(/Last known state: 1h/)).toBeTruthy();
+    expect(screen.queryByText(/Current state/)).toBeNull();
+    expect(screen.getByText(/Held for 1h/)).toBeTruthy();
+    expect(screen.queryByText(/Held for 2h 30m/)).toBeNull();
+    // Only durations end at the retained clock; "ago" labels stay relative to
+    // the live clock so a stale read does not re-base reader-facing times.
+    expect(screen.getAllByText(/2h 30m ago/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/1h ago/)).toHaveLength(0);
+  });
+
+  it("keeps the current-state label when the history read is not retained", () => {
+    const props = baseProps();
+    render(<HistorySection {...props} nowSeconds={transition.at + 3_600} />);
+
+    expect(screen.getByText(/Current state: 1h/)).toBeTruthy();
+    expect(screen.queryByText(/Last known state/)).toBeNull();
+  });
+
   it("labels a failed history query as partial fallback and avoids negative deployment conclusions", () => {
     const props = baseProps();
     render(
@@ -149,6 +184,30 @@ describe("HistorySection", () => {
     expect(screen.getByText("Unavailable")).toBeTruthy();
     expect(screen.getByText(/correlation is Unknown because only recent status fallback/i)).toBeTruthy();
     expect(screen.queryByText(/No degradation transition appears/i)).toBeNull();
+  });
+
+  it("does not name the selected window for a fallback recurrence summary", () => {
+    const props = baseProps();
+    render(
+      <HistorySection
+        {...props}
+        historyWindow="6h"
+        allTransitions={[
+          { ...transition, id: 1, at: props.nowSeconds - 10 * 86_400 },
+          { ...transition, id: 2, at: props.nowSeconds - 3 * 86_400 },
+        ]}
+        transitionsLast24h={2}
+        historyEvidence={{
+          source: "status-fallback",
+          state: "error",
+          completeness: "unknown",
+          message: "History query failed; showing recent status transitions only.",
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/Recurring causes in the loaded 6h window/)).toBeNull();
+    expect(screen.getByText(/Recurring causes in the recent status fallback/)).toBeTruthy();
   });
 
   it("labels row-limited history as bounded and keeps negative deployment correlation unknown", () => {

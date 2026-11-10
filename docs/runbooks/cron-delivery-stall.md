@@ -6,6 +6,10 @@
 
 `heavy_scheduled_delivery_stalled` independently checks `schedulerLiveness.heavy`: the fastest lane owned by `worker: "heavy"` in `shared/lib/scheduled-runner-registry.ts`; see the [canonical cron table](../worker-infrastructure.md#cron-scheduling) for its logical cadence, physical aliases and slot identity. Strictly more than 1800 seconds (two missed 15-minute slots) warns; strictly more than 2700 seconds is stale. `heavy_scheduler_liveness_unavailable` means absent, invalid, or unreadable heavy start evidence, not zero age or healthy delivery. Both budgets come from `STATUS_HEAVY_SCHEDULER_LIVENESS_THRESHOLDS` in `shared/lib/status-thresholds.ts`. Healthy public starts cannot clear a heavy delivery failure; both roles contribute to public health and admin availability.
 
+`schedulerLiveness.expectedLanes` covers every slot plan whose 3x cadence fits `CRON_SLOT_EXECUTIONS_RETENTION_SEC` (warn at 2x, stale at 3x; the monthly audit is excluded). The hourly external monitor warns on a degraded expected lane and fails/upserts this incident on any stale or unavailable lane, so a never-delivered daily/4-hourly slot cannot stay silent behind a watch-tier info cause. The top-level `operatorAlerts` field carries the operator-alert receipt (`operatorConfigured`, `pendingSince`, `pendingAgeSec`, 24h budget); the same monitor fails when the channel is unconfigured, pending past budget, unreadable, or a producer stops writing receipts, and warns without opening an incident while the field is absent from a pre-deploy snapshot.
+
+The receipt roster is `freshness`, `digest`, `turnover` and `telegramDelivery` (`OPERATOR_ALERT_RECEIPT_KEYS` in `worker/src/lib/status/operator-alert-health.ts`), under `operator-alert:receipt:<producer>:v1`. Missing or malformed receipts remain unavailable during bootstrap; never seed a healthy row. Turnover starts only after an admitted heavy-Worker evaluation; a skipped upstream publication is not receipt evidence. Observe real writers for every producer before declaring the operator channel operational ([health contract](../status-dashboard.md#synthetic-self-check)).
+
 For platform evidence, provide `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN` (the generic name wins when both are set) in the environment with Cloudflare Analytics read permission for the account. Never print the token or scrape Wrangler OAuth files. Optional `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_WORKER_NAME` select another explicit target. The D1 source uses ordinary Wrangler auth and a read-only SELECT.
 
 ```bash
@@ -21,11 +25,13 @@ The default `--source all` reads both sources; when one is unavailable it names 
 
 Admin `/api/status` raises the ops-only `scheduled_delivery_lag_elevated` warning when at least 10 slots that started in the trailing hour were more than 300 seconds late ([status contract](../status-dashboard.md#cron-health-model)). It never changes public health; treat it as a prompt to collect platform evidence, not as a stall.
 
-For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron-slot-abandonment.md#first-checks) and the daily Worker Memory Monitor artifacts. Scheduled is delivery evidence, **not a complete memory-outcome authority**: its `internalError`/`clientDisconnected` labels can correspond to Adaptive `exceededMemory`. The independent error-filtered Adaptive inventory and exact-second/CPU correlation preserve that distinction; no Scheduled non-success label alone establishes an OOM.
+Since approximately 2026-10-23, `workersInvocationsScheduled` has returned successful empty arrays across scripts/days. An empty dataset does not establish non-delivery: corroborate actual D1 slot starts and Workers Logs, whose retention and sampling also make absence non-proof. The capacity monitor no longer uses this dataset; its CPU source, token permissions, unavailable reasons and `warn > unavailable > ok` precedence are owned by [per-job resource evidence](../worker-and-api-limits.md#per-job-resource-evidence).
+
+For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron-slot-abandonment.md#first-checks) and the daily Worker Memory Monitor artifacts. No Scheduled non-success label alone establishes an OOM; the [OOM first checks](./cron-slot-abandonment.md#first-checks) own the independent Adaptive kill query, correlation requirements and artifact retention.
 
 ## Triage and lost slots
 
-1. Read public health and admin live status. Retain `observedAt`, `lastAnyStartedAt`, `lastFiveMinuteStartedAt`, public lane clocks, `heavy.scheduleKey` / `heavy.lastStartedAt`, each role's age/budgets/status and unavailable reason.
+1. Read public health and admin live status. Retain `observedAt`, `lastAnyStartedAt`, `lastFiveMinuteStartedAt`, public lane clocks, `heavy.scheduleKey` / `heavy.lastStartedAt`, every `expectedLanes` entry with its age/budget/status/unavailable reason, and `operatorAlerts`.
    `lastAnyStartedAt` is permanent investigative context subject to clock validity, never the public short-cadence or heavy freshness clock. An unrelated lane start cannot conceal delivery stalls; a malformed/future overall clock makes evidence unavailable.
 2. Use approved read-only D1 SELECT access: `SELECT slot_key, MAX(started_at) AS last_start FROM cron_slot_executions GROUP BY slot_key`. Use actual `started_at`, not scheduled time, leases, heartbeats or child completion.
 3. Correlate platform scheduled invocations, deployed Worker version, recent rollout and Cloudflare incident evidence. Separate delivery absence from a delivered slot whose child crashed or held publication.
@@ -33,9 +39,9 @@ For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron
 
 ## Recovery
 
-No automatic schedule PUT/reset is permitted. Do not reset leases, checkpoints or cron rows. The external GitHub monitor declares `43 * * * *` UTC (hourly) plus manual dispatch, but delivery is best-effort (30-day review: median gap ~4.7 h), not a ten-minute external SLA. It upserts one open incident issue before failing on stall/unavailability or transport/schema failure.
+No automatic schedule PUT/reset is permitted. Do not reset leases, checkpoints or cron rows. The external GitHub monitor declares `43 * * * *` UTC (hourly) plus manual dispatch, but delivery is best-effort (30-day review: median gap ~4.7 h), not a ten-minute external SLA. It upserts one open incident issue before failing on stall/unavailability or transport/schema failure, and closes that issue on the next passing run.
 
-A platform delivery stall may recover without a configuration change. Keep observing platform events and successive live requests. Close the incident only after actual starts resume for the affected role and affected producer/publication evidence is current; other independent blockers may remain. An operator-directed schedule change requires a reviewed Cloudflare/deployment procedure and preserved before/after evidence, never an in-dashboard repair button.
+A platform delivery stall may recover without a configuration change. Keep observing platform events and successive live requests. The passing run closes the incident only after actual starts resume for the affected role and the lane/receipt evidence is current; other independent blockers may remain. An operator-directed schedule change requires a reviewed Cloudflare/deployment procedure and preserved before/after evidence, never an in-dashboard repair button.
 
 If the paired deploy is verified but Analytics shows zero heavy-script invocations while public delivery continues, an authorized operator can re-PUT the heavy trigger configuration without redeploying code. Execute from `worker/`:
 

@@ -409,7 +409,7 @@ export function formatPartialEvidenceHeadline(description: PartialEvidenceDescri
   return `${primary!.label}${rest.length > 0 ? ` +${rest.length}` : ""}`;
 }
 
-/** A priced unknown's cause and the score it stands in with: "not yet researched · assumed 50/100". */
+/** A priced unknown's cause and the score it stands in with: "unresolved · assumed 50/100". */
 export function formatPricedUnknown(priced: V9PricedUnknown): string {
   return `${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]} · assumed ${priced.score.toFixed(0)}/100`;
 }
@@ -433,9 +433,8 @@ export interface PartialEvidenceCard {
 
 /**
  * One rule for every partial card: an unavailable pillar of a rated card
- * stands in at an assumed score (issuer non-disclosure C, or not yet
- * researched U); only A/B exclusions leave evidence out, and only A is a
- * data-pipeline unavailability.
+ * stands in at an assumed score (issuer non-disclosure C, or unresolved U); only A/B
+ * exclusions leave evidence out, and only A is a data-pipeline unavailability.
  */
 export function describePartialEvidence(card: PartialEvidenceCard): PartialEvidenceDescription | null {
   const partial = card.partialEvidence;
@@ -462,7 +461,7 @@ export function describePartialEvidence(card: PartialEvidenceCard): PartialEvide
       gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} ${SAFETY_SCORE_GAP_CAUSE_LABELS[priced.cause]}`, note: `assumed ${assumed}` });
       sentences.push(priced.cause === "C"
         ? `The issuer does not disclose ${PILLAR_LABELS[key]} evidence; the score assumes ${assumed}/100 in its place.`
-        : `${PILLAR_LABELS[key]} is not yet researched; the score assumes ${assumed}/100 until it is.`);
+        : `${PILLAR_LABELS[key]} is unresolved; the score assumes ${assumed}/100 until it is.`);
     } else if (card.ratingStatus === "rated") {
       gaps.push({ label: `${PILLAR_SHORT_LABELS[key]} unknown`, note: null });
       sentences.push(`${PILLAR_LABELS[key]} has no usable evidence; the score uses an assumed value in its place.`);

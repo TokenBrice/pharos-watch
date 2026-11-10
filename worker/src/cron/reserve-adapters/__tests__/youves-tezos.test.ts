@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateAdapterSnapshotAdmission, expectWarningEffect, installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { adaptYouvesTezosState, type YouvesTezosState } from "../youves-tezos";
+import { fetchTzktBigmapKeys } from "../tzkt";
 
 const TZKT_ORIGIN = "https://api.tzkt.io";
 const LEVEL = 14873956;
@@ -275,5 +276,37 @@ describe("fetchYouvesTezosReserves", () => {
       },
       nowSec: HEAD_TIME_SEC,
     })).rejects.toThrow("503");
+  });
+});
+
+describe("TzKT complete bigmap census", () => {
+  const valid = { key: "vault", value: { balance: "100" } };
+  const firstUrl = "https://api.tzkt.io/v1/bigmaps/42/keys?active=true&level=100&limit=10000&offset=0";
+  const nextUrl = firstUrl.replace("offset=0", "offset=10000");
+
+  for (const size of [2, 10_000]) {
+    it.each([null, 7, "bad", {}, { key: "missing-value" }, { value: {} }, { key: "array-value", value: [] }])(
+      `rejects malformed member %j on a ${size === 2 ? "final" : "nonfinal"} page`, async (malformed) => {
+        const page: unknown[] = Array.from({ length: size }, () => valid);
+        page[1] = malformed;
+        const network = installAdapterNetwork({ json: { [firstUrl]: page } });
+        await expect(fetchTzktBigmapKeys("https://api.tzkt.io", 42, 100, new AbortController().signal))
+          .rejects.toThrow(/bigmap 42 row 1/);
+        expect(network.requests).toHaveLength(1);
+      },
+    );
+  }
+  it("preserves valid pinned pagination", async () => {
+    const network = installAdapterNetwork({ json: {
+      [firstUrl]: Array.from({ length: 10_000 }, () => valid), [nextUrl]: [valid],
+    } });
+    const result = await fetchTzktBigmapKeys("https://api.tzkt.io", 42, 100, new AbortController().signal);
+    expect(result).toHaveLength(10_001);
+    expect(network.requests.map((request) => request.url)).toEqual([firstUrl, nextUrl]);
+  });
+  it("reports absolute row indices on later pages", async () => {
+    installAdapterNetwork({ json: { [firstUrl]: Array.from({ length: 10_000 }, () => valid), [nextUrl]: [null] } });
+    await expect(fetchTzktBigmapKeys("https://api.tzkt.io", 42, 100, new AbortController().signal))
+      .rejects.toThrow(/bigmap 42 row 10000/);
   });
 });

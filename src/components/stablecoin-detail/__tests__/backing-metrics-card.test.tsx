@@ -2,8 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
 import {
   BackingMetricsCard,
   buildBackingMetricsView,
@@ -16,6 +16,9 @@ import { RAIL_METRIC_MAX_SUB_METRICS } from "../rail-card";
 import { buildMechanismBackingView, type MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import * as overlayLookup from "@/lib/mechanism-overlay.server";
+
+// The checked-in overlay file is ~2 MB and Zod-parsed at module load; this suite supplies its own.
+vi.mock("@/lib/mechanism-overlay.server", () => ({ getMechanismReviewOverlay: vi.fn() }));
 
 const reviewed: MechanismCollateralizationView = {
   ratio: 2.455,
@@ -142,11 +145,27 @@ describe("buildBackingMetricsView", () => {
     expect(view?.headline.basis.trim()).not.toBe("");
   });
 
+  it("never claims a supply denominator for a reviewed ratio or backstop", () => {
+    const debtBasis: MechanismCollateralizationView = {
+      ...reviewed,
+      ratio: 1.650849,
+      liquidationCapacityRatio: 0.919,
+    };
+    const view = build({ collateralization: debtBasis })!;
+    expect(view.headline.basis).not.toMatch(/supply/i);
+    expect(JSON.stringify(view)).not.toMatch(/vs supply|share of supply/i);
+
+    const { container } = render(<BackingMetricsCard view={view} />);
+    expect(container.textContent).not.toMatch(/vs supply|share of supply/i);
+    expect(container.textContent).toContain("as reviewed");
+  });
+
   it("folds the reviewed ratio and protocol ratios into the details when the live ratio leads", () => {
     const view = build({ liveRatio: 1.183, collateralization: { ...reviewed, ratio: 1.042 }, backing: factsOnly });
     expect(view?.headline.value).toBe("118.3%");
     const folded = view?.details.map((row) => row.value) ?? [];
     expect(folded).toContain("104.2%");
+    expect(view?.details.map((row) => row.label)).toContain("Reviewed collateral ratio");
     expect(view?.details.every((row) => row.label.trim() !== "")).toBe(true);
   });
 
@@ -266,6 +285,8 @@ describe("buildBackingMetricsView", () => {
     const view = build({ collateralization: reviewed, liveLiquidationCapacityRatio: 0.704, liveAtSec: 1785168827 });
     expect(view?.headline.value).toBe("245.5%");
     expect(view?.subMetrics[0]?.value).toBe("70.4%");
+    expect(view?.subMetrics[0]?.label).toBe("Liquidation backstop");
+    expect(view?.subMetrics[0]?.hint).toBe("Capital committed to absorb liquidations.");
     expect(view?.freshness.live).not.toBeNull();
     expect(view?.freshness.reviewedAt).toBe(reviewed.reviewedAt);
   });
@@ -283,8 +304,9 @@ describe("buildBackingMetricsView", () => {
   });
 
   it("keeps at most two sub-metrics and loses no reviewed metric for every archetype", () => {
-    const overlays = mechanismReviewOverlays.overlays as unknown as { metrics: Record<string, unknown> }[];
-    const metricKeys = [...new Set(overlays.flatMap((overlay) => Object.keys(overlay.metrics)))];
+    // Metric identities come from the field map, not the checked-in overlay file.
+    const metricKeys = [...new Set(MECHANISM_ARCHETYPE_VALUES.flatMap((archetype) => V9_MECHANISM_FIELDS[archetype].metrics))];
+    expect(metricKeys.length).toBeGreaterThan(0);
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
       vi.spyOn(overlayLookup, "getMechanismReviewOverlay").mockReturnValue({
         assetId: "controlled",

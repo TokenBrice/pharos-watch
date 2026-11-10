@@ -233,6 +233,27 @@
     },
     {
       "chain": "base",
+      "address": "0xcb17c9db87b595717c857a08468793f5bab6445f",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-11-06",
+      "sources": [
+        {
+          "label": "Coinbase official Base cbLTC deployment 0xcb17C9Db87B595717C857a08468793f5bAb6445F; exact non-BTC/ETH L1 custody receipt",
+          "url": "https://www.coinbase.com/campaigns/wrapped-assets"
+        },
+        {
+          "label": "Coinbase cbLTC is backed 1:1 by LTC held by Coinbase; source data refreshed November 6, 2026",
+          "url": "https://www.coinbase.com/cbltc/proof-of-reserves"
+        },
+        {
+          "label": "Morpho idToMarketParams pinned at Base block 52630636, hash 0xd29b0a40afb66cf6503e9627bbb4546f867c64172fb6f01822879425dc73b8a5, 2026-10-15T07:50:19Z: market 0x9125d0fa03c3137166df68bcc72283477830de2a4a5536512374c573ad4583c3 collateral is this cbLTC token; identity only, not renewed allocations",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        }
+      ],
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-resv"
+    },
+    {
+      "chain": "base",
       "address": "0xcb585250f852c6c6bf90434ab21a00f02833a4af",
       "class": "major-alt-l1",
       "reviewedAt": "2026-10-14",
@@ -281,6 +302,27 @@
         }
       ],
       "reviewer": "Pharos v10.19 owner-approved collateral review (individual reviewer not recorded)"
+    },
+    {
+      "chain": "base",
+      "address": "0xcbd06e5a2b0c65597161de254aa074e489deb510",
+      "class": "major-alt-l1",
+      "reviewedAt": "2026-11-06",
+      "sources": [
+        {
+          "label": "Coinbase official Base cbDOGE deployment 0xcbD06E5A2B0C65597161de254AA074E489dEb510; exact non-BTC/ETH L1 custody receipt",
+          "url": "https://www.coinbase.com/campaigns/wrapped-assets"
+        },
+        {
+          "label": "Coinbase cbDOGE is backed 1:1 by DOGE held by Coinbase; source data refreshed November 4, 2026",
+          "url": "https://www.coinbase.com/cbdoge/proof-of-reserves"
+        },
+        {
+          "label": "Morpho idToMarketParams pinned at Base block 52630636, hash 0xd29b0a40afb66cf6503e9627bbb4546f867c64172fb6f01822879425dc73b8a5, 2026-10-15T07:50:19Z: market 0x73527ddd796e6d4f48387adaae36f6f3d49d606d7f2a15eb0c931416a58875d8 collateral is this cbDOGE token; identity only, not renewed allocations",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        }
+      ],
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-resv"
     },
     {
       "chain": "base",

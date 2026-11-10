@@ -3,7 +3,7 @@ import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-executi
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9/extension-shock";
@@ -593,5 +593,93 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     shock.assets[0]!.mechanismRiskReview = { archetype: "cdp", collateralizationRatio: 1.5, liquidationCapacityRatio: 0.25, metricApplicability: { collateralizationRatio: { state: "measured" }, liquidationCapacityRatio: { state: "measured" } }, collateralizationParameters: component, liquidationMechanics: component, backstop: component, branchIsolation: component, shutdownAndBadDebt: component, structuralRedemption: component };
     shock.registryFingerprint = fixedShock.registryFingerprint;
     expect(compileSafetyScoreV9FactSetFromFixedInput(fixedShock, shock).assets[0]!.evidence.find((evidence) => evidence.evidenceId.includes(":cdp-shock-coverage:"))).toMatchObject({ freshness: { state: "current", maxAgeSec: 259_200 } });
+  });
+});
+
+function compileExpiredReserveHistory(publishedBy: "issuer" | "unknown") {
+  const fixed = exactFixedInput({ omitLiveReserve: true });
+  const overlay = extension({
+    clockSec: fixed.clockSec,
+    registryFingerprint: fixed.registryFingerprint,
+  });
+  const asset = overlay.assets[0]!;
+  asset.researchEvidence = [
+    {
+      evidenceKey: "expired-reserve-report",
+      sourceId: "fixture.expired-reserve-report",
+      observedAtSec: fixed.clockSec - 1_000,
+      publishedAtSec: fixed.clockSec - 900,
+      publishedBy,
+      url: "https://example.com/expired-reserve-report.pdf",
+      contentSha256: "e".repeat(64),
+      confidence: "verified",
+      maxAgeSec: 500,
+    },
+  ];
+  asset.componentEvidence = [
+    {
+      componentKey: "reserve-composition-history",
+      evidenceKeys: ["expired-reserve-report"],
+    },
+  ];
+  return compileSafetyScoreV9FactSetFromFixedInput(fixed, overlay);
+}
+
+describe("Safety Score v10.01 current cause versus historical publisher", () => {
+  it.each(["issuer", "unknown"] as const)("retains %s publication history without certifying current nondisclosure", (publisher) => {
+    const asset = compileExpiredReserveHistory(publisher).assets[0]!;
+    const gap = asset.gaps.find((row) => row.gapId === "alpha:gap:reserve-composition")!;
+    expect(gap.causeProof).toMatchObject({ cause: "U", evidenceRefIds: [] });
+    expect(gap.evidenceHistory).toEqual({ publishedBy: publisher, evidenceRefIds: ["alpha:research:expired-reserve-report"] });
+    expect(asset.evidence.find((row) => row.evidenceId === gap.evidenceHistory!.evidenceRefIds[0])).toMatchObject({
+      observedAtSec: 9_000, publishedAtSec: 9_100, freshness: { state: "stale" },
+    });
+    expect(asset.reserveExposures).toEqual([]);
+    expect(asset.reserveResiduals).toMatchObject([{ weight: 1, status: { gapIds: [gap.gapId] } }]);
+  });
+});
+
+describe("Safety Score V9 evidence-only mechanism curation", () => {
+  it("prices reviewed issuer nondisclosure below an unresearched applicable mechanism", () => {
+    // The same exact-publication input differs only in the reviewed cause:
+    // issuer nondisclosure is C, while withdrawing the review leaves U.
+    // AM1 prices the unknown subfactors, not the known reserve book.
+    const clockSec = Date.parse("2026-08-09T00:00:00Z") / 1_000;
+    const fixed = exactFixedInput({ assetId: "uusd-anything-labs", clockSec });
+    const metaById = pinnedUusdMeta();
+
+    const curatedExtension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+    const curatedCompiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, curatedExtension);
+
+    const unreviewedExtension = structuredClone(curatedExtension);
+    unreviewedExtension.assets[0]!.mechanismRiskReview = null;
+    const unreviewedCompiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, unreviewedExtension);
+
+    const curated = evaluateV9FactSet(curatedCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    const unreviewed = evaluateV9FactSet(unreviewedCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+
+    expect(curated.trace.finalScore!).toBeLessThan(unreviewed.trace.finalScore!);
+    expect(curated.trace.finalGrade).not.toBe("NR");
+    expect(unreviewed.trace.finalGrade).not.toBe("NR");
+    for (const [result, cause] of [[curated, "C"], [unreviewed, "U"]] as const) {
+      const mechanismRows = result.backing.contributions.filter(row => row.source === "mechanism");
+      expect(mechanismRows.length).toBeGreaterThan(0);
+      for (const row of mechanismRows) expect(row).toMatchObject({
+        score: unknownQuality("backing", cause), cause, scoringDisposition: "bounded-uncertainty",
+      });
+    }
+    expect(curated.backing.contributions.filter(row => row.source !== "mechanism"))
+      .toEqual(unreviewed.backing.contributions.filter(row => row.source !== "mechanism"));
+
+    // The reviewed and withdrawn evidence states must genuinely differ.
+    expect(curatedCompiled.assets[0]!.mechanismRiskReview.review).not.toBeNull();
+    expect(unreviewedCompiled.assets[0]!.mechanismRiskReview.review).toBeNull();
+    expect(curatedCompiled.assets[0]!.mechanismRiskReview.status.observationState).toBe("bounded-unknown");
+    expect(unreviewedCompiled.assets[0]!.mechanismRiskReview.status.observationState).toBe("missing");
+    expect(
+      curatedCompiled.assets[0]!.gaps.some(
+        (gap) => gap.responsibility === "issuer-undisclosed" && "componentKey" in gap.path && gap.path.componentKey.startsWith("mechanism-review:"),
+      ),
+    ).toBe(true);
   });
 });

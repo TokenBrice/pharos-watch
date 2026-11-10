@@ -34,6 +34,8 @@ describe("public freshness clock skew", () => {
         "Cache-Control": "no-store",
         "X-Data-Age": "0",
         "X-Data-Updated-At": String(updatedAt),
+        "X-Data-Freshness": "degraded",
+        "X-Data-Freshness-Reason": "future-timestamp",
         Warning: `199 - "Response timestamp is ${API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC + 1}s in the future"`,
       });
     } finally {
@@ -48,6 +50,27 @@ describe("public freshness clock skew", () => {
     try {
       expect(buildFreshnessMeta(updatedAt, 60, "test-generic")).toMatchObject({ ageSeconds: 0, status: "fresh" });
       expect(addFreshnessHeaders({}, updatedAt, 60)).toEqual({ "X-Data-Age": "0", "X-Data-Updated-At": String(updatedAt) });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("keeps a caller-supplied 110 verdict instead of relabelling it as stale", () => {
+    const nowSec = 1_800_000_000;
+    const warning = '110 - "Response is degraded (2500s old, max 1800s)"; safety-score dependency publication held (600s old)';
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    try {
+      expect(addFreshnessHeaders(
+        { Warning: warning, "Cache-Control": "public, max-age=60" },
+        nowSec - 2500,
+        1800,
+        { freshBudgetSec: 1800 },
+      )).toEqual({
+        Warning: warning,
+        "Cache-Control": "no-store",
+        "X-Data-Age": "2500",
+        "X-Data-Updated-At": String(nowSec - 2500),
+      });
     } finally {
       nowSpy.mockRestore();
     }

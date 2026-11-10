@@ -78,7 +78,7 @@ interface PoolEvaluation {
   unpriced: boolean;
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
+function asRecordOrArray(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
 }
 
@@ -88,7 +88,7 @@ function parseAddress(value: unknown): string | null {
 
 function parseAccount(value: unknown): TzktAccount | null {
   if (typeof value === "string" && value.length > 0) return { address: value };
-  const row = asRecord(value);
+  const row = asRecordOrArray(value);
   if (!row) return null;
   const address = parseAddress(row.address);
   if (!address) return null;
@@ -116,52 +116,36 @@ function knownMetadataForToken(tokenAddress: string, tokenId: string): { symbol:
   return KNOWN_TEZOS_TOKEN_METADATA[`${tokenAddress}:${tokenId}`] ?? null;
 }
 
-function metadataForToken(
-  tokenAddress: string,
-  tokenId: string,
-  symbol: string | null,
-  decimals: number | null,
-): {
-  symbol: string | null;
-  decimals: number | null;
-} {
-  const known = knownMetadataForToken(tokenAddress, tokenId);
-  return {
-    symbol: known?.symbol ?? symbol,
-    decimals: known?.decimals ?? decimals,
-  };
-}
-
 function parseTokenBalance(value: unknown): ParsedTokenBalance | null {
-  const row = asRecord(value);
+  const row = asRecordOrArray(value);
   if (!row) return null;
   const account = parseAccount(row.account);
   const balance = parsePositiveInteger(row.balance);
-  const token = asRecord(row.token);
-  const selectedContract = asRecord(row["token.contract"]);
-  const contract = asRecord(token?.contract ?? selectedContract);
+  const token = asRecordOrArray(row.token);
+  const selectedContract = asRecordOrArray(row["token.contract"]);
+  const contract = asRecordOrArray(token?.contract ?? selectedContract);
   const tokenAddress = parseAddress(contract?.address ?? row["token.contract"]);
   const tokenIdValue = token?.tokenId ?? row["token.tokenId"];
   const tokenId = typeof tokenIdValue === "string" || typeof tokenIdValue === "number" ? String(tokenIdValue) : null;
-  const metadata = asRecord(token?.metadata ?? row["token.metadata"]);
+  const metadata = asRecordOrArray(token?.metadata ?? row["token.metadata"]);
   const rawSymbol = metadata?.symbol;
   const symbol = typeof rawSymbol === "string" && rawSymbol.trim() ? rawSymbol.trim() : null;
   const decimals = parseDecimals(metadata?.decimals);
   if (!account || !balance || !tokenAddress || tokenId == null) return null;
-  const resolvedMetadata = metadataForToken(tokenAddress, tokenId, symbol, decimals);
+  const known = knownMetadataForToken(tokenAddress, tokenId);
   return {
     account,
     tokenAddress,
     tokenId,
     balance,
-    symbol: resolvedMetadata.symbol,
-    decimals: resolvedMetadata.decimals,
+    symbol: known?.symbol ?? symbol,
+    decimals: known?.decimals ?? decimals,
     raw: value,
   };
 }
 
 function parseHolder(value: unknown): { account: TzktAccount; balance: string } | null {
-  const row = asRecord(value);
+  const row = asRecordOrArray(value);
   if (!row) return null;
   const account = parseAccount(row.account);
   const balance = parsePositiveInteger(row.balance);

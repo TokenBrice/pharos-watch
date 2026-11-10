@@ -626,15 +626,20 @@ export async function pruneDexMeasuredExecutionGenerations(
     db,
     signal,
     statements: {
+      // The ledger key leads with `surface`; naming it lets each join seek
+      // instead of scanning the whole ledger per batch (~30k rows, 2026-11-03).
       quotes: {
         sql: `DELETE FROM dex_measured_execution_quotes
        WHERE rowid IN (
          SELECT row.rowid FROM dex_measured_execution_quotes row
-         JOIN surface_publication_generations generation ON generation.generation_id = row.generation_id
+         JOIN surface_publication_generations generation ON generation.surface IN (?, ?)
+           AND generation.generation_id = row.generation_id
          WHERE row.generation_id IN (${retiredGenerationCandidates})
          ORDER BY generation.started_at ASC, row.generation_id ASC, row.rowid ASC LIMIT ?
        )`,
         bindsForLimit: (limit) => [
+          DEX_MEASURED_QUOTE_SURFACE,
+          DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           cutoff,
@@ -649,13 +654,16 @@ export async function pruneDexMeasuredExecutionGenerations(
         sql: `DELETE FROM dex_measured_execution_targets
        WHERE rowid IN (
          SELECT row.rowid FROM dex_measured_execution_targets row
-         JOIN surface_publication_generations generation ON generation.generation_id = row.generation_id
+         JOIN surface_publication_generations generation ON generation.surface IN (?, ?)
+           AND generation.generation_id = row.generation_id
          WHERE row.generation_id IN (${retiredGenerationCandidates})
            AND NOT EXISTS (SELECT 1 FROM dex_measured_execution_quotes reference
              WHERE reference.target_generation_id = row.generation_id)
          ORDER BY generation.started_at ASC, row.generation_id ASC, row.rowid ASC LIMIT ?
        )`,
         bindsForLimit: (limit) => [
+          DEX_MEASURED_TARGET_SURFACE,
+          DEX_SHADOW_MEASURED_TARGET_SURFACE,
           DEX_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           cutoff,

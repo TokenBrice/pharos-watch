@@ -1,5 +1,6 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
 import { decodeAbiParameters } from "viem/utils";
 
 import {
@@ -8,9 +9,18 @@ import {
   type EvmBlockHeader,
   type EvmMulticall3Result,
   type EvmRpcOptions,
+  type RecentFinalizedRpcPin,
 } from "../../lib/evm-rpc";
 
 const CURVE_STABLESWAP_FEE_DENOMINATOR = 10n ** 10n;
+/** Keeps a pin valid through one in-flight request past the capture deadline. */
+const RECENT_PIN_EXPIRY_MARGIN_SEC = 60;
+/**
+ * A finalized capture may only replace a near-head one: BSC/Monad finalize
+ * within seconds, while zkSync's finalized head trails by hours and must keep
+ * the latest-head capture.
+ */
+const RECENT_FINALIZED_CAPTURE_MAX_LAG_SEC = 300;
 export type PinnedCaptureCheck<TFailure> = { ok: true } | { ok: false; reason?: TFailure };
 
 export type PinnedCaptureResult<TResult, TFailure> =
@@ -20,6 +30,66 @@ export type PinnedCaptureResult<TResult, TFailure> =
 interface PinnedBlockCaptureContext {
   blockNumber: number;
   header: EvmBlockHeader;
+  /** Base options plus `recentStatePin` when this capture reads recent-only Dwellir state. */
+  rpcOptions: EvmRpcOptions;
+}
+
+function hasRecentOnlyDwellirRoute(chain: string, rpcOptions: EvmRpcOptions): boolean {
+  const endpoints = rpcOptions.chainRpcs?.get(chain)?.endpoints ?? [];
+  return endpoints.some((endpoint) =>
+    endpoint.operator === "dwellir" && !endpoint.routingDisabled &&
+    endpoint.stateHistory === "recent" && !endpoint.finalizedTagUnsupported);
+}
+
+/**
+ * Recent-only Dwellir state serves the authenticated finalized block, not an
+ * arbitrary numbered head. Return a pin only when that header is fresh now and
+ * cannot be future-dated; otherwise the caller keeps today's latest-head read.
+ */
+async function resolveRecentStateCapture(input: {
+  chain: string;
+  rpcOptions: EvmRpcOptions;
+  fetchBlockHeader: typeof fetchEvmBlockHeader;
+  nowSec: number;
+  maxAgeSec: number;
+}): Promise<{ header: EvmBlockHeader; pin: RecentFinalizedRpcPin } | null> {
+  // Callers that exclude Dwellir gain nothing from a finalized capture.
+  if (input.rpcOptions.excludeSupplementalRpc || !hasRecentOnlyDwellirRoute(input.chain, input.rpcOptions)) return null;
+  const finalized = await input.fetchBlockHeader(input.chain, "finalized", input.rpcOptions);
+  if (!finalized) return null;
+  const nowMs = Date.now();
+  const observedAtSec = Math.floor(nowMs / 1000);
+  if (!isFreshEvmCaptureHeader(finalized, input.nowSec, input.maxAgeSec)) return null;
+  if (input.nowSec - finalized.timestamp > RECENT_FINALIZED_CAPTURE_MAX_LAG_SEC) return null;
+  // `validRecentPin` re-checks this at every request, so a future timestamp is
+  // never a usable observation clock.
+  if (finalized.timestamp > observedAtSec) return null;
+  const { deadlineMs, timeoutMs } = input.rpcOptions;
+  const deadlineSec = deadlineMs == null || !Number.isFinite(deadlineMs)
+    ? 0
+    : Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
+  const inFlightSec = timeoutMs == null || !Number.isFinite(timeoutMs)
+    ? 0
+    : Math.max(0, Math.ceil(timeoutMs / 1000));
+  // The header itself stays bounded by the caller's freshness window. The pin
+  // window only keeps the already-authenticated block admissible for this
+  // capture's remaining state reads, so it must outlast them rather than
+  // expire at the first slow Multicall batch. Callers without a deadline get
+  // the measured-freshness window: an expired pin would fail reads outright,
+  // while a long-lived one only lets a pruned recent node refuse and fail over.
+  const pinMaxAgeSec = observedAtSec - finalized.timestamp + Math.max(
+    input.maxAgeSec, DEX_MEASURED_FRESHNESS_MAX_SEC,
+    deadlineSec + inFlightSec + RECENT_PIN_EXPIRY_MARGIN_SEC,
+  );
+  if (!Number.isSafeInteger(pinMaxAgeSec)) return null;
+  const pin: RecentFinalizedRpcPin = {
+    chainId: input.chain,
+    header: finalized,
+    finalized,
+    observedAtSec,
+    maxAgeSec: pinMaxAgeSec,
+  };
+  return { header: finalized, pin };
 }
 
 export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
@@ -45,24 +115,48 @@ export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
   }
   const fetchBlockNumber = input.fetchBlockNumber ?? fetchEvmBlockNumber;
   const fetchBlockHeader = input.fetchBlockHeader ?? fetchEvmBlockHeader;
-  const blockNumber = await fetchBlockNumber(input.chain, input.rpcOptions);
-  if (blockNumber == null) {
-    await input.onFailure();
-    return;
-  }
-  const header = await fetchBlockHeader(input.chain, blockNumber, input.rpcOptions);
-  if (
-    !header ||
-    header.number !== blockNumber
-  ) {
-    await input.onFailure();
-    return;
+  const recentCapture = await resolveRecentStateCapture({
+    chain: input.chain,
+    rpcOptions: input.rpcOptions,
+    fetchBlockHeader,
+    nowSec: input.nowSec,
+    maxAgeSec: input.maxAgeSec,
+  });
+  let blockNumber: number;
+  let header: EvmBlockHeader;
+  let captureRpcOptions = input.rpcOptions;
+  if (recentCapture) {
+    blockNumber = recentCapture.header.number;
+    header = recentCapture.header;
+    // The finalized head is an observed head, so retained-window endpoints can
+    // also serve this block's closing header read.
+    captureRpcOptions = {
+      ...input.rpcOptions,
+      recentStatePin: recentCapture.pin,
+      observedHeadBlock: recentCapture.header.number,
+    };
+  } else {
+    const latestBlockNumber = await fetchBlockNumber(input.chain, input.rpcOptions);
+    if (latestBlockNumber == null) {
+      await input.onFailure();
+      return;
+    }
+    const latestHeader = await fetchBlockHeader(input.chain, latestBlockNumber, input.rpcOptions);
+    if (
+      !latestHeader ||
+      latestHeader.number !== latestBlockNumber
+    ) {
+      await input.onFailure();
+      return;
+    }
+    blockNumber = latestBlockNumber;
+    header = latestHeader;
   }
   if (!isFreshEvmCaptureHeader(header, input.nowSec, input.maxAgeSec)) {
     await input.onFailure(input.freshnessFailureReason);
     return;
   }
-  const context = { blockNumber, header };
+  const context = { blockNumber, header, rpcOptions: captureRpcOptions };
   const verified = await input.verifyDeployment(context);
   if (!verified.ok) {
     await input.onFailure(verified.reason);
@@ -73,7 +167,7 @@ export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
     await input.onFailure(captured.reason);
     return;
   }
-  const confirmedHeader = await fetchBlockHeader(input.chain, blockNumber, input.rpcOptions);
+  const confirmedHeader = await fetchBlockHeader(input.chain, blockNumber, captureRpcOptions);
   if (
     !confirmedHeader ||
     confirmedHeader.number !== header.number ||

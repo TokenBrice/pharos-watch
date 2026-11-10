@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
+import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { MintBurnFlowsResponse, PegSummaryCoin, PegSummaryResponse } from "@shared/types";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
@@ -12,7 +14,8 @@ import {
   makeBuildStablecoinDetailViewModelParams,
   makeReadyDetailParams,
 } from "./fixtures/stablecoin-detail-view-model";
-import { buildDetailMarketSnapshot, buildDetailPegPriceSnapshot, buildDetailStaleQueries } from "../stablecoin-detail-query-view-model";
+import { buildDetailMarketSnapshot, buildDetailPegPriceSnapshot, buildDetailStaleQueries, buildDetailFeatureSnapshot, resolveDetailGradeRead } from "../stablecoin-detail-query-view-model";
+import type { StablecoinDetailStaleQuery } from "../stablecoin-detail-view-model-types";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { deriveDataHealth, isPublicWarning } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
@@ -295,6 +298,34 @@ describe("stablecoin detail view-model builder", () => {
     }
   });
 
+  it("ages an unverified reserve feed from its fetch clock instead of calling it unpopulated", () => {
+    const now = 1_790_000_000_000;
+    const nowSec = now / 1000;
+    const fetchedAt = nowSec - 60;
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: { reserves: {
+      enabled: true,
+      dataUpdatedAt: now,
+      live: {
+        mode: "live", reserves: [{ name: "Bank deposits", pct: 100, risk: "medium" }], estimated: false, liveAt: fetchedAt,
+        sync: {
+          enabled: true, status: "ok", stale: false, bootstrap: false,
+          freshness: {
+            stale: false, staleReasons: [], assessedAt: fetchedAt, fetchedAt, attemptId: "cngn-attempt",
+            fetchAgeSec: 0, fetchBudgetSec: 48 * 3600, freshnessMode: "unverified",
+            sourceFreshnessInvalid: false, sourceTimestamp: null, sourceAgeSec: null,
+            sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
+          },
+        },
+      },
+    } } });
+    const query = buildDetailStaleQueries(params.queries, params.supplemental, "il-compliant-naira")
+      .find((entry) => entry.label === "Live Reserves")!;
+    expect(query).toMatchObject({ hasData: true, dataUpdatedAt: fetchedAt * 1000, meta: { updatedAt: fetchedAt } });
+    const health = deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now);
+    expect(health.state).toBe("fresh");
+    expect(isPublicWarning(health)).toBe(false);
+  });
+
   it("selects the first public (12x) reserve expiry, not the first 1x budget, and warns on it", () => {
     const now = 1_790_000_000_000;
     const nowSec = now / 1000;
@@ -420,6 +451,59 @@ describe("stablecoin detail view-model builder", () => {
       deviationBps: currentDeviationBps,
       pegReferenceUnavailable,
     });
+  });
+
+  it("falls back to the admitted summary's archived provenance when the peg read has no row", () => {
+    const coin = TRACKED_META_BY_ID.get("msusd-main-street");
+    const frozenSnapshot = FROZEN_SNAPSHOTS_BY_ID.get("msusd-main-street");
+    expect(coin).toBeDefined();
+    expect(frozenSnapshot).toBeDefined();
+    const summary = projectFrozenSnapshotLiveSummary(frozenSnapshot!)!;
+
+    const snapshot = buildDetailPegPriceSnapshot("msusd-main-street", coin!, undefined, summary);
+
+    expect(snapshot.pegScoreResult).toBeNull();
+    expect(snapshot.consensusSources).toEqual([
+      "coingecko",
+      "coingecko-onchain-address",
+      "alchemy-address",
+      "moralis-address",
+    ]);
+    expect(snapshot.agreeSources).toEqual(["coingecko", "alchemy-address"]);
+  });
+
+  it("keeps unread peg provenance absent instead of a measured empty result", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+
+    const snapshot = buildDetailPegPriceSnapshot("usdc-circle", coin, undefined, undefined);
+
+    expect(snapshot.consensusSources).toBeNull();
+    expect(snapshot.agreeSources).toBeNull();
+  });
+
+  it("keeps a present peg row's empty source lists instead of borrowing summary provenance", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const summary = { consensusSources: ["coingecko"], agreeSources: ["coingecko"] } as StablecoinLiveSummary;
+    const pegSummaryCoin = makePegSummaryCoin({
+      id: "usdc-circle",
+      name: coin.name,
+      symbol: coin.symbol,
+      pegType: "peggedUSD",
+      pegCurrency: coin.flags.pegCurrency,
+      currentDeviationBps: 0,
+      consensusSources: [],
+      agreeSources: [],
+    });
+
+    const snapshot = buildDetailPegPriceSnapshot(
+      "usdc-circle",
+      coin,
+      { coins: [pegSummaryCoin], summary: null, methodology: {} } as PegSummaryResponse,
+      summary,
+    );
+
+    expect(snapshot.consensusSources).toEqual([]);
+    expect(snapshot.agreeSources).toEqual([]);
   });
 
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {
@@ -793,37 +877,6 @@ describe("stablecoin detail view-model builder", () => {
     );
   });
 
-  it("enables the yield section for non-yield-bearing coins when a live ranking exists", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
-    expect(coin?.flags.yieldBearing).toBe(false);
-
-    const viewModel = buildStablecoinDetailViewModel(
-      makeReadyDetailParams({
-        id: "usdc-circle",
-        coin: coin!,
-        asset: {
-          circulatingPrevDay: { peggedUSD: 95 },
-          circulatingPrevWeek: { peggedUSD: 90 },
-          circulatingPrevMonth: { peggedUSD: 85 },
-        },
-        supplemental: {
-          yieldRankingsData: {
-            rankings: [
-              makeYieldRanking({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }),
-            ],
-          } as never,
-        },
-      }),
-    );
-
-    expect(viewModel.status).toBe("ready");
-    if (viewModel.status !== "ready") return;
-
-    expect(viewModel.yieldRanking?.id).toBe("usdc-circle");
-    expect(viewModel.hasYieldSection).toBe(true);
-  });
-
   it("exposes tracked variant parent and parent-side child variants", () => {
     const variant = TRACKED_META_BY_ID.get("susds-sky");
     const parent = TRACKED_META_BY_ID.get("usds-sky");
@@ -1078,5 +1131,62 @@ describe("detail published mint evidence integration", () => {
     expect(view.mintAuthority.processDiagnostics).toContainEqual(expect.objectContaining({
       gate: "H3", field: "operationalExposurePpm", statusLabel: "Failed screen",
     }));
+  });
+});
+
+type BuildStablecoinDetailViewModelOverrides = Parameters<typeof makeBuildStablecoinDetailViewModelParams>[0];
+
+describe("detail feature-status ladders", () => {
+  const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+
+  function featureStates(
+    overrides: BuildStablecoinDetailViewModelOverrides,
+  ): ReturnType<typeof buildDetailFeatureSnapshot>["states"] {
+    const params = makeBuildStablecoinDetailViewModelParams({ ...overrides, core: { coin, ...overrides.core } });
+    return buildDetailFeatureSnapshot(coin.id, coin, params.queries, params.supplemental).states;
+  }
+
+  it("keeps deferred and failed reserve reads distinct", () => {
+    expect(featureStates({ supplemental: { reserves: { enabled: false, isLoading: true } } }).reserves.status).toBe("deferred");
+    expect(featureStates({ supplemental: { reserves: { enabled: true, error: new Error("offline") } } }).reserves.status).toBe("unavailable");
+    const live = { mode: "live" as const, reserves: [], estimated: false };
+    expect(featureStates({ supplemental: { reserves: { live, isLoading: true, error: new Error("offline") } } }).reserves.status).toBe("stale-with-data");
+  });
+
+  it.each([
+    [{ enabled: false, isLoading: true, error: new Error("offline") }, "deferred"],
+    [{ isLoading: true }, "loading"],
+    [{ isLoading: false }, "loading"],
+    [{ error: new Error("offline") }, "unavailable"],
+    [{ data: { coins: {} } }, "empty"],
+    [{ data: { coins: {} }, error: new Error("offline") }, "unavailable"],
+    [{ data: { coins: { "usdt-tether": {} } }, error: new Error("offline") }, "retained"],
+    [{ data: { coins: { "usdt-tether": {} } } }, "ready"],
+  ] as const)("distinguishes redemption evidence read %s as %s", (query, status) => {
+    const states = featureStates({ queries: { redemptionBackstops: query as never } });
+    expect(states.redemption.status).toBe(status);
+  });
+});
+
+function gradeReadReportCards(overrides: Partial<StablecoinDetailStaleQuery>): StablecoinDetailStaleQuery[] {
+  return [{ preset: "reportCards", dataUpdatedAt: 0, error: null, hasData: false, meta: null, ...overrides }];
+}
+
+describe("resolveDetailGradeRead", () => {
+  it("is settled whenever a card is present", () => {
+    expect(resolveDetailGradeRead({ grade: "A" }, gradeReadReportCards({ isLoading: true }))).toBe("settled");
+  });
+
+  it("is pending while the first report-card fetch is in flight", () => {
+    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ isLoading: true }))).toBe("pending");
+  });
+
+  it("is failed when the read errored without data", () => {
+    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ error: new Error("x"), isLoading: true }))).toBe("failed");
+  });
+
+  it("is settled when the response arrived without this coin (a real not-scored finding)", () => {
+    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ hasData: true }))).toBe("settled");
+    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ isLoading: false }))).toBe("settled");
   });
 });

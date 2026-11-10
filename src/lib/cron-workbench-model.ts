@@ -1,4 +1,5 @@
 import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, CRON_SCHEDULE_DEFINITIONS, CRON_TRIGGER_SCHEDULES, getCronJobMeta, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import type { OperatorVerdict } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type {
@@ -852,6 +853,19 @@ export function getCronCauses(job: string, causes: readonly StatusCause[] = []):
   return causes.filter((cause) => cause.subjects?.includes(job));
 }
 
-export function getCronTailCommand(job: string): string {
-  return `wrangler tail stablecoin-api --format pretty --search ${job}`;
+const SCHEDULED_WORKER_SCRIPTS: Record<ScheduledWorkerRole, string> = {
+  public: "stablecoin-api",
+  heavy: "stablecoin-heavy",
+};
+
+/** One tail command per Worker that runs this job, in its scheduled slot plans. */
+export function getCronTailCommands(job: string): string[] {
+  const scripts = new Set<string>();
+  for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
+    const runsJob = plan.jobChains.some((chain) => chain.includes(job)) || plan.budgetOnlyJobs?.includes(job);
+    if (runsJob) scripts.add(SCHEDULED_WORKER_SCRIPTS[plan.worker]);
+  }
+  // Jobs without a scheduled slot are triggered from the public Worker.
+  if (scripts.size === 0) scripts.add(SCHEDULED_WORKER_SCRIPTS.public);
+  return [...scripts].map((script) => `wrangler tail ${script} --format pretty --search ${job}`);
 }

@@ -16,6 +16,13 @@ const bootstrap = {
 };
 
 describe("liquidity baseline presentation", () => {
+  it("names the coverage-carrying run instead of claiming the newest run", () => {
+    render(<LiquidityHealthCard health={LiquidityHealthSchema.parse(bootstrap)} />);
+
+    expect(screen.getByText("Coverage run ok")).toBeTruthy();
+    expect(screen.queryByText(/Last run/)).toBeNull();
+  });
+
   it("renders failed prior evidence as unavailable instead of zero", () => {
     const health = LiquidityHealthSchema.parse({ ...bootstrap, lastRunStatus: "degraded",
       previousCoverage: null, previousCoverageClasses: null,

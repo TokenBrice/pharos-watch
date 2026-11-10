@@ -38,7 +38,12 @@ const candidate: CurveStableswapRateInputExecutionCandidate = {
   ],
 };
 
+function ok(label: string, returnData: `0x${string}`) {
+  return { label, success: true, returnData };
+}
+
 function stateResults(calls: readonly { label: string }[], overrides: {
+  balances?: bigint[];
   rates?: bigint[];
   fee?: bigint;
   offpegFeeMultiplier?: bigint;
@@ -50,60 +55,36 @@ function stateResults(calls: readonly { label: string }[], overrides: {
   const coinAddresses = overrides.coinAddresses ?? [SFRXUSD, FRXUSD];
   return calls.map((call) => {
     if (call.label.endsWith("-balances")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "get_balances",
-          result: PINNED_BALANCES,
-        }),
-      };
+      return ok(call.label, encodeFunctionResult({
+        abi: POOL_ABI,
+        functionName: "get_balances",
+        result: overrides.balances ?? PINNED_BALANCES,
+      }));
     }
     if (call.label.endsWith("-rates")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "stored_rates", result: rates }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "stored_rates", result: rates }));
     }
     if (call.label.endsWith("-A")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "A", result: PINNED_AMPLIFICATION }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "A", result: PINNED_AMPLIFICATION }));
     }
     if (call.label.endsWith("-fee")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "fee", result: fee }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "fee", result: fee }));
     }
     if (call.label.endsWith("-offpeg-fee-multiplier")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "offpeg_fee_multiplier",
-          result: offpegFeeMultiplier,
-        }),
-      };
+      return ok(call.label, encodeFunctionResult({
+        abi: POOL_ABI,
+        functionName: "offpeg_fee_multiplier",
+        result: offpegFeeMultiplier,
+      }));
     }
     const match = call.label.match(/-coin-(\d+)$/);
     if (!match) throw new Error(`unexpected call ${call.label}`);
     const index = Number(match[1]);
-    return {
-      label: call.label,
-      success: true,
-      returnData: encodeFunctionResult({
-        abi: POOL_ABI,
-        functionName: "coins",
-        result: coinAddresses[index]!,
-      }),
-    };
+    return ok(call.label, encodeFunctionResult({
+      abi: POOL_ABI,
+      functionName: "coins",
+      result: coinAddresses[index]!,
+    }));
   });
 }
 
@@ -134,10 +115,12 @@ function metrics(pool = poolEntry()) {
 function dependencies(input: {
   header?: { timestamp: number; hash: `0x${string}` };
   confirmedHeader?: { timestamp: number; hash: `0x${string}` };
+  balances?: bigint[];
   rates?: bigint[];
   fee?: bigint;
   offpegFeeMultiplier?: bigint;
   coinAddresses?: readonly `0x${string}`[];
+  multicallFails?: boolean;
 } = {}) {
   const header = {
     number: BLOCK_NUMBER,
@@ -155,12 +138,15 @@ function dependencies(input: {
       .mockResolvedValueOnce(header)
       .mockResolvedValueOnce(confirmed),
     fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
-      stateResults(calls, {
-        rates: input.rates,
-        fee: input.fee,
-        offpegFeeMultiplier: input.offpegFeeMultiplier,
-        coinAddresses: input.coinAddresses,
-      }),
+      input.multicallFails
+        ? null
+        : stateResults(calls, {
+            balances: input.balances,
+            rates: input.rates,
+            fee: input.fee,
+            offpegFeeMultiplier: input.offpegFeeMultiplier,
+            coinAddresses: input.coinAddresses,
+          }),
     ),
   };
 }
@@ -200,6 +186,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     );
     expect(state.fetchBlockHeader).toHaveBeenCalledTimes(2);
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(pool.extra?.measurement).toMatchObject({ balanceMeasured: true });
     const model = pool.extra?.ammExecutionModel;
@@ -230,6 +217,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
@@ -237,17 +225,86 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     });
   });
 
-  it("keeps the rate-bearing gate when every stored rate is the plain unit multiplier", async () => {
+  it("admits a base-only NG capture as a plain pool despite a >1% source price spread", async () => {
     const state = dependencies({ rates: [10n ** 18n, 10n ** 18n] });
     const pool = poolEntry();
     await run(pool, state);
 
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+    expect(pool.extra?.measurement).toMatchObject({ balanceMeasured: true });
+    const model = pool.extra?.ammExecutionModel;
+    expect(model).toMatchObject({
+      source: "curve",
+      invariant: "stableswap",
+      trackedTokenIndex: 1,
+      amplification: 5_000,
+      feeRate: 0.0001,
+      capture: {
+        blockNumber: BLOCK_NUMBER, blockHash: BLOCK_HASH, blockTimestamp: BLOCK_TIMESTAMP,
+        sourceGenerationId: "dex-stage:fixture",
+      },
+      tokens: [
+        { address: SFRXUSD, symbol: "sfrxUSD", referencePriceUsd: 1.2038465312792253 },
+        { address: FRXUSD, symbol: "frxUSD", trackedAssetId: "frxusd-frax" },
+      ],
     });
+    // A base-only stored_rates() array is a rate factor of 1: balances and
+    // references stay unscaled.
+    expect(model?.tokens[0]?.balance).toBeCloseTo(6_226_811.020583753, 6);
+    expect(model?.tokens[1]?.balance).toBeCloseTo(4_346_120.891108167, 6);
+    expect(model?.tokens[1]?.referencePriceUsd).toBeCloseTo(1.000155068994295, 12);
+    const diagnostic = pool.extra?.curveStableswapPlainAdmissionDiagnostic;
+    expect(diagnostic).toMatchObject({
+      stablecoinId: "frxusd-frax",
+      chain: "ethereum",
+      poolId: `ethereum:${POOL}`,
+      poolAddress: POOL,
+    });
+    expect(diagnostic?.sourcePriceSpreadRatio).toBeCloseTo(1.2036598809520127, 12);
+  });
+
+  it("admits a mixed-decimal base-only pool unscaled (EURC/EURS/EURQ shape: 6/2/6)", async () => {
+    const eurc = "0x00000000000000000000000000000000000e0c06" as const;
+    const eurs = "0x00000000000000000000000000000000000e0502" as const;
+    const eurq = "0x00000000000000000000000000000000000e0a06" as const;
+    const pool = poolEntry({
+      curveStableswapRateInputExecutionCandidate: {
+        poolAddress: POOL,
+        coins: [
+          { address: eurc, symbol: "EURC", decimals: 6, referencePriceUsd: 1.1166 },
+          { address: eurs, symbol: "EURS", decimals: 2, referencePriceUsd: 1.1488 },
+          { address: eurq, symbol: "EURQ", decimals: 6, referencePriceUsd: 1.0775 },
+        ],
+      },
+    });
+    const metric = initSourcePoolGraph("eurs-stasis", "EURS");
+    metric.pools.push(pool);
+    const state = dependencies({
+      balances: [4_000_000_000_000n, 300_000_000n, 5_000_000_000_000n],
+      // Base rates are 10^(36 - decimals): the pool is plain.
+      rates: [10n ** 30n, 10n ** 34n, 10n ** 30n],
+      coinAddresses: [eurc, eurs, eurq],
+    });
+    await enrichCurveStableswapRateInputExecutionModels({
+      sourceGenerationId: "dex-stage:fixture",
+      metrics: new Map([[metric.stablecoinId, metric]]),
+      chainAddressToId: new Map([[`ethereum:${eurs}`, "eurs-stasis"]]),
+      chainRpcs: new Map([["ethereum", {} as never]]),
+      nowSec: BLOCK_TIMESTAMP + 60,
+      dependencies: state as never,
+    });
+
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    const model = pool.extra?.ammExecutionModel;
+    expect(model?.trackedTokenIndex).toBe(1);
+    expect(model?.tokens.map((token) => token.balance)).toEqual([4_000_000, 3_000_000, 5_000_000]);
+    expect(model?.tokens.map((token) => token.referencePriceUsd)).toEqual([1.1166, 1.1488, 1.0775]);
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toMatchObject({
+      stablecoinId: "eurs-stasis",
+      poolAddress: POOL,
+    });
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic?.sourcePriceSpreadRatio).toBeCloseTo(1.1488 / 1.0775, 12);
   });
 
   it("prices a dynamic off-peg pool at its off-balance maximum fee", async () => {
@@ -289,7 +346,22 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "curve-stableswap",
+      reason: "rate-bearing-inputs",
+    });
+  });
+
+  it("keeps the rate-bearing gate when a base-only capture fails", async () => {
+    const state = dependencies({ rates: [10n ** 18n, 10n ** 18n], multicallFails: true });
+    const pool = poolEntry();
+    await run(pool, state);
+
+    expect(state.fetchBlockHeader).toHaveBeenCalledTimes(1);
+    expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
       reason: "rate-bearing-inputs",
@@ -305,6 +377,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
 
     expect(state.fetchMulticall).not.toHaveBeenCalled();
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",

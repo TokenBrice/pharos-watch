@@ -30,7 +30,7 @@ export type { BuildYieldViewModelOptions, YieldActiveFilterSummary, YieldCohortP
 
 export { YIELD_LANDING_RISK_BUDGET, YIELD_PRESET_SPECS, YIELD_RISK_BUDGET_MIN_SAFETY, YIELD_RISK_BUDGET_SPECS } from "@/lib/yield-view-config";
 export { YIELD_FILTER_AXIS_REGISTRY } from "@/lib/yield-view-model-filter-axes";
-export { RISK_BUDGET_FILTER_KEYS } from "@/lib/yield-view-model-presentation";
+export { RISK_BUDGET_FILTER_KEYS } from "@/lib/yield-view-config";
 export { riskBudgetUrlValue } from "@/lib/yield-view-url";
 
 /** Per-universe preparation shared by every view over one rankings set: row facets, filter options, and the cohort index over the unfiltered rows. */

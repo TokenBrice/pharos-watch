@@ -493,6 +493,24 @@ describe("deployment supply census assembly", () => {
     expect(solana).not.toHaveBeenCalled();
   });
 
+  it("names a missing aggregate denominator as an unavailable read and measures nothing", async () => {
+    const meta = fixtureMeta("no-aggregate", [{ chain: "solana", address: SOLANA_MINT }]);
+    const solana = vi.fn(solanaRpc());
+    const generation = await run(["no-aggregate"], [meta], {
+      "no-aggregate": { aggregateUsd: null, priceUsd: 1 },
+    }, {
+      dependencies: { nonEvm: {
+        fetchSafetyScoreV9SolanaRpc: solana as unknown as DeploymentSupplyCensusNonEvmDependencies["fetchSafetyScoreV9SolanaRpc"],
+      } },
+    });
+
+    const census = packet(generation, "no-aggregate");
+    expect(census.deployments).toEqual([]);
+    expect(census.conservation).toMatchObject({ rosterComplete: false, conserved: false });
+    expect(census.rejected).toEqual([{ routeId: null, code: "census-rejected:read-unavailable" }]);
+    expect(solana).not.toHaveBeenCalled();
+  });
+
   it("admits Solana and Move bounds with their own pins inside the conservation budget", async () => {
     const meta = fixtureMeta("ausd-agora", [
       { chain: "solana", address: SOLANA_MINT },

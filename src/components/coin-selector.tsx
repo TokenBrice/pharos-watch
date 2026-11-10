@@ -33,6 +33,11 @@ export function CoinSelector({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const listboxId = useId();
   const optionIdPrefix = `${listboxId}-option`;
+  const dismiss = useCallback(() => {
+    setOpen(false);
+    setSearch("");
+    setFocusedIndex(-1);
+  }, []);
 
   // Close on click outside
   useEffect(() => {
@@ -42,13 +47,12 @@ export function CoinSelector({
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
-        setOpen(false);
-        setSearch("");
+        dismiss();
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
+  }, [open, dismiss]);
 
   // Filter coins by search (must be above early return so keyboard handler can reference it)
   const filtered = useMemo(() => {
@@ -68,15 +72,14 @@ export function CoinSelector({
       if (!open || disabled) return;
       switch (e.key) {
         case "Escape":
-          setOpen(false);
-          setSearch("");
-          setFocusedIndex(-1);
+          dismiss();
           buttonRef.current?.focus();
           e.preventDefault();
           break;
         case "ArrowDown":
           e.preventDefault();
           setFocusedIndex((prev) => {
+            if (filtered.length === 0) return -1;
             const nextIdx = prev + 1;
             return nextIdx >= filtered.length ? 0 : nextIdx;
           });
@@ -84,6 +87,7 @@ export function CoinSelector({
         case "ArrowUp":
           e.preventDefault();
           setFocusedIndex((prev) => {
+            if (filtered.length === 0) return -1;
             const nextIdx = prev - 1;
             return nextIdx < 0 ? filtered.length - 1 : nextIdx;
           });
@@ -93,20 +97,16 @@ export function CoinSelector({
           const target = filtered[focusedIndex];
           if (target && !disabledIds?.has(target.id)) {
             onSelect(target);
-            setOpen(false);
-            setSearch("");
-            setFocusedIndex(-1);
+            dismiss();
           }
           break;
         }
         case "Tab":
-          setOpen(false);
-          setSearch("");
-          setFocusedIndex(-1);
+          dismiss();
           break;
       }
     },
-    [disabled, open, filtered, focusedIndex, disabledIds, onSelect],
+    [disabled, open, filtered, focusedIndex, disabledIds, onSelect, dismiss],
   );
 
   // Scroll focused item into view
@@ -157,7 +157,10 @@ export function CoinSelector({
         ref={buttonRef}
         variant="outline"
         className="min-h-11 w-full justify-between font-normal text-muted-foreground sm:min-h-9"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (open) dismiss();
+          else setOpen(true);
+        }}
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -178,8 +181,8 @@ export function CoinSelector({
               aria-controls={listboxId}
               aria-autocomplete="list"
               aria-activedescendant={
-                focusedIndex >= 0
-                  ? `${optionIdPrefix}-${filtered[focusedIndex]?.id}`
+                filtered[focusedIndex]
+                  ? `${optionIdPrefix}-${filtered[focusedIndex].id}`
                   : undefined
               }
               placeholder="Search by name or symbol..."
@@ -220,8 +223,7 @@ export function CoinSelector({
                   onClick={() => {
                     if (!coinDisabled) {
                       onSelect(coin);
-                      setOpen(false);
-                      setSearch("");
+                      dismiss();
                     }
                   }}
                 >

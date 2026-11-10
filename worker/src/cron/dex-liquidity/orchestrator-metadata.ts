@@ -2,13 +2,12 @@ import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persi
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 import type { DeadPoolExclusionSummary, DexPricePersistenceDiagnostics } from "./scoring";
 import {
-  POOL_REJECTION_MATERIAL_TVL_USD,
-  hasMaterialPoolRejections,
+  buildPoolRejectionMetadata,
 } from "./process-pools";
-import type { PoolProcessingRejection } from "./process-pool-types";
-import type { LiquidityFallbackCounters } from "./types";
+import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters } from "./types";
 import type { MeasuredTargetFunnel } from "./route-telemetry";
 import type { DexLiquidityScoringSourceState, DexLiquidityPoolState } from "./scoring-stage-contract";
+import { SOURCE_FAMILY_DROP_FLAG_PREFIX } from "./orchestrator-drift";
 
 export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidityScoringSourceState,
   "failedSources" | "degradedSources" | "directApiSourceSummary">): string[] {
@@ -26,14 +25,14 @@ export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidi
  */
 export function dexLiquidityDegradedReason(params: {
   criticalSourceFailures: string[];
-  poolRejections?: PoolProcessingRejection[];
   analysis: DexLiquidityPostScoreAnalysis;
   persistence: PersistScoresResult;
   dexPriceDiagnostics?: DexPricePersistenceDiagnostics;
   historicalSnapshot: HistoricalSnapshotWriteResult;
 }): string | null {
   if (params.criticalSourceFailures.length > 0) return "critical-source-failures";
-  if (hasMaterialPoolRejections(params.poolRejections)) return "material-pool-rejections";
+  const rejectionReason = params.analysis.sourceCoverage?.poolRejectionCoverage?.reason;
+  if (rejectionReason) return rejectionReason;
   if (!params.analysis.previousCoverageBaselineAvailable) return "previous-coverage-baseline-unavailable";
   if (params.analysis.requiredBaselineUnavailable) return "required-baseline-unavailable";
   if (params.analysis.nearCoverageGuard) return "near-coverage-guard";
@@ -48,21 +47,17 @@ export function dexLiquidityDegradedReason(params: {
   return null;
 }
 
-export function isDexLiquidityDegraded(params: Parameters<typeof dexLiquidityDegradedReason>[0]): boolean {
-  return dexLiquidityDegradedReason(params) !== null;
-}
-
 export function buildDexLiquidityCronMetadata(params: {
   sourceState: Pick<DexLiquidityScoringSourceState,
     "primaryRawPoolCount" | "failedSources" | "degradedSources" |
-    "fallbackSignals" | "directApiSourceSummary">;
+    "fallbackSignals" | "directApiSourceSummary" | "subgraphFailures">;
   poolState: Pick<DexLiquidityPoolState,
     "stagedMergedCount" | "stagedSkippedCount" | "stagedSkippedByExactIdentityCount" |
     "stagedSkippedByUniqueDerivedIdentityCount" | "stagedSkippedByOptionalWildcardIdentityCount" |
     "stagedSkippedByAuthoritativeProtocolCount" | "stagedSkipDimensions" |
     "registryRowsRead" | "registryMultiSourcePools" |
     "registryFamilyBySource" | "stagedWritebackRows" | "stagedWritebackSkippedUntrustedIds" |
-    "poolRejections" | "deadPoolUnindexedChainSkips"> & {
+    "poolRejections" | "deadPoolUnindexedChainSkips" | "priceRefresh"> & {
     registryEvaluatedAtSec?: number;
     directApiIntegration: Pick<DexLiquidityPoolState["directApiIntegration"],
       "acceptedByProtocolChain" | "excludedByReason">;
@@ -74,6 +69,8 @@ export function buildDexLiquidityCronMetadata(params: {
       fallbackCounters: LiquidityFallbackCounters;
       deadPoolExclusions: DeadPoolExclusionSummary;
       measuredTargetFunnel?: MeasuredTargetFunnel;
+      curveStableswapPlainAdmissions?: CurveStableswapPlainAdmissionDiagnostic[];
+      curveStableswapPlainAdmissionsOmitted?: number;
     };
   };
   persistenceState: {
@@ -88,8 +85,11 @@ export function buildDexLiquidityCronMetadata(params: {
   const { sourceState, poolState, scoreState } = params;
   const { persistence, historicalSnapshot, challengerPublication, dexPriceDiagnostics } = params.persistenceState;
   const rejectedPoolCount = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.count, 0);
-  const rejectedPoolTvlUsd = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.tvlUsd, 0);
+  // Chain TVL can fall with complete inputs; retained source-pool loss is coverage evidence.
+  const sourceFamilyDriftFlags = (scoreState.analysis.sourceCoverage.cohortDriftFlags ?? [])
+    .filter((flag) => flag.startsWith(SOURCE_FAMILY_DROP_FLAG_PREFIX));
   const qualityReasons = [...new Set([
+    ...sourceFamilyDriftFlags,
     ...(scoreState.analysis.sourceCoverage.qualityDriftFlags ?? []),
     ...getDexLiquiditySourceQualityReasons(sourceState),
   ])];
@@ -97,7 +97,9 @@ export function buildDexLiquidityCronMetadata(params: {
     ...(persistence.skippedReason === "required-baseline-read-failed"
       ? { reason: "required-baseline-read-failed" }
       : params.degradedReason != null ? { reason: params.degradedReason } : {}),
-    ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
+    ...(qualityReasons.length > 0
+      ? { quality: { ...(sourceFamilyDriftFlags.length > 0 ? { degraded: true } : {}), reasons: qualityReasons } }
+      : {}),
     rowsRead: sourceState.primaryRawPoolCount,
     rowsWritten: persistence.skipped || persistence.skippedReason === "liquidity-cadence-reuse"
       ? 0 : scoreState.scoreResults.size,
@@ -110,6 +112,7 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
     stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
     stagedWritebackRows: poolState.stagedWritebackRows,
+    priceRefresh: poolState.priceRefresh,
     stagedWritebackSkippedUntrustedIds: poolState.stagedWritebackSkippedUntrustedIds,
     registryEvaluation: poolState.registryEvaluatedAtSec == null ? undefined : {
       evaluatedAtSec: poolState.registryEvaluatedAtSec,
@@ -118,13 +121,7 @@ export function buildDexLiquidityCronMetadata(params: {
     registryRowsRead: poolState.registryRowsRead,
     registryMultiSourcePools: poolState.registryMultiSourcePools,
     registryFamilyBySource: poolState.registryFamilyBySource,
-    poolRejections: poolState.poolRejections,
-    poolRejectionMateriality: {
-      thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD,
-      rejectedPoolCount,
-      rejectedPoolTvlUsd,
-      material: hasMaterialPoolRejections(poolState.poolRejections),
-    },
+    ...buildPoolRejectionMetadata(poolState.poolRejections, scoreState.analysis.sourceCoverage.poolRejectionCoverage),
     directApiSourceSummary: {
       acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,
       excludedByReason: poolState.directApiIntegration.excludedByReason,
@@ -138,6 +135,7 @@ export function buildDexLiquidityCronMetadata(params: {
       challengerSnapshotsSkipped: challengerPublication.skippedStablecoins,
     },
     failedSources: [...new Set(sourceState.failedSources)],
+    subgraphFailures: sourceState.subgraphFailures ?? [],
     degradedSources: [...new Set(sourceState.degradedSources ?? [])],
     dexPriceDiagnostics,
     fallbackMode: [...new Set(sourceState.fallbackSignals)],
@@ -145,6 +143,12 @@ export function buildDexLiquidityCronMetadata(params: {
     retainedDeadPoolExclusions: scoreState.diagnostics.deadPoolExclusions,
     deadPoolUnindexedChainSkips: poolState.deadPoolUnindexedChainSkips ?? {},
     measuredTargetFunnel: scoreState.diagnostics.measuredTargetFunnel,
+    ...(scoreState.diagnostics.curveStableswapPlainAdmissions?.length
+      ? {
+          curveStableswapPlainAdmissions: scoreState.diagnostics.curveStableswapPlainAdmissions,
+          curveStableswapPlainAdmissionsOmitted: scoreState.diagnostics.curveStableswapPlainAdmissionsOmitted ?? 0,
+        }
+      : {}),
     exitRouteSelection: persistence.exitRouteSelection,
     exitRouteContinuity: persistence.exitRouteContinuity,
     persistence: {

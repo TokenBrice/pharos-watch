@@ -16,7 +16,8 @@ export interface LiquidityStatsData {
   highConfidenceCoverage: number;
   fallbackCoverage: number;
   totalTracked: number;
-  /** Pool-TVL-weighted 7d change over coins with a 7d baseline, not the global total's own change. */
+  /** Pool-TVL-weighted 7d change over coins with a 7d baseline, not the global total's own change.
+   *  Null when any observed member's prior TVL is non-invertible; never a survivor-only aggregate. */
   agg7dChange: number | null;
   avgBalance: number | null;
   avgOrganic: number | null;

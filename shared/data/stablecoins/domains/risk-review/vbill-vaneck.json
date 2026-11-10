@@ -116,6 +116,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x7f4546ef315efc65336187fe3765ea779ac90183",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -143,6 +146,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x14d72634328c4d03bba184a48081df65f1911279",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -170,6 +176,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -197,6 +206,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -217,6 +229,41 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ]
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "VBILL uses administrator-calculated fund NAV published through RedStone.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-1",
+      "rationale": "The issuer identifies VanEck Treasury Fund, Ltd. (VBILL), administered by Securitize Fund Services, on the same Ethereum, BNB Chain, Avalanche and Solana cohort as the tracked share. RedStone, the issuer-named oracle provider, identifies VBILL in its July 6, 2026 service disclosure and explains that Securitize fund NAV originates from one off-chain administrator rather than market-price aggregation. Its VBILL feed publishes daily NAV and interest accrual, with a 24-hour push heartbeat. VBILL is a fund share whose top-level valuation is this NAV; downstream Euler collateral use is a consumer, not a borrower-liquidation branch of VBILL itself. Transport does not create independent valuation or pricing redundancy. This review classifies the single administrator valuation authority only; it grants no publisher-signing, fallback, relay-updater or downstream lending-oracle closure.",
+      "sources": [
+        {
+          "label": "Securitize/VanEck VBILL launch dated 2025-05-13: exact fund, four-chain cohort, Securitize Fund Services administrator and RedStone daily NAV service; accessed 2026-11-06",
+          "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
+        },
+        {
+          "label": "RedStone service disclosure dated 2026-07-06: administrator-calculated single-source NAV, VBILL daily NAV and interest feeds on Ethereum/BNB Chain/Solana/Avalanche, 24-hour push heartbeat; accessed 2026-11-06",
+          "url": "https://www.redstone.finance/blog/tokenize-the-world-redstones-role-in-the-securitize-ecosystem/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c2-1",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Securitize/VanEck VBILL launch dated 2025-05-13: exact fund, four-chain cohort, Securitize Fund Services administrator and RedStone daily NAV service; accessed 2026-11-06",
+        "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
+      },
+      {
+        "label": "RedStone service disclosure dated 2026-07-06: administrator-calculated single-source NAV, VBILL daily NAV and interest feeds on Ethereum/BNB Chain/Solana/Avalanche, 24-hour push heartbeat; accessed 2026-11-06",
+        "url": "https://www.redstone.finance/blog/tokenize-the-world-redstones-role-in-the-securitize-ecosystem/"
       }
     ]
   }

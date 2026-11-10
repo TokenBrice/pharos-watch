@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runPruneDetailCache } from "../prune-detail-cache";
+import { CACHE_RETENTION_POLICIES } from "@shared/lib/retention-policy";
 import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -57,7 +58,11 @@ describe("runPruneDetailCache", () => {
     expect(metadata.cacheHygiene.retiredMintBurnV1).toEqual({ deleted: 1, retentionTruncated: false });
     expect(metadata.cacheHygiene.retiredBlacklistSummaryV4).toEqual({ deleted: 1, retentionTruncated: false });
     expect(metadata.cacheHygiene.retiredBlacklistGapMetricsProducerV2).toEqual({ deleted: 1, retentionTruncated: false });
-    expect(Object.keys(metadata.retentionTruncated)).toHaveLength(14);
+    // Every retention policy's truncation verdict is reported alongside the detail sweep.
+    expect(Object.keys(metadata.retentionTruncated)).toEqual([
+      "detail",
+      ...CACHE_RETENTION_POLICIES.map((policy) => policy.name),
+    ]);
   });
 
   it("caps each telemetry namespace and reports retained backlog", async () => {

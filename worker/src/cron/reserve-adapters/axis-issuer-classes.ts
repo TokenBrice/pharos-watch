@@ -3,20 +3,23 @@ import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { isRecord } from "@shared/lib/type-guards";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchPrimaryHtmlInput,
+  fetchJsonWithRetry,
   htmlLayoutChangedError,
-  htmlParseError,
-  requireHtmlInput,
+  requireJsonInput,
   verifiedFreshnessMetadata,
 } from "./helpers";
 
-export const AXIS_TRANSPARENCY_URL = "https://app.axis.to/transparency?tab=asset-composition";
+/** The issuer's transparency dashboard API (`NEXT_PUBLIC_TRANSPARENCY_API_URL` in the
+ *  app.axis.to client bundle) publishes the exact `initialDashboard` payload the
+ *  transparency page embeds server-side. The HTML page itself geo-restricts
+ *  non-issuer regions to a "Not available in your region" shell (observed for
+ *  Worker egress since 2026-10-30), so the JSON API is the machine-readable
+ *  reviewed feed. `reserves_period=max` keeps the dated history the same-day
+ *  reconciliation reads. */
+export const AXIS_TRANSPARENCY_API_URL = "https://transparency-api.axis.to/dashboard?reserves_period=max&performance_period=max";
 const KEY = "axis-issuer-classes";
-const PUSH_MARKER = "self.__next_f.push(";
-const FLIGHT_MAX_CHARS = 4_000_000;
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width ISO-8601 shape; every group has a fixed or bounded width, so no ambiguous backtracking path.
 const ISO_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
 /** The issuer publishes asset-class values and the whole-book total. Category sums and the
@@ -27,7 +30,7 @@ const TOTAL_RELATIVE_TOLERANCE = 0.0001;
 /** Published percentages carry two decimals; a legitimate rounding of ~0.005 points must pass. */
 const PERCENT_TOLERANCE = 0.01;
 
-/** The five issuer categories are reviewed identities, not labels read from the page. Any
+/** The five issuer categories are reviewed identities, not labels read from the payload. Any
  *  addition, removal or rename is a source-shape change until the classification review
  *  admits it, so the parser fails closed instead of publishing an unreviewed class. */
 const CLASS_IDS = ["cash_fiat", "stablecoins", "liquid_hedge", "staked_lst", "tbill_rwa"] as const;
@@ -133,103 +136,6 @@ const AxisDashboardSchema = z.object({
 
 type AxisDashboard = z.output<typeof AxisDashboardSchema>;
 
-/** Return the index of the `]` that closes the array starting at `start`, honoring JSON
- *  string escapes. Returns -1 when the page truncates the payload. */
-function findBalancedArrayEnd(text: string, start: number): number {
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let index = start; index < text.length; index += 1) {
-    const char = text[index];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (char === "\\") escaped = true;
-      else if (char === "\"") inString = false;
-      continue;
-    }
-    if (char === "\"") inString = true;
-    else if (char === "[") depth += 1;
-    else if (char === "]") {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
-  }
-  return -1;
-}
-
-/** Next.js streams the RSC flight text through `self.__next_f.push([1, "…"])` calls. Only the
- *  decoded text is read: no upstream JavaScript runs. Control rows without text are skipped,
- *  and an oversized or truncated stream fails closed. */
-function extractFlightText(html: string): string {
-  let flight = "";
-  let chunks = 0;
-  let index = 0;
-  for (;;) {
-    const marker = html.indexOf(PUSH_MARKER, index);
-    if (marker < 0) break;
-    const argumentStart = html.indexOf("[", marker + PUSH_MARKER.length);
-    if (argumentStart < 0 || argumentStart > marker + PUSH_MARKER.length + 8) {
-      throw htmlParseError(KEY, "flight push call has no array argument");
-    }
-    const argumentEnd = findBalancedArrayEnd(html, argumentStart);
-    if (argumentEnd < 0) throw htmlParseError(KEY, "flight push array is truncated");
-    let chunk: unknown;
-    try {
-      chunk = JSON.parse(html.slice(argumentStart, argumentEnd + 1)) as unknown;
-    } catch (error) {
-      throw htmlParseError(KEY, `flight push array is malformed: ${toErrorMessage(error)}`);
-    }
-    index = argumentEnd + 1;
-    if (!Array.isArray(chunk)) throw htmlLayoutChangedError(KEY, "flight push argument is not an array");
-    if (chunk[0] !== 1) continue;
-    if (chunk.length !== 2 || typeof chunk[1] !== "string") {
-      throw htmlLayoutChangedError(KEY, "flight text chunk is not a single string");
-    }
-    flight += chunk[1];
-    chunks += 1;
-    if (flight.length > FLIGHT_MAX_CHARS) {
-      throw htmlParseError(KEY, "flight payload exceeds the reviewed size bound");
-    }
-  }
-  if (chunks === 0) throw htmlLayoutChangedError(KEY, "missing Next.js flight payload");
-  return flight;
-}
-
-function collectInitialDashboard(value: unknown, matches: unknown[], depth: number): void {
-  if (matches.length > 1 || depth > 40) return;
-  if (Array.isArray(value)) {
-    for (const item of value.slice(0, 256)) collectInitialDashboard(item, matches, depth + 1);
-    return;
-  }
-  if (!isRecord(value)) return;
-  if (Object.prototype.hasOwnProperty.call(value, "initialDashboard")) {
-    matches.push(value.initialDashboard);
-    return;
-  }
-  for (const child of Object.values(value)) collectInitialDashboard(child, matches, depth + 1);
-}
-
-/** Flight rows are `<id>:<JSON value>`. Locate the one row that carries the dashboard, parse
- *  only its value, and require exactly one dashboard instance. */
-function findInitialDashboard(flight: string): unknown {
-  const matches: unknown[] = [];
-  for (const row of flight.split("\n")) {
-    if (!row.includes("\"initialDashboard\"")) continue;
-    const separator = row.indexOf(":");
-    if (separator <= 0) throw htmlLayoutChangedError(KEY, "flight dashboard row has no row id");
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(row.slice(separator + 1)) as unknown;
-    } catch (error) {
-      throw htmlParseError(KEY, `flight dashboard row is malformed: ${toErrorMessage(error)}`);
-    }
-    collectInitialDashboard(parsed, matches, 0);
-    if (matches.length > 1) throw htmlLayoutChangedError(KEY, "multiple initialDashboard payloads");
-  }
-  if (matches.length !== 1) throw htmlLayoutChangedError(KEY, "initialDashboard payload is missing");
-  return matches[0];
-}
-
 function parseDashboard(raw: unknown): AxisDashboard {
   try {
     return AxisDashboardSchema.parse(raw);
@@ -277,8 +183,8 @@ function readSourceTimestamp(lastUpdated: string, nowSec: number): number {
   return seconds;
 }
 
-export function adaptAxisIssuerClasses(html: string, nowSec: number): AdapterResult {
-  const dashboard = parseDashboard(findInitialDashboard(extractFlightText(html)));
+export function adaptAxisIssuerClasses(payload: unknown, nowSec: number): AdapterResult {
+  const dashboard = parseDashboard(payload);
   const { overview, dashboard_details: details } = dashboard;
   const classes = details.asset_classes;
   const total = classes.total;
@@ -358,8 +264,7 @@ export function adaptAxisIssuerClasses(html: string, nowSec: number): AdapterRes
       collateralizationRatio: total / overview.usdx_total_supply,
       unknownExposurePct: residualPct,
       details: {
-        sourceUrl: AXIS_TRANSPARENCY_URL,
-        tab: "asset-composition",
+        sourceUrl: AXIS_TRANSPARENCY_API_URL,
         lastUpdated: overview.last_updated,
         classCount: rows.length,
         classSumUsd: sum,
@@ -380,14 +285,15 @@ export async function fetchAxisIssuerClassesReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireHtmlInput(config.inputs.primary, KEY);
+  const input = requireJsonInput(config.inputs.primary, KEY);
   if (
     coin.id !== "usdx-axis" ||
-    input.url !== AXIS_TRANSPARENCY_URL ||
+    input.url !== AXIS_TRANSPARENCY_API_URL ||
     (config.params != null && Object.keys(config.params).length > 0)
   ) {
     throw new Error(`${KEY}: unexpected coin, input URL or params`);
   }
+  const payload = await fetchJsonWithRetry<unknown>(input.url, signal, 15_000, ctx);
   const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
-  return adaptAxisIssuerClasses(await fetchPrimaryHtmlInput(config, KEY, signal, ctx), nowSec);
+  return adaptAxisIssuerClasses(payload, nowSec);
 }

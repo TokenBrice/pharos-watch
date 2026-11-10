@@ -42,12 +42,13 @@
       "name": "Gauntlet USDC Frontier vault (gtusdcf)",
       "pct": 10,
       "risk": "high",
-      "assetClass": "protocol-position"
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho Vault V2 0x9a1d6bd5b8642c41f25e0958129b85f8e1176f3e (Gauntlet USDC Frontier)"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-30",
-    "reviewer": "FD19 bottom-up refinement 2026-10-21 (classification only)",
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c-resv (Frontier protocol-claim classification only; 2026-10-30 basket retained)",
     "confidence": "verified",
     "sources": [
       {
@@ -85,6 +86,14 @@
       {
         "label": "Reserve Protocol DTF basket API (read 2026-10-30)",
         "url": "https://api.reserve.org/discover/dtfs"
+      },
+      {
+        "label": "Exact Frontier VaultV2 verified source, read 2026-11-06: vault shares redeem into the immutable underlying asset subject to gates and available liquidity",
+        "url": "https://etherscan.io/address/0x9a1d6bd5b8642c41f25e0958129b85f8e1176f3e#code"
+      },
+      {
+        "label": "Morpho vaultV2ByAddress identity read 2026-11-06: Ethereum Frontier gtusdcf at 0x9a1d6bd5b8642c41f25e0958129b85f8e1176f3e, USDC underlying 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "url": "https://api.morpho.org/graphql"
       }
     ],
     "rationale": "Composition updated to the issuer-published basket from the 2026-09-29 basket RFC: saEthUSDT 24.97%, wcUSDCv3 25.01%, gtusdcp 30.01%, gtusdcf 10.00%, senPYUSDmain 10.01%. BackingManager 0xf014fef41ccb703975827c8569a3f0940cfd80a4 holds all five; wcUSDTv3 is dust and no saEthUSDC balance remains.",

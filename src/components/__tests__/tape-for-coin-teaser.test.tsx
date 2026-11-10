@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { makeTapeEvent } from "@shared/test-utils/tape-event";
 
@@ -60,6 +61,7 @@ function other(id: string, ts: number): TapeEvent {
 
 afterEach(() => {
   useLatestEventsMock.mockReset();
+  vi.useRealTimers();
 });
 
 describe("TapeForCoinTeaser", () => {
@@ -107,6 +109,29 @@ describe("TapeForCoinTeaser", () => {
     mockEvents(Array.from({ length: 8 }, (_, i) => other(`m${i}`, NOW - i * 60_000)));
     render(<TapeForCoinTeaser coinId="usde-ethena" />);
     expect(screen.getAllByText("Minted")).toHaveLength(5);
+  });
+
+  it.each([
+    ["a restored background tab", Date.UTC(2026, 10, 2, 9, 0), Date.UTC(2026, 10, 1, 22, 0), Date.UTC(2026, 10, 1, 22, 30)],
+    ["the UTC midnight boundary", Date.UTC(2026, 10, 2, 0, 30), Date.UTC(2026, 10, 1, 23, 0), Date.UTC(2026, 10, 1, 23, 40)],
+  ])("labels event days from the wall clock after %s", (_case, now, eventTs, dataUpdatedAt) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    mockEvents([other("m1", eventTs)], { dataUpdatedAt });
+
+    render(<TapeForCoinTeaser coinId="usde-ethena" />);
+
+    expect(screen.getByText("Yesterday")).toBeTruthy();
+    expect(screen.queryByText("Today")).toBeNull();
+  });
+
+  it("falls back to the absolute UTC date before the visitor clock is available", () => {
+    mockEvents([other("m1", Date.UTC(2026, 10, 1, 22, 0))]);
+
+    const html = renderToStaticMarkup(<TapeForCoinTeaser coinId="usde-ethena" />);
+
+    expect(html).toContain("1 Nov");
+    expect(html).not.toContain("Today");
   });
 
   it("shows loading and renders nothing when empty", () => {

@@ -220,4 +220,54 @@ describe("handleStablecoinSummary", () => {
       clock.mockRestore();
     }
   });
+
+  it("publishes the quote clock and ages freshness on the oldest contributing observation", async () => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const payload = JSON.parse(makeStablecoinsCacheValue());
+    Object.assign(payload.peggedAssets[0], {
+      price: 0.99,
+      priceSource: "cached",
+      priceConfidence: "fallback",
+      priceObservedAt: now - 21_600,
+      priceObservedAtMode: "local_fetch",
+      priceSyncedAt: now - 21_500,
+    });
+    try {
+      const db = mockD1([{ match: "cache", rows: [], first: {
+        value: JSON.stringify(payload), updated_at: now,
+      } }]);
+      const response = await handleStablecoinSummary(db, "usdt-tether");
+      const body = await readJsonResponse(response, 200);
+
+      expect(body).toMatchObject({
+        priceUsd: 0.99,
+        priceObservedAt: now - 21_600,
+        priceSyncedAt: now - 21_500,
+      });
+      expect(response.headers.get("X-Data-Age")).toBe("21600");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.get("Warning")).toContain("stale");
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("serves a valid requested row when a producer-admitted sibling fails the strict reader", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = JSON.parse(makeStablecoinsCacheValue());
+    payload.peggedAssets.push({
+      ...payload.peggedAssets[0],
+      id: "malformed-sibling",
+      name: "Malformed sibling",
+      symbol: "",
+    });
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify(payload), updated_at: now,
+    } }]);
+
+    const body = await readJsonResponse(await handleStablecoinSummary(db, "usdt-tether"), 200);
+
+    expect(body).toMatchObject({ id: "usdt-tether", symbol: "USDT", priceUsd: 1.0001 });
+  });
 });

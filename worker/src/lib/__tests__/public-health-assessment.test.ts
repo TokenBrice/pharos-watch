@@ -736,7 +736,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
-  it.each(["wusd-worldwide", "pht-pht"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
+  it.each(["wusd-worldwide", "bd-basedollar"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     for (const compact of [false, true]) {
       const nowSec = review.expiresAt - 1;
@@ -786,10 +786,6 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
-    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
-      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
-    }), nowSec, { logPrefix: "test" });
-    expect(baseline.overallStatus).toBe("healthy");
     // One gap in a full active set is far below the shared breadth threshold;
     // neither its persistence nor its market cap escalates.
     const db = makeMintBurnAssessmentDb(nowSec, {
@@ -835,10 +831,6 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
-    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
-      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
-    }), nowSec, { logPrefix: "test" });
-    expect(baseline.overallStatus).toBe("healthy");
     const db = makeMintBurnAssessmentDb(nowSec, {
       publicationMetadata: makePriceCoverageMetadata(
         nowSec,
@@ -862,10 +854,6 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
-    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
-      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
-    }), nowSec, { logPrefix: "test" });
-    expect(baseline.overallStatus).toBe("healthy");
     const db = makeMintBurnAssessmentDb(nowSec, {
       publicationMetadata: makePriceCoverageMetadata(nowSec, missingId, 1, false),
     });

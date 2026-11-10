@@ -15,6 +15,7 @@ import LIQUIDITY_SCORE_V3 from "../../data/methodology-changelogs/liquidity-scor
 import LIQUIDITY_SCORE_V4 from "../../data/methodology-changelogs/liquidity-score/v4.json";
 import LIQUIDITY_SCORE_V5 from "../../data/methodology-changelogs/liquidity-score/v5.json";
 import LIQUIDITY_SCORE_V6 from "../../data/methodology-changelogs/liquidity-score/v6.json";
+import LIQUIDITY_SCORE_V7 from "../../data/methodology-changelogs/liquidity-score/v7.json";
 import MINT_BURN_FLOW_V1 from "../../data/methodology-changelogs/mint-burn-flow/v1.json";
 import MINT_BURN_FLOW_V2 from "../../data/methodology-changelogs/mint-burn-flow/v2.json";
 import MINT_BURN_FLOW_V3 from "../../data/methodology-changelogs/mint-burn-flow/v3.json";
@@ -165,6 +166,7 @@ const METHODOLOGY_VERSION_CONFIGS = [
     currentVersion: LIQUIDITY_METHODOLOGY_VERSION,
     changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
     changelog: [
+      ...LIQUIDITY_SCORE_V7,
       ...LIQUIDITY_SCORE_V6,
       ...LIQUIDITY_SCORE_V5,
       ...LIQUIDITY_SCORE_V4,

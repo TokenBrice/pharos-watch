@@ -1,190 +1,153 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { ReserveFeedReviewSchema, type ReserveFeedReview } from "@shared/types/live-reserves";
+import { ReserveFeedReviewSchema, type ReserveFeedReview as Review } from "@shared/types/live-reserves";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { RESERVE_FEED_REVIEWS, matchReserveFeedReview, resolveReserveFeedReviews } from "../reserve-feed-reviews";
-import type { ReserveSyncStateRecord } from "../live-reserves/store-shared";
+import { RESERVE_FEED_REVIEWS, matchReserveFeedReview as matchReview, resolveReserveFeedReviews as resolveReviews } from "../reserve-feed-reviews";
+import type { ReserveSyncStateRecord as State } from "../live-reserves/store-shared";
 import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 
-const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
-const now = review.reviewedAt + 1;
-function state(overrides: Partial<ReserveSyncStateRecord> = {}): ReserveSyncStateRecord {
+const review = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "yzusd-yuzu")!;
+const accountable = "primary:http-json: Accountable ";
+const http = "primary:onchain-evm: HTTP 403 for https://api-prod.midas.app/api/transparency/by-timestamp?token=[redacted]&timestamp=changed";
+function state(r = review, overrides: Partial<State> = {}): State {
+  const now = r.reviewedAt + 1;
   return {
-    stablecoinId: review.stablecoinId, adapterKey: review.adapterKey, breakerKey: "live-reserves:yzusd-yuzu",
-    lastAttemptedAt: now, lastSuccessAt: now - 15 * 86400, lastStatus: "error", warningCount: 0,
-    warnings: [], lastError: review.errorPrefix ?? null,
-    metadata: { failureCategory: review.failureCategory }, ...overrides,
+    stablecoinId: r.stablecoinId, adapterKey: r.adapterKey, breakerKey: "test",
+    lastAttemptedAt: now, lastSuccessAt: now, lastStatus: r.failureCategory === null ? "degraded" : "error",
+    warningCount: r.warningCodes.length,
+    warnings: r.warningCodes.map((code) => ({ code, message: code, severity: "warning", effect: "degraded" })),
+    lastError: r.errorClass ? http : r.errorPrefix,
+    metadata: { failureCategory: r.failureCategory, sourceTimestamp: r.sourceTimestamp ?? now - 1, freshnessMode: "verified" },
+    ...overrides,
   };
 }
+async function check(s: State, r = review, expected: Review | null = r, db = mockD1(), now = r.reviewedAt + 1) {
+  expect(await matchReview(db, s, now, resolveReviews(now, [r]).activeById)).toEqual(expected);
+}
+function history(r = review, overrides: Record<string, unknown> = {}, failed = false) {
+  return mockD1([{ match: "status != 'skipped'", rows: [], first: {
+    stablecoin_id: r.stablecoinId, attempted_at: r.reviewedAt, adapter_key: r.adapterKey,
+    breaker_key: "test", status: "error", warnings: "[]", last_error: r.errorClass ? http : r.errorPrefix,
+    metadata: JSON.stringify({ failureCategory: r.failureCategory }), ...overrides,
+  }, ...(failed ? { throwError: new Error("read") } : {}) }]);
+}
+const skipped = { lastStatus: "skipped", lastError: null, metadata: { failureCategory: "circuit-open" } } as const;
 
 describe("reserve feed review policy", () => {
-  it.each(RESERVE_FEED_REVIEWS)("matches only the reviewed failure for $stablecoinId", async (item) => {
-    const now = item.reviewedAt + 1;
-    const observed = state({
-      stablecoinId: item.stablecoinId, adapterKey: item.adapterKey,
-      lastStatus: "error", lastError: item.errorPrefix,
-      warnings: [],
-      metadata: { failureCategory: item.failureCategory },
-    });
-    expect(await matchReserveFeedReview(mockD1(), observed, now)).toEqual(item);
-    expect(await matchReserveFeedReview(mockD1(), { ...observed, lastStatus: "ok", lastSuccessAt: now }, now)).toBeNull();
-    expect(await matchReserveFeedReview(mockD1(), {
-      ...observed, metadata: { failureCategory: "validation" },
-    }, now)).toBeNull();
-    expect(await matchReserveFeedReview(mockD1(), {
-      ...observed, warnings: [...observed.warnings, {
-        code: "new-failure", message: "New failure", severity: "warning", effect: "degraded",
-      }],
-    }, now)).toBeNull();
-    expect(await matchReserveFeedReview(mockD1(), { ...observed, lastError: "Different failure" }, now)).toBeNull();
-    expect(await matchReserveFeedReview(mockD1(), { ...observed, lastError: `${item.errorPrefix}: changed cause` }, now)).toBeNull();
-  });
-  it.each(["adapter-timeout", "run-budget-exhausted", "network", "storage-write"])("cannot authorize operational failure category %s", (failureCategory) => {
-    expect(ReserveFeedReviewSchema.safeParse({ ...review, failureCategory }).success).toBe(false);
-    expect(resolveReserveFeedReviews(now, [{ ...review, failureCategory } as ReserveFeedReview]).invalidIds).toEqual([review.stablecoinId]);
-  });
-  it("excludes timeout and budget categories from the review type", () => {
-    expectTypeOf<"adapter-timeout">().not.toExtend<ReserveFeedReview["failureCategory"]>();
-    expectTypeOf<"run-budget-exhausted">().not.toExtend<ReserveFeedReview["failureCategory"]>();
-  });
-  it.each([-1, 0, 1])("expires at equality %+is", (offset) => {
-    const resolved = resolveReserveFeedReviews(review.expiresAt + offset, [review]);
-    expect(resolved.activeById.has(review.stablecoinId)).toBe(offset < 0);
-    expect(resolved.expiredIds).toEqual(offset < 0 ? [] : [review.stablecoinId]);
-  });
-  it("accepts exactly fourteen days but rejects greater", () => {
-    expect(resolveReserveFeedReviews(now, [{ ...review, expiresAt: review.reviewedAt + 14 * 86400 }]).invalidIds).toEqual([]);
-    expect(resolveReserveFeedReviews(now, [{ ...review, expiresAt: review.reviewedAt + 14 * 86400 + 1 }]).invalidIds).toEqual([review.stablecoinId]);
-  });
-  it.each([
-    { reviewedAt: now + 1 }, { owner: " " }, { sources: [{ url: "http://example.com", evidenceDate: "2026-10-06" }] },
-    { sources: [{ url: "https://example.com", evidenceDate: "2026-02-30" }] },
-    { sources: [{ url: "https://example.com", evidenceDate: "2026-11-05" }] },
-    { expiresAt: review.reviewedAt }, { failureCategory: "" },
-  ])("rejects malformed/future review %j", (overrides) => {
-    expect(resolveReserveFeedReviews(now, [{ ...review, ...overrides } as ReserveFeedReview]).invalidIds).toEqual([review.stablecoinId]);
-  });
-  it("rejects every copy of a duplicate identity", () => {
-    const result = resolveReserveFeedReviews(now, [review, review]);
-    expect(result.activeById.size).toBe(0);
-    expect(result.invalidIds).toEqual([review.stablecoinId]);
-  });
-  it("matches only the named failure and never future/ambiguous/new warnings", async () => {
-    expect(await matchReserveFeedReview(mockD1(), state(), now)).toEqual(review);
-    for (const overrides of [
-      { lastError: "primary:http-json: Accountable:future-portfolio-timestamp" },
-      { lastError: "primary:http-json: stale or future portfolio timestamp" },
-      { metadata: { failureCategory: "adapter-timeout" } },
-      { metadata: { failureCategory: "run-budget-exhausted" } },
-      { metadata: { failureCategory: review.failureCategory, uncertainWrite: true } },
-      { warnings: [{ code: "new-failure", message: "new", severity: "warning", effect: "degraded" }] },
-    ] satisfies Partial<ReserveSyncStateRecord>[]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
-  });
-  it("does not acknowledge a review from unreadable or count-mismatched warning evidence", async () => {
-    expect(await matchReserveFeedReview(mockD1(), state(), now)).toEqual(review);
-    for (const overrides of [
-      { warningIntegrityIssue: { code: "invalid-warnings", message: "stored reserve warnings contain invalid JSON" } },
-      { warningCount: 1 },
-    ] satisfies Partial<ReserveSyncStateRecord>[]) {
-      expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
+  it("matches authored findings; rejects changed, corrupt, fatal and expired evidence", async () => {
+    for (const r of RESERVE_FEED_REVIEWS) {
+      const s = state(r);
+      await check(s, r);
+      const mutations: Partial<State>[] = [
+        { adapterKey: "other" }, { metadata: { failureCategory: "validation" } },
+        { metadata: { ...s.metadata, uncertainWrite: true } }, { warningCount: s.warningCount + 1 },
+        { warningIntegrityIssue: { code: "invalid-warnings", message: "unreadable" } },
+        { warnings: [...s.warnings, { code: "new", message: "new", severity: "warning", effect: "degraded" }], warningCount: s.warningCount + 1 },
+        { lastError: "Different failure" }, { lastError: `${s.lastError}: changed cause` },
+      ];
+      if (s.warnings.length) mutations.push({ warnings: s.warnings.map((w) => ({ ...w, effect: "fatal" })) });
+      if (r.failureCategory === null) mutations.push(
+        { metadata: {} }, { metadata: { ...s.metadata, failureCategory: {} } },
+        { metadata: { ...s.metadata, sourceTimestamp: r.reviewedAt + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 2 } },
+        { lastSuccessAt: r.reviewedAt },
+      );
+      for (const change of mutations) await check({ ...s, ...change }, r, null);
+      await check({ ...s, lastStatus: "ok" }, r, null);
+      await check(s, r, r, mockD1(), r.expiresAt - 1);
+      expect(await matchReview(mockD1(), s, r.expiresAt, new Map([[r.stablecoinId, r]]))).toBeNull();
     }
   });
-  it("keeps Yuzu's new review dated and short while naming the stale-timeline cause", async () => {
-    expect(review.reviewedAt).toBe(Date.parse("2026-10-29T11:02:00Z") / 1000);
-    expect(review.expiresAt).toBe(Date.parse("2026-11-05T11:02:00Z") / 1000);
+  it("validates review identity, dates, categories and classes", () => {
+    const now = review.reviewedAt + 1;
+    for (const failureCategory of ["adapter-timeout", "run-budget-exhausted", "network", "storage-write"]) {
+      expect(ReserveFeedReviewSchema.safeParse({ ...review, failureCategory }).success).toBe(false);
+    }
+    expectTypeOf<"adapter-timeout" | "run-budget-exhausted">().not.toExtend<Review["failureCategory"]>();
+    for (const overrides of [
+      { reviewedAt: now + 1 }, { owner: " " }, { sources: [{ url: "http://example.com", evidenceDate: "2026-11-04" }] },
+      ...["2026-02-30", "2026-11-08"].map((evidenceDate) => ({ sources: [{ url: "https://example.com", evidenceDate }] })),
+      { expiresAt: review.reviewedAt }, { expiresAt: review.reviewedAt + 14 * 86400 + 1 },
+      { failureCategory: "" }, { adapterKey: "m0" }, { failureCategory: null, errorPrefix: null },
+      { errorClass: "http-403" }, { errorClass: "http-200", failureCategory: "upstream-http", errorPrefix: null },
+      { sourceTimestamp: now }, { warningCodes: ["same", "same"] },
+    ]) expect(resolveReviews(now, [{ ...review, ...overrides } as Review]).invalidIds).toEqual([review.stablecoinId]);
+    expect(resolveReviews(now, [{ ...review, expiresAt: review.reviewedAt + 14 * 86400 }]).invalidIds).toEqual([]);
+    const duplicates = resolveReviews(now, [review, review]);
+    expect(duplicates.activeById.size).toBe(0);
+    expect(duplicates.invalidIds).toEqual([review.stablecoinId]);
+    for (const offset of [-1, 0, 1]) {
+      const result = resolveReviews(review.expiresAt + offset, [review]);
+      expect(result.activeById.has(review.stablecoinId)).toBe(offset < 0);
+      expect(result.expiredIds).toEqual(offset < 0 ? [] : [review.stablecoinId]);
+    }
+  });
+  it("keeps Yuzu dated and its exact error/category boundary", async () => {
+    expect([review.reviewedAt, review.expiresAt]).toEqual(["2026-11-07T19:46:52Z", "2026-11-14T19:46:52Z"].map((s) => Date.parse(s) / 1000));
+    expect(review.sources).toEqual([{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-11-07" }]);
     expect(review.failureCategory).toBe("unknown");
-    expect(review.errorPrefix).toBe(
-      "primary:http-json: Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation",
-    );
-    expect(review.sources).toEqual([{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-10-29" }]);
-    expect(await matchReserveFeedReview(mockD1(), state(), review.expiresAt - 1)).toEqual(review);
-    expect(await matchReserveFeedReview(mockD1(), state(), review.expiresAt)).toBeNull();
-  });
-  it("does not acknowledge the superseded bucket-total cause or a transport failure on the same feed", async () => {
-    expect(resolveReserveFeedReviews(now).activeById.get(review.stablecoinId)).toEqual(review);
+    expect(review.errorPrefix).toBe(accountable + "exposure_split has no contemporaneous timeline reserve total for reconciliation");
     for (const lastError of [
-      "primary:http-json: Accountable exposure_split bucket total 61782004.86065776 does not match total_reserves 63645930.21",
-      "primary:http-json: Accountable exposure_split has no valid timeline reserve total for reconciliation",
-      "primary:http-json: Accountable exposure_split_ts is invalid: 2026.13.01 00:00:00 UTC",
-      "primary:http-json: Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation: retry",
-      "primary:http-json: HTTP 403 for https://cache.accountable.capital/dashboard/yuzu",
-    ]) expect(await matchReserveFeedReview(mockD1(), state({ lastError }), now)).toBeNull();
-    for (const failureCategory of ["upstream-http", "schema-shape", "corroboration-mismatch"]) {
-      expect(await matchReserveFeedReview(mockD1(), state({ metadata: { failureCategory } }), now)).toBeNull();
+      "future-portfolio-timestamp", "stale or future portfolio timestamp",
+      "exposure_split bucket total 1 does not match total_reserves 2",
+      "exposure_split has no valid timeline reserve total for reconciliation",
+      "exposure_split_ts is invalid: 2026.13.01 00:00:00 UTC", "HTTP 403",
+    ]) await check(state(review, { lastError: accountable + lastError }), review, null);
+    for (const failureCategory of ["upstream-http", "schema-shape", "corroboration-mismatch", "adapter-timeout", "run-budget-exhausted"]) {
+      await check(state(review, { metadata: { failureCategory } }), review, null);
     }
-    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
-      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
-      breaker_key: "test", status: "error", warnings: "[]",
-      last_error: "primary:http-json: Accountable exposure_split bucket total 1 does not match total_reserves 2",
-      metadata: JSON.stringify({ failureCategory: "corroboration-mismatch" }),
-    } }]);
-    expect(await matchReserveFeedReview(db, state({
-      lastStatus: "skipped", metadata: { failureCategory: "circuit-open" },
-    }), now)).toBeNull();
+    expect(RESERVE_FEED_REVIEWS.some((r) => r.stablecoinId === "gusd-gemini")).toBe(false);
   });
-  it("retires the recovered Gemini review and the unmatched Midas review", async () => {
-    expect(RESERVE_FEED_REVIEWS.map((item) => item.stablecoinId)).toEqual(["yzusd-yuzu"]);
-    const midas: ReserveSyncStateRecord = {
-      stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", breakerKey: "live-reserves:mtbill-midas",
-      lastAttemptedAt: now, lastSuccessAt: now - 86400, lastStatus: "error", warningCount: 0, warnings: [],
-      lastError: "primary:onchain-evm: HTTP 403 for https://api-prod.midas.app/api/transparency/by-timestamp?token=[redacted]&timestamp=2026-10-28T10%3A00",
-      metadata: { failureCategory: "upstream-http" },
-    };
-    expect(await matchReserveFeedReview(mockD1(), midas, now)).toBeNull();
-    const midasSaveMismatch: ReserveSyncStateRecord = {
-      ...midas, lastError: "primary:onchain-evm: midas-mtbill:save-rounded-totals-mismatch",
-      metadata: { failureCategory: "unknown" },
-    };
-    expect(await matchReserveFeedReview(mockD1(), midasSaveMismatch, now)).toBeNull();
-    const gemini: ReserveSyncStateRecord = {
-      stablecoinId: "gusd-gemini", adapterKey: "gemini-independent-assurance", breakerKey: "live-reserves:gusd-gemini",
-      lastAttemptedAt: now, lastSuccessAt: now, lastStatus: "ok", warningCount: 0, warnings: [], lastError: null,
-      metadata: {},
-    };
-    expect(await matchReserveFeedReview(mockD1(), gemini, now)).toBeNull();
-    const retired = { ...gemini, lastStatus: "error" as const,
-      lastError: "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index",
-      metadata: { failureCategory: "unknown" } };
-    expect(await matchReserveFeedReview(mockD1(), retired, now)).toBeNull();
+  it("pins HTTP classes to the primary endpoint", async () => {
+    const r = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "mtbill-midas")!;
+    const s = state(r);
+    await check(s, r);
+    await check({ ...s, lastError: http.replace("HTTP 403", "midas-mtbill:source-egress-blocked: HTTP 403") }, r);
+    for (const lastError of [http.replace("403", "429"), http + "; fallback:http-json: failed",
+      http.replace("api-prod.midas.app", "other.example"), http.replace("by-timestamp", "other"),
+      http.replace("primary", "fallback"), http.replace("onchain-evm", "http-json"), "midas-mtbill:save-rounded-totals-mismatch"]) {
+      await check({ ...s, lastError }, r, null);
+    }
+    await check({ ...s, metadata: { failureCategory: "unknown" } }, r, null);
+    await check({ ...s, ...skipped }, r, r, history(r));
   });
-  it("inherits circuit-open only from the latest non-skipped matching attempt", async () => {
-    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
-      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
-      breaker_key: "test", status: "error", warnings: "[]", last_error: review.errorPrefix,
-      metadata: JSON.stringify({ failureCategory: review.failureCategory }),
-    } }]);
-    expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toEqual(review);
+  it("pins verified stalled clocks, including clean ok attempts", async () => {
+    const r = { ...RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "zsd-zephyr-protocol")!, warningCodes: [] };
+    const s = state(r, { lastStatus: "ok" });
+    await check(s, r);
+    for (const metadata of [{ ...s.metadata, sourceTimestamp: r.sourceTimestamp! + 1 }, { ...s.metadata, freshnessMode: "unverified" as const }]) {
+      await check({ ...s, metadata }, r, null);
+    }
+    const fresh = { ...r, sourceTimestamp: r.reviewedAt };
+    await check(state(fresh, { lastStatus: "ok" }), fresh, null);
   });
-  it.each([false, true])("fails closed on missing/unreadable circuit history (%s)", async (failed) => {
-    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: null, ...(failed ? { throwError: new Error("read") } : {}) }]);
-    expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toBeNull();
+  it("inherits only readable nonfatal latest circuit evidence", async () => {
+    const s = state(review, skipped);
+    await check(s, review, review, history());
+    for (const overrides of [
+      { warnings: "not-json" }, { warnings: "{}" }, { warnings: "[{}]" },
+      { metadata: JSON.stringify({ failureCategory: "unknown", uncertainWrite: true }) },
+      { metadata: "not-json" }, { last_error: "new cause" }, { adapter_key: "other" },
+      { metadata: JSON.stringify({ failureCategory: "corroboration-mismatch" }) },
+    ]) await check(s, review, null, history(review, overrides));
+    await check(s, review, null);
+    await check(s, review, null, history(review, {}, true));
+    const r = { ...review, warningCodes: ["same"] };
+    for (const effect of ["degraded", "fatal", "invalid"]) {
+      const db = history(r, { warnings: JSON.stringify([{ code: "same", effect }]) });
+      await check(s, r, effect === "degraded" ? r : null, db);
+    }
   });
-  it("cannot inherit an uncertain prior attempt through a circuit skip", async () => {
-    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
-      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
-      breaker_key: "test", status: "error", warnings: "[]", last_error: review.errorPrefix,
-      metadata: JSON.stringify({ failureCategory: review.failureCategory, uncertainWrite: true }),
-    } }]);
-    expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toBeNull();
-  });
-  it.each(["not-json", "{}", "[{}]"])("rejects unreadable warning evidence %s rather than assuming no warnings", async (warnings) => {
-    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
-      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
-      breaker_key: "test", status: "error", warnings, last_error: review.errorPrefix,
-      metadata: JSON.stringify({ failureCategory: review.failureCategory }),
-    } }]);
-    expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toBeNull();
-  });
-  it("uses adjusted numerator and denominator and retains raw counts", () => {
-    const reserve = makeReserveComposition({ configuredCoins: 10, freshCoins: 8, independentFreshEligible: 8,
-      healthConfiguredCoins: 8, healthFreshCoins: 6, healthAuthoritativeFreshCoins: 6, lastSuccessAt: now,
+  it("retains raw counts and uncertainty beside adjusted health", () => {
+    const r = makeReserveComposition({ configuredCoins: 10, freshCoins: 8, independentFreshEligible: 8,
+      healthConfiguredCoins: 8, healthFreshCoins: 6, healthAuthoritativeFreshCoins: 6, lastSuccessAt: review.reviewedAt,
       acknowledgedFeedIds: ["a", "b"], persistentlyStaleIndependentCoins: [{ stablecoinId: "a", ageSec: 999999 }],
       unacknowledgedPersistentlyStaleIndependentCoins: [],
     });
-    expect(evaluateReserveCompositionStatus(reserve)).toMatchObject({ status: "healthy", freshCoverageRatio: 0.75, authoritativeFreshCoverageRatio: 0.75 });
-    expect(reserve.freshCoins).toBe(8);
-    expect(evaluateReserveCompositionStatus({ ...reserve, healthFreshCoins: 0 }).status).toBe("stale");
-    expect(evaluateReserveCompositionStatus({ ...reserve, healthConfiguredCoins: 0, healthFreshCoins: 0, healthAuthoritativeFreshCoins: 0 }).status).toBe("healthy");
-    expect(evaluateReserveCompositionStatus({ ...reserve, writeTimeoutUncertain: 1 }).status).toBe("degraded");
+    expect(evaluateReserveCompositionStatus(r)).toMatchObject({ status: "healthy", freshCoverageRatio: 0.75, authoritativeFreshCoverageRatio: 0.75 });
+    expect(r.freshCoins).toBe(8);
+    expect(evaluateReserveCompositionStatus({ ...r, healthFreshCoins: 0 }).status).toBe("stale");
+    expect(evaluateReserveCompositionStatus({ ...r, healthConfiguredCoins: 0, healthFreshCoins: 0, healthAuthoritativeFreshCoins: 0 }).status).toBe("healthy");
+    expect(evaluateReserveCompositionStatus({ ...r, writeTimeoutUncertain: 1 }).status).toBe("degraded");
   });
 });

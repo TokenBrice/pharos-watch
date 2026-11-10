@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { formatCompactUsd } from "@shared/lib/format";
+import { formatCompactUsdOrSubDollar } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
+import { formatChainShare } from "@/lib/chain-ui";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ChainRouteViewModel } from "./view-model";
@@ -29,8 +30,8 @@ export function CompositionSection({ model }: { model: ChainRouteViewModel }) {
               href={buildStablecoinUrl(coin.id)}
               className="pharos-focus-ring h-full min-w-[2px] transition-opacity hover:opacity-80"
               style={{ width: `${coin.chainShare * 100}%`, backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length] }}
-              title={`${coin.name} (${coin.symbol}) · ${(coin.chainShare * 100).toFixed(1)}% · ${formatCompactUsd(coin.supplyUsd)}`}
-              aria-label={`${coin.name}, ${(coin.chainShare * 100).toFixed(1)}% of chain supply`}
+              title={`${coin.name} (${coin.symbol}) · ${formatChainShare(coin.chainShare)} · ${formatCompactUsdOrSubDollar(coin.supplyUsd)}`}
+              aria-label={`${coin.name}, ${formatChainShare(coin.chainShare)} of chain supply`}
             />
           ))}
           {rest.length > 0 && (
@@ -38,7 +39,7 @@ export function CompositionSection({ model }: { model: ChainRouteViewModel }) {
               role="listitem"
               className="h-full min-w-[2px]"
               style={{ width: `${othersShare * 100}%`, backgroundColor: CHART_SLATE }}
-              title={`${rest.length} other stablecoins · ${(othersShare * 100).toFixed(1)}% · ${formatCompactUsd(restTotal)}`}
+              title={`${rest.length} other stablecoins · ${formatChainShare(othersShare)} · ${formatCompactUsdOrSubDollar(restTotal)}`}
             />
           )}
         </div>
@@ -58,7 +59,7 @@ export function CompositionSection({ model }: { model: ChainRouteViewModel }) {
                 <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={16} />
                 <span className="font-medium">{coin.symbol}</span>
                 <span className="pharos-numeric text-xs text-muted-foreground">
-                  {(coin.chainShare * 100).toFixed(1)}% · {formatCompactUsd(coin.supplyUsd)}
+                  {formatChainShare(coin.chainShare)} · {formatCompactUsdOrSubDollar(coin.supplyUsd)}
                 </span>
               </Link>
             </li>
@@ -68,7 +69,7 @@ export function CompositionSection({ model }: { model: ChainRouteViewModel }) {
               <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: CHART_SLATE }} aria-hidden="true" />
               <span className="font-medium">+{rest.length} others</span>
               <span className="pharos-numeric text-xs">
-                {(othersShare * 100).toFixed(1)}% · {formatCompactUsd(restTotal)}
+                {formatChainShare(othersShare)} · {formatCompactUsdOrSubDollar(restTotal)}
               </span>
             </li>
           )}

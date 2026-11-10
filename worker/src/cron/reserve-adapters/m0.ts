@@ -507,7 +507,12 @@ export async function fetchM0Reserves(
     signal,
     12_000,
     ctx,
-    { headers: { Authorization: `ApiKey ${apiKey}` } },
+    {
+      headers: { Authorization: `ApiKey ${apiKey}` },
+      // Workers has no redirect: "error"; manual keeps the API key on the
+      // reviewed GraphQL origin instead of replaying a 307/308 POST elsewhere.
+      redirect: "manual",
+    },
   );
   if (payload.errors?.length) {
     const message = payload.errors.map((error) => error.message).filter(Boolean).join("; ");

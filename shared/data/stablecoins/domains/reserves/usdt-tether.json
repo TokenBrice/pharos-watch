@@ -4,7 +4,7 @@
     {
       "sourceKey": "tether:usdt:treasury-bills",
       "name": "U.S. Treasury bills",
-      "pct": 61.230408,
+      "pct": 64.162465,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -18,7 +18,7 @@
     {
       "sourceKey": "tether:usdt:overnight-reverse-repo",
       "name": "Overnight reverse repurchase agreements",
-      "pct": 9.920325,
+      "pct": 4.971874,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed reverse-repo counterparties",
@@ -33,7 +33,7 @@
     {
       "sourceKey": "tether:usdt:term-reverse-repo",
       "name": "Term reverse repurchase agreements",
-      "pct": 3.724834,
+      "pct": 3.749019,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed reverse-repo counterparties",
@@ -48,7 +48,7 @@
     {
       "sourceKey": "tether:usdt:non-us-treasury-bills",
       "name": "Non-US Treasury bills",
-      "pct": 0.011917,
+      "pct": 0.011482,
       "risk": "medium",
       "assetClass": "government-security",
       "issuerOrObligor": "Undisclosed non-US sovereign issuers",
@@ -63,7 +63,7 @@
     {
       "sourceKey": "tether:usdt:cash-bank-deposits",
       "name": "Cash and bank deposits",
-      "pct": 0.021469,
+      "pct": 0.010670,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed banking counterparties",
@@ -76,7 +76,7 @@
     {
       "sourceKey": "tether:usdt:corporate-bonds",
       "name": "Corporate bonds",
-      "pct": 0.004640,
+      "pct": 0.033367,
       "risk": "high",
       "assetClass": "public-credit",
       "issuerOrObligor": "Undisclosed corporate issuers",
@@ -91,7 +91,7 @@
     {
       "sourceKey": "tether:usdt:precious-metals",
       "name": "Precious metals",
-      "pct": 10.033669,
+      "pct": 9.968421,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Physical gold inventory",
@@ -105,7 +105,7 @@
     {
       "sourceKey": "tether:usdt:bitcoin",
       "name": "Bitcoin",
-      "pct": 3.090059,
+      "pct": 4.370396,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Tether-controlled on-chain wallets",
@@ -119,7 +119,7 @@
     {
       "sourceKey": "tether:usdt:public-equities",
       "name": "Public equities",
-      "pct": 2.003414,
+      "pct": 2.182178,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed public-equity issuers",
@@ -134,7 +134,7 @@
     {
       "sourceKey": "tether:usdt:other-investments",
       "name": "Other investments",
-      "pct": 2.793540,
+      "pct": 3.136088,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed",
@@ -149,7 +149,7 @@
     {
       "sourceKey": "tether:usdt:secured-loans",
       "name": "Secured loans",
-      "pct": 7.165724,
+      "pct": 7.404041,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Undisclosed third-party borrowers",
@@ -163,108 +163,104 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Safety Score v10.01 BDO primary-source classification and horizon review",
+    "reviewedAt": "2026-11-01",
+    "reviewer": "Pharos findings-curation renewal 2026-11-01 (BDO Q3 2026 primary-source classification and horizon review)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BDO ISAE 3000R report at 2026-06-30, signed 2026-07-31; report page 4 / PDF page 9, footnotes 3-13 reverified 2026-10-02 UTC",
-        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        "label": "BDO ISAE 3000R report at 2026-09-30, signed Milan 2026-10-30; report page 4 category dollars and footnotes 4-14 reverified 2026-11-01 UTC",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/7nQYtcoP9GxIUFSyro2dGK/8d0521470b9e99c8c0831019cabea4ee/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_30-09-2026.pdf"
       },
       {
-        "label": "Tether latest-report index and presentation, inspected 2026-09-27",
+        "label": "Tether latest-report index and presentation, inspected 2026-11-01; report-dated assets, liabilities and net equity block",
         "url": "https://tether.to/en/transparency/?tab=reports"
       },
       {
-        "label": "Tether live transparency balance endpoint (separate balance-sheet observation, not composition)",
+        "label": "Tether live transparency endpoint (daily net circulation and live reserve residual, not the report-dated balance sheet or composition)",
         "url": "https://app.tether.to/transparency.json"
-      },
-      {
-        "label": "BDO ISAE 3000R report at 2026-03-31, signed 2026-04-30 (prior-quarter equity comparison), reviewed 2026-10-19",
-        "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
       }
     ],
-    "rationale": "The eleven categories reproduce the dollar amounts in the June 30, 2026 report, signed July 31, 2026. Percentages are derived from the report's total assets and rounded to six decimals. Both authored composition arrays use this same dated allocation. The live transparency endpoint supplies a separate balance-sheet observation and does not refresh composition. The prior 2026-09-27 webpage inspection recorded assets of USD 187751825408, liabilities of USD 183642296213 and equity of USD 4109529195; the signed PDF gives USD 187751426411, USD 183641897215 and USD 4109529196, respectively. The USD 398997 asset discrepancy has no verified explanation or issuer reconciliation in those inspected sources; this composition uses the internally reconciling signed PDF denominator. The report covers fiat-denominated Tether tokens, not an independently allocated USDT-only balance sheet. Verified confidence covers the sourced amounts, dates and explicit category descriptions, not unresolved look-through identities. The non-US sovereign and corporate legacy risk tiers are conservative editorial classifications, not attested ratings. Primary-source re-verification was completed at 2026-10-02T22:41:38Z; the fetched PDF byte SHA256 is aa7322474c671beb4d02e2052dce36f4c0dc4482851021f782bf44ab7aba5ea1. This UTC verification pin establishes reviewedAt, without changing the June 30 portfolio date. Report page 4 (PDF page 9), footnote 9 states that Precious Metals comprises 'LBMA standard physical gold bars owned by the Company'. This establishes directly owned physical gold, but the D2 commodity peg-match rule reserves commodity-allocated for tokens pegged to the vaulted metal (GOLD or SILVER). USDT is USD-pegged, so its gold retains USD gold-price exposure and cannot receive that class's quality-90 and maturity-N/A treatment. The current reserve asset-class vocabulary has no separate physical-commodity class for USD-pegged reserves; retain other with market, custody and liquidity risk factors. No custodian identity, bar-level segregation, bankruptcy priority or liquidity term is inferred. Footnote 4 states Overnight Reverse-Repurchase Agreements have 'a maturity of 1 day' and are fully collateralized by US Treasuries: restore only this category's one-day contractual horizon and retain maturityDaysMax=1. This is the stated contractual term, not guaranteed stressed settlement. Footnotes 3, 5 and 6 give weighted/residual average maturities for US bills, term repo and non-US bills; footnote 8 gives corporate bonds' residual average above 360 days. None establishes a category-wide maximum or realization deadline. Footnote 7 identifies deposits without an access term; footnotes 9-13 identify physical gold, on-chain bitcoin, actively traded equities, other investments and secured loans without a category-wide liquidity term. All other liquidity horizons remain unknown after this researched disclosure review. No averages are converted to maxima; compositionAsOf stays 2026-06-30. The liveReservesConfig.params.slices classifications mirror these reviewed fields and change its fingerprint; existing mismatched snapshots remain inadmissible until recovery produces a compatible snapshot. Prior-quarter comparison, reviewed 2026-10-19: the March 31, 2026 BDO report, signed April 30, 2026, gives equity (assets in excess of liabilities) of USD 8232209778, so the June 30 equity of USD 4109529196 is about half the prior-quarter figure. The change-in-net-equity table in the June 30 report shows a financial result of USD -3171M for the six months from December 31, 2025, against USD +1040M for the first quarter in the March report, with net capital movements of USD 943M and USD 854M respectively. This comparison does not change composition or compositionAsOf.",
-    "compositionBasis": "BDO-assured Tether International reserves for fiat-denominated tokens at 2026-06-30 23:59 UTC; eleven reported USD asset categories divided by total assets of USD 187751426411.",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The eleven categories reproduce the dollar amounts in the September 30, 2026 report, signed October 30, 2026. Percentages are derived from the report's total assets and rounded to six decimals. Both authored composition arrays use this same dated allocation. The live transparency endpoint supplies circulation and a live reserve residual, not the report-dated issuer balance sheet, and does not refresh composition. Primary-source re-verification was completed at 2026-11-01; the report's page 4 table gives U.S. Treasury Bills 122839738995, Overnight Reverse Repurchase Agreements 9518706336, Term Reverse Repurchase Agreements 7177537907, Non-US Treasury Bills 21981521, Cash & Bank Deposits 20427407, Corporate Bonds 63881392, Precious Metals 19084651736, Bitcoin 8367170264, Public Equities 4177803686, Other Investments 6004074506 and Secured Loans 14175117624, totaling 191451091374. The report covers fiat-denominated Tether tokens, not an independently allocated USDT-only balance sheet. Verified confidence covers the sourced amounts, dates and explicit category descriptions, not unresolved look-through identities. The non-US sovereign and corporate legacy risk tiers are conservative editorial classifications, not attested ratings. Report page 4 footnote 10 states that Precious Metals comprises 'LBMA standard physical gold bars owned by the Company'. This establishes directly owned physical gold, but the D2 commodity peg-match rule reserves commodity-allocated for tokens pegged to the vaulted metal (GOLD or SILVER). USDT is USD-pegged, so its gold retains USD gold-price exposure and cannot receive that class's quality-90 and maturity-N/A treatment. The current reserve asset-class vocabulary has no separate physical-commodity class for USD-pegged reserves; retain other with market, custody and liquidity risk factors. No custodian identity, bar-level segregation, bankruptcy priority or liquidity term is inferred. Footnote 5 states Overnight Reverse-Repurchase Agreements have 'a maturity of 1 day' and are fully collateralized by US Treasuries: restore only this category's one-day contractual horizon and retain maturityDaysMax=1. This is the stated contractual term, not guaranteed stressed settlement. Footnotes 4, 6 and 7 give weighted/residual average maturities for US bills, term repo and non-US bills; footnote 9 gives corporate bonds' residual average above 360 days. None establishes a category-wide maximum or realization deadline. Footnote 8 identifies deposits without an access term; footnotes 10-14 identify physical gold, on-chain bitcoin, actively traded equities, other investments and secured loans without a category-wide liquidity term. All other liquidity horizons remain unknown after this researched disclosure review. No averages are converted to maxima; compositionAsOf stays 2026-09-30. The liveReservesConfig.params.slices classifications mirror these reviewed fields and change its fingerprint; existing mismatched snapshots remain inadmissible until recovery produces a compatible snapshot.",
+    "compositionBasis": "BDO-assured Tether International reserves for fiat-denominated tokens at 2026-09-30 23:59 UTC; eleven reported USD asset categories divided by total assets of USD 191451091374.",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The selected unresolved look-through set comprises non-US Treasury bills, corporate bonds, public equities, other investments and secured loans: the report does not identify their sovereign or corporate issuers, borrowers, positions or concentration. Its USD 22491186153 aggregate is 11.979236% of reported total assets when rounded to six decimals; the individually rounded slice percentages sum to 11.979235%. This set is not all counterparty uncertainty; banking and repo counterparties also remain unnamed.",
-    "knownUnknownExposurePct": 11.979235,
+    "knownUnknownExposure": "The selected unresolved look-through set comprises non-US Treasury bills, corporate bonds, public equities, other investments and secured loans: the report does not identify their sovereign or corporate issuers, borrowers, positions or concentration. Its USD 24442858729 aggregate is 12.767156% of reported total assets when rounded to six decimals; the individually rounded slice percentages also sum to 12.767156%. This set is not all counterparty uncertainty; banking and repo counterparties also remain unnamed.",
+    "knownUnknownExposurePct": 12.767156,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "U.S. Treasury bills",
-        "pct": 61.230408,
+        "pct": 64.162465,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Direct United States Treasury obligations are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Overnight reverse repurchase agreements",
-        "pct": 9.920325,
+        "pct": 4.971874,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reverse-repo claims are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Term reverse repurchase agreements",
-        "pct": 3.724834,
+        "pct": 3.749019,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reverse-repo claims are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Non-US Treasury bills",
-        "pct": 0.011917,
+        "pct": 0.011482,
         "disposition": "insufficient-evidence",
         "rationale": "Non-US sovereign obligations are external untracked claims, not tracked stablecoin dependencies; the report does not identify the sovereign issuers or concentration."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Cash and bank deposits",
-        "pct": 0.021469,
+        "pct": 0.010670,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Fiat bank balances are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Corporate bonds",
-        "pct": 0.004640,
+        "pct": 0.033367,
         "disposition": "insufficient-evidence",
         "rationale": "Corporate bonds are external untracked claims, not tracked stablecoin dependencies; the report does not identify the corporate issuers, ratings, positions or concentration."
       },
       {
         "reserveIndex": 6,
         "reserveName": "Precious metals",
-        "pct": 10.033669,
+        "pct": 9.968421,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Report page 4 / PDF page 9, footnote 9 identifies LBMA standard physical gold bars owned by the Company. These directly owned commodity holdings are external reserve backing rather than a tracked stablecoin dependency; custody safeguards and liquidation timing are not established."
+        "rationale": "Report page 4, footnote 10 identifies LBMA standard physical gold bars owned by the Company. These directly owned commodity holdings are external reserve backing rather than a tracked stablecoin dependency; custody safeguards and liquidation timing are not established."
       },
       {
         "reserveIndex": 7,
         "reserveName": "Bitcoin",
-        "pct": 3.090059,
+        "pct": 4.370396,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Bitcoin inventory is external reserve backing rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 8,
         "reserveName": "Public equities",
-        "pct": 2.003414,
+        "pct": 2.182178,
         "disposition": "insufficient-evidence",
         "rationale": "The attestation does not identify the equity issuers, individual positions, or concentration."
       },
       {
         "reserveIndex": 9,
         "reserveName": "Other investments",
-        "pct": 2.793540,
+        "pct": 3.136088,
         "disposition": "insufficient-evidence",
         "rationale": "The residual category does not identify the underlying instruments, issuers, obligors, or positions."
       },
       {
         "reserveIndex": 10,
         "reserveName": "Secured loans",
-        "pct": 7.165724,
+        "pct": 7.404041,
         "disposition": "insufficient-evidence",
         "rationale": "The attestation does not identify the borrowers, collateral packages, maturity profile, or concentration."
       }
@@ -280,13 +276,13 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA01USDT)",
+    "reviewedAt": "2026-11-01",
+    "reviewer": "Pharos findings-curation renewal 2026-11-01 (USDT custody recheck against the BDO Q3 2026 report)",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-06-30 (signed Milan, 2026-07-31)",
-        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+        "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-09-30 (signed Milan, 2026-10-30)",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/7nQYtcoP9GxIUFSyro2dGK/8d0521470b9e99c8c0831019cabea4ee/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_30-09-2026.pdf"
       },
       {
         "label": "Tether International Relevant Information Document filed with CNAD (2026-02-20), Safeguarding Arrangements section",
@@ -297,7 +293,7 @@
         "url": "https://tether.to/en/legal/"
       }
     ],
-    "uncertainty": "The Q2 2026 BDO report identifies reserve asset categories in aggregate and names no custodians; its procedures obtained confirmations directly from banks and depositaries. The CNAD-filed Relevant Information Document (2026-02-20), Safeguarding Arrangements section, states reserves are held with various third parties including banks and licensed financial institutions, without identifying those providers or describing reserve segregation, bankruptcy-remoteness, or reuse restrictions. The Token Terms grant verified customers a personal contractual redemption right. These inspected sources do not establish provider shares or the three custody safeguards; their unknown status is retained. This review does not claim that no other public source names a custodian.",
+    "uncertainty": "The Q3 2026 BDO report identifies reserve asset categories in aggregate and names no custodians; its procedures obtained confirmations directly from banks and depositaries. The CNAD-filed Relevant Information Document (2026-02-20), Safeguarding Arrangements section, states reserves are held with various third parties including banks and licensed financial institutions, without identifying those providers or describing reserve segregation, bankruptcy-remoteness, or reuse restrictions. The Token Terms grant verified customers a personal contractual redemption right. These inspected sources do not establish provider shares or the three custody safeguards; their unknown status is retained. This review does not claim that no other public source names a custodian.",
     "knownUnknownExposurePct": 100
   }
 }

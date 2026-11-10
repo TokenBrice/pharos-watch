@@ -67,6 +67,8 @@ export function executeCurveGetDyMulticall(input: {
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
   onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
+  /** Only adaptive callers that split a failed multi-call aggregate may opt in. */
+  splitOnExecutionBudgetError?: boolean;
 }): Promise<EvmMulticall3Result[] | null> {
   const { rpcBudget } = input;
   return fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
@@ -85,6 +87,10 @@ export function executeCurveGetDyMulticall(input: {
       return consumed;
     } } : {}),
     gas: CURVE_STABLESWAP_MULTICALL_GAS,
+    // A multi-call OOG is deterministic at this pinned block and gas cap, so an
+    // adaptive caller splits it instead of replaying it on every provider.
+    // Non-adaptive families and singletons keep full failover.
+    stopOnExecutionBudgetError: input.splitOnExecutionBudgetError === true && input.calls.length > 1,
     multicallBatchSize: Math.min(CURVE_STABLESWAP_MULTICALL_BATCH_SIZE, input.calls.length),
   });
 }

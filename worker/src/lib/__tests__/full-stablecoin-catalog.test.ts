@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import sourceAsset from "@shared/data/stablecoins/coins.generated.json";
 import * as canonicalRegistry from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types/core";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import decodedAsset, { decodeWorkerStablecoinCatalog } from "../full-stablecoin-catalog";
 
@@ -21,6 +22,32 @@ function packReviews(records: readonly { id: string; blacklistabilityReview: unk
   return { version: 2, maxUncompressedBytes: Math.max(...rows.flatMap((row) => [row[1], row[3].blacklistabilityReview[0]])), coins: rows };
 }
 
+const EVIDENCE_FIELDS = ["blacklistabilityReview", "mintAuthority", "bridgeRouteRisk", "oracleRisk", "genius"] as const;
+
+/**
+ * A descriptor copy of the decoded catalog whose evidence getters cache their
+ * first read. The registry sweep compares the same rows through ~13 exports,
+ * and every uncached read inflates the packed record again; non-caching is
+ * asserted directly above, so the copy is only used to keep the equality sweep
+ * affordable without sampling it.
+ */
+function memoizedCatalog(coins: readonly StablecoinMeta[]): readonly StablecoinMeta[] {
+  return coins.map((coin) => {
+    const copy = Object.create(Object.getPrototypeOf(coin) as object | null, Object.getOwnPropertyDescriptors(coin)) as StablecoinMeta;
+    for (const field of EVIDENCE_FIELDS) {
+      const descriptor = Object.getOwnPropertyDescriptor(copy, field);
+      if (!descriptor?.get) continue;
+      let cached: unknown;
+      let read = false;
+      Object.defineProperty(copy, field, { ...descriptor, get: () => {
+        if (!read) { read = true; cached = descriptor.get!.call(copy); }
+        return cached;
+      } });
+    }
+    return copy;
+  });
+}
+
 afterEach(() => {
   vi.doUnmock("#pharos-full-catalog");
   vi.resetModules();
@@ -28,15 +55,15 @@ afterEach(() => {
 
 describe("Worker full stablecoin catalog", () => {
   it("preserves every complete source record, its order, and its evidence hash", () => {
-    expect(decodedAsset).toEqual(sourceAsset);
     expect(decodedAsset.map((coin) => coin.id)).toEqual(sourceAsset.map((coin) => coin.id));
+    // Per-record digests include key order, so they subsume the deep equality.
     const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
     expect(decodedAsset.map(digest)).toEqual(sourceAsset.map(digest));
   });
 
   it("keeps all packed reviewed domains non-caching across the full cohort", () => {
     for (const coin of decodedAsset) {
-      for (const field of ["blacklistabilityReview", "mintAuthority", "bridgeRouteRisk", "oracleRisk", "genius"] as const) {
+      for (const field of EVIDENCE_FIELDS) {
         const first = coin[field];
         if (first == null) continue;
         expect(Object.getOwnPropertyDescriptor(coin, field)?.get).toBeTypeOf("function");
@@ -117,7 +144,7 @@ describe("Worker full stablecoin catalog", () => {
   });
 
   it("preserves every registry array, map and set including suspended-feed normalization", async () => {
-    vi.doMock("#pharos-full-catalog", () => ({ default: decodedAsset }));
+    vi.doMock("#pharos-full-catalog", () => ({ default: memoizedCatalog(decodedAsset) }));
     vi.resetModules();
     const workerRegistry = await import("@shared/lib/stablecoins/registry");
     for (const [key, expected] of Object.entries(canonicalRegistry)) {

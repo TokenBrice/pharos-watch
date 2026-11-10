@@ -77,4 +77,29 @@ describe("useUrlSearchSync", () => {
       expect(screen.getByTestId("deferred").textContent).toBe("beta");
     });
   });
+
+  it.each(["beta", ""])("retires committed draft %j before navigating back to its base query", async (value) => {
+    vi.useFakeTimers();
+    const baseUrl = "/compliance/?q=alpha&peg=USD#directory";
+    window.history.replaceState(null, "", baseUrl);
+    window.history.pushState(null, "", baseUrl);
+    render(createElement(SearchProbe));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(299); });
+    expect(new URL(window.location.href).searchParams.get("q")).toBe("alpha");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(new URL(window.location.href).searchParams.get("q") ?? "").toBe(value);
+    expect(new URL(window.location.href).searchParams.get("peg")).toBe("USD");
+    expect(window.location.hash).toBe("#directory");
+
+    await act(async () => {
+      window.history.back();
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(screen.getByTestId("input").textContent).toBe("alpha");
+    expect(screen.getByTestId("deferred").textContent).toBe("alpha");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(window.location.href).toBe(new URL(baseUrl, window.location.origin).href);
+    expect(window.gtag).toHaveBeenCalledTimes(value ? 1 : 0);
+  });
 });

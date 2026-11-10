@@ -279,8 +279,7 @@ export function SafetyScoreDataCoverage({ model }: { model: DataCoverageModel | 
       <StatDetail model={model} />
       {model.openEvidence === null ? (
         <p className="text-2xs leading-relaxed text-muted-foreground">
-          This publication predates the open-evidence block, so the three open-question counts
-          cannot be shown. They are unavailable, not zero.
+          Open-question counts are unavailable for this publication, not zero.
         </p>
       ) : null}
       {model.reasons.length > 0 ? (

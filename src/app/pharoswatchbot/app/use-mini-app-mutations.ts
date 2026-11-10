@@ -48,13 +48,24 @@ function countCoins(count: number): string {
   return `${count} ${count === 1 ? "coin" : "coins"}`;
 }
 
+interface AppliedBulkCounts {
+  added: number;
+  removed: number;
+}
+
 /** User-facing confirmation for a saved change; also the stale-auth "Not saved" intent. */
-function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
+function mutationSuccessAnnouncement(
+  operation: TelegramMiniAppOperation,
+  state: TelegramMiniAppState | null,
+  appliedBulk?: AppliedBulkCounts,
+): string {
   switch (operation.kind) {
     case "preview-bulk-watchlist":
     case "confirm-bulk-watchlist": {
-      const added = operation.addStablecoinIds.length;
-      const removed = operation.removeStablecoinIds.length;
+      // The preview may classify part of the selection as already matching; the
+      // confirmation applies only its adds/removes, so report those counts.
+      const added = appliedBulk?.added ?? operation.addStablecoinIds.length;
+      const removed = appliedBulk?.removed ?? operation.removeStablecoinIds.length;
       if (removed === 0) return `Added ${countCoins(added)}.`;
       if (added === 0) return `Removed ${countCoins(removed)}.`;
       return `Added ${countCoins(added)}, removed ${removed}.`;
@@ -321,7 +332,10 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     return () => clearTimeout(timer);
   }, [mutationRetryAfterSec]);
 
-  const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppClientSnapshot | null> => {
+  const performMutation = useCallback(async (
+    operation: TelegramMiniAppOperation,
+    appliedBulk?: AppliedBulkCounts,
+  ): Promise<TelegramMiniAppClientSnapshot | null> => {
     if (terminalRef.current) return null;
     if (authExpired || staleAuth) {
       // Resending the frozen initData is guaranteed to fail; keep the intent visible instead.
@@ -356,7 +370,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
         return next;
       }
       onSnapshotReplaced(next);
-      showNotice("success", mutationSuccessAnnouncement(operation, preState ?? next.state));
+      showNotice("success", mutationSuccessAnnouncement(operation, preState ?? next.state, appliedBulk));
       const haptics = webApp?.HapticFeedback;
       if (operation.kind === "recommended-setup" || operation.kind === "set-coin" || operation.kind === "remove-coin" || operation.kind === "confirm-bulk-watchlist") {
         haptics?.notificationOccurred?.("success");
@@ -478,14 +492,14 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       ...selection,
       expectedPreferenceGeneration: preview.expectedPreferenceGeneration,
       previewFingerprint: preview.previewFingerprint,
-    });
+    }, { added: preview.adds.length, removed: preview.removes.length });
     if (!next) return false;
     showNotice("success", mutationSuccessAnnouncement({
       kind: "confirm-bulk-watchlist",
       ...selection,
       expectedPreferenceGeneration: preview.expectedPreferenceGeneration,
       previewFingerprint: preview.previewFingerprint,
-    }, next.state), { kind: "undo-bulk-watchlist", ...preview.undo });
+    }, next.state, { added: preview.adds.length, removed: preview.removes.length }), { kind: "undo-bulk-watchlist", ...preview.undo });
     return true;
   }, [authExpired, performBulkWatchlistPreview, performMutation, showNotice, staleAuth, state, webApp]);
 

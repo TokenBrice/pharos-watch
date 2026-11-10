@@ -34,10 +34,13 @@ vi.mock("@/hooks/use-blacklist-events", () => ({
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
-  useUrlFilters: () => ({
-    searchParams: new URLSearchParams(currentSearch),
-    replaceParams: replaceParamsMock,
-  }),
+  useUrlFilters: () => {
+    const search = currentSearch;
+    return {
+      searchParams: new URLSearchParams(search),
+      replaceParams: (updater: (params: URLSearchParams) => void) => replaceParamsMock(updater, search),
+    };
+  },
 }));
 
 vi.mock("@/lib/analytics", () => ({
@@ -132,8 +135,8 @@ describe("useFreezeWatchPageController", () => {
         params,
       };
     });
-    replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void) => {
-      const params = new URLSearchParams(currentSearch);
+    replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void, search: string) => {
+      const params = new URLSearchParams(search);
       updater(params);
       currentSearch = params.toString() ? `?${params.toString()}` : "";
     });
@@ -143,7 +146,7 @@ describe("useFreezeWatchPageController", () => {
   it("derives cursor page state and resets navigation when URL ledger filters change", () => {
     const { result, rerender } = renderHook(() => useFreezeWatchPageController());
     expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(expect.objectContaining({
-      stablecoin: "USDT", chainName: "Tron", eventType: "destroy", query: "abc",
+      stablecoin: "USDT", chainId: "tron", eventType: "destroy", query: "abc",
       sortBy: "event", sortDirection: "asc", limit: 50, cursor: undefined, includeTotal: true,
     }));
     expect(result.current.clampedPage).toBe(1);
@@ -189,7 +192,7 @@ describe("useFreezeWatchPageController", () => {
       expect(result.current.page).toBe(1);
       expect(result.current.canPreviousPage).toBe(false);
       expect(useBlacklistEventsPageMock.mock.calls.every(([query]) =>
-        query.stablecoin === "USDC" && query.chainName === "Ethereum" && query.cursor === undefined,
+        query.stablecoin === "USDC" && query.chainId === "ethereum" && query.cursor === undefined,
       )).toBe(true);
       expect(trackEventMock).toHaveBeenCalledWith("filter_applied", {
         page: "freezewatch", filter_type: "stablecoin", filter_value: "USDC",
@@ -264,6 +267,34 @@ describe("useFreezeWatchPageController", () => {
     expect(drilldownEl.scrollIntoView).toHaveBeenCalledTimes(1);
 
     vi.useRealTimers();
+  });
+
+  it.each([false, true])("keeps pending search current across navigation (browser: %s)", (browser) => {
+    vi.useFakeTimers();
+    try {
+      currentSearch = "?coin=usdt&chainId=tron&page=2&q=abc&keep=yes";
+      const { result, rerender } = renderHook(() => useFreezeWatchPageController());
+      act(() => result.current.handleNextPage());
+      act(() => result.current.handleSearchChange("address"));
+      act(() => vi.advanceTimersByTime(299));
+      if (browser) currentSearch = "?coin=usdt&chainId=ethereum&q=back&keep=yes";
+      else act(() => result.current.handleChainChange("ethereum"));
+      rerender();
+      act(() => vi.advanceTimersByTime(1));
+      rerender();
+      const params = new URLSearchParams(currentSearch);
+      expect(result.current.chainFilter).toBe("ethereum");
+      expect(result.current.searchInput).toBe(browser ? "back" : "address");
+      expect(params.get("q")).toBe(browser ? "back" : "address");
+      expect(params.get("coin")).toBe("usdt");
+      expect(params.get("keep")).toBe("yes");
+      expect(params.get("page")).toBeNull();
+      expect(result.current.page).toBe(1);
+      expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: undefined }));
+      expect(replaceParamsMock).toHaveBeenCalledTimes(browser ? 0 : 2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("walks beyond the former 25000 offset cap with cursors and keeps the exact total", () => {
@@ -389,6 +420,27 @@ describe("useFreezeWatchPageController", () => {
 
     expect(result.current.error).toBe(reportCardsError);
     expect(result.current.stablecoinsError).toBeNull();
+  });
+
+  it("forwards the chain id when the summary (and its chain-name lookup) is unavailable", () => {
+    currentSearch = "?chain=tron";
+    useBlacklistSummaryMock.mockReturnValue({
+      data: undefined, isLoading: false, error: new Error("HTTP 503"), refetch: vi.fn(),
+    });
+    const { result } = renderHook(() => useFreezeWatchPageController());
+
+    const pageParams = useBlacklistEventsPageMock.mock.calls.at(-1)?.[0];
+    expect(result.current.chainFilter).toBe("tron");
+    expect(pageParams).toMatchObject({ chainId: "tron" });
+    expect(pageParams).not.toHaveProperty("chainName");
+  });
+
+  it("forwards an unresolved chain id instead of silently querying every chain", () => {
+    currentSearch = "?chain=bogus";
+    const { result } = renderHook(() => useFreezeWatchPageController());
+
+    expect(result.current.chainFilter).toBe("bogus");
+    expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ chainId: "bogus" }));
   });
 
   it("removes stale chainId alias when updating the chain filter", () => {

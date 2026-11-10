@@ -1,12 +1,20 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 import Beasties, { type Logger, type Options } from "beasties";
 import { runDirectCli } from "../lib/cli-args.mjs";
+import { gatedHtmlRoutes } from "./report-build-size.mjs";
+
+// `gates` narrows the pass to the HTML routes whose bytes the artifact gates
+// measure, plus the largest exported pages so the blocking largest-HTML ceiling
+// always measures an inlined page. Anything else (including unset) keeps the
+// full public pass.
+export const CRITICAL_CSS_SCOPE_GATES = "gates";
+export const GATE_SCOPED_LARGEST_HTML_PAGES = 3;
 
 export function collectCriticalCssPages(outDir: string): string[] {
   return readdirSync(outDir, { withFileTypes: true, recursive: true })
@@ -14,6 +22,31 @@ export function collectCriticalCssPages(outDir: string): string[] {
     .map((entry) => path.join(entry.parentPath, entry.name))
     .filter((file) => !path.relative(outDir, file).startsWith(`admin${path.sep}`))
     .sort();
+}
+
+/**
+ * Gate-scoped selection is a subset of the public pass. A missing gate route or
+ * an unrecognised scope falls back to the full pass so a scoped run never
+ * processes less than the artifact gates can prove. The largest pre-inline
+ * pages are always included because `largestHtmlBytes` measures every exported
+ * HTML file; without them a non-gate page could overtake the gate routes and
+ * the PR build would measure its un-inlined size.
+ */
+export function selectCriticalCssPages(
+  outDir: string,
+  scope: string | undefined = process.env.PHAROS_CRITICAL_CSS_SCOPE,
+  pages: readonly string[] = collectCriticalCssPages(outDir),
+): string[] {
+  if (scope !== CRITICAL_CSS_SCOPE_GATES) return [...pages];
+  const relative = new Set(pages.map((file) => path.relative(outDir, file).split(path.sep).join("/")));
+  const routes = gatedHtmlRoutes();
+  if (routes.length === 0 || !routes.every((route) => relative.has(route))) return [...pages];
+  const largest = [...pages]
+    .map((file) => ({ file, size: statSync(file).size }))
+    .sort((a, b) => b.size - a.size || a.file.localeCompare(b.file))
+    .slice(0, GATE_SCOPED_LARGEST_HTML_PAGES)
+    .map((entry) => entry.file);
+  return [...new Set([...routes.map((route) => path.join(outDir, ...route.split("/"))), ...largest])].sort();
 }
 
 export function criticalCssWorkerCount(pageCount: number): number {
@@ -158,7 +191,11 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
   const darkHtmlTag = /\sclass\s*=/i.test(htmlTag)
     ? htmlTag.replace(/(\sclass\s*=\s*)(["'])(.*?)\2/i, "$1$2$3 dark$2")
     : htmlTag.replace(/>$/, ' class="dark">');
-  let after = (await optimizer.process(before.replace(htmlTag, darkHtmlTag)))
+  // Portfolio's before-paint bootstrap selects these rules before full CSS loads.
+  const extractionHtmlTag = before.includes('src="/portfolio-bootstrap.js"')
+    ? darkHtmlTag.replace(/>$/, " data-portfolio-empty>")
+    : darkHtmlTag;
+  let after = (await optimizer.process(before.replace(htmlTag, extractionHtmlTag)))
     .replace(/<html\b[^>]*>/i, htmlTag);
 
   let hasAsyncStylesheet = false;
@@ -212,9 +249,12 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  const scope = process.env.PHAROS_CRITICAL_CSS_SCOPE;
+  const allPages = collectCriticalCssPages(outDir);
+  const pages = selectCriticalCssPages(outDir, scope, allPages);
   const startedAt = Date.now();
   try {
-    const results = await optimizeCriticalCssPages(outDir, collectCriticalCssPages(outDir));
+    const results = await optimizeCriticalCssPages(outDir, pages);
     // Worker completion order cannot reorder diagnostics.
     for (const result of results) {
       for (const log of result.logs) console[log.level](log.message);
@@ -222,9 +262,10 @@ async function main(): Promise<void> {
     const beforeBytes = results.reduce((bytes, result) => bytes + result.beforeBytes, 0);
     const afterBytes = results.reduce((bytes, result) => bytes + result.afterBytes, 0);
     const skipped = results.filter((result) => result.skipped).length;
+    const scopeLabel = pages.length < allPages.length ? ` (gate-scoped: ${pages.length}/${allPages.length} public pages)` : "";
     console.log(
-      `[critical-css] Optimized ${results.length - skipped} public HTML pages, skipped ${skipped} already-inlined pages ` +
-      `(${beforeBytes} -> ${afterBytes} bytes, ${Date.now() - startedAt}ms total).`,
+      `[critical-css] Optimized ${results.length - skipped} public HTML pages, skipped ${skipped} already-inlined pages` +
+      `${scopeLabel} (${beforeBytes} -> ${afterBytes} bytes, ${Date.now() - startedAt}ms total).`,
     );
   } catch (error) {
     console.error(`[critical-css] ${error instanceof Error ? error.message : String(error)}`);

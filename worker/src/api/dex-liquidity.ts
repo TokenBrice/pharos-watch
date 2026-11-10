@@ -30,6 +30,7 @@ import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/market";
+import { getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
 
 export const handleDexLiquidity = async (
   db: D1Database,
@@ -59,7 +60,7 @@ export const handleDexLiquidity = async (
         `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?${coinFilter}
-         ORDER BY stablecoin_id, snapshot_date DESC`,
+         ORDER BY snapshot_date DESC, stablecoin_id`,
       )
       .bind(Math.floor(Date.now() / 1000) - 8 * 86_400, ...coinBindings)
       .all<DexHistoryRow>(),
@@ -121,7 +122,9 @@ export const handleDexLiquidity = async (
     dexPriceById.set(row.stablecoin_id, row);
   }
 
-  // Build historical TVL lookup: stablecoin_id → sorted snapshots (newest first)
+  // Build historical TVL lookup: stablecoin_id → sorted snapshots (newest first).
+  // The read is date-ordered so the 8-day window seeks idx_dex_hist_snapshot_date;
+  // a coin-first ORDER BY walked the whole history index on every request.
   const histByCoin = new Map<string, DexHistoryRow[]>();
   for (const row of histResult.results ?? []) {
     const arr = histByCoin.get(row.stablecoin_id) ?? [];
@@ -274,11 +277,11 @@ export const handleDexLiquidity = async (
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: safeJsonParse<DexLiquidityData["priceSources"]>(
+      priceSources: getDexPriceSourceEntries(safeJsonParse<unknown>(
         dexPrice?.price_sources_json,
         null,
         `dex-liquidity:${id}:price_sources_json`,
-      ),
+      )) as DexLiquidityData["priceSources"],
       // v2 fields
       effectiveTvlUsd: evidence?.effectiveTvlUsd ?? row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,

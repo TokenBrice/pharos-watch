@@ -167,6 +167,8 @@ export interface V9FixedInputOptions {
   activeDepeg?: boolean;
   lastEventAt?: number | null;
   activeDepegPeakBps?: number;
+  /** Optional v10.42 directional peg input, passed through as captured. */
+  safetyScoreV9DirectionalPeg?: ReportCardsFixedInputDraft["safetyScoreV9DirectionalPeg"];
   // Reserves
   classifiedReserve?: boolean;
   omitLiveReserve?: boolean;
@@ -339,6 +341,9 @@ export function makeV9FixedInput(options: V9FixedInputOptions = {}) {
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
+    ...(options.safetyScoreV9DirectionalPeg
+      ? { safetyScoreV9DirectionalPeg: options.safetyScoreV9DirectionalPeg }
+      : {}),
   });
 }
 

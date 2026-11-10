@@ -93,4 +93,28 @@ describe("useMarketDataChartWindow — brush window", () => {
     expect(result.current.xDomain).toBeNull();
     expect(result.current.xTicks).toBeUndefined();
   });
+
+  it("falls back to automatic ticks when a brush window contains no UTC month start", () => {
+    const daily = Array.from({ length: 31 }, (_, index) => ({ ts: Date.UTC(2026, 6, 1 + index) }));
+    const { result } = renderHook(
+      () => useMarketDataChartWindow({ filteredData: daily, margin, range: "90d" }),
+      { wrapper: syncWrapper },
+    );
+
+    act(() => result.current.sync!.setBrushedRange([Date.UTC(2026, 6, 20), Date.UTC(2026, 6, 28)]));
+
+    expect(result.current.visibleData.length).toBe(9);
+    // An explicit [] would suppress every axis label; undefined lets Recharts auto-tick.
+    expect(result.current.xTicks).toBeUndefined();
+  });
+
+  it("falls back to automatic ticks for an unbrushed history inside one UTC month", () => {
+    const daily = Array.from({ length: 20 }, (_, index) => ({ ts: Date.UTC(2026, 9, 12 + index) }));
+    const { result } = renderHook(
+      () => useMarketDataChartWindow({ filteredData: daily, margin, range: "90d" }),
+    );
+
+    expect(result.current.visibleData.length).toBe(20);
+    expect(result.current.xTicks).toBeUndefined();
+  });
 });

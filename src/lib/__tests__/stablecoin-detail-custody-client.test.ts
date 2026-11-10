@@ -95,9 +95,22 @@ describe("projectCustodyClientSummary", () => {
       "Undisclosed Australian bank",
       "One or more undisclosed FDIC-insured reserve banks",
       "BlackOpal LiquidStone II FIDC custodian and administrator (unnamed)",
+      // Authored rows that name an owner, a contract or a legal entity while
+      // recording that the custodian itself is undisclosed.
+      "ISC Reserve A and Reserve B (ETF shares and USD cash; specific custodians undisclosed)",
+      "Tether International, S.A. de C.V. (reserve owner; MXNT custodian roster undisclosed)",
+      "Caverna Auctus Inc. (issuer and contractual asset owner; operational custodians undisclosed)",
+      "GHP Consulting Pte. Ltd. (ORI030 account confirmation; underlying custodian undisclosed)",
+      "MoonPay Digital Assets Limited (issuer-designated PYUSD receiving addresses; custodian undisclosed)",
+      "apcxUSDT reserve wallet (controller undisclosed)",
     ];
     const named = [
       "BitGo Trust Company, Inc. (IAUon Final Terms custodian; crypto/fiat custody, allocation undisclosed)",
+      "Alpaca Securities LLC (IAUon Final Terms broker and custodian; allocation undisclosed)",
+      "WBTC Bitcoin custodians (downstream borrower-collateral layer; exact custodian allocation undisclosed)",
+      "TRON DAO Reserve / USDD protocol contracts (self-custodied; no third-party custodian)",
+      "Reservoir Protocol on-chain Asset Adapter / PSM contracts (self-custodied balance sheet; no third-party custodian)",
+      "JuiceDollar StablecoinBridge and position contracts (ownerless, non-upgradeable) on Citrea - self-custodied, no third-party custodian",
       "Westpac Banking Corporation",
     ];
     const summary = project({
@@ -106,6 +119,18 @@ describe("projectCustodyClientSummary", () => {
     });
     expect(summary.providers.map((provider) => provider.name)).toEqual(named);
     expect(summary.unnamedHolders.map((holder) => holder.description)).toEqual(unnamed);
+  });
+
+  it("does not claim a named custodian when the reviewed row says the custodian is undisclosed", () => {
+    const summary = project({
+      ...USDC_LIKE_PROFILE,
+      providers: [
+        { name: "ISC Reserve A and Reserve B (ETF shares and USD cash; specific custodians undisclosed)", role: "other" },
+      ],
+    });
+    expect(summary.providers).toEqual([]);
+    expect(summary.unnamedHolders).toHaveLength(1);
+    expect(summary.summary).not.toMatch(/named custody provider/);
   });
 
   it("treats named providers without shares as undisclosed shares, not a 100 % undisclosed exposure", () => {

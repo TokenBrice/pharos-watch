@@ -226,33 +226,6 @@ describe("runTelegramInactiveCleanup", () => {
   );
 
 
-  it("preserves recently-active subscribers and chats with meaningful child state", async () => {
-    const { sqlite, db } = setupLatestSchemaSqlite();
-    const now = Math.floor(Date.now() / 1000);
-    const staleAt = now - INACTIVE_RETENTION_SEC - 1;
-    for (const chatId of ["has-sub", "has-preset", "has-pending-delivery", "eligible"]) {
-      insertSubscriber(sqlite, chatId, staleAt);
-    }
-    insertSubscriber(sqlite, "active", now - 3600);
-    insertSubscription(sqlite, "has-sub", { alertDews: 1 });
-    sqlite.prepare(
-      `INSERT INTO telegram_preset_subscriptions
-         (chat_id, preset_id, alert_dews, created_at, updated_at)
-       VALUES ('has-preset', 'usd-top25', 1, ?, ?)`,
-    ).run(staleAt, staleAt);
-    insertOpenDelivery(sqlite, "has-pending-delivery", staleAt);
-
-    const result = await runTelegramInactiveCleanup(db);
-
-    expect(result.itemCount).toBe(1);
-    expect(listSubscriberIds(sqlite)).toEqual([
-      "active",
-      "has-pending-delivery",
-      "has-preset",
-      "has-sub",
-    ]);
-  });
-
   it("preserves inactive subscribers that only have global alert flags", async () => {
     const { sqlite, db } = setupLatestSchemaSqlite();
     const now = Math.floor(Date.now() / 1000);

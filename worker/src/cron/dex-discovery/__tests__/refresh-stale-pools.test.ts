@@ -20,6 +20,7 @@ const HOUR = 3600;
 const USDC = {
   ethereum: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   base: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+  ink: "0x2d270e6886d130d724215a266106e6832161eaed",
   optimism: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
   polygon: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
   solana: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -71,6 +72,21 @@ function registryRows(sqlite: { prepare(sql: string): { all(): unknown[] } }) {
 }
 
 describe("refreshStaleRegistryPools", () => {
+  it.each([false, true])("does not back off locally rejected ids (mixed=%s)", async (mixed) => {
+    const { sqlite, db } = fixtures.open(), good = addr("aa", 1), bad = "bad/id";
+    await seed(db, ["bad-id", ...(mixed ? [good] : [])].map((id) => ({ poolId: `ethereum:${id}`, refreshedAt: NOW - 48 * HOUR })));
+    sqlite.prepare("UPDATE dex_pool_registry SET pool_id = ? WHERE pool_id = ?").run(`ethereum:${bad}`, "ethereum:bad-id");
+    const previous = JSON.stringify({ [`ethereum:${bad}`]: { misses: 1, at: NOW - 24 * HOUR, reason: "notReturned" } });
+    sqlite.prepare("INSERT INTO kv_config (key, value) VALUES ('dex_stale_pool_refresh_backoff', ?)").run(previous);
+    const deps = makeDeps(async () => ({ transportOk: true, schemaDegraded: false, rejectedAddresses: [bad], pools: mixed ? [usdcPool("ethereum", good)] : [] }));
+    const summary = await refreshStaleRegistryPools({
+      db, cgApiKey: "key", stablecoins: STABLECOINS, nowSec: NOW, deadlineMs: Date.now() + 60_000, dependencies: deps,
+    });
+    expect(summary).toMatchObject({ requests: Number(mixed), refreshed: Number(mixed), failures: { unaddressableId: 1, invalidRow: 0 } });
+    expect(deps.recordOutcome).toHaveBeenCalledTimes(Number(mixed));
+    expect(sqlite.prepare("SELECT value FROM kv_config WHERE key = 'dex_stale_pool_refresh_backoff'").get()!.value).toBe(previous);
+  });
+
   it("refreshes due CG-family and Slipstream pools stale-first by retained TVL", async () => {
     const { sqlite, db } = fixtures.open();
     const p = (index: number) => addr("aa", index);
@@ -126,11 +142,12 @@ describe("refreshStaleRegistryPools", () => {
       { poolId: `base:${a(1)}`, chain: "base", source: "direct_api", poolType: "aero-slipstream-1bp", tvlUsd: 20_000_000, refreshedAt: NOW - HOUR },
       { poolId: `base:${a(2)}`, chain: "base", source: "direct_api", poolType: "aero-stable", tvlUsd: 30_000_000, refreshedAt: NOW - HOUR },
       { poolId: `arc:${a(3)}`, chain: "arc", source: "direct_api", poolType: "aero-volatile", tvlUsd: 40_000_000, refreshedAt: NOW - HOUR },
+      { poolId: `ink:${a(4)}`, chain: "ink", source: "direct_api", poolType: "aero-slipstream-1bp", tvlUsd: 10_000_000, refreshedAt: NOW - HOUR },
     ]);
-    const deps = makeDeps(async (_network, addresses) => ({
+    const deps = makeDeps(async (network, addresses) => ({
       transportOk: true,
       schemaDegraded: false,
-      pools: addresses.map((address) => usdcPool("base", address, { dex: "aero-slipstream-base" })),
+      pools: addresses.map((address) => usdcPool(network === "ink" ? "ink" : "base", address, { dex: `aero-slipstream-${network}` })),
     }));
 
     await refreshStaleRegistryPools({
@@ -139,6 +156,7 @@ describe("refreshStaleRegistryPools", () => {
 
     expect(deps.fetchCgPoolsByAddressesWithStatus.mock.calls.map(([network, addresses]) => [network, addresses])).toEqual([
       ["base", [a(2), a(1)]],
+      ["ink", [a(4)]],
     ]);
   });
 
@@ -462,5 +480,7 @@ describe("planStalePoolRefreshBatches", () => {
 
     expect(planStalePoolRefreshBatches(ordered, 2, 2).map((batch) => batch.candidates.map((entry) => entry.poolId)))
       .toEqual([["a1", "a2"], ["b1"]]);
+    expect(planStalePoolRefreshBatches(Array.from({ length: 3 }, () => candidate(":".repeat(200), "a")), 3)
+      .map((batch) => batch.candidates.length)).toEqual([2, 1]);
   });
 });

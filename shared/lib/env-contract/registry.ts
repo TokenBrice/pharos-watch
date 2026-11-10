@@ -33,6 +33,51 @@ const ENV_BINDING_DEFINITIONS = [
     },
   },
   {
+    key: "NEXT_PUBLIC_PHAROS_HERO_VERDICT",
+    valueType: "string",
+    description: "Default-on homepage hero archetype verdict chip; set to `false` for the emergency rollback.",
+    example: { section: "frontend", value: "" },
+    runtimes: {
+      frontend: { status: "optional" },
+    },
+  },
+  {
+    key: "NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS",
+    valueType: "string",
+    description: "Default-off quiet calm deviations and magnitude-aware market-cap delta; set to `true` to enable.",
+    example: { section: "frontend", value: "" },
+    runtimes: {
+      frontend: { status: "optional" },
+    },
+  },
+  {
+    key: "NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY",
+    valueType: "string",
+    description: "Default-off mobile sticky compact summary; set to `true` to enable.",
+    example: { section: "frontend", value: "" },
+    runtimes: {
+      frontend: { status: "optional" },
+    },
+  },
+  {
+    key: "NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER",
+    valueType: "string",
+    description: "Default-on Depeg Duration Resolver surfaces and inputs; set to `false` for the emergency rollback.",
+    example: { section: "frontend", value: "" },
+    runtimes: {
+      frontend: { status: "optional" },
+    },
+  },
+  {
+    key: "NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER",
+    valueType: "string",
+    description: "Default-on reviewer module below the Depeg Duration Resolver; set to `false` for the emergency rollback.",
+    example: { section: "frontend", value: "" },
+    runtimes: {
+      frontend: { status: "optional" },
+    },
+  },
+  {
     key: "DB",
     valueType: "D1Database",
     description: "Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas.",
@@ -137,7 +182,13 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "SAFETY_GRADES_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Cloudflare per-source rate limiter for public safety grades, dependency graph, and uncached dependency scenarios, checked before reads.",
+    description: "Cloudflare per-source rate limiter for public safety grades, dependency graph, dependency scenarios, and site-data public status history, checked before reads.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
+    key: "FEEDBACK_PREAUTH_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-IP rate limiter for feedback submissions, checked before the request body and idempotency bookkeeping.",
     runtimes: { worker: { status: "required" } },
   },
   {
@@ -466,7 +517,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "MINT_BURN_DISABLED_SYMBOLS",
     valueType: "string",
-    description: "Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy.",
+    description: "Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy. A ticker shared by more than one tracked stablecoin is ignored with a `mint_burn_disabled_symbol_ignored` warning; use `MINT_BURN_DISABLED_IDS` for those.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -504,6 +555,30 @@ const ENV_BINDING_DEFINITIONS = [
     valueType: "string",
     description: "Mint/burn stale-alert dedupe cooldown override (seconds).",
     example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
+    key: "WEEKLY_DIGEST_MODEL",
+    valueType: "string",
+    description: "Optional Worker var overriding the weekly recap generation model.",
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
+    key: "WEEKLY_DIGEST_EFFORT",
+    valueType: "string",
+    description: "Optional Worker var overriding the weekly recap reasoning effort.",
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
+    key: "WEEKLY_DIGEST_MAX_TOKENS",
+    valueType: "string",
+    description: "Optional Worker var overriding the weekly recap output token cap.",
     runtimes: {
       worker: { status: "optional" },
     },

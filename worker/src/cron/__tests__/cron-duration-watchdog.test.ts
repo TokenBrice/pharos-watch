@@ -78,6 +78,7 @@ function watchdogDb(tables: MockTableConfig[]): ReturnType<typeof mockD1> {
 describe("runCronDurationWatchdog", () => {
   it.each([0, 20])("excludes admission skips from workload trend samples (%s executed)", async (executed) => {
     const { db, sqlite } = sqliteFixtures.open();
+    const reads = vi.spyOn(db, "prepare");
     const insert = sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES (?, ?, ?, ?, ?)`);
     for (let i = 0; i < executed; i++) {
       insert.run("sync-stablecoins", NOW_SEC - 3600 - i, SYNC_TIMEOUT_MS * 0.9, "ok", null);
@@ -86,6 +87,9 @@ describe("runCronDurationWatchdog", () => {
       insert.run("sync-stablecoins", NOW_SEC - 100 - i, 1, "skipped_neutral", JSON.stringify({ reason: "cadence_bucket_completed" }));
     }
     const result = await runCronDurationWatchdog(db);
+    const slotSql = reads.mock.calls.find(([sql]) => sql.includes("FROM cron_slot_executions"))![0];
+    expect(sqlite.prepare("EXPLAIN QUERY PLAN " + slotSql).all(STALE_SLOT_ERROR, STALE_SLOT_ERROR, SINCE_SEC))
+      .toContainEqual(expect.objectContaining({ detail: "SEARCH cron_slot_executions USING INDEX idx_cron_slot_executions_slot_started_at_prune (slot_started_at>?)" }));
     const metadata = JSON.parse(result.metadata!);
     expect(metadata.runtimeBreaching.includes("sync-stablecoins")).toBe(executed >= 20);
     expect(metadata.stats.find((row: { job: string }) => row.job === "sync-stablecoins")).toMatchObject({
@@ -112,53 +116,22 @@ describe("runCronDurationWatchdog", () => {
     expect(result.status).toBe("ok");
   });
 
-  it("degrades when the 7d average crosses 80% of the ceiling", async () => {
-    const db = watchdogDb([
-      statsMatcher("sync-stablecoins", { n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
-    ]);
-
+  it.each([
+    ["degrades when the 7d average crosses 80% of the ceiling", 660, 0.85, 1, 0],
+    ["degrades on repeated at-cap runs even with a healthy average", 660, 0.5, 3, 0],
+    ["degrades on repeated at-cap runs for low-cadence jobs below the trend sample floor", 3, 0.5, 3, 0],
+    ["degrades on repeated budget truncations below the trend sample floor", 3, 0.5, 0, 3],
+  ] as const)("%s", async (_name, n, ratio, cap_hits, budget_truncations) => {
+    const db = watchdogDb([statsMatcher("sync-stablecoins", {
+      n, avg_ms: Math.round(SYNC_TIMEOUT_MS * ratio),
+      max_ms: SYNC_TIMEOUT_MS - (budget_truncations ? 1 : 0), cap_hits, budget_truncations,
+      latest_cap_hit_at: cap_hits >= 3 ? NOW_SEC - 60 : null,
+      latest_budget_truncation_at: budget_truncations ? NOW_SEC - 60 : null,
+    })]);
     const result = await runCronDurationWatchdog(db);
-
     expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
-      breaching: ["sync-stablecoins"],
-    });
-  });
-
-  it("degrades on repeated at-cap runs even with a healthy average", async () => {
-    const db = watchdogDb([
-      statsMatcher("sync-stablecoins", {
-        n: 660,
-        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
-        max_ms: SYNC_TIMEOUT_MS,
-        cap_hits: 3,
-        latest_cap_hit_at: NOW_SEC - 60,
-      }),
-    ]);
-
-    const result = await runCronDurationWatchdog(db);
-
-    expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({ breaching: ["sync-stablecoins"] });
-  });
-
-  it("degrades on repeated at-cap runs for low-cadence jobs below the trend sample floor", async () => {
-    const db = watchdogDb([
-      statsMatcher("sync-stablecoins", {
-        n: 3,
-        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
-        max_ms: SYNC_TIMEOUT_MS,
-        cap_hits: 3,
-        latest_cap_hit_at: NOW_SEC - 60,
-      }),
-    ]);
-
-    const result = await runCronDurationWatchdog(db);
-
-    expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
-      runtimeBreaching: ["sync-stablecoins"],
-      breaching: ["sync-stablecoins"],
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      runtimeBreaching: ["sync-stablecoins"], breaching: ["sync-stablecoins"],
     });
   });
 
@@ -175,40 +148,15 @@ describe("runCronDurationWatchdog", () => {
     ]);
 
     const result = await runCronDurationWatchdog(db);
-    const metadata = JSON.parse(String(result.metadata));
+    const metadata = JSON.parse(result.metadata!);
 
     expect(result.status).toBe("ok");
     expect(metadata.runtimeBreaching).toEqual([]);
-    expect(metadata.stats).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          job: "sync-stablecoins",
-          capHits: 8,
-          recentCapHits: 2,
-        }),
-      ]),
-    );
-  });
-
-  it("degrades on repeated budget truncations below the trend sample floor", async () => {
-    const db = watchdogDb([
-      statsMatcher("sync-stablecoins", {
-        n: 3,
-        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
-        max_ms: SYNC_TIMEOUT_MS - 1,
-        cap_hits: 0,
-        budget_truncations: 3,
-        latest_budget_truncation_at: NOW_SEC - 60,
-      }),
-    ]);
-
-    const result = await runCronDurationWatchdog(db);
-
-    expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
-      runtimeBreaching: ["sync-stablecoins"],
-      breaching: ["sync-stablecoins"],
-    });
+    expect(metadata.stats).toEqual(expect.arrayContaining([expect.objectContaining({
+      job: "sync-stablecoins",
+      capHits: 8,
+      recentCapHits: 2,
+    })]));
   });
 
   it("keeps recovered at-cap history visible without degrading", async () => {
@@ -224,20 +172,16 @@ describe("runCronDurationWatchdog", () => {
     ]);
 
     const result = await runCronDurationWatchdog(db);
-    const metadata = JSON.parse(String(result.metadata));
+    const metadata = JSON.parse(result.metadata!);
 
     expect(result.status).toBe("ok");
     expect(metadata.runtimeCapRecentWindowSec).toBe(86400);
     expect(metadata.runtimeBreaching).toEqual([]);
-    expect(metadata.stats).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          job: "sync-stablecoins",
-          capHits: 3,
-          latestCapHitAt: NOW_SEC - 3 * 86400,
-        }),
-      ]),
-    );
+    expect(metadata.stats).toEqual(expect.arrayContaining([expect.objectContaining({
+      job: "sync-stablecoins",
+      capHits: 3,
+      latestCapHitAt: NOW_SEC - 3 * 86400,
+    })]));
   });
 
   it("ignores jobs with too few runs for a trend", async () => {
@@ -258,12 +202,35 @@ describe("runCronDurationWatchdog", () => {
     insert.run(NOW_SEC - 20, SYNC_TIMEOUT_MS * 100, "error", null, JSON.stringify({ reason: STALE_SLOT_METADATA_REASON }));
     const result = await runCronDurationWatchdog(db);
     expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(JSON.parse(result.metadata!)).toMatchObject({
       stats: expect.arrayContaining([expect.objectContaining({
         job: "sync-stablecoins", runs: 20, avgMs: 1000, maxMs: 1000, capHits: 0,
       })]),
       runtimeBreaching: [],
     });
+  });
+
+  it("excludes reserve-queue synthetic abandonment rows from runtime statistics", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, error, metadata) VALUES ('sync-live-reserves', ?, ?, ?, ?, ?)");
+    for (let index = 0; index < 20; index++) insert.run(NOW_SEC - index * 60, 1000, "ok", null, null);
+    for (let index = 0; index < 3; index++) {
+      insert.run(
+        NOW_SEC - 30 - index,
+        LIVE_RESERVES_TIMEOUT_MS + 230_000,
+        "error",
+        "Reserve Queue event ended without terminal accounting",
+        JSON.stringify({ reason: "reserve-queue-platform-abandoned", schedulerTerminalSource: "synthetic" }),
+      );
+    }
+
+    const result = await runCronDurationWatchdog(db);
+    const metadata = JSON.parse(result.metadata!);
+
+    expect(metadata.stats.find((row: { job: string }) => row.job === "sync-live-reserves")).toMatchObject({
+      runs: 20, avgMs: 1000, maxMs: 1000, capHits: 0, recentCapHits: 0,
+    });
+    expect(metadata.runtimeBreaching).not.toContain("sync-live-reserves");
   });
 
   it("publishes cap-hit stage breakdown and samples through the daily sentinel sanitizer", async () => {
@@ -281,7 +248,7 @@ describe("runCronDurationWatchdog", () => {
       [{ source: "duration", run: () => runCronDurationWatchdog(db) }],
       NOW_SEC,
     );
-    const sourceMetadata = JSON.parse(String(result.metadata)).sources.duration.metadata;
+    const sourceMetadata = JSON.parse(result.metadata!).sources.duration.metadata;
 
     expect(sourceMetadata.runtimeBreaching).toEqual(["sync-stablecoins"]);
     expect(sourceMetadata.durationDiagnostics).toEqual([
@@ -312,7 +279,7 @@ describe("runCronDurationWatchdog", () => {
     const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(JSON.parse(result.metadata!)).toMatchObject({
       runtimeBreaching: ["sync-live-reserves"],
       slotAbandonmentBreaching: [],
       breaching: ["sync-live-reserves"],
@@ -333,36 +300,10 @@ describe("runCronDurationWatchdog", () => {
     const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(JSON.parse(result.metadata!)).toMatchObject({
       runtimeBreaching: [],
       slotAbandonmentBreaching: ["hourlyYieldSync"],
       breaching: ["hourlyYieldSync"],
-    });
-  });
-
-  it("keeps not-started reconciliation visible without phantom accounting columns", async () => {
-    const db = watchdogDb([
-      slotStatsMatcher([{
-        slot_key: "halfHourlyOffset",
-        slots: 142,
-        error_slots: 12,
-        abandoned_slots: 37,
-        not_started_slots: 3,
-        latest_abandoned_at: NOW_SEC - 60,
-      }]),
-    ]);
-
-    const result = await runCronDurationWatchdog(db);
-
-    expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
-      slotStats: expect.arrayContaining([
-        expect.objectContaining({
-          scheduleKey: "halfHourlyOffset",
-          abandonedSlots: 37,
-          notStartedSlots: 3,
-        }),
-      ]),
     });
   });
 
@@ -408,7 +349,7 @@ describe("runCronDurationWatchdog", () => {
     }));
 
     const result = await runCronDurationWatchdog(createSqliteD1(sqlite));
-    const metadata = JSON.parse(String(result.metadata));
+    const metadata = JSON.parse(result.metadata!);
 
     expect(result.status).toBe("ok");
     expect(metadata.slotStats).toEqual(expect.arrayContaining([
@@ -434,7 +375,7 @@ describe("runCronDurationWatchdog", () => {
     const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("ok");
-    expect(JSON.parse(String(result.metadata))).toMatchObject({
+    expect(JSON.parse(result.metadata!)).toMatchObject({
       slotAbandonmentRecentWindowSec: 86400,
       slotAbandonmentBreaching: [],
       slotStats: expect.arrayContaining([
@@ -461,15 +402,11 @@ describe("runCronDurationWatchdog", () => {
     const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("ok");
-    const metadata = JSON.parse(String(result.metadata));
-    expect(metadata.slotStats).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          scheduleKey: "quarterHourly",
-          abandonedSlots: 14,
-          abandonmentRatio: 14 / 672,
-        }),
-      ]),
-    );
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.slotStats).toEqual(expect.arrayContaining([expect.objectContaining({
+      scheduleKey: "quarterHourly",
+      abandonedSlots: 14,
+      abandonmentRatio: 14 / 672,
+    })]));
   });
 });

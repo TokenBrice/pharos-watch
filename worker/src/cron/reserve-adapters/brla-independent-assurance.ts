@@ -139,23 +139,27 @@ export async function verifyBrlaNotionDiscovery(args: {
     throw new Error(`${ADAPTER_KEY}: index host ${index.hostname} is not reviewed for this profile`);
   }
 
+  const assertIndexResponseHost = (value: string): void => {
+    const finalHost = (() => {
+      try {
+        return new URL(value).hostname.toLowerCase();
+      } catch {
+        return "";
+      }
+    })();
+    if (finalHost !== args.indexHost.toLowerCase()) {
+      throw new Error(`${ADAPTER_KEY}: index response URL drifted`);
+    }
+  };
   const indexResponse = await fetchTextResponseWithRetry(args.indexUrl, args.signal, 15_000, args.ctx, {
     headers: {
       Accept: "text/html,application/xhtml+xml",
       "User-Agent": "Mozilla/5.0 Pharos reserve verifier",
     },
     maxRetries: 0,
+    validateResponse: (res) => assertIndexResponseHost(res.url || args.indexUrl),
   });
-  const finalHost = (() => {
-    try {
-      return new URL(indexResponse.finalUrl).hostname.toLowerCase();
-    } catch {
-      return "";
-    }
-  })();
-  if (finalHost !== args.indexHost.toLowerCase()) {
-    throw new Error(`${ADAPTER_KEY}: index response URL drifted`);
-  }
+  assertIndexResponseHost(indexResponse.finalUrl);
 
   const rootBlocks = await loadNotionChunk(args.indexHost, BRLA_NOTION_PIN.rootPageId, args.signal, args.ctx);
   const rootBlock = parseNotionBlock(rootBlocks[BRLA_NOTION_PIN.rootPageId]);

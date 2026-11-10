@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-10-15",
+    "kind": "governance",
+    "label": "JPY DeFi launches JPYdf borrowing on Ethereum",
+    "severity": "med",
+    "href": "https://deltaforesight.com/en/news/jpy-defi-mainnet-20261015/",
+    "note": "DeltaForesight confirmed that JPY DeFi began Ethereum mainnet operations on October 15, enabling JPYdf borrowing against separate wstETH or USDC collateral branches. This records the live protocol transition rather than the earlier development announcement."
+  }
+]

@@ -10,7 +10,7 @@ This document covers two frontend-only feature surfaces that are not backed by d
 
 ## Stablecoin Cemetery (`/cemetery`)
 
-The route title and description count from `buildCemeteryStats(CEMETERY_ENTRIES)` (total, first death year and per-cause tally with `CAUSE_META` labels), the same stats the hero and cause strip render.
+The route title and description count from `buildCemeteryStats(CEMETERY_ENTRIES)` (total and per-cause tally with `CAUSE_META` labels; the description dates the failure window from the first death year), the same stats the hero and cause strip render.
 
 `src/app/cemetery/page.tsx` owns the static shell. `shared/lib/cemetery-merged.ts` supplies data; `src/lib/cemetery-stats.ts`, `cemetery-register.ts` and `cemetery-selection.ts` own projections/navigation. `src/components/cemetery/` owns rendering and interaction.
 
@@ -82,7 +82,7 @@ The `og-cemetery` artifact renders the real resting plot map, depends on the atl
 
 ### Telegram channel notifications
 
-`worker/src/telegram/digest/digest-appendices.ts` compares deployed dataset with D1 snapshot during daily digest delivery. Seed silently on first run; new rows become one consolidated next-digest appendix with available epitaphs. This is not a separate API feed.
+`worker/src/telegram/digest/digest-appendices.ts` compares deployed dataset with D1 snapshot during daily digest delivery. Seed silently on first run; new rows become one consolidated next-digest appendix with available epitaphs. This is not a separate API feed. Digest delivery uses the Worker's `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
 
 ### UI behavior
 
@@ -98,7 +98,7 @@ Grave targets are real SVG anchors; Cloudflare Email Obfuscation is disabled for
 
 Exactly one responsive layer owns pin/key/tap events. Phone sheets keep record links and content clear of sticky/bottom navigation; layout handoff never reopens dismissed pins or replays scroll/focus. Hash-source portrait pins restore the tab stop, not a sheet covering the register. Reduced motion cuts beam, zoom and highlight transitions; no ambient motion is required.
 
-The server renders context, legend, count and desktop rest pose. Clients receive slim register rows/atlas, not the full dataset/model. Portrait mounting reserves its measured aspect against layout shift. No-JS CSS falls back to the desktop plan and register targets, subject to the page-shell visibility limitation below. Capacity failure requires design review, never lowering minimum face sizes.
+The server renders context, legend, count and desktop rest pose. Clients receive slim register rows/atlas, not the full dataset/model. Portrait mounting reserves its measured aspect against layout shift. No-JS CSS falls back to the desktop plan and register targets. Capacity failure requires design review, never lowering minimum face sizes.
 
 ### Selection and deep links
 
@@ -111,7 +111,7 @@ Anchors:
 - Section anchors are `CEMETERY_SECTION_ANCHORS` (`cemetery`, `key-facts`, `causes`, `register`, `analysis`, `methodology`, `dataset`, `faq`) plus `#cause-<cause>` for each cause column. The autopsy row takes `autopsy-<id>`, a desktop grave `grave-<id>` and a phone grave `walk-<id>`; grave links point at `#<id>`.
 - Unknown ids, unknown cause slugs and malformed encodings resolve to nothing.
 
-`/cemetery/#<id>` resolves in CSS without JavaScript. The server renders the first 25 register rows (`REGISTER_FOLD_COUNT`) in full, each followed by a `hidden` autopsy row; a `@layer base` rule in `cemetery-register.module.css` shows the autopsy row after a `:target` row until the register hydrates (`data-enhanced`). Rows past the fold render as one compact cell (`tr#<id>[data-folded]`: name, ticker, cause, death date, epitaph, obituary and source), hidden by `tr[data-folded]:not(:target)` so only a targeted record shows. Full rows replace the compact ones once the reader unfolds, filters, searches or sorts, or a reveal targets a folded record. From hydration on the client owns expansion, because `replaceState` never moves `:target`. The page shell itself still needs JavaScript today: `Providers` (`src/components/providers.tsx`) streams the whole body into a hidden boundary that a script reveals, so with JavaScript off the fold is correct but not on screen.
+`/cemetery/#<id>` resolves in CSS without JavaScript. The server renders the first 25 register rows (`REGISTER_FOLD_COUNT`) in full, each followed by a `hidden` autopsy row; a `@layer base` rule in `cemetery-register.module.css` shows the autopsy row after a `:target` row until the register hydrates (`data-enhanced`). Rows past the fold render as one compact cell (`tr#<id>[data-folded]`: name, ticker, cause, death date, epitaph, obituary and source), hidden by `tr[data-folded]:not(:target)` so only a targeted record shows. Full rows replace the compact ones once the reader unfolds, filters, searches or sorts, or a reveal targets a folded record. From hydration on the client owns expansion, because `replaceState` never moves `:target`.
 
 `revealRecord` in the register runs these steps in order: it clears any filters that exclude the row (keeping the sort) and announces that; unfolds the list; expands the row; scrolls it into view (instantly under reduced motion) and focuses its disclosure; highlights it (a static outline under reduced motion); and writes `#<id>`. The register registers its reveal handler only once the URL filters are readable, so a hash reveal queued during hydration judges the real filters. The peak chart's dots call `revealRecord` with the source `chart`, and the register's "Show on the field ↑" calls `pinGrave` with the source `register`.
 
@@ -134,7 +134,7 @@ Methodology distinguishes curated versus tracked-then-frozen admission, excludes
 
 `buildCemeteryRegisterRows` projects data server-side; clients import types, never `CEMETERY_ENTRIES`. Missing peak/mechanism/epitaph is visibly/accessibly not recorded; duplicate tickers retain names/IDs. A tracked archive's name (full and folded rows) is a static link to its frozen profile, so the register links those profiles in the prerendered HTML; curated-only records stay plain text. The row's tap-to-expand handler ignores clicks on that link.
 
-`CEMETERY_REGISTER_PARAMS` owns filter keys, accepted values and canonical order. Invalid values drop; bounded trimmed search is case/accent-insensitive over name/ticker/id/epitaph, not obituary. URL writes replace history, preserve unrelated params and omit default sort/direction. Died uses canonical order; missing peaks sort last both directions with default order breaking ties. Result counts announce politely.
+`CEMETERY_REGISTER_PARAMS` owns filter keys, accepted values and canonical order. Invalid values drop; bounded trimmed search is case/accent-insensitive over name/ticker/id/epitaph, not obituary. URL writes replace history, preserve unrelated params and omit default sort/direction. Died uses canonical order; missing peaks sort last both directions with default order breaking ties. Result counts announce politely after a debounce; initial hydration stays quiet. A reveal announcement takes priority during its hold, including over count announcements already pending when the reveal occurs.
 
 The server-rendered autopsy rows (first 25) carry the kicker, epitaph, obituary and source link, so a no-JS `#<id>` fragment shows them; the facts list (cause with a link to its definition, death date and precision, peak market cap, peg and record), mechanism (linked to its explainer), contracts, "Archived data →", the case study, "Copy link" and "Show on the field ↑" render once the row is expanded. Opening a row writes `#<id>`.
 
@@ -142,7 +142,7 @@ The server-rendered autopsy rows (first 25) carry the kicker, epitaph, obituary 
 
 Both charts are hand-rolled SVG driven by compact series props from `CemeteryStats`, with no Recharts on the route. Each has a `ChartDataTable` disclosure, which is also the screen-reader surface.
 
-- Deaths by year keeps a continuous axis, marks partial years and separates tracked/curated coverage. Empty years are catalog gaps, not evidence of no failures; absent peaks stay unrecorded. Count/share views and headlines use guarded stats.
+- Deaths by year keeps a continuous axis, marks partial years and separates tracked/curated coverage. Empty years are catalog gaps, not evidence of no failures; absent peaks stay unrecorded. A year's median peak names its recorded denominator (`n of m recorded`) when only some of its records carry a peak. Count/share views and headlines use guarded stats.
 - Peak-by-cause plots recorded peaks only, names omissions/denominators and uses deterministic jitter and roving tabindex. Jitter maps the same frozen `fnv1a32(id)` hash through `(hash / 0xffffffff) * 2 - 1`; labelled dots retain their below-lane placement. Selecting a dot reveals the register row; the data table is an equivalent screen-reader surface.
 
 Peak market cap is never presented as a loss: the section copy states that it measures size at the top, and the only peak sums shown are over recorded peaks with their `knownCount`.
@@ -180,14 +180,17 @@ Each pair page ends with a "Related comparisons" section: "More {A} comparisons"
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 - Mobile selection renders selected-coin chips plus one add selector instead of all five selector slots up front. The underlying URL state and five-coin maximum are unchanged; desktop keeps the full slot grid.
+- The shared coin selector publishes an active-option reference only for a rendered option; empty results have no active option. Every dismissal clears search and option focus, Escape restores trigger focus, and disabled options remain unselectable.
 
-Static HTML never links a `/compare/?coins=` facet: `buildStaticCompareHref()` (`src/lib/compare-links.ts`) links the curated pair page when one exists (a coin's primary pair; for two coins, their pair) and otherwise `/compare/#coins=<ids>`, which crawlers read as `/compare/`. Once the query is readable, `useCompareSelection()` adopts that fragment into `?coins=` (an explicit `?coins=` selection wins) and drops the fragment. `buildLiveCompareUrl()` stays for client-side navigation and the pair pages' "Open live compare" tool links.
+Static HTML never links a `/compare/?coins=` facet: `buildStaticCompareHref()` (`src/lib/compare-links.ts`) links the curated pair page when one exists (a coin's primary pair; for two coins, their pair) and otherwise `/compare/#coins=<ids>`, which crawlers read as `/compare/`. Once the query is readable, `useCompareSelection()` adopts that fragment into `?coins=` (an explicit `?coins=` selection wins on first load) and drops the fragment; later same-route `#coins=` navigations are re-adopted through the history-change signal. `buildLiveCompareUrl()` stays for client-side navigation and the pair pages' "Open live compare" tool links.
 
 Initial load normalizes the `coins` URL param to the accepted canonical ID list. If invalid tokens were present, `useCompareSelection()` rewrites the URL to the surviving canonical IDs or removes `coins` entirely.
 
 ### Data dependencies
 
 Compare composes stablecoins, peg summary, Bluechip, DEX, report cards, redemption, yield, stress and aggregate mint/burn queries plus per-coin supply/flow histories. `useCompareDataModel` owns query/window construction; successful aggregate evidence is required to claim tracking coverage.
+
+Per-coin detail imports settle independently: a failed import keeps that coin's list metadata without inventing evidence or suppressing successful enrichment for other coins. A superseded selection's batch cannot publish late results.
 
 An empty comparison admits only the stablecoin list used by its selector. Metric feeds enable as soon as at least one accepted comparison ID exists, including URL-initialized selections. Empty-state retries do not bypass those gates; pending evidence remains unavailable, not an empty or safe verdict.
 
@@ -204,6 +207,7 @@ The live-flow cards and comparison table both preserve an explicitly observed ze
 Compare includes client-side share/export rendering:
 
 - Builds a canvas card via `src/lib/compare-share-image.ts`
+- The card footer appends the oldest loaded producer generation (`stablecoins`, `pegSummary`, `dexLiquidity`, `reportCards`) as `As of DD Mon YYYY, HH:MM UTC`; an unknown contributing clock omits it, and the browser fetch clock is never used
 - Supports clipboard image copy + Twitter intent flow
 - Supports PNG download from the generated canvas
 - The share card reads market cap and the 7-day supply change through `getCirculatingRawOrNull()` / `getPrevWeekRawOrNull()`; an unavailable operand renders `—`, never `$0.00` or a fabricated `-100%` change
@@ -221,6 +225,4 @@ The peg-track-record row `Open recorded incident` reports `activeDepeg` as Yes/N
 ## Operational notes
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
-- Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
-- Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Per-coin flow-history failures get a retry notice; supply-history failures show inline "History unavailable". The shared retry includes both histories, preserving retained data and successful peers.
+- Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Per-coin flow-history failures get a retry notice; supply-history failures show inline "History unavailable". The supply-history read follows the chart range, requesting the unbounded `range=all` window for All and a covering bounded window otherwise. The shared retry includes both histories, preserving retained data and successful peers.

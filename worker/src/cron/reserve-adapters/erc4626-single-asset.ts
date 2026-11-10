@@ -1,7 +1,6 @@
 import { toFunctionSelector } from "viem/utils";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
@@ -44,7 +43,6 @@ import {
   projectErc4626RedemptionTelemetry,
   type Erc4626CapacityObservation,
   type Erc4626CapacityPauseProbe,
-  type Erc4626RedemptionLiquidityConfig,
   type RedemptionCapacityTelemetry,
 } from "./erc4626-redemption-capacity";
 import {
@@ -56,43 +54,6 @@ import { observeMorphoLenderBook } from "./morpho-lender-book";
 import { supportsLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
 
 const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
-
-interface SingleAssetSliceConfig {
-  name: ReserveSlice["name"];
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-  expectedAssetAddress?: string;
-  deployedExposure?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["deployedExposure"];
-  pooledClaim?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["pooledClaim"];
-  walletCashAccounting?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["walletCashAccounting"];
-  redemptionLiquidity?: Erc4626RedemptionLiquidityConfig;
-  redemptionLock?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionLock"];
-  redemptionRoute?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionRoute"];
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}
-
-function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
-  const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
-  return {
-    name: params.slice.name,
-    risk: params.slice.risk,
-    ...(params.slice.coinId ? { coinId: params.slice.coinId } : {}),
-    ...(params.slice.depType ? { depType: params.slice.depType } : {}),
-    ...(params.slice.expectedAssetAddress
-      ? { expectedAssetAddress: params.slice.expectedAssetAddress.toLowerCase() }
-      : {}),
-    ...(params.deployedExposure ? { deployedExposure: params.deployedExposure } : {}),
-    ...(params.pooledClaim ? { pooledClaim: params.pooledClaim } : {}),
-    ...(params.walletCashAccounting ? { walletCashAccounting: params.walletCashAccounting } : {}),
-    ...(params.redemptionLiquidity ? { redemptionLiquidity: params.redemptionLiquidity } : {}),
-    ...(params.redemptionLock ? { redemptionLock: params.redemptionLock } : {}),
-    ...(params.redemptionRoute ? { redemptionRoute: params.redemptionRoute } : {}),
-    ...(params.rpcUrl ? { rpcUrl: params.rpcUrl } : {}),
-    ...(params.fallbackRpcUrl ? { fallbackRpcUrl: params.fallbackRpcUrl } : {}),
-  };
-}
 
 // Underlying units count as USD only for a tracked, non-NAV USD stablecoin.
 function isTrackedParUsdContract(chain: string, address: string): boolean {
@@ -110,7 +71,9 @@ export async function fetchErc4626SingleAssetReserves(
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireOnchainInput(config.inputs.primary, "erc4626-single-asset");
-  const sliceConfig = parseSliceConfig(config);
+  const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
+  const sliceConfig = params.slice;
+  const expectedAssetAddress = sliceConfig.expectedAssetAddress?.toLowerCase();
   const contractAddress = resolveCoinContractAddress(coin, primaryInput.chain);
   if (!contractAddress) {
     throw new Error(`No ${primaryInput.chain} contract configured for ${coin.id}`);
@@ -123,22 +86,22 @@ export async function fetchErc4626SingleAssetReserves(
     ctx: _ctx,
     rpcMode: primaryInput.rpcMode,
     chain: primaryInput.chain,
-    rpcUrl: sliceConfig.rpcUrl,
-    fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
     timeoutMs: timeout,
   });
   const usesSfrxusdCrosschainRoute =
-    sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
+    params.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
   const usesExecutableRedemptionRoute = hasExecutableRedemptionObserver(coin.id);
   const usesGenericBatch = !usesExecutableRedemptionRoute && !usesSfrxusdCrosschainRoute;
   const probesYearnShutdown =
-    sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable";
+    params.redemptionLiquidity?.source === "yearn-v3-withdrawable";
 
   let pauseProbe: Erc4626CapacityPauseProbe = { paused: null, shutdown: null };
   let assetResult: string | null;
   let totalAssetsResult: string | null;
   let totalSupplyResult: string | null;
-  const locks = sliceConfig.redemptionLock ?? [];
+  const locks = params.redemptionLock ?? [];
   let settlementDelaySec: number | undefined;
   let unstakeWindowSec: number | undefined;
   let lockPaused = false;
@@ -154,7 +117,7 @@ export async function fetchErc4626SingleAssetReserves(
         // identity check below rejects the snapshot if that address drifted.
         ...locks.map((lock, index) => ({
           label: `redemption-lock-${index}`,
-          contract: lock.target === "asset" ? sliceConfig.expectedAssetAddress! : contractAddress,
+          contract: lock.target === "asset" ? expectedAssetAddress! : contractAddress,
           data: lock.selector.startsWith("0x") ? lock.selector : toFunctionSelector(lock.selector),
         })),
         ...(probesYearnShutdown
@@ -164,8 +127,8 @@ export async function fetchErc4626SingleAssetReserves(
       signal,
       ctx: _ctx,
       chain: primaryInput.chain,
-      rpcUrl: sliceConfig.rpcUrl,
-      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+      rpcUrl: params.rpcUrl,
+      fallbackRpcUrl: params.fallbackRpcUrl,
       timeoutMs: timeout,
     });
     assetResult = multicallResultOrNull(stateResults, "asset");
@@ -213,18 +176,18 @@ export async function fetchErc4626SingleAssetReserves(
 
   const warnings: LiveReserveWarning[] = [];
   const assetAddress = assetResult ? decodeStrictAddressWord(assetResult as `0x${string}`) : null;
-  if (!assetAddress && sliceConfig.expectedAssetAddress) {
+  if (!assetAddress && expectedAssetAddress) {
     throw new Error(
-      `ERC-4626 asset() could not be read for ${coin.id}; expected ${sliceConfig.expectedAssetAddress}`,
+      `ERC-4626 asset() could not be read for ${coin.id}; expected ${expectedAssetAddress}`,
     );
   }
   if (
     assetAddress
-    && sliceConfig.expectedAssetAddress
-    && assetAddress !== sliceConfig.expectedAssetAddress
+    && expectedAssetAddress
+    && assetAddress !== expectedAssetAddress
   ) {
     throw new Error(
-      `ERC-4626 asset() returned ${assetAddress}, expected ${sliceConfig.expectedAssetAddress} for ${coin.id}`,
+      `ERC-4626 asset() returned ${assetAddress}, expected ${expectedAssetAddress} for ${coin.id}`,
     );
   }
 
@@ -256,8 +219,8 @@ export async function fetchErc4626SingleAssetReserves(
     signal,
     ctx: _ctx,
     chain: primaryInput.chain,
-    rpcUrl: sliceConfig.rpcUrl,
-    fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
     timeoutMs: timeout,
   });
   const navCheck = computeErc4626NavConsistencyFromResult({
@@ -284,7 +247,7 @@ export async function fetchErc4626SingleAssetReserves(
       signal,
       _ctx,
       {
-        extraRpcUrls: [sliceConfig.rpcUrl, sliceConfig.fallbackRpcUrl].filter(
+        extraRpcUrls: [params.rpcUrl, params.fallbackRpcUrl].filter(
           (url): url is string => Boolean(url),
         ),
       },
@@ -304,8 +267,8 @@ export async function fetchErc4626SingleAssetReserves(
         coinId: coin.id,
         contractAddress,
         assetAddress,
-        configured: sliceConfig.redemptionLiquidity,
-        idleCapacityRaw: sliceConfig.walletCashAccounting ? null : idleUnderlyingBalanceRaw,
+        configured: params.redemptionLiquidity,
+        idleCapacityRaw: params.walletCashAccounting ? null : idleUnderlyingBalanceRaw,
         underlyingDecimalsRaw,
         supplyAssetsRaw,
         call,
@@ -313,8 +276,8 @@ export async function fetchErc4626SingleAssetReserves(
         ctx: _ctx,
         rpcMode: primaryInput.rpcMode,
         chain: primaryInput.chain,
-        rpcUrl: sliceConfig.rpcUrl,
-        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+        rpcUrl: params.rpcUrl,
+        fallbackRpcUrl: params.fallbackRpcUrl,
         timeoutMs: timeout,
       });
       warnings.push(...(configuredCapacity?.warnings ?? []));
@@ -372,7 +335,7 @@ export async function fetchErc4626SingleAssetReserves(
     ) {
       redemptionCapacity.capacityKind = "documented-bound";
     }
-    if (sliceConfig.redemptionRoute === "async-request") {
+    if (params.redemptionRoute === "async-request") {
       // Held backing does not prove when any particular withdrawal request
       // can settle. Preserve the balance as a bound, never executable capacity.
       redemptionCapacity.capacityKind = "documented-bound";
@@ -395,8 +358,8 @@ export async function fetchErc4626SingleAssetReserves(
   }
   // MetaMorpho V1 excludes skimmable donations; an explicit reviewed exclusion
   // also covers vaults whose accounting and burn path omit wallet balances.
-  const excludesWalletCash = sliceConfig.walletCashAccounting?.mode === "excluded"
-    || sliceConfig.redemptionLiquidity?.source === "morpho-vault-v1";
+  const excludesWalletCash = params.walletCashAccounting?.mode === "excluded"
+    || params.redemptionLiquidity?.source === "morpho-vault-v1";
   // A reviewed idle/deployed split cannot be published from a clamped share:
   // when the wallet holds more than `totalAssets()` (donation, skim or stale
   // NAV accounting) the split is unknown, and clamping would report the
@@ -408,7 +371,7 @@ export async function fetchErc4626SingleAssetReserves(
     : 0n;
   // The shared tolerance is a percentage; compare in basis points to stay exact.
   const idleExcessToleranceBps = BigInt(SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT * 100);
-  if (sliceConfig.deployedExposure && idleExcessRaw * 10_000n > totalAssetsRaw * idleExcessToleranceBps) {
+  if (params.deployedExposure && idleExcessRaw * 10_000n > totalAssetsRaw * idleExcessToleranceBps) {
     throw new Error(
       `erc4626-single-asset ${coin.id} underlying balance ${idleUnderlyingBalanceRaw} exceeds totalAssets ${totalAssetsRaw}`,
     );
@@ -421,11 +384,11 @@ export async function fetchErc4626SingleAssetReserves(
   // holdings. Publish measured shares under distinct keys; classification
   // enrichment remains subject to the consumer's unique-match and age gates.
   // An unreadable holding stays unattributed.
-  const reviewedDeployedExposure = idleUnderlyingBalanceRaw == null ? null : sliceConfig.deployedExposure ?? null;
+  const reviewedDeployedExposure = idleUnderlyingBalanceRaw == null ? null : params.deployedExposure ?? null;
   const deployedPct = compositionPctFromRaw(totalAssetsRaw - heldRaw, totalAssetsRaw, "erc4626-single-asset deployed share");
-  const unknownExposurePct = sliceConfig.pooledClaim ? 100 : reviewedDeployedExposure ? 0 : 100 - idlePct;
+  const unknownExposurePct = params.pooledClaim ? 100 : reviewedDeployedExposure ? 0 : 100 - idlePct;
   const slices: ReserveSlice[] = [];
-  if (sliceConfig.pooledClaim) {
+  if (params.pooledClaim) {
     slices.push({
       sourceKey: `erc4626-single-asset:${primaryInput.chain}:${contractAddress.toLowerCase()}:pooled-claim`,
       name: sliceConfig.name,
@@ -513,17 +476,17 @@ export async function fetchErc4626SingleAssetReserves(
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "erc4626-total-assets",
-        ...(sliceConfig.redemptionRoute
+        ...(params.redemptionRoute
           ? { redemptionMechanism: "async-request", settlementBoundReason: "Per-request withdrawal or receipt maturity; no global settlement bound observed" }
           : {}),
-        ...(sliceConfig.pooledClaim
-          ? { compositionBasis: "opaque-pooled-claim", pooledClaimBasis: sliceConfig.pooledClaim.basis, contextualObservationsOnly: true }
+        ...(params.pooledClaim
+          ? { compositionBasis: "opaque-pooled-claim", pooledClaimBasis: params.pooledClaim.basis, contextualObservationsOnly: true }
           : {}),
-        ...(sliceConfig.walletCashAccounting
-          ? { walletCashAccounting: sliceConfig.walletCashAccounting }
+        ...(params.walletCashAccounting
+          ? { walletCashAccounting: params.walletCashAccounting }
           : {}),
         ...(assetAddress
-          ? { assetAddressMatchesExpected: sliceConfig.expectedAssetAddress == null || assetAddress === sliceConfig.expectedAssetAddress }
+          ? { assetAddressMatchesExpected: expectedAssetAddress == null || assetAddress === expectedAssetAddress }
           : {}),
         ...(navConsistencyRatio != null && Number.isFinite(navConsistencyRatio)
           ? { navConsistencyRatio }

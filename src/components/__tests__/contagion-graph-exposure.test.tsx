@@ -114,6 +114,15 @@ describe("controlled exposure graph", () => {
       directExposureKnownIds={graph.result.current.directExposureKnownIds} nodeMap={graph.result.current.nodeMap} onTraceNode={vi.fn()} />);
     expect(screen.getByText("$0.0")).toBeTruthy();
   });
+  it("omits direct dependent exposure in the focused detail closure, which cannot date the full graph", () => {
+    const { container } = render(
+      <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} focusCoinId="coin-0" minimalChrome />,
+    );
+    fireEvent.mouseEnter(container.querySelector('[data-node-id="coin-1"]')!);
+    expect(container.querySelector('[aria-label="Selected node details"]')).not.toBeNull();
+    expect(screen.queryByText("Direct dependent exposure")).toBeNull();
+    expect(screen.getAllByText("Dependents").length).toBeGreaterThan(0);
+  });
   it("keeps an admitted shared-book holding replacement measurable", () => {
     const edges: ReportCardsV9DependencyEdge[] = [{ ...dependencyEdges[0], kind: "basket", materiality: "basket-weighted", weight: null }];
     const hubs = buildDirectHubExposures(edges, () => ({ usd: 100, asOf: null, basis: "market-cap-proxy" }), {

@@ -17,7 +17,7 @@ describe("chainHasRpc", () => {
       expect(chainHasRpc(chain, { chainRpcs: withoutKey }), chain).toBe(true);
       expect(chainHasRpc(chain, { chainRpcs: withKey }), chain).toBe(true);
     }
-    for (const chain of ["hyperevm", "xdc", "flow", "chiliz", "viction"]) {
+    for (const chain of ["hyperevm", "xdc", "flow"]) {
       expect(chainHasRpc(chain, { chainRpcs: withoutKey }), chain).toBe(false);
       expect(chainHasRpc(chain, { chainRpcs: withKey }), chain).toBe(false);
     }

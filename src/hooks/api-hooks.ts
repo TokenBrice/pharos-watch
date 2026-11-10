@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
 import {
   type DexLiquidityHistoryPoint,
+  type DigestArchiveResponse,
   type DigestSnapshotResponse,
   type ReportCardsV9CurrentResponse,
   type SafetyScoreHistoryResponse,
@@ -22,6 +23,7 @@ import {
   createApiPollingQueryOptions,
   createApiPollingQueryOptionsWithMeta,
   createStaticQueryOptions,
+  getPollingWindow,
   type ApiQueryOptions,
   type ApiQueryWithMetaResult,
   type PollingQueryControlOptions,
@@ -29,7 +31,7 @@ import {
 } from "./use-api-query";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import type { FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor } from "@/lib/api-query-contract";
-import type { ApiMeta } from "@/lib/api";
+import { apiFetchWithMeta, type ApiMeta } from "@/lib/api";
 import { reconcileStablecoinLiveSummary } from "@/lib/stablecoin-live-summary-query";
 
 export type { StabilityContributor };
@@ -183,7 +185,54 @@ function dexLiquidityHistoryQueryOptions(stablecoinId: string, days?: number) {
   );
 }
 
-export const useDigestArchive = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.digestArchive);
+/**
+ * Read every page of the complete archive so whole-archive aggregates are not
+ * silently capped at the default page. The server's cursor refuses to continue
+ * if the archive changes mid-traversal, so the merged set is one generation.
+ */
+export async function fetchCompleteDigestArchive(
+  signal?: AbortSignal,
+): Promise<{ data: DigestArchiveResponse; meta: ApiMeta | null }> {
+  const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.digestArchive;
+  const digests: DigestArchiveResponse["digests"] = [];
+  let meta: ApiMeta | null = null;
+  let cursor: string | null = null;
+  const seenCursors = new Set<string>();
+  for (;;) {
+    const path: string = `${descriptor.path}${cursor == null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`;
+    const page: { data: DigestArchiveResponse; meta: ApiMeta | null } = await apiFetchWithMeta<DigestArchiveResponse>(
+      path,
+      descriptor.schema,
+      { signal },
+      undefined,
+      { bootstrapQueryKey: descriptor.queryKey },
+    );
+    meta ??= page.meta;
+    digests.push(...page.data.digests);
+    const nextCursor: string | null = page.data.pagination?.nextCursor ?? null;
+    if (nextCursor == null) return { data: { digests }, meta };
+    if (seenCursors.has(nextCursor)) throw new Error("Digest archive pagination cursor repeated");
+    seenCursors.add(nextCursor);
+    cursor = nextCursor;
+  }
+}
+
+export function useDigestArchive(overrides?: QueryControlOverrides): ApiQueryWithMetaResult<DigestArchiveResponse> {
+  const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.digestArchive;
+  const { staleTime, refetchInterval } = getPollingWindow(descriptor.producerIntervalMs);
+  const query = useQuery({
+    queryKey: descriptor.queryKey,
+    queryFn: ({ signal }) => fetchCompleteDigestArchive(signal),
+    staleTime: overrides?.staleTime ?? staleTime,
+    refetchInterval: overrides?.refetchInterval ?? refetchInterval,
+    retry: overrides?.retry ?? 2,
+    retryDelay: overrides?.retryDelay,
+    placeholderData: overrides?.keepPreviousData ? keepPreviousData : undefined,
+    enabled: overrides?.enabled,
+  });
+  return unwrapApiQueryWithMetaResult(query);
+}
+
 export const useDigestPromo = bindRegisteredApiQuery(FRONTEND_API_QUERY_DESCRIPTORS.digestPromo);
 
 // Digest snapshots are immutable by date — static cache, no polling needed

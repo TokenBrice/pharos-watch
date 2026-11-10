@@ -354,7 +354,7 @@ function buildRoster(
 }
 
 /** The assembly refuses the 65th deployment; the cohort must never spend a slot on it. */
-export const DEPLOYMENT_SUPPLY_CENSUS_PER_ASSET_CAP = CENSUS_POLICY.maxDeploymentsPerAsset;
+const DEPLOYMENT_SUPPLY_CENSUS_PER_ASSET_CAP = CENSUS_POLICY.maxDeploymentsPerAsset;
 
 /** One asset's census target: how many open null-share deployments the census could close. */
 export interface DeploymentSupplyCensusTarget {
@@ -386,7 +386,7 @@ export interface DeploymentSupplyCensusTarget {
  * The estimate deliberately charges the full pin bracket even though a
  * chain's pin is shared by every selected asset on it.
  */
-export const DEPLOYMENT_SUPPLY_CENSUS_REQUEST_ESTIMATE = Object.freeze({
+const DEPLOYMENT_SUPPLY_CENSUS_REQUEST_ESTIMATE = Object.freeze({
   pinProbesPerChain: 32,
   perAssetSlack: 2,
 });
@@ -738,8 +738,9 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
       continue;
     }
     if (aggregateSupplyUsd === null || aggregateSupplyUsd <= 0) {
-      // Without the audited aggregate there is no share denominator.
-      addRejection(accumulator.rejected, null, "roster-incomplete");
+      // Without the audited aggregate there is no share denominator: an
+      // unavailable read, the same reason the consumer names (R5).
+      addRejection(accumulator.rejected, null, "read-unavailable");
       continue;
     }
     if (accumulator.rejected.size === 0) rosterDeployments += roster.entries.length;
@@ -861,13 +862,21 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
     throwIfAborted(input.signal);
     const evmTargets = evmTargetsByAssetId.get(accumulator.assetId);
     if (evmTargets === undefined) continue;
+    const rawChainBounds = new Map(accumulator.chainSupplyUsdByChainId);
+    // Canonical bounds apply after mirror netting; keep independent chain failures visible.
+    for (const entry of accumulator.entries) {
+      if (entry.canonicalDeployment &&
+        accumulator.entries.some(mirror => mirror.mirroredFromChainId === entry.chainId)) {
+        rawChainBounds.delete(entry.chainId);
+      }
+    }
     let census: DeploymentSupplyCensusEvmCensus;
     try {
       census = await observeDeploymentSupplyCensusEvm({
         targets: evmTargets,
         scoringClockSec: observationClockSec,
         aggregateSupplyUsd: accumulator.aggregateSupplyUsd!,
-        chainSupplyUsdByChainId: accumulator.chainSupplyUsdByChainId,
+        chainSupplyUsdByChainId: rawChainBounds,
         referencePrices: new Map(evmTargets.map(target => [target.routeId, accumulator.referencePrice])),
         pins,
         chainRpcs: input.chainRpcs,

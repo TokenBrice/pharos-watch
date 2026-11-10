@@ -72,22 +72,20 @@ describe("resolveChainId", () => {
     expect(resolveChainId("Hyperliquid L1")).toBe("hyperliquid");
   });
 
-  it("resolves the newly tracked citrea chain", () => {
-    expect(resolveChainId("citrea")).toBe("citrea");
-    expect(CHAIN_META.citrea).toBeDefined();
-  });
-
-  it("registers and resolves Pharos Network mainnet", () => {
-    expect(CHAIN_META.pharos).toMatchObject({
-      name: "Pharos Network",
-      explorerUrl: "https://www.pharosscan.xyz",
-      evmChainId: 1672,
-      type: "evm",
-    });
-    expect(CG_CHAIN_MAP.pharos).toBe("pharos");
-    expect(GT_CHAIN_MAP.pharos).toBe("pharos");
-    expect(resolveChainId("pharos")).toBe("pharos");
-    expect(resolveChainId("Pharos")).toBe("pharos");
+  it("resolves every CHAIN_META key, display name and EVM chain ID back to its key", () => {
+    const names = new Map<string, string>();
+    for (const [id, meta] of Object.entries(CHAIN_META)) {
+      expect(resolveChainId(id), id).toBe(id);
+      const normalizedName = normalizeChainId(meta.name);
+      expect(normalizedName, id).not.toBeNull();
+      expect(resolveChainId(meta.name), id).toBe(id);
+      // A display name may never alias two canonical chains.
+      expect(names.get(normalizedName!) ?? id, `${id}/${meta.name}`).toBe(id);
+      names.set(normalizedName!, id);
+      if (meta.evmChainId != null) {
+        expect(resolveChainId(meta.evmChainId), id).toBe(id);
+      }
+    }
   });
 
   it("registers canonical VeChain mainnet identity without claiming provider coverage", () => {
@@ -127,17 +125,6 @@ describe("resolveChainId", () => {
     expect(resolveChainId("Kaia")).toBe("klaytn");
     expect(resolveChainId("edgeX L1")).toBe("edgechain");
     expect(resolveChainId("Echelon Initia")).toBe("initia");
-  });
-
-  it.each([
-    ["RISE", "rise", 4153],
-    ["Somnia", "somnia", 5031],
-    ["Filecoin", "filecoin", 314],
-  ])("joins %s supply labels and EVM IDs to the same canonical chain", (label, chainId, evmChainId) => {
-    expect(resolveChainId(` ${label} `)).toBe(chainId);
-    expect(resolveChainId(label.toUpperCase())).toBe(chainId);
-    expect(resolveChainId(chainId)).toBe(chainId);
-    expect(resolveChainId(evmChainId)).toBe(chainId);
   });
 });
 
@@ -181,19 +168,6 @@ describe("getChainResilienceTier", () => {
 });
 
 describe("tracked contract chain coverage", () => {
-  it("tracks the verified Reservoir deployments on Pharos", () => {
-    expect(TRACKED_META_BY_ID.get("rusd-reservoir")?.contracts).toContainEqual({
-      chain: "pharos",
-      address: "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
-      decimals: 18,
-    });
-    expect(TRACKED_META_BY_ID.get("wsrusd-reservoir")?.contracts).toContainEqual({
-      chain: "pharos",
-      address: "0x4809010926aec940b550d34a46a52739f996d75d",
-      decimals: 18,
-    });
-  });
-
   it("keeps every tracked contract chain resolvable through the canonical chain registry", () => {
     const issues = Array.from(TRACKED_META_BY_ID.values()).flatMap((stablecoin) => (
       stablecoin.contracts?.flatMap((contract, contractIndex) => (

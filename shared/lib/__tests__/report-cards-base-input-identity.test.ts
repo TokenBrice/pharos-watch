@@ -142,6 +142,59 @@ describe("report-card base-input identity", () => {
     expect(deriveReportCardsBaseInputGenerationId(methodologyChanged)).not.toBe(baseline);
   });
 
+  it("keeps a legacy identity when the optional directional peg input is absent", () => {
+    // Pin the digest captured from the pre-field projection: an absent (or
+    // explicitly undefined) directional peg input must not move any identity.
+    const baseline = deriveReportCardsBaseInputGenerationId(source());
+    expect(baseline).toBe("report-cards-input:v1:5ed20a2639a869bb194fb25a8df0799612ada899efc673e0dd7a8e9bbd9359e5");
+    expect(deriveReportCardsBaseInputGenerationId({ ...source(), safetyScoreV9DirectionalPeg: undefined })).toBe(baseline);
+  });
+
+  it("binds the directional peg input as a score-bearing fact only when present", () => {
+    const directional = {
+      ...source(),
+      safetyScoreV9DirectionalPeg: {
+        premiumWeight: 0.25,
+        pegScoreById: { "usdc-circle": 99, "usdt-tether": 98 },
+        activeDiscountPeakBpsById: {},
+      },
+    };
+    const baselineIdentity = projectReportCardsBaseInputIdentityV1(source());
+    const directionalIdentity = projectReportCardsBaseInputIdentityV1(directional);
+
+    expect(deriveReportCardsBaseInputGenerationId(directional)).not.toBe(
+      deriveReportCardsBaseInputGenerationId(source()),
+    );
+    expect(directionalIdentity.normalizedSnapshotDigests.scoreBearingFactsSha256).not.toBe(
+      baselineIdentity.normalizedSnapshotDigests.scoreBearingFactsSha256,
+    );
+    // A fact, not freshness.
+    expect(directionalIdentity.normalizedSnapshotDigests.scoreBearingFreshnessSha256).toBe(
+      baselineIdentity.normalizedSnapshotDigests.scoreBearingFreshnessSha256,
+    );
+  });
+
+  it("is invariant to directional peg key order", () => {
+    const left = {
+      ...source(),
+      safetyScoreV9DirectionalPeg: {
+        premiumWeight: 0.25,
+        pegScoreById: { "usdc-circle": 99, "usdt-tether": 98 },
+        activeDiscountPeakBpsById: { "usdc-circle": 1_200 },
+      },
+    };
+    const right = {
+      ...source(),
+      safetyScoreV9DirectionalPeg: {
+        premiumWeight: 0.25,
+        pegScoreById: { "usdt-tether": 98, "usdc-circle": 99 },
+        activeDiscountPeakBpsById: { "usdc-circle": 1_200 },
+      },
+    };
+
+    expect(deriveReportCardsBaseInputGenerationId(right)).toBe(deriveReportCardsBaseInputGenerationId(left));
+  });
+
   it("binds aggregate circulating supply as a score-bearing fact", () => {
     const baseline = source();
     const supplyChanged = source();

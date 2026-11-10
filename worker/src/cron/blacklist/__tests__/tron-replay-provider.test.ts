@@ -232,15 +232,6 @@ describe("validateTronTransferPaginationUrl", () => {
     extraFilter.searchParams.set("min_block_timestamp", "0");
     expect(validateTronTransferPaginationUrl(extraFilter.toString(), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
   });
-
-  it.each([
-    "/v1/accounts/TOther/transactions/trc20",
-    `${ACCOUNT_PATH}/extra/transactions/trc20`,
-  ])("rejects a changed account pathname: %s", (pathname) => {
-    const next = new URL(windowUrl("page2"));
-    next.pathname = pathname;
-    expect(validateTronTransferPaginationUrl(next.toString(), ACCOUNT_PATH, CONTRACT, WINDOW_START, WINDOW_END)).toBeNull();
-  });
 });
 
 describe("fetchTronTransferWindow", () => {

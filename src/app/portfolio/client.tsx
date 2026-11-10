@@ -101,10 +101,9 @@ export function PortfolioClient() {
     [portfolio],
   );
 
-  if (!portfolio.initialized) return <PortfolioLoadingState />;
-
   return (
-    <div className="space-y-6">
+    <div>
+    <div className={portfolio.initialized ? "space-y-6" : "hidden space-y-6 [html[data-portfolio-empty]_&]:block"}>
       {portfolio.holdings.length > 0 && <>
       <QueryFreshnessNotices
         error={reportCardsError}
@@ -199,7 +198,8 @@ export function PortfolioClient() {
             <p className="text-sm text-muted-foreground" role="alert">
               V10 portfolio safety is unavailable ({v9Projection.reason}).
             </p>
-          ) : (
+          ) : null}
+          {reportData ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {heldCards.map((card) => {
                 const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
@@ -217,9 +217,15 @@ export function PortfolioClient() {
                 );
               })}
             </div>
-          )}
+          ) : null}
         </>
       )}
+    </div>
+    {!portfolio.initialized && (
+      <div className="[html[data-portfolio-empty]_&]:hidden">
+        <PortfolioLoadingState />
+      </div>
+    )}
     </div>
   );
 }

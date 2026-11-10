@@ -98,7 +98,7 @@ function buildHealthUnavailableMessage(meta: ApiMeta | null, chain: ChainSummary
   if (chain.healthFactors.quality != null) {
     // Quality cleared its gate, so the composite is withheld for insufficient peg evidence (DEC-04).
     const coverage = chain.pegStabilityCoverage;
-    const observed = coverage ? ` Peg prices are observed for ${formatPegCoverageShare(coverage.coverage)} of chain supply.` : "";
+    const observed = coverage ? ` Peg prices are observed for ${formatPegCoverageShare(coverage.coverage)} of peg-eligible chain supply.` : "";
     return `Chain Health is not rated because peg-stability coverage is below the ${formatSupplyShare(PEG_COVERAGE_COMPOSITE_MIN)} minimum.${observed} Sub-factors are shown below.`;
   }
   if (!reportCards || reportCards.status === "fresh") {
@@ -123,7 +123,7 @@ function formatPegStabilityContext(
   if (coverage.status === "unavailable") {
     return "No usable peg price was observed, so peg stability is not rated.";
   }
-  const parts = [`Peg observed on ${formatPegCoverageShare(coverage.coverage)} of chain supply`];
+  const parts = [`Peg observed on ${formatPegCoverageShare(coverage.coverage)} of peg-eligible chain supply`];
   const eligible = coverage.eligibleSupplyUsd;
   if (eligible > 0 && coverage.neutralImputedSupplyUsd > 0) {
     parts.push(`${formatSupplyShare(coverage.neutralImputedSupplyUsd / eligible)} without a usable price is scored neutral 50`);

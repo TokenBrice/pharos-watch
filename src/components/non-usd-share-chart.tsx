@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { type TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { formatCurrency, formatChartDate, formatPercent } from "@shared/lib/format";
+import { formatCoverageRatio, formatCurrency, formatChartDate, formatPercent } from "@shared/lib/format";
 import { useNonUsdShare } from "@/hooks/api-hooks";
 import { CHART_GREEN } from "@/lib/chart-colors";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
@@ -37,7 +37,7 @@ interface SharePoint {
 function coverageLabel(coverage: SharePoint["coverage"]): string {
   if (coverage == null) return "Value coverage unavailable";
   const partial = coverage.total < 1 || coverage.commodity < 1 || coverage.fiatNonUsd < 1;
-  return `${partial ? "Partial value coverage" : "Interior-gap value coverage"}: total ${formatPercent(coverage.total * 100, 1)}, commodities ${formatPercent(coverage.commodity * 100, 1)}, non-commodity ${formatPercent(coverage.fiatNonUsd * 100, 1)}`;
+  return `${partial ? "Partial value coverage" : "Interior-gap value coverage"}: total ${formatCoverageRatio(coverage.total)}, commodities ${formatCoverageRatio(coverage.commodity)}, non-commodity ${formatCoverageRatio(coverage.fiatNonUsd)}`;
 }
 
 const SHARE_SERIES: StackedAreaSeries[] = [

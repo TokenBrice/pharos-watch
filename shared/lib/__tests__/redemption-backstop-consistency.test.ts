@@ -3,7 +3,6 @@ import { buildRedemptionBackstopRegistry, type RedemptionBackstopConfigManifestE
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import {
-  resolveDefaultHolderEligibility,
   resolveRedemptionCostBpsAtNotional,
   resolveRedemptionPercentageFeeBps,
 } from "@shared/lib/redemption-backstop-configs/shared";
@@ -54,20 +53,16 @@ describe("redemption backstop config consistency", () => {
   });
 
   it.each([
-    "wars-argentine-peso",
-    "qcad-stablecorp",
-    "vbill-vaneck",
-    "jaaa-janus-henderson-anemoy",
-    "axcnh-anchorx",
-    "mxnb-juno",
-    "sbc-brale",
-    "brla-brla-digital",
-    "xo-exodus",
-  ])("%s publishes its settlement-withheld review conservatively", (id) => {
-    const config = REDEMPTION_BACKSTOP_CONFIGS[id]!;
-    expect(config.v9RouteReviewTerms?.missingScoringFields).toContain("settlement");
-    expect(resolveReviewedRedemptionSettlement(config, CLOCK_SEC)).toBe("days");
-    expect(config.holderEligibility ?? resolveDefaultHolderEligibility(config)).toBe("unknown");
+    ["unknown", "wars-argentine-peso vbill-vaneck jaaa-janus-henderson-anemoy mxnb-juno"],
+    ["whitelisted-primary", "axcnh-anchorx"],
+    ["verified-customer", "qcad-stablecorp sbc-brale brla-brla-digital xo-exodus"],
+  ])("retains %s access and withheld settlement", (eligibility, ids) => {
+    for (const id of ids.split(" ")) {
+      const config = REDEMPTION_BACKSTOP_CONFIGS[id]!;
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toContain("settlement");
+      expect(resolveReviewedRedemptionSettlement(config, CLOCK_SEC)).toBe("days");
+      expect(config.holderEligibility).toBe(eligibility);
+    }
   });
 
   it("keeps withheld settlement reviews off every faster-than-days issuer default", () => {
@@ -161,16 +156,24 @@ describe("redemption backstop config consistency", () => {
   });
 
   it("expanded shared configs receive per-coin reviewed docs instead of shared first-id docs", () => {
-    const expectedPrimaryUrls = new Map([
-      ["a7a5-old-vector", "https://www.a7a5.io/"],
-      ["gusd-gate", "https://www.gate.com/staking/USDT?isDebtType=1&pid=33"],
-      ["usyc-hashnote", "https://usyc.hashnote.com/"],
-      ["zarp-zarp", "https://www.zarpstablecoin.com/"],
-      ["cetes-etherfuse", "https://app.etherfuse.com/legal/proof-of-reserves"],
-    ]);
+    // Each group is one `defineBatch` in offchain-issuer/base-batches.ts whose
+    // members carry their own reviewed sources. Inheriting the batch's first-id
+    // docs would repeat one URL across siblings.
+    const expandedDocGroups = [
+      ["usyc-hashnote", "a7a5-old-vector", "gusd-gate"],
+      ["zarp-zarp", "cetes-etherfuse"],
+      [
+        "audx-aussie-dollar-token", "brl1-brl1", "cngn-compliant-naira", "reur-royal-euro",
+        "wars-argentine-peso", "eusd-telcoin", "rusd-royal-dollar",
+      ],
+    ] as const;
 
-    for (const [id, expectedUrl] of expectedPrimaryUrls) {
-      expect(REDEMPTION_BACKSTOP_CONFIGS[id]?.docs?.[0]?.url).toBe(expectedUrl);
+    for (const group of expandedDocGroups) {
+      const urls = group.map((id) => REDEMPTION_BACKSTOP_CONFIGS[id]?.docs?.[0]?.url);
+      for (const [index, url] of urls.entries()) {
+        expect(url, group[index]).toMatch(/^https:\/\/\S+$/);
+      }
+      expect(new Set(urls).size, group.join(",")).toBe(group.length);
     }
   });
 

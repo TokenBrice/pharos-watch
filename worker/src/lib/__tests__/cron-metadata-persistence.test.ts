@@ -7,6 +7,7 @@ import {
 } from "../cron-metadata-persistence";
 import { buildResourcePressure } from "../cron-resource-pressure";
 import { normalizeCronMetadataWithLease } from "../cron-metadata";
+import type { CronResult } from "../cron-logger";
 
 describe("compactCronMetadataForPersistence", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -91,16 +92,10 @@ describe("compactCronMetadataForPersistence", () => {
     });
 
     const result = compactCronMetadataForPersistence(metadata);
-    const parsed = JSON.parse(result.metadata!) as {
-      reason: string;
-      persistenceCompaction: { originalBytes: number };
-      providerDiagnostics: unknown;
-      fullAssets: unknown;
-    };
+    const parsed = JSON.parse(result.metadata!);
 
     expect(result.compacted).toBe(true);
     expect(result.originalBytes).toBeGreaterThan(MAX_PERSISTED_CRON_METADATA_BYTES);
-    expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
     expect(parsed.reason).toBe("stablecoin-publication");
     expect(parsed.persistenceCompaction.originalBytes).toBe(result.originalBytes);
     expect(parsed).toMatchObject({
@@ -108,6 +103,22 @@ describe("compactCronMetadataForPersistence", () => {
       providerDiagnostics: { count: 5_000 }, fullAssets: { count: 410 },
     });
     expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+  });
+
+  it("preserves measured-execution per-chain evidence through sync-cl-exit-depth compaction", () => {
+    const chains = {
+      base: { scoreEligibleTargets: 4, measured: 0, failed: 4, deferred: 0 },
+      ethereum: { scoreEligibleTargets: 9, measured: 9, failed: 0, deferred: 0 },
+    };
+    const result = compactCronMetadataForPersistence(JSON.stringify({
+      lane: "active",
+      chains,
+      failuresByReason: Object.fromEntries(
+        Array.from({ length: 1_000 }, (_, index) => [`reason-${index}`, "x".repeat(40)]),
+      ),
+    }), undefined, "sync-cl-exit-depth");
+    expect(result.compacted).toBe(true);
+    expect(JSON.parse(result.metadata!).chains).toEqual(chains);
   });
 
   it("preserves mxLedger scalars as top-level keys through oversized compaction", () => {
@@ -129,9 +140,7 @@ describe("compactCronMetadataForPersistence", () => {
     const result = compactCronMetadataForPersistence(metadata);
     expect(result.compacted).toBe(true);
     const parsed = JSON.parse(result.metadata!) as Record<string, unknown>;
-    // Top-level scalars, not nested under diagnostics: producer history's
-    // normalizeHistoryMetadata drops nested objects, and the durable
-    // activation-gate ledger reads these keys from worker_producer_history.
+    // The durable activation ledger reads top-level keys from producer history.
     expect(parsed.mxLedgerV).toBe(1);
     expect(parsed.mxLedgerKind).toBe("A");
     expect(parsed.mxLedgerCycle).toBe(1_787_120_160);
@@ -174,15 +183,21 @@ describe("compactCronMetadataForPersistence", () => {
       activePublicationCoverage: { missingActiveIds: ["coin-a"], complete: false },
       publicationStats: { pysInputsPersistedCount: 3, pysInputsNullCount: 1 },
       apiErrorConfigs: [{ configKey: "ethereum-test" }],
+      subgraphFailures: [{ source: "uniswap-v4-subgraph", chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }],
+      directApiSourceSummary: { sourceWarnings: ["meteora: malformed pool row"], pagination: [] },
+      poolRejections: [{ reason: "invalid-pool-volume", source: "dl", protocol: "curve", chain: "ethereum",
+        poolId: "pool-a", tvlUsd: 50_000, stablecoinIds: ["coin-a"] }],
+      poolRejectionMateriality: { material: true, affectedCoins: [{ stablecoinId: "coin-a", lostShare: 0.5 }] },
     };
     const result = compactCronMetadataForPersistence(JSON.stringify({ ...evidence,
+      payload: "x".repeat(10_000),
       adapterLatency: { groups: Array.from({ length: 1_000 }, () => ({ adapterKey: "test", elapsedMs: 10 })) },
     }));
     expect(result.compacted).toBe(true);
     expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
     expect(JSON.parse(result.metadata!)).toMatchObject(evidence);
     expect(JSON.parse(result.metadata!).d1Cost).toEqual(evidence.d1Cost);
-    expect(JSON.parse(result.metadata!).adapterLatency).toEqual({ groupsCount: 1_000 });
+    expect(JSON.parse(result.metadata!).diagnostics.adapterLatency).toEqual({ groupsCount: 1_000 });
   });
 
   it("retains complete watchdog generation evidence under the documented per-job exception", () => {
@@ -215,6 +230,99 @@ describe("compactCronMetadataForPersistence", () => {
     expect(parsed.diagnostics).toEqual({});
     expect(warn).toHaveBeenCalledExactlyOnceWith("[cron-metadata] Consumer evidence exceeds persistence budget", {
       job: job ?? "default", budgetBytes: getCronMetadataBudgetBytes(job), persistedBytes: result.persistedBytes,
+    });
+  });
+});
+
+describe("normalizeCronMetadataWithLease", () => {
+  it("keeps measurements unknown and merges lease meta when job metadata is absent", () => {
+    const result = normalizeCronMetadataWithLease(null, { owner: "test" });
+    expect(JSON.parse(result)).toEqual({
+      rowsRead: null,
+      rowsWritten: null,
+      rowsDropped: null,
+      sourceCoverage: null,
+      fallbackMode: null,
+      validationFailures: null,
+      owner: "test",
+    });
+  });
+
+  it("merges producer metadata without inferring writes from itemCount", () => {
+    const result = normalizeCronMetadataWithLease(
+      { status: "ok", itemCount: 5, metadata: JSON.stringify({ items: 5 }) } as CronResult,
+      { owner: "test" },
+    );
+    expect(JSON.parse(result)).toMatchObject({
+      items: 5, rowsRead: null, rowsWritten: null, rowsDropped: null, validationFailures: null, owner: "test",
+    });
+  });
+
+  it.each([null, 0, 7])("preserves producer measurements (%s) and scheduler lease identity", (measurement) => {
+    const measurements = {
+      rowsRead: measurement, rowsWritten: measurement, rowsDropped: measurement, validationFailures: measurement,
+    };
+    const result = normalizeCronMetadataWithLease(
+      { itemCount: 99, metadata: JSON.stringify({ ...measurements, reason: "producer-evidence", leaseOwner: "producer" }) },
+      { leaseOwner: "scheduler", scheduleKey: "quarterHourly", slotStartedAt: 600 },
+    );
+    expect(JSON.parse(result)).toMatchObject({
+      ...measurements, reason: "producer-evidence", leaseOwner: "scheduler",
+      scheduleKey: "quarterHourly", slotStartedAt: 600,
+    });
+  });
+
+  it("keeps unparseable job metadata as rawMetadata alongside the lease meta", () => {
+    const result = normalizeCronMetadataWithLease(
+      { status: "ok", metadata: "plain text" } as CronResult,
+      { owner: "test" },
+    );
+    const parsed = JSON.parse(result) as Record<string, unknown>;
+    expect(parsed.rawMetadata).toBe("plain text");
+    expect(parsed.owner).toBe("test");
+  });
+
+  it("leaves producer and lease evidence intact until audited write-time compaction", () => {
+    const adapterLatency = {
+      schemaVersion: 1,
+      groups: [{ adapterKey: "example", attemptCount: 1 }],
+      overflow: false,
+    };
+    const reason = "reserve-adapter-or-persistence-failed";
+    const reasons = [reason, "reserve-run-budget-deferred", "reserve-circuit-open"];
+    const adapterFailureBudget = { maxFailureRatio: 0.25, attemptedFeeds: 100, failedFeeds: 1 };
+    const cohortGrading = { itemsDone: 100, complete: true, attemptedCoins: 100, synced: 99,
+      failed: 1, persistenceFailed: 0, circuitSkipped: 0 };
+    const normalized = normalizeCronMetadataWithLease(
+      {
+        status: "degraded",
+        metadata: JSON.stringify({
+          adapterLatency,
+          reason, reasons,
+          adapterFailureBudget, cohortGrading,
+          failed: 1, unacknowledgedFailed: 1, persistenceFailed: 0,
+          quality: { reasons: [reason] },
+          warnings: Array.from({ length: 2_000 }, (_, index) => `warning-${index}-${"x".repeat(80)}`),
+          attemptFailureSummaries: Array.from(
+            { length: 500 },
+            (_, index) => ({ stablecoinId: `coin-${index}`, message: "failure".repeat(30) }),
+          ),
+        }),
+      } as CronResult,
+      { leaseOwner: "job:scheduled:test" },
+    );
+    const parsed = JSON.parse(normalized);
+
+    expect(new TextEncoder().encode(normalized).length).toBeGreaterThan(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(parsed.adapterLatency).toEqual(adapterLatency);
+    expect(parsed.leaseOwner).toBe("job:scheduled:test");
+    expect(parsed.reason).toBe(reason);
+    expect(parsed.reasons).toEqual(reasons);
+    const persisted = compactCronMetadataForPersistence(normalized);
+    expect(persisted.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
+    expect(JSON.parse(persisted.metadata!)).toMatchObject({
+      reason, reasons, leaseOwner: "job:scheduled:test", adapterFailureBudget, cohortGrading,
+      failed: 1, unacknowledgedFailed: 1, persistenceFailed: 0, quality: { reasons: [reason] },
     });
   });
 });

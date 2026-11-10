@@ -51,9 +51,10 @@ import {
   unknownActivePriceCoverageHealth,
   unknownStablecoinPublicationHealth,
 } from "./stablecoin-publication-health";
-import type { SchedulerLiveness } from "@shared/types/status/public-health";
+import type { OperatorAlertHealth, SchedulerLiveness } from "@shared/types/status/public-health";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
-import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "./cron-output";
+import { loadOperatorAlertHealth } from "./status/operator-alert-health";
+import { LATEST_CONFIRMED_CRON_OUTPUT_SQL } from "./cron-output";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -145,6 +146,8 @@ export interface PublicHealthAssessment {
   activePriceCoverageImpactStatus: HealthResponse["status"];
   schedulerLiveness: SchedulerLiveness;
   schedulerLivenessImpactStatus: HealthResponse["status"];
+  /** Operator-alert channel receipt; additive because older snapshots omit it. */
+  operatorAlerts?: OperatorAlertHealth;
 }
 
 /** Current-read completeness, independent of semantic service health. */
@@ -193,7 +196,11 @@ export function buildPublicHealthResponse(
     ? undefined
     : getBlacklistGapStatus({ missingRatio: assessment.blacklistMetrics.totalEvents > 0
       ? assessment.blacklistMetrics.classificationMissingAmounts / assessment.blacklistMetrics.totalEvents : 0 });
-  return { ...body, ...projectPublicStatus(body, undefined, blacklistImpactStatus) };
+  return {
+    ...body,
+    ...(assessment.operatorAlerts ? { operatorAlerts: assessment.operatorAlerts } : {}),
+    ...projectPublicStatus(body, undefined, blacklistImpactStatus),
+  };
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "db" | "mint-burn"): string {
@@ -381,9 +388,7 @@ async function loadMintBurnHealth(
         "latestSuccessfulSyncAt",
         () =>
           db
-            .prepare(
-              `SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`,
-            )
+            .prepare(LATEST_CONFIRMED_CRON_OUTPUT_SQL)
             .bind(MINT_BURN_CRON_JOB)
             .first<{ started_at: number | null }>()
             .then((row) => row?.started_at ?? null),
@@ -396,14 +401,24 @@ async function loadMintBurnHealth(
         "rowCount",
         () =>
           db
+            // One newest-first probe per job: the OR form ran as MULTI-INDEX OR,
+            // parsing and sorting every retained sentinel row before LIMIT 1.
             .prepare(
-              `SELECT job, item_count, metadata
-               FROM cron_runs
-               WHERE (
-                 job = ?
-                 AND json_extract(metadata, '$.mode') = 'daily'
-                 AND json_extract(metadata, '$.sources.growth.status') IN ('ok', 'degraded')
-               ) OR (job = ? AND status IN ('ok', 'degraded'))
+              `SELECT job, item_count, metadata FROM (
+                 SELECT * FROM (
+                   SELECT job, item_count, metadata, started_at FROM cron_runs
+                    WHERE job = ?
+                      AND json_extract(metadata, '$.mode') = 'daily'
+                      AND json_extract(metadata, '$.sources.growth.status') IN ('ok', 'degraded')
+                    ORDER BY started_at DESC LIMIT 1
+                 )
+                 UNION ALL
+                 SELECT * FROM (
+                   SELECT job, item_count, metadata, started_at FROM cron_runs
+                    WHERE job = ? AND status IN ('ok', 'degraded')
+                    ORDER BY started_at DESC LIMIT 1
+                 )
+               )
                ORDER BY started_at DESC
                LIMIT 1`,
             )
@@ -591,7 +606,10 @@ export async function assessPublicHealth(
 ): Promise<PublicHealthAssessment> {
   const logPrefix = options?.logPrefix ?? "health";
   const warnings: string[] = [];
-  const schedulerLiveness = options?.schedulerLiveness ?? await loadSchedulerLiveness(db, now);
+  const [schedulerLiveness, operatorAlerts] = await Promise.all([
+    options?.schedulerLiveness ?? loadSchedulerLiveness(db, now),
+    loadOperatorAlertHealth(db, now),
+  ]);
   const schedulerLivenessImpactStatus = getSchedulerLivenessImpactStatus(schedulerLiveness);
   warnings.push(...schedulerLivenessWarnings(schedulerLiveness));
 
@@ -644,6 +662,7 @@ export async function assessPublicHealth(
       activePriceCoverageImpactStatus: "healthy",
       schedulerLiveness,
       schedulerLivenessImpactStatus,
+      operatorAlerts,
     };
   }
 
@@ -929,5 +948,6 @@ export async function assessPublicHealth(
     activePriceCoverageImpactStatus,
     schedulerLiveness,
     schedulerLivenessImpactStatus,
+    operatorAlerts,
   };
 }

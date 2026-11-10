@@ -49,7 +49,9 @@ export function buildChainDirectoryJsonLd(
           "@id": `${url}#webpage`,
           name: `${entry.name} Stablecoin Analytics`,
           url,
-          description: `${entry.deploymentCount} tracked stablecoin deployment${entry.deploymentCount === 1 ? "" : "s"} mapped on ${entry.name}.`,
+          description: entry.deploymentCount > 0
+            ? `${entry.deploymentCount} active stablecoin deployment${entry.deploymentCount === 1 ? "" : "s"} mapped on ${entry.name}.`
+            : `Stablecoin analytics on ${entry.name}.`,
           about: {
             "@type": "Thing",
             name: entry.name,
@@ -76,10 +78,12 @@ export function buildChainProfileJsonLd({
   return buildCollectionItemListJsonLd({
     url: pageUrl,
     name: `${meta.name} Stablecoin Analytics`,
-    description: `Stablecoin supply, composition, Chain Health, and ${trackedDeploymentCount} tracked deployment${trackedDeploymentCount === 1 ? "" : "s"} on ${meta.name}.`,
+    description: trackedDeploymentCount > 0
+      ? `Stablecoin supply, composition, Chain Health, and ${trackedDeploymentCount} active deployment${trackedDeploymentCount === 1 ? "" : "s"} on ${meta.name}.`
+      : `Stablecoin supply, composition, and Chain Health on ${meta.name}.`,
     inLanguage: "en",
     itemListId: `${pageUrl}#deployments`,
-    itemListName: `${meta.name} tracked stablecoin deployments`,
+    itemListName: `${meta.name} active stablecoin deployments`,
     about: {
       "@type": "Thing",
       "@id": `${pageUrl}#chain`,
@@ -95,7 +99,7 @@ export function buildChainProfileJsonLd({
       resolveUrl: (deployment) => absoluteUrl(deployment.href),
       resolveId: (deployment) => `${pageUrl}#deployment-${deployment.id}`,
       resolveDescription: (deployment) =>
-        `${deployment.name} is a ${deployment.pegLabel}, ${deployment.backingLabel}, ${deployment.governanceLabel} stablecoin with ${deployment.contractCount} tracked deployment${deployment.contractCount === 1 ? "" : "s"} on ${meta.name}.`,
+        `${deployment.name} is a ${deployment.pegLabel}, ${deployment.backingLabel}, ${deployment.governanceLabel} stablecoin with ${deployment.contractCount} active deployment${deployment.contractCount === 1 ? "" : "s"} on ${meta.name}.`,
       includeMainEntityOfPage: true,
     }),
   });

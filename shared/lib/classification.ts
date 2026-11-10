@@ -413,29 +413,34 @@ export const PEG_BAND_LABELS = {
   depeg: "depeg",
 } as const;
 
+const LIMITED_EVIDENCE_BADGE_CLASS =
+  "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+
 /** One label and badge palette for the screener's V9 evidence states. */
 export const SAFETY_EVIDENCE_LABELS = {
   strong: "Strong",
   adequate: "Adequate",
   limited: "Limited",
+  insufficient: "Insufficient",
   nr: "NR",
 } as const;
 
 export const SAFETY_EVIDENCE_BADGE_CLASSES = {
   strong: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   adequate: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  limited: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  limited: LIMITED_EVIDENCE_BADGE_CLASS,
+  insufficient: LIMITED_EVIDENCE_BADGE_CLASS,
   nr: "border-border/60 bg-muted/30 text-muted-foreground",
 } as const;
 
 /**
  * Why a Safety Score pillar or component is missing from a card, by evidence
  * cause. C and U are priced as unknowns in the score; A and B are left out.
- * Only A is a data-pipeline unavailability, never "not yet researched".
+ * Only A is a data-pipeline unavailability, never an unresolved question.
  */
 export const SAFETY_SCORE_GAP_CAUSE_LABELS = {
   C: "undisclosed by issuer",
-  U: "not yet researched",
+  U: "unresolved",
   A: "data pipeline unavailable",
   B: "awaiting curation",
 } as const;

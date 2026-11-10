@@ -136,14 +136,37 @@ describe("ChinaAMC disclosed pooled fund holdings", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * Both rejection paths below exhaust the production 1 s + 2 s retry backoff.
+   * Fake only the timer primitives so the retry policy still runs, then advance
+   * it instead of sleeping on the wall clock.
+   */
+  async function settlesAfterRetries(assertion: Promise<unknown>) {
+    try {
+      // Let the first attempt settle before advancing, so its per-request
+      // timeout is disposed instead of firing during the backoff.
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.runAllTimersAsync();
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+
   it("rejects oversized responses without returning an allocation", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("x".repeat(256 * 1024 + 1))));
-    await expect(fetchChinaamcHoldingsReserves(coin, config, signal(), { nowSec: now })).rejects.toThrow();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await settlesAfterRetries(
+      expect(fetchChinaamcHoldingsReserves(coin, config, signal(), { nowSec: now })).rejects.toThrow(),
+    );
   });
 
   it("rejects unavailable endpoints and propagates cancellation", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("Unavailable", { status: 503 })));
-    await expect(fetchChinaamcHoldingsReserves(coin, config, signal(), { nowSec: now })).rejects.toThrow();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await settlesAfterRetries(
+      expect(fetchChinaamcHoldingsReserves(coin, config, signal(), { nowSec: now })).rejects.toThrow(),
+    );
     const controller = new AbortController();
     controller.abort();
     await expect(fetchChinaamcHoldingsReserves(coin, config, controller.signal, { nowSec: now })).rejects.toThrow();

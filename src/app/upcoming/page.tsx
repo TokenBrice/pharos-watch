@@ -7,7 +7,7 @@ import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
+import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { UPCOMING_LAUNCH_PHASE_VALUES, type UpcomingLaunchPhase } from "@shared/types/core";
 import type { StablecoinMeta } from "@shared/types";
@@ -58,11 +58,16 @@ const PRE_LAUNCH_LOGOS = Object.fromEntries(
 // The month stamp is the build month: the static export is rebuilt at least
 // daily, so it cannot outlive the registry snapshot the count comes from.
 const UPCOMING_BUILD_MONTH = new Date().toLocaleString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
-const UPCOMING_PHASE_TALLY = UPCOMING_LAUNCH_PHASE_VALUES
-  .map((phase) => [phase, UPCOMING_STABLECOINS.filter((coin) => coin.launchPhase === phase).length] as const)
-  .filter(([, count]) => count > 0)
-  .map(([phase, count]) => `${LAUNCH_PHASE_LABELS[phase]} ${count}`)
-  .join(", ");
+// Coins without a launchPhase have no `UPCOMING_LAUNCH_PHASE_VALUES` bucket,
+// so the complement is counted explicitly and the tally covers every coin.
+const UPCOMING_UNPHASED_COUNT = UPCOMING_STABLECOINS.filter((coin) => !coin.launchPhase).length;
+const UPCOMING_PHASE_TALLY = [
+  ...UPCOMING_LAUNCH_PHASE_VALUES
+    .map((phase) => [phase, UPCOMING_STABLECOINS.filter((coin) => coin.launchPhase === phase).length] as const)
+    .filter(([, count]) => count > 0)
+    .map(([phase, count]) => `${LAUNCH_PHASE_LABELS[phase]} ${count}`),
+  ...(UPCOMING_UNPHASED_COUNT > 0 ? [`${PRE_LAUNCH_UNPHASED_LABEL} ${UPCOMING_UNPHASED_COUNT}`] : []),
+].join(", ");
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Upcoming Stablecoin Launches (${UPCOMING_BUILD_MONTH}): ${UPCOMING_STABLECOINS.length} Tracked`,

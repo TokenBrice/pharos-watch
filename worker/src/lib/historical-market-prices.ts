@@ -169,6 +169,7 @@ function appendUniqueMergeReason(
 function applyHistoricalPolicyAdjustments(
   stablecoinId: string,
   prices: PricePoint[],
+  source: HistoricalMarketSource = "coingecko",
 ): { prices: PricePoint[]; adjustments: HistoricalMarketPolicyAdjustment[] } {
   const policy = HISTORICAL_SOURCE_POLICIES[stablecoinId];
   if (!policy?.coinGecko?.abovePegExclusions?.length) {
@@ -188,7 +189,7 @@ function applyHistoricalPolicyAdjustments(
     const removedPoints = before - filtered.length;
     if (removedPoints > 0) {
       adjustments.push({
-        source: "coingecko",
+        source,
         adjustment: "above-peg-clamp",
         removedPoints,
       });
@@ -466,9 +467,13 @@ export async function fetchMarketBackfillPriceSeries(
         ? []
         : await fetchDlPriceChart(coinId, twoYearsAgo, null, options?.signal)),
     ]);
-    diagnostics.perSourceStats.push(buildSeriesStats("defillama", dlPrices));
-    if (dlPrices.length > 0) {
-      mergedPrices = dedupeAndSortPrices([...cgPrices, ...dlPrices]);
+    // DefiLlama mirrors the same corrupted CoinGecko history, so the policy must
+    // hold for the series that is actually returned, not only the CG leg.
+    const dlAdjusted = applyHistoricalPolicyAdjustments(meta.id, dlPrices, "defillama");
+    diagnostics.perSourceStats.push(buildSeriesStats("defillama", dlAdjusted.prices));
+    diagnostics.policyAdjustments.push(...dlAdjusted.adjustments);
+    if (dlAdjusted.prices.length > 0) {
+      mergedPrices = dedupeAndSortPrices([...cgPrices, ...dlAdjusted.prices]);
       appendUniqueSources(diagnostics.sourcesUsed, "defillama");
     }
   }

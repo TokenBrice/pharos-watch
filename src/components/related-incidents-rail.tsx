@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { MECHANISM_ARCHETYPE_SHORT_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
+import type { MechanismArchetype, PegCurrency } from "@shared/types";
 import type { DepegEventSearchEntry } from "@shared/types/market";
 
 const ARCHETYPE_BY_COIN = new Map(
@@ -12,9 +15,9 @@ export interface RelatedIncidentsRailProps {
   /** Slug of the event to exclude from the listing (typically the current event). */
   excludeEventId?: string;
   /** Peg currency of the focal event — drives the "same peg currency" group. */
-  pegCurrency?: string;
+  pegCurrency?: PegCurrency;
   /** Mechanism archetype of the focal event's coin — drives the "same risk archetype" group. */
-  riskArchetype?: string;
+  riskArchetype?: MechanismArchetype;
   /** Unix-seconds timestamp of the focal event — drives the "DEWS context" group. */
   startedAt?: number;
   className?: string;
@@ -71,14 +74,15 @@ function selectGroups({
 
   // 1. Same peg currency
   if (pegCurrency) {
-    const cohort = pool.filter((event) => event.pegType === pegCurrency);
+    const canonicalPegType = pegTypeFromCurrency(pegCurrency);
+    const cohort = pool.filter((event) => event.pegType === canonicalPegType);
     const items = sortNewest(cohort)
       .filter((event) => !used.has(event.slug))
       .slice(0, MAX_PER_GROUP);
     if (items.length > 0) {
       items.forEach((event) => used.add(event.slug));
       groups.push({
-        label: `Other recent ${pegCurrency} depegs`,
+        label: `Other recent ${PEG_LABELS_SHORT[pegCurrency]} depegs`,
         items: items.map(toRelatedItem),
       });
     }
@@ -95,7 +99,7 @@ function selectGroups({
     if (items.length > 0) {
       items.forEach((event) => used.add(event.slug));
       groups.push({
-        label: `Other ${riskArchetype} incidents`,
+        label: `Other ${MECHANISM_ARCHETYPE_SHORT_LABELS[riskArchetype]} incidents`,
         items: items.map(toRelatedItem),
       });
     }

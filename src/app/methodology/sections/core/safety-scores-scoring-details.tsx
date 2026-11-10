@@ -119,22 +119,12 @@ export function SafetyScoresScoringDetails() {
           Same-run live adapter telemetry can also carry token-specific route status and capacity for Liquity-style
           systems, wrappers, PSMs, Yearn V3 strategy-queue exits, and instant-redemption vaults. Redemption metadata
           emitted by a live reserve adapter ages out with the reserve snapshot; if it is stale or degraded, the route
-          stays visible but does not score as current capacity. A disclosure the redemption run admitted as fresh is
-          carried forward until that run&apos;s own budget (the next scheduled refresh plus one retry) expires, keeping
-          its original observation time, so a source budget lapsing between runs does not drop the route.
+          stays visible but does not score as current capacity.
         </p>
         <p>
           Current route coverage includes reviewed issuer rails, on-chain collateral redemptions, protocol NAV wrappers,
           and queued vault exits; newly reviewed wrappers and Nest-style vaults follow the same route-family caps and
           confidence gates as older configured routes.
-        </p>
-        <p>
-          A DEX route whose measured observation ages past its freshness window is derated rather than discarded: it
-          keeps its place in the exit capacity denominator at reduced credit, because an expired producer window is
-          weaker evidence rather than absent evidence. A route with no retained observation at all still fails closed,
-          as does a stale non-atomic redemption route. Dropping expired routes outright previously let an ordinary
-          producer-schedule delay move a score with no market event behind it, and propagated that move to every asset
-          backed by the affected one.
         </p>
       </div>
 
@@ -149,20 +139,6 @@ export function SafetyScoresScoringDetails() {
           from a referenced base stablecoin. The peg dimension passes through the computed peg score directly; severe
           active depegs are hard-capped after the multiplier using the open event&apos;s peak deviation:
           &ge;&nbsp;2500&nbsp;bps (25%+) caps the overall score at F, &ge;&nbsp;1000&nbsp;bps (10%+) caps at D.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Grade stability</h3>
-        <p>
-          A published letter grade changes only after two consecutive publications compute the same new band. Until
-          then the card keeps its previous grade beside the raw score and discloses the computed band
-          (<code className="text-xs">gradeHold</code>). Scores are never held or smoothed, and moves into or out of NR
-          or a pipeline gap publish immediately. When a run&apos;s deployment-supply attribution misses an asset, the
-          last admitted attribution is reused for one further 30-minute cycle, keeping its original observation time;
-          after that the existing unavailable-supply treatment applies. Likewise, when the stablecoin supply sync has not
-          re-observed an asset, its last observed circulating supply stays usable for one further hour beyond the
-          30-minute supply budget, keeping its original observation time; a fresh observation always replaces it.
         </p>
       </div>
 

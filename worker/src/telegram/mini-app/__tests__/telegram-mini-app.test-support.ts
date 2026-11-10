@@ -126,6 +126,7 @@ export function stateReadTables(overrides: {
   subscriber?: Record<string, unknown> | null;
   subscriptions?: Record<string, unknown>[];
   presets?: Record<string, unknown>[];
+  diagnostics?: Record<string, unknown> | null;
 } = {}): MockTableConfig[] {
   const subscriber = overrides.subscriber ?? {
     global_alert_dews: 0,
@@ -154,7 +155,7 @@ export function stateReadTables(overrides: {
     { match: "FROM telegram_subscribers", first: subscriber, rows: subscriber == null ? [] : [subscriber] },
     { match: "FROM telegram_subscriptions", rows: overrides.subscriptions ?? [] },
     { match: "FROM telegram_preset_subscriptions", rows: overrides.presets ?? [] },
-    { match: "FROM telegram_chat_delivery_diagnostics", first: null, rows: [] },
+    { match: "FROM telegram_chat_delivery_diagnostics", first: overrides.diagnostics ?? null, rows: overrides.diagnostics ? [overrides.diagnostics] : [] },
     { match: "FROM telegram_deliveries WHERE chat_id = ?", first: { queued_alerts: 0 }, rows: [{ queued_alerts: 0 }] },
   ];
 }

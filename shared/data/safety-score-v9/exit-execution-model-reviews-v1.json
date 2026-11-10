@@ -2742,21 +2742,22 @@
       "identity": {
         "assetId": "frxusd-frax",
         "deployment": "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
-        "endpoint": "ethereum:0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+        "endpoint": "ethereum:0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
         "outputAssetKeys": [
           "usdc-circle"
         ],
         "implementationIdentity": "sha256:b6a9e0c5b0dda3784aab28c6d6ce90b90e1493ead65a5854e2a87058ddd853ea"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
+      "reviewedAt": "2026-11-06T18:29:30.000Z",
       "expiresAt": "2026-11-28T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:FrxUSDCustodianUsdc:0.2.8",
         "verified-source:FrxUSD3:erc20-balances-account-slot-0",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1"
+        "pinned-identity:ethereum:26356959:0x7ef25ec11653595d0747b17c9a79ae06748bb62a3c294088dcccf9ffa5adcbc8"
       ],
       "sourceUrls": [
+        "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc",
         "https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xcacd6fd266af91b8aed52accc382b4e165586e29",
         "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000048d2c8baf31742f6765383278bada4d5",
@@ -2767,11 +2768,16 @@
         "kind": "erc4626-instant",
         "chain": "ethereum",
         "chainId": 1,
-        "contract": "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+        "contract": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
         "outputToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         "inputDecimals": 18,
         "outputDecimals": 6,
-        "codeSha256": "b6a9e0c5b0dda3784aab28c6d6ce90b90e1493ead65a5854e2a87058ddd853ea",
+        "codeSha256": "97deceada03489cf734bddeaea4962448ca661e9a29b8731a9c9fb77093d3d5b",
+        "implementation": {
+          "address": "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "b6a9e0c5b0dda3784aab28c6d6ce90b90e1493ead65a5854e2a87058ddd853ea"
+        },
         "balanceStorage": {
           "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
           "keyOrder": "account-slot"
@@ -2954,17 +2960,22 @@
         "implementationIdentity": "sha256:932df9d5d00d1231c3621d8f265b23694811fd89d1f2a2b7496d5c423366d2e1"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-11T01:01:20.000Z",
-      "expiresAt": "2026-11-10T01:01:20.000Z",
+      "reviewedAt": "2026-11-04T22:06:40.000Z",
+      "expiresAt": "2026-12-04T22:06:40.000Z",
       "evidenceIds": [
         "verified-source:7eae07df298291ff00a19cfdb8f22d256a5150b04b9d201c760e63bf285f9d8e",
         "pinned-identity:ethereum:26164397:0x5fa8788cdf21b08e1d184c9d4897788c8388d01226025f4d8b9cb28cf4d061ef",
+        "pinned-identity:ethereum:26343799:0x35a77b1de6f39e1be66ff2db8486fb992fddfeb50ff522af9be065de05dd9053",
+        "pinned-simulation:ethereum:26343799:3b5dc9c9df129036992d55d69bbf99efd1c9b717ea5c116ee6627cb6cc20eb9d",
+        "verified-source:f6981a72d7cabfabcca53902e8e6fb86a09d7951ecf6b6b01b683a5fa6bbf788",
         "balance-layout:account-slot:0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000f2eb9f69274678c76222b35eec7588a65",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc",
-        "https://docs.yo.xyz"
+        "https://docs.yo.xyz",
+        "https://etherscan.io/block/26343799",
+        "https://api-ethereum-mainnet.n.dwellir.com"
       ],
       "producer": {
         "kind": "erc4626-instant",

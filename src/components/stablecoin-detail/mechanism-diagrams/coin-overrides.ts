@@ -38,15 +38,21 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
 
   // USDe (Ethena): mostly Liquid Cash since the Apr 2026 reserve overhaul; a perp-hedged crypto minority
   "usde-ethena": {
+    syntheticStrategy: "perp-short",
     steps: [
       { label: "Collateral deposit", subtitle: "mostly stables + loans" },
       { label: "Mostly Liquid Cash", subtitle: "minority perp-hedged" },
-      { label: "USDe minted", subtitle: "lending + funding yield" },
+      { label: "USDe minted", subtitle: "yield to sUSDe stakers" },
     ],
     ariaLabel:
-      "Collateral is held mostly as Liquid Cash, with the crypto remainder hedged by equal short perp positions; lending income and the funding rate paid by perp longs become the yield on USDe.",
+      "Collateral is held mostly as Liquid Cash, with the crypto remainder hedged by equal short perp positions; lending income and the funding rate paid by perp longs flow to sUSDe stakers as yield.",
     description:
       "Users deposit collateral; the protocol holds most of it as Liquid Cash (stablecoins, DeFi and institutional lending, tokenized funds) and hedges the remaining crypto with equal-size short perpetual futures positions; lending income and funding flow to sUSDe stakers as yield.",
+  },
+
+  // USR (Resolv): spot ETH/BTC collateral hedged with equal short perps; funding is the carry
+  "usr-resolv": {
+    syntheticStrategy: "perp-short",
   },
 
   // ftUSD: stablecoin lending with native-asset borrow/stake carry on both chains

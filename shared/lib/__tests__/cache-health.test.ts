@@ -20,6 +20,17 @@ describe("cache health impact", () => {
     expect(getCacheImpactStatus(cache({ ageSeconds: 22_000, maxAge: 1_800, sourceStatus: "fresh" }))).toBe("stale");
   });
 
+  it("degrades inside the global 8x-12x band without letting a stale producer source escalate it", () => {
+    expect(
+      getCacheImpactStatus({
+        ageSeconds: 16000,
+        maxAge: 1800,
+        healthy: false,
+        sourceStatus: "stale",
+      }),
+    ).toBe("degraded");
+  });
+
   describe("yield-data per-cache override (producer grace 3x/6x)", () => {
     // yield-data availability budget = its hourly producer interval; global 8x/12x would
     // keep a multi-hour-stale ranking "healthy". The override degrades past 3x, stales past 6x.

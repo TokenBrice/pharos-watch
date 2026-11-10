@@ -89,10 +89,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "90000000" }],
         },
         "0xunk": {
@@ -245,10 +242,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [
             {
               collateralBalance: "100000000",
@@ -281,10 +275,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "100000000", minted: "not-an-integer", zchf: "0xZCHF", zchfDecimals: 18 }],
         },
       },
@@ -307,10 +298,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "100000000" }],
         },
       },
@@ -340,10 +328,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "100000000" }],
         },
       },
@@ -625,14 +610,14 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
     expect(result.metadata?.redemption?.outputValuationUnavailableReason).toBe("output-price-freshness");
   });
 
-  it("does not require an unused market quote for a zero-inventory bridge", async () => {
+  it("retains a zero-inventory bridge identity without requiring its unused quote", async () => {
     const prices: NonNullable<BridgeBasketOptions["prices"]> = { ...BASE_PRICES, ...memberPricesWith() };
     delete prices[EURA_TOKEN];
     const { result } = await runBridgeBasket({ inventories: { [EURA_TOKEN]: 0n }, prices });
     expect(result.metadata?.redemption?.outputValuation).toMatchObject({ observedAt: BRIDGE_NOW, unitValueUsd: expect.closeTo(1.2, 10) });
-    expect(result.metadata?.redemption?.outputValuation?.basketWeights).not.toContainEqual(
-      expect.objectContaining({ assetId: "asset:eura" }),
-    );
+    const weights = result.metadata?.redemption?.outputValuation?.basketWeights;
+    expect(weights).toHaveLength(BRIDGE_INVENTORY.length);
+    expect(weights).toContainEqual({ assetId: "asset:eura", weight: 0 });
   });
 
   it("withholds the whole redemption block when one bridge inventory read fails", async () => {

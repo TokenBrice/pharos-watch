@@ -31,12 +31,16 @@ export function DependencyMapClient() {
   } = reportCardsQuery;
   const {
     data: stablecoinsData,
+    isLoading: isLoadingSupply,
     error: stablecoinsError,
     refetch: refetchStablecoins,
   } = stablecoinsQuery;
   const logos = logosById;
   // A failed refetch keeps the retained supply generation and its own clock; the shared banner ages it.
   const hasRetainedSupply = !!stablecoinsData?.peggedAssets?.length;
+  // A first supply read in flight is not an unavailable one: the hero must not
+  // claim missing data before the request settles (R2/ADR-29).
+  const supplyPending = isLoadingSupply && !hasRetainedSupply && !stablecoinsError;
 
   const mcapMap = useMemo(() => {
     if (!stablecoinsData?.peggedAssets) return new Map<string, number | null>();
@@ -141,6 +145,7 @@ export function DependencyMapClient() {
         logos={logos}
         workspace={exposureWorkspace}
         commonModeGroups={reportData.commonModeGroups ?? null}
+        supplyPending={supplyPending}
         mobileSummary={<DependencyMapBasinList model={dependencyHubsModel} publication={reportData} logos={logos} labelOf={id => { const card = cards.find(entry => entry.id === id); return card ? stablecoinLabel(card) : id; }} onExposure={exposureWorkspace.addRoot} />}
       />
       <section className="pharos-card-shell space-y-2 p-4" aria-label="Dependency coverage">

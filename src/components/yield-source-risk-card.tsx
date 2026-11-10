@@ -8,10 +8,10 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   classifyYieldSourcePosture,
   formatYieldSourcePosture,
+  getYieldSourceDepthDisplay,
   isYieldSourcePostureScoringWindowOnly,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
@@ -21,7 +21,7 @@ import {
 } from "@/lib/yield-source-risk";
 import { formatCurrency } from "@shared/lib/format";
 import { numberValue } from "@shared/lib/type-guards";
-import type { YieldRanking } from "@shared/types";
+import type { YieldRanking, YieldSourceRole, YieldType } from "@shared/types";
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 
 type YieldSourceRisk = YieldRanking["sourceRisk"];
@@ -31,6 +31,8 @@ export interface YieldSourceRiskCardProps {
   sourceRisk: YieldSourceRisk;
   sourceTvlUsd: number | null;
   sourceDepthLens: YieldSourceDepthLens;
+  yieldType: YieldType;
+  sourceRole?: YieldSourceRole | null;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
   sourceChanged?: boolean;
   /** Reader-facing source age from the source's own clock (public gate). */
@@ -84,6 +86,8 @@ export function YieldSourceRiskCard({
   sourceRisk,
   sourceTvlUsd,
   sourceDepthLens,
+  yieldType,
+  sourceRole = null,
   sourceRiskDrivers,
   sourceChanged = false,
   freshness,
@@ -94,14 +98,14 @@ export function YieldSourceRiskCard({
   showVenueBreakdown = true,
   className,
 }: YieldSourceRiskCardProps) {
-  const postureInput = { sourceRisk, sourceTvlUsd, sourceDepthLens, sourceChanged, sourceFreshness, warningSignals };
+  const postureInput = { sourceRisk, sourceTvlUsd, sourceDepthLens, yieldType, sourceRole, sourceChanged, sourceFreshness, warningSignals };
   const posture = classifyYieldSourcePosture(postureInput);
   const postureMeta = YIELD_SOURCE_POSTURE_DEFINITIONS[posture];
   const postureLabel = formatYieldSourcePosture(
     posture,
     isYieldSourcePostureScoringWindowOnly(postureInput, posture, freshness?.status === "stale"),
   );
-  const depthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[sourceDepthLens];
+  const depthDisplay = getYieldSourceDepthDisplay({ depthLens: sourceDepthLens, yieldType, sourceRole, sourceTvlUsd });
   const venueTier = sourceRisk?.venueRiskTier ?? null;
   const venueConfidence = sourceRisk?.venueRiskConfidence ?? null;
   const dependency = sourceRisk?.dependencyConcentration ?? null;
@@ -130,7 +134,7 @@ export function YieldSourceRiskCard({
       <dl className={cn("mt-3 grid gap-2", compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4")}>
         <RiskMetric label="Score" value={formatScore(sourceRisk)} />
         <RiskMetric label="Penalty" value={formatPenalty(sourceRisk)} />
-        <RiskMetric label="Depth" value={depthMeta.label} title={depthMeta.description} />
+        <RiskMetric label="Depth" value={depthDisplay.label} title={depthDisplay.description} />
         <RiskMetric
           label="Freshness"
           value={

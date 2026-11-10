@@ -76,6 +76,42 @@ describe("setup-workspace caches", () => {
     }
   });
 
+  it("restores an exact-key dependency cache without generated outputs", () => {
+    const { inputs } = z.object({
+      inputs: z.record(z.string(), z.object({ default: z.string() })),
+    }).parse(readYaml(".github/actions/setup-workspace/action.yml"));
+    expect(inputs["node-modules-cache"].default).toBe("false");
+    const restore = steps.find((step) => step.id === "node-modules-cache")!;
+    expect(restore.uses).toMatch(/^actions\/cache\/restore@[0-9a-f]{40}$/);
+    expect(restore.if).toBe("${{ inputs.install-deps == 'true' && inputs.node-modules-cache == 'true' }}");
+    // Exact key only: no restore-keys may substitute a tree built from another
+    // lockfile, Node version, platform or npm configuration.
+    expect(restore.with.key).toBe(
+      "node-modules-${{ runner.os }}-${{ runner.arch }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', 'package.json', 'worker/package.json', 'shared/contracts/package.json', '.npmrc') }}",
+    );
+    expect(restore.with["restore-keys"]).toBeUndefined();
+    // A cache outage falls back to npm ci instead of failing the job.
+    expect(restore["continue-on-error"]).toBe(true);
+    const paths = String(restore.with.path).trim().split("\n");
+    expect(paths).toEqual(["node_modules", "worker/node_modules", "shared/contracts/node_modules"]);
+    // Generated outputs are deliberately absent so the bootstrap guard keeps
+    // detecting a repaired or stale tracked artifact.
+    expect(paths.some((path) => /generated|public|shared\/data/.test(path))).toBe(false);
+
+    const miss = "steps.node-modules-cache.outputs.cache-hit != 'true'";
+    const install = steps.findIndex((step) => step.run === "npm ci" && step.if?.includes(miss));
+    const save = steps.findIndex((step) => step.name === "Save installed dependencies");
+    expect(install).toBeGreaterThan(steps.indexOf(restore));
+    expect(save).toBeGreaterThan(install);
+    expect(steps[save].uses).toMatch(/^actions\/cache\/save@[0-9a-f]{40}$/);
+    expect(steps[save].if).toContain(miss);
+    expect(steps[save]["continue-on-error"]).toBe(true);
+    expect(steps[save].with.key).toBe("${{ steps.node-modules-cache.outputs.cache-primary-key }}");
+    // Selecting the cache off keeps today's plain npm ci.
+    expect(steps.some((step) => step.run === "npm ci"
+      && step.if === "${{ inputs.install-deps == 'true' && inputs.node-modules-cache != 'true' }}")).toBe(true);
+  });
+
   it("publishes validated lint and compiler state before unrelated nightly guards can fail", () => {
     const workflow = z.object({ jobs: z.record(z.string(), z.object({ steps: z.array(stepSchema) })) })
       .parse(readYaml(".github/workflows/nightly-validation.yml"));
@@ -98,7 +134,8 @@ describe("setup-workspace caches", () => {
     expect(nightly[save].if).toContain("!cancelled()");
     expect(nightly[save]["continue-on-error"]).toBeUndefined();
     expect(nightly[save].with.key).toBe("${{ steps.workspace.outputs.static-cache-key }}");
-    expect(steps.some((step) => step.uses?.startsWith("actions/cache/save@"))).toBe(false);
+    expect(steps.filter((step) => step.uses?.startsWith("actions/cache/save@")).map((step) => step.name))
+      .toEqual(["Save installed dependencies"]);
   });
 
 });

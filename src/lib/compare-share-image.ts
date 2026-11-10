@@ -1,3 +1,5 @@
+import { formatOgStampTime } from "@shared/lib/og-route-cards";
+
 /** Radar section data for one coin. */
 interface ShareRadarCoinData {
   symbol: string;
@@ -66,6 +68,13 @@ const ROW_H = 24;
 const CARD_BOTTOM_PAD = 12;
 const CARDS_Y = 90;
 const FOOTER_H = 50;
+
+/** Footer line; dates the card by its oldest loaded producer generation, never the render clock. */
+export function buildCompareShareFooter(asOfUpdatedAt?: number | null): string {
+  return typeof asOfUpdatedAt === "number" && Number.isFinite(asOfUpdatedAt) && asOfUpdatedAt > 0
+    ? `pharos.watch/compare · As of ${formatOgStampTime(asOfUpdatedAt)}`
+    : "pharos.watch/compare";
+}
 
 /** Compute the number of stat rows for a coin (8 base + 1 if has rating). */
 function statRowCount(coin: ShareCoinData): number {
@@ -294,6 +303,7 @@ export function renderCompareShareImage(
   coins: ShareCoinData[],
   pharosLogo: HTMLImageElement,
   radarData?: ShareRadarData,
+  asOfUpdatedAt?: number | null,
 ): HTMLCanvasElement | null {
   // Compute card and canvas height from content
   const maxRows = coins.reduce((m, c) => Math.max(m, statRowCount(c)), -Infinity);
@@ -354,7 +364,7 @@ export function renderCompareShareImage(
   ctx.fillStyle = MUTED;
   ctx.font = "13px -apple-system, 'Segoe UI', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("pharos.watch/compare", W / 2, H - 20);
+  ctx.fillText(buildCompareShareFooter(asOfUpdatedAt), W / 2, H - 20);
 
   return canvas;
 }

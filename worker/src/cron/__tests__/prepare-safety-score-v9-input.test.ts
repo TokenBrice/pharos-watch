@@ -124,7 +124,10 @@ function pegSummary(): PegSummaryCoin {
     pegCurrency: "USD",
     governance: "centralized",
     currentDeviationBps: 1,
-    pegScore: 99,
+    // A scored row must carry the tracking anchor its score was computed at: the
+    // capture recomputes the public score there as an equality guard, and an
+    // empty event set over a known span scores 100.
+    pegScore: 100,
     pegPct: 99.9,
     severityScore: 0,
     spreadPenalty: 0,
@@ -133,6 +136,7 @@ function pegSummary(): PegSummaryCoin {
     activeDepeg: false,
     lastEventAt: null,
     trackingSpanDays: 1_000,
+    historyCoverage: { startedAt: CLOCK_SEC - 1_000 * 86_400, source: "asset-age", status: "assumed" },
     methodologyVersion: "6.0",
   };
 }

@@ -3,7 +3,9 @@ import { fileURLToPath } from "node:url";
 
 import {
   DEFAULT_SQL_SAFETY_ROOTS,
+  findInsertArityMismatches,
   scanSqlInterpolationSafety,
+  sqlArityMismatches,
 } from "../ci/check-sql-interpolation-safety.ts";
 
 import { withTempRepo } from "./helpers/test-state";
@@ -12,6 +14,34 @@ const FIXTURE_ROOT = new URL("./fixtures/sql-safety/", import.meta.url);
 describe("DEFAULT_SQL_SAFETY_ROOTS", () => {
   it("covers worker runtime, worker scripts, and root scripts", () => {
     expect(DEFAULT_SQL_SAFETY_ROOTS).toEqual(["worker/src", "worker/scripts", "scripts"]);
+  });
+});
+
+describe("INSERT arity", () => {
+  it("ignores quoted punctuation while counting a tuple", () => {
+    expect(sqlArityMismatches("INSERT INTO t(a) VALUES ('x,y'), ('it''s ) fine')")).toEqual([]);
+  });
+
+  it("checks later tuples while ignoring SQL comments and nested expressions", () => {
+    expect(sqlArityMismatches("INSERT INTO t(a) VALUES (coalesce(1, 2)), /* , ) */ (2,3)"))
+      .toEqual([{ columns: 1, values: 2 }]);
+  });
+
+  it("ignores TypeScript comments but checks executable literals", () => {
+    expect(findInsertArityMismatches(
+      '// INSERT INTO t(a) VALUES (1,2)\nconst sql = `INSERT INTO t(a) VALUES (1), (2,3)`;',
+      "fixture.ts",
+    )).toEqual([{ line: 2, columns: 1, values: 2 }]);
+  });
+
+  it("routes static INSERT arity mismatches through the scan report", () => {
+    withTempRepo("pharos-sql-safety", {
+      "worker/src/insert.ts": "const good = `INSERT INTO t(a, b) VALUES (1, 2)`;\nconst bad = `INSERT INTO t(a) VALUES (1, 2)`;",
+    }, (cwd) => {
+      expect(scanSqlInterpolationSafety(["worker/src"], cwd).violations).toEqual([
+        expect.objectContaining({ file: "worker/src/insert.ts", line: 2, rule: "insert-arity" }),
+      ]);
+    });
   });
 });
 

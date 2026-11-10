@@ -261,6 +261,52 @@ describe("YieldHealthCard", () => {
     expect(screen.getByText(/Coverage queue: queue unavailable/)).toBeTruthy();
   });
 
+  it("never prints a zero gap or candidate count for a partial coverage audit", () => {
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          coverageAudit: {
+            ...makeHealth().coverageAudit,
+            headlineGapCount: 0,
+            recommendationCandidateCount: null,
+            status: "unknown",
+            unavailableReason: "coverage-audit-malformed",
+            headlineGaps: [],
+            recommendationCandidates: [],
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/Coverage queue: queue unavailable/)).toBeTruthy();
+    expect(screen.queryByText(/0 candidates/)).toBeNull();
+  });
+
+  it("names an unreadable rankings cache instead of claiming an empty ranking cohort", () => {
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          rankingCount: null,
+          rankingStatus: "stale",
+          rankingUnavailableReason: "rankings-malformed",
+          sourceRiskCoverage: {
+            status: "unknown",
+            threshold: 0.75,
+            totalRows: 0,
+            bestRows: 0,
+            altRows: 0,
+            rowsWithSourceRisk: 0,
+            fields: {} as YieldHealthSummary["sourceRiskCoverage"]["fields"],
+          },
+        })}
+      />,
+    );
+
+    const tile = within(screen.getByText("Source risk").parentElement!);
+    expect(tile.queryByText("no ranking rows")).toBeNull();
+    expect(tile.getByText("rankings unavailable")).toBeTruthy();
+  });
+
   it("reports proxy selection as a row count, not a degraded feed", () => {
     const base = makeHealth();
     render(

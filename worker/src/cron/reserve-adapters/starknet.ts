@@ -7,13 +7,11 @@ import { fetchJsonPostWithRetry } from "./request";
 const STARKNET_TOTAL_SUPPLY_SELECTOR = "0x1557182e4359a1f0c6301278e8f5b35a776ab58d39892581e357578fb287836";
 
 /**
- * Public Starknet JSON-RPC endpoint, verified 2026-07-29 to serve
- * `starknet_call` unauthenticated. The historical `blastapi.io` endpoints are
- * permanently retired (HTTP 403), and `rpc.starknet.lava.build` answers
- * HTTP 410 "This endpoint has been discontinued" since 2026-10-05.
+ * PublicNode `starknet_call` verified unauthenticated 2026-11-04; Cartridge
+ * now requires authentication (HTTP 401).
  */
 const STARKNET_RPC_URLS = [
-  "https://api.cartridge.gg/x/starknet/mainnet",
+  "https://starknet-rpc.publicnode.com",
 ] as const;
 
 const FELT_RE = /^0x[0-9a-fA-F]{1,64}$/;

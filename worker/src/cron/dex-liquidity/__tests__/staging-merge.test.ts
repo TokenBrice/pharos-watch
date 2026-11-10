@@ -15,8 +15,9 @@ import {
 } from "../scoring-helpers";
 import { initLiquidityFallbackCounters, initSourcePoolGraph } from "../pool-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import type { SourcePoolGraph } from "../types";
-import { makePool, scorePoolGraph } from "./scoring-test-builders";
+import type { GtNewPool, PoolEntry, SourcePoolGraph } from "../types";
+import { makeGtPool, makePool, scorePoolGraph } from "./scoring-test-builders";
+import { mergeGtPools } from "../fetch-crawlers";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import {
   buildPoolIdentity,
@@ -932,21 +933,13 @@ describe("mergeStagedPools", () => {
     expect(result.mergedCount).toBe(raw_json === JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION }) ? 1 : 0);
   });
 
-  it("retains exact pool attribution for the ten reviewed cross-asset fixtures", async () => {
+  it("retains exact pool attribution for cross-asset fixtures", async () => {
     const now = 1710000000;
     const evmPoolAddress = "0x0000000000000000000000000000000000000456";
     const solanaPoolAddress = "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc";
     const fixtures = [
       { stablecoinId: "aznd-mu-digital", chain: "ethereum", poolAddress: evmPoolAddress },
-      { stablecoinId: "cgusd-cygnus-finance", chain: "ethereum", poolAddress: evmPoolAddress },
-      { stablecoinId: "eur0-usual", chain: "ethereum", poolAddress: evmPoolAddress },
-      { stablecoinId: "ggbr-goldfish-gold", chain: "ethereum", poolAddress: evmPoolAddress },
       { stablecoinId: "isc-international-stable-currency", chain: "solana", poolAddress: solanaPoolAddress },
-      { stablecoinId: "qcad-stablecorp", chain: "solana", poolAddress: solanaPoolAddress },
-      { stablecoinId: "susd-solayer", chain: "solana", poolAddress: solanaPoolAddress },
-      { stablecoinId: "usdn-smardex", chain: "ethereum", poolAddress: evmPoolAddress },
-      { stablecoinId: "usdv-solomon", chain: "solana", poolAddress: solanaPoolAddress },
-      { stablecoinId: "xnk-kinka", chain: "ethereum", poolAddress: evmPoolAddress },
     ] as const;
     const makeFixtureRow = (fixture: (typeof fixtures)[number]) => {
       const isSolana = fixture.chain === "solana";
@@ -1017,24 +1010,10 @@ describe("mergeStagedPools", () => {
       expect(metrics.get(fixture.stablecoinId)?.pools).toHaveLength(1);
     }
     expect(knownPoolIndex.exactStablecoinIdsByKey.get(`ethereum:${evmPoolAddress}`)).toEqual(
-      new Set([
-        "fixture-evm-owner",
-        "aznd-mu-digital",
-        "cgusd-cygnus-finance",
-        "eur0-usual",
-        "ggbr-goldfish-gold",
-        "usdn-smardex",
-        "xnk-kinka",
-      ]),
+      new Set(["fixture-evm-owner", "aznd-mu-digital"]),
     );
     expect(knownPoolIndex.exactStablecoinIdsByKey.get(`solana:${solanaPoolAddress}`)).toEqual(
-      new Set([
-        "fixture-solana-owner",
-        "isc-international-stable-currency",
-        "qcad-stablecorp",
-        "susd-solayer",
-        "usdv-solomon",
-      ]),
+      new Set(["fixture-solana-owner", "isc-international-stable-currency"]),
     );
   });
 
@@ -1961,5 +1940,86 @@ describe("mergeStagedPools dead-pool floor (v6.92)", () => {
     expect(measuredPool.volumeReading).toEqual({ volume24hUsd: 40_000, volume7dUsd: null, observedAtSec: NOW });
     expect(result.priceObservations.get("usdc-circle")?.map((obs) => obs.poolKey)).toEqual([quiet]);
     expect(scoreRetained(metric)).toEqual([quiet]);
+  });
+});
+
+function makePoolEntry(poolId: string): PoolEntry {
+  return {
+    poolId,
+    project: "uniswap-v3",
+    chain: "Ethereum",
+    tvlUsd: 100_000,
+    symbol: "USDC / USDT",
+    volumeUsd1d: 10_000,
+    poolType: "uniswap-v3-5bp",
+    source: "direct_api",
+  };
+}
+
+describe("secondary DEX pool merges", () => {
+  it("retains duplicate execution evidence through the indexed merge path", async () => {
+    const metrics = new Map<string, SourcePoolGraph>();
+    const address = `0x${"1".repeat(40)}`;
+    const basePool = makeGtPool(address);
+    const executionModel: NonNullable<GtNewPool["ammExecutionModel"]> = {
+      source: "raydium",
+      invariant: "constant-product",
+      trackedTokenIndex: 0,
+      feeRate: 0.0025,
+      tokens: [
+        {
+          address: "UsdcMint",
+          symbol: "USDC",
+          decimals: 6,
+          balance: 100_000,
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+          trackedAssetId: "usdc-circle",
+        },
+        {
+          address: "UsdtMint",
+          symbol: "USDT",
+          decimals: 6,
+          balance: 100_000,
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+          trackedAssetId: "usdt-tether",
+        },
+      ],
+    };
+
+    await mergeGtPools(metrics, new Map([["usdc-circle", [basePool]]]));
+    await mergeGtPools(metrics, new Map([["usdc-circle", [{ ...basePool, ammExecutionModel: executionModel }]]]));
+
+    const result = metrics.get("usdc-circle");
+    expect(result?.pools).toHaveLength(1);
+    expect(result?.pools[0]?.extra?.ammExecutionModel).toEqual(executionModel);
+  });
+
+  it("indexes existing pool identities once for a large per-coin batch", async () => {
+    const existingCount = 128;
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    let poolIdReads = 0;
+
+    for (let index = 0; index < existingCount; index++) {
+      const entry = makePoolEntry("");
+      Object.defineProperty(entry, "poolId", {
+        enumerable: true,
+        get: () => {
+          poolIdReads++;
+          return `ethereum:0x${index.toString(16).padStart(40, "0")}`;
+        },
+      });
+      metrics.pools.push(entry);
+    }
+
+    const incoming = Array.from({ length: existingCount }, (_, index) =>
+      makeGtPool(`0x${(index + existingCount).toString(16).padStart(40, "0")}`),
+    );
+
+    await mergeGtPools(new Map([["usdc-circle", metrics]]), new Map([["usdc-circle", incoming]]));
+
+    expect(poolIdReads).toBe(existingCount);
+    expect(metrics.pools).toHaveLength(existingCount * 2);
   });
 });

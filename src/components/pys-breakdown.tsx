@@ -8,7 +8,6 @@ import {
   PYS_DEFAULT_SAFETY_SCORE,
   PYS_MAX_SOURCE_RISK_PENALTY,
   PYS_SUSTAINABILITY_FLOOR,
-  computePYS,
   computeSourceRiskScoreFromPenalty,
 } from "@shared/lib/yield-scoring";
 import { formatPercent, formatScore } from "@shared/lib/format";
@@ -17,7 +16,12 @@ import {
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import { cn } from "@/lib/utils";
-import { formatSignedPysDelta, formatYieldApyDelta } from "@/lib/yield-presentation";
+import {
+  buildPysNeutralizeInput,
+  formatSignedPysDelta,
+  formatYieldApyDelta,
+  neutralizePysFactorAndRescore,
+} from "@/lib/yield-presentation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
@@ -120,39 +124,6 @@ function NullPysScore({
   );
 }
 
-interface NeutralizeInput {
-  apy30d: number;
-  safetyScore: number | null;
-  apyVarianceScore: number | null;
-  scalingFactor: number;
-  benchmarkRate: number | null;
-  usdBenchmarkRate: number | null;
-  sourceRiskPenalty: number;
-}
-
-// WHY: per-factor attribution via neutralize-and-rescore (see Presentation Boundaries
-// in docs/yield-intelligence.md). Deltas are not strictly additive.
-function neutralizeFactorAndRescore(
-  actualScore: number,
-  factor: "sourceRisk" | "safety" | "sustainability",
-  components: NeutralizeInput,
-): number {
-  const neutralized: NeutralizeInput = { ...components };
-  switch (factor) {
-    case "sourceRisk":
-      neutralized.sourceRiskPenalty = 1;
-      break;
-    case "safety":
-      neutralized.safetyScore = 100;
-      break;
-    case "sustainability":
-      neutralized.apyVarianceScore = 0;
-      break;
-  }
-  const neutralizedScore = computePYS(neutralized);
-  return actualScore - neutralizedScore;
-}
-
 function shouldShowDefaultSafetyBadge(props: PysBreakdownProps): boolean {
   return props.safetyScore == null;
 }
@@ -228,29 +199,27 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     : "Safety unavailable";
   const consistencyPct = sustainabilityMult == null ? null : Math.round(sustainabilityMult * 100);
 
-  const effectiveScalingFactor = scalingFactor;
-  const apyVarianceScore = sustainabilityMult == null ? null : Math.max(0, Math.min(1, 1 - sustainabilityMult));
-  const benchmarkRate = benchmarkSpread === null ? null : apy30d - benchmarkSpread;
-  const benchmarkRefLabel = `${benchmarkLabel ?? "benchmark"}${benchmarkRate !== null ? ` (${formatPercent(benchmarkRate)})` : ""}`;
-  const neutralizeComponents: NeutralizeInput = {
+  const neutralizeComponents = buildPysNeutralizeInput({
     apy30d,
     safetyScore,
-    apyVarianceScore,
-    scalingFactor: effectiveScalingFactor,
-    benchmarkRate,
-    usdBenchmarkRate: benchmarkRate === null ? null : benchmarkRate + hurdleRebase,
+    scalingFactor,
+    benchmarkSpread,
+    hurdleRebase,
     sourceRiskPenalty,
-  };
+    sustainabilityMult,
+  });
+  const benchmarkRate = neutralizeComponents.benchmarkRate;
+  const benchmarkRefLabel = `${benchmarkLabel ?? "benchmark"}${benchmarkRate !== null ? ` (${formatPercent(benchmarkRate)})` : ""}`;
 
   const hasScore = typeof score === "number" && Number.isFinite(score);
   const sourceRiskDelta = hasScore
-    ? neutralizeFactorAndRescore(score, "sourceRisk", neutralizeComponents)
+    ? neutralizePysFactorAndRescore(score, "sourceRisk", neutralizeComponents)
     : null;
   const safetyDelta = hasScore
-    ? neutralizeFactorAndRescore(score, "safety", neutralizeComponents)
+    ? neutralizePysFactorAndRescore(score, "safety", neutralizeComponents)
     : null;
   const sustainabilityDelta = hasScore
-    ? neutralizeFactorAndRescore(score, "sustainability", neutralizeComponents)
+    ? neutralizePysFactorAndRescore(score, "sustainability", neutralizeComponents)
     : null;
 
   const resolvedSourceRiskScore = sourceRiskScore ?? computeSourceRiskScoreFromPenalty(sourceRiskPenalty);
@@ -373,9 +342,13 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
           </span>
         </div>
         {sourceRiskDrivers.length === 0 ? (
-          <div className="text-2xs text-muted-foreground" aria-label="Source risk neutral">
-            <span aria-hidden="true">{"✓"} Source risk neutral</span>
-          </div>
+          // A resolved penalty above 1× is not neutral even when no projected
+          // driver explains it (the 6h age term and the sub-2.5 venue band).
+          sourceRiskPenalty <= 1 ? (
+            <div className="text-2xs text-muted-foreground" aria-label="Source risk neutral">
+              <span aria-hidden="true">{"✓"} Source risk neutral</span>
+            </div>
+          ) : null
         ) : (
           <div
             className="flex flex-wrap gap-1"
@@ -403,7 +376,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
       <div className="space-y-0.5">
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Divided by safety penalty ${adjustedRiskPenalty.toFixed(1)} times${safetyDelta !== null ? ` (${formatSignedPysDelta(safetyDelta)})` : ""}`}
+          aria-label={`Divided by safety penalty ${adjustedRiskPenalty.toFixed(2)} times${safetyDelta !== null ? ` (${formatSignedPysDelta(safetyDelta)})` : ""}`}
         >
           <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
             <span>{"÷"} safety penalty</span>
@@ -418,7 +391,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
             ) : null}
           </span>
           <span aria-hidden="true" className="flex items-baseline gap-1.5">
-            <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}{"×"}</span>
+            <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(2)}{"×"}</span>
             {safetyDelta !== null ? (
               <span className="font-mono text-3xs tabular-nums text-muted-foreground/80">
                 ({formatSignedPysDelta(safetyDelta)})
@@ -462,9 +435,9 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
 
       <div
         className="flex items-baseline justify-between gap-3"
-        aria-label={`Pharos Yield Score ${formatScore(score)} out of 100`}
+        aria-label={`Pharos Yield Score ${formatScore(score)} out of 100${scalingFactor !== 1 ? ` (× ${scalingFactor} scaling factor)` : ""}`}
       >
-        <span aria-hidden="true" className="font-medium text-foreground">PYS</span>
+        <span aria-hidden="true" className="font-medium text-foreground">{scalingFactor !== 1 ? `× ${scalingFactor} → PYS` : "PYS"}</span>
         <span
           aria-hidden="true"
           className={cn("font-mono text-sm font-semibold tabular-nums", toneClass)}

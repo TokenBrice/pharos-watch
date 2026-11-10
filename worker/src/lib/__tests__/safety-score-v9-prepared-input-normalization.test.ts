@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
+import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   normalizeSafetyScoreV9CompilerInput,
   withNormalizedV9JournalProjections,
@@ -17,16 +17,16 @@ import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
  */
 describe("Safety Score V9 prepared-input normalization", () => {
   it("v10.01 preserves generation-bound reader proofs through journal-only preparation", () => {
-    const base = normalizeSafetyScoreV9CompilerInput(createSafetyScoreV9FullRegistryInput());
+    const base = normalizeSafetyScoreV9CompilerInput(makeV9TwoAssetFixedInput());
     const failure = createRuntimeGapVerdict({
-      assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",
+      assetId: "alpha", scope: { pillar: "backing", componentKey: "reserve-composition",
         factorKey: null, routeKey: null, exposureId: null, requiredDatum: "reserve-composition" },
       sourceId: "fixture-reserves", sourceGenerationId: "attempt:prepared-base",
       observedAtSec: base.clockSec, asOfSec: base.clockSec, producerState: "producer-failed",
       rejectionCode: "read-failed", reason: "The captured reader failed.",
     });
     const captured = normalizeSafetyScoreV9CompilerInput({
-      ...base, baseInputGenerationId: undefined, pipelineGapByAssetId: { "usdc-circle": [failure] },
+      ...base, baseInputGenerationId: undefined, pipelineGapByAssetId: { "alpha": [failure] },
     });
     const prepared = withNormalizedV9JournalProjections({ ...captured, evidenceJournalById: {} });
     expect(prepared.pipelineGapByAssetId).toEqual(captured.pipelineGapByAssetId);
@@ -35,10 +35,10 @@ describe("Safety Score V9 prepared-input normalization", () => {
     expect(normalizeSafetyScoreV9CompilerInput(prepared)).toEqual(prepared);
   });
   it("yields byte-identical compiler input to the full re-normalization path", () => {
-    const base = normalizeSafetyScoreV9CompilerInput(createSafetyScoreV9FullRegistryInput());
+    const base = normalizeSafetyScoreV9CompilerInput(makeV9TwoAssetFixedInput());
     const prepared = {
       ...base,
-      evidenceJournalById: { "usdc-circle": [] },
+      evidenceJournalById: { "alpha": [] },
       supplyAttributionJournalById: {},
     };
 
@@ -50,18 +50,18 @@ describe("Safety Score V9 prepared-input normalization", () => {
   });
 
   it("still rejects a malformed journal projection", () => {
-    const base = normalizeSafetyScoreV9CompilerInput(createSafetyScoreV9FullRegistryInput());
+    const base = normalizeSafetyScoreV9CompilerInput(makeV9TwoAssetFixedInput());
 
     expect(() =>
       withNormalizedV9JournalProjections({
         ...base,
-        evidenceJournalById: { "usdc-circle": [{ assetId: "usdc-circle" }] } as never,
+        evidenceJournalById: { "alpha": [{ assetId: "alpha" }] } as never,
       }),
     ).toThrow();
   });
 
   it("applies the empty-journal default instead of dropping the projections", () => {
-    const base = normalizeSafetyScoreV9CompilerInput(createSafetyScoreV9FullRegistryInput());
+    const base = normalizeSafetyScoreV9CompilerInput(makeV9TwoAssetFixedInput());
     const withoutJournals = { ...base } as Record<string, unknown>;
     delete withoutJournals.evidenceJournalById;
     delete withoutJournals.supplyAttributionJournalById;

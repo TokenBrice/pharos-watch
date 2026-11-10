@@ -3,18 +3,18 @@
   "product": "USAT",
   "profile": "usat-v1",
   "officialIndexUrl": "https://www.anchorage.com/platform/usat-reserve-attestations",
-  "reportUrl": "https://learn.anchorage.com/08.31.26_USAT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-  "reportSha256": "358e3d0c14e2e74478c4e3c4a4d4f88d589be4d8bef0461a209c0172b7cdd4be",
-  "reportByteLength": 406030,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:59:59Z",
+  "reportUrl": "https://learn.anchorage.com/09.30.26_USAT-Stablecoin-Attestation-Report-signed.pdf",
+  "reportSha256": "25e7eb881d9bd44fc835aa030af0f11d902f7261f2928bfb7740227bbf0f227c",
+  "reportByteLength": 408962,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:59:59Z",
   "reportTimeZone": "UTC",
-  "reportIssuedAt": "2026-09-28T23:59:00Z",
+  "reportIssuedAt": "2026-10-26T23:59:00Z",
   "attestor": "Deloitte & Touche LLP",
   "attestorIdentification": {
     "method": "reviewed-inference",
     "evidence": [
-      "The August report's rendered first page names Deloitte & Touche LLP on the letterhead and bears its handwritten signature; reviewed visually on 2026-09-30.",
+      "The September report's rendered first page names Deloitte & Touche LLP on the letterhead and bears its handwritten signature; reviewed visually on 2026-11-03.",
       "The letterhead is an image and the examiner name is absent from the Poppler text extraction."
     ],
     "reReviewTrigger": "Re-review the rendered letterhead and signature for each new report or if the examiner identity changes."
@@ -26,33 +26,33 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "17477828"
+      "amount": "17630250"
     },
     {
       "code": "reverse-repo",
       "label": "Reverse repurchase agreements collateralized by U.S. Treasury securities, at fair value",
-      "amount": "158914000"
+      "amount": "159247000"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "Ethereum USAT redeemable tokens",
-      "amount": "175534959"
+      "amount": "175984519"
     },
     {
       "code": "celo",
       "label": "Celo USAT redeemable tokens",
-      "amount": "196391"
+      "amount": "231545"
     }
   ],
-  "reportedAssetTotal": "176391828",
-  "computedAssetTotal": "176391828",
-  "reportedLiabilityTotal": "175731350",
+  "reportedAssetTotal": "176877250",
+  "computedAssetTotal": "176877250",
+  "reportedLiabilityTotal": "176216064",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.08.0",
-    "normalizedTextSha256": "c5df8f5a6161ac5ba26fd2b9e94b10d2a520dd28090cae46f97c69e014372067",
+    "parserVersion": "26.10.0",
+    "normalizedTextSha256": "ebe870f7545551b11a8e99b7043430e0a20104a6d2bafd01b009be95414f67ca",
     "pageCount": 8
   },
   "assuranceTier": "independent-assurance"

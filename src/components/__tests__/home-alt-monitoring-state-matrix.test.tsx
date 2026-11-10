@@ -82,7 +82,7 @@ vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
 }));
 vi.mock("@/components/homepage-client-view-model", () => ({
   buildHomepageCriticalViewModel: ({ stablecoinsData }: { stablecoinsData?: { peggedAssets?: unknown[] } }) => ({
-    filteredRowCount: stablecoinsData?.peggedAssets?.length ?? 0,
+    filteredRowCount: stablecoinsData ? stablecoinsData.peggedAssets?.length ?? 0 : 0,
     pegScores: new Map(),
   }),
   buildHomepageOptionalViewModel: () => ({ reportCardMap: {} }),
@@ -182,6 +182,10 @@ interface SurfaceCase {
   emptyText: string | RegExp;
   emptyExtraText?: string;
   readyText: string;
+  /** Exact copy the unavailable placeholder must show, when the card has one. */
+  unavailableText?: string;
+  /** States whose output the card's own owner test already asserts. */
+  statesOwnedElsewhere?: MonitoringState[];
 }
 
 const SURFACES: SurfaceCase[] = [
@@ -197,6 +201,8 @@ const SURFACES: SurfaceCase[] = [
     },
     emptyText: "No open confirmed incidents",
     readyText: "USDC",
+    // home-alt-active-depegs-card.test.tsx pins the open-incident row and the zero-state copy.
+    statesOwnedElsewhere: ["ready", "empty"],
   },
   {
     Component: PegHealthCard,
@@ -215,6 +221,8 @@ const SURFACES: SurfaceCase[] = [
     },
     emptyText: /90d/,
     readyText: "39.0",
+    // home-alt-psi-band-card.test.tsx pins the ready score and band figures.
+    statesOwnedElsewhere: ["ready"],
   },
   {
     Component: MintBurnCard,
@@ -254,6 +262,7 @@ const SURFACES: SurfaceCase[] = [
     },
     emptyText: "table ready",
     readyText: "table ready",
+    unavailableText: "Stablecoin rankings are updating.",
   },
 ];
 
@@ -269,7 +278,7 @@ afterEach(() => {
 
 describe.each(SURFACES)(
   "$Component.name semantic query states",
-  ({ Component, configure, emptyText, emptyExtraText, readyText }) => {
+  ({ Component, configure, emptyText, emptyExtraText, readyText, unavailableText, statesOwnedElsewhere = [] }) => {
     function renderState(state: MonitoringState) {
       useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
       usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: [], togglePinned: vi.fn() });
@@ -284,14 +293,14 @@ describe.each(SURFACES)(
       expect(screen.queryByRole("status")).toBeNull();
     });
 
-    it("renders ready data", () => {
+    it.skipIf(statesOwnedElsewhere.includes("ready"))("renders ready data", () => {
       renderState("ready");
       expect(screen.queryAllByText(readyText).length).toBeGreaterThan(0);
       expect(screen.queryByRole("alert")).toBeNull();
       expect(screen.queryByRole("status")).toBeNull();
     });
 
-    it("renders a valid empty state", () => {
+    it.skipIf(statesOwnedElsewhere.includes("empty"))("renders a valid empty state", () => {
       renderState("empty");
       expect(screen.queryAllByText(emptyText).length).toBeGreaterThan(0);
       if (emptyExtraText) expect(screen.getByText(emptyExtraText)).toBeTruthy();
@@ -303,6 +312,7 @@ describe.each(SURFACES)(
     it("renders unavailable as a neutral placeholder without a healthy or empty claim", () => {
       renderState("unavailable");
       expect(screen.queryAllByText(/^Updating$|rankings are updating/).length).toBeGreaterThan(0);
+      if (unavailableText) expect(screen.queryAllByText(unavailableText).length).toBeGreaterThan(0);
       expect(screen.queryAllByText(emptyText)).toHaveLength(0);
       expect(screen.queryByRole("alert")).toBeNull();
       expect(screen.queryByRole("status")).toBeNull();

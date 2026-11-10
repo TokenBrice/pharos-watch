@@ -265,11 +265,65 @@ const CDP_RESERVE_CONFIG: ThreeStepConfig = {
 };
 
 /**
+ * The `algorithmic` family default draws the historical pure mint/burn design
+ * (UST), but tracked members are a mixed set: AMO-managed units, conversion
+ * systems and collateralized issuers. A coin page therefore claims neither a
+ * governance-token burn nor the absence of reserve backing, and its return
+ * path is the ordinary arbitrage stabiliser rather than a collapse.
+ */
+const ALGORITHMIC_COIN_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-algorithmic)",
+  stressFootnote: "stress: target pressure / arbitrage incentive failure",
+  ariaLabel: (symbol) =>
+    `An algorithmic mint/burn module issues ${symbol} and adjusts supply to defend its target through arbitrage incentives.`,
+  description: (symbol) =>
+    `An algorithmic mint/burn module issues ${symbol} and adjusts supply to defend its target through arbitrage incentives; supply follows the module's rules.`,
+  defaultSteps: (symbol) => [
+    { label: "Algorithmic issuance", subtitle: "mint and burn by rule" },
+    { label: "Mint/burn AMO", subtitle: "defends target via arbitrage" },
+    { label: `${symbol} minted`, subtitle: "supply set by rule" },
+  ],
+  returnArrow: {
+    fromX: 500,
+    toX: 75,
+    topY: 90,
+    peakY: 140,
+    label: "arbitrage",
+    strokeWidth: 1.2,
+  },
+};
+
+/**
+ * The `fiat-cash` family default describes an issuer's bank rail, but a
+ * crypto-backed member has no customer bank transfer, fiat custody or issuer
+ * redemption to describe. Those claims, their redeem loop and the
+ * banking-rail stress are withheld, and the copy names no collateral poster:
+ * bridged and pool-backed members are issued against reserves they never
+ * received from a user.
+ */
+const FIAT_CASH_CRYPTO_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-fiat-cash)",
+  stressFootnote: "stress: collateral or liquidity shock",
+  ariaLabel: (symbol) =>
+    `${symbol} is issued against crypto assets held in reserve; supply follows the issuer's or protocol's rules.`,
+  description: (symbol) =>
+    `${symbol} is issued against crypto assets held in reserve; the issuer or protocol manages supply and liquidity under its own rules.`,
+  defaultSteps: (symbol) => [
+    { label: "Crypto assets", subtitle: "held in reserve" },
+    { label: "Issuance module", subtitle: "supply managed by rule" },
+    { label: `${symbol} issued`, subtitle: "against crypto assets" },
+  ],
+};
+
+/**
  * The `rwa-credit-fund` family default describes the archetype ("quarterly
  * redemption gates"), but members range from quarterly fund windows to FIFO
  * queues served as liquidity allows (syrupUSDC) and weekly processing. A coin
  * page therefore states no cadence: redemption follows the issuer's terms,
  * and the coin's own Redemption route carries the specifics.
+ *
+ * NAV-token members are fund shares whose value tracks the fund's NAV; the
+ * non-NAV credit vehicles keep the credit-portfolio wording below.
  */
 const RWA_CREDIT_COIN_CONFIG: ThreeStepConfig = {
   accentColor: "var(--mechanism-rwa-credit-fund)",
@@ -294,6 +348,29 @@ const RWA_CREDIT_COIN_CONFIG: ThreeStepConfig = {
   },
 };
 
+const RWA_FUND_NAV_COIN_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-rwa-credit-fund)",
+  stressFootnote: "stress: NAV markdown / redemption gate",
+  ariaLabel: (symbol) =>
+    `Investor cash funds the issuer's portfolio; ${symbol} value tracks fund performance, and redemptions follow the issuer's terms.`,
+  description: (symbol) =>
+    `Investors subscribe or deposit cash; the issuer deploys it into the fund's portfolio, whose marks drive NAV and carry market and liquidity risk; ${symbol} value reflects fund performance, with redemption timing and gates set by the issuer's terms.`,
+  defaultSteps: (symbol) => [
+    { label: "Investor cash", subtitle: "subscribed or deposited" },
+    { label: "Fund portfolio", subtitle: "marked to fund NAV" },
+    { label: `${symbol} issued`, subtitle: "value tracks fund NAV" },
+  ],
+  returnArrow: {
+    fromX: 500,
+    toX: 75,
+    topY: 90,
+    peakY: 140,
+    label: "redeem",
+    strokeWidth: 1.2,
+    dashed: true,
+  },
+};
+
 /**
  * Resolves the archetype's diagram copy. `facts` is the coin in hand (see
  * {@link MechanismTemplateFacts}); without it the archetype keeps its family
@@ -306,7 +383,11 @@ export function resolveThreeStepConfig(
   if (!facts) return THREE_STEP_ARCHETYPE_CONFIG[archetype];
   if (archetype === "tbill" && facts.navToken === false) return TBILL_PAR_REDEMPTION_CONFIG;
   if (archetype === "cdp" && facts.liquidationEngine === false) return CDP_RESERVE_CONFIG;
-  if (archetype === "rwa-credit-fund") return RWA_CREDIT_COIN_CONFIG;
+  if (archetype === "rwa-credit-fund") {
+    return facts.navToken === true ? RWA_FUND_NAV_COIN_CONFIG : RWA_CREDIT_COIN_CONFIG;
+  }
+  if (archetype === "algorithmic") return ALGORITHMIC_COIN_CONFIG;
+  if (archetype === "fiat-cash" && facts.backing === "crypto-backed") return FIAT_CASH_CRYPTO_CONFIG;
   return THREE_STEP_ARCHETYPE_CONFIG[archetype];
 }
 

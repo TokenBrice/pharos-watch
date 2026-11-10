@@ -223,7 +223,7 @@ export function SafetyResultsSummary({
       Showing <span className="font-medium text-foreground">{count}</span>{" "}
       {count === 1 ? "coin" : "coins"}
       {gradeFilter === "pipeline-gap" ? " with Pipeline gap" : gradeFilter !== "all" && ` with grade ${gradeFilter}`}
-      {pegFilter !== "all" && ` · ${pegFilter === "usd" ? "USD peg" : pegFilter === "fiat-non-usd" ? "fiat non-USD peg" : "commodity peg"}`}
+      {pegFilter !== "all" && ` · ${pegFilter === "usd" ? "USD peg" : pegFilter === "fiat-non-usd" ? "other peg" : "commodity peg"}`}
     </p>
   );
 }

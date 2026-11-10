@@ -39,6 +39,7 @@ function resetFetchRetryMocks(): void {
 }
 
 import { syncFxRates } from "../sync-fx-rates";
+import { loadExchangeRateApiPayload, loadFrankfurterPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
 import { buildFxCacheStatus, getFxReferenceTypeFromState, hydrateFxRateState } from "../../lib/fx-rate-state";
 describe("syncFxRates", () => {
   const fixtures = createLatestSchemaFixtureTracker();
@@ -197,7 +198,7 @@ describe("syncFxRates", () => {
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(losingKey)).toBeUndefined();
   });
 
-  it("uses fresh commodity peer medians from the stablecoins cache when gold-api.com is unavailable", async () => {
+  it("uses fresh commodity peer medians with a real quorum when gold-api.com is unavailable", async () => {
     mockFetch(fxMirrors({
       gold: { body: { error: "blocked" }, status: 503 },
       silver: { body: { error: "blocked" }, status: 503 },
@@ -210,12 +211,14 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.mode).toBe("live");
     expect(metadata.sources["gold-api.com"]).toBe("error");
-    expect(metadata.sources["commodity-peer-median"]).toBe("ok");
+    expect(metadata.sources["commodity-peer-median"]).toBe("partial");
 
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
     expect(cachedRates.peggedGOLD).toBeCloseTo(2905, 6);
-    expect(cachedRates.peggedSILVER).toBeCloseTo(31.5, 6);
+    // Only KAG and XAGm are active silver coins in production; GRAMS is
+    // quarantined, so the two-coin group must not stand in for spot.
+    expect(cachedRates.peggedSILVER).toBeUndefined();
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
@@ -224,11 +227,9 @@ describe("syncFxRates", () => {
       sourceDateByPeg: Record<string, string | null>;
     };
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt - 30);
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(stablecoinsUpdatedAt - 30);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeUndefined();
     expect(cachedMeta.sourceCadenceByPeg.peggedGOLD).toBe("intraday");
-    expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
     expect(cachedMeta.sourceDateByPeg.peggedGOLD).toBeNull();
-    expect(cachedMeta.sourceDateByPeg.peggedSILVER).toBeNull();
   });
 
   it("rejects gold-api.com metal spots that diverge from the commodity peer median", async () => {
@@ -256,6 +257,114 @@ describe("syncFxRates", () => {
     };
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt - 30);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
+  });
+
+  it("keeps a stale cached silver spot when a dated low quote has no corroboration", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const silverObservedAt = nowSec - 30;
+    mockFetch(fxMirrors({
+      gold: { body: { price: 2900, updatedAt: new Date(nowSec * 1000).toISOString() } },
+      silver: { body: { price: 5.0378, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
+    }));
+
+    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 60,
+      updatedAt: nowSec - 3600,
+    });
+    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+    });
+
+    const result = await syncFxRates(db);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.sources["gold-api.com"]).toBe("partial");
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedSILVER).toBeCloseTo(40.448374, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceUpdatedAtByPeg: Record<string, number | null>;
+    };
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(nowSec - 26 * 3600);
+  });
+
+  it("re-anchors a stale cached silver spot corroborated by a fresh Chainlink round", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const silverObservedAt = nowSec - 30;
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "ethereum",
+      feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
+      answer: 5_037_800_000n,
+      updatedAt: nowSec - 600,
+    });
+    mockFetch([
+      ...routes.filter((route) => !(typeof route.match === "string" && route.match.includes("gold-api.com/price/XAG"))),
+      { match: "gold-api.com/price/XAG", body: { price: 50.39, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
+    ], { requireMatch: true });
+
+    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 60,
+      updatedAt: nowSec - 3600,
+    });
+    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+    });
+
+    const result = await syncFxRates(db, undefined, undefined, chainRpcs);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.sources["gold-api.com"]).toBe("ok");
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Rejected peggedSILVER=50.39"));
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedSILVER).toBeCloseTo(50.39, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceUpdatedAtByPeg: Record<string, number | null>;
+    };
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(silverObservedAt);
+  });
+
+  it("does not treat a non-fresh Chainlink round as spot corroboration", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const silverObservedAt = nowSec - 30;
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "ethereum",
+      feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
+      answer: 5_037_800_000n,
+      updatedAt: nowSec - 8 * 3600,
+    });
+    mockFetch([
+      ...routes.filter((route) => !(typeof route.match === "string" && route.match.includes("gold-api.com/price/XAG"))),
+      { match: "gold-api.com/price/XAG", body: { price: 50.39, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
+    ], { requireMatch: true });
+
+    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 60,
+      updatedAt: nowSec - 3600,
+    });
+    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+    });
+
+    await syncFxRates(db, undefined, undefined, chainRpcs);
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedSILVER).toBeCloseTo(40.448374, 6);
   });
 
   it("falls back to cached rates when frankfurter.dev is unavailable", async () => {
@@ -1300,5 +1409,197 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata!) as { reason: string };
     expect(metadata.reason).toBe("cadence_bucket_completed");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("syncFxRates", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    resetFetchRetryMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("loads secondary and ExchangeRate-API fallback JSON through body-aware retry helpers", async () => {
+    mockFetch([
+      {
+        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest",
+        body: { date: "2025-06-15", usd: { cnh: 7.28 } },
+      },
+      {
+        match: "latest.currency-api.pages.dev",
+        body: { date: "2025-06-14", usd: { cnh: 7.29 } },
+      },
+      {
+        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@2025.6.15",
+        body: { date: "2025-06-15", usd: { cnh: 7.27 } },
+      },
+      {
+        match: "open.er-api.com",
+        body: { result: "success", time_last_update_unix: Math.floor(Date.now() / 1000) - 60, rates: { EUR: 0.92 } },
+      },
+    ]);
+    fetchRetryMocks.fetchWithRetry.mockImplementation(async () => {
+      throw new Error("raw fetchWithRetry JSON path should not be used");
+    });
+
+    const secondary = await loadSecondaryCurrencyCandidate();
+    const tertiary = await loadExchangeRateApiPayload();
+
+    expect(secondary?.endpoint).toBe("jsdelivr");
+    expect(tertiary?.rates.EUR).toBe(0.92);
+    expect(fetchRetryMocks.fetchWithRetry).not.toHaveBeenCalled();
+    const jsonUrls = vi.mocked(fetchJsonWithRetry).mock.calls.map(([url]) => String(url));
+    expect(jsonUrls).toEqual(expect.arrayContaining([
+      expect.stringContaining("@fawazahmed0/currency-api@latest"),
+      expect.stringContaining("latest.currency-api.pages.dev"),
+      expect.stringContaining("@fawazahmed0/currency-api@2025.6.15"),
+      expect.stringContaining("open.er-api.com"),
+    ]));
+  });
+
+  it("fires all secondary FX mirror fetches concurrently", async () => {
+    const started = new Set<string>();
+    let release!: () => void;
+    const responses = new Promise<void>((resolve) => { release = resolve; });
+    mockFetch([{ match: () => true, respond: async (request) => {
+      const url = request.url;
+      if (
+        url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest")
+        || (
+          url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@")
+          && !url.includes("@latest")
+        )
+        || url.includes("latest.currency-api.pages.dev")
+      ) {
+        const endpoint = url.includes("latest.currency-api.pages.dev")
+          ? "pagesDev"
+          : url.includes("@latest")
+            ? "jsdelivrLatest"
+            : "jsdelivrVersioned";
+        started.add(endpoint);
+        await responses;
+        return new Response(
+          JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    } }]);
+
+    const loading = loadSecondaryCurrencyCandidate();
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect([...started].sort()).toEqual(["jsdelivrLatest", "jsdelivrVersioned", "pagesDev"]);
+    } finally {
+      release();
+      await loading;
+    }
+  });
+
+  it("uses the date-pinned jsdelivr package when @latest is behind", async () => {
+    vi.setSystemTime(new Date("2026-05-20T07:30:00Z"));
+    const fetchSpy = mockFetch([{ match: () => true, respond: async (request) => {
+      const url = request.url;
+      if (url.includes("@2026.5.20/")) {
+        return new Response(
+          JSON.stringify({ date: "2026-05-20", usd: { cnh: 7.18 } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest")) {
+        return new Response(
+          JSON.stringify({ date: "2025-05-19", usd: { cnh: 7.28 } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("latest.currency-api.pages.dev")) {
+        return new Response(
+          JSON.stringify({ date: "2025-05-19", usd: { cnh: 7.28 } }),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    } }]);
+
+    const candidate = await loadSecondaryCurrencyCandidate();
+
+    expect(candidate?.endpoint).toBe("jsdelivr-versioned");
+    expect(candidate?.payload.date).toBe("2026-05-20");
+    expect(candidate?.payload.usd.cnh).toBe(7.18);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("@2026.5.20/"))).toBe(true);
+  });
+
+  it("ignores malformed optional date-pinned secondary FX payloads when other mirrors are healthy", async () => {
+    vi.setSystemTime(new Date("2026-05-20T07:30:00Z"));
+    mockFetch([{ match: () => true, respond: async (request) => {
+      const url = request.url;
+      if (url.includes("@2026.5.20/")) {
+        return new Response("definitely not json", { status: 200 });
+      }
+      if (url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest")) {
+        return new Response(
+          JSON.stringify({ date: "2026-05-19", usd: { cnh: 7.28 } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("latest.currency-api.pages.dev")) {
+        return new Response(
+          JSON.stringify({ date: "2026-05-18", usd: { cnh: 7.29 } }),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    } }]);
+
+    const candidate = await loadSecondaryCurrencyCandidate();
+
+    expect(candidate?.endpoint).toBe("jsdelivr");
+    expect(candidate?.payload.date).toBe("2026-05-19");
+    expect(candidate?.payload.usd.cnh).toBe(7.28);
+  });
+
+  it.each(["2099-01-01", "2025-06-16", "2025-02-30"])("rejects source date %s before ranking mirrors", async (date) => {
+    mockFetch([
+      { match: "api.frankfurter.dev", body: { base: "USD", date, rates: { EUR: 0.92 } } },
+      { match: "@latest", body: { date, usd: { cnh: 7.28 } } },
+      { match: "pages.dev", body: { date: "2025-06-15", usd: { cnh: 7.29 } } },
+      { match: "@2025.6.15", body: { date, usd: { cnh: 7.28 } } },
+    ]);
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({ ok: false, kind: "invalid-payload" });
+    expect(await loadSecondaryCurrencyCandidate()).toMatchObject({
+      endpoint: "pages.dev", successfulEndpoints: ["pages.dev"],
+    });
+  });
+
+  it.each(["EUR", "GBP"])("rejects a Frankfurter payload based on %s instead of USD", async (base) => {
+    mockFetch([{ match: "api.frankfurter.dev", body: { base, date: "2025-06-15", rates: { EUR: 0.92 } } }]);
+    // Inverting a non-USD base would shift every major by the base's own rate
+    // and still pass the range guard, so the payload is invalid evidence.
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({ ok: false, kind: "invalid-payload" });
+  });
+
+  it("rejects a Frankfurter payload with no base field", async () => {
+    mockFetch([{ match: "api.frankfurter.dev", body: { date: "2025-06-15", rates: { EUR: 0.92 } } }]);
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({ ok: false, kind: "invalid-payload" });
+  });
+
+  it("accepts a USD-based Frankfurter payload", async () => {
+    mockFetch([{ match: "api.frankfurter.dev", body: { base: "USD", date: "2025-06-15", rates: { EUR: 0.92 } } }]);
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({
+      ok: true,
+      data: { date: "2025-06-15", rates: { EUR: 0.92 } },
+    });
+  });
+
+  it("rejects ExchangeRate-API's future raw epoch", async () => {
+    mockFetch([{ match: "open.er-api.com", body: {
+      result: "success", time_last_update_unix: Date.now() / 1000 + 301, rates: { EUR: 0.92 },
+    } }]);
+    expect(await loadExchangeRateApiPayload()).toBeNull();
   });
 });

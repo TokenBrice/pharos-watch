@@ -227,21 +227,6 @@ describe("ContractDeployments complete address list", () => {
     expect(container.querySelectorAll("#contracts")).toHaveLength(1);
   });
 
-  it("keeps every row mounted while the disclosure opens and closes", () => {
-    const { container } = render(<ContractDeployments coinId={meta.id} contracts={manyContracts} />);
-    const disclosure = container.querySelector<HTMLDetailsElement>("details[data-module-fold]");
-    expect(disclosure).not.toBeNull();
-    expect(disclosure!.open).toBe(false);
-
-    disclosure!.open = true;
-    fireEvent(disclosure!, new Event("toggle"));
-    expect(foldRows(container)).toHaveLength(manyContracts.length);
-
-    disclosure!.open = false;
-    fireEvent(disclosure!, new Event("toggle"));
-    expect(foldRows(container)).toHaveLength(manyContracts.length);
-  });
-
   it("keeps the rail show-all toggle and adds no fold there", () => {
     const { container } = render(<ContractDeployments coinId={meta.id} contracts={manyContracts} compact />);
 

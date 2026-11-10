@@ -63,7 +63,7 @@ export function buildStablecoinSafetyScoreV9Presentation(
         key === "exit" ? " (selected route)" : ""
       }`;
       const baseEvidenceSummary = pillar.aggregationDisposition === "excluded-a-b"
-        ? "Excluded until evidence is curated · 0% weight"
+        ? "Excluded until evidence is curated · 0% measured weight"
         : isUnknownSafetyScoreV9Value(pillar.freshness)
         ? evidenceLevel
         : `${evidenceLevel} · ${humanizeSafetyScoreV9Value(pillar.freshness).toLowerCase()}`;

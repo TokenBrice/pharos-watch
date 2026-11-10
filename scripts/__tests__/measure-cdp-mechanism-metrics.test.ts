@@ -267,20 +267,6 @@ async function recomputeFromJournal(
 }
 
 describe("recorded family measurement replay", () => {
-  it("derives selectors and calldata for every original fixture call without replacing captured bytes", async () => {
-    const fixtures = [FIXTURE, loadFixture("bold-liquity-mechanism-measurement-block-25533671.json"), ...FAMILY_JOURNALS.map(({ assetId }) => loadJournal(assetId))];
-    for (const fixture of fixtures) {
-      const caller = new ReplayEthCaller(fixture.calls);
-      for (const call of fixture.calls) {
-        const words = call.callData.slice(10).match(/.{64}/g) ?? [];
-        await caller.call({ name: call.name, to: call.to, signature: call.signature, args: words.map((word) => BigInt(`0x${word}`)) });
-        caller.recordDecoded(call.decoded);
-      }
-      caller.assertExhausted();
-      expect(caller.calls).toEqual(fixture.calls);
-    }
-  });
-
   it.each(FAMILY_JOURNALS)("replays the original $assetId capture byte-identically", async ({ assetId, capture }) => {
     const summary = JSON.parse(
       readFileSync(

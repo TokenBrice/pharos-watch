@@ -16,7 +16,8 @@ import {
 const HASHES: Record<string, string> = {
   "0x6000": "0x146015dd2944fa6e6d87c95119399290c52ddea7e7a09f62ef54f04ee300463a", // RIF bucket proxy
   "0x6001": "0x5dcd44a0907ccf27e9d5f19c9466dac15c4dba10b0f30776d531269a30cfcde3", // DOC bucket proxy
-  "0x6002": "0xdaf1fdd739f2a2030fe5e92db559631b2c0dabf28e0d97abf6e48446f73da78e", // shared bucket implementation
+  "0x6002": "0xdaf1fdd739f2a2030fe5e92db559631b2c0dabf28e0d97abf6e48446f73da78e", // DOC bucket implementation
+  "0x6006": "0xf784a3c3541097832eeccdd3b9367cea8bb01fbcad09cdd6d8a4f989be8e46a7", // reviewed RIF bucket upgrade
   "0x6003": "0x0959a24babb02d4d6c6ef27aaec9c34e824a2c55d24b13a8b3dae8401138e1c4", // canonical USDRIF proxy
   "0x6004": "0x391df4bc67ae9a4c235ee373a183027f60451e19b7ac680a7b5e0d28447194f0", // RIF token
   "0x6005": "0x64392cccf7af6a17beef7097970da802b39f177ef8a77763ca6c847c240289c4", // DOC token
@@ -35,7 +36,8 @@ const DOC_BUCKET = "0x697535055aa7afd2c280523c7b062b1f05284661";
 const USDRIF = "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37";
 const RIF = "0x2acc95758f8b5f583470ba265eb685a8f45fc9d5";
 const DOC = "0xe700691da7b9851f2f35f8b8182c69c53ccad9db";
-const IMPLEMENTATION = "0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f";
+const DOC_IMPLEMENTATION = "0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f";
+const RIF_IMPLEMENTATION = "0xa8bc1c546bb740f720bf35edfd348f0b0bcd98c7";
 const RIF_PEG_PROVIDER = "0xafb1b8c320acc776c1279bcdb24ab8f84ab727a4";
 const PRICE_PROVIDER = "0x6a343488338b944c6fcc89906646fac1e8e91ce5";
 const ROGUE_TOKEN = "0x1111111111111111111111111111111111111111";
@@ -82,6 +84,7 @@ const usdrifWord = word(USDRIF);
 interface UsdrifNetworkOptions {
   /** tpTokens(1) answers with a rogue address instead of the reviewed revert. */
   secondToken?: string | undefined;
+  rifImplementation?: string | undefined;
   /** Canonical totalSupply; a +1 drift breaks bucket-liability reconciliation. */
   totalSupply?: bigint | undefined;
   /** The closing block read observes this hash instead of the pinned one. */
@@ -100,8 +103,8 @@ function usdrifNetwork(options: UsdrifNetworkOptions = {}): AdapterNetworkSpec {
       blockReads += 1;
       return options.closingHash && blockReads > 1 ? { ...pinnedHeader, hash: options.closingHash } : pinnedHeader;
     },
-    [`${RIF_BUCKET}:${EIP1967_IMPLEMENTATION_SLOT}`]: word(IMPLEMENTATION),
-    [`${DOC_BUCKET}:${EIP1967_IMPLEMENTATION_SLOT}`]: word(IMPLEMENTATION),
+    [`${RIF_BUCKET}:${EIP1967_IMPLEMENTATION_SLOT}`]: word(options.rifImplementation ?? RIF_IMPLEMENTATION),
+    [`${DOC_BUCKET}:${EIP1967_IMPLEMENTATION_SLOT}`]: word(DOC_IMPLEMENTATION),
     [`${USDRIF}:${SELECTORS.totalSupply}`]: options.totalSupply ?? TOTAL_SUPPLY,
     [`${USDRIF}:${SELECTORS.decimals}`]: 18n,
     [`${RIF}:${SELECTORS.balanceOf}${word(RIF_BUCKET).slice(2)}`]: RIF_COLLATERAL,
@@ -150,7 +153,8 @@ function usdrifNetwork(options: UsdrifNetworkOptions = {}): AdapterNetworkSpec {
     code: {
       [RIF_BUCKET]: "0x6000",
       [DOC_BUCKET]: "0x6001",
-      [IMPLEMENTATION]: "0x6002",
+      [DOC_IMPLEMENTATION]: "0x6002",
+      [RIF_IMPLEMENTATION]: "0x6006",
       [USDRIF]: "0x6003",
       [RIF]: "0x6004",
       [DOC]: "0x6005",
@@ -175,9 +179,9 @@ function usdrifNetwork(options: UsdrifNetworkOptions = {}): AdapterNetworkSpec {
 }
 
 async function runUsdrif(options: UsdrifNetworkOptions & RunAdapterOptions = {}) {
-  const { secondToken, totalSupply, closingHash, rifPrice, docPrice, ...runOptions } = options;
+  const { secondToken, rifImplementation, totalSupply, closingHash, rifPrice, docPrice, ...runOptions } = options;
   return runAdapter("moc-v3-buckets", "usdrif-rif", {
-    network: usdrifNetwork({ secondToken, totalSupply, closingHash, rifPrice, docPrice }),
+    network: usdrifNetwork({ secondToken, rifImplementation, totalSupply, closingHash, rifPrice, docPrice }),
     nowSec: NOW_SEC,
     ...runOptions,
   });
@@ -216,7 +220,8 @@ describe("moc-v3-buckets USDRIF promotion", () => {
     expectWarnings(result, ["moc-v3-wallet-accounting-excess"]);
   });
 
-  it("fails closed when the second token probe succeeds or supply reconciliation drifts", async () => {
+  it("fails closed on implementation, sole-token or supply drift", async () => {
+    await expect(runUsdrif({ rifImplementation: DOC_IMPLEMENTATION })).rejects.toThrow("implementation mismatch");
     await expect(runUsdrif({ secondToken: ROGUE_TOKEN })).rejects.toThrow("did not return both");
     await expect(runUsdrif({ totalSupply: TOTAL_SUPPLY + 1n })).rejects.toThrow("do not equal");
   });

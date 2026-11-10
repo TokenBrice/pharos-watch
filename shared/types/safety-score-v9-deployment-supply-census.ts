@@ -21,7 +21,7 @@ import { DeploymentIdSchema } from "./stablecoin-meta-primitives";
  * shape and re-checks the same bounds so a captured packet cannot widen them.
  */
 export const SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL = "deployment-supply-census-v1" as const;
-export const V9_DEPLOYMENT_SUPPLY_CENSUS_REJECTION_PREFIX = "census-rejected:" as const;
+const V9_DEPLOYMENT_SUPPLY_CENSUS_REJECTION_PREFIX = "census-rejected:" as const;
 
 const censusPolicy = candidatePolicy.semantic.supplyAttribution.deploymentSupplyCensus;
 // Tolerance is a policy constant, never the packet's own claim: a captured
@@ -32,14 +32,15 @@ const supplyPolicy = candidatePolicy.semantic.supplyAttribution;
 const CENSUS_ARITHMETIC_RELATIVE_TOLERANCE = 1e-9;
 
 /** Machine reason for one rejected deployment (or the whole asset when the key is null). */
-export const V9DeploymentSupplyCensusRejectionReasonSchema = z.enum([
+const V9DeploymentSupplyCensusRejectionReasonSchema = z.enum([
   // The reviewed roster is not fully measured; a partial partition is never evidence.
   "roster-incomplete",
   // SUM(shareUpper) exceeds 1 + conservation tolerance (e.g. a canonical over-count).
   "conservation-breach",
   // The route is not a reviewed bridge route with a token address.
   "route-unreviewed",
-  // No admitted read kind exists for this chain family.
+  // A required read is unavailable: no admitted read kind for the chain family,
+  // a failed read, or no usable aggregate supply denominator.
   "read-unavailable",
   // The pinned header/slot/ledger is absent.
   "missing-block-pin",
@@ -103,7 +104,7 @@ const IntegerStringSchema = z.string().max(128).regex(/^(0|[1-9][0-9]*)$/);
  * One pinned header/slot/ledger per chain per run. A pin names exactly what was
  * read; a missing pin rejects the row (R3), never zero.
  */
-export const V9DeploymentSupplyCensusPinSchema = z.discriminatedUnion("kind", [
+const V9DeploymentSupplyCensusPinSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("evm-header"),
     blockNumber: z.number().int().positive(),
@@ -163,7 +164,7 @@ export const V9DeploymentSupplyCensusRowSchema = z
 export type V9DeploymentSupplyCensusRow = z.output<typeof V9DeploymentSupplyCensusRowSchema>;
 
 /** Conservation of the admitted partition. A breach is representable so the diagnostic can name it. */
-export const V9DeploymentSupplyCensusConservationSchema = z
+const V9DeploymentSupplyCensusConservationSchema = z
   .strictObject({
     aggregateSupplyUsd: NonNegativeFiniteSchema,
     measuredSupplyUsd: NonNegativeFiniteSchema,
@@ -199,12 +200,8 @@ export const V9DeploymentSupplyCensusConservationSchema = z
       });
     }
   });
-export type V9DeploymentSupplyCensusConservation = z.output<
-  typeof V9DeploymentSupplyCensusConservationSchema
->;
-
 /** One rejected deployment (or `null` for an asset-level rejection), always machine-reasoned. */
-export const V9DeploymentSupplyCensusRejectionSchema = z.strictObject({
+const V9DeploymentSupplyCensusRejectionSchema = z.strictObject({
   routeId: DeploymentIdSchema.nullable(),
   code: V9DeploymentSupplyCensusRejectionCodeSchema,
 });
@@ -385,6 +382,3 @@ export const V9DeploymentSupplyCensusPolicySchema = z
     maxDeploymentsPerAsset: z.number().int().positive().max(64),
   })
   .strict();
-export type V9DeploymentSupplyCensusPolicy = z.output<
-  typeof V9DeploymentSupplyCensusPolicySchema
->;

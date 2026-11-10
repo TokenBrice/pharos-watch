@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
+import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import {
   baseEventType,
   describeEventDelta,
@@ -73,12 +74,16 @@ function newsTitle(event: TapeEvent): string {
   return humanized.charAt(0).toUpperCase() + humanized.slice(1);
 }
 
-// UTC day diff so labels agree with the tape feed's UTC day grouping.
-function newsDateLabel(tsMs: number, nowMs: number): string {
+// UTC day diff so labels agree with the tape feed's UTC day grouping. Before
+// hydration the visitor clock is unavailable, so fall back to the absolute date
+// rather than claiming "Today" from a build or receipt clock.
+function newsDateLabel(tsMs: number, nowMs: number | null): string {
   const utcDay = (ms: number) => Math.floor(ms / 86_400_000);
-  const diff = utcDay(nowMs) - utcDay(tsMs);
-  if (diff <= 0) return "Today";
-  if (diff === 1) return "Yesterday";
+  if (nowMs != null) {
+    const diff = utcDay(nowMs) - utcDay(tsMs);
+    if (diff <= 0) return "Today";
+    if (diff === 1) return "Yesterday";
+  }
   const date = new Date(tsMs);
   const month = date.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
   return `${date.getUTCDate()} ${month}`;
@@ -102,7 +107,7 @@ function utcMinute(tsMs: number): string {
   return new Date(tsMs).toISOString().slice(0, 16).replace("T", " ");
 }
 
-function NewsEntry({ entry, nowMs }: { entry: CoinNewsEntry; nowMs: number }) {
+function NewsEntry({ entry, nowMs }: { entry: CoinNewsEntry; nowMs: number | null }) {
   const { event, lowBand } = entry;
   const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
   let title: string;
@@ -152,14 +157,12 @@ function NewsEntry({ entry, nowMs }: { entry: CoinNewsEntry; nowMs: number }) {
 }
 
 export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
-  const { data, dataUpdatedAt, isLoading } = useLatestEvents({ coin: coinId, limit: NEWS_LOAD_LIMIT });
+  const { data, isLoading } = useLatestEvents({ coin: coinId, limit: NEWS_LOAD_LIMIT });
   const events = useMemo(() => projectTapeEventsForReader(data?.events ?? []), [data?.events]);
   const entries = collapseForCoinNews(events).slice(0, NEWS_ENTRY_LIMIT);
-  // Lazy initializer keeps the render pure (react-hooks/purity). TanStack Query
-  // refreshes dataUpdatedAt after successful polling refetches, so keep labels
-  // tied to the latest event payload instead of freezing at mount time.
-  const [nowMs] = useState(() => Date.now());
-  const labelNowMs = dataUpdatedAt > 0 ? dataUpdatedAt : nowMs;
+  // Day labels follow the visitor clock, not the last successful query receipt:
+  // a backgrounded tab or a failed refresh can leave the receipt hours behind.
+  const nowMs = useUtcDayNowMs();
 
   if (!isLoading && events.length === 0) {
     return null;
@@ -182,7 +185,7 @@ export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
       ) : (
         <div className="divide-y divide-border/40">
           {entries.map((entry) => (
-            <NewsEntry key={entry.key} entry={entry} nowMs={labelNowMs} />
+            <NewsEntry key={entry.key} entry={entry} nowMs={nowMs} />
           ))}
         </div>
       )}

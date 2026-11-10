@@ -66,6 +66,7 @@ import {
 import {
   buildHistoryKey,
   pruneYieldTables,
+  YIELD_D1_IDLE_RATIO,
 } from "./history";
 import {
   TRACKED_META_BY_ID,
@@ -111,6 +112,7 @@ import {
 } from "../../lib/cron-result";
 import {
   rethrowIfAborted,
+  sleepWithSignal,
   throwIfAborted,
 } from "../../lib/abort";
 
@@ -494,7 +496,18 @@ export async function publishYieldRowsAtomically(
       .bind(getFreshnessSentinelCacheKey("yield-data"), sentinelValue, input.startSec, input.generationId),
   ];
 
-  const results = await runWithOverloadRetry(() => db.batch(buildStatements()), 3, input.signal);
+  let batchMs = 0;
+  const results = await runWithOverloadRetry(async () => {
+    const attemptStartedMs = Date.now();
+    const batch = await db.batch(buildStatements());
+    batchMs = Date.now() - attemptStartedMs;
+    return batch;
+  }, 3, input.signal, { waitOutResourceWindow: true });
+  // The atomic batch writes every history row across all its indexes in one
+  // burst; the prune and terminal accounting that follow must not land in the
+  // same spent D1 window (2026-11-04 16:56Z). The batch has committed, so an
+  // abort must not turn this idle into a misreported failed publication.
+  await sleepWithSignal(Math.round(batchMs * YIELD_D1_IDLE_RATIO));
   let written = Number(results[0]?.meta?.changes ?? 0) > 0;
   let appliedByPriorAttempt = false;
   if (!written) {
@@ -990,6 +1003,7 @@ function evaluatedSourceToRanking(
 ) {
   const meta = TRACKED_META_BY_ID.get(source.id);
   const benchmarkRate = finiteBaseValue(source.benchmarkRate, "benchmarkRate", source.id);
+  const sourceRisk = buildYieldSourceRisk({ source, provenance, isBest: true });
   return {
     id: source.id,
     symbol: source.symbol,
@@ -1004,6 +1018,7 @@ function evaluatedSourceToRanking(
       stablecoinId: source.id,
       sourceKey: source.sourceKey,
       yieldSource: source.yieldSource,
+      venueProtocol: sourceRisk?.venueProtocol,
     }),
     yieldType: source.yieldType,
     dataSource: source.dataSource,
@@ -1035,7 +1050,7 @@ function evaluatedSourceToRanking(
     altSources: [] as AltYieldSource[],
     alternateSummary: undefined as YieldAlternateSummary | null | undefined,
     rankChangeAttribution: undefined as YieldRankChangeAttribution | null | undefined,
-    sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: true }),
+    sourceRisk,
     sourceRole: deriveYieldSourceRole(source, { isSelected: true }),
     ...(publicationGenerationId ? { publicationGenerationId } : {}),
     ...(publishedRank ? { publishedRank } : {}),
@@ -1064,6 +1079,11 @@ function buildAltYieldSource(params: {
   provenance: Record<string, unknown> | null;
   selectionRank: number | undefined;
 }): AltYieldSource {
+  const sourceRisk = buildYieldSourceRisk({
+    source: params.candidate,
+    provenance: params.provenance,
+    isBest: false,
+  });
   return {
     sourceKey: params.candidate.sourceKey,
     yieldSource: params.candidate.yieldSource,
@@ -1071,17 +1091,14 @@ function buildAltYieldSource(params: {
       stablecoinId: params.candidate.id,
       sourceKey: params.candidate.sourceKey,
       yieldSource: params.candidate.yieldSource,
+      venueProtocol: sourceRisk?.venueProtocol,
     }),
     yieldType: params.candidate.yieldType as AltYieldSource["yieldType"],
     currentApy: params.candidate.currentApy,
     apy30d: params.candidate.apy30d,
     sourceTvlUsd: params.candidate.sourceTvlUsd,
     dataSource: params.candidate.dataSource,
-    sourceRisk: buildYieldSourceRisk({
-      source: params.candidate,
-      provenance: params.provenance,
-      isBest: false,
-    }),
+    sourceRisk,
     sourceRole: deriveYieldSourceRole(params.candidate, { isSelected: false }),
     confidenceTier: params.candidate.confidenceTier,
     calculationMode: params.candidate.calculationMode,
@@ -1412,6 +1429,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     if (ranking.provenance) {
       const effectiveSourceFreshness = staleSource ? "stale" : (source.sourceFreshness ?? "unknown");
       const qualificationInvalidated = staleSource || benchmarkFreshness === "stale";
+      const scoreQualification = qualificationInvalidated ? "NR" : source.scoreQualification;
       const newlyMissingEvidenceFields =
         (staleSource && source.sourceFreshness === "fresh" ? 1 : 0) +
         (benchmarkFreshness === "stale" && source.benchmarkFreshness !== "stale" ? 1 : 0);
@@ -1425,8 +1443,8 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
             (source.evidenceCompleteness - newlyMissingEvidenceFields / EVIDENCE_FIELD_COUNT).toFixed(4),
           ),
         ),
-        scoreQualification: qualificationInvalidated ? "NR" : source.scoreQualification,
-        scoreQualified: ranking.pharosYieldScore != null,
+        scoreQualification,
+        scoreQualified: scoreQualification !== "NR",
       };
     }
     ranking.sourceRole = deriveYieldSourceRole(
@@ -2193,10 +2211,22 @@ export async function publishYieldCoordinatorResults(params: {
       params.degradationReasons.push("yield-publication:payload-oversize");
     }
     throwIfAborted(params.signal);
-    await pruneYieldTables(params.db, params.startSec, {
-      allowDestructiveCleanup: params.degradationReasons.length === 0 && !params.safetySnapshotHeld,
-      signal: params.signal,
-    });
+    try {
+      await pruneYieldTables(params.db, params.startSec, {
+        allowDestructiveCleanup: params.degradationReasons.length === 0 && !params.safetySnapshotHeld,
+        signal: params.signal,
+      });
+    } catch (error) {
+      if (params.signal?.aborted) throw error;
+      // Retention runs after the publication committed and resumes next run, so
+      // a spent D1 window defers it instead of failing the published run.
+      params.degradationReasons.push("yield-retention:deferred");
+      logWorkerEvent({
+        scope: "lib", level: "warn", event: "yield-retention-deferred", job: "sync-yield-data",
+        message: "[sync-yield-data] Retention prune deferred after a committed publication",
+        metadata: { generationId, error: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200) },
+      });
+    }
 
     return {
       ok: true,

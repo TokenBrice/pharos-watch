@@ -11,6 +11,10 @@ vi.mock("@/components/digest-archive-client", () => ({
   DigestArchiveClient: () => <section data-testid="digest-archive-client" />,
 }));
 
+vi.mock("@/components/digest-nameplate-live", () => ({
+  DigestNameplateLive: () => null,
+}));
+
 import DigestArchivePage from "./page";
 import digests from "../../../data/digests.json";
 

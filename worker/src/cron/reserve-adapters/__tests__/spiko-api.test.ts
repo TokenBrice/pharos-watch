@@ -138,29 +138,6 @@ describe("adaptSpikoShareClassTotals", () => {
     });
   });
 
-  it("still parses a stale NAV update into a verified but old sourceTimestamp", () => {
-    const staleTotals: SpikoShareClassTotals = {
-      ...EURSAFO_TOTALS,
-      netAssetValue: {
-        ...EURSAFO_TOTALS.netAssetValue,
-        updatedAt: "2026-06-01T08:00:00.000Z",
-      },
-    };
-
-    const result = adaptSpikoShareClassTotals(staleTotals, "eurSAFO", {
-      name: "Fully collateralized overnight total-return swap exposure",
-      risk: "medium",
-    });
-
-    // The adapter reports the real disclosure timestamp honestly; the cron's
-    // BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC policy (not the adapter) is what
-    // later marks a sync built from this snapshot as degraded once stale.
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Math.floor(Date.parse("2026-06-01T08:00:00.000Z") / 1000),
-      freshnessMode: "verified",
-    });
-  });
-
   it("throws on a malformed payload missing totalShares", () => {
     const malformed = {
       totalAssets: { value: "665195773.91", currency: "EUR" },

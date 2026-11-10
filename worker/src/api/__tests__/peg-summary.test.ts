@@ -12,10 +12,18 @@ import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
 import { loadTimelineOgPage } from "../og-page/timeline";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import * as currentPegObservations from "../../lib/current-peg-observations";
+import * as depegTrustPolicy from "../../lib/depeg-trust-policy";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/constants";
 
 const nowSec = Math.floor(Date.now() / 1000);
+const TODAY_START_SEC = Math.floor(nowSec / 86_400) * 86_400;
 
-afterEach(() => vi.useRealTimers());
+/** A fresh (<= offsetSec old) cache clock that is always on the request's UTC day. */
+function sameDayCachedAt(offsetSec: number): number {
+  return Math.max(TODAY_START_SEC, nowSec - offsetSec);
+}
+
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 function makePegSummaryDb(
   assets: ReturnType<typeof makeAsset>[] = [],
@@ -40,6 +48,9 @@ function makePegSummaryDbWithDexPrice(
   assets: ReturnType<typeof makeAsset>[],
   updatedAt: number,
   sourceTotalTvl = 10_000_000,
+  observedAt: number | null = updatedAt,
+  dexPriceUsd = 1.0002,
+  deviationFromPrimaryBps: number | null = 2,
 ) {
   const cacheValue = JSON.stringify({ peggedAssets: assets });
   return mockD1([
@@ -54,12 +65,13 @@ function makePegSummaryDbWithDexPrice(
       match: "dex_prices",
       rows: [
         {
-          stablecoin_id: "usdt-tether",
-          dex_price_usd: 1.0002,
-          deviation_from_primary_bps: 2,
+          stablecoin_id: assets[0].id,
+          dex_price_usd: dexPriceUsd,
+          deviation_from_primary_bps: deviationFromPrimaryBps,
           source_pool_count: 4,
           source_total_tvl: sourceTotalTvl,
           updated_at: updatedAt,
+          price_sources_json: JSON.stringify({ aggregateObservedAt: observedAt, sources: [] }),
         },
       ],
     },
@@ -151,7 +163,9 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
-  it.each([null, 1])("keeps historical analytics when the live price is %s", async (price) => {
+  it.each([null, 0, -1, 1])("keeps historical analytics when the live price is %s", async (price) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
     const asset = makeAsset({ price, priceObservedAt: nowSec, priceUpdatedAt: nowSec });
     const db = mockD1([
       { match: "cache", matchBinds: ["stablecoins"], rows: [{
@@ -166,17 +180,19 @@ describe("handlePegSummary", () => {
     const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
     expect(body.coins).toHaveLength(1);
     expect(body.coins[0]).toMatchObject({
-      currentDeviationBps: price === null ? null : 0,
+      price: price === 1 ? 1 : null,
+      priceObservedAt: nowSec,
+      currentDeviationBps: price === 1 ? 0 : null,
       pegScore: 99,
       eventCount: 1,
       worstDeviationBps: -120,
     });
     expect(body.summary).toMatchObject({
       activeDepegCount: 0,
-      medianDeviationBps: price === null ? null : 0,
-      worstCurrent: price === null ? null : { id: "usdt-tether", symbol: "USDT", bps: 0 },
-      coinsAtPeg: price === null ? 0 : 1,
-      totalTracked: price === null ? 0 : 1,
+      medianDeviationBps: price === 1 ? 0 : null,
+      worstCurrent: price === 1 ? { id: "usdt-tether", symbol: "USDT", bps: 0 } : null,
+      coinsAtPeg: price === 1 ? 1 : 0,
+      totalTracked: price === 1 ? 1 : 0,
       depegEventsToday: 2,
       depegEventsYesterday: 1,
     });
@@ -189,6 +205,7 @@ describe("handlePegSummary", () => {
       const db = makePegSummaryDb([makeAsset({ id: "usdt-tether", price: 1 })]);
       const body = await readJsonResponse<{ coins: PegSummaryCoin[] }>(await handlePegSummary(db), 200);
       expect(body.coins.find((coin) => coin.id === "usdt-tether")).toMatchObject({
+        price: null,
         currentDeviationBps: null,
         pegReference: null,
         pegReferenceUnavailable: true,
@@ -218,21 +235,24 @@ describe("handlePegSummary", () => {
     { priceSource: "protocol-par", priceObservedAtMode: "upstream" as const },
     { priceSource: "coingecko+protocol-par", priceObservedAtMode: "upstream" as const },
   ])("withholds nominal current prices despite an older accepted at-peg reference: $priceSource", async (provenance) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    const cachedAt = sameDayCachedAt(1200);
     const asset = makeAsset({ id: "usdt-tether", price: 1, ...provenance });
     const db = mockD1([
       { match: "cache", matchBinds: ["stablecoins"], rows: [{
         key: "stablecoins", value: JSON.stringify({ peggedAssets: [asset] }), updated_at: nowSec,
       }] },
       { match: "cache", matchBinds: ["peg-analytics"], rows: [{
-        key: "peg-analytics", updated_at: nowSec - 1200,
-        value: JSON.stringify({ computedAtSec: nowSec - 1200, depegEventsToday: 0, depegEventsYesterday: 0, pegData: [makeCachedPegCoin()] }),
+        key: "peg-analytics", updated_at: cachedAt,
+        value: JSON.stringify({ computedAtSec: cachedAt, depegEventsToday: 0, depegEventsYesterday: 0, pegData: [makeCachedPegCoin()] }),
       }] },
       { match: "dex_prices", rows: [] },
     ]);
     const body = await readJsonResponse(await handlePegSummary(db), 200) as {
       coins: PegSummaryCoin[]; summary: { coinsAtPeg: number; totalTracked: number };
     };
-    expect(body.coins[0]).toMatchObject({ currentDeviationBps: null, currentPriceUnavailable: true, pegScore: 99 });
+    expect(body.coins[0]).toMatchObject({ price: null, currentDeviationBps: null, currentPriceUnavailable: true, pegScore: 99 });
     expect(body.summary.coinsAtPeg).toBe(0);
     expect(body.summary.totalTracked).toBe(0);
   });
@@ -240,13 +260,16 @@ describe("handlePegSummary", () => {
   it.each([false, true].flatMap((retained) => (["failed-read", "malformed-row"] as const).map((failure) => ({ retained, failure }))))(
     "does not substitute raw analytics on $failure projection with retained cache=$retained", async ({ retained, failure }) => {
     vi.useFakeTimers();
-    vi.setSystemTime(nowSec * 1000);
-    const computedAtSec = nowSec - 3600;
+    // A fixed mid-day clock keeps the 1h-old row stale on every run; clamping a
+    // real clock to midnight would make the row accidentally fresh (00:00-00:30 UTC).
+    const requestNowSec = Date.parse("2026-07-13T12:00:00Z") / 1000;
+    vi.setSystemTime(requestNowSec * 1000);
+    const computedAtSec = requestNowSec - 3600;
     const pegData = [makeCachedPegCoin({ eventCount: 1 })];
     const reason = failure === "failed-read" ? "incident-projection-read-failed" : "incident-projection-invalid";
     const db = mockD1([
       { match: "cache", matchBinds: ["stablecoins"], rows: [{
-        key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether" })] }), updated_at: nowSec,
+        key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether" })] }), updated_at: requestNowSec,
       }] },
       { match: "cache", matchBinds: ["peg-analytics"], rows: retained ? [{
         key: "peg-analytics", updated_at: computedAtSec,
@@ -418,6 +441,7 @@ describe("handlePegSummary", () => {
       id: "usdt-tether",
       symbol: "USDT",
       priceSource: "cached",
+      price: 0.997,
       priceConfidence: "fallback",
       priceObservedAt: nowSec - 3600,
       priceObservedAtMode: "local_fetch",
@@ -425,21 +449,10 @@ describe("handlePegSummary", () => {
       priceUpdatedAt: nowSec - 1800,
     });
     const db = makePegSummaryDb([asset]);
-    const res = await handlePegSummary(db);
-    const body = (await res.json()) as {
-      coins: Array<{
-        id: string;
-        priceSource?: string;
-        priceConfidence?: string | null;
-        priceObservedAt?: number | null;
-        priceObservedAtMode?: string | null;
-        priceSyncedAt?: number | null;
-        priceUpdatedAt?: number | null;
-        primaryTrust?: string;
-      }>;
-    };
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
     const coin = body.coins.find((c) => c.id === "usdt-tether");
     expect(coin).toMatchObject({
+      price: 0.997,
       priceSource: "cached",
       priceConfidence: "fallback",
       priceObservedAt: nowSec - 3600,
@@ -450,52 +463,31 @@ describe("handlePegSummary", () => {
     });
   });
 
-  it("keeps dexPriceCheck for data fresh enough for UI display", async () => {
+  it.each([
+    ["fresh", 1800, 10_000_000, 1800, true],
+    ["stale publication", DEX_PRICE_CHECK_FRESHNESS_SEC, 10_000_000, 60, false],
+    ["thin", 1800, 200_000, 60, false],
+    ["stale original", 60, 10_000_000, DEX_PRICE_CHECK_FRESHNESS_SEC, false],
+    ["six-hour original", 60, 10_000_000, 21_600, false],
+    ["missing original", 60, 10_000_000, null, false],
+  ] as const)("admits only fresh, thick original DEX observations: %s", async (_label, age, tvl, originalAge, accepted) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
-    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800);
-    const res = await handlePegSummary(db);
-    const body = (await res.json()) as {
-      coins: Array<{
-        id: string;
-        dexPriceCheck?: {
-          dexPrice: number;
-          dexDeviationBps: number;
-          agrees: boolean;
-          sourcePools: number;
-          sourceTvl: number;
-        } | null;
-      }>;
-    };
+    const db = makePegSummaryDbWithDexPrice([asset], nowSec - age, tvl, originalAge == null ? null : nowSec - originalAge);
+    const decode = vi.spyOn(depegTrustPolicy, "readDexAggregateObservedAt");
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+    expect(db.getHistory().find(({ sql }) => sql.includes("FROM dex_prices"))?.sql).toContain("price_sources_json");
+    expect(decode).toHaveBeenCalledTimes(age < DEX_PRICE_CHECK_FRESHNESS_SEC && tvl >= 250_000 ? 1 : 0);
     const coin = body.coins.find((c) => c.id === "usdt-tether");
-    expect(coin?.dexPriceCheck).toEqual({
+    if (accepted) expect(coin?.dexPriceCheck).toEqual({
       dexPrice: 1.0002,
       dexDeviationBps: 2,
       agrees: true,
       sourcePools: 4,
       sourceTvl: 10_000_000,
     });
-  });
-
-  it("hides dexPriceCheck when data is too stale for UI display", async () => {
-    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
-    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 7200);
-    const res = await handlePegSummary(db);
-    const body = (await res.json()) as {
-      coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
-    };
-    const coin = body.coins.find((c) => c.id === "usdt-tether");
-    expect(coin?.dexPriceCheck).toBeUndefined();
-  });
-
-  it("hides dexPriceCheck when DEX source TVL is below the UI trust floor", async () => {
-    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
-    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800, 200_000);
-    const res = await handlePegSummary(db);
-    const body = (await res.json()) as {
-      coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
-    };
-    const coin = body.coins.find((c) => c.id === "usdt-tether");
-    expect(coin?.dexPriceCheck).toBeUndefined();
+    else expect(coin?.dexPriceCheck).toBeUndefined();
   });
 
   it("serves an explicitly degraded no-store response when the DEX price read fails", async () => {
@@ -515,10 +507,7 @@ describe("handlePegSummary", () => {
       ]);
 
       const res = await handlePegSummary(db);
-      const body = (await readJsonResponse(res, 200)) as {
-        coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
-        degradedReason?: string;
-      };
+      const body = PegSummaryResponseSchema.parse(await readJsonResponse(res, 200));
       expect(body.coins.find((c) => c.id === "usdt-tether")?.dexPriceCheck).toBeUndefined();
       expect(body.degradedReason).toBe("dex-prices-read-failed");
       expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -539,18 +528,7 @@ describe("handlePegSummary", () => {
     });
     const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800);
     const res = await handlePegSummary(db);
-    const body = (await res.json()) as {
-      coins: Array<{
-        id: string;
-        dexPriceCheck?: {
-          dexPrice: number;
-          dexDeviationBps: number;
-          agrees: boolean;
-          sourcePools: number;
-          sourceTvl: number;
-        } | null;
-      }>;
-    };
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(res, 200));
     const coin = body.coins.find((c) => c.id === "usdt-tether");
     expect(coin?.dexPriceCheck).toEqual({
       dexPrice: 1.0002,
@@ -562,32 +540,10 @@ describe("handlePegSummary", () => {
   });
 
   describe("DEX price check basis", () => {
-    async function dexCheckFor(asset: StablecoinData, dexPriceUsd: number) {
-      const cacheValue = JSON.stringify({ peggedAssets: [asset] });
-      const db = mockD1([
-        {
-          match: "cache",
-          rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
-          first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
-        },
-        { match: "depeg_events", rows: [] },
-        {
-          match: "dex_prices",
-          rows: [{
-            stablecoin_id: asset.id,
-            dex_price_usd: dexPriceUsd,
-            deviation_from_primary_bps: null,
-            source_pool_count: 4,
-            source_total_tvl: 10_000_000,
-            updated_at: nowSec - 60,
-          }],
-        },
-        { match: "supply_history", rows: [] },
-      ]);
-      const body = (await readJsonResponse(await handlePegSummary(db), 200)) as {
-        coins: Array<{ id: string; dexPriceCheck?: { dexDeviationBps: number; agrees: boolean } }>;
-      };
-      return body.coins.find((coin) => coin.id === asset.id)?.dexPriceCheck;
+    async function dexCoinFor(asset: StablecoinData, dexPriceUsd: number) {
+      const db = makePegSummaryDbWithDexPrice([asset], nowSec - 60, 10_000_000, nowSec - 60, dexPriceUsd, null);
+      const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+      return body.coins.find((coin) => coin.id === asset.id);
     }
 
     const navAsset = (overrides: Partial<StablecoinData> = {}) => makeAsset({
@@ -600,13 +556,15 @@ describe("handlePegSummary", () => {
     });
 
     it("measures a NAV token against its own reference price, not the peg unit", async () => {
-      const check = await dexCheckFor(navAsset(), 1.2513);
+      const coin = await dexCoinFor(navAsset(), 1.2513);
+      const check = coin?.dexPriceCheck;
+      expect(coin?.price).toBe(1.2514);
       expect(check?.agrees).toBe(true);
       expect(Math.abs(check?.dexDeviationBps ?? Number.POSITIVE_INFINITY)).toBeLessThan(50);
     });
 
     it("still flags a NAV token whose DEX print diverges from its reference price", async () => {
-      const check = await dexCheckFor(navAsset(), 1.2);
+      const check = (await dexCoinFor(navAsset(), 1.2))?.dexPriceCheck;
       expect(check?.agrees).toBe(false);
     });
 
@@ -614,14 +572,14 @@ describe("handlePegSummary", () => {
       { label: "missing", overrides: { price: null } },
       { label: "nominal-only", overrides: { priceObservedAtMode: "nominal_reference" } },
     ])("publishes no verdict for a NAV token whose reference price is $label", async ({ overrides }) => {
-      expect(await dexCheckFor(navAsset(overrides), 1.2513)).toBeUndefined();
+      const coin = await dexCoinFor(navAsset(overrides), 1.2513);
+      expect(coin?.dexPriceCheck).toBeUndefined();
+      expect(coin?.price).toBeNull();
     });
 
-    it("keeps comparing a fixed-peg token with its peg", async () => {
-      // Primary and DEX both read 0.97: the deviation is measured against the
-      // $1 peg, and the two sources agree on that depeg.
-      const check = await dexCheckFor(makeAsset({ price: 0.97 }), 0.97);
-      expect(check?.dexDeviationBps).toBe(-300);
+    it.each([[0.97, -300], [0.4, -6000]])("keeps comparing a fixed-peg token with its peg ($%s)", async (price, bps) => {
+      const check = (await dexCoinFor(makeAsset({ price }), price))?.dexPriceCheck;
+      expect(check?.dexDeviationBps).toBe(bps);
       expect(check?.agrees).toBe(true);
     });
   });
@@ -681,6 +639,7 @@ describe("handlePegSummary", () => {
             source_pool_count: 2,
             source_total_tvl: 2_000_000,
             updated_at: nowSec - 60,
+            price_sources_json: JSON.stringify([{ aggregateObservedAt: nowSec - 60 }]),
           },
           {
             stablecoin_id: "cngn-compliant-naira",
@@ -689,6 +648,7 @@ describe("handlePegSummary", () => {
             source_pool_count: 2,
             source_total_tvl: 2_000_000,
             updated_at: nowSec - 60,
+            price_sources_json: JSON.stringify([{ aggregateObservedAt: nowSec - 60 }]),
           },
           {
             stablecoin_id: "xofm-mento",
@@ -697,6 +657,7 @@ describe("handlePegSummary", () => {
             source_pool_count: 2,
             source_total_tvl: 2_000_000,
             updated_at: nowSec - 60,
+            price_sources_json: JSON.stringify([{ aggregateObservedAt: nowSec - 60 }]),
           },
         ],
       },
@@ -725,6 +686,74 @@ describe("handlePegSummary", () => {
     });
   });
 
+  it("measures the DEX cross-check and at-peg threshold against the live peg unit, not an older cached pegType", async () => {
+    const price = 1.08 * (1 + 120 / 10_000);
+    const asset = makeAsset({
+      id: "eurc-circle",
+      name: "EURC",
+      symbol: "EURC",
+      pegType: "peggedEUR",
+      price,
+      priceObservedAt: nowSec,
+      priceUpdatedAt: nowSec,
+      circulating: { peggedEUR: 100_000_000 },
+    });
+    const stablecoinsValue = JSON.stringify({ peggedAssets: [asset], fxFallbackRates: { peggedEUR: 1.08 } });
+    const pegAnalyticsValue = JSON.stringify({
+      computedAtSec: sameDayCachedAt(60),
+      depegEventsToday: 0,
+      depegEventsYesterday: 0,
+      pegData: [makeCachedPegCoin({
+        id: "eurc-circle",
+        name: "EURC",
+        symbol: "EURC",
+        pegCurrency: "EUR",
+        pegType: "peggedUSD",
+        currentDeviationBps: null,
+        pegReference: null,
+        pegReferenceUnavailable: true,
+      })],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
+      },
+      {
+        match: "cache",
+        matchBinds: ["peg-analytics"],
+        rows: [{ key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec }],
+        first: { key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec },
+      },
+      {
+        match: "dex_prices",
+        rows: [{
+          stablecoin_id: "eurc-circle",
+          dex_price_usd: price,
+          deviation_from_primary_bps: null,
+          source_pool_count: 3,
+          source_total_tvl: 5_000_000,
+          updated_at: nowSec - 60,
+          price_sources_json: JSON.stringify([{ aggregateObservedAt: nowSec - 60 }]),
+        }],
+      },
+    ]);
+
+    const body = await readJsonResponse(await handlePegSummary(db), 200) as {
+      coins: PegSummaryCoin[];
+      summary: { coinsAtPeg: number };
+    };
+    const coin = body.coins.find((entry) => entry.id === "eurc-circle");
+    expect(coin?.pegType).toBe("peggedEUR");
+    expect(coin?.currentDeviationBps).toBe(120);
+    expect(coin?.dexPriceCheck).toMatchObject({ dexDeviationBps: 120, agrees: true });
+    // 120 bps is inside the non-USD band; the cached USD label would have
+    // selected the 100 bps USD band and dropped the row from coinsAtPeg.
+    expect(body.summary.coinsAtPeg).toBe(1);
+  });
+
   it("includes navToken coins with peg signals withheld", async () => {
     const db = makePegSummaryDb([
       makeAsset({
@@ -736,21 +765,7 @@ describe("handlePegSummary", () => {
       }),
     ]);
     const res = await handlePegSummary(db);
-    const data = (await res.json()) as {
-      coins: Array<{
-        id: string;
-        currentDeviationBps: number | null;
-        pegScore: number | null;
-        pegPct: number | null;
-        severityScore: number;
-        spreadPenalty: number;
-        activeDepeg: boolean;
-        eventCount: number;
-        worstDeviationBps: number | null;
-        lastEventAt: number | null;
-        trackingSpanDays: number;
-      }>;
-    };
+    const data = PegSummaryResponseSchema.parse(await readJsonResponse(res, 200));
     const fpi = data.coins.find((c) => c.id === "fpi-frax");
     expect(fpi).toMatchObject({
       currentDeviationBps: null,
@@ -899,6 +914,7 @@ describe("handlePegSummary", () => {
             source_pool_count: 4,
             source_total_tvl: 10_000_000,
             updated_at: nowSec - 60,
+            price_sources_json: JSON.stringify([{ aggregateObservedAt: nowSec - 60 }]),
           },
         ],
       },
@@ -986,10 +1002,13 @@ describe("handlePegSummary", () => {
   });
 
   it("serves peg data and event counters from the peg-analytics cache when fresh", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    const cachedAt = sameDayCachedAt(1200);
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 });
     const stablecoinsValue = JSON.stringify({ peggedAssets: [asset] });
     const pegAnalyticsValue = JSON.stringify({
-      computedAtSec: nowSec - 1200,
+      computedAtSec: cachedAt,
       depegEventsToday: 2,
       depegEventsYesterday: 5,
       pegData: [makeCachedPegCoin()],
@@ -1053,11 +1072,174 @@ describe("handlePegSummary", () => {
     });
     // Freshness keys to the older historical snapshot even though current
     // deviation is coherent with the newer stablecoins price observation.
-    expect(body.methodology.asOf).toBe(nowSec - 1200);
-    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(1200);
+    expect(body.methodology.asOf).toBe(cachedAt);
+    expect(Number(res.headers.get("X-Data-Age"))).toBe(nowSec - cachedAt);
+  });
+
+  it("rebuckets day-scoped counters when the request crosses the producer's UTC day", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-07-13T00:05:00Z"));
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 });
+    const db = mockD1([
+      { match: "cache", matchBinds: ["stablecoins"], rows: [{
+        key: "stablecoins", value: JSON.stringify({ peggedAssets: [asset] }), updated_at: publishedAtSec,
+      }] },
+      { match: "cache", matchBinds: ["peg-analytics"], rows: [{
+        key: "peg-analytics", updated_at: publishedAtSec,
+        value: JSON.stringify({
+          computedAtSec: publishedAtSec,
+          depegEventsToday: 1,
+          depegEventsYesterday: 0,
+          pegData: [makeCachedPegCoin()],
+        }),
+      }] },
+      { match: "cache", rows: [{
+        key: "stablecoins", value: JSON.stringify({ peggedAssets: [asset] }), updated_at: publishedAtSec,
+      }] },
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+    // The cached counters described 2026-07-12; the request clock is 07-13.
+    expect(body.summary?.depegEventsToday).toBe(0);
+    expect(body.summary?.depegEventsYesterday).toBe(0);
+  });
+
+  it("re-buckets a previous-day generation on the incident's projected onset, not the fragment clock", async () => {
+    vi.useFakeTimers();
+    const requestNowSec = Date.parse("2026-07-13T00:05:00Z") / 1000;
+    vi.setSystemTime(requestNowSec * 1000);
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    const firstOnsetSec = Date.parse("2026-07-12T23:00:00Z") / 1000;
+    const currentFragmentSec = Date.parse("2026-07-13T00:01:00Z") / 1000;
+    const independentTodaySec = Date.parse("2026-07-13T00:02:00Z") / 1000;
+    const incidentKey = `ddr2:${"a".repeat(32)}`;
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const stablecoins = JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })] });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("stablecoins", stablecoins, requestNowSec);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("peg-analytics", JSON.stringify({
+          computedAtSec: publishedAtSec,
+          depegEventsToday: 1,
+          depegEventsYesterday: 0,
+          pegData: [makeCachedPegCoin()],
+        }), publishedAtSec);
+      const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
+        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 200, ?, NULL, 0.99, 1)`);
+      insertEvent.run(101, currentFragmentSec);
+      insertEvent.run(102, firstOnsetSec);
+      insertEvent.run(103, independentTodaySec);
+      const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700000100)`);
+      insertLink.run(incidentKey, 101);
+      insertLink.run(incidentKey, 102);
+      sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+        (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+         first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+         superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+        VALUES (?, 'usdt-tether', 'USD', 'below', 102, 101, ?, ?, 200, 'active', NULL, ?, 1700000100, 1700000100)`)
+        .run(incidentKey, firstOnsetSec, currentFragmentSec, "a".repeat(64));
+
+      const body = await readJsonResponse(await handlePegSummary(db), 200) as {
+        summary: { depegEventsToday: number; depegEventsYesterday: number };
+      };
+      // Event 101's current fragment started today, but its incident's first
+      // onset was yesterday: the producer and /api/depeg-events count it there.
+      expect(body.summary).toMatchObject({ depegEventsToday: 1, depegEventsYesterday: 1 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("returns an explicit 503 when the midnight re-bucketing read fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-07-13T00:05:00Z"));
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    const stablecoins = JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })] });
+    const db = mockD1([
+      { match: "cache", matchBinds: ["stablecoins"], rows: [{
+        key: "stablecoins", value: stablecoins, updated_at: publishedAtSec,
+      }] },
+      { match: "cache", matchBinds: ["peg-analytics"], rows: [{
+        key: "peg-analytics", updated_at: publishedAtSec,
+        value: JSON.stringify({
+          computedAtSec: publishedAtSec,
+          depegEventsToday: 3,
+          depegEventsYesterday: 4,
+          pegData: [makeCachedPegCoin()],
+        }),
+      }] },
+      { match: "depeg_events_with_provenance", rows: [], throwError: new Error("D1 unavailable") },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(await readJsonResponse(res, 503)).toMatchObject({
+      error: expect.stringContaining("depeg event"),
+      reason: "peg-event-day-count-read-failed",
+    });
+  });
+
+  it.each([
+    { label: "serves a previous-day accepted generation across midnight without recomputing", minute: 5, retained: false },
+    { label: "retains a stale previous-day generation during a projection outage and re-buckets its counters", minute: 26, retained: true },
+  ])("$label", async ({ minute, retained }) => {
+    vi.useFakeTimers();
+    const todayStartSec = Date.parse("2026-07-13T00:00:00Z") / 1000;
+    const readAt = todayStartSec + minute * 60;
+    vi.setSystemTime(readAt * 1000);
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    const price = retained ? 0.98 : 1;
+    const stablecoinsValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT", price, priceObservedAt: readAt - 60 })],
+    });
+    const stablecoinsRow = { key: "stablecoins", value: stablecoinsValue, updated_at: publishedAtSec };
+    const db = mockD1([
+      { match: "cache", matchBinds: ["stablecoins"], rows: [stablecoinsRow] },
+      { match: "cache", matchBinds: ["peg-analytics"], rows: [{
+        key: "peg-analytics", updated_at: publishedAtSec,
+        value: JSON.stringify({
+          computedAtSec: publishedAtSec, depegEventsToday: 9, depegEventsYesterday: 9,
+          pegData: [makeCachedPegCoin({ eventCount: 7, price: 1.1 })],
+        }),
+      }] },
+      { match: "cache", rows: [stablecoinsRow] },
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [], throwError: new Error("projection unavailable") },
+      { match: "depeg_events", rows: [
+        makeDepegEventRow({ id: 1, started_at: todayStartSec + 60 }),
+        makeDepegEventRow({ id: 2, started_at: todayStartSec - 60 }),
+      ] },
+      { match: "dex_prices", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    const res = await handlePegSummary(db);
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(res, 200));
+    if (retained) {
+      expect(body.degradedReason).toBe("incident-projection-read-failed");
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    } else {
+      expect(body.degradedReason).toBeUndefined();
+      expect(res.headers.get("Cache-Control")).toContain("s-maxage=300");
+    }
+    expect(body.coins.find((coin) => coin.id === "usdt-tether")).toMatchObject({
+      eventCount: 7, price, currentDeviationBps: retained ? -200 : 0, priceObservedAt: readAt - 60,
+    });
+    expect(body.summary?.depegEventsToday).toBe(1);
+    expect(body.summary?.depegEventsYesterday).toBe(1);
   });
 
   it("recomputes current deviation and reference admission from the live snapshot", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    const cachedAt = sameDayCachedAt(1200);
     const cases = [
       {
         id: "usdt-tether",
@@ -1133,7 +1315,7 @@ describe("handlePegSummary", () => {
       fxFallbackRates: { peggedEUR: 1.2, peggedGOLD: 3000 },
     });
     const pegAnalyticsValue = JSON.stringify({
-      computedAtSec: nowSec - 1200,
+      computedAtSec: cachedAt,
       depegEventsToday: 0,
       depegEventsYesterday: 0,
       pegData: cases.map((entry) => entry.peg),
@@ -1157,8 +1339,11 @@ describe("handlePegSummary", () => {
     const res = await handlePegSummary(db);
     const body = (await readJsonResponse(res, 200)) as { coins: PegSummaryCoin[] };
     expect(Object.fromEntries(
-      cases.map(({ id }) => [id, body.coins.find((coin) => coin.id === id)?.currentDeviationBps]),
-    )).toEqual(Object.fromEntries(cases.map(({ id, expected }) => [id, expected])));
+      cases.map(({ id }) => {
+        const coin = body.coins.find((coin) => coin.id === id);
+        return [id, [coin?.price, coin?.currentDeviationBps]];
+      }),
+    )).toEqual(Object.fromEntries(cases.map(({ id, asset, expected }) => [id, [asset.price, expected]])));
   });
 
   it("falls back to direct compute when the peg-analytics cache read throws", async () => {

@@ -40,12 +40,12 @@
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
     "branchModel": "single-path",
-    "summary": "nOPAL is a Nest vault share whose per-token value is the protocol's own vault accounting: the issuer's price endpoint serves nav, price and totalSupply for the vault, and the issuer documents returns accruing into the nOPAL token price rather than being distributed. No external aggregated market feed and no borrower liquidation branch consumes an nOPAL price; the underlying sleeve values are manager-reported and reach the share price through issuer accounting.",
+    "summary": "nOPAL is a Nest vault share whose per-token value is the protocol's own vault accounting: the issuer's price endpoint serves nav, price and totalSupply for the vault, and the issuer documents returns accruing into the nOPAL token price rather than being distributed. The underlying sleeve values are manager-reported and reach the share price through issuer accounting.",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-30",
-      "reviewer": "RS2-009 research sprint 2026-10-30 (batch 2)",
-      "rationale": "Vault share pricing is the only price-sensitive authority for nOPAL: deposits and redemptions settle at the protocol's NAV per share. nOPAL holders have no borrower debt or liquidation market, so the branches-required case does not apply and the single top-level path is sufficient.",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+      "rationale": "This review covers nOPAL's primary issuance/redemption NAV formation, not third-party collateral integrations or a complete signer/upgrade inventory. The issuer vault registry binds Nest BlackOpal LiquidStone II Vault, symbol nOPAL, to share token 0x119dd7daff816f29d7ee47596ae5e4bdc4299165 and NestAccountant 0x2afa49257c960db6d9d7114eeb085c2db1ccd98e, with Plume as hub and eight EVM spokes. The same-token last-price-update endpoint reports the Plume accountant update at 1793988477 (2026-11-06T18:07:57Z) and Arc at 1793988565 (2026-11-06T18:09:25Z). Undated issuer operations and cross-chain documentation, read 2026-11-06, identifies underlying issuer NAV as the primary valuation input, Nest operations as the routine updater, the hub as canonical accounting source, and the current share price as the mint/redemption conversion input. These establish privileged internal top-level share pricing, not independent valuation or borrower liquidation branches. The separately identified Solana OFT mint does not establish a separate local pricing path or an exemption.",
       "sources": [
         {
           "label": "Nest available vaults, nOPAL detail",
@@ -54,12 +54,28 @@
         {
           "label": "Nest published nOPAL vault price payload",
           "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/price"
+        },
+        {
+          "label": "Nest exact nOPAL token, hub and spoke accountant registry (read 2026-11-06; no source as-of timestamp)",
+          "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+        },
+        {
+          "label": "Nest nOPAL accountant updates (source timestamps 2026-11-06T18:07:57Z and 2026-11-06T18:09:25Z)",
+          "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update"
+        },
+        {
+          "label": "Nest primary NAV inputs, operations updater and share conversion (undated; read 2026-11-06)",
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+        },
+        {
+          "label": "Nest canonical hub and local spoke accounting (undated; read 2026-11-06)",
+          "url": "https://docs.nest.credit/about/cross-chain"
         }
       ]
     },
-    "reviewedAt": "2026-10-30",
-    "reviewer": "RS2-009 research sprint 2026-10-30 (batch 2)",
-    "confidence": "limited",
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Nest available vaults, nOPAL detail",
@@ -68,6 +84,22 @@
       {
         "label": "Nest published nOPAL vault price payload",
         "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/price"
+      },
+      {
+        "label": "Nest exact nOPAL token, hub and spoke accountant registry (read 2026-11-06; no source as-of timestamp)",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+      },
+      {
+        "label": "Nest nOPAL accountant updates (source timestamps 2026-11-06T18:07:57Z and 2026-11-06T18:09:25Z)",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update"
+      },
+      {
+        "label": "Nest primary NAV inputs, operations updater and share conversion (undated; read 2026-11-06)",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+      },
+      {
+        "label": "Nest canonical hub and local spoke accounting (undated; read 2026-11-06)",
+        "url": "https://docs.nest.credit/about/cross-chain"
       }
     ]
   },
@@ -169,6 +201,9 @@
         "contractAddress": "GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq",
         "representationId": "solana:FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq",
         "protocol": "LayerZero OFT",
+        "providerKeys": [
+          "layerzero"
+        ],
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
@@ -182,6 +217,10 @@
           {
             "label": "Nest nOPAL integration guide",
             "url": "https://docs.nest.credit/developers/integration-guides/nopal/"
+          },
+          {
+            "label": "Nest LayerZero OFT cross-chain architecture (accessed 2026-11-04)",
+            "url": "https://docs.nest.credit/about/cross-chain"
           },
           {
             "label": "Nest current nOPAL vault registry",

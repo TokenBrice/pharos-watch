@@ -3,5 +3,5 @@ export function stablecoinCountLabel(count: number): string {
 }
 
 export function deploymentCountLabel(count: number): string {
-  return `${count} tracked deployment${count === 1 ? "" : "s"}`;
+  return `${count} active deployment${count === 1 ? "" : "s"}`;
 }

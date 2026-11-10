@@ -1,4 +1,18 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+// Register shared mocks before importing cron modules that capture them.
+import {
+  checkpointIdentity as makeCheckpointIdentity,
+  checkpointTable as makeCheckpointTable,
+  getReserveAdapterMock,
+  mockLiveReserveAdapterRegistry,
+  mockLiveReserveD1,
+  recordOutcomeSafeMock,
+  recoverNoCandidateMock,
+  shouldAttemptFetchMock,
+} from "./live-reserves.test-support";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -19,22 +33,15 @@ import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { breakerKeyForConfig, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { breakerKeyForConfig, CONFIGURED_COINS, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { advanceLiveReserveCheckpoint, beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import { createAdapterLatencyCollector, syncReserveCoin } from "../sync-live-reserves-core";
+import { getReserveSyncState } from "../../lib/live-reserves/store-read";
+import { adaptMakinaStrategyReserves } from "../reserve-adapters/makina-strategy";
 import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
 import type { ReserveSyncStateRecord } from "../../lib/live-reserves/store";
-import {
-  checkpointIdentity as makeCheckpointIdentity,
-  checkpointTable as makeCheckpointTable,
-  getReserveAdapterMock,
-  mockLiveReserveAdapterRegistry,
-  mockLiveReserveD1,
-  recordOutcomeSafeMock,
-  recoverNoCandidateMock,
-  shouldAttemptFetchMock,
-} from "./live-reserves.test-support";
 
 const mockD1 = mockLiveReserveD1;
 const mockAdapterRegistry = mockLiveReserveAdapterRegistry;
@@ -110,8 +117,10 @@ function collectParamChainIds(value: unknown, chains: Set<string>): void {
 
 describe("syncLiveReserves", () => {
   const fixtures = createLatestSchemaFixtureTracker();
+  let runController: AbortController;
   let replacedStore = false;
   afterEach(() => {
+    runController.abort();
     fixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -150,12 +159,93 @@ describe("syncLiveReserves", () => {
     }, new Set<string>())
     .size;
 
+  type SyncLiveReserves = typeof import("../sync-live-reserves").syncLiveReserves;
+  const healthyReserves = () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] });
+  const mockHealthyAdapter = () => mockAdapterRegistry(async () => healthyReserves());
+  const uniqueBreakerKeys = new Set(ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig)
+    .map((coin) => `live-reserves:${coin.liveReservesConfig!.breakerScope ?? coin.liveReservesConfig!.adapter}`));
+  function finalizeRun(overrides: Pick<Parameters<typeof finalizeReserveSyncRun>[0], "counts"> & Partial<Parameters<typeof finalizeReserveSyncRun>[0]>) {
+    const collector = createAdapterLatencyCollector();
+    return finalizeReserveSyncRun({
+      db: mockD1(), total: 100, runStartedAt: Math.floor(Date.now() / 1000), runStartedMs: Date.now(),
+      warningMessages: [], coinsWithErrors: [], coinsWithWarnings: [],
+      breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
+      deferredTail: { nextCursorStablecoinId: null, cursorTailState: null, cursorRecordedAt: null,
+        cursorTailCompletedAt: null, cursorTailFailedAt: null, cursorTailError: null, runBudgetTruncationCount: 0 },
+      checkpointOwned: false, attemptFailureSummaries: [], budgetConfig: resolveLiveReserveSyncBudgetConfig(),
+      phaseTimings: { setup: 0, queue: 0, adapter: 0, d1CoinPersistence: 0 },
+      adapterLatency: collector.finalize(), adapterTelemetryProgress: collector.progress(),
+      ...overrides,
+    });
+  }
+  async function runSync(
+    db: Parameters<SyncLiveReserves>[0], budget?: Parameters<SyncLiveReserves>[4],
+    progress?: Parameters<SyncLiveReserves>[3], checkpoint?: Parameters<SyncLiveReserves>[5],
+  ) {
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    return syncLiveReserves(db, runController.signal, {}, progress, budget, checkpoint);
+  }
+
+
+  /**
+   * Scope a real-SQLite run to one coin: seed (or re-seed) the checkpoint
+   * frontier at that coin and cap the slice at two lifecycles. The adapter,
+   * persistence and retention behaviour under test is unchanged; only the
+   * unrelated queue prefix is skipped.
+   */
+  async function runScopedSlice(
+    sync: SyncLiveReserves,
+    db: Parameters<SyncLiveReserves>[0],
+    coinId: string,
+    budget: NonNullable<Parameters<SyncLiveReserves>[4]> = {},
+  ): Promise<Awaited<ReturnType<SyncLiveReserves>>> {
+    const index = SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === coinId);
+    if (index < 0) throw new Error(`coin ${coinId} is not in the live reserve queue`);
+    const identity = makeCheckpointIdentity(1, `scoped-${coinId}`);
+    await beginLiveReserveCheckpoint(db, {
+      slotStartedAt: identity.slotStartedAt,
+      invocationId: identity.invocationId,
+    });
+    await advanceLiveReserveCheckpoint(db, identity, { nextItemKey: coinId, itemsDone: index });
+    return sync(db, runController.signal, {}, undefined, { maxCoinsPerSlice: 2, ...budget }, identity);
+  }
+
+  async function expectRetainedBook(id: string, failNextRead: () => void, checkFailure: (state: Record<string, unknown>) => void) {
+    const { db, sqlite } = fixtures.open();
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const snapshot = () => sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
+    const success = () => sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id);
+    await runScopedSlice(syncLiveReserves, db, id);
+    const originalSnapshot = snapshot();
+    expect(originalSnapshot).toBeDefined();
+    const originalSuccess = success();
+    const original = await resolveReserveResult(db, id, Math.floor(Date.now() / 1000));
+    expect(original?.mode).toBe("live");
+    expect(original?.reserves.length).toBeGreaterThan(0);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      failNextRead();
+      await runScopedSlice(syncLiveReserves, db, id);
+      expect(snapshot()).toEqual(originalSnapshot);
+      expect(success()).toEqual(originalSuccess);
+      const served = await resolveReserveResult(db, id, Math.floor(Date.now() / 1000));
+      expect(served?.reserves).toEqual(original?.reserves);
+      expect(served?.liveAt).toBe(original?.liveAt);
+      expect(served?.metadata?.sourceTimestamp).toBe(original?.metadata?.sourceTimestamp);
+      const state = sqlite.prepare("SELECT * FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)!;
+      expect(state.last_status).toBe("error");
+      checkFailure(state);
+    }
+    return original;
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
+    // Budget clocks and D1 timeout guards advance only when the test asks.
+    vi.useFakeTimers();
+    runController = new AbortController();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
-    recoverNoCandidateMock.mockClear();
+    recoverNoCandidateMock.mockReset();
   });
 
   it("keeps public RPC live-reserve inputs resolvable", () => {
@@ -198,32 +288,16 @@ describe("syncLiveReserves", () => {
       itemsDone: 0,
       queueHash: "stale-queue-hash",
     })]);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
 
-    await expect(syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      undefined,
-      checkpointIdentity,
-    )).rejects.toThrow("refusing unsafe suffix replay");
+    await expect(runSync(db, undefined, undefined, checkpointIdentity)).rejects.toThrow("refusing unsafe suffix replay");
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
   it("rejects a recovery attempt when its checkpoint is missing", async () => {
     const checkpointIdentity = makeCheckpointIdentity(2, "missing-owner");
     const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [] }]);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
 
-    await expect(syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      undefined,
-      checkpointIdentity,
-    )).rejects.toThrow("live reserve checkpoint missing");
+    await expect(runSync(db, undefined, undefined, checkpointIdentity)).rejects.toThrow("live reserve checkpoint missing");
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
@@ -257,16 +331,8 @@ describe("syncLiveReserves", () => {
           ]
         : []),
     ]);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
 
-    await expect(syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      undefined,
-      checkpointIdentity,
-    )).rejects.toThrow(expected);
+    await expect(runSync(db, undefined, undefined, checkpointIdentity)).rejects.toThrow(expected);
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
@@ -284,8 +350,7 @@ describe("syncLiveReserves", () => {
       };
     });
     try {
-      const { syncLiveReserves } = await import("../sync-live-reserves");
-      await syncLiveReserves(mockD1(), new AbortController().signal, {}, undefined, { runBudgetMs: 720_000 });
+      await runSync(mockD1(), { runBudgetMs: 720_000 });
       expect(fetch).toHaveBeenCalledWith(
         expect.anything(), expect.anything(), expect.anything(),
         expect.objectContaining({ nowSec: Math.floor(startedMs / 1_000) + 180 }),
@@ -297,13 +362,10 @@ describe("syncLiveReserves", () => {
 
 
   it("reuses identical shared HTTP reserve sources within a run", async () => {
-    const adapterFetch = mockAdapterRegistry(async () => ({
-      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
-    }));
+    const adapterFetch = mockHealthyAdapter();
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const { db, sqlite } = fixtures.open();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
 
     expect(adapterFetch).toHaveBeenCalledTimes(sharedSourceInvocationCount);
     expect(sharedSourceInvocationCount).toBeLessThan(configuredCoinCount);
@@ -353,7 +415,7 @@ describe("syncLiveReserves", () => {
 
     const adapterFetch = mockAdapterRegistry(async (coin, config) => {
       if (config?.adapter !== "reservoir") {
-        return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+        return healthyReserves();
       }
       return {
         slices: [{ name: "USDC positions", pct: 100, risk: "low" as const }],
@@ -383,7 +445,7 @@ describe("syncLiveReserves", () => {
     try {
       const { syncLiveReserves } = await import("../sync-live-reserves");
       const { db, sqlite } = fixtures.open();
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await syncLiveReserves(db, runController.signal, {});
       // Reading back through the persisted row proves the orchestrator wrote
       // three distinct snapshots rather than one shared result.
       const rows = sqlite
@@ -437,15 +499,15 @@ describe("syncLiveReserves", () => {
         key: adapterKey,
         fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => {
           if (coin.id === "usdcx-movement") {
-            return fetchEscrowBalanceReserves(coin, config, new AbortController().signal, { chainRpcs: network.chainRpcs });
+            return fetchEscrowBalanceReserves(coin, config, runController.signal, { chainRpcs: network.chainRpcs });
           }
-          return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+          return healthyReserves();
         },
       }));
       const { db, sqlite } = fixtures.open();
-      // This suite resets/mocks the producer module graph between cases.
+      // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await runScopedSlice(syncLiveReserves, db, "usdcx-movement");
       const before = sqlite.prepare(
         "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
       ).get("usdcx-movement");
@@ -454,7 +516,7 @@ describe("syncLiveReserves", () => {
         .toMatchObject({ capacityUsd: 100 });
       nowMs += 60_000;
       balance = outcome === "observed-zero" ? 0n : null;
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await runScopedSlice(syncLiveReserves, db, "usdcx-movement");
       const after = sqlite.prepare(
         "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
       ).get("usdcx-movement");
@@ -465,7 +527,7 @@ describe("syncLiveReserves", () => {
         expect(served?.liveAt).toBe(Math.floor(nowMs / 1000));
         nowMs += 60_000;
         balance = null;
-        await syncLiveReserves(db, new AbortController().signal, {});
+        await runScopedSlice(syncLiveReserves, db, "usdcx-movement");
         expect(sqlite.prepare(
           "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
         ).get("usdcx-movement")).toEqual(after);
@@ -490,19 +552,19 @@ describe("syncLiveReserves", () => {
         ? adaptUnitedPorPayload({
             ...UNITED_POR_PAYLOAD, totalReserve, totalToken: "100", updatedAt: new Date(nowMs).toISOString(),
           }, { name: "Aggregate backing", risk: "low" })
-        : { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] },
+        : healthyReserves(),
     }));
     const { db, sqlite } = fixtures.open();
-    // The producer graph is reset between cases; load its current mocks.
+    // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, "u-united-stables");
     const healthy = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables");
     expect(healthy).toBeDefined();
     expect((await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000)))?.metadata)
       .toMatchObject({ totalReserveUsd: 110, collateralizationRatio: 1.1 });
     nowMs += 60_000;
     totalReserve = "0";
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, "u-united-stables");
     const adverse = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables");
     expect(adverse).not.toEqual(healthy);
     const served = await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000));
@@ -517,7 +579,7 @@ describe("syncLiveReserves", () => {
     }));
     nowMs += 60_000;
     totalReserve = "unavailable";
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, "u-united-stables");
     expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables")).toEqual(adverse);
     const retained = await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000));
     expect(retained?.metadata).toMatchObject({ totalReserveUsd: 0, collateralizationRatio: 0 });
@@ -543,33 +605,17 @@ describe("syncLiveReserves", () => {
         fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => coin.id === "crvusd-curve"
           ? fetchCrvUsdReserves(coin, {
             ...config, inputs: { primary: { kind: "http-json", url: "https://curve.example/markets" } },
-          }, new AbortController().signal, { chainRpcs: network.chainRpcs })
-          : { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] },
+          }, runController.signal, { chainRpcs: network.chainRpcs })
+          : healthyReserves(),
       }));
-      const { db, sqlite } = fixtures.open();
-      // This suite resets/mocks the producer module graph between cases, so a static import would retain stale mocks.
-      const { syncLiveReserves } = await import("../sync-live-reserves");
-      await syncLiveReserves(db, new AbortController().signal, {});
-      const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("crvusd-curve");
-      expect(snapshot).toBeDefined();
-      const original = await resolveReserveResult(db, "crvusd-curve", Math.floor(nowMs / 1000));
-      expect(original?.reserves.map((slice) => slice.pct)).toEqual([50, 50]);
-      for (let attempt = 0; attempt < 2; attempt++) {
-        incomplete = true;
-        nowMs += 60_000;
-        await syncLiveReserves(db, new AbortController().signal, {});
-        expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("crvusd-curve")).toEqual(snapshot);
-        const served = await resolveReserveResult(db, "crvusd-curve", Math.floor(nowMs / 1000));
-        expect(served?.reserves).toEqual(original?.reserves);
-        expect(served?.liveAt).toBe(original?.liveAt);
-        const state = sqlite.prepare("SELECT last_status, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get("crvusd-curve")!;
-        expect(state.last_status).toBe("error");
+      const original = await expectRetainedBook("crvusd-curve", () => { incomplete = true; nowMs += 60_000; }, (state) => {
         expect(JSON.parse(String(state.warnings))).toContainEqual(expect.objectContaining({ code: reason, effect: "fatal" }));
         const diagnostics = JSON.parse(String(state.metadata)).adapterDiagnostics;
         expect(diagnostics.details.measuredDirectCollateralUsd).toBe(reason === "curve-markets-incomplete" ? 100 : 200);
         expect(diagnostics).not.toHaveProperty("yieldBasisCollateralUsd");
         expect(diagnostics).not.toHaveProperty("yieldBasisCollateralPct");
-      }
+      });
+      expect(original?.reserves.map((slice) => slice.pct)).toEqual([50, 50]);
     },
   );
 
@@ -604,34 +650,13 @@ describe("syncLiveReserves", () => {
     getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
       ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey], key: adapterKey,
       fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => {
-        if (coin.id !== id) return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+        if (coin.id !== id) return healthyReserves();
         const fetcher = adapter === "frax-fpi-collateral" ? fetchFraxFpiCollateralReserves : fetchFlyingTulipFtUsdReserves;
         return fetcher(coin, { ...config, inputs: { primary: { kind: "http-json", url: endpoint } } },
-          new AbortController().signal, { chainRpcs: network.chainRpcs });
+          runController.signal, { chainRpcs: network.chainRpcs });
       },
     }));
-    const { db, sqlite } = fixtures.open();
-    // The suite resets the producer graph between cases; a static import would retain stale mocks.
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
-    const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
-    expect(snapshot).toBeDefined();
-    const original = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
-    expect(original?.mode).toBe("live");
-    expect(original?.reserves.length).toBeGreaterThan(0);
-    const success = sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id);
-    for (let attempt = 0; attempt < 2; attempt++) {
-      incomplete = true;
-      nowMs += 60_000;
-      await syncLiveReserves(db, new AbortController().signal, {});
-      expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id)).toEqual(snapshot);
-      expect(sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)).toEqual(success);
-      const served = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
-      expect(served?.reserves).toEqual(original?.reserves);
-      expect(served?.metadata?.sourceTimestamp).toBe(original?.metadata?.sourceTimestamp);
-      expect(served?.liveAt).toBe(original?.liveAt);
-      const state = sqlite.prepare("SELECT last_status, last_error, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)!;
-      expect(state.last_status).toBe("error");
+    await expectRetainedBook(id, () => { incomplete = true; nowMs += 60_000; }, (state) => {
       if (adapter === "frax-fpi-collateral") {
         expect(JSON.parse(String(state.warnings))).toContainEqual(expect.objectContaining({ code: reason, effect: "fatal" }));
         expect(JSON.parse(String(state.metadata)).adapterDiagnostics).toMatchObject({
@@ -640,7 +665,7 @@ describe("syncLiveReserves", () => {
       } else {
         expect(state.last_error).toContain(reason);
       }
-    }
+    });
   });
 
   it.each([
@@ -676,36 +701,15 @@ describe("syncLiveReserves", () => {
     getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
       ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey], key: adapterKey,
       fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => {
-        if (coin.id !== id) return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+        if (coin.id !== id) return healthyReserves();
         const fetcher = adapter === "jupusd" ? fetchJupUsdReserves : fetchKavaCdpReserves;
         return fetcher(coin, {
           ...config, inputs: { primary: { kind: "http-json", url: endpoint } },
           ...(adapter === "jupusd" ? { params: { snapshotsUrl: "https://jupusd.example/snapshots" } } : {}),
-        }, new AbortController().signal, { nowSec: Math.floor(nowMs / 1000) });
+        }, runController.signal, { nowSec: Math.floor(nowMs / 1000) });
       },
     }));
-    const { db, sqlite } = fixtures.open();
-    // The suite resets the producer module graph between cases; static imports retain stale mocks.
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
-    const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
-    expect(snapshot).toBeDefined();
-    const original = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
-    expect(original?.mode).toBe("live");
-    expect(original?.reserves.length).toBeGreaterThan(0);
-    const success = sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id);
-    for (let attempt = 0; attempt < 2; attempt++) {
-      incomplete = true;
-      nowMs += 60_000;
-      await syncLiveReserves(db, new AbortController().signal, {});
-      expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id)).toEqual(snapshot);
-      expect(sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)).toEqual(success);
-      const served = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
-      expect(served?.reserves).toEqual(original?.reserves);
-      expect(served?.liveAt).toBe(original?.liveAt);
-      expect(served?.metadata?.sourceTimestamp).toBe(original?.metadata?.sourceTimestamp);
-      const state = sqlite.prepare("SELECT last_status, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)!;
-      expect(state.last_status).toBe("error");
+    await expectRetainedBook(id, () => { incomplete = true; nowMs += 60_000; }, (state) => {
       expect(JSON.parse(String(state.warnings))).toContainEqual(expect.objectContaining({ code: reason, effect: "fatal" }));
       const diagnostics = JSON.parse(String(state.metadata)).adapterDiagnostics;
       expect(diagnostics).not.toHaveProperty("totalReserveUsd");
@@ -715,7 +719,7 @@ describe("syncLiveReserves", () => {
       expect(diagnostics.details).toMatchObject(adapter === "jupusd"
         ? { measuredHoldingsUsd: 100, unavailableHoldingNames: ["1:USDtb"] }
         : { unpricedCollateralTypes: ["swp-a"], unpricedPrincipalTokens: 4.889684 });
-    }
+    });
   });
 
   it("returns ok with warning metadata when the adapter yields warnings (warnings are metadata-only)", async () => {
@@ -726,9 +730,8 @@ describe("syncLiveReserves", () => {
       }),
     );
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
     const metadata = JSON.parse(result?.metadata ?? "{}") as { warningCount?: number };
 
     // Warnings remain metadata; unacknowledged failures determine execution status.
@@ -742,7 +745,6 @@ describe("syncLiveReserves", () => {
       throw new Error("adapter should not run when circuit is open");
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([{
       match: "SELECT key, value, updated_at FROM cache WHERE key IN",
       rows: SYNC_ORDERED_CONFIGURED_COINS.map((coin) => ({
@@ -754,13 +756,15 @@ describe("syncLiveReserves", () => {
         updated_at: Math.floor(Date.now() / 1000),
       })),
     }]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
 
     // An all-circuit-open run synced nothing but had no genuine failures and no
     // budget-deferred tail; this is healthy recovery behavior, surfaced as
     // "degraded" rather than masked as "error".
-    expect(result?.status).toBe("degraded");
-    expect(result?.itemCount).toBe(0);
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 0,
+    });
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
     expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
     expect(shouldAttemptFetchMock).toHaveBeenCalledTimes(new Set(
@@ -768,84 +772,57 @@ describe("syncLiveReserves", () => {
     ).size);
   });
 
-  it("records circuit breaker outcome only once per unique breakerKey per run", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
-
+  it.each([false, true])("records one outcome per breaker key (bulk read fails: %s)", async (bulkReadFails) => {
+    mockHealthyAdapter();
+    const db = mockD1(bulkReadFails ? [{
+      match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [],
+      throwError: new Error("bulk breaker read unavailable"),
+    }] : []);
+    const result = await runSync(db);
     const callsByKey = new Map<string, number>();
-    for (const call of recordOutcomeSafeMock.mock.calls) {
-      const key = call[1] as string;
-      callsByKey.set(key, (callsByKey.get(key) ?? 0) + 1);
+    for (const [, key] of recordOutcomeSafeMock.mock.calls) {
+      callsByKey.set(key as string, (callsByKey.get(key as string) ?? 0) + 1);
     }
-
-    for (const [key, count] of callsByKey) {
-      expect(count, `breakerKey "${key}" recorded ${count} times, expected 1`).toBe(1);
-    }
-
-    const uniqueBreakerKeys = new Set(
-      ACTIVE_STABLECOINS
-        .filter((c) => c.liveReservesConfig)
-        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
-    );
+    for (const [key, count] of callsByKey) expect(count, key).toBe(1);
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeys.size);
+    if (bulkReadFails) {
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        breakerOutcomesRecorded: uniqueBreakerKeys.size, breakerOutcomesSkippedClosedSuccess: 0,
+      });
+      expect(db.getHistory().some((entry) =>
+        entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-breaker-bulk-read-failed")).toBe(true);
+    }
   });
 
-  it("skips closed success breaker heartbeats but still records failed outcomes", async () => {
+  it.each([false, true])("records failed breaker outcomes (write fails: %s)", async (writeFails) => {
     const firstQueuedCoin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
-    const failedBreakerKey = `live-reserves:${
-      firstQueuedCoin.liveReservesConfig!.breakerScope ?? firstQueuedCoin.liveReservesConfig!.adapter
-    }`;
+    const failedBreakerKey = breakerKeyForConfig(firstQueuedCoin.liveReservesConfig!);
     mockAdapterRegistry(async (coin) => {
-      if (coin?.id === firstQueuedCoin.id) {
-        throw new Error("HTTP 503 forced reserve source outage");
-      }
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+      if (coin?.id === firstQueuedCoin.id) throw new Error("HTTP 503 forced reserve source outage");
+      return healthyReserves();
     });
-
-    const uniqueBreakerKeys = new Set(
-      ACTIVE_STABLECOINS
-        .filter((c) => c.liveReservesConfig)
-        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
-    );
-    const closedBreakerRows = Array.from(uniqueBreakerKeys, (key) => ({
-      key: `circuit:${key}`,
-      value: JSON.stringify({
-        state: "closed",
-        consecutiveFailures: 0,
-        lastFailureAt: null,
-        lastSuccessAt: 1_700_000_000,
-        openedAt: null,
-      }),
-    }));
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1([
-      {
-        match: "SELECT key, value, updated_at FROM cache WHERE key IN",
-        rows: closedBreakerRows.map((row) => ({ ...row, updated_at: 1_700_000_000 })),
-      },
-    ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      breakerOutcomesRecorded?: number;
-      breakerOutcomesSkippedClosedSuccess?: number;
-    };
-
-    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(1);
+    if (writeFails) recordOutcomeSafeMock.mockImplementation(async (_db, key) => key === failedBreakerKey ? null : undefined);
+    const db = mockD1(writeFails ? [] : [{
+      match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+      rows: Array.from(uniqueBreakerKeys, (key) => ({
+        key: `circuit:${key}`, updated_at: 1_700_000_000,
+        value: JSON.stringify({ state: "closed", consecutiveFailures: 0, lastFailureAt: null,
+          lastSuccessAt: 1_700_000_000, openedAt: null }),
+      })),
+    }]);
+    const result = await runSync(db);
+    const metadata = JSON.parse(result.metadata!);
     expect(recordOutcomeSafeMock).toHaveBeenCalledWith(expect.anything(), failedBreakerKey, false);
-    expect(metadata.breakerOutcomesRecorded).toBe(1);
-    expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(uniqueBreakerKeys.size - 1);
+    expect(metadata.breakerOutcomesRecorded).toBe(writeFails ? uniqueBreakerKeys.size - 1 : 1);
+    if (writeFails) expect(metadata.breakerOutcomeWriteFailures).toBe(1);
+    else {
+      expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(1);
+      expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(uniqueBreakerKeys.size - 1);
+    }
   });
 
   it("records success breaker outcomes that still need state recovery", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
+    mockHealthyAdapter();
 
     const uniqueBreakerKeys = Array.from(new Set(
       ACTIVE_STABLECOINS
@@ -877,14 +854,13 @@ describe("syncLiveReserves", () => {
       };
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([
       {
         match: "SELECT key, value, updated_at FROM cache WHERE key IN",
         rows: closedBreakerRows.map((row) => ({ ...row, updated_at: 1_700_000_000 })),
       },
     ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       breakerOutcomesRecorded?: number;
       breakerOutcomesSkippedClosedSuccess?: number;
@@ -898,95 +874,22 @@ describe("syncLiveReserves", () => {
     expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(uniqueBreakerKeys.length - keysNeedingRecovery.size);
   });
 
-  it("falls back to per-outcome breaker writes when the bulk breaker read fails", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
-
-    const uniqueBreakerKeys = new Set(
-      ACTIVE_STABLECOINS
-        .filter((c) => c.liveReservesConfig)
-        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
-    );
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1([
-      {
-        match: "SELECT key, value, updated_at FROM cache WHERE key IN",
-        rows: [],
-        throwError: new Error("bulk breaker read unavailable"),
-      },
-    ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      breakerOutcomesRecorded?: number;
-      breakerOutcomesSkippedClosedSuccess?: number;
-    };
-
-    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeys.size);
-    expect(metadata.breakerOutcomesRecorded).toBe(uniqueBreakerKeys.size);
-    expect(metadata.breakerOutcomesSkippedClosedSuccess).toBe(0);
-    expect(db.getHistory().some((entry) => (
-      entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-breaker-bulk-read-failed"
-    ))).toBe(true);
-  });
-
-  it("reports breaker outcome write failures without counting them as recorded", async () => {
-    const firstQueuedCoin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
-    const failedBreakerKey = `live-reserves:${
-      firstQueuedCoin.liveReservesConfig!.breakerScope ?? firstQueuedCoin.liveReservesConfig!.adapter
-    }`;
-    mockAdapterRegistry(async (coin) => {
-      if (coin?.id === firstQueuedCoin.id) {
-        throw new Error("HTTP 503 forced reserve source outage");
-      }
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
-    });
-    recordOutcomeSafeMock.mockImplementation(async (_db, key) => (
-      key === failedBreakerKey ? null : undefined
-    ));
-
-    const uniqueBreakerKeys = new Set(
-      ACTIVE_STABLECOINS
-        .filter((c) => c.liveReservesConfig)
-        .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
-    );
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      breakerOutcomesRecorded?: number;
-      breakerOutcomeWriteFailures?: number;
-    };
-
-    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(expect.anything(), failedBreakerKey, false);
-    expect(metadata.breakerOutcomesRecorded).toBe(uniqueBreakerKeys.size - 1);
-    expect(metadata.breakerOutcomeWriteFailures).toBe(1);
-  });
 
   it("skips breaker outcome writes when finalization tail budget is exhausted", async () => {
     let nowMs = 1_700_000_000_000;
     const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
     mockAdapterRegistry(async () => {
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+      return healthyReserves();
     });
 
     try {
-      const { syncLiveReserves } = await import("../sync-live-reserves");
       const db = mockD1();
-      const result = await syncLiveReserves(
-        db,
-        new AbortController().signal,
-        {},
-        async (update) => { if (update.stage === "finalizing") nowMs += 10_000; },
-        {
-          runBudgetMs: 5_000,
-          adapterTimeoutMs: 1,
-          d1FinalizeTimeoutMs: 1,
-          finalizationMarginMs: 1,
-        },
-      );
+      const result = await runSync(db, {
+        runBudgetMs: 5_000,
+        adapterTimeoutMs: 1,
+        d1FinalizeTimeoutMs: 1,
+        finalizationMarginMs: 1,
+      }, async (update) => { if (update.stage === "finalizing") nowMs += 10_000; });
       const metadata = JSON.parse(result?.metadata ?? "{}") as {
         breakerOutcomeBudgetExhausted?: boolean;
         breakerOutcomesRecorded?: number;
@@ -995,8 +898,10 @@ describe("syncLiveReserves", () => {
       };
 
       expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
-      expect(metadata.breakerOutcomeBudgetExhausted).toBe(true);
-      expect(metadata.breakerOutcomesRecorded).toBe(0);
+      expect(metadata).toMatchObject({
+        breakerOutcomeBudgetExhausted: true,
+        breakerOutcomesRecorded: 0,
+      });
       expect(metadata.breakerOutcomesSkippedBudget).toBeGreaterThan(0);
       expect(metadata.staleBreakerRecoveriesSkipped).toBe(1);
     } finally {
@@ -1005,11 +910,8 @@ describe("syncLiveReserves", () => {
   });
 
   it("cleans stale reserve artifacts by deleting only rows outside the active keep-list", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
+    mockHealthyAdapter();
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([
       {
         match: "SELECT stablecoin_id FROM reserve_sync_state",
@@ -1034,7 +936,7 @@ describe("syncLiveReserves", () => {
       },
     ]);
 
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runSync(db);
 
     const deleteStateRows = db.getHistory().filter((entry) => (
       entry.sql.includes("DELETE FROM reserve_sync_state WHERE stablecoin_id IN")
@@ -1062,45 +964,38 @@ describe("syncLiveReserves", () => {
     ).toBe(false);
   });
 
-  it("keeps stale artifact cleanup best-effort and records warning metadata", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
-
+  it.each([
+    ["stale artifact cleanup", "cleanupStaleLiveReserveArtifacts", "artifact cleanup unavailable", "live-reserve-artifact-cleanup-failed"],
+    ["history pruning", "pruneLiveReserveHistory", "history prune unavailable", "live-reserve-history-prune-failed"],
+  ] as const)("keeps %s best-effort and records warning metadata", async (_label, operation, error, eventType) => {
+    mockHealthyAdapter();
     const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
     replacedStore = true;
     vi.resetModules();
-    vi.doMock("../../lib/live-reserves/store", async () => ({
+    vi.doMock("../../lib/live-reserves/store", () => ({
       ...actualStore,
-      cleanupStaleLiveReserveArtifacts: vi.fn(async () => {
-        throw new Error("artifact cleanup unavailable");
-      }),
+      [operation]: vi.fn(async () => { throw new Error(error); }),
     }));
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      artifactCleanup?: unknown;
-      artifactCleanupWarningCount?: number;
-      artifactCleanupWarnings?: Array<{ eventType?: string; message?: string; error?: string }>;
-    };
-
-    expect(result?.status).toBe("ok");
-    expect(metadata.artifactCleanup).toBeNull();
-    expect(metadata.artifactCleanupWarningCount).toBe(1);
-    expect(metadata.artifactCleanupWarnings).toEqual([
-      {
-        eventType: "live-reserve-artifact-cleanup-failed",
-        message: "Ghost live-reserve artifact cleanup failed.",
-        error: "artifact cleanup unavailable",
-      },
-    ]);
-    const cleanupEvent = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT INTO cache")
-      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-artifact-cleanup-failed"
-    ));
-    expect(cleanupEvent).toBeDefined();
+    const result = await runSync(db);
+    const metadata = JSON.parse(result.metadata!);
+    expect(result.status).toBe("ok");
+    if (operation === "cleanupStaleLiveReserveArtifacts") {
+      expect(metadata.artifactCleanup).toBeNull();
+      expect(metadata.artifactCleanupWarningCount).toBe(1);
+      expect(metadata.artifactCleanupWarnings).toEqual([{
+        eventType, message: "Ghost live-reserve artifact cleanup failed.", error,
+      }]);
+    } else {
+      expect(metadata.historyPrune).toBeUndefined();
+      expect(metadata.historyPruneSkipped).toBe(false);
+    }
+    const event = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `cron:event:sync-live-reserves:${eventType}`);
+    expect(event).toBeDefined();
+    if (operation === "pruneLiveReserveHistory") {
+      expect(JSON.parse(String(event!.binds[1]))).toMatchObject({ severity: "warning", metadata: { error } });
+    }
   });
 
   it("recovers stale live-reserve circuit breakers with no configured candidates", async () => {
@@ -1123,9 +1018,8 @@ describe("syncLiveReserves", () => {
       lastSuccessAt: null,
       openedAt: Math.floor(Date.now() / 1000) - 30,
     });
-    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
+    mockHealthyAdapter();
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([
       {
         match: "key LIKE 'circuit:%'",
@@ -1136,7 +1030,7 @@ describe("syncLiveReserves", () => {
       },
     ]);
 
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runSync(db);
 
     const staleRecoveryCalls = recoverNoCandidateMock.mock.calls.filter((call) => call[1] === staleBreakerKey);
     expect(staleRecoveryCalls).toHaveLength(1);
@@ -1147,7 +1041,7 @@ describe("syncLiveReserves", () => {
   it("skips remaining stale breaker recoveries when the finalization tail budget runs out mid-loop", async () => {
     let nowMs = 1_700_000_000_000;
     const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
-    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
+    mockHealthyAdapter();
     const staleState = JSON.stringify({
       state: "open",
       consecutiveFailures: 3,
@@ -1160,7 +1054,6 @@ describe("syncLiveReserves", () => {
     });
 
     try {
-      const { syncLiveReserves } = await import("../sync-live-reserves");
       const db = mockD1([
         {
           match: "key LIKE 'circuit:%'",
@@ -1170,25 +1063,21 @@ describe("syncLiveReserves", () => {
           ],
         },
       ]);
-      const result = await syncLiveReserves(
-        db,
-        new AbortController().signal,
-        {},
-        undefined,
-        {
-          runBudgetMs: 5_000,
-          adapterTimeoutMs: 1,
-          d1FinalizeTimeoutMs: 1,
-          finalizationMarginMs: 1,
-        },
-      );
+      const result = await runSync(db, {
+        runBudgetMs: 5_000,
+        adapterTimeoutMs: 1,
+        d1FinalizeTimeoutMs: 1,
+        finalizationMarginMs: 1,
+      });
       const metadata = JSON.parse(result?.metadata ?? "{}") as {
         staleBreakerRecoveriesSkipped?: number;
         finalizationTailBudgetExhausted?: boolean;
       };
 
-      expect(metadata.staleBreakerRecoveriesSkipped).toBe(1);
-      expect(metadata.finalizationTailBudgetExhausted).toBe(true);
+      expect(metadata).toMatchObject({
+        staleBreakerRecoveriesSkipped: 1,
+        finalizationTailBudgetExhausted: true,
+      });
       expect(recoverNoCandidateMock.mock.calls.map((call) => call[1])).toEqual([
         "live-reserves:removed-a",
       ]);
@@ -1205,17 +1094,16 @@ describe("syncLiveReserves", () => {
       lastSuccessAt: null,
       openedAt: Math.floor(Date.now() / 1000) - 30,
     });
-    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
+    mockHealthyAdapter();
     recoverNoCandidateMock.mockRejectedValueOnce(new Error("stale recovery unavailable"));
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([
       {
         match: "key LIKE 'circuit:%'",
         rows: [{ key: "circuit:live-reserves:removed-adapter-key", value: staleState }],
       },
     ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
 
     expect(result?.status).toBe("ok");
     expect(recoverNoCandidateMock).toHaveBeenCalledTimes(1);
@@ -1232,51 +1120,13 @@ describe("syncLiveReserves", () => {
     expect(event.metadata?.error).toBe("stale recovery unavailable");
   });
 
-  it("keeps finalization best-effort and records a warning when history pruning fails", async () => {
-    mockAdapterRegistry(async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }));
-
-    const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
-    replacedStore = true;
-    vi.resetModules();
-    vi.doMock("../../lib/live-reserves/store", async () => ({
-      ...actualStore,
-      pruneLiveReserveHistory: vi.fn(async () => {
-        throw new Error("history prune unavailable");
-      }),
-    }));
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      historyPrune?: unknown;
-      historyPruneSkipped?: boolean;
-    };
-
-    expect(result?.status).toBe("ok");
-    expect(metadata.historyPrune).toBeUndefined();
-    expect(metadata.historyPruneSkipped).toBe(false);
-    const pruneFailureEvent = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT INTO cache")
-      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-prune-failed"
-    ));
-    expect(pruneFailureEvent).toBeDefined();
-    const event = JSON.parse(String(pruneFailureEvent?.binds[1])) as {
-      severity?: string;
-      metadata?: { error?: string };
-    };
-    expect(event.severity).toBe("warning");
-    expect(event.metadata?.error).toBe("history prune unavailable");
-  });
-
   it("classifies parser drift in sync attempt metadata", async () => {
     mockAdapterRegistry(async () => {
       throw new Error("circle-transparency: layout-changed: missing reserve attributes");
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runSync(db);
 
     const attemptInsert = db.getHistory().find((entry) => entry.sql.includes("reserve_sync_attempt_history"));
     expect(attemptInsert).toBeDefined();
@@ -1288,10 +1138,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("records timed out write finalization as a non-authoritative storage failure", async () => {
-    vi.useFakeTimers();
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
+    mockHealthyAdapter();
 
     const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
     let finalizeCalls = 0;
@@ -1310,7 +1157,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const runPromise = syncLiveReserves(db, new AbortController().signal, {});
+    const runPromise = syncLiveReserves(db, runController.signal, {});
 
     await vi.advanceTimersByTimeAsync(30_100);
     const result = await runPromise;
@@ -1341,10 +1188,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("accepts a timed out write finalization when authoritative readback proves success", async () => {
-    vi.useFakeTimers();
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
+    mockHealthyAdapter();
 
     const actualStore = await vi.importActual<typeof import("../../lib/live-reserves/store")>("../../lib/live-reserves/store");
     replacedStore = true;
@@ -1361,7 +1205,7 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const runPromise = syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       {
@@ -1398,7 +1242,6 @@ describe("syncLiveReserves", () => {
   });
 
   it("hard-times out a non-cooperative adapter attempt", async () => {
-    vi.useFakeTimers();
     const adapterFetch = mockAdapterRegistry(
       async () => await new Promise<never>(() => undefined),
     );
@@ -1407,7 +1250,7 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const runPromise = syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       {
@@ -1443,24 +1286,22 @@ describe("syncLiveReserves", () => {
   });
 
   it("bounds non-cooperative fallback chains without treating the local deadline as source failure", async () => {
-    vi.useFakeTimers();
     const target = SYNC_ORDERED_CONFIGURED_COINS.find((coin) =>
       (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) >= 2
       && coin.liveReservesConfig?.adapter !== "hive-hbd-protocol");
     if (!target) throw new Error("Expected multi-fallback source");
     const adapterFetch = mockAdapterRegistry(async (coin) => {
       if (coin?.id === target.id) return await new Promise<never>(() => undefined);
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+      return healthyReserves();
     });
     const identity = makeCheckpointIdentity(2, "deadline-owner");
     const db = mockD1([makeCheckpointTable({
       attemptNo: identity.attemptNo, invocationId: identity.invocationId,
       nextItemKey: target.id, itemsDone: SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === target.id),
     }), { match: "UPDATE worker_scheduled_checkpoints", rows: [] }]);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const pending = syncLiveReserves(db, new AbortController().signal, {}, undefined, {
+    const pending = runSync(db, {
       runBudgetMs: 60_000, adapterTimeoutMs: 20_000, d1FinalizeTimeoutMs: 30_000, finalizationMarginMs: 5_000,
-    }, identity);
+    }, undefined, identity);
     await vi.advanceTimersByTimeAsync(25_001);
     const result = await pending;
     expect(adapterFetch.mock.calls.filter(([coin]) => coin.id === target.id)).toHaveLength(2);
@@ -1497,14 +1338,11 @@ describe("syncLiveReserves", () => {
   });
 
   it("reports per-coin progress through the cron progress hook", async () => {
-    mockAdapterRegistry(
-      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
-    );
+    mockHealthyAdapter();
 
     const reportProgress = vi.fn(async (_update: unknown) => undefined);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {}, reportProgress as never);
+    await runSync(db, undefined, reportProgress as never);
 
     expect(reportProgress).toHaveBeenCalled();
     const progressCalls = reportProgress.mock.calls as Array<[{
@@ -1538,37 +1376,21 @@ describe("syncLiveReserves", () => {
     });
   });
 
-  it("defers the full queue safely when configured run budget is below adapter timeout", async () => {
-    const adapterFetch = mockAdapterRegistry(async () => ({
-      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
-    }));
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    const result = await syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      { runBudgetMs: 1, adapterTimeoutMs: 20_000 },
-    );
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      synced?: number;
-      skipped?: number;
-      deferredCoins?: number;
-      runBudgetTruncated?: boolean;
-    };
-
+  it.each([
+    ["below adapter timeout", { runBudgetMs: 1, adapterTimeoutMs: 20_000 }, "error"],
+    ["below the finalize margin", { runBudgetMs: 1_699, adapterTimeoutMs: 1_000, d1FinalizeTimeoutMs: 500, finalizationMarginMs: 200 }, undefined],
+  ] as const)("defers the full queue safely when remaining budget is %s", async (_label, budget, status) => {
+    const adapterFetch = mockHealthyAdapter();
+    const result = await runSync(mockD1(), budget);
+    const metadata = JSON.parse(result.metadata!);
     expect(adapterFetch).not.toHaveBeenCalled();
-    expect(result?.status).toBe("error");
     expect(metadata).toMatchObject({
-      synced: 0,
-      skipped: configuredCoinCount,
-      deferredCoins: configuredCoinCount,
-      runBudgetTruncated: true,
-      reason: "reserve-run-budget-deferred",
-      reasons: ["reserve-run-budget-deferred"],
+      synced: 0, skipped: configuredCoinCount, deferredCoins: configuredCoinCount, runBudgetTruncated: true,
     });
+    if (status) {
+      expect(result.status).toBe(status);
+      expect(metadata).toMatchObject({ reason: "reserve-run-budget-deferred", reasons: ["reserve-run-budget-deferred"] });
+    } else expect(metadata.finalizationMarginMs).toBe(200);
   });
 
   it("keeps Yuzu's failed attempt and retained snapshot unchanged when acknowledging the cron finding", async () => {
@@ -1580,17 +1402,16 @@ describe("syncLiveReserves", () => {
     let fail = false;
     mockAdapterRegistry(async (coin) => {
       if (fail && coin?.id === review.stablecoinId) throw new Error(review.errorPrefix!.replace("primary:http-json: ", ""));
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+      return healthyReserves();
     });
     const { db, sqlite } = fixtures.open();
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runSync(db);
     const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(review.stablecoinId);
     expect(snapshot).toBeDefined();
     const originalSuccess = sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(review.stablecoinId);
     now += 60;
     fail = true;
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata!)).toMatchObject({
       failed: 1, unacknowledgedFailed: 0,
@@ -1607,7 +1428,7 @@ describe("syncLiveReserves", () => {
     const config = coin.liveReservesConfig!;
     const db = mockD1([{ match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes } }]);
     const result = await syncReserveCoin({
-      db, coin, signal: new AbortController().signal,
+      db, coin, signal: runController.signal,
       adapter: { ...LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter], fetch: vi.fn() },
       runAdapter: async () => { throw new Error("issuer failure"); },
       breakerCanFetch: new Map([[breakerKeyForConfig(config), true]]), previousState: null,
@@ -1647,7 +1468,6 @@ describe("syncLiveReserves", () => {
       },
     };
     const original = structuredClone(failure);
-    const collector = createAdapterLatencyCollector();
     const synced = scenario.synced ?? 1;
     const failed = scenario.circuit ? 0 : 1 + (scenario.remaining ?? 0);
     const circuitSkipped = scenario.circuit ? 1 : 0;
@@ -1656,20 +1476,16 @@ describe("syncLiveReserves", () => {
       breaker_key: failure.breakerKey, status: "error", warnings: "[]", last_error: review.errorPrefix,
       metadata: JSON.stringify({ failureCategory: review.failureCategory }),
     }, ...(scenario.unreadable ? { throwError: new Error("history unreadable") } : {}) }]);
-    const result = await finalizeReserveSyncRun({
-      db, total: synced + failed + circuitSkipped, runStartedAt: now,
+    const result = await finalizeRun({
+      db,
+      total: synced + failed + circuitSkipped,
+      runStartedAt: now,
       runStartedMs: (scenario.budget ? now - 3600 : now) * 1000,
       counts: { synced, failed, persistenceFailed: scenario.uncertain || scenario.unconfirmed ? 1 : 0,
         skipped: circuitSkipped, circuitSkipped, deferredCoins: 0, deferredSkipped: 0,
         attemptedCoins: synced + failed + circuitSkipped, ...(synced ? { latestPublishedAt: now - 2 } : {}) },
       persistedFailures: scenario.unconfirmed ? [] : [failure],
-      warningMessages: [], coinsWithErrors: failed ? [review.stablecoinId] : [], coinsWithWarnings: [],
-      breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
-      deferredTail: { nextCursorStablecoinId: null, cursorTailState: null, cursorRecordedAt: null,
-        cursorTailCompletedAt: null, cursorTailFailedAt: null, cursorTailError: null, runBudgetTruncationCount: 0 },
-      checkpointOwned: false, attemptFailureSummaries: [], budgetConfig: resolveLiveReserveSyncBudgetConfig(),
-      phaseTimings: { setup: 0, queue: 0, adapter: 0, d1CoinPersistence: 0 },
-      adapterLatency: collector.finalize(), adapterTelemetryProgress: collector.progress(),
+      coinsWithErrors: failed ? [review.stablecoinId] : [],
     });
     expect(result.status).toBe(scenario.expected);
     expect(failure).toEqual(original);
@@ -1767,22 +1583,14 @@ describe("syncLiveReserves", () => {
       status: "ok", reason: undefined, reasons: ["reserve-run-budget-deferred"],
     },
   ])("retains all applicable reasons with budget-aware terminal priority: $name", async ({ counts, status, reason, reasons, persistenceFailed = 0 }) => {
-    const collector = createAdapterLatencyCollector();
     const nowMs = Date.now();
-    const result = await finalizeReserveSyncRun({
-      db: mockD1(), total: 100, runStartedAt: Math.floor(nowMs / 1000), runStartedMs: nowMs,
+    const result = await finalizeRun({
+      db: mockD1(),
+      total: 100,
+      runStartedAt: Math.floor(nowMs / 1000),
+      runStartedMs: nowMs,
       counts: { ...counts, persistenceFailed, attemptedCoins: counts.synced + counts.failed + counts.circuitSkipped,
         ...(counts.synced > 0 ? { latestPublishedAt: 1_000 } : {}) },
-      warningMessages: [], coinsWithErrors: [], coinsWithWarnings: [],
-      breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
-      deferredTail: {
-        nextCursorStablecoinId: null, cursorTailState: null, cursorRecordedAt: null,
-        cursorTailCompletedAt: null, cursorTailFailedAt: null, cursorTailError: null, runBudgetTruncationCount: 0,
-      },
-      checkpointOwned: false, attemptFailureSummaries: [],
-      budgetConfig: resolveLiveReserveSyncBudgetConfig(),
-      phaseTimings: { setup: 0, queue: 0, adapter: 0, d1CoinPersistence: 0 },
-      adapterLatency: collector.finalize(), adapterTelemetryProgress: collector.progress(),
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(result.status).toBe(status);
@@ -1816,12 +1624,14 @@ describe("syncLiveReserves", () => {
     { name: "missing prefix evidence", priorSynced: 150, priorFailed: 0, missing: true, synced: 2, failed: 0, status: "degraded" },
     { name: "a mismatched prefix frontier", priorSynced: 150, priorFailed: 0, mismatch: true, synced: 2, failed: 0, status: "degraded" },
   ])("grades the cumulative cohort for $name", async (scenario) => {
-    const collector = createAdapterLatencyCollector();
     const nowMs = Date.now();
     const prefix = scenario.priorSynced + scenario.priorFailed;
     const complete = !scenario.missing && !scenario.mismatch;
-    const result = await finalizeReserveSyncRun({
-      db: mockD1(), total: scenario.synced + scenario.failed, runStartedAt: Math.floor(nowMs / 1000), runStartedMs: nowMs,
+    const result = await finalizeRun({
+      db: mockD1(),
+      total: scenario.synced + scenario.failed,
+      runStartedAt: Math.floor(nowMs / 1000),
+      runStartedMs: nowMs,
       counts: { synced: scenario.synced, failed: scenario.failed, persistenceFailed: 0,
         skipped: 0, circuitSkipped: 0, deferredCoins: 0, deferredSkipped: 0,
         attemptedCoins: scenario.synced + scenario.failed },
@@ -1831,13 +1641,7 @@ describe("syncLiveReserves", () => {
         synced: scenario.priorSynced, failed: scenario.priorFailed, persistenceFailed: scenario.priorPersistence ?? 0,
         circuitSkipped: 0, attemptedCoins: prefix,
       },
-      warningMessages: [], coinsWithErrors: [], coinsWithWarnings: [],
-      breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
-      deferredTail: { nextCursorStablecoinId: null, cursorTailState: null, cursorRecordedAt: null,
-        cursorTailCompletedAt: null, cursorTailFailedAt: null, cursorTailError: null, runBudgetTruncationCount: 0 },
-      checkpointOwned: true, attemptFailureSummaries: [], budgetConfig: resolveLiveReserveSyncBudgetConfig(),
-      phaseTimings: { setup: 0, queue: 0, adapter: 0, d1CoinPersistence: 0 },
-      adapterLatency: collector.finalize(), adapterTelemetryProgress: collector.progress(),
+      checkpointOwned: true,
     });
     expect(result.status).toBe(scenario.status);
     const metadata = JSON.parse(result.metadata!);
@@ -1860,10 +1664,9 @@ describe("syncLiveReserves", () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(startedMs);
     mockAdapterRegistry(async () => {
       clock.mockReturnValue(startedMs + 800);
-      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+      return healthyReserves();
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
     const batch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
@@ -1876,18 +1679,12 @@ describe("syncLiveReserves", () => {
       return batch(statements);
     });
 
-    const result = await syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      {
-        runBudgetMs: 1_000,
-        adapterTimeoutMs: 100,
-        d1FinalizeTimeoutMs: 100,
-        finalizationMarginMs: 100,
-      },
-    );
+    const result = await runSync(db, {
+      runBudgetMs: 1_000,
+      adapterTimeoutMs: 100,
+      d1FinalizeTimeoutMs: 100,
+      finalizationMarginMs: 100,
+    });
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       cursorTailState?: string;
       cursorTailError?: string;
@@ -1902,51 +1699,13 @@ describe("syncLiveReserves", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalled();
   });
 
-  it("defers when remaining budget covers the adapter timeout but not finalize margin", async () => {
-    const adapterFetch = mockAdapterRegistry(async () => ({
-      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
-    }));
-
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-    const db = mockD1();
-    const result = await syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      {
-        runBudgetMs: 1_699,
-        adapterTimeoutMs: 1_000,
-        d1FinalizeTimeoutMs: 500,
-        finalizationMarginMs: 200,
-      },
-    );
-    const metadata = JSON.parse(result?.metadata ?? "{}") as {
-      synced?: number;
-      skipped?: number;
-      deferredCoins?: number;
-      runBudgetTruncated?: boolean;
-      finalizationMarginMs?: number;
-    };
-
-    expect(adapterFetch).not.toHaveBeenCalled();
-    expect(metadata).toMatchObject({
-      synced: 0,
-      skipped: configuredCoinCount,
-      deferredCoins: configuredCoinCount,
-      runBudgetTruncated: true,
-      finalizationMarginMs: 200,
-    });
-  });
-
   it("does not repurpose Hive's corroborating node as a substitute primary", async () => {
     const adapterFetch = mockAdapterRegistry(async (coin) => {
       if (coin?.id === "hbd-hive") throw new Error("material reads crossed a changing Hive head");
       return { slices: [{ name: "Tracked vaults", pct: 100, risk: "low" as const }] };
     });
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runSync(db);
 
     const hiveCalls = adapterFetch.mock.calls.filter(([coin]) => coin.id === "hbd-hive");
     expect(hiveCalls).toHaveLength(1);
@@ -1983,9 +1742,8 @@ describe("syncLiveReserves", () => {
       return { slices: [{ name: "Tracked vaults", pct: 100, risk: "low" as const }] };
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
 
     const successAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
@@ -1998,8 +1756,10 @@ describe("syncLiveReserves", () => {
     const parsed = JSON.parse(warningsJson!) as Array<{ code?: string; effect?: string; severity?: string }>;
     const fallbackInfo = parsed.find((w) => w.code === "primary-fallback-used");
     expect(fallbackInfo).toBeDefined();
-    expect(fallbackInfo!.effect).toBe("info");
-    expect(fallbackInfo!.severity).toBe("info");
+    expect(fallbackInfo!).toMatchObject({
+      effect: "info",
+      severity: "info",
+    });
     const runMetadata = JSON.parse(result.metadata ?? "{}") as {
       adapterLatency?: {
         groups?: Array<{ adapterKey?: string; stage?: string; attemptCount?: number }>;
@@ -2044,9 +1804,8 @@ describe("syncLiveReserves", () => {
       throw new Error("fallback reserve source failed");
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await runSync(db);
 
     const fallbackAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
@@ -2175,5 +1934,58 @@ describe("buildSharedSourceCacheKey", () => {
     expect(buildSharedSourceCacheKey(usdcConfig, adapter)).not.toEqual(
       buildSharedSourceCacheKey(eurcConfig, adapter),
     );
+  });
+});
+
+describe("syncReserveCoin makina sign contract", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(() => fixtures.closeAll());
+
+  const MAKINA_FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "../reserve-adapters/__tests__/fixtures");
+  const strategyFixture = JSON.parse(readFileSync(join(MAKINA_FIXTURES, "makina-strategy.json"), "utf8"));
+  const allocationsFixture = JSON.parse(readFileSync(join(MAKINA_FIXTURES, "makina-allocations.json"), "utf8"));
+  const PARAMS = {
+    allocationsUrl: "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations",
+    machineAddress: "0x6b006870C83b1Cd49E766Ac9209f8d68763Df721",
+    accountingTokenSymbol: "USDC",
+    accountingTokenDecimals: 6,
+    otherThresholdPct: 2,
+    reconciliationTolerancePct: 0.5,
+  };
+
+  it("retains the accepted snapshot and original clocks when a below-tolerance debt loses its sign", async () => {
+    const { sqlite, db } = fixtures.open();
+    const coin = CONFIGURED_COINS.find((candidate) => candidate.id === "dusd-dialectic")!;
+    const adapter = { ...LIVE_RESERVE_ADAPTER_DEFINITIONS["makina-strategy"], fetch: vi.fn() };
+    const sourceClock = Math.floor(Date.now() / 1000) - 120;
+    const strategy = structuredClone(strategyFixture);
+    strategy.meta.generated_at = new Date(sourceClock * 1000).toISOString();
+    strategy.data.aum = strategy.data.lastReportedAum = "9990000000";
+    const allocations = structuredClone(allocationsFixture);
+    allocations.meta.generated_at = strategy.meta.generated_at;
+    allocations.data.base_tokens = [{
+      accounting_token_value: "10000000000", token: structuredClone(strategyFixture.data.accountingToken),
+    }];
+    allocations.data.positions = [{ protocol: "aave-v4", value: "10000000", is_debt: true, updated_at: sourceClock }];
+    const args = {
+      db, coin, adapter, signal: new AbortController().signal,
+      breakerCanFetch: new Map([["live-reserves:makina-strategy", true]]), d1FinalizeTimeoutMs: 30_000,
+      runAdapter: async () => adaptMakinaStrategyReserves(strategy, allocations, PARAMS),
+    };
+    expect((await syncReserveCoin({ ...args, previousState: null })).status).toBe("synced");
+    const before = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id);
+    expect(before).toBeDefined();
+    const previousState = await getReserveSyncState(db, coin.id);
+    delete allocations.data.positions[0].is_debt;
+    const attempt = await syncReserveCoin({ ...args, previousState });
+    expect(attempt.status).toBe("failed");
+    expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id)).toEqual(before);
+    const retainedState = await getReserveSyncState(db, coin.id);
+    expect(retainedState).toMatchObject({
+      lastStatus: "error", lastSuccessAt: previousState!.lastSuccessAt,
+      lastSuccessAttemptId: previousState!.lastSuccessAttemptId,
+      // Adapter exceptions are persisted as lastError, not synthesized warnings.
+      lastError: expect.stringMatching(/is_debt/),
+    });
   });
 });

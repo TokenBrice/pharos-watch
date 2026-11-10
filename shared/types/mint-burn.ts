@@ -38,6 +38,26 @@ export const MintBurnValuationSchema = z.object({
 });
 export type MintBurnValuation = z.infer<typeof MintBurnValuationSchema>;
 
+/** Classification is independent of scan coverage and USD valuation. */
+export const MintBurnClassificationSchema = z.object({
+  completeness: MintBurnValuationCompletenessSchema,
+  mintCompleteness: MintBurnValuationCompletenessSchema,
+  burnCompleteness: MintBurnValuationCompletenessSchema,
+  /** Observed unresolved events; unknown historical hours are named by completeness. */
+  unresolvedMintEventCount: z.number().int().nonnegative(),
+  unresolvedBurnEventCount: z.number().int().nonnegative(),
+  unavailableReason: z.enum(["classification-unresolved", "classification-unknown"]).nullable(),
+});
+export type MintBurnClassification = z.infer<typeof MintBurnClassificationSchema>;
+
+const MintBurnCoinClassificationSchema = z.object({
+  window24h: MintBurnClassificationSchema,
+  baseline: MintBurnClassificationSchema,
+  netFlow7d: MintBurnClassificationSchema,
+  netFlow30d: MintBurnClassificationSchema,
+  netFlow90d: MintBurnClassificationSchema,
+});
+
 /**
  * Proven one-sided bound on a withheld signed net (mint-burn-flow v6.25). Unpriced mints can only
  * raise the true net (`lower`: net ≥ valueUsd); unpriced burns can only lower it (`upper`: net ≤
@@ -85,7 +105,7 @@ export const MintBurnPublicationSchema = z.object({
     stablecoinId: z.string(),
     chainId: z.string(),
     status: z.enum(["admitted", "pending-admission", "disabled"]),
-    reason: z.enum(["legacy-grandfathered", "baseline-incomplete", "frontier-stale", "proof-unavailable", "valuation-incomplete", "operator-disabled", "shared-bucket-disabled", "unsupported-shared-bucket", "reactivation-pending"]).nullable(),
+    reason: z.enum(["legacy-grandfathered", "baseline-incomplete", "frontier-stale", "proof-unavailable", "valuation-incomplete", "classification-incomplete", "operator-disabled", "shared-bucket-disabled", "unsupported-shared-bucket", "reactivation-pending"]).nullable(),
     admittedAt: z.number().int().nonnegative().nullable(),
     baselineFrom: z.number().int().nonnegative().nullable(),
     baselineTo: z.number().int().nonnegative().nullable(),
@@ -100,6 +120,8 @@ export type MintBurnPublication = z.infer<typeof MintBurnPublicationSchema>;
  */
 export const MINT_BURN_FTQ_UNAVAILABLE_REASONS = [
   "valuation-incomplete",
+  "classification-unresolved",
+  "classification-unknown",
   "flow-window-unavailable",
   "cohort-member-unpublished",
 ] as const;
@@ -142,9 +164,9 @@ const MintBurnGaugeSchema = z.object({
    */
   mcapUnavailableCoins: z.number().int().nonnegative().optional(),
   /**
-   * Weighted coins whose valuation can alter `score`. Since mint-burn-flow v6.23 these are coins with
+   * Weighted coins whose incomplete valuation, classification or scope can alter `score`. Since mint-burn-flow v6.23 these are coins with
    * 24h activity and at least seven days of baseline history whose pressure is withheld because the 24h window is not `complete`
-   * or the baseline is `partial`; `score` re-weights over the remaining coins, so any positive count
+   * or the baseline valuation or classification is not `complete`; `score` re-weights over the remaining coins, so any positive count
    * means it is not the full-cohort composite. Before v6.23 the count named partial inputs that
    * entered `score`. Absent on payloads produced before valuation completeness existed (unknown).
    */
@@ -267,21 +289,25 @@ export const MintBurnCoinFlowSchema = z.object({
       amountUsd: z.number(),
       txHash: z.string(),
       timestamp: z.number(),
+      scope: z.literal("valued-counted-admitted-scope").optional(),
     })
     .nullable(),
+  classification: MintBurnCoinClassificationSchema.optional(),
   coverage: MintBurnCoinCoverageSchema.optional(),
   /** Absent on payloads produced before valuation completeness existed (unknown). */
   valuation: MintBurnCoinValuationSchema.optional(),
 });
 export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
+/** Every requested closed hour appears; missing evidence withholds net and scan completeness. */
 const MintBurnHourlyBucketSchema = z.object({
-  hourTs: z.number().int().nonnegative(),
+  hourTs: z.number().int().nonnegative().describe("Dense closed UTC hour in [window.start, window.end); no stored row is zero only with scan and classification proof."),
   netFlowUsd: z.number().finite().nullable(),
   mintVolumeUsd: z.number().finite().nonnegative(),
   burnVolumeUsd: z.number().finite().nonnegative(),
   /** Absent on payloads produced before valuation completeness existed (unknown). */
   valuation: MintBurnValuationCompletenessSchema.optional(),
+  classification: MintBurnClassificationSchema.optional(),
   scanCoverage: MintBurnScanWindowSchema.optional(),
 });
 export type MintBurnHourlyBucket = z.infer<typeof MintBurnHourlyBucketSchema>;
@@ -297,6 +323,7 @@ const MintBurnAggregateChainSchema = z.object({
   netFlow24hUsd: z.number().finite().nullable(),
   /** Absent on payloads produced before valuation completeness existed (unknown). */
   valuation: MintBurnValuationCompletenessSchema.optional(),
+  classification: MintBurnClassificationSchema.optional(),
   scanCoverage: MintBurnScanWindowSchema.optional(),
 });
 
@@ -331,6 +358,7 @@ const MintBurnPerCoinChainSchema = z.object({
   burnCount: z.number().int().nonnegative(),
   netFlowUsd: z.number().finite().nullable(),
   valuation: MintBurnValuationSchema.optional(),
+  classification: MintBurnClassificationSchema.optional(),
   scanCoverage: MintBurnScanWindowSchema.optional(),
 });
 
@@ -347,6 +375,7 @@ export const MintBurnPerCoinResponseSchema = z.object({
   hourly: z.array(MintBurnHourlyBucketSchema),
   /** Qualifies the window totals. Absent on payloads produced before valuation completeness existed (unknown). */
   valuation: MintBurnValuationSchema.optional(),
+  classification: MintBurnClassificationSchema.optional(),
   scanCoverage: MintBurnScanWindowSchema.optional(),
   totalsSemantics: z.literal("observed-subtotals").optional(),
   updatedAt: z.number(),

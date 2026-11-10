@@ -10,7 +10,7 @@ import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const COMPLIANCE_SUMMARY = buildComplianceSummary();
-const complianceDescription = `${COMPLIANCE_SUMMARY.micaAuthorized} of ${COMPLIANCE_SUMMARY.micaAssessed} EU-assessed stablecoins hold MiCA authorization. GENIUS Act status for ${COMPLIANCE_SUMMARY.geniusTracked} coins (effective ${GENIUS_REGIME_STATE.effectiveDate}), from public registers.`;
+const complianceDescription = `${COMPLIANCE_SUMMARY.micaAuthorized} of ${COMPLIANCE_SUMMARY.micaAssessed} active stablecoins assessed for MiCA hold MiCA authorization. GENIUS Act status for ${COMPLIANCE_SUMMARY.geniusTracked} coins (effective ${GENIUS_REGIME_STATE.effectiveDate}), from public registers.`;
 
 const COMPLIANCE_FAQ_ITEMS = [
   {
@@ -41,11 +41,11 @@ const COMPLIANCE_HERO = (
   <section aria-label="Compliance coverage summary" className="pharos-card-shell overflow-hidden">
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border/50 p-5 sm:p-6">
       <div className="space-y-1.5">
-        <p className="text-sm font-medium text-muted-foreground">MiCA-authorized stablecoins</p>
+        <p className="text-sm font-medium text-muted-foreground">MiCA-authorized active stablecoins</p>
         <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
           {COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()}
         </p>
-        <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} EU-assessed stablecoins</p>
+        <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} active stablecoins assessed for MiCA</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -58,7 +58,7 @@ const COMPLIANCE_HERO = (
     </div>
     <dl className="grid grid-cols-3 divide-x divide-border/40">
       <div className="min-w-0 space-y-1 px-4 py-4 sm:px-6 sm:py-5">
-        <dt className="pharos-meta">MiCA authorization rate</dt>
+        <dt className="pharos-meta">Authorized share of active MiCA rows</dt>
         <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
           {COMPLIANCE_SUMMARY.micaAuthorizedPct}%
         </dd>
@@ -143,7 +143,7 @@ const COMPLIANCE_STATIC_SECTION = (
 const route = createClientFeaturePage({
   path: "/compliance/",
   metadata: {
-    title: `MiCA-Authorized Stablecoins (${COMPLIANCE_SUMMARY.micaAuthorized}) & GENIUS Act Tracker`,
+    title: `Active MiCA-Authorized Stablecoins (${COMPLIANCE_SUMMARY.micaAuthorized}) & GENIUS Act Tracker`,
     description: complianceDescription,
     ogImage: `${SITE_URL}/og-card.png`,
   },

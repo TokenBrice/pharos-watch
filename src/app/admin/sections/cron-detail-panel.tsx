@@ -19,7 +19,7 @@ import {
   getCronCauses,
   getCronNextExpected,
   getCronRunbooks,
-  getCronTailCommand,
+  getCronTailCommands,
   type CronWorkbenchRow,
 } from "@/lib/cron-workbench-model";
 import { getActionsForCronJob, getRecommendedActionsForCause } from "@/lib/status/action-recommendations";
@@ -208,7 +208,9 @@ export function CronDetailPanel({
             </Link>
           </li>
         </ul>
-        <CopyTailCommand command={getCronTailCommand(row.job)} />
+        {getCronTailCommands(row.job).map((command) => (
+          <CopyTailCommand key={command} command={command} />
+        ))}
       </section>
 
       {row.cron.inFlight ? (

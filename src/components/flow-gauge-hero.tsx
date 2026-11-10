@@ -142,14 +142,14 @@ function GaugeStatusChips({
         <OpsStatusChip label="Not rated" reasonCodes={["gauge-score-null"]}>
           <p>
             No weighted coin has a pressure shift this window. A coin scores with 7 days of baseline history, at
-            least $50K of 24h flow and a fully valued window.
+            least $50K of 24h flow, complete classification and fully valued window and baseline.
           </p>
         </OpsStatusChip>
       ) : null}
       {model.bandUnsettled ? (
         <OpsStatusChip label="Band unsettled" reasonCodes={["band-not-robust-to-withheld-weight"]}>
           <p>
-            Weight withheld for valuation could carry the full-cohort score across a band edge, so no band is
+            Weight withheld for incomplete flow inputs could carry the full-cohort score across a band edge, so no band is
             claimed.
           </p>
           <p className="text-muted-foreground">
@@ -160,9 +160,9 @@ function GaugeStatusChips({
         </OpsStatusChip>
       ) : null}
       {withheld > 0 ? (
-        <OpsStatusChip label="Partial valuation" reasonCodes={["partial-valuation-inputs"]}>
+        <OpsStatusChip label="Incomplete flow inputs" reasonCodes={["partial-valuation-inputs"]}>
           <p>
-            {withheld} weighted {withheld === 1 ? "coin has" : "coins have"} unpriced events in the 24h window or
+            {withheld} weighted {withheld === 1 ? "coin has" : "coins have"} incomplete classification or valuation in the 24h window or
             baseline, so {withheld === 1 ? "its pressure is" : "their pressure is"} withheld and the gauge re-weights
             over the {scoredCoins} scored {scoredCoins === 1 ? "coin" : "coins"}.
           </p>
@@ -204,7 +204,11 @@ function GaugeStatusChips({
             ? "A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld."
             : gauge.flightToQualityReason === "flow-window-unavailable"
               ? "An incomplete 24h scan window could change the flight-to-quality verdict, so none is published."
-              : "Missing valuation could change the flight-to-quality verdict, so none is published."}</p>
+              : gauge.flightToQualityReason === "classification-unresolved"
+                ? "Events awaiting classification review could change the flight-to-quality verdict, so none is published."
+                : gauge.flightToQualityReason === "classification-unknown"
+                  ? "Historical classification completeness is unknown, so no flight-to-quality verdict is published."
+                  : "Missing valuation could change the flight-to-quality verdict, so none is published."}</p>
         </OpsStatusChip>
       ) : null}
       {/* Degraded reads (source advisories, failed refreshes, catch-up) are operator signal, not chips. */}
@@ -241,7 +245,11 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
   const { score, band } = model;
   const scoredCoins = model.ticks.length;
   const withheld = model.withheldForValuation;
-  const verdict = buildGaugeVerdict(model.bandUnsettled ? "unsettled" : band, selectRunLineDrivers(model));
+  // An unread summary has no gauge payload to describe: the error notice and the
+  // "—" beam already say so, and a sentence would claim something about every coin.
+  const verdict = gauge == null
+    ? null
+    : buildGaugeVerdict(model.bandUnsettled ? "unsettled" : band, selectRunLineDrivers(model));
   const trackedCoins = gauge?.trackedCoins ?? coins.length;
   const watermark = window?.watermark;
   const excludedCoins = gauge?.scanCoverage?.excludedCoins ?? 0;
@@ -326,13 +334,17 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
       subKicker="Last 24 hours"
       sub={
         <div className="space-y-3">
-          <p className="text-pretty text-sm leading-relaxed text-foreground/85">{verdict}</p>
+          {verdict ? (
+            <p className="text-pretty text-sm leading-relaxed text-foreground/85">{verdict}</p>
+          ) : null}
           <div className="divide-y divide-border/50">
             <HeroMetricRow
               label="Printed 24h"
               value={
                 <FlowVolumeValue
                   valueUsd={aggregate.mintVolumeUsd}
+                  classificationCompleteness={aggregate.mintClassificationCompleteness}
+                  unresolvedEventCount={aggregate.unresolvedMintEventCount}
                   completeness={aggregate.mintCompleteness}
                   unpricedEventCount={aggregate.unpricedMintEventCount}
                   scanComplete={aggregate.scanComplete}
@@ -345,6 +357,8 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
               value={
                 <FlowVolumeValue
                   valueUsd={aggregate.burnVolumeUsd}
+                  classificationCompleteness={aggregate.burnClassificationCompleteness}
+                  unresolvedEventCount={aggregate.unresolvedBurnEventCount}
                   completeness={aggregate.burnCompleteness}
                   unpricedEventCount={aggregate.unpricedBurnEventCount}
                   scanComplete={aggregate.scanComplete}

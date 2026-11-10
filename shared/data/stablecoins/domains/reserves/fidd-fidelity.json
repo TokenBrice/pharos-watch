@@ -64,15 +64,19 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB04FIDD)",
+    "reviewedAt": "2026-11-04",
+    "reviewer": "Issue 1707 fresh primary-evidence review 2026-11-04",
     "confidence": "verified",
     "sources": [
       {
         "label": "PwC FIDD Reserve Attestation Report - August 2026",
         "url": "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026"
+      },
+      {
+        "label": "PwC FIDD September 2026 report, note 4 (PDF p.9), reviewed November 4, 2026",
+        "url": "https://fwc.widen.net/content/azzc1igqzr/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf?u=5lvvtn&download=true"
       }
     ],
-    "uncertainty": "The August report states that all reserve investments and cash deposits were held in segregated accounts at BNY Mellon on both August report dates. It does not establish statutory bankruptcy remoteness or disclose rehypothecation terms."
+    "uncertainty": "The September report note 4 states that investments and cash deposits at both September report dates were held in segregated deposit accounts at U.S. regulated depository institutions, currently only The Bank of New York Mellon; cash deposits are not FDIC insured. This renews the same whole-book provider and segregation findings from the retained August report. Neither report establishes statutory bankruptcy remoteness or discloses rehypothecation terms."
   }
 }

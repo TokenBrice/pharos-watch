@@ -6,7 +6,8 @@ import { crawlCurvePoolsStage } from "../crawl-curve-pools";
 import { createCrawlStageContext } from "../staged-pool";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../../dex-liquidity/constants";
 
-vi.mock("../../../lib/fetch-retry", () => ({
+vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/fetch-retry")>()),
   fetchJsonWithRetry: vi.fn(),
 }));
 
@@ -17,6 +18,7 @@ function target(chain: string, index: number): ContractDeployment {
 describe("Curve discovery pool fetching", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("serializes larger census responses while preserving chain order", async () => {
@@ -110,5 +112,31 @@ describe("Curve discovery pool fetching", () => {
       status: "failure",
       retryable: true,
     }]);
+  });
+
+  it("reads an Ethereum census larger than the former 4 MiB ceiling", async () => {
+    const address = "0x1111111111111111111111111111111111111111";
+    const payload = JSON.stringify({
+      data: { poolData: [{ usdTotal: 100_000, coins: [{ address }] }] },
+      padding: "x".repeat(4 * 1024 * 1024),
+    });
+    const actualFetchRetry = await vi.importActual<typeof import("../../../lib/fetch-retry")>(
+      "../../../lib/fetch-retry",
+    );
+    vi.mocked(fetchJsonWithRetry).mockImplementation(actualFetchRetry.fetchJsonWithRetry);
+    const fetchMock = vi.fn(async () => new Response(payload));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await crawlCurvePoolsStage({
+      coinTargets: [{ chain: "ethereum", address, decimals: 18 }],
+      context: createCrawlStageContext({
+        stablecoinId: "test", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [],
+      }),
+    });
+
+    expect(result.providerChecks).toEqual([
+      { chain: "ethereum", address, provider: "curve", status: "success", observedPoolCount: 1 },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -122,6 +122,9 @@
         "protocol": "YieldFi yUSD native YToken with BridgeCCIP",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
+        "providerKeys": [
+          "chainlink-ccip"
+        ],
         "riskTier": "issuer-native-lock-mint",
         "semantics": "lock-mint",
         "scope": "canonical",

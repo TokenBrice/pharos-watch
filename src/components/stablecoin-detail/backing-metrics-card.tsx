@@ -49,7 +49,7 @@ export interface BackingMetricsHeadline {
   source: BackingHeadlineSource;
   /** Formatted figure. */
   value: string;
-  /** What the figure is measured against: "vs supply", "hedge coverage · via USDe". Never empty. */
+  /** What the figure is measured against: "vs debt", "hedge coverage · via USDe". Never empty. */
   basis: string;
 }
 
@@ -137,7 +137,7 @@ export interface BackingMetricsInput {
   backing: MechanismBackingView | null;
   /** Live feed ratio from the reserve snapshot metadata, when the adapter emits one. */
   liveRatio?: number | null;
-  /** Live committed liquidation capital as a share of supply, when measured. */
+  /** Live committed liquidation capital, when measured. */
   liveLiquidationCapacityRatio?: number | null;
   liveAtSec?: number | null;
   liveFreshnessLabel?: string;
@@ -159,9 +159,14 @@ export interface BackingMetricsInput {
 
 const SHARED_BOOK_BASIS = "vs Sky/Maker debt";
 const UNKNOWN_LIVE_BASIS = "reported reserve ratio";
-const REVIEWED_RATIO_BASIS = "vs supply";
+/**
+ * The reviewed collateral metrics carry no denominator field: CDP reviews
+ * measure some assets against supply and others against system/pool debt, so
+ * the label names the source of the figure, never a guessed denominator.
+ */
+const REVIEWED_RATIO_BASIS = "as reviewed";
 const BACKSTOP_LABEL = "Liquidation backstop";
-const BACKSTOP_HINT = "Capital committed to absorb liquidations, as a share of supply.";
+const BACKSTOP_HINT = "Capital committed to absorb liquidations.";
 const COLLATERAL_RATIO_NOTE_KEY = "metric:collateralizationRatio";
 const HEDGE_COVERAGE_KEY = "hedgeCoverageRatio";
 
@@ -445,7 +450,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     visual = {
       kind: "coverage-ratio",
       valuePct: collateralization.ratio * 100,
-      ariaLabel: `Collateral ratio ${REVIEWED_RATIO_BASIS}`,
+      ariaLabel: `Collateral ratio, ${REVIEWED_RATIO_BASIS}`,
       threshold: markers.threshold,
       shutdown: markers.shutdown,
     };
@@ -466,7 +471,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
       ...metrics.slice(1).filter((metric) => !plan.consumed.has(metric.key)).map(metricCandidate),
     ];
   } else if (backstop != null) {
-    headline = { source: "backstop", value: formatRatioPct(backstop), basis: "liquidation backstop, share of supply" };
+    headline = { source: "backstop", value: formatRatioPct(backstop), basis: "liquidation backstop" };
     visual = { kind: "share", valuePct: ratioToPct(backstop), label: BACKSTOP_LABEL };
   } else if (facts.length > 0) {
     const lead = facts[0]!;
@@ -564,7 +569,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
   if (headline.source === "live-ratio" && collateralization?.ratio != null) {
     details.push({
       key: "reviewed-ratio",
-      label: `Reviewed collateral ratio ${REVIEWED_RATIO_BASIS}`,
+      label: "Reviewed collateral ratio",
       value: formatRatioPct(collateralization.ratio),
       note: `Reviewed ${collateralization.reviewedAt}`,
     });
@@ -572,7 +577,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
   if (liveBackstop != null && reviewedBackstop != null && collateralization != null) {
     details.push({
       key: "reviewed-backstop",
-      label: "Reviewed liquidation backstop, share of supply",
+      label: "Reviewed liquidation backstop",
       value: formatRatioPct(reviewedBackstop),
       note: `Reviewed ${collateralization.reviewedAt}`,
     });

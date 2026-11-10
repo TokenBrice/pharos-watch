@@ -1,10 +1,10 @@
 {
   "generatedBy": "scripts/maintenance/build-cemetery-logo-atlas.ts",
-  "generatorVersion": 2,
+  "generatorVersion": 3,
   "cellSize": 48,
   "gutter": 2,
   "webp": {
-    "quality": 66,
+    "quality": 63,
     "alphaQuality": 80,
     "effort": 6
   },
@@ -13,12 +13,12 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "67898f18828add001da65804756e014a2a642f30c3ffddf460920058add9f478",
+  "inputSha256": "27f05b5c86ed66fb618d52ddd21dc27b3892b178d03af30164439f5c3719101e",
   "image": {
-    "sha256": "f4935c94497a1f29629a801f76ecf802096a0eaac3d80adff96491d977ebad21",
-    "bytes": 148728,
+    "sha256": "e1164d1c4734a61b35c5264b25d40f74a6bf3081e57028a03860fad94a9e68b4",
+    "bytes": 149022,
     "width": 798,
-    "height": 748
+    "height": 798
   },
   "sources": [
     {
@@ -204,6 +204,11 @@
     {
       "logo": "/logos/cemetery/fusd.png",
       "sha256": "2ed7505520e4c7488babb4d2991c14588582d6549a147704fe711d7ce8f6a9f3",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/fxd-fathom.svg",
+      "sha256": "585fa67fe2dd5c1dbc350779a9d612ee1ecca3b48a4b8ca88b0e05e8a8599698",
       "kernel": "lanczos3"
     },
     {
@@ -399,6 +404,16 @@
     {
       "logo": "/logos/cemetery/usda-angle.png",
       "sha256": "5475749da37412bbb15f88b73b8768813d9c0badc59bcd133d031745ed447579",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/220-usda.png",
+      "sha256": "ef8e177c226f8c208af68417419064e0a7d2508be7577b4989ad1bd6352ef333",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/172-usdb.png",
+      "sha256": "29eec3f12d28bb7ec7a89efc2cd24605df33e8de05c240f32aa1c4237e5a57cc",
       "kernel": "lanczos3"
     },
     {
@@ -780,6 +795,10 @@
       "logo": "/logos/cemetery/fusd.png"
     },
     {
+      "id": "fxd-fathom",
+      "logo": "/logos/fxd-fathom.svg"
+    },
+    {
       "id": "grai-gravita-grai-2025-06",
       "logo": "/logos/cemetery/grai.png"
     },
@@ -942,6 +961,14 @@
     {
       "id": "usda-angle-usda-2026-03",
       "logo": "/logos/cemetery/usda-angle.png"
+    },
+    {
+      "id": "usda-avalon",
+      "logo": "/logos/220-usda.png"
+    },
+    {
+      "id": "usdb-blast",
+      "logo": "/logos/172-usdb.png"
     },
     {
       "id": "usdc-m-multichain-usdc-2023-07",

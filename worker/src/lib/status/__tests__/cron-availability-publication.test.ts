@@ -35,6 +35,48 @@ async function outputAt(fixture: Fixture, job: string): Promise<number | null> {
 }
 
 describe("cron availability retains independently confirmed publication evidence", () => {
+  it.each([
+    [2.5, "ok", {}, true],
+    [3, "ok", {}, true],
+    [3.01, "ok", {}, false],
+    [2.5, null, {}, false],
+    [2.5, "error", {}, false],
+    [2.5, "degraded", {}, false],
+    [2.5, "ok", null, false],
+    [2.5, "ok", { leaseUntil: NOW - 1 }, false],
+    [2.5, "ok", { heartbeatAt: NOW - 931 }, false],
+    [2.5, "ok", { heartbeatAt: NOW - 320 }, true],
+    [2.5, "ok", { heartbeatAt: NOW }, false],
+    [2.5, "ok", { heartbeatAt: null }, false],
+    [2.5, "ok", { heartbeatAt: NOW - 300 }, true],
+    [2.5, "ok", { observedAt: NOW + 1 }, false],
+    [2.5, "ok", { observedAt: NOW - 31 }, false],
+    [2.5, "ok", { observedAt: "recent" }, false],
+    [2.5, "ok", { holderJob: "unknown" }, false],
+    [2.5, "ok", { holderJob: null }, false],
+    [2.5, "ok", { leaseJob: "other" }, false],
+    [2.5, "ok", { leaseOwner: "requester" }, false],
+    [2.5, "ok", { leaseOwner: "" }, false],
+    [2.5, "ok", { leaseUntil: null }, false],
+    [2.5, "ok", {}, false, null],
+  ] as const)("bounds live lease contention by required success (%sx/%s/%j/%s)", async (age, status, blocker, healthy, requester: string | null = "requester") => {
+    for (const job of ["reserve-recovery", "sync-stablecoins"]) {
+      const fixture = fixtures.open();
+      const clock = job === "reserve-recovery" || status === null ? null : NOW - getCronJobMeta(job)!.intervalSec * age;
+      if (status) insertRun(fixture, job, getCronJobMeta(job)!.intervalSec * age, status, 0, { outputPublishedAt: clock });
+      for (const skipAge of [30, 330]) insertRun(fixture, job, skipAge, "skipped_locked", 0, {
+        reason: "lease-locked", leaseOwner: requester, blockedBy: blocker === null ? null : {
+          leaseJob: job, leaseOwner: "holder", holderJob: "sync-live-reserves",
+          observedAt: NOW - skipAge, heartbeatAt: NOW - skipAge - 30, leaseUntil: NOW + 600, ...blocker,
+        },
+      });
+      const cron = (await loadCronHealth(fixture.db, NOW, { jobs: [job] })).crons[job];
+      expect(cron.healthy).toBe(healthy);
+      expect(cron.inFlight).toBeNull();
+      expect(await outputAt(fixture, job)).toBe(status === "error" ? null : clock);
+    }
+  });
+
   it.each(["fresh", "stale", "missing"] as const)("ignores unadmitted catch-up failures without inventing %s output", async (output) => {
     const fixture = fixtures.open();
     const insert = fixture.sqlite.prepare(

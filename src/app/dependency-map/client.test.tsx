@@ -89,6 +89,19 @@ describe("DependencyMapClient", () => {
     expect(screen.getByText(/Excludes 1 coins without supply data/)).toBeTruthy();
   });
 
+  it("does not turn a first supply read in flight into an unavailable claim", () => {
+    mockUseStablecoins.mockReturnValue({
+      ...makeQueryResult(undefined),
+      isLoading: true,
+    } as unknown as ReturnType<typeof useStablecoins>);
+    render(<DependencyMapClient />);
+    // The summary renders before the dynamically imported graph resolves.
+    expect(screen.getByText("Mapped direct exposure").nextElementSibling?.textContent).toBe("—");
+    expect(screen.queryByText("Supply data unavailable")).toBeNull();
+    expect(screen.queryByText(/market cap as of unknown/)).toBeNull();
+    expect(screen.queryByText(/Excludes 1 coins without supply data/)).toBeNull();
+  });
+
   it("retains supply sizes and its as-of clock through a failed stablecoins refetch", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const graph = mockUseDependencyGraph()!.data as { updatedAt: number };

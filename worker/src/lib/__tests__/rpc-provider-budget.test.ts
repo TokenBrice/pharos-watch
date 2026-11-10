@@ -7,6 +7,7 @@ import {
   flushDwellirCredits,
   loadDwellirBudgetState,
   recordDwellirCredits,
+  resetRpcProviderBudgetStateForTests,
 } from "../rpc-provider-budget";
 
 const SEPTEMBER_NOW_SEC = Date.parse("2026-09-24T10:00:00.000Z") / 1000;
@@ -243,6 +244,15 @@ describe("recordDwellirCredits and flushDwellirCredits", () => {
       ok: true,
     });
     expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("drops pending credits through the shared-process reset hook", async () => {
+    recordDwellirCredits(9);
+    resetRpcProviderBudgetStateForTests();
+    await expect(flushDwellirCredits(makeNoopD1(), SEPTEMBER_NOW_SEC)).resolves.toEqual({
+      flushedCredits: 0,
+      ok: true,
+    });
   });
 
   it("accumulates credits across flushes in one month and starts fresh in the next", async () => {

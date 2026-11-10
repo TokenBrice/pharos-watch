@@ -390,27 +390,7 @@ export async function collectPrimaryProviderQuotes(params: {
     sourceAllowed,
   } = plan;
 
-  const emptyQuoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-  const {
-    cgQuotes,
-    binancePrices,
-    krakenPrices,
-    bitstampPrices,
-    coinbasePrices,
-    curvePrices,
-    curveObservedAtByCoinId,
-    cgTickerPrices,
-    bitstampObservedAtBySymbol,
-    coinbaseObservedAtBySymbol,
-    navPrices,
-  } = emptyQuoteMaps;
-
-  let curveOraclePrice: number | null = null;
-  let curveOracleObservedAt: number | null = null;
-  let cgTickerObservedAt: number | null = null;
-  let cgObservedAt: number | null = null;
-  let binanceObservedAt: number | null = null;
-  let krakenObservedAt: number | null = null;
+  const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
 
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   // Push thunks (not started promises) so the bounded `mapWithConcurrency`
@@ -427,7 +407,7 @@ export async function collectPrimaryProviderQuotes(params: {
         references,
       });
       for (const [coinId, quote] of quotes) {
-        navPrices.set(coinId, quote);
+        quoteMaps.navPrices.set(coinId, quote);
       }
     });
   }
@@ -437,10 +417,10 @@ export async function collectPrimaryProviderQuotes(params: {
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_PRICES, "CG price API", async () => {
         const outcome = await fetchCoingeckoSimplePrices(geckoIds, coingeckoApiKey ?? null, signal, nowSec);
         for (const [geckoId, entry] of outcome.value) {
-          cgQuotes.set(geckoId, entry);
+          quoteMaps.cgQuotes.set(geckoId, entry);
         }
         if (outcome.value.size > 0) {
-          cgObservedAt = Math.floor(Date.now() / 1000);
+          quoteMaps.cgObservedAt = Math.floor(Date.now() / 1000);
         }
         return isSuccessfulOutcome(outcome);
       }),
@@ -456,10 +436,10 @@ export async function collectPrimaryProviderQuotes(params: {
           signal,
         );
         for (const [coinId, price] of prices) {
-          cgTickerPrices.set(coinId, price);
+          quoteMaps.cgTickerPrices.set(coinId, price);
         }
         if (prices.size > 0) {
-          cgTickerObservedAt = Math.floor(Date.now() / 1000);
+          quoteMaps.cgTickerObservedAt = Math.floor(Date.now() / 1000);
         }
         return successfulResponses > 0;
       }),
@@ -474,10 +454,10 @@ export async function collectPrimaryProviderQuotes(params: {
           const { prices, diagnostics } = outcome.value;
           providerDiagnostics.push(...diagnostics);
           for (const [symbol, price] of prices) {
-            binancePrices.set(symbol, price);
+            quoteMaps.binancePrices.set(symbol, price);
           }
           if (prices.size > 0) {
-            binanceObservedAt = Math.floor(Date.now() / 1000);
+            quoteMaps.binanceObservedAt = Math.floor(Date.now() / 1000);
           }
           return isSuccessfulOutcome(outcome);
         });
@@ -486,11 +466,12 @@ export async function collectPrimaryProviderQuotes(params: {
       if (sourceAllowed.kraken && krakenSymbols.length > 0) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.KRAKEN_PRICES, "Kraken ticker", async () => {
           const outcome = await fetchKrakenPrices(krakenSymbols, signal);
-          for (const [symbol, price] of outcome.value) {
-            krakenPrices.set(symbol, price);
+          providerDiagnostics.push(...outcome.value.diagnostics);
+          for (const [symbol, price] of outcome.value.prices) {
+            quoteMaps.krakenPrices.set(symbol, price);
           }
-          if (outcome.value.size > 0) {
-            krakenObservedAt = Math.floor(Date.now() / 1000);
+          if (outcome.value.prices.size > 0) {
+            quoteMaps.krakenObservedAt = Math.floor(Date.now() / 1000);
           }
           return isSuccessfulOutcome(outcome);
         });
@@ -499,11 +480,12 @@ export async function collectPrimaryProviderQuotes(params: {
       if (sourceAllowed.bitstamp && shouldFetchBitstamp) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker", async () => {
           const outcome = await fetchBitstampPrices(signal);
+          providerDiagnostics.push(...outcome.value.diagnostics);
           for (const [symbol, price] of outcome.value.prices) {
-            bitstampPrices.set(symbol, price);
+            quoteMaps.bitstampPrices.set(symbol, price);
           }
           for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
-            bitstampObservedAtBySymbol.set(symbol, observedAt);
+            quoteMaps.bitstampObservedAtBySymbol.set(symbol, observedAt);
           }
           return isSuccessfulOutcome(outcome);
         });
@@ -512,11 +494,12 @@ export async function collectPrimaryProviderQuotes(params: {
       if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
           const outcome = await fetchCoinbasePrices(coinbaseSymbols, signal);
+          providerDiagnostics.push(...outcome.value.diagnostics);
           for (const [symbol, price] of outcome.value.prices) {
-            coinbasePrices.set(symbol, price);
+            quoteMaps.coinbasePrices.set(symbol, price);
           }
           for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
-            coinbaseObservedAtBySymbol.set(symbol, observedAt);
+            quoteMaps.coinbaseObservedAtBySymbol.set(symbol, observedAt);
           }
           return isSuccessfulOutcome(outcome);
         });
@@ -542,10 +525,10 @@ export async function collectPrimaryProviderQuotes(params: {
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain", async () => {
         const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
         for (const [id, price] of outcome.value.prices) {
-          curvePrices.set(id, price);
+          quoteMaps.curvePrices.set(id, price);
         }
         for (const [id, observedAt] of outcome.value.observedAtByCoinId) {
-          curveObservedAtByCoinId.set(id, observedAt);
+          quoteMaps.curveObservedAtByCoinId.set(id, observedAt);
         }
         return isSuccessfulOutcome(outcome);
       }),
@@ -567,8 +550,8 @@ export async function collectPrimaryProviderQuotes(params: {
         if (!quote) return false;
         const now = Math.floor(Date.now() / 1000);
         if (now - quote.blockTimestamp > CURVE_ORACLE_MAX_STALENESS_SEC) return false;
-        curveOraclePrice = quote.price;
-        curveOracleObservedAt = quote.blockTimestamp;
+        quoteMaps.curveOraclePrice = quote.price;
+        quoteMaps.curveOracleObservedAt = quote.blockTimestamp;
         return true;
       }),
     );
@@ -581,11 +564,10 @@ export async function collectPrimaryProviderQuotes(params: {
 
   // The native observer starts only after every earlier provider/body drains.
   // Its CG parent is dependency-only and never becomes a stablecoin candidate.
-  let hiveNativeQuote: HiveNativePriceQuote | null = null;
   if (plan.candidates.some((asset) => asset.id === "hbd-hive") && sourceAllowed.hiveMarket) {
-    const parent = sourceAllowed.cg ? cgQuotes.get("hive") : undefined;
+    const parent = sourceAllowed.cg ? quoteMaps.cgQuotes.get("hive") : undefined;
     const result = await fetchHiveNativeHbdPrice(parent ? { id: "hive", ...parent } : undefined, { signal, generation: nowSec });
-    hiveNativeQuote = result.quote;
+    quoteMaps.hiveNativeQuote = result.quote;
     const reason = result.diagnostic.rejectionReason;
     providerDiagnostics.push({
       source: "hive-native-cg", stage: "primary", endpoint: result.diagnostic.node ?? "hive-market",
@@ -608,27 +590,5 @@ export async function collectPrimaryProviderQuotes(params: {
     throwIfAborted(signal);
   }
 
-  return {
-    quoteMaps: {
-      cgQuotes,
-      cgObservedAt,
-      cgTickerPrices,
-      cgTickerObservedAt,
-      binancePrices,
-      binanceObservedAt,
-      krakenPrices,
-      krakenObservedAt,
-      bitstampPrices,
-      bitstampObservedAtBySymbol,
-      coinbasePrices,
-      coinbaseObservedAtBySymbol,
-      curvePrices,
-      curveObservedAtByCoinId,
-      curveOraclePrice,
-      curveOracleObservedAt,
-      navPrices,
-      hiveNativeQuote,
-    },
-    providerDiagnostics,
-  };
+  return { quoteMaps, providerDiagnostics };
 }

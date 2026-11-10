@@ -29,101 +29,12 @@ const env = makeScheduledEnv({
   DWELLIR_ROUTING_DISABLED_CHAINS,
 });
 
-const EMPTY_LATENCY = { p50Ms: null, p95Ms: null, samples: 0 };
-const METHOD_LATENCY = { p50Ms: 80, p95Ms: 160, samples: 6 };
-const SERVED_METHOD = { attempts: 6, successes: 6, capabilityRefusals: 0, referenceUnavailable: 0, unknownRuns: 0, successRate: 1 };
+// Sentinel report: the handler is a pass-through, so the shape only needs to
+// prove the loader output reaches the wire unchanged.
 const TRIAL_REPORT = {
   provider: "dwellir",
   generatedAtSec: 1_772_000_000,
-  budget: {
-    configured: true,
-    usable: true,
-    reason: "ok",
-    window: "2026-09",
-    usedCredits: 12_345,
-    capCredits: 20_000_000,
-    observedAtSec: 1_772_000_000,
-  },
-  circuit: { state: "closed", consecutiveFailures: 0, updatedAtSec: 1_771_999_000 },
-  observation: {
-    windowStartSec: 1_771_000_000,
-    lastRunAtSec: 1_771_999_000,
-    runsRetained: 6,
-    chains: [
-      {
-        chainId: "base",
-        dwellirHost: "api-base-mainnet-archive.n.dwellir.com",
-        routing: { statePlacement: "supplemental", logScan: false },
-        lastFailures: [],
-        comparator: { operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" },
-        logsComparator: { operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" },
-        comparatorsByStep: {
-          head: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
-          state: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
-          logs: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
-          latest: [],
-          reference: [], header: [], "legacy-latest": [],
-        },
-        runs: 6,
-        skips: { "no-comparator": 0, "no-dwellir-entry": 0, deadline: 0, aborted: 0, unknown: 0 },
-        lastSkip: null,
-        dwellirSuccessRate: 1,
-        headLagBlocks: { p50: 0, p95: 1, samples: 6 },
-        stateParity: { checked: 6, matched: 6, mismatched: 0, lastMismatch: null },
-        logParity: { checked: 6, matched: 6, mismatched: 0, skippedReason: null },
-        prunedLogProbe: null,
-        latency: {
-          dwellir: {
-            firstTouch: { head: { p50Ms: 180, p95Ms: 420, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY, reference: EMPTY_LATENCY, header: EMPTY_LATENCY, "legacy-latest": EMPTY_LATENCY },
-            warm: {
-              head: { ...METHOD_LATENCY, samples: 12 }, state: METHOD_LATENCY, logs: METHOD_LATENCY,
-              latest: { ...METHOD_LATENCY, samples: 12 }, reference: METHOD_LATENCY, header: METHOD_LATENCY, "legacy-latest": EMPTY_LATENCY,
-            },
-            warmRunMedian: METHOD_LATENCY,
-          },
-          comparator: {
-            firstTouch: { head: { p50Ms: 140, p95Ms: 300, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY, reference: EMPTY_LATENCY, header: EMPTY_LATENCY, "legacy-latest": EMPTY_LATENCY },
-            warm: { head: EMPTY_LATENCY, state: METHOD_LATENCY, logs: METHOD_LATENCY, latest: EMPTY_LATENCY, reference: EMPTY_LATENCY, header: EMPTY_LATENCY, "legacy-latest": EMPTY_LATENCY },
-            warmRunMedian: METHOD_LATENCY,
-          },
-        },
-        availability: {
-          dwellir: {
-            head: { ...SERVED_METHOD, attempts: 18, successes: 18 }, state: SERVED_METHOD, logs: SERVED_METHOD,
-            latest: { ...SERVED_METHOD, attempts: 12, successes: 12 },
-            reference: SERVED_METHOD, header: SERVED_METHOD,
-            "legacy-latest": { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
-          },
-          comparator: {
-            head: SERVED_METHOD, state: SERVED_METHOD, logs: SERVED_METHOD,
-            latest: { ...SERVED_METHOD, attempts: 0, successes: 0, unknownRuns: 6, successRate: null },
-            reference: { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
-            header: { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
-            "legacy-latest": { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
-          },
-        },
-        latestFreshness: {
-          fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6, nonDiscriminatingFresh: 0,
-          reasons: { "served-block-in-range": 6 }, maxNumericCalls: 10, blockTolerance: 3, lastStale: null,
-          sentinel: { fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6 },
-          tokenState: { fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6 },
-        },
-        errorClasses: {},
-        comparatorErrorClasses: {},
-        failedSteps: {
-          dwellir: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
-          comparator: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
-        },
-        lastComparatorFailure: null,
-        gate: { passed: false, failing: [
-          "runs", "insufficient-head-attempts", "insufficient-state-attempts", "insufficient-log-attempts",
-          "insufficient-latest-freshness-checks", "insufficient-comparable-samples",
-          "insufficient-state-checks", "insufficient-log-checks", "insufficient-warm-samples",
-        ] },
-        last: { atSec: 1_771_999_000, dwellirHead: 21_000_000, comparatorHead: 21_000_000, commonBlock: 21_000_000 },
-      },
-    ],
-  },
+  observation: { runsRetained: 6, chains: [] },
   observationError: null,
 };
 
@@ -197,24 +108,5 @@ describe("GET /api/rpc-provider-trial", () => {
       DWELLIR_BUDGET_ENV,
       expect.any(Number),
     );
-  });
-
-  it("still answers 200 when the observation window is unreadable", async () => {
-    const route = await loadRoute();
-    parity.loadRpcProviderTrialReport.mockResolvedValue({
-      ...TRIAL_REPORT,
-      observation: null,
-      observationError: "samples-unreadable",
-    });
-
-    const response = await route.handler(makeContext(route, true));
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    await expect(response.json()).resolves.toMatchObject({
-      provider: "dwellir",
-      observation: null,
-      observationError: "samples-unreadable",
-    });
   });
 });

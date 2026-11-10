@@ -300,26 +300,15 @@ describe("exact physical rail precedence", () => {
     expect(result.diversificationBonus).toBe(0);
   });
 
-  it("still lets a same-rail exact-complete certificate supersede the model", () => {
-    const certificate = certificateRoute({
-      routeKey: "certificate", certification: "exact-complete", physicalResourceKeys: ["rail:fixture"],
-      requestedNotionalUsd: 1_000_000,
-    });
-    const modeled = route({ physicalResourceKeys: ["rail:fixture"] });
-    const request = selectV9ExitStressRequest(2_000_000, V9_CANDIDATE_POLICY_V1);
-    const capacity = resolveV9DistinctExitCapacity([modeled, certificate.route], request, V9_CANDIDATE_POLICY_V1);
-    expect(capacity.includedRouteKeys).toEqual(["certificate"]);
-    expect(capacity.valuedExecutableUsd).toBe(1_000_000);
-
-    const result = evaluateV9Exit({
-      circulatingUsd: 2_000_000, assetId: certificate.assetId, clockSec: certificate.clockSec,
-      routes: [modeled, certificate.route],
-    }, V9_CANDIDATE_POLICY_V1);
-    expect(result.primaryRouteKey).toBe("certificate");
-    expect(result.routes.find((entry) => entry.routeKey === "redemption:issuer")!.score).toBeNull();
-  });
-
-  it.each([
+  it.each<{
+    name: string;
+    measured: number;
+    claimed: number;
+    ask: number;
+    supersedes: boolean;
+    certification?: "exact-complete" | "exact-lower-bound";
+    stale?: boolean;
+  }>([
     { name: "arcusdc-sized sub-ask receipt", measured: 4_250_000, claimed: 12_580_000, ask: 25_000_000, supersedes: false },
     { name: "senrlusdv2-sized full-ask receipt", measured: 20_730_000, claimed: 44_590_000, ask: 20_730_000, supersedes: true },
     { name: "one dollar below modeled capacity", measured: 4_250_000, claimed: 4_250_001, ask: 25_000_000, supersedes: false },

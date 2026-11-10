@@ -183,6 +183,36 @@ describe("computePegStability", () => {
     }
   });
 
+  it("ignores a disputed terminal boundary when deriving the recorded recovery", () => {
+    const recovery = makeEvent({
+      startedAt: NOW - 310 * DAY_SECONDS, endedAt: NOW - 300 * DAY_SECONDS,
+      peakDeviationBps: -300, closeReason: "recovered-primary",
+    });
+    const disputed = makeEvent({
+      startedAt: NOW - 20 * DAY_SECONDS, endedAt: NOW - 10 * DAY_SECONDS,
+      peakDeviationBps: -200, closeReason: null, recoveryPrice: null,
+      provenance: { auditVerdict: "disputed" },
+    });
+    expect(computeStability([recovery, disputed], NOW - 365 * DAY_SECONDS)).toMatchObject({
+      latestClosure: "recovered", currentStreakDays: 300, depeggedNow: false,
+    });
+  });
+
+  it("does not let a disputed recovery row reset the recorded recovery age", () => {
+    const recovery = makeEvent({
+      startedAt: NOW - 310 * DAY_SECONDS, endedAt: NOW - 300 * DAY_SECONDS,
+      peakDeviationBps: -300, closeReason: "recovered-primary",
+    });
+    const disputed = makeEvent({
+      startedAt: NOW - 20 * DAY_SECONDS, endedAt: NOW - 10 * DAY_SECONDS,
+      peakDeviationBps: -200, closeReason: "recovered-primary", recoveryPrice: 1,
+      provenance: { auditVerdict: "false_positive" },
+    });
+    expect(computeStability([recovery, disputed], NOW - 365 * DAY_SECONDS)).toMatchObject({
+      latestClosure: "recovered", currentStreakDays: 300, depeggedNow: false,
+    });
+  });
+
   it("keeps a zero-day recorded recovery separate from open and absent history", () => {
     const recovery = makeEvent({ startedAt: NOW - DAY_SECONDS, endedAt: NOW, peakDeviationBps: -200, closeReason: "recovered-primary" });
     expect(computeStability([recovery], NOW - 10 * DAY_SECONDS)).toMatchObject({

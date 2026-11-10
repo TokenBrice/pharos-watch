@@ -1064,6 +1064,312 @@
           }
         ],
         "evidence": "IDRX documents an issuer-operated API processor that receives txHashBurn and bridge nonce data after a source burn and credits the destination; its signer, failure, and reconciliation controls are not publicly verified."
+      },
+      {
+        "id": "idrx-celo-bridge-minter-safe-a",
+        "label": "IDRX Celo bridge-mint Safe A",
+        "routeRefs": [
+          "celo:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x35c77bf695334701bf993fecec386cbc4f2b69cb",
+        "failureDomainKeys": [
+          "safe:celo:0x35c77bf695334701bf993fecec386cbc4f2b69cb"
+        ],
+        "authorityType": "safe",
+        "observedAt": "2026-11-06",
+        "observedBlock": 82088784,
+        "sources": [
+          {
+            "label": "Safety unknowns campaign 2026-11-06 \u2014 k-mia; Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z; exact code/storage/role/Safe/timelock reads and 507 contiguous 10000-block-or-smaller admin-event ranges from creation block 77019128 through this pin",
+            "url": "https://api-celo-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Celo IDRX verified proxy source and deployed runtime (verified 2026-09-09); runtime independently matched at the named pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          },
+          {
+            "label": "Celo IDRX verified implementation source (verified 2026-09-09); runtime independently matched at the named pin; mintBridge, unbounded mint, role administration and UUPS authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693"
+          },
+          {
+            "label": "IDRX issuer burnBridge / bridge-request / destination mint workflow, re-read 2026-11-06; page does not publish a Celo liability partition",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          },
+          {
+            "label": "Celo verified SafeProxy and SafeL2 singleton/CompatibilityFallbackHandler sources; all three runtimes matched at the same pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+          },
+          {
+            "label": "Celo verified CompatibilityFallbackHandler source; runtime matched at the same pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+          }
+        ],
+        "evidence": "Safety unknowns campaign 2026-11-06 \u2014 k-mia. Verified at Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z. Exact proxy and implementation runtime match the verified source; the EIP-1967 implementation is 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693 and the admin slot is zero (UUPS, not renounced upgrades). The creation-to-pin role/upgrade/emergency-event scan [77019128,82088784] completed all 507 contiguous ranges and returned 15 RoleGranted, 7 RoleRevoked and the constructor Upgraded event; replayed role membership matches the independently read hasRole values. This is authority evidence, not a negative incident review or a complete liability/perimeter certificate. Safe VERSION=1.4.1, getThreshold=2, exact getOwners roster recorded below; getModulesPaginated(0x1,100) returned an empty array and terminal 0x1; guard slot is zero and the recorded fallback handler is present. No human signer independence, key custody, arbitrary-target closure or fallback noninterference credit is asserted.",
+        "threshold": 2,
+        "signerCount": 7,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x92a02b8a3ab6b4de7e27e31b2ded22a25771af77",
+            "0x2034824ddf96337935973d0e1529e7eddc611491",
+            "0xb37e212507427f8820414d08dc67c2d7629db6e8",
+            "0xcff892903d12d42fb68bf851fab542cbe1cafb1e",
+            "0xbbb20420b988dc118ad7028f4182acdb8a6fd9c7",
+            "0xc4dd013030d26977ed377550ffc91b0b79a77ea7",
+            "0x10296f14a3cedf5bca6f6ec85fb2d0cb0d23959c"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 82088784,
+          "observedAt": "2026-11-06",
+          "source": "manual"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "mintBridge() is MINTER_ROLE-gated, requires only a previously unused caller-supplied source-chain nonce, amount >= current fee, and a nonzero fee recipient. It authenticates no source-chain burn proof and enforces no mint amount or aggregate cap. Generic mint() under the same role is also unbounded.",
+          "pausersAdminsUpgraders": "Current MINTER_ROLE=true; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE=false. Role administration remains with the separately named admin EOA and Safe."
+        }
+      },
+      {
+        "id": "idrx-celo-bridge-minter-safe-b",
+        "label": "IDRX Celo bridge-mint Safe B",
+        "routeRefs": [
+          "celo:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x9252fbbfd7887ac67bd17a884e08fbd5aeeb912a",
+        "failureDomainKeys": [
+          "safe:celo:0x9252fbbfd7887ac67bd17a884e08fbd5aeeb912a"
+        ],
+        "authorityType": "safe",
+        "observedAt": "2026-11-06",
+        "observedBlock": 82088784,
+        "sources": [
+          {
+            "label": "Safety unknowns campaign 2026-11-06 \u2014 k-mia; Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z; exact code/storage/role/Safe/timelock reads and 507 contiguous 10000-block-or-smaller admin-event ranges from creation block 77019128 through this pin",
+            "url": "https://api-celo-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Celo IDRX verified proxy source and deployed runtime (verified 2026-09-09); runtime independently matched at the named pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          },
+          {
+            "label": "Celo IDRX verified implementation source (verified 2026-09-09); runtime independently matched at the named pin; mintBridge, unbounded mint, role administration and UUPS authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693"
+          },
+          {
+            "label": "IDRX issuer burnBridge / bridge-request / destination mint workflow, re-read 2026-11-06; page does not publish a Celo liability partition",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          },
+          {
+            "label": "Celo verified SafeProxy and SafeL2 singleton/CompatibilityFallbackHandler sources; all three runtimes matched at the same pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+          },
+          {
+            "label": "Celo verified CompatibilityFallbackHandler source; runtime matched at the same pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+          }
+        ],
+        "evidence": "Safety unknowns campaign 2026-11-06 \u2014 k-mia. Verified at Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z. Exact proxy and implementation runtime match the verified source; the EIP-1967 implementation is 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693 and the admin slot is zero (UUPS, not renounced upgrades). The creation-to-pin role/upgrade/emergency-event scan [77019128,82088784] completed all 507 contiguous ranges and returned 15 RoleGranted, 7 RoleRevoked and the constructor Upgraded event; replayed role membership matches the independently read hasRole values. This is authority evidence, not a negative incident review or a complete liability/perimeter certificate. Safe VERSION=1.4.1, getThreshold=2, exact getOwners roster recorded below; getModulesPaginated(0x1,100) returned an empty array and terminal 0x1; guard slot is zero and the recorded fallback handler is present. No human signer independence, key custody, arbitrary-target closure or fallback noninterference credit is asserted.",
+        "threshold": 2,
+        "signerCount": 5,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xb37e212507427f8820414d08dc67c2d7629db6e8",
+            "0x2034824ddf96337935973d0e1529e7eddc611491",
+            "0x92a02b8a3ab6b4de7e27e31b2ded22a25771af77",
+            "0x22c9ec74654841aa15be0e0ff7bdd7754bcee735",
+            "0x2882f19092d248907cc72b8121e0bd94e711e28e"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 82088784,
+          "observedAt": "2026-11-06",
+          "source": "manual"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "caps": "mintBridge() is MINTER_ROLE-gated, requires only a previously unused caller-supplied source-chain nonce, amount >= current fee, and a nonzero fee recipient. It authenticates no source-chain burn proof and enforces no mint amount or aggregate cap. Generic mint() under the same role is also unbounded.",
+          "pausersAdminsUpgraders": "Current MINTER_ROLE=true; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE=false. Role administration remains with the separately named admin EOA and Safe."
+        }
+      },
+      {
+        "id": "idrx-celo-bridge-admin-eoa",
+        "label": "IDRX Celo bridge-role admin EOA (immediate role reconfiguration bypass)",
+        "routeRefs": [
+          "celo:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
+        "failureDomainKeys": [
+          "eoa:celo:0x5515be1db2a513888f5cf375bf5c7956ee93c779"
+        ],
+        "authorityType": "eoa",
+        "observedAt": "2026-11-06",
+        "observedBlock": 82088784,
+        "sources": [
+          {
+            "label": "Safety unknowns campaign 2026-11-06 \u2014 k-mia; Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z; exact code/storage/role/Safe/timelock reads and 507 contiguous 10000-block-or-smaller admin-event ranges from creation block 77019128 through this pin",
+            "url": "https://api-celo-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Celo IDRX verified proxy source and deployed runtime (verified 2026-09-09); runtime independently matched at the named pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          },
+          {
+            "label": "Celo IDRX verified implementation source (verified 2026-09-09); runtime independently matched at the named pin; mintBridge, unbounded mint, role administration and UUPS authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693"
+          },
+          {
+            "label": "IDRX issuer burnBridge / bridge-request / destination mint workflow, re-read 2026-11-06; page does not publish a Celo liability partition",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          }
+        ],
+        "evidence": "Safety unknowns campaign 2026-11-06 \u2014 k-mia. Verified at Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z. Exact proxy and implementation runtime match the verified source; the EIP-1967 implementation is 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693 and the admin slot is zero (UUPS, not renounced upgrades). The creation-to-pin role/upgrade/emergency-event scan [77019128,82088784] completed all 507 contiguous ranges and returned 15 RoleGranted, 7 RoleRevoked and the constructor Upgraded event; replayed role membership matches the independently read hasRole values. This is authority evidence, not a negative incident review or a complete liability/perimeter certificate. The source-proven immediate grant-and-upgrade path is retained as adverse authority; eth_getCode=0x proves on-chain EOA topology only, not private-key custody.",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "eth_getCode=0x. DEFAULT_ADMIN_ROLE, PAUSER_ROLE and BLACKLIST_ROLE are true; MINTER_ROLE, UPGRADER_ROLE and PLATFORM_FEE_SETTER_ROLE are false. Every role getRoleAdmin() returns DEFAULT_ADMIN_ROLE. Verified grantRole() has no delay and _authorizeUpgrade() requires only UPGRADER_ROLE, so this admin can grant a direct upgrade or bridge-minter role without the separately observed 172800-second timelock.",
+          "caps": "No economic mint cap is enforced by the current implementation; DEFAULT_ADMIN_ROLE can authorize MINTER_ROLE and replace the upgrade authority."
+        },
+        "bypassSurfaces": [
+          "Immediate DEFAULT_ADMIN_ROLE grantRole(MINTER_ROLE, account) and grantRole(UPGRADER_ROLE, account); no timelock in AccessControl grantRole."
+        ]
+      },
+      {
+        "id": "idrx-celo-bridge-admin-safe",
+        "label": "IDRX Celo bridge-role admin Safe (immediate role reconfiguration bypass)",
+        "routeRefs": [
+          "celo:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0xa75d3393eb063bcea7f43fca0b9489c40cebe600",
+        "failureDomainKeys": [
+          "safe:celo:0xa75d3393eb063bcea7f43fca0b9489c40cebe600"
+        ],
+        "authorityType": "safe",
+        "observedAt": "2026-11-06",
+        "observedBlock": 82088784,
+        "sources": [
+          {
+            "label": "Safety unknowns campaign 2026-11-06 \u2014 k-mia; Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z; exact code/storage/role/Safe/timelock reads and 507 contiguous 10000-block-or-smaller admin-event ranges from creation block 77019128 through this pin",
+            "url": "https://api-celo-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Celo IDRX verified proxy source and deployed runtime (verified 2026-09-09); runtime independently matched at the named pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          },
+          {
+            "label": "Celo IDRX verified implementation source (verified 2026-09-09); runtime independently matched at the named pin; mintBridge, unbounded mint, role administration and UUPS authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693"
+          },
+          {
+            "label": "IDRX issuer burnBridge / bridge-request / destination mint workflow, re-read 2026-11-06; page does not publish a Celo liability partition",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          },
+          {
+            "label": "Celo verified SafeL2 singleton; exact runtime, Safe owner/threshold/module/guard/handler state observed at the named pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+          }
+        ],
+        "evidence": "Safety unknowns campaign 2026-11-06 \u2014 k-mia. Verified at Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z. Exact proxy and implementation runtime match the verified source; the EIP-1967 implementation is 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693 and the admin slot is zero (UUPS, not renounced upgrades). The creation-to-pin role/upgrade/emergency-event scan [77019128,82088784] completed all 507 contiguous ranges and returned 15 RoleGranted, 7 RoleRevoked and the constructor Upgraded event; replayed role membership matches the independently read hasRole values. This is authority evidence, not a negative incident review or a complete liability/perimeter certificate. Safe VERSION=1.4.1, 2-of-2 threshold with the exact owners below; module pagination is empty/terminal 0x1, guard slot zero and the recorded CompatibilityFallbackHandler present. No custody or complete execution-scope credit is asserted.",
+        "threshold": 2,
+        "signerCount": 2,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
+            "0x3b8515a930eb16c0b2cec34fc9232f8cfcc6c0a1"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 82088784,
+          "observedAt": "2026-11-06",
+          "source": "manual"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false at this pin after the revoke at block 82038101. Every role is DEFAULT_ADMIN_ROLE-administered, so the Safe can grant mint/upgrade authority without using the current upgrade timelock.",
+          "caps": "Role reconfiguration can authorize unbounded mintBridge/mint or replace mint-critical logic; the current minimum-delay timelock is independently bypassable."
+        },
+        "bypassSurfaces": [
+          "Immediate DEFAULT_ADMIN_ROLE grantRole(MINTER_ROLE, account) and grantRole(UPGRADER_ROLE, account)."
+        ]
+      },
+      {
+        "id": "idrx-celo-bridge-upgrader-timelock",
+        "label": "IDRX Celo bridge-route UUPS timelock (admin bypass retained)",
+        "routeRefs": [
+          "celo:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "celo",
+        "controllerAddress": "0x30d940c7b4a21e10f3fcaf4faabe8fe826a5b92d",
+        "failureDomainKeys": [
+          "timelock:celo:0x30d940c7b4a21e10f3fcaf4faabe8fe826a5b92d"
+        ],
+        "authorityType": "timelock",
+        "observedAt": "2026-11-06",
+        "observedBlock": 82088784,
+        "sources": [
+          {
+            "label": "Safety unknowns campaign 2026-11-06 \u2014 k-mia; Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z; exact code/storage/role/Safe/timelock reads and 507 contiguous 10000-block-or-smaller admin-event ranges from creation block 77019128 through this pin",
+            "url": "https://api-celo-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Celo IDRX verified proxy source and deployed runtime (verified 2026-09-09); runtime independently matched at the named pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          },
+          {
+            "label": "Celo IDRX verified implementation source (verified 2026-09-09); runtime independently matched at the named pin; mintBridge, unbounded mint, role administration and UUPS authorization",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693"
+          },
+          {
+            "label": "IDRX issuer burnBridge / bridge-request / destination mint workflow, re-read 2026-11-06; page does not publish a Celo liability partition",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          },
+          {
+            "label": "Celo verified TimeLock / OpenZeppelin TimelockController source (verified 2026-09-09); runtime matched at the same pin",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x30d940c7b4a21e10f3fcaf4faabe8fe826a5b92d"
+          }
+        ],
+        "evidence": "Safety unknowns campaign 2026-11-06 \u2014 k-mia. Verified at Celo block 82088784, hash 0x5334effac464ac98dcd143b297e48474cc75dc2d8482d4917343c880de8e516f, timestamp 2026-11-06T18:25:42Z. Exact proxy and implementation runtime match the verified source; the EIP-1967 implementation is 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693 and the admin slot is zero (UUPS, not renounced upgrades). The creation-to-pin role/upgrade/emergency-event scan [77019128,82088784] completed all 507 contiguous ranges and returned 15 RoleGranted, 7 RoleRevoked and the constructor Upgraded event; replayed role membership matches the independently read hasRole values. This is authority evidence, not a negative incident review or a complete liability/perimeter certificate.",
+        "timelockDelaySec": 172800,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "UPGRADER_ROLE and PLATFORM_FEE_SETTER_ROLE are true on IDRX. getMinDelay()=172800 seconds. The issuer admin EOA and 2-of-2 admin Safe each currently hold the timelock DEFAULT_ADMIN_ROLE, PROPOSER_ROLE, EXECUTOR_ROLE and CANCELLER_ROLE; the token DEFAULT_ADMIN_ROLE can also bypass this contract by granting a direct UPGRADER_ROLE. The timelock delay is not a route-wide unavoidable delay."
+        },
+        "bypassSurfaces": [
+          "Token DEFAULT_ADMIN_ROLE can immediately grant UPGRADER_ROLE to another account."
+        ]
       }
     ]
   }

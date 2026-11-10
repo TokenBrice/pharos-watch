@@ -1,5 +1,5 @@
 import { formatCurrency } from "@shared/lib/format";
-import { resolveDexVolumeView, type DexVolumeView } from "@shared/lib/dex-volume-availability";
+import { DEX_VOLUME_BOUND_MIN_USD, resolveDexVolumeView, type DexVolumeView } from "@shared/lib/dex-volume-availability";
 import type { DexVolumeAvailability, DexVolumeCompleteness } from "@shared/types/market";
 
 const COMPLETENESS_LABEL: Record<DexVolumeCompleteness, string> = {
@@ -40,6 +40,10 @@ export function describeDexVolume(
     return { text, detail: null, lowerBound: null, title: "Completeness not recorded for this snapshot", view };
   }
   const partialGrossUsd = view.partialGrossUsd;
+  // A bound that prints as $0.00 is indistinguishable from a measured zero.
+  const informativeGrossUsd = partialGrossUsd != null && partialGrossUsd >= DEX_VOLUME_BOUND_MIN_USD
+    ? partialGrossUsd
+    : null;
   // A legacy payload's null (e.g. pre-record 7d volume) carries no completeness record.
   const label = availability == null ? "Not measured" : COMPLETENESS_LABEL[view.completeness];
   const coverage = availability?.volumeCoverage;
@@ -47,10 +51,10 @@ export function describeDexVolume(
   const coverageClause = typeof coverage === "number" ? ` over pools holding ${Math.floor(coverage * 100)}% of retained TVL` : "";
   return {
     text,
-    detail: partialGrossUsd != null ? `Partial ≥ ${formatCurrency(partialGrossUsd)}` : label,
-    lowerBound: partialGrossUsd != null
+    detail: informativeGrossUsd != null ? `Partial ≥ ${formatCurrency(informativeGrossUsd)}` : label,
+    lowerBound: informativeGrossUsd != null
       ? {
-          text: `≥ ${formatCurrency(partialGrossUsd)}`,
+          text: `≥ ${formatCurrency(informativeGrossUsd)}`,
           detail: typeof coverage === "number"
             ? `Partial lower bound: pools holding ${Math.floor(coverage * 100)}% of TVL`
             : "Partial lower bound: not every pool measured",

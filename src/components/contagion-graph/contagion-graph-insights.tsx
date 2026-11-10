@@ -19,6 +19,8 @@ interface ContagionGraphInsightsProps {
   logos?: Record<string, string>;
   onTraceNode: (nodeId: string) => void;
   onUseAsExposureRoot?: (coinId: string) => void;
+  /** Detail pages draw only the focus coin's incident-and-dependent closure, which cannot date full-graph exposure. */
+  detailScope?: boolean;
   variant?: "overlay" | "panel";
 }
 
@@ -80,6 +82,7 @@ export function ContagionGraphInsights({
   logos,
   onTraceNode,
   onUseAsExposureRoot,
+  detailScope = false,
   variant = "overlay",
 }: ContagionGraphInsightsProps) {
   if (!inspectedNode) return null;
@@ -143,9 +146,11 @@ export function ContagionGraphInsights({
         <div className="grid grid-cols-2 gap-1.5">
           <MiniMetric label="Dependents" value={`${dependentCount} (${dependentSummary.count} visible)`} />
           <MiniMetric label="Upstream" value={`${upstreamCount} (${upstreamSummary.count} visible)`} />
-          <MiniMetric label="Direct dependent exposure" value={directKnown ? `${formatCurrency(exposure?.knownUsd ?? 0, 1)}${exposure && !exposure.complete ? " (known only)" : ""}` : "Unavailable"} />
+          {detailScope ? null : (
+            <MiniMetric label="Direct dependent exposure" value={directKnown ? `${formatCurrency(exposure?.knownUsd ?? 0, 1)}${exposure && !exposure.complete ? " (known only)" : ""}` : "Unavailable"} />
+          )}
         </div>
-        {exposure && !exposure.complete && (
+        {!detailScope && exposure && !exposure.complete && (
           <p className="text-2xs text-muted-foreground">
             {exposure.excludedSupplyUnknownIds.length} supply unavailable; {exposure.unknownShareEdgeCount} shares unavailable.
             {exposure.integrityFlag && " Published shares need review."}

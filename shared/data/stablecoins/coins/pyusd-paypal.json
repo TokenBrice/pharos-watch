@@ -15,7 +15,7 @@
   "geckoId": "paypal-usd",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.paxos.com/pyusd-transparency",
+    "url": "https://www.paxos.com/transparency/pyusd",
     "provider": "KPMG",
     "attestorTier": "big4",
     "cadence": "monthly",
@@ -167,13 +167,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "pyusd-paypal",
     "display": {
-      "url": "https://www.paxos.com/pyusd-transparency",
+      "url": "https://www.paxos.com/transparency/pyusd",
       "label": "Paxos Transparency"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.paxos.com/pyusd-transparency"
+        "url": "https://www.paxos.com/transparency/pyusd"
       }
     },
     "params": {

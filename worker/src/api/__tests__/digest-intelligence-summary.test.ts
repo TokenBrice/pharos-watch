@@ -89,4 +89,14 @@ describe("selectDigestIntelligence", () => {
     expect(result.forwardLookOutcomes).toBeNull();
     expect(result.riskTape).toBeNull();
   });
+
+  it("returns null when a non-empty array has no valid elements", () => {
+    const result = selectDigestIntelligence({ nextTriggers: [{ id: "broken" }, null] });
+    expect(result.nextTriggers).toBeNull();
+  });
+
+  it("keeps a genuinely empty stored array as proven empty", () => {
+    const result = selectDigestIntelligence({ nextTriggers: [] });
+    expect(result.nextTriggers).toEqual([]);
+  });
 });

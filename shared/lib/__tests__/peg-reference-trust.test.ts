@@ -29,8 +29,23 @@ describe("peg reference trust", () => {
       expected: false,
     },
     {
-      label: "commodity pegs stay trusted when their rate is present",
+      label: "commodity medians stay trusted at three contributors",
+      input: { pegCurrency: "GOLD", pegType: "peggedGOLD", pegRateSource: "median", pegRateContributorCount: 3 },
+      expected: true,
+    },
+    {
+      label: "commodity medians are not trusted with two contributors",
+      input: { pegCurrency: "SILVER", pegType: "peggedSILVER", pegRateSource: "median", pegRateContributorCount: 2 },
+      expected: false,
+    },
+    {
+      label: "commodity medians are not trusted with one contributor",
       input: { pegCurrency: "GOLD", pegType: "peggedGOLD", pegRateSource: "median", pegRateContributorCount: 1 },
+      expected: false,
+    },
+    {
+      label: "commodity spot fallbacks stay trusted without peer contributors",
+      input: { pegCurrency: "SILVER", pegType: "peggedSILVER", pegRateSource: "fallback", pegRateContributorCount: 0 },
       expected: true,
     },
     {

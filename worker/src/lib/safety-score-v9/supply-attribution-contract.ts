@@ -219,8 +219,10 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
 
 const CENTRIFUGE_V3_SPOKE_ADDRESS =
   "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab";
+export const PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG = 15;
+// Issuer rotation: JTRSY slot 462868190, ACRDX slot 462868261; reverified finalized at slot 465239190.
 const CENTRIFUGE_SOLANA_MINT_AUTHORITY =
-  "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb";
+  "BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4";
 const SOLANA_TOKEN_2022_PROGRAM =
   "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const SOLANA_SYSTEM_PROGRAM = "11111111111111111111111111111111";
@@ -287,8 +289,16 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
       safeBlockLag: 10,
       extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
     },
-    // Withheld until Pharos runtime, Spoke and safe-block/RPC evidence is reviewed.
-    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": null,
+    // Runtime pin 22124683; pool/share-class and transport binding pin 22133080 (jtrsy-pharos-route-20261104).
+    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG,
+      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.pharos,
+    },
     "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj": {
       runtime: "solana",
       liabilityModel: "protocol-burn-mint",
@@ -296,6 +306,23 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
       mintAuthority: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
       controllerAddress: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
       controllerProgramOwner: SOLANA_SYSTEM_PROGRAM,
+    },
+    // Reviewed pins: X Layer 75356629, Arc 30150643; exact JTRSY pool/share class and Spoke ward.
+    "xlayer:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "9fcdeadc7475bc4a9b66a1674420773f281fa54a73437744a0dc56b1b3ab4408",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 12,
+    },
+    "arc:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "cc94a8560b293e9d6b9a6b460240b51b9d842dcb074dd8e682b6f863c74d5efc",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 2,
     },
   },
   "acrdx-anemoy-apollo": {
@@ -883,8 +910,8 @@ export function expectedWmDeploymentIdentity(routeId: string): WmDeploymentIdent
 export function expectedCentrifugeDeploymentIdentity(
   assetId: string,
   routeId: string,
-): CentrifugeDeploymentIdentity | undefined {
-  return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId] ?? undefined;
+): CentrifugeDeploymentIdentity | null | undefined {
+  return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
 }
 
 export function loadReviewedEconomicSupplyPlans(value: unknown) {

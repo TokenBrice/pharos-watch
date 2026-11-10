@@ -10,10 +10,17 @@ import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
+import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
 import { parseJson } from "../lib/json-parse";
-import { logWorkerEvent } from "../lib/structured-log";
+import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
+import { deliverOperatorAlert } from "./cron-sentinel-rules";
 
 export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnover-watchdog:snapshot:v1";
+/**
+ * One alert per alert episode. The episode flag is committed only after
+ * transport accepts the durable pending payload.
+ */
+export const DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY = "dex-exit-route-turnover-watchdog:alert:v1";
 
 /**
  * Alert at 0.5 Jaccard distance: for two equally sized route sets this means
@@ -66,6 +73,12 @@ const PendingTurnoverAlertSchema = z.object({
     .max(MAX_WORST_OFFENDERS),
 }).strict();
 
+const TurnoverAlertStateSchema = z.object({
+  active: z.boolean(),
+  generationId: z.string().min(1).nullable(),
+  sentAtSec: z.number().int().nonnegative().nullable(),
+}).strict();
+
 const RouteSnapshotSchema = z.object({
   schemaVersion: z.literal(1),
   generationId: z.string().min(1),
@@ -87,8 +100,8 @@ const RouteSnapshotSchema = z.object({
   /**
    * Evidence for an alerting run (a divergence sustained across two published
    * generations). The per-coin baseline advances in the run that alerts, so
-   * the alert itself is persisted here and cleared only by a later run that
-   * observes no alerting coin.
+   * original alert stays here until transport accepts it, independently of
+   * subsequent comparisons.
    */
   pendingAlert: PendingTurnoverAlertSchema.optional(),
 }).strict();
@@ -97,6 +110,12 @@ type RouteEvidence = z.infer<typeof RouteEvidenceSchema>;
 type RouteSnapshot = z.infer<typeof RouteSnapshotSchema>;
 type PendingTurnoverAlert = z.infer<typeof PendingTurnoverAlertSchema>;
 type TurnoverCandidate = z.infer<typeof TurnoverCandidateSchema>;
+type TurnoverAlertState = z.infer<typeof TurnoverAlertStateSchema>;
+
+export interface DexExitRouteTurnoverWatchdogOptions {
+  /** Operator chat; absent credentials leave the alert pending for the next run. */
+  operatorTelegramCreds?: TelegramCreds | null;
+}
 
 interface PublishedGenerationRow {
   generation_id: string;
@@ -260,11 +279,36 @@ function meetsAlertCriteria(evaluation: TurnoverEvaluation): boolean {
     && evaluation.removedRouteCount >= DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES;
 }
 
+function parseAlertState(value: string | null | undefined): TurnoverAlertState {
+  if (value == null) return { active: false, generationId: null, sentAtSec: null };
+  const parsed = parseJson(value);
+  const state = parsed.ok ? TurnoverAlertStateSchema.safeParse(parsed.value) : null;
+  if (!state?.success) throw new Error("Invalid DEX exit-route turnover alert state");
+  return state.data;
+}
+
+function buildTurnoverAlertMessage(alert: PendingTurnoverAlert): string {
+  const offenders = alert.worstOffenders
+    .map((offender) => `${offender.stablecoinId} (${offender.jaccardDistance.toFixed(2)})`)
+    .join(", ");
+  return [
+    "<b>Pharos DEX exit-route turnover</b>",
+    "",
+    "Producer: sync-dex-liquidity",
+    `Published generation: ${escapeHtml(alert.generationId)}`,
+    "Historical published event; current routes may have recovered.",
+    `Budget: Jaccard >= ${DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD} with >= ${DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES} removed routes, sustained 2 published generations`,
+    `Coins: ${escapeHtml(offenders)}`,
+  ].join("\n");
+}
+
 export async function runDexExitRouteTurnoverWatchdog(
   db: D1Database,
   signal?: AbortSignal,
+  options: DexExitRouteTurnoverWatchdogOptions = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  const nowSec = Math.floor(Date.now() / 1000);
   const generation = await db
     .prepare(
       `SELECT generation_id, published_at
@@ -275,14 +319,87 @@ export async function runDexExitRouteTurnoverWatchdog(
     )
     .first<PublishedGenerationRow>();
   throwIfAborted(signal);
+  const [previousCache, alertStateCache] = await Promise.all([
+    getCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, signal),
+    getCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, signal),
+  ]);
+  throwIfAborted(signal);
+
+  const previous = previousCache === null
+    ? null
+    : parsePreviousRouteSnapshot(previousCache.value);
+  if (previous !== null && "invalidReason" in previous) {
+    // Unread state cannot prove that no historical notification is pending.
+    throw new Error(`Invalid DEX exit-route turnover snapshot: ${previous.invalidReason}`);
+  }
+  const comparable = previous;
+  let alertState = parseAlertState(alertStateCache?.value);
+  let alertSent = false;
+  let alertDeliveryFailed = false;
+  let alertDeliveryErrorClass: string | null = null;
+  // Legacy snapshots may retain an already acknowledged episode payload.
+  let pendingAlert = alertState.active ? undefined : comparable?.pendingAlert;
+  const finish = async (
+    result: CronResult,
+    snapshot: RouteSnapshot | null = comparable,
+    alertingComparison: boolean | null = null,
+  ): Promise<CronResult> => {
+    const persistSnapshot = async () => {
+      if (snapshot) {
+        const { pendingAlert: _previousPending, ...baseline } = snapshot;
+        await setCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY,
+          JSON.stringify(pendingAlert ? { ...baseline, pendingAlert } : baseline), signal);
+      }
+    };
+    if (snapshot !== comparable || (comparable?.pendingAlert && !pendingAlert)) await persistSnapshot();
+    const recordReceipt = () => recordOperatorAlertReceipt(db, "turnover", {
+      nowSec,
+      operatorConfigured: options.operatorTelegramCreds != null,
+      pending: pendingAlert != null,
+      delivered: alertSent,
+      reason: options.operatorTelegramCreds == null ? "operator-alert-credentials-missing"
+        : alertDeliveryFailed ? "operator-alert-delivery-failed" : null,
+    }, signal);
+    // Persist both payload and pending age before transport can accept the event.
+    await recordReceipt();
+    if (pendingAlert && options.operatorTelegramCreds != null) {
+      const delivery = await deliverOperatorAlert(
+        options.operatorTelegramCreds, buildTurnoverAlertMessage(pendingAlert), signal,
+      );
+      alertDeliveryFailed = !delivery.ok;
+      alertDeliveryErrorClass = delivery.ok ? null : delivery.errorClass ?? "unknown";
+      if (delivery.ok) {
+        alertState = { active: true, generationId: pendingAlert.generationId, sentAtSec: nowSec };
+        await setCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, JSON.stringify(alertState), signal);
+        alertSent = true;
+        pendingAlert = undefined;
+        await persistSnapshot();
+      }
+      await recordReceipt();
+    }
+    if (alertingComparison === false && alertState.active) {
+      alertState = { active: false, generationId: null, sentAtSec: null };
+      await setCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, JSON.stringify(alertState), signal);
+    }
+    const metadata = JSON.parse(String(result.metadata));
+    metadata.operatorAlert = {
+      episodeActive: pendingAlert != null || alertState.active,
+      sent: alertSent,
+      deliveryFailed: alertDeliveryFailed,
+      // Provider class (auth, chat_not_found, formatting...) names why Telegram refused it.
+      ...(alertDeliveryFailed ? { deliveryErrorClass: alertDeliveryErrorClass } : {}),
+    };
+    metadata.pendingAlertCleared = comparable?.pendingAlert != null && pendingAlert == null;
+    if (alertDeliveryFailed) metadata.reason = "operator-alert-delivery-failed";
+    return { ...result, status: alertDeliveryFailed ? "degraded" : result.status, metadata: JSON.stringify(metadata) };
+  };
   if (generation === null) {
-    return createCronResult({
+    return finish(createCronResult({
       status: "skipped_neutral",
       itemCount: 0,
       metadata: { reason: "no-published-dex-generation" },
-    });
+    }));
   }
-
   const publishedRows = await db
     .prepare(
       `SELECT stablecoin_id, score_components_json
@@ -295,41 +412,24 @@ export async function runDexExitRouteTurnoverWatchdog(
     .all<PublishedRouteRow>();
   throwIfAborted(signal);
   const current = buildRouteSnapshot(generation.generation_id, publishedRows.results ?? []);
-  const previousCache = await getCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, signal);
-  throwIfAborted(signal);
-
-  const previous = previousCache === null
-    ? null
-    : parsePreviousRouteSnapshot(previousCache.value);
-  if (previous !== null && "invalidReason" in previous) {
-    logWorkerEvent({
-      scope: "lib",
-      level: "warn",
-      event: "dex_exit_route_turnover_snapshot_recovered",
-      job: "dex-exit-route-turnover-watchdog",
-      message: "Replaced an unreadable DEX exit-route turnover baseline",
-      metadata: { reason: previous.invalidReason, generationId: current.generationId },
-    });
-  }
-  const comparable = previous !== null && !("invalidReason" in previous) ? previous : null;
 
   // The sustain window counts published generations, not watchdog runs: a
   // rerun that still sees the last compared generation must not confirm or
   // clear candidate state against the same observation twice.
   if (comparable !== null && comparable.generationId === current.generationId) {
-    return createCronResult({
+    return finish(createCronResult({
       status: "skipped_neutral",
       itemCount: 0,
       metadata: {
         reason: "no-new-published-dex-generation",
         currentGenerationId: current.generationId,
       },
-    });
+    }));
   }
 
   let result: CronResult;
   let nextSnapshot: RouteSnapshot = current;
-  let pendingAlert: PendingTurnoverAlert | undefined;
+  let alertingComparison = false;
   if (comparable === null) {
     result = createCronResult({
       status: "ok",
@@ -406,19 +506,19 @@ export async function runDexExitRouteTurnoverWatchdog(
       coins: baselineCoins,
       ...(heldCandidates.length > 0 ? { candidates: heldCandidates } : {}),
     };
-    // An alert raised here is persisted with the new snapshot and stays
-    // visible until a run sees no alerting coin.
+    // Comparison advancement must not replace an undelivered historical event.
     const carriedAlert = comparable.pendingAlert ?? null;
-    pendingAlert = alerting.length === 0
-      ? undefined
-      : {
-          generationId: current.generationId,
-          threshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
-          worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS).map((evaluation) => ({
-            stablecoinId: evaluation.stablecoinId,
-            jaccardDistance: evaluation.jaccardDistance,
-          })),
-        };
+    alertingComparison = alerting.length > 0;
+    if (alertingComparison && !pendingAlert && !alertState.active) {
+      pendingAlert = {
+        generationId: current.generationId,
+        threshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
+        worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS).map((evaluation) => ({
+          stablecoinId: evaluation.stablecoinId,
+          jaccardDistance: evaluation.jaccardDistance,
+        })),
+      };
+    }
     const metadata = JSON.stringify({
       currentGenerationId: current.generationId,
       previousGenerationId: comparable.generationId,
@@ -436,19 +536,11 @@ export async function runDexExitRouteTurnoverWatchdog(
       highestObservedTurnover: evaluations[0]?.jaccardDistance ?? 0,
       worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
       carriedPendingAlert: carriedAlert,
-      pendingAlertCleared: carriedAlert !== null && alerting.length === 0,
-      ...(pendingAlert ? { quality: { reason: "dex-route-turnover-threshold" } } : {}),
-      firedRuleIds: pendingAlert ? ["dex-route-turnover"] : [],
+      ...(alertingComparison ? { quality: { reason: "dex-route-turnover-threshold" } } : {}),
+      firedRuleIds: alertingComparison ? ["dex-route-turnover"] : [],
     });
     result = { status: "ok", itemCount: evaluations.length, metadata };
   }
 
-  await setCache(
-    db,
-    DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY,
-    JSON.stringify(pendingAlert ? { ...nextSnapshot, pendingAlert } : nextSnapshot),
-    signal,
-  );
-  throwIfAborted(signal);
-  return result;
+  return finish(result, nextSnapshot, alertingComparison);
 }

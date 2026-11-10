@@ -17,8 +17,8 @@ import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
   formatYieldSourceRiskCompact,
+  getYieldSourceDepthDisplay,
 } from "@/lib/yield-source-risk";
 import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
@@ -77,11 +77,11 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   const canAddToCompare = compare.canAdd;
 
   const sourceExplorer = buildYieldSourceExplorerModel(ranking, sourceClock);
-  const effectiveSourceKey = selectedSourceKey ?? sourceExplorer.selectedSource.sourceKey;
   const totalSources = sourceExplorer.allSources.length;
   const { selectedSource } = sourceExplorer;
   const activeSource =
-    sourceExplorer.allSources.find((source) => source.sourceKey === effectiveSourceKey) ?? selectedSource;
+    sourceExplorer.allSources.find((source) => source.sourceKey === selectedSourceKey) ?? selectedSource;
+  const effectiveSourceKey = activeSource.sourceKey;
   const confidenceTier = ranking.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] ?? null) : null;
   const resolvedBenchmark = resolveYieldRowBenchmark(ranking, benchmarks, riskFreeRate);
@@ -92,9 +92,13 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   const scoreQualification = ranking.provenance?.scoreQualification ?? null;
   const opportunityRisk = ranking.sourceRisk?.opportunityRisk ?? null;
   const freshness = selectedSource.freshness;
-  const hasAlternateSelected =
-    selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
-  const deepDive = getYieldWorkbenchLink(ranking.id, hasAlternateSelected ? selectedSourceKey : null);
+  const selectedDepthDisplay = getYieldSourceDepthDisplay({
+    depthLens: selectedSource.depthLens,
+    yieldType: selectedSource.yieldType,
+    sourceRole: selectedSource.sourceRole,
+    sourceTvlUsd: selectedSource.sourceTvlUsd,
+  });
+  const deepDive = getYieldWorkbenchLink(ranking.id, activeSource.isChosen ? null : effectiveSourceKey);
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -159,9 +163,9 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
               {selectedSource.sourceTvlUsd !== null && <span>TVL {formatCurrency(selectedSource.sourceTvlUsd)}</span>}
               <span
                 className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-3xs"
-                title={YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].description}
+                title={selectedDepthDisplay.description}
               >
-                {YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].label} depth
+                {selectedDepthDisplay.phrase}
               </span>
               {freshness && (
                 <YieldFreshnessLabel freshness={freshness} mode="plain-title" />
@@ -232,6 +236,8 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             sourceRisk={activeSource.sourceRisk}
             sourceTvlUsd={activeSource.sourceTvlUsd}
             sourceDepthLens={activeSource.depthLens}
+            yieldType={activeSource.yieldType}
+            sourceRole={activeSource.sourceRole}
             sourceRiskDrivers={activeSource.sourceRiskDrivers}
             sourceChanged={activeSource.isChosen ? sourceExplorer.sourceSwitch.changed : false}
             confidenceTier={activeSource.confidenceTier}
@@ -255,6 +261,12 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                     const confidence = source.confidenceTier
                       ? (YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null)
                       : null;
+                    const depthDisplay = getYieldSourceDepthDisplay({
+                      depthLens: source.depthLens,
+                      yieldType: source.yieldType,
+                      sourceRole: source.sourceRole,
+                      sourceTvlUsd: source.sourceTvlUsd,
+                    });
 
                     return (
                       <button
@@ -278,8 +290,8 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-3xs text-muted-foreground">
                             {confidence ? <span>{confidence}</span> : null}
-                            <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
-                              {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
+                            <span title={depthDisplay.description}>
+                              {depthDisplay.phrase}
                             </span>
                             <span className="font-mono tabular-nums">
                               Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
@@ -335,8 +347,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             <p className="text-xs text-muted-foreground">
               Showing{" "}
               <span className="font-medium text-foreground">
-                {sourceExplorer.allSources.find((source) => source.sourceKey === effectiveSourceKey)?.displayLabel ??
-                  "Best source"}
+                {activeSource.displayLabel}
               </span>
             </p>
             <YieldHistoryChart

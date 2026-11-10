@@ -8,11 +8,11 @@ user_invocable: true
 
 ## Authority and cadence
 
-Run at least monthly, and after a known governance, custody, role, or contract change relevant to a published note. Approval is one-time, not time-limited. A monthly read is a drift report, not an approval renewal.
+Run at least monthly, and after a known governance, custody, role, or contract change relevant to a published note. Approval is one-time and content-bound; see [One-time maintainer approval](../../../docs/process/failure-scenarios.md#one-time-maintainer-approval). A monthly read is a drift report, not an approval renewal.
 
 Read `docs/process/failure-scenarios.md` first. The record in `data/failure-scenarios.json`, the schemas and publication selector in `shared/lib/failure-scenarios.ts`, checks in `shared/lib/failure-scenario-checks/`, and reviewed document baselines in `shared/data/failure-scenario-documents.json` are authoritative. Do not hard-code a coin roster: enumerate the current registry and records. The verifier includes drafts so checks can be exercised before publication; clearly distinguish them from approved notes.
 
-Only the maintainer runs `npm run scenarios:approve`. Agents must never invoke it, even with prior approval of research work. The verifier never writes `data/failure-scenarios.json` and must never broadcast a transaction.
+The `scenarios:approve` command is maintainer-only; agents must never invoke it, even with prior approval of research work. See [One-time maintainer approval](../../../docs/process/failure-scenarios.md#one-time-maintainer-approval). The verifier never writes `data/failure-scenarios.json` and must never broadcast a transaction.
 
 ## Collect a pinned report
 
@@ -55,7 +55,7 @@ This flag records today's successful fingerprints and normalized text in the sep
 Review the full note, not just the summary. Record the pins and a decision with supporting row IDs, evidence, and unresolved gaps:
 
 1. **Still holds**: tested premises remain valid, unchecked conditions have been manually reviewed, and no wording needs correction. Leave the content and approval untouched; retain the dated review report.
-2. **Correct and re-approve**: factual drift or wording requires an edit but a defensible scenario remains. Propose the exact text and falsifier changes to the maintainer. Any edit to approved content (including falsifier evidence/status) invalidates the content hash and withholds publication until the maintainer approves the corrected, verified record again. Do not automate approval or merely rewrite the hash.
-3. **Retire**: a condition genuinely invalidates the failure path or evidence no longer supports publication. Present the rationale and proposed retirement/status change for the maintainer's decision. A falsifier flipping to `met` withholds the record at the next build, even if its previous approval remains recorded. Do not keep a disproven record publishing by relabelling the condition.
+2. **Correct and re-approve**: factual drift or wording requires an edit but a defensible scenario remains. Propose the exact text and falsifier changes to the maintainer. Any edit to approved content (including falsifier evidence/status) invalidates the content hash and withholds publication until maintainer re-approval; do not automate approval or merely rewrite the hash. See [Monthly re-verification and falsifier suspension](../../../docs/process/failure-scenarios.md#monthly-re-verification-and-falsifier-suspension).
+3. **Retire**: a condition genuinely invalidates the failure path or evidence no longer supports publication. Present the rationale and proposed retirement/status change for the maintainer's decision. A falsifier flipping to `met` withholds the record at the next build even if its previous approval remains recorded; see [Monthly re-verification and falsifier suspension](../../../docs/process/failure-scenarios.md#monthly-re-verification-and-falsifier-suspension). Do not keep a disproven record publishing by relabelling the condition.
 
-Deliver a concise per-coin decision table with `still holds`, `correct and re-approve`, `retire`, or `undecided: evidence gap`, plus the read provenance and action owner. Monthly reports are advisory; the maintainer decides all record edits, re-approvals and retirements.
+Deliver a concise per-coin decision table with `still holds`, `correct and re-approve`, `retire`, or `undecided: evidence gap`, plus the read provenance and action owner. Monthly reports are advisory; the maintainer decides all record edits, re-approvals and retirements (see [Monthly re-verification and falsifier suspension](../../../docs/process/failure-scenarios.md#monthly-re-verification-and-falsifier-suspension)).

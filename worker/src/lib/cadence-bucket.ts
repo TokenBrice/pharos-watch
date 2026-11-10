@@ -21,7 +21,7 @@ export interface CadenceBucketClaim {
 
 export type CadenceBucketClaimResult =
   | { kind: "claimed"; claim: CadenceBucketClaim }
-  | { kind: "skip"; reason: "already-completed" | "in-progress"; bucket: number };
+  | { kind: "skip"; reason: "already-completed" | "in-progress" | "superseded"; bucket: number };
 
 function parseMarker(value: string): CadenceMarker | null {
   const parsed = parseJsonObject<Partial<CadenceMarker>>(value);
@@ -81,7 +81,13 @@ export async function claimCadenceBucket(
   const existingRow = await getCache(db, options.key);
   const existing = existingRow ? parseMarker(existingRow.value) : null;
   if (existing && existing.bucket > options.bucket) {
-    return { kind: "skip", reason: "already-completed", bucket: existing.bucket };
+    // Only a completed later bucket proves this delivery's work was published.
+    // A later claimed/failed marker supersedes it without claiming completion.
+    return {
+      kind: "skip",
+      reason: existing.state === "completed" ? "already-completed" : "superseded",
+      bucket: existing.bucket,
+    };
   }
   if (existing && existing.bucket === options.bucket) {
     if (existing.state === "completed") {
@@ -190,7 +196,9 @@ export async function runCadenceBucketPublication(
       metadata: JSON.stringify({
         reason: claimResult.reason === "already-completed"
           ? "cadence_bucket_completed"
-          : "cadence_bucket_in_progress",
+          : claimResult.reason === "superseded"
+            ? "cadence_bucket_superseded"
+            : "cadence_bucket_in_progress",
         cadence: {
           bucket,
           observedBucket: claimResult.bucket,

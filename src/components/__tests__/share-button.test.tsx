@@ -75,4 +75,32 @@ describe("ShareButton", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:pharos-png");
   });
 
+  it.each(["Download PNG", "Copy as image"])("keeps %s loading past prior link feedback", async (action) => {
+    const response = Promise.withResolvers<Response>();
+    vi.stubGlobal("navigator", { clipboard: {
+      writeText: vi.fn().mockResolvedValue(undefined), write: vi.fn().mockResolvedValue(undefined),
+    } });
+    vi.stubGlobal("ClipboardItem", class {});
+    mockFetch([{ match: "/api/og/stablecoin/usdc", respond: () => response.promise }], { requireMatch: true });
+    render(<ShareButton ogPath="/api/og/stablecoin/usdc" />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    });
+    expect(screen.getByRole("button", { name: "Copied!" })).toHaveProperty("disabled", false);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: action }));
+    });
+    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
+    expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", true);
+    await act(async () => { response.resolve(new Response("png")); });
+    const completedLabel = action === "Copy as image" ? "Copied!" : "Share";
+    expect(screen.getByRole("button", { name: completedLabel })).toHaveProperty("disabled", false);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1999); });
+    expect(screen.getByRole("button", { name: completedLabel })).toHaveProperty("disabled", false);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", false);
+  });
+
 });

@@ -71,6 +71,18 @@ describe("loadBlacklistReconciliationStatus", () => {
     }
   });
 
+  it("does not publish a verified status that contradicts its derived safe-head state", async () => {
+    const row = makeBlacklistReconciliationStatusRow({
+      arbitrum_min_cursor: 500,
+      arbitrum_min_safe_head: 600,
+    });
+    const status = await loadBlacklistReconciliationStatus(mockD1([
+      { match: "blacklist-reconciliation-status-latest", rows: [row] },
+    ]));
+    expect(status.arbitrumAtSafeHead).toBe(false);
+    expect(status.status).toBe("unknown");
+  });
+
   it("redacts legacy run IDs that embedded the D1 Time Travel bookmark", async () => {
     const bookmark = "sensitive-d1-time-travel-bookmark";
     const db = mockD1([

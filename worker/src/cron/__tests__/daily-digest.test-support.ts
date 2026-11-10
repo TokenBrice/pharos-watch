@@ -3,10 +3,12 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 import type { ActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
+import type { StablecoinData } from "@shared/types/market";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import type { PreparedTelegramDigestAppendices } from "../../telegram/digest/digest-appendices";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
 import type { CollectorContext } from "../daily-digest/collectors-shared";
+import type { CurrentPegObservation } from "../../lib/current-peg-observations";
 import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
 import type {
   EnqueueTelegramDigestEditionResult,
@@ -252,7 +254,7 @@ export function publishedGaugeTable(
   const nowSec = Math.floor(Date.now() / 1000);
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v6:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v8:aggregate:24"],
     rows: [],
     first: {
       value: options.value ?? JSON.stringify(publishedGaugePayload()),
@@ -264,7 +266,7 @@ export function publishedGaugeTable(
 export function missingPublishedGaugeTable(): MockTableConfig {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["mint-burn-flows:v6:aggregate:24"],
+    matchBinds: ["mint-burn-flows:v8:aggregate:24"],
     rows: [],
     first: null,
   };
@@ -414,6 +416,38 @@ export function makeDailyDigestScenario(
   };
 }
 
+/**
+ * Current observations for every asset in the collector context, including
+ * assets a test adds after `makeCollectorCtx`. Deriving a $1 reference keeps
+ * those rows on a live deviation instead of silently running on the stored-peak
+ * fallback; a test that needs another reference (gold, FX) assigns its own map.
+ */
+class DerivedCurrentPegObservationMap extends Map<string, CurrentPegObservation> {
+  constructor(private readonly assets: ReadonlyMap<string, StablecoinData>) {
+    super();
+  }
+
+  override get(id: string): CurrentPegObservation | undefined {
+    return super.get(id) ?? (this.assets.has(id) ? currentPegObservation(1) : undefined);
+  }
+}
+
+/** Minimal current peg observation; `valueUsd` is the admitted per-token reference. */
+export function currentPegObservation(
+  valueUsd: number | null,
+  overrides: Partial<CurrentPegObservation> = {},
+): CurrentPegObservation {
+  return {
+    currentDeviationBps: null,
+    currentSignal: null,
+    pegReference: valueUsd == null ? null : { valueUsd, source: "median", contributorCount: 1, asOf: 0 },
+    pegReferenceUnavailable: false,
+    currentPriceUnavailable: false,
+    currentSupplyUnavailable: false,
+    ...overrides,
+  };
+}
+
 export function makeCollectorCtx(db: D1Database): CollectorContext {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
@@ -423,14 +457,16 @@ export function makeCollectorCtx(db: D1Database): CollectorContext {
     makeAsset({ id: "dai-makerdao", symbol: "DAI", price: 1.05, circulating: { peggedUSD: 5_000_000 }, circulatingPrevWeek: { peggedUSD: 5_000_000 } }),
   ];
   for (const asset of assets) asset.priceObservedAt = nowSec;
+  const stablecoinAssetById = new Map(assets.map((asset) => [asset.id, asset]));
   return {
     db,
     trackedStablecoinAssets: assets,
     trackedStablecoinIds: new Set(assets.map(({ id }) => id)),
     coreAggregateStablecoinAssets: assets,
     coreAggregateStablecoinIds: new Set(assets.map(({ id }) => id)),
-    stablecoinAssetById: new Map(assets.map((asset) => [asset.id, asset])),
+    stablecoinAssetById,
     mcapById: new Map([["usdt-tether", 100_000_000_000], ["usdc-circle", 50_000_000_000], ["dai-makerdao", 5_000_000]]),
+    currentPegObservationById: new DerivedCurrentPegObservationMap(stablecoinAssetById),
     stablecoinsCacheIsFresh: true,
     nowSec,
     todayTs,
@@ -540,3 +576,13 @@ export const VALID_CAPTURE_MAP_SUMMARY = {
     { tier: "F" as const, range: "0-59", count: 2, mcapUsd: 2_000_000_000, sharePct: 2, leaders: [] },
   ],
 };
+
+export function makeResumeDigestDb(tables: MockTableConfig[], row: Record<string, unknown> = {
+  generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
+}): MockD1Database {
+  return mockD1([
+    { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: row },
+    { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+    ...tables,
+  ]);
+}

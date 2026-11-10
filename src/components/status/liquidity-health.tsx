@@ -56,7 +56,7 @@ export function LiquidityHealthCard({
         <div className="flex items-center justify-between gap-3">
           <CardTitle as="h3" className="text-base">Liquidity health</CardTitle>
           <span className="text-xs text-muted-foreground">
-            Last run {health.lastRunStatus ?? "unknown"}
+            Coverage run {health.lastRunStatus ?? "unknown"}
           </span>
         </div>
       </CardHeader>

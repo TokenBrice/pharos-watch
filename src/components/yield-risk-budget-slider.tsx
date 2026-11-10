@@ -40,6 +40,20 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
     onSelect(target.key);
   }
 
+  // WHY: in the no-match (Custom) state the thumb is parked on "All", so a
+  // pointer click on that dot produces no native change event. Commit the stop
+  // under the pointer instead; keyboard still goes through onChange.
+  function handlePointerUp(event: React.PointerEvent<HTMLInputElement>) {
+    if (stopCount <= 1) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = (event.clientX - rect.left) / rect.width;
+    const index = Math.min(stopCount - 1, Math.max(0, Math.round(ratio * (stopCount - 1))));
+    const target = stops[index];
+    if (!target || target.active) return;
+    onSelect(target.key);
+  }
+
   return (
     <div
       role="group"
@@ -91,6 +105,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
           step={1}
           value={activeIndex}
           onChange={handleChange}
+          onPointerUp={handlePointerUp}
           aria-label="Risk tolerance"
           aria-valuetext={valueText}
           // WHY: h-11 (44px) meets WCAG 2.5.5 advisory target size while

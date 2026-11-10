@@ -185,22 +185,11 @@ export async function loadPublishedDexPoolChallengers(
 
   if (needsLegacy) {
     const loadedLegacy = await loadLegacy();
-    for (const coinId of [...loadedLegacy.topPoolCoins, ...loadedLegacy.fallbackCoins]) {
+    for (const [coinId, legacyRows] of loadedLegacy) {
       if (publishedCoins.has(coinId)) continue;
       if (!legacyFallbackCoins.has(coinId) && snapshotByCoin.has(coinId)) continue;
-      const legacyRows = loadedLegacy.challengersByStablecoin.get(coinId);
       if (legacyRows && legacyRows.length > 0) {
         challengersByStablecoin.set(coinId, legacyRows);
-        legacyFallbackCoins.add(coinId);
-        legacyUsedCoins.add(coinId);
-      }
-    }
-
-    for (const coinId of loadedLegacy.challengersByStablecoin.keys()) {
-      if (challengersByStablecoin.has(coinId)) continue;
-      if (publishedCoins.has(coinId)) continue;
-      if (!snapshotByCoin.has(coinId)) {
-        challengersByStablecoin.set(coinId, loadedLegacy.challengersByStablecoin.get(coinId) ?? []);
         legacyFallbackCoins.add(coinId);
         legacyUsedCoins.add(coinId);
       }

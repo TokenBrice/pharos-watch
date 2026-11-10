@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PUBLIC_ROUTE_PATHS } from "../../../src/lib/public-route-inventory";
+import { gatedHtmlRoutes, runReportBuildSize } from "../report-build-size.mjs";
 
 const SCRIPT = resolve(process.cwd(), "scripts/maintenance/report-build-size.mjs");
 const ZOD_CHUNK = "out/_next/static/chunks/framework-zod.js";
@@ -21,6 +22,14 @@ const BUDGET_ROUTES = ["depeg", "safety-scores", "stablecoins", "status", "scree
 const REQUIRED_ROUTES = [...new Set([...PROSE_ROUTES, ...BUDGET_ROUTES])];
 const HTML_FILES = 2 + REQUIRED_ROUTES.length;
 const OUT_FILES = 8 + REQUIRED_ROUTES.length;
+// Every prose route exercises the same branch; these keep the special /status/
+// row and one ordinary static-docs row without rebuilding the tree per route.
+const PROSE_ROUTE_SAMPLES = [
+  "privacy",
+  PROSE_ROUTES.find((route) => route.startsWith("docs/"))!,
+  "status",
+];
+const DOCS_ROUTES = PROSE_ROUTES.filter((route) => route.startsWith("docs/"));
 
 // Fixed payload sizes so the reported byte totals are derived, not guessed.
 const ZOD_CHUNK_BYTES = 500;
@@ -79,10 +88,41 @@ function runReport(buildRoot: string, { budgets = {}, check = true }: {
 } = {}) {
   const summaryPath = join(buildRoot, "step-summary.md");
   writeFileSync(summaryPath, "");
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const log = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+    stdout.push(args.map(String).join(" "));
+  });
+  const error = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+    stderr.push(args.map(String).join(" "));
+  });
+  try {
+    const status = runReportBuildSize({
+      cwd: buildRoot,
+      argv: check ? ["--check"] : [],
+      env: { ...process.env, GITHUB_STEP_SUMMARY: summaryPath, ...budgets },
+      publicRoutePaths: PUBLIC_ROUTE_PATHS,
+    });
+    return {
+      status,
+      stdout: `${stdout.join("\n")}\n`,
+      stderr: `${stderr.join("\n")}\n`,
+      stepSummary: readFileSync(summaryPath, "utf8"),
+    };
+  } finally {
+    log.mockRestore();
+    error.mockRestore();
+  }
+}
+
+/** One real child process: CLI wiring and exit codes are the process boundary. */
+function runReportProcess(buildRoot: string, { check = true }: { check?: boolean } = {}) {
+  const summaryPath = join(buildRoot, "step-summary.md");
+  writeFileSync(summaryPath, "");
   const result = spawnSync(process.execPath, check ? [SCRIPT, "--check"] : [SCRIPT], {
     cwd: buildRoot,
     encoding: "utf8",
-    env: { ...process.env, GITHUB_STEP_SUMMARY: summaryPath, ...budgets },
+    env: { ...process.env, GITHUB_STEP_SUMMARY: summaryPath },
   });
   return { ...result, stepSummary: readFileSync(summaryPath, "utf8") };
 }
@@ -92,6 +132,20 @@ afterEach(() => {
 });
 
 describe("report-build-size", () => {
+  it("exports the same HTML route set its blocking byte and eager-JS gates measure", () => {
+    const routes = gatedHtmlRoutes();
+    expect(new Set(routes).size).toBe(routes.length);
+    expect(routes).toEqual([...routes].sort());
+    expect(routes).toEqual(expect.arrayContaining([
+      "index.html",
+      "cemetery/index.html",
+      "api/reference/index.html",
+      DETAIL_ROUTE.replace(/^out\//, "") + "/index.html",
+      ...BUDGET_ROUTES.map((route) => `${route}/index.html`),
+    ]));
+    expect(PUBLIC_ROUTE_PATHS).toContain("/api/reference/");
+  });
+
   it("reports the payload inventory measured from the generated build", () => {
     const result = runReport(syntheticBuild());
 
@@ -171,7 +225,7 @@ describe("report-build-size", () => {
     );
   });
 
-  it.each(PROSE_ROUTES)(
+  it.each(PROSE_ROUTE_SAMPLES)(
     "blocks homepage and chart scripts leaking into /%s/",
     (route) => {
       const forbiddenScripts = route === "status"
@@ -192,7 +246,7 @@ describe("report-build-size", () => {
     } });
     expect(runReport(build).status).toBe(0);
   });
-  it.each(["api", "api/reference", ...PROSE_ROUTES.filter((route) => route.startsWith("docs/"))])(
+  it.each(["api", "api/reference", DOCS_ROUTES[0]])(
     "fails closed when required /%s/ HTML is missing",
     (route) => {
       const build = syntheticBuild();
@@ -241,8 +295,10 @@ describe("report-build-size", () => {
     expect(result.stderr).toContain("stablecoin/usdc-circle (1 scripts, gzip)");
   });
 
-  it.each(BUDGET_ROUTES)("enforces the /%s/ eager-script gzip budget", (route) => {
+  it.each([BUDGET_ROUTES[0]])("enforces the /%s/ eager-script gzip budget", (route) => {
     const build = syntheticBuild({ extraFiles: { [`out/${route}/index.html`]: SHELL_HTML + SHELL_HTML } });
+    // Positive control: the ceiling failing below is otherwise satisfiable.
+    expect(runReport(build).status).toBe(0);
     const result = runReport(build, {
       budgets: { [`PHAROS_SIZE_BUDGET_${route.toUpperCase().replaceAll("-", "_")}_EAGER_JS_GZIP_BYTES`]: "1" },
     });
@@ -250,10 +306,9 @@ describe("report-build-size", () => {
     expect(result.stderr).toContain(`${route} eager JS gzip exceeds its byte ceiling`);
     expect(result.stderr).toContain(`${route} (1 scripts, gzip)`);
     expect(result.stepSummary).toContain(`| ${route} eager JS gzip |`);
-    expect(runReport(build).status).toBe(0);
   });
 
-  it.each(BUDGET_ROUTES)("fails closed when budgeted /%s/ HTML is missing", (route) => {
+  it.each([BUDGET_ROUTES[0]])("fails closed when budgeted /%s/ HTML is missing", (route) => {
     const build = syntheticBuild();
     rmSync(join(build, "out", route, "index.html"));
     const result = runReport(build);
@@ -265,8 +320,8 @@ describe("report-build-size", () => {
     const emptyRoot = mkdtempSync(join(tmpdir(), "report-build-size-empty-"));
     tempDirs.push(emptyRoot);
 
-    const gated = runReport(emptyRoot, { check: true });
-    const advisory = runReport(emptyRoot, { check: false });
+    const gated = runReportProcess(emptyRoot, { check: true });
+    const advisory = runReportProcess(emptyRoot, { check: false });
 
     expect(existsSync(join(emptyRoot, "out"))).toBe(false);
     expect(gated.status).toBe(1);

@@ -3,6 +3,9 @@ interface WorkerProbeArgs {
   adminApiUrl?: string;
   cfAccessClientId?: string;
   cfAccessClientSecret?: string;
+  apiKey?: string;
+  timeoutMs?: number;
+  noCache?: boolean;
 }
 
 interface WorkerHttpProbeResult {
@@ -11,6 +14,8 @@ interface WorkerHttpProbeResult {
   ok: boolean;
   latencyMs: number;
   payload?: unknown;
+  /** Producer/update clock carried by the response, when the route publishes one. */
+  updatedAt?: number | null;
   error?: string;
 }
 
@@ -20,7 +25,19 @@ export function accessHeaders(args: WorkerProbeArgs): Record<string, string> {
     headers["CF-Access-Client-Id"] = args.cfAccessClientId;
     headers["CF-Access-Client-Secret"] = args.cfAccessClientSecret;
   }
+  if (args.apiKey) {
+    headers["X-API-Key"] = args.apiKey;
+  }
+  if (args.noCache) {
+    headers["Cache-Control"] = "no-cache";
+  }
   return headers;
+}
+
+function readUpdatedAtHeader(response: Response): number | null {
+  const raw = response.headers.get("X-Data-Updated-At");
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  return Number(raw);
 }
 
 export async function fetchJsonProbe(
@@ -30,8 +47,10 @@ export async function fetchJsonProbe(
 ): Promise<WorkerHttpProbeResult> {
   const url = new URL(path, origin);
   const startedAt = Date.now();
+  const signal = args.timeoutMs != null ? AbortSignal.timeout(args.timeoutMs) : undefined;
   try {
-    const response = await fetch(url, { method: "GET", headers: accessHeaders(args) });
+    const response = await fetch(url, { method: "GET", headers: accessHeaders(args), signal });
+    const updatedAt = readUpdatedAtHeader(response);
     const text = await response.text();
     let payload: unknown = null;
     try {
@@ -45,6 +64,7 @@ export async function fetchJsonProbe(
       ok: response.ok,
       latencyMs: Date.now() - startedAt,
       payload,
+      updatedAt,
     };
   } catch (error) {
     return {

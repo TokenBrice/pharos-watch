@@ -1,0 +1,27 @@
+{
+  "id": "eurxt-caceis",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "EURXT token contract (Ethereum)",
+        "url": "https://etherscan.io/token/0xf62dc56438f13e9cd8076b7d6cf3e616cf756cd0"
+      },
+      {
+        "label": "EURXT implementation contract (unverified source)",
+        "url": "https://etherscan.io/address/0x305bf189d18f53a3970283d863e7509ec661eae0"
+      },
+      {
+        "label": "OpenZeppelin: CACEIS EURXT smart contract security audit",
+        "url": "https://stable-xt.io/assets/documents/EURXT_OpenZeppelin_Audit_Report.pdf"
+      },
+      {
+        "label": "CACEIS Bank: EURXT MiCA white paper",
+        "url": "https://stable-xt.io/assets/documents/EN_CACEIS%20BANK_%20EURO%20STABLECOIN_EURXT_White_paper.pdf"
+      }
+    ],
+    "evidence": "Verified on-chain. EURXT has one deployment, the Ethereum token at 0xf62dc56438f13e9cd8076b7d6cf3e616cf756cd0, which carried 100% of the 54,366,000 EURXT supply at block 26319420 (2026-11-01 10:47:59 UTC). It is a TransparentUpgradeableProxy whose implementation 0x305bf189d18f53a3970283d863e7509ec661eae0, set at deployment and not upgraded since, is not source-verified on Blockscout, Etherscan or Sourcify. Its runtime bytecode dispatches blacklist, unblacklist, isBlacklisted, seizeBlacklistedFunds, pause and unpause behind OpenZeppelin AccessControlEnumerable roles, matching the surface in OpenZeppelin's May 2026 audit and the freeze, blacklist and fund-recovery features listed in the white paper. At that block getRoleMember returned one BLACKLIST_ADMIN_ROLE member, 0xcc1346178183897654b9ba60ae7668fa246c6de3, and one PAUSER_ROLE member, 0x4df9a608ed9bca24cc5c5fdfb96c3532bdacc593, both externally owned accounts. An eth_simulateV1 run against block 26319420 from the blacklist admin blacklisted the sole holder 0x2a394a2486cf53e45d31721344acde1f3bed6398, made that holder's transfer revert, and moved its full balance to an arbitrary address through seizeBlacklistedFunds. The same blacklist call from an account without the role reverted with an AccessControl error. The pauser can also halt all transfers, and ProxyAdmin 0xad0151f42c84babb6ca153f7627a2f3b730c14f6, owned by externally owned account 0x990d7ebf41ff0e797cc14f30d90dc16ad57812ea, can replace the logic. At the observation block paused() returned false and the holder was not blacklisted.",
+    "reviewer": "Claude weekly pre-launch sweep",
+    "reviewedAt": "2026-11-01"
+  }
+}

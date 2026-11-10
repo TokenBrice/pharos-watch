@@ -5,7 +5,7 @@ import type {
   DepegObservationUnavailableReason,
 } from "../depeg-detection/types";
 import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
@@ -28,6 +28,7 @@ import type {
 } from "../../lib/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import {
+  STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE,
   classifyStablecoinPublicationGap,
   compactStablecoinActivePriceCoverage,
   evaluateStablecoinActivePriceCoverage,
@@ -158,6 +159,26 @@ function boundedIds(ids: readonly string[]): { ids: string[]; total: number; tru
     total: ids.length,
     truncated: Math.max(0, ids.length - MAX_DIAGNOSTIC_ARRAY_ITEMS),
   };
+}
+
+function trackedCoverageMetadata(trackedCoverage: TrackedCoverageRestoreResult | null | undefined) {
+  if (!trackedCoverage || (trackedCoverage.restoredIds.length === 0 && trackedCoverage.droppedIds.length === 0)) return null;
+  return {
+    restoredIds: boundedIds(trackedCoverage.restoredIds),
+    droppedIds: boundedIds(trackedCoverage.droppedIds),
+  };
+}
+
+/** Rows the CoinGecko outage intake served this run; tracked-coverage rows were carried or withheld, not read. */
+export function countFallbackCoingeckoAssets(
+  assets: readonly Pick<PeggedAsset, "id">[],
+  trackedCoverage: TrackedCoverageRestoreResult | null | undefined,
+): number {
+  const coverageIds = new Set((trackedCoverage?.assets ?? []).map((asset) => String(asset.id)));
+  // Frozen snapshots are injected from the archive, never served by CoinGecko.
+  return assets.filter((asset) =>
+    !coverageIds.has(String(asset.id)) && !FROZEN_IDS.has(String(asset.id))
+  ).length;
 }
 
 function preferredNativeSupplyQuality(assets: readonly PeggedAsset[]) {
@@ -423,6 +444,8 @@ function sizeGuardMetadataForRung(
 // an oversized payload whose global persistence compaction would silently
 // drop the same evidence without any marker.
 function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Record<string, unknown> {
+  const quality = guard.metadata.quality as Record<string, unknown> | undefined;
+  const census = quality?.depegObservation as DepegObservationCensus | null | undefined;
   return {
     reason: "stablecoins-metadata-over-budget",
     metadataCompactedBySizeGuard: true,
@@ -439,7 +462,9 @@ function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Re
     depegHeldReason: guard.metadata.depegHeldReason,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
     supplyChainGuard: guard.metadata.supplyChainGuard,
-    quality: guard.metadata.quality,
+    quality: census?.unavailableAssets ? { ...quality,
+      depegObservation: { ...census, unavailableAssets: undefined, unavailableIdsDropped: true },
+    } : quality,
     activePublicationCoverage: {
       complete: guard.publicationCoverage.complete,
       expectedActiveCount: guard.publicationCoverage.expectedActiveCount,
@@ -570,7 +595,11 @@ export function buildStablecoinsSyncResult(input: {
   });
   const supplyQuarantined = (input.supplyChainGuard?.quarantinedAssetIds.length ?? 0) > 0
     || (input.supplyChainGuard?.unavailableAssetIds.length ?? 0) > 0;
-  const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+  const degradedReason = resolveSyncDegradedReason({
+    ...input,
+    activePriceCoverage,
+    previousPricedActiveCount: input.previousActivePriceCoverage?.pricedActiveCount ?? null,
+  }, publicationGap);
   const status: CronResult["status"] = degradedReason ? "degraded" : "ok";
 
   const metadata: Record<string, unknown> = {
@@ -680,12 +709,8 @@ export function buildStablecoinsSyncResult(input: {
       gapFillRejections: compactDiagnosticValue(input.supplyGapReconciliation.gapFillRejections),
     };
   }
-  if (input.trackedCoverage && (input.trackedCoverage.restoredIds.length > 0 || input.trackedCoverage.droppedIds.length > 0)) {
-    metadata.trackedCoverage = {
-      restoredIds: boundedIds(input.trackedCoverage.restoredIds),
-      droppedIds: boundedIds(input.trackedCoverage.droppedIds),
-    };
-  }
+  const trackedCoverage = trackedCoverageMetadata(input.trackedCoverage);
+  if (trackedCoverage) metadata.trackedCoverage = trackedCoverage;
   if (input.depegErrorCount > 0) {
     metadata.depegErrorCount = input.depegErrorCount;
     metadata.depegErrors = compactDiagnosticValue(input.depegErrors);
@@ -741,12 +766,24 @@ export function buildFallbackStablecoinsSyncResult(input: {
   cacheKey: string;
   syncStartSec: number;
   activePriceCoverage: StablecoinActivePriceCoverage;
+  previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
+  trackedCoverage?: TrackedCoverageRestoreResult | null;
 }): CronResult {
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     input.assets.map((asset) => String(asset.id)),
     input.syncStartSec,
   );
-  const publicationGap = classifyStablecoinPublicationGap(publicationCoverage);
+  const coingeckoFallbackAssets = countFallbackCoingeckoAssets(input.assets, input.trackedCoverage);
+  const trackedCoverage = trackedCoverageMetadata(input.trackedCoverage);
+  // Restores keep the published payload complete, but they are carries, not this run's reads: the
+  // run's verdict and downstream capability are graded on the observed rows only (ADR-31, R2).
+  const restoredIds = new Set(input.trackedCoverage?.restoredIds ?? []);
+  const publicationGap = classifyStablecoinPublicationGap(restoredIds.size === 0
+    ? publicationCoverage
+    : evaluateStablecoinPublicationCoverage(
+      input.assets.map((asset) => String(asset.id)).filter((id) => !restoredIds.has(id)),
+      input.syncStartSec,
+    ));
   const persistedActivePriceCoverage = input.activePriceCoverage.missingActiveAssets.length > 20
     ? compactStablecoinActivePriceCoverage(input.activePriceCoverage, 20)
     : input.activePriceCoverage;
@@ -756,7 +793,10 @@ export function buildFallbackStablecoinsSyncResult(input: {
     authoritativeOverrideStats: input.authoritativeOverrideStats,
   }));
 
-  const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+  const degradedReason = resolveSyncDegradedReason({
+    ...input,
+    previousPricedActiveCount: input.previousActivePriceCoverage?.pricedActiveCount ?? null,
+  }, publicationGap);
   const depegObservation = depegObservationQuality(input);
   const preferredNativeSupply = preferredNativeSupplyQuality(input.assets);
   const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons,
@@ -766,10 +806,11 @@ export function buildFallbackStablecoinsSyncResult(input: {
     status: degradedReason ? "degraded" : "ok",
     itemCount: input.assets.length,
     metadata: buildSyncMetadata({
-      rowsRead: input.assets.length,
+      rowsRead: coingeckoFallbackAssets,
       rowsWritten: input.assets.length,
       rowsDropped: 0,
-      sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
+      sourceCoverage: { defillama: false, coingeckoFallbackAssets },
+      ...(trackedCoverage ? { trackedCoverage } : {}),
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: input.enrichStats,
@@ -839,14 +880,42 @@ function publicationGapDegradesRun(gap: StablecoinPublicationGapBand): boolean {
   return gap === "elevated" || gap === "systemic";
 }
 
+/**
+ * A zero priced active cohort, or a material relative drop against the last
+ * published priced cohort, is a producer failure even when publication and
+ * breadth grading stay healthy. Absent baseline evidence (first run, unreadable
+ * prior metadata) leaves only the zero-cohort verdict.
+ */
+function pricedCohortCollapsed(
+  coverage: Pick<StablecoinActivePriceCoverage, "pricedActiveCount" | "expectedActiveCount">,
+  previousPricedActiveCount: number | null | undefined,
+): boolean {
+  if (coverage.expectedActiveCount <= 0) return false;
+  if (coverage.pricedActiveCount <= 0) return true;
+  return previousPricedActiveCount != null
+    && previousPricedActiveCount >= STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE.minBaselinePricedCount
+    && coverage.pricedActiveCount
+      <= previousPricedActiveCount * (1 - STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE.relativeDrop);
+}
+
 // One machine-readable driver per degraded run, in the precedence the run's
 // top-level `reason` has always used (a depeg hold outranks a publication gap).
 function resolveSyncDegradedReason(
-  input: { depegHeldReason?: DepegHoldReason; depegErrorCount: number; stalenessCheckFailed: boolean },
+  input: {
+    depegHeldReason?: DepegHoldReason;
+    depegErrorCount: number;
+    stalenessCheckFailed: boolean;
+    activePriceCoverage?: Pick<StablecoinActivePriceCoverage, "pricedActiveCount" | "expectedActiveCount"> | null;
+    previousPricedActiveCount?: number | null;
+  },
   publicationGap: StablecoinPublicationGapBand,
 ): string | null {
   if (input.depegHeldReason) return input.depegHeldReason;
   if (publicationGapDegradesRun(publicationGap)) return `stablecoin-publication-gap-${publicationGap}`;
+  if (input.activePriceCoverage
+    && pricedCohortCollapsed(input.activePriceCoverage, input.previousPricedActiveCount)) {
+    return "stablecoin-price-coverage-collapse";
+  }
   if (input.depegErrorCount > 0) return "depeg-pipeline-errors";
   if (input.stalenessCheckFailed) return "price-staleness-check-failed";
   return null;

@@ -59,7 +59,7 @@ export const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
 
 export const DEPEG_OPTIONS: readonly SelectorOption<SelectorDepegTolerance>[] = [
   { value: "zero", label: "Zero tolerance", sublabel: "Peg must hold without exception." },
-  { value: "tight", label: "Within 0.5%", sublabel: "Brief slippage acceptable if liquidity holds." },
+  { value: "tight", label: "Within 1%", sublabel: "Brief slippage acceptable if liquidity holds." },
   { value: "moderate", label: "Moderate", sublabel: "Short depegs OK if recovery is clean." },
 ];
 

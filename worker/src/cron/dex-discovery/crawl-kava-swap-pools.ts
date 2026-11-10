@@ -1,4 +1,5 @@
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
+import { readRecord as asRecord } from "@shared/lib/type-guards";
 import {
   isKavaSwapDiscoveryDeployment,
   KAVA_SWAP_USDX_DISCOVERY_ADDRESS,
@@ -44,12 +45,6 @@ export interface KavaSwapPoolsStageResult {
 /** Canonical registry identity served by this adapter: native Kava `usdx`. */
 
 export { isKavaSwapDiscoveryDeployment };
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
 
 function parseDenom(value: unknown): string | null {
   if (typeof value !== "string") return null;

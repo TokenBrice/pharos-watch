@@ -4,7 +4,7 @@ import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import { buildHeroPassportItems } from "@/lib/stablecoin-detail-passport";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import type { RedemptionBackstopEntry } from "@shared/types";
 
 vi.mock("next/link", async () => {
@@ -151,7 +151,7 @@ describe("HeroPassportStrip", () => {
       methodologyVersion: "1.1", updatedAt: 1_700_000_000, capsApplied: [],
     };
     const items = buildHeroPassportItems({
-      coin: TRACKED_META_BY_ID.get("usdc-circle")!, chainCount: 1, blacklistStatus: null,
+      coin: makeStablecoinMeta({ id: "usdc-circle", name: "USD Coin", symbol: "USDC" }), chainCount: 1, blacklistStatus: null,
       resolvedMechanismArchetype: null,
       mintAuthority: { status: "not-reviewed", mintPathLabel: "Unknown", mintPathShortLabel: "Unknown" },
       redemptionBackstop, pegScoreResult: { eventCount: 0 }, isNavToken: false,
@@ -194,6 +194,23 @@ describe("HeroPassportStrip", () => {
     expect(container.querySelectorAll('[data-passport-reserve="minting"]')).toHaveLength(0);
     expect(container.querySelector('a[href="#contracts"]')).toBe(chains);
     expect(chains.className).toContain("w-40");
+  });
+
+  it("does not publish a zero-chain fact when no contract record exists", () => {
+    const items = buildHeroPassportItems({
+      coin: makeStablecoinMeta({ id: "hbd-hive", name: "Hive Dollar", symbol: "HBD" }),
+      chainCount: 0,
+      blacklistStatus: null,
+      resolvedMechanismArchetype: null,
+      mintAuthority: { status: "not-reviewed", mintPathLabel: "Unknown", mintPathShortLabel: "Unknown" },
+      redemptionBackstop: null,
+      pegScoreResult: null,
+      isNavToken: false,
+    });
+    const { queryByRole, queryByText } = render(<HeroPassportStrip items={items} />);
+
+    expect(queryByRole("link", { name: /Deployed on 0 chains/ })).toBeNull();
+    expect(queryByText("Chains")).toBeNull();
   });
 
   it("renders nothing when fewer than three facts resolve", () => {

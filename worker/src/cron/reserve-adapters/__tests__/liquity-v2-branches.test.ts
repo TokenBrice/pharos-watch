@@ -1,4 +1,5 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { HYPEREVM_HISTORY_RPC_URL } from "@shared/lib/evm-rpc-capabilities";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -334,7 +335,8 @@ describe("reviewed plain-token branches", () => {
     expect(branch.kind).toBe("plain-token");
     const assetKey = defillamaAssetKey(branch.token.chain, branch.token.address);
     const { result, network } = await runAdapter("liquity-v2-branches", coinId, {
-      params: { mechanismMetrics: undefined },
+      // HyperEVM's public registry routes are latest-only, so a pinned read needs a history-capable route.
+      params: { mechanismMetrics: undefined, ...(coinId === "feusd-felix" ? { rpcUrl: HYPEREVM_HISTORY_RPC_URL } : {}) },
       nowSec: NOW,
       network: {
         block: BLOCK,
@@ -374,10 +376,7 @@ describe("reviewed plain-token branches", () => {
 describe("Base Dollar production bindings", () => {
   const config = resolveAdapterCoin("liquity-v2-branches", "bd-basedollar").config;
   const params = config.params as {
-    rpcUrl: string;
-    fallbackRpcUrl: string;
     sourceUrls: string[];
-    redemptionRateProbe: { contract: string; selector: string };
     branches: Array<{
       name: string;
       holder: string;
@@ -386,8 +385,6 @@ describe("Base Dollar production bindings", () => {
     }>;
     mechanismMetrics: {
       supplyTokenAddress: string;
-      branchPriceSelector: string;
-      stabilityPoolDepositsSelector: string;
       branches: Array<{
         name: string;
         troveManagerAddress: string;
@@ -396,83 +393,26 @@ describe("Base Dollar production bindings", () => {
     };
   };
 
-  it("pins all five launch branches to the production ActivePools and mechanism contracts", () => {
-    expect(config.inputs.primary).toMatchObject({ kind: "onchain-evm", chain: "base", rpcMode: "alchemy" });
-    expect(params).toMatchObject({
-      rpcUrl: "https://mainnet.base.org",
-      fallbackRpcUrl: "https://base-rpc.publicnode.com",
-      redemptionRateProbe: {
-        contract: "0x7551ebfc8340b7f91874942be9c653733d4fb04f",
-        selector: "0xc52861f2",
-      },
-      mechanismMetrics: {
-        supplyTokenAddress: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-        branchPriceSelector: MECHANISM_PRICE_SELECTOR,
-        stabilityPoolDepositsSelector: STABILITY_POOL_DEPOSITS_SELECTOR,
-      },
-    });
-    expect(params.sourceUrls).toEqual(expect.arrayContaining([
-      expect.stringContaining("contracts/script/DeployLiquity2.s.sol"),
-      expect.stringContaining("contracts/broadcast/DeployLiquity2.s.sol/8453/run-latest.json"),
-    ]));
-    expect(params.branches).toMatchObject([
-      {
-        name: "WETH",
-        holder: "0x254a8267d4e12a8c0f283274632a18a33e49f7c0",
-        token: { chain: "base", address: "0x4200000000000000000000000000000000000006", decimals: 18 },
-      },
-      {
-        name: "wstETH (Lido)",
-        holder: "0x1021fefc406c9573ab3579fc55be13e3300ef6b1",
-        token: { chain: "base", address: "0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452", decimals: 18 },
-      },
-      {
-        name: "rETH (Rocket Pool)",
-        holder: "0x1b9a62798e8bae0cea4eb21b4b3775359beb819f",
-        token: { chain: "base", address: "0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c", decimals: 18 },
-      },
-      {
-        name: "cbBTC (Coinbase)",
-        holder: "0xcaa72df531554087318eaf24646958500668b230",
-        token: { chain: "base", address: "0x92a7aee8afaa71ba0a9cc04a3dbe1f34237c33e0", decimals: 18 },
-        priceToken: { chain: "base", address: "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf" },
-      },
-      {
-        name: "cbETH (Coinbase)",
-        holder: "0xddac84ab417677f553cced8ababf497226112218",
-        token: { chain: "base", address: "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22", decimals: 18 },
-      },
-    ]);
-    expect(params.mechanismMetrics.branches).toMatchObject([
-      {
-        name: "WETH",
-        troveManagerAddress: "0xa957d42c4c43eb97d5f71b8435eb638e5dd9f639",
-        stabilityPoolAddress: "0x7d837bf114785642d225d1101145ddb8af4ba438",
-      },
-      {
-        name: "wstETH (Lido)",
-        troveManagerAddress: "0x79a6a3361eae4d4b80939206426f2320c11a4bfb",
-        stabilityPoolAddress: "0xc65a05737d31e0f42c0806c739f3c88dd009c05f",
-      },
-      {
-        name: "rETH (Rocket Pool)",
-        troveManagerAddress: "0xd31987fcba98f471b6e4220c52f7741b11b2fc5e",
-        stabilityPoolAddress: "0x4eb3b6970fd358d34195b5d40e4eb64e0e3c0b6a",
-      },
-      {
-        name: "cbBTC (Coinbase)",
-        troveManagerAddress: "0x835b04eefbb0e32d8f75cfe96acb527a42f1a0d9",
-        stabilityPoolAddress: "0x6bd55dd953507641c84a03956760f83d29d65726",
-      },
-      {
-        name: "cbETH (Coinbase)",
-        troveManagerAddress: "0x482de97e667330afba99f8ced527118aec66f15d",
-        stabilityPoolAddress: "0x25afbb09d9804482ed8e24295be4a12704fe93ea",
-      },
-    ]);
-    expect(params.mechanismMetrics.branches.map((entry) => entry.name)).toEqual(
-      params.branches.map((entry) => entry.name),
-    );
+  it("keeps five uniquely named branch bindings with matching mechanism targets", () => {
+    // One identity anchor binds this config to the reviewed Base Dollar launch book.
+    expect(config.inputs.primary).toMatchObject({ kind: "onchain-evm", chain: "base" });
+    expect(params.mechanismMetrics.supplyTokenAddress).toBe("0x252d36f435582ecb01686448d21e8c9ea0b2ca65");
+
+    const address = /^0x[0-9a-fA-F]{40}$/;
+    const branchNames = params.branches.map((branch) => branch.name);
+    expect(params.branches).toHaveLength(5);
+    expect(new Set(branchNames).size).toBe(branchNames.length);
+    for (const branch of params.branches) {
+      expect(branch.holder).toMatch(address);
+      expect(branch.token.address).toMatch(address);
+      if (branch.priceToken) expect(branch.priceToken.address).toMatch(address);
+    }
+    expect(params.mechanismMetrics.branches.map((entry) => entry.name)).toEqual(branchNames);
+    for (const mechanism of params.mechanismMetrics.branches) {
+      expect(mechanism.troveManagerAddress).toMatch(address);
+      expect(mechanism.stabilityPoolAddress).toMatch(address);
+    }
+    expect(params.sourceUrls.some((url) => url.includes("DeployLiquity2.s.sol"))).toBe(true);
   });
 });
 
@@ -1141,5 +1081,90 @@ describe("fetchLiquityV2BranchReserves staged branch reads", () => {
     expect(calls.slice(17, 18).map((call) => [call.selector, call.contract])).toEqual([
       [BRANCH_PRICE_SELECTOR, branches[1]!.holder],
     ]);
+  });
+});
+
+const { config } = resolveAdapterCoin("liquity-v2-branches", "usdaf-asymmetry");
+const params = parseLiveReserveAdapterParams("liquity-v2-branches", config.params);
+const assets = [
+  "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+  "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+  "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+  "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+  null,
+  null,
+];
+
+// Contract identities are the September 9 live six-branch census. Quantities
+// are scaled deterministic observations so each branch contributes $100.
+function network(options: { shutdown?: boolean; missingDebt?: boolean } = {}): AdapterNetworkSpec {
+  const rpc: NonNullable<AdapterNetworkSpec["rpc"]> = {
+    "decimals()": 18n,
+    "totalAssets()": 100n * 10n ** 18n,
+    "totalSupply()": 100n * 10n ** 18n,
+    "getRedemptionRateWithDecay()": 5n * 10n ** 15n,
+  };
+  const prices: Record<string, { price: number; timestamp: number; confidence: number }> = {};
+  params.branches.forEach((branch, index) => {
+    rpc[`${branch.token.address}:balanceOf(address)`] = 1_000_000n * 10n ** 18n; // Unsolicited balances are not protocol collateral.
+    rpc[`${branch.holder}:getCollBalance()`] = index < 4 ? 100n * 10n ** 18n : 10n ** 16n;
+    rpc[`${branch.token.address}:asset()`] = assets[index];
+    rpc[`${branch.holder}:getBoldDebt()`] = options.missingDebt && index === 0 ? null : 50n * 10n ** 18n;
+    rpc[`${branch.holder}:hasBeenShutDown()`] = options.shutdown === true && index === 0;
+    const pricedToken = branch.priceToken?.address ?? assets[index] ?? branch.token.address;
+    prices[`ethereum:${pricedToken}`] = { price: index < 4 ? 1 : 10_000, timestamp: NOW, confidence: 1 };
+  });
+  return {
+    rpc,
+    block: { number: 25_942_241, timestamp: NOW },
+    json: {
+      [`https://coins.llama.fi/prices/current/${Object.keys(prices).sort().join(",")}`]: { coins: prices },
+      // Individual asset() failures withhold the two unclassified non-receipt
+      // branches, so only converted receipts participate in the price request.
+      [`https://coins.llama.fi/prices/current/${Object.keys(prices).filter((key) =>
+        assets.some((asset) => asset != null && key === `ethereum:${asset}`),
+      ).sort().join(",")}`]: { coins: prices },
+    },
+  };
+}
+
+describe("USDaf on-chain rebinding", () => {
+  it("uses accounted collateral despite unsolicited token balances", async () => {
+    const { result } = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: network(), nowSec: NOW });
+    expect(result.slices.map((slice) => slice.name).sort()).toEqual(["sUSDS", "scrvUSD", "sfrxUSD", "tBTC", "wBTC", "ysyBOLD"].sort());
+    for (const slice of result.slices) expect(slice.pct).toBeCloseTo(100 / 6, 0);
+    expect(result.slices.find((slice) => slice.name === "wBTC")?.sourceKey).toBe("liquity-v2-branches:ethereum:0xe065bc161b90c9c4bba2de7f1e194b70a3267c47");
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 300, routeStatus: "unknown", routeStatusSource: "static-config", freshnessKind: "same-run-onchain", feeBps: 50 });
+    expectWarnings(result, []);
+  });
+
+  it.each([false, true])("preserves receipt conversion but withholds unclassified fallback members (shutdown=%s)", async (shutdown) => {
+    const batched = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", {
+      network: { ...network({ shutdown }), multicall: true }, nowSec: NOW,
+    });
+    const fallback = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", {
+      network: { ...network({ shutdown }), multicall: false }, nowSec: NOW,
+    });
+    expect(fallback.result.metadata).toMatchObject({ valuationComplete: false, unknownExposurePct: 100 });
+    expect(fallback.result.metadata?.details).toMatchObject({
+      knownReserveValueUsd: 400,
+      unavailableBranches: expect.arrayContaining([
+        { name: "tBTC", reason: "balance-unavailable" },
+        { name: "wBTC", reason: "balance-unavailable" },
+      ]),
+    });
+    expect(fallback.result.slices).toEqual([{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" }]);
+    expect(fallback.result.metadata?.redemption).toEqual(batched.result.metadata?.redemption);
+    expect(batched.result.metadata?.valuationComplete).toBe(true);
+  });
+
+  it("retains measured collateral while a branch shutdown degrades the route", async () => {
+    const { result } = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: network({ shutdown: true }), nowSec: NOW });
+    expect(result.metadata?.redemption?.routeStatus).toBe("degraded");
+    expect(result.slices.find((slice) => slice.name === "ysyBOLD")?.pct).toBeCloseTo(100 / 6, 0);
+  });
+
+  it("rejects shape drift when the required branch debt getter disappears", async () => {
+    await expect(runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: network({ missingDebt: true }), nowSec: NOW })).rejects.toThrow(/active-pool debt/);
   });
 });

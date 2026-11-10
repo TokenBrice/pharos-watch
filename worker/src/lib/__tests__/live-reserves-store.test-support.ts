@@ -11,6 +11,7 @@ export const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const 
 
 export const RESERVE_DEFAULT_TABLES: MockTableConfig[] = [
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "INSERT INTO cache", rows: [] },
   { match: "FROM reserve_sync_state", rows: [] },
   { match: "FROM reserve_composition", rows: [] },
   { match: "INSERT INTO reserve_sync_state", rows: [] },

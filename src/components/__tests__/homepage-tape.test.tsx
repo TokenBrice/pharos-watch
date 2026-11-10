@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { makeTapeEvent } from "@shared/test-utils/tape-event";
 
@@ -27,6 +27,7 @@ import { HomepageTape } from "@/components/homepage-tape";
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -231,6 +232,29 @@ describe("HomepageTape", () => {
     // Badge reflects the coin count, not the literal event count.
     expect(screen.getAllByText("×3")).toHaveLength(2);
     expect(screen.getAllByLabelText("3 coins")).toHaveLength(4); // stack + badge × marquee dup
+  });
+
+  it("advances event ages on the viewer's minute clock between polls", () => {
+    vi.useFakeTimers();
+    const base = Date.parse("2026-11-01T12:05:00.000Z");
+    vi.setSystemTime(base);
+    mockEvents([
+      makeTapeEvent({
+        id: "evt-age",
+        type: "freeze.address.blocked",
+        title: "USDT freeze blocked",
+        coinId: "usdt-tether",
+        ts: base - 5 * 60_000,
+      }),
+    ]);
+
+    render(<HomepageTape />);
+    expect(screen.getAllByText("5m ago")).toHaveLength(2);
+
+    act(() => { vi.advanceTimersByTime(40 * 60_000); });
+
+    expect(screen.getAllByText("45m ago")).toHaveLength(2);
+    expect(screen.queryByText("5m ago")).toBeNull();
   });
 
   it("keeps DEWS escalations separate from de-escalations across the same coins", () => {

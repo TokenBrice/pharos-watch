@@ -105,4 +105,57 @@ describe("DonorList", () => {
     render(<DonorList donations={[]} lastUpdatedAt={now} />);
     expect(screen.getByText(/No community donations yet/)).toBeTruthy();
   });
+
+  it("keeps cents on sub-dollar receipts and never renders an unpriced donation as zero", () => {
+    const donation = (txHash: string, usdAtReceipt: number, priceNote: string): Donation => ({
+      chain: "ethereum",
+      tx_hash: txHash,
+      block_timestamp: now - 60,
+      from_address: "0x1",
+      display: txHash,
+      kind: "community",
+      asset_symbol: "ETH",
+      token_address: null,
+      amount_decimal: 0.001,
+      usd_at_receipt: usdAtReceipt,
+      price_note: priceNote,
+    });
+    render(
+      <DonorList
+        donations={[
+          donation("0xcents", 0.06, "coingecko-historical-2026-04-18"),
+          donation("0xsubcent", 0.004, "coingecko-historical-2026-04-18"),
+          // An observed zero-dollar receipt is a value, not an unpriced row.
+          donation("0xzerovalue", 0, "stablecoin-1-to-1"),
+          // The committed ledger's real unpriced marker.
+          donation("0xunpriced", 0, "manual-token-not-priced"),
+        ]}
+        lastUpdatedAt={now}
+      />,
+    );
+    expect(screen.getByText("$0.06")).toBeTruthy();
+    expect(screen.getByText("<$0.01")).toBeTruthy();
+    expect(screen.getAllByText("$0.00")).toHaveLength(1);
+    expect(screen.getAllByText("—")).toHaveLength(1);
+    expect(screen.queryByText("$0")).toBeNull();
+  });
+
+  it("counts the footer cap in donation rows, not supporters", () => {
+    const donations: Donation[] = Array.from({ length: 25 }, (_, index) => ({
+      chain: "ethereum",
+      tx_hash: `0x${index.toString(16).padStart(4, "0")}`,
+      block_timestamp: now - index * 60,
+      from_address: `0x${index % 10}`,
+      display: `donor-${index % 10}`,
+      kind: "community",
+      asset_symbol: "ETH",
+      token_address: null,
+      amount_decimal: 0.01,
+      usd_at_receipt: 1,
+      price_note: "coingecko-historical-2026-04-18",
+    }));
+    render(<DonorList donations={donations} lastUpdatedAt={now} />);
+    expect(screen.getByText(/Showing most recent 20 of 25 donations\./)).toBeTruthy();
+    expect(screen.queryByText(/Showing most recent 20 of 25 supporters/)).toBeNull();
+  });
 });

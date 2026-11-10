@@ -52,6 +52,16 @@ describe("buildQuarterPoints", () => {
       total: 6,
     });
   });
+
+  it("keeps a producer payload key outside the compiled stablecoin list", () => {
+    const stats = makeStats({});
+    (stats.perCoinQuarterlyEventTypes as Record<string, QuarterlyEventPoint[]>).MNEE = [
+      { quarter: "Q2 '26", blacklist: 0, unblacklist: 0, destroy: 2 },
+    ];
+    expect(buildQuarterPoints(stats)).toEqual([
+      { quarter: "Q2 '26", blacklist: 0, unblacklist: 0, destroy: 2, total: 2 },
+    ]);
+  });
 });
 
 describe("InterventionSeismograph", () => {
@@ -89,6 +99,16 @@ describe("InterventionSeismograph", () => {
     expect(screen.getByText("Events tracked").nextElementSibling?.textContent).toBe("8");
     expect(screen.queryByText(/refresh failed/)).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("takes the authoritative event total and includes off-list payload quarters", () => {
+    const stats = makeStats({});
+    (stats.perCoinQuarterlyEventTypes as Record<string, QuarterlyEventPoint[]>).MNEE = [
+      { quarter: "Q2 '26", blacklist: 0, unblacklist: 0, destroy: 2 },
+    ];
+    render(createElement(InterventionSeismograph, { stats, chart: [], isLoading: false, totalEvents: 10 }));
+    expect(screen.getByText("Events tracked").nextElementSibling?.textContent).toBe("10");
+    expect(screen.getByText("Largest wipe quarter").nextElementSibling?.textContent).toBe("Q2 '26");
   });
 
   it.each([[0, "0"], [-3, "-3"], [1_500, "1.5k"]] as const)("preserves finite count %s in the headline", (blacklist, expected) => {

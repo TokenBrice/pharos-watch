@@ -32,6 +32,7 @@ import { z } from "zod";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { sha256Hex } from "../../lib/hash";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = TelegramBroadcastScope;
@@ -227,7 +228,34 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
     }
 
     const chatIds = await loadBroadcastTargetChatIds(db, scope);
-    const chunks = splitMessage(messageHtml);
+    let chunks: string[];
+    try {
+      chunks = splitMessage(messageHtml);
+    } catch (error) {
+      // The message is deterministic validation input: nothing has been sent
+      // or enqueued, so a split failure is a 4xx rejection, not an unknown
+      // execution outcome.
+      await logAdminAction(
+        db,
+        {
+          action: "admin-telegram-broadcast",
+          target: scope,
+          result: "error",
+          httpStatus: 422,
+          details: {
+            scope,
+            dryRun,
+            messageLength: messageHtml.length,
+            rejectedReason: "message-not-splittable",
+          },
+        },
+        request,
+      );
+      return adminJsonResponse(
+        { error: toErrorMessage(error), reason: "message-not-splittable" },
+        { status: 422 },
+      );
+    }
     const fleetChatIds = canaryChatId == null ? chatIds : chatIds.filter((chatId) => chatId !== canaryChatId);
     const targetMessageCount = fleetChatIds.length * chunks.length;
     const nowSec = Math.floor(Date.now() / 1000);

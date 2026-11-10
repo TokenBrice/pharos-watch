@@ -1,12 +1,11 @@
 import {
-  FRESHNESS_RATIOS,
   getCacheRatioThresholds,
   STATUS_CACHE_RATIO_THRESHOLDS,
 } from "@shared/lib/status-thresholds";
 import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
+import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { PrioritySplitTable } from "./priority-split-table";
 import { TableCell, TableRow } from "@/components/table";
 import { StatusPill } from "./severity-pill";
@@ -33,6 +32,12 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return ratioB - ratioA;
   });
 
+  // The shared cache impact floor (ADR-32): age alone is not health, and
+  // explicit degraded/unreadable producer quality (yield sentinel, fx
+  // provenance) is not a healthy cache.
+  const isImpacted = (cache: CacheStatus, key: string) =>
+    getCacheImpactStatus(cache, key) !== "healthy" || cache.degraded === true || cache.degraded === null;
+
   const describeBand = (cache: CacheStatus, key: string) => {
     const thresholds = getCacheRatioThresholds(key);
     const outageRatio = thresholds.stale * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER;
@@ -43,9 +48,12 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         : null;
     const ratio = getCacheFreshnessRatio(cache);
     // Missing age grades as Degraded, matching the public component projection.
-    const state: PublicComponentState = ratio == null
+    const ageState: PublicComponentState = ratio == null
       ? "degraded"
       : getAgeBandState(ratio, thresholds.degraded, thresholds.stale);
+    // The shared cache impact floor (ADR-32): a fresh lane serving a cached
+    // fallback or a quality-degraded producer is degraded, not operational.
+    const state: PublicComponentState = isImpacted(cache, key) && ageState === "operational" ? "degraded" : ageState;
     return { state, ratio, thresholdLabel };
   };
 
@@ -61,14 +69,8 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return [cache.producerJob, interval].filter(Boolean).join(" · ") || "—";
   };
 
-  const unhealthy = sorted.filter(([key, cache]) => {
-    const status = getCacheFreshnessStatus(cache, key);
-    return status === "stale" || status === "degraded";
-  });
-  const ok = sorted.filter(([key, cache]) => {
-    const status = getCacheFreshnessStatus(cache, key);
-    return status !== "stale" && status !== "degraded";
-  });
+  const unhealthy = sorted.filter(([key, cache]) => isImpacted(cache, key));
+  const ok = sorted.filter(([key, cache]) => !isImpacted(cache, key));
 
   const renderRow = ([key, cache]: [string, CacheStatus]) => {
     const band = describeBand(cache, key);
@@ -77,6 +79,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
       cache.endpointMaxAge != null && cache.endpointMaxAge !== (cache.availabilityMaxAge ?? cache.maxAge);
     const noteParts = [
       cache.warning,
+      cache.degraded === true ? cache.degradedReason : null,
       budgetsDiffer ? cache.endpointBudgetReason : null,
       budgetsDiffer ? cache.availabilityBudgetReason : null,
       cache.consecutiveFallbackRuns != null && cache.consecutiveFallbackRuns > 0
@@ -145,11 +148,11 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     <PublicSignalCard title="Cache freshness">
       <div>
         <div className="mb-3 text-xs text-muted-foreground">
-          Each lane is Delayed past {STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x its availability budget,
-          Degraded past {STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x and an Outage past{" "}
+          By default, each lane is Delayed past {STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x its availability
+          budget, Degraded past {STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x and an Outage past{" "}
           {(STATUS_CACHE_RATIO_THRESHOLDS.stale * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER).toFixed(2)}x. Endpoint
-          basis is the max-age used by the X-Data-Age header and _meta; the generic freshness Warning header starts after{" "}
-          {FRESHNESS_RATIOS.FRESH.toFixed(0)}x that basis.
+          basis is the max-age used by the X-Data-Age header and _meta; the generic freshness Warning header starts after
+          that lane&apos;s Delayed multiple of that basis.
         </div>
         <PrioritySplitTable
           primaryRows={unhealthy}

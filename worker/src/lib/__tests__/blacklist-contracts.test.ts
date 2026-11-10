@@ -219,6 +219,8 @@ describe("blacklist-contracts shared metadata alignment", () => {
     expect(missing).toEqual([]);
   });
 
+  // Tracker curation is a reviewed per-deployment decision with no sound
+  // metadata derivation; dropping a listed config would under-report coverage.
   it("includes first-wave blacklist expansion configs", () => {
     expect(CONTRACT_CONFIGS).toEqual(
       expect.arrayContaining([
@@ -228,6 +230,31 @@ describe("blacklist-contracts shared metadata alignment", () => {
         expect.objectContaining({ stablecoinId: "u-united-stables", chain: expect.objectContaining({ chainId: "bsc" }) }),
         expect.objectContaining({ stablecoinId: "usdtb-ethena", chain: expect.objectContaining({ chainId: "ethereum" }) }),
         expect.objectContaining({ stablecoinId: "a7a5-old-vector", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+      ]),
+    );
+  });
+
+  it("includes direct EVM follow-up coverage configs", () => {
+    expect(CONTRACT_CONFIGS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
+        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "gnosis" }) }),
+        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
+        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "base" }) }),
+        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "usdq-quantoz", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "base" }) }),
+        expect.objectContaining({ stablecoinId: "usdx-hex-trust", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "aid-gaib", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "avalanche" }) }),
+        expect.objectContaining({ stablecoinId: "eurc-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "buidl-blackrock", chain: expect.objectContaining({ chainId: "ethereum" }) }),
       ]),
     );
   });
@@ -256,31 +283,6 @@ describe("blacklist-contracts shared metadata alignment", () => {
     expect(rlusd).toBeDefined();
     const accountPaused = getBlacklistEventBySignature(rlusd!, "AccountPaused");
     expect(accountPaused?.eventType).toBe("blacklist");
-  });
-
-  it("includes direct EVM follow-up coverage configs", () => {
-    expect(CONTRACT_CONFIGS).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "bsc" }) }),
-        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
-        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "gnosis" }) }),
-        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
-        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "base" }) }),
-        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "bsc" }) }),
-        expect.objectContaining({ stablecoinId: "usdq-quantoz", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "base" }) }),
-        expect.objectContaining({ stablecoinId: "usdx-hex-trust", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "aid-gaib", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "avalanche" }) }),
-        expect.objectContaining({ stablecoinId: "eurc-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-        expect.objectContaining({ stablecoinId: "buidl-blackrock", chain: expect.objectContaining({ chainId: "ethereum" }) }),
-      ]),
-    );
   });
 
   it("uses corrected Arbitrum startBlocks for FDUSD/AUSD/BUIDL", () => {
@@ -315,19 +317,6 @@ describe("blacklist-contracts shared metadata alignment", () => {
     )!.events);
   });
 
-  it("tracks Avalon USDA blacklist events without a non-existent DestroyedBlackFunds event", () => {
-    const config = CONTRACT_CONFIGS.find(
-      (c) => c.stablecoinId === "usda-avalon" && c.chain.chainId === "ethereum",
-    );
-
-    expect(config).toBeDefined();
-    expect(config!.events.map((event) => event.signature)).toEqual([
-      "AddedBlackList(address)",
-      "RemovedBlackList(address)",
-    ]);
-    expect(getBlacklistEventBySignature(config!, "DestroyedBlackFunds")).toBeUndefined();
-  });
-
   it("returns undefined for an unknown topic hash", () => {
     const config = CONTRACT_CONFIGS[0];
     expect(getBlacklistEventByTopic(config, "0xdeadbeef")).toBeUndefined();
@@ -343,5 +332,35 @@ describe("blacklist-contracts shared metadata alignment", () => {
 
   it("returns empty array when getBlacklistConfigsForSymbolAndChain has no match", () => {
     expect(getBlacklistConfigsForSymbolAndChain("USDC", "nowhere")).toEqual([]);
+  });
+});
+
+describe("Dual-index freeze family split", () => {
+  it("FDUSD, EURI, U have only the 2 freeze events — not WLFI destroys", () => {
+    const splitCoins = ["FDUSD", "EURI", "U"] as const;
+    const wlfiDestroyTopics = new Set([
+      "FrozenAccountDrained(address,address,uint256)",
+      "FrozenFundsReallocated(address,address,address,uint256)",
+    ]);
+    for (const coin of splitCoins) {
+      const cfgs = CONTRACT_CONFIGS.filter((c) => c.stablecoin === coin);
+      expect(cfgs.length).toBeGreaterThan(0);
+      for (const cfg of cfgs) {
+        for (const def of cfg.events) {
+          expect(wlfiDestroyTopics.has(def.signature)).toBe(false);
+        }
+        // Exactly 2 events (Freeze + Unfreeze):
+        expect(cfg.events.length).toBe(2);
+      }
+    }
+  });
+
+  it("USD1 still carries the full WLFI freeze+destroy family (4 events)", () => {
+    const cfgs = CONTRACT_CONFIGS.filter((c) => c.stablecoin === "USD1");
+    expect(cfgs.length).toBeGreaterThan(0);
+    for (const cfg of cfgs) {
+      expect(cfg.events.length).toBe(4);
+      expect(cfg.events.some((e) => e.signature.startsWith("FrozenAccountDrained"))).toBe(true);
+    }
   });
 });

@@ -115,6 +115,40 @@
           }
         ]
       }
-    ]
+    ],
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — k-mib",
+      "routeIds": [
+        "base:0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "celo:0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
+        "solana:5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1"
+      ],
+      "rationale": "VNX's authoritative, undated contract registry read on 2026-11-06 lists four VGBP identities: Base 0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411, Celo 0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f, Solana 5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1, and Ethereum 0x34c9c643becd939c950bb9f141e35777559817cb. Its separate bridge documentation explicitly describes canonical native VGBP moved by issuer-operated burn-and-mint, with no wrapped or synthetic representation. The three authored native routes retain their original August 16 observations. The fourth, non-catalogued Ethereum identity is independently bound at Ethereum block 26357480, hash 0x6d5662418bb27b6f317e8f61eb1cf39a74656ef7b0109151a9ad474547155b18, timestamp 2026-11-06T18:03:47Z: symbol() returns VGBP, the EIP-1967 implementation is 0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc, both proxy and implementation runtime equal the verified source bytecode, and totalSupply() returns exactly 0 raw units. This material native census does not assign a supply share or rewrite the unmatched Ethereum producer row; native applicability remains conditional on the runtime's unchanged dust and complete selected-native-inventory gates. It grants no renewed controller, signing-quorum, cap, reconciliation or incident claim.",
+      "sources": [
+        {
+          "label": "VNX authoritative four-chain VGBP registry; undated source read 2026-11-06",
+          "url": "https://vnx.gitbook.io/vnx-global/transparency/standards-and-contracts"
+        },
+        {
+          "label": "VNX canonical native issuer burn-and-mint service; undated source read 2026-11-06",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/products/bridge"
+        },
+        {
+          "label": "Verified VGBP Ethereum proxy source; exact runtime correspondence at block 26357480",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x34c9c643becd939c950bb9f141e35777559817cb"
+        },
+        {
+          "label": "Verified Ethereum VNXCToken implementation source; exact runtime correspondence at block 26357480",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc"
+        },
+        {
+          "label": "Ethereum block 26357480, hash 0x6d5662418bb27b6f317e8f61eb1cf39a74656ef7b0109151a9ad474547155b18, timestamp 2026-11-06T18:03:47Z; eth_getStorageAt, eth_getCode, symbol() and totalSupply() exact reads",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        }
+      ]
+    }
   }
 }

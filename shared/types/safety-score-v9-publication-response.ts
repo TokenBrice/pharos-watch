@@ -27,7 +27,7 @@ import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
  * (a module browser readers import for the card schemas) so the schema-8
  * envelope's OpenEvidence validator stays on the worker/script side.
  */
-export const SafetyScoreV9ResponseShape = {
+const SafetyScoreV9ResponseShape = {
   model: z.literal("v9-critical-path"),
   lifecycle: z.literal("active"),
   candidateId: z.string().min(1),

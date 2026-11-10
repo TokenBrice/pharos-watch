@@ -331,6 +331,20 @@ describe("ContagionSnapshot", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
+  it("keeps the drawn graph when only the supply read fails", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      error: new Error("503"),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
+
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("restarts both sources on retry and drops the notice once they recover", () => {
     const refetchCards = vi.fn();
     const refetchSupply = vi.fn();
@@ -394,6 +408,13 @@ describe("ContagionSnapshot", () => {
     expect(summary.textContent).toContain("1 direct dependent");
     expect(summary.textContent).toContain("Direct USD exposure unavailable");
     expect(summary.textContent).not.toContain("$0");
+  });
+
+  it("keeps the drawn graph in a shrinkable grid slot so long inspection options cannot widen it", () => {
+    render(<ContagionSnapshot stablecoinId="usdc-circle" />);
+    const graph = screen.getByTestId("contagion-graph");
+    // LazySection wrapper -> min-w-0 slot -> the Context grid.
+    expect(graph.parentElement?.parentElement?.className).toContain("min-w-0");
   });
 
 });

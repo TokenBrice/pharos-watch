@@ -73,6 +73,18 @@ describe("PysBreakdown", () => {
     expect(screen.getByLabelText("Bench spread: —, Benchmark unavailable")).toBeTruthy();
   });
 
+  it("keys the neutral source-risk line on the resolved penalty, not only on an empty driver list", () => {
+    const { unmount } = renderWithProvider(
+      baseProps({ mode: "popover", sourceRiskPenalty: 1.25, sourceRiskDrivers: [] }),
+    );
+    expect(screen.getByLabelText(/Divided by source-risk penalty 1\.25 times/)).toBeTruthy();
+    expect(screen.queryByLabelText("Source risk neutral")).toBeNull();
+    unmount();
+
+    renderWithProvider(baseProps({ mode: "popover", sourceRiskPenalty: 1, sourceRiskDrivers: [] }));
+    expect(screen.getByLabelText("Source risk neutral")).toBeTruthy();
+  });
+
   it("renders score, breakdown lines, and methodology link with version label", () => {
     const { container } = renderWithProvider(baseProps({ mode: "inline", score: 50 }));
 
@@ -83,7 +95,7 @@ describe("PysBreakdown", () => {
     expect(screen.getByLabelText(/Base APY 5\.00%/)).toBeTruthy();
     expect(screen.getByLabelText(/Effective yield 4\.50%/)).toBeTruthy();
     expect(screen.getByLabelText(/Divided by source-risk penalty 1.00 times/)).toBeTruthy();
-    expect(screen.getByLabelText(/Divided by safety penalty 1.0 times/)).toBeTruthy();
+    expect(screen.getByLabelText(/Divided by safety penalty 1\.00 times/)).toBeTruthy();
     expect(screen.getByLabelText(/Multiplied by consistency 90 percent/)).toBeTruthy();
 
     // Methodology link points at the changelog and exposes the version label.
@@ -410,6 +422,46 @@ describe("PysBreakdown — printed equation (D14)", () => {
     expect(Math.abs(base + adjustment + rebase - effective)).toBeLessThanOrEqual(0.06);
     expect(effective).toBeCloseTo(12 + 2 + 0.32, 2);
     expect(screen.queryByLabelText("Effective yield floored at 0%")).toBeNull();
+  });
+
+  it("prints the scaling step and a two-decimal safety divisor so the ladder reproduces the served PYS", () => {
+    const input = {
+      apy30d: 12,
+      safetyScore: 60,
+      yieldStability: 0.6,
+      benchmarkRate: 4,
+      usdBenchmarkRate: 4.32,
+      benchmarkCurrency: "EUR",
+    };
+    // The published scaling constant; the served score uses the same inputs.
+    const score = computePYS({
+      apy30d: input.apy30d,
+      safetyScore: input.safetyScore,
+      apyVarianceScore: 1 - input.yieldStability,
+      scalingFactor: 8,
+      benchmarkRate: input.benchmarkRate,
+      usdBenchmarkRate: input.usdBenchmarkRate,
+      benchmarkCurrency: input.benchmarkCurrency,
+    });
+    renderWithProvider({ ...propsFromComponents(input), score, scalingFactor: 8 });
+
+    const labelled = (pattern: RegExp) =>
+      screen.getByLabelText(pattern).getAttribute("aria-label") ?? "";
+    const printed = (label: string, pattern: RegExp): number => {
+      const match = label.match(pattern);
+      if (!match) throw new Error(`no printed factor in: ${label}`);
+      return Number(match[1]);
+    };
+    const effective = printed(labelled(/^Effective yield/), /Effective yield ([\d.]+)%/);
+    const source = printed(labelled(/^Divided by source-risk penalty/), /penalty ([\d.]+) times/);
+    const safety = printed(labelled(/^Divided by safety penalty/), /penalty ([\d.]+) times/);
+    const consistency = printed(labelled(/Multiplied by consistency/), /consistency (\d+) percent/);
+    const pysLabel = labelled(/Pharos Yield Score/);
+    expect(screen.getByText("× 8 → PYS")).toBeTruthy();
+    expect(pysLabel).toContain("× 8 scaling factor");
+    // Every printed factor reconciles to the served score within display rounding.
+    const reproduced = (effective / source / safety) * (consistency / 100) * 8;
+    expect(Math.abs(reproduced - score)).toBeLessThanOrEqual(1);
   });
 
   it("shows floor 0% and a zero total when the addends sum negative", () => {

@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { EvmCodeAtBlockResult, EvmMulticall3Call, EvmMulticall3Result } from "../evm-rpc";
+import type { EvmBlockHeader, EvmCodeAtBlockResult, EvmMulticall3Call, EvmMulticall3Result, EvmRpcOptions } from "../evm-rpc";
 import { TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { buildChainRpcs } from "../chain-registry";
+import { supplyAttributionPinMaxAgeSec } from "@shared/lib/safety-score-v9/policy";
 import { SafetyScoreV9DeploymentSupplyCensusSchema, V9DeploymentSupplyCensusRowSchema } from "@shared/types/safety-score-v9-deployment-supply-census";
 import {
   observeDeploymentSupplyCensusEvm,
@@ -13,6 +14,7 @@ import {
   type DeploymentSupplyCensusReadTarget,
   type DeploymentSupplyCensusReferencePrice,
 } from "../safety-score-v9/deployment-supply-census-evm";
+import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";
 import rpcGeneration from "./fixtures/deployment-supply-census-evm/rpc-generation.json";
 import shareBoundary from "./fixtures/deployment-supply-census-evm/share-boundary-rows.json";
 
@@ -80,6 +82,31 @@ function evmDependencies(options: {
 
 function pinned(chainAnchor: DeploymentSupplyCensusEvmChainAnchor): DeploymentSupplyCensusEvmPinResolution {
   return { kind: "pinned", anchor: chainAnchor };
+}
+
+function optionCapturingDependencies(): {
+  dependencies: Partial<DeploymentSupplyCensusEvmDependencies>;
+  codeOptions: EvmRpcOptions[];
+  multicallOptions: EvmRpcOptions[];
+} {
+  const base = evmDependencies();
+  const codeOptions: EvmRpcOptions[] = [];
+  const multicallOptions: EvmRpcOptions[] = [];
+  return {
+    dependencies: {
+      ...base.dependencies,
+      fetchEvmCodeStatusAtBlock: (async (...args: Parameters<DeploymentSupplyCensusEvmDependencies["fetchEvmCodeStatusAtBlock"]>) => {
+        codeOptions.push(args[3] ?? {});
+        return base.code(args[0], args[1]);
+      }) as DeploymentSupplyCensusEvmDependencies["fetchEvmCodeStatusAtBlock"],
+      fetchEvmMulticall3Aggregate3AtBlock: (async (...args: Parameters<DeploymentSupplyCensusEvmDependencies["fetchEvmMulticall3Aggregate3AtBlock"]>) => {
+        multicallOptions.push(args[3] ?? {});
+        return base.multicall(args[0], args[1]);
+      }) as DeploymentSupplyCensusEvmDependencies["fetchEvmMulticall3Aggregate3AtBlock"],
+    },
+    codeOptions,
+    multicallOptions,
+  };
 }
 
 function readCensus(
@@ -429,6 +456,15 @@ describe("deployment supply census EVM rows", () => {
     ]);
   });
 
+  it.each([0, Number.NaN, Number.POSITIVE_INFINITY])("names an unusable aggregate denominator (%s) as an unavailable read", async (aggregateSupplyUsd) => {
+    const { dependencies } = evmDependencies();
+    const census = await readCensus({ targets: [target("ethereum:0x01")], aggregateSupplyUsd }, dependencies);
+    expect(census).toEqual({
+      rows: [],
+      rejected: [{ routeId: null, code: "census-rejected:read-unavailable" }],
+    });
+  });
+
   it("rejects a duplicated route key as an inconsistent roster", async () => {
     const { dependencies } = evmDependencies();
     const census = await readCensus({
@@ -587,6 +623,172 @@ describe("pinned EVM chain reads", () => {
       },
     });
     expect(pins.get(ETHEREUM)).toEqual({ kind: "rejected", reason: "missing-block-pin" });
+  });
+
+  it("fetches the authenticated finalized head only for a recent-state-only Dwellir route", async () => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const anchorHeader: EvmBlockHeader = {
+      number: 100, hash: `0x${"ab".repeat(32)}`, timestamp: CLOCK - 60,
+    };
+    const finalizedHeader: EvmBlockHeader = {
+      number: 99, hash: `0x${"cd".repeat(32)}`, timestamp: CLOCK - 300,
+    };
+    const header = vi.fn(async (_chain: string, block: number | "finalized") =>
+      block === "finalized" ? finalizedHeader : anchorHeader);
+    const resolve = vi.fn(async (
+      _chain: string, _clock: number, cache: { latestBlockNumber?: number },
+    ) => {
+      cache.latestBlockNumber = 120;
+      return 100;
+    });
+    const dependencies = {
+      resolveClosestBlockAtOrBeforeTimestamp: resolve as unknown as DeploymentSupplyCensusEvmDependencies["resolveClosestBlockAtOrBeforeTimestamp"],
+      fetchEvmBlockHeader: header as unknown as DeploymentSupplyCensusEvmDependencies["fetchEvmBlockHeader"],
+    };
+
+    const recent = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: ["monad"],
+      scoringClockSec: CLOCK,
+      chainRpcs,
+    }, dependencies);
+    expect(header).toHaveBeenCalledWith("monad", 100, expect.objectContaining({ observedHeadBlock: 120 }));
+    expect(header).toHaveBeenCalledWith("monad", "finalized", expect.anything());
+    expect(recent.get("monad")).toEqual({
+      kind: "pinned",
+      anchor: { blockNumber: 100, blockHash: anchorHeader.hash, blockTimeSec: anchorHeader.timestamp },
+      finalized: finalizedHeader,
+    });
+
+    header.mockClear();
+    const archive = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: ["ethereum"],
+      scoringClockSec: CLOCK,
+      chainRpcs,
+    }, dependencies);
+    expect(archive.get("ethereum")).toEqual({
+      kind: "pinned",
+      anchor: { blockNumber: 100, blockHash: anchorHeader.hash, blockTimeSec: anchorHeader.timestamp },
+    });
+    expect(header).not.toHaveBeenCalledWith("ethereum", "finalized", expect.anything());
+
+    header.mockClear();
+    const absent = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: ["monad"],
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, dependencies);
+    expect(absent.get("monad")).toEqual({
+      kind: "pinned",
+      anchor: { blockNumber: 100, blockHash: anchorHeader.hash, blockTimeSec: anchorHeader.timestamp },
+    });
+    expect(header).not.toHaveBeenCalledWith("monad", "finalized", expect.anything());
+  });
+
+  it.each([
+    { label: "still canonical", canonicalHash: `0x${"ab".repeat(32)}`, keeps: true },
+    { label: "orphaned by a reorg", canonicalHash: `0x${"ef".repeat(32)}`, keeps: false },
+  ] as const)("re-authenticates an anchor below the finalized head when it is $label", async ({ canonicalHash, keeps }) => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const anchorHeader: EvmBlockHeader = { number: 100, hash: `0x${"ab".repeat(32)}`, timestamp: CLOCK - 60 };
+    const finalizedHeader: EvmBlockHeader = { number: 110, hash: `0x${"cd".repeat(32)}`, timestamp: CLOCK - 30 };
+    let numberedReads = 0;
+    const header = vi.fn(async (_chain: string, block: number | "finalized", _options?: unknown) => {
+      if (block === "finalized") return finalizedHeader;
+      numberedReads += 1;
+      return numberedReads === 1 ? anchorHeader : { ...anchorHeader, hash: canonicalHash as `0x${string}` };
+    });
+    const resolve = vi.fn(async (
+      _chain: string, _clock: number, cache: { latestBlockNumber?: number },
+    ) => {
+      cache.latestBlockNumber = 120;
+      return 100;
+    });
+    const pins = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: ["monad"],
+      scoringClockSec: CLOCK,
+      chainRpcs,
+    }, {
+      resolveClosestBlockAtOrBeforeTimestamp: resolve as unknown as DeploymentSupplyCensusEvmDependencies["resolveClosestBlockAtOrBeforeTimestamp"],
+      fetchEvmBlockHeader: header as unknown as DeploymentSupplyCensusEvmDependencies["fetchEvmBlockHeader"],
+    });
+
+    expect(header).toHaveBeenLastCalledWith("monad", 100, expect.objectContaining({ observedHeadBlock: 110 }));
+    expect(pins.get("monad")).toEqual({
+      kind: "pinned",
+      anchor: { blockNumber: 100, blockHash: anchorHeader.hash, blockTimeSec: anchorHeader.timestamp },
+      ...(keeps ? { finalized: finalizedHeader } : {}),
+    });
+  });
+
+  it("attaches a valid recent-state pin so a recent-only Dwellir route can serve the census reads", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const blockHash: `0x${string}` = `0x${"ab".repeat(32)}`;
+    const finalized: EvmBlockHeader = { number: 100, hash: blockHash, timestamp: now - 60 };
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const { dependencies, codeOptions, multicallOptions } = optionCapturingDependencies();
+
+    const chainRead = await observeDeploymentSupplyCensusEvmChain({
+      chainId: "monad",
+      targets: [target("monad:0x01", { chainId: "monad" })],
+      anchor: { blockNumber: 100, blockHash, blockTimeSec: now - 60 },
+      finalized,
+      scoringClockSec: now,
+      chainRpcs,
+    }, dependencies);
+
+    expect(chainRead.kind).toBe("measured");
+    const expectedPin = {
+      chainId: "monad",
+      header: { number: 100, hash: blockHash, timestamp: now - 60 },
+      finalized,
+      observedAtSec: expect.any(Number),
+      maxAgeSec: supplyAttributionPinMaxAgeSec(["monad"]),
+    };
+    expect(codeOptions[0]).toMatchObject({
+      recentStatePin: expectedPin, observedHeadBlock: 100, stateBlockHash: blockHash,
+    });
+    expect(multicallOptions[0]).toMatchObject({
+      recentStatePin: expectedPin, observedHeadBlock: 100, stateBlockHash: blockHash,
+    });
+    await expectRecentPinRouting(codeOptions[0]!);
+  });
+
+  it.each([
+    ["finalized is below the anchor", (now: number) => ({
+      finalized: { number: 99, hash: `0x${"ab".repeat(32)}` as `0x${string}`, timestamp: now - 60 },
+      anchorTime: now - 60,
+    })],
+    ["hashes differ at an equal height", (now: number) => ({
+      finalized: { number: 100, hash: `0x${"cd".repeat(32)}` as `0x${string}`, timestamp: now - 60 },
+      anchorTime: now - 60,
+    })],
+    ["the pin would expire before the chain deadline", (now: number) => ({
+      finalized: { number: 100, hash: `0x${"ab".repeat(32)}` as `0x${string}`, timestamp: now - 1795 },
+      anchorTime: now - 1795,
+      deadlineMs: Date.now() + 10_000,
+    })],
+  ] as const)("keeps today's historical read when %s", async (_label, buildCase) => {
+    const now = Math.floor(Date.now() / 1000);
+    const { finalized, anchorTime, ...deadlines } = buildCase(now);
+    const blockHash: `0x${string}` = `0x${"ab".repeat(32)}`;
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const { dependencies, codeOptions, multicallOptions } = optionCapturingDependencies();
+
+    const chainRead = await observeDeploymentSupplyCensusEvmChain({
+      chainId: "monad",
+      targets: [target("monad:0x01", { chainId: "monad" })],
+      anchor: { blockNumber: 100, blockHash, blockTimeSec: anchorTime },
+      finalized,
+      scoringClockSec: now,
+      chainRpcs,
+      ...deadlines,
+    }, dependencies);
+
+    expect(chainRead.kind).toBe("measured");
+    expect(codeOptions[0]?.recentStatePin).toBeUndefined();
+    expect(codeOptions[0]?.observedHeadBlock).toBeUndefined();
+    expect(multicallOptions[0]?.recentStatePin).toBeUndefined();
+    expect(multicallOptions[0]?.observedHeadBlock).toBeUndefined();
   });
 
   it("rejects a malformed token address before any code or multicall read", async () => {

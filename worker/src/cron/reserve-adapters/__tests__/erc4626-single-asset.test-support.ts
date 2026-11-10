@@ -142,6 +142,13 @@ export function getErc4626Network(): AdapterNetwork | undefined {
   return activeNetwork;
 }
 
+/** Restore the default network between files that share one module cache, so a
+ * test omitting `installErc4626Network()` cannot inherit the previous file's
+ * chain in the non-isolated `worker-shared` project. */
+export function resetErc4626NetworkForTests(): void {
+  activeNetwork = undefined;
+}
+
 export async function runTrackedVault(
   id: string,
   configTransform?: (config: LiveReservesConfig) => LiveReservesConfig,

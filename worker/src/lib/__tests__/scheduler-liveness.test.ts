@@ -28,10 +28,79 @@ describe("live scheduled delivery", () => {
         .map((candidate) => CRON_SCHEDULE_CADENCES[candidate.scheduleKey].intervalSec)),
     );
     const query = db.getHistory()[0];
-    expect(query.binds).toEqual(["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll", plan.scheduleKey]);
+    expect(query.binds.slice(0, 4)).toEqual([
+      "fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll", plan.scheduleKey,
+    ]);
+    expect(query.binds.slice(4).sort()).toEqual(observation.expectedLanes!.map((lane) => lane.scheduleKey).sort());
     expect(query.sql).toContain("MAX(started_at)");
     expect(query.sql).not.toContain("scheduled_at");
     expect(query.sql).not.toContain("cron_runs");
+  });
+  it("resolves every expected lane with its own bounded index seek", async () => {
+    const db = slotDb(30);
+    const observation = await loadSchedulerLiveness(db, now);
+    const query = db.getHistory()[0];
+    // The GROUP BY form scans every retained row for each lane group on a
+    // public path; one correlated MAX per lane stays an index seek.
+    expect(query.sql).not.toContain("GROUP BY");
+    expect(query.sql).toContain("WITH lane(slot_key) AS (VALUES");
+    expect(query.binds.slice(4).sort()).toEqual(
+      observation.expectedLanes!.map((lane) => lane.scheduleKey).sort());
+  });
+  it("keeps a lane with no retained start missing rather than unreadable", async () => {
+    const laneStarts: Record<string, number | null> = Object.fromEntries(
+      Object.keys(SCHEDULED_SLOT_PLANS).map((scheduleKey) => [scheduleKey, observedAt - 1]),
+    );
+    laneStarts.daily0300Utc = null;
+    const observation = await loadSchedulerLiveness(slotDb(30, { lanes: JSON.stringify(laneStarts) }), now);
+    expect(observation.expectedLanes?.find((lane) => lane.scheduleKey === "daily0300Utc")).toMatchObject({
+      status: "unavailable", unavailableReason: "lane-slot-start-evidence-missing",
+    });
+  });
+  it("reports a lone stalled public lane the aggregate cannot see", async () => {
+    const laneStarts = Object.fromEntries(
+      Object.keys(SCHEDULED_SLOT_PLANS).map((scheduleKey) => [scheduleKey, observedAt - 1]),
+    );
+    laneStarts.fiveMinuteTelegramAlerts = observedAt - 3_600;
+    const observation = await loadSchedulerLiveness(
+      slotDb(30, { telegram: observedAt - 3_600, lanes: JSON.stringify(laneStarts) }), now);
+    // The aggregate follows the most recent start, so one dead lane leaves it healthy.
+    expect(observation.status).toBe("healthy");
+    expect(evaluateSchedulerLiveness(observation).causes).toEqual([
+      expect.objectContaining({
+        code: "expected_scheduled_lane_unhealthy", severity: "info", value: 1, threshold: 1,
+      }),
+    ]);
+  });
+  it("grades every registry-derived lane against its cadence budget and omits retention-bound months", async () => {
+    const laneStarts = Object.fromEntries(
+      Object.keys(SCHEDULED_SLOT_PLANS).map((scheduleKey) => [scheduleKey, observedAt - 1]),
+    );
+    laneStarts.statusSelfCheckOffset = observedAt - 1_801;
+    laneStarts.daily0300Utc = observedAt - 259_201;
+    const observation = await loadSchedulerLiveness(slotDb(30, { lanes: JSON.stringify(laneStarts) }), now);
+    expect(observation.status).toBe("healthy");
+    expect(observation.expectedLanes?.some((lane) => lane.scheduleKey === "monthlyYieldAudit")).toBe(false);
+    expect(observation.expectedLanes?.find((lane) => lane.scheduleKey === "statusSelfCheckOffset")).toMatchObject({
+      status: "degraded", ageSeconds: 1_801, warningAfterSec: 1_800, staleAfterSec: 2_700,
+      unavailableReason: null,
+    });
+    expect(observation.expectedLanes?.find((lane) => lane.scheduleKey === "daily0300Utc")).toMatchObject({
+      status: "stale", ageSeconds: 259_201, warningAfterSec: 172_800, staleAfterSec: 259_200,
+    });
+    expect(observation.expectedLanes?.find((lane) => lane.scheduleKey === "daily0800Utc")).toMatchObject({
+      status: "healthy", ageSeconds: 1,
+    });
+    expect(evaluateSchedulerLiveness(observation)).toMatchObject({
+      status: "healthy",
+      causes: [{ code: "expected_scheduled_lane_unhealthy", severity: "info", metric: "unhealthyExpectedLanes" }],
+    });
+  });
+  it("keeps an unreadable per-lane map unknown instead of healthy", async () => {
+    const observation = await loadSchedulerLiveness(slotDb(30, { lanes: "not-json" }), now);
+    expect(observation.status).toBe("healthy");
+    expect(observation.expectedLanes?.every((lane) => lane.status === "unavailable")).toBe(true);
+    expect(schedulerLivenessWarnings(observation)).toEqual([]);
   });
   it.each([[600, "healthy"], [601, "degraded"], [1200, "degraded"], [1201, "stale"]] as const)(
     "classifies strictly at %ss", async (age, status) => {

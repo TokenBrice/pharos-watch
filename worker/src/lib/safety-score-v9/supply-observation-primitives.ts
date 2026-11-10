@@ -24,6 +24,7 @@ import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
   normalizeReviewedDeploymentAddress,
+  PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG,
   reviewedDeploymentObservationTimingIssue,
 } from "./supply-attribution-contract";
 
@@ -31,12 +32,19 @@ const REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
 const REVIEWED_DEPLOYMENT_SOLANA_BLOCK_ANCHOR_LOOKBACK_SLOTS = 64;
 const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+// Chain 1672 rejects EIP-1898; only this reviewed chain may use bracketed numbered state.
+const BRACKETED_NUMBER_PIN_MIN_LAG_BY_CHAIN_ID: Readonly<Record<string, number>> = {
+  pharos: PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG,
+};
 
 export type ReviewedDeploymentObservationRejectionCode =
   | "route-inventory-unavailable"
   | "deployment-identity-unavailable"
+  | "deployment-identity-authored-withholding"
   | "chain-rpc-unavailable"
   | "safe-block-unavailable"
+  | "deployment-pin-lag-violation"
+  | "deployment-pin-header-mismatch"
   | "deployment-state-unavailable"
   | "deployment-state-invalid"
   | "deployment-identity-mismatch"
@@ -113,6 +121,10 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
       safetyLag <= 0 || headBlockNumber < safetyLag) {
     return rejectDeployment("safe-block-unavailable");
   }
+  const numberPinMinLag = BRACKETED_NUMBER_PIN_MIN_LAG_BY_CHAIN_ID[chainId];
+  if (numberPinMinLag !== undefined && safetyLag < numberPinMinLag) {
+    return rejectDeployment("deployment-pin-lag-violation");
+  }
 
   let blockHeader = await rewindEvmBlockHeaderToScoringClock({
     initialBlockNumber: headBlockNumber - safetyLag,
@@ -130,7 +142,21 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
     if (!blockHeader) return rejectDeployment("deployment-observation-skew");
   }
   const blockNumber = blockHeader.number;
-  const stateOptions = { ...options, stateBlockHash: blockHeader.hash, multicallFallbackBlockHash: blockHeader.hash };
+  const numberPinned = numberPinMinLag !== undefined;
+  if (numberPinned && blockNumber > headBlockNumber - numberPinMinLag) {
+    return rejectDeployment("deployment-pin-lag-violation");
+  }
+  const pinHeaderMatches = async () => {
+    const header = await dependencies.fetchEvmBlockHeader(chainId, blockNumber, options);
+    return header?.number === blockNumber && header.hash === blockHeader.hash &&
+      header.timestamp === blockHeader.timestamp;
+  };
+  if (numberPinned && !await pinHeaderMatches()) {
+    return rejectDeployment("deployment-pin-header-mismatch");
+  }
+  const stateOptions = numberPinned ? options : {
+    ...options, stateBlockHash: blockHeader.hash, multicallFallbackBlockHash: blockHeader.hash,
+  };
   const calls = [
     { label: "total-supply", target: contractAddress, callData: TOTAL_SUPPLY_SELECTOR, allowFailure: false },
     { label: "decimals", target: contractAddress, callData: DECIMALS_SELECTOR, allowFailure: false },
@@ -169,6 +195,9 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
     : null;
   if (protocolResult.implementationAddress && implementationBytes === null) {
     return rejectDeployment("deployment-state-unavailable");
+  }
+  if (numberPinned && !await pinHeaderMatches()) {
+    return rejectDeployment("deployment-pin-header-mismatch");
   }
 
   const observation: ReviewedDeploymentSupplyObservation = {
@@ -270,7 +299,8 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
   scoringClockSec: number;
   signal?: AbortSignal;
   alignToSolana?: boolean;
-  identityRuntime: (routeId: string) => "evm" | "solana" | null;
+  /** Null is an authored withholding; undefined is an accidentally missing identity. */
+  identityRuntime: (routeId: string) => "evm" | "solana" | null | undefined;
   observeEvm: (route: {
     routeId: string;
     chainId: string;
@@ -298,7 +328,7 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
     if (!runtime) {
       return {
         status: "rejected",
-        rejectionCode: "deployment-identity-unavailable",
+        rejectionCode: runtime === null ? "deployment-identity-authored-withholding" : "deployment-identity-unavailable",
         failedRouteId: route.routeId,
       };
     }

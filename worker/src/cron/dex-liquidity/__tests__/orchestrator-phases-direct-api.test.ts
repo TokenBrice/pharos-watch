@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-api-common";
-import { integrateDirectApiLiquidityPhase } from "../orchestrator-phases/direct-api";
+import {
+  buildDexDirectApiFetchers,
+  integrateDirectApiLiquidityPhase,
+  type DirectApiCensusScope,
+} from "../orchestrator-phases/direct-api";
 import { fetchDirectApiFixture } from "../../__tests__/dex-liquidity-direct-api.test-support";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { initSourcePoolGraph } from "../pool-helpers";
 import { buildChainAddressKey } from "../token-resolution";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const SOLANA_POOL_ADDRESS = "11111111111111111111111111111111";
 const SOLANA_USDC_MINT = "UsdcMint";
@@ -498,5 +503,257 @@ describe("integrateDirectApiLiquidityPhase", () => {
       "pancakeswap:ethereum": 1,
       "pancakeswap:base": 0,
     });
+  });
+});
+
+const ETHEREUM_POOL_KEY = "ethereum:0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
+
+describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
+  it("requires positive exhaustive authority even when raw identities and a healthy result exist", () => {
+    const entry: Parameters<typeof buildAuthoritativeStagedPoolConfirmationIndex>[0][number] = {
+      name: "Undeclared",
+      circuitKey: "undeclared-api",
+      normalizedProtocol: "undeclared",
+      supportedChains: ["ethereum"],
+      censusScope: "exhaustive",
+      authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
+      result: { pools: [], ok: true, degraded: false, errors: [] },
+    };
+    Reflect.deleteProperty(entry, "censusScope");
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([entry]);
+    expect(index.enforcedChainsByProtocol.size).toBe(0);
+    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
+  });
+
+  it("enforces confirmation on a chain where an exhaustive census legitimately found no pools", () => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([
+      {
+        name: "Balancer",
+        circuitKey: "balancer-api",
+        normalizedProtocol: "balancer",
+        supportedChains: ["ethereum", "plasma"],
+        censusScope: "exhaustive",
+        authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+        },
+      },
+    ]);
+
+    expect(index.enforcedChainsByProtocol.get("balancer")).toEqual(new Set(["ethereum", "plasma"]));
+    expect(index.confirmedExactKeysByProtocol.get("balancer")).toEqual(new Set([ETHEREUM_POOL_KEY]));
+  });
+
+  it("enforces confirmation for warning-only authoritative protocol fetches", () => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([
+      {
+        name: "Balancer",
+        circuitKey: "balancer-api",
+        normalizedProtocol: "balancer",
+        supportedChains: ["ethereum"],
+        censusScope: "exhaustive",
+        authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+          warnings: ["page 1 skipped 1 malformed pool rows"],
+        },
+      },
+    ]);
+
+    expect(index.enforcedChainsByProtocol.get("balancer")).toEqual(new Set(["ethereum"]));
+    expect(index.confirmedExactKeysByProtocol.get("balancer")).toEqual(new Set([ETHEREUM_POOL_KEY]));
+  });
+
+  it.each<{
+    name: string;
+    entry: Parameters<typeof buildAuthoritativeStagedPoolConfirmationIndex>[0][number];
+  }>([
+    {
+      name: "fails open when the authoritative fetch has a real failure",
+      entry: {
+        name: "Balancer",
+        circuitKey: "balancer-api",
+        normalizedProtocol: "balancer",
+        supportedChains: ["plasma"],
+        censusScope: "exhaustive",
+        authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
+        result: {
+          pools: [],
+          ok: true,
+          degraded: true,
+          errors: ["partial"],
+        },
+      },
+    },
+    {
+      name: "fails open when the authoritative fetch has mixed warnings and real failures",
+      entry: {
+        name: "Balancer",
+        circuitKey: "balancer-api",
+        normalizedProtocol: "balancer",
+        supportedChains: ["ethereum"],
+        censusScope: "exhaustive",
+        authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
+        result: {
+          pools: [],
+          ok: true,
+          degraded: true,
+          errors: ["balancer page 2 returned 503"],
+          warnings: ["page 1 skipped 1 malformed pool rows"],
+        },
+      },
+    },
+    {
+      name: "fails open while a paginated authoritative inventory is incomplete",
+      entry: {
+        name: "PancakeSwap",
+        circuitKey: "pancakeswap-api",
+        normalizedProtocol: "pancakeswap",
+        supportedChains: ["bsc"],
+        censusScope: "exhaustive",
+        authoritativeExactPoolKeys: new Set([ETHEREUM_POOL_KEY]),
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+          pagination: {
+            state: "partial",
+            headRefreshed: true,
+            pagesFetched: 3,
+            cursor: "750",
+            cycleCompleted: false,
+          },
+        },
+      },
+    },
+    // ODR-B1b `pools-lost-before-scoring`: three ways a census with no authority
+    // over a staged pool was nonetheless allowed to veto it.
+    {
+      name: "never enforces from a bounded-sample census",
+      entry: {
+        name: "Meteora",
+        circuitKey: "meteora-api",
+        normalizedProtocol: "meteora",
+        supportedChains: ["solana"],
+        censusScope: "bounded-sample",
+        authoritativeExactPoolKeys: new Set(["solana:5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6"]),
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+        },
+      },
+    },
+    {
+      name: "never enforces when the census produced no identity at all",
+      entry: {
+        name: "Aerodrome Slipstream",
+        circuitKey: "aerodrome-slipstream-api",
+        normalizedProtocol: "aerodrome",
+        supportedChains: ["base"],
+        censusScope: "exhaustive",
+        authoritativeExactPoolKeys: new Set<string>(),
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+        },
+      },
+    },
+    // `result.pools` is filtered down to tracked tokens during compaction, so it
+    // must never stand in for the raw census. Without a raw key set there is
+    // nothing to confirm against and the protocol must not veto.
+    {
+      name: "never enforces from the compacted tracked-token pool list",
+      entry: {
+        name: "Orca",
+        circuitKey: "orca-api",
+        normalizedProtocol: "orca",
+        supportedChains: ["solana"],
+        censusScope: "exhaustive",
+        result: {
+          pools: [
+            {
+              source: "orca",
+              chain: "solana",
+              poolAddress: "2D9mokxthTheNAU6hCWGRXdNmhNQoypHs1JcRCbwkgLL",
+              poolType: "orca-whirlpool",
+              tokens: [
+                { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9, priceUsd: 100 },
+                { address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", symbol: "USDC", decimals: 6, priceUsd: 1 },
+              ],
+              price: 100,
+              tvlUsd: 1_000_000,
+              volume24hUsd: 0,
+              feeRate: null,
+              balances: null,
+            },
+          ],
+          ok: true,
+          degraded: false,
+          errors: [],
+        },
+      },
+    },
+  ])("$name", ({ entry }) => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([entry]);
+
+    expect(index.enforcedChainsByProtocol.size).toBe(0);
+    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
+  });
+});
+
+describe("direct API census scope declarations", () => {
+  // One matrix enrolls every descriptor's maximum authority and stop policy.
+  // Completion must describe this run, never a resumed multi-run rotation.
+  const contracts: { name: string; censusScope: DirectApiCensusScope; stop: string }[] = [
+    { name: "Fluid", censusScope: "bounded-sample", stop: "tracked-token extract" },
+    { name: "Balancer", censusScope: "exhaustive", stop: "short page; full page at cap is partial" },
+    { name: "PancakeSwap", censusScope: "bounded-sample", stop: "head plus two rotating tail pages" },
+    { name: "Meteora", censusScope: "bounded-sample", stop: "three-page head sample" },
+    { name: "Raydium", censusScope: "exhaustive", stop: "short page or below admission floor; cap is partial" },
+    { name: "Orca", censusScope: "exhaustive", stop: "four-page budget; contiguous exhausted run only" },
+    { name: "Aerodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
+    { name: "Uniswap V3 BSC shadow", censusScope: "bounded-sample", stop: "bounded staged exact-pool recovery" },
+    { name: "Velodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
+  ];
+  const fetchers = buildDexDirectApiFetchers({
+    db: makeNoopD1(),
+    graphApiKey: null,
+    chainAddressToId: new Map(),
+    symbolToChainScopedIds: new Map(),
+    stablecoinPriceById: new Map(),
+  });
+
+  it.each(contracts)("$name declares its $stop census contract", ({ name, censusScope }) => {
+    const fetcher = fetchers.find((adapter) => adapter.name === name)!;
+    expect(fetcher.censusScope).toBe(censusScope);
+    for (const scan of ["exhausted", "capped", "later-page-failure", "malformed-identity", "resumed-tail"] as const) {
+      const chain = fetcher.supportedChains[0];
+      const index = buildAuthoritativeStagedPoolConfirmationIndex([{
+        ...fetcher,
+        authoritativeExactPoolKeys: new Set([`${chain}:pool`]),
+        result: {
+          pools: [], ok: true, degraded: scan === "later-page-failure", errors: [],
+          physicalPoolCensus: { exactPoolKeys: [`${chain}:pool`], incompleteChains: scan === "malformed-identity" ? [chain] : [] },
+          pagination: {
+            state: scan === "exhausted" || scan === "malformed-identity" ? "complete" : "partial",
+            headRefreshed: true, pagesFetched: 1, cursor: scan === "exhausted" ? null : "tail",
+            cycleCompleted: scan === "exhausted" || scan === "malformed-identity" || scan === "resumed-tail",
+          },
+        },
+      }]);
+      expect(index.enforcedChainsByProtocol.get(fetcher.normalizedProtocol)?.has(chain) ?? false,
+        `${name}: ${scan}`).toBe(censusScope === "exhaustive" && scan === "exhausted");
+    }
   });
 });

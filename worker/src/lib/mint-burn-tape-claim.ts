@@ -1,14 +1,18 @@
 /** Large-flow Tape claim eligibility, shared by the projector, store write guard and retention. */
+import { mintBurnSupplyProofAcceptedSql } from "./mint-burn-supply-proofs";
 
-export const MINT_BURN_TAPE_NOTICE_USD = 10_000_000;
+const MINT_BURN_TAPE_NOTICE_USD = 10_000_000;
 const NOTICE_USD = MINT_BURN_TAPE_NOTICE_USD;
 
 /** Single-transaction eligibility, shared with the store write guard and retention. */
 export function mintBurnTapeEligibleSql(alias: string): string {
   return `${alias}.amount_usd IS NOT NULL
     AND ${alias}.amount_usd >= ${NOTICE_USD}
+    AND ${alias}.below_display_threshold = 0
+    AND ${mintBurnSupplyProofAcceptedSql(alias)}
     AND (${alias}.flow_type IS NULL OR ${alias}.flow_type NOT IN ('bridge_transfer', 'protocol_internal'))
-    AND (${alias}.direction = 'mint' OR ${alias}.burn_type IS NULL OR ${alias}.burn_type != 'review_required')
+    AND ((${alias}.direction = 'mint' AND ${alias}.burn_type IS NOT 'review_required')
+      OR (${alias}.direction = 'burn' AND ${alias}.burn_type = 'effective_burn'))
     AND ${alias}.direction IN ('mint', 'burn')`;
 }
 

@@ -6,9 +6,10 @@ import { mintBurnScanCoverageAdmits, mintBurnScanFingerprint, type MintBurnScanS
 import grandfatheredConfigKeys from "./mint-burn-pipeline/grandfathered-config-keys.json";
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import { batchExecute, executeAtomicBatch } from "./db";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 
 /** netFlow90dUsd is the longest published aggregate. */
-export const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
+const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
 // Immutable pre-admission roster, not a claim that legacy history is durable-v2.
 const grandfathered = new Set(grandfatheredConfigKeys);
 
@@ -27,6 +28,76 @@ export function mintBurnDisabledReason(
   return null;
 }
 
+export interface MintBurnIgnoredDisabledSymbol {
+  symbol: string;
+  reason: "unknown-symbol" | "shared-symbol";
+  stablecoinIds: string[];
+  /** Previously durable disabled keys for this ticker, preserved across the rollout. */
+  retainedKeys: string[];
+}
+
+export interface MintBurnDisabledSymbolPolicy {
+  symbols: Set<string>;
+  retainedKeys: Set<string>;
+  ignored: MintBurnIgnoredDisabledSymbol[];
+}
+
+/**
+ * The legacy symbol switch is coin-scoped only when every config carrying that
+ * symbol belongs to one stablecoin. A shared ticker (GUSD, MUSD, USDP, YUSD, …)
+ * would otherwise withdraw an unrelated coin, so an ambiguous symbol disables
+ * nothing; operators use MINT_BURN_DISABLED_IDS for that case. A deployment
+ * that already disabled the ticker before this rule keeps its durable keys, so
+ * the rollout cannot silently re-enable a quarantined leg.
+ */
+export function resolveMintBurnDisabledSymbolPolicy(
+  configs: readonly MintBurnContractConfig[],
+  operatorSymbols: ReadonlySet<string>,
+  priorDisabledKeys: ReadonlySet<string> = new Set(),
+): MintBurnDisabledSymbolPolicy {
+  const idsBySymbol = new Map<string, Set<string>>();
+  const keysBySymbol = new Map<string, string[]>();
+  for (const config of configs) {
+    const symbol = config.symbol.toUpperCase();
+    const ids = idsBySymbol.get(symbol) ?? new Set<string>();
+    ids.add(config.stablecoinId.toLowerCase());
+    idsBySymbol.set(symbol, ids);
+    const keys = keysBySymbol.get(symbol) ?? [];
+    keys.push(mintBurnConfigKey(config));
+    keysBySymbol.set(symbol, keys);
+  }
+  const symbols = new Set<string>();
+  const retainedKeys = new Set<string>();
+  const ignored: MintBurnIgnoredDisabledSymbol[] = [];
+  for (const symbol of [...operatorSymbols].sort()) {
+    const ids = idsBySymbol.get(symbol);
+    if (!ids || ids.size === 0) {
+      ignored.push({ symbol, reason: "unknown-symbol", stablecoinIds: [], retainedKeys: [] });
+      continue;
+    }
+    if (ids.size > 1) {
+      const retained = (keysBySymbol.get(symbol) ?? []).filter((key) => priorDisabledKeys.has(key)).sort();
+      retained.forEach((key) => retainedKeys.add(key));
+      ignored.push({
+        symbol,
+        reason: "shared-symbol",
+        stablecoinIds: [...ids].sort(),
+        retainedKeys: retained,
+      });
+      continue;
+    }
+    symbols.add(symbol);
+  }
+  return { symbols, retainedKeys, ignored };
+}
+
+export function resolveMintBurnDisabledSymbols(
+  configs: readonly MintBurnContractConfig[],
+  disabledSymbols: ReadonlySet<string>,
+): Set<string> {
+  return resolveMintBurnDisabledSymbolPolicy(configs, disabledSymbols).symbols;
+}
+
 export interface MintBurnAdmissionRow {
   config_key: string;
   config_fingerprint: string;
@@ -43,12 +114,38 @@ export function prepareMintBurnPublicationPolicy(db: D1Database) {
   return db.prepare("SELECT disabled_keys, paused_keys FROM mint_burn_publication_policy WHERE id = 1");
 }
 
+/** The stored value was read, but it is not a usable key list; a writer may replace it. */
+export class MintBurnPublicationPolicyDecodeError extends Error {
+  cause?: unknown;
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message);
+    this.name = "MintBurnPublicationPolicyDecodeError";
+    if (options && "cause" in options) this.cause = options.cause;
+  }
+}
+
 export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
-  const keys: unknown = JSON.parse(policy);
+  let keys: unknown;
+  try {
+    keys = JSON.parse(policy);
+  } catch (error) {
+    throw new MintBurnPublicationPolicyDecodeError("Invalid mint/burn publication policy", { cause: error });
+  }
   if (!Array.isArray(keys) || !keys.every((key) => typeof key === "string")) {
-    throw new Error("Invalid mint/burn publication policy");
+    throw new MintBurnPublicationPolicyDecodeError("Invalid mint/burn publication policy");
   }
   return new Set(keys);
+}
+
+/** The durable disabled scope a rollout must not silently erase. */
+export async function readMintBurnDisabledKeys(db: D1Database, signal?: AbortSignal): Promise<Set<string>> {
+  const row = await runWithOverloadRetry(
+    () => prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>(),
+    3,
+    signal,
+  );
+  return decodeMintBurnDisabledKeys(row?.disabled_keys ?? "[]");
 }
 
 /** The scheduled runtime is the authority for the env switch; readers share its durable policy. */
@@ -109,9 +206,9 @@ export function mintBurnPublicationDisabled(
 }
 
 /**
- * R8/ADR-35: an admitted leg whose accepted frontier exceeds the shared publication
- * freshness budget leaves the common watermark instead of freezing every coin. The
- * caller pauses the returned keys; only the existing reactivation catch-up resumes them.
+ * R8/ADR-35: missing or stale accepted frontiers are isolation candidates. The
+ * caller must prove a surviving common hour before pausing the returned candidates;
+ * only the existing reactivation catch-up resumes them.
  */
 export function selectMintBurnStalledFrontiers(
   configs: readonly MintBurnContractConfig[],
@@ -123,8 +220,8 @@ export function selectMintBurnStalledFrontiers(
     const key = mintBurnConfigKey(config);
     const proof = (segments.get(key) ?? []).filter((row) => row.dirty_hour_ts == null);
     const frontier = Math.max(legacy.get(key)?.end ?? 0, ...proof.map((row) => row.to_timestamp));
-    // Hour-aligned like the watermark, so a leg is quarantined exactly when it alone would stale it.
-    return frontier > 0 && now - Math.floor(frontier / 3600) * 3600 > freshnessBudgetSec;
+    // Compare closed hours under the same freshness budget as the common watermark.
+    return frontier === 0 || now - Math.floor(frontier / 3600) * 3600 > freshnessBudgetSec;
   });
 }
 

@@ -99,6 +99,8 @@ const LENDING_PROTOCOLS = {
   "inverse-finance-firm": { label: "Inverse Finance FiRM" },
   "segment-finance": { label: "Segment Finance" },
   "save": { label: "Save" },
+  // 2026-11-07 queue review: HyperCore USDC borrower interest, not HLP strategy returns.
+  "hyperliquid-earn": { label: "Hyperliquid Earn" },
   // YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR
   // Future allowlist rounds start from the monthly yield-coverage-audit
   // operatorQueue.recommendationCandidates entries with kind "lending-allowlist".
@@ -111,6 +113,28 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set(Object.keys(LENDING_PROTOCOLS)
 export const LENDING_PROTOCOL_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(LENDING_PROTOCOLS).map(([slug, config]) => [slug, config.label]),
 );
+
+/**
+ * Reviewed lending venues deliberately kept outside Wave-2 discovery, so adding
+ * them here does not widen auto-lending publication. `project-0` is a Solana
+ * lending market; its pools still hold tracked coins as deposits, which is why
+ * Layer 3 must not adopt them as a coin's own yield.
+ */
+const LAYER3_NON_DISCOVERY_VENUE_PROJECTS = ["project-0"] as const;
+
+/**
+ * DeFiLlama project slugs that name a lending venue rather than the tracked
+ * coin's issuer. Layer 3 is a base-symbol/address guess with no curated holder
+ * identity, so a match inside one of these projects is a deposit market that
+ * holds the coin, never the coin's own yield. Such matches are skipped; venue
+ * opportunities publish only through lending discovery under its admission
+ * rules, and an issuer's own pool inside such a project must be pinned in
+ * `YIELD_POOL_MAP` (ADR-32: this registry owns the venue vocabulary).
+ */
+export const LAYER3_EXCLUDED_VENUE_PROJECTS: ReadonlySet<string> = new Set([
+  ...LENDING_PROTOCOL_ALLOWLIST,
+  ...LAYER3_NON_DISCOVERY_VENUE_PROJECTS,
+]);
 
 export interface AutoLendingCollisionBlock {
   readonly project?: string;

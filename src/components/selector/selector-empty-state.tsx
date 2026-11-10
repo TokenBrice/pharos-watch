@@ -104,7 +104,7 @@ export function SelectorEmptyState({
           href={screenerHandoffHref}
           className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-3.5 text-sm font-medium text-foreground hover:bg-background/85 sm:min-h-9"
         >
-          Open the Screener with these filters
+          Open the Screener with the filters it can carry
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>

@@ -87,19 +87,19 @@ for (const { descriptor, fixture } of CASES) {
       expect(result).toMatchObject({ blockNumber: fixture.block.number, sourceTimestamp: fixture.block.timestamp, outputAssetKeys: [...descriptor.outputAssetKeys] });
       if (descriptor.capacityCapability === "measured") expect(result?.diagnostics.observedBlockHash).toBe(fixture.block.hash);
     });
-    for (const call of fixture.calls.filter(c => !c.label.startsWith("preview"))) {
-      it(`withholds evidence if required ${call.label} read is absent`, async () => {
-        await expect(observe(descriptor, fixture, { state: { [call.label]: null } })).rejects.toThrow();
-      });
-    }
-    for (const identity of fixture.identities) {
-      it(`rejects missing or drifted runtime ${identity.address}`, async () => {
-        await expect(observe(descriptor, fixture, { identityAddress: identity.address })).rejects.toThrow();
-      });
-      if (identity.implementationAddress) it(`rejects implementation drift ${identity.address}`, async () => {
-        await expect(observe(descriptor, fixture, { implementationAddress: identity.address })).rejects.toThrow();
-      });
-    }
+    it("withholds evidence if any required read is absent", async () => {
+      for (const call of fixture.calls.filter(c => !c.label.startsWith("preview"))) {
+        await expect(observe(descriptor, fixture, { state: { [call.label]: null } }), call.label).rejects.toThrow();
+      }
+    });
+    it("rejects missing or drifted runtime identity and implementation", async () => {
+      for (const identity of fixture.identities) {
+        await expect(observe(descriptor, fixture, { identityAddress: identity.address }), identity.address).rejects.toThrow();
+        if (identity.implementationAddress) {
+          await expect(observe(descriptor, fixture, { implementationAddress: identity.address }), identity.address).rejects.toThrow();
+        }
+      }
+    });
     for (const { clock, boundary, offsetSec, admitted } of [
       { clock: "stale", boundary: "just inside", offsetSec: EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC - 1, admitted: true },
       { clock: "stale", boundary: "just beyond", offsetSec: EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC + 1, admitted: false },
@@ -141,6 +141,7 @@ describe("native quote guards remain independent of all-in USD admission", () =>
       });
       expect(capacity.eventualCapacityUsd).toBeNull();
       expect(capacity.immediateCapacityUsd).toBeNull();
+      expect(capacity.capacityRejectionReason).toBe("all-in-cost-unobserved");
     });
     it(`${descriptor.coinId} cannot certify measured/open after missing previews even without cost proof`, async () => {
       await expect(observe(descriptor, fixture, { quote: null })).rejects.toThrow();

@@ -33,7 +33,7 @@
       },
       {
         "label": "Paxos PAXG transparency reports",
-        "url": "https://www.paxos.com/paxg-transparency"
+        "url": "https://www.paxos.com/transparency/paxg"
       },
       {
         "label": "Paxos PAXG allocation and physical gold bar details",
@@ -91,13 +91,13 @@
       },
       {
         "label": "Paxos PAXG transparency reports",
-        "url": "https://www.paxos.com/paxg-transparency"
+        "url": "https://www.paxos.com/transparency/paxg"
       },
       {
         "label": "Paxos PAXG allocation and physical gold bar details",
         "url": "https://support.paxos.com/articles/7204091747-paxg-allocation-and-physical-gold-bar-details-representing-my-paxg-tokens"
       }
     ],
-    "uncertainty": "Paxos custody, allocated storage, and the current Brink's Global Services Ltd. and ICBC Standard Bank vault providers are disclosed. The August 2026 report does not disclose provider-level gold shares, vault-account identifiers, or explicit rehypothecation terms. The existing bankruptcy-remoteness classification is retained without a new insolvency-law opinion."
+    "uncertainty": "Paxos custody, allocated storage, and the current Brink's Global Services Ltd. and ICBC Standard Bank vault providers are disclosed. The September 2026 report, re-read November 4, does not disclose provider-level gold shares, vault-account identifiers, or explicit rehypothecation terms. The existing bankruptcy-remoteness classification is retained without a new insolvency-law opinion."
   }
 }

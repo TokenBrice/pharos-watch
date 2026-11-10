@@ -43,7 +43,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
         ["route", "access", "settlement", "fees"],
       ),
-      sourceRef("Paxos PYUSD transparency", "https://www.paxos.com/pyusd-transparency", ["capacity"]),
+      sourceRef("Paxos PYUSD transparency", "https://www.paxos.com/transparency/pyusd", ["capacity"]),
     ],
     notes: [
       "Paxos terms document free 1:1 redemption for fully verified customers with always-available on-platform USD conversion, and monthly attested reserves are held entirely in cash deposits, short-dated US Treasury bills, overnight reverse repos, and government money market funds; Pharos applies the uniform 75% major-issuer haircut to that ~100% attested highly liquid share for a 25% documented immediate hot-buffer floor",
@@ -283,7 +283,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
         ["route", "access", "settlement", "fees"],
       ),
-      sourceRef("Paxos USDP transparency", "https://www.paxos.com/usdp-transparency", ["capacity"]),
+      sourceRef("Paxos USDP transparency", "https://www.paxos.com/transparency/usdp", ["capacity"]),
     ],
     notes: [
       "Paxos terms document free 1:1 redemption for fully verified customers with always-available on-platform USD conversion, and monthly attested NYDFS-eligible reserves are held entirely in cash deposits, short-dated US Treasury bills, overnight reverse repos, and government money market funds; Pharos applies the uniform 75% major-issuer haircut to that ~100% attested highly liquid share for a 25% documented immediate hot-buffer floor",
@@ -322,7 +322,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
         ["route", "access", "settlement", "fees"],
       ),
-      sourceRef("Paxos USDG transparency", "https://www.paxos.com/usdg-transparency", ["capacity"]),
+      sourceRef("Paxos USDG transparency", "https://www.paxos.com/transparency/usdg", ["capacity"]),
     ],
     notes: [
       "Paxos terms document free 1:1 redemption for fully verified customers with always-available on-platform USD conversion, and Paxos states USDG reserves are held 100% in US dollar deposits, US treasuries, and cash equivalents with monthly attestations; Pharos applies the uniform 75% major-issuer haircut to that ~100% attested highly liquid share for a 25% documented immediate hot-buffer floor",
@@ -522,6 +522,13 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: undisclosedReviewedFee(
       "Redeemable 1:1 in USD directly with SG-FORGE; public fee schedule not disclosed",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "The September 30, 2026 white paper I.07 grants EEA-resident holders redemption at par. Five Business Days bounds acknowledgement only. After successful KYC/AML, sanctions and other controls and applicable token delivery, the issuer will transfer USD to the holder's cash account no later than the last Business Day of the month following the month controls completed. Controls have no published completion maximum. This conditional month-end payment commitment cannot be represented by a fixed businessDays or elapsed-second value; no scalar or unconditional request-to-completion guarantee is inferred.",
+      reviewedAt: "2026-11-06",
+      docs: [sourceRef("USDCV white paper v2.2, September 30, 2026, I.07: conditional month-end cash-account payment", "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf", ["route", "access", "settlement"])],
+    },
     docs: [
       sourceRefRouteCapacity("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/"),
       sourceRefRouteCapacity(

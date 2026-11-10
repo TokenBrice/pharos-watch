@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 
 import { render, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { compile } from "tailwindcss";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
+import PortfolioPage from "./page";
 import type { ReportCardsV9Response } from "@shared/types";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
@@ -11,11 +15,6 @@ import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "
 let portfolioState: {
   holdings: Array<{ coinId: string; amount: number }>;
   initialized: boolean;
-  upstreamExposure: Array<{ coinId: string; name: string; symbol: string; usd: number; pct: number; isCollateral: boolean }>;
-  upstreamExposureGrouped: Array<{ coinId: string; name: string; symbol: string; usd: number; pct: number; isCollateral: boolean }>;
-  portfolioGrade: string;
-  portfolioScore: number | null;
-  dimensionScores: Record<string, number | null>;
   totalUsd: number;
   addCoin: ReturnType<typeof vi.fn>;
   clearAll: ReturnType<typeof vi.fn>;
@@ -38,6 +37,7 @@ const reportCardsState: {
   meta: {},
 };
 const reportQueryOptions = vi.hoisted(() => vi.fn());
+const bootstrapScript = readFileSync("public/portfolio-bootstrap.js", "utf8");
 
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCardsV9Table: (options: { enabled: boolean }) => {
@@ -77,10 +77,6 @@ vi.mock("@/components/coin-selector", () => ({
   CoinSelector: () => <div>coin-selector</div>,
 }));
 
-vi.mock("@/components/radar-chart", () => ({
-  ReportCardRadar: () => <div>radar</div>,
-}));
-
 vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <div>{name}</div>,
 }));
@@ -101,17 +97,6 @@ function basePortfolioState(): typeof portfolioState {
   return {
     holdings: [],
     initialized: true,
-    upstreamExposure: [],
-    upstreamExposureGrouped: [],
-    portfolioGrade: "NR",
-    portfolioScore: null,
-    dimensionScores: {
-      pegStability: null,
-      liquidity: null,
-      resilience: null,
-      decentralization: null,
-      dependencyRisk: null,
-    },
     totalUsd: 0,
     addCoin: vi.fn(),
     clearAll: vi.fn(),
@@ -139,6 +124,57 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.getByText("portfolio-empty-state")).toBeTruthy();
   });
 
+  it.each([
+    ["", "[]", true, true],
+    ["", "[]", false, false],
+    ["", '[{"coinId":"usdc-circle","amount":100}]', true, false],
+    ["?p=usdc-circle:100", "[]", true, false],
+    ["?coins=usdc-circle", "[]", true, false],
+  ] as const)("prerenders safely (%s, %s, bootstrap %s)", async (search, stored, runs, firstVisit) => {
+    portfolioState.initialized = false;
+    window.history.replaceState(null, "", `/portfolio/${search}`);
+    window.localStorage.setItem("pharos:portfolio", stored);
+    const html = renderToString(<PortfolioPage />);
+    expect(html).toContain("portfolio-empty-state");
+    expect(html).toContain("Add holdings manually or load a starter mix below.");
+    expect(html).not.toContain("<!--$");
+    if (runs) new Function(bootstrapScript)();
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.append(container);
+    const note = container.querySelector(".pharos-empty-note");
+    const { rerender } = render(<PortfolioPage />, { container, hydrate: true });
+    const empty = screen.getByText("portfolio-empty-state").parentElement!;
+    const loading = empty.nextElementSibling!;
+    const style = document.createElement("style");
+    style.textContent = (await compile("@tailwind utilities;")).build([...empty.classList, ...loading.classList]);
+    document.head.append(style);
+    expect(getComputedStyle(empty).display).toBe(firstVisit ? "block" : "none");
+    expect(getComputedStyle(loading).display).toBe(firstVisit ? "none" : "block");
+    portfolioState.initialized = true;
+    rerender(<PortfolioPage />);
+    expect(container.querySelector(".pharos-empty-note")).toBe(note);
+    expect(screen.getAllByText(/Add holdings manually/)).toHaveLength(1);
+    style.remove();
+    document.documentElement.removeAttribute("data-portfolio-empty");
+    expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
+  });
+
+  it("stops using the pre-paint selector once holdings initialize", () => {
+    portfolioState.initialized = false;
+    document.documentElement.setAttribute("data-portfolio-empty", "");
+    const { container, rerender } = render(<PortfolioClient />);
+    const root = container.firstElementChild;
+    expect(container.children).toHaveLength(1);
+    portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }] };
+    rerender(<PortfolioClient />);
+    expect(container.firstElementChild).toBe(root);
+    expect(container.innerHTML).not.toContain("data-portfolio-empty");
+    expect(screen.queryByText("portfolio-empty-state")).toBeNull();
+    expect(screen.getByText("Total portfolio value")).toBeTruthy();
+    document.documentElement.removeAttribute("data-portfolio-empty");
+  });
+
   it("keeps holdings editable while risk enrichment is pending", () => {
     portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }] };
     reportCardsState.isLoading = true;
@@ -149,27 +185,14 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.queryByText(/Weighted V10 safety aggregate/)).toBeNull();
   });
 
-  it("removes stale legacy portfolio params when nothing valid survives", async () => {
+  it.each([false, true])("normalizes legacy URL holdings (retained %s)", async (retained) => {
+    portfolioState.holdings = retained ? [{ coinId: "usdt-tether", amount: 25 }] : [];
     window.history.replaceState(null, "", "/portfolio/?p=1:25");
 
     render(<PortfolioClient />);
 
     await waitFor(() => {
-      expect(window.location.search).toBe("");
-    });
-  });
-
-  it("rewrites stale portfolio params to canonical holdings", async () => {
-    portfolioState = {
-      ...basePortfolioState(),
-      holdings: [{ coinId: "usdt-tether", amount: 25 }],
-    };
-    window.history.replaceState(null, "", "/portfolio/?p=1:25");
-
-    render(<PortfolioClient />);
-
-    await waitFor(() => {
-      expect(window.location.search).toBe("?p=usdt-tether%3A25");
+      expect(window.location.search).toBe(retained ? "?p=usdt-tether%3A25" : "");
     });
   });
 
@@ -201,5 +224,54 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.getAllByText("Unavailable")).toHaveLength(3);
     expect(screen.getByText(/Pipeline gap · fewer than two pillars available/)).toBeTruthy();
     expect(screen.queryByText(/NR|0\/100|100\/100/)).toBeNull();
+  });
+
+  it("keeps every carded holding's grade visible when one holding has no card", () => {
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [
+        { coinId: "usdc-circle", amount: 100 },
+        { coinId: "usdv-solomon", amount: 300 },
+      ],
+    };
+    reportCardsState.data = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 80 })] });
+    render(<PortfolioClient />);
+    expect(screen.getByRole("alert").textContent).toContain("portfolio-card-unavailable");
+    expect(screen.getByLabelText("Safety grade A-, score 80")).toBeTruthy();
+  });
+});
+
+describe("portfolio pre-paint selector", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    document.documentElement.removeAttribute("data-portfolio-empty");
+    window.history.replaceState(null, "", "/portfolio/");
+  });
+
+  it.each([null, "[]", "not json", "{}"])("keeps the static empty state for storage %s", (stored) => {
+    if (stored !== null) window.localStorage.setItem("pharos:portfolio", stored);
+    new Function(bootstrapScript)();
+    expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(true);
+  });
+
+  it.each(["", "?p=usdc-circle:100", "?coins=usdc-circle"])("hides the empty state for saved/shared holdings (%s)", (search) => {
+    window.history.replaceState(null, "", `/portfolio/${search}`);
+    if (!search) window.localStorage.setItem("pharos:portfolio", '[{"coinId":"usdc-circle","amount":100}]');
+    new Function(bootstrapScript)();
+    expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(false);
+  });
+
+  it("keeps first visits visible when storage access is blocked", () => {
+    const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
+    try {
+      expect(() => new Function(bootstrapScript)()).not.toThrow();
+      expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(true);
+      window.history.replaceState(null, "", "/portfolio/?p=usdc-circle:100");
+      new Function(bootstrapScript)();
+      expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(false);
+    } finally {
+      read.mockRestore();
+      document.documentElement.removeAttribute("data-portfolio-empty");
+    }
   });
 });

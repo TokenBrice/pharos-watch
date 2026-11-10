@@ -2,7 +2,7 @@ import type { CronResult } from "./cron-logger";
 
 const NON_OUTPUT_REASONS = [
   "already_written_today", "already_written_today_before_freshness_gate",
-  "cadence_bucket_completed", "cadence_bucket_in_progress",
+  "cadence_bucket_completed", "cadence_bucket_in_progress", "cadence_bucket_superseded",
   "circuit-open", "no-pending-request", "not-due-today",
 ] as const;
 
@@ -96,3 +96,34 @@ export const CONFIRMED_CRON_OUTPUT_AT_SQL = `CASE
       AND ${field("coverageOutcomeCounts.quiet")} = ${field("configsAttempted")})
     OR (status = 'ok' AND item_count > 0) THEN started_at
   ELSE NULL END`;
+
+/** Span bound far above any recorded attempt (longest: ~18 min, continuation lanes). */
+const MAX_CRON_ATTEMPT_SPAN_SEC = 86_400;
+
+/**
+ * Scalar subquery: the confirmed clock of `jobRef`'s newest confirmed row, found
+ * newest-first through idx_cron_runs_job_started. Pass a bound parameter (or an
+ * outer column of a materialized row set) so it stays a once-evaluated floor.
+ */
+export function newestConfirmedCronOutputSql(jobRef: string): string {
+  return `(SELECT ${CONFIRMED_CRON_OUTPUT_AT_SQL} FROM cron_runs AS floor_run
+    WHERE floor_run.job = ${jobRef} AND (${CONFIRMED_CRON_OUTPUT_AT_SQL}) IS NOT NULL
+    ORDER BY floor_run.started_at DESC LIMIT 1)`;
+}
+
+/**
+ * Exact pruning for `MAX(CONFIRMED_CRON_OUTPUT_AT_SQL)`: a row's confirmed clock
+ * never exceeds `started_at + duration + 1s` (the outputPublishedAt branch checks
+ * exactly that; every other branch is `started_at`), so only rows whose bound
+ * reaches a known confirmed clock can hold the maximum. The rest are skipped on
+ * their duration column before their metadata is parsed; a full-history parse
+ * overloaded D1 on 2026-11-03. A null floor (no confirmed row) matches nothing.
+ */
+export function confirmedCronOutputReachesSql(floorSql: string, table = "cron_runs"): string {
+  return `${table}.started_at >= ${floorSql} - ${MAX_CRON_ATTEMPT_SPAN_SEC}
+    AND ${table}.started_at + MAX(${table}.duration_ms, 0) / 1000.0 + 1 >= ${floorSql}`;
+}
+
+/** Latest confirmed output of the job bound to `?1`, as `started_at`. */
+export const LATEST_CONFIRMED_CRON_OUTPUT_SQL = `SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?1
+  AND ${confirmedCronOutputReachesSql(newestConfirmedCronOutputSql("?1"))}`;

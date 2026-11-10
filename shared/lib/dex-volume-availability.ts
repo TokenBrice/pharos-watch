@@ -59,6 +59,13 @@ export const DEX_VOLUME_OBSERVATION_MAX_AGE_SEC = 72 * 3600;
 export const DEX_VOLUME_COVERAGE_MIN = 0.5;
 
 /**
+ * Smallest partial-window lower bound worth printing. A smaller admitted sum
+ * renders as `$0.00`, which reads like a measured zero (R1); views keep the
+ * unavailable dash and the completeness label instead.
+ */
+export const DEX_VOLUME_BOUND_MIN_USD = 0.005;
+
+/**
  * Dead-pool floor (liquidity v6.92). A retained pool whose scoring TVL is at
  * least this value is excluded from scoring and DEX price inputs when its
  * admitted 24h reading is a trade-verified zero (the provider reported no 24h

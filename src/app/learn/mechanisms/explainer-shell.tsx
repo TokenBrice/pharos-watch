@@ -6,11 +6,14 @@ import {
   nestVariants,
 } from "@shared/lib/stablecoins/by-mechanism";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isQuarantinedStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import {
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
@@ -162,11 +165,16 @@ function RepresentativeCoins({
 }: {
   coins: ArchetypeContent["representativeCoins"];
 }) {
+  // Quarantined coins leave the listing immediately; frozen examples remain.
+  const listed = coins.filter((coin) => {
+    const meta = TRACKED_META_BY_ID.get(coin.coinId);
+    return !meta || !isQuarantinedStablecoinMeta(meta);
+  });
   return (
     <RelatedCoinsList
-      coins={coins}
+      coins={listed}
       kicker="Tracked examples"
-      heading="Live coins using this design"
+      heading="Tracked coins using this design"
     />
   );
 }
@@ -306,8 +314,10 @@ function TrackedCoinList({
   // is roughly supply-descending and matches what the screener defaults to
   // before the runtime supply query lands.
   const coins = getActiveByArchetype(archetype);
+  // Launched rows are live, not upcoming: the /upcoming/ projection excludes
+  // them too, so they must not inflate this footer's "+N upcoming".
   const preLaunchCount = getCoinsByLifecycleStatus(archetype, "pre-launch")
-    .length;
+    .filter((coin) => !isLaunchedAwaitingData(coin)).length;
   const frozenCount = getCoinsByLifecycleStatus(archetype, "frozen").length;
   const { parents, childrenByParentId } = nestVariants(coins);
   const trackedCoinCount = coins.length;

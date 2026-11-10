@@ -29,7 +29,7 @@ describe("fetchStarknetTotalSupply", () => {
       .resolves.toBe(175_676_210_017_239_649_676_533n);
 
     const [url, body] = vi.mocked(fetchJsonPostWithRetry).mock.calls[0] ?? [];
-    expect(url).toBe("https://api.cartridge.gg/x/starknet/mainnet");
+    expect(url).toBe("https://starknet-rpc.publicnode.com");
     expect(body).toMatchObject({
       method: "starknet_call",
       params: { request: { contract_address: STARKNET_CONTRACT, calldata: [] }, block_id: "latest" },
@@ -55,7 +55,7 @@ describe("fetchStarknetTotalSupply", () => {
     })).resolves.toBe(10n);
 
     expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[0]?.[0]).toBe("https://starknet.example");
-    expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[1]?.[0]).toBe("https://api.cartridge.gg/x/starknet/mainnet");
+    expect(vi.mocked(fetchJsonPostWithRetry).mock.calls[1]?.[0]).toBe("https://starknet-rpc.publicnode.com");
   });
 
   it("fails closed when every endpoint fails", async () => {
@@ -143,6 +143,16 @@ describe("pinned Move fungible-asset census reads", () => {
       if (maxResponseBytes === undefined) expect(call[4]).toBeUndefined();
       else expect(call[4]).toEqual({ maxResponseBytes });
     }
+  });
+
+  it("returns unresolved for malformed ConcurrentSupply.current instead of converting it to zero", async () => {
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({ chain_id: 1, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::ConcurrentSupply", data: { current: {} } })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::Metadata", data: { decimals: 6 } });
+    expect(await fetchMoveFungibleAssetSupply(metadataAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 1,
+    })).toBeNull();
   });
 
   it("authenticates the deployed OFT package metadata and all mint/burn/transfer refs at the same ledger", async () => {

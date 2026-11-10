@@ -139,17 +139,17 @@ function MarketDataSectionBody({
   const sync = useMarketDataChartSync();
 
   // Brush domain matches the active controlled range, not the entire supply
-  // history — brushing inside "30d" lets you focus a few days.
+  // history — brushing inside "30d" lets you focus a few days. A history
+  // shorter than the range starts at its first observation, so a pre-history
+  // sliver of the strip cannot be brushed into an empty chart.
   const brushDomain = useMemo<readonly [number, number] | null>(() => {
     if (supplyHistory.length === 0) return null;
+    const firstTs = (supplyHistory[0].date ?? 0) * 1000;
     const lastTs = (supplyHistory[supplyHistory.length - 1].date ?? 0) * 1000;
-    if (range === "all") {
-      const firstTs = (supplyHistory[0].date ?? 0) * 1000;
-      return [firstTs, lastTs];
-    }
+    if (range === "all") return [firstTs, lastTs];
     const cutoff = RANGE_MS[range];
     if (!cutoff) return null;
-    return [lastTs - cutoff, lastTs];
+    return [Math.max(lastTs - cutoff, firstTs), lastTs];
   }, [range, supplyHistory]);
 
   // Clear brush when the active range changes — the previous selection no

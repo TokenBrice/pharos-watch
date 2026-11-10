@@ -148,10 +148,7 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
         warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
       }
       if (reportedLastPage) return "stop";
-      if (page >= MAX_PAGES) {
-        warnings.push(`bounded sample: stopped at page ${page} with more pages advertised`);
-        return "stop";
-      }
+      if (page >= MAX_PAGES) return "stop";
     },
   });
 
@@ -162,10 +159,18 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
     logWorkerEventArgs("handler", "warn", "[fetch-meteora]", error);
   }
 
+  const completed = result.completed || (reportedLastPage && result.errors.length === 0);
   return makeDexApiFetchResult(result.rows, {
     ok: result.successfulPages > 0,
     degraded: result.errors.length > 0,
     errors: result.errors,
     warnings: result.warnings,
+    pagination: {
+      state: completed ? "complete" : "partial",
+      headRefreshed: result.successfulPages > 0,
+      pagesFetched: result.successfulPages,
+      cursor: completed ? null : String(result.nextPage),
+      cycleCompleted: completed,
+    },
   });
 }

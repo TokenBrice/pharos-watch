@@ -1,5 +1,5 @@
 import "../../test-helpers/reviewed-deployment-catalog.test-support";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
@@ -31,10 +31,11 @@ const RAW_BY_CHAIN: Record<string, bigint> = {
   ethereum: 378_869_494_500_836_268_665_209n,
   arbitrum: 19_837_361_464_973_825_379_103n,
   avalanche: 8_837_361_464_973_825_379_103n,
-  base: 0n,
+  base: 0n, xlayer: 0n, arc: 0n,
   bsc: 4_837_361_464_973_825_379_103n,
   plume: 32_320_262_971_888_335_278_993_277n,
   monad: 9_837_361_464_973_825_379_103_908n,
+  pharos: 3_419_937_985_239n,
 };
 
 const BLOCK_BY_CHAIN: Record<string, number> = {
@@ -45,6 +46,9 @@ const BLOCK_BY_CHAIN: Record<string, number> = {
   bsc: 52_000_000,
   plume: 83_072_568,
   monad: 89_944_923,
+  pharos: 22_124_698,
+  xlayer: 75_356_641,
+  arc: 30_150_645,
 };
 
 const TIME_BY_CHAIN: Record<string, number> = {
@@ -55,16 +59,13 @@ const TIME_BY_CHAIN: Record<string, number> = {
   bsc: CLOCK_SEC - 10,
   plume: CLOCK_SEC - 7,
   monad: CLOCK_SEC - 4,
+  pharos: CLOCK_SEC - 5,
+  xlayer: CLOCK_SEC - 4,
+  arc: CLOCK_SEC - 2,
 };
 
 const EVM_CHAINS = [
-  "ethereum",
-  "arbitrum",
-  "avalanche",
-  "base",
-  "bsc",
-  "plume",
-  "monad",
+  "ethereum", "arbitrum", "avalanche", "base", "bsc", "plume", "monad", "pharos", "xlayer", "arc",
 ] as const;
 
 function uint256(value: bigint): `0x${string}` {
@@ -72,21 +73,16 @@ function uint256(value: bigint): `0x${string}` {
 }
 
 function chainRpcs(): Map<string, ChainRpcConfig> {
-  return makeChainRpcs(["ethereum", "arbitrum", "avalanche", "base", "bsc"]);
+  return makeChainRpcs(["ethereum", "arbitrum", "avalanche", "base", "bsc", "xlayer", "arc"]);
 }
 
 function routeForChain(chainId: string) {
-  return buildReviewedDeploymentRouteInventory(ASSET_ID)!.routes.find(
-    (route) => route.chainId === chainId,
-  )!;
+  return buildReviewedDeploymentRouteInventory(ASSET_ID)!.routes.find(route => route.chainId === chainId)!;
 }
 
 function solanaObservation(): ReviewedDeploymentSupplyObservation {
   const route = routeForChain("solana");
-  const identity = expectedCentrifugeDeploymentIdentity(
-    ASSET_ID,
-    route.routeId,
-  );
+  const identity = expectedCentrifugeDeploymentIdentity(ASSET_ID, route.routeId);
   if (!identity || identity.runtime !== "solana") {
     throw new Error("Missing JTRSY Solana identity");
   }
@@ -174,25 +170,27 @@ function dependencies() {
   };
 }
 
-async function observe(
-  overrides: ReturnType<typeof dependencies> = dependencies(),
-) {
-  const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
-    {
-      assetId: ASSET_ID,
-      aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-      registryFingerprint: REGISTRY_FINGERPRINT,
-      scoringClockSec: CLOCK_SEC,
-      chainRpcs: chainRpcs(),
-    },
-    overrides,
-  );
+function observeAttempt(deps = dependencies()) {
+  return observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
+    assetId: ASSET_ID, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+    registryFingerprint: REGISTRY_FINGERPRINT, scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(),
+  }, deps);
+}
+
+async function observe(deps = dependencies()) {
+  const attempt = await observeAttempt(deps);
   return attempt.status === "accepted" ? attempt.attribution : null;
 }
 
 describe("Centrifuge reviewed deployment observer", () => {
-  it.each(["0", "1", null])("admits an unreviewed Solana route only at observed zero within the historical pinned inventory (%s)", async (rawSupply) => {
-    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+  const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+  const historical = metaById.get(ASSET_ID)!;
+  beforeEach(() => metaById.set(ASSET_ID, {
+    ...historical, contracts: currentJtrsyCoin.contracts, bridgeRouteRisk: structuredClone(currentJtrsyRisk.bridgeRouteRisk),
+  } as unknown as StablecoinMeta));
+  afterEach(() => metaById.set(ASSET_ID, historical));
+
+  it.each(["0", "1", null])("admits an unreviewed Solana route only at observed zero within the current inventory (%s)", async (rawSupply) => {
     const reviewed = metaById.get(ASSET_ID)!;
     metaById.set(ASSET_ID, { ...reviewed, bridgeRouteRisk: { ...reviewed.bridgeRouteRisk!,
       routes: reviewed.bridgeRouteRisk!.routes!.map(route => route.destinationChain === "solana"
@@ -201,10 +199,7 @@ describe("Centrifuge reviewed deployment observer", () => {
     try {
       const deps = dependencies();
       deps.fetchSolanaObservation.mockResolvedValue(rawSupply === null ? null : { ...solanaObservation(), rawSupply });
-      const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
-        assetId: ASSET_ID, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT, scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(),
-      }, deps);
+      const attempt = await observeAttempt(deps);
       if (rawSupply === "0") expect(attempt.status).toBe("accepted");
       else expect(attempt).toEqual({ status: "rejected",
         rejectionCode: rawSupply === null ? "deployment-state-unavailable" : "packet-reconciliation-failed",
@@ -214,42 +209,23 @@ describe("Centrifuge reviewed deployment observer", () => {
       metaById.set(ASSET_ID, reviewed);
     }
   });
-  it("withholds the complete current JTRSY inventory pending Pharos identity review", async () => {
-    const historical = await observe();
-    expect(historical).not.toBeNull();
-    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
-    const reviewed = metaById.get(ASSET_ID)!;
-    metaById.set(ASSET_ID, {
-      ...reviewed,
-      contracts: currentJtrsyCoin.contracts,
-      bridgeRouteRisk: currentJtrsyRisk.bridgeRouteRisk,
-    } as unknown as StablecoinMeta);
-    try {
-      const inventory = buildReviewedDeploymentRouteInventory(ASSET_ID)!;
-      const pharos = "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040";
-      expect(inventory.routes).toHaveLength(currentJtrsyCoin.contracts.length);
-      expect(inventory.routes.map(route => route.routeId)).toContain(pharos);
-      expect(expectedCentrifugeDeploymentIdentity(ASSET_ID, pharos)).toBeUndefined();
-      expect(reviewedDeploymentAttributionValidationError({ assetId: ASSET_ID,
-        attribution: { ...historical!, routeInventoryDigest: inventory.digest },
-        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC,
-      })).toBe(`reviewed deployment identity unavailable for ${ASSET_ID}:${pharos}`);
-      const deps = dependencies();
-      const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
-        assetId: ASSET_ID,
-        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
-        scoringClockSec: CLOCK_SEC,
-        chainRpcs: chainRpcs(),
-      }, deps);
-      expect(attempt).toEqual({
-        status: "rejected",
-        rejectionCode: "deployment-identity-unavailable",
-        failedRouteId: pharos,
-      });
-    } finally {
-      metaById.set(ASSET_ID, reviewed);
-    }
+  it("accepts the current JTRSY packet with positive Pharos supply on its reviewed provider route", async () => {
+    const pharos = routeForChain("pharos");
+    const review = ACTIVE_META_BY_ID.get(ASSET_ID)!.bridgeRouteRisk!.routes!.find(row => row.id === pharos.routeId)!;
+    expect(review).toMatchObject({
+      reviewDisposition: "reviewed", semantics: "burn-mint", issuanceModel: "bridge-representation",
+      routeClass: "third-party", providerKeys: ["layerzero", "chainlink-ccip"], controllerChain: "pharos",
+    });
+    expect(review.rail).toBeUndefined();
+    const attempt = await observeAttempt();
+    expect(attempt.status).toBe("accepted");
+    if (attempt.status !== "accepted") throw new Error("Expected complete JTRSY attribution");
+    expect(attempt.attribution.deployments.find(row => row.chainId === "pharos"))
+      .toMatchObject({ rawSupply: RAW_BY_CHAIN.pharos!.toString() });
+    expect(reviewedDeploymentAttributionValidationError({
+      assetId: ASSET_ID, attribution: attempt.attribution, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+      registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC,
+    })).toBeNull();
   });
 
   it("finishes finalized Solana first and rewinds newer EVM pins into its actual clock window", async () => {
@@ -285,19 +261,11 @@ describe("Centrifuge reviewed deployment observer", () => {
     const attribution = await observe(deps);
 
     expect(attribution).not.toBeNull();
-    expect(attribution!.deployments).toHaveLength(8);
-    expect(
-      attribution!.deployments.reduce(
-        (sum, row) => sum + row.currentSupplyUsd,
-        0,
-      ),
-    ).toBe(AGGREGATE_SUPPLY_USD);
+    expect(attribution!.deployments).toHaveLength(currentJtrsyCoin.contracts.length);
+    expect(attribution!.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0)).toBe(AGGREGATE_SUPPLY_USD);
     expect(
       attribution!.deployments.filter((row) => row.rawSupply === "0"),
-    ).toEqual([
-      expect.objectContaining({ chainId: "base", currentSupplyUsd: 0 }),
-      expect.objectContaining({ chainId: "solana", currentSupplyUsd: 0 }),
-    ]);
+    ).toEqual(["arc", "base", "solana", "xlayer"].map(chainId => expect.objectContaining({ chainId, currentSupplyUsd: 0 })));
   });
 
   it("rejects the whole packet when Spoke authorization or Solana is unavailable", async () => {
@@ -333,33 +301,29 @@ describe("Centrifuge reviewed deployment observer", () => {
           : (`0x${"0".repeat(64)}` as const),
     );
 
-    await expect(
-      observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
-        {
-          assetId: ASSET_ID,
-          aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-          registryFingerprint: REGISTRY_FINGERPRINT,
-          scoringClockSec: CLOCK_SEC,
-          chainRpcs: chainRpcs(),
-        },
-        proxyDrift,
-      ),
-    ).resolves.toEqual({
+    await expect(observeAttempt(proxyDrift)).resolves.toEqual({
       status: "rejected",
       rejectionCode: "deployment-state-invalid",
       failedRouteId: routeForChain("base").routeId,
     });
   });
 
-  it("reads the pinned Token-2022 mint and direct authority from one finalized context", async () => {
-    const route = routeForChain("solana");
+  it.each(["jtrsy-anemoy", "acrdx-anemoy-apollo"])("reads the rotated Token-2022 authority for %s and rejects its predecessor", async (assetId) => {
+    const route = buildReviewedDeploymentRouteInventory(assetId)!.routes.find(row => row.chainId === "solana")!;
     const identity = expectedCentrifugeDeploymentIdentity(
-      ASSET_ID,
+      assetId,
       route.routeId,
     );
     if (!identity || identity.runtime !== "solana") {
       throw new Error("Missing JTRSY Solana identity");
     }
+    const authority = "BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4";
+    expect(identity).toMatchObject({
+      mintAuthority: authority, controllerAddress: authority,
+      programOwner: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      controllerProgramOwner: "11111111111111111111111111111111",
+    });
+    let observedAuthority = authority;
     const rpc = vi.fn(async (method: string, params: unknown[]) => {
       if (method === "getMultipleAccounts") {
         expect(params).toEqual([
@@ -367,16 +331,17 @@ describe("Centrifuge reviewed deployment observer", () => {
           { commitment: "finalized", encoding: "jsonParsed" },
         ]);
         return {
-          context: { slot: 434_941_163 },
+          context: { slot: 465_239_190 },
           value: [
             {
               owner: identity.programOwner,
               data: {
                 parsed: {
                   info: {
-                    decimals: route.decimals,
+                    decimals: 6,
                     supply: "0",
-                    mintAuthority: identity.mintAuthority,
+                    mintAuthority: observedAuthority,
+                    freezeAuthority: observedAuthority,
                   },
                 },
               },
@@ -390,33 +355,32 @@ describe("Centrifuge reviewed deployment observer", () => {
       }
       if (method === "getBlocks") {
         expect(params).toEqual([
-          434_941_099,
-          434_941_163,
-          { commitment: "finalized", minContextSlot: 434_941_163 },
+          465_239_126,
+          465_239_190,
+          { commitment: "finalized", minContextSlot: 465_239_190 },
         ]);
-        return [434_941_162, 434_941_163];
+        return [465_239_190];
       }
       expect(method).toBe("getBlock");
       return {
-        blockhash: "B".repeat(44),
-        blockTime: CLOCK_SEC - 3,
+        blockhash: "8CyVUSfa6dgiAgAFNQY261sEMYrCSktpSfdsq1UwbMAD",
+        blockTime: 1_793_781_842,
       };
     });
 
-    await expect(
-      fetchSolanaCentrifugeDeploymentObservation(
-        ASSET_ID,
-        route.routeId,
-        route.contractAddress,
-        undefined,
-        rpc as unknown as CentrifugeSolanaRpcFetcher,
-      ),
-    ).resolves.toMatchObject({
+    const fetch = () => fetchSolanaCentrifugeDeploymentObservation(
+      assetId, route.routeId, route.contractAddress, undefined, rpc as unknown as CentrifugeSolanaRpcFetcher,
+    );
+    await expect(fetch()).resolves.toMatchObject({
       rawSupply: "0",
-      blockNumberOrSlot: "434941163",
+      blockNumberOrSlot: "465239190",
+      blockTimeSec: 1_793_781_842,
+      decimals: 6,
       programOwner: identity.programOwner,
       mintAuthority: identity.mintAuthority,
       controllerProgramOwner: identity.controllerProgramOwner,
     });
+    observedAuthority = "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb";
+    await expect(fetch()).resolves.toBeNull();
   });
 });

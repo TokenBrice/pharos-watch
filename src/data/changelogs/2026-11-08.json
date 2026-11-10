@@ -1,0 +1,141 @@
+{
+  "dateRange": {
+    "from": "2026-11-02",
+    "to": "2026-11-08"
+  },
+  "headline": "Premiums no longer trigger Safety Score depeg caps, and evidence curation closes 62 open questions.",
+  "fieldNotes": "Most of the week kept missing or old evidence from passing as a complete, current claim. DEX quotes keep their contributors' clocks, native supply repairs publish only observed amounts, and mint/burn totals flag a missing established leg. Safety Score curation added dated issuer non-disclosure records and oracle profiles, closing 62 open questions and lowering nine grades. Indexed reads and paced cleanup relieved the D1 overload that had failed yield syncs and status checks.",
+  "summary": [
+    {
+      "label": "Safety Score 10.43",
+      "tag": "feature",
+      "description": "Two releases. Premiums no longer trigger active-depeg caps and count at a quarter weight. Curation closed 62 open questions with dated issuer non-disclosures and 12 oracle profiles, lowering nine grades.",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "Pricing 6.75",
+      "tag": "feature",
+      "description": "Nine releases, 6.67 to 6.75. DEX prices keep their contributors' original clocks, as DEWS 6.44 now does, and supply during DefiLlama fill defaults publishes only bounded native remainders.",
+      "href": "/methodology/pricing-pipeline-changelog/"
+    },
+    {
+      "label": "Mint/burn isolation",
+      "tag": "feature",
+      "description": "6.34 to 6.35. Native scan evidence governs leg isolation, quarantined mismatches stay visible, and surviving totals are marked partial when an established leg is missing. Returning legs gain a bounded reactivation turn.",
+      "href": "/methodology/mint-burn-flow-changelog/"
+    },
+    {
+      "label": "Yield source controls",
+      "tag": "feature",
+      "description": "8.53 to 8.54. Missing native depth alone stops causing Watch; lending pools leave automatic native discovery. Cohorts serve through rebuilds under current admission rules, and reviewed impaired venues are excluded.",
+      "href": "/methodology/yield-changelog/"
+    },
+    {
+      "label": "Catalog and sources",
+      "tag": "coverage",
+      "description": "Active coins fall from 388 to 384 as Avalon USDa, Blast USDB and Fathom FXD freeze and PHT delists. Axis and Paxos reserve feeds recover, OUSG gains XRPL supply reads, and DEX coverage reads Aero pools on Ink directly.",
+      "href": "/cemetery/"
+    },
+    {
+      "label": "Operator alert controls",
+      "tag": "infra",
+      "description": "Scoped reviews keep structural gaps out of acute warnings. Undelivered Telegram notices stay pending until accepted, delivery risk pages the operator, and browser probes stay on admitted site-data routes.",
+      "href": "/status/"
+    },
+    {
+      "label": "Runtime and build efficiency",
+      "tag": "infra",
+      "description": "Indexed history reads and paced retention reduce D1 load. Import-based PR planning and nightly registry sweeps cut CI work; data-only deploys reuse build IDs, and shared parsers replace duplicated helpers."
+    },
+    {
+      "label": "Accessible analytical tables",
+      "tag": "design",
+      "description": "Liquidity, flow and chain tables keep native row semantics and real identity links. Focus rings and confidence labels meet contrast checks, charts honor reduced motion, and failed wide-range reads can retry."
+    }
+  ],
+  "stats": {
+    "totalCommits": 335
+  },
+  "commits": [
+    {
+      "hash": "dfb855bd",
+      "message": "fix(status): judge a lease blocker's heartbeat at its skip observation"
+    },
+    {
+      "hash": "5c8627bb",
+      "message": "fix: reconcile integration fallout from the PHT/FXD lifecycle and MOVEUSD reader"
+    },
+    {
+      "hash": "d4bc3e02",
+      "message": "fix(dex): persist owner-accepted chain TVL baselines"
+    },
+    {
+      "hash": "c9b14782",
+      "message": "fix(dex): produce native USDA and Tempo price observations"
+    },
+    {
+      "hash": "34aa9dca",
+      "message": "fix(pricing): fail closed when the Orca exact source has no age budget"
+    },
+    {
+      "hash": "8ec63c4d",
+      "message": "fix(supply): admit JTRSY X Layer and Arc deployments"
+    },
+    {
+      "hash": "7a006dda",
+      "message": "fix(status): honor verified lease contention within producer grace"
+    },
+    {
+      "hash": "cf0c7199",
+      "message": "fix(pricing): read MOVEUSD's reviewed Orca pool on-chain"
+    },
+    {
+      "hash": "c91bff98",
+      "message": "fix(ops): review blocked wM supply carries by source"
+    },
+    {
+      "hash": "10d9ac7b",
+      "message": "data(lifecycle): delist PHT and freeze Fathom FXD"
+    },
+    {
+      "hash": "eacd7f0f",
+      "message": "fix(dex): review chain TVL levels after coverage checks"
+    },
+    {
+      "hash": "994fb6fa",
+      "message": "fix(supply): bound native remainders and record Pricing v6.74"
+    },
+    {
+      "hash": "8aaef677",
+      "message": "fix(supply): keep native repairs publishable during list price outages"
+    },
+    {
+      "hash": "95cfd950",
+      "message": "fix(ops): scope depeg reviews and yield exclusions precisely"
+    },
+    {
+      "hash": "095e9006",
+      "message": "fix(supply): add a fallback RPC for Robinhood chain reads"
+    },
+    {
+      "hash": "d94cd5a4",
+      "message": "fix(yield): keep opportunity holds in their own registry module"
+    },
+    {
+      "hash": "bd4a7845",
+      "message": "fix(pricing): distinguish fetched quotes from list fill attribution"
+    },
+    {
+      "hash": "1ae0693a",
+      "message": "fix(ops): review structural blind depeg coverage"
+    },
+    {
+      "hash": "0249e03f",
+      "message": "fix(supply): rebaseline GBPA after its reviewed collapse release"
+    },
+    {
+      "hash": "3fcf59b4",
+      "message": "fix(dex): review evidenced Plasma liquidity withdrawal"
+    }
+  ]
+}

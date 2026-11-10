@@ -26,6 +26,10 @@ jobs:
   memory:
     name: Collect Worker memory evidence
     if: ${{ github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      actions: read
+      issues: write # Capacity headroom upsert/close only; no other job mutates issues.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -68,11 +72,62 @@ jobs:
           path: |
             ${{ runner.temp }}/worker-memory/report.json
             ${{ runner.temp }}/worker-memory/report.md
+            ${{ runner.temp }}/worker-memory/capacity.md
             ${{ runner.temp }}/worker-memory/samples.ndjson
             ${{ runner.temp }}/worker-memory/exceeded-memory.ndjson
             ${{ runner.temp }}/worker-memory/queries.json
           if-no-files-found: error
           retention-days: 30
+      - name: Capacity headroom
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/worker-memory"
+          if [[ ! -f "$root/capacity.md" || ! -f "$root/report.json" ]]; then
+            echo "Capacity evidence unavailable; the collection verdict owns this failure."
+            exit 0
+          fi
+          cat "$root/capacity.md" >> "$GITHUB_STEP_SUMMARY"
+          decision="$(node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/worker-memory/report.json`, 'utf8'));
+          const status = report?.capacity?.status;
+          const reportOnly = process.env.EVENT_NAME !== 'schedule' || report?.window?.mode !== 'default';
+          process.stdout.write(!['ok', 'warn', 'unavailable'].includes(status) ? 'unknown' : reportOnly ? 'report-only' : status);
+          NODE
+          )"
+          issue_number() {
+            gh issue list --state open --search 'in:title "Worker capacity headroom"' --json number,title --jq '[.[] | select(.title == "Worker capacity headroom")][0].number // empty'
+          }
+          case "$decision" in
+            warn)
+              body="$RUNNER_TEMP/worker-capacity-issue.md"
+              {
+                echo 'The daily capacity headroom check crossed its warning threshold.'
+                echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+                echo
+                cat "$root/capacity.md"
+              } > "$body"
+              number="$(issue_number)"
+              if [[ -n "$number" ]]; then gh issue edit "$number" --body-file "$body"
+              else gh issue create --title 'Worker capacity headroom' --body-file "$body"
+              fi
+              ;;
+            ok)
+              number="$(issue_number)"
+              if [[ -n "$number" ]]; then
+                gh issue close "$number" --reason completed --comment "Capacity headroom cleared in run https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+              fi
+              ;;
+            *)
+              echo "Capacity verdict: $decision; no issue mutation."
+              ;;
+          esac
       - name: Heavy kill observed
         if: ${{ always() }}
         shell: bash
@@ -105,7 +160,7 @@ jobs:
             const report = JSON.parse(readFileSync(`${root}/report.json`, 'utf8'));
             const verdict = report.verdict;
             if (report.schemaVersion !== 1 || typeof verdict?.heavyKillObserved !== 'boolean' || typeof verdict?.collectionIncomplete !== 'boolean' || typeof verdict?.freshnessFailed !== 'boolean' || ![0, 1].includes(verdict.exitCode)
-                || !['report.json', 'report.md', 'samples.ndjson', 'exceeded-memory.ndjson', 'queries.json'].every(file => existsSync(`${root}/${file}`))) throw new Error();
+                || !['report.json', 'report.md', 'capacity.md', 'samples.ndjson', 'exceeded-memory.ndjson', 'queries.json'].every(file => existsSync(`${root}/${file}`))) throw new Error();
             if (verdict.collectionIncomplete || process.env.COLLECT_OUTCOME !== (verdict.exitCode === 0 ? 'success' : 'failure')) {
               console.error('::error::collection-incomplete; inspect retained source coverage and machine reasons');
               process.exitCode = 1;
@@ -137,19 +192,66 @@ jobs:
           install-playwright-chromium: "false"
           install-playwright-firefox: "false"
       - name: Restore latest rolling evidence archive
+        id: restore-archive
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/worker-incidents-previous"
-          artifact_id="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" | jq -r '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')"
-          if [[ -n "$artifact_id" ]]; then
+          # Pull-request runs execute in this repository and expose the PR head
+          # ref in workflow_run.head_branch, so artifact metadata alone is not a
+          # producer identity: a fork branch named "main" matches it. Authenticate
+          # the producing run before trusting any archive, then bind the artifact
+          # name to that run. Any completed non-cancelled run qualifies: the
+          # memory job exits red on a heavy kill and the incidents job exits red
+          # on an unavailable read, but both still upload that day's shard, so
+          # requiring a green conclusion would discard the incident day itself.
+          # A run whose own restore failed never captures (see the capture
+          # step), so it uploads no truncated shard to be restored here.
+          # Anything else is ignored newest-to-oldest.
+          candidates="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" \
+            | jq -r '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")]
+              | sort_by(.created_at) | reverse
+              | .[] | [.id, .name, .workflow_run.id, .workflow_run.head_sha] | @tsv')"
+          rejected=0
+          while IFS=$'\t' read -r artifact_id artifact_name run_id head_sha; do
+            [[ -n "$artifact_id" ]] || continue
+            # A failed lookup is not a rejection: fail the step so capture is
+            # skipped rather than starting a one-day window over a good archive.
+            if ! run_json="$(gh api "repos/$GH_REPO/actions/runs/$run_id")"; then
+              echo "::error::Could not read producing run $run_id; refusing to start a fresh window."
+              exit 1
+            fi
+            if ! jq -e --arg repo "$GH_REPO" --arg head_sha "$head_sha" --arg name "$artifact_name" --argjson run_id "$run_id" '
+                  .path == ".github/workflows/worker-memory-monitor.yml" and
+                  (.event == "schedule" or .event == "workflow_dispatch") and
+                  .status == "completed" and .conclusion != "cancelled" and
+                  .head_branch == "main" and .head_sha == $head_sha and
+                  .head_repository.full_name == $repo and
+                  ($name | startswith("worker-incidents-\($run_id)-"))
+                ' <<< "$run_json" >/dev/null; then
+              rejected=$((rejected + 1))
+              continue
+            fi
             gh api "repos/$GH_REPO/actions/artifacts/$artifact_id/zip" > "$RUNNER_TEMP/worker-incidents-previous.zip"
-            unzip -q "$RUNNER_TEMP/worker-incidents-previous.zip" -d "$RUNNER_TEMP/worker-incidents-previous"
+            # The producer uploads exactly these two files; any other member
+            # shape is not an archive this restore path knows how to trust.
+            if [[ "$(unzip -Z1 "$RUNNER_TEMP/worker-incidents-previous.zip" | LC_ALL=C sort | tr '\n' ' ')" == "bundle.json report.md " ]]; then
+              unzip -q "$RUNNER_TEMP/worker-incidents-previous.zip" -d "$RUNNER_TEMP/worker-incidents-previous"
+              break
+            fi
+            rm -f "$RUNNER_TEMP/worker-incidents-previous.zip"
+            rejected=$((rejected + 1))
+          done <<< "$candidates"
+          if [[ ! -f "$RUNNER_TEMP/worker-incidents-previous/bundle.json" && "$rejected" -gt 0 ]]; then
+            echo "::warning::Ignored $rejected incident artifact(s) that failed producer authentication or archive validation; starting a fresh 21-day window."
           fi
       - name: Capture deployment delivery child and publication evidence
-        if: ${{ always() && !cancelled() }}
+        # Without the restored archive the bundle would hold only today's shard;
+        # restoring that later would drop the rest of the 21-day window.
+        if: ${{ always() && !cancelled() && steps.restore-archive.outcome == 'success' }}
         id: incidents
         continue-on-error: true
         env:

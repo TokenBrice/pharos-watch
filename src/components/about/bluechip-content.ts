@@ -36,7 +36,7 @@ export const BLUECHIP_GATES: readonly BluechipGate[] = [
   {
     id: "fresh-reference-data",
     title: "Fresh reference data",
-    body: "The roster is refreshed from the Bluechip sync and Pharos report-card API. Stale or unavailable inputs fail closed rather than inventing a substitute grade.",
+    body: "While the roster is active, it is refreshed from the Bluechip sync and Pharos report-card API. Stale or unavailable inputs fail closed rather than inventing a substitute grade.",
   },
   {
     id: "no-local-score-blend",
@@ -64,6 +64,6 @@ export const BLUECHIP_REFUSALS: readonly BluechipRefusal[] = [
   },
   {
     title: "No stale roster carry",
-    body: "If either feed is unavailable or stops clearing the A-tier threshold, the asset is removed from this active roster until both inputs recover.",
+    body: "If either feed is unavailable or stops clearing the A-tier threshold, the asset is removed from this roster until both inputs recover.",
   },
 ];

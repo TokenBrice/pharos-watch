@@ -10,7 +10,7 @@ import {
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
 } from "../../lib/pricing-provider-lifecycle";
-import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSymbol } from "../../lib/dexscreener";
+import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSide, getDsTrackedTokenSymbol } from "../../lib/dexscreener";
 import { applyResolvedPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
@@ -190,25 +190,23 @@ function resolveDexScreenerAddressPrice(
   target: DexScreenerTarget,
   pairs: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>["pairs"],
   fxRates: Record<string, number> | undefined,
-): number | null {
-  const prices = pairs
-    .map((pair) => {
-      const tvl = pair.liquidity?.usd ?? 0;
-      if (tvl < DEXSCREENER_MIN_LIQUIDITY_USD) return null;
-      if (
-        target.expectedSymbol &&
-        getDsTrackedTokenSymbol(pair, target.address, target.chain)?.toUpperCase() !== target.expectedSymbol.toUpperCase()
-      ) {
-        return null;
-      }
-      return getDsTrackedTokenPriceUsd(pair, target.address, target.chain).priceUsd;
-    })
+): { price: number | null; rejectionClass: string | null } {
+  const matched = pairs.filter((pair) => getDsTrackedTokenSide(pair, target.address, target.chain) !== null);
+  if (matched.length === 0) return { price: null, rejectionClass: pairs.length === 0 ? "empty-response" : "identity-mismatch" };
+  const liquid = matched.filter((pair) => !((pair.liquidity?.usd ?? 0) < DEXSCREENER_MIN_LIQUIDITY_USD));
+  if (liquid.length === 0) return { price: null, rejectionClass: "missing-liquidity" };
+  const symbolMatched = liquid.filter((pair) => !target.expectedSymbol ||
+    getDsTrackedTokenSymbol(pair, target.address, target.chain)?.toUpperCase() === target.expectedSymbol.toUpperCase());
+  if (symbolMatched.length === 0) return { price: null, rejectionClass: "symbol-mismatch" };
+  const prices = symbolMatched
+    .map((pair) => getDsTrackedTokenPriceUsd(pair, target.address, target.chain).priceUsd)
     .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
 
   const price = median(prices);
-  if (price == null) return null;
+  if (price == null) return { price: null, rejectionClass: "invalid-price" };
 
-  return isUsableFallbackPrice(asset, price, fxRates) ? price : null;
+  return isUsableFallbackPrice(asset, price, fxRates)
+    ? { price, rejectionClass: null } : { price: null, rejectionClass: "price-rejected" };
 }
 
 function dexScreenerFailureKind(result: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>): string {
@@ -233,7 +231,7 @@ export async function runDexScreenerPass(
    * pick (a test, a replay) pins it. Without this the chain a run selects
    * depends on the hour it happens to execute in, so an assertion on
    * which deployment leads passes locally and fails in CI — which is why the
-   * pinned URL in `enrich-prices-fallback-cmc-jupiter.test.ts` had to be
+   * pinned URL in `enrich-prices-fallback-cmc.test.ts` had to be
    * weakened to a prefix at `ebe1340c7`.
    */
   nowMs?: number,
@@ -425,11 +423,11 @@ export async function runDexScreenerPass(
           const assetAttempts: NonNullable<PricingProviderAttemptDiagnostic["assetAttempts"]> = [];
           for (const { entry, target } of batch) {
             if (resolvedAssetIds.has(entry.asset.id)) continue;
-            const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
+            const { price: exactPrice, rejectionClass } = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
             if (exactPrice == null) {
               assetAttempts.push({ assetId: entry.asset.id, adapter: "dexscreener-exact", source: "dexscreener-exact",
                 chain: target.chain, target: target.address, state: "attempted", result: "empty",
-                rejectionClass: "missing-quote", candidateAt: Math.floor(Date.now() / 1000), replaySafe: false });
+                rejectionClass: rejectionClass!, candidateAt: Math.floor(Date.now() / 1000), replaySafe: false });
               continue;
             }
 

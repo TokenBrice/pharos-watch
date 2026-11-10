@@ -1,4 +1,5 @@
 import type { BaseBlobExec } from "./critical-ownership.mts";
+import { isRecord as record } from "../../shared/lib/type-guards.ts";
 
 export const REBASELINE_DIRECTORY = ".ci/critical-coverage-rebaseline";
 export const REBASELINE_MEASUREMENT_COMMAND = "CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical";
@@ -34,10 +35,6 @@ interface RebaselineContext {
   lineMinimum: (source: string) => number;
   branchMinimum: (source: string) => number | null;
   now?: Date;
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function text(value: unknown): value is string {

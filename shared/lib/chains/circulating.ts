@@ -1,5 +1,6 @@
 import { resolveChainId } from "../../types/chain-identity";
-import { admitSupplyBuckets } from "../supply";
+import type { SupplyChainGuardProvenance } from "../../types/market";
+import { admitSupplyBuckets, getCirculatingRawOrNull } from "../supply";
 
 export interface ChainCirculatingNormalizationDiagnostics {
   droppedRows: number;
@@ -112,4 +113,40 @@ export function canonicalizeChainCirculating(
   }
 
   return canonical;
+}
+
+/** A chain breakdown conserves its total when they differ by at most max($0.01, total × 1e-9). */
+export function chainSupplyReconciles(chainSupply: number, total: number): boolean {
+  return Math.abs(chainSupply - total) <= Math.max(0.01, total * 1e-9);
+}
+
+/**
+ * Display rows for a chain-dropout carry. The published row keeps each carried chain at `current: null`
+ * while the headline re-adds its frozen baseline, so a breakdown view shows each `carried-baseline` chain at
+ * that `baselineUsd`, but only when the complete displayed breakdown then sums to the published headline.
+ * Otherwise (e.g. an attribution-ambiguous held total the fresh chains have moved away from) the published
+ * rows are returned unchanged. Presentation only: never feed this into aggregates, scores or weights.
+ */
+export function chainCirculatingForDisplay(asset: {
+  circulating?: Record<string, number>;
+  chainCirculating?: RawChainCirculating;
+  supplyChainGuard?: Pick<SupplyChainGuardProvenance, "chains">;
+}): RawChainCirculating | undefined {
+  const rows = asset.chainCirculating;
+  const carried = asset.supplyChainGuard?.chains.filter((chain) => chain.resolution === "carried-baseline") ?? [];
+  if (!rows || carried.length === 0) return rows;
+  const display: RawChainCirculating = { ...rows };
+  for (const chain of carried) {
+    const row = display[chain.chainLabel];
+    if (!row || row.current != null) return rows;
+    display[chain.chainLabel] = { ...row, current: chain.baselineUsd };
+  }
+  let breakdown = 0;
+  for (const row of Object.values(display)) {
+    const current = normalizeChainSupplyValue(row.current);
+    if (current == null) return rows;
+    breakdown += current;
+  }
+  const headline = getCirculatingRawOrNull(asset);
+  return headline != null && chainSupplyReconciles(breakdown, headline) ? display : rows;
 }

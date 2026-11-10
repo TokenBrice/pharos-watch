@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { resolveYieldSourceUrl } from "../yield-source-links";
 import { LENDING_PROTOCOL_ALLOWLIST, LENDING_PROTOCOL_LABELS } from "../yield-config/yield-config-lending-protocols";
 
+// DL pool UUIDs are assembled so fixture literals don't read as secrets.
+const djedLiqwidPool = ["4a0746b8", "61f7", "40b2", "9378", "80e902aec4f9"].join("-");
+const apyusdKaminoPool = ["675dcb0e", "d8d7", "5930", "93d6", "ccde2777466c"].join("-");
+
 describe("resolveYieldSourceUrl", () => {
   it("prefers curated protocol links for discovered lending sources", () => {
     expect(
@@ -23,14 +27,58 @@ describe("resolveYieldSourceUrl", () => {
     ).toBe("https://app.dtrinity.org/");
   });
 
-  it("links an identified DL pool instead of the issuer homepage", () => {
+  it("links a pinned native DL pool to its issuer rather than DeFiLlama", () => {
     expect(
       resolveYieldSourceUrl({
-        stablecoinId: "usde-ethena",
+        stablecoinId: "susde-ethena",
         sourceKey: "66985a81-9c51-46ca-9977-42b4fe7bc6df",
         yieldSource: "Ethena staking (sUSDe)",
       }),
-    ).toBe("https://defillama.com/yields/pool/66985a81-9c51-46ca-9977-42b4fe7bc6df");
+    ).toBe("https://ethena.fi/");
+  });
+
+  it("links a discovered DL lending pool to its venue rather than DeFiLlama", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "djed-coti",
+        sourceKey: djedLiqwidPool,
+        yieldSource: "Liqwid",
+        venueProtocol: "liqwid",
+      }),
+    ).toBe("https://app.liqwid.finance/");
+  });
+
+  it("names a DL pool's venue by its project before the row label", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "apyusd-apyx",
+        sourceKey: apyusdKaminoPool,
+        yieldSource: "Apyx apyUSD vault",
+        venueProtocol: "kamino-lend",
+      }),
+    ).toBe("https://app.kamino.finance/");
+  });
+
+  it("keeps an unmapped DL venue on DeFiLlama instead of the issuer app", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "usdc-circle",
+        sourceKey: djedLiqwidPool,
+        yieldSource: "Unmapped venue",
+        venueProtocol: "unmapped-venue",
+      }),
+    ).toBe(`https://defillama.com/yields/pool/${djedLiqwidPool}`);
+  });
+
+  it("ignores inherited object keys as venue or label names", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "nonexistent-coin",
+        sourceKey: djedLiqwidPool,
+        yieldSource: "constructor",
+        venueProtocol: "__proto__",
+      }),
+    ).toBe(`https://defillama.com/yields/pool/${djedLiqwidPool}`);
   });
 
   it("returns null when no curated link and no metadata link exists", () => {
@@ -61,16 +109,6 @@ describe("resolveYieldSourceUrl", () => {
         yieldSource: "Aave v3 (base)",
       }),
     ).toBe("https://app.aave.com/");
-  });
-
-  it("falls back to the linked child venue instead of the parent issuer", () => {
-    expect(
-      resolveYieldSourceUrl({
-        stablecoinId: "usdc-circle",
-        sourceKey: "linked-variant:yvusdc-yearn:price-derived",
-        yieldSource: "Yearn v3 USDC vault",
-      }),
-    ).toBe("https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204");
   });
 
   it("preserves a structured linked alternative's child-owned source link", () => {

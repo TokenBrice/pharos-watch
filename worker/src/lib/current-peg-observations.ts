@@ -96,6 +96,7 @@ export function deriveCurrentPegObservationMap(options: {
   return result;
 }
 
-function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
+/** The published quotes peg summary measures; the detail overlay displays exactly these. */
+export function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
   return isObservedPrice(asset) && typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
 }

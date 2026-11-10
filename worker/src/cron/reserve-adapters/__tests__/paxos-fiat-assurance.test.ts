@@ -6,17 +6,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
 import { runAdapter, installAdapterNetwork } from "./reserve-adapter.test-support";
 
-const SITE = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl";
-const MAIN_URL = `${SITE}/script_main.DWSgnPFN.mjs`;
+const SITE = "https://framerusercontent.com/sites/3LisDBBNdK504GXe51PoGF";
+const MAIN_URL = `${SITE}/script_main.JHWnvNrQ.mjs`;
 const CASES = [
-  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.eF7UdfG3.mjs", capture: "2026-10-27", now: "2026-10-27T00:00:00Z", assets: 2754709360, liabilities: 2747625868, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
-  { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.1zoiA1Sy.mjs", capture: "2026-10-24", now: "2026-10-24T00:00:00Z", assets: 3168423407, liabilities: 3164996248, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
-  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.xspL-Gtt.mjs", capture: "2026-10-27", now: "2026-10-27T00:00:00Z", assets: 26113649, liabilities: 26084307, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
+  { product: "PAXG", id: "paxg-paxos", module: "XxY0esLV2L37QMcfpTbY3mX7rJ1xD_tTnPI8cztHho0.DCYmf5Zw.mjs", capture: "2026-10-27", now: "2026-10-27T00:00:00Z", assets: 435306, liabilities: 435306, asOf: "2026-09-30T17:00:00-04:00", classes: ["commodity-allocated"] },
+  { product: "PYUSD", id: "pyusd-paypal", module: "hvQ2ClCUy80JuCQ8DW0rPlTdwALgwC46CwKznbqVAT0.CPA3W5Z-.mjs", capture: "2026-10-27", now: "2026-10-27T00:00:00Z", assets: 2754709360, liabilities: 2747625868, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
+  { product: "USDG", id: "usdg-paxos", module: "DIAUvcXOB9nOYLw3a2fyfs-NJgh1Sht8DtgV4mAgIZY.adp0H3P0.mjs", capture: "2026-10-24", now: "2026-10-24T00:00:00Z", assets: 3168423407, liabilities: 3164996248, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
+  { product: "USDP", id: "usdp-paxos", module: "pa_gfhekxTj99VUC6AmRAHCHBeVfp34Y82lKPKjcwRM.BBCIx3bI.mjs", capture: "2026-10-27", now: "2026-10-27T00:00:00Z", assets: 26113649, liabilities: 26084307, asOf: "2026-09-30T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
 ] as const;
-const routeTableMain = (row: (typeof CASES)[number]) =>
-  `const routes={R1:{elements:{a:\`${row.product.toLowerCase()}-attestations\`},page:L(()=>import(\`./${row.module}\`)),path:\`/${row.product.toLowerCase()}-transparency\`},`
-  + `R2:{page:L(()=>import(\`./decoyPage.D1coyChunk.mjs\`)),path:\`/blog\`}};`;
+const MIGRATED_MAIN = readFileSync(new NodeURL("./fixtures/paxos/main-2026-11-04.mjs.txt", import.meta.url), "utf8")
+  .replace(/^<!--[^]*?-->\s*/, "");
 function fixture(product: string, captured = "2026-10-27"): string {
+  if (product === "PAXG") return readFileSync(new NodeURL("./fixtures/paxos/reports-2026-11-04.mjs.txt", import.meta.url), "utf8")
+    .replace(/^<!--[^]*?-->\s*/, "");
   const capture: { gzipBase64: string; rawSha256: string; rawByteLength: number } = JSON.parse(
     readFileSync(new NodeURL(`./fixtures/paxos/${product.toLowerCase()}-${captured}.module.json`, import.meta.url), "utf8"),
   );
@@ -26,7 +28,7 @@ function fixture(product: string, captured = "2026-10-27"): string {
   return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
 }
 
-describe("Paxos fiat product assurance", () => {
+describe("Paxos product assurance", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   it.each(CASES)("$product admits the reviewed selection, reconciles liabilities and degrades on a newer report", async (row) => {
@@ -37,13 +39,13 @@ describe("Paxos fiat product assurance", () => {
     const page = fixture(row.product, row.capture);
     const nextModule = row.module.replace(/\.[^.]+\.mjs$/, ".SeptemberChunk.mjs");
     let changed = false;
-    const newerPage = page.replace("\n//# sourceMappingURL=", "\nconst september={file:`https://framerusercontent.com/assets/September2026Unreviewed.pdf`};\n//# sourceMappingURL=");
+    const newerPage = `${page}\nconst september={file:\`https://framerusercontent.com/assets/September2026Unreviewed.pdf\`};`;
     expect(newerPage).not.toBe(page);
     expect(newerPage).toContain(manifest.reportUrl);
     const network = installAdapterNetwork({
       html: {
         [manifest.officialIndexUrl]: `<script src="${MAIN_URL}"></script>`,
-        [MAIN_URL]: () => routeTableMain(row).replace(row.module, changed ? nextModule : row.module),
+        [MAIN_URL]: () => MIGRATED_MAIN.replace(row.module, changed ? nextModule : row.module),
         [new URL(row.module, MAIN_URL).href]: page,
         [new URL(nextModule, MAIN_URL).href]: newerPage,
         [manifest.reportUrl]: { body: pdf, headers: { "content-type": "application/pdf" } },
@@ -79,11 +81,11 @@ describe("Paxos fiat product assurance", () => {
       reportSha256: createHash("sha256").update(pdf).digest("hex"),
     };
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(manifest);
-    const row = CASES[0];
+    const row = CASES[1];
     const network = installAdapterNetwork({
       html: {
         [manifest.officialIndexUrl]: `<script src="${MAIN_URL}"></script>`,
-        [MAIN_URL]: routeTableMain(row),
+        [MAIN_URL]: MIGRATED_MAIN,
         [new URL(row.module, MAIN_URL).href]: fixture("PYUSD"),
         [manifest.reportUrl]: { body: tampered, headers: { "content-type": "application/pdf" } },
       },

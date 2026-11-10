@@ -18,6 +18,10 @@ describe("stablecoin-charts reconciliation", () => {
     expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(({ id }) => forbidden.includes(id))).toEqual([]);
   });
 
+  it("excludes a DefiLlama-charted asset that carries no registry llamaId", () => {
+    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map(({ id }) => id)).not.toContain("sofid-sofi");
+  });
+
   it("merges structural supplemental history into the base chart series", () => {
     const merged = mergeStructuralSupplementalHistoryIntoCharts(
       [

@@ -11,10 +11,17 @@ export async function reconcileCurrentBalanceDebt(
   context: CurrentBalanceFetchContext,
   circuits: { etherscanAllowed: boolean; tronGridAllowed: boolean },
 ): Promise<void> {
+  const eligibleConfigKeys = CONTRACT_CONFIGS
+    .filter((config) => config.chain.type === "tron" ? circuits.tronGridAllowed : circuits.etherscanAllowed)
+    .map((config) => config.configKey);
+  if (eligibleConfigKeys.length === 0) return;
+  // Apply provider gates before the limit so blocked debt cannot starve eligible work.
+  // One JSON bind avoids D1's parameter cap as the registry grows.
   const candidates = await db.prepare(`SELECT events.* FROM cache AS debt
     JOIN blacklist_events AS events ON events.id = debt.value
     WHERE debt.key GLOB '${CURRENT_BALANCE_DEBT_PREFIX}*'
-    ORDER BY debt.updated_at, debt.key LIMIT 24`).all<BlacklistRow>();
+      AND events.config_key IN (SELECT value FROM json_each(?))
+    ORDER BY debt.updated_at, debt.key LIMIT 24`).bind(JSON.stringify(eligibleConfigKeys)).all<BlacklistRow>();
   const seen = new Set<string>();
   for (const row of candidates.results ?? []) {
     if (blacklistRuntimeBudgetReached(context.runBudget) || blacklistSubrequestBudgetReached(context.runBudget)) break;
@@ -23,7 +30,6 @@ export async function reconcileCurrentBalanceDebt(
     seen.add(identity);
     const config = CONTRACT_CONFIGS.find((candidate) => candidate.configKey === row.config_key);
     if (!config) continue;
-    if (config.chain.type === "tron" ? !circuits.tronGridAllowed : !circuits.etherscanAllowed) continue;
     const history = await db.prepare(`SELECT * FROM blacklist_events
       WHERE config_key = ? AND (LOWER(address) IN (?, ?) OR address = ?) AND suppression_reason IS NULL
       ORDER BY ${blacklistEventOrderSql("ASC")}`)

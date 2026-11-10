@@ -132,15 +132,11 @@ export function useFreezeWatchPageController() {
     () => () => {
       if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
     },
-    [],
+    [searchQuery],
   );
 
-  const selectedChainName = useMemo(
-    () => summary?.chains.find((chain) => chain.id === chainFilter)?.name ?? "all",
-    [summary?.chains, chainFilter],
-  );
   const pageSize = PAGE_SIZE;
-  const ledgerKey = JSON.stringify([stablecoinFilter, selectedChainName, eventTypeFilter, searchQuery, sortKey, sortDirection]);
+  const ledgerKey = JSON.stringify([stablecoinFilter, chainFilter, eventTypeFilter, searchQuery, sortKey, sortDirection]);
   const [navigation, setNavigation] = useState<{ key: string; cursors: Array<string | undefined>; index: number }>(
     () => ({ key: ledgerKey, cursors: [undefined], index: 0 }),
   );
@@ -160,7 +156,7 @@ export function useFreezeWatchPageController() {
     meta: pageMeta,
   } = useBlacklistEventsPage({
     stablecoin: stablecoinFilter,
-    chainName: selectedChainName,
+    chainId: chainFilter === "all" ? undefined : chainFilter,
     eventType: eventTypeFilter,
     query: searchQuery,
     sortBy: sortKey,
@@ -228,6 +224,11 @@ export function useFreezeWatchPageController() {
     [parsedFilters, replaceParams],
   );
 
+  const updateFiltersRef = useRef(updateFilters);
+  useEffect(() => {
+    updateFiltersRef.current = updateFilters;
+  }, [updateFilters]);
+
   useEffect(() => {
     if (statusBucket && previousStatusBucketRef.current !== statusBucket) {
       drilldownRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -274,10 +275,10 @@ export function useFreezeWatchPageController() {
       if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
       searchSyncTimer.current = setTimeout(() => {
         trackSearch("freezewatch", v.length);
-        updateFilters({ searchQuery: v });
+        updateFiltersRef.current({ searchQuery: v });
       }, 300);
     },
-    [updateFilters],
+    [],
   );
 
   const handleSortChange = useCallback(
@@ -338,6 +339,7 @@ export function useFreezeWatchPageController() {
     summary,
     summaryLoading,
     summaryError,
+    pageError,
     error,
     freshnessQueries,
     sourceGenerations: { stablecoins: stablecoinsMeta?.updatedAt, reportCards: reportCardsMeta?.updatedAt },
@@ -345,6 +347,7 @@ export function useFreezeWatchPageController() {
     stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,
     stablecoinsError: supportStablecoinsError,
     reportCardMap,
+    reportCardsMethodologyVersion: reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null,
     blacklistStatusBuckets,
     supportDataLoading: supportStablecoinsLoading || supportReportCardsLoading,
     refetchSummary,

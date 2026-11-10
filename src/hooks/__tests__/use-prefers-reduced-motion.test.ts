@@ -1,73 +1,80 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
 import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 import { usePrefersReducedMotion } from "../use-prefers-reduced-motion";
+import { useChartShell } from "../use-chart-shell";
 
-function mockMatchMedia(mediaState: { matches: boolean }) {
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      get matches() {
-        return mediaState.matches;
-      },
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
+function mockMatchMedia(media: { matches: boolean }) {
+  const listeners: (() => void)[] = [];
+  vi.stubGlobal("matchMedia", () => ({
+    get matches() { return media.matches; },
+    addEventListener: (_: string, listener: () => void) => listeners.push(listener),
+  }));
+  return () => listeners.forEach((listener) => listener());
 }
 
-function MotionProbe() {
-  return createElement("span", null, usePrefersReducedMotion() ? "reduced" : "full");
+function MotionProbe({ ssrDefault = false }) {
+  return createElement("span", null, usePrefersReducedMotion({ ssrDefault }) ? "reduced" : "full");
+}
+
+function ShellProbe() {
+  return createElement("span", null, useChartShell().animProps.isAnimationActive ? "full" : "reduced");
 }
 
 describe("usePrefersReducedMotion", () => {
+  beforeEach(() => {
+    const restore = [document.documentElement, document.body].map((root) => {
+      const value = root.dataset.motion;
+      return () => { if (value === undefined) delete root.dataset.motion; else root.dataset.motion = value; };
+    });
+    return () => restore.forEach((fn) => fn());
+  });
   afterEach(() => {
     cleanupFrontendTest();
+    localStorage.clear();
   });
 
-  it("hydrates against the server snapshot when the browser prefers reduced motion", async () => {
+  it.each([[MotionProbe, false], [MotionProbe, true], [ShellProbe, true]] as const)("hydrates %s, SSR %s", async (Probe, ssrDefault) => {
     mockMatchMedia({ matches: true });
     const container = document.createElement("div");
-    // Markup the static export renders without a window (reduced motion off).
-    container.innerHTML = "<span>full</span>";
+    const probe = createElement(Probe, { ssrDefault });
+    container.innerHTML = renderToString(probe);
+    expect(container.textContent).toBe(ssrDefault ? "reduced" : "full");
     document.body.appendChild(container);
-    const recoverableErrors: unknown[] = [];
+    const errors: unknown[] = [];
 
+    let root: ReturnType<typeof hydrateRoot>;
     await act(async () => {
-      hydrateRoot(container, createElement(MotionProbe), {
-        onRecoverableError: (error) => recoverableErrors.push(error),
+      root = hydrateRoot(container, probe, {
+        onRecoverableError: (error) => errors.push(error),
       });
     });
 
-    expect(recoverableErrors).toEqual([]);
+    expect(errors).toEqual([]);
     expect(container.textContent).toBe("reduced");
+    act(() => root.unmount());
+    container.remove();
   });
 
-  it("re-reads the browser reduced-motion preference on rerender", () => {
-    // Real MediaQueryList objects mutate `matches` before the shared
-    // motion-preference store notifies; the derived snapshot re-reads the live
-    // browser value.
-    const mediaState = { matches: false };
-    mockMatchMedia(mediaState);
-
-    const { result, rerender } = renderHook(() => usePrefersReducedMotion());
-
-    expect(result.current).toBe(false);
-
-    act(() => {
-      mediaState.matches = true;
+  it.each(["system", "reduced", "full"])("gates shell motion for %s", async (preference) => {
+    vi.resetModules();
+    localStorage.setItem("pharos-motion-preference-v1", preference);
+    const media = { matches: false };
+    const notify = mockMatchMedia(media);
+    const { useChartShell } = await import("../use-chart-shell");
+    const { result, rerender } = renderHook(() => useChartShell());
+    for (const matches of [false, true, false]) {
+      act(() => { media.matches = matches; notify(); });
       rerender();
-    });
-
-    expect(result.current).toBe(true);
+      expect(result.current.animProps.isAnimationActive).toBe(preference === "full" || (preference === "system" && !matches));
+    }
+    act(result.current.handleAnimationEnd);
+    act(() => { media.matches = false; notify(); });
+    rerender();
+    expect(result.current.animProps).toEqual({ isAnimationActive: false });
   });
 });

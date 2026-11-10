@@ -147,7 +147,7 @@ describe("blacklist-api", () => {
   it("buildBlacklistEventsPath forwards pagination, filter, search, and sort params", () => {
     const path = buildBlacklistEventsPath({
       stablecoin: "USDT",
-      chainName: "Ethereum",
+      chainId: "ethereum",
       eventType: "blacklist",
       query: "0xabc",
       sortBy: "chain",
@@ -160,7 +160,7 @@ describe("blacklist-api", () => {
 
     expect(path).toContain("/api/blacklist?");
     expect(path).toContain("stablecoin=USDT");
-    expect(path).toContain("chain=Ethereum");
+    expect(path).toContain("chainId=ethereum");
     expect(path).toContain("eventType=blacklist");
     expect(path).toContain("q=0xabc");
     expect(path).toContain("sortBy=chain");

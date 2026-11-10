@@ -25,6 +25,12 @@ const DS_TOKEN_PAIRS_API = "https://api.dexscreener.com/token-pairs/v1";
  * an abort at the cap otherwise.
  */
 const DEXSCREENER_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+/**
+ * Prefix of an otherwise-parseable response searched for the WAF refusal
+ * marker. Cloudflare pages carry it near the start, so the check stays a
+ * bounded scan of an already-buffered body rather than a second full pass.
+ */
+const DEXSCREENER_REFUSAL_MARKER_SCAN_CHARS = 4_096;
 const DEXSCREENER_API_HEADERS = {
   Accept: "application/json",
   "User-Agent": USER_AGENT,
@@ -235,7 +241,22 @@ async function fetchDsPoolsWithStatus(
   const status = res.status;
 
   try {
-    const data = JSON.parse(await readBodyText(res, timeoutMs, signal)) as unknown;
+    const rawBody = await readBodyText(res, timeoutMs, signal);
+    // Cloudflare can serve its rate-limit page (WAF code 1015) under a 2xx
+    // status. Classify it from the body exactly like the non-2xx path instead of
+    // reporting a payload schema change, so the run stops spending paced
+    // requests on a provider that has already refused it.
+    if (isHardRefusal(status, rawBody.slice(0, DEXSCREENER_REFUSAL_MARKER_SCAN_CHARS))) {
+      return {
+        ok: false,
+        pairs: [],
+        status,
+        contentType,
+        error: `DexScreener hard refusal in a ${status} body for ${url}`,
+        hardRefusal: true,
+      };
+    }
+    const data = JSON.parse(rawBody) as unknown;
     const parsedPairs = parseDexScreenerTokenPoolsResponse(data);
     if (parsedPairs == null) {
       return {

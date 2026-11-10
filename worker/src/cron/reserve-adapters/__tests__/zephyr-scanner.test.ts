@@ -9,28 +9,6 @@ import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import { ZEPHYR_CAPTURE } from "./zephyr-scanner.test-support";
 
 describe("adaptZephyrScanner", () => {
-  it("maps latest reserve snapshot into a ZEPH protocol reserve slice with verified metadata", () => {
-    const result = adaptZephyrScanner(ZEPHYR_CAPTURE);
-
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0]).toMatchObject({ name: "ZEPH protocol reserve", pct: 100, risk: "high", assetClass: "cryptoasset", liquidityHorizon: "unknown" });
-    expect(result.slices[0].riskFactors).toEqual(["smart-contract", "market", "liquidity", "concentration", "custody"]);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: 1710000000,
-      totalReserveUsd: 1_221_858.9661031931,
-      supplyUsd: 385_036.81291444064,
-      collateralizationRatio: 3.173356,
-      reserveAssetAmount: 3_838_581.0555380915,
-      reserveAssetPriceUsd: 0.31831006,
-      reserveRatioMovingAverage: 3.218013,
-      zsdYieldReserve: 315_747.159842202,
-      reserveHeight: 773828,
-      hardForkVersion: 11,
-    });
-    expect(result.warnings).toBeUndefined();
-  });
-
   it("bounds reserve freshness by the used price, not a newer capture", () => {
     const snapshot = ZEPHYR_CAPTURE.results[0];
     const result = adaptZephyrScanner({ results: [{

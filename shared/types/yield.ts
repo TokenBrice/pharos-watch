@@ -296,6 +296,20 @@ const YieldResponseFreshnessMetaSchema = FreshnessAssessmentSchema
   })
   .strict();
 
+/**
+ * History may lack both the cache row and confirmed producer output; its
+ * verdict then names the unavailable authority instead of publishing a
+ * zero-derived clock.
+ */
+const YieldHistoryFreshnessMetaSchema = YieldResponseFreshnessMetaSchema.extend({
+  updatedAt: z.number().nullable(),
+  ageSeconds: z.number().nullable(),
+});
+
+const YieldHistoryMethodologySchema = MethodologyEnvelopeSchema.extend({
+  asOf: z.number().nullable(),
+});
+
 export const YieldRankingsResponseSchema = z.object({
   rankings: z.array(YieldRankingSchema),
   riskFreeRate: z.number(),
@@ -315,14 +329,16 @@ export const YieldRankingsCoinResponseSchema = YieldRankingsResponseSchema.exten
 });
 export type YieldRankingsCoinResponse = z.infer<typeof YieldRankingsCoinResponseSchema>;
 
-/** Internal generation-bound comparator census; coin readers admit only their row. */
-export const YieldCoinCohortSchema = YieldRankingsResponseSchema.pick({ provenance: true, warnings: true }).extend({
+/** Internal complete assessment; coin readers admit only their row and original envelope. */
+export const YieldCoinCohortSchema = YieldRankingsResponseSchema.extend({
+  publication: YieldPublicationMetadataSchema,
   signature: z.string().min(1),
+  // Legacy assessments lack the build version and cannot serve cross-signature fallback.
+  yieldMethodologyVersion: z.string().min(1).optional(),
   assessedAt: z.number().nonnegative(),
   validUntil: z.number().nonnegative(),
   totalCount: z.number().int().nonnegative(),
   degradationReasons: z.array(z.string()),
-  rankings: z.array(YieldRankingSchema.pick({ id: true, liveRank: true, rankChangeAttribution: true })),
 });
 export type YieldCoinCohort = z.infer<typeof YieldCoinCohortSchema>;
 
@@ -330,8 +346,8 @@ export const YieldHistoryResponseSchema = z.object({
   current: YieldHistoryPointSchema.nullable(),
   history: z.array(YieldHistoryPointSchema),
   warning: z.string().optional(),
-  _meta: YieldResponseFreshnessMetaSchema.optional(),
-  methodology: MethodologyEnvelopeSchema,
+  _meta: YieldHistoryFreshnessMetaSchema.optional(),
+  methodology: YieldHistoryMethodologySchema,
   publication: YieldPublicationMetadataSchema.nullable().optional(),
 });
 export type YieldHistoryResponse = z.infer<typeof YieldHistoryResponseSchema>;

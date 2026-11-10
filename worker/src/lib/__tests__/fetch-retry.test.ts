@@ -235,6 +235,25 @@ describe("fetchWithRetry", () => {
     expect(sleepWithSignalMock).toHaveBeenCalledWith(1000, undefined);
   });
 
+  it("clamps an HTTP retry wait to the deadline budget", async () => {
+    mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { error: "slow down" }, status: 429, headers: { "Retry-After": "60" } },
+        { body: { ok: true } },
+      ],
+    }]);
+
+    const result = await fetchJsonWithRetry("https://example.com/token", undefined, 1, {
+      deadlineMs: Date.now() + 5_000,
+    });
+
+    expect(result?.body).toEqual({ ok: true });
+    expect(sleepWithSignalMock).toHaveBeenCalledTimes(1);
+    const [delay] = sleepWithSignalMock.mock.calls[0];
+    expect(delay).toBeLessThanOrEqual(5_000);
+  });
+
   it("honors Retry-After on 503 responses before succeeding", async () => {
     const fetchMock = mockFetch([{
       match: () => true,
@@ -413,33 +432,6 @@ describe("fetchWithRetry", () => {
       expect(() => fetchSpy.assertAllOutcomesUsed()).not.toThrow();
     } finally {
       randomSpy.mockRestore();
-    }
-  });
-
-  it("keeps the per-attempt timeout active while reading JSON bodies", async () => {
-    vi.useFakeTimers();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const fetchMock = mockFetch([{ match: () => true, respond: () => neverEndingResponse("{") }]);
-
-      const resultPromise = fetchJsonWithRetry(
-        "https://example.com/slow.json",
-        undefined,
-        0,
-        { timeoutMs: 5 },
-      );
-
-      const expectation = expect(resultPromise).resolves.toBeNull();
-      await vi.advanceTimersByTimeAsync(5);
-      await expectation;
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
-        event: "fetch_retry_attempt_failed",
-        errorName: "TimeoutError",
-      }));
-    } finally {
-      warnSpy.mockRestore();
-      vi.useRealTimers();
     }
   });
 

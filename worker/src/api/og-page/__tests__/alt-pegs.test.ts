@@ -84,7 +84,7 @@ describe("alt-pegs route card", () => {
     expect(load.context).toBe("known market cap subtotal of non-USD stablecoins");
     expect(load.support).toEqual([]);
     expect(load.visual).toBeUndefined();
-    expect(load.stampNote).toBe(`Partial · ${NON_USD_IDS.length - 1}/${NON_USD_IDS.length} non-USD coins observed`);
+    expect(load.stampNote).toBe(`Partial · ${NON_USD_IDS.length}/${NON_USD_IDS.length} non-USD coins observed`);
   });
 
   it("treats a core non-USD coin missing from the cache as partial, never complete", async () => {

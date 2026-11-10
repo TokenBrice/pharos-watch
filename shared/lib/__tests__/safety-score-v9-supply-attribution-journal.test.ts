@@ -7,6 +7,7 @@ import {
   SupplyAttributionJournalV1Schema,
   computeSupplyAttributionJournalIdV1,
   createSupplyAttributionJournalV1,
+  admissionCodeForSupplyAttributionRejection,
   WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC,
   type SupplyAttributionJournalV1Payload,
 } from "../safety-score-v9-supply-attribution-journal";
@@ -51,6 +52,18 @@ function xautPayload(overrides: Partial<SupplyAttributionJournalV1Payload> = {})
 }
 
 describe("Safety Score V9 supply attribution journal runtime", () => {
+  it.each(["deployment-pin-lag-violation", "deployment-pin-header-mismatch"] as const)(
+    "retains the exact Centrifuge pin rejection %s", rejectionCode => {
+      const rejected = createSupplyAttributionJournalV1(payload({
+        assetId: "jtrsy-anemoy", sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
+        admissionCode: admissionCodeForSupplyAttributionRejection(rejectionCode), rejectionCode,
+        fallbackCode: "supply-attribution.fallback.aggregate-only", contentSha256: null,
+        sourceObservedAtSec: null, failedRouteId: "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040",
+      }));
+      expect(rejected.rejectionCode).toBe(rejectionCode);
+      expect(rejected.admissionCode).toBe("supply-attribution.admission.rejected-invalid-payload");
+    },
+  );
   it("admits timestamped economic observation-stale without widening ordinary deployment vocabulary", () => {
     const stale = payload({
       assetId: "witry-brix", sourceId: "reviewed.economic-deployment-partition.v1",

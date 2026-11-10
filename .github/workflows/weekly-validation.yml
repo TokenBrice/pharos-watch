@@ -18,6 +18,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
       # Full-lockfile scope includes dev/build dependencies. The verifier is
       # fail-closed and accepts only an unexpired, exact registry entry.
       - run: node --import tsx scripts/ci/verify-dependency-audit.ts
@@ -35,6 +37,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
       # Reserve adapter fixtures are captures of live issuer dashboards, so
       # they expire on the calendar rather than on any diff. The PR gate can
       # never own this: a branch that touches nothing would start failing on
@@ -82,6 +86,7 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
+          node-modules-cache: "true"
       - run: npm run coverage:critical
 
   node26-proof:
@@ -99,6 +104,7 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
+          node-modules-cache: "true"
           node-version: "26"
           static-cache: "true"
       - run: npm run typecheck
@@ -118,6 +124,8 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
       - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
       - name: Compare Cloudflare account state
         env:
           CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: ${{ secrets.CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN }}
@@ -134,6 +142,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
       - name: Capture production dependency coverage
         env:
           DEPENDENCY_COVERAGE_API_KEY: ${{ secrets.PHAROS_API_KEY }}
@@ -166,4 +176,191 @@ jobs:
           name: dependency-coverage-${{ github.run_id }}-${{ github.run_attempt }}
           path: .tmp/dependency-coverage/
           retention-days: 90
+          if-no-files-found: warn
+
+  ci-report:
+    name: Weekly CI report
+    concurrency: {group: weekly-validation-publication, cancel-in-progress: false}
+    # Scheduled or manually dispatched on main: the job reads run/job history and
+    # the tree at the reporting head, so a branch dispatch would publish branch
+    # evidence into the single owned issue. It is a sibling of the blocking
+    # jobs with no dependents, so a telemetry failure reddens this job alone.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    env:
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          # Trees only: the added-file census reads paths, never blob contents.
+          filter: blob:none
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.16.0"
+
+      # The report installs nothing: the renderer imports only Node builtins,
+      # `scripts/lib/cli-args.mjs` and the `scripts/lib/pr-lanes.mts` budgets.
+      # Every remote read happens here, and the token never reaches the step
+      # that parses repository or API content.
+      - name: Fetch the reporting window
+        id: window
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/ci-weekly
+          since="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          until="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "since=${since}" >> "$GITHUB_OUTPUT"
+          echo "until=${until}" >> "$GITHUB_OUTPUT"
+          # One transient GitHub 5xx must not fail the weekly report: retry each
+          # read, and emit a page set only when the whole read succeeded.
+          gh_read() {
+            local out attempt
+            for attempt in 1 2 3; do
+              if out="$(gh api --paginate "$@")"; then printf '%s\n' "${out}"; return 0; fi
+              sleep "$((attempt * 15))"
+            done
+            return 1
+          }
+          # Newest first, then a hard cap so the per-run job requests stay
+          # inside the run's bounded API budget.
+          gh_read \
+            "repos/${GH_REPO}/actions/workflows/pull-request-checks.yml/runs?created=%3E%3D${since}&per_page=100" \
+            | jq -s '[.[].workflow_runs[]] | map({id, createdAt: .created_at, conclusion}) | .[0:200]' \
+            > .tmp/ci-weekly/runs.json
+          # One jobs request per run. `filter=latest` drops superseded attempts,
+          # so a re-run is not counted twice.
+          while IFS= read -r run_id; do
+            gh_read "repos/${GH_REPO}/actions/runs/${run_id}/jobs?per_page=100&filter=latest" \
+              | jq -c --argjson run "${run_id}" \
+                '.jobs[] | {runId: $run, name, conclusion, startedAt: .started_at, completedAt: .completed_at}'
+          done < <(jq -r '.[].id' .tmp/ci-weekly/runs.json) > .tmp/ci-weekly/jobs.ndjson
+          jq -s '.' .tmp/ci-weekly/jobs.ndjson > .tmp/ci-weekly/jobs.json
+          run_count="$(jq length .tmp/ci-weekly/runs.json)"
+          echo "Collected ${run_count} Pull Request Checks runs since ${since}."
+          if [[ "${run_count}" == "0" ]]; then
+            echo "::warning title=Empty reporting window::No Pull Request Checks run in the last seven days."
+          fi
+
+      - name: Collect the test files added in the window
+        # The walk reads `origin/main`, the ref this fetch deepens, never the
+        # checkout's own shallow root. `--shallow-since` carries one day of
+        # margin so the shallow boundary sits before the window and its parent
+        # is never needed; `--not <boundary>` keeps a boundary commit whose date
+        # still falls inside the window from reporting its whole tree as added.
+        # `--no-renames` walks trees only, as the checkout carries no blobs.
+        # `--diff-merges=first-parent` is what makes a merge report the files the
+        # branch actually added; without it a merge commit diffs nothing and a
+        # long-lived branch's work is missing from the census. `--since` prunes
+        # by commit date, which the report states so the count is not read as a
+        # merge-date census.
+        # The log lands only after a successful walk: a broken fetch fails the
+        # job instead of publishing an empty window as "nothing was added".
+        run: |
+          set -euo pipefail
+          since="${{ steps.window.outputs.since }}"
+          fetch_since="$(date -u -d "${since} -1 day" +%Y-%m-%dT%H:%M:%SZ)"
+          git fetch --no-tags --filter=blob:none --shallow-since="${fetch_since}" \
+            origin +refs/heads/main:refs/remotes/origin/main
+          boundary="$(git rev-list --max-parents=0 origin/main | head -1)"
+          boundary_epoch="$(git show -s --format=%ct "${boundary}")"
+          since_epoch="$(date -u -d "${since}" +%s)"
+          if (( boundary_epoch > since_epoch )); then
+            echo "::warning title=Shallow boundary inside the window::Oldest available commit is newer than ${since}; added-file evidence starts at that boundary."
+          fi
+          work="$(mktemp "${RUNNER_TEMP}/ci-weekly-added.XXXXXX")"
+          trap 'rm -f "${work}"' EXIT
+          git log origin/main --not "${boundary}" --since="${since}" --diff-filter=A --no-renames \
+            --diff-merges=first-parent --name-only --pretty=format:'COMMIT %H' > "${work}"
+          mv "${work}" .tmp/ci-weekly/added-tests.log
+
+      - name: Acquire the nightly test timings
+        # Advisory input staged exactly like PR shard planning: a missing,
+        # stale or malformed nightly artifact leaves no file, and the report
+        # then names the slow-file section unavailable instead of empty.
+        id: timings
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          timings=".tmp/ci-weekly/test-timings.json"
+          rm -f "${timings}"
+          work="$(mktemp -d "${RUNNER_TEMP}/ci-weekly-timings.XXXXXX")"
+          trap 'rm -rf "${work}"' EXIT
+          # Twenty newest dailies; a red nightly still publishes its timings, and
+          # the two-week cutoff keeps the last usable per-file evidence through
+          # a broken week instead of erasing it.
+          cutoff="$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          if runs="$(gh run list --workflow=nightly-validation.yml --branch=main --status=completed --limit=20 --json databaseId,createdAt 2>/dev/null)"; then
+            for candidate in $(printf '%s' "${runs}" | jq -r --arg cutoff "${cutoff}" '[.[] | select(.createdAt >= $cutoff)] | sort_by(.createdAt) | reverse | .[].databaseId'); do
+              rm -rf "${work:?}"/*
+              if gh run download "${candidate}" --name test-timings --dir "${work}" >/dev/null 2>&1; then
+                source_file="$(find "${work}" -type f -name '*.json' -print -quit)"
+                if [[ -n "${source_file}" ]] && jq -e 'type == "object" and .version == 1' "${source_file}" >/dev/null 2>&1; then
+                  cp "${source_file}" "${timings}"
+                  break
+                fi
+              fi
+            done
+          fi
+          if [[ -s "${timings}" ]]; then
+            echo "Using the newest nightly test-timings artifact."
+          else
+            echo "::warning title=Nightly test timings unavailable::No test-timings artifact in the last two weeks; the slow-file section reports unavailable."
+          fi
+
+      - name: Render the weekly report
+        run: |
+          set -euo pipefail
+          out=".tmp/ci-weekly/report.md"
+          args=(
+            --runs .tmp/ci-weekly/runs.json
+            --jobs .tmp/ci-weekly/jobs.json
+            --since "${{ steps.window.outputs.since }}"
+            --until "${{ steps.window.outputs.until }}"
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            --output "${out}"
+          )
+          if [[ -s .tmp/ci-weekly/test-timings.json ]]; then args+=(--timings .tmp/ci-weekly/test-timings.json); fi
+          if [[ -f .tmp/ci-weekly/added-tests.log ]]; then args+=(--added-test-log .tmp/ci-weekly/added-tests.log); fi
+          node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+            scripts/maintenance/report-ci-weekly.ts "${args[@]}"
+          cat "${out}" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upsert the weekly CI report issue
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          body=".tmp/ci-weekly/report.md"
+          # One owned issue mirrors `ci:nightly-red`: the body is replaced in
+          # place, so the numbers never accumulate as comment history.
+          gh label create "ci:weekly-report" --color 0E8A16 \
+            --description "Weekly PR lane budget report" --force >/dev/null 2>&1 || true
+          issue_number="$(gh issue list --label ci:weekly-report --state open --limit 20 \
+            --json number,title --jq '.[] | select(.title == "Weekly CI report") | .number' | head -1)"
+          if [[ -n "${issue_number}" ]]; then
+            gh issue edit "${issue_number}" --body-file "${body}"
+          else
+            gh issue create --title "Weekly CI report" --label ci:weekly-report --body-file "${body}"
+          fi
+
+      - name: Retain the report and its inputs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-weekly-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/ci-weekly/
+          include-hidden-files: true
+          retention-days: 30
           if-no-files-found: warn

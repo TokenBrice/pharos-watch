@@ -128,6 +128,7 @@ describe("validateAndWriteStablecoinsCache", () => {
         price: 1, source: "coingecko", confidence: "single-source",
         updatedAt: syncStartSec - 30, observedAt: syncStartSec - 30,
         observedAtMode: "upstream", syncedAt: syncStartSec,
+        hasExplicitClocks: true,
         agreeSources: ["coingecko"], consensusSources: ["coingecko"],
       }]]);
     }

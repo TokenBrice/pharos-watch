@@ -1,154 +1,58 @@
 import { describe, expect, it } from "vitest";
 import { detectAtomicRoundtrips } from "../mint-burn-pipeline/roundtrip-detection";
+import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 
-function makeRow(overrides: Partial<MintBurnRow>): MintBurnRow {
-  return {
-    id: "ethereum-0xabc-0",
-    stablecoin_id: "usdc-circle",
-    symbol: "USDC",
-    chain_id: "ethereum",
-    direction: "mint",
-    amount: 1_000_000,
-    amount_usd: 1_000_000,
-    price_used: 1,
-    price_timestamp: 1_700_000_000,
-    price_source: "price_cache",
-    burn_type: null,
-    burn_review_reason: null,
-    flow_type: "standard",
-    counterparty: "0x1234",
-    tx_hash: "0xabc",
-    block_number: 100,
-    timestamp: 1_700_000_000,
-    explorer_tx_url: "https://etherscan.io/tx/0xabc",
-    ...overrides,
-  };
-}
+const row = (direction: "mint" | "burn", amount = 100, overrides: Partial<MintBurnRow> = {}) => makeMintBurnRow({
+  id: direction, direction, amount, amount_usd: amount, amount_raw: String(Math.round(amount * 1000)),
+  tx_hash: "tx", ...overrides,
+});
 
 describe("detectAtomicRoundtrips", () => {
-
-  it("does not flag when tx has only mints", () => {
-    const rows = [
-      makeRow({ id: "eth-0xabc-0", tx_hash: "0xabc", direction: "mint" }),
-      makeRow({ id: "eth-0xabc-1", tx_hash: "0xabc", direction: "mint" }),
-    ];
-
-    const flagged = detectAtomicRoundtrips(rows);
-
-    expect(flagged).toBe(0);
-    expect(rows[0].flow_type).toBe("standard");
-  });
-
-  it("does not flag when tx has only burns", () => {
-    const rows = [
-      makeRow({ id: "eth-0xabc-0", tx_hash: "0xabc", direction: "burn" }),
-    ];
-
-    const flagged = detectAtomicRoundtrips(rows);
-
-    expect(flagged).toBe(0);
-  });
-
-  it("handles multiple tx_hashes independently", () => {
-    const rows = [
-      makeRow({ id: "eth-0xabc-0", tx_hash: "0xabc", direction: "mint" }),
-      makeRow({ id: "eth-0xabc-1", tx_hash: "0xabc", direction: "burn" }),
-      makeRow({ id: "eth-0xdef-0", tx_hash: "0xdef", direction: "mint" }),
-    ];
-
-    const flagged = detectAtomicRoundtrips(rows);
-
-    expect(flagged).toBe(2);
-    expect(rows[2].flow_type).toBe("standard");
-  });
-
-  it("handles different stablecoins in same tx independently", () => {
-    const rows = [
-      makeRow({
-        id: "eth-0xabc-0",
-        tx_hash: "0xabc",
-        stablecoin_id: "usdc-circle",
-        direction: "mint",
-      }),
-      makeRow({
-        id: "eth-0xabc-1",
-        tx_hash: "0xabc",
-        stablecoin_id: "usdt-tether",
-        direction: "burn",
-      }),
-    ];
-
-    const flagged = detectAtomicRoundtrips(rows);
-
-    expect(flagged).toBe(0);
-  });
-
-  it("handles different chains in same tx independently", () => {
-    const rows = [
-      makeRow({
-        id: "eth-0xabc-0",
-        tx_hash: "0xabc",
-        chain_id: "ethereum",
-        direction: "mint",
-      }),
-      makeRow({
-        id: "arb-0xabc-1",
-        tx_hash: "0xabc",
-        chain_id: "arbitrum",
-        direction: "burn",
-      }),
-    ];
-
-    const flagged = detectAtomicRoundtrips(rows);
-
-    expect(flagged).toBe(0);
+  it.each([
+    [row("mint"), row("mint", 100, { id: "second" })],
+    [row("burn")],
+    [row("mint"), row("burn", 100, { tx_hash: "other" })],
+    [row("mint"), row("burn", 100, { stablecoin_id: "other" })],
+    [row("mint"), row("burn", 100, { chain_id: "arbitrum" })],
+    [row("mint", 100, { tx_hash: "" }), row("burn", 100, { tx_hash: "" })],
+    [row("mint"), row("burn", 100, { supply_proof_id: "pending-proof" })],
+  ])("keeps one-sided or separately identified groups standard (%#)", (...rows) => {
+    expect(detectAtomicRoundtrips(rows)).toBe(0);
     expect(rows.every((r) => r.flow_type === "standard")).toBe(true);
   });
 
-});
-
-function mb(direction: "mint" | "burn", tx: string, amount: number, id = "x"): MintBurnRow {
-  return {
-    id: `${id}-${direction}`, stablecoin_id: "c", symbol: "C", chain_id: "ethereum",
-    direction, amount, amount_usd: amount, price_used: 1, price_timestamp: 0,
-    price_source: "test", burn_type: direction === "burn" ? "effective_burn" : null,
-    burn_review_reason: null, flow_type: "standard", counterparty: null,
-    tx_hash: tx, block_number: 1, timestamp: 1, explorer_tx_url: "",
-  };
-}
-
-describe("detectAtomicRoundtrips — amount tolerance", () => {
-  it("flags mint and burn that match within 0.5%", () => {
-    const rows = [mb("mint", "0x1", 100), mb("burn", "0x1", 100.4)];
-    detectAtomicRoundtrips(rows);
-    expect(rows.every((r) => r.flow_type === "atomic_roundtrip")).toBe(true);
+  it("tags exact multi-row sums independently and preserves a signed residual", () => {
+    const rows = [row("mint", 60), row("mint", 40, { id: "second" }), row("burn"),
+      row("mint", 100, { tx_hash: "residual" }), row("burn", 100.4, { tx_hash: "residual" })];
+    expect(detectAtomicRoundtrips(rows)).toBe(3);
+    expect(rows.map((r) => r.flow_type)).toEqual(["atomic_roundtrip", "atomic_roundtrip", "atomic_roundtrip", "standard", "standard"]);
+    expect(rows.filter((r) => r.flow_type === "standard")
+      .reduce((net, r) => net + (r.direction === "mint" ? r.amount : -r.amount), 0)).toBeCloseTo(-0.4);
   });
 
-  it("does NOT flag mint 100 / burn 95 (5% mismatch exceeds tolerance)", () => {
-    const rows = [mb("mint", "0x3", 100), mb("burn", "0x3", 95)];
-    detectAtomicRoundtrips(rows);
-    expect(rows.every((r) => r.flow_type === "standard")).toBe(true);
+  it("admits only resolved standard legs, leaving excluded legs out of the sum", () => {
+    for (const exclusion of [{ flow_type: "bridge_transfer" }, { flow_type: "protocol_internal" },
+      { burn_type: "review_required" }, { burn_type: "bridge_burn" }] as const) {
+      const rows = [row("mint"), row("burn", 100, exclusion)];
+      expect(detectAtomicRoundtrips(rows)).toBe(0);
+      expect(rows[0].flow_type).toBe("standard");
+      expect(rows[1]).toMatchObject(exclusion);
+    }
+    expect(detectAtomicRoundtrips([row("mint", 100, { burn_type: "review_required" }), row("burn")])).toBe(0);
+    const excluded = row("mint", 999, { id: "bridge", flow_type: "bridge_transfer", amount_raw: null });
+    expect(detectAtomicRoundtrips([row("mint"), row("burn"), excluded])).toBe(2);
+    expect(excluded.flow_type).toBe("bridge_transfer");
   });
 
-  it("flags multi-row groups when totals match within tolerance", () => {
-    const rows = [
-      mb("mint", "0x4", 60, "a"), mb("mint", "0x4", 40, "b"),
-      mb("burn", "0x4", 100, "c"),
-    ];
-    detectAtomicRoundtrips(rows);
-    expect(rows.every((r) => r.flow_type === "atomic_roundtrip")).toBe(true);
-  });
-});
-
-describe("detectAtomicRoundtrips — empty tx_hash guard", () => {
-  it("does not collide rows with missing tx_hash across different coins", () => {
-    // Without the guard, both would share key "-coin-a" / "-coin-b"; with the guard they skip entirely.
-    const rows = [
-      { ...mb("mint", "", 100, "a"), tx_hash: "", stablecoin_id: "coin-a" } as MintBurnRow,
-      { ...mb("burn", "", 100, "b"), tx_hash: "", stablecoin_id: "coin-a" } as MintBurnRow,
-    ];
-    detectAtomicRoundtrips(rows);
-    expect(rows.every((r) => r.flow_type === "standard")).toBe(true);
+  it("compares raw integers beyond REAL precision and rejects missing or invalid amounts", () => {
+    const mint = row("mint", 1e18, { amount_raw: "1000000000000000000000000000000000000" });
+    const burn = row("burn", 1e18, { amount_raw: "1000000000000000000000000000000000001" });
+    expect(detectAtomicRoundtrips([mint, burn])).toBe(0);
+    burn.amount_raw = mint.amount_raw;
+    expect(detectAtomicRoundtrips([mint, burn])).toBe(2);
+    for (const amount_raw of [null, "", "1.2", "-1", "garbage"]) {
+      expect(detectAtomicRoundtrips([row("mint"), row("burn", 100, { amount_raw })])).toBe(0);
+    }
   });
 });

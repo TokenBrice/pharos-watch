@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { memo, useCallback, useMemo, type CSSProperties } from "react";
 import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { formatCompactUsd, formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
+import { formatCompactUsd, formatCurrency } from "@shared/lib/format";
+import { formatNonUsdShare } from "@shared/lib/alt-peg-snapshot";
 import type { PlacedCoin } from "@/lib/alt-peg-hero";
 import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 
@@ -52,7 +53,7 @@ function CoinEmblemInner({
   const cohortIncomplete = cohortSupplyUnavailableCount > 0 || cohortSupplyPartialCount > 0;
   const cohortShare =
     !cohortIncomplete && cohortMarketCap != null && cohortMarketCap > 0 && coin.marketCap !== null
-      ? formatPercentFromRatio(coin.marketCap / cohortMarketCap, 1)
+      ? formatNonUsdShare((coin.marketCap / cohortMarketCap) * 100)
       : null;
   const pegLabel = PEG_LABELS_SHORT[coin.pegCurrency] ?? coin.pegCurrency;
   const pegHex = PEG_CHART_COLORS[coin.pegCurrency]?.hex ?? PEG_CHART_COLORS.OTHER.hex;

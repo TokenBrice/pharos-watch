@@ -33,7 +33,7 @@ const route = createClientFeaturePage({
     headerActions: <ShareButton ogPath={API_PATHS.ogPage("liquidity")} />,
     leadParagraphs: [
       "Pool depth across 15+ DEX protocols, your exit route in a panic.",
-      "The Liquidity Score weights on-chain depth, 24h volume, venue diversity, and redemption-backstop quality. A coin with deep pools on one protocol scores lower than a coin with durable liquidity across Curve, Uniswap, Fluid, Balancer, and native redemption rails.",
+      "The Liquidity Score weights TVL depth relative to market cap, 24h volume activity, pool quality, durability, and pool diversity. A coin with deep pools on one protocol scores lower than a coin with durable liquidity across Curve, Uniswap, Fluid, Balancer, and native redemption rails.",
     ],
     leadDisclosureLabel: "How the Liquidity Score works",
   },

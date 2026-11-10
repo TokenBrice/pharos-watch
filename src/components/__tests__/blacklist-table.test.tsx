@@ -74,6 +74,15 @@ const amountMatrix: Array<{ event: BlacklistEvent; expected: string }> = [
     expected: "0.00000123 PAXG",
   },
   {
+    event: { ...event, id: "zero-resolved", amountNative: 0, amountUsdAtEvent: null, amountSource: "historical_balance", amountStatus: "resolved" },
+    expected: "0 USDT",
+  },
+  {
+    // A legacy derived zero is still queued for replay proof; it is not a measurement.
+    event: { ...event, id: "zero-derived", amountNative: 0, amountUsdAtEvent: null, amountSource: "derived", amountStatus: "resolved" },
+    expected: "resolved",
+  },
+  {
     event: { ...event, id: "zero-unknown", amountNative: 0, amountUsdAtEvent: null, amountSource: "unavailable", amountStatus: "provider_failed" },
     expected: "provider failed",
   },
@@ -91,11 +100,12 @@ const amountMatrix: Array<{ event: BlacklistEvent; expected: string }> = [
   },
 ];
 
-function renderTable(events: BlacklistEvent[] = [event]) {
+function renderTable(events: BlacklistEvent[] = [event], error: unknown | null = null) {
   return render(
     <BlacklistTable
       events={events}
       isLoading={false}
+      error={error}
       page={1}
       pageSize={50}
       sortKey="date"
@@ -106,6 +116,18 @@ function renderTable(events: BlacklistEvent[] = [event]) {
 }
 
 describe("BlacklistTable", () => {
+  it("hides the module on a failed ledger read instead of showing an empty match set", () => {
+    renderTable([], new Error("ledger read failed"));
+    expect(screen.queryByText("No freeze events match your filters.")).toBeNull();
+    expect(screen.queryByTestId("freezewatch-events-table")).toBeNull();
+    expect(screen.queryByText(/temporarily unavailable/)).toBeNull();
+  });
+
+  it("keeps the empty match copy for a settled empty read", () => {
+    renderTable([]);
+    expect(screen.getAllByText("No freeze events match your filters.")).toHaveLength(2);
+    expect(screen.queryByText(/Freeze ledger data is temporarily unavailable/)).toBeNull();
+  });
   it("renders amount provenance and unresolved status badges", () => {
     renderTable();
 

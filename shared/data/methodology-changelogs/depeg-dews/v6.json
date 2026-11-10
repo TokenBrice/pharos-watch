@@ -1,5 +1,36 @@
 [
   {
+    "version": "6.44",
+    "title": "Original aggregate clocks qualify affirmative DEX evidence",
+    "date": "2026-11-06",
+    "effectiveAt": 1793962500,
+    "summary": "Live depeg, pending confirmation, DEWS divergence and public DEX availability require the original clock of the aggregate's selected in-budget contributors, preventing a fresh publication from renewing old evidence while preserving conservative vetoes.",
+    "impact": [
+      "The publisher computes the median from deduplicated plausible contributors younger than the existing 75-minute depeg budget, applies the existing outlier filter to that subset, and dates it by its oldest input. Count, TVL and protocol provenance describe those median inputs. With no in-budget contributor the full blend retains its old clock for conservative vetoes. Affirmative aggregate DEX admission validates aggregateObservedAt evidence before protocol filtering. Legacy nonempty price_sources_json arrays use the oldest repeated clock; the {aggregateObservedAt,sources:[]} envelope preserves independent aggregate time when no display lane qualifies, without creating a protocol source. Missing, invalid, nonpositive, nonfinite or future clocks fail closed. Publication updated_at and surviving 35-minute protocol lanes cannot supply or renew that clock.",
+      "The existing strict below-75-minute aggregate freshness boundary and $1M source-TVL floor now apply to original evidence in direction changes, positive recovery, trusted coverage, pending confirmation, DEWS divergence and public depeg availability. Per-protocol corroboration retains its inclusive 35-minute family and 75-minute aggregate gates. A valid aggregate is not discarded solely because no protocol lane survives.",
+      "Pending aggregate confirmation, recovery and contradiction require admitted original clocks. A publication-fresh old same-direction confirmation remains veto-only against rejection; it does not become affirmative confirmation or coexist with an unavailable opposing signal. Native extreme admission needs original-clock-fresh DEX corroboration, while publication-fresh native-quote veto corroboration retains its separate conservative policy. Current DEWS source ages and snapshots retain the admitted aggregate observation time, not publication time; malformed eligible evidence retains decoder telemetry, and original-clock refusals retain machine-readable primary/pending reasons.",
+      "Peg-summary publishes optional nullable price beside current deviation and provenance from the same admitted live observation, even when historical analytics are retained. Missing or nominal observations emit null despite any raw positive asset price; an observed NAV quote may retain price with null deviation. Invalid or nonpositive values emit null, and legacy responses may omit the field. Public DEX comparisons keep their strict budget of two hourly producer intervals plus the stage lead and $250K floor against the original aggregate clock.",
+      "Detection thresholds, confirmation/recovery windows, PegScore and DEWS weights are unchanged; stored events, historical scores and sealed publications are not relabeled. Fixed-clock producer replay, declared Safety movers and qualifying production observations remain release obligations."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.43",
+    "title": "Commodity peer medians require three contributors",
+    "date": "2026-11-02",
+    "effectiveAt": 1793664000,
+    "summary": "A commodity peer median may stand in for spot only when at least three live same-metal coins contribute. Thin commodity groups fail closed, and a stale or unknown-clock cached metal observation bounds a spot move only within the prior-value delta limit: a larger move needs independent fresh corroboration.",
+    "impact": [
+      "`shared/lib/peg-reference-trust.ts` exports the single `MIN_PEER_MEDIAN_CONTRIBUTORS = 3` authority. Gold and silver medians with one or two contributors are `non-authoritative-reference`: a one-coin median is the coin's own price and a two-coin median mirrors half of any real move onto the healthy peer. Direct spot/FX references do not need peer contributors.",
+      "The `fx-rates` metals producer applies the same quorum before admitting a tracked commodity median, so a thin median cannot be published as a spot substitute. The affected asset falls back to an honestly clocked cached value or reports an unavailable reference instead.",
+      "A metal quote that moves more than 20% against a stale or unknown-clock incumbent is admitted only when an independent fresh source confirms it within 5%: a fresh, provider-dated Chainlink round or a three-contributor commodity median. Otherwise the incumbent is retained with its original observation clock rather than the run clock, and an undated quote is never treated as provider-dated evidence. A fresh Chainlink metal round replaces a non-fresh incumbent only within the same prior-value bound; older rounds never replace a newer incumbent or move its clock backwards.",
+      "Detection thresholds, confirmation, recovery and DEWS weights are unchanged. Activation is 2026-11-03 00:00 UTC (1793664000)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.42",
     "title": "Public depeg counts exclude disputed rows; retired coins are marked",
     "date": "2026-10-31",

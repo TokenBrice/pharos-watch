@@ -12,7 +12,7 @@ export function tronRpcQuantity(value: unknown): number | null {
   return Number.isSafeInteger(number) && number >= 0 ? number : null;
 }
 
-export function isTronLogFilter(value: unknown): boolean {
+function isTronLogFilter(value: unknown): boolean {
   if (value == null || typeof value !== "object" || Array.isArray(value)) return false;
   const filter = value as Record<string, unknown>;
   if (Object.keys(filter).some((key) => !["fromBlock", "toBlock", "address", "topics"].includes(key))) return false;

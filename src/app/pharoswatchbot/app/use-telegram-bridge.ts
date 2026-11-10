@@ -81,15 +81,18 @@ export function useTelegramBridge(opts: UseTelegramBridgeOptions = {}): Telegram
         return;
       }
       if (cancelled) return;
+      // The SDK can fail to load (blocked host, slow WebView) after Telegram has
+      // already put the signed payload in the URL; the Worker HMAC stays the authority.
+      const resolvedInitData = launch.initData || (launch.hasTelegramLaunchHint ? launch.launchInitData : "");
       setWebApp(launch.webApp);
-      setInitData(launch.initData);
+      setInitData(resolvedInitData);
       setStartParam(launch.startParam);
       setPreviewName(launch.previewName);
       applyTelegramTheme(launch.webApp);
       cleanup = bindTelegramViewportAndTheme(launch.webApp);
       launch.webApp?.ready?.();
       launch.webApp?.expand?.();
-      if (launch.initData) {
+      if (resolvedInitData) {
         setStatus("ready");
       } else if (launch.hasTelegramLaunchHint) {
         setStatus("missing");

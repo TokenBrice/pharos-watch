@@ -8,11 +8,17 @@ import { recordJsonParseFailure } from "./api-cache-read";
 
 type BluechipCacheFailureReason = "missing-cache" | "json-parse-failed" | "invalid-payload";
 
-export function parseBluechipRatingsCache(
+export interface BluechipRatingsCacheRead {
+  ratings: BluechipRatingsMap;
+  /** Payload keys that failed schema admission and carry no readable rating. */
+  droppedIds: string[];
+}
+
+export function readBluechipRatingsCache(
   raw: string | null | undefined,
   context: string,
-): BluechipRatingsMap {
-  const decoded = decodeCachedJson<BluechipRatingsMap, BluechipCacheFailureReason>(
+): BluechipRatingsCacheRead {
+  const decoded = decodeCachedJson<BluechipRatingsCacheRead, BluechipCacheFailureReason>(
     raw ? { value: raw } : null,
     {
       missingReason: "missing-cache",
@@ -23,6 +29,7 @@ export function parseBluechipRatingsCache(
         }
 
         const ratings: BluechipRatingsMap = {};
+        const droppedIds: string[] = [];
         for (const [pharosId, value] of Object.entries(parsed)) {
           const validation = validatePayloadWithSchema(
             BluechipRatingSchema,
@@ -30,12 +37,20 @@ export function parseBluechipRatingsCache(
             `${context}:bluechip-cache:${pharosId}`,
           );
           if (validation.ok) ratings[pharosId] = validation.data;
+          else droppedIds.push(pharosId);
         }
-        return { ok: true, payload: ratings };
+        return { ok: true, payload: { ratings, droppedIds } };
       },
       onParseFailure: ({ message }) => recordJsonParseFailure(context, message),
     },
   );
 
-  return decoded.ok ? decoded.payload : {};
+  return decoded.ok ? decoded.payload : { ratings: {}, droppedIds: [] };
+}
+
+export function parseBluechipRatingsCache(
+  raw: string | null | undefined,
+  context: string,
+): BluechipRatingsMap {
+  return readBluechipRatingsCache(raw, context).ratings;
 }

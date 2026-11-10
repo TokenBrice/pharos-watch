@@ -3,7 +3,7 @@ import type * as WitnessTextModule from "@shared/lib/safety-score-v9/public-witn
 import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { iterateEvidenceResponsibilityFacts, type V9EvidenceFactContext } from "@shared/types/safety-score-v9-public-evidence-facts";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
-import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
+import { FULL_REGISTRY_CLOCK_SEC, createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate";
 import { buildAlertSafetyV9SourceEnvelopeFromParts } from "../alert-safety-source-cache";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
@@ -26,6 +26,15 @@ vi.mock("@shared/lib/safety-score-v9/public-witness-texts", async (importOrigina
     },
   };
 });
+
+// Documented card-shape cohort for the round-trip case below: one rated USD
+// issuer whose consumers are asserted, a second fiat issuer, a CDP, a wrapped
+// bridge representation, a gold peg and an EUR peg.
+const CARD_SHAPE_COHORT = [
+  "usdc-circle", "usdt-tether", "dai-makerdao", "wm-m0", "xgld-unitas", "eurc-circle",
+  // The provisional card shape and multi-ref foreign-gap interning.
+  "usdf-astherus", "aa-falconx-mev-capital",
+] as const;
 
 describe("card-local public witness texts", () => {
   it("losslessly shares repeated messages and paths without mutating evaluator views", () => {
@@ -111,8 +120,15 @@ describe("card-local public witness texts", () => {
     ]);
   });
 
-  it("resolves every real full-registry card losslessly and preserves admitted USDC consumers", () => {
-    const fixedInput = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+  it("resolves every documented card shape losslessly and preserves admitted USDC consumers", () => {
+    // Witness-text interning is a per-card contract, not a registry-wide one: the
+    // cohort keeps a rated USD issuer (USDC, whose consumers are asserted below),
+    // a second fiat issuer, a DAI-style CDP, a wrapped/bridged representation and
+    // two non-USD pegs. Building the whole ~386-asset registry cost 11s of this
+    // file (32s in CI) without adding a shape.
+    const fixedInput = normalizeFixedInput(
+      createSafetyScoreV9FullRegistryInput(FULL_REGISTRY_CLOCK_SEC, CARD_SHAPE_COHORT),
+    );
     const { candidate } = buildSafetyScoreV9PublicationFromNormalizedInput({ fixedInput, publishedAtSec: fixedInput.clockSec });
     const card = candidate.cards.find((item) => item.id === "usdc-circle");
     expect(card).toBeDefined();
@@ -153,6 +169,7 @@ describe("card-local public witness texts", () => {
     expect(buildAlertSafetyV9SourceEnvelopeFromParts(parts)).toEqual(buildAlertSafetyV9SourceEnvelopeFromParts({
       ...parts, cards: [resolveV9PublicWitnessTexts(card!)],
     }));
-  // One full-registry publication: 23s in the plain lane, 41-81s under V8 coverage.
+  // One cohort publication: ~0.3s plain, and the headroom below keeps V8 coverage
+  // and concurrent critical-suite work from making a shape assertion flaky.
   }, 180_000);
 });

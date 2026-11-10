@@ -10,6 +10,7 @@ import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import {
   cgPoolVolume24hReading,
+  CG_ONCHAIN_MIN_RESERVE_USD,
   fetchCgTokenPoolsWithStatus,
   type CgPool,
   type CgPoolsByAddressResult,
@@ -159,7 +160,7 @@ export function admitCgOnchainPool({
   if (!side) return { reason: "untracked-leg" };
   const priceRaw = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
   const tvlUsd = parsed.tvlUsd;
-  if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) return { reason: "min-tvl" };
+  if (!Number.isFinite(tvlUsd) || tvlUsd < CG_ONCHAIN_MIN_RESERVE_USD) return { reason: "min-tvl" };
 
   if (!coherence.admits(side, parsed)) return { reason: "incoherent-price" };
 
@@ -268,21 +269,21 @@ export async function crawlCoinGeckoPoolsStage({
         apiKey,
         { maxRetries: 0, timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain },
       );
-      const classification = classifyCoinGeckoResult(result);
-      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, classification.retryable !== true);
-      providerChecks.push({
-        ...makeDexDeploymentProviderCheck(
-          { chain, address },
-          "coingecko",
-          classification.status,
-          { retryable: classification.retryable, paginationComplete: result.complete },
-        ),
-        ...(classification.error ? { error: classification.error } : {}),
-      });
-
+      let schemaDegraded = result.schemaDegraded;
       for (const pool of result.pools) {
-        const parsed = parseCgPool(pool, chain);
-        if (!parsed) continue;
+        let parsed: ParsedPool | null;
+        try {
+          parsed = parseCgPool(pool, chain);
+        } catch {
+          schemaDegraded = true;
+          continue;
+        }
+        // Required evidence must be readable even for a known or excluded pool.
+        if (!parsed || typeof parsed.dexId !== "string" || !parsed.dexId.trim() ||
+          !Number.isFinite(parsed.tvlUsd) || parsed.tvlUsd < 0) {
+          schemaDegraded = true;
+          continue;
+        }
 
         const poolId = canonicalExitRouteScopedKey(chain, parsed.poolAddress);
         if (context.hasKnownPool(poolId)) continue;
@@ -305,6 +306,17 @@ export async function crawlCoinGeckoPoolsStage({
           context.hasUsablePoolPrice = true;
         }
       }
+      const classification = classifyCoinGeckoResult({ ...result, schemaDegraded });
+      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, classification.retryable !== true);
+      providerChecks.push({
+        ...makeDexDeploymentProviderCheck(
+          { chain, address },
+          "coingecko",
+          classification.status,
+          { retryable: classification.retryable, paginationComplete: result.complete },
+        ),
+        ...(classification.error ? { error: classification.error } : {}),
+      });
     } catch (err) {
       if (context.signal?.aborted) throw err;
       logWorkerEventArgs("handler", "warn", `[dex-discovery] cg_onchain error for ${chain}:${address}`, err);

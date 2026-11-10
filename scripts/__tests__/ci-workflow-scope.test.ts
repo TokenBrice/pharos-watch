@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -9,6 +10,19 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
+  it.each([
+    ["weekly-validation", "ci-report"],
+    ["agent-maintenance-candidates", null],
+    ["curation-expiry-sweep", null],
+    ["ddr-curation-watch", null],
+    ["ops-followups", null],
+  ])("serializes %s issue publication without cancellation", (name, job) => {
+    const workflow = parseYaml(readRepoFile(`.github/workflows/${name}.yml`));
+    expect((job ? workflow.jobs[job] : workflow).concurrency).toEqual({
+      group: `${name}-publication`, "cancel-in-progress": false,
+    });
+  });
+
   it("transports ignored compile/serve inputs without an unused Next cache branch", () => {
     const action = parseYaml(readRepoFile(".github/actions/setup-workspace/action.yml"));
     expect(action.inputs["next-cache"]).toBeUndefined();
@@ -54,6 +68,53 @@ describe("CI workflow scope", () => {
     expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
     expect(steps[gate].run)
       .toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
+  });
+
+  it("runs the test corpus budget once per PR, outside the selection that skips test-only PRs", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
+      jobs: Record<string, {
+        outputs?: Record<string, string>;
+        env?: Record<string, string>;
+        steps: Array<{ name?: string; id?: string; uses?: string; run?: string; if?: string; env?: Record<string, string>; "continue-on-error"?: boolean }>;
+      }>;
+    };
+    const steps = workflow.jobs.prepare.steps;
+    const gate = steps.findIndex((step) => step.name === "Check test corpus budget");
+    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    expect(steps.filter((step) => step.run?.includes("check:test-corpus-budget"))).toHaveLength(1);
+    // Unconditional: check:structural's selection skips test-only PRs, so the
+    // gate must not inherit a condition from the classify step.
+    expect(steps[gate].if).toBeUndefined();
+    expect(steps[gate].env).toEqual({
+      PR_BASE_SHA: "${{ github.event.pull_request.base.sha }}",
+      TEST_BUDGET_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}",
+    });
+    expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
+    expect(steps[gate].run)
+      .toContain('if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
+
+    // Non-fatal in prepare, because a failure there must not skip the validation
+    // lanes; the recorded exit code is what the PR gate enforces.
+    expect(steps[gate].id).toBe("test-corpus-budget");
+    expect(steps[gate]["continue-on-error"]).toBe(true);
+    expect(steps[gate].run).toContain('echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"');
+    expect(steps[gate].run).toContain("GITHUB_STEP_SUMMARY");
+    expect(workflow.jobs.prepare.outputs?.test_corpus_budget).toBe("${{ steps.test-corpus-budget.outputs.exit-code }}");
+    const prGate = workflow.jobs["pr-gate"];
+    expect(prGate.env?.TEST_CORPUS_BUDGET).toBe("${{ needs.prepare.outputs.test_corpus_budget }}");
+    const require = prGate.steps.find((step) => step.name === "Require the manifest-selected validation path");
+    expect(require?.run).toContain('if [ "${TEST_CORPUS_BUDGET:-missing}" != "0" ]; then');
+    expect(require?.run).toContain("exit 1");
+
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
+    };
+    // The schedule has no PR base, so the nightly declares H2-only instead of
+    // leaving the add diff to an implicit empty base.
+    expect(nightly.jobs["full-static"].steps.filter((step) => step.run?.startsWith("npm run check:test-corpus-budget")))
+      .toHaveLength(1);
+    expect(nightly.jobs["full-static"].steps.some((step) => step.run?.includes("check:test-corpus-budget -- --metrics-only")))
+      .toBe(true);
   });
 
   it("feeds nightly Lighthouse trusted retained release data with a token confined to acquisition", () => {
@@ -131,6 +192,7 @@ describe("CI workflow scope", () => {
       "npm run lint", "npm run typecheck", "npm run typecheck:worker",
       "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
       "npm run check:unused-code", "npm run check:sensitive-page-copy",
+      "npm run check:test-corpus-budget -- --metrics-only",
     ]);
     // Every mandatory command runs independently once the workspace is ready,
     // so one red step cannot mask the remaining mandatory outcomes.
@@ -162,7 +224,7 @@ describe("CI workflow scope", () => {
     expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
       staticSteps.findIndex((step) => step.run === "npm run check:structural"));
     const outcomeEnv = Object.entries(aggregate!.env ?? {});
-    expect(outcomeEnv).toHaveLength(8);
+    expect(outcomeEnv).toHaveLength(9);
     for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
       const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
       for (const [key, expression] of outcomeEnv) {
@@ -198,8 +260,11 @@ describe("CI workflow scope", () => {
       step.run === "npm run test:v9-resource")).toHaveLength(1);
     expect(weekly.jobs["v9-resource"]).toBeUndefined();
     expect(readRepoFile(".github/workflows/weekly-validation.yml")).not.toContain("npm run test:v9-resource");
-    expect(nightly.jobs["full-tests"].steps.some((step: { run?: string }) =>
-      step.run === "npm test -- --shard=${{ matrix.shard }}/2")).toBe(true);
+    expect(nightly.jobs["full-tests"].strategy.matrix.shard).toEqual([1, 2, 3, 4]);
+    const shardRun = nightly.jobs["full-tests"].steps.find((step: { run?: string }) =>
+      step.run?.includes("npm test -- --shard=${{ matrix.shard }}/4"));
+    expect(shardRun?.run).toContain("--reporter=default --reporter=github-actions --reporter=json");
+    expect(shardRun?.run).toContain("--outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json");
   });
 
   it("runs CodeQL weekly on Monday and manual dispatch, not pushes", () => {
@@ -212,15 +277,17 @@ describe("CI workflow scope", () => {
   it("restricts auxiliary production publishers to main for manual and scheduled runs", () => {
     const scenarios = parseYaml(readRepoFile(".github/workflows/dependency-scenarios-refresh.yml"));
     const map = parseYaml(readRepoFile(".github/workflows/safety-map-refresh.yml"));
-    for (const workflow of [scenarios, map]) {
+    const curation = parseYaml(readRepoFile(".github/workflows/curation-expiry-sweep.yml"));
+    for (const workflow of [scenarios, map, curation]) {
       expect(workflow.on).toHaveProperty("workflow_dispatch");
       expect(workflow.on.schedule.length).toBeGreaterThan(0);
     }
     // Main-only, without an event restriction: main dispatches and schedules
     // remain admitted, while feature-branch dispatches cannot get credentials.
-    for (const job of [scenarios.jobs.scenarios, map.jobs.plan]) {
+    for (const job of [scenarios.jobs.scenarios, map.jobs.plan, curation.jobs.sweep]) {
       expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
     }
+    expect(curation.on.schedule).toEqual([{ cron: "45 5 * * 2" }]);
     expect(scenarios.on.schedule).toEqual([{ cron: "17 2 * * *" }]);
     expect(Object.keys(map.jobs)).toEqual(["plan"]);
     const steps = map.jobs.plan.steps as Array<{
@@ -376,7 +443,11 @@ describe("CI workflow scope", () => {
       id?: string; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
     }>;
 
-    expect(deploy.jobs["deploy-worker"].needs).toBe("plan");
+    expect(deploy.jobs["deploy-worker"].needs).toEqual(["plan"]);
+    const workerDeployCondition = String(deploy.jobs["deploy-worker"].if).replace(/\s+/g, " ");
+    expect(workerDeployCondition).toContain("!cancelled()");
+    expect(workerDeployCondition).not.toContain("always()");
+    expect(workerDeployCondition).toContain("needs.plan.outputs.worker_required == 'true'");
     expect(deploy.jobs["pages-prepare"].needs).toBe("plan");
     expect(deploy.jobs["pages-prepare"].uses).toBe("$/.github/workflows/pages-prepare.yml");
     expect(deploy.jobs["pages-prepare"].if).toBe("${{ needs.plan.outputs.pages_required == 'true' }}");
@@ -556,7 +627,53 @@ describe("CI workflow scope", () => {
       OBSERVED_WORKER_VERSION: "${{ steps.verify-worker-identity.outputs.worker_version }}",
       EXPECTED_HEAVY_WORKER_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
       OBSERVED_HEAVY_WORKER_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
+      PHAROS_API_KEY: "${{ secrets.PHAROS_API_KEY }}",
     });
+  });
+
+  it("gates every Shock Coverage Refresh credential path on main", () => {
+    const shock = parseYaml(readRepoFile(".github/workflows/shock-coverage-refresh.yml")) as {
+      jobs: Record<string, { if?: string }>;
+    };
+    expect(shock.jobs.targets.if)
+      .toBe("${{ github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || github.event.schedule == '41 3 * * *') }}");
+    expect(shock.jobs.measure.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(shock.jobs.refresh.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+  });
+
+  it("restores Worker incident evidence from its own completed main run even when an evidence job alerts", () => {
+    const monitor = parseYaml(readRepoFile(".github/workflows/worker-memory-monitor.yml")) as {
+      jobs: Record<string, { steps: Array<{ id?: string; if?: string; name?: string; run?: string; env?: Record<string, string> }> }>;
+    };
+    const restore = monitor.jobs.incidents.steps.find((step) => step.name === "Restore latest rolling evidence archive")!;
+    // A pull_request run executes in this repository and reports its head ref
+    // in workflow_run.head_branch, so artifact metadata alone is not an
+    // identity: authenticate the producing run before trusting the archive.
+    expect(restore.env).toMatchObject({ GH_REPO: "${{ github.repository }}" });
+    expect(restore.run).toContain("actions/artifacts?per_page=100");
+    for (const guard of [
+      '.path == ".github/workflows/worker-memory-monitor.yml"',
+      '(.event == "schedule" or .event == "workflow_dispatch")',
+      '.status == "completed"',
+      '.conclusion != "cancelled"',
+      ".head_sha == $head_sha",
+      ".head_repository.full_name == $repo",
+      'startswith("worker-incidents-\\($run_id)-")',
+    ]) expect(restore.run).toContain(guard);
+    // The memory job exits red on a heavy kill and the incidents job exits red
+    // on an unavailable read; both still upload that day's shard. Requiring a
+    // green run here would discard the incident day itself.
+    expect(restore.run).not.toContain('.conclusion == "success"');
+    // A red run is restorable only because a failed restore never captures:
+    // otherwise its one-day shard would replace the 21-day window.
+    expect(restore.id).toBe("restore-archive");
+    const capture = monitor.jobs.incidents.steps.find((step) => step.name === "Capture deployment delivery child and publication evidence")!;
+    expect(capture.if).toContain("steps.restore-archive.outcome == 'success'");
+    // An unreadable producing-run lookup fails the restore instead of counting
+    // as a rejection, which would start a one-day window over a good archive.
+    expect(restore.run).toContain('if ! run_json="$(gh api "repos/$GH_REPO/actions/runs/$run_id")"; then');
+    expect(restore.run).toContain("refusing to start a fresh window");
+    expect(restore.run).toContain("actions/runs/$run_id");
   });
 
   it("keeps the curation expiry sweep process-only with sentinel verdicts and by-week renewal views", () => {
@@ -607,6 +724,219 @@ describe("CI workflow scope", () => {
     expect(upload.with?.path).toBe("agents/sweep/");
   });
 
+  type WorkflowStep = {
+    id?: string; name?: string; uses?: string; run?: string; if?: string;
+    permissions?: Record<string, string>;
+    "continue-on-error"?: boolean; "timeout-minutes"?: number;
+    with?: Record<string, unknown>; env?: Record<string, string>;
+  };
+  type WorkflowJob = {
+    needs?: string | string[]; if?: string; permissions?: Record<string, string>;
+    "timeout-minutes"?: number; env?: Record<string, string>;
+    outputs?: Record<string, string>; strategy?: Record<string, unknown>; steps?: WorkflowStep[];
+  };
+  type Workflow = { jobs: Record<string, WorkflowJob> };
+
+  it("caches installed dependencies only in secret-free jobs", () => {
+    const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const deploy = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as Workflow;
+    const preparePages = parseYaml(readRepoFile(".github/workflows/pages-prepare.yml")) as Workflow;
+    const setupOf = (job: WorkflowJob) => job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
+    expect(setupOf(pr.jobs.prepare)?.with).toMatchObject({ "node-modules-cache": "true" });
+    for (const job of ["full-static", "full-tests", "v9-resource", "lighthouse", "web-vitals", "test-plan-parity"]) {
+      expect(setupOf(nightly.jobs[job])?.with, job).toMatchObject({ "node-modules-cache": "true" });
+    }
+    for (const [job, definition] of Object.entries(weekly.jobs)) {
+      // These jobs install nothing: gitleaks imports only Node builtins and the
+      // CI report renders from workflow-fetched files (asserted below).
+      if (job === "gitleaks" || job === "ci-report") continue;
+      expect(setupOf(definition)?.with, job).toMatchObject({ "node-modules-cache": "true" });
+    }
+    // The history-scan job imports only Node builtins; it has no workspace setup.
+    expect(setupOf(weekly.jobs.gitleaks)).toBeUndefined();
+    // pages-prepare packs a workspace consumed by the credential-holding
+    // pages-release job, so it never restores a writable dependency cache.
+    expect(setupOf(preparePages.jobs["pages-prepare"])?.with).toMatchObject({ "node-modules-cache": "false" });
+    // Production credential holders install without a writable dependency cache.
+    expect(setupOf(deploy.jobs["deploy-worker"])?.with).toMatchObject({ "node-modules-cache": "false" });
+    expect(setupOf(deploy.jobs["post-deploy-acceptance"])?.with).toMatchObject({ "install-deps": "false" });
+    expect(setupOf(deploy.jobs.plan)?.with).toMatchObject({ "install-deps": "false" });
+  });
+
+  it("keeps validation history and wires the Pages critical-CSS scope", () => {
+    const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
+    const checkoutOf = (job: WorkflowJob) => job.steps?.find((step) => step.uses?.startsWith("actions/checkout@"));
+    expect(pr.jobs.validation.strategy?.["max-parallel"]).toBe(14);
+    expect(checkoutOf(pr.jobs.validation)?.with?.["fetch-depth"]).toBe(0);
+    expect(pr.jobs.prepare.outputs?.pages_critical_css_full_pass)
+      .toBe("${{ steps.classify.outputs.pages_critical_css_full_pass }}");
+    const replay = pr.jobs["pages-artifact"].steps?.find((step) => step.env?.PR_LANE_ID === "pages-artifact");
+    expect(replay?.env).toMatchObject({
+      PHAROS_CRITICAL_CSS_FULL_PASS: "${{ needs.prepare.outputs.pages_critical_css_full_pass }}",
+      PHAROS_PAGES_REUSE_PREPARED_WORKSPACE: "1",
+    });
+  });
+
+  it("confines the timing-acquisition token and scopes the nightly-red issue writer", () => {
+    const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
+    const prepare = pr.jobs.prepare;
+    expect(prepare.permissions).toEqual({ contents: "read", actions: "read" });
+    // Only the gh-only acquisition step may see a token; candidate code never does.
+    const tokenSteps = (prepare.steps ?? []).filter((step) => step.env?.GH_TOKEN !== undefined);
+    expect(tokenSteps.map((step) => step.id)).toEqual(["test-timings"]);
+    expect(tokenSteps[0]?.run).not.toMatch(/\b(npm|npx|node)\b/);
+    // Acquisition runs immediately after checkout, before setup-workspace and
+    // therefore before any PR code; a bounded, non-fatal advisory step.
+    const prepareSteps = prepare.steps ?? [];
+    const checkout = prepareSteps.findIndex((step) => step.uses?.startsWith("actions/checkout@"));
+    const acquire = prepareSteps.findIndex((step) => step.id === "test-timings");
+    const setup = prepareSteps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace");
+    expect(acquire).toBe(checkout + 1);
+    expect(acquire).toBeLessThan(setup);
+    expect(prepareSteps[acquire]["timeout-minutes"]).toBe(2);
+    expect(prepareSteps[acquire]["continue-on-error"]).toBe(true);
+    expect(prepareSteps[acquire].if).toBeUndefined();
+
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const red = nightly.jobs["nightly-red"];
+    expect(red.permissions).toEqual({ contents: "read", issues: "write" });
+    expect(red.if).toContain("refs/heads/main");
+    expect(red.steps?.every((step) => step.uses === undefined)).toBe(true);
+    // Telemetry merge failure is a warning, never a red nightly leaf.
+    const merge = nightly.jobs["test-timings"].steps?.find((step) => step.name === "Merge the shard timing reports");
+    expect(merge?.["continue-on-error"]).toBe(true);
+  });
+
+  it("wires the main-only static test-plan parity canary into the nightly red set", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const job = nightly.jobs["test-plan-parity"];
+    expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(job.needs).toBeUndefined();
+    expect(job["timeout-minutes"]).toBe(30);
+    const checkout = job.steps?.find((step) => step.uses?.startsWith("actions/checkout@"));
+    expect(checkout?.with?.["fetch-depth"]).toBe(0);
+    const setup = job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
+    expect(setup?.with).toMatchObject({ "node-modules-cache": "true", "bootstrap-history": "true" });
+    expect(job.steps?.filter((step) => step.run).map((step) => step.run)).toEqual([
+      "npm run check:test-plan-parity -- --commits=5",
+    ]);
+    const red = nightly.jobs["nightly-red"];
+    expect(red.needs).toContain("test-plan-parity");
+    expect(red.env?.TEST_PLAN_PARITY_RESULT).toBe("${{ needs.test-plan-parity.result }}");
+  });
+
+  it("keeps a nightly shuffled isolated run of the classified worker-shared files", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const job = nightly.jobs["worker-shared-stability"];
+    expect(job.needs).toBeUndefined();
+    expect(job["timeout-minutes"]).toBe(30);
+    expect(job.steps?.filter((step) => step.run).map((step) => step.run)).toEqual([
+      "npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}",
+      "npm test -- --project worker-shared --isolate",
+    ]);
+    const red = nightly.jobs["nightly-red"];
+    expect(red.needs).toContain("worker-shared-stability");
+    expect(red.env?.WORKER_SHARED_STABILITY_RESULT).toBe("${{ needs.worker-shared-stability.result }}");
+  });
+
+  it("publishes the weekly CI report from a main-only workflow-fed job", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const job = weekly.jobs["ci-report"];
+    // Branch evidence never reaches the single owned issue.
+    expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(job.permissions).toEqual({ contents: "read", actions: "read", issues: "write" });
+    expect(job.needs).toBeUndefined();
+    // No dependents: a telemetry failure cannot fail another weekly job.
+    for (const [name, definition] of Object.entries(weekly.jobs)) {
+      if (name === "ci-report") continue;
+      expect(definition.needs ?? [], name).not.toContain("ci-report");
+    }
+
+    const steps = job.steps ?? [];
+    // The token is confined to the gh-only steps; the renderer that parses
+    // repository and API content never sees it.
+    const tokenSteps = steps.filter((step) => step.env?.GH_TOKEN !== undefined);
+    expect(tokenSteps.map((step) => step.id)).toEqual(["window", "timings", "publish"]);
+    for (const step of tokenSteps) expect(step.run ?? "").not.toMatch(/\b(npm|npx)\b/);
+    const render = steps.find((step) => step.name === "Render the weekly report");
+    expect(render?.env?.GH_TOKEN).toBeUndefined();
+    expect(render?.run).toContain("scripts/maintenance/report-ci-weekly.ts");
+    // Advisory evidence only: a missing nightly timing artifact must not red the
+    // job before the report names the section unavailable.
+    expect(steps.find((step) => step.id === "timings")?.["continue-on-error"]).toBe(true);
+    // The report installs nothing, so it restores no dependency cache.
+    expect(steps.some((step) => step.uses === "$/.github/actions/setup-workspace")).toBe(false);
+    // One stable issue identity: the locator, the edit and the create all name
+    // the same title, and the label is created with the issue.
+    const publish = steps.find((step) => step.id === "publish")?.run ?? "";
+    const titles = [...publish.matchAll(/(?:--title|select\(\.title ==) "([^"]+)"/g)].map((match) => match[1]);
+    expect(titles.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(titles)).toEqual(new Set(["Weekly CI report"]));
+    expect(publish).toContain("ci:weekly-report");
+    expect(publish).not.toContain("gh issue comment");
+  });
+
+  it("opens the nightly-red issue on the first red run and never closes it on cancellation", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const script = nightly.jobs["nightly-red"].steps?.find((step) => step.name === "Upsert the nightly-red issue")?.run;
+    expect(script).toBeDefined();
+    const root = mkdtempSync(join(tmpdir(), "pharos-nightly-red-"));
+    const log = join(root, "gh.log");
+    const gh = join(root, "gh");
+    writeFileSync(gh, [
+      "#!/usr/bin/env bash",
+      'printf "%s\\n" "$*" >> "$GH_LOG"',
+      'if [[ "$1" == "issue" && "$2" == "list" && -n "${OPEN_ISSUE:-}" ]]; then printf "%s\\n" "$OPEN_ISSUE"; fi',
+      "exit 0",
+      "",
+    ].join("\n"), { mode: 0o755 });
+    const base: NodeJS.ProcessEnv = {
+      ...process.env,
+      PATH: `${root}:${process.env.PATH ?? ""}`,
+      GH_LOG: log,
+      RUNNER_TEMP: root,
+      RUN_URL: "https://example.test/run/1",
+      FULL_STATIC_RESULT: "success",
+      FULL_TESTS_RESULT: "success",
+      V9_RESOURCE_RESULT: "success",
+      LIGHTHOUSE_RESULT: "success",
+      WEB_VITALS_RESULT: "skipped",
+      TEST_TIMINGS_RESULT: "success",
+      TEST_PLAN_PARITY_RESULT: "success",
+      WORKER_SHARED_STABILITY_RESULT: "success",
+    };
+    const run = (overrides: Partial<NodeJS.ProcessEnv>): string => {
+      writeFileSync(log, "");
+      const result = spawnSync("bash", ["-c", script!], { env: { ...base, ...overrides }, encoding: "utf8" });
+      expect(result.status, result.stderr).toBe(0);
+      return readFileSync(log, "utf8");
+    };
+    try {
+      // One red leaf is enough to open the issue, even with no previous issue.
+      const red = run({ FULL_TESTS_RESULT: "failure" });
+      expect(red).toContain("issue create --title Nightly validation is red");
+      expect(red).not.toContain("issue close");
+      // A cancelled leaf neither opens nor closes and does not comment.
+      const cancelled = run({ FULL_TESTS_RESULT: "cancelled", OPEN_ISSUE: "7" });
+      expect(cancelled).not.toContain("issue close");
+      expect(cancelled).not.toContain("issue create");
+      expect(cancelled).not.toContain("issue comment");
+      expect(cancelled).not.toContain("label create");
+      // Every leaf success/skipped closes the one issue.
+      const green = run({ OPEN_ISSUE: "7" });
+      expect(green).toContain("issue close 7");
+      expect(green).not.toContain("issue create");
+      // Any non-success/skipped leaf (e.g. a tool failure) keeps it open.
+      const failed = run({ OPEN_ISSUE: "7", TEST_PLAN_PARITY_RESULT: "failure" });
+      expect(failed).toContain("issue comment 7");
+      expect(failed).not.toContain("issue close");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
 });
 
 it("snapshots trusted base code and policy before PR checkout and scans both modes afterward", () => {
@@ -620,6 +950,9 @@ it("snapshots trusted base code and policy before PR checkout and scans both mod
   expect(snapshot).toBeLessThan(steps.indexOf(checkouts[1]));
   expect(scanner).toBeGreaterThan(steps.indexOf(checkouts[1]));
   expect(steps[scanner].run).toContain('git fetch --no-tags origin "${GITLEAKS_HEAD_REF}"');
+  // The trusted snapshot checkout is shallow; the range scan must restore full history.
+  expect(steps[scanner].run).toContain("git fetch --no-tags --unshallow origin");
+  expect(steps[scanner].run).toContain('git cat-file -e "${GITLEAKS_BASE_REF}^{commit}"');
   expect(steps[scanner].env.GITLEAKS_HEAD_REF).toBe("${{ github.event.pull_request.head.sha }}");
 });
 
@@ -702,8 +1035,19 @@ describe("external scheduler delivery monitor", () => {
         lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
           scheduleKey, lastStartedAt: now - 30,
         })),
-        heavy: { status: "healthy", scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: now - 30,
+        heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
           ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+        expectedLanes: ["statusSelfCheckOffset", "daily0300Utc"].map((scheduleKey) => ({
+          scheduleKey, lastStartedAt: now - 30, ageSeconds: 30,
+          warningAfterSec: scheduleKey === "statusSelfCheckOffset" ? 1800 : 172_800,
+          staleAfterSec: scheduleKey === "statusSelfCheckOffset" ? 2700 : 259_200,
+          status: "healthy", unavailableReason: null,
+        })),
+      },
+      operatorAlerts: {
+        status: "healthy", operatorConfigured: true, lastDeliveredAt: now - 600,
+        pendingSince: null, pendingAgeSec: null, maxPendingSec: 86_400,
+        pendingProducers: [], reason: null, unavailableReason: null,
       },
       ...overrides,
     };
@@ -725,8 +1069,70 @@ describe("external scheduler delivery monitor", () => {
       lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
         scheduleKey, lastStartedAt: now - 30,
       })),
-      heavy: { status, scheduleKey: "v9SupplyAttributionOffset", warningAfterSec: 1800, staleAfterSec: 2700 },
+      heavy: { status, scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), warningAfterSec: 1800, staleAfterSec: 2700 },
+      expectedLanes: ["statusSelfCheckOffset"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30, ageSeconds: 30,
+        warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null,
+      })),
     } }).status).toBe(1);
+  });
+  it("fails on an aged registry lane or a stale operator channel", () => {
+    const now = Math.floor(Date.now() / 1000);
+    expect(runMonitor({ schedulerLiveness: {
+      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
+      ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30,
+      })),
+      heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
+        ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+      expectedLanes: [
+        { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30,
+          warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null },
+        { scheduleKey: "daily0300Utc", lastStartedAt: now - 259_201, ageSeconds: 259_201,
+          warningAfterSec: 172_800, staleAfterSec: 259_200, status: "stale", unavailableReason: null },
+      ],
+    } }).status).toBe(1);
+    expect(runMonitor({ operatorAlerts: {
+      status: "stale", operatorConfigured: false, lastDeliveredAt: null,
+      pendingSince: now - 86_401, pendingAgeSec: 86_401, maxPendingSec: 86_400,
+      pendingProducers: ["freshness"], reason: "operator-alert-delivery-pending", unavailableReason: null,
+    } }).status).toBe(1);
+  });
+  it("warns on a degraded lane inside its stale budget instead of opening an incident", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const result = runMonitor({ schedulerLiveness: {
+      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
+      ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30,
+      })),
+      heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
+        ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+      expectedLanes: [
+        { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30,
+          warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null },
+        // Two missed 5-minute deliveries: inside the lane's own 3x stale budget.
+        { scheduleKey: "fiveMinuteTelegramAlerts", lastStartedAt: now - 601, ageSeconds: 601,
+          warningAfterSec: 600, staleAfterSec: 900, status: "degraded", unavailableReason: null },
+      ],
+    } });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Scheduled lane delivery degraded");
+  });
+  it("treats an absent operator receipt as unknown instead of opening an incident", () => {
+    // A public-health snapshot written before the receipt shipped can omit it
+    // for up to one snapshot interval; that is not an unconfigured channel.
+    const result = runMonitor({ operatorAlerts: undefined });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Operator alert receipt absent");
+  });
+  it("closes the delivery incident on a passing run", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/cron-liveness.yml"));
+    const steps = workflow.jobs.delivery.steps as Array<{ name?: string; if?: string; run?: string }>;
+    const close = steps.find((step) => step.name === "Close recovered delivery incident");
+    expect(close?.if).toBe("steps.health.outcome == 'success'");
+    expect(close?.run).toContain("gh issue close");
   });
 });
 

@@ -136,6 +136,86 @@ describe("PegStabilityCard", () => {
     expect(card.textContent).not.toContain("Reviewed ");
   });
 
+  it("reserves fund-NAV copy for navToken credit-fund coins", () => {
+    const nav = render(
+      <PegStabilityCard
+        meta={coin({
+          mechanismArchetype: "rwa-credit-fund",
+          flags: {
+            backing: "crypto-backed",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            yieldBearing: false,
+            rwa: false,
+            navToken: true,
+          },
+        })}
+        isWrapper={false}
+      />,
+    );
+    const navText = within(mechanismModule(nav.container)).getByRole("figure").textContent ?? "";
+    expect(navText).toContain("Fund portfolio");
+    expect(navText).toContain("value tracks fund NAV");
+    cleanup();
+
+    // The $1-pegged credit vehicles keep the archetype's credit-portfolio wording.
+    const credit = render(
+      <PegStabilityCard meta={coin({ mechanismArchetype: "rwa-credit-fund" })} isWrapper={false} />,
+    );
+    const creditText = within(mechanismModule(credit.container)).getByRole("figure").textContent ?? "";
+    expect(creditText).toContain("Credit portfolio");
+    expect(creditText).toContain("value tracks credit losses");
+    expect(creditText).not.toContain("Fund portfolio");
+  });
+
+  it("withholds the bank rail from a crypto-backed fiat-cash coin", () => {
+    const { container } = render(
+      <PegStabilityCard meta={coin({ mechanismArchetype: "fiat-cash" })} isWrapper={false} />,
+    );
+    const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
+    expect(text).toContain("Crypto assets");
+    expect(text).toContain("issued against crypto assets");
+    expect(text).not.toMatch(/bank transfer|KYC|custodied 1:1|eligible holders redeem|banking-rail/i);
+  });
+
+  it("keeps the bank rail on an rwa-backed fiat-cash coin", () => {
+    const { container } = render(
+      <PegStabilityCard
+        meta={coin({
+          mechanismArchetype: "fiat-cash",
+          flags: {
+            backing: "rwa-backed",
+            governance: "decentralized",
+          } as StablecoinDetailCoinMeta["flags"],
+        })}
+        isWrapper={false}
+      />,
+    );
+    const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
+    expect(text).toMatch(/bank transfer/i);
+    expect(text).toMatch(/eligible holders redeem/i);
+  });
+
+  it("draws a wrapper's parent flow from the parent's backing, not the wrapper's", () => {
+    const wrapper = (parentBacking: StablecoinDetailCoinMeta["flags"]["backing"]) => render(
+      <PegStabilityCard
+        meta={coin({ mechanismArchetype: "fiat-cash", variantOf: "usdc-circle" })}
+        isWrapper
+        parentSymbol="USDC"
+        parentArchetype="fiat-cash"
+        parentBacking={parentBacking}
+      />,
+    );
+    const rwa = wrapper("rwa-backed");
+    expect(within(mechanismModule(rwa.container)).getByRole("figure").textContent).toMatch(/bank transfer/i);
+    cleanup();
+
+    const crypto = wrapper("crypto-backed");
+    const cryptoText = within(mechanismModule(crypto.container)).getByRole("figure").textContent ?? "";
+    expect(cryptoText).toContain("issued against crypto assets");
+    expect(cryptoText).not.toMatch(/bank transfer|KYC|custodied 1:1|eligible holders redeem|banking-rail/i);
+  });
+
   it("never names another coin's incident in a coin's stress line", () => {
     const usdt = render(
       <PegStabilityCard

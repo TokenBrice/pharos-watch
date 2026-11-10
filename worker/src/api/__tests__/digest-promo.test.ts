@@ -71,6 +71,25 @@ describe("handleDigestPromo", () => {
     expect(response.headers.get("X-Data-Age")).not.toBeNull();
   });
 
+  it("keeps the archive's row identity when editions share a generated_at second", async () => {
+    const { db, insert } = createDigestDatabase();
+    const start = 1_700_000_000;
+    for (let edition = 1; edition <= 400; edition += 1) {
+      insert.run(`Daily ${edition}`, `Title ${edition}`, start + Math.floor((edition - 1) / 2), null, null);
+    }
+
+    const promo = DigestPromoResponseSchema.parse(await (await handleDigestPromo(db)).json());
+    const archive = await (await handleDigestArchive(db)).json() as {
+      digests: { digestTitle: string; editionNumber: number }[];
+    };
+
+    expect(promo.latest).toMatchObject({ digestTitle: "Title 400", excerpt: "Daily 400", editionNumber: 400 });
+    expect(archive.digests[0]).toMatchObject({ digestTitle: "Title 400", editionNumber: 400 });
+    expect(promo.previousEditions).toContainEqual(
+      expect.objectContaining({ digestTitle: "Title 399", editionNumber: 399 }),
+    );
+  });
+
   it("retains internal numbering gaps without exposing internal or blocked titles", async () => {
     const { db, insert } = createDigestDatabase();
     insert.run("First", "First", 1, null, null);
@@ -91,7 +110,7 @@ describe("handleDigestPromo", () => {
     expect(promo.previousEditions).toEqual([]);
   });
 
-  it("reads bodies only for the latest visible edition, outside the numbering window", async () => {
+  it("reads titles and bodies only for the visible page, outside the numbering window", async () => {
     const { sqlite, insert } = createDigestDatabase();
     for (let index = 1; index <= 4; index++) insert.run(`Copy ${index}`, `Title ${index}`, index, "Large prior body".repeat(10_000), null);
     let selectedSql = "";
@@ -99,13 +118,10 @@ describe("handleDigestPromo", () => {
     const response = await handleDigestPromo(db);
     expect(response.status).toBe(200);
     const selected = sqlite.prepare(selectedSql).all();
-    expect(selected).toHaveLength(3);
-    expect(selected[0]).toMatchObject({ digest_text: "Copy 4" });
-    expect(selected.slice(1)).toEqual([
-      expect.objectContaining({ digest_text: null, digest_extended: null, digest_title: "Title 3" }),
-      expect.objectContaining({ digest_text: null, digest_extended: null, digest_title: "Title 2" }),
+    expect(selected.map(({ digest_title, digest_text }) => [digest_title, digest_text])).toEqual([
+      ["Title 4", "Copy 4"], ["Title 3", "Copy 3"], ["Title 2", "Copy 2"],
     ]);
-    expect(selectedSql.slice(0, selectedSql.indexOf("), visible AS"))).not.toMatch(/digest_text|digest_extended/);
+    expect(selectedSql.slice(0, selectedSql.indexOf("), visible AS"))).not.toMatch(/digest_text|digest_extended|digest_title/);
   });
 
   it("keeps a successfully empty projection unavailable without inventing a producer clock", async () => {

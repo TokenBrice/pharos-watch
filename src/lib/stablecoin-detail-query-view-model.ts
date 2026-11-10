@@ -50,8 +50,9 @@ export interface DetailPegPriceSnapshot {
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;
-  consensusSources: string[];
-  agreeSources: string[];
+  /** Null when neither the peg row nor the admitted summary was read. */
+  consensusSources: string[] | null;
+  agreeSources: string[] | null;
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
 }
 
@@ -128,6 +129,7 @@ export function buildDetailPegPriceSnapshot(
   id: string,
   coin: StablecoinMeta,
   pegSummaryData?: PegSummaryResponse,
+  summaryData?: StablecoinLiveSummary,
 ): DetailPegPriceSnapshot {
   const isNavToken = coin.flags.navToken ?? false;
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
@@ -140,8 +142,16 @@ export function buildDetailPegPriceSnapshot(
     deviationBps,
     pegReferenceUnavailable: !isNavToken && pegScoreResult?.pegReferenceUnavailable === true,
     pegScoreResult,
-    consensusSources: pegScoreResult?.consensusSources ?? [],
-    agreeSources: pegScoreResult?.agreeSources ?? [],
+    // The active-only peg summary omits frozen archives. Fall back to the
+    // admitted summary's own provenance only when no peg row was read, so a
+    // present row's empty source lists remain an honest empty result.
+    // Neither read present means unread provenance, not a measured zero.
+    consensusSources: pegScoreResult
+      ? (pegScoreResult.consensusSources ?? [])
+      : (summaryData?.consensusSources ?? null),
+    agreeSources: pegScoreResult
+      ? (pegScoreResult.agreeSources ?? [])
+      : (summaryData?.agreeSources ?? null),
     dexPriceCheck: pegScoreResult?.dexPriceCheck ?? null,
   };
 }
@@ -172,15 +182,21 @@ function reserveStaleQuery(
   const freshness = sync?.freshness;
   const fetchedAt = freshness?.fetchedAt ?? live?.liveAt;
   const isLive = live?.mode === "live" || live?.mode === "live-stale";
-  const sourceAuthorityAvailable = freshness?.freshnessMode === "not-applicable"
-    || (freshness?.freshnessMode === "verified" && freshness.sourceTimestamp != null
-      && freshness.sourceTimestamp > 0 && freshness.sourceAgeBudgetSec != null);
+  const sourceTimestamp = freshness?.sourceTimestamp;
+  const sourceAgeBudgetSec = freshness?.sourceAgeBudgetSec;
+  // "unverified" feeds still carry a producer fetch clock; only the source
+  // observation clock is absent, so they age on the fetch clock like
+  // "not-applicable" rather than reading as never populated.
+  const fetchClockAuthority = freshness?.freshnessMode === "not-applicable"
+    || freshness?.freshnessMode === "unverified";
+  const sourceClockAuthority = freshness?.freshnessMode === "verified"
+    && sourceTimestamp != null && sourceTimestamp > 0
+    && sourceAgeBudgetSec != null;
   const clocks: { at: number; budget: number }[] = [];
-  if (isLive && freshness && fetchedAt != null && fetchedAt > 0 && sourceAuthorityAvailable) {
+  if (isLive && freshness && fetchedAt != null && fetchedAt > 0 && (fetchClockAuthority || sourceClockAuthority)) {
     clocks.push({ at: fetchedAt, budget: freshness.fetchBudgetSec });
-    if (freshness.freshnessMode === "verified" && freshness.sourceTimestamp != null
-      && freshness.sourceTimestamp > 0 && freshness.sourceAgeBudgetSec != null) {
-      clocks.push({ at: freshness.sourceTimestamp, budget: freshness.sourceAgeBudgetSec });
+    if (sourceClockAuthority) {
+      clocks.push({ at: sourceTimestamp, budget: sourceAgeBudgetSec });
     }
   }
   const authority = clocks.reduce<{ at: number; budget: number } | null>((first, clock) =>

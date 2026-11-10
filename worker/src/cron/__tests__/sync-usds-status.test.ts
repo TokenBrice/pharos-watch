@@ -76,6 +76,31 @@ describe("syncUsdsStatus", () => {
     });
   });
 
+  it("probes isBlocked(address) with its canonical selector", async () => {
+    const expectedData = `0xfbac3951${"0".repeat(64)}`;
+    mockFetch([
+      {
+        match: (request) => new URL(request.url).searchParams.get("action") === "eth_getStorageAt",
+        body: { result: `0x${"0".repeat(24)}${"a".repeat(40)}` },
+      },
+      {
+        match: (request) => new URL(request.url).searchParams.get("action") === "eth_call"
+          && new URL(request.url).searchParams.get("data") === expectedData,
+        body: { result: `0x${"0".repeat(63)}1` },
+      },
+    ], { requireMatch: true });
+
+    const db = mockD1();
+    const result = await syncUsdsStatus(db, "etherscan-key");
+    expect(result.itemCount).toBe(1);
+    const insert = getCacheInsert(db);
+    expect(insert).toBeDefined();
+    expect(JSON.parse(String(insert!.binds[1]))).toMatchObject({
+      freezeCapabilityPresent: true,
+      implementationAddress: `0x${"a".repeat(40)}`,
+    });
+  });
+
   it("skips fresh cached status without network or publication", async () => {
     const fetch = mockFetch([]);
     const db = mockD1([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", first: { value: "{}", updated_at: Math.floor(Date.now() / 1000) }, rows: [] }]);

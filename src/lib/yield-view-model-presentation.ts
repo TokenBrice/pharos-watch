@@ -18,9 +18,11 @@ import type {
 } from "@/lib/yield-view-model-types";
 import {
   DEFAULT_FILTERS,
+  RISK_BUDGET_FILTER_KEYS,
   YIELD_PRESET_SPECS,
   YIELD_RISK_ANY_PARAM,
   YIELD_RISK_BUDGET_SPECS,
+  filtersMatchRiskBudget,
   type YieldPresetSpec,
   type YieldRiskBudgetSpec,
   type YieldViewModelFilters,
@@ -130,14 +132,6 @@ export function buildYieldPresets(
   return { presets, matchingPreset };
 }
 
-export const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] = [
-  "minSafety",
-  "depth",
-  "sourcePosture",
-  "sourceConfidence",
-  "warnings",
-];
-
 // Selecting a band replaces all risk-budget axes while retaining research
 // filters such as peg/search. Counts must match `handleApplyRiskBudget`.
 function riskBudgetTargetFilters(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): YieldViewModelFilters {
@@ -146,14 +140,6 @@ function riskBudgetTargetFilters(filters: YieldViewModelFilters, spec: YieldRisk
     (target as Record<keyof YieldViewModelFilters, unknown>)[key] = spec.overrides[key] ?? DEFAULT_FILTERS[key];
   }
   return target;
-}
-
-function filtersMatchRiskBudget(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): boolean {
-  for (const key of RISK_BUDGET_FILTER_KEYS) {
-    const target = (spec.overrides as Record<string, unknown>)[key] ?? DEFAULT_FILTERS[key];
-    if (filters[key] !== target) return false;
-  }
-  return true;
 }
 
 export function buildYieldRiskBudget(

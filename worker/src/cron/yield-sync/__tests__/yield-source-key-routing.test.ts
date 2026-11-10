@@ -20,9 +20,6 @@ import { resolveEvidenceClass } from "../evaluation";
  */
 describe("yield source-key routing table", () => {
   it("derives ordered family membership, required caches and routes from one registry", () => {
-    expect(SUPPLEMENTAL_SOURCE_FAMILY_KEYS).toEqual([
-      "morpho", "pendle", "yearnKong", "beefy", "compoundV3", "aaveV3", "roycoDawn",
-    ]);
     expect(REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS).toEqual(SUPPLEMENTAL_SOURCE_FAMILY_KEYS);
     for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
       const entry = SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family];

@@ -67,7 +67,7 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 4. Export the targeted parent/source rows from both hourly and daily tiers in a version-3 artifact, including each row's nullable `source_observed_at` observation clock; review the separate tier counts.
 5. Rehearse the delete + restore drill on a local throwaway SQLite dataset, including daily-only rows older than hourly retention, and compare complete rows in both tables.
 6. Run the bounded production cleanup only after the restore drill passes.
-7. Verify the parent/source rows stay absent after the next hourly writer cycle.
+7. Verify the parent/source rows stay absent after the next post-V9 writer cycle.
 
 - Use `worker/scripts/yield-history-cleanup.ts` controls rather than ad hoc SQL. The script owns the `--arm-writer-pause`, `--clear-writer-pause`, `--execute`, `--confirm yield-history-cleanup`, and guarded restore paths.
 - If the pause key is stale and no cleanup operator owns it, clear it with the script's `--clear-writer-pause` path, then let the next post-V9 `sync-yield-data` cycle publish.

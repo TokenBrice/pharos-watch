@@ -128,7 +128,7 @@ describe("resolveBaseSymbol", () => {
 
 describe("bucketForAsset", () => {
   it("classifies stablecoin assets", () => {
-    for (const asset of ["sUSDe", "DAI", "USDC", "PYUSD", "USR", "DOLA-FRAXBP"]) {
+    for (const asset of ["sUSDe", "sSwanUSD", "DAI", "USDC", "PYUSD", "USR", "DOLA-FRAXBP"]) {
       expect(bucketForAsset(asset)).toBe("stablecoin");
     }
   });
@@ -139,12 +139,16 @@ describe("bucketForAsset", () => {
 });
 
 describe("adaptFirmMarkets", () => {
-  it("maps the identified staked yBOLD collateral while preserving unknown collateral", () => {
-    const payload = { markets: [makeMarket("ysyBOLD", 80), makeMarket("UNKNOWN", 20)], timestamp: 1_776_330_494 };
+  it("maps identified staking-vault collateral while preserving unknown collateral", () => {
+    const payload = { markets: [makeMarket("ysyBOLD", 40), makeMarket("sSwanUSD", 40), makeMarket("UNKNOWN", 20)], timestamp: 1_776_330_494 };
     const result = adaptFirmMarkets(payload, 100);
     expect(result.slices).toContainEqual({
-      sourceKey: "dola-inverse:ysybold", name: "ysyBOLD collateral", pct: 80,
+      sourceKey: "dola-inverse:ysybold", name: "ysyBOLD collateral", pct: 40,
       risk: "medium", coinId: "ybold-yearn", depType: "collateral",
+    });
+    expect(result.slices).toContainEqual({
+      sourceKey: "dola-inverse:sswanusd", name: "sSwanUSD collateral", pct: 40,
+      risk: "high", coinId: "swanusd-swan", depType: "collateral",
     });
     expect(result.metadata?.unknownExposurePct).toBe(20);
     expect(listUnexpectedDolaAssets(payload)).toEqual(["UNKNOWN"]);
@@ -267,7 +271,7 @@ describe("adaptFirmMarkets", () => {
         makeMarket("yv-reUSD-sDOLA", 50),
         makeMarket("sDOLA-scrvUSD clp", 200),
         makeMarket("reUSD", 100),
-        { ...makeMarket("sUSDe", 100), underlying: { symbol: "sUSDe", isLP: true } },
+        { ...makeMarket("sSwanUSD", 100), underlying: { symbol: "sSwanUSD", isLP: true } },
       ],
       timestamp: 1000,
     }, 600);

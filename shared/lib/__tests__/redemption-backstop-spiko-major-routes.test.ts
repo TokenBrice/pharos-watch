@@ -5,9 +5,21 @@ import { resolveReviewedRedemptionSettlementDelay } from "../redemption-backstop
 import { resolveRedemptionCostBpsAtNotional, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstop-configs/shared";
 import { COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS as familyConfigs } from "../redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit";
 
-const clock = Date.parse("2026-10-08T12:00:00Z") / 1000;
+const clock = Date.parse("2026-11-07T12:00:00Z") / 1000;
 const spikoIds = ["ustbl-spiko", "safo-spiko-usd", "spkcc-spiko", "uktbl-spiko", "gbpsafo-spiko", "eutbl-spiko", "eursafo-spiko", "eurspkcc-spiko"];
 const midasIds = ["mf-one-midas", "mglobal-midas-fasanara", "mhyper-midas", "mmev-midas", "mapollo-midas"];
+
+/**
+ * `reviewedAt` is curated review metadata, not a scoring input, so pin the
+ * documented review-age budget (`redemption-backstop-confidence.ts`, 365 days)
+ * instead of the literal date a re-review would change.
+ */
+function expectReviewDateWithinBudget(reviewedAt: string | undefined, id: string): void {
+  expect(reviewedAt, id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  const reviewedAtSec = Date.parse(`${reviewedAt}T00:00:00Z`) / 1000;
+  expect(reviewedAtSec, id).toBeLessThanOrEqual(clock);
+  expect(clock - reviewedAtSec, id).toBeLessThanOrEqual(365 * 86_400);
+}
 
 describe("reviewed Spiko and major-issuer route boundaries", () => {
   it("does not expose an operational route for account-only BFUSD", () => {
@@ -29,17 +41,20 @@ describe("reviewed Spiko and major-issuer route boundaries", () => {
       expect(resolveRedemptionCostBpsAtNotional(config.costModel, 100_000)).toBe(0);
       expect(config.v9RouteReviewTerms).toMatchObject({
         settlementModel: "days", scoringDisposition: "bounded-terms-gap",
-        missingScoringFields: ["settlement"], reviewedAt: "2026-10-07",
+        missingScoringFields: ["settlement"],
       });
+      expectReviewDateWithinBudget(config.v9RouteReviewTerms?.reviewedAt, id);
       expect(config.v9RouteReviewTerms).not.toHaveProperty("settlementDelaySec");
       expect(config.v9RouteReviewTerms).not.toHaveProperty("businessDayTerms");
     },
   );
 
   it("keeps GBPSAFO's independent review and merged factor gaps", () => {
-    expect(getRedemptionBackstopConfig("gbpsafo-spiko")!.v9RouteReviewTerms).toMatchObject({
-      reviewedAt: "2026-09-04", missingScoringFields: ["capacity", "settlement", "cost"],
+    const terms = getRedemptionBackstopConfig("gbpsafo-spiko")!.v9RouteReviewTerms;
+    expect(terms).toMatchObject({
+      missingScoringFields: ["capacity", "settlement", "cost"],
     });
+    expectReviewDateWithinBudget(terms?.reviewedAt, "gbpsafo-spiko");
   });
 
   it.each(["rlusd-ripple", "tusd-trueusd", "usdgo-osl", "ylds-figure"])(
@@ -56,8 +71,9 @@ describe("reviewed Spiko and major-issuer route boundaries", () => {
       const config = getRedemptionBackstopConfig(id)!;
       expect(config.settlementModel).toBe("days");
       expect(config.v9RouteReviewTerms).toMatchObject({
-        scoringDisposition: "bounded-terms-gap", reviewedAt: "2026-10-07",
+        scoringDisposition: "bounded-terms-gap",
       });
+      expectReviewDateWithinBudget(config.v9RouteReviewTerms?.reviewedAt, id);
       expect(config.v9RouteReviewTerms!.missingScoringFields).toEqual(expect.arrayContaining(["cost", "settlement"]));
       expect(config.v9RouteReviewTerms).not.toHaveProperty("settlementDelaySec");
     },

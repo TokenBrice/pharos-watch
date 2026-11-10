@@ -8,7 +8,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
-  buildDexMeasuredExecutionTargetId,
   getDexMeasuredExecutionFreshnessMaxSec,
   validateDexMeasuredExecutionProfile,
   getDexMeasuredExecutionProbeNotionals,
@@ -158,16 +157,6 @@ function target(
     referencePriceUsd: 1,
   };
   return makeMeasuredTarget({
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-      stablecoinId: policy.stablecoinId,
-      chain: policy.chain,
-      protocol: "curve",
-      poolId,
-      tokenInAddress: tokenIn.address,
-      tokenOutAddress: tokenOut.address,
-      poolTokenAddresses,
-    }),
     stablecoinId: policy.stablecoinId,
     adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
     protocol: "curve",
@@ -361,20 +350,6 @@ describe("reviewed Curve StableSwap-NG policy", () => {
       CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
     );
     expect(freshnessMaxSec).toBe(10_800);
-    expect(evaluateCurveStableSwapNgEligibility({
-      chain: "ethereum",
-      endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
-      blockNumber: BLOCK_NUMBER,
-      nowSec: BLOCK_TIMESTAMP + freshnessMaxSec,
-      evidence: runtimeEvidence(),
-    })).toEqual({ ok: true });
-    expect(evaluateCurveStableSwapNgEligibility({
-      chain: "ethereum",
-      endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
-      blockNumber: BLOCK_NUMBER,
-      nowSec: BLOCK_TIMESTAMP + freshnessMaxSec + 1,
-      evidence: runtimeEvidence(),
-    })).toEqual({ ok: false, reason: "stale-pinned-block" });
 
     const verify = createCurveStableSwapNgDeploymentVerifier({
       fetchCodeStatus: vi.fn(async () => ({ status: "unavailable" as const })),

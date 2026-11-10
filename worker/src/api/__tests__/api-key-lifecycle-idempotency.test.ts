@@ -8,6 +8,7 @@ import {
   handleApiKeyUpdateRoute,
 } from "../api-keys";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 
 stubCryptoForAuth();
 
@@ -135,6 +136,45 @@ describe("API key lifecycle idempotency", () => {
       { action: "deactivated", count: 1 },
       { action: "rotated", count: 1 },
       { action: "updated", count: 1 },
+    ]);
+  });
+
+  it("keeps the committed credential and its token when the audit write fails", async () => {
+    const { sqlite } = fixtures.open();
+    const db = createSqliteD1(sqlite, {
+      onRun(sql) {
+        if (sql.includes("INSERT INTO api_key_audit_log")) throw new Error("injected audit failure");
+      },
+    });
+
+    const createResponse = await handleApiKeysRoute({
+      db,
+      trustedAdmin: true,
+      apiKeyHashPepper: "pepper",
+      request: mutationRequest("/api/api-keys", "audit-failure-create", { name: "Ops Key" }),
+    });
+    const created = (await readJsonResponse(createResponse, 201)) as { key: { id: number; keyPrefix: string }; token: string };
+    expect(created.token).toMatch(/^ph_live_/);
+    expect(sqlite.prepare("SELECT key_prefix FROM api_keys WHERE id = ?").get(created.key.id))
+      .toEqual({ key_prefix: created.key.keyPrefix });
+
+    const rotateResponse = await handleApiKeyRotateRoute({
+      db,
+      apiKeyId: created.key.id,
+      trustedAdmin: true,
+      apiKeyHashPepper: "pepper",
+      request: mutationRequest(`/api/api-keys/${created.key.id}/rotate`, "audit-failure-rotate"),
+    });
+    const rotated = (await readJsonResponse(rotateResponse, 200)) as { key: { keyPrefix: string }; token: string };
+    expect(rotated.token).toMatch(/^ph_live_/);
+    expect(sqlite.prepare("SELECT key_prefix FROM api_keys WHERE id = ?").get(created.key.id))
+      .toEqual({ key_prefix: rotated.key.keyPrefix });
+
+    expect(
+      sqlite.prepare("SELECT action, response_status FROM admin_idempotency_keys ORDER BY action").all(),
+    ).toEqual([
+      { action: "api-key-create", response_status: 201 },
+      { action: "api-key-rotate", response_status: 200 },
     ]);
   });
 });

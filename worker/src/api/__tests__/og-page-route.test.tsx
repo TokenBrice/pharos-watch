@@ -18,6 +18,7 @@ vi.mock("../og-page", async () => ({
 }));
 
 import { handleOg, resetOgWasmInitializationForTests } from "../og";
+import { loadUpcomingOgPage } from "../og-page/upcoming";
 
 beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
@@ -131,6 +132,12 @@ describe("/api/og/page/:slug", () => {
       expect(error).not.toHaveBeenCalled();
       const record = JSON.parse(String(info.mock.calls[info.mock.calls.length - 1]?.[0]));
       expect(record).toMatchObject({ level: "info", event: "og.page_timeless", metadata: { slug: "upcoming", reason: "timeless-by-decision" } });
+      // Timeless by decision means the loader must not read the database at all.
+      const neverRead = new Proxy({}, { get: () => { throw new Error("db read"); } }) as D1Database;
+      await expect(loadUpcomingOgPage(neverRead, 1_800_000_000)).resolves.toEqual({
+        kind: "unavailable",
+        reason: "timeless-by-decision",
+      });
     } finally {
       info.mockRestore();
       warn.mockRestore();

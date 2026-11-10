@@ -9,8 +9,11 @@ import {
   withYieldBenchmarkStaticMeta,
   type ParsedYieldBenchmarkMeta,
 } from "../yield-sync/benchmarks";
-import { buildHistoryKey } from "../yield-sync/history";
-import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
+import { buildHistoryKey, pickHistoryRowsForSource } from "../yield-sync/history";
+import type { YieldHistorySnapshotRow } from "../yield-sync/history";
+import { buildYieldSourceRisk, computeTvlWeightedMedianApy, evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
+import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import { compareCandidates } from "../yield-sync/evaluation";
 import {
@@ -1791,5 +1794,386 @@ describe("source eligibility and unavailable score inputs", () => {
       pysNullReason: "missing-inputs",
     });
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:base");
+  });
+});
+
+// Legacy carry-forward decides whether a switched row inherits or empties its
+// loaded 30-day window, so the acceptance and semantic rejection guards stay
+// pinned here.
+const HISTORY_COIN_ID = "test-coin";
+const HISTORY_CURRENT_SOURCE_KEY = "defillama:new-source";
+const HISTORY_CURRENT_DATA_SOURCE = "defillama";
+const HISTORY_START_SEC = 1_774_000_000;
+
+function historyLegacyRow(
+  recordedAt: number,
+  overrides: Partial<YieldHistorySnapshotRow> = {},
+): YieldHistorySnapshotRow {
+  return {
+    stablecoin_id: HISTORY_COIN_ID,
+    source_key: "legacy-best",
+    recorded_at: recordedAt,
+    is_best: 1,
+    apy: 4.6,
+    apy_base: null,
+    source_tvl_usd: 1_000_000,
+    data_source: HISTORY_CURRENT_DATA_SOURCE,
+    yield_source: "Legacy Source",
+    yield_type: "lending-vault",
+    exchange_rate: null,
+    ...overrides,
+  };
+}
+
+function pickLegacyHistory(params: {
+  legacyRows?: YieldHistorySnapshotRow[];
+  resolvedCount?: number;
+  dataSource?: string;
+} = {}) {
+  return pickHistoryRowsForSource(
+    HISTORY_COIN_ID,
+    HISTORY_CURRENT_SOURCE_KEY,
+    params.dataSource ?? HISTORY_CURRENT_DATA_SOURCE,
+    new Map(),
+    new Map(),
+    new Map(),
+    params.legacyRows ? new Map([[HISTORY_COIN_ID, params.legacyRows]]) : new Map(),
+    params.resolvedCount == null ? new Map() : new Map([[HISTORY_COIN_ID, params.resolvedCount]]),
+  );
+}
+
+describe("pickHistoryRowsForSource legacy carry-forward", () => {
+  it("carries same-family legacy history into a switched row", () => {
+    const fresh = historyLegacyRow(HISTORY_START_SEC - 2 * DAY_SECONDS);
+
+    const result = pickLegacyHistory({ legacyRows: [fresh] });
+
+    expect(result).toEqual({ rows: [fresh], usedLegacyHistory: true });
+  });
+
+
+  it("rejects legacy history once more than one candidate resolved for the coin", () => {
+    const result = pickLegacyHistory({ legacyRows: [historyLegacyRow(HISTORY_START_SEC - DAY_SECONDS)], resolvedCount: 2 });
+
+    expect(result).toEqual({ rows: [], usedLegacyHistory: false });
+  });
+
+  it("rejects legacy history that belongs to another data-source family", () => {
+    const result = pickLegacyHistory({
+      legacyRows: [historyLegacyRow(HISTORY_START_SEC - DAY_SECONDS, { data_source: "onchain" })],
+      resolvedCount: 1,
+    });
+
+    expect(result).toEqual({ rows: [], usedLegacyHistory: false });
+  });
+
+  it("rejects legacy history whose rows mix data-source families", () => {
+    const result = pickLegacyHistory({
+      legacyRows: [
+        historyLegacyRow(HISTORY_START_SEC - DAY_SECONDS),
+        historyLegacyRow(HISTORY_START_SEC - 2 * DAY_SECONDS, { data_source: "onchain" }),
+      ],
+      resolvedCount: 1,
+    });
+
+    expect(result).toEqual({ rows: [], usedLegacyHistory: false });
+  });
+
+  it("prefers keyed source history over the legacy window", () => {
+    const keyed = historyLegacyRow(HISTORY_START_SEC - DAY_SECONDS, { source_key: HISTORY_CURRENT_SOURCE_KEY, apy: 5.1 });
+    const result = pickHistoryRowsForSource(
+      HISTORY_COIN_ID,
+      HISTORY_CURRENT_SOURCE_KEY,
+      HISTORY_CURRENT_DATA_SOURCE,
+      new Map([[buildHistoryKey(HISTORY_COIN_ID, HISTORY_CURRENT_SOURCE_KEY), [keyed]]]),
+      new Map(),
+      new Map(),
+      new Map([[HISTORY_COIN_ID, [historyLegacyRow(HISTORY_START_SEC - DAY_SECONDS, { apy: 4.2 })]]]),
+      new Map(),
+    );
+
+    expect(result).toEqual({ rows: [keyed], usedLegacyHistory: false });
+  });
+});
+
+describe("current anchor-only resolution", () => {
+  it.each(["onchain", "protocol-api"] as const)("excludes %s re-anchor seeds before statistics and arbitration", async (dataSource) => {
+    const input = baseEvaluationInput();
+    const sourceKey = `${dataSource}:coin-a:nav`;
+    const seed = { id: "coin-a", symbol: "A", yield: resolvedYield({
+      observationKind: "anchor-only", dataSource, sourceKey,
+      currentApy: 0, apyBase: null, exchangeRate: 1.1,
+    }) };
+    input.resolved = [seed];
+    input.sourceHistory.set(buildHistoryKey("coin-a", sourceKey), [
+      { ...historyLegacyRow(input.startSec - DAY_SECONDS), stablecoin_id: "coin-a", source_key: sourceKey, apy: 6 },
+    ]);
+    const anchorOnly = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    expect(anchorOnly.evaluatedSources).toEqual([]);
+    expect(anchorOnly.bestSourceKeyByCoin.size).toBe(0);
+    expect(anchorOnly.medianApy).toBeNull();
+    expect(anchorOnly.rowsRejected).toBe(0);
+
+    const measured = { id: "coin-a", symbol: "A", yield: resolvedYield({ currentApy: 4, apyBase: 4 }) };
+    input.resolved = [seed, measured];
+    const withAlternative = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    expect(withAlternative.evaluatedSources).toHaveLength(1);
+    expect(withAlternative.bestSourceKeyByCoin.get("coin-a")).toBe(measured.yield.sourceKey);
+    expect(withAlternative.evaluatedSources[0]).toMatchObject({ currentApy: 4, apy7d: 4, apy30d: 4 });
+  });
+
+  it.each([0, -2])("keeps a genuinely measured %s%% return after an anchor-only observation", async (apy) => {
+    const input = baseEvaluationInput();
+    const sourceKey = "onchain:coin-a";
+    input.resolved = [{ id: "coin-a", symbol: "A", yield: resolvedYield({
+      sourceKey, dataSource: "onchain", currentApy: apy, apyBase: apy, exchangeRate: 1,
+    }) }];
+    input.sourceHistory.set(buildHistoryKey("coin-a", sourceKey), [{
+      ...historyLegacyRow(input.startSec - 7 * DAY_SECONDS), stablecoin_id: "coin-a", source_key: sourceKey,
+      data_source: "onchain", apy: 0, apy_base: null, exchange_rate: 1,
+    }]);
+    const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    expect(result.evaluatedSources[0]).toMatchObject({ currentApy: apy, apy7d: apy, apy30d: apy });
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe(sourceKey);
+  });
+});
+
+function makeRiskSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYieldSource {
+  return {
+    sourceKey: "aave-v3-onchain:ethereum:0xasset",
+    dataSource: "onchain",
+    yieldType: "lending-vault",
+    currentApy: 5,
+    apyReward: null,
+    sourceRisk: null,
+    sourceRiskPenalty: 1,
+    sourceDepthRatio: null,
+    observationCount30d: null,
+    sourceSwitchCount30d: null,
+    venueProtocol: null,
+    venueChain: null,
+    ...overrides,
+  } as EvaluatedYieldSource;
+}
+
+describe("yield source-risk registry", () => {
+  it("publishes the reviewed venue tier on built source-risk evidence", () => {
+    const sourceRisk = buildYieldSourceRisk({
+      source: makeRiskSource(),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+
+    expect(sourceRisk).toMatchObject({
+      sourceRiskPenalty: 1,
+      venueProtocol: "aave-v3",
+      venueChain: "ethereum",
+      venueRiskTier: "low",
+      venueRiskScores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
+    });
+    expect(sourceRisk.venueRiskWeighted).toBeCloseTo(1.3, 5);
+  });
+
+  it("treats fixed-yield Pendle rows as lending-market opportunities with reviewed venue risk", () => {
+    const sourceRisk = buildYieldSourceRisk({
+      source: makeRiskSource({
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+        dataSource: "protocol-api",
+        yieldType: "fixed-yield",
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+
+    expect(sourceRisk).toMatchObject({
+      deploymentPlace: "lending-market",
+      venueProtocol: "pendle",
+      venueChain: "ethereum",
+      venueRiskTier: "low",
+    });
+  });
+
+  it("normalizes sourceRiskScore from the resolved sourceRiskPenalty", () => {
+    const neutralSource = buildYieldSourceRisk({
+      source: makeRiskSource({ sourceRiskPenalty: 1 }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(neutralSource.sourceRiskScore).toBe(0);
+
+    const elevatedSource = buildYieldSourceRisk({
+      source: makeRiskSource({ sourceRiskPenalty: 1.75 }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(elevatedSource.sourceRiskScore).toBe(50);
+
+    const maxedSource = buildYieldSourceRisk({
+      source: makeRiskSource({ sourceRiskPenalty: 2.5 }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(maxedSource.sourceRiskScore).toBe(100);
+  });
+
+  it("emits rewardShare 0 for a base-only payload and never a stored value (A9)", () => {
+    const baseOnly = buildYieldSourceRisk({
+      source: makeRiskSource({ apyBase: 5, apyReward: null, currentApy: 5 }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(baseOnly.rewardShare).toBe(0);
+
+    // The same row on a previous publication stored a reward-heavy share. The
+    // payload proves reward = 0, so the stored value must not be republished —
+    // it would price a reward driver the row does not pay.
+    const withStoredShare = buildYieldSourceRisk({
+      source: makeRiskSource({
+        apyBase: 5,
+        apyReward: null,
+        currentApy: 5,
+        sourceRisk: { rewardShare: 0.83 } as EvaluatedYieldSource["sourceRisk"],
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(withStoredShare.rewardShare).toBe(0);
+
+    // A genuine split still resolves to the derived share.
+    const rewardHeavy = buildYieldSourceRisk({
+      source: makeRiskSource({ apyBase: 1, apyReward: 4, currentApy: 5 }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(rewardHeavy.rewardShare).toBeCloseTo(0.8, 5);
+
+    // No split and no base-only proof stays unknown rather than defaulting to 0.
+    const unknownSplit = buildYieldSourceRisk({
+      source: makeRiskSource({ apyBase: 3, apyReward: null, currentApy: 5 }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(unknownSplit.rewardShare).toBeNull();
+  });
+
+  it("omits investabilityFlags when no producer reported them (R1)", () => {
+    const plainDefillama = buildYieldSourceRisk({
+      source: makeRiskSource({ sourceKey: "defillama:pool-1", dataSource: "defillama", yieldType: "lending-vault" }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(plainDefillama.investabilityFlags).toBeUndefined();
+
+    const onchainWithoutFlags = buildYieldSourceRisk({
+      source: makeRiskSource({
+        sourceRisk: { venueProtocol: "aave-v3", venueChain: "ethereum" },
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(onchainWithoutFlags.investabilityFlags).toBeUndefined();
+
+    const reportedFlags = ["listing-verified", "senior-protected-by-junior-coverage"];
+    const withFlags = buildYieldSourceRisk({
+      source: makeRiskSource({
+        sourceKey: "protocol-api:royco-dawn:ethereum:0xmarket",
+        dataSource: "protocol-api",
+        yieldType: "structured-tranche",
+        sourceRisk: { venueProtocol: "royco-dawn", investabilityFlags: reportedFlags },
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(withFlags.investabilityFlags).toEqual(reportedFlags);
+  });
+
+  it("resolves the wrapper venue of tracked variant children (A8)", () => {
+    const resolved = buildYieldSourceRisk({
+      source: makeRiskSource({ id: "susds-sky", sourceKey: "onchain:susds-sky", dataSource: "onchain" }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(resolved.venueProtocol).toBe("spark-savings");
+    expect(resolved.venueRiskTier).toBe("low");
+
+    // Wrapper tiers follow their independent venue reviews.
+    for (const [id, venue, tier] of [
+      ["susde-ethena", "ethena", "medium"],
+      ["sfrxusd-frax", "frax", "unknown"],
+      ["wsrusd-reservoir", "reservoir-protocol", "medium"],
+    ] as const) {
+      const sourceRisk = buildYieldSourceRisk({
+        source: makeRiskSource({ id, sourceKey: `onchain:${id}`, dataSource: "onchain" }),
+        provenance: { sourceAgeSeconds: 300 },
+        isBest: true,
+      });
+      expect(sourceRisk.venueProtocol, id).toBe(venue);
+      expect(sourceRisk.venueRiskTier, id).toBe(tier);
+    }
+  });
+
+  it("resolves a parent override before the child-id map for projected wrapper rows (A8)", () => {
+    const projected = buildYieldSourceRisk({
+      source: makeRiskSource({
+        id: "usds-sky",
+        sourceKey: "linked-variant:susds-sky:onchain:susds-sky",
+        dataSource: "onchain",
+        venueProtocol: "spark-savings",
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(projected.venueProtocol).toBe("spark-savings");
+    expect(projected.venueRiskTier).toBe("low");
+  });
+});
+
+describe("computeTvlWeightedMedianApy", () => {
+  it("returns null for empty input", () => {
+    expect(computeTvlWeightedMedianApy([])).toBeNull();
+  });
+
+  it("returns null when all rows have null TVL", () => {
+    expect(computeTvlWeightedMedianApy([
+      { apy_30d: 5, source_tvl_usd: null },
+      { apy_30d: 3, source_tvl_usd: null },
+    ])).toBeNull();
+  });
+
+  it("returns null when all rows have zero TVL", () => {
+    expect(computeTvlWeightedMedianApy([
+      { apy_30d: 5, source_tvl_usd: 0 },
+    ])).toBeNull();
+  });
+
+  it("returns the APY of a single valid row", () => {
+    expect(computeTvlWeightedMedianApy([
+      { apy_30d: 5, source_tvl_usd: 1_000_000 },
+    ])).toBe(5);
+  });
+
+  it("returns TVL-weighted median, not simple median", () => {
+    const result = computeTvlWeightedMedianApy([
+      { apy_30d: 10, source_tvl_usd: 100_000 },
+      { apy_30d: 3, source_tvl_usd: 10_000_000 },
+    ]);
+    expect(result).toBe(3);
+  });
+
+  it("filters out rows with zero or negative APY", () => {
+    const result = computeTvlWeightedMedianApy([
+      { apy_30d: 0, source_tvl_usd: 100_000_000 },
+      { apy_30d: 5, source_tvl_usd: 1_000_000 },
+    ]);
+    expect(result).toBe(5);
+  });
+
+  it("picks median from sorted valid rows for balanced TVL", () => {
+    const result = computeTvlWeightedMedianApy([
+      { apy_30d: 2, source_tvl_usd: 1_000_000 },
+      { apy_30d: 5, source_tvl_usd: 1_000_000 },
+      { apy_30d: 8, source_tvl_usd: 1_000_000 },
+    ]);
+    expect(result).toBe(5);
   });
 });

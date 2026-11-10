@@ -4,7 +4,7 @@ import { registerStablecoinParameterContract } from "../../test-helpers/__shared
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
-import { makeFlowHourlyRow } from "./mint-burn-flows.test-support";
+import { flowResponse, makeFlowHourlyRow } from "./mint-burn-flows.test-support";
 import { aggregateFlowCacheKey, perCoinFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
@@ -19,10 +19,6 @@ import { handleMintBurnEvents } from "../mint-burn-events";
 import type { MockD1Database } from "@shared/test-utils/mock-d1";
 
 const fixtures = createLatestSchemaFixtureTracker();
-
-// ---------------------------------------------------------------------------
-// Contract tests (handler-level, using D1 mock)
-// ---------------------------------------------------------------------------
 
 describe("handleMintBurnFlows contract tests", () => {
   afterEach(() => {
@@ -54,7 +50,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("hourly");
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body).not.toHaveProperty("stablecoinId");
-    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 134, pendingAdmissionCount: 2 });
+    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 132, pendingAdmissionCount: 2 });
     expect(parsed.data?.publication?.legs.every((leg) => leg.status !== "admitted")).toBe(true);
     const cached = (db as MockD1Database).getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === aggregateFlowCacheKey(24));
@@ -94,7 +90,7 @@ describe("handleMintBurnFlows contract tests", () => {
     // The inactive key keeps a latent pause for its re-admission; retained detail still reads.
     expect(JSON.parse(String((sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1")
       .get() as { paused_keys: string }).paused_keys))).toContain(mintBurnConfigKey(config));
-    const response = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${id}`));
+    const response = await flowResponse(db, `?stablecoin=${id}`);
     const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
     expect(body.stablecoinId).toBe(id);
     expect(body.chains.map((chain) => chain.chainId)).toEqual(["ethereum"]);
@@ -114,10 +110,12 @@ describe("handleMintBurnFlows contract tests", () => {
       .run(id, configs[0].chain.chainId, Math.floor(nowSec / 3600) * 3600 - 3600);
     sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)")
       .run(JSON.stringify(configs.map(mintBurnConfigKey)), nowSec);
-    const response = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${id}`));
+    const response = await flowResponse(db, `?stablecoin=${id}`);
     const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
-    expect(body).toMatchObject({ stablecoinId: id, netFlowUsd: null, mintVolumeUsd: 0, chains: [], hourly: [],
+    expect(body).toMatchObject({ stablecoinId: id, netFlowUsd: null, mintVolumeUsd: 0, chains: [],
       scanCoverage: { complete: false } });
+    expect(body.hourly).toHaveLength(24);
+    expect(body.hourly.every((hour) => hour.netFlowUsd === null && !hour.scanCoverage?.complete)).toBe(true);
     expect(body.publication?.legs.every((leg) => leg.status === "disabled")).toBe(true);
   });
 
@@ -136,7 +134,7 @@ describe("handleMintBurnFlows contract tests", () => {
   it("retains the producer's declared unavailable reason through the authoritative shared DTO", async () => {
     const unavailableDb = mintBurnScenario({ rows: { scanCoverage: [] } });
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(
-      await handleMintBurnFlows(unavailableDb, new URL("https://x/api/mint-burn-flows")), 200));
+      await flowResponse(unavailableDb), 200));
     expect(body.coins.length).toBeGreaterThan(0);
     for (const coin of body.coins) {
       expect(coin.coverage?.unavailableReason).toBe("scan-coverage-incomplete");
@@ -166,16 +164,13 @@ describe("handleMintBurnFlows contract tests", () => {
   });
 
   it("rejects out-of-range hours instead of clamping them", async () => {
-    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=9999"));
+    const res = await flowResponse(db, "?hours=9999");
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid hours: must be between 1 and 720" });
   });
 
   it("returns 503 when stablecoins cache is unavailable and no flow fallback cache exists", async () => {
-    const res = await handleMintBurnFlows(
-      mintBurnScenario({ stablecoinsCache: null }),
-      new URL("https://x/api/mint-burn-flows"),
-    );
+    const res = await flowResponse(mintBurnScenario({ stablecoinsCache: null }));
 
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({
@@ -235,8 +230,8 @@ describe("aggregate flight-to-quality cohorts", () => {
     }
     const hourly = sqlite.prepare(`INSERT INTO mint_burn_hourly
       (stablecoin_id, chain_id, hour_ts, mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd,
-       mint_unpriced_event_count, burn_unpriced_event_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)`);
+       mint_unpriced_event_count, burn_unpriced_event_count, mint_unresolved_event_count, burn_unresolved_event_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)`);
     // Observed safe inflow is already past the +$100M activation threshold.
     hourly.run("usdc-circle", "ethereum", end - HOUR, 1, 0, 150_000_000, 0, 150_000_000);
     // The observed risky outflow is short of -$100M; the omitted risky coin is unbounded.
@@ -259,7 +254,7 @@ describe("aggregate flight-to-quality cohorts", () => {
     });
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({ kind: "v9", snapshot });
 
-    const response = await handleMintBurnFlows(db, new URL("https://api.test/api/mint-burn-flows"));
+    const response = await flowResponse(db);
     const body = MintBurnFlowsResponseSchema.parse(await response.json());
 
     // Reachability: the risky coin's only leg is published as pending admission.

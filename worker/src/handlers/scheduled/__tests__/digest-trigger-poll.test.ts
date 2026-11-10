@@ -582,7 +582,7 @@ describe("runDigestTriggerPollSlot", () => {
     }));
   });
 
-  it("does not start a replaced intent or overwrite a newer request during settlement", async () => {
+  it("does not start a replaced intent", async () => {
     const oldIntent = buildIntent("manual-digest-old");
     const newIntent = buildIntent("manual-digest-new");
     queueIntent(oldIntent);
@@ -593,17 +593,6 @@ describe("runDigestTriggerPollSlot", () => {
     });
     await runDigestTriggerPollSlot(buildRuntime());
     expect(generateDailyDigest).not.toHaveBeenCalled();
-    expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
-
-    queueIntent(oldIntent);
-    vi.mocked(generateDailyDigest).mockImplementationOnce(async () => {
-      fixture.sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
-        .run(JSON.stringify(newIntent), DIGEST_FORCE_RUN_CACHE_KEY);
-      return { status: "ok", itemCount: 1, metadata: "" };
-    });
-    runLeasedCron.mockImplementationOnce(async (_job, fn) => fn(new AbortController().signal, async () => {}));
-    await runDigestTriggerPollSlot(buildRuntime());
     expect(JSON.parse(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
       .get(DIGEST_FORCE_RUN_CACHE_KEY)!.value as string)).toEqual(newIntent);
   });

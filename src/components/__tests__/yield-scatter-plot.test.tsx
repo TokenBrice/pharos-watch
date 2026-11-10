@@ -38,9 +38,8 @@ function showTooltip(id: string) {
 
 describe("YieldScatterPlot", () => {
   it.each([
+    // risk and mobile are orthogonal inputs; one row per branch covers both.
     { risk: undefined, mobile: false },
-    { risk: "any", mobile: false },
-    { risk: undefined, mobile: true },
     { risk: "any", mobile: true },
   ])("renders captured acrdx loss inside the $risk cohort, mobile=$mobile", async ({ risk, mobile }) => {
     chart.mobile = mobile;
@@ -72,12 +71,27 @@ describe("YieldScatterPlot", () => {
       makeYieldRanking({ id: "rocket", apy30d: 200 }),
       makeYieldRanking({ id: "unscored", safetyScore: null }),
     ];
-    render(<YieldScatterPlot rankings={rankings} benchmarkRate={4.25} />);
+    const { rerender } = render(<YieldScatterPlot rankings={rankings} benchmarkRate={4.25} />);
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("15 yield-source rows plotted, including 1 on the upper rail");
-    expect(screen.getByText(/1 row without a safety score not shown/)).toBeTruthy();
-    showTooltip("rocket");
+    expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
+    const tooltip = showTooltip("rocket");
     expect(screen.getByText("200.00%")).toBeTruthy();
     expect(screen.getByText(/Chart rail:/)).toBeTruthy();
+    tooltip.unmount();
+    rerender(
+      <YieldScatterPlot
+        rankings={rankings}
+        benchmarkRate={4.25}
+        compact
+        frame="bare"
+        usesDefaultBenchmarkFrame
+      />,
+    );
+    expect(screen.getByText(/outlier pinned above/)).toBeTruthy();
+    expect(screen.getByText("(USD frame)")).toBeTruthy();
+    expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
+    const figure = screen.getByRole("figure");
+    expect(figure.getAttribute("aria-label")).toContain("1 row without a measured safety score not shown");
   });
 
   it.each([
@@ -109,6 +123,23 @@ describe("YieldScatterPlot", () => {
 
   it("discloses an entirely unscored population", () => {
     render(<YieldScatterPlot rankings={[makeYieldRanking({ safetyScore: null })]} benchmarkRate={4.25} />);
-    expect(screen.getByText(/1 row without a safety score not shown/)).toBeTruthy();
+    expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
+  });
+
+  it("does not plot the default-safety sentinel as a measured score", () => {
+    render(<YieldScatterPlot rankings={[
+      makeYieldRanking({
+        id: "sentinel",
+        symbol: "sentinel",
+        safetyScore: 40,
+        safetyGrade: "NR",
+        provenance: makeYieldProvenance({ usedDefaultSafety: true, safetyProvenance: "default-safety" }),
+      }),
+      makeYieldRanking({ id: "measured", safetyScore: 80 }),
+    ]} benchmarkRate={4.25} />);
+    expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
+    const points = chart.scatter.mock.calls.at(-1)![0].data as Array<{ id: string; x: number }>;
+    expect(points.map((point) => point.id)).toEqual(["measured"]);
+    expect(points[0].x).toBe(80);
   });
 });

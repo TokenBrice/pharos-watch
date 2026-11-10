@@ -2,6 +2,19 @@ import type { PricingSourceRegistryEntry } from "./pricing-source-registry-types
 import { definePricingSource, PRICING_SOURCE_PRESETS } from "./pricing-source-registry-presets";
 
 export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
+  definePricingSource(PRICING_SOURCE_PRESETS.fallbackSearch, {
+    key: "orca-exact",
+    label: "Orca reviewed exact-pool mark",
+    shortLabel: "Orca exact",
+    depegSourceFamily: "dex:orca",
+    maxTrustedAgeSec: 15 * 60,
+    defaultWeight: 1,
+    isReplaySafe: false,
+    isSearchDerived: false,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
+  }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "jupiter-exact",
     label: "Jupiter reviewed direct-route quote",

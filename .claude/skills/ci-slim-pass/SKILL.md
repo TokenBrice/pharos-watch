@@ -1,0 +1,1 @@
+../../../.codex/skills/ci-slim-pass/SKILL.md

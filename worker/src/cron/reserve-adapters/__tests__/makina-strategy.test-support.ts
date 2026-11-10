@@ -25,9 +25,11 @@ export const MAKINA_ALLOCATIONS_FIXTURE = JSON.parse(
 );
 
 // Runtime code of the reviewed AsyncRedeemer implementation
-// 0x49c4762ab838f2e5d8252b69b90a1e8587a74511, captured from a public Ethereum
-// RPC. Its keccak256 is the adapter's reviewed implementation-code pin, so
-// serving the real bytes exercises the real identity check.
+// 0x18a68a9ef93960c27894b5661b510980a6a93baf (beacon-repointed successor of
+// 0x49c4...74511 with a line-identical verified main source), captured from a
+// public Ethereum RPC. Its keccak256 is the adapter's reviewed
+// implementation-code pin, so serving the real bytes exercises the real
+// identity check.
 export const MAKINA_REVIEWED_IMPLEMENTATION_RUNTIME_CODE = readFileSync(
   join(FIXTURES_DIR, "makina-async-redeemer-runtime-code.txt"),
   "utf8",
@@ -42,9 +44,9 @@ export const MAKINA_ASYNC_REDEEMER = "0x1303c26cfe06bac5bfee29907f37919643def75c
 export const MAKINA_DUSD = "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef";
 export const MAKINA_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 export const MAKINA_BEACON = "0x1f20cdfa19b860f0dd78fefbb052be5aa5003dd9";
-export const MAKINA_REVIEWED_IMPLEMENTATION = "0x49c4762ab838f2e5d8252b69b90a1e8587a74511";
+export const MAKINA_REVIEWED_IMPLEMENTATION = "0x18a68a9ef93960c27894b5661b510980a6a93baf";
 export const MAKINA_REVIEWED_IMPLEMENTATION_CODE_HASH =
-  "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
+  "0x16650c691f2c846f529f23c1050d07ceb4919bfacae4f71e83b54f55837fb5e2";
 export const MAKINA_BLOCK = 25_646_765;
 export const MAKINA_LOCKED_SHARES = 3_000n * 10n ** 18n;
 

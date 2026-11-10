@@ -6,7 +6,7 @@ import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-s
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
-import { computeFreezableSummary, describeFreezableSupplyCoverage } from "@shared/lib/freezewatch/freezable-summary";
+import { computeFreezableSummary } from "@shared/lib/freezewatch/freezable-summary";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
@@ -48,7 +48,6 @@ export function BlacklistStats({
   const supportUnavailable = supportState === "unavailable";
   const stats = summary?.stats;
   const dataQuality = summary?.dataQuality;
-  const trackedFrozenTotal = stats ? (stats.trackedFrozenTotal ?? stats.activeFrozenTotal ?? 0) : null;
   const freezableSummary = computeFreezableSummary(blacklistStatusBuckets);
   const totalTrackedMarketCap = freezableSummary.totalMarketCap;
   const unfreezableBucket = blacklistStatusBuckets?.find((bucket) => bucket.key === "no") ?? null;
@@ -61,23 +60,11 @@ export function BlacklistStats({
       : null;
   const isUnfreezableShareLoading = supportDataLoading;
   const unfreezableSharePartial = freezableSummary.coverage === "partial";
-  // A partial observed-supply denominator qualifies the share with a small marker; it never replaces it.
+  // A partial observed-supply denominator is disclosed in the subtext ("observed", excluded count), not beside the figure.
   const unfreezableMarketShareValue =
-    isUnfreezableShareLoading || supportUnavailable || unfreezableMarketSharePct === null ? (
-      "—"
-    ) : unfreezableSharePartial ? (
-      <>
-        {formatMarketSharePercentage(unfreezableMarketSharePct)}
-        <span
-          className="ml-2 text-sm font-normal text-muted-foreground"
-          title={describeFreezableSupplyCoverage(freezableSummary) ?? undefined}
-        >
-          partial
-        </span>
-      </>
-    ) : (
-      formatMarketSharePercentage(unfreezableMarketSharePct)
-    );
+    isUnfreezableShareLoading || supportUnavailable || unfreezableMarketSharePct === null
+      ? "—"
+      : formatMarketSharePercentage(unfreezableMarketSharePct);
   const unfreezableCount = isUnfreezableShareLoading ? "syncing" : `${unfreezableBucket?.count ?? 0} stablecoins`;
   const baseUnfreezableSubtext = supportUnavailable
     ? "Freeze status data unavailable"
@@ -175,14 +162,23 @@ export function BlacklistStats({
       )}
       <MetricStatCard
         title="Tracked frozen total"
-        value={trackedFrozenTotal === null ? "—" : formatCurrency(trackedFrozenTotal)}
+        value={
+          stats
+            ? formatBlacklistValuation(stats.trackedFrozenTotal, {
+                knownCount: stats.trackedAddressCount - stats.trackedAmountGapCount,
+                unavailableCount: stats.trackedAmountGapCount,
+              }, formatCurrency, { markPartial: false })
+            : "—"
+        }
         subtext="last-known freeze snapshots"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"
       />
       <MetricStatCard
         title="Total wiped value"
-        value={stats ? formatBlacklistValuation(stats.destroyedTotal, stats.valuationCoverage?.destroyed) : "—"}
+        value={stats
+          ? formatBlacklistValuation(stats.destroyedTotal, stats.valuationCoverage?.destroyed, formatCurrency, { markPartial: false })
+          : "—"}
         subtext="destroyed or confiscated value"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"

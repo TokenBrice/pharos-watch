@@ -12,12 +12,12 @@ import {
   type ContractEventConfig,
 } from "../blacklist-contracts";
 import { normalizeTronAddress, tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
-import { batchExecute } from "../db";
+import { executeAtomicBatch } from "../db";
 import type { RateLimitedFetch } from "../evm-logs";
 import { decimalNumberFromBigInt } from "../bigint";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
-import { buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
+import { buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence, type BlacklistAmountSelectedState } from "./amount-persistence";
 import {
   fetchTronHeadBlock,
   fetchTronDestroyWindowClear,
@@ -52,7 +52,7 @@ const TRON_REPLAY_MAX_PAGES_PER_RUN = 120;
 const TRON_REPLAY_MIN_FREEZE_AGE_MS = 15 * 60_000;
 const TRON_REPLAY_PROVENANCE_SOURCE = "trongrid-transfer-replay";
 
-export interface TronReplayRow {
+export interface TronReplayRow extends BlacklistAmountSelectedState {
   id: string;
   stablecoin: string;
   event_type: string;
@@ -395,8 +395,7 @@ export async function backfillTronBlacklistAmounts(
   const rows = await db
     .prepare(
       `/* blacklist-tron-replay-candidates */
-       SELECT events.id, events.stablecoin, events.event_type, events.address, events.block_number,
-              events.timestamp, events.tx_hash, events.config_key, events.contract_address,
+       SELECT events.*,
               COALESCE(queue.attempt_count, 0) AS queue_attempt_count
        FROM blacklist_events AS events
        LEFT JOIN blacklist_amount_repair_queue AS queue ON queue.event_id = events.id
@@ -417,6 +416,7 @@ export async function backfillTronBlacklistAmounts(
   if (candidates.length === 0) return result;
 
   const statements: D1PreparedStatement[] = [];
+  const outcomes: Array<"resolved" | "retried" | "parked"> = [];
   const provider: TronReplayProviderContext = {
     apiKey: options.trongridApiKey,
     limiter: options.limiter,
@@ -434,6 +434,7 @@ export async function backfillTronBlacklistAmounts(
     errorClass: BlacklistRecoveryErrorClass,
     lastProvider: string,
   ): void => {
+    const outcome = resolveQueueOutcomeForFailure(errorClass, row.queue_attempt_count);
     statements.push(
       buildBlacklistAmountAttemptUpdate(
         db,
@@ -445,18 +446,20 @@ export async function backfillTronBlacklistAmounts(
           // Ambiguous evidence is a distinct, reviewable state, not a provider outage.
           amountStatus: errorClass === "ambiguous" ? "ambiguous" : "provider_failed",
         },
-        { requireUnresolvedAmount: true },
+        { requireUnresolvedAmount: true, selectedState: row },
       ),
     );
     statements.push(
       buildBlacklistAmountRepairQueueUpdate(db, {
         eventId: row.id,
-        outcome: resolveQueueOutcomeForFailure(errorClass, row.queue_attempt_count),
+        outcome,
         attemptedAt: attemptAt,
         priorAttempts: row.queue_attempt_count,
         errorClass,
+        requireChangedEvent: true,
       }),
     );
+    outcomes.push(outcome === "park" ? "parked" : "retried");
   };
 
   for (const row of candidates) {
@@ -472,11 +475,9 @@ export async function backfillTronBlacklistAmounts(
     const attemptAt = Math.floor(Date.now() / 1000);
     const config = resolveTronConfig(row);
     if (!config) {
-      result.attempted++;
       const errorClass: BlacklistRecoveryErrorClass =
         row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config";
       recordFailure(row, attemptAt, errorClass, "none");
-      result.retried++;
       continue;
     }
 
@@ -489,17 +490,11 @@ export async function backfillTronBlacklistAmounts(
     }
     if (recovery.lastErrorClass === "state_raced") continue;
 
-    result.attempted++;
     providerInteractionSeen = true;
     if (recovery.amount == null) {
       const errorClass = recovery.lastErrorClass ?? "provider_null";
       if (errorClass.startsWith("provider_")) providerFailureSeen = true;
       recordFailure(row, attemptAt, errorClass, "trongrid");
-      if (resolveQueueOutcomeForFailure(errorClass, row.queue_attempt_count) === "park") {
-        result.parked++;
-      } else {
-        result.retried++;
-      }
       continue;
     }
 
@@ -529,13 +524,19 @@ export async function backfillTronBlacklistAmounts(
         attemptedAt: attemptAt,
         priorAttempts: row.queue_attempt_count,
         errorClass: null,
+        requireChangedEvent: true,
       }),
     );
-    result.resolved++;
+    outcomes.push("resolved");
   }
 
   if (statements.length > 0) {
-    await batchExecute(db, statements, { signal });
+    const writes = await executeAtomicBatch(db, statements, { signal, returnResults: true });
+    for (const [index, outcome] of outcomes.entries()) {
+      if (Number(writes[index * 2]?.meta?.changes ?? 0) === 0) continue;
+      result.attempted++;
+      result[outcome]++;
+    }
     logWorkerEventArgs("lib", "info", `[sync-blacklist] Replayed ${result.resolved} Tron freeze amount(s)`);
   }
   // Feed the shared TronGrid circuit the same way the scan lane does, so a failing

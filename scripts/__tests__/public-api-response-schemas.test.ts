@@ -78,6 +78,9 @@ describe("public API response schemas", () => {
         priceUsd: 1.0001,
         priceSource: "coingecko+defillama-list",
         priceConfidence: "high",
+        priceObservedAt: 1_700_000_000,
+        priceSyncedAt: 1_700_000_060,
+        priceUpdatedAt: 1_700_000_060,
         supplySource: "defillama",
         supplyObservedAt: 1_700_000_000,
         supplyRestored: true,
@@ -153,7 +156,9 @@ describe("public API response schemas", () => {
   it("accepts unavailable current summary supply only with its reason field present", () => {
     const base = {
       id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
-      priceUsd: 1, priceSource: null, priceConfidence: null, supplySource: null, supplyObservedAt: null,
+      priceUsd: 1, priceSource: null, priceConfidence: null,
+      priceObservedAt: null, priceSyncedAt: null, priceUpdatedAt: null,
+      supplySource: null, supplyObservedAt: null,
       supplyRestored: false, supplyByPegUsd: {}, chainCount: 0, updatedAt: 1_779_105_600,
     };
     const unavailable = {

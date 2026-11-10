@@ -9,7 +9,9 @@ import type {
   YieldRankChangeAttribution,
   YieldScoreQualification,
 } from "@shared/types";
+import { computePYS } from "@shared/lib/yield-scoring";
 import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-presentation";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import type { CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { formatYieldRatioPercent, resolveYieldScoreQualification } from "@/lib/yield-constants";
@@ -22,8 +24,11 @@ const YIELD_CSV_COLUMNS = {
   pys: { header: "PYS", accessor: (row) => row.pharosYieldScore ?? "NR" },
   qualification: { header: "PYS qualification", accessor: resolveYieldScoreQualification },
   nullReason: { header: "PYS null reason", accessor: (row) => row.pysNullReason ?? "" },
-  safetyGrade: { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "NR" },
-  safetyScore: { header: "Safety score", accessor: (row) => row.safetyScore ?? "NR" },
+  safetyGrade: { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "unknown" },
+  safetyScore: {
+    header: "Safety score",
+    accessor: (row) => (row.safetyGrade === null ? "unknown" : row.safetyScore ?? "NR"),
+  },
   safetyProvenance: { header: "Safety provenance", accessor: (row) => row.provenance?.safetyProvenance ?? "unknown" },
   source: { header: "Yield source", accessor: (row) => row.yieldSource },
   type: { header: "Yield type", accessor: (row) => row.yieldType },
@@ -34,7 +39,10 @@ const YIELD_CSV_COLUMNS = {
   age: { header: "Source age seconds", accessor: (row) => row.sourceRisk?.sourceAgeSeconds ?? "unknown" },
   venue: { header: "Venue risk tier", accessor: (row) => row.sourceRisk?.venueRiskTier ?? "unknown" },
   completeness: { header: "Evidence completeness (%)", accessor: (row) => formatYieldRatioPercent(row.provenance?.evidenceCompleteness) },
-  benchmark: { header: "Benchmark", accessor: (row) => row.benchmarkLabel ?? "unknown" },
+  benchmark: {
+    header: "Benchmark",
+    accessor: (row) => (row.benchmarkLabel ? getYieldBenchmarkDisplayLabel(row) : "unknown"),
+  },
   tvl: { header: "TVL USD", accessor: (row) => row.sourceTvlUsd ?? "unknown" },
   stability: { header: "Stability (%)", accessor: (row) => formatYieldRatioPercent(row.yieldStability) },
   warnings: { header: "Warnings", accessor: (row) => row.warningSignals.join(" | ") },
@@ -160,6 +168,84 @@ export function formatSignedPysDelta(delta: number): string {
   const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
   const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
   return `${sign}${rounded} PYS`;
+}
+
+export interface PysNeutralizeInput {
+  apy30d: number;
+  safetyScore: number | null;
+  apyVarianceScore: number | null;
+  scalingFactor: number;
+  benchmarkRate: number | null;
+  usdBenchmarkRate: number | null;
+  sourceRiskPenalty: number;
+}
+
+export function buildPysNeutralizeInput(params: {
+  apy30d: number;
+  safetyScore: number | null;
+  scalingFactor: number;
+  benchmarkSpread: number | null;
+  hurdleRebase: number;
+  sourceRiskPenalty: number;
+  sustainabilityMult: number | null;
+}): PysNeutralizeInput {
+  const benchmarkRate = params.benchmarkSpread === null ? null : params.apy30d - params.benchmarkSpread;
+  return {
+    apy30d: params.apy30d,
+    safetyScore: params.safetyScore,
+    apyVarianceScore:
+      params.sustainabilityMult == null ? null : Math.max(0, Math.min(1, 1 - params.sustainabilityMult)),
+    scalingFactor: params.scalingFactor,
+    benchmarkRate,
+    usdBenchmarkRate: benchmarkRate === null ? null : benchmarkRate + params.hurdleRebase,
+    sourceRiskPenalty: params.sourceRiskPenalty,
+  };
+}
+
+// WHY: per-factor attribution via neutralize-and-rescore (see Presentation Boundaries
+// in docs/yield-intelligence.md). Deltas are not strictly additive.
+export function neutralizePysFactorAndRescore(
+  actualScore: number,
+  factor: "sourceRisk" | "safety" | "sustainability",
+  components: PysNeutralizeInput,
+): number {
+  const neutralized: PysNeutralizeInput = { ...components };
+  switch (factor) {
+    case "sourceRisk":
+      neutralized.sourceRiskPenalty = 1;
+      break;
+    case "safety":
+      neutralized.safetyScore = 100;
+      break;
+    case "sustainability":
+      neutralized.apyVarianceScore = 0;
+      break;
+  }
+  return actualScore - computePYS(neutralized);
+}
+
+/** Smallest PYS cost named on a row; smaller drags stay in the breakdown popover. */
+const PYS_ROW_DRAG_MIN_POINTS = 5;
+
+export interface PysRowDrag {
+  label: "stability" | "source risk";
+  points: number;
+}
+
+/**
+ * Stability and source-risk costs of at least PYS_ROW_DRAG_MIN_POINTS, largest
+ * first. Safety is left out: it has its own column, and neutralizing it
+ * saturates almost every score.
+ */
+export function selectPysRowDrags(score: number | null, components: PysNeutralizeInput): PysRowDrag[] {
+  if (score === null || !Number.isFinite(score)) return [];
+  const drags: PysRowDrag[] = [
+    { label: "stability", points: Math.round(neutralizePysFactorAndRescore(score, "sustainability", components)) },
+    { label: "source risk", points: Math.round(neutralizePysFactorAndRescore(score, "sourceRisk", components)) },
+  ];
+  return drags
+    .filter((drag) => drag.points <= -PYS_ROW_DRAG_MIN_POINTS)
+    .sort((a, b) => a.points - b.points);
 }
 
 export interface YieldRankChangeChipDisplay {

@@ -7,7 +7,7 @@ import {
   type V9DeploymentSupplyCensusRow,
 } from "@shared/types/safety-score-v9-deployment-supply-census";
 import { compareCodeUnits } from "@shared/lib/compare";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
@@ -16,8 +16,11 @@ import {
   fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   resolveClosestBlockAtOrBeforeTimestamp,
+  type EvmBlockHeader,
+  type EvmBlockSearchCache,
   type EvmMulticall3Call,
   type EvmRpcOptions,
+  type RecentFinalizedRpcPin,
 } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { sha256Hex } from "../hash";
@@ -114,7 +117,12 @@ export interface DeploymentSupplyCensusEvmChainAnchor {
 }
 
 export type DeploymentSupplyCensusEvmPinResolution =
-  | { readonly kind: "pinned"; readonly anchor: DeploymentSupplyCensusEvmChainAnchor }
+  | {
+      readonly kind: "pinned";
+      readonly anchor: DeploymentSupplyCensusEvmChainAnchor;
+      /** Authenticated `finalized` header for a recent-state-only Dwellir route; absent otherwise. */
+      readonly finalized?: EvmBlockHeader;
+    }
   | { readonly kind: "rejected"; readonly reason: V9DeploymentSupplyCensusRejectionReason };
 
 /** Reference price for the deployment's unit, as the assembler resolved it. */
@@ -168,12 +176,58 @@ function chainConcurrency(value: number | undefined): number {
   return Math.min(DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.chainConcurrency, Math.max(1, Math.floor(value)));
 }
 
+/** The census may place state on a Dwellir route only at/below its authenticated finalized head. */
+function hasRecentStateDwellirRoute(chainId: string, chainRpcs: Map<string, ChainRpcConfig>): boolean {
+  return chainRpcs.get(chainId)?.endpoints.some(endpoint =>
+    endpoint.operator === "dwellir" && !endpoint.routingDisabled &&
+    endpoint.stateHistory === "recent" && !endpoint.finalizedTagUnsupported) ?? false;
+}
+
+/**
+ * Build a pin only when it authenticates the anchor and stays valid through
+ * this chain's whole read window. Otherwise the census keeps the historical
+ * requirement: a pin that expires mid-read would empty `buildRpcUrls`.
+ */
+function recentStatePinForAnchor(input: {
+  chainId: string;
+  anchor: DeploymentSupplyCensusEvmChainAnchor;
+  finalized: EvmBlockHeader | undefined;
+  deadlineMs: number;
+}): RecentFinalizedRpcPin | undefined {
+  const { chainId, anchor, finalized, deadlineMs } = input;
+  if (finalized === undefined || !Number.isSafeInteger(finalized.number) ||
+      !Number.isSafeInteger(finalized.timestamp) || !/^0x[0-9a-fA-F]{64}$/.test(finalized.hash)) return undefined;
+  if (finalized.number < anchor.blockNumber || finalized.timestamp < anchor.blockTimeSec) return undefined;
+  if (finalized.number === anchor.blockNumber && finalized.hash.toLowerCase() !== anchor.blockHash.toLowerCase()) return undefined;
+  const observedAtSec = Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(anchor.blockNumber) || anchor.blockNumber < 0 ||
+      !/^0x[0-9a-fA-F]{64}$/.test(anchor.blockHash) || !Number.isSafeInteger(anchor.blockTimeSec) ||
+      anchor.blockTimeSec <= 0 || anchor.blockTimeSec > observedAtSec) return undefined;
+  const maxAgeSec = supplyAttributionPinMaxAgeSec([chainId]);
+  if (observedAtSec - anchor.blockTimeSec > maxAgeSec) return undefined;
+  // `validRecentPin` is rechecked at every request: leave a margin past the deadline.
+  if ((anchor.blockTimeSec + maxAgeSec) * 1000 < deadlineMs + 1_000) return undefined;
+  return {
+    chainId,
+    header: {
+      number: anchor.blockNumber,
+      hash: anchor.blockHash.toLowerCase() as `0x${string}`,
+      timestamp: anchor.blockTimeSec,
+    },
+    finalized: { ...finalized, hash: finalized.hash.toLowerCase() as `0x${string}` },
+    observedAtSec,
+    maxAgeSec,
+  };
+}
+
 function censusOptions(input: {
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   deadlineMs?: number;
   beforeRequest?: EvmRpcOptions["beforeRequest"];
   stateBlockHash?: `0x${string}`;
+  recentStatePin?: EvmRpcOptions["recentStatePin"];
+  observedHeadBlock?: number;
   maxResponseBytes?: number;
   maxRetries?: number;
 }): EvmRpcOptions {
@@ -183,6 +237,8 @@ function censusOptions(input: {
     ...(input.deadlineMs === undefined ? {} : { deadlineMs: input.deadlineMs }),
     ...(input.beforeRequest === undefined ? {} : { beforeRequest: input.beforeRequest }),
     ...(input.stateBlockHash === undefined ? {} : { stateBlockHash: input.stateBlockHash }),
+    ...(input.recentStatePin === undefined ? {} : { recentStatePin: input.recentStatePin }),
+    ...(input.observedHeadBlock === undefined ? {} : { observedHeadBlock: input.observedHeadBlock }),
     maxRetries: input.maxRetries ?? 0,
     multicallBatchSize: CENSUS_POLICY.evmMulticallMaxBatchSize,
     maxResponseBytes: input.maxResponseBytes ?? DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.maxResponseBytes,
@@ -245,9 +301,13 @@ export async function resolveDeploymentSupplyCensusEvmPins(
           maxResponseBytes: DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.headerResponseBytes,
           maxRetries: DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.pinRetries,
         });
+        const searchCache: EvmBlockSearchCache = { blockTimestampByNumber: new Map() };
         const blockNumber = await dependencies.resolveClosestBlockAtOrBeforeTimestamp(
-          chainId, input.scoringClockSec, { blockTimestampByNumber: new Map() }, options,
+          chainId, input.scoringClockSec, searchCache, options,
         );
+        const headerOptions: EvmRpcOptions = searchCache.latestBlockNumber === undefined
+          ? options
+          : { ...options, observedHeadBlock: searchCache.latestBlockNumber };
         // A bracketing search can fail for reasons that are not the clock's: a
         // non-archive endpoint prunes the exponential walk-back, a probe is
         // rate-limited, or the probe budget runs out (fraxtal at the 2026-10-30
@@ -255,20 +315,61 @@ export async function resolveDeploymentSupplyCensusEvmPins(
         // timestamped block the chain guarantees is behind the tip, so use it
         // when the search cannot bracket. `anchorRejection` still refuses a
         // future-dated or aged header. Never fall back to `latest`.
-        let header = blockNumber === null
-          ? await dependencies.fetchEvmBlockHeader(chainId, "finalized", options)
-          : await dependencies.fetchEvmBlockHeader(chainId, blockNumber, options);
-        if (header === null && blockNumber !== null) {
-          header = await dependencies.fetchEvmBlockHeader(chainId, "finalized", options);
+        let finalizedHeader: EvmBlockHeader | null = null;
+        const readFinalized = async (): Promise<EvmBlockHeader | null> =>
+          await dependencies.fetchEvmBlockHeader(chainId, "finalized", options);
+        const readFinalizedSafely = async (): Promise<EvmBlockHeader | null> => {
+          try {
+            return await readFinalized();
+          } catch (error) {
+            rethrowIfAborted(error, input.signal);
+            return null;
+          }
+        };
+        let header: EvmBlockHeader | null;
+        if (blockNumber === null) {
+          header = finalizedHeader = await readFinalized();
+        } else {
+          header = await dependencies.fetchEvmBlockHeader(chainId, blockNumber, headerOptions);
         }
+        if (header === null && blockNumber !== null) finalizedHeader = header = await readFinalized();
         if (timeout.isTimedOut() || header === null) return;
         const anchor: DeploymentSupplyCensusEvmChainAnchor = {
           blockNumber: header.number, blockHash: header.hash, blockTimeSec: header.timestamp,
         };
         const reason = anchorRejection(anchor, input.scoringClockSec);
-        resolutions.set(chainId, reason === null
+        if (reason !== null) {
+          resolutions.set(chainId, { kind: "rejected", reason });
+          return;
+        }
+        // Recent-state-only Dwellir routes need the chain's own finalized tag,
+        // never the reviewed lag, to authenticate state at the anchor.
+        let finalized: EvmBlockHeader | null = null;
+        if (hasRecentStateDwellirRoute(chainId, input.chainRpcs)) {
+          finalized = finalizedHeader !== null &&
+            finalizedHeader.number === header.number && finalizedHeader.hash === header.hash
+            ? finalizedHeader
+            : await readFinalizedSafely();
+          // A finalized head above the anchor does not prove the anchor is its
+          // ancestor (a reorg may have orphaned it). Re-read the canonical
+          // header at the anchor height after finality, as CCIP pins do, and
+          // keep the historical route on any mismatch or failed read.
+          if (finalized !== null && finalized.number > header.number) {
+            let canonical: EvmBlockHeader | null = null;
+            try {
+              canonical = await dependencies.fetchEvmBlockHeader(
+                chainId, header.number, { ...headerOptions, observedHeadBlock: finalized.number },
+              );
+            } catch (error) {
+              rethrowIfAborted(error, input.signal);
+            }
+            if (canonical === null || canonical.hash !== header.hash ||
+              canonical.timestamp !== header.timestamp) finalized = null;
+          }
+        }
+        resolutions.set(chainId, finalized === null
           ? { kind: "pinned", anchor }
-          : { kind: "rejected", reason });
+          : { kind: "pinned", anchor, finalized });
       } catch (error) {
         rethrowIfAborted(error, input.signal);
       } finally {
@@ -288,6 +389,8 @@ export async function observeDeploymentSupplyCensusEvmChain(
     chainId: string;
     targets: readonly DeploymentSupplyCensusReadTarget[];
     anchor: DeploymentSupplyCensusEvmChainAnchor;
+    /** Authenticated `finalized` header for a recent-state-only Dwellir route, when held. */
+    finalized?: EvmBlockHeader;
     scoringClockSec: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
@@ -306,9 +409,15 @@ export async function observeDeploymentSupplyCensusEvmChain(
     Date.now() + DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.chainTimeoutMs,
     input.deadlineMs ?? Infinity,
   );
+  const recentStatePin = hasRecentStateDwellirRoute(chainId, input.chainRpcs)
+    ? recentStatePinForAnchor({ chainId, anchor, finalized: input.finalized, deadlineMs })
+    : undefined;
   const options = censusOptions({
     chainRpcs: input.chainRpcs, signal: input.signal, deadlineMs,
     beforeRequest: input.beforeRequest, stateBlockHash: anchor.blockHash,
+    ...(recentStatePin === undefined ? {} : {
+      recentStatePin, observedHeadBlock: recentStatePin.finalized.number,
+    }),
   });
   const rejected = new Map<string, V9DeploymentSupplyCensusRejectionReason>();
   try {
@@ -448,8 +557,8 @@ export async function observeDeploymentSupplyCensusEvm(
   }
   if (!Number.isFinite(input.aggregateSupplyUsd) || input.aggregateSupplyUsd <= 0) {
     // Without the audited aggregate there is no share denominator; a row
-    // without a share is not census evidence.
-    return { rows: [], rejected: [rejection(null, "roster-incomplete")] };
+    // without a share is not census evidence. An unavailable read (R5).
+    return { rows: [], rejected: [rejection(null, "read-unavailable")] };
   }
   if (input.targets.length === 0) return { rows: [], rejected: [] };
 
@@ -515,6 +624,7 @@ export async function observeDeploymentSupplyCensusEvm(
           chainId,
           targets,
           anchor: resolution.anchor,
+          ...(resolution.finalized === undefined ? {} : { finalized: resolution.finalized }),
           scoringClockSec,
           chainRpcs: input.chainRpcs,
           signal: timeout.signal,

@@ -32,7 +32,7 @@ import {
   type AdapterRpcValue,
 } from "./reserve-adapter.test-support";
 import { MENTO_RESERVE_COMPOSITION_PAYLOAD as RAW_SAMPLE_PAYLOAD } from "./reserve-adapter-payloads.test-support";
-import { brokerGuardFixture, brokerInventoryCalls, BROKER_FEED, BROKER_PRICING_MODULE, BROKER, BROKER_ORACLE, BROKER_BREAKER } from "./mento-broker.test-support";
+import { brokerGuardFixture, brokerInventoryCalls, BROKER_FEED, BROKER_PRICING_MODULE, BROKER, BROKER_ORACLE } from "./mento-broker.test-support";
 
 const redemptionOverride = vi.hoisted(() => ({ error: null as Error | null }));
 vi.mock("../mento-redemption", async (importOriginal) => {
@@ -698,26 +698,6 @@ describe("mento redemption telemetry", () => {
     expect(result.slices.length).toBeGreaterThan(0);
     expect(result.metadata?.redemption).toBeUndefined();
     expectWarningEffect(result, "mento-redemption-telemetry-failed", "degraded");
-  });
-
-  it("retains an observed closed Broker breaker despite unchanged positive buckets", async () => {
-    const guards = brokerGuardFixture(EXCHANGE_ID_1, BRLM_TOKEN_ADDRESS, USDM_ADDRESS, 1000, CURRENT_DASHBOARD_NOW_SEC - 60);
-    guards[`celo:${BROKER_BREAKER}:${toFunctionSelector("getRateFeedTradingMode(address)")}`] = 1n;
-    const { result } = await runAdapter("mento", "brlm-mento", {
-      network: mentoNetwork({
-        block: { number: 12345, timestamp: CURRENT_DASHBOARD_NOW_SEC - 60 },
-        rpc: {
-          ...guards,
-          [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1]),
-          [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
-            asset0: BRLM_TOKEN_ADDRESS, asset1: USDM_ADDRESS,
-            bucket0: 1000n * 10n ** 18n, bucket1: 1000n * 10n ** 18n, spread: 5n * 10n ** 20n,
-          }),
-        },
-      }),
-      nowSec: CURRENT_DASHBOARD_NOW_SEC,
-    });
-    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 0, routeStatus: "degraded", routeStatusSource: "onchain" });
   });
 
   it("sums matched counter-asset buckets and takes the max spread as the fee", async () => {

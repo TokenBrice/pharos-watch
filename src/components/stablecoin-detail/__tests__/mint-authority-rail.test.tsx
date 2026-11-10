@@ -77,11 +77,14 @@ describe("MintAuthorityRail", () => {
     expect(html).toContain("+2 more in Primary controls");
   });
 
-  it("keeps the authoritative count when the detail census is bounded", () => {
+  it("bounds the overflow by the Primary controls fold while keeping the census count in the label", () => {
     const controls = [0, 1, 2, 3].map((index) => makeControl({ key: `control-${index}`, roleLabel: `Ctl-${index}` }));
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} totalControlCount={149} />);
     expect(html).toContain("through 149 controls");
-    expect(html).toContain("+146 more in Primary controls");
+    // The fold holds all four rows and draws three, so one row remains there;
+    // the census remainder belongs to the fold's own "Showing 4 of 149" line.
+    expect(html).toContain("+1 more in Primary controls");
+    expect(html).not.toContain("+146 more in Primary controls");
     expect(html).not.toContain("through 4 controls");
   });
 

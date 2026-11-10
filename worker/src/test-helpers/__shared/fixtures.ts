@@ -276,6 +276,8 @@ export function makeMintBurnRow(overrides: Partial<MintBurnRow> = {}): MintBurnR
     chain_id: "ethereum",
     direction,
     amount: 1_000_000,
+    amount_raw: null,
+    below_display_threshold: 0,
     amount_usd: 1_000_000,
     price_used: 1,
     price_timestamp: Math.floor(Date.now() / 1000) - 3600,

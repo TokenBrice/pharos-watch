@@ -5,6 +5,8 @@ import {
   groupCommandPaletteResults,
   rankCommandPaletteResults,
 } from "@/components/command-palette-model";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
+import depegEventSearchData from "@/generated/depeg-event-search-data.json";
 
 describe("command palette model", () => {
   it("orders coins in the same match tier by live market cap, not by extra name hits", () => {
@@ -16,7 +18,12 @@ describe("command palette model", () => {
     const ids = buildCommandPaletteResultDescriptors({ query: "usdc", history: [], isDark: false, stablecoinLiveMetadata })
       .filter((row) => row.id === "coin-syrupusdc-maple" || row.id === "coin-sirloinusdc-steakhouse" || row.id === "coin-sparkusdc-spark")
       .map((row) => row.id);
-    expect(ids).toEqual(["coin-syrupusdc-maple", "coin-sirloinusdc-steakhouse", "coin-sparkusdc-spark"]);
+    // Expected order is the supplied market caps, descending.
+    expect(ids).toEqual(
+      [...stablecoinLiveMetadata]
+        .sort(([, left], [, right]) => right.marketCapUsd - left.marketCapUsd)
+        .map(([id]) => `coin-${id}`),
+    );
   });
 
   it("caps every ranked section for a one-letter query", () => {
@@ -57,11 +64,11 @@ describe("command palette model", () => {
     const order = results.map((result) => result.href ?? "");
 
     expect(results).toHaveLength(5);
+    // The supplied market cap is the prominence signal: it carries the coin into the capped five
+    // and orders every result that has live metadata.
     expect(order).toContain("/stablecoin/syrupusdc-maple/");
-    expect(order).toContain("/stablecoin/gtusdcp-gauntlet/");
-    expect(order.indexOf("/stablecoin/syrupusdc-maple/")).toBeLessThan(
-      order.indexOf("/stablecoin/gtusdcp-gauntlet/"),
-    );
+    const caps = results.map((result) => result.marketCapUsd).filter((cap): cap is number => cap != null);
+    expect(caps).toEqual([...caps].sort((left, right) => right - left));
     expect(results.find((result) => result.href === "/stablecoin/syrupusdc-maple/")).toMatchObject({
       marketCapUsd: 100_000_000_000,
     });
@@ -102,5 +109,21 @@ describe("command palette model", () => {
         lead: true,
       });
     }
+  });
+
+  it("keeps a reviewed dispute's badge on its recent-depeg row", () => {
+    const events = depegEventSearchData as Array<{ slug: string; auditVerdict?: string | null }>;
+    // Select by the verdict the badge reads, not by a curated event slug.
+    const disputedEvent = events.find((event) => isDisputedAuditVerdict(event.auditVerdict));
+    expect(disputedEvent, "generated depeg search data carries a disputed verdict").toBeDefined();
+    const ordinaryEvent = events.find((event) => !isDisputedAuditVerdict(event.auditVerdict))!;
+
+    const disputed = buildCommandPaletteResultDescriptors({ query: disputedEvent!.slug, history: [], isDark: false })
+      .find((item) => item.id === `depeg-${disputedEvent!.slug}`);
+    expect(disputed?.sublabel).toContain("Disputed");
+
+    const ordinary = buildCommandPaletteResultDescriptors({ query: ordinaryEvent.slug, history: [], isDark: false })
+      .find((item) => item.id === `depeg-${ordinaryEvent.slug}`);
+    expect(ordinary?.sublabel).not.toContain("Disputed");
   });
 });

@@ -10,6 +10,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { countActiveByArchetype, getCoinsByLifecycleStatus } from "@shared/lib/stablecoins/by-mechanism";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -109,8 +110,13 @@ function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, 
 
 export default function MechanismExplainersHub() {
   const counts = countActiveByArchetype();
+  // Launched rows are live, not upcoming: the /upcoming/ projection excludes
+  // them too, so they must not inflate this route's "+N upcoming".
   const preLaunchCounts: Record<MechanismArchetype, number> = Object.fromEntries(
-    MECHANISM_ARCHETYPE_VALUES.map((a) => [a, getCoinsByLifecycleStatus(a, "pre-launch").length]),
+    MECHANISM_ARCHETYPE_VALUES.map((a) => [
+      a,
+      getCoinsByLifecycleStatus(a, "pre-launch").filter((coin) => !isLaunchedAwaitingData(coin)).length,
+    ]),
   ) as Record<MechanismArchetype, number>;
   const frozenCounts: Record<MechanismArchetype, number> = Object.fromEntries(
     MECHANISM_ARCHETYPE_VALUES.map((a) => [a, getCoinsByLifecycleStatus(a, "frozen").length]),
@@ -130,7 +136,7 @@ export default function MechanismExplainersHub() {
       titleClassName="max-w-[22ch]"
     >
       <LearnHero
-        beamLabel="Active coins tracked"
+        beamLabel="Active coins by mechanism"
         beamValue={mechanismTotal}
         subKicker={`Across ${MECHANISM_ARCHETYPE_VALUES.length} designs`}
         sub={

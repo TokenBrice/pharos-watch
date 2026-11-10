@@ -137,16 +137,40 @@ describe("StablecoinTable", () => {
     expect(screen.queryByText(/deltas reflect supply expansion and contraction/)).toBeNull();
   });
 
+  it("reads a missing stablecoins payload as unavailable instead of an empty filter result", () => {
+    const { rerender } = render(
+      <StablecoinTable data={undefined} isLoading={false} activeFilters={["usd-peg"]} />,
+    );
+    expect(screen.queryByText("No stablecoins match your filters")).toBeNull();
+    expect(screen.getByText("No stablecoin data available")).toBeTruthy();
+
+    rerender(<StablecoinTable data={[]} isLoading={false} activeFilters={["usd-peg"]} />);
+    expect(screen.getByText("No stablecoins match your filters")).toBeTruthy();
+  });
+
+  it("reads a failed stablecoins read as unreachable data instead of an empty market", () => {
+    const { rerender } = render(
+      <StablecoinTable data={undefined} isLoading={false} activeFilters={[]} unavailable />,
+    );
+    expect(screen.queryByText("No stablecoin data available")).toBeNull();
+    expect(screen.getByText("We couldn't reach the data.")).toBeTruthy();
+
+    rerender(<StablecoinTable data={[]} isLoading={false} activeFilters={[]} />);
+    expect(screen.getByText("No stablecoin data available")).toBeTruthy();
+  });
+
   it("threads supplied source generations through the table model into the CSV preamble", () => {
     render(<StablecoinTable
       data={[coin]} isLoading={false} activeFilters={[]}
       pegScores={new Map()} dexLiquidity={{}} reportCards={{}}
+      reportCardsMethodologyVersion="10.01"
       sourceGenerations={{ stablecoins: 1_725_192_000, pegSummary: null, dexLiquidity: 1_725_191_940, reportCards: null }}
     />);
     fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     expect(downloadCsvWithPreambleMock).toHaveBeenCalledOnce();
     expect(downloadCsvWithPreambleMock.mock.calls[0][3]).toMatchObject({
-      asOfISO: "2024-09-01T12:00:00.000Z",
+      asOfISO: "2024-09-01T11:59:00.000Z",
+      methodologyLabel: "published source values · safety-score v10.01",
       sourceGenerations: {
         stablecoins: "2024-09-01T12:00:00.000Z", pegSummary: null,
         dexLiquidity: "2024-09-01T11:59:00.000Z", reportCards: null,
@@ -288,6 +312,31 @@ describe("StablecoinTable", () => {
 
     expect(onTogglePinned).toHaveBeenCalledWith("usdt-tether");
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("activates a stablecoin row only for an unmodified cell click without selected text", () => {
+    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} onTogglePinnedStablecoin={vi.fn()} />);
+    const link = screen.getByRole("link", { name: /View Tether \(USDT\) details/i });
+    const cell = link.closest("tr")!.querySelector("td")!;
+    const icon = screen.getByRole("button", { name: "Star USDT" }).querySelector("svg")!;
+    for (const options of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+      fireEvent.click(cell, options);
+    }
+    fireEvent.click(icon);
+    link.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    fireEvent.click(link);
+    expect(push).not.toHaveBeenCalled();
+    const selection = window.getSelection()!, range = document.createRange();
+    range.selectNodeContents(link);
+    selection.addRange(range);
+    try {
+      fireEvent.click(cell);
+      expect(push).not.toHaveBeenCalled();
+    } finally {
+      selection.removeAllRanges();
+    }
+    fireEvent.click(cell);
+    expect(push).toHaveBeenCalledExactlyOnceWith("/stablecoin/usdt-tether/");
   });
 
   it("marks starred row controls as pressed", () => {

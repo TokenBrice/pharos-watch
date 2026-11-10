@@ -8,6 +8,7 @@ import type {
 } from "@shared/types/digest";
 import type { StablecoinData } from "@shared/types/market";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { CurrentPegObservation } from "../../lib/current-peg-observations";
 import type { DigestEvidence } from "./digest-evidence";
 
 export interface CanonicalSafetyGradeRow {
@@ -32,6 +33,8 @@ export interface CollectorContext {
   coreAggregateStablecoinIds: ReadonlySet<string>;
   stablecoinAssetById: Map<string, StablecoinData>;
   mcapById: Map<string, number>;
+  /** Current peg observations under the same authority `/api/peg-summary` uses. */
+  currentPegObservationById: ReadonlyMap<string, CurrentPegObservation>;
   stablecoinsCacheIsFresh: boolean;
   nowSec: number;
   todayTs: number;

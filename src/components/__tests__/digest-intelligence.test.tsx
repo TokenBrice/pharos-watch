@@ -13,8 +13,23 @@ describe("DigestIntelligencePanel", () => {
     );
 
     expect(html).toContain("MSUSD 5,070 bps");
-    expect(html).toContain("pmUSD d124 4,953 bps");
+    expect(html).toContain("pmUSD d124 -4,953 bps");
     expect(html).toContain("Missed: USTB weekly supply move");
+    expect(html).toContain("Previous edition&#x27;s checks");
+    expect(html).not.toContain("Yesterday");
     expect(html).not.toMatch(/uppercase|tracking-/);
+  });
+
+  it("keeps the direction of a standing deviation visible", () => {
+    const render = (currentBps: number) => renderToStaticMarkup(
+      <DigestIntelligencePanel
+        standingConditions={[{ stablecoinId: "xau", symbol: "XAUm", ageDays: 10, currentBps }]}
+      />,
+    );
+    const above = render(1660);
+    const below = render(-1660);
+    expect(above).toContain("XAUm d10 +1,660 bps");
+    expect(below).toContain("XAUm d10 -1,660 bps");
+    expect(above).not.toBe(below);
   });
 });

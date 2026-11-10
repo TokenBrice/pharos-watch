@@ -223,6 +223,15 @@ describe("applyFilters", () => {
       expected: ["usdc-circle"],
     },
     {
+      name: "keeps Insufficient evidence distinct from Limited",
+      rows: [
+        makeRow({ id: "insufficient", safetyEvidence: "insufficient" }),
+        makeRow({ id: "limited", safetyEvidence: "limited" }),
+      ],
+      filters: { safetyEvidence: ["insufficient"] },
+      expected: ["insufficient"],
+    },
+    {
       name: "treats coins as exact Picker inspection mode even when broad filters diverge",
       rows: [
         makeRow({ id: "usdc-circle", pegScore: 10 }),
@@ -240,6 +249,24 @@ describe("applyFilters", () => {
       name: "excludes rows with null mechanism when mechanism filter is active",
       filters: { mechanisms: ["cdp", "fiat-cash"] },
       expected: ["usdc-circle", "dai-makerdao", "eurs-stasis"],
+    },
+    {
+      name: "keeps an inherited-archetype commodity variant in the unfiltered universe",
+      rows: [
+        makeRow({ id: "gold-variant", mechanism: "fiat-cash", mechanismIncluded: false }),
+        makeRow({ id: "cash", mechanism: "fiat-cash" }),
+      ],
+      filters: {},
+      expected: ["gold-variant", "cash"],
+    },
+    {
+      name: "excludes an inherited-archetype commodity variant from a mechanism filter",
+      rows: [
+        makeRow({ id: "gold-variant", mechanism: "fiat-cash", mechanismIncluded: false }),
+        makeRow({ id: "cash", mechanism: "fiat-cash" }),
+      ],
+      filters: { mechanisms: ["fiat-cash"] },
+      expected: ["cash"],
     },
     {
       name: "filters by type (multi-select)",
@@ -407,6 +434,26 @@ describe("resolveScreenerFilterDataState", () => {
     { filters: { liquidityScoreMin: 65 }, source: "liquidity" },
   ])("qualifies active $source predicates by publication availability ($filters)", ({ filters, source }) => {
     const active = { ...SCREENER_FILTER_DEFAULTS, ...filters };
+    // The active key requires its own publication, so an errored empty read is unavailable...
+    expect(resolveScreenerFilterDataState(active, {
+      ...loaded, [source]: { loading: false, hasData: false, error: new Error("offline") },
+    })).toBe("unavailable");
+    // ...while every other source failing cannot gate it.
+    const othersUnavailable = Object.fromEntries(
+      (Object.keys(loaded) as Array<keyof ScreenerFilterSources>).map((key) => [
+        key, key === source ? loaded[key] : { loading: false, hasData: false, error: new Error("irrelevant") },
+      ]),
+    ) as ScreenerFilterSources;
+    expect(resolveScreenerFilterDataState(active, othersUnavailable)).toBe("ready");
+  });
+
+  it.each([
+    { filters: { dewsMin: 80 }, source: "dews" },
+    { filters: { safetyGrades: ["A"] }, source: "report" },
+    { filters: { pegScoreMin: 80 }, source: "peg" },
+    { filters: { liquidityScoreMin: 65 }, source: "liquidity" },
+  ] as const)("resolves every publication state from the required $source", ({ filters, source }) => {
+    const active = { ...SCREENER_FILTER_DEFAULTS, ...filters };
     const resolve = (state: ScreenerFilterSources[typeof source]) =>
       resolveScreenerFilterDataState(active, { ...loaded, [source]: state });
     expect(resolve({ loading: true, hasData: false })).toBe("loading");
@@ -452,7 +499,7 @@ describe("SCREENER_URL_SCHEMA codec", () => {
       mintAuthorityScoreMin: 65,
       mintAuthorityScores: ["hardened", "governed"],
       coins: ["usdc-circle"],
-      safetyEvidence: ["strong", "nr"],
+      safetyEvidence: ["strong", "insufficient", "nr"],
       custodyModels: ["onchain"],
       pegScoreMin: 80,
       liquidityScoreMin: 65,
@@ -466,7 +513,7 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(encoded).toContain("mintAuthorityScoreMin=65");
     expect(encoded).toContain("mintAuthorityScores=hardened%2Cgoverned");
     expect(encoded).toContain("coins=usdc-circle");
-    expect(encoded).toContain("safetyEvidence=strong%2Cnr");
+    expect(encoded).toContain("safetyEvidence=strong%2Cinsufficient%2Cnr");
     expect(encoded).toContain("custodyModels=onchain");
     expect(encoded).toContain("pegScoreMin=80");
     expect(encoded).toContain("liquidityScoreMin=65");
@@ -480,7 +527,7 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(decoded.mintAuthorityScoreMin).toBe(65);
     expect(decoded.mintAuthorityScores).toEqual(["hardened", "governed"]);
     expect(decoded.coins).toEqual(["usdc-circle"]);
-    expect(decoded.safetyEvidence).toEqual(["strong", "nr"]);
+    expect(decoded.safetyEvidence).toEqual(["strong", "insufficient", "nr"]);
     expect(decoded.custodyModels).toEqual(["onchain"]);
     expect(decoded.pegScoreMin).toBe(80);
     expect(decoded.liquidityScoreMin).toBe(65);

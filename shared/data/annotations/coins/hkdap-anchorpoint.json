@@ -1,3 +1,4 @@
 [
-  {"date":"2026-04-10","kind":"regulatory","label":"HKMA grants Anchorpoint stablecoin licence, the first batch (HK Ordinance)","severity":"high","href":"https://www.sc.com/en/press-release/standard-chartered-backed-anchorpoint-granted-stablecoin-issuer-licence-by-the-hong-kong-monetary-authority/"}
+  {"date":"2026-04-10","kind":"regulatory","label":"HKMA grants Anchorpoint stablecoin licence, the first batch (HK Ordinance)","severity":"high","href":"https://www.sc.com/en/press-release/standard-chartered-backed-anchorpoint-granted-stablecoin-issuer-licence-by-the-hong-kong-monetary-authority/"},
+  {"date":"2026-08-12","kind":"governance","label":"HKDAP opens institutional Beta Access","severity":"med","href":"https://anchorpoint.hk/uploads/2026/08/Anchorpoint-commences-institutional-rollout-of-HKDAP-via-Beta-Access-1.pdf","note":"Anchorpoint began HKDAP Beta Access for selected institutions and professional investors through authorised distributors. This restricted rollout did not open retail access."}
 ]

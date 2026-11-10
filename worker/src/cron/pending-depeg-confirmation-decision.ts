@@ -18,12 +18,12 @@ import {
   buildPendingOutcomeStmt,
   buildPoolConfirmationKey,
   confirmationSourceList,
-  getPendingExpiryLimitSec,
   isOpposingConfirmationStatus,
   pendingPeakQuoteDomain,
   pickPeakCandidate,
   type PromotionDecisionInput,
 } from "./pending-depeg-confirmation";
+import { getPendingExpiryLimitSec } from "../lib/depeg-pending";
 
 const TEMPORAL_CONFIRMATION_LABEL = `temporal:${Math.round(DEPEG_PENDING_MIN_AGE_SEC / 60)}m`;
 
@@ -90,6 +90,11 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
         ? evidence.poolConfirmations.map((confirmation) => buildPoolConfirmationKey(confirmation.pool))
         : [],
     );
+    // The outcome ledger records the same agreeing families as the event and
+    // its decision reason, including the primary families that admitted it.
+    const outcomeEvidence = primaryConfirmationSources.length === 0
+      ? evidence
+      : { ...evidence, confirmingSources: [...evidence.confirmingSources, ...primaryConfirmationSources] };
     const event: DepegEvent = {
       id: 0,
       stablecoinId: row.stablecoin_id,
@@ -123,7 +128,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
         outcomeState,
         "promoted",
         now,
-        evidence,
+        outcomeEvidence,
         `confirmed-by:${confirmedBy || "unknown"}`,
       ),
       buildDeletePendingStmt(db, row),
@@ -131,7 +136,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
   }
 
   const statuses = [evidence.offchainStatus, evidence.dexStatus, evidence.cexStatus, evidence.poolStatus];
-  const hasSameDirectionConfirmation = statuses.includes("confirm");
+  const hasSameDirectionConfirmation = statuses.includes("confirm") || evidence.dexConfirmationVeto === true;
   const hasOpposingEvidence =
     statuses.some(isOpposingConfirmationStatus) ||
     (isNativeOrigin && isOpposingConfirmationStatus(primaryStatus));

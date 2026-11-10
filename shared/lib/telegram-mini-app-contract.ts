@@ -318,6 +318,7 @@ export const TelegramMiniAppCatalogSchema = z
           symbol: z.string(),
           name: z.string(),
           peg: z.string().nullable().optional(),
+          pegLabel: z.string().optional(),
           status: z.string().nullable().optional(),
           rank: z.number().int().positive().optional(),
           variant: z.boolean().optional(),
@@ -393,6 +394,8 @@ export const TelegramMiniAppMutableStateSchema = z
         lastSuccessfulReplyAt: z.number().nullable(),
         queuedAlerts: z.number(),
         recentFailureClass: z.string().nullable(),
+        // Absent on older Workers; false means the diagnostics read failed.
+        diagnosticsAvailable: z.boolean().optional(),
       })
       .passthrough(),
   })

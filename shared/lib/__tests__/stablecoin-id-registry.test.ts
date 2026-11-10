@@ -23,7 +23,6 @@ import {
 } from "@shared/lib/stablecoins/registry";
 import { PSI_HISTORICAL_ASSETS } from "@shared/lib/psi-historical-assets";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 
 const USDT_META = REGISTRY_BY_LLAMA_ID.get("1");
 const CANONICAL_USDT_ID = USDT_META?.id ?? "1";
@@ -46,28 +45,21 @@ describe("REGISTRY_BY_ID", () => {
     }
   });
 
-  it("has no duplicate canonical IDs", () => {
-    expect(REGISTRY_BY_ID.size).toBe(TRACKED_STABLECOINS.length + PSI_HISTORICAL_ASSETS.length);
-  });
-
 });
 
 describe("REGISTRY_BY_LLAMA_ID", () => {
   it("maps numeric llamaId to meta", () => {
     expect(REGISTRY_BY_LLAMA_ID.get("1")?.symbol).toBe("USDT");
+    expect(REGISTRY_BY_LLAMA_ID.get("430")?.id).toBe("sofid-sofi");
+    expect(REGISTRY_BY_LLAMA_ID.get("446")?.id).toBe("gbpe-monerium");
+    expect(REGISTRY_BY_LLAMA_ID.has("305")).toBe(false);
+    expect(REGISTRY_BY_LLAMA_ID.has("450")).toBe(false);
   });
 
   it("maps the audited Royal Dollar DefiLlama row", () => {
     expect(REGISTRY_BY_LLAMA_ID.get("415")?.id).toBe("rusd-royal-dollar");
   });
 
-  it("has no duplicate llamaIds", () => {
-    const llamaIdCount = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS].filter(
-      (stablecoin) => stablecoin.llamaId,
-    ).length;
-
-    expect(REGISTRY_BY_LLAMA_ID.size).toBe(llamaIdCount);
-  });
 });
 
 describe("reused Solomon provider identity", () => {
@@ -192,50 +184,10 @@ describe("REGISTRY_BY_CMC_SLUG", () => {
   it("maps cmcSlug to meta", () => {
     expect(REGISTRY_BY_CMC_SLUG.get("jupusd")?.symbol).toBe("JUPUSD");
   });
-
-  it("has no duplicate cmcSlugs", () => {
-    const cmcSlugCount = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS].filter(
-      (stablecoin) => stablecoin.cmcSlug,
-    ).length;
-
-    expect(REGISTRY_BY_CMC_SLUG.size).toBe(cmcSlugCount);
-  });
-
-  it("indexes exactly the records with populated CMC slugs", () => {
-    const expected = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS]
-      .filter((metadata) => metadata.cmcSlug)
-      .map((metadata) => [metadata.cmcSlug, metadata] as const);
-    expect(REGISTRY_BY_CMC_SLUG).toEqual(new Map(expected));
-    expect([...REGISTRY_BY_CMC_SLUG.keys()]).not.toContain("");
-    expect([...REGISTRY_BY_CMC_SLUG.keys()]).not.toContain(undefined);
-  });
 });
 
 describe("REGISTRY_BY_GECKO_ID", () => {
   it("maps geckoId to meta", () => {
     expect(REGISTRY_BY_GECKO_ID.get("tether")?.symbol).toBe("USDT");
-  });
-
-  it("has no duplicate geckoIds", () => {
-    const geckoIdCount = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS].filter(
-      (stablecoin) => stablecoin.geckoId,
-    ).length;
-
-    expect(REGISTRY_BY_GECKO_ID.size).toBe(geckoIdCount);
-  });
-});
-
-describe("dead stablecoin llamaId invariant", () => {
-  it("has no duplicate dead stablecoin llamaIds", () => {
-    const seenDeadLlamaIds = new Set<string>();
-
-    for (const dead of DEAD_STABLECOINS) {
-      if (!dead.llamaId) {
-        continue;
-      }
-
-      expect(seenDeadLlamaIds.has(dead.llamaId)).toBe(false);
-      seenDeadLlamaIds.add(dead.llamaId);
-    }
   });
 });

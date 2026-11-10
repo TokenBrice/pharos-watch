@@ -28,11 +28,12 @@ function jsonMemberFragmentSql(alias: string): string {
 // Raw JSON fragments preserve booleans, strings, explicit nulls and absent keys.
 // Invalid JSON/primitive roots use tiny representatives with the same decoder
 // outcome, so malformed-row diagnostics never require transferring the capture.
-const ARCHIVE_INPUT_SQL = `CASE
-  WHEN input_data IS NULL THEN NULL
-  WHEN NOT json_valid(input_data) THEN '{'
-  WHEN json_type(input_data) = 'array' THEN '[]'
-  WHEN json_type(input_data) != 'object' THEN 'null'
+function archiveInputSql(table: string): string {
+  return `CASE
+  WHEN ${table}.input_data IS NULL THEN NULL
+  WHEN NOT json_valid(${table}.input_data) THEN '{'
+  WHEN json_type(${table}.input_data) = 'array' THEN '[]'
+  WHEN json_type(${table}.input_data) != 'object' THEN 'null'
   ELSE (
     SELECT json_group_object(field.key, json(
       CASE WHEN field.key = 'dailyDigests' AND field.type = 'array' THEN (
@@ -52,13 +53,14 @@ const ARCHIVE_INPUT_SQL = `CASE
         FROM json_each(field.value) AS entry
       ) ELSE ${jsonMemberFragmentSql("field")} END
     ))
-    FROM json_each(input_data) AS field
+    FROM json_each(${table}.input_data) AS field
     WHERE field.key IN (
       'stabilityIndex', 'totalMcapUsd', 'supplyCoverage', 'activeDepegCount',
       'topDepegs', 'dailyDigests', 'nextTriggers', 'forwardLookOutcomes', 'riskTape'
     )
   )
 END`;
+}
 
 type DigestArchiveInput = {
   stabilityIndex?: { score: number; band: string } | null;
@@ -79,42 +81,8 @@ type DigestArchiveMeta = {
   editorialStyleHash?: string;
 };
 
-function isDigestInputDataSummary(
-  value: unknown,
-): value is DigestArchiveInput {
-  return typeof value === "object" && value !== null;
-}
-
-function decodeDigestInputData(value: string | null, generatedAt: number) {
-  const decoded = decodeJsonString<DigestArchiveInput, "missing" | "json-parse-failed" | "invalid-shape">(
-    value,
-    {
-      updatedAt: generatedAt,
-      missingReason: "missing",
-      parseErrorReason: "json-parse-failed",
-      normalize: (parsed) => {
-        if (!isDigestInputDataSummary(parsed)) {
-          return { ok: false, reason: "invalid-shape" };
-        }
-        return { ok: true, payload: parsed };
-      },
-    },
-  );
-  if (!decoded.ok && decoded.reason !== "missing") {
-    logMalformedJsonPath({
-      scope: "api",
-      owner: "digest-archive",
-      context: "daily_digest.input_data",
-      reason: decoded.reason,
-      source: "daily_digest",
-      updatedAt: generatedAt,
-    });
-  }
-  return decoded.ok ? decoded.payload : null;
-}
-
-function decodeDigestMeta(value: string | null, generatedAt: number): DigestArchiveMeta | null {
-  const decoded = decodeJsonString<DigestArchiveMeta, "missing" | "json-parse-failed" | "invalid-shape">(
+function decodeDigestArchiveField<T>(value: string | null, generatedAt: number, context: string): T | null {
+  const decoded = decodeJsonString<T, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
       updatedAt: generatedAt,
@@ -124,7 +92,7 @@ function decodeDigestMeta(value: string | null, generatedAt: number): DigestArch
         if (typeof parsed !== "object" || parsed === null) {
           return { ok: false, reason: "invalid-shape" };
         }
-        return { ok: true, payload: parsed as DigestArchiveMeta };
+        return { ok: true, payload: parsed as T };
       },
     },
   );
@@ -132,7 +100,7 @@ function decodeDigestMeta(value: string | null, generatedAt: number): DigestArch
     logMalformedJsonPath({
       scope: "api",
       owner: "digest-archive",
-      context: "daily_digest.digest_meta",
+      context,
       reason: decoded.reason,
       source: "daily_digest",
       updatedAt: generatedAt,
@@ -158,19 +126,31 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
   }
   const rows = await db.prepare(
     // Number full non-blocked history (including sentinels) before keyset
-    // pagination. The insertion horizon also excludes later backdated inserts.
-    `SELECT * FROM (
-       SELECT rowid AS archive_id, digest_text, digest_title, generated_at, digest_extended,
-         ${ARCHIVE_INPUT_SQL} AS input_data, digest_meta,
-         ${completeHistory ? "COUNT(*) OVER () AS archive_total, MAX(rowid) OVER () AS archive_horizon," : ""}
+    // pagination. The numbering pass reads only generated_at/rowid/digest_meta,
+    // which the daily_digest numbering index covers, so the wide digest body is
+    // joined by rowid for the returned page only. The insertion horizon also
+    // excludes later backdated inserts.
+    `WITH numbered AS (
+       SELECT rowid AS archive_id, generated_at, digest_meta,
          ROW_NUMBER() OVER (
            PARTITION BY CASE WHEN ${DIGEST_META_TYPE_SQL} = 'weekly' THEN 'weekly' ELSE 'daily' END
            ORDER BY generated_at ASC, rowid ASC
          ) AS edition_number
+         ${completeHistory ? ", COUNT(*) OVER () AS archive_total, MAX(rowid) OVER () AS archive_horizon" : ""}
        FROM daily_digest WHERE (${NON_BLOCKED_DIGEST_SQL_FILTER})
          ${cursor ? "AND rowid <= ?" : ""}
-     ) ${cursor ? "WHERE (generated_at, archive_id) < (?, ?)" : ""}
-     ORDER BY generated_at DESC, archive_id DESC LIMIT 365`,
+     ), page AS (
+       SELECT archive_id, generated_at, edition_number
+         ${completeHistory ? ", archive_total, archive_horizon" : ""}
+       FROM numbered
+         ${cursor ? "WHERE (generated_at, archive_id) < (?, ?)" : ""}
+       ORDER BY generated_at DESC, archive_id DESC LIMIT 365
+     )
+     SELECT page.archive_id, body.digest_text, body.digest_title, page.generated_at,
+       body.digest_extended, ${archiveInputSql("body")} AS input_data, body.digest_meta,
+       page.edition_number ${completeHistory ? ", page.archive_total, page.archive_horizon" : ""}
+     FROM page LEFT JOIN daily_digest body ON body.rowid = page.archive_id
+     ORDER BY page.generated_at DESC, page.archive_id DESC`,
   ).bind(...(cursor ? [cursor[0], cursor[3], cursor[4]] : [])).all<{
     archive_id: number; archive_total: number; archive_horizon: number;
     digest_text: string; digest_title: string | null; generated_at: number;
@@ -201,7 +181,7 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
     let nextTriggers: DigestNextTrigger[] | null = null;
     let forwardLookOutcomes: DigestForwardLookOutcome[] | null = null;
     let riskTape: DigestRiskTapeItem[] | null = null;
-    const input = decodeDigestInputData(r.input_data, r.generated_at);
+    const input = decodeDigestArchiveField<DigestArchiveInput>(r.input_data, r.generated_at, "daily_digest.input_data");
     const coverage = DigestSupplyCoverageSchema.safeParse(input?.supplyCoverage);
     if (input) {
       psiScore = input.stabilityIndex?.score ?? null;
@@ -215,7 +195,7 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
       riskTape = intelligence.riskTape;
     }
     let digestType: "daily" | "weekly" = "daily";
-    const meta = decodeDigestMeta(r.digest_meta, r.generated_at);
+    const meta = decodeDigestArchiveField<DigestArchiveMeta>(r.digest_meta, r.generated_at, "daily_digest.digest_meta");
     if (meta?.type === "weekly") {
       digestType = "weekly";
     }

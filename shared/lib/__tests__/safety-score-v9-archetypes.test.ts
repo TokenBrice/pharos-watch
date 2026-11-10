@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { V9FactGapV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing-primitives";
-import { V9MechanismRiskReviewSchema } from "../../types/safety-score-v9-backing";
+import { V9MechanismRiskReviewSchema, type V9FiatCashMechanismRiskReview } from "../../types/safety-score-v9-backing";
 import { evaluateV9Backing, type V9MechanismRiskReview } from "../safety-score-v9/archetypes";
 import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
@@ -1089,5 +1089,43 @@ describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
     // `weak` bad-debt quality must NOT trip the untouched shutdown-and-bad-debt component
     // (that structural component only fires on `failed`) — the critical comes from the CR gate.
     expect(result.structuralReasons.some((reason) => reason.pathKey === "mechanism:shutdown-and-bad-debt")).toBe(false);
+  });
+});
+
+describe("v10 scoped assurance fragments", () => {
+  const unknownAssurance: V9MechanismFactV1 = { status: { ...knownStatus("evidence:searched", "mechanism.required"), observationState: "bounded-unknown", gapIds: ["gap:issuer-undisclosed"] }, quality: null, failureDomains: [] };
+  const strongAssurance: V9MechanismFactV1 = { status: knownStatus("evidence:claim", "mechanism.required"), quality: "strong", failureDomains: [] };
+  const reserve = backingAsset([exposure({ key: "cash", weight: 1, policyRuleId: "mechanism.required" })], [], knownStatus("evidence:reserves", "mechanism.required"));
+  const baseline: V9FiatCashMechanismRiskReview = { archetype: "fiat-cash", claimAndSegregation: strongAssurance, custodyContinuity: strongAssurance, assuranceAndReconciliation: unknownAssurance };
+
+  function score(fact: V9MechanismFactV1, seasoned = false) {
+    return evaluateV9Backing({ ...reserve, ...(seasoned ? { trackRecordMonths: 120 } : {}) }, { ...baseline, assuranceAndReconciliation: fact }, V9_CANDIDATE_POLICY_V1);
+  }
+
+  it("partial verified assurance cannot worsen unknown; unknown remainder keeps its charge and no seasoning", () => {
+    const partial: V9MechanismFactV1 = { ...unknownAssurance, scopedAssessments: [
+      { scopeId: "trust", share: 0.25, quality: "adequate", status: knownStatus("evidence:trust", "mechanism.required") },
+      { scopeId: "remainder", share: 0.75, quality: null, status: unknownAssurance.status },
+    ] };
+    const before = score(unknownAssurance);
+    const after = score(partial);
+    expect(after.score!).toBeGreaterThan(before.score!);
+    const fragments = after.contributions.filter(row => row.componentKey.includes(":scope:"));
+    const covered = fragments.find(row => row.componentKey.endsWith(":trust"))!;
+    const remainder = fragments.find(row => row.componentKey.endsWith(":remainder"))!;
+    expect(covered).toMatchObject({ score: 87, observationState: "known" });
+    expect(remainder).toMatchObject({
+      score: unknownQuality("backing", "U"), observationState: "bounded-unknown", cause: "U",
+    });
+    expect(covered.normalizedWeight / remainder.normalizedWeight).toBeCloseTo(1 / 3);
+    expect(score(partial, true).score).toBe(after.score);
+  });
+
+  it("an adverse reviewed fragment lowers rather than hides its measured failure", () => {
+    const adverse: V9MechanismFactV1 = { ...unknownAssurance, scopedAssessments: [
+      { scopeId: "failed-book", share: 0.25, quality: "failed", status: knownStatus("evidence:failure", "mechanism.required") },
+      { scopeId: "remainder", share: 0.75, quality: null, status: unknownAssurance.status },
+    ] };
+    expect(score(adverse).score!).toBeLessThan(score(unknownAssurance).score!);
   });
 });

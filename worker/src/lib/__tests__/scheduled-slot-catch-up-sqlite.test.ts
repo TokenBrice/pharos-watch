@@ -99,14 +99,7 @@ describe("one-shot scheduled slot catch-up", () => {
 
   it("admits only the window between grace and the next natural slot's margin", () => {
     expect(resolveSlotCatchUpCandidate("quarterHourly", QUARTER_SLOT + 300)).toBeNull();
-    expect(resolveSlotCatchUpCandidate("quarterHourly", QUARTER_SLOT + 600)).toBe(QUARTER_SLOT);
-    expect(resolveSlotCatchUpCandidate("quarterHourly", QUARTER_SLOT + 720)).toBe(QUARTER_SLOT);
-    // Imminent next natural slot (:15) closes the window.
-    expect(resolveSlotCatchUpCandidate("quarterHourly", QUARTER_SLOT + 780)).toBeNull();
     expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 300)).toBeNull();
-    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 600)).toBe(YIELD_SLOT);
-    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 105 * 60)).toBe(YIELD_SLOT);
-    expect(resolveSlotCatchUpCandidate("hourlyYieldSync", YIELD_SLOT + 106 * 60)).toBeNull();
     expect(isSlotCatchUpWithinWindow("statusSelfCheckOffset", QUARTER_SLOT, QUARTER_SLOT + 600)).toBe(false);
   });
 

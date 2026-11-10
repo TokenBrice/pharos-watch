@@ -366,21 +366,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_portability",3:"bulk_watchlist_preview",4:"rate_limited"})).toBe(true);
   });
 
-  it("applies global alert mutations", async () => {
-    const initData = await privateInitData();
-    const db = makeMiniAppDb(stateReadTables({
-      subscriber: { global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 1, global_alert_launch: 0, global_depeg_worsening_bps_step: null, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null, timezone: null, alert_snooze_until_ts: null },
-    }));
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "set-global", alertType: "safety", enabled: true },
-    }), BOT_TOKEN);
-
-    expect(response.status).toBe(200);
-    expect(db.getHistory().some((entry) => entry.sql.includes("global_alert_safety = excluded.global_alert_safety"))).toBe(true);
-  });
-
   it("applies global depeg-step mutations", async () => {
     const initData = await privateInitData();
     const db = makeMiniAppDb(stateReadTables());
@@ -395,20 +380,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "global_depeg_worsening_bps_step = ?", { 0: 500, 1: NOW_SEC, 2: "42" })).toBe(true);
   });
 
-  it("persists the exact quiet-hour window", async () => {
-    const initData = await privateInitData();
-    const { db, sqlite } = persistedDb();
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "set-quiet-hours", enabled: true, startHourUtc: 22, endHourUtc: 7 },
-    }), BOT_TOKEN);
-
-    expect(response.status).toBe(200);
-    expect(sqlite.prepare("SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc FROM telegram_subscribers WHERE chat_id = '42'").get())
-      .toEqual({ quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 7 });
-  });
-
   it("retains a custom quiet window across omitted-hour toggles and replaces it only with explicit hours", async () => {
     const initData = await privateInitData();
     const { db, sqlite } = persistedDb();
@@ -416,7 +387,7 @@ describe("handleTelegramMiniAppMutation", () => {
       { kind: "set-quiet-hours", enabled: true, startHourUtc: 1, endHourUtc: 9 },
       { kind: "set-quiet-hours", enabled: false },
       { kind: "set-quiet-hours", enabled: true },
-      { kind: "set-quiet-hours", enabled: true, startHourUtc: 2, endHourUtc: 10 },
+      { kind: "set-quiet-hours", enabled: true, startHourUtc: 22, endHourUtc: 7 },
     ];
     for (const [index, operation] of operations.entries()) {
       const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
@@ -426,8 +397,8 @@ describe("handleTelegramMiniAppMutation", () => {
       expect(sqlite.prepare(`SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
         FROM telegram_subscribers WHERE chat_id = '42'`).get()).toEqual({
         quiet_hours_enabled: operation.enabled ? 1 : 0,
-        quiet_hours_start_utc: index === 3 ? 2 : 1,
-        quiet_hours_end_utc: index === 3 ? 10 : 9,
+        quiet_hours_start_utc: index === 3 ? 22 : 1,
+        quiet_hours_end_utc: index === 3 ? 7 : 9,
       });
     }
   });

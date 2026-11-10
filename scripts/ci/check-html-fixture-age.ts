@@ -82,6 +82,8 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "Immutable adverse-state context captured 2026-10-07 from api.pharos.watch/api/stablecoin-reserves/usd0-usual; historical external balances and oracle valuations are explicitly distinct from independent circular-claim wire evidence.",
   "leverup-oct7-2026.json":
     "Immutable adverse-state replay captured 2026-10-07 from api-monad-mainnet-full.n.dwellir.com at Monad block 111423307; preserves six state responses proving the designated-reserve deficit.",
+  "axis-transparency-api-2026-11-02.json":
+    "captured 2026-11-03 from https://transparency-api.axis.to/dashboard?reserves_period=max&performance_period=max (payload overview.last_updated 2026-11-02T08:46:44.936Z), trimmed to overview, dashboard_details.asset_classes and reserves_history; frozen regression input whose clock the adapter tests pin, JSON cannot carry an HTML-comment capture header",
   "midas-mtbill-transparency.json":
     "captured 2026-09-14 from the mTBILL issuer transparency API (payload updatedAt 2026-09-14T13:06:24.130Z); frozen JSON regression input cannot carry an HTML-comment capture header",
   "tether-transparency.json":
@@ -114,7 +116,7 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
   "forest-road-observer-pinned.json":
     "Immutable Ethereum block 26143056 RPC capture accessed 2026-10-07T22:20:50.462557+00:00 from https://ethereum.drpc.org; freezes exact USDfr par-controller identities, authority and guarded same-notional quotes, not refreshable current capacity.",
   "monetrix-observer-pinned.json":
-    "Immutable HyperEVM block 47935956 RPC capture accessed 2026-10-07T22:20:50.462193+00:00 from https://rpc.hyperliquid.xyz/evm; freezes funded-escrow shortfall and request-local cooldown context for diagnostic replay, not holder capacity.",
+    "HyperEVM latest-state RPC capture accessed 2026-10-07T22:20:50.462193+00:00 from https://rpc.hyperliquid.xyz/evm with recorded header 47935956; the endpoint ignores block selectors, so state is not authenticated to that header. Retained for diagnostic replay, not holder capacity.",
   "saturn-observer-pinned.json":
     "Immutable Ethereum block 26143056 RPC capture accessed 2026-10-07T22:20:50.462420+00:00 from https://ethereum.drpc.org; freezes Saturn V2 queue identities, balances and process-time fee words for diagnostic replay, not invented queue throughput.",
 };

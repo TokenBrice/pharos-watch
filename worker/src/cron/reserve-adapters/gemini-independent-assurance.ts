@@ -5,14 +5,14 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import type { AdapterContext, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
 
-// Reviewed 2026-10-07: Gemini's /dollar attestation list loads from the public
+// Reviewed 2026-11-03: Gemini's /dollar attestation list loads from the public
 // Contentful delivery collection below (space jg6lo9a2ukvr,
-// content_type=gusdAttestation, newest first). The August 31, 2026 entry resolves
-// to the reviewed August 31, 2026 BPM examination signed October 6. The
-// delivery token is public client-bundle configuration, not a secret; the
-// collection is the official machine-readable index.
+// content_type=gusdAttestation, newest first). The September 30, 2026 entry
+// resolves to the reviewed September 30, 2026 BPM examination signed
+// October 29. The delivery token is public client-bundle configuration, not a
+// secret; the collection is the official machine-readable index.
 const GEMINI_ATTESTATION_CONTENT_TYPE = "gusdAttestation";
-const GEMINI_REVIEWED_ENTRY_REPORT_DATE = "2026-08-31T05:00:00Z";
+const GEMINI_REVIEWED_ENTRY_REPORT_DATE = "2026-09-30T05:00:00Z";
 
 interface ContentfulEntry {
   sys?: { contentType?: { sys?: { id?: string } } };

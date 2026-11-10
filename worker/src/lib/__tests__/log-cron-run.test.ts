@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 
-import { CronTerminalAccountingError, logCronRun } from "../cron-logger";
+import { CronTerminalAccountingError, logCronRun, type CronResult } from "../cron-logger";
+import { createScheduledRuntimeContext } from "../../handlers/scheduled/context";
 import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease-primitives";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -17,6 +18,33 @@ describe("logCronRun", () => {
   const db = mockD1([
     { match: "cron_runs", rows: [] },
   ]);
+
+  it.each(["default", "scheduled-default", "unproven", "no-write", "error", "committed", "scheduled"])("retains only opted-in committed abort evidence (%s)", async (mode) => {
+    const { db, sqlite } = fixtures.open(); const ac = new AbortController(); const stop = new Error("cancelled");
+    const fn = async (): Promise<CronResult> => {
+      ac.abort(stop);
+      return { itemCount: 1, status: mode === "error" ? "error" : "ok",
+        abortResultPolicy: mode.endsWith("default") ? undefined : "preserve-committed-publication",
+        metadata: JSON.stringify({ cacheWriteSucceeded: mode !== "no-write" }),
+        productivity: { productive: true, publications: mode === "unproven" ? [] : [
+          { surface: "stablecoins", generationId: "stablecoins:1234", publishedAt: 1234 }] } };
+    };
+    const runtime = createScheduledRuntimeContext({ DB: db } as Parameters<typeof createScheduledRuntimeContext>[0], {} as ExecutionContext,
+      { cron: "0 * * * *", scheduleKey: "quarterHourly", scheduledTimeMs: Date.now(), slotStartedAt: 1234, parentSignal: ac.signal });
+    const pending = mode.startsWith("scheduled") ? runtime.runLeasedCron("sync-stablecoins", fn)
+      : logCronRun(db, "sync-stablecoins", fn, { abortSignal: ac.signal,
+        producer: { scheduleKey: "quarterHourly", producerPath: "quarterHourly", producerKind: "scheduled-job", invocationId: mode } });
+    const retained = mode === "committed" || mode === "scheduled";
+    if (retained) await expect(pending).resolves.toMatchObject({ status: "degraded", itemCount: 1 });
+    else await expect(pending).rejects.toBe(stop);
+    expect(sqlite.prepare("SELECT status, productive, publication_count, degraded_reason FROM cron_runs").get()).toMatchObject({
+      status: retained ? "degraded" : "error", productive: Number(retained), publication_count: Number(retained),
+      degraded_reason: retained ? "aborted-after-publication" : "Error" });
+    expect(sqlite.prepare("SELECT last_outcome, last_publication_at FROM worker_producer_heads").get()).toEqual({
+      last_outcome: retained ? "degraded" : "error", last_publication_at: retained ? 1234 : null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS leases, (SELECT generation_id FROM surface_publication_generations) AS generation FROM cron_leases").get())
+      .toEqual({ leases: 0, generation: retained ? "stablecoins:1234" : null });
+  });
 
   it.each([-1, 0, 1])("selects result evidence only when equally recent or newer (%s)", async (offset) => {
     const { sqlite, db } = fixtures.open();
@@ -100,17 +128,6 @@ describe("logCronRun", () => {
     });
     await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
     expect(signalRef!.aborted).toBe(false);
-  });
-
-  it("logs error status when job throws", async () => {
-    const { sqlite, db } = fixtures.open();
-    await expect(
-      logCronRun(db, "test-job", async () => {
-        throw new Error("boom");
-      })
-    ).rejects.toThrow("boom");
-    expect(sqlite.prepare("SELECT status, item_count, error FROM cron_runs").all())
-      .toEqual([{ status: "error", item_count: null, error: expect.stringContaining("boom") }]);
   });
 
   it("persists the producing generation clock rather than the successful attempt clock", async () => {

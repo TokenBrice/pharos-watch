@@ -954,6 +954,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     },
   );
 
+  // Finish both cohort sweeps before cleanup can reset the next row's fake clock.
   it.each([180_000, 1])("attempts every tier within N=cohort-size runs under sustained %ims exhaustion", async windowMs => {
     vi.useFakeTimers();
     try {
@@ -1035,7 +1036,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         expect(attemptsByRun[1]).toContain("wm-m0");
       }
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
-  });
+  }, 60_000);
 
   it("re-derives accepted raw observations against the current aggregate", () => {
     const applied = applySafetyScoreV9SupplyAttributionGeneration(
@@ -1393,15 +1394,10 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   // skipped :20 falling back to a packet from the previous half hour instead of
   // from :05. Both cadences must stay under one grid step.
   it("keeps both capture cadences under one 15-minute grid step", () => {
-    const CAPTURE_GRID_STEP_SEC = 15 * 60;
     const accepted = fixtures.acceptedGeneration;
     expect(
       nextSafetyScoreV9SupplyAttributionDueAtSec(accepted),
     ).toBe(accepted.capturedAtSec + 12 * 60);
-    expect(
-      nextSafetyScoreV9SupplyAttributionDueAtSec(accepted) -
-        accepted.capturedAtSec,
-    ).toBeLessThan(CAPTURE_GRID_STEP_SEC);
     const {
       generationId: _generationId,
       ...acceptedPayload
@@ -1431,10 +1427,6 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(
       nextSafetyScoreV9SupplyAttributionDueAtSec(rejected),
     ).toBe(rejected.capturedAtSec + 14 * 60);
-    expect(
-      nextSafetyScoreV9SupplyAttributionDueAtSec(rejected) -
-        rejected.capturedAtSec,
-    ).toBeLessThan(CAPTURE_GRID_STEP_SEC);
   });
 
   it("rejects malformed journal references even when the generation hash is recomputed", () => {

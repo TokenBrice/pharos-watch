@@ -51,40 +51,26 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(resolveReviewedYieldRiskConfig(null)).toBeNull();
   });
 
-  it("resolves reviewed October vault identities to the lending venue, not the curator", () => {
-    for (const childId of [
-      "senpyusdmain-sentora",
-      "senpyusdprimev2-sentora",
-      "senrlusdv2-sentora",
-      "senpathusd-sentora",
-      "senpyusdpst-sentora",
-      "senpyusdmwin-sentora",
-      "sxsrlusd-sentora",
-      "krusdc-keyrock",
-      "arcusdc-galaxy",
-      "armusdcs-wintermute",
-      "pendleusdc-pendle",
-      "skymoneyusdsflagship-sky",
-      "skymoneyusdtsavings-sky",
-      "sirloinusdc-steakhouse",
-      "steakusdg-steakhouse",
-      "steakeurcv-steakhouse",
-      "kpkusdcyield-kpk",
-      "kpkusdcprime-kpk",
-      "gusdcq-galaxy",
-      "gusdtq-galaxy",
-      "gtusdtp-gauntlet",
-      "steakcusdc-steakhouse",
-      "bbqusdc-steakhouse-v2",
-      "cscbusdc-clearstar",
-      "ethenausdc-steakhouse",
-      "hyperusdca-hyperithm",
-      "sparkusdc-spark",
-      "sparkusdtbc-spark",
-    ]) {
-      expect(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[childId], childId).toBe("morpho-blue");
-      expect(venueRiskTierOf(resolveReviewedYieldRiskConfig(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[childId])!), childId).toBe("medium");
+  it("resolves every variant child identity to a reviewed lending venue", () => {
+    // Venues whose review has not landed yet publish their issuing protocol and
+    // stay `unknown` (PYS-neutral) until the coverage queue clears them.
+    const UNREVIEWED_VENUES = new Set(["frax"]);
+    const children = Object.entries(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS);
+    expect(children.length).toBeGreaterThan(0);
+    for (const [childId, venue] of children) {
+      expect(venue, childId).not.toBe("");
+      const config = resolveReviewedYieldRiskConfig(venue);
+      if (UNREVIEWED_VENUES.has(venue)) {
+        // No reviewed config yet: the row publishes its issuing protocol, and the
+        // venue tier stays PYS-neutral instead of borrowing a curated score.
+        expect(config, childId).toBeNull();
+      } else {
+        expect(config, `${childId} -> ${venue}`).not.toBeNull();
+        expect(venueRiskTierOf(config!), childId).not.toBe("unknown");
+      }
     }
+    // October wave anchors: the curator/brand is not the lending venue.
+    expect(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS["senpyusdmain-sentora"]).toBe("morpho-blue");
     expect(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS["syrupusdg-maple"]).toBe("maple");
     expect(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS["susdat-saturn"]).toBeUndefined();
   });
@@ -122,11 +108,10 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
   });
 
   it("resolves reviewer-set dependency concentration by stablecoin id", () => {
-    // yvUSDC's dominant risk (single-ecosystem Sky coupling) is captured here,
-    // not via the per-venue tier — the canonical case the signal exists for.
+    // Sky remains yvUSDC's largest ecosystem after allocation diversification.
     const yvusdc = resolveDependencyConcentration("yvusdc-yearn");
     expect(yvusdc?.ecosystem).toBe("Sky");
-    expect(yvusdc?.severity).toBe("medium");
+    expect(yvusdc?.severity).toBe("low");
     expect(resolveDependencyConcentration("usdc-circle")).toBeNull();
     expect(resolveDependencyConcentration(null)).toBeNull();
   });

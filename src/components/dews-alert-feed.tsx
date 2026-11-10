@@ -88,6 +88,10 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded 
     );
   }
 
+  // An empty census means the aggregate was unreadable, not that every asset
+  // was observed below ALERT; omit the module instead of publishing an all-clear.
+  if (Object.keys(signals).length === 0) return null;
+
   return (
     <div className={cn(embedded ? "flex flex-col" : "pharos-card-shell flex flex-col p-4", className)}>
       <div className="flex items-center justify-between gap-2 pb-3">

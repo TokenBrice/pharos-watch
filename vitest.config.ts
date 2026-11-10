@@ -1,7 +1,16 @@
 import { configDefaults, defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import path from "path";
-import { EXECUTABLE_TEST_PROJECTS, ISOLATED_NODE_TESTS, THREADED_WORKER_TESTS } from "./scripts/lib/critical-ownership.mts";
+import {
+  EXECUTABLE_TEST_PROJECTS,
+  ISOLATED_NODE_TESTS,
+  THREADED_WORKER_TESTS,
+  WORKER_SHARED_TEST_FILES,
+} from "./scripts/lib/critical-ownership.mts";
+import {
+  VITEST_GLOBAL_SETUP_FILES,
+  VITEST_PROJECT_SETUP_FILES,
+} from "./scripts/lib/vitest-setup-files.mts";
 
 const normalizedRoot = path.resolve(__dirname).replaceAll("\\", "/");
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
@@ -41,6 +50,11 @@ const isolationDependentNodeTests = ISOLATED_NODE_TESTS;
 // suite on a thread worker; the rest of worker/ retains process isolation.
 const threadBackedWorkerTests = THREADED_WORKER_TESTS;
 
+// Non-isolated worker project: `worker/src/{cron,lib}` files that
+// `critical-ownership.mts` classifies as state-safe share one module cache per
+// fork; everything else stays in the isolated `worker` project.
+const workerSharedTests = WORKER_SHARED_TEST_FILES;
+
 export default defineConfig({
   plugins: [wasmStubPlugin()],
   // Keep large evidence JSON on Vite's JSON-specific SSR path. "auto" with
@@ -48,6 +62,17 @@ export default defineConfig({
   json: { stringify: true, namedExports: false },
   test: {
     execArgv: nodeExecArgv,
+    // Nightly-tier tag vocabulary (`scripts/lib/nightly-test-tier.mts`). The
+    // PR runner passes `--tagsFilter=!nightly`; every other invocation keeps
+    // the tagged cases. `strictTags` turns a misspelled tag into a collection
+    // error instead of a silent tier change.
+    tags: [
+      {
+        name: "nightly",
+        description: "Nightly full-suite tier: excluded from PR test selection.",
+      },
+    ],
+    strictTags: true,
     // Vitest's 5s default is below what several honest suites need on a
     // two-core CI runner: full-registry scoring, workerd rendering, migrated
     // SQLite fixtures and whole-tree AST scans all cost seconds of real work.
@@ -59,10 +84,17 @@ export default defineConfig({
     // The gitignored stablecoin catalog artifacts are static imports in many
     // suites; a stale local copy fails them with misleading validation errors.
     // The setup regenerates them when cached input/output metadata changes
-    // (inherited by every project via extends).
+    // (inherited by every project via extends). The second entry builds the
+    // migrated SQLite template once per run; fixture processes deserialize it
+    // or replay migrations when it is unavailable.
     // Absolute path: vitest resolves relative setup paths against the
     // invocation cwd, which may be worker/.
-    globalSetup: [path.resolve(__dirname, "scripts/test/ensure-fresh-stablecoin-artifacts.ts")],
+    // The critical coverage runner sets PHAROS_CRITICAL_COVERAGE_FILTER to
+    // persist only enrolled sources' V8 results (scripts/lib/critical-coverage-filter.mts).
+    globalSetup: [
+      ...VITEST_GLOBAL_SETUP_FILES,
+      ...(process.env.PHAROS_CRITICAL_COVERAGE_FILTER === "1" ? ["scripts/lib/critical-coverage-filter.mts"] : []),
+    ].map((file) => path.resolve(__dirname, file)),
     projects: [
       {
         extends: true,
@@ -87,14 +119,33 @@ export default defineConfig({
       {
         // Worker suites lean on module-level state (circuit breakers, caches,
         // D1 stubs) and fail without per-file isolation — verified 2026-07-02
-        // (263 test failures under isolate:false). Keep default isolation.
+        // (263 test failures under isolate:false). Keep default isolation,
+        // except for the classified `worker-shared` project below.
         extends: true,
         test: {
           name: "worker",
           include: EXECUTABLE_TEST_PROJECTS.find((project) => project.name === "worker")!.include,
-          exclude: [...baseTestExcludes, ...threadBackedWorkerTests],
+          exclude: [...baseTestExcludes, ...threadBackedWorkerTests, ...workerSharedTests],
         },
       },
+      ...(workerSharedTests.length > 0
+        ? [{
+            extends: true as const,
+            test: {
+              name: "worker-shared",
+              include: workerSharedTests,
+              // The eligibility scan above (no vi.mock/hoisted module factories,
+              // no unrestored global/env stubs, no env writes, no stateful
+              // support module without a reset hook) is what makes this safe;
+              // central setup restores mocks and module state after every test.
+              // A file that fails shuffled runs moves back to the isolated
+              // `worker` project.
+              isolate: false,
+              pool: "forks" as const,
+              setupFiles: VITEST_PROJECT_SETUP_FILES["worker-shared"].map((file) => path.resolve(__dirname, file)),
+            },
+          }]
+        : []),
       {
         extends: true,
         test: {
@@ -108,7 +159,7 @@ export default defineConfig({
         test: {
           name: "src",
           include: EXECUTABLE_TEST_PROJECTS.find((project) => project.name === "src")!.include,
-          setupFiles: [path.resolve(__dirname, "src/test/setup.ts")],
+          setupFiles: VITEST_PROJECT_SETUP_FILES.src.map((file) => path.resolve(__dirname, file)),
         },
       },
     ],

@@ -96,6 +96,13 @@ describe("static content route adapters", () => {
     }
   });
 
+  it("describes multi-model archetypes without collapsing them to one collateral or redemption model", () => {
+    const html = renderToStaticMarkup(<MechanismComparisonMatrix />);
+
+    expect(html).toContain("none to protocol collateral");
+    expect(html).toContain("NAV or par");
+  });
+
   it("uses the shared Learn image in case-study Article and hub ItemList JSON-LD", () => {
     const image = `${SITE_ORIGIN}/og-editorial-learn.png`;
     for (const study of CASE_STUDY_LIST) {

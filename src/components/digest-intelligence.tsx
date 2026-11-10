@@ -55,7 +55,7 @@ function StandingConditionsStrip({ conditions }: { conditions: DigestStandingCon
         <span key={condition.stablecoinId ?? condition.symbol}>
           {index > 0 && " · "}
           {condition.symbol} d{condition.ageDays}
-          {condition.currentBps != null && ` ${Math.abs(condition.currentBps).toLocaleString()} bps`}
+          {condition.currentBps != null && ` ${condition.currentBps > 0 ? "+" : ""}${condition.currentBps.toLocaleString("en-US")} bps`}
         </span>
       ))}
     </p>
@@ -102,7 +102,7 @@ function OutcomeStrip({ outcomes }: { outcomes: DigestForwardLookOutcome[] }) {
   return (
     <div className="space-y-1">
       <p className="pharos-label">
-        Yesterday&apos;s checks
+        Previous edition&apos;s checks
       </p>
       <div className="flex flex-wrap gap-1.5">
         {outcomes.slice(0, 3).map((outcome) => (

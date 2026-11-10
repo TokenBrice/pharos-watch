@@ -12,7 +12,7 @@ import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { cemeteryCauseAnchor } from "@/lib/cemetery-selection";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { digestDisplay } from "@/lib/fonts/digest";
-import { formatRegisterDeathDate } from "./cemetery-register-model";
+import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import styles from "./cemetery-register.module.css";
 
 const CONTRACT_PREVIEW_COUNT = 4;
@@ -127,7 +127,7 @@ export function CemeteryRegisterAutopsy({ row, expanded, onShowOnField }: Cemete
           </dd>
 
           <dt className="text-muted-foreground">Peg</dt>
-          <dd className="pharos-numeric">{row.pegCurrency}</dd>
+          <dd className="pharos-numeric">{formatCemeteryPeg(row.pegCurrency)}</dd>
 
           <dt className="text-muted-foreground">Record</dt>
           <dd>{row.tracked ? "Tracked archive: frozen detail page" : "Curated record"}</dd>

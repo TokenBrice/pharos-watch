@@ -17,6 +17,7 @@ import {
   getYieldAlternateSourceCount,
   getYieldRowSourceClockInput,
   getYieldWorkbenchDataSource,
+  getYieldWorkbenchSourceRole,
   isYieldRankingSummary,
   type YieldWorkbenchRanking,
 } from "@/lib/yield-workbench-row";
@@ -159,10 +160,9 @@ function sortedLabelCounts(labelCounts: Map<string, number>): YieldSourceBoardLa
 }
 
 function sortedRiskDriverCounts(
-  driverCounts: Map<YieldSourceRiskDriver["key"], { label: string; count: number; description: string }>,
+  driverCounts: Map<string, { key: YieldSourceRiskDriver["key"]; label: string; count: number; description: string }>,
 ): YieldSourceBoardRiskDriverCount[] {
-  return Array.from(driverCounts.entries())
-    .map(([key, value]) => ({ key, ...value }))
+  return Array.from(driverCounts.values())
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
@@ -196,8 +196,9 @@ export function buildYieldSourceBoardModel(
   const depthCounts = emptyDepthCounts();
   const postureCounts = emptyPostureCounts();
   const sourceRiskDriverCounts = new Map<
-    YieldSourceRiskDriver["key"],
+    string,
     {
+      key: YieldSourceRiskDriver["key"];
       label: string;
       count: number;
       description: string;
@@ -233,6 +234,8 @@ export function buildYieldSourceBoardModel(
       sourceRisk: ranking.sourceRisk,
       sourceTvlUsd: ranking.sourceTvlUsd,
       sourceDepthLens,
+      yieldType: ranking.yieldType,
+      sourceRole: getYieldWorkbenchSourceRole(ranking),
       sourceChanged: ranking.provenance?.sourceSwitch ?? false,
       sourceFreshness: ranking.provenance?.sourceFreshness,
       warningSignals: ranking.warningSignals,
@@ -243,12 +246,16 @@ export function buildYieldSourceBoardModel(
     if (isYieldSourcePostureScoringWindowOnly(postureInput, posture, displayStale)) speculativeScoringWindowCount += 1;
 
     // Display drivers are projected before the top-N cut, so a suppressed
-    // scoring-only stale driver never occupies a visible slot.
+    // scoring-only stale driver never occupies a visible slot. The aggregate is
+    // keyed by the full driver text: a same-key chip carries one row's
+    // ecosystem or venue evidence, so it must never absorb another row's count.
     for (const driver of projectYieldSourceDisplayDrivers(getYieldSourceRiskDrivers(postureInput), displayStale)) {
-      const existing = sourceRiskDriverCounts.get(driver.key);
+      const driverKey = `${driver.key}|${driver.label}|${driver.description}`;
+      const existing = sourceRiskDriverCounts.get(driverKey);
       if (existing) existing.count += 1;
       else
-        sourceRiskDriverCounts.set(driver.key, {
+        sourceRiskDriverCounts.set(driverKey, {
+          key: driver.key,
           label: driver.label,
           count: 1,
           description: driver.description,

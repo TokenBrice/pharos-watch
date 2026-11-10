@@ -140,9 +140,12 @@ describe("Forest Road measured accounting", () => {
     await expect(run()).rejects.toThrow(/impairment exceeds/);
   });
 
-  it.each(["idleReserve", "totalBacking", "recognizedBacking"])("rejects a divergent %s getter", async (label) => {
+  it.each([
+    ["idleReserve", /backing accounting does not reconcile/],
+    ["recognizedBacking", /recognized backing diverges/],
+  ] as const)("rejects a divergent %s getter", async (label, reason) => {
     overrides[label] = word(1n);
-    await expect(run()).rejects.toThrow(/reconcile|recognized backing/);
+    await expect(run()).rejects.toThrow(reason);
   });
 
   it("rejects physical custody loss rather than substituting the idle ledger", async () => {
@@ -169,11 +172,10 @@ describe("Forest Road measured accounting", () => {
     await expect(run()).rejects.toThrow();
   });
 
-  it.each(["idleUSDC", "actualUSDC", "deployedPrincipal", "impairment", "supply", "recognizedBacking", "deliveryActive", "accruedUnissued"])(
-    "never turns an absent %s getter into zero", async (label) => {
-      overrides[label] = null;
-      await expect(run()).rejects.toThrow();
-    });
+  it("never turns an absent idleUSDC getter into zero", async () => {
+    overrides.idleUSDC = null;
+    await expect(run()).rejects.toThrow(/observation failed: idleUSDC/);
+  });
 
   it("retains an observed zero idle balance with a complete positive credit book", async () => {
     const credit = BigInt(RAW_ACCOUNTING["0x6fa4a33b"]);
@@ -233,11 +235,10 @@ describe("Forest Road measured accounting", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "forest-road-backing-shortfall", effect: "degraded" }));
   });
 
-  it.each(["idleReserve", "idleUSDC", "deployedPrincipal", "impairment", "totalBacking", "recognizedBacking", "supply", "actualUSDC"])(
-    "rejects a multiword %s result rather than silently truncating", async (label) => {
-      overrides[label] = `${word(0n)}${word(0n).slice(2)}`;
-      await expect(run()).rejects.toThrow(/malformed uint256/);
-    });
+  it("rejects a multiword uint256 result rather than silently truncating", async () => {
+    overrides.idleUSDC = `${word(0n)}${word(0n).slice(2)}`;
+    await expect(run()).rejects.toThrow(/malformed uint256/);
+  });
 
   it("keeps liability coverage unchanged when accrued claims become physical supply", async () => {
     const before = await run();

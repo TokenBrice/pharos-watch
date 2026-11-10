@@ -74,6 +74,7 @@ type ScanCounters = {
     failed: number;
     skippedDueBudget: number;
     budgetExhausted: boolean;
+    deferredToDebt: number;
   };
 };
 
@@ -143,7 +144,7 @@ type ScanSingleConfigArgs = ScanBlacklistConfigsArgs & {
 
 function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCursor: number): BlacklistScanResult {
   const nextCursor = result.scannedToTimestamp != null ? Math.max(lastCursor, result.scannedToTimestamp) : lastCursor;
-  const coverageOutcome = result.usedRpcLogs && result.incomplete && result.scannedToTimestamp != null
+  const coverageOutcome = result.coverageOutcome ?? (result.usedRpcLogs && result.incomplete && result.scannedToTimestamp != null
     ? "partial" : result.apiError
     ? result.coveredTopicCount > 0
       ? "missing_topic"
@@ -154,7 +155,7 @@ function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCurso
         : "incomplete"
       : result.rows.length > 0
         ? "complete"
-        : "quiet";
+        : "quiet");
 
   return {
     rows: result.rows,
@@ -162,6 +163,7 @@ function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCurso
     nextCursor: nextCursor > lastCursor ? nextCursor : null,
     apiError: result.apiError,
     incomplete: result.incomplete,
+    localBudgetStop: result.localBudgetStop,
     usedRpcLogs: result.usedRpcLogs ?? false,
     scannedToCursor: result.scannedToTimestamp,
     safeHead: result.safeHead,
@@ -392,7 +394,10 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
 
     if (config.chain.type === "tron") {
       if (result.tronRpc) state.tronRpc[configKey] = result.tronRpc;
-      if (!result.tronRpc || result.tronRpc.trongridRpcCalls > 0 || result.tronRpc.eventApiCalls > 0) {
+      if ((!result.tronRpc || result.tronRpc.trongridRpcCalls > 0 || result.tronRpc.eventApiCalls > 0)
+        && !result.localBudgetStop) {
+        // Local admission stopped the scan before provider evidence; circuit
+        // health stays neutral instead of recording an unobserved success.
         await recordOutcomeSafe(args.db, CIRCUIT_SOURCE.TRONGRID,
           result.tronRpc ? result.tronRpc.trongridFailureReason == null : !result.apiError);
       }
@@ -529,6 +534,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
         failed: 0,
         skippedDueBudget: 0,
         budgetExhausted: false,
+        deferredToDebt: 0,
       },
     },
     apiErrorClasses: {},

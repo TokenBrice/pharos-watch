@@ -45,6 +45,8 @@ const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
  * `INSERT OR IGNORE`, so the second write is a no-op instead of a new observation.
  */
 const ZEPHYR_OBSERVATION_BUCKET_SEC = 3600;
+/** Same five-minute future-skew ceiling as the sibling issuer-NAV adapters. */
+const ZEPHYR_MAX_FUTURE_SKEW_SEC = 5 * 60;
 
 function getFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -90,6 +92,13 @@ export async function fetchZephyrZysSource(signal?: AbortSignal): Promise<Zephyr
     if (upstreamSuccessSec == null) {
       logWorkerEventArgs("handler", "warn",
         "[yield] Zephyr ZYS source returned no observation timestamp header; refusing to date it from the fetch clock",
+      );
+      return null;
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (upstreamSuccessSec > nowSec + ZEPHYR_MAX_FUTURE_SKEW_SEC) {
+      logWorkerEventArgs("handler", "warn",
+        "[yield] Zephyr ZYS source observation clock is beyond the future-skew allowance; rejecting the observation",
       );
       return null;
     }

@@ -23,7 +23,10 @@ describe("resolveRootTokens", () => {
   });
 });
 
-describe("buildOgCemetery + checkOgCemetery", () => {
+// Nightly tier: the pure dangling-reference case above stays on PR; the render/
+// check cases retain PR coverage via scripts/maintenance/run-pr-static-checks.ts
+// (`check:generated-artifacts --only=og-cemetery`).
+describe("buildOgCemetery + checkOgCemetery", { tags: ["nightly"] }, () => {
   const roots: string[] = [];
   afterEach(() => {
     for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });

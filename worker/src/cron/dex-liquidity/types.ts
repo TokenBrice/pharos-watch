@@ -91,7 +91,6 @@ export interface LiquidityMetrics {
 
 import type {
   DexAmmExecutionModel,
-  DexStoredAmmExecutionModel,
   DexExecutionCapabilityGate,
   DexLiquidityPool,
   DexVolumeAvailabilityRecord,
@@ -136,6 +135,21 @@ export interface CurveStableswapRateInputExecutionCandidate {
 }
 
 /**
+ * Internal evidence that the source-stage price-spread proxy was overridden by
+ * a base-only on-chain `stored_rates()` capture, which shows the NG pool is
+ * plain. Consumed into cron metadata during scoring and never published.
+ */
+export interface CurveStableswapPlainAdmissionDiagnostic {
+  stablecoinId: string;
+  chain: string;
+  poolId: string;
+  /** The Curve pool address whose state was captured on chain. */
+  poolAddress: string;
+  /** max(source reference price) / min(source reference price). */
+  sourcePriceSpreadRatio: number;
+}
+
+/**
  * A pool's raw provider volume readings and the clock they were observed at
  * (DEC-19). Never decayed or coerced: a missing reading stays null. Window
  * summaries classify it (measured / stale / missing) against the run clock.
@@ -155,33 +169,24 @@ export interface DexPoolVolumeReading {
   deadPoolSignature?: true;
 }
 
-export type DexPoolVolumeObservation = NonNullable<DexLiquidityPool["volumeObservation"]>;
-
-export interface PoolEntry {
+export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
   poolId: string;
   /** Candidate metadata only; never an exact aggregate or physical identity. */
   candidateFingerprint?: string;
-  project: string;
-  chain: string;
-  tvlUsd: number;
-  symbol: string;
   /**
    * Provider 24h volume. In the source stage this is the raw reading (null when
    * the source published none); the scoring eligibility pass replaces it with
    * the in-window value, null unless `volumeObservation.status` is `measured`.
    */
-  volumeUsd1d: number | null;
+  volumeUsd1d: DexLiquidityPool["volumeUsd1d"];
   /** Provider 7d volume under the same raw-then-in-window contract as `volumeUsd1d`. */
-  volumeUsd7d?: number | null;
+  volumeUsd7d?: DexLiquidityPool["volumeUsd7d"];
   /** DEC-19 eligibility of the 24h reading; set by the scoring eligibility pass and published. */
-  volumeObservation?: DexPoolVolumeObservation;
+  volumeObservation?: DexLiquidityPool["volumeObservation"];
   /** Internal raw readings; absent means no reading (classified missing). Never published. */
   volumeReading?: DexPoolVolumeReading;
-  poolType: string;
   /** Canonical source family for coverage-confidence accounting and UI attribution. */
   source: LiquidityPoolSourceFamily;
-  /** DEX-implied price of the tracked stablecoin in this pool (USD). */
-  price?: number;
   /** Original price-row observation clock; absent/null means unknown, never publication time. */
   priceObservedAt?: number | null;
   /**
@@ -193,43 +198,20 @@ export interface PoolEntry {
   priceSource?: LiquidityPoolSourceFamily;
   /** The price-observing row's own TVL claim; caps the price observation's weight. */
   priceEvidenceTvlUsd?: number;
-  extra?: {
-    amplificationCoefficient?: number;
-    balanceRatio?: number;
-    feeTier?: number;
+  extra?: NonNullable<DexLiquidityPool["extra"]> & {
     qualityAdjustedTvl?: number;
-    effectiveTvl?: number;
-    organicFraction?: number;
     hasMeasuredOrganicFraction?: boolean;
-    pairQuality?: number;
-    stressIndex?: number;
-    isMetaPool?: boolean;
-    maturityDays?: number;
-    registryId?: string;
     lockedLiquidityPct?: number | null;
-    orderbookDepthUsd?: number;
-    orderbookDepthUpUsd?: number;
-    orderbookTvlBasis?: "volume-derived" | "coingecko-depth-2pct-capped-by-volume";
-    balanceDetails?: {
-      symbol: string;
-      balancePct: number;
-      isTracked: boolean;
-    }[];
-    measurement?: PoolMeasurementFlags;
-    /** Reviewed exact-family failure retained for P4 completeness accounting. */
-    executionCapabilityGate?: DexExecutionCapabilityGate;
-    /** Exact direct-API inputs retained for supported AMM execution simulation. */
-    ammExecutionModel?: DexStoredAmmExecutionModel;
     /** Internal V2 candidate; consumed before scoring and never published. */
     evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
     /** Internal Curve NG rate-input candidate; consumed before scoring and never published. */
     curveStableswapRateInputExecutionCandidate?: CurveStableswapRateInputExecutionCandidate;
+    /** Internal plain-NG admission evidence; consumed into cron metadata before scoring and never published. */
+    curveStableswapPlainAdmissionDiagnostic?: CurveStableswapPlainAdmissionDiagnostic;
     /** Internal all-retained target descriptor; stripped before top-pool publication. */
     measuredExecutionTarget?: DexMeasuredExecutionTarget;
     /** Internal multi-direction packet for reviewed pools; stripped before publication. */
     measuredExecutionTargets?: DexMeasuredExecutionTarget[];
-    /** Proof-free validated capacity/provenance projection retained for P4 and API publication. */
-    measuredExecution?: DexMeasuredExecutionPublicProfile;
     /** Internal multi-direction measured packet consumed by P4 before publication. */
     measuredExecutions?: DexMeasuredExecutionPublicProfile[];
     /** Internal D1 proof profile; stripped before top-pool publication. */

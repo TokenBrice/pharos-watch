@@ -101,6 +101,19 @@ export function getTrackedDeploymentsForChain(chainId: string): ChainTrackedDepl
   });
 }
 
+/**
+ * One chain-cohort ranking for titles, editorial and the compare CTA: base
+ * coins lead and NAV tokens/variants only fill spare slots.
+ */
+export function rankChainDeployments<T extends { isNavOrVariant: boolean }>(
+  deployments: readonly T[],
+): T[] {
+  return [
+    ...deployments.filter((deployment) => !deployment.isNavOrVariant),
+    ...deployments.filter((deployment) => deployment.isNavOrVariant),
+  ];
+}
+
 export function getChainTrackedDeploymentCount(chainId: string): number {
   return getTrackedDeploymentsForChain(chainId).reduce(
     (sum, deployment) => sum + deployment.contractCount,

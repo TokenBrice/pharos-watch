@@ -365,7 +365,8 @@ async function upsertTelegramLifecycleSnapshot(
         `INSERT INTO telegram_watcher_lifecycle_daily (${columns.map(([column]) => column).join(", ")})
          VALUES (${columns.map(() => "?").join(", ")})
          ON CONFLICT(day) DO UPDATE SET ${columns.slice(1)
-           .map(([column]) => `${column} = excluded.${column}`).join(",\n           ")}`,
+           .map(([column]) => `${column} = excluded.${column}`).join(",\n           ")}
+         WHERE excluded.snapshot_at >= telegram_watcher_lifecycle_daily.snapshot_at`,
       )
       .bind(...columns.map(([, value]) => value))
       .run();
@@ -482,10 +483,15 @@ export async function loadTelegramTopFollowedCoins(
     .slice(0, limit);
 }
 
+/** A failed diagnostics read is unavailable evidence, distinct from a missing row. */
+export type TelegramChatHealthDiagnosticsRead =
+  | { available: true; diagnostics: TelegramChatHealthDiagnostics | null }
+  | { available: false };
+
 export async function loadTelegramChatHealthDiagnostics(
   db: D1Database,
   chatId: string,
-): Promise<TelegramChatHealthDiagnostics | null> {
+): Promise<TelegramChatHealthDiagnosticsRead> {
   try {
     const row = await db
       .prepare(
@@ -495,13 +501,16 @@ export async function loadTelegramChatHealthDiagnostics(
       )
       .bind(chatId)
       .first<DeliveryDiagnosticsRow>();
-    if (!row) return null;
+    if (!row) return { available: true, diagnostics: null };
     return {
-      lastSuccessfulDeliveryAt: coerceNullableTimestamp(row.last_successful_delivery_at),
-      lastSuccessfulReplyAt: coerceNullableTimestamp(row.last_successful_reply_at),
-      recentFailureClass: row.recent_failure_class ?? null,
+      available: true,
+      diagnostics: {
+        lastSuccessfulDeliveryAt: coerceNullableTimestamp(row.last_successful_delivery_at),
+        lastSuccessfulReplyAt: coerceNullableTimestamp(row.last_successful_reply_at),
+        recentFailureClass: row.recent_failure_class ?? null,
+      },
     };
   } catch {
-    return null;
+    return { available: false };
   }
 }

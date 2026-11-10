@@ -39,6 +39,8 @@ import {
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
 import { validateReviewedRedemptionDispositionRows } from "../maintenance/generate-redemption-coverage-audit";
+import { buildPegLandingUrl } from "../../src/lib/peg-landing";
+import { REMOVED_STABLECOINS, type RemovedStablecoin } from "../../src/lib/removed-stablecoins";
 
 const INDEPENDENT_ASSURANCE_MANIFEST_DIR = "shared/data/live-reserves/independent-assurance";
 const INDEPENDENT_ASSURANCE_MANIFEST_PRODUCTS = new Set(Object.keys(MANIFEST_SOURCES));
@@ -526,6 +528,31 @@ function isTrackedRuntimeCoin(coin: StablecoinMeta): boolean {
   return isReadableStablecoinMeta(coin);
 }
 
+/**
+ * A symbol shared by several active coins needs a deployment footprint so address-based
+ * routing can tell the namesakes apart. External provider ids disambiguate a coin with no
+ * contract footprint of its own.
+ */
+export function getCollidingSymbolContractIssues(coins: readonly StablecoinMeta[]): string[] {
+  const bySymbol = new Map<string, StablecoinMeta[]>();
+  for (const coin of coins) {
+    const symbol = coin.symbol.toUpperCase();
+    const namesakes = bySymbol.get(symbol);
+    if (namesakes) namesakes.push(coin);
+    else bySymbol.set(symbol, [coin]);
+  }
+  const issues: string[] = [];
+  for (const [symbol, namesakes] of bySymbol) {
+    if (namesakes.length <= 1) continue;
+    for (const coin of namesakes) {
+      if (coin.contracts?.length || coin.tradedContracts?.length) continue;
+      if (coin.geckoId || coin.cmcSlug) continue;
+      issues.push(`${coin.id}: symbol "${symbol}" is shared but the coin has no contract for address-based disambiguation`);
+    }
+  }
+  return issues;
+}
+
 export function getListingGovernanceIssues(
   coins: readonly StablecoinMeta[],
   listingDecisions: unknown = listingDecisionsAsset,
@@ -713,6 +740,79 @@ export {
   getReferenceIssues,
 };
 
+const REMOVED_REDIRECT_FILE = "public/_redirects";
+
+interface RedirectRule {
+  source: string;
+  destination: string;
+  status: string;
+}
+
+function parseRedirectRules(source: string): RedirectRule[] {
+  return source
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .map((line) => {
+      const [sourcePath, destination, status] = line.split(/\s+/);
+      return { source: sourcePath!, destination: destination!, status: status! };
+    });
+}
+
+/**
+ * Retired `/stablecoin/<id>/` profiles keep a hand-maintained 301 to their
+ * cemetery record, built peg hub or `/coverage/`; conversely no redirect may
+ * point at a retired ID the removal list does not name.
+ */
+export function getRemovedStablecoinRedirectIssues(
+  redirectsSource: string,
+  {
+    removed = REMOVED_STABLECOINS,
+    trackedIds = new Set<string>(),
+    cemeteryIds = new Set(DEAD_STABLECOINS.map((entry) => entry.id)),
+  }: {
+    removed?: readonly RemovedStablecoin[];
+    trackedIds?: ReadonlySet<string>;
+    cemeteryIds?: ReadonlySet<string>;
+  } = {},
+): string[] {
+  const issues: string[] = [];
+  // Fail closed on an empty removal list: both loops below would otherwise pass
+  // vacuously while every retired profile URL rots.
+  if (removed.length === 0) {
+    issues.push("removed-stablecoin list is empty, so no retired profile redirect can be verified");
+  }
+  const rules = parseRedirectRules(redirectsSource);
+  const listed = new Set<string>();
+  for (const coin of removed) {
+    if (trackedIds.has(coin.id)) issues.push(`${coin.id}: removed stablecoin is still in the tracked registry`);
+    if (listed.has(coin.id)) issues.push(`${coin.id}: duplicate removed stablecoin entry`);
+    listed.add(coin.id);
+    if (coin.cemeteryId != null && !cemeteryIds.has(coin.cemeteryId)) {
+      issues.push(`${coin.id}: cemetery record "${coin.cemeteryId}" does not exist`);
+    }
+    const destination = coin.cemeteryId
+      ? `/cemetery/#${coin.cemeteryId}`
+      : buildPegLandingUrl(coin.pegCurrency) ?? "/coverage/";
+    for (const source of [`/stablecoin/${coin.id}`, `/stablecoin/${coin.id}/*`]) {
+      const rule = rules.find((candidate) => candidate.source === source);
+      if (!rule || rule.destination !== destination || rule.status !== "301") {
+        issues.push(`${source}: expected a 301 to ${destination}`);
+      }
+    }
+  }
+  const retiredRedirectIds = rules
+    .filter((rule) => /^\/stablecoins\/[a-z]+\/$|^\/coverage\/$|^\/cemetery\/#/.test(rule.destination))
+    .map((rule) => /^\/stablecoin\/([a-z][^/*]*)\/?$/.exec(rule.source)?.[1])
+    .filter((id): id is string => id != null);
+  for (const id of retiredRedirectIds) {
+    if (!listed.has(id)) {
+      issues.push(`/stablecoin/${id}: redirect points at a retired profile the removal list does not name`);
+    }
+  }
+  return issues;
+}
+
 function runStablecoinDataCheck(): void {
   let canonicalOrder: string[] = [];
   let perCoinEntries: StablecoinSourceEntry[] = [];
@@ -871,6 +971,13 @@ function runStablecoinDataCheck(): void {
       reportError(`${STABLECOIN_DATA_DIR}: ${error}`);
     }
 
+    // Active coins disambiguate a shared symbol by deployment address.
+    for (const issue of getCollidingSymbolContractIssues(
+      allEntries.map((entry) => entry.coin).filter((coin) => isActiveStablecoinMeta(coin)),
+    )) {
+      reportError(`${STABLECOIN_DATA_DIR}: ${issue}`);
+    }
+
     for (const issue of findBlacklistabilityReviewIssues(allEntries.map((entry) => entry.coin))) {
       reportError(`${STABLECOIN_DATA_DIR}: ${issue.id}: ${issue.message}`);
     }
@@ -919,6 +1026,15 @@ function runStablecoinDataCheck(): void {
           `slices without eligibility modality (look-through / taxonomy naming; not reviewed as drift).\n`,
       );
     }
+  }
+
+  try {
+    const trackedIds = new Set(perCoinEntries.map((entry) => entry.coin.id));
+    for (const issue of getRemovedStablecoinRedirectIssues(readFileSync(REMOVED_REDIRECT_FILE, "utf8"), { trackedIds })) {
+      reportError(`${REMOVED_REDIRECT_FILE}: ${issue}`);
+    }
+  } catch (error) {
+    reportError(`${REMOVED_REDIRECT_FILE}: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   if (errorCount > 0) {

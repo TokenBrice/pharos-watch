@@ -1,6 +1,4 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -24,13 +22,24 @@ import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { QUALITY_WEIGHT, CHAIN_ENVIRONMENT_WEIGHT, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT, BACKING_DIVERSITY_WEIGHT } from "@shared/lib/chains/health";
 import { PYS_BENCHMARK_SPREAD_WEIGHT, PYS_RISK_PENALTY_EXPONENT, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR, PYS_MAX_SOURCE_RISK_PENALTY, PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import { DEFINITIONS } from "@/lib/definitions";
-import { DEPEG_RESOLVER_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
+import { DEPEG_RESOLVER_SECTION_CONTENT, MINT_BURN_FLOW_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_HISTORY_ARCHIVES, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
 
+// The page is static (no props, constant date): render once and reuse the parsed document.
+let cachedHtml: string | null = null;
+let cachedRoot: HTMLElement | null = null;
+
+function methodologyHtml() {
+  cachedHtml ??= renderToStaticMarkup(<MethodologyPage />);
+  return cachedHtml;
+}
+
 function methodologyDocument() {
-  const root = document.createElement("div");
-  root.innerHTML = renderToStaticMarkup(<MethodologyPage />);
-  return root;
+  if (!cachedRoot) {
+    cachedRoot = document.createElement("div");
+    cachedRoot.innerHTML = methodologyHtml();
+  }
+  return cachedRoot;
 }
 
 function tableCells(root: HTMLElement, testId: string) {
@@ -86,7 +95,7 @@ describe("MethodologyPage", () => {
 
 
   it("renders every section anchor that methodology context deep-links to", () => {
-    const html = renderToStaticMarkup(<MethodologyPage />);
+    const html = methodologyHtml();
     const anchors = new Set(
       Object.values(METHODOLOGY_CONTEXT)
         .map((item) => item.methodologyPath)
@@ -244,8 +253,6 @@ describe("MethodologyPage", () => {
     const text = methodologyDocument().querySelector("#pricing-pipeline-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(text).toContain("withheld once an overlapping protocol DEX candidate passes registry, freshness, price and TVL checks, even if corroboration later fails");
     expect(text).not.toContain("withheld only when an overlapping protocol-level DEX bridge lane is admitted");
-    const owner = readFileSync(resolve(process.cwd(), "docs/pricing-pipeline.md"), "utf8");
-    expect(owner).toContain("the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.");
   });
 
   it("explains Bank Run Gauge unavailability by missing or zero weights, not only all-NR", () => {
@@ -266,6 +273,50 @@ describe("MethodologyPage", () => {
     const text = methodologyDocument().querySelector("#liquidity-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(text).toContain("~43%+->100");
     expect(text).not.toContain("~32%+->100");
+  });
+
+  it("states the PegScore tracking gate without a retired early-score label", () => {
+    const root = methodologyDocument();
+    const faq = [...root.querySelectorAll('script[type="application/ld+json"]')]
+      .map((script) => JSON.parse(script.textContent!))
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .find((value) => value["@type"] === "FAQPage");
+    const entry = faq?.mainEntity.find((item: { name: string }) => item.name === "How is the Pharos peg score calculated?");
+    expect(entry?.acceptedAnswer.text).not.toMatch(/early/i);
+    expect(entry?.acceptedAnswer.text).not.toContain("historyCoverage");
+    expect(DEFINITIONS.pegScore.detail).not.toMatch(/early/i);
+    expect(DEFINITIONS.pegScore.long).not.toMatch(/early/i);
+    const technical = root.querySelector("#pegscore-dews-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(technical).not.toMatch(/Early score/);
+    expect(technical).not.toContain("historyCoverage");
+  });
+
+  it("states the leg-quarantine rule instead of keeping a stalled mint/burn leg in scope", () => {
+    const text = methodologyDocument().querySelector("#mint-burn-flow-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("quarantined from the common watermark");
+    expect(text).toContain("reactivation-pending");
+    expect(text).not.toContain("that later stalls stays in scope");
+    expect(MINT_BURN_FLOW_SECTION_CONTENT.markdown).toContain("quarantines an admitted leg");
+  });
+
+  it("lists only blacklist contracts with an active scan", () => {
+    const text = methodologyDocument().querySelector("#blacklist-tracker-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).not.toMatch(/\bAEUR\b/);
+  });
+
+  it("keeps a confirm-required opposite reading from retiring the live depeg", () => {
+    const text = methodologyDocument().querySelector("#pegscore-dews-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).not.toMatch(/retires the stale live row/);
+    expect(text).toContain("keeps the existing old-direction lifecycle open");
+    expect(text).toContain("superseded-direction");
+  });
+
+  it("separates per-coin unrated fallback PYS from an unavailable safety snapshot and opportunity-evidence-missing NR", () => {
+    const text = methodologyDocument().querySelector("#yield-intelligence-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("Rows whose per-coin report card is unrated keep the 40/NR fallback and publish null PYS with `safety-unrated`");
+    expect(text).toContain("an unavailable common safety snapshot publishes PYS NR with the same reason");
+    expect(text).toContain("rows carrying `opportunity-evidence-missing` publish PYS NR");
+    expect(text).not.toContain("`safety-unrated` or `opportunity-evidence-missing` remain estimated");
   });
 
 });

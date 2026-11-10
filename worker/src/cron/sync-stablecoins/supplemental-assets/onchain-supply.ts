@@ -3,6 +3,7 @@ import { fetchUsdySuiSupply } from "./usdy-sui-supply";
 import { fetchUsdyAptosSupply } from "./usdy-aptos-supply";
 import { fetchStellarSupply } from "./stellar-supply";
 import { fetchNobleSupply } from "./noble-supply";
+import { fetchXrplSupply, XrplSupplyValidationError } from "./xrpl-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
@@ -361,7 +362,7 @@ async function fetchOnChainSupplyForContract(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   dwellirNative?: DwellirNativeCapability;
   signal?: AbortSignal;
-  curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean };
+  curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean; hotwallet?: readonly string[] };
   observedBlocks?: Map<string, EvmBlockHeader>;
   onFailure?: (reason: PartitionReadFailure) => void;
 }): Promise<ContractOnChainMcapResult | null> {
@@ -377,12 +378,8 @@ async function fetchOnChainSupplyForContract(input: {
     });
     return null;
   };
-  if (!isFixedDecimalDeployment(supplyContract)) {
-    return reject("amount-encoding-unavailable");
-  }
   const family = onchainSupplyProbeFamily(supplyContract);
   if (family === null) return reject("unsupported-chain-family");
-  const decimals = supplyContract.decimals;
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
   const allowZeroSupply = input.curated?.allowZeroSupply === true;
@@ -392,6 +389,16 @@ async function fetchOnChainSupplyForContract(input: {
     const incumbentUrls = registryRpcEndpoints(chainRpc).filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
     const rpcUrl = input.curated?.rpcUrl ?? incumbentUrls[0];
     const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? incumbentUrls[1];
+    if (family === "xrpl") {
+      const observation = await fetchXrplSupply(supplyContract.address, supplySignal, rpcUrl, fallbackRpcUrl, input.curated?.hotwallet);
+      throwIfAborted(supplySignal);
+      const mcap = observation.supply * input.priceUsd;
+      if (!Number.isFinite(mcap) || mcap < 0 || (mcap === 0 && !allowZeroSupply)) return reject("supply-valuation-invalid");
+      return { mcap, supplySource: "onchain-total-supply", observedAt: observation.observedAt,
+        chain: supplyContract.chain, chainLabel: contractChainLabel(supplyContract) };
+    }
+    if (!isFixedDecimalDeployment(supplyContract)) return reject("amount-encoding-unavailable");
+    const decimals = supplyContract.decimals;
     const rpcOptions = joinedSupplyRpcOptions({ ...input, signal: supplySignal });
     const needsJoinedBlock = family === "evm" && (
       !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
@@ -476,7 +483,8 @@ async function fetchOnChainSupplyForContract(input: {
     }
   } catch (err) {
     throwIfAborted(supplySignal);
-    return reject("supply-probe-failed", err, err instanceof OnchainSupplyValidationError ? "partition-invalid" : "legs-unreadable");
+    return reject("supply-probe-failed", err,
+      err instanceof OnchainSupplyValidationError || err instanceof XrplSupplyValidationError ? "partition-invalid" : "legs-unreadable");
   }
 
   return reject("supply-valuation-invalid");

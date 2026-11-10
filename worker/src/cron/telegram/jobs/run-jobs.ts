@@ -31,6 +31,19 @@ const OPEN_PLANNING_JOB_SQL = `SELECT job_id, kind, payload_json, state, cursor,
 /** Jobs closed per sweep. */
 const CLOSE_JOBS_LIMIT = 50;
 
+/**
+ * Broadcast jobs keep the message HTML in `payload_json` because every fan-out
+ * page re-reads it. Terminal delivery rows already drop their `body`, but the
+ * job row outlives the send (until retention), so the text is removed from the
+ * payload at the transition that no longer needs it: fan-out completion, a
+ * planning cancel, or the close that ends the job (which also scrubs payloads
+ * readied before this rule). `payload_json` is NOT NULL, so remove the key, not
+ * the column, and keep `scope`/`excludeChatId` for routing and `/forget`. The
+ * `json_valid` guard keeps a corrupt payload from aborting the closing batch.
+ */
+const CLEAR_JOB_MESSAGE_TEXT_SQL =
+  "CASE WHEN json_valid(payload_json) THEN json_remove(payload_json, '$.messageHtml') ELSE payload_json END";
+
 export interface TelegramFanoutResult {
   pages: number;
   deliveriesPlanned: number;
@@ -88,7 +101,8 @@ export async function fanOutPlanningTelegramJobs(
     cappedRows: 0,
   };
   const cancelled = await db.prepare(
-    `UPDATE telegram_jobs SET state = 'cancelled', completed_at = ?, error = COALESCE(error, 'expired_while_planning')
+    `UPDATE telegram_jobs SET state = 'cancelled', completed_at = ?, error = COALESCE(error, 'expired_while_planning'),
+        payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}
       WHERE state = 'planning' AND expires_at <= ?`,
   ).bind(nowSec, nowSec).run();
   result.jobsCancelled = Number(cancelled.meta?.changes ?? 0);
@@ -113,7 +127,9 @@ export async function fanOutPlanningTelegramJobs(
     const handler = TELEGRAM_JOB_KIND_HANDLERS[job.kind];
     if (!handler?.buildPage) {
       await db.prepare(
-        "UPDATE telegram_jobs SET state = 'cancelled', completed_at = ?, error = 'no_fanout_builder' WHERE job_id = ? AND state = 'planning'",
+        `UPDATE telegram_jobs SET state = 'cancelled', completed_at = ?, error = 'no_fanout_builder',
+            payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}
+          WHERE job_id = ? AND state = 'planning'`,
       ).bind(nowSec, job.job_id).run();
       result.jobsCancelled += 1;
       continue;
@@ -172,14 +188,18 @@ export async function fanOutPlanningTelegramJobs(
           if (inserts.length + capped.overflowStatements.length + 1 > D1_BATCH_SIZE) {
             throw new RangeError(`Telegram fan-out slice for ${job.job_id} exceeds one atomic batch`);
           }
+          const nextState = last && page.nextCursor == null ? "ready" : "planning";
+          // The last page leaves every delivery row carrying its own chunk, so
+          // the job payload's message text is scrubbed in the same atomic batch.
+          const clearMessageText = nextState === "ready" ? `, payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}` : "";
           const advance = db.prepare(
             `UPDATE telegram_jobs
-                SET cursor = ?, planned_count = ?, state = ?, error = NULL
+                SET cursor = ?, planned_count = ?, state = ?, error = NULL${clearMessageText}
               WHERE job_id = ? AND state = 'planning' AND cursor IS ?`,
           ).bind(
             sliceCursor,
             plannedCount + capped.admitted.length,
-            last && page.nextCursor == null ? "ready" : "planning",
+            nextState,
             job.job_id,
             cursor,
           );
@@ -281,7 +301,8 @@ export async function sweepTelegramJobs(db: D1Database, nowSec: number): Promise
       }
     }
     const closed = await db.prepare(
-      "UPDATE telegram_jobs SET state = 'done', completed_at = ? WHERE job_id = ? AND state = 'ready'",
+      `UPDATE telegram_jobs SET state = 'done', completed_at = ?, payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}
+        WHERE job_id = ? AND state = 'ready'`,
     ).bind(nowSec, job.job_id).run();
     jobsDone += Number(closed.meta?.changes ?? 0);
   }

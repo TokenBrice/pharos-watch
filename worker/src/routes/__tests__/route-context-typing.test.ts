@@ -3,52 +3,49 @@ import type { FeedbackEnv } from "../../api/feedback";
 import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-support";
 import { buildRouteContext } from "../../handlers/http/context";
 import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";
-import { getRouteMatch } from "../registry";
 import { defineDynamicRoute, defineStaticRoute, type RouteContextFor } from "../shared";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
-  STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   getDynamicEndpointDescriptorByKey,
   type EndpointDependenciesForKey,
 } from "@shared/lib/api-endpoints";
 import type { CloudflareD1StatusBindings } from "../../lib/env";
 
+// `vitest.config.ts` has no typecheck block, so `expectTypeOf` inside `it()`
+// asserts nothing at runtime. Keep these narrowing assertions at module scope,
+// where `npm run typecheck:worker` checks them.
+void defineStaticRoute("status", async (routeCtx) => {
+  expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"status">>>();
+  expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
+  expectTypeOf(routeCtx.cloudflareD1StatusBindings).toEqualTypeOf<CloudflareD1StatusBindings>();
+  expectTypeOf(routeCtx.workerCanaryMode).toEqualTypeOf<"off" | "shadow" | "status" | "alert">();
+  expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
+  return new Response("ok");
+});
+
+void defineStaticRoute("rpc-provider-trial", async (routeCtx) => {
+  expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"rpc-provider-trial">>>();
+  expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null | undefined>();
+  return new Response("ok");
+});
+
+void defineStaticRoute("feedback", async (routeCtx) => {
+  expectTypeOf(routeCtx.feedbackEnv).toEqualTypeOf<FeedbackEnv>();
+  return new Response("ok");
+});
+
+void defineDynamicRoute(/^\/example$/, ["coingeckoApiKey"], ["GET"], async (routeCtx) => {
+  expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
+  expectTypeOf(routeCtx.feedbackEnv).toEqualTypeOf<FeedbackEnv | undefined>();
+  return new Response("ok");
+});
+
+void defineDynamicRoute(/^\/admin$/, [], ["GET"], async (routeCtx) => {
+  expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null | undefined>();
+  return new Response("ok");
+});
+
 describe("route context typing", () => {
-  it("narrows static route contexts to declared endpoint dependencies", () => {
-    defineStaticRoute("status", async (routeCtx) => {
-      expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"status">>>();
-      expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
-      expectTypeOf(routeCtx.cloudflareD1StatusBindings).toEqualTypeOf<CloudflareD1StatusBindings>();
-      expectTypeOf(routeCtx.workerCanaryMode).toEqualTypeOf<"off" | "shadow" | "status" | "alert">();
-      expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
-      return new Response("ok");
-    });
-
-    defineStaticRoute("rpc-provider-trial", async (routeCtx) => {
-      expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"rpc-provider-trial">>>();
-      expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null | undefined>();
-      return new Response("ok");
-    });
-
-    defineStaticRoute("feedback", async (routeCtx) => {
-      expectTypeOf(routeCtx.feedbackEnv).toEqualTypeOf<FeedbackEnv>();
-      return new Response("ok");
-    });
-  });
-
-  it("narrows dynamic route contexts to declared dependencies", () => {
-    defineDynamicRoute(/^\/example$/, ["coingeckoApiKey"], ["GET"], async (routeCtx) => {
-      expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
-      expectTypeOf(routeCtx.feedbackEnv).toEqualTypeOf<FeedbackEnv | undefined>();
-      return new Response("ok");
-    });
-
-    defineDynamicRoute(/^\/admin$/, [], ["GET"], async (routeCtx) => {
-      expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null | undefined>();
-      return new Response("ok");
-    });
-  });
-
   it("hydrates only the requested dependency fields at runtime", () => {
     const request = new Request("https://api.pharos.watch/api/status");
     const url = new URL(request.url);
@@ -107,7 +104,7 @@ describe("route context typing", () => {
       trustedAdmin: false,
       routeDependencies: ["feedbackEnv"] as const,
     });
-    expect(feedbackCtx.feedbackEnv).toEqual({
+    expect(feedbackCtx.feedbackEnv).toMatchObject({
       GITHUB_PAT: "ghp_demo",
       FEEDBACK_IP_SALT: "salt",
     });
@@ -118,12 +115,6 @@ describe("route context typing", () => {
     expect(getDynamicRouteMatch("/api/api-keys/7/update")?.dependencies).toEqual(["apiKeyHashPepper"]);
     expect(getDynamicRouteMatch("/api/api-keys/7/deactivate")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies).toEqual(["apiKeyHashPepper"]);
-  });
-
-  it("keeps static route dependency mapping centralized", () => {
-    for (const policy of STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES) {
-      expect(getRouteMatch(policy.path)?.dependencies, policy.key).toEqual(policy.dependencies);
-    }
   });
 
   it("keeps dynamic admin handler bindings exhaustive against shared descriptors", () => {

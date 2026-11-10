@@ -1,6 +1,6 @@
 # Portfolio Page
 
-`/portfolio/` is a noindex/follow personal risk workspace, canonical to itself. `src/app/portfolio/page.tsx` provides the static `createClientFeaturePage()` shell; route client/model compose shared scoring and `usePortfolio`. Holdings remain client-side; there is no `/api/portfolio` endpoint.
+`/portfolio/` is a noindex/follow personal risk workspace, canonical to itself. `src/app/portfolio/page.tsx` provides the static `FeaturePageShell`; route client/model compose shared scoring and `usePortfolio`. Holdings remain client-side; there is no `/api/portfolio` endpoint.
 
 ## Data Contract
 
@@ -8,7 +8,11 @@
 
 The holdings editor waits only for URL/local-storage initialization, not report cards. Report cards are enabled only when initialized holdings exist. Pending enrichment has an explicit loading state beside the still-editable holdings; it never implies a zero-risk portfolio.
 
-The initialization placeholder reserves separate hero, editor and first-visit empty-state areas so the footer does not enter the viewport before the workspace appears.
+The first-visit hero, editor and empty state prerender directly after the page header, outside Suspense. The client is imported directly: a dynamic island would move the LCP note into a hidden document-tail segment awaiting a reveal script. One workspace DOM tree survives hydration without a static duplicate or handoff. Before the workspace is parsed, synchronous same-origin `public/portfolio-bootstrap.js` sets `data-portfolio-empty` only when neither a shared URL nor a nonempty stored array exists. CSS defaults to the reserved loading areas until initialization or an explicit first-visit selection, so a blocked or failed script cannot flash an empty workspace for returning/shared visits.
+
+The external script is allowed by the static CSP's `script-src 'self'` and bypasses Pages Functions. It only selects presentation; holdings validation and writeback remain owned by `usePortfolio`. Initialized content no longer depends on the selector.
+
+Critical-CSS extraction temporarily matches `data-portfolio-empty` only on documents containing this bootstrap, then restores the original HTML root. Both first-visit visibility rules must be inline; otherwise the workspace still waits for the asynchronous full stylesheet despite being in the first flush.
 
 Coin options derive from `CLIENT_ACTIVE_STABLECOINS`, excluding every other lifecycle state, not by subtracting cemetery rows. Static logos and local holdings introduce no new server data source.
 

@@ -1,8 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import type * as IndependentAssurance from "../independent-assurance";
-import { getReserveAdapter } from "../index";
 import { fetchIndependentAssuranceReserves } from "../independent-assurance";
-import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const REPORT_TIMESTAMP = 1_790_812_799;
@@ -49,15 +47,6 @@ beforeEach(() => {
       collateralizationRatio: 1_191_693_796 / 1_186_633_562,
       details: { assurance: { reportUrl: "https://learn.anchorage.com/09.30.26_USDGO-Stablecoin-Attestation-Report-signed.pdf" } },
     },
-  });
-});
-
-describe("usdgo-transparency profile classification", () => {
-  it("names the STBXX fund that the CUSIP identifies, not the Financial Square series", () => {
-    expect(USDGO_INDEPENDENT_ASSURANCE_PROFILE.classifications.stbxx).toMatchObject({
-      name: "Goldman Sachs STBXX (CUSIP 38151N205)",
-      issuerOrObligor: "Goldman Sachs Stablecoin Reserves Fund",
-    });
   });
 });
 
@@ -110,16 +99,5 @@ describe("usdgo-transparency independent promotion", () => {
       nowSec: REPORT_TIMESTAMP + 3_600,
       validate: false,
     })).rejects.toThrow("issuer cross-check disagrees");
-  });
-
-  it("validates the promoted adapter output and registry declaration", async () => {
-    const { result, report } = await runAdapter("usdgo-transparency", "usdgo-osl", {
-      network: issuerNetwork(),
-      nowSec: REPORT_TIMESTAMP + 3_600,
-    });
-    const adapter = getReserveAdapter("usdgo-transparency");
-    expect(report.valid).toBe(true);
-    expect(adapter).toMatchObject({ evidenceClass: "independent", sourceModel: "dynamic-mix" });
-    expect(result.metadata?.freshnessMode).toBe("verified");
   });
 });

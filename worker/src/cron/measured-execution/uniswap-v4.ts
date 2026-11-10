@@ -388,18 +388,10 @@ export function computeUniswapV4SpotBoundAmountOut(input: {
     : (netAmountInRaw * UNISWAP_V4_Q192) / priceX192;
 }
 
-function encodeSlot0(poolId: `0x${string}`): `0x${string}` {
+function encodePoolState(poolId: `0x${string}`, functionName: "getSlot0" | "getLiquidity"): `0x${string}` {
   return encodeFunctionData({
     abi: UNISWAP_V4_STATE_VIEW_ABI,
-    functionName: "getSlot0",
-    args: [poolId],
-  });
-}
-
-function encodeLiquidity(poolId: `0x${string}`): `0x${string}` {
-  return encodeFunctionData({
-    abi: UNISWAP_V4_STATE_VIEW_ABI,
-    functionName: "getLiquidity",
+    functionName,
     args: [poolId],
   });
 }
@@ -463,45 +455,29 @@ export async function resolveUniswapV4PoolBindings(input: {
       ...request,
       index,
       poolId: poolKey.poolId,
-      slot0CallData: encodeSlot0(poolKey.poolId),
-      liquidityCallData: encodeLiquidity(poolKey.poolId),
+      slot0CallData: encodePoolState(poolKey.poolId, "getSlot0"),
+      liquidityCallData: encodePoolState(poolKey.poolId, "getLiquidity"),
     };
   });
   const outcomes = input.requests.map<UniswapV4PoolBindingOutcome>((request) => ({
     targetId: request.target.targetId,
   }));
   const plans = encoded.flatMap((request) => request == null ? [] : [
-    {
-      index: request.index * 2,
-      request,
-      kind: "slot0" as const,
-      label: `${request.index}:slot0`,
-      chain: request.target.chain,
-      blockNumber: input.blockNumber,
-      blockHash: input.blockHash,
-      call: {
-        label: `${request.index}:slot0`,
-        target: request.deployment.stateViewAddress,
-        callData: request.slot0CallData,
-        allowFailure: true,
-      },
+    ["slot0", request.slot0CallData] as const,
+    ["liquidity", request.liquidityCallData] as const,
+  ].map(([kind, callData], offset) => ({
+    index: request.index * 2 + offset,
+    label: `${request.index}:${kind}`,
+    chain: request.target.chain,
+    blockNumber: input.blockNumber,
+    blockHash: input.blockHash,
+    call: {
+      label: `${request.index}:${kind}`,
+      target: request.deployment.stateViewAddress,
+      callData,
+      allowFailure: true,
     },
-    {
-      index: request.index * 2 + 1,
-      request,
-      kind: "liquidity" as const,
-      label: `${request.index}:liquidity`,
-      chain: request.target.chain,
-      blockNumber: input.blockNumber,
-      blockHash: input.blockHash,
-      call: {
-        label: `${request.index}:liquidity`,
-        target: request.deployment.stateViewAddress,
-        callData: request.liquidityCallData,
-        allowFailure: true,
-      },
-    },
-  ]);
+  })));
   const reads: Array<{ result?: EvmMulticall3Result; failureReason?: string } | null> = Array.from(
     { length: input.requests.length * 2 },
     () => null,

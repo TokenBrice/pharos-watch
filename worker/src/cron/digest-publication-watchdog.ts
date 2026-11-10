@@ -2,7 +2,7 @@ import { formatIsoDate } from "@shared/lib/format";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
-import { readSafetyMapManifestDate, type SafetyMapManifestDateObservation } from "../lib/digest-safety-map";
+import { isSafetyMapManifestDataCurrent, readSafetyMapManifestDate, type SafetyMapManifestDateObservation } from "../lib/digest-safety-map";
 import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
 import type { CronResult } from "../lib/cron-logger";
 import {
@@ -10,7 +10,9 @@ import {
   NON_INTERNAL_DIGEST_SQL_FILTER,
   NON_WEEKLY_DIGEST_SQL_FILTER,
 } from "../lib/digest-sql-filters";
+import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
+import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "./digest-input-quality";
 import { SAFETY_MAP_READY_AFTER_SEC } from "./safety-map-producer-kick";
 
 const DIGEST_WATCHDOG_STATE_KEY = "digest-publication-watchdog:state:v1";
@@ -29,9 +31,11 @@ const DIGEST_PUBLICATION_CONDITIONS = [
   "daily-row",
   "daily-telegram",
   "daily-twitter",
+  "daily-inputs",
   "weekly-row",
   "weekly-telegram",
   "weekly-twitter",
+  "weekly-inputs",
   "map-producer-lag",
 ] as const;
 
@@ -120,9 +124,11 @@ function conditionLabel(condition: DigestPublicationCondition): string {
     case "daily-row": return "daily digest row";
     case "daily-telegram": return "daily Telegram edition";
     case "daily-twitter": return "daily Twitter edition";
+    case "daily-inputs": return "daily input completeness";
     case "weekly-row": return "weekly recap row";
     case "weekly-telegram": return "weekly Telegram edition";
     case "weekly-twitter": return "weekly Twitter edition";
+    case "weekly-inputs": return "weekly input completeness";
     case "map-producer-lag": return "Safety Score map producer";
   }
 }
@@ -179,6 +185,65 @@ async function readTwitterLedgerDelivered(
   }
 }
 
+/**
+ * Read the regime-critical degraded sources recorded on the newest published
+ * edition of one kind. Missing rows remain distinct from unreadable inputs, so the
+ * row-presence condition keeps ownership of that failure.
+ */
+async function readCriticalDegradedSources(
+  db: D1Database,
+  jsonPath: "$.dataQuality.degradedSources" | "$.degradedSourcesThisWeek",
+  editionFilterSql: string,
+  startSec: number,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<
+  | { state: "missing" }
+  | { state: "readable"; sources: string[] }
+  | { state: "unreadable"; reason: "digest-input-data-unreadable" }
+> {
+  const parentPath = jsonPath === "$.dataQuality.degradedSources" ? "$.dataQuality" : "$";
+  const row = await readFirst<{
+    input_type: string | null;
+    parent_type: string | null;
+    sources_type: string | null;
+    sources_json: string | null;
+  }>(
+    db,
+    `SELECT
+       CASE WHEN json_valid(input_data) THEN json_type(input_data) END AS input_type,
+       CASE WHEN json_valid(input_data) THEN json_type(input_data, '${parentPath}') END AS parent_type,
+       CASE WHEN json_valid(input_data)
+         THEN json_type(input_data, '${jsonPath}')
+       END AS sources_type,
+       CASE WHEN json_valid(input_data) AND json_type(input_data, '${jsonPath}') = 'array'
+         THEN json_extract(input_data, '${jsonPath}')
+       END AS sources_json
+       FROM daily_digest
+      WHERE generated_at >= ? AND generated_at <= ?
+        AND (${editionFilterSql})
+      ORDER BY generated_at DESC, id DESC
+      LIMIT 1`,
+    [startSec, nowSec],
+    signal,
+  );
+  if (!row) return { state: "missing" };
+  const unreadable = { state: "unreadable", reason: "digest-input-data-unreadable" } as const;
+  if (row.input_type !== "object" || (row.parent_type != null && row.parent_type !== "object")) return unreadable;
+  if (row.sources_type == null) return { state: "readable", sources: [] };
+  if (row.sources_type !== "array" || row.sources_json == null) return unreadable;
+  try {
+    const parsed = JSON.parse(row.sources_json) as unknown;
+    if (!Array.isArray(parsed) || !parsed.every((source) => typeof source === "string")) return unreadable;
+    return {
+      state: "readable",
+      sources: parsed.filter((source) => (REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[]).includes(source)),
+    };
+  } catch {
+    return unreadable;
+  }
+}
+
 async function readPublicationObservations(
   db: D1Database,
   date: string,
@@ -216,6 +281,15 @@ async function readPublicationObservations(
       signal,
     );
     const twitterSent = await readTwitterLedgerDelivered(db, `daily-digest:twitter-sent:${date}`, signal);
+    const criticalInputs = await readCriticalDegradedSources(
+      db,
+      "$.dataQuality.degradedSources",
+      // Each filter is an OR chain; parenthesise them so AND cannot rebind across them.
+      `(${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`,
+      dayStartSec,
+      nowSec,
+      signal,
+    );
     observations.push(
       {
         condition: "daily-row",
@@ -233,6 +307,19 @@ async function readPublicationObservations(
         condition: "daily-twitter",
         state: twitterSent ? "ok" : "stale",
         detail: twitterSent ? "sent" : "ledger not delivered",
+        advisory: false,
+      },
+      {
+        condition: "daily-inputs",
+        state: criticalInputs.state === "unreadable"
+          || (criticalInputs.state === "readable" && criticalInputs.sources.length > 0) ? "stale" : "ok",
+        detail: criticalInputs.state === "missing"
+          ? "no published row to inspect"
+          : criticalInputs.state === "unreadable"
+            ? criticalInputs.reason
+            : criticalInputs.sources.length > 0
+              ? `degraded: ${criticalInputs.sources.join(", ")}`
+              : "no regime-critical degraded source",
         advisory: false,
       },
     );
@@ -262,6 +349,14 @@ async function readPublicationObservations(
       `weekly-recap:twitter-sent:${weeklyDate}`,
       signal,
     );
+    const weeklyCriticalInputs = await readCriticalDegradedSources(
+      db,
+      "$.degradedSourcesThisWeek",
+      `json_extract(digest_meta, '$.type') = 'weekly' AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`,
+      weekStartSec,
+      nowSec,
+      signal,
+    );
     observations.push(
       {
         condition: "weekly-row",
@@ -281,18 +376,39 @@ async function readPublicationObservations(
         detail: weeklyTwitterSent ? "sent" : "ledger not delivered",
         advisory: false,
       },
+      {
+        condition: "weekly-inputs",
+        state: weeklyCriticalInputs.state === "unreadable"
+          || (weeklyCriticalInputs.state === "readable" && weeklyCriticalInputs.sources.length > 0) ? "stale" : "ok",
+        detail: weeklyCriticalInputs.state === "missing"
+          ? "no published row to inspect"
+          : weeklyCriticalInputs.state === "unreadable"
+            ? weeklyCriticalInputs.reason
+            : weeklyCriticalInputs.sources.length > 0
+              ? `degraded: ${weeklyCriticalInputs.sources.join(", ")}`
+              : "no regime-critical degraded source",
+        advisory: false,
+      },
     );
   }
 
   if (options.mapDue) {
     map = await readSafetyMapManifestDate(signal);
-    const mapCurrent = map.date === date;
+    // The digest resolver refuses an invalid manifest and any data clock at or
+    // beyond the 72h budget; a date-only match must not certify more than that.
+    const mapCurrent = map.date === date
+      && map.manifestValid
+      && isSafetyMapManifestDataCurrent(map.asOfSec, nowSec);
     observations.push({
       condition: "map-producer-lag",
       state: mapCurrent ? "ok" : "stale",
       detail: mapCurrent
         ? "manifest is current"
-        : `map manifest for ${date} is unavailable${map.reason ? ` (${map.reason})` : ` (published ${map.date ?? "no date"})`}`,
+        : map.date === date
+          ? map.manifestValid
+            ? `manifest is dated today but its data clock ${map.asOfSec} is beyond the 72h budget`
+            : `manifest is dated today but rejected by the digest (${map.reason ?? "manifest-invalid"})`
+          : `map manifest for ${date} is unavailable${map.reason ? ` (${map.reason})` : ` (published ${map.date ?? "no date"})`}`,
       advisory: true,
     });
   }
@@ -402,14 +518,28 @@ export async function runDigestPublicationWatchdog(
     await setCache(db, DIGEST_WATCHDOG_STATE_KEY, nextState, signal);
   }
 
+  const pendingTransition = (stale.length > 0 || recovered.length > 0) && !transitions.sent;
+  const credentialsMissing = pendingTransition && options.operatorTelegramCreds == null;
+  await recordOperatorAlertReceipt(db, "digest", {
+    nowSec,
+    operatorConfigured: options.operatorTelegramCreds != null,
+    pending: pendingTransition,
+    delivered: transitions.sent,
+    reason: transitions.sent ? null
+      : alertDeliveryFailed ? "operator-alert-delivery-failed"
+        : credentialsMissing ? "operator-alert-credentials-missing"
+          : transitions.cooldown ? "operator-alert-cooldown" : null,
+  }, signal);
+
   const blockingStale = observations.filter((observation) => (
     !observation.advisory && observation.state === "stale"
   ));
   return {
-    status: alertDeliveryFailed ? "degraded" : "ok",
+    status: alertDeliveryFailed || credentialsMissing ? "degraded" : "ok",
     itemCount: blockingStale.length,
     metadata: JSON.stringify({
-      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
+      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" }
+        : credentialsMissing ? { reason: "operator-alert-credentials-missing" } : {}),
       ...(blockingStale.length > 0 ? { quality: { reason: "digest-publication-findings" } } : {}),
       firedRuleIds: observations.filter((observation) => observation.state === "stale").map((observation) => observation.condition),
       date,

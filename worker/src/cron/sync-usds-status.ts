@@ -1,3 +1,4 @@
+import { toFunctionSelector } from "viem/utils";
 import type { UsdsStatusResponse } from "@shared/types";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import { shouldSkipFreshCache, setCacheIfNewer, type CacheWriteResult } from "../lib/db-cache";
@@ -26,8 +27,8 @@ const NO_FREEZE_IMPLS = new Set<string>([
 ]);
 // Ethereum mainnet
 const ETH_CHAIN_ID = 1;
-// isBlocked(address) selector = keccak256("isBlocked(address)")[:4]
-const IS_BLOCKED_SELECTOR = "0xe4c0aaf4";
+// isBlocked(address) selector, derived so it cannot drift from its signature.
+const IS_BLOCKED_SELECTOR = toFunctionSelector("isBlocked(address)");
 const THIRTY_TWO_BYTE_HEX_RE = /^0x[a-fA-F0-9]{64}$/;
 const EVM_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 

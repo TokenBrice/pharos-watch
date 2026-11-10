@@ -623,12 +623,15 @@ describe("seeded data-migration replay", () => {
     }
   });
 
-  it("replays every seeded data migration, including grandfathered 0236, against the repository fixtures", async () => {
+  // Nightly tier: PR coverage retained by the tiny-fixture annotation/DML cases
+  // in this file and `npm run check:migrations` (the same validateWorkerMigrations
+  // on worker-changing PRs).
+  it("replays every seeded data migration, including grandfathered 0236, against the repository fixtures", { tags: ["nightly"], timeout: 60_000 }, async () => {
     // Replays every migration against its row fixtures; the budget covers the
     // replay, not assertions, and stays above the default under shard load.
     const result = await validateWorkerMigrations();
     expect(result.dataMigrationFixtureCheckedCount).toBeGreaterThanOrEqual(1);
-  }, 60_000);
+  });
 });
 
 describe("native database-open failure", () => {

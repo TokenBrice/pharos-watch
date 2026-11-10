@@ -16,6 +16,15 @@ import {
 
 import { makeStablecoin } from "../../test-utils/stablecoin";
 import { isObservedPrice } from "../../lib/pricing-source-policy";
+import { PegSummaryCoinSchema } from "../peg";
+
+describe("peg summary quote identity", () => {
+  it("preserves legacy quote absence", () => expect(PegSummaryCoinSchema.pick({ price: true }).parse({})).toEqual({}));
+  it.each([undefined, null, 0.99, 0, -1, NaN, Infinity])("admits only legacy absence, null or a finite positive price: %s", (price) => {
+    expect(PegSummaryCoinSchema.pick({ price: true }).safeParse({ price }).success)
+      .toBe(price == null || (Number.isFinite(price) && price > 0));
+  });
+});
 
 describe("chain partition provenance contract", () => {
   const provenance = {
@@ -285,5 +294,71 @@ describe("supply history provenance contract (K-031)", () => {
     expect(SupplyHistoryResponseSchema.safeParse([
       { date: 1, circulatingUsd: 1, price: 1, supplyProvenance: { supplySource: 7, supplyObservedAt: null, supplyChainGuard: null } },
     ]).success).toBe(false);
+  });
+});
+
+describe("StablecoinListResponseSchema compatibility", () => {
+  it("normalizes snake_case gecko IDs and nullable historical buckets", () => {
+    const parsed = StablecoinListResponseSchema.parse({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          symbol: "USDT",
+          gecko_id: "tether",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat-backed",
+          price: 1,
+          priceSource: "defillama",
+          circulating: { peggedUSD: 1000 },
+          circulatingPrevDay: null,
+          circulatingPrevWeek: undefined,
+          circulatingPrevMonth: { peggedUSD: 950 },
+          chainCirculating: {
+            Ethereum: {
+              current: 1000,
+              circulatingPrevDay: 990,
+              circulatingPrevWeek: 980,
+              circulatingPrevMonth: 970,
+            },
+          },
+          chains: ["Ethereum"],
+        },
+      ],
+      chains: ["Ethereum"],
+      _meta: { updatedAt: 1, ageSeconds: 0, status: "fresh" },
+    });
+
+    const coin = parsed.peggedAssets[0];
+    expect(coin.geckoId).toBe("tether");
+    expect(coin.priceConfidence).toBeNull();
+    expect(coin.circulatingPrevDay).toEqual({});
+    expect(coin.circulatingPrevWeek).toEqual({});
+    expect(coin.circulatingPrevMonth).toEqual({ peggedUSD: 950 });
+  });
+
+  it("defaults missing gecko ID to null", () => {
+    const parsed = StablecoinListResponseSchema.parse({
+      peggedAssets: [
+        {
+          id: "usdc-circle",
+          name: "Unknown",
+          symbol: "UNK",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat-backed",
+          price: null,
+          priceSource: "defillama",
+          priceConfidence: null,
+          circulating: { peggedUSD: 100 },
+          circulatingPrevDay: { peggedUSD: 100 },
+          circulatingPrevWeek: { peggedUSD: 100 },
+          circulatingPrevMonth: { peggedUSD: 100 },
+          chainCirculating: {},
+          chains: [],
+        },
+      ],
+    });
+
+    expect(parsed.peggedAssets[0].geckoId).toBeNull();
   });
 });

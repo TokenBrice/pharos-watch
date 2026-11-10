@@ -1,4 +1,5 @@
 import { COVERAGE_FEATURE_MODULES as modules } from "@/lib/coverage-feature-modules";
+import { countsTowardPriceDepth } from "@/lib/coverage/price";
 import type { CoverageFeatureDefinition } from "@/lib/coverage-types";
 
 export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
@@ -10,6 +11,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCountLabel: "≥3 sources",
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with ≥3 price sources`,
     headlineFilter: (row) => (row.statuses.price.sourceCount ?? 0) >= 3,
+    denominatorFilter: countsTowardPriceDepth,
     href: "/depeg/",
     statusKinds: modules.price.statusKinds,
     legendItems: modules.price.legendItems,

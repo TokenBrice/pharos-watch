@@ -92,6 +92,11 @@ vi.mock("../../../src/lib/backfill-fx", async () => {
   };
 });
 
+function backfill(db: D1Database, path: string, options: Pick<Parameters<typeof handleBackfillSupplyHistoryTrusted>[0], "coingeckoApiKey" | "chainRpcs"> = {}) {
+  return handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(path),
+    request: makeApiRequest(path, { adminKey: "secret" }), ...options });
+}
+
 function formatUint256Hex(value: bigint): string {
   return `0x${value.toString(16).padStart(64, "0")}`;
 }
@@ -167,23 +172,18 @@ describe("handleBackfillSupplyHistory", () => {
   it("inserts rows for a valid USD stablecoin detail payload", async () => {
     const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          price: 1,
-          tokens: [
-            {
-              date: 1_700_000_000,
-              circulating: { peggedUSD: 125_000_000 },
-            },
-          ],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      Response.json({
+        price: 1,
+        tokens: [
+          {
+            date: 1_700_000_000,
+            circulating: { peggedUSD: 125_000_000 },
+          },
+        ],
+      }),
     );
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15", {
-        adminKey: "secret",
-      }) });
+    const res = await backfill(db, "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15");
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -224,9 +224,7 @@ describe("handleBackfillSupplyHistory", () => {
       ],
     }));
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-10-28&endDay=2026-10-29";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     const body = await readJsonResponse<{ rowsInserted: number; rowsSkippedExisting?: number }>(res, 200);
     expect(body.rowsInserted).toBe(1);
     expect(body.rowsSkippedExisting).toBe(1);
@@ -253,9 +251,7 @@ describe("handleBackfillSupplyHistory", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 229_000 } }] }));
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-10-28&endDay=2026-10-28&overwrite=true";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     const body = await readJsonResponse<{ rowsInserted: number; rowsSkippedExisting?: number }>(res, 200);
     expect(body.rowsInserted).toBe(1);
     expect(body.rowsSkippedExisting).toBeUndefined();
@@ -279,9 +275,7 @@ describe("handleBackfillSupplyHistory", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     expect((await readJsonResponse<{ rowsInserted: number }>(res, 200)).rowsInserted).toBe(1);
     expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
       .get("usdt-tether", day)).toEqual({ circulating_usd: 0, price: null });
@@ -295,9 +289,7 @@ describe("handleBackfillSupplyHistory", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     const body = await readJsonResponse<{ rowsInserted: number; rowsSkippedExisting?: number }>(res, 200);
     expect(body).toMatchObject({ rowsInserted: 0, rowsSkippedExisting: 1 });
     expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
@@ -314,9 +306,7 @@ describe("handleBackfillSupplyHistory", () => {
       ],
     }));
     const path = "/api/backfill-supply-history?stablecoin=euro3-3a-dao&startDay=2026-04-09&endDay=2026-04-10";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     const body = await readJsonResponse<{ rowsInserted: number; errors?: string[] }>(res, 200);
     expect(body.rowsInserted).toBe(1);
     if (mixed) expect(body.errors?.[0]).toContain("non-USD coin missing historical prices");
@@ -334,9 +324,7 @@ describe("handleBackfillSupplyHistory", () => {
       vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
         Response.json({ tokens: [{ date: day, circulating }] }));
       const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
-      const res = await handleBackfillSupplyHistoryTrusted({
-        db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-      });
+      const res = await backfill(db, path);
       expect((await readJsonResponse<{ rowsInserted: number }>(res, 200)).rowsInserted).toBe(0);
       expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
         .get("usdt-tether", day)).toEqual({ circulating_usd: 100, price: 0.99 });
@@ -352,9 +340,7 @@ describe("handleBackfillSupplyHistory", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
-    await expect(handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    })).rejects.toThrow("injected supply write failure");
+    await expect(backfill(db, path)).rejects.toThrow("injected supply write failure");
     expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
       .get("usdt-tether", day)).toEqual({ circulating_usd: 100, price: 0.99 });
   });
@@ -364,21 +350,16 @@ describe("handleBackfillSupplyHistory", () => {
     const oldDay = Math.floor(Date.UTC(2020, 0, 1) / 1000);
     const recentDay = Math.floor(Date.UTC(2026, 0, 1) / 1000);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          price: 1,
-          tokens: [
-            { date: oldDay, circulating: { peggedUSD: 10_000_000 } },
-            { date: recentDay, circulating: { peggedUSD: 20_000_000 } },
-          ],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      Response.json({
+        price: 1,
+        tokens: [
+          { date: oldDay, circulating: { peggedUSD: 10_000_000 } },
+          { date: recentDay, circulating: { peggedUSD: 20_000_000 } },
+        ],
+      }),
     );
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether", {
-        adminKey: "secret",
-      }) });
+    const res = await backfill(db, "/api/backfill-supply-history?stablecoin=usdt-tether");
 
     const body = (await readJsonResponse(res, 200)) as {
       rowsInserted: number;
@@ -421,9 +402,7 @@ describe("handleBackfillSupplyHistory", () => {
     let path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-01-01&endDay=2026-01-05&windowDays=2";
     const widths: number[] = [];
     for (let page = 0; page < 5; page++) {
-      const res = await handleBackfillSupplyHistoryTrusted({
-        db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-      });
+      const res = await backfill(db, path);
       const body = await readJsonResponse<{
         rowsInserted: number; done: boolean; continuationCursor: string | null;
         window: { windowDays: number };
@@ -446,13 +425,10 @@ describe("handleBackfillSupplyHistory", () => {
   it("threads the request AbortSignal into supply backfill upstream helpers", async () => {
     const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          price: 1,
-          tokens: [{ date: 1_700_000_000, circulating: { peggedUSD: 125_000_000 } }],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      Response.json({
+        price: 1,
+        tokens: [{ date: 1_700_000_000, circulating: { peggedUSD: 125_000_000 } }],
+      }),
     );
     const request = makeApiRequest(
       "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15",
@@ -487,27 +463,22 @@ describe("handleBackfillSupplyHistory", () => {
       ],
     });
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          price: 1,
-          tokens: [
-            {
-              date: day1,
-              circulating: { peggedEUR: 1_000_000 },
-            },
-            {
-              date: day2,
-              circulating: { peggedEUR: 2_000_000 },
-            },
-          ],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      Response.json({
+        price: 1,
+        tokens: [
+          {
+            date: day1,
+            circulating: { peggedEUR: 1_000_000 },
+          },
+          {
+            date: day2,
+            circulating: { peggedEUR: 2_000_000 },
+          },
+        ],
+      }),
     );
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=euro3-3a-dao&startDay=2023-11-14&endDay=2023-11-16"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=euro3-3a-dao&startDay=2023-11-14&endDay=2023-11-16", {
-        adminKey: "secret",
-      }) });
+    const res = await backfill(db, "/api/backfill-supply-history?stablecoin=euro3-3a-dao&startDay=2023-11-14&endDay=2023-11-16");
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -561,27 +532,22 @@ describe("handleBackfillSupplyHistory", () => {
       },
     });
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          price: 1,
-          tokens: [
-            {
-              date: beforePriceRange,
-              circulating: { peggedEUR: 1_000 },
-            },
-            {
-              date: afterPriceRange,
-              circulating: { peggedEUR: 2_000 },
-            },
-          ],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      Response.json({
+        price: 1,
+        tokens: [
+          {
+            date: beforePriceRange,
+            circulating: { peggedEUR: 1_000 },
+          },
+          {
+            date: afterPriceRange,
+            circulating: { peggedEUR: 2_000 },
+          },
+        ],
+      }),
     );
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2023-11-13&endDay=2023-11-15"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2023-11-13&endDay=2023-11-15", {
-        adminKey: "secret",
-      }) });
+    const res = await backfill(db, "/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2023-11-13&endDay=2023-11-15");
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -623,22 +589,13 @@ describe("handleBackfillSupplyHistory", () => {
       },
     });
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          price: 1,
-          tokens: days.map((date) => ({ date, circulating: { peggedEUR: 1_000_000 } })),
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      Response.json({
+        price: 1,
+        tokens: days.map((date) => ({ date, circulating: { peggedEUR: 1_000_000 } })),
+      }),
     );
 
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db,
-      url: makeApiUrl("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2024-11-02&endDay=2024-11-06"),
-      request: makeApiRequest("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2024-11-02&endDay=2024-11-06", {
-        adminKey: "secret",
-      }),
-    });
+    const res = await backfill(db, "/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2024-11-02&endDay=2024-11-06");
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -675,19 +632,13 @@ describe("handleBackfillSupplyHistory", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.includes("/coins/spark-savings-usdt/market_chart")) {
-        return new Response(
-          JSON.stringify({
-            market_caps: [[ts1, 0], [ts2, 0]],
-            prices: [[ts1, 1.0002], [ts2, 1.0011]],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({
+          market_caps: [[ts1, 0], [ts2, 0]],
+          prices: [[ts1, 1.0002], [ts2, 1.0011]],
+        });
       }
       if (url.includes("/coins/spark-savings-usdt?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_data: { circulating_supply: 0 } });
       }
       if (url.includes("fake-eth-rpc")) {
         const requestBlock = JSON.parse(String(init?.body)).params[1] as string;
@@ -700,9 +651,7 @@ describe("handleBackfillSupplyHistory", () => {
 
     const chainRpcs = ethereumSupplyRpc();
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`), request: makeApiRequest(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, {
-        adminKey: "secret",
-      }), coingeckoApiKey: null, chainRpcs });
+    const res = await backfill(db, `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, { coingeckoApiKey: null, chainRpcs });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -741,19 +690,13 @@ describe("handleBackfillSupplyHistory", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.includes("/coins/spark-savings-usdt/market_chart")) {
-        return new Response(
-          JSON.stringify({
-            market_caps: [[ts1, 1_234_567], [ts2, 0]],
-            prices: [[ts1, 1.0002], [ts2, 1.0011]],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({
+          market_caps: [[ts1, 1_234_567], [ts2, 0]],
+          prices: [[ts1, 1.0002], [ts2, 1.0011]],
+        });
       }
       if (url.includes("/coins/spark-savings-usdt?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_data: { circulating_supply: 0 } });
       }
       if (url.includes("fake-eth-rpc")) {
         return supplyRpcResponse(init, blockNumber, { [TOTAL_SUPPLY_SELECTOR]: 1_100_000_000_000n });
@@ -763,9 +706,7 @@ describe("handleBackfillSupplyHistory", () => {
 
     const chainRpcs = ethereumSupplyRpc();
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`), request: makeApiRequest(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, {
-        adminKey: "secret",
-      }), coingeckoApiKey: null, chainRpcs });
+    const res = await backfill(db, `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, { coingeckoApiKey: null, chainRpcs });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -799,19 +740,13 @@ describe("handleBackfillSupplyHistory", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.includes("/coins/apollo-diversified-credit-securitize-fund/market_chart")) {
-        return new Response(
-          JSON.stringify({
-            market_caps: [[ts, 0]],
-            prices: [[ts, 1.01]],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({
+          market_caps: [[ts, 0]],
+          prices: [[ts, 1.01]],
+        });
       }
       if (url.includes("/coins/apollo-diversified-credit-securitize-fund?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_data: { circulating_supply: 0 } });
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });
@@ -836,9 +771,7 @@ describe("handleBackfillSupplyHistory", () => {
       ],
     ]);
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=acred-apollo-securitize&startDay=2026-04-09&endDay=2026-04-09"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=acred-apollo-securitize&startDay=2026-04-09&endDay=2026-04-09", {
-        adminKey: "secret",
-      }), coingeckoApiKey: null, chainRpcs });
+    const res = await backfill(db, "/api/backfill-supply-history?stablecoin=acred-apollo-securitize&startDay=2026-04-09&endDay=2026-04-09", { coingeckoApiKey: null, chainRpcs });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -877,10 +810,7 @@ describe("handleBackfillSupplyHistory", () => {
     });
     const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-09`;
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-      chainRpcs: ethereumSupplyRpc(),
-    });
+    const res = await backfill(db, path, { chainRpcs: ethereumSupplyRpc() });
     const body = await readJsonResponse(res, 200) as { rowsInserted: number; errors?: string[] };
     expect(body.rowsInserted).toBe(0);
     expect(body.errors?.[0]).toContain("unsupported-complete-roster");
@@ -910,9 +840,7 @@ describe("handleBackfillSupplyHistory", () => {
     });
     const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-09`;
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     expect((await readJsonResponse(res, 200) as { rowsInserted: number }).rowsInserted).toBe(1);
     const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INTO supply_history"));
     expect(inserts.map((stmt) => stmt.binds)).toEqual([[fixtureId, ts / 1000, cap, price]]);
@@ -924,11 +852,7 @@ describe("handleBackfillSupplyHistory", () => {
     const fixtureId = useMissingDecimalsHistoricalSupplyFixture();
     const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-06-09&endDay=2026-06-09`;
 
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db,
-      url: makeApiUrl(path),
-      request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
 
     const body = (await readJsonResponse(res, 200)) as { rowsInserted: number; errors?: string[] };
     expect(body.rowsInserted).toBe(0);
@@ -973,10 +897,7 @@ describe("handleBackfillSupplyHistory", () => {
       expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
       const raw = totalSupplyByCall.shift();
       if (raw == null) throw new Error("Unexpected extra Base Dollar totalSupply call");
-      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return Response.json({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) });
     });
 
     const chainRpcs = new Map<string, ChainRpcConfig>([
@@ -1000,13 +921,7 @@ describe("handleBackfillSupplyHistory", () => {
     ]);
 
     const path = "/api/backfill-supply-history?stablecoin=bd-basedollar&startDay=2026-08-04&endDay=2026-08-05";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db,
-      url: makeApiUrl(path),
-      request: makeApiRequest(path, { adminKey: "secret" }),
-      coingeckoApiKey: null,
-      chainRpcs,
-    });
+    const res = await backfill(db, path, { coingeckoApiKey: null, chainRpcs });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -1043,9 +958,7 @@ describe("handleBackfillSupplyHistory", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unpriced days must not fetch"));
     const chainRpcs = ethereumSupplyRpc();
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?batch=0&batchSize=2&startDay=2026-06-09&endDay=2026-06-09"), request: makeApiRequest("/api/backfill-supply-history?batch=0&batchSize=2&startDay=2026-06-09&endDay=2026-06-09", {
-        adminKey: "secret",
-      }), coingeckoApiKey: null, chainRpcs });
+    const res = await backfill(db, "/api/backfill-supply-history?batch=0&batchSize=2&startDay=2026-06-09&endDay=2026-06-09", { coingeckoApiKey: null, chainRpcs });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -1092,10 +1005,7 @@ describe("handleBackfillSupplyHistory", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) =>
       supplyRpcResponse(init, blockNumber, amounts));
     const path = "/api/backfill-supply-history?stablecoin=usg-tangent&startDay=2026-05-09&endDay=2026-05-09";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-      coingeckoApiKey: null, chainRpcs: ethereumSupplyRpc(),
-    });
+    const res = await backfill(db, path, { coingeckoApiKey: null, chainRpcs: ethereumSupplyRpc() });
     const body = await readJsonResponse<{ rowsInserted: number; skippedDays?: number; errors?: string[] }>(res, 200);
     const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INTO supply_history"));
     if (price == null) {
@@ -1119,23 +1029,15 @@ describe("handleBackfillSupplyHistory", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.includes("/coins/spark-savings-usdt/market_chart")) {
-        return new Response(
-          JSON.stringify({ market_caps: [[ts1, 0]], prices: [[ts1, 1.0]] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_caps: [[ts1, 0]], prices: [[ts1, 1.0]] });
       }
       if (url.includes("/coins/spark-savings-usdt?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_data: { circulating_supply: 0 } });
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INTO supply_history", rows: [] }]), url: makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09", {
-        adminKey: "secret",
-      }), coingeckoApiKey: null });
+    const res = await backfill(mockD1([{ match: "INTO supply_history", rows: [] }]), "/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09", { coingeckoApiKey: null });
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -1180,9 +1082,7 @@ describe("handleBackfillSupplyHistory", () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
     const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     const body = await readJsonResponse<{ rowsInserted: number; errors?: string[] }>(res, 200);
     expect(body.rowsInserted).toBe(error ? 0 : 1);
     if (error) expect(body.errors?.[0]).toContain(error);
@@ -1211,9 +1111,7 @@ describe("handleBackfillSupplyHistory", () => {
       throw new Error(`Unexpected fallback fetch: ${input}`);
     });
     const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-09";
-    const res = await handleBackfillSupplyHistoryTrusted({
-      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
-    });
+    const res = await backfill(db, path);
     const body = await readJsonResponse<{ rowsInserted: number; errors?: string[] }>(res, 200);
     expect(body.rowsInserted).toBe(0);
     expect(body.errors?.[0]).toContain("requires a dedicated commodity-token mapping");
@@ -1230,47 +1128,33 @@ describe("handleBackfillSupplyHistory", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.includes("/coins/tether-gold/market_chart")) {
-        return new Response(
-          JSON.stringify({ market_caps: [], prices: [] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_caps: [], prices: [] });
       }
       if (url.includes("/coins/tether-gold?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_data: { circulating_supply: 0 } });
       }
       if (url.includes("/protocol/tether-gold")) {
-        return new Response(
-          JSON.stringify({
-            mcap: 101_000_000,
-            tvl: [
-              { date: day1, totalLiquidityUSD: 100_000_000 },
-              { date: day2, totalLiquidityUSD: 101_000_000 },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({
+          mcap: 101_000_000,
+          tvl: [
+            { date: day1, totalLiquidityUSD: 100_000_000 },
+            { date: day2, totalLiquidityUSD: 101_000_000 },
+          ],
+        });
       }
       if (url.includes("/chart/coingecko:tether-gold")) {
-        return new Response(
-          JSON.stringify({
-            coins: {
-              "coingecko:tether-gold": {
-                prices: [{ timestamp: day1, price: 2_300 }],
-              },
+        return Response.json({
+          coins: {
+            "coingecko:tether-gold": {
+              prices: [{ timestamp: day1, price: 2_300 }],
             },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+          },
+        });
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10", {
-        adminKey: "secret",
-      }) });
+    const res = await backfill(db, "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10");
 
     const body = (await readJsonResponse(res, 200)) as {
       coinsProcessed: number;
@@ -1290,30 +1174,19 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("consumes the parallel price response before returning a protocol fallback error", async () => {
-    const priceResponse = new Response(JSON.stringify({ coins: {} }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    const priceResponse = Response.json({ coins: {} });
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
       if (url.includes("/coins/tether-gold/market_chart")) {
-        return new Response(
-          JSON.stringify({ market_caps: [], prices: [] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_caps: [], prices: [] });
       }
       if (url.includes("/coins/tether-gold?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return Response.json({ market_data: { circulating_supply: 0 } });
       }
       if (url.includes("/protocol/tether-gold")) {
-        return new Response(JSON.stringify({ tvl: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return Response.json({ tvl: [] });
       }
       if (url.includes("/chart/coingecko:tether-gold")) {
         return priceResponse;
@@ -1322,10 +1195,24 @@ describe("handleBackfillSupplyHistory", () => {
     });
 
     const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10";
-    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INTO supply_history", rows: [] }]), url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }) });
+    const res = await backfill(mockD1([{ match: "INTO supply_history", rows: [] }]), path);
 
     const body = (await readJsonResponse(res, 200)) as { errors?: string[] };
     expect(body.errors?.[0]).toContain("no TVL history");
     expect(priceResponse.bodyUsed).toBe(true);
+  });
+});
+
+describe("handleBackfillSupplyHistory shape", () => {
+  it("returns 400 with { error } for a malformed startDay query param", async () => {
+    const db = mockD1([]);
+    const req = makeApiRequest("https://operator.invalid/jobs/backfill-supply-history?startDay=not-a-date", {
+      adminKey: "secret",
+    });
+
+    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+
+    const body = (await readJsonResponse(res, 400)) as { error: string };
+    expect(typeof body.error).toBe("string");
   });
 });

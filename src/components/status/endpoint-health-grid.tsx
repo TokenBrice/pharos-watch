@@ -2,6 +2,7 @@ import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import type { EndpointProbeResult } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { getProbeDisplayStatus, isProbePassing } from "@/lib/status-dashboard-model";
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
 import { PublicSignalCard } from "./public-signal-card";
 
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
@@ -118,7 +119,6 @@ export function EndpointHealthGrid({
               <h3 className="mb-2 text-sm font-medium text-muted-foreground">{label}</h3>
               <div className="space-y-1">
                 {sampled.map((path) => {
-                  const probe = probeMap.get(path);
                   const display = path.replace(/^\/api\//, "");
 
                   if (isInline) {
@@ -130,12 +130,9 @@ export function EndpointHealthGrid({
                     );
                   }
 
-                  const displayStatus = probe ? getProbeDisplayStatus(probe) : null;
-                  const isOk = displayStatus === "healthy";
-                  const isSemanticDegraded = displayStatus === "degraded";
-                  const isError = displayStatus === "stale";
-                  const statusLabel = probe ? probeBadgeLabel(probe) : "—";
-                  const statusDetail = probe ? probe.error ?? probe.semanticDetail ?? null : null;
+                  const probe = probeMap.get(path)!;
+                  const displayStatus = getProbeDisplayStatus(probe);
+                  const statusDetail = probe.error ?? probe.semanticDetail ?? null;
 
                   return (
                     <div key={path} className="flex items-start justify-between gap-3 py-1">
@@ -148,31 +145,15 @@ export function EndpointHealthGrid({
                         ) : null}
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {probe ? (
-                          <>
-                            {isOk && (
-                              <Badge className="bg-state-positive-solid/15 text-xs text-state-positive">
-                                {statusLabel}
-                              </Badge>
-                            )}
-                            {isSemanticDegraded && (
-                              <Badge className="bg-state-warn-solid/15 text-xs text-state-warn">
-                                {statusLabel}
-                              </Badge>
-                            )}
-                            {isError && (
-                              <Badge className="bg-state-danger-solid/15 text-xs text-state-danger">
-                                {statusLabel}
-                              </Badge>
-                            )}
-                            <span className="pharos-numeric text-xs text-muted-foreground">
-                              {probe.status != null ? `HTTP ${probe.status}` : "No HTTP"}
-                            </span>
-                            <span className="pharos-numeric text-xs text-muted-foreground">{probe.latencyMs}ms</span>
-                          </>
-                        ) : (
-                          <Badge className="bg-muted text-xs text-muted-foreground">—</Badge>
-                        )}
+                        <Badge className={OPERATIONAL_PILL_CLASS[
+                          displayStatus === "healthy" ? "ok" : displayStatus === "degraded" ? "warning" : "error"
+                        ]}>
+                          {probeBadgeLabel(probe)}
+                        </Badge>
+                        <span className="pharos-numeric text-xs text-muted-foreground">
+                          {probe.status != null ? `HTTP ${probe.status}` : "No HTTP"}
+                        </span>
+                        <span className="pharos-numeric text-xs text-muted-foreground">{probe.latencyMs}ms</span>
                       </div>
                     </div>
                   );

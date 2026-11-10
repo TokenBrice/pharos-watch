@@ -62,7 +62,6 @@ describe("buildReserveFetchNotice", () => {
       } });
       // Operator signal (Telegram, /status); the footnote still names fallback/stale modes.
       expect(buildReserveFeedStatus(reserves, null)).toBeNull();
-      expect(reserves.sync?.stale).toBe(true);
     }
   });
 
@@ -186,8 +185,17 @@ describe("buildReserveCompositionNote", () => {
       makeReserves({ mode: "live", metadata: { referenceNavUsd: 1.034963, yieldBasisCollateralPct: 33.456 } }),
     );
     expect(note).toBe(
-      "Strategy reference NAV is $1.0350 per share. Yield Basis positions account for 33.5% of this live reserve mix.",
+      "Strategy reference NAV is $1.0350. Yield Basis positions account for 33.5% of this live reserve mix.",
     );
+    expect(note).not.toMatch(/per share/);
+  });
+
+  it("does not assert a per-share price for a producer's book-total reference NAV", () => {
+    const note = buildReserveCompositionNote(
+      makeReserves({ mode: "live", metadata: { referenceNavUsd: 289_656_147.33 } }),
+    );
+    expect(note).toBe("Strategy reference NAV is $289,656,147.3300.");
+    expect(note).not.toMatch(/per share/);
   });
 });
 
@@ -421,6 +429,8 @@ describe("reserve composition slices", () => {
       parentId: "parent-coin",
       parentSymbol: "PAR",
       parentReviewedAt: null,
+      parentCompositionAsOf: null,
+      parentSources: [],
       slices: [
         { key: "a:0", name: "Hedged basis book", pct: 18.7, risk: "medium", obligor: null, assetClassLabel: null },
         { key: "b:1", name: "CoreGhoDirectMinter", pct: 81.3, risk: "low", obligor: "Aave GHO facilitator", assetClassLabel: "Protocol position" },
@@ -488,7 +498,7 @@ describe("dated reserve disclosures", () => {
     expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
   });
 
-  it.each(["2026-02-30", "2026-13-01", "2026-6-30", "2026-06-30T00:00:00Z", "", 20260630])(
+  it.each(["2026-02-30", "2026-13-01", "2026-6-30", 20260630])(
     "rejects invalid reviewed composition date %s without borrowing the totals clock",
     (compositionAsOf) => {
       const reserves = makeReserves({

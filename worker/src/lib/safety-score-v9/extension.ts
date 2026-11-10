@@ -66,6 +66,7 @@ import {
   addSafetyScoreV9IncidentEvidence,
   addSafetyScoreV9NegativeIncidentEvidence,
   getSafetyScoreV9NegativeIncidentReviews,
+  laneContributorProviderKeys,
   routeSafetyScoreV9NegativeIncidentReviews,
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
@@ -97,6 +98,7 @@ import {
 } from "./extension-routes";
 import {
   buildSafetyScoreV9SupplyAdmission,
+  type ReviewedProviderRowExclusionRow,
 } from "./extension-supply";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -156,6 +158,8 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
   accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+  /** Injected reviewed provider-row exclusions; omitted reads the shared curated registry. */
+  providerRowExclusionReviews?: readonly ReviewedProviderRowExclusionRow[];
   /**
    * Evaluation inputs of the v10.39 lane closure, loaded by the publication
    * runner: the admitted certificate chain per lane (only `current` reads are
@@ -2431,6 +2435,9 @@ export function createSafetyScoreV9BaselineExtensionSource(
     navPriceById: fixedInput.navPriceById ?? {},
     ...(fixedInput.exitOutputPriceById ? { exitOutputPriceById: fixedInput.exitOutputPriceById } : {}),
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
+    ...(fixedInput.safetyScoreV9DirectionalPeg
+      ? { safetyScoreV9DirectionalPeg: fixedInput.safetyScoreV9DirectionalPeg }
+      : {}),
   });
   const researchOverlaysGenerationDigest = domainDigest("safety-score-v9.research-overlays.v3", {
     registryRevision: fixedInput.registryRevision,
@@ -2562,8 +2569,6 @@ export function createSafetyScoreV9BaselineExtensionSource(
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
-        const negativeIncidentRead = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
-        const negativeIncidentReviews = negativeIncidentRead.reviews;
         admissionPath = "wrapperAllocationReview";
         const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
         admissionPath = "wrapperLocalReviews";
@@ -2709,6 +2714,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           {
             meta,
             transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
+            ...(options.providerRowExclusionReviews === undefined ? {} : { providerRowExclusionReviews: options.providerRowExclusionReviews }),
           },
         );
         const supplyReview = supplyAdmission.review;
@@ -2747,6 +2753,14 @@ export function createSafetyScoreV9BaselineExtensionSource(
             providerKeys: [...(route.providerKeys ?? [])],
           });
         }
+        const contributorControls = meta.bridgeRouteRisk?.controls ?? [];
+        admissionPath = "reviewedIncidents";
+        const negativeIncidentRead = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec,
+          bridge.controls.flatMap((control) => control.scope === "global" && laneRoutes.get(control.deploymentKey)?.rail === "issuer-operated"
+            ? laneContributorProviderKeys(control, contributorControls) ?? [] : []));
+        const negativeIncidentReviews = negativeIncidentRead.reviews;
+        admissionPath = "controlReview";
+        const incidentClosureFailures: V9LaneIncidentClosureFailure[] = [];
         const controls = routeSafetyScoreV9NegativeIncidentReviews(
           incidentControlRoute.controls,
           assetId,
@@ -2757,16 +2771,26 @@ export function createSafetyScoreV9BaselineExtensionSource(
             descriptors: options.laneEmitterDescriptors ?? [],
             certificates: options.laneIncidentCertificates ?? new Map(),
             routes: laneRoutes,
+            contributorControls,
+            incidentClosureFailures,
             unreadableProviders: negativeIncidentRead.unreadableProviders,
           },
         ).sort((left, right) => compareText(left.controlKey, right.controlKey));
         addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews, controls);
-        const incidentClosureFailures: V9LaneIncidentClosureFailure[] = [];
         if (negativeIncidentRead.unreadableProviders.size > 0) {
           for (const [deploymentRouteKey, route] of laneRoutes) {
-            if (!controls.some((control) => control.deploymentKey === deploymentRouteKey &&
-                control.controlKind === "bridge" && control.scope === "deployment" && control.incidentState === "unknown")) continue;
-            for (const providerKey of route.providerKeys) {
+            const laneControls = controls.filter((control) => control.deploymentKey === deploymentRouteKey &&
+              control.controlKind === "bridge" && control.incidentState === "unknown" &&
+              (control.scope === "deployment" || control.scope === "global") &&
+              (control.scope !== "global" || route.routeClass === "native" || route.rail === "issuer-operated"));
+            if (laneControls.length === 0) continue;
+            const providerKeys = route.rail === "issuer-operated"
+              ? laneControls.filter((control) => control.scope === "global")
+                .flatMap((control) => laneContributorProviderKeys(control, contributorControls) ?? []) : route.providerKeys;
+            for (const providerKey of new Set(providerKeys)) {
+              if (laneControls.every((control) => control.scope === "deployment") &&
+                  !negativeIncidentReviews.some((review) => review.assetId === assetId &&
+                    review.scope.kind === "provider" && review.scope.providerKey === providerKey)) continue;
               const foreignAssetIds = negativeIncidentRead.unreadableProviders.get(providerKey);
               if (foreignAssetIds !== undefined) incidentClosureFailures.push({
                 deploymentRouteKey, providerKey, foreignAssetIds: [...foreignAssetIds],

@@ -19,6 +19,8 @@ export interface DeathsByYearDatum {
   tracked: number[];
   /** Formatted median recorded peak; null when the year has no recorded peak (or no records). */
   medianPeakLabel: string | null;
+  /** Records in the year with a recorded peak; at most `total`. */
+  recordedPeakCount: number;
   partial: boolean;
 }
 
@@ -111,6 +113,17 @@ function yearSummary(datum: DeathsByYearDatum, asOfLabel: string): string {
   return `${datum.year}: ${datum.total}${datum.partial ? ` through ${asOfLabel}` : ""}`;
 }
 
+/** The page's "n of m recorded" qualifier, only when the year mixes recorded and unrecorded peaks. */
+function medianPeakQualifier(datum: DeathsByYearDatum): string {
+  return datum.recordedPeakCount > 0 && datum.recordedPeakCount < datum.total
+    ? ` (${datum.recordedPeakCount} of ${datum.total} recorded)`
+    : "";
+}
+
+function medianPeakLabel(datum: DeathsByYearDatum, missingLabel: string): string {
+  return datum.medianPeakLabel ? `${datum.medianPeakLabel}${medianPeakQualifier(datum)}` : missingLabel;
+}
+
 function buildColumns(asOfLabel: string): ChartDataTableColumn<DeathsByYearDatum>[] {
   return [
     {
@@ -132,7 +145,7 @@ function buildColumns(asOfLabel: string): ChartDataTableColumn<DeathsByYearDatum
     {
       id: "median",
       label: "Median peak",
-      format: (row) => (row.total === 0 ? "no records" : (row.medianPeakLabel ?? "not recorded")),
+      format: (row) => (row.total === 0 ? "no records" : medianPeakLabel(row, "not recorded")),
     },
   ];
 }
@@ -349,7 +362,7 @@ export function DeathsByYearChart({
                       </div>
                       <div className="flex justify-between gap-4 text-xs">
                         <span className="text-muted-foreground">Median peak</span>
-                        <span className="font-mono tabular-nums text-foreground">{hovered.datum.medianPeakLabel ?? "n/r"}</span>
+                        <span className="font-mono tabular-nums text-foreground">{medianPeakLabel(hovered.datum, "n/r")}</span>
                       </div>
                     </div>
                   )}

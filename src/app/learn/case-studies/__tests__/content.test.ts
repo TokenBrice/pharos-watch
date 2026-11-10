@@ -45,9 +45,28 @@ describe("case-study content", () => {
     }
   });
 
-  it("keeps Terra's displayed low and basis-point deviation in the same window", () => {
+  it("keeps Terra's displayed low and basis-point deviation exact", () => {
     const { lowPrice, peakDeviationBps } = CASE_STUDIES["terra-ust-2022"].eventWindow;
     expect(peakDeviationBps).toBe(Math.round(((lowPrice ?? 1) - 1) * 10_000));
+  });
+
+  it("keeps each displayed low and basis-point deviation in the same window", () => {
+    for (const study of CASE_STUDY_LIST) {
+      for (const window of study.eventWindows ?? [study.eventWindow]) {
+        const { lowPrice, peakDeviationBps } = window;
+        if (lowPrice == null || peakDeviationBps == null) continue;
+        // Above-peg peaks are measured against a different side of the band.
+        if (peakDeviationBps >= 0 || lowPrice >= 1) continue;
+        const impliedBps = Math.round((lowPrice - 1) * 10_000);
+        // The low is displayed to three decimals, so its price rounding moves
+        // the implied deviation by at most 0.0005 × 10,000 = 5 bps.
+        const displayToleranceBps = Math.ceil(10_000 * 0.0005);
+        expect(
+          Math.abs(peakDeviationBps - impliedBps),
+          `${study.slug} low $${lowPrice} implies ${impliedBps} bps but peakDeviationBps is ${peakDeviationBps}`,
+        ).toBeLessThanOrEqual(displayToleranceBps);
+      }
+    }
   });
 
   describe.each(CASE_STUDY_LIST)("$slug", (study) => {

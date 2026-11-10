@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DepegHistoryPreview } from "../depeg-history-preview";
 import type { StablecoinDetailHistorySnapshot } from "@/lib/stablecoin-detail-history-snapshot";
@@ -81,6 +81,31 @@ describe("DepegHistoryPreview", () => {
     const link = screen.getByRole("link", { name: "Event record" });
     expect(link.getAttribute("href")).toBe("/depeg/usdt-2023-03-23/");
     expect(screen.getByText("Live observation")).toBeTruthy();
+  });
+
+  it("badges disputed and false-positive rows in the Recorded status cell", () => {
+    const events = [
+      { ...makeSnapshot().events[0], id: 1, provenance: { sourceKind: "live", auditVerdict: "disputed" } },
+      { ...makeSnapshot().events[1], id: 2, provenance: { sourceKind: "live", auditVerdict: "false_positive" } },
+    ];
+    render(<DepegHistoryPreview snapshot={makeSnapshot({ events })} />);
+
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByText("Disputed")).toBeTruthy();
+    expect(within(rows[0]).getByText("Recovered")).toBeTruthy();
+    expect(within(rows[1]).getByText("Disputed")).toBeTruthy();
+    expect(within(rows[1]).getByText("Open at capture")).toBeTruthy();
+  });
+
+  it("counts only non-disputed displayed rows in the caption numerator", () => {
+    const events = [
+      { ...makeSnapshot().events[0], id: 1, provenance: { sourceKind: "live", auditVerdict: "disputed" } },
+      { ...makeSnapshot().events[1], id: 2, provenance: null },
+    ];
+    render(<DepegHistoryPreview snapshot={makeSnapshot({ events })} />);
+
+    expect(screen.getByText(/Latest 1 of 248 archived incidents/)).toBeTruthy();
+    expect(screen.getAllByRole("row")).toHaveLength(3); // header + both displayed rows
   });
 
   it("never renders more than six recorded incidents", () => {

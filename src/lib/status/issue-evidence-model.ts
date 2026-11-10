@@ -40,8 +40,13 @@ const MAINTENANCE_CAUSE_CODES = new Set(["ddr_repair_debt_present", "reserve_syn
  * expected, so they are standing notices rather than triage findings. They stay
  * in `/api/status` causes (and every raw cause history), but never become a
  * dashboard issue, so they neither count as Watch items nor appear in Triage.
+ * `active_price_coverage_incomplete` joins them only at info severity with
+ * positive health evidence that every missing price is acknowledged or calendar-covered.
  */
-const STANDING_NOTICE_CAUSE_CODES = new Set(["active_price_coverage_nominal_reference"]);
+const STANDING_NOTICE_CAUSE_CODES = new Set([
+  "active_price_coverage_nominal_reference", "reserve_feed_reviews_acknowledged",
+  "supply_carry_reviews_acknowledged", "depeg_blind_event_reviews_acknowledged",
+]);
 const PUBLICATION_CAUSE_CODES = new Set(["stablecoin_publication_incomplete", "stablecoin_publication_unknown"]);
 const ACTIVE_PRICE_COVERAGE_CAUSE_CODE = "active_price_coverage_incomplete";
 const ACTIVE_PRICE_COVERAGE_CAUSE_CODES = new Set([ACTIVE_PRICE_COVERAGE_CAUSE_CODE, "active_price_coverage_unknown"]);
@@ -156,9 +161,16 @@ export function buildPublicHealthStatusCauses(healthData: HealthResponse | null 
   }];
 }
 
+function isStandingNotice(cause: StatusCause, allMissingPricesReviewed: boolean): boolean {
+  // Info also covers new unacknowledged gaps below the persistence threshold.
+  return cause.severity === "info" && (STANDING_NOTICE_CAUSE_CODES.has(cause.code)
+    || (cause.code === ACTIVE_PRICE_COVERAGE_CAUSE_CODE && allMissingPricesReviewed));
+}
+
 export function normalizeStatusIssues(
   causes: StatusResponse["causes"],
   additionalCauses: readonly StatusCause[] = [],
+  allMissingPricesReviewed = false,
 ): DashboardIssue[] {
   const deduped = new Map<string, StatusCause>();
   for (const cause of [...causes.overall, ...causes.availability, ...causes.dataQuality, ...additionalCauses]) {
@@ -182,7 +194,7 @@ export function normalizeStatusIssues(
   }
   return [...deduped.entries()].flatMap(([id, cause]) => {
     // A standing notice is by-design context, never a triage finding.
-    if (STANDING_NOTICE_CAUSE_CODES.has(cause.code)) return [];
+    if (isStandingNotice(cause, allMissingPricesReviewed)) return [];
     const publicImpacting = transitionHasPublicImpact([cause]);
     const kind = getIssueKind(cause, publicImpacting);
     return [{ ...cause, id, kind, publicImpacting, affectedSurface: getAffectedSurface(cause, publicImpacting), impactLabel: getIssueImpactLabel(kind) }];
@@ -206,7 +218,9 @@ export function groupDashboardIssues(issues: readonly DashboardIssue[]): Dashboa
 
 const EVIDENCE_LABELS: Record<DashboardEvidenceState, string> = {
   current: "Current and complete",
-  partial: "Current with partial evidence",
+  // A required query that never loaded is a missing source, not a "current"
+  // read: the label must not claim currency the state gate cannot prove.
+  partial: "Partial evidence",
   stale: "Stale",
   unavailable: "Unavailable",
 };

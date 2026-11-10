@@ -122,7 +122,7 @@ export function makeCompleteTelegramBotStatus(
     explicitCoinSubscriptions: 12,
     presetImpliedCoinSubscriptions: 3,
     activePresetFollowers: 2,
-    avgSubscriptionsPerSubscribedChat: 2.5,
+    avgSubscriptionsPerSubscribedChat: 2,
     pendingDeliveries: 0,
     oldestPendingDeliveryAgeSec: null,
     oldestDuePendingAgeSec: null,

@@ -214,6 +214,46 @@ describe("buildYieldSourceBoardModel", () => {
     expect(inferLaneConfidenceTier("mystery-feed")).toBeNull();
   });
 
+  it("keeps each ecosystem's concentration evidence on its own chip", () => {
+    const model = buildYieldSourceBoardModel([
+      makeYieldRanking({
+        id: "gtusdc-gauntlet",
+        symbol: "GTUSDC",
+        sourceRisk: {
+          dependencyConcentration: {
+            ecosystem: "Morpho (Gauntlet)",
+            severity: "high",
+            note: "The vault depends on Gauntlet's Morpho market, about $23M deposits.",
+            reviewedAt: "2026-10-01",
+          },
+        },
+      }),
+      makeYieldRanking({
+        id: "steakusdt-steakhouse",
+        symbol: "STEAKUSDT",
+        sourceRisk: {
+          dependencyConcentration: {
+            ecosystem: "Morpho (Steakhouse)",
+            severity: "high",
+            note: "The vault depends on Steakhouse's Morpho market, about $67M deposits.",
+            reviewedAt: "2026-10-01",
+          },
+        },
+      }),
+    ]);
+
+    const chips = model.topSourceRiskDrivers.filter((driver) => driver.key === "concentrated-dependency");
+    expect(chips.map((chip) => chip.label)).toEqual([
+      "Morpho (Gauntlet) concentration",
+      "Morpho (Steakhouse) concentration",
+    ]);
+    expect(chips.map((chip) => chip.count)).toEqual([1, 1]);
+    expect(chips.map((chip) => chip.description)).toEqual([
+      "The vault depends on Gauntlet's Morpho market, about $23M deposits.",
+      "The vault depends on Steakhouse's Morpho market, about $67M deposits.",
+    ]);
+  });
+
   it("returns empty summaries for an empty ranking set", () => {
     const model = buildYieldSourceBoardModel([]);
 

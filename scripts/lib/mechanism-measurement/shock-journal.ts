@@ -1,5 +1,6 @@
 import { keccak256, type Hex } from "viem";
 import { isTronRpcUrl } from "@shared/lib/tron-rpc";
+import { supportsEvmRpcBlockSelectors } from "@shared/lib/evm-rpc-capabilities";
 
 import { encodeWord, normalizeAddress, selectorForSignature } from "./core";
 import type { MeasurementCall } from "./schema";
@@ -235,8 +236,8 @@ export class JournaledShockCaller extends DecodedCallJournal implements ShockCal
     private readonly fetcher: typeof fetch = fetch,
   ) {
     super();
-    if (isTronRpcUrl(rpcUrl)) {
-      throw new Error("historical-state-unsupported: TRON constant calls execute latest state");
+    if (isTronRpcUrl(rpcUrl) || !supportsEvmRpcBlockSelectors(rpcUrl)) {
+      throw new Error("historical-state-unsupported: RPC constant calls execute latest state");
     }
   }
 

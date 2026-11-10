@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, renderHook, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { YieldHistoryPoint } from "@shared/types";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, useYieldHistoryChartModel } from "@/components/yield-history-chart-model";
 import { SourceStrip, WarningDot, YieldHistoryTooltip } from "@/components/yield-history-chart-ui";
@@ -172,20 +173,6 @@ describe("YieldHistoryChart", () => {
       isLoading: false,
     }));
 
-    render(
-      <YieldHistoryChart
-        stablecoinId="usdc-circle"
-        benchmarkRate={3}
-        benchmarkLabel="SOFR"
-        medianApy={0}
-        availableSources={[
-          { sourceKey: "a", yieldSource: "Source A" },
-          { sourceKey: "b", yieldSource: "Source B" },
-        ]}
-      />,
-    );
-
-
     // E19: overlays beyond the old 4-source cap must still be requested.
     render(
       <YieldHistoryChart
@@ -297,4 +284,289 @@ describe("YieldHistoryChart", () => {
   });
 });
 
+// The model cases below drive the chart model through the same hook mock the chart cases use.
+const historyBySource = new Map<string, YieldHistoryPoint[]>();
+const BASE = Date.UTC(2026, 0, 1);
+function point(date: number, apy: number, overrides: Partial<YieldHistoryPoint> = {}): YieldHistoryPoint {
+  return { date, apy, apyBase: null, apyReward: null, exchangeRate: null,
+    sourceTvlUsd: null, warningSignals: [], ...overrides };
+}
+const chartProps = { stablecoinId: "fixture", benchmarkRate: 5, medianApy: 5 };
 
+describe("yield history transformations", () => {
+  beforeEach(() => {
+    useYieldHistoryMock.mockImplementation((_id: string, options: { sourceKey: string | null; enabled?: boolean }) => ({
+      data: { history: options.enabled === false ? [] : historyBySource.get(options.sourceKey ?? "best") ?? [] },
+    }));
+  });
+  afterEach(() => {
+    historyBySource.clear();
+  });
+
+  it("prioritizes overlays, caps the cohort at eight, and drops stale internal selection", () => {
+    const sources = ["a", "b", "c", "d", "e", "f", "g", "h", "i"].map((sourceKey) => ({ sourceKey, yieldSource: sourceKey }));
+    for (const [index, source] of sources.entries()) historyBySource.set(source.sourceKey, [point(BASE, index + 5)]);
+    const { result, rerender } = renderHook(
+      ({ availableSources, externalSourceKeys }: { availableSources: typeof sources; externalSourceKeys?: string[] }) =>
+        useYieldHistoryChartModel({ ...chartProps, availableSources, externalSourceKeys }),
+      { initialProps: { availableSources: sources, externalSourceKeys: undefined as string[] | undefined } },
+    );
+    act(() => result.current.onSourceChange?.("b"));
+    expect(result.current.chartData[0].apy).toBe(6);
+    rerender({ availableSources: sources, externalSourceKeys: ["a", "b", "c", "d", "e", "f", "g", "h", "i"] });
+    expect(result.current.selectedSourceKey).toBe("b");
+    expect(result.current.primarySourceKey).toBe("a");
+    expect(result.current.mergedChartData[0]).toMatchObject({
+      apy: 5,
+      apy_overlay_0: 6,
+      apy_overlay_1: 7,
+      apy_overlay_2: 8,
+      apy_overlay_3: 9,
+      apy_overlay_4: 10,
+      apy_overlay_5: 11,
+      apy_overlay_6: 12,
+    });
+    expect(result.current.overlaySeriesKeys).toEqual([
+      "apy_overlay_0",
+      "apy_overlay_1",
+      "apy_overlay_2",
+      "apy_overlay_3",
+      "apy_overlay_4",
+      "apy_overlay_5",
+      "apy_overlay_6",
+    ]);
+    // The 9th source sits beyond MAX_OVERLAY_SOURCES and is reported, not silently dropped.
+    expect(result.current.omittedOverlayKeys).toEqual(["i"]);
+    historyBySource.set("best", [point(BASE, 3)]);
+    rerender({ availableSources: sources.filter((source) => source.sourceKey !== "b"), externalSourceKeys: undefined });
+    expect(result.current.selectedSourceKey).toBe("best");
+    expect(result.current.primarySourceKey).toBe("best");
+    expect(result.current.chartData[0].apy).toBe(3);
+  });
+
+  it("preserves actual timestamps across seconds and milliseconds without inventing observations", () => {
+    historyBySource.set("a", [point(BASE / 1000 + 10, 5), point(BASE + 3_600_000 + 10_000, 6), point(BASE + 7_200_000 + 10_000, 7)]);
+    historyBySource.set("b", [point(BASE + 300_000, 8.5), point(BASE / 1000 + 3600 + 300, 9.5)]);
+    const { result } = renderHook(() => useYieldHistoryChartModel({ ...chartProps, externalSourceKeys: ["a", "b"] }));
+    expect(result.current.mergedChartData.map(({ date, apy, apy_overlay_0 }) => [date, apy, apy_overlay_0]))
+      .toEqual([
+        [BASE + 10_000, 5, null], [BASE + 300_000, null, 8.5],
+        [BASE + 3_610_000, 6, null], [BASE + 3_900_000, null, 9.5],
+        [BASE + 7_210_000, 7, null],
+      ]);
+  });
+
+  it("uses the trailing thirty-day window and requires a strict spike ratio", () => {
+    historyBySource.set("best", [
+      point(BASE, 0.5),
+      ...[31, 32, 33].map((day) => point(BASE + day * 86_400_000, 4)),
+      point(BASE + 34 * 86_400_000, 8),
+    ]);
+    const { result, rerender } = renderHook(() => useYieldHistoryChartModel(chartProps));
+    // Exactly 2× is not a spike: the worker's `yield-spike` signal needs > 2×.
+    expect(result.current.spikeAnnotations).toEqual([]);
+    historyBySource.set("best", [
+      point(BASE, 0.5),
+      ...[31, 32, 33].map((day) => point(BASE + day * 86_400_000, 4)),
+      point(BASE + 34 * 86_400_000, 8.01),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 34 * 86_400_000, apy: 8.01, trailingAvg: 4, ratio: 8.01 / 4, windowDays: 3 },
+    ]);
+    historyBySource.set("best", [
+      ...[0, 1, 2].map((day) => point(BASE + day * 86_400_000, 0.5)),
+      point(BASE + 3 * 86_400_000, 2),
+      point(BASE + 4 * 86_400_000, 2.01),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations.map(({ date, apy }) => [date, apy]))
+      .toEqual([[BASE + 4 * 86_400_000, 2.01]]);
+  });
+
+  it("averages observed zero and negative APY in the trailing window", () => {
+    const DAY = 86_400_000;
+    historyBySource.set("best", [
+      ...Array.from({ length: 20 }, (_, day) => point(BASE + day * DAY, 2.1)),
+      ...Array.from({ length: 5 }, (_, index) => point(BASE + (20 + index) * DAY, 0)),
+      ...Array.from({ length: 5 }, (_, index) => point(BASE + (25 + index) * DAY, -1.4)),
+      point(BASE + 30 * DAY, 4.5),
+    ]);
+    const { result } = renderHook(() => useYieldHistoryChartModel(chartProps));
+
+    expect(result.current.spikeAnnotations).toHaveLength(1);
+    expect(result.current.spikeAnnotations[0]).toMatchObject({
+      date: BASE + 30 * DAY, apy: 4.5, windowDays: 30,
+    });
+    expect(result.current.spikeAnnotations[0].trailingAvg).toBeCloseTo(35 / 30);
+    expect(result.current.spikeAnnotations[0].ratio).toBeCloseTo(4.5 / (35 / 30));
+  });
+
+  it("does not annotate a best-source switch as a yield spike", () => {
+    const DAY = 86_400_000;
+    const TWO_HOURS = 7_200_000;
+    const oldSource = Array.from({ length: 30 * 12 }, (_, index) =>
+      point(BASE + index * TWO_HOURS, 1.8, { sourceKey: "a" }));
+    const switchTs = BASE + 30 * DAY;
+    const newSource = Array.from({ length: 2 * 12 }, (_, index) =>
+      point(switchTs + index * TWO_HOURS, 3.9, { sourceKey: "b", sourceSwitch: index === 0 }));
+    historyBySource.set("best", [...oldSource, ...newSource]);
+    const { result, rerender } = renderHook(() => useYieldHistoryChartModel(chartProps));
+
+    expect(result.current.spikeAnnotations).toEqual([]);
+
+    historyBySource.set("best", [
+      ...oldSource,
+      ...Array.from({ length: 5 }, (_, index) =>
+        point(switchTs + index * TWO_HOURS, 3.9, { sourceKey: "b", sourceSwitch: index === 0 })),
+      point(switchTs + 5 * TWO_HOURS, 8, { sourceKey: "b" }),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations.map(({ date, apy }) => [date, apy]))
+      .toEqual([[switchTs + 5 * TWO_HOURS, 8]]);
+  });
+
+  it("bounds source-mode baselines by source identity, not the is_best flip flag", () => {
+    const DAY = 86_400_000;
+    const sourceKey = "source-s";
+    const availableSources = [{ sourceKey, yieldSource: "Source S" }];
+    const chart = (history: YieldHistoryPoint[]) => {
+      historyBySource.set(sourceKey, history);
+      return renderHook(() => useYieldHistoryChartModel({ ...chartProps, externalSourceKey: sourceKey, availableSources }));
+    };
+
+    // The source's own jump over its 30-day mean is annotated even though the
+    // row where it gains the is_best slot carries `sourceSwitch`.
+    const { result, rerender } = chart([
+      ...Array.from({ length: 30 }, (_, day) => point(BASE + day * DAY, 0.5, { sourceKey })),
+      point(BASE + 30 * DAY, 3, { sourceKey, sourceSwitch: true }),
+    ]);
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 30 * DAY, apy: 3, trailingAvg: 0.5, ratio: 6, windowDays: 30 },
+    ]);
+
+    // A post-flip dip is averaged with the source's own 30-day history, not a
+    // baseline restarted at the is_best flip.
+    historyBySource.set(sourceKey, [
+      ...Array.from({ length: 60 }, (_, day) => point(BASE + day * DAY, 5, { sourceKey })),
+      ...Array.from({ length: 6 }, (_, index) =>
+        point(BASE + (60 + index) * DAY, 1, { sourceKey, sourceSwitch: index === 0 })),
+      point(BASE + 67 * DAY, 2.2, { sourceKey }),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations).toEqual([]);
+  });
+
+  it("never labels a future-inclusive series mean as a trailing average", () => {
+    const DAY = 86_400_000;
+    historyBySource.set("best", [
+      ...Array.from({ length: 60 }, (_, day) => point(BASE + day * DAY, 0)),
+      point(BASE + 60 * DAY, 50),
+      ...Array.from({ length: 304 }, (_, index) => point(BASE + (61 + index) * DAY, 5)),
+    ]);
+    const { result, rerender } = renderHook(() => useYieldHistoryChartModel(chartProps));
+
+    expect(result.current.spikeAnnotations.some((spike) => spike.date === BASE + 60 * DAY)).toBe(false);
+    for (const spike of result.current.spikeAnnotations) {
+      const points = historyBySource.get("best")!.filter(
+        (entry) => Number(entry.date) < spike.date && Number(entry.date) >= spike.date - spike.windowDays * DAY,
+      );
+      const expected = points.reduce((sum, entry) => sum + entry.apy, 0) / points.length;
+      expect(spike.trailingAvg).toBeCloseTo(expected, 10);
+    }
+
+    historyBySource.set("best", [
+      point(BASE, 12),
+      ...Array.from({ length: 29 }, (_, index) => point(BASE + (index + 1) * DAY, 1)),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations).toEqual([]);
+  });
+
+  it("does not average a stitched best-mode source switch into a yield spike", () => {
+    const DAY = 86_400_000;
+    const previousSource = Array.from({ length: 20 }, (_, day) =>
+      point(BASE + day * DAY, 3, { sourceKey: "a", sourceSwitch: false }));
+    historyBySource.set("best", [
+      ...previousSource,
+      point(BASE + 20 * DAY, 8, { sourceKey: "b", sourceSwitch: true }),
+    ]);
+    const { result, rerender } = renderHook(() => useYieldHistoryChartModel(chartProps));
+    expect(result.current.spikeAnnotations).toEqual([]);
+
+    // The same jump inside one source is still a spike.
+    historyBySource.set("best", [
+      ...previousSource,
+      point(BASE + 20 * DAY, 8, { sourceKey: "a", sourceSwitch: false }),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 20 * DAY, apy: 8, trailingAvg: 3, ratio: 8 / 3, windowDays: 20 },
+    ]);
+  });
+
+});
+
+
+describe("yield history chart source display", () => {
+  it("disambiguates duplicate source names with source identity", () => {
+    const sources = [
+      { sourceKey: "aave-v3:ethereum:usdc", yieldSource: "Aave V3" },
+      { sourceKey: "aave-v3:base:usdc", yieldSource: "Aave V3" },
+      { sourceKey: "compound-v3:base:usdc", yieldSource: "Compound V3" },
+    ];
+
+    expect(getYieldHistorySourceDisplayLabel(sources[0], sources)).toBe("Aave V3 (...thereum:usdc)");
+    expect(getYieldHistorySourceDisplayLabel(sources[1], sources)).toBe("Aave V3 (...v3:base:usdc)");
+    expect(getYieldHistorySourceDisplayLabel(sources[2], sources)).toBe("Compound V3");
+  });
+});
+
+describe("deriveYieldSourceSegments", () => {
+  it("splits at each source switch and preserves boundaries", () => {
+    const segments = deriveYieldSourceSegments([
+      { ts: 1_000, sourceKey: "aave-v3", sourceLabel: "Aave V3" },
+      { ts: 2_000, sourceKey: "aave-v3", sourceLabel: "Aave V3" },
+      { ts: 3_000, sourceKey: "compound-v3", sourceLabel: "Compound V3" },
+      { ts: 4_000, sourceKey: "compound-v3", sourceLabel: "Compound V3" },
+      { ts: 5_000, sourceKey: "morpho", sourceLabel: "Morpho" },
+      { ts: 6_000, sourceKey: "morpho", sourceLabel: "Morpho" },
+    ]);
+
+    expect(segments).toHaveLength(3);
+    expect(segments[0]).toMatchObject({ startTs: 1_000, endTs: 2_000, sourceKey: "aave-v3" });
+    expect(segments[1]).toMatchObject({ startTs: 3_000, endTs: 4_000, sourceKey: "compound-v3" });
+    expect(segments[2]).toMatchObject({ startTs: 5_000, endTs: 6_000, sourceKey: "morpho" });
+  });
+
+  it("collapses sources beyond the top-5 cap into an 'other' lane", () => {
+    const history = [
+      { ts: 1, sourceKey: "src-a", sourceLabel: "Source A" },
+      { ts: 2, sourceKey: "src-b", sourceLabel: "Source B" },
+      { ts: 3, sourceKey: "src-c", sourceLabel: "Source C" },
+      { ts: 4, sourceKey: "src-d", sourceLabel: "Source D" },
+      { ts: 5, sourceKey: "src-e", sourceLabel: "Source E" },
+      { ts: 6, sourceKey: "src-f", sourceLabel: "Source F" },
+      { ts: 7, sourceKey: "src-g", sourceLabel: "Source G" },
+    ];
+    const segments = deriveYieldSourceSegments(history);
+
+    expect(segments).toHaveLength(7);
+    const topKeys = segments.slice(0, 5).map((segment) => segment.sourceKey);
+    expect(topKeys).toEqual(["src-a", "src-b", "src-c", "src-d", "src-e"]);
+    expect(segments[5]).toMatchObject({ sourceKey: "src-f", sourceLabel: "Source F", isOther: true });
+    expect(segments[6]).toMatchObject({ sourceKey: "src-g", sourceLabel: "Source G", isOther: true });
+    expect(segments[5].color).toBe(segments[6].color);
+  });
+
+  it("preserves point-only switches and repeated source identity without invented intervals", () => {
+    expect(deriveYieldSourceSegments([
+      { ts: 1000, sourceKey: "a" }, { ts: 2000, sourceKey: "b" },
+      { ts: 3000, sourceKey: "b" }, { ts: 4000, sourceKey: "a" },
+    ]).map(({ startTs, endTs, sourceKey }) => ({ startTs, endTs, sourceKey }))).toEqual([
+      { startTs: 1000, endTs: 1000, sourceKey: "a" },
+      { startTs: 2000, endTs: 3000, sourceKey: "b" },
+      { startTs: 4000, endTs: 4000, sourceKey: "a" },
+    ]);
+  });
+});

@@ -31,6 +31,8 @@ import {
   INDEXABLE_DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
 import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
+import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 
 export const dynamic = "force-static";
 
@@ -42,6 +44,9 @@ const LAST_EDITED: Record<string, string> = sitemapDates;
 const fundingCosts = CostsFileSchema.parse(costsData);
 const fundingDonations = DonationsFileSchema.parse(donationsData);
 const typedSummaries = aiSummaries as StablecoinAiSummariesById;
+const TOP_STABLECOINS_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as {
+  _meta: { asOfISO: string };
+};
 
 type SitemapChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
 type StaticPageSpec = readonly [
@@ -77,6 +82,38 @@ function fundingLastModified(): Date {
       lastEdited("/funding/").getTime(),
       fundingCosts.last_reviewed_at * 1000,
       fundingDonations.last_updated_at * 1000,
+    ),
+  );
+}
+
+/** The homepage bakes the current top-stablecoins dataset, not the depeg/digest clock. */
+function homeLastModified(): Date {
+  const asOfMs = Date.parse(TOP_STABLECOINS_DATASET._meta.asOfISO);
+  return new Date(Math.max(lastEdited("/").getTime(), Number.isFinite(asOfMs) ? asOfMs : 0));
+}
+
+/** /safety-scores/ bakes the dated scores-latest preview, not only its route shell. */
+function safetyScoresLastModified(): Date {
+  const publishedAtMs = (getSafetyScoresPreview()?.publishedAtSec ?? 0) * 1000;
+  return new Date(Math.max(lastEdited("/safety-scores/").getTime(), Number.isFinite(publishedAtMs) ? publishedAtMs : 0));
+}
+
+/** The digest hub lists the digest set; its own newest publication dates it. */
+function digestIndexLastModified(): Date {
+  return new Date(
+    Math.max(
+      lastEdited("/digest/").getTime(),
+      ...DIGEST_ENTRIES.map((digest) => digest.generatedAt * 1000),
+    ),
+  );
+}
+
+/** The depeg hub lists events; the newest event date is its content clock. */
+function depegIndexLastModified(): Date {
+  return new Date(
+    Math.max(
+      lastEdited("/depeg/").getTime(),
+      ...DEPEG_EVENT_ENTRIES.map((event) => (event.endedAt ?? event.startedAt) * 1000),
     ),
   );
 }
@@ -135,41 +172,25 @@ function buildStaticSitemapEntries(
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  // Live-data routes bake fresh data at deploy time, but stamping build-time
-  // `now` on every deploy claims constant content change. Use the freshest
-  // data-snapshot timestamp the build actually baked in (latest digest
-  // publication or depeg event — moves daily), floored by the route's own
-  // git-derived edit date.
-  const latestDataSnapshotMs = Math.max(
-    0,
-    ...DIGEST_ENTRIES.map((d) => d.generatedAt * 1000),
-    ...DEPEG_EVENT_ENTRIES.map((e) => (e.endedAt ?? e.startedAt) * 1000),
-  );
-  const liveDataLastModified = (path: string): Date => {
-    const editedMs = LAST_EDITED[path] ? new Date(LAST_EDITED[path]).getTime() : 0;
-    const ms = Math.max(editedMs, latestDataSnapshotMs);
-    return ms > 0 ? new Date(ms) : lastEdited(path);
-  };
-
   const primaryPagePolicy: Record<(typeof PUBLIC_PRIMARY_ROUTE_PATHS)[number], StaticPagePolicy> = {
-    "/": ["hourly", 1.0, liveDataLastModified],
+    "/": ["hourly", 1.0, () => homeLastModified()],
     "/coverage/": ["weekly", 0.6],
     "/alt-pegs/": ["daily", 0.7],
-    "/freezewatch/": ["daily", 0.85, liveDataLastModified],
-    "/depeg/": ["daily", 0.8, liveDataLastModified],
+    "/freezewatch/": ["daily", 0.85],
+    "/depeg/": ["daily", 0.8, depegIndexLastModified],
     "/cemetery/": ["monthly", 0.7],
     "/compare/": ["weekly", 0.7],
-    "/liquidity/": ["daily", 0.8, liveDataLastModified],
+    "/liquidity/": ["daily", 0.8],
     "/upcoming/": ["daily", 0.6],
-    "/digest/": ["daily", 0.6, liveDataLastModified],
-    "/safety-scores/": ["daily", 0.8, liveDataLastModified],
-    "/safety-scores/map/": ["daily", 0.6, liveDataLastModified],
-    "/stability-index/": ["daily", 0.8, liveDataLastModified],
-    "/dependency-map/": ["daily", 0.7, liveDataLastModified],
-    "/yield/": ["daily", 0.7, liveDataLastModified],
+    "/digest/": ["daily", 0.6, digestIndexLastModified],
+    "/safety-scores/": ["daily", 0.8, safetyScoresLastModified],
+    "/safety-scores/map/": ["daily", 0.6],
+    "/stability-index/": ["daily", 0.8],
+    "/dependency-map/": ["daily", 0.7],
+    "/yield/": ["daily", 0.7],
     "/screener/": ["daily", 0.7],
     "/funding/": ["weekly", 0.5, fundingLastModified],
-    "/status/": ["daily", 0.4, liveDataLastModified],
+    "/status/": ["daily", 0.4],
     "/flows/": ["daily", 0.7],
     "/compliance/": ["weekly", 0.6],
     "/pharoswatchbot/": ["weekly", 0.7],
@@ -229,7 +250,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const chainPages: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/chains/`,
-      lastModified: liveDataLastModified("/chains/"),
+      lastModified: lastEdited("/chains/"),
       changeFrequency: "daily",
       priority: 0.8,
     },

@@ -1,5 +1,5 @@
 import type { ContractDeployment, NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
-import type { ChainPartitionProvenance, PriceDerivation, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyUnavailableReason } from "@shared/types/market";
+import type { ChainPartitionProvenance, PriceDerivation, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyRestoreMode, SupplyUnavailableReason } from "@shared/types/market";
 import type { DefiLlamaListFillDefaultQuote } from "@shared/lib/pricing-source-policy";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
 import { stampPriceMetadata } from "./shared";
@@ -59,6 +59,8 @@ export interface PeggedAsset {
   supplySource?: string;
   supplyObservedAt?: number | null;
   supplyRestored?: boolean;
+  /** Set only by the DefiLlama-outage fallback; routine main-path carries stay unmarked. */
+  supplyRestoreMode?: SupplyRestoreMode;
   supplyUnavailableReason?: SupplyUnavailableReason;
   supplyPerimeter?: SfraxStockPerimeterObservation;
   /** DEC-01 provenance when the aggregate was raised by the bounded CoinGecko gap-fill. */

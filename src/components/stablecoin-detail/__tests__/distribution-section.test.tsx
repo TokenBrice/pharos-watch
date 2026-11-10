@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DistributionSection } from "@/components/stablecoin-detail/distribution-section";
 
 import type { ApiMeta } from "@/lib/api";
@@ -72,6 +72,55 @@ it.each([
 
   expect(screen.getByRole("alert")).toBeTruthy();
   expect(screen.queryByRole("figure")).toBeNull();
+});
+
+describe("chain-dropout carry", () => {
+  // BUIDL shape (2026-11-01, #1826): the published Tempo row is unavailable while the carried headline
+  // re-adds its frozen $107.4M baseline.
+  const tempoBaselineUsd = 107_427_733.81;
+  function carriedBuidl(headlineUsd: number) {
+    return {
+      id: "buidl-blackrock",
+      circulating: { peggedUSD: headlineUsd },
+      chainCirculating: {
+        Ethereum: { current: 401_541_068.11 }, Solana: { current: 812_650_279.58 },
+        Avalanche: { current: 793_346_197.83 }, Tempo: { current: null },
+      },
+      supplyRestored: true,
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "quarantined", chains: [{
+          chainId: "tempo", chainLabel: "Tempo", listCurrentUsd: null, baselineUsd: tempoBaselineUsd,
+          baselineObservedAt: 1_793_391_290, baselineSource: "state", resolution: "carried-baseline",
+        }],
+      },
+    };
+  }
+  function renderCarried(headlineUsd: number) {
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [carriedBuidl(headlineUsd)] },
+      isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+    });
+    useDexLiquidityMock.mockReturnValue({ data: {}, isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn() });
+    render(<DistributionSection stablecoinId="buidl-blackrock" />);
+  }
+  const headlineUsd = 401_541_068.11 + 812_650_279.58 + 793_346_197.83 + tempoBaselineUsd;
+
+  it("shows the carried chain at its baseline so the displayed rows sum to the headline", () => {
+    renderCarried(headlineUsd);
+    const figure = screen.getByRole("figure", { name: "Circulating supply distribution across 4 chains" });
+    const contents = within(figure.parentElement!);
+    // Shares of the full displayed total, which equals the headline: Tempo 5.08%, Ethereum 18.99%.
+    expect(contents.getByText("Tempo")).toBeTruthy();
+    expect(contents.getByText("5%")).toBeTruthy();
+    expect(contents.getByText("19%")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("stays unavailable when the carried rows cannot sum to the headline", () => {
+    renderCarried(headlineUsd + 7_287.34);
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.queryByRole("figure", { name: /Circulating supply distribution/ })).toBeNull();
+  });
 });
 
 it.each(["not-yet-registered-chain", "sUSDe unattributed OFT escrow", "savUSD unattributed CCIP escrow"])(

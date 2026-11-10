@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
-import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
+import { DEWS_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -42,11 +42,11 @@ type TopPoolsRead =
   | { pools: PoolEntry[]; unavailableReason: null }
   | { pools: null; unavailableReason: TopPoolsUnavailableReason };
 
-const TOP_POOLS_DECODE_UNAVAILABLE_REASON: Record<PersistedJsonDecodeReason, TopPoolsUnavailableReason> = {
+const TOP_POOLS_DECODE_UNAVAILABLE_REASON = {
   missing: "top-pools-missing",
   "json-parse-failed": "top-pools-json-parse-failed",
   "invalid-shape": "top-pools-invalid-shape",
-};
+} as const;
 
 /**
  * Reads the worst-pool evidence for one asset. A readable `[]` is an observed empty set; a missing,
@@ -62,7 +62,7 @@ function readTopPools(
 ): TopPoolsRead {
   if (!topPoolsJson) return { pools: null, unavailableReason: "top-pools-missing" };
 
-  const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(topPoolsJson, {
+  const decoded = decodeJsonString<unknown[], keyof typeof TOP_POOLS_DECODE_UNAVAILABLE_REASON>(topPoolsJson, {
     updatedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
@@ -115,11 +115,9 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   let insufficientDataCount = 0;
   const noCurrentSupplyIds: string[] = [];
 
-  const scored: Array<{ meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult }> =
+  const scored: Array<{ meta: (typeof DEWS_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult }> =
     [];
-  for (const meta of PSI_ELIGIBLE_STABLECOINS) {
-    if (meta.flags?.navToken) continue;
-
+  for (const meta of DEWS_ELIGIBLE_STABLECOINS) {
     const asset = assetById.get(meta.id);
     if (!asset) continue;
 

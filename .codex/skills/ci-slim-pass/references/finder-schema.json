@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["batch", "files_reviewed", "keep_count", "findings", "patterns", "speed_notes"],
+  "properties": {
+    "batch": {"type": "string"},
+    "files_reviewed": {"type": "integer"},
+    "keep_count": {"type": "integer"},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "file", "action", "scope", "cases_removed", "loc_removed", "target", "evidence", "risk", "confidence"],
+        "properties": {
+          "id": {"type": "string", "description": "Stable within the batch; the verifier returns one verdict per id."},
+          "file": {"type": "string"},
+          "action": {"type": "string", "enum": ["DELETE", "MERGE", "TRIM", "DEPIN", "CONVERT", "DEMOTE", "SPEEDUP"]},
+          "scope": {"type": "string"},
+          "cases_removed": {"type": "integer"},
+          "loc_removed": {"type": "integer"},
+          "target": {"type": "string"},
+          "evidence": {"type": "string"},
+          "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        }
+      }
+    },
+    "patterns": {"type": "array", "items": {"type": "string"}},
+    "speed_notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

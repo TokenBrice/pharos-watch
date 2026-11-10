@@ -7,15 +7,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { DependencyScenarioArtifactSchema, DEPENDENCY_SCENARIOS_CACHE_PREFIX, type DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
 import { DEPENDENCY_SCENARIO_CHUNK_BYTES, DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT, DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER, DEPENDENCY_SCENARIO_READER_VERSION_HEADER } from "@shared/types/dependency-scenario-storage";
 import { chunkDependencyScenarioPayload, reassembleDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
-import { buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
 import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
-import { buildDirectHubExposures } from "@shared/lib/dependency-exposure";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
-import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import type { ContagionShock } from "@shared/types/contagion";
-import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
+import type { SafetyScoreV9ReplayArtifact } from "./replay-safety-score-v9";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9ReplayLaneScreening, parseSafetyScoreV9SourceAdmissionBaseline, type SafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
 import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
@@ -43,7 +39,7 @@ function verificationStamp(source: ReportCardsV9CurrentResponse, artifactBytes: 
   })).digest("hex");
 }
 
-type ReplayCard = ReturnType<typeof buildSafetyScoreV9ReplayArtifact>["pipeline"]["candidate"]["cards"][number];
+type ReplayCard = SafetyScoreV9ReplayArtifact["pipeline"]["candidate"]["cards"][number];
 
 /**
  * Raw replay score, rating status and partial evidence stay strict. Only the
@@ -72,19 +68,21 @@ export function verifyAcceptedPublicationCards(
 
 const USAGE = `Usage: node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts --mode <plan|resolve-source|compute|publish> --out-dir <path> [--input <capture.json>] [--publication <publication.json>] [--trusted-ref <ref>]
 Plan exports the production capture and accepted publication. Resolve-source selects the newest trusted first-parent commit whose committed evaluator manifest matches the accepted publication, without executing it. Compute without --publication is a local replay only and cannot be published. Publish verifies immutable payload bytes before advancing the commit marker.`;
-function remote(...args: string[]): string {
+/** Executes one read-only or mutating D1 call; production spawns Wrangler, tests inject a SQLite-backed executor. */
+export type DependencyScenarioRemote = (...args: string[]) => string;
+function defaultRemote(...args: string[]): string {
   const run = spawnSync("npx", ["--no-install", "wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", ...args], { cwd: resolve("worker"), encoding: "utf8", maxBuffer: 50_000_000, timeout: DEPENDENCY_SCENARIO_PUBLICATION_DEADLINE_MS });
   if (run.status !== 0) throw new Error(`D1 command failed: ${run.stderr || run.stdout}`);
   return run.stdout;
 }
 const sqlString = (value: string) => `'${value.replaceAll("'", "''")}'`;
-function readRemote(key: string): string | null {
+function readRemote(remote: DependencyScenarioRemote, key: string): string | null {
   // SAFETY: sqlString quotes and escapes the interpolated cache key as a SQL string literal.
   const result = JSON.parse(remote("--command", `SELECT value FROM cache WHERE key = ${sqlString(key)}`));
   return result[0]?.results[0]?.value ?? null;
 }
 
-function readActivePublicVersion() {
+function readActivePublicVersion(remote: DependencyScenarioRemote) {
   const result: unknown = JSON.parse(remote("--command", "SELECT value, updated_at FROM cache WHERE key = 'worker-active-version:public'"));
   if (!Array.isArray(result)) return null;
   const first: unknown = result[0];
@@ -93,9 +91,9 @@ function readActivePublicVersion() {
   return parseActiveWorkerVersionMarker(first.results[0], "public");
 }
 
-async function requireChunkReader(expectedVersion?: string): Promise<string> {
+async function requireChunkReader(remote: DependencyScenarioRemote, expectedVersion?: string): Promise<string> {
   try {
-    const active = readActivePublicVersion();
+    const active = readActivePublicVersion(remote);
     if (!active || (expectedVersion !== undefined && active.workerVersion !== expectedVersion)) throw new Error("active-reader-identity-unavailable");
     const response = await fetch("https://api.pharos.watch/api/dependency-scenarios/v1", {
       cache: "no-store", headers: { "Cache-Control": "no-cache" }, signal: AbortSignal.timeout(10_000),
@@ -105,14 +103,15 @@ async function requireChunkReader(expectedVersion?: string): Promise<string> {
       && response.headers.get(DEPENDENCY_SCENARIO_READER_VERSION_HEADER) === active.workerVersion;
     // Only headers are proof inputs; release the body before another connection.
     await response.body?.cancel();
-    if (!supported || readActivePublicVersion()?.workerVersion !== active.workerVersion) throw new Error("active-reader-capability-unproven");
+    if (!supported || readActivePublicVersion(remote)?.workerVersion !== active.workerVersion) throw new Error("active-reader-capability-unproven");
     return active.workerVersion;
   } catch (error) {
     throw Object.assign(new Error("dependency-scenarios-chunk-reader-unavailable"), { cause: error });
   }
 }
-async function main(): Promise<void> {
-  const { values } = parseStrictCliArgs(process.argv.slice(2), { options: { mode: { type: "string" }, "out-dir": { type: "string" }, input: { type: "string" }, publication: { type: "string" }, "trusted-ref": { type: "string" } } });
+export async function main(argv: readonly string[] = process.argv.slice(2), options: { remote?: DependencyScenarioRemote } = {}): Promise<void> {
+  const remote = options.remote ?? defaultRemote;
+  const { values } = parseStrictCliArgs(argv, { options: { mode: { type: "string" }, "out-dir": { type: "string" }, input: { type: "string" }, publication: { type: "string" }, "trusted-ref": { type: "string" } } });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   assertCliUsage(typeof values["out-dir"] === "string", "--out-dir is required");
   assertCliUsage(["plan", "resolve-source", "compute", "publish"].includes(values.mode as string), "--mode must be plan, resolve-source, compute or publish");
@@ -138,6 +137,7 @@ async function main(): Promise<void> {
     }
     const source = projectSafetyScoreV9PublicationToPublicSnapshot(publication,
       parseSafetyScoreV9PublicationHealthCache({ value: healthRow.value, updatedAt: healthRow.updated_at }));
+    const { parseSafetyScoreV9ReplayFixedInput } = await import("./replay-safety-score-v9");
     const fixedInput = await parseSafetyScoreV9ReplayFixedInput(replayRows.baseValue);
     const capture = await parseSafetyScoreV9PublicationReplayCapture(replayRows.deltaValue, fixedInput);
     if (capture.publicationGenerationId !== source.safetyScoreIdentity.publicationGenerationId) {
@@ -183,13 +183,13 @@ async function main(): Promise<void> {
     const assertPublicationDeadline = () => {
       if (Date.now() - startedAtMs >= DEPENDENCY_SCENARIO_PUBLICATION_DEADLINE_MS) throw new Error("dependency-scenarios-publication-deadline-exceeded");
     };
-    const readerVersion = chunked ? await requireChunkReader() : null;
+    const readerVersion = chunked ? await requireChunkReader(remote) : null;
     const writeRow = (rowKey: string, value: string, updatedAtSec = artifact.computedAtSec) => {
       assertPublicationDeadline();
       const sqlPath = resolve(directory, "publish.sql");
       writeFileSync(sqlPath, `INSERT INTO cache (key,value,updated_at) VALUES (${sqlString(rowKey)},${sqlString(value)},${updatedAtSec}) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at;`);
       remote("--file", sqlPath);
-      if (readRemote(rowKey) !== value) throw new Error(`Readback mismatch for ${rowKey}`);
+      if (readRemote(remote, rowKey) !== value) throw new Error(`Readback mismatch for ${rowKey}`);
     };
     // Immutable content first. An unsuccessful readback never advances latest.
     try {
@@ -210,11 +210,11 @@ async function main(): Promise<void> {
         const readback = JSON.parse(remote("--command", `SELECT chunk_index,value,byte_length,sha256 FROM dependency_scenario_payload_chunks WHERE payload_id = ${sqlString(key)} ORDER BY chunk_index`));
         if (reassembleDependencyScenarioPayload(manifest, readback[0]?.results ?? [], digest) !== bytes) throw new Error(`Readback mismatch for ${key}`);
         // Reprove activation after staging; deployment may have changed meanwhile.
-        await requireChunkReader(readerVersion!);
+        await requireChunkReader(remote, readerVersion!);
         // The manifest is immutable payload metadata, not the commit marker.
         writeRow(key, JSON.stringify(manifest));
       }
-      if (chunked && readActivePublicVersion()?.workerVersion !== readerVersion) throw new Error("dependency-scenarios-chunk-reader-unavailable");
+      if (chunked && readActivePublicVersion(remote)?.workerVersion !== readerVersion) throw new Error("dependency-scenarios-chunk-reader-unavailable");
       writeRow(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}latest`, key);
     } finally {
       if (chunked) {
@@ -246,6 +246,21 @@ async function main(): Promise<void> {
     return;
   }
   assertCliUsage(typeof values.input === "string", "--input is required for compute");
+  // Compute-only graph: plan/publish must stay cheap and must not load the
+  // evaluator, contagion and dependency-exposure modules.
+  const [
+    { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput },
+    { buildReportCardsV9DependencyGraph },
+    { buildDirectHubExposures },
+    { createV9ContagionScenarioEvaluator },
+    { loadV9CandidateMethodologyPolicy },
+  ] = await Promise.all([
+    import("./replay-safety-score-v9"),
+    import("@shared/types/report-cards-v9"),
+    import("@shared/lib/dependency-exposure"),
+    import("@shared/lib/safety-score-v9/contagion"),
+    import("@shared/lib/safety-score-v9/policy"),
+  ]);
   const start = performance.now(), cpu = process.cpuUsage();
   const capture = JSON.parse(readFileSync(resolve(values.input as string), "utf8"));
   const fixedInput = await parseSafetyScoreV9ReplayFixedInput(capture.fixedInput ?? capture, capture.registrySnapshot);
@@ -317,4 +332,4 @@ async function main(): Promise<void> {
   const used = process.cpuUsage(cpu);
   console.log(JSON.stringify({ wallMs: performance.now() - start, cpuMs: (used.user + used.system) / 1000, bytes: Buffer.byteLength(bytes), roots: hubs.length, scenarios: scenarios.length, rows: scenarios.reduce((sum, row) => sum + row.results.length, 0), failures: scenarios.reduce((sum, row) => sum + row.failures.length, 0), acceptedPublicationVerified: source !== null }));
 }
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) void runCliEntrypoint(main, { label: "dependency-scenarios", usage: USAGE });
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) void runCliEntrypoint(() => main(), { label: "dependency-scenarios", usage: USAGE });

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { CliUsageError, parseStrictCliArgs, runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
 import { decodeD1Envelopes } from "../../scripts/lib/remote-d1";
 import type { DdrRepairOperation } from "../src/lib/depeg-resolver-repair-store";
@@ -49,9 +50,10 @@ export function parseInputCorruptionArgs(argv: string[]) {
   } };
 }
 
-/** Offline plan: all live identity and single-use checks run inside one D1 import. */
+/** Apply rebuilds this offline plan against the canonical frozen registry before the atomic D1 guards. */
 export function buildInputCorruptionPlan(input: InputCorruptionPlanInput) {
   const p = inputSchema.parse(input);
+  const frozen = FROZEN_IDS.has(p.stablecoinId);
   const event = p.eventId, prediction = p.publicPredictionId, incident = sqlString(p.incidentKey);
   const expiresAt = p.createdAt + 15 * 60;
   const note = JSON.stringify({ operation: SCRIPT, evidencePath: p.evidencePath,
@@ -62,7 +64,7 @@ export function buildInputCorruptionPlan(input: InputCorruptionPlanInput) {
   const authorizationWhere = `a.event_id=${event} AND a.incident_key=${incident} AND a.operation='${OPERATION}' AND a.created_at=${p.createdAt} AND a.expires_at=${expiresAt} AND a.created_by=${actor} AND a.required_erratum_id=(SELECT er.id FROM depeg_resolver_prediction_errata er WHERE ${erratumWhere})`;
   const guard = `
     unixepoch() BETWEEN ${p.createdAt} AND ${expiresAt}
-    AND (SELECT COUNT(*) FROM depeg_events WHERE id=${event} AND stablecoin_id=${sqlString(p.stablecoinId)} AND ended_at IS NOT NULL)=1
+    AND (SELECT COUNT(*) FROM depeg_events WHERE id=${event} AND stablecoin_id=${sqlString(p.stablecoinId)} AND (ended_at IS NOT NULL OR ${frozen ? 1 : 0}=1))=1
     AND (SELECT COUNT(*) FROM depeg_resolver_public_predictions p WHERE ${predictionWhere} AND length(p.row_hash)=64)=1
     AND (SELECT COUNT(*) FROM depeg_resolver_public_predictions p JOIN depeg_resolver_incident_event_links l ON l.incident_key=p.incident_key WHERE l.event_id=${event})=1
     AND EXISTS (SELECT 1 FROM depeg_resolver_incident_event_links WHERE event_id=${event} AND incident_key=${incident})

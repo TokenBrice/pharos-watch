@@ -72,9 +72,9 @@ const STATIC_PROFILE_LINKS = HOMEPAGE_TOP_CORE_STABLECOINS.slice(0, 8);
 
 function HomepageStaticProfileDirectory(): React.JSX.Element {
   return (
-    <nav aria-label="Leading stablecoin profiles" className="space-y-2.5">
+    <nav aria-label="Core stablecoin profiles" className="space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">Market leaders</p>
+        <p className="text-sm font-medium text-foreground">Core stablecoin profiles</p>
         <Link
           href="/screener/"
           className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"

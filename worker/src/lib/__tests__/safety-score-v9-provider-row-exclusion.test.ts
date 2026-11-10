@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import reviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { unresolvedDeploymentCohort } from "@shared/lib/safety-score-v9/control-bridge-join";
@@ -15,14 +15,14 @@ import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-eviden
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { buildSafetyScoreV9SupplyReview, type ReviewedProviderRowExclusionRow } from "../safety-score-v9/extension-supply";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 
-const original = structuredClone(reviews.providerRowExclusionReviews);
-const registryPath = "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
-let authoredExclusions = structuredClone(original);
+const original = structuredClone(reviews.providerRowExclusionReviews) as ReviewedProviderRowExclusionRow[];
+let authoredExclusions: ReviewedProviderRowExclusionRow[] = structuredClone(original);
 afterEach(() => {
   authoredExclusions = structuredClone(original);
-  vi.doUnmock(registryPath);
-  vi.resetModules();
 });
 const profile = { routes: [{ id: "ethereum:native", reviewDisposition: "reviewed", routeClass: "native", issuanceModel: "native-issuance" }] } as unknown as BridgeRouteRiskProfile;
 function input() {
@@ -33,11 +33,9 @@ function input() {
   } as unknown as SafetyScoreV9CompilerInput;
 }
 async function build(fixedInput = input(), risk = profile) {
-  vi.resetModules();
-  vi.doMock(registryPath, () => ({ default: { ...reviews, providerRowExclusionReviews: authoredExclusions } }));
-  // Cold-import each registry fixture: a static import would retain the previously admitted evidence.
-  const { buildSafetyScoreV9SupplyReview } = await import("../safety-score-v9/extension-supply");
-  return buildSafetyScoreV9SupplyReview(fixedInput, "frax-frax", risk)!;
+  return buildSafetyScoreV9SupplyReview(fixedInput, "frax-frax", risk, {
+    providerRowExclusionReviews: authoredExclusions,
+  })!;
 }
 function cohort(review: NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][number]["supplyReview"]>) {
   return unresolvedDeploymentCohort({ assetId: "frax-frax", supply: {
@@ -79,9 +77,6 @@ async function consumer({
       ...(additionalProviderLabel ? { fraxtal: row(10) } : {}) },
   });
   await build(fixed as SafetyScoreV9CompilerInput, risk);
-  // Cold imports are required to exercise the just-replaced registry admission boundary.
-  const { buildSafetyScoreV9BaselineExtension } = await import("../safety-score-v9/extension");
-  const { compileSafetyScoreV9FactSetFromFixedInput } = await import("../safety-score-v9/fact-set");
   const transfer = SafetyScoreV9ReviewedTransferFactSchema.parse({
     assetId: meta.id, reviewedAt: "2026-10-01", reviewer: "Fixture reviewer",
     deployments: [{ chainId: "ethereum", contractOrTokenId: native.address, scope: "canonical",
@@ -89,6 +84,7 @@ async function consumer({
   });
   const extension = buildSafetyScoreV9BaselineExtension(fixed, {
     metaById: new Map([[meta.id, meta]]), reviewedTransferFacts: new Map([[meta.id, transfer]]),
+    providerRowExclusionReviews: authoredExclusions,
   });
   return { fixed, extension, facts: compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]! };
 }

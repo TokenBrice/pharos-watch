@@ -1,13 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
-import { DISPUTED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { handleDepegEvents } from "../../api/depeg-events";
 import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../depeg-event-projection";
 import { DEPEG_EVENTS_COUNT_CACHE_KEY, prepareDepegEventsCountStatements } from "../depeg-events-count-cache";
-
-const DISPUTED_VERDICT_SQL = DISPUTED_AUDIT_VERDICTS.map((verdict) => `'${verdict}'`).join(", ");
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -61,8 +58,7 @@ async function expectLegacyCounts(fixture: Fixture) {
       if (stablecoinId) conditions.push("stablecoin_id = ?");
       if (active) conditions.push("ended_at IS NULL");
       const expected = fixture.sqlite.prepare(`SELECT COUNT(*) AS total FROM depeg_events_with_provenance
-        WHERE ${conditions.join(" AND ")}
-          AND (provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN (${DISPUTED_VERDICT_SQL}))`)
+        WHERE ${conditions.join(" AND ")}`)
         .get(...(stablecoinId ? [stablecoinId] : [])) as { total: number };
       expect(await readCount(fixture, stablecoinId, active)).toBe(expected.total);
     }
@@ -100,7 +96,7 @@ describe("depeg event count publication cache", () => {
     }
   });
 
-  it("excludes disputed and false-positive provenance while null and unknown verdicts keep counting", async () => {
+  it("counts every pageable verdict, including disputed and false-positive provenance", async () => {
     const fixture = fixtures.open();
     for (const id of [1, 2, 3, 4, 5]) insertEvent(fixture, id);
     insertProvenance(fixture, 1, "disputed");
@@ -112,12 +108,12 @@ describe("depeg event count publication cache", () => {
     fixture.sqlite.exec("DROP TRIGGER trg_depeg_provenance_audit_verdict_insert_guard");
     insertProvenance(fixture, 5, "legacy_unknown");
     await expectLegacyCounts(fixture);
-    expect(await readCount(fixture)).toBe(3);
-    expect(await readCount(fixture, "usdt-tether")).toBe(3);
-    expect(await readCount(fixture, "usdt-tether", true)).toBe(3);
+    expect(await readCount(fixture)).toBe(5);
+    expect(await readCount(fixture, "usdt-tether")).toBe(5);
+    expect(await readCount(fixture, "usdt-tether", true)).toBe(5);
   });
 
-  it("never serves a cached pre-change count after a verdict becomes disputed", async () => {
+  it("keeps cached page membership unchanged after a verdict becomes disputed", async () => {
     const fixture = fixtures.open();
     insertEvent(fixture, 1);
     insertEvent(fixture, 2);
@@ -126,11 +122,10 @@ describe("depeg event count publication cache", () => {
     const cached = cacheRow(fixture);
     expect(cached).toBeDefined();
     fixture.sqlite.prepare("UPDATE depeg_event_provenance SET audit_verdict = 'disputed' WHERE event_id = 2").run();
-    // No invalidation trigger runs on provenance, so the persisted summary is
-    // still the pre-change generation; the public count must not repeat it.
+    // Verdicts change neither page membership nor the cached total.
     expect(cacheRow(fixture)).toEqual(cached);
-    expect(await readCount(fixture)).toBe(1);
-    expect(await readCount(fixture, "usdt-tether")).toBe(1);
+    expect(await readCount(fixture)).toBe(2);
+    expect(await readCount(fixture, "usdt-tether")).toBe(2);
   });
 
   it("keeps an empty publication exact and invalidates on new events, closure, reclassification and deletes", async () => {

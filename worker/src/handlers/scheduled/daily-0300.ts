@@ -6,6 +6,7 @@ import { runTelegramInactiveCleanup } from "../../cron/telegram/maintenance/tele
 import { runTelegramRetentionCleanup } from "../../cron/telegram/maintenance/telegram-retention-cleanup";
 import { runDailyCronSentinel } from "../../cron/cron-sentinel-daily";
 import { resolveDdrRepairTaskRunnerConfig } from "../../lib/env";
+import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
@@ -31,6 +32,9 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext) {
       "cron-sentinel": (signal) => runDailyCronSentinel(runtime.db, {
         nowSec: Math.floor(Date.now() / 1_000),
         repairRunnerEnabled: ddrRepairTaskRunner.enabled,
+        mintBurnDisabledIds: runtime.mintBurnDisabledIds,
+        mintBurnDisabledSymbols: runtime.mintBurnDisabledSymbols,
+        operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
         signal,
       }),
       "prune-status-probe-runs": (signal) => runPruneStatusProbeRuns(runtime.db, signal),

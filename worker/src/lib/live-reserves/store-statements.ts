@@ -353,6 +353,37 @@ export interface ReserveSyncDeferredRecord {
   reason: string;
 }
 
+/** Readback for an ambiguous failure-finalization acknowledgement. */
+export function buildReserveSyncAttemptFinalizationReadbackStatement(
+  db: D1Database,
+  record: ReserveSyncStateRecord,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `SELECT 1 AS finalized
+         FROM reserve_sync_state s
+        WHERE s.stablecoin_id = ?
+          AND s.last_attempt_id IS ?
+          AND s.pending_attempt_id IS NULL
+          AND s.last_attempted_at IS ?
+          AND s.last_status = ?
+          AND EXISTS (
+            SELECT 1
+              FROM reserve_sync_attempt_history h
+             WHERE h.stablecoin_id = s.stablecoin_id
+               AND h.attempt_id IS s.last_attempt_id
+               AND h.status = s.last_status
+          )
+        LIMIT 1`,
+    )
+    .bind(
+      record.stablecoinId,
+      record.lastAttemptId ?? null,
+      record.lastAttemptedAt,
+      record.lastStatus,
+    );
+}
+
 export function buildReserveSyncRecordDeferredStatement(
   db: D1Database,
   record: ReserveSyncDeferredRecord,

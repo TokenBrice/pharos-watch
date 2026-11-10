@@ -39,18 +39,24 @@ export type ParsedVerb =
  * Fuzzy resolve a token (symbol/name/id) to a coin id from the static palette
  * registry. Case-insensitive. Returns null when nothing matches.
  *
+ * Exact id and symbol matches are collected across every row, including
+ * suppressed (frozen/quarantined/delisted) coins: a verb that names that asset
+ * must never run against a live namesake. A ticker several coins own is
+ * ambiguous and resolves to nothing, so no Run-command row offers a wrong coin.
+ *
  * Preference order:
- *   1. Exact symbol match (case-insensitive).
- *   2. Exact id match.
+ *   1. Exact id match.
+ *   2. Exact symbol match, when exactly one coin owns the ticker.
  *   3. Symbol startsWith.
  *   4. Id startsWith.
  *   5. Name startsWith (first word).
+ * Only the prefix tiers skip suppressed coins.
  */
 function resolveCoinIdFromToken(token: string): string | null {
   const t = token.trim().toLowerCase();
   if (!t) return null;
 
-  let exactSymbol: string | null = null;
+  const exactSymbolIds = new Set<string>();
   let exactId: string | null = null;
   let prefixSymbol: string | null = null;
   let prefixId: string | null = null;
@@ -58,13 +64,15 @@ function resolveCoinIdFromToken(token: string): string | null {
 
   for (const coin of COMMAND_PALETTE_STABLECOINS) {
     const [id, name, symbol, status] = coin;
-    if (status === "quarantined" || status === "delisted" || status === "frozen") continue;
     const idLc = id.toLowerCase();
     const symbolLc = symbol.toLowerCase();
+
+    if (idLc === t) exactId = id;
+    if (symbolLc === t) exactSymbolIds.add(id);
+
+    if (status === "quarantined" || status === "delisted" || status === "frozen") continue;
     const nameLc = name.toLowerCase();
 
-    if (!exactSymbol && symbolLc === t) exactSymbol = id;
-    if (!exactId && idLc === t) exactId = id;
     if (!prefixSymbol && symbolLc.startsWith(t)) prefixSymbol = id;
     if (!prefixId && idLc.startsWith(t)) prefixId = id;
     if (!prefixName) {
@@ -73,7 +81,10 @@ function resolveCoinIdFromToken(token: string): string | null {
     }
   }
 
-  return exactSymbol ?? exactId ?? prefixSymbol ?? prefixId ?? prefixName;
+  if (exactId) return exactId;
+  if (exactSymbolIds.size > 1) return null;
+  const [exactSymbol] = exactSymbolIds;
+  return exactSymbol ?? prefixSymbol ?? prefixId ?? prefixName;
 }
 
 // ── Compare verb resolution ─────────────────────────────────────────────────

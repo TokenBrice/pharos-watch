@@ -2,6 +2,8 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
+import { DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 
 interface RssRouteModule {
   GET: () => Promise<Response>;
@@ -31,9 +33,7 @@ function makeDepegEvent(overrides: Record<string, unknown> = {}): Record<string,
   };
 }
 
-// Static-content routes are pure modules: import each route graph exactly once
-// and reuse the references. vi.resetModules() is reserved for the fixture
-// loader below, where a mocked process.cwd() must be baked in at import time.
+// Cache ordinary route imports; reset modules only for isolated fixture imports.
 let routes: Promise<{
   blog: RssRouteModule;
   digest: RssRouteModule;
@@ -52,9 +52,7 @@ function loadRoutes() {
   ]).then(([blog, digest, depeg, methodology, cemetery]) => ({ blog, digest, depeg, methodology, cemetery })));
 }
 
-// All filesystem-rooted scenarios share one temp root and one fixture module
-// instance: the route re-reads the data directory on every GET, so tests only
-// mutate the shard file between calls.
+// One temp root: depeg GET re-reads the shard after each fixture write.
 let fixtureRoot: string | undefined;
 let fixtureRoute: Promise<RssRouteModule> | undefined;
 
@@ -75,26 +73,25 @@ function writeShard(raw: string) {
   writeFileSync(join(fixtureRoot!, "data/depeg-events/2023.json"), raw, "utf8");
 }
 
-function parseItems(xml: string): Array<{ title: string; link: string; guid: string; description: string }> {
+function parseItems(xml: string): Array<{ title: string; link: string; guid: string; description: string; pubDate: string }> {
   const text = (body: string, tag: string) => {
-    // Same element slice as `<tag[^>]*>([\s\S]*?)</tag>`: skip attributes to
-    // the opening tag's `>`, then take plain text to the first close tag.
-    const open = `<${tag}`;
-    const openAt = body.indexOf(open);
-    const gt = openAt === -1 ? -1 : body.indexOf(">", openAt + open.length);
-    const closeAt = gt === -1 ? -1 : body.indexOf(`</${tag}>`, gt + 1);
-    if (openAt === -1 || gt === -1 || closeAt === -1) return "";
-    return body
-      .slice(gt + 1, closeAt)
-      .replace(/^<!\[CDATA\[/, "")
-      .replace(/\]\]>$/, "");
+    const open = body.indexOf(`<${tag}`);
+    const start = body.indexOf(">", open) + 1;
+    const end = body.indexOf(`</${tag}>`, start);
+    return (open < 0 || !start || end < 0 ? "" : body.slice(start, end))
+      .replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "");
   };
   return Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g), ([, body]) => ({
     title: text(body!, "title"),
     link: text(body!, "link"),
     guid: text(body!, "guid"),
     description: text(body!, "description"),
+    pubDate: text(body!, "pubDate"),
   }));
+}
+
+function parseLastBuildDate(xml: string): string {
+  return xml.match(/<lastBuildDate>([^<]*)<\/lastBuildDate>/)?.[1] ?? "";
 }
 
 afterEach(() => {
@@ -108,8 +105,7 @@ afterAll(() => {
 });
 
 describe("feed routes smoke", () => {
-  // Importing the five route graphs is the expensive part of this file; do it
-  // once outside the per-test budget so the assertions keep the default timeout.
+  // Load the route graphs once outside the per-test timeout.
   beforeAll(async () => {
     await loadRoutes();
   }, 60_000);
@@ -137,36 +133,78 @@ describe("feed routes smoke", () => {
     }
   });
 
+  it("keeps live methodology dates descending and bounded by the build clock", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const now = Math.max(...METHODOLOGY_CHANGELOG_REGISTRY.flatMap(({ entries }) =>
+      entries.map(({ date }) => Date.parse(`${date}T00:00:00Z`)))) + 12 * 3_600_000;
+    vi.setSystemTime(now);
+    try {
+      const loaded = await loadRoutes();
+      const xml = await (await loaded.methodology.GET()).text();
+      const items = parseItems(xml);
+      const lastBuildDate = parseLastBuildDate(xml);
+      const pubDateMs = items.map(({ pubDate }) => Date.parse(pubDate));
+
+      expect(items.length).toBeGreaterThan(0);
+      expect(Math.max(...pubDateMs)).toBeLessThanOrEqual(now);
+      expect(pubDateMs).toEqual([...pubDateMs].sort((left, right) => right - left));
+      expect(Date.parse(lastBuildDate)).toBeLessThanOrEqual(now);
+      expect(lastBuildDate).not.toBe(items[0]!.pubDate);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("pins authored chronology and the build clock despite future activation", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-03T12:00:00Z"));
+    vi.resetModules();
+    vi.doMock("@shared/lib/methodology-versions/registry", () => ({ METHODOLOGY_CHANGELOG_REGISTRY: [{
+      feedLabel: "Example", feedKey: "example", publicPath: "/methodology/example/",
+      entries: [
+        { version: "1.0", title: "Older", date: "2026-01-01", effectiveAt: Date.UTC(2027, 0, 1) / 1_000, summary: "Older release", impact: [] },
+        { version: "2.0", title: "Newer", date: "2026-01-02", effectiveAt: Date.UTC(2026, 0, 2) / 1_000, summary: "Newer release", impact: [] },
+      ],
+    }] }));
+    try {
+      const route = await import("../methodology.xml/route");
+      const xml = await (await route.GET()).text();
+      const items = parseItems(xml);
+      expect(items.map(({ guid }) => guid)).toEqual(["pharos:methodology:example:2.0", "pharos:methodology:example:1.0"]);
+      expect(items.map(({ pubDate }) => pubDate)).toEqual(["Fri, 02 Jan 2026 00:00:00 GMT", "Thu, 01 Jan 2026 00:00:00 GMT"]);
+      expect(parseLastBuildDate(xml)).toBe("Sat, 03 Jan 2026 12:00:00 GMT");
+    } finally {
+      vi.doUnmock("@shared/lib/methodology-versions/registry");
+      vi.resetModules();
+      vi.useRealTimers();
+    }
+  });
+
   it("depeg route tolerates a missing prebuild events file", async () => {
     const mod = await fixtureRouteModule();
     const res = await mod.GET();
     expect(await res.text()).not.toContain("<item>");
   });
 
-  it("depeg route throws on malformed events JSON", async () => {
+  it.each([
+    ["malformed events JSON", "{not json", /Failed to parse .*depeg-events.*\.json as JSON/],
+    ["invalid event rows", JSON.stringify([makeDepegEvent({ slug: "" })]), /Invalid depeg feed event data/],
+  ] as const)("depeg route throws on %s", async (_, raw, error) => {
     const mod = await fixtureRouteModule();
-    writeShard("{not json");
-    await expect(mod.GET()).rejects.toThrow(/Failed to parse .*depeg-events.*\.json as JSON/);
-  });
-
-  it("depeg route throws on invalid event rows", async () => {
-    const mod = await fixtureRouteModule();
-    writeShard(JSON.stringify([makeDepegEvent({ slug: "" })]));
-    await expect(mod.GET()).rejects.toThrow(/Invalid depeg feed event data/);
+    writeShard(raw);
+    await expect(mod.GET()).rejects.toThrow(error);
   });
 
   it("depeg feed emits exactly the newest 100 events in descending order with status and links", async () => {
     const mod = await fixtureRouteModule();
     const epochBase = 1_800_000_000;
-    // 101 deliberately unsorted events: newest (i=100) first in the input is
-    // the truncation trap; the route must sort, not trust input order.
+    // Unsorted input must be sorted before truncation.
     const events = Array.from({ length: 101 }, (_, i) =>
       makeDepegEvent({
         id: i,
         slug: `scx-event-${String(i).padStart(3, "0")}`,
         symbol: "SCX",
-        // i=1 stays under the 500 bps static-page threshold: it must fall
-        // back to the stablecoin history anchor instead of an event page.
+        // Sub-threshold events use the profile history anchor.
         peakDeviationBps: i === 1 ? -499 : -(600 + i),
         direction: i % 2 === 0 ? "below" : "above",
         startedAt: epochBase + i * 60,
@@ -179,23 +217,49 @@ describe("feed routes smoke", () => {
     const items = parseItems(await res.text());
 
     expect(items).toHaveLength(100);
-    // Newest 100 in strict descending order; the oldest fixture event (i=0)
-    // is truncated away.
+    // The oldest event is truncated away.
     expect(items.map((item) => item.guid)).toEqual(
       Array.from({ length: 100 }, (_, rank) => `pharos:depeg-event:scx-event-${String(100 - rank).padStart(3, "0")}`),
     );
     expect(items.map((item) => item.guid)).not.toContain("pharos:depeg-event:scx-event-000");
-    // Newest (i=100, below, resolved) and runner-up (i=99, above, active)
-    // carry direction, magnitude, and resolution status.
+    // Recorded peaks and closure status never imply a current price.
     expect(items[0]!.link).toBe("https://pharos.watch/depeg/scx-event-100/");
     expect(items[0]!.title).toBe("SCX depeg -700 bps");
-    expect(items[0]!.description).toBe("Resolved below peg by 700 bps starting 2027-01-15.");
+    expect(items[0]!.description).toBe("Resolved; peaked at 700 bps below peg starting 2027-01-15.");
     expect(items[1]!.title).toBe("SCX depeg +699 bps");
-    expect(items[1]!.description).toBe("Active above peg by 699 bps starting 2027-01-15.");
+    expect(items[1]!.description).toBe(`${DEPEG_CLOSURE_LABELS.open}; peaked at 699 bps above peg starting 2027-01-15.`);
+    expect(items.every((item) => !item.description.includes("Active"))).toBe(true);
     // Sub-threshold events link to the stablecoin history anchor instead.
     expect(items[99]!.guid).toBe("pharos:depeg-event:scx-event-001");
     expect(items[99]!.link).toContain("usdc-circle");
     expect(items[99]!.link.endsWith("#depeg-history")).toBe(true);
+  });
+
+  it("depeg feed quarantines disputed audit verdicts without consuming feed slots", async () => {
+    const mod = await fixtureRouteModule();
+    const epochBase = 1_800_000_000;
+    const confirmed = Array.from({ length: 101 }, (_, i) =>
+      makeDepegEvent({
+        id: i,
+        slug: `confirmed-${String(i).padStart(3, "0")}`,
+        startedAt: epochBase + i * 60,
+        endedAt: epochBase + i * 60 + 3_600,
+      }),
+    );
+    const disputed = makeDepegEvent({
+      id: 999,
+      slug: "disputed-newest",
+      startedAt: epochBase + 10_000,
+      endedAt: epochBase + 13_600,
+      provenance: { auditVerdict: "disputed" },
+    });
+    writeShard(JSON.stringify([...confirmed, disputed]));
+
+    const items = parseItems(await (await mod.GET()).text());
+
+    expect(items).toHaveLength(100);
+    expect(items.map((item) => item.guid)).not.toContain("pharos:depeg-event:disputed-newest");
+    expect(items[0]!.guid).toBe("pharos:depeg-event:confirmed-100");
   });
 
   it("depeg feed reserves resolved status for recovered closures", async () => {
@@ -209,7 +273,7 @@ describe("feed routes smoke", () => {
       { closeReason: "superseded-direction", recoveryPrice: null, status: "Closed", detail: "direction change" },
       { closeReason: "orphan-tracking-removed", recoveryPrice: null, status: "Closed", detail: "removed from tracking" },
       { closeReason: null, recoveryPrice: null, status: "Closed", detail: "unknown terminal state" },
-      { closeReason: null, recoveryPrice: null, endedAt: null, status: "Active" },
+      { closeReason: null, recoveryPrice: null, endedAt: null, status: DEPEG_CLOSURE_LABELS.open },
     ];
     writeShard(JSON.stringify(cases.map(({ status: _status, detail: _detail, ...closure }, index) =>
       makeDepegEvent({ id: index + 1, slug: `closure-${index}`, ...closure }),

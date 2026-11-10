@@ -3,18 +3,23 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { MintBurnReconciliationSummary, StatusSectionError } from "@shared/types";
+import type { MintBurnReconciliationSummary, MintBurnSupplyReconciliationLeg, StatusSectionError } from "@shared/types";
 import { cn } from "@/lib/utils";
 import { CountValue, StatusCardEmptyState, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { LazyDetails } from "@/components/status/lazy-details";
 
 const COLLAPSED_ROW_COUNT = 6;
 type IntegrityStatus = "Verified" | "Critical" | "Unverified";
 type ReconciliationRow = MintBurnReconciliationSummary["rows"][number];
 
 function integrityStatus(row: ReconciliationRow, version?: number): IntegrityStatus {
+  if (row.dailyReconciliation?.some((leg) => leg.activeFindings.length > 0
+    || leg.status === "unexplained-residual" || leg.status === "review-suppression")) return "Critical";
   if (version !== 1 || !row.conservation?.length) return "Unverified";
   if (row.status === "critical" && row.conservation.some((record) => record.status === "mismatch")) return "Critical";
-  if (row.status === "ok" && row.conservation.every((record) => record.status === "ok")) return "Verified";
+  // The published row verdict is authoritative; an unsupported or unavailable
+  // leg does not veto it as long as one contract actually verified.
+  if (row.status === "ok" && row.conservation.some((record) => record.status === "ok")) return "Verified";
   return "Unverified";
 }
 
@@ -51,6 +56,64 @@ function formatRawTokens(raw: string | undefined, decimals: number): string {
   const whole = BigInt(decimals ? digits.slice(0, -decimals) : digits).toLocaleString("en-US");
   const fraction = decimals ? digits.slice(-decimals).replace(/0+$/, "") : "";
   return `${negative && /[1-9]/.test(digits) ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
+}
+
+function DailyReconciliation({ leg, symbol }: { leg: MintBurnSupplyReconciliationLeg; symbol: string }) {
+  const receipt = leg.latest;
+  return (
+    <div className="mt-3 space-y-2 border-t border-border/50 pt-3 text-xs">
+      <p className="font-medium">Daily ledger · {leg.chainId}</p>
+      <p className="break-all font-mono text-muted-foreground">{leg.address}</p>
+      <p>{leg.latestDay == null ? "Day unavailable" : auditDate(leg.latestDay)?.slice(0, 10)} · {leg.status}</p>
+      <p className="text-muted-foreground">{leg.reason}</p>
+      {leg.activeFindings.map((finding) => (
+        <p key={`${finding.day}-${finding.status}-${finding.reason}`} className="text-state-danger-bright">
+          {auditDate(finding.day)?.slice(0, 10)} · {finding.status} · {finding.reason}
+          {finding.residualRaw == null ? "" : ` · residual ${formatRawTokens(finding.residualRaw, leg.decimals)} ${symbol}`}
+        </p>
+      ))}
+      {receipt ? <>
+        <p className="text-muted-foreground">Law: {receipt.law}. Checked {auditDate(receipt.checkedAt)?.replace("T", " ").replace(".000Z", " UTC") ?? "date unavailable"}.</p>
+        {([ ["Opening", receipt.opening], ["Closing", receipt.closing] ] as const).map(([label, checkpoint]) => (
+          <div key={label} className="text-muted-foreground">
+            <p>{label}: {checkpoint ? `${checkpoint.number.toLocaleString("en-US")} · supply ${formatRawTokens(checkpoint.supplyRaw, leg.decimals)} ${symbol}` : "unavailable"}</p>
+            {checkpoint ? <p className="break-all font-mono">{checkpoint.hash}</p> : null}
+          </div>
+        ))}
+        <p>Residual: {formatRawTokens(receipt.residualRaw ?? undefined, leg.decimals)} {symbol}</p>
+        {receipt.classes ? <dl className="space-y-1">
+          {Object.entries(receipt.classes).map(([name, value]) => (
+            <div key={name}>
+              <dt className="font-medium">{name} · {value.eventCount.toLocaleString("en-US")} events</dt>
+              <dd className="pharos-numeric break-all text-muted-foreground">Mint {formatRawTokens(value.mintRaw, leg.decimals)} · burn {formatRawTokens(value.burnRaw, leg.decimals)} {symbol}</dd>
+            </div>
+          ))}
+        </dl> : <p className="text-muted-foreground">Class totals unavailable.</p>}
+        {Object.entries(receipt.reviewByReason ?? {}).map(([reason, value]) => (
+          <p key={reason} className="break-all text-muted-foreground">Review {reason}: {value.eventCount} events · mint {formatRawTokens(value.mintRaw, leg.decimals)} · burn {formatRawTokens(value.burnRaw, leg.decimals)} {symbol}</p>
+        ))}
+      </> : null}
+      <dl className="space-y-1">
+        {leg.windows.map((window) => (
+          <div key={window.days}>
+            <dt className="font-medium">{window.days}d · {window.status}</dt>
+            <dd className="break-all text-muted-foreground">{window.reason}{window.residualRaw == null ? "" : ` · residual ${formatRawTokens(window.residualRaw, leg.decimals)} ${symbol}`}</dd>
+            {window.classes ? <dd>
+              <LazyDetails summary={<summary className="cursor-pointer">{window.days}d class totals</summary>}>
+                <p className="mt-1 text-muted-foreground">{auditDate(window.fromDay)?.slice(0, 10)}–{auditDate(window.toDay)?.slice(0, 10)} UTC · supply change {formatRawTokens(window.supplyDeltaRaw, leg.decimals)} {symbol}</p>
+                {Object.entries(window.classes).map(([name, value]) => (
+                  <p key={name} className="break-all text-muted-foreground">{name}: {value.eventCount} events · mint {formatRawTokens(value.mintRaw, leg.decimals)} · burn {formatRawTokens(value.burnRaw, leg.decimals)} {symbol}</p>
+                ))}
+                {Object.entries(window.reviewByReason ?? {}).map(([reason, value]) => (
+                  <p key={reason} className="break-all text-muted-foreground">Review {reason}: {value.eventCount} events · mint {formatRawTokens(value.mintRaw, leg.decimals)} · burn {formatRawTokens(value.burnRaw, leg.decimals)} {symbol}</p>
+                ))}
+              </LazyDetails>
+            </dd> : null}
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 export function MintBurnReconciliationCard({ summary, error }: {
@@ -92,7 +155,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
         <div className={cn("flex flex-wrap items-start justify-between gap-3 rounded-2xl px-4 py-3", STATUS_PANEL_SHELL_CLASS)}>
           <div className="space-y-1 text-xs text-muted-foreground">
             <p>Compares all mint/burn events with on-chain total-supply changes over matched blocks in the latest audited scan ranges.</p>
-            <p>Each contract has its own range. This is not a 24-hour audit. Critical means a verified conservation mismatch; missing, stale or unsupported audits remain unverified.</p>
+            <p>Each raw audit has its own range. This is not a 24-hour audit. Daily ledger receipts separately compare classified events with UTC-day supply changes. Critical includes unresolved residuals and material review suppression.</p>
             {summary.conservationVersion !== 1 ? <p>This payload has no matched-block audit. Legacy circulating-supply comparisons cannot establish integrity.</p> : null}
             <p>Showing {visibleRows.length} of {rows.length} assets, with critical and actionable unverified audits first; wholly unsupported assets last.</p>
           </div>
@@ -114,7 +177,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
                   <span className="font-medium text-foreground">{row.symbol}</span>
                   <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", statusTone(status))}>{status}</span>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Audit coverage: {status === "Verified" ? "All configured contracts verified" : "See contract audit status below"}</p>
+                <p className="mt-2 text-xs text-muted-foreground">Audit coverage: {status === "Verified" ? "All supported contracts verified" : "See contract audit status below"}</p>
                 {!records?.length ? <p className="mt-3 text-xs text-muted-foreground">No matched-block audit available.</p> : records.map((record) => {
                   const checkedAt = auditDate(record.checkedAt);
                   return (
@@ -133,7 +196,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
                           ["Supply change", record.supplyDeltaRaw], ["Residual", record.residualRaw],
                         ] as const).map(([label, raw]) => (
                           <div key={label} className="min-w-0">
-                            <dt className="text-muted-foreground">{label} ({row.symbol})</dt>
+                            <dt className="text-muted-foreground">{label} ({record.units === "raw-shares" ? `${row.symbol} shares` : row.symbol})</dt>
                             <dd className="pharos-numeric break-all">{formatRawTokens(raw, record.decimals)}</dd>
                           </div>
                         ))}
@@ -141,6 +204,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
                     </div>
                   );
                 })}
+                {row.dailyReconciliation?.map((leg) => <DailyReconciliation key={leg.configKey} leg={leg} symbol={row.symbol} />)}
                 <p className="mt-4 text-xs text-muted-foreground">Scan coverage: {row.coverageStatus}</p>
                 {row.conservationIssue ? <p className="mt-2 text-xs text-muted-foreground">{row.conservationIssue}</p> : null}
               </div>

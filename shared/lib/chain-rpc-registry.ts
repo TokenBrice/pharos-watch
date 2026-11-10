@@ -73,6 +73,8 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
   polygon: ["https://polygon.drpc.org"],
   // dRPC as an independent second operator behind rpc.mainnet.arc.io.
   arc: ["https://arc.drpc.org"],
+  // Independent X Layer operator; chain 196 and hash-pinned JTRSY supply verified 2026-11-08.
+  xlayer: ["https://xlayer.drpc.org"],
   // dRPC as an independent second operator behind rpc.hemi.network; verified
   // 2026-09-24 returning the same VCRED totalSupply and Safe balanceOf reads.
   hemi: ["https://hemi.drpc.org"],
@@ -81,6 +83,8 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
 // Reviewed supply profile. These fallbacks intentionally differ from the Worker
 // profile (notably Monad and Blast); neither profile implicitly expands the other.
 export const SUPPLY_RPC_DEFAULTS = {
+  // Ripple's Clio gateway omits validated; Ankr supports the strict paired read.
+  "xrpl": { rpcUrl: "https://xrplcluster.com", fallbackRpcUrl: "https://rpc.ankr.com/xrp_mainnet" },
   "aptos": { rpcUrl: APTOS_PUBLIC_REST_URL },
   // 0G mainnet (16661 / 0x4115), exact PYUSDx deployment and decimals verified
   // 2026-10-15. Supply-only profile; no archive/log routing is inferred.
@@ -98,12 +102,13 @@ export const SUPPLY_RPC_DEFAULTS = {
   "fraxtal": { rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
   "hyperevm": { rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io" },
   "ink": { rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org" },
-  "tac": { rpcUrl: "https://rpc.tac.build" },
+  "tac": { rpcUrl: "https://rpc-public.tac.build" },
   "zksync": { rpcUrl: "https://mainnet.era.zksync.io", fallbackRpcUrl: "https://zksync.drpc.org" },
   "sophon": { rpcUrl: "https://rpc.sophon.xyz" },
   "zircuit": { rpcUrl: "https://mainnet.zircuit.com" },
   "metis": { rpcUrl: "https://andromeda.metis.io/?owner=1088", fallbackRpcUrl: "https://metis-rpc.publicnode.com" },
-  "xlayer": { rpcUrl: PUBLIC_RPC_URLS["xlayer"] },
+  "xlayer": { rpcUrl: PUBLIC_RPC_URLS["xlayer"], fallbackRpcUrl: EXTRA_FALLBACK_RPC_URLS["xlayer"][0] },
+  "arc": { rpcUrl: PUBLIC_RPC_URLS["arc"], fallbackRpcUrl: EXTRA_FALLBACK_RPC_URLS["arc"][0] },
   "morph-l2": { rpcUrl: PUBLIC_RPC_URLS["morph-l2"], fallbackRpcUrl: "https://morph.drpc.org" },
   "scroll": { rpcUrl: "https://rpc.scroll.io", fallbackRpcUrl: "https://scroll-rpc.publicnode.com" },
   "kava": { rpcUrl: "https://evm.kava.io", fallbackRpcUrl: "https://kava-evm-rpc.publicnode.com" },
@@ -121,7 +126,8 @@ export const SUPPLY_RPC_DEFAULTS = {
   "klaytn": { rpcUrl: "https://public-en.node.kaia.io" },
   "stable": { rpcUrl: "https://rpc.stable.xyz", fallbackRpcUrl: "https://stable.drpc.org" },
   "codex": { rpcUrl: "https://rpc.codex.xyz", fallbackRpcUrl: "https://81224.rpc.thirdweb.com" },
-  "robinhood": { rpcUrl: PUBLIC_RPC_URLS["robinhood"] },
+  // Public endpoint rate-limits Worker egress (HTTP 429, 2026-11-07); publicnode verified chain 4663 and totalSupply reads.
+  "robinhood": { rpcUrl: PUBLIC_RPC_URLS["robinhood"], fallbackRpcUrl: "https://robinhood-rpc.publicnode.com" },
   "tempo": { rpcUrl: PUBLIC_RPC_URLS["tempo"] },
   // Official keyless endpoints, eth_chainId/totalSupply/decimals verified
   // 2026-10-03. Keep these latest-state supply profiles out of PUBLIC_RPC_URLS:
@@ -140,4 +146,5 @@ export const SUPPLY_RPC_DEFAULTS = {
 export const SUPPLY_ATTRIBUTION_RPC_URLS = {
   plume: [PUBLIC_RPC_URLS.plume],
   monad: [PUBLIC_RPC_URLS.monad, "https://rpc1.monad.xyz"],
+  pharos: ["https://rpc.pharos.xyz"],
 } as const;

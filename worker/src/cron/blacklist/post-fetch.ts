@@ -7,6 +7,7 @@ import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
 import {
+  MAX_SCAN_PHASE_BALANCE_CAPTURES,
   syncCurrentBalanceCacheForRows,
   type SyncCurrentBalanceCacheResult,
 } from "../../lib/blacklist/current-balance-cache";
@@ -172,6 +173,7 @@ export async function processFetchedBlacklistRows(
           etherscanLimiter: options.etherscanLimiter,
           tronLimiter: options.tronLimiter,
           runBudget: options.runBudget,
+          captureLimit: MAX_SCAN_PHASE_BALANCE_CAPTURES,
           signal: options.signal,
           chainRpcs: options.chainRpcs,
           assetPriceUsd,
@@ -192,6 +194,7 @@ export async function processFetchedBlacklistRows(
         failed: 0,
         skippedDueBudget: 0,
         budgetExhausted: false,
+        deferredToDebt: 0,
       },
     };
   }
@@ -241,6 +244,7 @@ export async function processFetchedBlacklistRows(
       etherscanLimiter: options.etherscanLimiter,
       tronLimiter: options.tronLimiter,
       runBudget: options.runBudget,
+      captureLimit: MAX_SCAN_PHASE_BALANCE_CAPTURES,
       signal: options.signal,
       chainRpcs: options.chainRpcs,
       assetPriceUsd,

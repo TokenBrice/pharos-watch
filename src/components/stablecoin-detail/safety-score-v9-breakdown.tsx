@@ -248,7 +248,7 @@ function PillarBreakdownDetails({
         </span>
         {breakdown.aggregationWeight !== null ? (
           <span className="pharos-label">
-            {(breakdown.aggregationWeight * 100).toFixed(0)}% aggregation weight
+            {(breakdown.aggregationWeight * 100).toFixed(0)}% measured aggregation weight
           </span>
         ) : null}
       </div>

@@ -221,7 +221,8 @@ export function formatReserveReportNote(
 type ProofOfReserves = NonNullable<StablecoinMeta["proofOfReserves"]>;
 type ProofOfReservesCadence = NonNullable<ProofOfReserves["cadence"]>;
 
-const DISCLOSURE_STATE_LABELS: Record<IssuerDisclosureState, string> = {
+/** Visible words for the tri-state: `false` is a reviewed absence, `undefined` no record. */
+export const DISCLOSURE_STATE_LABELS: Record<IssuerDisclosureState, string> = {
   published: "Published",
   gap: "Not found",
   unrecorded: "Not recorded",
@@ -244,7 +245,8 @@ const ATTESTATION_CADENCES: Partial<Record<ProofOfReservesCadence, { label: stri
   "ad-hoc": { label: "Ad hoc", monthly: false },
 };
 
-function reviewedState(present: boolean | undefined): IssuerDisclosureState {
+/** `undefined` means no record, not a reviewed absence. */
+export function reviewedState(present: boolean | undefined): IssuerDisclosureState {
   if (present == null) return "unrecorded";
   return present ? "published" : "gap";
 }

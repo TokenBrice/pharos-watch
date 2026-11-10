@@ -44,7 +44,7 @@
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }
       ],
       "checks": [
-        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts"
+        "npx vitest run shared/lib/scene src/components/__tests__/ui-primitives.test.tsx src/components/__tests__/scene-motion-coverage.test.ts"
       ],
       "rules": [
         "The Cemetery must stay byte-identical during kit refactors.",
@@ -120,6 +120,15 @@
           "local": [
             { "path": "docs/process/adding-a-stablecoin.md", "anchor": "additionevidence-handoff-packet" }
           ]
+        },
+        {
+          "sources": ["shared/data/stablecoins/coins/**"],
+          "local": [
+            { "path": "docs/stablecoin-data.md", "anchor": "registry-editing-entry" },
+            { "path": "docs/classification.md", "anchor": "classification-entry" },
+            { "path": "docs/process/adding-a-stablecoin.md", "anchor": "source-of-truth" },
+            "docs/process/stablecoin-research-sidecars.md"
+          ]
         }
       ],
       "testOwnership": [
@@ -159,6 +168,7 @@
       "label": "Pricing and supply pipelines",
       "risk": "high",
       "sources": [
+        "worker/src/cron/sync-stablecoins.ts",
         "worker/src/cron/sync-stablecoins/**",
         "worker/src/cron/snapshot-supply.ts",
         "worker/src/cron/snapshot-chain-supply.ts",
@@ -247,6 +257,8 @@
         "shared/types/reserve-continuation.ts",
         "shared/lib/live-reserve*.ts",
         "worker/src/lib/live-reserves/**",
+        "worker/src/lib/collateral-drift.ts",
+        "worker/src/lib/__tests__/collateral-drift.test.ts",
         "worker/src/lib/accepted-reserve-generation.ts",
         "worker/src/lib/reserve-continuation*.ts",
         "worker/src/handlers/reserve-continuation.ts",
@@ -295,6 +307,7 @@
         "docs/process/live-reserves-appendix.md",
         "docs/process/protocol-api-mechanism-refresh.md",
         "docs/process/redemption-route-evidence.md",
+        "docs/process/redemption-backstops-appendix.md",
         "docs/redemption-backstops.md"
       ],
       "docs": [
@@ -315,6 +328,12 @@
         {"path": "docs/live-reserves.md", "anchor": "frontend-consumers"},
         "docs/access-lookthrough.md",
         {"path": "docs/redemption-backstops.md", "anchor": "methodology-versioning"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "cron-schedule"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "config-registry"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "docs--notes"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "cost-modeling"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "provider--source-definitions"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "database-schema"},
         "docs/process/protocol-api-mechanism-refresh.md",
         {"path": "docs/process/redemption-route-evidence.md", "anchor": "configured-route-bound-evidence"},
         {"path": "docs/process/redemption-route-evidence.md", "anchor": "zero-route-producer-evidence-review-pkt-12-2026-10-14"}
@@ -368,7 +387,7 @@
         { "path": "docs/runbooks/yield-rankings-stale-or-missing.md", "runbook": { "label": "Yield rankings stale or missing", "kind": "symptom" } },
         { "path": "docs/runbooks/yield-supplemental-snapshot.md", "runbook": { "label": "Yield supplemental snapshot failure", "kind": "symptom" } },
         {"path": "docs/yield-intelligence-operations.md", "anchor": "runtime-guardrails"},
-        {"path": "docs/yield-intelligence-operations.md", "anchor": "publication-storage-appendix"},
+        {"path": "docs/yield-intelligence-operations.md", "anchor": "decision-ledger-retention"},
         {"path": "docs/yield-intelligence-operations.md", "anchor": "failure-semantics"}
       ],
       "rules": ["Keep source observation, publication, and read-time freshness distinct; missing yield evidence is not a measured zero."]
@@ -973,6 +992,10 @@
         "shared/lib/depeg-resolver/**",
         "worker/src/lib/stability-index.ts",
         "worker/src/lib/mint-burn-scoring.ts",
+        "worker/src/lib/mint-burn-log-identity.ts",
+        "worker/src/lib/mint-burn-conservation.ts",
+        "worker/src/lib/mint-burn-mcap-weighting.ts",
+        "worker/src/lib/mint-burn-pipeline/rpc.ts",
         "worker/src/lib/dews.ts",
         "worker/src/lib/dews/**",
         "worker/src/cron/compute-depeg-resolver.ts",
@@ -1003,6 +1026,16 @@
       ],
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "reading": [
+        {
+          "sources": ["worker/src/lib/mint-burn-log-identity.ts", "worker/src/lib/mint-burn-conservation.ts", "worker/src/lib/mint-burn-pipeline/rpc.ts"],
+          "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "shared-ingestion-pipeline-boundaries" }],
+          "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "shared-ingestion-pipeline-boundaries" }]
+        },
+        {
+          "sources": ["worker/src/lib/mint-burn-mcap-weighting.ts"],
+          "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "bank-run-gauge-composite" }],
+          "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "bank-run-gauge-composite" }]
+        },
         {
           "sources": ["worker/src/cron/dex-liquidity/**", "worker/src/cron/measured-execution/**", "worker/src/lib/dex-api-token-pricing.ts", "worker/src/lib/dexscreener.ts", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
           "local": [
@@ -1301,6 +1334,9 @@
       "risk": "high",
       "sources": [
         "worker/src/lib/status/**",
+        "worker/src/lib/mint-burn-supply-reconciliation.ts",
+        "worker/src/cron/mint-burn-reconciliation-watchdog.ts",
+        "shared/lib/mint-burn-reconciliation-policy.ts",
         "worker/src/lib/status-evaluation.ts",
         "worker/src/lib/status-reliability-shared.ts",
         "worker/src/lib/public-health-assessment.ts",
@@ -1338,6 +1374,37 @@
         {"path": "docs/scripts.md", "anchor": "worker-incident-evidence-and-status-profile"},
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
+      "reading": [
+        {
+          "sources": ["worker/src/lib/mint-burn-supply-reconciliation.ts", "worker/src/cron/mint-burn-reconciliation-watchdog.ts", "shared/lib/mint-burn-reconciliation-policy.ts"],
+          "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "daily-operator-invariant" }, { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }],
+          "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "daily-operator-invariant" }, { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }]
+        },
+        {
+          "sources": ["src/lib/status/**", "src/lib/status-dashboard-model.ts"],
+          "local": [
+            { "path": "docs/status-dashboard.md", "anchor": "frontend-flow" },
+            { "path": "docs/status-dashboard.md", "anchor": "public-status-projection" },
+            { "path": "docs/status-dashboard.md", "anchor": "rendering-and-refresh-contract" }
+          ],
+          "contract": [
+            { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
+            { "path": "docs/status-dashboard.md", "anchor": "timestamp-admission" },
+            { "path": "docs/status-dashboard.md", "anchor": "overall-status" }
+          ]
+        },
+        {
+          "sources": ["worker/src/lib/status/derived-data.ts"],
+          "local": [
+            { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
+            { "path": "docs/status-dashboard.md", "anchor": "timestamp-admission" },
+            { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }
+          ],
+          "contract": [
+            { "path": "docs/status-dashboard.md", "anchor": "public-status-projection" }
+          ]
+        }
+      ],
       "background": [
         { "path": "docs/status-dashboard.md", "anchor": "cron-metadata-persistence-budget" },
         { "path": "docs/architecture.md", "anchor": "adr-9" },
@@ -1358,8 +1425,12 @@
       "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts scripts/maintenance/__tests__/worker-evidence-report.test.ts scripts/__tests__/night-watch-worker.test.ts scripts/__tests__/watch-worker-cron.test.ts worker/scripts/__tests__/worker-status-profile.test.ts"],
       "testOwnership": [
         {
-          "sources": ["scripts/maintenance/worker-*.mjs", "worker/scripts/worker-status-profile.mjs", "worker/scripts/worker-status-profile.d.mts", "scripts/maintenance/watch-worker-cron.mjs", "scripts/maintenance/night-watch-worker.mjs", "docs/process/lane-freshness-matrix.md"],
+          "sources": ["scripts/maintenance/worker-*.mjs", "worker/scripts/worker-status-profile.mjs", "worker/scripts/worker-status-profile.d.mts", "scripts/maintenance/watch-worker-cron.mjs", "scripts/maintenance/night-watch-worker.mjs"],
           "tests": ["scripts/maintenance/__tests__/worker-evidence-report.test.ts", "worker/scripts/__tests__/worker-status-profile.test.ts", "scripts/__tests__/night-watch-worker.test.ts", "scripts/__tests__/watch-worker-cron.test.ts"]
+        },
+        {
+          "sources": ["docs/process/lane-freshness-matrix.md"],
+          "tests": ["scripts/__tests__/doc-sync.test.ts"]
         },
         {
           "sources": ["scripts/maintenance/monitor-worker-memory.ts", "scripts/maintenance/__tests__/fixtures/worker-memory/**", ".github/workflows/worker-memory-monitor.yml"],
@@ -1387,6 +1458,7 @@
         "scripts/lib/automation-registry.mjs",
         "scripts/lib/command-runner.mts",
         "scripts/lib/deploy-impact.mts",
+        "scripts/lib/lane-input-closure.mts",
         "scripts/lib/generated-artifacts.ts",
         "scripts/lib/post-deploy-acceptance.mts",
         "scripts/lib/pr-*.mts",
@@ -1401,6 +1473,7 @@
         "worker/scripts/measure-v9-resource.ts",
         "worker/scripts/calibrate-v9-resource.ts",
         "worker/scripts/lib/v9-resource-policy.ts",
+        "worker/scripts/lib/v9-contagion-inputs.ts",
         "worker/src/lib/__tests__/safety-score-v9-resource-*.test-support.ts",
         "scripts/maintenance/run-generated-artifacts.ts",
         "scripts/maintenance/prepare-workspace.ts",
@@ -1467,6 +1540,7 @@
       "risk": "medium",
       "sources": [
         "scripts/**",
+        "public/og-editorial-*.png",
         "public/critical-css-loader.js",
         "public/datasets/top-stablecoins/**",
         "public/datasets/depeg-history/**",
@@ -1626,10 +1700,13 @@
         "src/**",
         "data/logos.json",
         "public/logos/**",
+        "public/partners/**",
+        "public/blog/**",
         "public/chains/**",
         "public/datasets/stablecoin-cemetery.*",
         "public/llms.txt",
         "public/og-cemetery.png",
+        "public/portfolio-bootstrap.js",
         "shared/lib/public-docs.ts",
         "shared/lib/og-route-cards.ts",
         "shared/lib/og-route-glyphs.ts",
@@ -1664,6 +1741,10 @@
             { "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" },
             { "path": "docs/stablecoin-detail-page.md", "anchor": "route-shape" }
           ]
+        },
+        {
+          "sources": ["src/components/ui/**"],
+          "local": []
         }
       ],
       "background": [
@@ -1709,6 +1790,12 @@
       ],
       "alsoRead": ["src/AGENTS.md"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
+      "testOwnership": [
+        {
+          "sources": ["public/portfolio-bootstrap.js"],
+          "tests": ["src/app/portfolio/client.test.tsx"]
+        }
+      ],
       "checks": ["npx vitest run src"]
     },
     {
@@ -1798,6 +1885,7 @@
     {
       "id": "shared-runtime",
       "required": [
+        { "path": "docs/architecture.md", "anchor": "typescript-target-constraints" },
         { "path": "docs/architecture.md", "anchor": "adr-28" },
         { "path": "docs/architecture.md", "anchor": "adr-29" },
         { "path": "docs/architecture.md", "anchor": "adr-30" },

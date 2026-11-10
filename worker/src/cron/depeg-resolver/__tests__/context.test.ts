@@ -1,10 +1,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { computeDuration, groupIncidents, structuralClass, type DdrStratumKey } from "@shared/lib/depeg-resolver";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
-import { loadDdrContext, loadDdrHistoricalEvents } from "../context";
-import { HISTORICAL_ROW_CAP, TRAINING_WINDOW_SEC } from "../constants";
-import { activeRow, NOW_SEC } from "./depeg-resolver.test-support";
+import { buildCurrentDeviationMap, loadDdrContext, loadDdrHistoricalEvents } from "../context";
+import {
+  CURRENT_PRICE_MAX_AGE_SEC,
+  DDR_SNAPSHOT_TTL_SEC,
+  DEWS_MAX_AGE_SEC,
+  DEX_LIQUIDITY_MAX_AGE_SEC,
+  HISTORICAL_ROW_CAP,
+  TRAINING_WINDOW_SEC,
+} from "../constants";
+import { buildDiagnosticSnapshot, buildDdrResponse } from "../public-projection";
+import { resolveDdrIncidents } from "../incident-resolution";
+import {
+  activeInput,
+  activeRow,
+  loadedContext,
+  mockResolverD1,
+  NOW_SEC,
+  stablecoinsCache,
+} from "./depeg-resolver.test-support";
 import { seedAssessmentSample, seedHistoricalEvent, seedResolverInputs } from "./context.test-support";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
@@ -13,6 +30,7 @@ import { toStructural } from "../utils";
 import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../../lib/mint-burn-pipeline/scan-coverage";
+import * as mintBurnFlowsService from "../../../lib/mint-burn-flows-service";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -26,9 +44,10 @@ describe("DDR historical context", () => {
   it("excludes pending and disabled legs from both mint-surge rows and its scan proof", async () => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);
-    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdc-circle");
+    const event = activeRow({ stablecoin_id: "usdt-tether", symbol: "USDT" });
+    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");
     const pending = { ...configs[0], chain: { ...configs[0].chain, chainId: "synthetic-pending" } };
-    const end = Math.floor(activeRow().started_at / 3600) * 3600;
+    const end = Math.floor(event.started_at / 3600) * 3600;
     MINT_BURN_CONFIGS.push(pending);
     try {
       for (const config of configs) {
@@ -42,16 +61,25 @@ describe("DDR historical context", () => {
       }
       const insert = sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
         mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
-        VALUES ('usdc-circle', ?, ?, 1, 0, 0, 0, ?, 0, ?)`);
+        VALUES ('usdt-tether', ?, ?, 1, 0, 0, 0, ?, 0, ?)`);
       insert.run(configs[0].chain.chainId, end - 3600, 100, 100);
       insert.run(pending.chain.chainId, end - 3600, 1_000_000, 1_000_000);
-      const admitted = await loadDdrContext(db, [activeRow()], NOW_SEC);
+      const admitted = await loadDdrContext(db, [event], NOW_SEC);
       if (admitted.kind !== "ok") throw new Error(admitted.reason);
-      expect(admitted.context.mintBurnCoveredEventIds.has(activeRow().id)).toBe(true);
-      expect(admitted.context.mintBurnHourlyByCoin.get("usdc-circle")?.map((row) => row.netFlowUsd)).toEqual([100]);
+      expect(admitted.context.mintBurnCoveredEventIds.has(event.id)).toBe(true);
+      expect(admitted.context.mintBurnHourlyByCoin.get("usdt-tether")?.map((row) => row.netFlowUsd)).toEqual([100]);
+      const scope = await mintBurnFlowsService.readMintBurnWindowContext(db, NOW_SEC, MINT_BURN_CONFIGS);
+      vi.spyOn(mintBurnFlowsService, "readMintBurnWindowContext").mockResolvedValueOnce({ ...scope, partialCoinIds: new Set(["usdt-tether"]) });
+      const partial = await loadDdrContext(db, [event], NOW_SEC);
+      if (partial.kind !== "ok") throw new Error(partial.reason);
+      expect(partial.context.mintBurnCoveredEventIds.size).toBe(0);
+      sqlite.exec("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 1 WHERE chain_id = 'ethereum'");
+      const unresolved = await loadDdrContext(db, [event], NOW_SEC);
+      if (unresolved.kind !== "ok") throw new Error(unresolved.reason);
+      expect(unresolved.context.mintBurnCoveredEventIds.size).toBe(0);
       sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)")
         .run(JSON.stringify(configs.map(mintBurnConfigKey)), NOW_SEC);
-      const disabled = await loadDdrContext(db, [activeRow()], NOW_SEC);
+      const disabled = await loadDdrContext(db, [event], NOW_SEC);
       if (disabled.kind !== "ok") throw new Error(disabled.reason);
       expect(disabled.context.mintBurnCoveredEventIds.size).toBe(0);
       expect(disabled.context.mintBurnHourlyByCoin.size).toBe(0);
@@ -233,5 +261,62 @@ describe("DDR historical context", () => {
     const incidents = groupIncidents(loaded.historical, () => "USD");
     expect(incidents.every((incident) => incident.fragments?.length === 0)).toBe(true);
     expect(computeDuration(key, 3600, incidents, new Set()).horizons.every((cell) => cell.rawAtRisk === 0)).toBe(true);
+  });
+});
+
+describe("resolver source-owned time budgets", () => {
+  it.each([0, 1])("admits producer-cadence current prices inclusively and rejects age budget + %s", async (extraAge) => {
+    const updatedAt = NOW_SEC - CURRENT_PRICE_MAX_AGE_SEC - extraAge;
+    const db = mockResolverD1([stablecoinsCache(updatedAt)]);
+    const result = await buildCurrentDeviationMap(db, NOW_SEC);
+    expect(result.dataAsOf).toBe(updatedAt);
+    if (extraAge === 0) {
+      expect(result.healthy).toBe(true);
+      expect(result.degradedReason).toBeNull();
+      expect(result.byCoin.get("usdc-circle")).toBe(-300);
+    } else {
+      expect(result.healthy).toBe(false);
+      expect(result.degradedReason).toBe("stablecoins-cache-stale");
+      expect(result.byCoin.size).toBe(0);
+    }
+  });
+
+  it("carries the training window and publication TTL into diagnostic and public snapshots", () => {
+    const lineage = {
+      trainingWindow: { start: NOW_SEC - TRAINING_WINDOW_SEC, end: NOW_SEC },
+      eventCount: 0,
+      incidentCount: 0,
+      coinCount: 0,
+      quarantinedCoins: 0,
+      trainingRowsTruncated: false,
+    };
+    expect(lineage.trainingWindow).toEqual({ start: NOW_SEC - TRAINING_WINDOW_SEC, end: NOW_SEC });
+    const diagnostic = buildDiagnosticSnapshot({ rows: [], lineage, nowSec: NOW_SEC });
+    const published = buildDdrResponse({ candidateRows: [], incidentsByEventId: new Map(), sealed: [], firstPublication: [],
+      manifest: null, errata: [], lineage, nowSec: NOW_SEC });
+    for (const snapshot of [diagnostic, published]) {
+      expect(snapshot._meta.computedAt).toBe(NOW_SEC);
+      expect(snapshot._meta.expiresAt).toBe(NOW_SEC + DDR_SNAPSHOT_TTL_SEC);
+      expect(snapshot._meta.lineage?.trainingWindow).toEqual(lineage.trainingWindow);
+    }
+  });
+
+  it.each([0, 1])("expires DEWS and liquidity context at each source budget + %s", (extraAge) => {
+    const active = activeInput();
+    const context = loadedContext({
+      dewsByCoin: new Map([[active.stablecoinId, {
+        stablecoin_id: active.stablecoinId, score: 80, band: "DANGER", signals_json: "{}",
+        computed_at: NOW_SEC - DEWS_MAX_AGE_SEC - extraAge,
+      }]]),
+      liqByCoin: new Map([[active.stablecoinId, {
+        stablecoin_id: active.stablecoinId, liquidity_score: 10, concentration_hhi: 0.9,
+        total_tvl_usd: 10, total_volume_24h_usd: 5, updated_at: NOW_SEC - DEX_LIQUIDITY_MAX_AGE_SEC - extraAge,
+        methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
+      }]]),
+    });
+    const [row] = resolveDdrIncidents(context, NOW_SEC);
+    expect(row.relatedContext.dewsScore).toBe(extraAge === 0 ? 80 : null);
+    expect(row.relatedContext.dewsBand).toBe(extraAge === 0 ? "DANGER" : null);
+    expect(row.relatedContext.liquidityScore).toBe(extraAge === 0 ? 10 : null);
   });
 });

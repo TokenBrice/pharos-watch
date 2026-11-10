@@ -51,8 +51,10 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "gtusdcp-gauntlet", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "yvusdc-yearn", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "autousd-auto-finance", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "eearn-ember", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "savusd-avant", parentId: AVUSD_AVANT_ID, chain: "avalanche" }),
+  // Missing own-market quotes: admit fresh direct USDC with its single-source confidence.
+  defineRegistryErc4626NavVault({ id: "eearn-ember", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
+  // Missing own-market quote: inherit fresh direct avUSD without upgrading its confidence.
+  defineRegistryErc4626NavVault({ id: "savusd-avant", parentId: AVUSD_AVANT_ID, chain: "avalanche", allowFreshReplaySafeSingleSourceParent: true }),
   // USN prices single-source from CoinGecko. Inherit that fresh replay-safe
   // quote and its confidence instead of the sUSN last trade.
   defineRegistryErc4626NavVault({ id: "susn-noon", parentId: USN_NOON_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
@@ -73,7 +75,8 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   // leg's source, single-source confidence and clock instead of upgrading it.
   defineRegistryErc4626NavVault({ id: "senpathusd-sentora", parentId: "pathusd-bridge", chain: "tempo", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "skymoneyusdtsavings-sky", parentId: USDT_TETHER_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "krusdc-keyrock", parentId: USDC_CIRCLE_ID, chain: "arc" }),
+  // Same direct USDC single-source admission as eearn-ember.
+  defineRegistryErc4626NavVault({ id: "krusdc-keyrock", parentId: USDC_CIRCLE_ID, chain: "arc", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "senpyusdpst-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "senpyusdmwin-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "senrlusdv2-sentora", parentId: "rlusd-ripple", chain: ETHEREUM_CHAIN }),
@@ -84,8 +87,11 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "sxsrlusd-sentora", parentId: "rlusd-ripple", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "senpyusdprimev2-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "armusdcs-wintermute", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "arcusdc-galaxy", parentId: USDC_CIRCLE_ID, chain: "arc" }),
-  defineRegistryErc4626NavVault({ id: "susdc-spark-v1", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
+  defineRegistryErc4626NavVault({ id: "arcusdc-galaxy", parentId: USDC_CIRCLE_ID, chain: "arc", allowFreshReplaySafeSingleSourceParent: true }),
+  // DefiLlama coins dropped the coingecko:spark-usdc mirror on 2026-10-31 and
+  // the CG ticker is months stale, so sUSDC-v1's only supply valuation is this
+  // NAV (same flag rationale as eearn-ember).
+  defineRegistryErc4626NavVault({ id: "susdc-spark-v1", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "cscbusdc-clearstar", parentId: USDC_CIRCLE_ID, chain: "base" }),
   defineRegistryErc4626NavVault({ id: "bbqusdc-steakhouse-v2", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "hyperusdca-hyperithm", parentId: USDC_CIRCLE_ID, chain: "monad" }),
@@ -189,7 +195,7 @@ export function getFreshSingleSourceNavParentId(stablecoinId: string): string | 
  * before this run's enrichment prices exist, so the parent row comes from the
  * caller's run-local map: an admitted same-run parent observation or the
  * previous published payload. This reuses the exact protocol-redeem route —
- * parent-trust gate (incl. its source freshness budget), live
+ * parent-trust gate (a cadence budget only for a previous-payload supply read), live
  * registered ERC-4626 convertToAssets or Idle CDO virtualPrice read, and the bounded cached-rate degradation lane — so no
  * freshness policy is bypassed. The result values supply only; the live
  * override stage re-prices the published row in the same run.
@@ -200,9 +206,11 @@ export async function resolveVaultNavSupplyPrice(
   db?: D1Database,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
 ): Promise<CurrentPriceOverride | null> {
   const config = ERC4626_NAV_VAULTS_BY_ID.get(stablecoinId);
   const provider = config ? erc4626NavProvider
+    : PREVIEW_REDEEM_VAULTS_BY_ID.has(stablecoinId) ? previewRedeemProvider
     : idleCdoTrancheProvider.matches(stablecoinId) ? idleCdoTrancheProvider : null;
   const parentId = config?.parentId ?? provider?.liveParentByAssetId?.[stablecoinId];
   if (!provider || !parentId) return null;
@@ -212,6 +220,7 @@ export async function resolveVaultNavSupplyPrice(
 
   const nowSec = Math.floor(Date.now() / 1000);
   const context: LivePriceContext = {
+    supplyPreviousPayloadParent: previousAssetsById?.get(parentId) === parentAsset,
     assetsById: new Map([[parentId, { ...parentAsset }]]),
     chainRpcs,
     vaultRateCache: db ? await readVaultRateCache(db, nowSec) : undefined,

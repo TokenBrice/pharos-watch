@@ -126,6 +126,8 @@ export function MultiSeriesLineChart<D extends { ts: number }>({
                 stroke={item.color}
                 strokeWidth={lineStrokeWidth}
                 dot={false}
+                /* Rows are union-merged, so a series is absent at another
+                   series' timestamps; its own consecutive samples must connect. */
                 connectNulls
               />
             ))}

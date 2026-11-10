@@ -44,6 +44,41 @@ describe("createEdgeCacheContext", () => {
     expect(tracked.cacheKey.url).toBe(bare.cacheKey.url);
   });
 
+  it("keeps only declared query parameters in a public-status-history cache key", () => {
+    const canonical = (url: string) => {
+      const request = new Request(url);
+      return createEdgeCacheContext(request, new URL(request.url)).cacheKey.url;
+    };
+
+    const baseline = canonical("https://api.pharos.watch/api/public-status-history?window=7d&limit=200");
+    expect(canonical("https://api.pharos.watch/api/public-status-history?window=7d&limit=200&bust=random"))
+      .toBe(baseline);
+    expect(canonical("https://api.pharos.watch/api/public-status-history?limit=200&window=7d"))
+      .toBe(baseline);
+    expect(canonical("https://api.pharos.watch/api/public-status-history?window=24h&limit=200"))
+      .not.toBe(baseline);
+    expect(canonical("https://api.pharos.watch/api/public-status-history?window=7d&window=24h&limit=200"))
+      .toBe(baseline);
+  });
+
+  it("coalesces tracking-query variants for dynamic routes declared query-free", () => {
+    const bare = createEdgeCacheContext(
+      new Request("https://api.pharos.watch/api/stablecoin/usdt-tether"),
+      new URL("https://api.pharos.watch/api/stablecoin/usdt-tether"),
+    );
+    const tracked = createEdgeCacheContext(
+      new Request("https://api.pharos.watch/api/stablecoin/usdt-tether?cb=random"),
+      new URL("https://api.pharos.watch/api/stablecoin/usdt-tether?cb=random"),
+    );
+    const liveSummary = createEdgeCacheContext(
+      new Request("https://api.pharos.watch/api/stablecoin-live-summary/usdt-tether?cb=random"),
+      new URL("https://api.pharos.watch/api/stablecoin-live-summary/usdt-tether?cb=random"),
+    );
+
+    expect(tracked.cacheKey.url).toBe(bare.cacheKey.url);
+    expect(liveSummary.cacheKey.url).toBe("https://api.pharos.watch/api/stablecoin-live-summary/usdt-tether");
+  });
+
   it("preserves meaningful query parameters for parameterized routes", () => {
     const usdtRequest = new Request("https://api.pharos.watch/api/depeg-events?stablecoin=usdt-tether");
     const usdcRequest = new Request("https://api.pharos.watch/api/depeg-events?stablecoin=usdc-circle");
@@ -159,25 +194,7 @@ describe("writeEdgeCache", () => {
     const ctx = makeExecutionContext();
     const response = new Response("{}", {
       status: 200,
-      headers: { "Cache-Control": "public, s-maxage=60, max-age=10" },
-    });
-
-    writeEdgeCache(makeContext(), response, ctx);
-    await Promise.all(ctx.waitUntil.mock.calls.map(([promise]) => promise));
-
-    expect(put).toHaveBeenCalledOnce();
-    await expect(put.mock.calls[0]![1].text()).resolves.toBe("{}");
-    await expect(response.text()).resolves.toBe("{}");
-  });
-
-  it("stores cacheable responses without dropping Vary metadata", async () => {
-    const ctx = makeExecutionContext();
-    const response = new Response("{}", {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, s-maxage=60, max-age=10",
-        Vary: "Authorization",
-      },
+      headers: { "Cache-Control": "public, s-maxage=60, max-age=10", Vary: "Authorization" },
     });
 
     writeEdgeCache(makeContext(), response, ctx);
@@ -185,6 +202,8 @@ describe("writeEdgeCache", () => {
 
     expect(put).toHaveBeenCalledOnce();
     expect(put.mock.calls[0]?.[1]?.headers.get("Vary")).toBe("Authorization");
+    await expect(put.mock.calls[0]![1].text()).resolves.toBe("{}");
+    await expect(response.text()).resolves.toBe("{}");
   });
 
   it("skips no-store, no-cache, and private responses", () => {

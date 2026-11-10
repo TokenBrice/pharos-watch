@@ -164,7 +164,7 @@ export function buildApiKeyInventorySummary(keys: readonly ApiKeySummary[], nowS
   return [
     { label: "Total keys", value: String(keys.length), detail: `${active} active / ${keys.length - active} inactive` },
     { label: "Expiring soon", value: String(expiringSoon), detail: "active keys inside 7 days" },
-    { label: "Expired", value: String(expired), detail: "needs rotation or deactivation" },
+    { label: "Expired", value: String(expired), detail: "past their expiry date" },
     { label: "Non-expiring", value: String(nonExpiring), detail: "explicit exceptions" },
   ];
 }

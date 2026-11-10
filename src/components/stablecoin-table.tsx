@@ -25,6 +25,8 @@ interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
   activeFilters: readonly FilterTag[];
+  /** True when the stablecoins read failed and retained nothing. */
+  unavailable?: boolean;
   eligibleIds?: ReadonlySet<string>;
   toolbarActions?: ReactNode;
   filterPanel?: ReactNode;
@@ -34,6 +36,8 @@ interface StablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  /** The loaded report-cards response's methodology version, for the CSV label. */
+  reportCardsMethodologyVersion?: string | null;
   sourceGenerations?: StablecoinTableSourceGenerations;
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
@@ -54,6 +58,7 @@ export function StablecoinTable({
   data,
   isLoading,
   activeFilters,
+  unavailable,
   eligibleIds,
   toolbarActions,
   filterPanel,
@@ -63,6 +68,7 @@ export function StablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  reportCardsMethodologyVersion,
   sourceGenerations,
   initialVisibleColumns,
   columnPreferenceNamespace = "pharos-table",
@@ -106,6 +112,7 @@ export function StablecoinTable({
     activeFilters,
     eligibleIds,
     reportCards,
+    reportCardsMethodologyVersion,
     searchQuery,
     sort,
     renderedSet: columns.renderedSet,
@@ -229,6 +236,7 @@ export function StablecoinTable({
       searchQuery={searchQuery}
       activeFilters={activeFilters}
       data={data}
+      unavailable={unavailable}
       onClearFilters={onClearFilters}
       onClearSearch={onClearSearch}
     />

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -11,9 +11,12 @@ import {
   loadYieldHistorySnapshots,
   purgeYieldHistoryOwnershipHandoffs,
 } from "../yield-sync/history";
-import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
+import type { YieldHistorySnapshotRow } from "../yield-sync/history";
+import { evaluateYieldSourcesCooperative, type EvaluateYieldSourcesResult } from "../yield-sync/evaluation";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 import { cleanupFalseLinkedVariantSourceSwitches, drainDecisionRowsBeforeCutoff, drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/history";
+import { classifyDecisionRetention } from "../yield-sync/publication";
+import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
@@ -63,7 +66,9 @@ describe("loadYieldHistorySnapshots", () => {
     sqlite = fixture.sqlite;
     for (const [stablecoinId, publicationState] of [["coin-a", "published"], ["coin-b", null]] as const) {
       insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 100, isBest: 1, apy: 4, sourceTvlUsd: 10, publicationState });
-      insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 200, isBest: 1, apy: 99, sourceTvlUsd: 999, publicationState: "staged" });
+      for (const [recordedAt, state] of [[200, "staged"], [300, "failed"]] as const) {
+        insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt, isBest: 1, apy: 99, sourceTvlUsd: 999, publicationState: state });
+      }
     }
     insertHistory(sqlite, { stablecoinId: "staged-only", sourceKey: "source-a", recordedAt: 200, isBest: 1, publicationState: "staged" });
     expect(sqlite.prepare("SELECT publication_state FROM yield_history WHERE stablecoin_id = 'coin-b' AND recorded_at = 100").get()).toEqual({ publication_state: null });
@@ -104,10 +109,11 @@ describe("loadYieldHistorySnapshots", () => {
 
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 100, sourceTvlUsd: 10 });
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, sourceTvlUsd: 20 });
-    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, sourceTvlUsd: 30 });
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: -40 * DAY_SECONDS, sourceTvlUsd: 30 });
     insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 170, sourceTvlUsd: 40 });
     insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 190, sourceTvlUsd: 50 });
 
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 300 });
     const sourceKeysByStablecoin = new Map<string, Set<string>>([
       ["coin-a", new Set(["source-a", "source-b"])],
       ["coin-b", new Set(["source-c"])],
@@ -116,63 +122,27 @@ describe("loadYieldHistorySnapshots", () => {
       sourceKeysByStablecoin,
     });
 
-    expect(
-      snapshots.prevTvlRows.map((row) => ({
-        stablecoinId: row.stablecoin_id,
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-        tvl: row.source_tvl_usd,
-      })),
-    ).toEqual([
-      { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, tvl: 20 },
-      { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, tvl: 30 },
-      { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 190, tvl: 50 },
+    expect(snapshots.prevTvlRows.map((row) => [row.stablecoin_id, row.source_key, row.recorded_at, row.source_tvl_usd])).toEqual([
+      ["coin-a", "source-a", 200, 20],
+      ["coin-a", "source-b", -40 * DAY_SECONDS, 30],
+      ["coin-b", "source-c", 190, 50],
     ]);
   });
 
-  it("returns one previous-best row per stablecoin", async () => {
+  it("breaks previous-best timestamp ties by latest rowid and excludes the cutoff", async () => {
     const fixture = createDb();
     sqlite = fixture.sqlite;
 
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-old",
-      recordedAt: 100,
-      isBest: 1,
-      sourceTvlUsd: 10,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-new",
-      recordedAt: 200,
-      isBest: 1,
-      sourceTvlUsd: 20,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-b",
-      sourceKey: "source-b",
-      recordedAt: 150,
-      isBest: 1,
-      sourceTvlUsd: 30,
-    });
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-z", recordedAt: 200, isBest: 1, sourceTvlUsd: 10 });
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, isBest: 1, sourceTvlUsd: 20 });
+    insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-b", recordedAt: 150, isBest: 1, sourceTvlUsd: 30 });
 
-    const snapshots = await loadYieldHistorySnapshots(
-      fixture.db,
-      ["coin-a", "coin-b"],
-      1_000,
-      300,
-      { sourceKeysByStablecoin: new Map() },
-    );
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "at-cutoff", recordedAt: 1_000, isBest: 1 });
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b"], 1_000, 300, { sourceKeysByStablecoin: new Map() });
 
-    expect(
-      snapshots.prevBestRows.map((row) => ({
-        stablecoinId: row.stablecoin_id,
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-      })),
-    ).toEqual([
-      { stablecoinId: "coin-a", sourceKey: "source-new", recordedAt: 200 },
-      { stablecoinId: "coin-b", sourceKey: "source-b", recordedAt: 150 },
+    expect(snapshots.prevBestRows.map((row) => [row.stablecoin_id, row.source_key, row.recorded_at])).toEqual([
+      ["coin-a", "source-a", 200],
+      ["coin-b", "source-b", 150],
     ]);
   });
 
@@ -180,78 +150,67 @@ describe("loadYieldHistorySnapshots", () => {
     const fixture = createDb();
     sqlite = fixture.sqlite;
 
-    insertHistory(sqlite, {
-      stablecoinId: "usde-ethena",
-      sourceKey: "valid-source",
-      recordedAt: 100,
-      isBest: 1,
-      sourceTvlUsd: 10,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "usde-ethena",
-      sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY,
-      recordedAt: 200,
-      isBest: 1,
-      sourceTvlUsd: 20,
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: "valid-source", recordedAt: 100, isBest: 1, sourceTvlUsd: 10 });
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY, recordedAt: 200, isBest: 1, sourceTvlUsd: 20 });
+
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["usde-ethena"], 1_000, 300, {
+      sourceKeysByStablecoin: new Map([["usde-ethena", new Set(["valid-source", LEGACY_BEST_YIELD_SOURCE_KEY])]]),
     });
 
-    const snapshots = await loadYieldHistorySnapshots(
-      fixture.db,
-      ["usde-ethena"],
-      1_000,
-      300,
-      { sourceKeysByStablecoin: new Map() },
-    );
-
+    expect(snapshots.historyRows.map((row) => row.source_key)).toEqual(["valid-source"]);
+    expect(snapshots.prevTvlRows.map((row) => row.source_key)).toEqual(["valid-source"]);
     expect(snapshots.prevBestRows).toHaveLength(1);
     expect(snapshots.prevBestRows[0]?.source_key).toBe("valid-source");
     expect(snapshots.prevBestRows[0]?.recorded_at).toBe(100);
   });
 
-  it("bounds previous-history materialization without pre-counting old candidates", async () => {
-    const fixture = createDb();
+  it("keeps every read under D1's bind cap across large coin and pair chunks", async () => {
+    const fixture = createLatestSchemaSqlite({ onAll: (sql) => {
+      expect(sql.match(/\?/g)?.length ?? 0).toBeLessThanOrEqual(100);
+    } });
     sqlite = fixture.sqlite;
+    const ids = Array.from({ length: 90 }, (_, i) => `coin-${i}`);
+    for (const stablecoinId of ids) {
+      insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 100, isBest: 1, sourceTvlUsd: 10 });
+      insertHistory(sqlite, { stablecoinId, sourceKey: "source-b", recordedAt: 100, isBest: 0, sourceTvlUsd: 5 });
+    }
+    const pacedReads: number[] = [];
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ids, 1_000, 300, {
+      chunkSize: 90,
+      paceHistoryRead: async (readMs) => { pacedReads.push(readMs); },
+      sourceKeysByStablecoin: new Map(ids.map((id) => [id, new Set(["source-a", "source-b"])])),
+    });
+    // One idle gap per history-window read: the selected read and four pair chunks.
+    expect(pacedReads).toHaveLength(5);
+    expect(snapshots.historyRows).toHaveLength(180);
+    expect(snapshots.prevTvlRows).toHaveLength(180);
+    expect(snapshots.prevBestRows.map((row) => row.stablecoin_id)).toEqual(ids);
+    expect(snapshots.previousTvlRowsTruncated).toBe(false);
+  });
 
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-a",
-      recordedAt: 100,
-      isBest: 1,
-      sourceTvlUsd: 10,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-a",
-      recordedAt: 200,
-      isBest: 1,
-      sourceTvlUsd: 20,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-b",
-      recordedAt: 150,
-      isBest: 0,
-      sourceTvlUsd: 30,
-    });
-
-    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300, {
-      sourceKeysByStablecoin: new Map([["coin-a", new Set(["source-a"])]]),
-    });
-
-    expect(
-      snapshots.prevTvlRows.map((row) => ({
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-      })),
-    ).toEqual([
-      { sourceKey: "source-a", recordedAt: 200 },
-    ]);
-    expect(
-      snapshots.prevBestRows.map((row) => ({
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-      })),
-    ).toEqual([{ sourceKey: "source-a", recordedAt: 200 }]);
+  it("waits out one spent D1 window on an idempotent history read instead of failing the run", async () => {
+    vi.useFakeTimers();
+    try {
+      let tripped = false;
+      const fixture = createLatestSchemaSqlite({ onAll: (sql) => {
+        if (tripped || !sql.includes("history-window")) return;
+        tripped = true;
+        throw new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
+      } });
+      sqlite = fixture.sqlite;
+      insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 100, isBest: 1 });
+      let settled = false;
+      const pending = loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300, {
+        sourceKeysByStablecoin: new Map(), yieldToEventLoop: () => Promise.resolve(),
+      }).finally(() => { settled = true; });
+      await vi.advanceTimersByTimeAsync(5_000);
+      // Still inside the spent window: a sub-second backoff would have retried already.
+      expect([tripped, settled]).toEqual([true, false]);
+      await vi.advanceTimersByTimeAsync(6_001);
+      expect((await pending).historyRows).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("caps source-key-scoped previous TVL history rows and reports truncation", async () => {
@@ -662,5 +621,426 @@ describe("yield history observation clock admission", () => {
     expect(withoutFutureObservation?.sourceSwitchCount30d).toBe(1);
     expect(withFutureObservation?.sourceSwitchCount30d)
       .toBe(withoutFutureObservation?.sourceSwitchCount30d);
+  });
+});
+
+function row(overrides: Partial<YieldHistorySnapshotRow>): YieldHistorySnapshotRow {
+  return {
+    stablecoin_id: "coin-a",
+    source_key: "source-a",
+    recorded_at: 1_700_000_000,
+    is_best: 0,
+    apy: 4.2,
+    apy_base: null,
+    source_tvl_usd: 1_000_000,
+    data_source: "defillama",
+    yield_source: "Source A",
+    yield_type: "lending",
+    exchange_rate: null,
+    ...overrides,
+  };
+}
+
+describe("yield coordinator history", () => {
+  it("reports each history phase in order before yielding at row cadence and phase completion", async () => {
+    const trace: string[] = [];
+    const result = await buildYieldHistoryEvaluationInputsCooperative({
+      historyRows: [100, 200, 300].map((recorded_at) => row({ recorded_at, is_best: 1 })),
+      prevTvlRows: [row({ source_tvl_usd: 9_000 }), row({ source_tvl_usd: 8_000 })],
+      prevBestRows: [row({ is_best: 1 })],
+    }, {
+      yieldEveryRows: 2,
+      onProgress: ({ phase, rowsDone, rowsTotal }) => { trace.push(`${phase}:${rowsDone}/${rowsTotal}`); },
+      yieldToEventLoop: async () => { trace.push("yield"); },
+    });
+    expect(trace).toEqual([
+      "history-rows:2/3", "yield", "history-rows:3/3", "yield",
+      "previous-tvl:2/2", "yield", "previous-best:1/1", "yield", "source-switches:1/1", "yield",
+    ]);
+    expect(result.sourceHistory.get("coin-a::source-a")?.map((entry) => entry.recorded_at)).toEqual([100, 200, 300]);
+    expect(result.prevTvlBySource.get("coin-a::source-a")).toBe(9_000);
+    expect(result.prevBestSourceKeyByCoin.get("coin-a")).toBe("source-a");
+    expect(result.sourceSwitchCount30dByCoin.get("coin-a")).toBe(0);
+  });
+
+  it("aborts after yielding without admitting the next history row or later phases", async () => {
+    const controller = new AbortController();
+    const trace: string[] = [];
+    await expect(buildYieldHistoryEvaluationInputsCooperative({
+      historyRows: [row({}), row({})],
+      prevTvlRows: [row({})],
+      prevBestRows: [row({})],
+    }, {
+      signal: controller.signal,
+      yieldEveryRows: 1,
+      onProgress: ({ phase, rowsDone }) => { trace.push(`${phase}:${rowsDone}`); },
+      yieldToEventLoop: async () => { trace.push("yield"); controller.abort(); },
+    })).rejects.toThrow();
+    expect(trace).toEqual(["history-rows:1", "yield"]);
+  });
+
+  it("normalizes source, legacy, on-chain, TVL, and previous-best history inputs", async () => {
+    const result = await buildYieldHistoryEvaluationInputsCooperative({
+      historyRows: [
+        row({}),
+        row({
+          source_key: null,
+          data_source: "onchain",
+          exchange_rate: 1.01,
+        }),
+        row({
+          stablecoin_id: "lusd-liquity",
+          source_key: "bprotocol-lqty-only",
+          data_source: "onchain",
+          exchange_rate: 1.02,
+        }),
+      ],
+      prevTvlRows: [
+        row({ source_tvl_usd: 9_000 }),
+        row({ source_key: null, source_tvl_usd: 7_000 }),
+        row({ source_tvl_usd: 8_000 }),
+      ],
+      prevBestRows: [
+        row({ is_best: 1 }),
+      ],
+    }, { yieldToEventLoop: () => Promise.resolve() });
+
+    expect(result.sourceHistory.get("coin-a::source-a")).toHaveLength(1);
+    expect(result.legacyHistoryById.get("coin-a")?.[0]?.source_key).toBe("legacy-best");
+    expect(result.onChainCompatibilityHistoryById.get("coin-a")).toHaveLength(1);
+    expect(result.legacyDeterministicOnChainHistoryById.get("lusd-liquity")).toHaveLength(1);
+    expect(result.prevTvlBySource.get("coin-a::source-a")).toBe(9_000);
+    expect(result.legacyPrevTvlById.get("coin-a")).toBe(7_000);
+    expect(result.prevBestSourceKeyByCoin.get("coin-a")).toBe("source-a");
+  });
+
+  it("counts selected-source switches across 30d history rows, collapsing one-publication gaps", async () => {
+    const switchesFor = async (rows: YieldHistorySnapshotRow[]) =>
+      (await buildYieldHistoryEvaluationInputsCooperative({ historyRows: rows, prevTvlRows: [], prevBestRows: [] }, { yieldToEventLoop: () => Promise.resolve() }))
+        .sourceSwitchCount30dByCoin.get("coin-a");
+
+    // Durable runs: A A B B A A -> two switches.
+    expect(await switchesFor([
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 400 }),
+      row({ is_best: 1, recorded_at: 500 }),
+      row({ is_best: 1, recorded_at: 600 }),
+    ])).toBe(2);
+
+    // B2: a one-publication out-and-back is a fetch gap, not two switches.
+    expect(await switchesFor([
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
+      row({ is_best: 1, recorded_at: 400 }),
+      row({ is_best: 1, recorded_at: 500 }),
+    ])).toBe(0);
+
+    // Non-best rows never participate in the selected-source series.
+    expect(await switchesFor([
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ source_key: "source-b", recorded_at: 200 }),
+      row({ is_best: 1, recorded_at: 300 }),
+    ])).toBe(0);
+  });
+
+  it("skips the legacy-best sentinel in the durable selected-source series", async () => {
+    const switchesFor = async (rows: YieldHistorySnapshotRow[]) =>
+      (await buildYieldHistoryEvaluationInputsCooperative({ historyRows: rows, prevTvlRows: [], prevBestRows: [] }, { yieldToEventLoop: () => Promise.resolve() }))
+        .sourceSwitchCount30dByCoin.get("coin-a");
+
+    // A coin that only ever published legacy rows and then gains source-aware
+    // rows has not switched sources: `isRealSourceSwitch` never charges the
+    // sentinel, so the 30d count must not charge it either.
+    expect(await switchesFor([
+      row({ source_key: "legacy-best", is_best: 1, recorded_at: 100 }),
+      row({ source_key: "legacy-best", is_best: 1, recorded_at: 200 }),
+      row({ is_best: 1, recorded_at: 300 }),
+      row({ is_best: 1, recorded_at: 400 }),
+    ])).toBe(0);
+
+    // A durable legacy era between two runs of one real source is an unchanged
+    // source, not two switches.
+    expect(await switchesFor([
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
+      row({ source_key: "legacy-best", is_best: 1, recorded_at: 300 }),
+      row({ source_key: "legacy-best", is_best: 1, recorded_at: 400 }),
+      row({ is_best: 1, recorded_at: 500 }),
+      row({ is_best: 1, recorded_at: 600 }),
+    ])).toBe(0);
+
+    // A real switch still counts once when it straddles a legacy era.
+    expect(await switchesFor([
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
+      row({ source_key: "legacy-best", is_best: 1, recorded_at: 300 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 400 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 500 }),
+    ])).toBe(1);
+  });
+
+  it("publishes the switch series including the current run, not a transient increment", async () => {
+    const priorKey = "defillama:coin-a:prior";
+    const challengerKey = "defillama:coin-a:challenger";
+    const run = async (bestRows: YieldHistorySnapshotRow[], sourceKeys: string[]) => {
+      const inputs = await buildYieldHistoryEvaluationInputsCooperative({
+        historyRows: bestRows,
+        prevTvlRows: [],
+        prevBestRows: [row({ source_key: priorKey, is_best: 1 })],
+      }, { yieldToEventLoop: () => Promise.resolve() });
+      return await evaluateYieldSourcesCooperative(baseEvaluationInput({
+        resolved: sourceKeys.map((sourceKey, index) => ({
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({ sourceKey, currentApy: index === 0 ? 5 : 6 }),
+        })),
+        ...inputs,
+      }), { yieldToEventLoop: () => Promise.resolve() });
+    };
+    const published = (result: EvaluateYieldSourcesResult, sourceKey: string) =>
+      result.evaluatedSources.find((source) => source.sourceKey === sourceKey);
+    const priorRun = (recordedAt: number) => row({ source_key: priorKey, is_best: 1, recorded_at: recordedAt });
+
+    // Durable switch: the challenger wins twice in a row. The first publication
+    // sees one run of it, so the collapsed series still reads 0; the second run
+    // is the second consecutive publication and charges exactly one switch.
+    const durableFirst = published(await run([priorRun(100), priorRun(200)], [priorKey, challengerKey]), challengerKey);
+    const durableSecond = published(
+      await run(
+        [priorRun(100), priorRun(200), row({ source_key: challengerKey, is_best: 1, recorded_at: 300 })],
+        [priorKey, challengerKey],
+      ),
+      challengerKey,
+    );
+    expect(durableFirst?.sourceSwitchCount30d).toBe(0);
+    expect(durableSecond?.sourceSwitchCount30d).toBe(1);
+    // The published penalty is derived from that same count.
+    expect((durableSecond?.sourceRiskPenalty ?? 0) - (durableFirst?.sourceRiskPenalty ?? 0)).toBeCloseTo(0.1, 6);
+
+    // One-publication excursion: the challenger wins once and the prior source
+    // returns. Both publications read 0 — the count never publishes an increment
+    // the next run erases.
+    const excursion = published(await run([priorRun(100), priorRun(200)], [priorKey, challengerKey]), challengerKey);
+    const returned = published(
+      await run(
+        [priorRun(100), priorRun(200), row({ source_key: challengerKey, is_best: 1, recorded_at: 300 })],
+        [priorKey],
+      ),
+      priorKey,
+    );
+    expect(excursion?.sourceSwitchCount30d).toBe(0);
+    expect(returned?.sourceSwitchCount30d).toBe(0);
+  });
+
+  it("treats a resolved-but-rejected previous winner as no incumbent for both arms", async () => {
+    const incumbent = "defillama:coin-a:prior";
+    const challenger = "defillama:coin-a:challenger";
+    // History with a positive APY against a zero current APY is the
+    // `source-zero-vs-history` rejection: the incumbent is resolved this run but
+    // not publishable — exactly the fact the 30d count already reads.
+    const bestRows = [
+      row({ source_key: incumbent, is_best: 1, recorded_at: 10, apy: 5 }),
+      row({ source_key: challenger, is_best: 1, recorded_at: 100 }),
+      row({ source_key: challenger, is_best: 1, recorded_at: 200 }),
+    ];
+    const evaluate = async (includeIncumbent: boolean) => {
+      const inputs = await buildYieldHistoryEvaluationInputsCooperative({
+        historyRows: bestRows,
+        prevTvlRows: [],
+        prevBestRows: [row({ source_key: incumbent, is_best: 1 })],
+      }, { yieldToEventLoop: () => Promise.resolve() });
+      const entries = [
+        ...(includeIncumbent
+          ? [{ sourceKey: incumbent, currentApy: 0, apyBase: 0 }]
+          : []),
+        { sourceKey: challenger, currentApy: 6, apyBase: 6 },
+      ];
+      return await evaluateYieldSourcesCooperative(baseEvaluationInput({
+        resolved: entries.map((entry) => ({
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield(entry),
+        })),
+        ...inputs,
+      }), { yieldToEventLoop: () => Promise.resolve() });
+    };
+
+    const withoutIncumbent = await evaluate(false);
+    const withRejectedIncumbent = await evaluate(true);
+    // Same winner and same charged count: a rejected incumbent neither arms the
+    // B3 arbitration margin nor blocks the switch series.
+    expect(withRejectedIncumbent.bestSourceKeyByCoin.get("coin-a")).toBe(challenger);
+    expect(withoutIncumbent.bestSourceKeyByCoin.get("coin-a")).toBe(challenger);
+    expect(withRejectedIncumbent.sourceSwitches).toBe(withoutIncumbent.sourceSwitches);
+    const rejectedRow = withRejectedIncumbent.evaluatedSources.find(
+      (source) => source.sourceKey === incumbent,
+    );
+    expect(rejectedRow?.rejected).toBe(true);
+    // The winner carries the transient-missing record: the rejected incumbent is
+    // not a live candidate for either arm.
+    const winnerRow = withRejectedIncumbent.evaluatedSources.find(
+      (source) => source.sourceKey === challenger,
+    );
+    expect(winnerRow?.anomalies).toContain("previous-source-transiently-missing");
+  });
+
+  it("preserves linked on-chain identities across consecutive generations", async () => {
+    const linkedSourceKey = "linked-variant:child-coin:onchain:child-coin";
+    const result = await buildYieldHistoryEvaluationInputsCooperative({
+      historyRows: [
+        row({
+          stablecoin_id: "parent-coin",
+          source_key: linkedSourceKey,
+          data_source: "onchain",
+          exchange_rate: 1.01,
+          is_best: 1,
+          recorded_at: 100,
+        }),
+        row({
+          stablecoin_id: "parent-coin",
+          source_key: linkedSourceKey,
+          data_source: "onchain",
+          exchange_rate: 1.02,
+          is_best: 1,
+          recorded_at: 200,
+        }),
+      ],
+      prevTvlRows: [],
+      prevBestRows: [row({
+        stablecoin_id: "parent-coin",
+        source_key: linkedSourceKey,
+        data_source: "onchain",
+        exchange_rate: 1.02,
+        is_best: 1,
+      })],
+    }, { yieldToEventLoop: () => Promise.resolve() });
+
+    expect(result.prevBestSourceKeyByCoin.get("parent-coin")).toBe(linkedSourceKey);
+    expect(result.sourceSwitchCount30dByCoin.get("parent-coin")).toBe(0);
+  });
+});
+
+describe("yield history set loading", () => {
+  it("loads previous TVL only for requested pairs while retaining selected history", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO yield_history (
+           stablecoin_id, source_key, recorded_at, is_best, apy,
+           source_tvl_usd, data_source, publication_state
+         ) VALUES ('coin-a', ?, ?, ?, 4.2, ?, 'test', 'published')`,
+      );
+      insert.run("source-a", 100, 0, 10);
+      insert.run("source-a", 200, 0, 20);
+      insert.run("source-b", 150, 1, 30);
+      insert.run("source-c", 175, 0, 40);
+
+      const snapshots = await loadYieldHistorySnapshots(
+        db,
+        ["coin-a"],
+        1_000,
+        300,
+        {
+          sourceKeysByStablecoin: new Map([
+            ["coin-a", new Set(["source-a"])],
+          ]),
+        },
+      );
+
+      expect(
+        snapshots.historyRows.map((row) => [row.source_key, row.recorded_at]),
+      ).toEqual([
+        ["source-a", 100],
+        ["source-b", 150],
+        ["source-a", 200],
+      ]);
+      expect(
+        snapshots.prevTvlRows.map((row) => [row.source_key, row.recorded_at]),
+      ).toEqual([["source-a", 200]]);
+      expect(snapshots.previousTvlRowsTruncated).toBe(false);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+function decisionSource(
+  sourceKey: string,
+  anomalies: string[] = [],
+): EvaluatedYieldSource {
+  return {
+    sourceKey,
+    confidenceTier: "curated",
+    anomalies,
+    rejected: false,
+  } as EvaluatedYieldSource;
+}
+
+describe("yield decision retention parity", () => {
+  it("drains classifier-generated audit rows and retains trend and episode rows", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const source = decisionSource("source-a");
+      const classifications = [
+        classifyDecisionRetention({
+          sourceSwitch: false,
+          source,
+          candidates: [source],
+        }),
+        classifyDecisionRetention({
+          sourceSwitch: true,
+          source,
+          candidates: [source],
+        }),
+        classifyDecisionRetention({
+          sourceSwitch: false,
+          source,
+          candidates: [decisionSource("source-a", ["source-stale"])],
+        }),
+      ];
+      expect(classifications.map((row) => row.retentionReason)).toEqual([
+        "audit",
+        "trend",
+        "episode",
+      ]);
+
+      const insert = sqlite.prepare(
+        `INSERT INTO yield_source_decisions (
+           generation_id, stablecoin_id, selected_source_key,
+           selected_confidence_tier, selected_data_source, selected_apy_30d,
+           selected_reason, source_switch, alternatives_json, created_at,
+           retention_reason, trend_fingerprint
+         ) VALUES (?, 'coin-a', 'source-a', 'curated', 'test', 4.2,
+                   'test', ?, '[]', 100, ?, ?)`,
+      );
+      for (const [index, classification] of classifications.entries()) {
+        insert.run(
+          `generation-${index}`,
+          classification.retentionReason === "trend" ? 1 : 0,
+          classification.retentionReason,
+          classification.trendFingerprint,
+        );
+      }
+
+      expect(await drainDecisionRowsBeforeCutoff({ db, cutoffSec: 200 })).toEqual({
+        deleted: 1,
+        budgetExhausted: false,
+      });
+      expect(
+        sqlite
+          .prepare(
+            "SELECT retention_reason FROM yield_source_decisions ORDER BY retention_reason",
+          )
+          .all(),
+      ).toEqual([
+        { retention_reason: "episode" },
+        { retention_reason: "trend" },
+      ]);
+    } finally {
+      sqlite.close();
+    }
   });
 });

@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
+import { copyText } from "@/lib/clipboard";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 vi.mock("@/lib/exports/csv", () => ({
   downloadCsvWithPreamble: vi.fn(),
 }));
+vi.mock("@/lib/clipboard", () => ({ copyText: vi.fn() }));
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div data-testid="sheet">{children}</div> : null,
@@ -60,12 +63,54 @@ const usdt = makeRow({
   yieldSource: "Morpho",
 });
 
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 beforeEach(() => {
+  vi.mocked(copyText).mockReset();
   window.history.replaceState(null, "", "/yield/");
+  vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 
 describe("YieldCompareDrawer", () => {
+  it.each(["selection", "reopen", "current"].flatMap((context) =>
+    ["shared", "copied", "failed"].map((outcome) => [context, outcome]),
+  ))("scopes feedback after %s to its initiating %s attempt", async (context, outcome) => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => { finish = resolve; });
+    const share = vi.fn(() => pending);
+    vi.stubGlobal("navigator", { share: outcome === "shared" ? share : undefined });
+    vi.mocked(copyText).mockImplementationOnce(async () => {
+      await pending;
+      return outcome === "copied" ? { ok: true } : { ok: false, reason: "copy-failed" };
+    });
+    const drawer = (open: boolean) => <YieldCompareDrawer open={open} onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />;
+    const { rerender } = render(drawer(true));
+    fireEvent.click(screen.getByRole("button", { name: "Share comparison" }));
+    if (context === "selection") fireEvent.click(screen.getAllByRole("button", { name: "Remove USDT from compare" })[0]);
+    if (context === "reopen") {
+      rerender(drawer(false));
+      rerender(drawer(true));
+    }
+    await act(async () => { finish(); });
+    const current = context === "current";
+    expect(screen.getByRole("button", { name: current && outcome !== "failed" ? (outcome === "shared" ? "Shared" : "Link copied") : "Share comparison" })).toBeTruthy();
+    expect(Boolean(screen.queryByText("Sharing failed. Check browser permissions and try again."))).toBe(current && outcome === "failed");
+    expect(outcome === "shared" ? share : copyText).toHaveBeenCalledWith(outcome === "shared" ? {
+      title: "Pharos Yield comparison", text: "Compare 2 stablecoin yield opportunities on Pharos.",
+      url: `${window.location.origin}/yield/?compare=usdc-circle%2Cusdt-tether`,
+    } : `${window.location.origin}/yield/?compare=usdc-circle%2Cusdt-tether`);
+  });
+
   it("renders metric rows side-by-side for the selected coins", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
     render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
@@ -121,6 +166,35 @@ describe("YieldCompareDrawer", () => {
     expect(screen.getAllByText("Medium (3.1/5), partial confidence").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Decision reason").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Curated source preferred | 1 alternate rejected").length).toBeGreaterThan(0);
+  });
+
+  it("labels investment warnings and gives an unrated PYS its null-reason tooltip", async () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <TooltipProvider>
+        <YieldCompareDrawer
+          open
+          onOpenChange={vi.fn()}
+          rows={[
+            makeRow({
+              pharosYieldScore: null,
+              pysNullReason: "source-stale",
+              warningSignals: ["data-stale"],
+            } as Partial<YieldViewModelRow>),
+          ]}
+          logos={{}}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getAllByText("Investment warnings").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Warnings")).toBeNull();
+    expect(screen.getAllByText("None").length).toBeGreaterThan(0);
+
+    const dash = screen.getAllByText("—").find((node) => node.closest("[data-slot='tooltip-trigger']"));
+    expect(dash).toBeTruthy();
+    fireEvent.focus(dash!);
+    expect(await screen.findByText("Source observation stale")).toBeTruthy();
   });
 
   it("does not pass inherited logo properties as image sources", () => {
@@ -193,5 +267,59 @@ describe("YieldCompareDrawer", () => {
     expect(cells["Stability (%)"]).toBe(92);
     expect(cells["Safety provenance"]).toBe(safetyProvenance ?? "unknown");
     expect(cells["PYS qualification"]).toBe("partial");
+  });
+
+  it("reads a native row's unmeasurable depth as Native rather than Unknown", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            yieldType: "rebase",
+            sourceRole: "canonical-holder",
+            sourceTvlUsd: null,
+            sourceDepthLens: "unknown",
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getAllByText("Native").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
+  });
+
+  it("marks a currency-mismatched benchmark fallback in the compare cell", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,xsgd-straitsx");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            id: "usdc-circle",
+            symbol: "USDC",
+            benchmarkLabel: "USD 3M T-Bill",
+            benchmarkSelectionMode: "native",
+            peg: "USD",
+          } as Partial<YieldViewModelRow>),
+          makeRow({
+            id: "xsgd-straitsx",
+            symbol: "XSGD",
+            name: "XSGD",
+            benchmarkLabel: "USD 3M T-Bill",
+            benchmarkSelectionMode: "fallback-usd",
+            benchmarkIsFallback: true,
+            peg: "SGD",
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getAllByText("USD 3M T-Bill (fallback)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("USD 3M T-Bill").length).toBeGreaterThan(0);
   });
 });

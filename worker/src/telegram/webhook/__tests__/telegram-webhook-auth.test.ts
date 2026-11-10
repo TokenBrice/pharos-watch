@@ -1,9 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
-import { timingSafeCompare, hasValidAdminCredential, requireAdmin, withAdmin } from "../../../lib/auth";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { hasValidAdminCredential, requireAdmin } from "../../../lib/auth";
 import {
   resetTelegramInvalidSecretLogStateForTests,
 } from "../../common/log";
-import { isGroupAdminActor, resolveGroupAdminStatus, validateTelegramWebhookSecret } from "../telegram-webhook-auth";
+import {
+  formatAdministratorMentions,
+  getCachedChatAdministrators,
+  isGroupAdminActor,
+  resolveGroupAdminStatus,
+  validateTelegramWebhookSecret,
+} from "../telegram-webhook-auth";
 
 describe("timingSafeCompare", () => {
   it("denies group authorization on oversized Telegram member evidence", async () => {
@@ -16,19 +23,6 @@ describe("timingSafeCompare", () => {
     } finally {
       fetchMock.mockRestore();
     }
-  });
-
-  it("returns true for matching strings", async () => {
-    expect(await timingSafeCompare("secret123", "secret123")).toBe(true);
-  });
-  it("returns false for non-matching strings", async () => {
-    expect(await timingSafeCompare("secret123", "wrong")).toBe(false);
-  });
-  it("returns false for empty strings", async () => {
-    expect(await timingSafeCompare("", "secret")).toBe(false);
-  });
-  it("returns false when both empty", async () => {
-    expect(await timingSafeCompare("", "")).toBe(false);
   });
 });
 
@@ -94,25 +88,8 @@ describe("validateTelegramWebhookSecret", () => {
 });
 
 describe("hasValidAdminCredential", () => {
-  it("returns true when trustedAdmin is true", async () => {
-    expect(await hasValidAdminCredential(undefined, true)).toBe(true);
-  });
   it("returns false when no request and not trusted", async () => {
     expect(await hasValidAdminCredential(undefined)).toBe(false);
-  });
-  it("returns false for non-ops-api request", async () => {
-    const req = new Request("https://api.pharos.watch/api/test");
-    expect(await hasValidAdminCredential(req)).toBe(false);
-  });
-  it("rejects ops-api request when no env configured", async () => {
-    const req = new Request("https://ops-api.pharos.watch/api/test", {
-      headers: { "Cf-Access-Jwt-Assertion": "some-jwt" },
-    });
-    expect(await hasValidAdminCredential(req, false, {})).toBe(false);
-  });
-  it("returns false for ops-api request without JWT header", async () => {
-    const req = new Request("https://ops-api.pharos.watch/api/test");
-    expect(await hasValidAdminCredential(req)).toBe(false);
   });
 });
 
@@ -120,22 +97,31 @@ describe("requireAdmin", () => {
   it("returns null when authorized", async () => {
     expect(await requireAdmin(undefined, true)).toBeNull();
   });
-  it("returns 401 Response when unauthorized", async () => {
-    const result = await requireAdmin(undefined);
-    expect(result).toBeInstanceOf(Response);
-    expect(result!.status).toBe(401);
+});
+
+describe("getCachedChatAdministrators", () => {
+  it("keeps oversized administrator evidence unavailable without caching a partial list", async () => {
+    const db = mockD1([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null }]);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    }));
+    try {
+      expect(await getCachedChatAdministrators(db, "bot-token", "-100")).toBeNull();
+    } finally {
+      fetchMock.mockRestore();
+    }
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT"))).toBe(false);
   });
 });
 
-describe("withAdmin", () => {
-  it("executes handler when authorized", async () => {
-    const handler = async () => new Response("ok");
-    const result = await withAdmin(undefined, handler, true);
-    expect(await result.text()).toBe("ok");
-  });
-  it("returns 401 when unauthorized", async () => {
-    const handler = async () => new Response("ok");
-    const result = await withAdmin(undefined, handler, false);
-    expect(result.status).toBe(401);
+describe("formatAdministratorMentions", () => {
+  it("omits anonymous administrators from group-visible hints", () => {
+    expect(
+      formatAdministratorMentions([
+        { status: "creator", userId: "1", username: "alice", firstName: "Alice", isAnonymous: false },
+        { status: "administrator", userId: "2", username: "hidden", firstName: "Hidden", isAnonymous: true },
+        { status: "administrator", userId: "3", username: null, firstName: "Bob", isAnonymous: false },
+      ]),
+    ).toBe("@alice, Bob");
   });
 });

@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import ts from "typescript";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
@@ -27,6 +30,7 @@ import { PATH_FAMILIES, enumerateDocReferences, matchesOwnershipGlob } from "../
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
 import { SENSITIVE_COPY_ROOTS } from "../ci/check-sensitive-page-copy.ts";
+import { isHomepageCopyPath } from "../ci/check-homepage-health-copy.ts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
@@ -47,6 +51,21 @@ const STRUCTURAL_TEST_PATH_PATTERNS = [
   /(^|\/)__mocks__(?:\/|$)/,
   /(^|\/)fixtures(?:\/|$)/,
 ];
+const DEFAULT_STRUCTURAL_CONCURRENCY = 3;
+// Config, dependency and generated inputs can change what `tsconfig.typecheck.json`
+// resolves even when no changed source file is part of its current program.
+const ROOT_TYPECHECK_WIDENED_TRIGGERS = [
+  /(^|\/)package-lock\.json$/,
+  /(^|\/)package\.json$/,
+  /(^|\/)tsconfig[^/]*\.json$/,
+  /^next\.config\.[^/]+$/,
+  /\.d\.ts$/,
+  /^src\/generated\//,
+];
+const ROOT_TYPECHECK_SOURCE_EXTENSIONS = /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
+const ROOT_TYPECHECK_SOURCE_ROOTS = /^(?:src|shared|functions|scripts)\//;
+const ROOT_TYPECHECK_EXCLUDED_PATH =
+  /(^|\/)(?:__tests__|__mocks__)(?:\/|$)|\.test\.tsx?$|^(?:worker|node_modules|coverage|out|worktrees|\.worktrees)\//;
 
 interface PrStaticCheckOptions {
   argv?: readonly string[];
@@ -75,6 +94,7 @@ const PARALLEL_STATIC_CHECKS = new Set([
   "typecheck",
   "typecheck:worker",
   "check:structural",
+  "check:unused-code",
   "check:generated-artifacts",
 ]);
 
@@ -90,16 +110,98 @@ export const STRUCTURAL_CHECKS = [
   "check:agent-skills",
 ] as const;
 
+function resolveStructuralConcurrency(env: NodeJS.ProcessEnv = process.env): number {
+  const configured = Number.parseInt(env.PHAROS_STRUCTURAL_CONCURRENCY ?? "", 10);
+  if (!Number.isFinite(configured) || configured < 1) return DEFAULT_STRUCTURAL_CONCURRENCY;
+  return Math.min(configured, STRUCTURAL_CHECKS.length);
+}
+
+interface RootTypecheckSources {
+  /** Files the config's `include`/`exclude` selection names. */
+  included: ReadonlySet<string>;
+  /** Memoized program membership; null when the program cannot be built. */
+  programFiles: () => ReadonlySet<string> | null;
+}
+
+const rootTypecheckSourceCache = new Map<string, RootTypecheckSources | null>();
+
+/** The include set is not the program `tsc -p tsconfig.typecheck.json` compiles:
+ * `allowJs` adds imported `.js`/`.mjs` modules the include globs never match, and
+ * module resolution adds the files they import. Selection must test the program,
+ * so it is built lazily — once per process, only when a changed file is not
+ * already known to belong. */
+function rootTypecheckSources(cwd: string): RootTypecheckSources | null {
+  if (rootTypecheckSourceCache.has(cwd)) return rootTypecheckSourceCache.get(cwd) ?? null;
+  let sources: RootTypecheckSources | null = null;
+  try {
+    const configPath = resolve(cwd, "tsconfig.typecheck.json");
+    const config = ts.readConfigFile(configPath, ts.sys.readFile);
+    if (!config.error) {
+      const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, cwd, undefined, configPath);
+      if (parsed.errors.length === 0) {
+        const rootNames = [...parsed.fileNames];
+        let programFiles: ReadonlySet<string> | null | undefined;
+        sources = {
+          included: new Set(rootNames.map((file) => resolve(file))),
+          programFiles: () => {
+            if (programFiles === undefined) {
+              try {
+                const program = ts.createProgram(rootNames, parsed.options);
+                programFiles = new Set(program.getSourceFiles().map((sourceFile) => resolve(sourceFile.fileName)));
+              } catch {
+                programFiles = null;
+              }
+            }
+            return programFiles;
+          },
+        };
+      }
+    }
+  } catch {
+    sources = null;
+  }
+  rootTypecheckSourceCache.set(cwd, sources);
+  return sources;
+}
+
+/** Root typing is skipped only for a known-irrelevant change set; a missing or
+ * unreadable config, a typed source the program cannot classify (a deleted file,
+ * or a JS/TS module under the typed roots the program never reaches) and every
+ * config/dependency/generated input keep today's run. */
+function selectsRootTypecheck(changedFiles: readonly string[], cwd = process.cwd()): boolean {
+  if (changedFiles.some((file) => ROOT_TYPECHECK_WIDENED_TRIGGERS.some((pattern) => pattern.test(file)))) {
+    return true;
+  }
+  const sources = rootTypecheckSources(cwd);
+  if (sources === null) return true;
+  const needsProgram: string[] = [];
+  for (const file of changedFiles) {
+    const absolute = resolve(cwd, file);
+    if (sources.included.has(absolute)) return true;
+    if (!ROOT_TYPECHECK_SOURCE_ROOTS.test(file) || !ROOT_TYPECHECK_SOURCE_EXTENSIONS.test(file)) continue;
+    if (ROOT_TYPECHECK_EXCLUDED_PATH.test(file)) continue;
+    // A deleted typed source belongs to no program; keep today's run rather
+    // than treating it as untyped.
+    if (!existsSync(absolute)) return true;
+    needsProgram.push(file);
+  }
+  if (needsProgram.length === 0) return false;
+  const programFiles = sources.programFiles();
+  if (programFiles === null) return true;
+  return needsProgram.some((file) => programFiles.has(resolve(cwd, file)));
+}
+
 async function runStructuralChecks({
+  env = process.env,
   runCommandImpl = runSpawnCommand,
   stdout = process.stdout,
-}: Pick<PrStaticCheckOptions, "runCommandImpl" | "stdout"> = {}): Promise<number> {
+}: Pick<PrStaticCheckOptions, "env" | "runCommandImpl" | "stdout"> = {}): Promise<number> {
   const log = (message: string) => stdout.write(`[check:structural] ${message}\n`);
   const result = await runParallelExecutionUnits(
     STRUCTURAL_CHECKS.map((name) => createExecutionUnit([createNpmScriptCommand(name)])),
     {
       continueOnError: true,
-      maxParallel: 1,
+      maxParallel: resolveStructuralConcurrency(env),
       reporter: { start: (command) => log(command) },
       runCommandImpl,
     },
@@ -146,16 +248,21 @@ export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckComma
 
 export function buildPrStaticCheckPlan(
   changedFiles: readonly string[],
-  { group }: { group?: PrStaticCheckGroup } = {},
+  { cwd = process.cwd(), group }: { cwd?: string; group?: PrStaticCheckGroup } = {},
 ) {
   const { classification, commands: baselineChecks } = selectPrBaselineChecks(changedFiles);
   const commands: PrStaticCheckCommand[] = [
     { name: changedFiles.some((file) => file === "eslint.config.mjs") ? "lint" : "lint:changed" },
-    { name: "typecheck" },
+  ];
+  if (selectsRootTypecheck(changedFiles, cwd)) commands.push({ name: "typecheck" });
+  commands.push(
     { name: "check:env-contract" },
     { name: "check:critical-coverage-completeness" },
-  ];
+  );
 
+  // Both audits stay: `audit:deps` reports any pre-existing production
+  // high/critical finding, while the reviewed delta only rejects new
+  // production+dev pairs since the frozen base. Neither covers the other.
   if (changedFiles.some((file) => ROOT_DEPENDENCY_PATHS.has(file))) {
     commands.push({ name: "audit:deps" });
   }
@@ -176,11 +283,14 @@ export function buildPrStaticCheckPlan(
   )) {
     commands.push({ name: "check:sensitive-page-copy" });
   }
+  if (changedFiles.some(isHomepageCopyPath)) {
+    commands.push({ name: "check:homepage-health-copy" });
+  }
   commands.push(...baselineChecks);
 
 
   if (hasProductionStructuralImpact(changedFiles)) {
-    commands.push({ name: "check:structural" });
+    commands.push({ name: "check:structural" }, { name: "check:unused-code" });
   }
 
 
@@ -211,7 +321,10 @@ export function selectPrBaselineChecks(changedFiles: readonly string[]) {
   }
   const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles));
   if (artifactIds.length > 0) {
-    commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
+    commands.push({ name: "check:generated-artifacts", args: [
+      `--only=${artifactIds.join(",")}`,
+      ...(artifactIds.includes("public-datasets") ? ["--integrity-only"] : []),
+    ] });
   }
   if (classification.workerChanged) {
     commands.push(
@@ -270,7 +383,7 @@ export async function runPrStaticChecks({
 }: PrStaticCheckOptions = {}): Promise<number> {
   if (argv.includes("--structural")) {
     if (argv.length !== 1) throw new Error("--structural cannot be combined with other options.");
-    return runStructuralChecks({ runCommandImpl, stdout });
+    return runStructuralChecks({ env, runCommandImpl, stdout });
   }
   const startedAt = Date.now();
   const { base, head, rest, staged } = parseChangedFileArgs(argv, env);

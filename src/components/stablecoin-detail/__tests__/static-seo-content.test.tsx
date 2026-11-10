@@ -315,6 +315,55 @@ describe("StablecoinDetailSeoContent", () => {
       expect(items[1].answer).toContain("direct redemption is limited to customers the issuer has verified");
     });
 
+    it("never publishes the internal fee review note", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "stable-single",
+        physicalCommodityDelivery: undefined,
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Internal reviewer note: 0.10% with a $1,000 minimum", feeBpsMax: 10 },
+        v9RouteCostTerms: { minFeeUsd: 1_000 },
+        v9RouteReviewTerms: { minRedeemUsd: 100_000 },
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).not.toContain("Internal reviewer note");
+    });
+
+    it("does not invent a payout asset the review left unresolved", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "bluechip-collateral",
+        outputAssets: undefined,
+        physicalCommodityDelivery: undefined,
+        unresolvedOutputAssetKeys: ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"],
+        unresolvedOutputDisposition: "reviewed-external",
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).toContain("can redeem TSTD for an unresolved output asset");
+      expect(answer).not.toContain("blue-chip crypto collateral");
+    });
+
+    it("does not call a reviewed fiat payout an unresolved output asset", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "stable-single",
+        outputAssets: undefined,
+        physicalCommodityDelivery: undefined,
+        unresolvedOutputAssetKeys: ["fiat:MXN"],
+        unresolvedOutputDisposition: "reviewed-external",
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).not.toContain("unresolved output asset");
+    });
+
     it("omits the answer once the review is older than the reviewed-evidence budget", () => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date("2028-01-01T00:00:00Z"));
@@ -445,26 +494,31 @@ describe("same-ticker disambiguation", () => {
 describe("variant relationship labels", () => {
   it("names the parent and sibling entities in their existing links", async () => {
     const { TRACKED_META_BY_ID } = await import("@shared/lib/stablecoins/registry");
+    const { getDisplayedVariantSiblings } = await import("../same-ticker-stablecoins");
 
     // USN and its savings wrapper stay distinct records: the parent link names
-    // the full entity and the block adds no duplicate sibling entry for it.
+    // the record's full display name and the block adds no duplicate sibling entry.
     const usnSavings = TRACKED_META_BY_ID.get("susn-noon")!;
+    const usnParent = TRACKED_META_BY_ID.get(usnSavings.variantOf!)!;
     const usn = render(<StablecoinDetailSeoContent coin={usnSavings} />);
-    expect(screen.getAllByRole("link", { name: "View Noon USN (USN) parent asset" })).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "View Noon USN (USN) parent asset" }).textContent).toBe("Noon USN (USN)");
-    expect(usn.container.querySelectorAll('a[href="/stablecoin/usn-noon/"]')).toHaveLength(1);
+    const usnParentLink = screen.getByRole("link", { name: `View ${usnParent.name} (${usnParent.symbol}) parent asset` });
+    expect(usnParentLink.textContent).toBe(`${usnParent.name} (${usnParent.symbol})`);
+    expect(usn.container.querySelectorAll(`a[href="/stablecoin/${usnParent.id}/"]`)).toHaveLength(1);
     usn.unmount();
 
-    // A USDS variant lists the other USDS wrappers by full recorded name.
+    // A USDS variant lists the other USDS wrappers by full recorded name, once each.
     const usdsVariant = TRACKED_META_BY_ID.get("stusds-sky")!;
+    const usdsParent = TRACKED_META_BY_ID.get(usdsVariant.variantOf!)!;
+    const siblings = getDisplayedVariantSiblings(usdsVariant);
+    expect(siblings.length).toBeGreaterThan(0);
     const usds = render(<StablecoinDetailSeoContent coin={usdsVariant} />);
-    expect(screen.getByRole("link", { name: "View Sky Dollar (USDS) parent asset" }).textContent).toBe("Sky Dollar (USDS)");
-    expect(screen.getByRole("link", { name: "View related Sky Savings USDS (sUSDS) variant" }).textContent).toBe(
-      "Sky Savings USDS (sUSDS)",
-    );
-    expect(screen.getByRole("link", { name: "View related sky.money USDS Flagship (skyMoneyUsdsFlagship) variant" }).textContent).toBe(
-      "sky.money USDS Flagship (skyMoneyUsdsFlagship)",
-    );
+    expect(screen.getByRole("link", { name: `View ${usdsParent.name} (${usdsParent.symbol}) parent asset` }).textContent)
+      .toBe(`${usdsParent.name} (${usdsParent.symbol})`);
+    for (const sibling of siblings) {
+      const link = screen.getByRole("link", { name: `View related ${sibling.name} (${sibling.symbol}) variant` });
+      expect(link.textContent).toBe(`${sibling.name} (${sibling.symbol})`);
+      expect(link.getAttribute("href")).toBe(`/stablecoin/${sibling.id}/`);
+    }
     const siblingHrefs = screen.getAllByRole("link", { name: /variant$/ }).map((link) => link.getAttribute("href"));
     expect(new Set(siblingHrefs).size).toBe(siblingHrefs.length);
     usds.unmount();

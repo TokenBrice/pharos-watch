@@ -9,9 +9,11 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { DEPEG_AUDIT_DISPUTED_BADGE, resolveMechanismArchetype } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { formatDeviationBps, formatIsoTimestamp } from "@shared/lib/format";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
@@ -100,22 +102,36 @@ export async function generateMetadata(
   });
 }
 
+const PROVENANCE_BADGE_CLASS = "inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-3xs font-medium leading-none";
+
 function ProvenanceLine({ event }: { event: DepegEventEntry }) {
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
   const provenance = event.provenance ?? null;
+  const disputed = isDisputedAuditVerdict(provenance?.auditVerdict);
   const parts: string[] = [`Detected under ${versionLabel}`];
   if (provenance?.confidenceTier) parts.push(`${provenance.confidenceTier} confidence`);
-  if (provenance?.auditVerdict) parts.push(`audit: ${provenance.auditVerdict}`);
+  if (provenance?.auditVerdict && !disputed) parts.push(`audit: ${provenance.auditVerdict}`);
   if (event.confirmationSources) parts.push(`confirmed via ${event.confirmationSources}`);
-  return <p className="text-sm text-muted-foreground">{parts.join(" · ")}</p>;
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+      {disputed ? (
+        <span className={`${PROVENANCE_BADGE_CLASS} ${DEPEG_AUDIT_DISPUTED_BADGE.className}`}>
+          {DEPEG_AUDIT_DISPUTED_BADGE.label}
+        </span>
+      ) : null}
+      <span>{parts.join(" · ")}</span>
+    </p>
+  );
 }
 
 function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; includeTime: boolean }) {
-  const startPrice = formatEventPrice(event.startPrice);
-  const peakPrice = formatEventPrice(event.peakPrice);
+  const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
+  const peakPrice = formatEventPrice(event.peakPrice, event.pegType, event.pegReference);
   const { closure, label: closureLabel, isRecovery } = getDepegEventClosurePresentation(event);
-  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice) : null;
+  const recoveryPrice = isRecovery
+    ? formatEventPrice(event.recoveryPrice, event.pegType, event.pegReference)
+    : null;
   const durationSec = event.endedAt != null ? event.endedAt - event.startedAt : null;
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
@@ -184,7 +200,7 @@ function buildDepegRecordContext({
   event: DepegEventEntry;
   versionLabel: string;
 }): string {
-  const startPrice = formatEventPrice(event.startPrice);
+  const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
   const pegReference = formatEventPrice(event.pegReference);
   const sourceLabel = event.source === "live" ? "live monitoring" : "a historical backfill";
   const pricePath = startPrice && pegReference
@@ -323,7 +339,7 @@ export default async function DepegEventPage(
 
       <RelatedIncidentsRail
         excludeEventId={event.slug}
-        pegCurrency={event.pegType}
+        pegCurrency={getPegTaxonomyByType(event.pegType)?.currency}
         riskArchetype={coin ? resolveMechanismArchetype(coin, TRACKED_META_BY_ID) ?? undefined : undefined}
         startedAt={event.startedAt}
       />

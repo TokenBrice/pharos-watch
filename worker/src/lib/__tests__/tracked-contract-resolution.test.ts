@@ -1,23 +1,28 @@
 import { describe, expect, it } from "vitest";
+import usdtTetherCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
 import { resolveRequiredTrackedContractConfig } from "../tracked-contract-resolution";
+
+type Deployment = { chain: string; address: string; decimals: number };
+const usdtOptimism = (usdtTetherCoin.contracts as Deployment[]).find((entry) => entry.chain === "optimism")!;
+const usdtOptimismTraded = (usdtTetherCoin.tradedContracts as Deployment[]).find((entry) => entry.chain === "optimism")!;
 
 describe("lightweight tracked contract resolution", () => {
   it("preserves primary, traded, and any-source selection", () => {
     expect(resolveRequiredTrackedContractConfig("usdt-tether", "optimism")).toMatchObject({
-      contractAddress: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
-      decimals: 6,
+      contractAddress: usdtOptimism.address,
+      decimals: usdtOptimism.decimals,
     });
     expect(
       resolveRequiredTrackedContractConfig("usdt-tether", "optimism", { source: "traded" }),
     ).toMatchObject({
-      contractAddress: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071",
-      decimals: 6,
+      contractAddress: usdtOptimismTraded.address,
+      decimals: usdtOptimismTraded.decimals,
     });
     expect(
       resolveRequiredTrackedContractConfig("usdt-tether", "optimism", { source: "any" }),
     ).toMatchObject({
-      contractAddress: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
-      decimals: 6,
+      contractAddress: usdtOptimism.address,
+      decimals: usdtOptimism.decimals,
     });
   });
 

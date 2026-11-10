@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptCustodyInventory, type BackingAndSupplyPayload } from "../custody-inventory";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { validateAdapterOutput } from "../validate";
+import { getReserveAdapter } from "../index";
 import { MEGAUSD_BACKING } from "./megausd-custody.test-support";
 
 const USDC_TOTAL = 1618402.389424 + 15319532.925638 + 440 + 1000.109;
@@ -136,7 +137,8 @@ describe("custody inventory MegaUSD profile", () => {
       lastUpdatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     };
     const result = adaptCustodyInventory("megausd-custody", stale);
-    const report = expectValidAdapterOutput("megausd-custody", result);
+    const report = validateAdapterOutput(result, { adapter: getReserveAdapter("megausd-custody") ?? undefined });
+    expect(report.valid).toBe(true);
     expect(report.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "stale-source-data", effect: "degraded" })]),
     );

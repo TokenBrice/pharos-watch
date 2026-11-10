@@ -1,4 +1,6 @@
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCircuitRecord } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
@@ -15,11 +17,20 @@ import {
 } from "../../../lib/rpc-provider-parity/__tests__/rpc-parity-test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
+const cacheDatabases: DatabaseSync[] = [];
 const API_KEY = "dwellir-parity-test-key";
 
 afterEach(() => {
   fixtures.closeAll();
+  for (const sqlite of cacheDatabases.splice(0)) sqlite.close();
 });
+
+function cacheOnlyDb(): D1Database {
+  const sqlite = new DatabaseSync(":memory:");
+  cacheDatabases.push(sqlite);
+  sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+  return createSqliteD1(sqlite);
+}
 
 function probeResult(overrides: Partial<RpcParityProbeRunResult> = {}): RpcParityProbeRunResult {
   return {
@@ -74,7 +85,7 @@ describe("rpc parity job", () => {
   });
 
   it("skips when the monthly credit ledger is exhausted", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const { nowSec, month, ledgerKey } = currentMonthWindow();
     await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(ledgerKey, JSON.stringify({ window: month, usedCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH }), nowSec)
@@ -95,7 +106,7 @@ describe("rpc parity job", () => {
   });
 
   it("stores the run and closes the circuit when most chains answered", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const samples = RPC_PARITY_TARGETS.slice(0, 4).map((target, index) => paritySample(
       target.chainId,
       { headOk: index < 3 },
@@ -141,7 +152,7 @@ describe("rpc parity job", () => {
   });
 
   it("opens the circuit when fewer than half of the attempted chains answered", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const samples = RPC_PARITY_TARGETS.slice(0, 4).map((target, index) => paritySample(
       target.chainId,
       { headOk: index < 1, errorClass: index < 1 ? null : "network" },
@@ -162,7 +173,7 @@ describe("rpc parity job", () => {
   });
 
   it("records nothing on the circuit when no chain was attempted", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const result = await syncRpcProviderParity(
       db,
       { DWELLIR_API_KEY: API_KEY },
@@ -188,7 +199,7 @@ describe("rpc parity job", () => {
   });
 
   it("reports a bounded truncated observation as ok and retains incomplete coverage", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const samples = [paritySample(RPC_PARITY_TARGETS[0].chainId)];
     const result = await syncRpcProviderParity(
       db,
@@ -218,7 +229,7 @@ describe("rpc parity job", () => {
     { attempted: 1, samples: [] },
     { attempted: 0, samples: [paritySample(RPC_PARITY_TARGETS[0].chainId)] },
   ])("does not accept deadline truncation without both attempt and sample evidence ($attempted attempts)", async ({ attempted, samples }) => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const result = await syncRpcProviderParity(
       db,
       { DWELLIR_API_KEY: API_KEY },
@@ -234,7 +245,7 @@ describe("rpc parity job", () => {
   });
 
   it("keeps a returned probe abort degraded despite collected deadline samples", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const samples = [paritySample(RPC_PARITY_TARGETS[0].chainId)];
     const result = await syncRpcProviderParity(
       db,
@@ -251,7 +262,7 @@ describe("rpc parity job", () => {
   });
 
   it("leaves an open Dwellir circuit untouched when the job signal tears the run down", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const openedAt = Math.floor(Date.now() / 1000) - 60;
     await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(
@@ -301,7 +312,7 @@ describe("rpc parity job", () => {
   });
 
   it("keeps store degradation actionable despite a sampled deadline run", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(RPC_PARITY_STORE_KEY, "unreadable parity payload", PARITY_NOW_SEC)
       .run();
@@ -325,7 +336,7 @@ describe("rpc parity job", () => {
   });
 
   it("returns an error result instead of throwing when the probe itself fails", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const result = await syncRpcProviderParity(
       db,
       { DWELLIR_API_KEY: API_KEY },
@@ -341,7 +352,7 @@ describe("rpc parity job", () => {
   });
 
   it("rethrows the job abort so the slot fence owns the outcome", async () => {
-    const { db } = fixtures.open();
+    const db = cacheOnlyDb();
     const controller = new AbortController();
     const samples = fullParityRun(PARITY_NOW_SEC).samples.slice(0, 2);
     controller.abort();

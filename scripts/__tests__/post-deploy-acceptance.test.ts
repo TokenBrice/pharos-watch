@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { getProbePaths } from "@shared/lib/api-endpoints";
 
 import {
   POST_DEPLOY_ACCEPTANCE_OUTCOMES,
+  POST_DEPLOY_ROUTE_SWEEP_CONCURRENCY,
+  POST_DEPLOY_ROUTE_SWEEP_DEADLINE_MS,
+  POST_DEPLOY_ROUTE_SWEEP_PATHS,
+  POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS,
+  selectPostDeployProbes,
   summarizePostDeployAcceptance,
+  summarizePostDeployRouteSweep,
 } from "../lib/post-deploy-acceptance.mts";
 
 describe("post-deploy acceptance outcomes", () => {
@@ -42,5 +49,69 @@ describe("post-deploy acceptance outcomes", () => {
       ]),
     ).toMatchObject({ outcome: "passed" });
     expect(POST_DEPLOY_ACCEPTANCE_OUTCOMES).toEqual(["passed", "failed", "pending"]);
+  });
+});
+
+describe("post-deploy route sweep", () => {
+  it("sweeps exactly the public status-probe registry with its representative parameters", () => {
+    expect([...POST_DEPLOY_ROUTE_SWEEP_PATHS]).toEqual(getProbePaths("public"));
+    expect(POST_DEPLOY_ROUTE_SWEEP_CONCURRENCY).toBeLessThanOrEqual(4);
+    expect(POST_DEPLOY_ROUTE_SWEEP_DEADLINE_MS + POST_DEPLOY_ROUTE_SWEEP_TIMEOUT_MS).toBeLessThan(120_000);
+  });
+
+  it("selects the sweep only for a deployed Worker", () => {
+    expect(selectPostDeployProbes({ pagesDeployed: true }).map((probe) => probe.id)).toEqual(["pages-shell"]);
+    expect(selectPostDeployProbes({ workerDeployed: true }).map((probe) => probe.id)).toEqual([
+      "worker-health",
+      "worker-route-sweep",
+    ]);
+  });
+
+  it.each([
+    [200, true], [204, true], [299, true],
+    [199, false], [300, false], [400, false], [404, false], [405, false], [410, false],
+  ] as const)("requires 2xx for Telegram (HTTP %s)", (status, passed) => {
+    const result = summarizePostDeployRouteSweep(
+      POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: path === "/api/telegram-pulse" ? status : 200 })),
+    );
+    expect(result.outcome).toBe(passed ? "passed" : "failed");
+    expect(result.failures).toEqual(passed ? [] : [{ path: "/api/telegram-pulse", status, reason: "unexpected-status" }]);
+    expect(result.detail).toContain(`${passed ? POST_DEPLOY_ROUTE_SWEEP_PATHS.length : 1}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length}`);
+  });
+
+  it("fails when every required route returns 404", () => {
+    const result = summarizePostDeployRouteSweep(POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: 404 })));
+    expect(result.outcome).toBe("failed");
+    expect(result.failures).toEqual(POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: 404, reason: "unexpected-status" })));
+  });
+
+  it("records a 429 as unknown, neither a pass nor a release failure", () => {
+    const probes = POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({
+      path,
+      status: path === "/api/telegram-pulse" ? 429 : 200,
+    }));
+    const result = summarizePostDeployRouteSweep(probes);
+    expect(result.outcome).toBe("pending");
+    expect(result.failures).toEqual([{ path: "/api/telegram-pulse", status: 429, reason: "rate-limited" }]);
+    expect(result.detail).toContain("rate-limited");
+    expect(result.detail).not.toContain("routes failed");
+  });
+
+  it("fails a 5xx, an auth rejection, a transport failure and a route that never ran", () => {
+    const probes: { path: string; status: number; error?: string }[] =
+      POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: 200 }));
+    probes[0] = { path: probes[0]!.path, status: 503 };
+    probes[1] = { path: probes[1]!.path, status: 401 };
+    probes[2] = { path: probes[2]!.path, status: 0, error: "offline" };
+    probes.splice(3, 1);
+    const result = summarizePostDeployRouteSweep(probes);
+    expect(result.outcome).toBe("failed");
+    expect(result.failures.map((failure) => failure.reason)).toEqual([
+      "http-5xx",
+      "auth-rejected",
+      "transport-error",
+      "sweep-not-run",
+    ]);
+    expect(result.detail).toContain("503");
   });
 });

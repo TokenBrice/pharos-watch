@@ -27,7 +27,8 @@ import ChangelogPage from "@/app/changelog/page";
 import ChangelogArchivePage, * as changelogArchiveRoute from "@/app/changelog/archive/[month]/page";
 
 function idsIn(html: string) {
-  return Array.from(html.matchAll(/\bid="([^"]+)"/g), (match) => match[1]);
+  // Match the `id` attribute itself; `data-table-id` must not satisfy a fragment target.
+  return Array.from(html.matchAll(/(?:^|\s)id="([^"]+)"/g), (match) => match[1]);
 }
 
 describe("registry-backed static history documents", () => {
@@ -53,6 +54,18 @@ describe("registry-backed static history documents", () => {
     }
     // Component markup guard; the final Next HTML/Flight budget is checked on the export.
     expect(new TextEncoder().encode(html).length).toBeLessThan(300 * 1024);
+  });
+
+  it("renders every linked detail-table fragment target inside its full archive", async () => {
+    for (const archive of METHODOLOGY_HISTORY_ARCHIVES) {
+      const anchors = archive.entries.flatMap((entry) => methodologyDetailAnchors(entry.detail));
+      if (anchors.length === 0) continue;
+      const html = renderToStaticMarkup(await MethodologyArchivePage({
+        params: Promise.resolve({ slug: archive.slug, archive: archive.archive }),
+      }));
+      const ids = idsIn(html);
+      for (const anchor of anchors) expect(ids, archive.path).toContain(anchor.id);
+    }
   });
 
   it("preserves each historical PDF release in its full archive, before the unknown-path fallback", async () => {

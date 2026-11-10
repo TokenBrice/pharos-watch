@@ -3,7 +3,7 @@ import type { CompilerProfile } from "./shared";
 export const PROFILE: CompilerProfile = {
   product: "USDG",
   profile: "usdg-v1",
-  officialIndexUrl: "https://www.paxos.com/usdg-transparency",
+  officialIndexUrl: "https://www.paxos.com/transparency/usdg",
   reportUrl: "https://framerusercontent.com/assets/SKxHUTNlo82s3Rrqw0ZL09z2vc.pdf",
   reportDate: "2026-09-30",
   reportAsOf: "2026-09-30T17:00:00-04:00",

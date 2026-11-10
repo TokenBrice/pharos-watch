@@ -13,8 +13,10 @@ import {
 } from "@/hooks/api-hooks";
 import { useQuerySlice } from "@/hooks/use-query-slice";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
+import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
@@ -40,6 +42,8 @@ interface UseCompareDataModelOptions {
   selectedIds: string[];
   flowHours: 24 | 168 | 720;
   radarCohort: CompareRadarCohort;
+  /** Chart range; the supply-history read must cover it so "All" is not truncated. */
+  range: TimeRangeOption;
 }
 
 function toFreshnessQuery(
@@ -56,11 +60,16 @@ function toFreshnessQuery(
   };
 }
 
+function isProducerUpdatedAt(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 export function useCompareDataModel({
 
   selectedIds,
   flowHours,
   radarCohort,
+  range,
 }: UseCompareDataModelOptions) {
   const [clientDetailsById, setClientDetailsById] = useState<ReadonlyMap<string, StablecoinClientDetailMeta>>(
     new Map(),
@@ -70,7 +79,7 @@ export function useCompareDataModel({
   useEffect(() => {
     let cancelled = false;
     const ids = selectedIdsSignature ? selectedIdsSignature.split("\u0000") : [];
-    void Promise.all(ids.map((id) => loadClientStablecoinDetail(id))).then((details) => {
+    void Promise.all(ids.map((id) => loadClientStablecoinDetail(id).catch(() => null))).then((details) => {
       if (cancelled) return;
       setClientDetailsById(
         new Map(
@@ -127,6 +136,21 @@ export function useCompareDataModel({
     : null);
   const hasPrimaryData = !!listData?.peggedAssets?.length;
 
+  // The share card is dated by the oldest producer generation among the payloads
+  // it reads. A loaded payload without a clock, or an unknown stablecoins clock,
+  // leaves the stamp off rather than dating the card by receipt time.
+  const shareAsOfUpdatedAt = useMemo(() => {
+    const stablecoinsUpdatedAt = list.meta?.updatedAt;
+    if (listData === undefined || !isProducerUpdatedAt(stablecoinsUpdatedAt)) return null;
+    const loadedGenerations: (number | null | undefined)[] = [stablecoinsUpdatedAt];
+    if (pegSummary !== undefined) loadedGenerations.push(peg.meta?.updatedAt);
+    if (dexData !== undefined) loadedGenerations.push(dex.meta?.updatedAt);
+    if (reportCardsData !== undefined) loadedGenerations.push(reportCards.meta?.updatedAt);
+    const knownGenerations = loadedGenerations.filter(isProducerUpdatedAt);
+    if (knownGenerations.length !== loadedGenerations.length) return null;
+    return Math.min(...knownGenerations);
+  }, [dex, dexData, list, listData, peg, pegSummary, reportCards, reportCardsData]);
+
   const freshnessQueries = useMemo<StaleQuery[]>(() => [
     toFreshnessQuery("stablecoins", list, hasPrimaryData),
     ...(metricsEnabled ? [
@@ -180,8 +204,10 @@ export function useCompareDataModel({
     };
   }, [listData]);
 
+  const supplyHistoryWindow =
+    range === "all" ? "all" : range === "1y" ? 365 : STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS;
   const detailQueries = useQueries({
-    queries: selectedIds.map((id) => supplyHistoryQueryOptions(id)),
+    queries: selectedIds.map((id) => supplyHistoryQueryOptions(id, supplyHistoryWindow)),
   });
 
   const flowCoinQueries = useQueries({
@@ -328,13 +354,16 @@ export function useCompareDataModel({
     flowErrorNotice,
     flowScopeLabel: flowData?.scope?.label ?? "Configured issuance chains",
     flowSeries,
-    flowUpdatedAt: flowData?.updatedAt ?? null,
+    // The producer's own generation clock (R3), not the newest closed-hour
+    // bucket start carried in the body.
+    flowUpdatedAt: flow.meta?.updatedAt ?? null,
     freshnessQueries,
     globalError,
     handleRetry,
     hasPrimaryData,
     pegRates,
     radarCards,
+    shareAsOfUpdatedAt,
     supplySeries,
   };
 }

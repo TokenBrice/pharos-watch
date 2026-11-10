@@ -4,6 +4,7 @@ import { bindBackfillSql, createBackfillDatabase } from "../lib/backfill-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getEndpointDefinition, getStatusPageActions } from "@shared/lib/api-endpoints";
 import * as stabilityBackfill from "../backfills/backfill-stability-index";
+import { invalidateBlacklistDerivedCaches } from "../../src/lib/blacklist-cache-invalidation";
 
 const TRON_USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 
@@ -160,6 +161,8 @@ describe("remote D1 backfill statements", () => {
     expect(await db.prepare("SELECT value FROM cache WHERE key = ?").bind("test").first("value")).toBe("quote ' ?");
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name LIKE '_pharos_backfill_%'").all()).toEqual([]);
     await expect(db.batch([db.prepare("SELECT 1"), db.prepare("DELETE FROM cache")])).rejects.toThrow("nonreturning-writes");
+    expect(await invalidateBlacklistDerivedCaches(db)).toEqual({ attempted: 5, deleted: 5, failed: 0 });
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()).toBeDefined();
   });
 
   it("uses command envelopes without imports and retains per-write counts, including local metadata stripping", async () => {

@@ -38,8 +38,13 @@ export function WatershedTable({ model, publication, labelOf }: { model: Watersh
   const indirect = useMemo(() => open
     ? new Map([...model.hubExposures.keys()].map(id => {
       const result = computeDependencyExposure(publication, [id]);
+      const hasRows = result.rows.some(row => row.minHop > 1);
       const known = result.rows.some(row => row.minHop > 1 && row.exposureUsd !== null);
-      return [id, known ? result.indirect.knownUsd : result.rows.some(row => row.minHop > 1) ? null : 0];
+      return [id, {
+        knownUsd: !hasRows ? 0 : known ? result.indirect.knownUsd : null,
+        complete: result.indirect.complete,
+        unknownCount: result.indirect.excludedSupplyUnknownIds.length + result.indirect.unknownShareEdgeCount,
+      }];
     }))
     : null, [open, model, publication]);
   const hubRows = useMemo(() => [...model.hubExposures.values()].map(hub => ({
@@ -49,10 +54,19 @@ export function WatershedTable({ model, publication, labelOf }: { model: Watersh
     direct: model.directKnown.has(hub.hubId) ? hub.direct.knownUsd : null,
     indirect: indirect?.get(hub.hubId) ?? null,
     dependents: hub.dependentCount,
-    unknown: hub.direct.excludedSupplyUnknownIds.length + hub.direct.unknownShareEdgeCount,
+    unknown: hub.direct.excludedSupplyUnknownIds.length + hub.direct.unknownShareEdgeCount
+      + (indirect?.get(hub.hubId)?.unknownCount ?? 0),
     complete: hub.direct.complete,
   })).sort((a, b) => {
-    const value = (row: typeof a) => hubSort.key === "hub" ? row.label : row[hubSort.key];
+    const value = (row: typeof a): number | string | null => {
+      switch (hubSort.key) {
+        case "hub": return row.label;
+        case "layer": return row.layer;
+        case "direct": return row.direct;
+        case "indirect": return row.indirect?.knownUsd ?? null;
+        case "dependents": return row.dependents;
+      }
+    };
     return compareNullable(value(a), value(b), hubSort.desc) || a.id.localeCompare(b.id);
   }), [model, labelOf, indirect, hubSort]);
   const edgeRows = useMemo(() => [...model.edges].sort((a, b) => {
@@ -77,7 +91,7 @@ export function WatershedTable({ model, publication, labelOf }: { model: Watersh
             <TableCell>{row.label}</TableCell>
             <TableCell className="pharos-numeric">{row.layer ?? "—"}</TableCell>
             <TableCell className="pharos-numeric">{row.direct === null ? "Unavailable" : `${formatCurrency(row.direct, 2)}${row.complete ? "" : " (known only)"}`}</TableCell>
-            <TableCell className="pharos-numeric">{row.indirect === null ? "Unavailable" : formatCurrency(row.indirect, 2)}</TableCell>
+            <TableCell className="pharos-numeric">{row.indirect === null || row.indirect.knownUsd === null ? "Unavailable" : `${formatCurrency(row.indirect.knownUsd, 2)}${row.indirect.complete ? "" : " (known only)"}`}</TableCell>
             <TableCell className="pharos-numeric">{row.dependents}</TableCell>
             <TableCell className="pharos-numeric">{row.unknown}</TableCell>
           </TableRow>)}</TableBody>

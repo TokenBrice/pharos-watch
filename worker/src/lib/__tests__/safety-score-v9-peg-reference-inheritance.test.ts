@@ -1,4 +1,5 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
@@ -107,6 +108,30 @@ function parentDepegPeg(fixedInput: ReturnType<typeof twoAssetInput>, peakBps: n
       },
     },
     activeDepegPeakBpsById: { [PARENT_ID]: Math.abs(peakBps) },
+  });
+}
+
+/**
+ * The v10.42 shape: the any-direction peak stays the summary's witness, while
+ * the discount-only map decides whether the parent caps its children.
+ */
+function directionalParentDepegPeg(
+  fixedInput: ReturnType<typeof twoAssetInput>,
+  peakBps: number,
+  discountPeakBps: number | null,
+) {
+  return reseal(parentDepegPeg(fixedInput, peakBps), {
+    safetyScoreV9DirectionalPeg: {
+      premiumWeight: V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegPremiumWeight,
+      // A child inherits the parent's open-event state, not its score row, so
+      // each captured row keeps its own summary score.
+      pegScoreById: {
+        [CHILD_ID]: fixedInput.pegDataById[CHILD_ID]!.pegScore,
+        [PARENT_ID]: fixedInput.pegDataById[PARENT_ID]!.pegScore,
+      },
+      // Keyed by the parent's witness id; null records a premium-only open event.
+      activeDiscountPeakBpsById: { [PARENT_ID]: discountPeakBps },
+    },
   });
 }
 
@@ -227,6 +252,30 @@ describe("Safety Score V9 peg-reference inheritance", () => {
       activeDepeg: true,
       activeDepegBps: 2_500,
     });
+  });
+
+  it.each([
+    {
+      label: "premium",
+      peakBps: 700,
+      discountPeakBps: null,
+      expected: { pegScore: null, activeDepeg: null, activeDepegBps: null },
+      expectedApplicability: "not-applicable",
+    },
+    {
+      label: "discount",
+      peakBps: -2_500,
+      discountPeakBps: 2_500,
+      expected: { pegScore: 100, activeDepeg: true, activeDepegBps: 2_500 },
+      expectedApplicability: "required",
+    },
+  ] as const)("inherits only a parent $label into a configured-reference child", (testCase) => {
+    const fixed = directionalParentDepegPeg(twoAssetInput(), testCase.peakBps, testCase.discountPeakBps);
+    const child = childPeg(fixed);
+
+    expect(child).toMatchObject(testCase.expected);
+    expect(child.status.applicability.state).toBe(testCase.expectedApplicability);
+    expect(child.status.observationState).toBe("known");
   });
 
   it("leaves an asset without pegReferenceId on its own peg data", () => {

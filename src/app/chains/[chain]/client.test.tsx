@@ -227,7 +227,7 @@ describe("ChainProfileClient", () => {
     const health = within(screen.getByRole("region", { name: "Chain Health" }));
 
     expect(health.getByText(/not rated because peg-stability coverage is below the 95% minimum/i).textContent)
-      .toContain("observed for 0% of chain supply");
+      .toContain("observed for 0% of peg-eligible chain supply");
     expect(health.queryByText(/Insufficient safety score coverage/i)).toBeNull();
     expect(health.getByText("Not rated: no usable peg price was observed for this chain's supply.")).toBeTruthy();
     // Only the peg factor is null here; quality cleared its gate and keeps its number.
@@ -256,7 +256,7 @@ describe("ChainProfileClient", () => {
     const health = within(screen.getByRole("region", { name: "Chain Health" }));
 
     expect(health.getByText(
-      "Peg observed on 60% of chain supply; 30% without a usable price is scored neutral 50; 10% has no peg reference.",
+      "Peg observed on 60% of peg-eligible chain supply; 30% without a usable price is scored neutral 50; 10% has no peg reference.",
     )).toBeTruthy();
     expect(health.getByText("70")).toBeTruthy();
     expect(health.queryByText("NR")).toBeNull();
@@ -285,7 +285,7 @@ describe("ChainProfileClient", () => {
     const health = within(screen.getByRole("region", { name: "Chain Health" }));
 
     expect(health.getByText("robust")).toBeTruthy();
-    expect(health.getByText("Peg observed on 99% of chain supply.")).toBeTruthy();
+    expect(health.getByText("Peg observed on 99% of peg-eligible chain supply.")).toBeTruthy();
     expect(health.queryByText(/not rated because/i)).toBeNull();
   });
 

@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   ALL_NODE_LIMIT,
   buildGraphData,
   buildSupernodeState,
   contagionEdgeWeight,
   runSimulation,
+  runSimulationInChunks,
   WIDTH,
   HEIGHT,
   MAX_COLLISION_PASS_NODES,
@@ -262,5 +263,29 @@ describe("runSimulation", () => {
       expect(pos.y).toBeGreaterThanOrEqual(PAD - node.r);
       expect(pos.y).toBeLessThanOrEqual(HEIGHT - PAD + node.r);
     }
+  });
+});
+
+describe("chunked layout", () => {
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+  it("does not publish a superseded layout even if an idle callback is already queued", () => {
+    const cards: ContagionGraphCard[] = [
+      { id: "a", symbol: "A", grade: "A" },
+      { id: "b", symbol: "B", grade: "B" },
+    ];
+    const graph = buildGraphData(cards, new Map([["a", 1e9], ["b", 1e8]]), [
+      { from: "b", to: "a", kind: "serial", materiality: "serial", weight: null, upstreamScore: null },
+    ], "all");
+    const state = buildSupernodeState(graph.nodes, graph.links);
+
+    let pending: (() => void) | undefined;
+    vi.stubGlobal("requestIdleCallback", (callback: () => void) => { pending = callback; return 1; });
+    vi.stubGlobal("cancelIdleCallback", vi.fn());
+    const complete = vi.fn();
+    const cancel = runSimulationInChunks(graph.nodes, graph.links, state, complete);
+    cancel();
+    pending?.();
+    expect(complete).not.toHaveBeenCalled();
   });
 });

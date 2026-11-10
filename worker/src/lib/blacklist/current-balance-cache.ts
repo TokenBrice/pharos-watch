@@ -43,7 +43,19 @@ export interface SyncCurrentBalanceCacheResult {
   failed: number;
   skippedDueBudget: number;
   budgetExhausted: boolean;
+  /** Rows this call deferred without a live capture so they stay durable debt. */
+  deferredToDebt: number;
 }
+
+/**
+ * Live per-address captures admitted per scan-phase call. A mass freeze on one
+ * config must not consume the shared scan budget (one serial provider fetch
+ * plus ledger writes per address), so scans admit the same row count the
+ * maintenance debt lane digests per run and leave the remainder as durable
+ * `blacklist:current-balance-debt:` rows. Uncapped callers (debt lane,
+ * operator backfills) keep their own bounds.
+ */
+export const MAX_SCAN_PHASE_BALANCE_CAPTURES = 24;
 
 export type CurrentBalanceFetchContext = {
   etherscanApiKey: string | null;
@@ -56,6 +68,8 @@ export type CurrentBalanceFetchContext = {
   chainRpcs?: Map<string, ChainRpcConfig>;
   assetPriceUsd?: number | null;
   latestRows?: readonly BlacklistRow[];
+  /** Maximum live captures this call may attempt; absent means uncapped. */
+  captureLimit?: number;
 };
 
 async function fetchCurrentBalanceForAddress(
@@ -144,7 +158,7 @@ export async function syncCurrentBalanceCacheForRows(
   context: CurrentBalanceFetchContext,
 ): Promise<SyncCurrentBalanceCacheResult> {
   if (rows.length === 0) {
-    return { updated: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false };
+    return { updated: 0, failed: 0, skippedDueBudget: 0, budgetExhausted: false, deferredToDebt: 0 };
   }
 
   await enqueueCurrentBalanceDebt(db, rows);
@@ -154,7 +168,10 @@ export async function syncCurrentBalanceCacheForRows(
     failed: 0,
     skippedDueBudget: 0,
     budgetExhausted: false,
+    deferredToDebt: 0,
   };
+  const deferredRowIds = new Set<string>();
+  let liveCaptures = 0;
   const now = Math.floor(Date.now() / 1000);
 
   const assetPriceUsd = context.assetPriceUsd ?? await fetchBlacklistAssetPriceFromCache(db, config.stablecoin);
@@ -201,6 +218,15 @@ export async function syncCurrentBalanceCacheForRows(
       continue;
     }
 
+    if (context.captureLimit != null && liveCaptures >= context.captureLimit) {
+      // Admission deferral, not a budget stop: budget telemetry stays untouched
+      // and the row keeps its durable current-balance debt for the maintenance lane.
+      counters.deferredToDebt++;
+      deferredRowIds.add(row.id);
+      continue;
+    }
+    liveCaptures++;
+
     let amount = await fetchCurrentBalanceForAddress(config, row.address, context);
     let source = "current_balance";
 
@@ -220,7 +246,11 @@ export async function syncCurrentBalanceCacheForRows(
   }
   if (!counters.budgetExhausted && counters.failed === 0 && latestRows.length > 0
     && !latestRows.some((row) => row.event_type === "destroy" && row.amount_native == null)) {
-    for (const row of unambiguousRows(rows)) await clearCurrentBalanceDebt(db, row.id);
+    for (const row of unambiguousRows(rows)) {
+      // Never clear durable debt for work this call deferred.
+      if (deferredRowIds.has(row.id)) continue;
+      await clearCurrentBalanceDebt(db, row.id);
+    }
   }
 
   return counters;

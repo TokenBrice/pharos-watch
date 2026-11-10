@@ -16,14 +16,17 @@ import { getPublicProducerGraceBudget, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PROD
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
-import type { DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
+import type { CanaryStatus, CronRunDetail, DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
+import type { SupplyIntegrityAssessment } from "./supply-integrity-quality";
 import { SCHEDULED_DELIVERY_LAG_SIGNAL, type CronFindingJobs, type ScheduledDeliveryLagSummary } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
+import { expiringReviews } from "./evaluation-causes";
 import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES, type SafetyPublicationSizeObservation } from "./safety-publication-size";
+import { resolveDepegBlindEventReviews } from "../canary-checks-depeg";
 
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed
@@ -141,6 +144,65 @@ export interface AvailabilityEvaluationInput {
   scheduledDeliveryLag?: ScheduledDeliveryLagSummary;
 }
 
+/**
+ * Latest executed redemption-backstop coverage verdict. Capacity shortfalls
+ * stay quality metadata on the producer run (the run publishes every row it
+ * could resolve), so the status cause must read that run instead of inferring
+ * coverage from the endpoint's renewed freshness clock. A generation without
+ * those fields returns null (unknown), never a healthy zero.
+ *
+ * The floor counts only runtime missing capacity: `structuralMissingCapacity`
+ * names the config/capability-derived rows excluded from the floor (reviewed
+ * `unquantified` models, diagnostic-only observers, adapters that cannot emit
+ * route-capacity telemetry, and deterministic evidence-model rejection
+ * reasons). Generations published before that field existed report null for
+ * it, and their totals are evaluated as-is rather than reinterpreted.
+ */
+export interface RedemptionCapacityCoverageEvidence {
+  /** Producer run start clock: the generation this verdict applies to. */
+  startedAt: number;
+  /** Total missing-capacity rows, including structural rows. */
+  unresolvedMissingCapacity: number;
+  /** Config/capability-derived structural rows; null on legacy generations. */
+  structuralMissingCapacity: number | null;
+  /** Missing-capacity rows that count toward the floor (total minus structural). */
+  runtimeMissingCapacity: number;
+  missingCapacityOkThreshold: number;
+  activeConfigured: number | null;
+}
+
+export function readRedemptionCapacityCoverage(
+  runs: readonly Pick<CronRunDetail, "startedAt" | "status" | "metadata">[] | undefined,
+): RedemptionCapacityCoverageEvidence | null {
+  // The newest executed generation is the one the endpoint serves, even when
+  // that run failed: its placeholder rows still carry a coverage verdict.
+  const run = runs?.find((entry) =>
+    entry.status === "ok" || entry.status === "degraded" || entry.status === "error");
+  const metadata = run?.metadata;
+  if (!run || !metadata) return null;
+  const threshold = metadata.missingCapacityOkThreshold;
+  const unresolved = metadata.unresolvedMissingCapacity;
+  if (typeof threshold !== "number" || !Number.isFinite(threshold)
+    || typeof unresolved !== "number" || !Number.isFinite(unresolved)) return null;
+  const structural = metadata.structuralMissingCapacity;
+  const structuralMissingCapacity = typeof structural === "number"
+    && Number.isFinite(structural) && structural >= 0
+      ? structural
+      : null;
+  const runtimeMissingCapacity = unresolved -
+    Math.min(structuralMissingCapacity ?? 0, unresolved);
+  const activeConfigured = typeof metadata.activeConfigured === "number"
+    && Number.isFinite(metadata.activeConfigured) ? metadata.activeConfigured : null;
+  return {
+    startedAt: run.startedAt,
+    unresolvedMissingCapacity: unresolved,
+    structuralMissingCapacity,
+    runtimeMissingCapacity,
+    missingCapacityOkThreshold: threshold,
+    activeConfigured,
+  };
+}
+
 export interface DataQualityEvaluationInput {
   nowSec: number;
   dataQuality: DataQuality;
@@ -155,17 +217,13 @@ export interface DataQualityEvaluationInput {
   activePriceCoverage: PublicHealthAssessment["activePriceCoverage"];
   onchainAssessmentCauses: StatusCause[];
   reserveComposition: StatusResponse["reserveComposition"];
+  /** Value, carry and daily-snapshot integrity; omitted only by legacy fixtures. */
+  supplyIntegrityAssessment?: SupplyIntegrityAssessment;
+  redemptionCapacityCoverage: RedemptionCapacityCoverageEvidence | null;
 }
 
 function ruleResult(status: StatusHealthValue, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
   return status === "healthy" && causes.length === 0 ? null : { status, causes };
-}
-
-function expiringReviews(entries: readonly { id: string; expiresAt: number }[], nowSec: number) {
-  return entries
-    .map((entry) => ({ ...entry, remainingSec: entry.expiresAt - nowSec }))
-    .filter((entry) => entry.remainingSec > 0 && entry.remainingSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC)
-    .sort((a, b) => a.expiresAt - b.expiresAt || a.id.localeCompare(b.id));
 }
 
 function evaluateCacheDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
@@ -515,6 +573,19 @@ export function rebuildCronDerivedAvailabilityCauses(
   ];
 }
 
+/**
+ * Availability causes owned by the live scheduler-liveness read. `/api/status`
+ * replaces, never merges, the cached copies so one response cannot publish
+ * stale lane evidence beside the live observation (R5: one authority).
+ */
+export const SCHEDULER_LIVENESS_AVAILABILITY_CAUSE_CODES = [
+  "scheduler_liveness_unavailable",
+  "scheduled_delivery_stalled",
+  "heavy_scheduler_liveness_unavailable",
+  "heavy_scheduled_delivery_stalled",
+  "expected_scheduled_lane_unhealthy",
+] as const;
+
 export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
   const causes: StatusCause[] = [];
   let status: StatusHealthValue = "healthy";
@@ -540,6 +611,27 @@ export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["sch
       unavailable ? `Heavy scheduler delivery evidence unavailable (${heavy.unavailableReason}; warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`
         : `Heavy lane ${heavy.scheduleKey} has not started for ${heavy.ageSeconds}s (warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`,
       { metric: "heavySchedulerDeliveryAgeSeconds", value: heavy.ageSeconds ?? undefined, threshold: heavy.warningAfterSec },
+    ));
+  }
+  // Registry-derived lanes own their own budgets. The aggregate follows the
+  // most recent lane start, so it only names a public lane when it is itself
+  // reporting; otherwise a lone stalled lane would leave no cause at all.
+  const coveredLanes = new Set([
+    ...(scheduler.status === "healthy" ? [] : scheduler.lanes.map((lane) => lane.scheduleKey)),
+    ...(heavy.scheduleKey ? [heavy.scheduleKey] : []),
+  ]);
+  // Unreadable lane evidence is named by the external delivery monitor and by
+  // the aggregate unavailable cause; only an aged lane adds a status cause.
+  const laneFailures = (scheduler.expectedLanes ?? []).filter((lane) =>
+    (lane.status === "degraded" || lane.status === "stale") && !coveredLanes.has(lane.scheduleKey));
+  if (laneFailures.length > 0) {
+    const evidence = laneFailures.map((lane) =>
+      `${lane.scheduleKey} (${lane.status} ${lane.ageSeconds ?? "?"}s; warn >${lane.warningAfterSec}s / stale >${lane.staleAfterSec}s)`,
+    ).join(", ");
+    causes.push(makeCause(
+      "availability", "expected_scheduled_lane_unhealthy", "info",
+      `${laneFailures.length} scheduled slot lane(s) lack a start inside their delivery budget: ${evidence}.`,
+      { metric: "unhealthyExpectedLanes", value: laneFailures.length, threshold: 1 },
     ));
   }
   return { status, causes };
@@ -810,6 +902,28 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
       ));
     }
   }
+  const redemption = input.redemptionCapacityCoverage;
+  if (redemption && redemption.runtimeMissingCapacity > redemption.missingCapacityOkThreshold) {
+    causes.push(makeCause(
+      "data-quality",
+      "redemption_capacity_coverage_floor",
+      "warning",
+      `sync-redemption-backstops run at ${new Date(redemption.startedAt * 1000).toISOString()} published `
+        + `${redemption.runtimeMissingCapacity} runtime missing-capacity route(s) above its `
+        + `${redemption.missingCapacityOkThreshold} budget`
+        + (redemption.activeConfigured != null ? ` across ${redemption.activeConfigured} active configured route(s)` : "")
+        + (redemption.structuralMissingCapacity != null && redemption.structuralMissingCapacity > 0
+          ? ` (${redemption.structuralMissingCapacity} structural evidence-limit route(s) excluded from the floor)`
+          : "")
+        + ". Failed routes keep placeholder rows, so the endpoint's renewed freshness clock does not prove coverage.",
+      {
+        metric: "redemptionRuntimeMissingCapacity",
+        value: redemption.runtimeMissingCapacity,
+        threshold: redemption.missingCapacityOkThreshold,
+        subjects: ["sync-redemption-backstops"],
+      },
+    ));
+  }
   return ruleResult("healthy", causes);
 }
 
@@ -837,8 +951,9 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
               "data-quality",
               "stablecoin_publication_incomplete",
               status === "healthy" ? "info" : "warning",
-              `Stablecoin publication is missing ${missing.length} unwaived active ID(s)` +
-                (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
+              missing.length === 0
+                ? `Stablecoin publication counts do not reconcile with the deployed catalog (${publication.presentActiveCount} present + ${publication.waivedActiveCount} waived of ${publication.expectedActiveCount} expected).`
+                : `Stablecoin publication is missing ${missing.length} unwaived active ID(s): ${examples}${missing.length > 12 ? ", ..." : ""}.`,
               { metric: "missingActiveStablecoins", value: missing.length, threshold: 1 },
             );
           })()
@@ -1000,6 +1115,14 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
       const causes = input.onchainAssessmentCauses.map(withRunbook);
       return status === "healthy" && causes.length === 0 ? null : { status, causes };
   },
+  (input) => {
+      const assessment = input.supplyIntegrityAssessment;
+      if (!assessment) return null;
+      const causes = assessment.causes.map(withRunbook);
+      return assessment.status === "healthy" && causes.length === 0
+        ? null
+        : { status: assessment.status, causes };
+  },
   evaluateReserveOperationalDiagnostics,
   (input) => {
     const reserve = input.reserveComposition;
@@ -1065,6 +1188,32 @@ function formatPersistentStaleIndependentFeeds(
   return `${coins.length} persistently stale independent feed(s)${examples ? ` (${examples}${suffix})` : ""}`;
 }
 
+export function evaluateDepegBlindReviewCauses(canaries: Pick<CanaryStatus, "checks" | "maxAgeSec"> | null | undefined, nowSec: number): StatusCause[] {
+  if (!canaries) return [];
+  const check = canaries.checks["depeg-open-coverage"];
+  const ids: unknown = check?.metadata?.acknowledgedBlindReviewIds;
+  if (!check || check.executionStatus !== "completed" || !["ok", "degraded"].includes(check.status)
+    || !Number.isFinite(check.observedAt) || check.observedAt <= 0 || check.observedAt > nowSec
+    || !Number.isFinite(canaries.maxAgeSec) || canaries.maxAgeSec <= 0 || nowSec - check.observedAt > canaries.maxAgeSec
+    || !Array.isArray(ids) || !(ids as unknown[]).every((id) => typeof id === "number" && Number.isSafeInteger(id) && id > 0)) return [];
+  // Re-resolve at read time: retained canary metadata cannot renew an expired review.
+  const active = resolveDepegBlindEventReviews(nowSec);
+  const reviews = [...new Set(ids as number[])].flatMap((id) => {
+    const review = active.get(id);
+    return review ? [review] : [];
+  });
+  if (reviews.length === 0) return [];
+  const causes = [makeCause("data-quality", "depeg_blind_event_reviews_acknowledged", "info",
+    `Reviewed blind open-event coverage: ${reviews.map((review) =>
+      `${review.stablecoinId}(${review.eventId}) (expires ${new Date(review.expiresAt * 1000).toISOString()})`).join(", ")}. Raw blindness, events and trusted-price rules are unchanged.`)];
+  const expiring = expiringReviews(reviews.map((review) => ({ id: `${review.stablecoinId}(${review.eventId})`, expiresAt: review.expiresAt })), nowSec);
+  if (expiring.length > 0) causes.push(makeCause("data-quality", "depeg_blind_event_reviews_expiring", "info",
+    `Blind-event review(s) currently acknowledging open-event coverage expire within 48h: ${expiring.map((review) =>
+      `${review.id} (expires ${new Date(review.expiresAt * 1000).toISOString()}, ${Math.floor(review.remainingSec / 3600)}h left)`).join(", ")}. Renew with fresh evidence or let blind coverage re-alert.`,
+    { metric: "depegBlindEventReviewsExpiringSoonestSec", value: expiring[0].remainingSec, threshold: STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC }));
+  return causes;
+}
+
 const RUNBOOK_BASE = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks";
 
 const RUNBOOK_BY_CODE: Record<string, string> = {
@@ -1083,6 +1232,7 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   active_price_coverage_breadth_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   price_gap_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
+  depeg_blind_event_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
   price_gap_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
   price_gap_reviews_invalid: `${RUNBOOK_BASE}/review-renewal.md`,
   price_market_hours_calendars_invalid: `${RUNBOOK_BASE}/review-renewal.md`,
@@ -1096,6 +1246,15 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_integrity_stale: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_monitor_unavailable: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+  supply_value_drift: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_carry_stale: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_carry_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
+  supply_carry_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
+  supply_availability_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_snapshot_overdue: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_snapshot_partial: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_integrity_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  chart_history_truncated: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   d1_capacity_watch: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
   d1_capacity_warning: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
   d1_capacity_critical: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,

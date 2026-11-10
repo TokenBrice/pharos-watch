@@ -64,7 +64,10 @@ export function useMarketDataChartWindow<T extends MarketDataTimePoint>({
     const last = visibleData[visibleData.length - 1].ts;
     // A month start before the first point would sit off the plot edge and
     // render clipped ("ul '26" for Jul '26).
-    return buildAdaptiveMonthlyTicks(first, last).filter((tick) => tick >= first);
+    const ticks = buildAdaptiveMonthlyTicks(first, last).filter((tick) => tick >= first);
+    // An explicit empty list suppresses Recharts' own ticks: a window with no
+    // UTC month start inside it falls back to automatic labels instead.
+    return ticks.length > 0 ? ticks : undefined;
   }, [range, visibleData]);
 
   const xDomain = useMemo<readonly [number, number] | null>(() => {

@@ -2,7 +2,7 @@
 
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import { HeroChipRail } from "../hero-card-sections";
 
 vi.mock("@/lib/feature-flags", () => ({ isHeroVerdictEnabled: () => true }));
@@ -14,7 +14,7 @@ vi.mock("next/link", async () => {
 
 describe("detail verdict lane", () => {
   it("renders the verdict lane only when a verdict is shown, leaving the taxonomy unchanged", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const coin = makeStablecoinMeta({ id: "usdt-tether", name: "Tether", symbol: "USDT" });
     const { container, rerender } = render(<HeroChipRail coin={coin} verdict={{ archetype: "uncategorized", label: "Uncategorized" }} />);
     expect(container.querySelector("[data-hero-verdict-lane]")).toBeNull();
     const initialTaxonomy = container.firstElementChild!.firstElementChild!.innerHTML;
@@ -27,7 +27,7 @@ describe("detail verdict lane", () => {
   });
 
   it("renders no lane and no chip for the internal institutional-default archetype", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const coin = makeStablecoinMeta({ id: "usdc-circle", name: "USD Coin", symbol: "USDC" });
     const { container } = render(<HeroChipRail coin={coin} verdict={{ archetype: "institutional-default", label: "Institutional Default" }} />);
     expect(container.querySelector("[data-hero-verdict-lane]")).toBeNull();
     expect(container.querySelector(`#hero-verdict-${coin.id}`)).toBeNull();

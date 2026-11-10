@@ -1,152 +1,43 @@
-import { describe, expect, it } from "vitest";
+import {expect as e,it} from "vitest"
+import {evaluateCliArgsPolicy as check,sourceUsesProcessArgv as uses} from "../ci/check-cli-args-policy.ts"
+import {CLI_ARGV_POLICY} from "../lib/cli-argv-policy.mjs"
 
-import { evaluateCliArgsPolicy, sourceUsesProcessArgv } from "../ci/check-cli-args-policy.ts";
-
-const EXEMPTION_REASON = "Reads repository state and reports findings without persistent mutation.";
-
-function createSourceReader(sources: Record<string, string>) {
-  return (path: string): string => {
-    const source = sources[path];
-    if (source === undefined) throw new Error(`Missing fixture source: ${path}`);
-    return source;
-  };
-}
-
-describe("check-cli-args-policy", () => {
-  it("discovers actual argv access without matching comments or strings", () => {
-    expect(sourceUsesProcessArgv('const label = "process.argv"; // process.argv\n')).toBe(false);
-    expect(sourceUsesProcessArgv("const args = process.argv.slice(2);\n")).toBe(true);
-    expect(sourceUsesProcessArgv('const args = process["argv"].slice(2);\n')).toBe(true);
-  });
-
-  it("rejects a newly discovered process.argv entrypoint until it is classified", () => {
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: ["scripts/maintenance/new-operator.mjs"],
-      policy: { strict: [], exemptions: [] },
-      readSource: createSourceReader({}),
-    });
-
-    expect(result.errors).toContain("Unclassified process.argv entrypoint: scripts/maintenance/new-operator.mjs");
-  });
-
-  it("rejects strict declarations whose parser does not use the shared wrapper", () => {
-    const path = "scripts/maintenance/operator.mjs";
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [path],
-      policy: {
-        strict: [{ path, parserPath: path }],
-        exemptions: [],
-      },
-      readSource: createSourceReader({
-        [path]: "const args = process.argv.slice(2);\n",
-      }),
-    });
-
-    expect(result.errors).toContain(
-      `Strict parser ${path} must import scripts/lib/cli-args.mjs and call parseStrictCliArgs().`,
-    );
-  });
-
-  it("accepts direct and transitive strict parsers through cycles and extension resolution", () => {
-    const path = "scripts/maintenance/operator.mjs";
-    const parserPath = "scripts/lib/operator-parser.ts";
-    const parser = 'import { parseStrictCliArgs } from "./cli-args.mjs"; export const parse = (argv) => parseStrictCliArgs(argv);';
-    for (const direct of [true, false]) {
-      const result = evaluateCliArgsPolicy({
-        discoveredPaths: [path],
-        policy: { strict: [{ path, parserPath: direct ? path : parserPath }], exemptions: [] },
-        readSource: createSourceReader({
-          [path]: direct ? parser.replace("./cli-args", "../lib/cli-args") : 'import "../lib/bridge"; process.argv;',
-          "scripts/lib/bridge.mjs": 'import "../maintenance/operator.mjs"; export { parse } from "./operator-parser.js";',
-          [parserPath]: parser,
-        }),
-      });
-      expect(result.errors).toEqual([]);
-    }
-  });
-
-  it("accepts unsorted strict and exempt entries without changing parser enforcement", () => {
-    const strictPaths = ["scripts/maintenance/z-operator.mjs", "scripts/maintenance/a-operator.mjs"];
-    const exemptPaths = ["scripts/ci/z-report.mjs", "scripts/ci/a-report.mjs"];
-    const parserSource = 'import { parseStrictCliArgs } from "../lib/cli-args.mjs"; parseStrictCliArgs(process.argv);';
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [...strictPaths, ...exemptPaths],
-      policy: {
-        strict: strictPaths.map((path) => ({ path, parserPath: path })),
-        exemptions: exemptPaths.map((path) => ({ path, category: "read-only", reason: EXEMPTION_REASON })),
-      },
-      readSource: createSourceReader(Object.fromEntries(strictPaths.map((path) => [path, parserSource]))),
-    });
-
-    expect(result.errors).toEqual([]);
-    expect(result.counts).toEqual({ discovered: 4, strict: 2, exempt: 2 });
-  });
-
-  it.each(["comment", "string"])("rejects wrapper import and call spoofed in a %s", (kind) => {
-    const path = "scripts/maintenance/operator.mjs";
-    const spoof = 'import { parseStrictCliArgs } from "../lib/cli-args.mjs"; parseStrictCliArgs(process.argv);';
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [path],
-      policy: { strict: [{ path, parserPath: path }], exemptions: [] },
-      readSource: createSourceReader({
-        [path]: kind === "comment" ? `/* ${spoof} */ process.argv;` : `const help = \`${spoof}\`; process.argv;`,
-      }),
-    });
-    expect(result.errors).toEqual([
-      `Strict parser ${path} must import scripts/lib/cli-args.mjs and call parseStrictCliArgs().`,
-    ]);
-  });
-
-  it("rejects a commented-out connection to an otherwise valid parser", () => {
-    const path = "scripts/maintenance/operator.mjs";
-    const parserPath = "scripts/lib/operator-parser.mjs";
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [path],
-      policy: { strict: [{ path, parserPath }], exemptions: [] },
-      readSource: createSourceReader({
-        [path]: '// import "../lib/operator-parser.mjs";\nprocess.argv;',
-        [parserPath]: 'import { parseStrictCliArgs } from "./cli-args.mjs"; export const parse = (argv) => parseStrictCliArgs(argv);',
-      }),
-    });
-    expect(result.errors).toEqual([
-      `Strict CLI entrypoint ${path} does not import its declared parser ${parserPath}.`,
-    ]);
-  });
-
-  it("rejects exemptions without an allowed category and audit reason", () => {
-    const path = "scripts/ci/repository-check.mjs";
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [path],
-      policy: {
-        strict: [],
-        exemptions: [{ path, category: "operator", reason: "temporary" }],
-      },
-      readSource: createSourceReader({}),
-    });
-
-    expect(result.errors).toContain(`Invalid CLI exemption category for ${path}: operator`);
-    expect(result.errors).toContain(`CLI exemption ${path} must have a specific audit reason.`);
-  });
-
-  it("rejects duplicate and conflicting policy declarations", () => {
-    const path = "scripts/maintenance/operator.mjs";
-    const parserSource = [
-      'import { parseStrictCliArgs } from "../lib/cli-args.mjs";',
-      "parseStrictCliArgs(process.argv.slice(2));",
-    ].join("\n");
-    const result = evaluateCliArgsPolicy({
-      discoveredPaths: [path],
-      policy: {
-        strict: [
-          { path, parserPath: path },
-          { path, parserPath: path },
-        ],
-        exemptions: [{ path, category: "build", reason: EXEMPTION_REASON }],
-      },
-      readSource: createSourceReader({ [path]: parserSource }),
-    });
-
-    expect(result.errors).toContain(`Duplicate strict CLI policy entry: ${path}`);
-    expect(result.errors).toContain(`CLI path cannot be both strict and exempt: ${path}`);
-  });
-});
+const path="scripts/operator.mjs",parserPath="scripts/parser.ts",entry={path,parserPath:path}
+const parser='import { parseStrictCliArgs } from "./lib/cli-args.mjs"; parseStrictCliArgs(process.argv);'
+const reason="Reports repository state without persistent mutation."
+const bad=`Strict parser ${path} must import scripts/lib/cli-args.mjs and call parseStrictCliArgs().`
+it.each(["land","worktree"])("strict agent %s",name=>{
+const path=`scripts/maintenance/agent-${name}.ts`
+e(CLI_ARGV_POLICY.strict.filter(entry=>entry.path===path)).toEqual([{path,parserPath:path}])
+})
+it.each([
+['"process.argv"; // process.argv',false],['process.argv',true],
+['process["argv"]',true],['\\u0070rocess.argv',true],['processArgs',false],
+])("argv discovery: %s → %s",(source,want)=>e(uses(source)).toBe(want))
+it.each([
+[[],[],parser,[`Unclassified process.argv entrypoint: ${path}`]],
+...["process.argv",`/* ${parser} */ process.argv;`,`const help = \`${parser}\`; process.argv;`]
+.map(source=>[[entry],[],source,[bad]] as const),
+[[],[{path,category:"operator",reason:"temporary"}],parser,[
+`Invalid CLI exemption category for ${path}: operator`,`CLI exemption ${path} must have a specific audit reason.`,
+]],
+[[entry,entry],[{path,category:"build",reason}],parser,[
+`Duplicate strict CLI policy entry: ${path}`,`CLI path cannot be both strict and exempt: ${path}`,
+]],
+[[entry],[],parser,[]],[[{path,parserPath}],[],'import "./bridge"; process.argv;',[]],
+[[{path,parserPath}],[],'// import "./parser.ts";\nprocess.argv;',[
+`Strict CLI entrypoint ${path} does not import its declared parser ${parserPath}.`,
+]],
+] as const)("strict policy %#",(strict,exemptions,source,errors)=>{
+const sources:Record<string,string>={[path]:source,[parserPath]:parser,
+"scripts/bridge.mjs":'import "./operator.mjs"; export { parse } from "./parser.js";'}
+e(check({policy:{strict,exemptions},discoveredPaths:[path],readSource:p=>{
+if(!(p in sources)) throw Error("Missing source");return sources[p]
+}}).errors).toEqual(errors)
+})
+it("unsorted strict/exempt",()=>{
+const paths=["z","a"].map(n=>`scripts/${n}-operator.mjs`),exempt=["z","a"].map(n=>`scripts/ci/${n}-report.mjs`)
+e(check({discoveredPaths:[...paths,...exempt],policy:{
+strict:paths.map(path=>({path,parserPath:path})),exemptions:exempt.map(path=>({path,category:"read-only",reason})),
+},readSource:()=>parser})).toEqual({errors:[],counts:{discovered:4,strict:2,exempt:2}})
+})

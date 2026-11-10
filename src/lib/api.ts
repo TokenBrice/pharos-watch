@@ -188,6 +188,30 @@ export class ApiFetchError extends Error {
   }
 }
 
+/** Dataset-state 503 bodies published by the Worker for a not-populated read. */
+const NOT_POPULATED_503_ERRORS = new Set([
+  "data not yet available",
+  "stablecoins data not yet available",
+  "redemption backstop snapshot unavailable",
+]);
+
+/**
+ * Whether a failed read is a dataset-state "not populated yet" 503. Maintenance,
+ * rate-limit, transport-shed and malformed-cache 503s are transport failures and
+ * must not claim emptiness.
+ */
+export function isDatasetNotPopulatedError(error: unknown): boolean {
+  if (!(error instanceof ApiFetchError) || error.status !== 503 || !error.bodyText) return false;
+  try {
+    const body: unknown = JSON.parse(error.bodyText);
+    return typeof body === "object" && body !== null && !Array.isArray(body) &&
+      typeof (body as { error?: unknown }).error === "string" &&
+      NOT_POPULATED_503_ERRORS.has((body as { error: string }).error.trim().toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 function getBodyWarning(data: unknown): string | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return null;

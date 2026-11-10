@@ -1,10 +1,11 @@
 "use client";
 
 import { CheckIcon, DownloadIcon, Share2Icon, XIcon } from "lucide-react";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import {
@@ -12,20 +13,22 @@ import {
   resolveYieldScoreQualification,
 } from "@/lib/yield-constants";
 import {
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   formatYieldSourceRiskSummary,
+  getYieldSourceDepthDisplay,
   isNativeYieldSource,
 } from "@/lib/yield-source-risk";
 import { getYieldDecisionReasonLine, getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatYieldSafetySrLabel, YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
+import { isRequestCancellation, RequestSequence } from "@/lib/request";
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { PYS_NULL_REASON_TEXT, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 interface YieldCompareDrawerProps {
@@ -94,7 +97,19 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "pys",
     label: "PYS",
     align: "right",
-    render: (row) => (row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "—"),
+    render: (row) => {
+      if (row.pharosYieldScore !== null) return formatScore(row.pharosYieldScore);
+      const reason = row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
+      if (!reason) return "—";
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{"—"}</span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[220px] text-2xs">{reason}</TooltipContent>
+        </Tooltip>
+      );
+    },
   },
   {
     key: "qualification",
@@ -114,6 +129,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
         safetyScore={row.safetyScore}
         safetySrLabel={formatYieldSafetySrLabel(row.safetyGrade, row.safetyScore)}
         opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+        usedDefaultSafety={row.provenance?.usedDefaultSafety === true}
         compact
       />
     ),
@@ -152,7 +168,14 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "depth",
     label: "Depth",
     align: "left",
-    render: (row) => YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens]?.label ?? "—",
+    // Same display lens as the board and mobile card: a native row with no
+    // venue TVL is "not applicable", not an unclassified measurement.
+    render: (row) => getYieldSourceDepthDisplay({
+      depthLens: row.sourceDepthLens,
+      yieldType: row.yieldType,
+      sourceRole: getYieldWorkbenchSourceRole(row),
+      sourceTvlUsd: row.sourceTvlUsd,
+    }).label,
   },
   {
     key: "stability",
@@ -162,7 +185,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
   },
   {
     key: "warnings",
-    label: "Warnings",
+    label: "Investment warnings",
     align: "left",
     render: (row) =>
       selectInvestmentWarningSignals(row.warningSignals).length === 0
@@ -173,7 +196,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "benchmark",
     label: "Benchmark",
     align: "left",
-    render: (row) => row.benchmarkLabel ?? "—",
+    render: (row) => (row.benchmarkLabel ? getYieldBenchmarkDisplayLabel(row) : "—"),
   },
 ];
 
@@ -191,6 +214,8 @@ export function YieldCompareDrawer({
   const [openedAt] = useState(() => Math.floor(Date.now() / 1000));
   const updatedAt = updatedAtProp ?? openedAt;
   const [shareStatus, setShareStatus] = useState<"shared" | "copied" | "failed" | null>(null);
+  const [shareSequence] = useState(() => new RequestSequence());
+  useLayoutEffect(() => () => shareSequence.cancel(), [ids, open, shareSequence]);
   // A stale Shared/copied/failed state must never survive a different
   // selection or a reopen: reset on ids change and whenever the drawer opens.
   const [shareContext, setShareContext] = useState({ ids, open });
@@ -207,7 +232,7 @@ export function YieldCompareDrawer({
     () => (ids.length > 0 ? `/yield/?compare=${encodeURIComponent(ids.join(","))}` : "/yield/"),
     [ids],
   );
-  const handleShare = useCallback(async () => {
+  const handleShare = useCallback(() => shareSequence.run(async (signal) => {
     const url = new URL(shareHref, window.location.origin).href;
     const payload = {
       title: "Pharos Yield comparison",
@@ -218,7 +243,7 @@ export function YieldCompareDrawer({
     if (typeof navigator.share === "function") {
       try {
         await navigator.share(payload);
-        setShareStatus("shared");
+        if (!signal.aborted) setShareStatus("shared");
         trackEvent("yield_comparison_shared", {
           method: "web_share",
           coin_count: ids.length,
@@ -239,21 +264,23 @@ export function YieldCompareDrawer({
 
     const result = await copyText(url);
     if (result.ok) {
-      setShareStatus("copied");
+      if (!signal.aborted) setShareStatus("copied");
       trackEvent("yield_comparison_shared", {
         method: "clipboard",
         coin_count: ids.length,
         success: true,
       });
     } else {
-      setShareStatus("failed");
+      if (!signal.aborted) setShareStatus("failed");
       trackEvent("yield_comparison_shared", {
         method: "clipboard",
         coin_count: ids.length,
         success: false,
       });
     }
-  }, [ids.length, shareHref]);
+  }).catch((error: unknown) => {
+    if (!isRequestCancellation(error)) throw error;
+  }), [ids.length, shareHref, shareSequence]);
   const handleExport = useCallback(() => {
     const selectedRows = columns.flatMap((column) => (column.row ? [column.row] : []));
     if (selectedRows.length === 0) return;

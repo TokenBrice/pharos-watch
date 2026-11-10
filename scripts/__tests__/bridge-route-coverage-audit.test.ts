@@ -38,35 +38,38 @@ describe("bridge-route coverage audit", () => {
     expect(audit.summary.reviewedRoutes + audit.summary.unresolvedRoutes).toBe(audit.summary.routes);
   });
 
-  it.each([
-    ["alusd-alchemix", "ethereum", "0xe9d672f89493c7286a9bafc6b763364ec0bfe4fe", "wrapped-representation", "third-party", "external-lock-mint", "lock-mint", "peripheral", 26154553, "0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9"],
-    ["alusd-alchemix", "base", "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3", "bridge-representation", "third-party", "external-lock-mint", "lock-mint", "peripheral", 52442771, "0x24e9cbb9ddda1247ae4b4eeee3c569a2190ac401"],
-    ["bold-liquity", "berachain", "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9", "bridge-representation", "third-party", "external-validated-network", "burn-mint", "peripheral", 27330196, "0xcfc5092583c1b2122f221f524c198abdecbf3d1b"],
-    ["mxnb-juno", "arc", "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "native-issuance", "native", "issuer-native-burn-mint", "native-mint", "canonical", 25087646, undefined],
-  ] as const)("retains the source-pinned reviewed disposition for %s on %s (%s)", (coinId, chain, address, issuanceModel, routeClass, riskTier, semantics, scope, observedBlock, controllerAddress) => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === coinId);
-    expect(coin?.contracts).toEqual(expect.arrayContaining([expect.objectContaining({ chain, address })]));
-    const routes = coin?.bridgeRouteRisk?.routes?.filter(
-      (route) => route.destinationChain === chain && route.contractAddress === address,
+  it("keeps every reviewed route on a listed deployment with evidence and a verified controller pairing", () => {
+    const reviewedRoutes = ACTIVE_STABLECOINS.flatMap((coin) =>
+      (coin.bridgeRouteRisk?.routes ?? [])
+        .filter((route) => route.reviewDisposition === "reviewed")
+        .map((route) => ({ coin, route })),
     );
-    expect(routes).toHaveLength(1);
-    const route = routes?.[0];
-    expect(route).toMatchObject({
-      id: `${chain}:${address}`,
-      reviewDisposition: "reviewed",
-      issuanceModel,
-      routeClass,
-      riskTier,
-      semantics,
-      scope,
-      observedAt: "2026-10-10",
-      observedBlock,
-    });
-    expect(route?.reviewNote?.trim().length).toBeGreaterThanOrEqual(12);
-    expect(route?.sources?.length).toBeGreaterThan(0);
-    expect(route?.sources?.every((source) => source.label.trim() && /^https:\/\//.test(source.url))).toBe(true);
-    expect(route?.controllerChain).toBe(controllerAddress ? chain : undefined);
-    expect(route?.controllerAddress).toBe(controllerAddress);
+    // Non-vacuity: without authored reviewed routes the sweep below proves nothing.
+    expect(reviewedRoutes.length).toBeGreaterThan(0);
+    for (const { coin, route } of reviewedRoutes) {
+      const label = `${coin.id}/${route.id}`;
+      expect(
+        coin.contracts?.some(
+          (contract) =>
+            contract.chain === route.destinationChain &&
+            contract.address.toLowerCase() === route.contractAddress.toLowerCase(),
+        ),
+        label,
+      ).toBe(true);
+      expect([route.scope, route.routeClass, route.issuanceModel, route.semantics], label).not.toContain("unknown");
+      expect(route.sources?.length, label).toBeGreaterThan(0);
+      expect(
+        route.sources!.every((source) => source.label.trim().length > 0 && /^https:\/\//.test(source.url)),
+        label,
+      ).toBe(true);
+      expect(
+        route.observedAt != null
+          ? /^\d{4}-\d{2}-\d{2}$/.test(route.observedAt)
+          : Number.isInteger(route.observedBlock) && route.observedBlock! > 0,
+        label,
+      ).toBe(true);
+      expect(Boolean(route.controllerChain), label).toBe(Boolean(route.controllerAddress));
+    }
   });
 
   it("keeps genuinely unresolved routes honest without fabricated evidence", () => {

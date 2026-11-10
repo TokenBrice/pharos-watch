@@ -12,6 +12,7 @@ import {
   type CacheRetentionPolicy,
 } from "./db-cache";
 import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "@shared/lib/ops-limits";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { CIRCUIT_SOURCE } from "./constants";
 import { WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CircuitRecordSchema, type CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
@@ -97,14 +98,14 @@ function circuitRecordPolicy(source: string): CachePolicy<CircuitRecord> {
   };
 }
 
-class InvalidDwellirCircuitRecordError extends Error {}
+class InvalidCircuitRecordError extends Error {}
 
 async function readCircuitRecordFromDb(db: D1Database, source: string): Promise<CircuitRecord> {
   const cached = await readCacheWithPolicy(db, circuitRecordPolicy(source));
-  // A missing record intentionally permits first boot. Corrupt Dwellir state
-  // must not masquerade as that missing/closed record and admit metered reads.
-  if (source === "dwellir-evm" && cached.state === "invalid") {
-    throw new InvalidDwellirCircuitRecordError("Invalid dwellir-evm circuit record");
+  // A missing record intentionally permits first boot. Corrupt state must not
+  // masquerade as that missing/closed record and admit reads.
+  if (cached.state === "invalid") {
+    throw new InvalidCircuitRecordError(`Invalid circuit record for ${source}`);
   }
   return cached.state === "fresh" || cached.state === "stale"
     ? cloneCircuitRecord(cached.value)
@@ -144,6 +145,67 @@ export async function getCircuitRecord(db: D1Database, source: string): Promise<
   return cloneCircuitRecord(await read);
 }
 
+export interface CircuitRecordAdmission {
+  record: CircuitRecord;
+  /** The stored row was corrupt and was replaced with a fail-closed open record. */
+  invalid: boolean;
+}
+
+/**
+ * Read a circuit record for a decision that must not fail its caller. A corrupt
+ * row is replaced, best-effort, by a fail-closed open record so the normal
+ * open -> half-open probe can produce a measured outcome; this attempt is still
+ * denied. `getCircuitRecord` stays strict for diagnostics.
+ */
+export async function getCircuitRecordForAdmission(
+  db: D1Database,
+  source: string,
+): Promise<CircuitRecordAdmission> {
+  try {
+    return { record: await getCircuitRecord(db, source), invalid: false };
+  } catch (error) {
+    if (!(error instanceof InvalidCircuitRecordError)) throw error;
+    return { record: await repairInvalidCircuitRecord(db, source, error), invalid: true };
+  }
+}
+
+/**
+ * Persist a fail-closed open record so the normal probe interval has a valid
+ * row to transition to half-open. A storage fault still yields the open record
+ * for this read (and denies admission); the next invalid read retries the repair.
+ */
+async function repairInvalidCircuitRecord(
+  db: D1Database,
+  source: string,
+  error: unknown,
+): Promise<CircuitRecord> {
+  const now = Math.floor(Date.now() / 1000);
+  const record: CircuitRecord = {
+    state: "open",
+    consecutiveFailures: CIRCUIT_OPEN_THRESHOLD,
+    // The corruption is the cause, not an observed provider failure; do not
+    // invent a failure timestamp. openedAt still starts the probe interval.
+    lastFailureAt: null,
+    lastSuccessAt: null,
+    openedAt: now,
+  };
+  logWorkerEvent({
+    scope: "lib", level: "warn", event: "circuit_record_invalid",
+    message: "Circuit record invalid; replacing it with a fail-closed open record",
+    provider: source, error, metadata: { state: "open" },
+  });
+  try {
+    await setCircuitRecord(db, source, record);
+  } catch (writeError) {
+    logWorkerEvent({
+      scope: "lib", level: "warn", event: "circuit_record_repair_failed",
+      message: "Failed to persist the fail-closed circuit record; denying this attempt",
+      provider: source, error: writeError,
+    });
+  }
+  return record;
+}
+
 async function setCircuitRecord(db: D1Database, source: string, record: CircuitRecord): Promise<void> {
   invalidateCircuitRecord(db, source);
   await writeCacheWithPolicy(db, circuitRecordPolicy(source), record);
@@ -170,7 +232,8 @@ export async function getCircuitRecordsForSources(
     for (const source of chunk) {
       const row = cached.get(cacheKey(source));
       if (!row) continue;
-      const parsed = circuitRecordPolicy(source).decode(row.value);
+      const timestamp = assessFreshnessTimestamp(Math.floor(Date.now() / 1000), row.updatedAt);
+      const parsed = timestamp.reason == null ? circuitRecordPolicy(source).decode(row.value) : null;
       if (parsed) records[source] = cloneCircuitRecord(parsed);
       else invalidSources.push(source);
     }
@@ -188,7 +251,12 @@ export async function getCircuitRecordsForSources(
  * recorded outcome for two probe intervals reverts to open.
  */
 export async function shouldAttemptFetch(db: D1Database, source: string): Promise<boolean> {
-  const record = await getCircuitRecord(db, source);
+  // Corrupt state must not admit a read (R2), but an admission predicate must
+  // not fail its caller's request either: a public endpoint degrades to its
+  // retained cache instead of a 500. The admission read persists a fail-closed
+  // open row, so the next probe interval can produce a measured outcome.
+  const { record, invalid } = await getCircuitRecordForAdmission(db, source);
+  if (invalid) return false;
   if (record.state === "closed") return true;
   const now = Math.floor(Date.now() / 1000);
 
@@ -235,15 +303,9 @@ export async function recordOutcome(
   source: string,
   success: boolean,
 ): Promise<CircuitOutcomeRecord> {
-  let record: CircuitRecord;
-  try {
-    record = await getCircuitRecord(db, source);
-  } catch (error) {
-    if (!(error instanceof InvalidDwellirCircuitRecordError)) throw error;
-    // Admission still rejects malformed state; only a new measured outcome
-    // repairs it. A failed repair must reopen rather than admit fresh reads.
-    record = { ...DEFAULT_RECORD, state: "half-open" };
-  }
+  // A corrupt row is repaired to a fail-closed open record before the measured
+  // outcome is applied; it never falls back to a closed/default record.
+  const { record } = await getCircuitRecordForAdmission(db, source);
   const before = { ...record };
   const now = Math.floor(Date.now() / 1000);
 
@@ -307,15 +369,18 @@ export async function recordOutcomeDecision(
  * record success so the breaker can transition toward closed on the next
  * read. Prevents sources whose candidate set temporarily empties from
  * staying open indefinitely.
+ *
+ * A corrupt row is only repaired here, never closed: the repair is not an
+ * observed provider outcome, so the repaired open row waits for the measured
+ * half-open probe (R2/ADR-29).
  */
 export async function recoverBreakerOnNoCandidate(
   db: D1Database,
   source: string,
 ): Promise<void> {
-  const record = await getCircuitRecord(db, source);
-  if (record.state !== "closed") {
-    await recordOutcome(db, source, true);
-  }
+  const { record, invalid } = await getCircuitRecordForAdmission(db, source);
+  if (invalid || record.state === "closed") return;
+  await recordOutcome(db, source, true);
 }
 
 /** No-candidate recovery is best-effort bookkeeping; a storage fault must not abort the caller's collected work. */

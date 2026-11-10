@@ -49,9 +49,11 @@ function getSafeTarget(scope: StatusPageActionScope, url: URL): { target: string
 async function getActionMode(endpoint: EndpointDefinition, url: URL, request: Request, response: Response): Promise<"dry-run" | "live" | "inspect"> {
   const action = endpoint.statusPageAction;
   if (!action) return "inspect";
-  if (action.dryRun.supported) {
+  const mutatingRequest = endpoint.mutatingAdmin && request.method.toUpperCase() !== "GET";
+  if (action.dryRun.supported || mutatingRequest) {
     // The handler's resolved mode includes body/query aliases and precedence.
-    // The catalog default is an operator-UI preview default, not execution policy.
+    // The catalog default is an operator-UI preview default, not execution
+    // policy, and a dual-mode POST may emit its own flag without one.
     try {
       const result: unknown = await response.clone().json();
       if (result && typeof result === "object" && "dryRun" in result && typeof result.dryRun === "boolean") {
@@ -60,10 +62,12 @@ async function getActionMode(endpoint: EndpointDefinition, url: URL, request: Re
     } catch {
       // Error/empty responses may not carry the resolved execution mode.
     }
-    if (url.searchParams.get(action.dryRun.queryParam) === "true") return "dry-run";
-    if (!action.dryRun.liveSupported && !url.searchParams.has(action.dryRun.queryParam)) return "dry-run";
+    if (action.dryRun.supported) {
+      if (url.searchParams.get(action.dryRun.queryParam) === "true") return "dry-run";
+      if (!action.dryRun.liveSupported && !url.searchParams.has(action.dryRun.queryParam)) return "dry-run";
+    }
   }
-  if (endpoint.mutatingAdmin && request.method.toUpperCase() !== "GET") return "live";
+  if (mutatingRequest) return "live";
   if (action.kind === "inspect" || action.risk === "read-only") return "inspect";
   return "live";
 }
@@ -127,7 +131,9 @@ export async function auditCatalogActionResponse({
   const executionCertainty = getExecutionCertainty(response, outcome);
   const idempotencyReplayHeader = response.headers.get("X-Idempotent-Replay");
   const idempotentReplay = idempotencyReplayHeader === "true";
-  const intentWriteMode = idempotencyReplayHeader === "false" ? "authoritative" : "insert-if-missing";
+  const intentWriteMode = idempotencyReplayHeader === "false"
+    ? "authoritative"
+    : idempotencyReplayHeader === "true" ? "insert-if-missing" : "replace-failed";
 
   const mode = await getActionMode(endpoint, url, request, response);
 

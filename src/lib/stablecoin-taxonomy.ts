@@ -108,6 +108,15 @@ function buildCohortTitle(baseTitle: string, count: number): string {
     : `${compactBaseTitle}: ${coinLabel} Ranked by Risk`;
 }
 
+/**
+ * Cohort leaders skip wrapper variants: a variant's risk and yield belong to
+ * its parent, so four wrappers of one coin are not four leaders.
+ */
+export function getTopCohortCoinIds(coins: readonly StablecoinMeta[], limit = 4): string[] {
+  const primaryCoins = coins.filter((coin) => !coin.variantOf);
+  return (primaryCoins.length > 0 ? primaryCoins : coins).slice(0, limit).map((coin) => coin.id);
+}
+
 export const GOVERNANCE_TAXONOMY_PAGES = (Object.entries(GOVERNANCE_SLUGS) as [GovernanceType, string][])
   .map(([value, slug]) => {
     const content = GOVERNANCE_CONTENT[value];

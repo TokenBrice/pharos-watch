@@ -66,7 +66,12 @@ function getErc4626SidecarKeys(): Map<string, string[]> {
 
 
 describe("live reserve catalog integrity", () => {
-  it("rejects invalid authored configs even when suspended or outside the active catalog", () => {
+  // Nightly tier: the three whole-catalog sweeps below re-read and parse every coin
+  // source. The PR tier keeps `npm run check:stablecoin-data`
+  // (scripts/ci/check-stablecoin-data.ts), which parses each source through
+  // LiveReservesConfigSchema (adapter policy and source-age cap) and rejects an
+  // unsuspended binding on a frozen or delisted row before publication.
+  it("rejects invalid authored configs even when suspended or outside the active catalog", { tags: ["nightly"] }, () => {
     const failures = [...getCoinSources()].flatMap(([id, source]) => {
       const config = source.liveReservesConfig;
       return config && !LiveReservesConfigSchema.safeParse(config).success ? [id] : [];
@@ -74,7 +79,7 @@ describe("live reserve catalog integrity", () => {
     expect(failures).toEqual([]);
   });
 
-  it("has no executable binding on terminal-lifecycle source entries", () => {
+  it("has no executable binding on terminal-lifecycle source entries", { tags: ["nightly"] }, () => {
     const deadBindings = [...getCoinSources()].filter(([, source]) =>
       (source.status === "frozen" || source.status === "delisted")
       && source.liveReservesConfig && !source.liveReservesConfig.suspended,
@@ -101,7 +106,7 @@ describe("live reserve catalog integrity", () => {
     expect(coin?.custodyProfile).toBeUndefined();
   });
 
-  it("keeps every bound source-age override at or below its adapter cap", () => {
+  it("keeps every bound source-age override at or below its adapter cap", { tags: ["nightly"] }, () => {
     const failures: string[] = [];
     // Read source JSONs as well as active bindings so suspended configurations are covered.
     for (const [id, source] of getCoinSources()) {

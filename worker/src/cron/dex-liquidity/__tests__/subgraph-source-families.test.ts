@@ -456,7 +456,7 @@ describe("subgraph source families", () => {
       respond: async (request) => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        if (inFlight === 5) waveStarted.resolve(undefined);
+        if (inFlight === 4) waveStarted.resolve(undefined);
         await releaseWave.promise;
         inFlight--;
         if (request.url.endsWith(UNIV3_SUBGRAPHS.celo)) {
@@ -509,12 +509,12 @@ describe("subgraph source families", () => {
     );
     const pending = fetchUniV3Data("graph-key", new Map(), chainAddressToId);
     void pending.catch((error: unknown) => waveStarted.reject(error));
-    // Failure-only watchdog: release blocked work even if the concurrency cap regresses below five.
+    // Failure-only watchdog: release blocked work even if the concurrency cap regresses below four.
     const deadlockGuard = setTimeout(() => waveStarted.reject(new Error("First wave did not start")), 1000);
     try {
       await waveStarted.promise;
-      expect(fetchMock).toHaveBeenCalledTimes(5);
-      expect(inFlight).toBe(5);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(inFlight).toBe(4);
     } finally {
       clearTimeout(deadlockGuard);
       releaseWave.resolve(undefined);
@@ -523,7 +523,7 @@ describe("subgraph source families", () => {
     const result = await pending;
 
     expect(fetchMock).toHaveBeenCalledTimes(configuredChains.length);
-    expect(maxInFlight).toBe(5);
+    expect(maxInFlight).toBe(4);
     expect(fetchMock.getHistory().some(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.bsc))).toBe(true);
     expect(result.uniV3ExecutionCandidates.size).toBe(configuredChains.length);
     const bscKey = buildUniV3ExecutionCandidateKey("bsc", [token0, token1], 3000);
@@ -608,7 +608,7 @@ describe("subgraph source families", () => {
       respond: async () => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        if (inFlight === 5) waveStarted.resolve(undefined);
+        if (inFlight === 4) waveStarted.resolve(undefined);
         await releaseWave.promise;
         inFlight--;
         return {
@@ -648,8 +648,8 @@ describe("subgraph source families", () => {
     const deadlockGuard = setTimeout(() => waveStarted.reject(new Error("First wave did not start")), 1000);
     try {
       await waveStarted.promise;
-      expect(fetchMock).toHaveBeenCalledTimes(5);
-      expect(inFlight).toBe(5);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(inFlight).toBe(4);
     } finally {
       clearTimeout(deadlockGuard);
       releaseWave.resolve(undefined);
@@ -657,7 +657,7 @@ describe("subgraph source families", () => {
     }
     const result = await pending;
     expect(fetchMock).toHaveBeenCalledTimes(5);
-    expect(maxInFlight).toBe(5);
+    expect(maxInFlight).toBe(4);
     const key = buildUniswapV4ExecutionCandidateKey(
       "ethereum",
       [token0, token1],
@@ -677,8 +677,10 @@ describe("subgraph source families", () => {
     const usdt = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e";
     const cusd = "0x765de816845861e75a25fca122bb6898b8b1282a";
     const usdc = "0xceba9300f2b948710d2653dd7b07f33a8b32118c";
+    const wars = "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d";
     const usdtUsdcPool = "0x1a810e0b6c2dd5629afa2f0c898b9512c6f78846";
     const usdtCusdPool = "0x5dc631ad6c26bea1a59fbf2c2680cf3df43d249f";
+    const warsUsdtPool = "0x5d8ef8b839be522b9e3d60a51edb5837cd0b2391";
     const unorderedPool = "0x4444444444444444444444444444444444444444";
     const dustPool = "0x5555555555555555555555555555555555555555";
     const tradingFee = (feePercentage: string) => [
@@ -710,6 +712,18 @@ describe("subgraph source families", () => {
         fees: tradingFee("0.01"),
         tick: "276321",
         totalValueLockedUSD: "2220257.323562950490716069290656678",
+      },
+      {
+        // Celo block 81923426 (2026-11-04): the quote token's symbol is USD\u20ae.
+        id: warsUsdtPool,
+        inputTokens: [
+          { id: wars, symbol: "wARS", decimals: 18 },
+          { id: usdt, symbol: "USD\u20ae", decimals: 6 },
+        ],
+        inputTokenBalances: ["127281516131062434766767840", "29483491935"],
+        fees: tradingFee("0.01"),
+        tick: "-350495",
+        totalValueLockedUSD: "9000000",
       },
       {
         id: unorderedPool,
@@ -745,32 +759,37 @@ describe("subgraph source families", () => {
     const result = await fetchUniV3Data(
       "graph-key",
       new Map(),
-      new Map([[`celo:${usdt}`, "usdt-tether"], [`celo:${cusd}`, "cusd-celo"]]),
+      new Map([[`celo:${usdt}`, "usdt-tether"], [`celo:${cusd}`, "cusd-celo"], [`celo:${wars}`, "wars-argentine-peso"]]),
     );
 
     expect(result.failedChains).toEqual([]);
     const celoRequests = fetchMock.getHistory().filter(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.celo));
     expect(celoRequests).toHaveLength(1);
-    expect(JSON.parse(celoRequests[0]!.body ?? "{}").query).toBe(buildUniV3MessariPoolQuery(0, [usdt, cusd]));
+    expect(JSON.parse(celoRequests[0]!.body ?? "{}").query).toBe(buildUniV3MessariPoolQuery(0, [usdt, cusd, wars]));
 
     // FIXED_TRADING_FEE 0.01% -> 100 pips; the unordered and sub-floor rows are dropped.
     expect(result.uniV3PoolFees.get(`celo:${usdtUsdcPool}`)).toBe(100);
     expect(result.uniV3PoolFees.get(`celo:${usdtCusdPool}`)).toBe(100);
+    expect(result.uniV3PoolFees.get(`celo:${warsUsdtPool}`)).toBe(100);
     expect(result.uniV3PoolFees.has(`celo:${unorderedPool}`)).toBe(false);
     expect(result.uniV3PoolFees.has(`celo:${dustPool}`)).toBe(false);
 
-    // USDC is the reference side: USD₮ is priced at token1 per token0 from the
-    // tick, and TVL is valued from balances rather than the ~$488K reported.
+    // Both tokens are references: the tick prices USDT, and the first token
+    // anchors balance-derived TVL rather than the ~$488K reported.
     const [usdtObs] = result.uniV3PriceObs.get("usdt-tether") ?? [];
     const usdtPerUsdc = Math.pow(1.0001, -2);
     expect(usdtObs?.chain).toBe("celo");
     expect(usdtObs?.price).toBeCloseTo(usdtPerUsdc, 12);
-    expect(usdtObs?.tvl).toBeCloseTo(86_069.486562 + 100_882.319722 * usdtPerUsdc, 3);
+    expect(usdtObs?.tvl).toBeCloseTo(100_882.319722 + 86_069.486562 / usdtPerUsdc, 3);
 
-    // Neither USD₮ nor cUSD is a USD reference symbol: no price observation,
-    // but the pool still resolves as a measured-execution candidate.
-    expect(result.uniV3PriceObs.has("cusd-celo")).toBe(false);
+    // USD\u20ae is USDT: both non-reference assets retain their measured cross-rate.
     const cusdPerUsdt = Math.pow(1.0001, 276_321) * 1e-12;
+    expect(result.uniV3PriceObs.get("cusd-celo")?.[0]?.price).toBeCloseTo(1 / cusdPerUsdt, 12);
+    const warsPrice = Math.pow(1.0001, -350_495) * 1e12;
+    const [warsObs] = result.uniV3PriceObs.get("wars-argentine-peso") ?? [];
+    expect(warsObs).toMatchObject({ chain: "celo", protocol: "uniswap-v3", sourceFamily: "dl" });
+    expect(warsObs?.price).toBeCloseTo(warsPrice, 12);
+    expect(warsObs?.tvl).toBeCloseTo(29_483.491935 + 127_281_516.13106243 * warsPrice, 3);
     const [cusdCandidate] = result.uniV3ExecutionCandidates.get(
       buildUniV3ExecutionCandidateKey("celo", [usdt, cusd], 100)!,
     ) ?? [];

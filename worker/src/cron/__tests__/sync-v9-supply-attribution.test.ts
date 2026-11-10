@@ -19,6 +19,8 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
 } from "../../lib/safety-score-v9/supply-attribution-generation";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
+import type { LaneScreeningDescriptor } from "../sync-v9-lane-admin-events";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { SafetyScoreV9SupplyAttributionCaptureOptions } from "../../lib/safety-score-v9/supply-attribution-capture";
 import type * as SupplyAttributionCaptureModule from "../../lib/safety-score-v9/supply-attribution-capture";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
@@ -29,6 +31,9 @@ import { SUPPLY_ATTRIBUTION_CAPTURE_BUDGET } from "@shared/lib/safety-score-v9-s
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import * as economicObserver from "../../lib/safety-score-v9/economic-supply-observer";
 import * as xautObserver from "../../lib/safety-score-v9/xaut-supply-observer";
+import * as centrifugeObserver from "../../lib/safety-score-v9/centrifuge-supply-observer";
+import { deriveXautRepresentationGroupSupplyAttribution } from "../../lib/safety-score-v9/xaut-supply-attribution-contract";
+import { makeXautObservation } from "../../test-helpers/v9-fixed-input-observations";
 import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET, type DeploymentSupplyCensusEvmDependencies } from "../../lib/safety-score-v9/deployment-supply-census-evm";
 import {
@@ -59,8 +64,13 @@ vi.mock(
   },
 );
 
-const { syncSafetyScoreV9SupplyAttribution, deploymentSupplyCensusCohort, deploymentSupplyCensusSelection } =
-  await import("../sync-v9-supply-attribution");
+const {
+  syncSafetyScoreV9SupplyAttribution,
+  deploymentSupplyCensusCohort,
+  deploymentSupplyCensusSelection,
+  LANE_SCREENING_SETTLE_RESERVE_MS,
+  runV9LaneScreeningShadowPhase,
+} = await import("../sync-v9-supply-attribution");
 
 
 function openDb(): { sqlite: DatabaseSync; db: D1Database } {
@@ -102,6 +112,55 @@ function insertSourceInput(
     );
 }
 
+function seedSource(sqlite: DatabaseSync, source: SafetyScoreV9SupplyAttributionSource, ageSec = 900) {
+  const nowSec = source.clockSec + ageSec;
+  vi.setSystemTime(nowSec * 1_000);
+  insertSourceInput(sqlite, source);
+  return nowSec;
+}
+
+function storedGeneration(sqlite: DatabaseSync) {
+  return parseSafetyScoreV9SupplyAttributionGeneration(sqlite.prepare("SELECT value FROM cache WHERE key=?")
+    .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY)?.value);
+}
+
+async function useActualCapture() {
+  const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
+  mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
+}
+
+function emptyCapture(captureClockSec: number) {
+  return { captureClockSec, expectedAssetIds: [], attributionById: {}, journalRecords: [] };
+}
+
+function captureControl(source: SafetyScoreV9SupplyAttributionSource) {
+  return buildSafetyScoreV9CaptureControl({
+    safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
+      methodologyVersion: "10.05", baseInputGenerationId: source.baseInputGenerationId,
+      publicationGenerationId: source.sourceGeneration,
+    }),
+    baseInputGenerationId: source.baseInputGenerationId, sourceGeneration: source.sourceGeneration,
+    clockSec: source.clockSec, registryFingerprint: source.registryFingerprint,
+    workerVersion: "worker", workerUploadedAtSec: source.clockSec,
+  }, source.clockSec);
+}
+
+function rejectedXautJournal(source: SafetyScoreV9SupplyAttributionSource, nowSec: number, stale: boolean) {
+  return createSupplyAttributionJournalV1({
+    schemaVersion: 1, lane: "supply-attribution", assetId: "xaut-tether",
+    attemptId: `supply-attribution:${stale ? "isolated" : "blocking"}-fixture`,
+    sourceId: "xaut.canonical-lock-mint-group-partition.v2", sourceOriginClass: "issuer-disclosure-plus-onchain",
+    baseInputGenerationId: source.baseInputGenerationId, sourceGeneration: source.sourceGeneration,
+    registryFingerprint: source.registryFingerprint, routeInventoryDigest: null,
+    attemptCode: "supply-attribution.collector.attempted",
+    admissionCode: stale ? "supply-attribution.admission.rejected-stale" : "supply-attribution.admission.rejected-upstream",
+    fallbackCode: "supply-attribution.fallback.aggregate-only",
+    rejectionCode: stale ? "transparency-stale" : "transparency-source-unavailable",
+    attemptedAtSec: nowSec - 1, completedAtSec: nowSec, scoringClockSec: nowSec,
+    sourceObservedAtSec: stale ? source.clockSec - 1 : null, failedRouteId: null, contentSha256: null,
+  });
+}
+
 function economicSourceFixture(): SafetyScoreV9SupplyAttributionSource {
   const clockSec = Date.parse("2026-10-29T09:16:00Z") / 1_000;
   const activeAssetIds = ["witry-brix", "xgld-unitas"];
@@ -139,16 +198,12 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         registryFingerprint: "b".repeat(64), clockSec: Date.parse("2026-10-29T09:16:00Z") / 1_000,
         activeAssetIds: [], aggregateCirculatingById: {}, chainCirculatingById: {}, navPriceById: {},
       };
-      const nowSec = source.clockSec + 15 * 60;
-      vi.setSystemTime(nowSec * 1_000);
-      insertSourceInput(sqlite, source);
+      const nowSec = seedSource(sqlite, source);
       mocks.capture.mockImplementation(async (
         _input: unknown, _rpcs: unknown, _signal: unknown, options: SafetyScoreV9SupplyAttributionCaptureOptions,
       ) => {
         options.onBodyRead?.(evidence);
-        return {
-          captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
-        };
+        return emptyCapture(nowSec);
       });
       const result = await syncSafetyScoreV9SupplyAttribution(db, new Map());
       const metadata = JSON.parse(result.metadata ?? "{}");
@@ -181,12 +236,8 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     const { sqlite, db } = openDb();
     try {
       const source = censusSourceFixture();
-      const nowSec = source.clockSec + 60;
-      vi.setSystemTime(nowSec * 1_000);
-      insertSourceInput(sqlite, source);
-      mocks.capture.mockResolvedValue({
-        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
-      });
+      const nowSec = seedSource(sqlite, source, 60);
+      mocks.capture.mockResolvedValue(emptyCapture(nowSec));
       const head = { number: 100_000, timestamp: nowSec - 60, hash: `0x${"a".repeat(64)}` as `0x${string}` };
       vi.spyOn(evmRpc, "fetchEvmBlockHeaderAtTag").mockResolvedValue(head);
       vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue(head);
@@ -206,7 +257,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       const deadlineMs = Date.now() + 100_000;
       const lane = "ethereum:0x1111111111111111111111111111111111111111";
       const result = await syncSafetyScoreV9SupplyAttribution(
-        db, new Map([["ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "" }]]),
+        db, CENSUS_CHAIN_RPCS,
         undefined, { slotStartedAtSec: nowSec, deadlineMs, minimumRemainingMs: 60_000 }, undefined,
         { metaById: new Map() },
         { descriptors: [{
@@ -264,8 +315,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       const source = economicSourceFixture();
       for (const price of Object.values(source.navPriceById)) price.observedAtSec = source.clockSec - 30 * 60;
       insertSourceInput(sqlite, source);
-      const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
-      mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
+      await useActualCapture();
       for (const time of ["09:38:00", "09:53:00", "10:08:00"]) {
         vi.setSystemTime(Date.parse(`2026-10-29T${time}Z`));
         const result = await syncSafetyScoreV9SupplyAttribution(db, new Map());
@@ -312,11 +362,8 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       source.aggregateCirculatingById["xaut-tether"] = xautSourceFixture().aggregateCirculatingById["xaut-tether"];
       insertSourceInput(sqlite, source);
       vi.setSystemTime(Date.parse("2026-10-29T09:53:00Z"));
-      const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
-      mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
-      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map([["ethereum", {
-        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
-      }]]));
+      await useActualCapture();
+      const result = await syncSafetyScoreV9SupplyAttribution(db, CENSUS_CHAIN_RPCS);
       expect(result.status, result.metadata).toBe("ok");
       expect(economicSpy).not.toHaveBeenCalled();
       expect(xautSpy).toHaveBeenCalledOnce();
@@ -325,9 +372,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         quality: { reason: "supply-attribution-input-stale-for-reference" },
         captureAdmission: { deferredAssetIds: ["witry-brix", "xgld-unitas"] },
       });
-      const cached = sqlite.prepare("SELECT value FROM cache WHERE key=?")
-        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string };
-      const generation = parseSafetyScoreV9SupplyAttributionGeneration(cached.value);
+      const generation = storedGeneration(sqlite);
       expect(generation.outcomesById["witry-brix"]).toMatchObject({
         status: "rejected", rejectionCode: "observation-stale",
         failedRouteId: "supply-attribution-input-stale-for-reference",
@@ -351,11 +396,8 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       insertSourceInput(sqlite, source);
       vi.setSystemTime(Date.parse("2026-10-29T09:38:00Z"));
       expect(supplyAttributionCaptureAdmission(source, Date.now() / 1_000).deferredAssetIds).toEqual([]);
-      const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
-      mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
-      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map([["ethereum", {
-        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
-      }]]));
+      await useActualCapture();
+      const result = await syncSafetyScoreV9SupplyAttribution(db, CENSUS_CHAIN_RPCS);
       expect(economicSpy).toHaveBeenCalledTimes(calls);
       if (calls === 0) {
         expect(JSON.parse(result.metadata ?? "{}").captureAdmission.assets["witry-brix"])
@@ -368,34 +410,8 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     const { sqlite, db } = openDb();
     try {
       const fixedInput = xautSourceFixture();
-      const nowSec = fixedInput.clockSec + 15 * 60;
-      vi.setSystemTime(nowSec * 1_000);
-      insertSourceInput(sqlite, fixedInput);
-      const journal = createSupplyAttributionJournalV1({
-        schemaVersion: 1,
-        lane: "supply-attribution",
-        assetId: "xaut-tether",
-        attemptId: "supply-attribution:isolated-fixture",
-        sourceId:
-          "xaut.canonical-lock-mint-group-partition.v2",
-        sourceOriginClass: "issuer-disclosure-plus-onchain",
-        baseInputGenerationId: fixedInput.baseInputGenerationId,
-        sourceGeneration: fixedInput.sourceGeneration,
-        registryFingerprint: fixedInput.registryFingerprint,
-        routeInventoryDigest: null,
-        attemptCode: "supply-attribution.collector.attempted",
-        admissionCode:
-          "supply-attribution.admission.rejected-stale",
-        fallbackCode:
-          "supply-attribution.fallback.aggregate-only",
-        rejectionCode: "transparency-stale",
-        attemptedAtSec: nowSec - 1,
-        completedAtSec: nowSec,
-        scoringClockSec: nowSec,
-        sourceObservedAtSec: fixedInput.clockSec - 1,
-        failedRouteId: null,
-        contentSha256: null,
-      });
+      const nowSec = seedSource(sqlite, fixedInput);
+      const journal = rejectedXautJournal(fixedInput, nowSec, true);
       mocks.capture.mockResolvedValue({
         captureClockSec: nowSec,
         expectedAssetIds: ["xaut-tether"],
@@ -431,13 +447,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
           )
           .get(),
       ).toEqual({ count: 1 });
-      const cached = sqlite
-        .prepare("SELECT value FROM cache WHERE key = ?")
-        .get(
-          SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
-        ) as { value: string };
-      const generation =
-        parseSafetyScoreV9SupplyAttributionGeneration(cached.value);
+      const generation = storedGeneration(sqlite);
       expect(generation).toMatchObject({
         expectedAssetIds: ["xaut-tether"],
         observedAssetIds: ["xaut-tether"],
@@ -461,13 +471,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     try {
       const source = { ...xautSourceFixture(), activeAssetIds: [], clockSec: Date.parse("2026-10-07T20:17:00Z") / 1_000 };
       insertSourceInput(sqlite, source);
-      const control = buildSafetyScoreV9CaptureControl({
-        safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
-          methodologyVersion: "10.05", baseInputGenerationId: source.baseInputGenerationId, publicationGenerationId: source.sourceGeneration,
-        }),
-        baseInputGenerationId: source.baseInputGenerationId, sourceGeneration: source.sourceGeneration,
-        clockSec: source.clockSec, registryFingerprint: source.registryFingerprint, workerVersion: "worker", workerUploadedAtSec: source.clockSec,
-      }, source.clockSec);
+      const control = captureControl(source);
       sqlite.prepare("INSERT INTO cache(key,value,updated_at) VALUES (?,?,?)")
         .run(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, JSON.stringify(control), source.clockSec);
       const due = control.attribution.dueSlotStartedAtSec;
@@ -479,7 +483,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
           sqlite.prepare("UPDATE cache SET value=? WHERE key=?").run(JSON.stringify(next), SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
         }
         if (kind === "thrown") throw new Error("observer exploded");
-        return { captureClockSec: due, expectedAssetIds: [], attributionById: {}, journalRecords: [] };
+        return emptyCapture(due);
       });
       if (kind === "failed-write") sqlite.exec(`CREATE TRIGGER failed_generation BEFORE INSERT ON cache
         WHEN NEW.key='${SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY}' BEGIN SELECT RAISE(ABORT,'generation write failed'); END`);
@@ -518,9 +522,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         },
         chainCirculatingById: {},
       };
-      const nowSec = fixedInput.clockSec + 15 * 60;
-      vi.setSystemTime(nowSec * 1_000);
-      insertSourceInput(sqlite, fixedInput);
+      const nowSec = seedSource(sqlite, fixedInput);
       const diagnostic: SupplyAttributionAttemptDiagnostic = {
         observer: "layerzero-oft", sourceId: "srusd-ethereum-oft-escrow",
         laneId: "ethereum:berachain", chainId: "ethereum", providerOrigin: "https://rpc.example",
@@ -580,47 +582,64 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
           intakeBytes: 192, rejectedBodies: 0,
         },
       });
-      const cached = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string };
-      const generation = parseSafetyScoreV9SupplyAttributionGeneration(cached.value);
+      const generation = storedGeneration(sqlite);
       expect(generation.acceptedAssetIds).toEqual([]);
       expect(generation.attributionById).toEqual({});
       expect(generation.outcomesById[assetId]).toMatchObject({ status: "rejected", diagnostics });
     } finally { sqlite.close(); }
   });
 
+  it.each([
+    "deployment-identity-authored-withholding", "deployment-identity-unavailable",
+    "deployment-identity-mismatch", "chain-rpc-unavailable", "deployment-state-unavailable",
+    "deployment-pin-lag-violation", "deployment-pin-header-mismatch",
+  ] as const)("classifies JTRSY %s beside accepted XAUT without admitting its packet", async (rejectionCode) => {
+    const { sqlite, db } = openDb();
+    const centrifugeSpy = vi.spyOn(centrifugeObserver, "observeCentrifugeReviewedDeploymentUnitPartitionAttempt");
+    const xautSpy = vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt");
+    try {
+      const source = xautSourceFixture();
+      source.activeAssetIds = ["jtrsy-anemoy", "xaut-tether"];
+      source.aggregateCirculatingById["jtrsy-anemoy"] = {
+        circulating: { peggedUSD: 100 }, observedAtSec: source.clockSec,
+      };
+      const nowSec = seedSource(sqlite, source, 60);
+      centrifugeSpy.mockResolvedValue({ status: "rejected", rejectionCode,
+        failedRouteId: "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040" });
+      const attribution = deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: 2_480_000_000, registryFingerprint: source.registryFingerprint,
+        scoringClockSec: nowSec, observation: makeXautObservation({ clockSec: nowSec }),
+      })!;
+      xautSpy.mockResolvedValue({ status: "accepted", attribution });
+      await useActualCapture();
+      const result = await syncSafetyScoreV9SupplyAttribution(db, CENSUS_CHAIN_RPCS);
+      const diagnostic = rejectionCode === "deployment-identity-authored-withholding";
+      expect(result.status, result.metadata).toBe(diagnostic ? "ok" : "degraded");
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata).toMatchObject({
+        acceptedCount: 1, rejectedAssetIds: ["jtrsy-anemoy"],
+        diagnosticRejectedAssetIds: diagnostic ? ["jtrsy-anemoy"] : [],
+        blockingRejectedAssetIds: diagnostic ? [] : ["jtrsy-anemoy"],
+      });
+      if (diagnostic) expect(metadata.quality.reason).toBe("supply-attribution-authored-withholding");
+      const generation = storedGeneration(sqlite);
+      expect(generation.outcomesById["jtrsy-anemoy"]).toMatchObject({ status: "rejected", rejectionCode });
+      expect(generation.attributionById["jtrsy-anemoy"]).toBeUndefined();
+      expect(generation.acceptedAssetIds).toEqual(["xaut-tether"]);
+      expect(JSON.parse(String(sqlite.prepare(
+        "SELECT payload_json FROM safety_score_v9_supply_attribution_journal WHERE asset_id=?",
+      ).get("jtrsy-anemoy")!.payload_json))).toMatchObject({
+        rejectionCode, fallbackCode: "supply-attribution.fallback.aggregate-only",
+      });
+    } finally { centrifugeSpy.mockRestore(); xautSpy.mockRestore(); sqlite.close(); }
+  });
+
   it("keeps blocking rejected generations degraded", async () => {
     const { sqlite, db } = openDb();
     try {
       const fixedInput = xautSourceFixture();
-      const nowSec = fixedInput.clockSec + 15 * 60;
-      vi.setSystemTime(nowSec * 1_000);
-      insertSourceInput(sqlite, fixedInput);
-      const journal = createSupplyAttributionJournalV1({
-        schemaVersion: 1,
-        lane: "supply-attribution",
-        assetId: "xaut-tether",
-        attemptId: "supply-attribution:blocking-fixture",
-        sourceId:
-          "xaut.canonical-lock-mint-group-partition.v2",
-        sourceOriginClass: "issuer-disclosure-plus-onchain",
-        baseInputGenerationId: fixedInput.baseInputGenerationId,
-        sourceGeneration: fixedInput.sourceGeneration,
-        registryFingerprint: fixedInput.registryFingerprint,
-        routeInventoryDigest: null,
-        attemptCode: "supply-attribution.collector.attempted",
-        admissionCode:
-          "supply-attribution.admission.rejected-upstream",
-        fallbackCode:
-          "supply-attribution.fallback.aggregate-only",
-        rejectionCode: "transparency-source-unavailable",
-        attemptedAtSec: nowSec - 1,
-        completedAtSec: nowSec,
-        scoringClockSec: nowSec,
-        sourceObservedAtSec: null,
-        failedRouteId: null,
-        contentSha256: null,
-      });
+      const nowSec = seedSource(sqlite, fixedInput);
+      const journal = rejectedXautJournal(fixedInput, nowSec, false);
       mocks.capture.mockResolvedValue({
         captureClockSec: nowSec,
         expectedAssetIds: ["xaut-tether"],
@@ -645,9 +664,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         blockingRejectedAssetIds: ["xaut-tether"],
         blockingRejectedCount: 1,
       });
-      const cached = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string };
-      const priorGeneration = parseSafetyScoreV9SupplyAttributionGeneration(cached.value);
+      const priorGeneration = storedGeneration(sqlite);
       expect(priorGeneration.outcomesById["xaut-tether"]).toMatchObject({
         status: "rejected", captureFailureReason: "capture-window-exhausted",
       });
@@ -915,15 +932,13 @@ describe("V9 supply attribution shadow census lane", () => {
     const { sqlite, db } = openDb();
     try {
       const source = censusSourceFixture();
-      const nowSec = source.clockSec + 15 * 60;
-      insertSourceInput(sqlite, source);
-      vi.setSystemTime(nowSec * 1_000);
+      const nowSec = seedSource(sqlite, source);
       const { dependencies, multicall } = censusEvmDependencies();
       mocks.capture.mockImplementation(async () => {
         // Serial phases: the census lane must not open a connection while the
         // attribution capture is still running (peak stays 3/6, not 6/6).
         expect(multicall).not.toHaveBeenCalled();
-        return { captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [] };
+        return emptyCapture(nowSec);
       });
       const metaById = new Map([["shadow-fixture",
         censusMeta("shadow-fixture", [{ chain: "ethereum", address: CENSUS_TOKEN }])]]);
@@ -984,13 +999,9 @@ describe("V9 supply attribution shadow census lane", () => {
     const { sqlite, db } = openDb();
     try {
       const source = censusSourceFixture();
-      const nowSec = source.clockSec + 15 * 60;
-      insertSourceInput(sqlite, source);
-      vi.setSystemTime(nowSec * 1_000);
+      const nowSec = seedSource(sqlite, source);
       const { dependencies } = censusEvmDependencies({ pin: false });
-      mocks.capture.mockResolvedValue({
-        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
-      });
+      mocks.capture.mockResolvedValue(emptyCapture(nowSec));
       const metaById = new Map([["shadow-fixture",
         censusMeta("shadow-fixture", [{ chain: "ethereum", address: CENSUS_TOKEN }])]]);
       const window = {
@@ -1027,9 +1038,7 @@ describe("V9 supply attribution shadow census lane", () => {
     const { sqlite, db } = openDb();
     try {
       const source = censusSourceFixture();
-      const nowSec = source.clockSec + 15 * 60;
-      insertSourceInput(sqlite, source);
-      vi.setSystemTime(nowSec * 1_000);
+      const nowSec = seedSource(sqlite, source);
       const generation = createSafetyScoreV9DeploymentSupplyCensusGeneration({
         schemaVersion: 1,
         kind: "safety-score-v9-deployment-supply-census-generation",
@@ -1040,9 +1049,7 @@ describe("V9 supply attribution shadow census lane", () => {
       });
       await writeSafetyScoreV9DeploymentSupplyCensusGeneration(db, generation);
       const { dependencies, multicall } = censusEvmDependencies();
-      mocks.capture.mockResolvedValue({
-        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
-      });
+      mocks.capture.mockResolvedValue(emptyCapture(nowSec));
       const window = {
         slotStartedAtSec: nowSec,
         deadlineMs: (nowSec + 180) * 1_000,
@@ -1070,12 +1077,8 @@ describe("V9 supply attribution shadow census lane", () => {
     const { sqlite, db } = openDb();
     try {
       const source = censusSourceFixture();
-      const nowSec = source.clockSec + 15 * 60;
-      insertSourceInput(sqlite, source);
-      vi.setSystemTime(nowSec * 1_000);
-      mocks.capture.mockResolvedValue({
-        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
-      });
+      const nowSec = seedSource(sqlite, source);
+      mocks.capture.mockResolvedValue(emptyCapture(nowSec));
 
       const window = {
         slotStartedAtSec: nowSec,
@@ -1191,27 +1194,13 @@ describe("V9 supply attribution shadow census lane", () => {
     const { sqlite, db } = openDb();
     try {
       const source = censusSourceFixture();
-      const nowSec = source.clockSec + 15 * 60;
-      vi.setSystemTime(nowSec * 1_000);
-      insertSourceInput(sqlite, source);
+      const nowSec = seedSource(sqlite, source);
       // A control row written by a deploy whose sidecar schema grew one field,
       // read here by a Worker that predates it: `attribution` is a strict
       // object, so the row is present but unreadable. An absent row is already
       // inert; present-but-unreadable must be equally inert for a sidecar that
       // only carries settlement bookkeeping.
-      const control = buildSafetyScoreV9CaptureControl({
-        safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
-          methodologyVersion: "10.05",
-          baseInputGenerationId: source.baseInputGenerationId,
-          publicationGenerationId: source.sourceGeneration,
-        }),
-        baseInputGenerationId: source.baseInputGenerationId,
-        sourceGeneration: source.sourceGeneration,
-        clockSec: source.clockSec,
-        registryFingerprint: source.registryFingerprint,
-        workerVersion: "worker",
-        workerUploadedAtSec: source.clockSec,
-      }, source.clockSec);
+      const control = captureControl(source);
       const driftedControl = {
         ...control,
         attribution: { ...control.attribution, settlementAttempts: 0 },
@@ -1219,9 +1208,7 @@ describe("V9 supply attribution shadow census lane", () => {
       sqlite
         .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
         .run(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, JSON.stringify(driftedControl), source.clockSec);
-      mocks.capture.mockResolvedValue({
-        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
-      });
+      mocks.capture.mockResolvedValue(emptyCapture(nowSec));
 
       const result = await syncSafetyScoreV9SupplyAttribution(db, new Map());
 
@@ -1243,3 +1230,106 @@ describe("V9 supply attribution shadow census lane", () => {
     }
   });
 });
+
+const db = {} as never;
+const signal = new AbortController().signal;
+const deadlineMs = Date.now() + 10 * 60_000;
+const window = { deadlineMs } as never;
+
+function descriptor(): LaneScreeningDescriptor {
+  return {
+    subjectDeploymentKey: "ethereum:0x1111111111111111111111111111111111111111",
+    emitters: [{
+      address: "0x1111111111111111111111111111111111111111",
+      expectedRuntimeCodeSha256: "a".repeat(64),
+      families: ["OwnershipTransferred"],
+    }],
+    lookbackBlocks: 50_000,
+    provenance: { controlIds: ["fixture-owner"] },
+  };
+}
+
+describe("hosted lane screening phase", () => {
+  it("is inert while the reviewed catalog has no admitted lane", async () => {
+    const run = vi.fn();
+    const outcome = await runV9LaneScreeningShadowPhase({
+      db, signal, executionWindow: window, options: { descriptors: [], run },
+    });
+    expect(outcome).toMatchObject({ status: "skipped", reason: "lane-screening-no-descriptors", catalog: 0 });
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("runs after publication with a settlement reserve and journals the counts", async () => {
+    const run = vi.fn().mockResolvedValue({
+      status: "ok",
+      itemCount: 1,
+      metadata: JSON.stringify({
+        catalog: 1, candidates: 1, attempted: 1, admitted: 1, failed: 0,
+        certificatesWritten: 1, deadlineExhausted: false,
+      }),
+    });
+    const outcome = await runV9LaneScreeningShadowPhase({
+      db, signal, executionWindow: window, options: { descriptors: [descriptor()], run },
+    });
+    expect(run).toHaveBeenCalledTimes(1);
+    const [calledDb, chainRpcs, calledSignal, options] = run.mock.calls[0]!;
+    expect(calledDb).toBe(db);
+    expect(chainRpcs).toBeInstanceOf(Map);
+    expect(calledSignal).toBe(signal);
+    expect(options).toEqual({ descriptors: [descriptor()], deadlineMs: deadlineMs - LANE_SCREENING_SETTLE_RESERVE_MS });
+    expect(outcome).toMatchObject({
+      status: "published", reason: "lane-screening-completed", catalog: 1,
+      attempted: 1, admitted: 1, certificatesWritten: 1,
+    });
+  });
+
+  it("journals a producer failure instead of failing the host", async () => {
+    const run = vi.fn().mockRejectedValue(Object.assign(new Error("store down"), { name: "D1Error" }));
+    const outcome = await runV9LaneScreeningShadowPhase({
+      db, signal, executionWindow: window, options: { descriptors: [descriptor()], run },
+    });
+    expect(outcome).toMatchObject({ status: "failed", reason: "lane-screening-failed", code: "D1Error" });
+  });
+
+  it("keeps settlement headroom instead of admitting a phase with only its request minimum", async () => {
+    const run = vi.fn();
+    const outcome = await runV9LaneScreeningShadowPhase({
+      db, signal, executionWindow: { deadlineMs: Date.now() + 70_000 } as never,
+      options: { descriptors: [descriptor()], run },
+    });
+    expect(outcome).toMatchObject({ status: "skipped", reason: "lane-screening-window-insufficient" });
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("skips without a slot window and when the window is nearly spent", async () => {
+    const run = vi.fn();
+    const noWindow = await runV9LaneScreeningShadowPhase({
+      db, signal, options: { descriptors: [descriptor()], run },
+    });
+    expect(noWindow).toMatchObject({ status: "skipped", reason: "lane-screening-slot-window-unavailable" });
+    const spent = await runV9LaneScreeningShadowPhase({
+      db,
+      signal,
+      executionWindow: { deadlineMs: Date.now() + 1_000 } as never,
+      options: { descriptors: [descriptor()], run },
+    });
+    expect(spent).toMatchObject({ status: "skipped", reason: "lane-screening-window-insufficient" });
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("does not start work after an abort", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const run = vi.fn();
+    const outcome = await runV9LaneScreeningShadowPhase({
+      db, signal: controller.signal, executionWindow: window, options: { descriptors: [descriptor()], run },
+    });
+    expect(outcome).toMatchObject({ status: "skipped", reason: "lane-screening-aborted" });
+    expect(run).not.toHaveBeenCalled();
+  });
+});
+
+// Keep the injected RPC map's type exercised so a config change cannot silently
+// drop the chain registry contract from the phase seam.
+const _chainRpcs: Map<string, ChainRpcConfig> = new Map();
+void _chainRpcs;

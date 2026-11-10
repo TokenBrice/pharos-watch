@@ -1,5 +1,6 @@
 // src/lib/__tests__/stablecoin-detail-reserve-quality-client.test.ts
 import { describe, expect, it } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveReview, ReserveSlice, StablecoinMeta } from "@shared/types";
 import {
   formatReserveQualityPct,
@@ -94,6 +95,50 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary?.asOf).toBe("2026-06-30");
   });
 
+  it("keeps a near-whole share short of 100% at display precision", () => {
+    expect(formatReserveQualityPct(99.99757415980419)).toBe(">99.9%");
+    expect(formatReserveQualityPct(99.96)).toBe(">99.9%");
+    expect(formatReserveQualityPct(100)).toBe("100%");
+  });
+
+  it.each([
+    [99.99999962097924, 3.790207601143955e-7],
+    [0.0067, 99.9933],
+    [0.005757310118, 99.994242689881],
+    [3.651e-8, 99.99999996349],
+    [9.352639691815362e-15, 99.99999999999999],
+  ])("bounds a rounded-to-whole share beside a positive opposite share (%s / %s)", (liquid, unknown) => {
+    const summary = projectReserveQualityClientSummary(
+      coinWith([
+        { name: "Liquid", pct: liquid, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
+        { name: "Untimed", pct: unknown, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
+        { name: "Rest", pct: 100 - liquid - unknown, risk: "medium", assetClass: "other", liquidityHorizon: "over-seven-days" },
+      ]),
+    )!;
+    expect(summary.lede).not.toContain("100%");
+    expect(summary.lede).not.toContain("at least >");
+    expect(summary.lede).not.toContain("≥ >");
+  });
+
+  it("ignores float-summation dust at the full-basket boundary", () => {
+    const wholeLiquid = projectReserveQualityClientSummary(coinWith([
+      { name: "Cash", pct: 24.3, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
+      { name: "T-bills", pct: 64.6, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "one-day" },
+      { name: "Deposits", pct: 11.1, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "one-day" },
+    ]))!;
+    expect(wholeLiquid.liquidWithinOneDayPct).toBe(100);
+    expect(wholeLiquid.lede).toBe("3 reviewed reserve slices — 100% convertible within one day.");
+    expect(wholeLiquid.chipLabel).toBe("Highly liquid");
+
+    const wholeUnknown = projectReserveQualityClientSummary(coinWith([
+      { name: "Cash", pct: 24.3, risk: "very-low", assetClass: "cash", liquidityHorizon: "unknown" },
+      { name: "T-bills", pct: 64.6, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "unknown" },
+      { name: "Deposits", pct: 11.1, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "unknown" },
+    ]))!;
+    expect(wholeUnknown.unknownHorizonPct).toBe(100);
+    expect(wholeUnknown.lede).toBe("3 reviewed reserve slices — no published exit timeline for any of the basket.");
+  });
+
   it("returns null without reserves", () => {
     expect(projectReserveQualityClientSummary(coinWith(undefined))).toBeNull();
     expect(projectReserveQualityClientSummary(coinWith([]))).toBeNull();
@@ -106,6 +151,49 @@ describe("projectReserveQualityClientSummary", () => {
       ),
     ).toBeNull();
   });
+
+  it("projects only review provenance when a full-composition review misses one quality dimension", () => {
+    const summary = projectReserveQualityClientSummary(
+      coinWith([{ name: "Cash", pct: 100, risk: "very-low", assetClass: "cash" }], USDC_LIKE_REVIEW),
+    )!;
+    expect(summary.provenanceOnly).toBe(true);
+    expect(summary.chipLabel).toBeNull();
+    expect(summary.lede).toBeNull();
+    expect(summary.ladder).toEqual([]);
+    expect(summary.liquidWithinOneDayPct).toBeNull();
+    expect(summary.unknownHorizonPct).toBeNull();
+    expect(summary.unidentifiedObligorsPct).toBeNull();
+    expect(summary.slices).toEqual([]);
+    expect(summary.reviewedAt).toBe("2026-07-18");
+    expect(summary.asOf).toBe("2026-06-30");
+    expect(summary.confidenceLabel).toBe("Verified");
+    expect(summary.compositionBasis).toBe("Monthly attestation composition table.");
+    expect(summary.knownUnknownExposureNote).toBe("No undisclosed obligors in the attested basket.");
+    expect(summary.sources).toEqual([{ label: "Circle reserve report", url: "https://example.com/reserves" }]);
+  });
+
+  it.each([
+    ["usde-ethena", "Verified"],
+    ["usdon-ondo", "Probable"],
+  ])(
+    "projects provenance only for the reviewed full-composition book %s",
+    (id, confidenceLabel) => {
+      const coin = TRACKED_META_BY_ID.get(id)!;
+      const review = coin.reserveReview!;
+      const summary = projectReserveQualityClientSummary(coin)!;
+      expect(summary.provenanceOnly).toBe(true);
+      expect(summary.chipLabel).toBeNull();
+      expect(summary.lede).toBeNull();
+      expect(summary.ladder).toEqual([]);
+      expect(summary.sliceCount).toBe(coin.reserves!.length);
+      expect(summary.reviewedAt).toBe(review.reviewedAt);
+      expect(summary.asOf).toBe(review.compositionAsOf ?? null);
+      expect(summary.confidenceLabel).toBe(confidenceLabel);
+      expect(summary.compositionBasis).toBe(review.compositionBasis);
+      expect(summary.knownUnknownExposureNote).toBe(review.knownUnknownExposure);
+      expect(summary.sources).toEqual(review.sources);
+    },
+  );
 
   it("returns null when liquidity horizons are curated but no asset class is", () => {
     expect(

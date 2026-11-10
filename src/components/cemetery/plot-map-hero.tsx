@@ -587,7 +587,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   const tagText = hotRow
     ? `${hotRow.symbol} · ${formatRegisterDeathDate(hotRow.deathDate)} · ${hotRow.peak === null ? "peak not recorded" : formatCemeteryPeak(hotRow.peak)}`
     : cypress
-      ? `${cypress.year} · ${cypress.count} ${cypress.count === 1 ? "death" : "deaths"}`
+      ? cypress.label
       : null;
 
   // Inspector: docked beside its grave (≥ 1280 px), clamped to the band below the chrome, clear of the Feedback

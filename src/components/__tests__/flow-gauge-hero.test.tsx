@@ -132,7 +132,7 @@ describe("FlowGaugeHero", () => {
     // Equivalent data surface: every tracked coin, with status.
     expect(screen.getByRole("table")).toBeTruthy();
     expect(screen.getAllByRole("row")).toHaveLength(4);
-    expect(screen.getByText("Withheld: partial valuation")).toBeTruthy();
+    expect(screen.getByText("Withheld: incomplete valuation")).toBeTruthy();
   });
 
   it("labels a re-weighted beam on the label and as a reason-coded chip", () => {
@@ -146,7 +146,7 @@ describe("FlowGaugeHero", () => {
 
     expect(screen.getByText(/partial: 1 weighted coin withheld/)).toBeTruthy();
     expect(container.querySelector('[data-reason-codes="partial-valuation-inputs"]')?.textContent).toContain(
-      "Partial valuation",
+      "Incomplete flow inputs",
     );
   });
 
@@ -158,6 +158,14 @@ describe("FlowGaugeHero", () => {
     expect(screen.getAllByText("Not rated").length).toBeGreaterThan(0);
     expect(beam?.textContent).toBe("—Not rated");
     expect(beam?.textContent).not.toContain("0");
+  });
+
+  it("omits the verdict when the summary payload was not read", () => {
+    const { container } = render(<FlowGaugeHero gauge={null} coins={[]} sync={null} />);
+
+    expect(container.textContent).not.toMatch(/not rated this window|history and fully valued/i);
+    expect(container.querySelector("p.pharos-numeric")?.textContent).toBe("—Not rated");
+    expect(screen.getByText("Printed 24h")).toBeTruthy();
   });
 
   it("preserves unknown activity and unavailable totals in the hero and run-line data surface", () => {
@@ -277,20 +285,24 @@ describe("FlowGaugeHero", () => {
     expect(screen.queryByText(/Safety Score dependency budget/)).toBeNull();
   });
 
-  it("explains a withheld verdict with its published cause instead of assuming valuation", () => {
+  it.each([
+    ["cohort-member-unpublished", "A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld."],
+    ["classification-unresolved", "Events awaiting classification review could change the flight-to-quality verdict, so none is published."],
+    ["classification-unknown", "Historical classification completeness is unknown, so no flight-to-quality verdict is published."],
+  ] as const)("explains a withheld verdict with its published %s cause", (reason, explanation) => {
     const { container } = render(
       <FlowGaugeHero
         gauge={gauge({ flightToQuality: null, flightIntensity: null,
           classificationSource: "safety-score-v9-publication", classificationReason: null,
-          flightToQualityReason: "cohort-member-unpublished" })}
+          flightToQualityReason: reason })}
         coins={coins}
         sync={null}
       />,
     );
-    expect(container.querySelector('[data-reason-codes="cohort-member-unpublished"]')).toBeTruthy();
+    expect(container.querySelector(`[data-reason-codes="${reason}"]`)).toBeTruthy();
     expect(container.querySelector('[data-reason-codes="valuation-incomplete"]')).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /FTQ unavailable/ }));
-    expect(screen.getByText("A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld.")).toBeTruthy();
+    expect(screen.getByText(explanation)).toBeTruthy();
     expect(screen.queryByText(/Missing valuation could change/)).toBeNull();
   });
 });

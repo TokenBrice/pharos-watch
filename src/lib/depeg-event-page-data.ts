@@ -33,6 +33,26 @@ export const INDEXABLE_DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = DEPEG_E
   (event) => !NOINDEX_DEPEG_EVENT_SLUGS.has(event.slug),
 );
 
+/**
+ * The coin's newest permanent depeg event pages ("USDC depeg Mar 2023").
+ */
+export function buildExploreDepegEventLinks(
+  coinId: string,
+  symbol: string,
+  limit = 5,
+): Array<{ href: string; label: string }> {
+  return DEPEG_EVENT_ENTRIES.filter((event) => event.stablecoinId === coinId)
+    .slice(0, limit)
+    .map((event) => ({
+      href: `/depeg/${event.slug}/`,
+      label: `${symbol} depeg ${new Date(event.startedAt * 1000).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })}`,
+    }));
+}
+
 export const COLLIDING_DEPEG_EVENT_SLUGS: ReadonlySet<string> =
   buildSameDayDirectionCollisionSlugs(DEPEG_EVENT_ENTRIES);
 

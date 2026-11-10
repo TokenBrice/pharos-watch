@@ -18,9 +18,11 @@ import { rescoreConfidenceForAvailability } from "../lib/status/evaluation-state
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
 import {
   evaluateSafetyPublicationSizeCauses,
+  evaluateDepegBlindReviewCauses,
   evaluateSchedulerLiveness,
   mergeD1QuotaCauses,
   rebuildCronDerivedAvailabilityCauses,
+  SCHEDULER_LIVENESS_AVAILABILITY_CAUSE_CODES,
 } from "../lib/status/evaluation-rules";
 import { loadSafetyPublicationSize } from "../lib/status/safety-publication-size";
 import { buildStatusSummary } from "../lib/status/summary";
@@ -178,7 +180,9 @@ async function resolveRawStatusForResponse(
 
   const snapshot = await loadStatusRawSnapshot(db, now);
   const currentReserve = snapshot.kind === "fresh"
-    ? await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync")).catch(() => null) : null;
+    ? await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"), undefined, {
+      adapterReliability: false,
+    }).catch(() => null) : null;
   const cachedReserve = snapshot.kind === "fresh" ? snapshot.raw.reserveComposition : null;
   const reviewApplicabilityChanged = cachedReserve?.status === "unavailable" || !currentReserve
     || JSON.stringify([currentReserve.acknowledgedFeeds, currentReserve.expiredFeedReviewIds, currentReserve.invalidFeedReviewIds])
@@ -196,10 +200,12 @@ async function resolveRawStatusForResponse(
     // re-derived from the same live cron-health read that replaces `crons`
     // and rebuilds `summary` below; otherwise one response can show a cached
     // cause count next to a live summary count that disagrees with it (R5).
+    // Every scheduler-liveness cause is likewise replaced by the live
+    // observation, so a recovered lane cannot leave its cached copy behind.
     const scheduler = evaluateSchedulerLiveness(schedulerLiveness);
+    const schedulerCauseCodes: readonly string[] = SCHEDULER_LIVENESS_AVAILABILITY_CAUSE_CODES;
     const availabilityCauses = [...rebuildCronDerivedAvailabilityCauses(snapshot.raw.causes.availability.filter((cause) =>
-      cause.code !== "scheduled_delivery_stalled" && cause.code !== "scheduler_liveness_unavailable"
-      && cause.code !== "heavy_scheduled_delivery_stalled" && cause.code !== "heavy_scheduler_liveness_unavailable"), {
+      !schedulerCauseCodes.includes(cause.code)), {
       degradedCronRuns: cronHealth.degradedCronRuns,
       cronErrorCount: cronHealth.cronErrorCount,
       availabilityImpactingCronErrors: cronHealth.availabilityImpactingCronErrors,
@@ -363,6 +369,10 @@ export function handleStatus({
         ),
         ...evaluateSafetyPublicationSizeCauses(safetyPublicationSize),
       ];
+      const dataQualityCauses = [
+        ...raw.causes.dataQuality,
+        ...evaluateDepegBlindReviewCauses(supplements.canaries, now),
+      ];
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak,
         "status-missing", probeIssues.length > 0 ? "probe-unreadable" : "probe-missing");
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
@@ -406,7 +416,8 @@ export function handleStatus({
         causes: {
           ...raw.causes,
           availability: availabilityCauses,
-          overall: synthesizeOverallCauses(availabilityCauses, raw.causes.dataQuality),
+          dataQuality: dataQualityCauses,
+          overall: synthesizeOverallCauses(availabilityCauses, dataQualityCauses),
         },
         state: resolvedState,
         staleness: resolvedStaleness,

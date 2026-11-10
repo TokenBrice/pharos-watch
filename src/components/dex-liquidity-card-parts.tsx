@@ -7,7 +7,7 @@ import { buildBreakdownEntries, BreakdownBar, BreakdownLegend } from "@/componen
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { ChartAreaGradient, useNiceValueAxis } from "@/components/chart-primitives/axes";
-import { formatCurrency, formatChartDate, getNetColor } from "@shared/lib/format";
+import { formatCurrency, formatChartDate, formatUsdPriceAdaptive, getNetColor } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { CHART_AXIS_TICK, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
 import {
@@ -253,7 +253,7 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
               </TableCell>
               <TableCell className="hidden px-3 py-1.5 text-right font-mono tabular-nums md:table-cell">
                 {pool.price != null ? (
-                  `$${pool.price.toFixed(4)}`
+                  `$${formatUsdPriceAdaptive(pool.price)}`
                 ) : (
                   <span className="text-muted-foreground text-xs">&mdash;</span>
                 )}

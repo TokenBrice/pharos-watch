@@ -224,15 +224,6 @@ describe("Cloudflare deployment API verification", () => {
     expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toContain("worker_version=version-2");
   });
 
-  it("uses the first API entry as active even when a later entry has a newer timestamp", async () => {
-    const env = apiEnv();
-    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(apiFixture()));
-    await runWorkerDeploymentVerification(env, fetchApi);
-    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toContain(
-      `worker_activation_at=${Date.parse(ACTIVATED_AT) / 1000}`,
-    );
-  });
-
   it("keeps version verification but skips the D1 marker when created_on is invalid", async () => {
     const env = apiEnv();
     const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(

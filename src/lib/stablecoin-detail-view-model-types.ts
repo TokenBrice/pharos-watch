@@ -166,8 +166,9 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   pegReferenceUnavailable: boolean;
   isNavToken: boolean;
   pegScoreResult: PegSummaryCoin | null;
-  consensusSources: string[];
-  agreeSources: string[];
+  /** Null when the peg-summary provenance row was not read. */
+  consensusSources: string[] | null;
+  agreeSources: string[] | null;
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;

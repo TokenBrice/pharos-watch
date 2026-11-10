@@ -190,7 +190,9 @@ export function MintAuthorityRail({
   if (controls.length === 0 || mintPathShortLabel === "Unknown") return null;
   const railNodes = groupRailControls(controls).slice(0, MAX_RAIL_CONTROLS);
   const drawnControlCount = railNodes.reduce((total, node) => total + node.names.length, 0);
-  const hiddenControlCount = totalControlCount - drawnControlCount;
+  // The overflow button points at the "Primary controls" fold, so it must name
+  // that fold's remainder, not the census remainder the fold already states.
+  const hiddenControlCount = controls.length - drawnControlCount;
 
   return (
     <div

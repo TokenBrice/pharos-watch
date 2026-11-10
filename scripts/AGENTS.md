@@ -21,13 +21,13 @@ Applies to scripts, excluding worker-bound tooling under worker/scripts.
 
 ## Entrypoints & Generation
 
-- `scripts/ci/` contains merge/release guardrails; `scripts/maintenance/` contains generators, audits, and operator tooling.
+- `scripts/ci/` contains merge/release guardrails; `scripts/maintenance/` contains generators, audits, and operator tooling; `scripts/build-data/` holds the registry, catalog and Safety Score generators.
 - `scripts/lib/cli-args.mjs` owns strict parsing; `scripts/lib/automation-registry.mjs` owns generated-artifact routing.
 - Use `npm run bootstrap:generated` for compile/serve inputs; regenerate affected tracked artifacts explicitly and use `npm run check:generated-artifacts` for freshness.
 
 ## Tests
 
-- `scripts/__tests__/`, `scripts/maintenance/__tests__/`, and `scripts/test-utils/__tests__/`; their TypeScript coverage is selected by `tsconfig.test-typecheck.json`.
+- `scripts/__tests__/`, `scripts/maintenance/__tests__/`, `scripts/build-data/__tests__/`, and `scripts/test-utils/__tests__/`; their TypeScript coverage is selected by `tsconfig.test-typecheck.json`.
 
 ## Common Checks
 

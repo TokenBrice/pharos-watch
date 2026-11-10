@@ -5,6 +5,7 @@ import {
   incrementRunSeq,
   isValidStagedPoolId,
   readDiscoveryCensusSummaries,
+  readDiscoveryDeploymentOutcomes,
   readDiscoveryMeta,
   readDiscoveryRunCheckpoint,
   readDiscoveryTargetCursors,
@@ -445,6 +446,38 @@ describe("discovery persistence D1 retry coverage", () => {
       ["coin-a", { verifiedNoPoolsCount: 1, observedPoolsCount: 1, providerSupportedInaccessibleCount: 1, remappedUnsupportedCount: 1 }],
       ["coin-b", { verifiedNoPoolsCount: 0, observedPoolsCount: 0, providerSupportedInaccessibleCount: 0, remappedUnsupportedCount: 1 }],
     ]));
+  });
+
+  it("reads only complete outcomes inside the revisit cutoff, with their attempt fence", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO dex_discovery_meta
+      (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at, deployment_fence_attribution_at)
+      VALUES ('coin-a', 0, 200, NULL, 200), ('coin-b', 0, 200, NULL, 200);
+      INSERT INTO dex_deployment_outcomes
+      (stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
+       observed_pool_count, observed_at, last_attempt_at)
+      VALUES ('coin-a', 'ethereum', '0xabc', 'verified_no_pools', '["coingecko"]', 'empty', 0, 100, 100),
+        ('coin-a', 'ethereum', '0xdef', 'observed_pools', '["curve"]', 'pools', 2, 120, 120),
+        ('coin-a', 'ethereum', '0xold', 'verified_no_pools', '["curve"]', 'empty', 0, 50, 50),
+        ('coin-b', 'ethereum', '0xabc', 'provider_inaccessible', '["curve"]', 'outage', 0, 150, 150)`);
+
+    const rows = await readDiscoveryDeploymentOutcomes(db, 100);
+
+    expect(rows).toHaveLength(2);
+    expect(rows.sort((left, right) => left.contract_address.localeCompare(right.contract_address))).toEqual([
+      {
+        stablecoin_id: "coin-a", chain: "ethereum", contract_address: "0xabc",
+        outcome: "verified_no_pools", provider_set_json: '["coingecko"]', reason: "empty",
+        observed_pool_count: 0, observed_at: 100, deployment_last_attempt_at: 100,
+        discovery_last_crawl_at: 200, deployment_fence_attribution_at: 200,
+      },
+      {
+        stablecoin_id: "coin-a", chain: "ethereum", contract_address: "0xdef",
+        outcome: "observed_pools", provider_set_json: '["curve"]', reason: "pools",
+        observed_pool_count: 2, observed_at: 120, deployment_last_attempt_at: 120,
+        discovery_last_crawl_at: 200, deployment_fence_attribution_at: 200,
+      },
+    ]);
   });
 
   it("atomically round-trips the cohort checkpoint and deployment-window cursor map", async () => {

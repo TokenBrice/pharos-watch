@@ -4,6 +4,8 @@ import { mergeDepegSeconds, mergeUnknownDepegSeconds, hasCurrentTrustedDepegObse
 import { DAY_SECONDS } from "./time-constants";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
+/** Hero Peg Scores below this tracking span are marked early. */
+export const PEG_SCORE_EARLY_MAX_DAYS = 30;
 const RECENT_PEG_WINDOW_DAYS = 90;
 const LOW_CONFIDENCE_WEIGHT = 0.5;
 const MAGNITUDE_FLOOR_DIVISOR = 2000;
@@ -142,21 +144,34 @@ export function computeRecentPegStats(
   };
 }
 
+function isPremiumDepegEvent(event: DepegEvent): boolean {
+  // Premiums are classified by sign, never by `direction`: historical rows
+  // disagree with their own sign (e.g. bean-beanstalk: "above", -10000 bps).
+  // A non-finite peak is not provably a premium, so it keeps full weight.
+  return Number.isFinite(event.peakDeviationBps) && event.peakDeviationBps > 0;
+}
+
+function roundPegScore(raw: number | null): number | null {
+  return raw == null ? null : Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+interface PegScoreCoreResult {
+  result: PegScoreResult;
+  premiumWeightedPegScore: number | null;
+}
+
 /**
- * Compute peg score from depeg events.
- *
- * @param events     All depeg events for this coin (from DB)
- * @param trackingStartSec  Earliest known data timestamp (unix seconds).
- *                          If unknown, pass null and we'll use the earliest event.
- * @param nowSec     Current time in unix seconds (defaults to Date.now()/1000)
+ * Shared peg-score core. `premiumWeight` scales above-peg event time, severity
+ * and active penalties; the public score calls it with 1, which must reproduce
+ * the historical result exactly. `result` is meaningful only at weight 1: the
+ * weighted call reads only `premiumWeightedPegScore`.
  */
-export function computePegScore(
+function computePegScoreCore(
   events: DepegEvent[],
   trackingStartSec: number | null,
-  nowSec?: number,
-): PegScoreResult {
-  const now = nowSec ?? Math.floor(Date.now() / 1000);
-
+  now: number,
+  premiumWeight: number,
+): PegScoreCoreResult {
   // Determine tracking window start
   // Only compute earliestEvent when trackingStartSec is absent (all production callers supply it).
   const earliestEvent =
@@ -165,7 +180,7 @@ export function computePegScore(
 
   // No events and no known tracking start -> assume stable, default score
   if (startSec === null) {
-    return { ...NULL_PEG_SCORE_RESULT };
+    return { result: { ...NULL_PEG_SCORE_RESULT }, premiumWeightedPegScore: null };
   }
 
   // A tracking anchor at or after the scoring clock proves no observed second:
@@ -187,8 +202,21 @@ export function computePegScore(
   const knownSpanSec = Math.max(0, spanSec - unknownCoverageSeconds);
   const insufficientData = knownSpanSec < 7 * DAY_SECONDS;
   // --- Time score (pegPct) ---
+  // Discounts are below-peg peaks; premiums are above-peg peaks, by sign.
+  // Below-peg time is merged first so overlaps are attributed to discounts.
+  const belowPegEvents = scoringEvents.filter((e) => e.peakDeviationBps <= 0);
   const totalDepegSec = mergeDepegSeconds(scoringEvents, startSec, now);
+  // Anything not provably a premium (including a non-finite peak) keeps full weight.
+  const belowPegSec = mergeDepegSeconds(scoringEvents.filter((e) => !isPremiumDepegEvent(e)), startSec, now);
+  const abovePegSec = totalDepegSec - belowPegSec;
+  // A premium second counts `premiumWeight` seconds in the Safety peg input.
+  // Weight 1 keeps the merged total itself rather than a `below + (total - below)`
+  // round trip, so the public time-at-peg value stays byte-identical.
+  const premiumOffPegSec = premiumWeight === 1 ? totalDepegSec : belowPegSec + premiumWeight * abovePegSec;
   const pegPct = knownSpanSec > 0 ? Math.max(0, (1 - totalDepegSec / knownSpanSec) * 100) : null;
+  const premiumWeightedPegPct = knownSpanSec > 0
+    ? Math.max(0, (1 - premiumOffPegSec / knownSpanSec) * 100)
+    : null;
 
   // --- Severity score ---
   // Each event's penalty = max(durationPenalty, magnitudeFloor).
@@ -207,7 +235,9 @@ export function computePegScore(
 
     const durationPenalty = (peakBps / 100) * (durationDays / 30) * recencyWeight;
     const magnitudeFloor = (peakBps / MAGNITUDE_FLOOR_DIVISOR) * recencyWeight;
-    totalPenalty += Math.max(durationPenalty, magnitudeFloor) * eventSeverityWeight(e);
+    // A premium event's severity penalty counts at `premiumWeight` of its magnitude.
+    const premiumFactor = isPremiumDepegEvent(e) ? premiumWeight : 1;
+    totalPenalty += Math.max(durationPenalty, magnitudeFloor) * eventSeverityWeight(e) * premiumFactor;
   }
   const severityScore = Math.max(0, 100 - totalPenalty);
 
@@ -216,8 +246,8 @@ export function computePegScore(
   // Confidence weights are observation weights, not scaled magnitudes: the
   // weighted mean and variance both divide by the weight sum, so a half-weight
   // row keeps its observed peak instead of shrinking into artificial dispersion.
-  // stddev of |peakDeviationBps| scaled into 0-15 range.
-  const belowPegEvents = scoringEvents.filter((e) => e.peakDeviationBps <= 0);
+  // stddev of |peakDeviationBps| scaled into 0-15 range. `belowPegEvents` is
+  // the discount subset from the time score: premiums never enter the spread.
   let spreadPenalty = 0;
   if (belowPegEvents.length >= 2) {
     const observations = belowPegEvents.map((e) => {
@@ -246,34 +276,78 @@ export function computePegScore(
       // Use worst active event when multiple concurrent depegs exist.
       const rawAbsBps = Math.abs(e.peakDeviationBps);
       const absBps = Number.isFinite(rawAbsBps) ? rawAbsBps : 0;
+      // A premium's whole active penalty counts at `premiumWeight`: floor `5w`, cap `50w`.
+      const premiumFactor = isPremiumDepegEvent(e) ? premiumWeight : 1;
       activeDepegPenalty = Math.max(
         activeDepegPenalty,
-        Math.min(ACTIVE_DEPEG_CAP, Math.max(ACTIVE_DEPEG_FLOOR, absBps / ACTIVE_DEPEG_BPS_PER_POINT)),
+        Math.min(ACTIVE_DEPEG_CAP, Math.max(ACTIVE_DEPEG_FLOOR, absBps / ACTIVE_DEPEG_BPS_PER_POINT)) * premiumFactor,
       );
     }
   }
 
   // --- Composite ---
-  const raw = pegPct == null ? null : PEG_COMPOSITE_WEIGHT * pegPct + PEG_COMPOSITE_WEIGHT * severityScore - activeDepegPenalty - spreadPenalty;
-  const pegScore = insufficientData || raw == null ? null : Math.max(0, Math.min(100, Math.round(raw)));
+  const composite = (timeAtPeg: number | null): number | null =>
+    timeAtPeg == null
+      ? null
+      : PEG_COMPOSITE_WEIGHT * timeAtPeg + PEG_COMPOSITE_WEIGHT * severityScore - activeDepegPenalty - spreadPenalty;
+  const pegScore = insufficientData ? null : roundPegScore(composite(pegPct));
+  const premiumWeightedPegScore = insufficientData ? null : roundPegScore(composite(premiumWeightedPegPct));
 
   // --- Worst deviation ---
   const worstDeviationBps = worstDeviation(scoringEvents);
 
   return {
-    pegScore,
-    pegPct,
-    severityScore,
-    spreadPenalty,
-    eventCount: coverageEvents.length,
-    scoredEventCount: scoringEvents.length,
-    excludedEventCount,
-    lowConfidenceEventCount,
-    qualityAdjusted,
-    worstDeviationBps,
-    activeDepeg: scoringEvents.some((e) => e.endedAt === null),
-    lastEventAt: scoringEvents.length > 0 ? scoringEvents.reduce((m, e) => Math.max(m, e.startedAt), -Infinity) : null,
-    trackingSpanDays: Math.floor(spanDays),
-    unknownCoverageSeconds,
+    result: {
+      pegScore,
+      pegPct,
+      severityScore,
+      spreadPenalty,
+      eventCount: coverageEvents.length,
+      scoredEventCount: scoringEvents.length,
+      excludedEventCount,
+      lowConfidenceEventCount,
+      qualityAdjusted,
+      worstDeviationBps,
+      activeDepeg: scoringEvents.some((e) => e.endedAt === null),
+      lastEventAt: scoringEvents.length > 0 ? scoringEvents.reduce((m, e) => Math.max(m, e.startedAt), -Infinity) : null,
+      trackingSpanDays: Math.floor(spanDays),
+      unknownCoverageSeconds,
+    },
+    premiumWeightedPegScore,
   };
+}
+
+/**
+ * Compute the Safety peg input with premium (above-peg) events counted at
+ * `premiumWeight`: off-peg time, per-event severity and the active penalty all
+ * scale, while the spread penalty stays discount-only. Returns null exactly
+ * when the public peg score is null. `premiumWeight` must be finite and in
+ * [0, 1].
+ */
+export function computePremiumWeightedPegScore(
+  events: DepegEvent[],
+  trackingStartSec: number | null,
+  nowSec: number,
+  premiumWeight: number,
+): number | null {
+  if (!Number.isFinite(premiumWeight) || premiumWeight < 0 || premiumWeight > 1) {
+    throw new RangeError(`premiumWeight must be finite and within [0, 1]; received ${premiumWeight}`);
+  }
+  return computePegScoreCore(events, trackingStartSec, nowSec, premiumWeight).premiumWeightedPegScore;
+}
+
+/**
+ * Compute peg score from depeg events.
+ *
+ * @param events     All depeg events for this coin (from DB)
+ * @param trackingStartSec  Earliest known data timestamp (unix seconds).
+ *                          If unknown, pass null and we'll use the earliest event.
+ * @param nowSec     Current time in unix seconds (defaults to Date.now()/1000)
+ */
+export function computePegScore(
+  events: DepegEvent[],
+  trackingStartSec: number | null,
+  nowSec?: number,
+): PegScoreResult {
+  return computePegScoreCore(events, trackingStartSec, nowSec ?? Math.floor(Date.now() / 1000), 1).result;
 }

@@ -6,7 +6,7 @@ import {
   orderDependencyGraphNodes,
 } from "../dependency-graph";
 import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
-import type { StablecoinMeta } from "../../types/core";
+import type { DependencyWeight, StablecoinMeta } from "../../types/core";
 import { ReserveSliceSchema } from "../../types/reserves";
 import { StablecoinReservesResponseSchema } from "../../types/live-reserves";
 
@@ -514,20 +514,6 @@ describe("dependency-graph", () => {
     }
   });
 
-  it("orders the SCC-collapsed graph without hiding cyclic components", () => {
-    const edges = [
-      { from: "a", to: "b", weight: 1, type: "wrapper" as const },
-      { from: "b", to: "a", weight: 1, type: "wrapper" as const },
-      { from: "b", to: "child", weight: 1, type: "wrapper" as const },
-    ];
-    const result = orderDependencyGraphNodes(["child", "free", "b", "a"], edges);
-    expect(result.cyclicComponents).toEqual([["a", "b"]]);
-    expect(result.order.indexOf("a")).toBeLessThan(result.order.indexOf("child"));
-    expect(result.order.indexOf("b")).toBeLessThan(result.order.indexOf("child"));
-    expect([...result.order].sort()).toEqual(["a", "b", "child", "free"]);
-    expect(orderDependencyGraphNodes(["a", "b", "free", "child"], [...edges].reverse())).toEqual(result);
-  });
-
   it("collapses overlapping self-loops once while preserving every node", () => {
     const edges = [
       { from: "a", to: "b", weight: 1, type: "wrapper" as const },
@@ -543,5 +529,86 @@ describe("dependency-graph", () => {
       cyclicComponents: [["a", "b"], ["self"]],
     });
     expect(orderDependencyGraphNodes(["self", "a", "b", "free", "child"], [...edges].reverse())).toEqual(result);
+  });
+});
+
+// Minimal helper — only fields effective dependency derivation reads
+function makeReserveTemplateMeta(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
+  return {
+    id: "test",
+    name: "Test",
+    symbol: "TST",
+    flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: false, rwa: true, navToken: false },
+    ...overrides,
+  } as StablecoinMeta;
+}
+
+describe("reserve dependency templates", () => {
+  it("returns empty array when no reserves and no dependencies", () => {
+    const meta = makeReserveTemplateMeta();
+    expect(deriveEffectiveDependencySet(meta)).toMatchObject({ dependencies: [], rejectionReasons: [] });
+  });
+
+  it("falls back to manual dependencies when reserves is empty", () => {
+    const deps: DependencyWeight[] = [{ id: "usdc-circle", weight: 0.5 }];
+    const meta = makeReserveTemplateMeta({ dependencies: deps, reserves: [] });
+    expect(deriveEffectiveDependencies(meta)).toEqual(deps);
+  });
+
+  it("falls back to manual dependencies when no reserve has coinId", () => {
+    const deps: DependencyWeight[] = [{ id: "usdt-tether", weight: 0.3 }];
+    const meta = makeReserveTemplateMeta({
+      dependencies: deps,
+      reserves: [
+        { name: "U.S. Treasuries", pct: 80, risk: "very-low" },
+        { name: "Cash", pct: 20, risk: "very-low" },
+      ],
+    });
+    expect(deriveEffectiveDependencies(meta)).toEqual(deps);
+  });
+
+  it("derives dependencies from reserve coinId, ignoring manual dependencies", () => {
+    const meta = makeReserveTemplateMeta({
+      dependencies: [{ id: "usdc-circle", weight: 0.1 }], // stale manual entry
+      reserves: [
+        { name: "USDtb", pct: 90, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
+        { name: "USDC buffer", pct: 10, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      ],
+    });
+    const result = deriveEffectiveDependencySet(meta);
+    expect(result.rejectionReasons).toEqual([]);
+    expect(result.dependencies).toEqual([
+      { id: "usdtb-ethena", weight: 0.9, type: "collateral" },
+      { id: "usdc-circle", weight: 0.1, type: "collateral" },
+    ]);
+  });
+
+  it("only includes slices with coinId, skips non-linked slices", () => {
+    const meta = makeReserveTemplateMeta({
+      reserves: [
+        { name: "ETH / stETH", pct: 45, risk: "low" },
+        { name: "BTC", pct: 25, risk: "very-low" },
+        { name: "SOL", pct: 10, risk: "high" },
+        { name: "USDC", pct: 15, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+        { name: "USDT", pct: 5, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      ],
+    });
+    const result = deriveEffectiveDependencies(meta);
+    expect(result).toEqual([
+      { id: "usdc-circle", weight: 0.15, type: "collateral" },
+      { id: "usdt-tether", weight: 0.05, type: "collateral" },
+    ]);
+  });
+
+  it("preserves depType when set (wrapper)", () => {
+    const meta = makeReserveTemplateMeta({
+      reserves: [
+        { name: "USDe", pct: 100, risk: "low", coinId: "usde-ethena", depType: "wrapper" },
+      ],
+    });
+    const result = deriveEffectiveDependencies(meta);
+    expect(result).toEqual([
+      { id: "usde-ethena", weight: 1.0, type: "wrapper" },
+    ]);
   });
 });

@@ -4,11 +4,12 @@ import { Send } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
-import { DigestNameplate } from "@/components/digest-nameplate";
+import { DigestNameplateLive } from "@/components/digest-nameplate-live";
 import { DigestColophon } from "@/components/digest-colophon";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { digestMonthKey, formatDigestMonthLabel } from "@/lib/digest";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { DIGEST_ENTRIES, LATEST_DAILY_DIGEST } from "@/lib/digest-registry";
 
@@ -23,7 +24,7 @@ export const metadata: Metadata = buildPageMetadata({
 export default function DigestArchivePage() {
   const months = new Map<string, (typeof DIGEST_ENTRIES)[number][]>();
   for (const entry of DIGEST_ENTRIES) {
-    const month = entry.date.slice(0, 7);
+    const month = digestMonthKey(entry.generatedAt);
     const entries = months.get(month) ?? [];
     entries.push(entry);
     months.set(month, entries);
@@ -57,7 +58,7 @@ export default function DigestArchivePage() {
           )}
       />
 
-      <DigestNameplate issueNumber={LATEST_DAILY_DIGEST?.editionNumber} date={LATEST_DAILY_DIGEST?.date} />
+      <DigestNameplateLive initialLead={LATEST_DAILY_DIGEST} />
 
       <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-muted-foreground">
         <Send className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
@@ -77,8 +78,8 @@ export default function DigestArchivePage() {
         {Array.from(months, ([month, entries]) => (
           <details key={month} className="rounded-lg border border-border px-4">
             <summary className="pharos-focus-ring cursor-pointer py-3 text-sm font-medium">
-              {new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}
-              <span className="ml-2 text-muted-foreground">({entries.length} editions)</span>
+              {formatDigestMonthLabel(month)}
+              <span className="ml-2 text-muted-foreground">({entries.length} {entries.length === 1 ? "edition" : "editions"})</span>
             </summary>
             <ul className="space-y-3 pb-4 text-sm">
               {entries.map((entry) => (

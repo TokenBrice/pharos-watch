@@ -48,14 +48,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "The report measures USD cash 314771112 and redeemable liabilities 308322426, excluding 6448686 issuer-held tokens from circulation. A pinned URL/hash can validate this historical report but cannot certify the newest series member. Preserve accounting basis and static-validated classification until authoritative complete index discovery exists.",
   },
-  "usda-avalon": {
-    sourceUrl: "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda.md",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "Avalon complete CeDeFi custody and collateral census",
-    freshnessEvidence: "Reviewed 2026-10-07: official Bitcoin-backed USDa CDP docs are reachable but publish no dated supply-weighted custody/collateral book.",
-    scoreGradePlausible: false,
-    note: "Require the complete tracked USDa custody, collateral and liability snapshot with a source timestamp. Selected on-chain pools omit CeDeFi scope; supply and eligible collateral prose cannot establish full reserves.",
-  },
   "moveusd-cfx": {
     sourceUrl: "https://trust.cfx.to/",
     sourceQuality: "weak-proof",
@@ -304,14 +296,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "Require a current favorable assurance engagement or independently measured complete reserve source. Preserve AUP/static-validated treatment; title, signature or fresh access cannot convert the historical procedures into independent assurance.",
   },
-  "pht-pht": {
-    sourceUrl: "https://docs.apacx.io/transparency",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "complete multichain multi-ilk collateral, debt and bridge census with PHP valuation",
-    freshnessEvidence: "Reviewed 2026-10-07: transparency names one Tron collateral wallet; the historical Ethereum multi-ilk conflict and Tron pinning constraints remain unresolved.",
-    scoreGradePlausible: false,
-    note: "Require a complete dated multichain collateral/debt/bridge census with independent PHP valuation. Current prose cannot resolve historical lineage conflicts; a single Tron wallet cannot represent all liabilities or refresh historical chain observations.",
-  },
   "cgo-comtech": {
     sourceUrl: "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf",
     sourceQuality: "weak-proof",
@@ -415,14 +399,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     freshnessEvidence: "Reviewed 2026-10-07: Veda root returns 401; Trevee describes a multistrategy BoringVault and fresh pinned Ethereum totalAssets() reverts. Accepted-token lists do not measure holdings.",
     scoreGradePlausible: false,
     note: "Require readable authorized dated Veda accounting or complete verified strategy decoding. 401 means access failure, not an empty portfolio. ERC-4626, escrow and single-balance configs omit accountant/deployed positions and cannot establish full reserves.",
-  },
-  "fxd-fathom": {
-    sourceUrl: "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network",
-    sourceQuality: "independent",
-    expectedAdapterFamily: "evm-branch-balances only after independent psXDC rate and complete three-pool census",
-    freshnessEvidence: "Reviewed 2026-10-07: primary docs identify XDC/CGO pools; dominant psXDC remains without a reviewed independent valuation rate. Empty supplemental quote query corroborates only lack of that quote.",
-    scoreGradePlausible: false,
-    note: "Require an independently measured psXDC receipt/market exchange rate and fresh complete three-pool collateral/debt census. Historical pool weights remain historical. Omitting psXDC or hardcoding 1:1 XDC would manufacture coverage; quote-service absence is not reserve proof.",
   },
   "weusd-picwe": {
     sourceUrl: "https://docs.picwe.org/what-is-weusd",

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
-import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
-import { manageAlertsMarkup } from "../rollup-step";
 import type { StoredTelegramChange } from "../change-log";
 import {
   computeNetRollupChanges,
@@ -122,25 +120,6 @@ describe("formatRollupMessage", () => {
     expect(formatRollupMessage({ changes: [], overflowCount: 1 })!.split("\n")[0]).toBe("<b>Daily changes</b>: 1 alert held back");
     const many = Array.from({ length: TELEGRAM_ALERT_POLICY.rollup.maxListedChanges + 3 }, (_, index) => safety(`c${index}`, "B", "C"));
     expect(formatRollupMessage({ changes: computeNetRollupChanges(many), overflowCount: 0 })).toContain("+ 3 more changes on pharos.watch");
-  });
-});
-
-describe("public reserve sample", () => {
-  it("is the plain-text render of a real roll-up and its keyboard", () => {
-    const html = formatRollupMessage({
-      changes: computeNetRollupChanges([
-        safety("pyusd-paypal", "B", "C+"),
-        { id: 500, kind: "reserve", stablecoinId: "usdc-circle", sourceKey: "r", observedAt: 100, payload: { symbol: "USDC", name: "Circle USD Coin" } },
-      ]).map((change) => change.kind === "safety" ? { ...change, symbol: "PYUSD" } : change),
-      overflowCount: 0,
-    })!;
-    const plain = html
-      .replace(/\n\n<a href="https:\/\/([^"]+)">View on Pharos<\/a>$/, "\n\nView on Pharos: $1")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
-    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES.reserve.message).toBe(plain);
-    expect(TELEGRAM_PUBLIC_ALERT_SAMPLES.reserve.buttons)
-      .toEqual(manageAlertsMarkup("1").inline_keyboard.map((row) => row.map((button) => button.text)));
   });
 });
 

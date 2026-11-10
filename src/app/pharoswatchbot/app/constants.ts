@@ -25,7 +25,7 @@ export const ALERT_DESCRIPTIONS = {
   depeg: "Price moves away from the peg",
   safety: "Severe grade drops live, other moves daily",
   launch: "Retired",
-  reserve: "Reserve mix shifts, in the daily summary",
+  reserve: "Reserve mix shifts",
   freeze: "Large issuer freezes and token destroys",
 } as const satisfies Record<TelegramAlertType, string>;
 

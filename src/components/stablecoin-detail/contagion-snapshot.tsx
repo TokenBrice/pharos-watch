@@ -105,9 +105,9 @@ export function ContagionSnapshot({
   );
   const hasCollateralUsage = collateralUsageEntries.length > 0;
   const hasRightColumn = hasVariantCard || hasCollateralUsage;
-  const sourceError = reportCardsQuery.error ?? stablecoinsQuery.error;
-  const hasSourceData = rc !== undefined && list !== undefined;
-  const sourceUnavailable = sourceError != null && !hasSourceData;
+  // The notice names the report-card read, which is the graph's source; a
+  // supply-only failure leaves the graph drawn with "mcap n/a" instead.
+  const sourceUnavailable = reportCardsQuery.error != null && rc === undefined;
 
   if (!detailCard && !hasContagion && !hasRightColumn && !sourceUnavailable) {
     return null;
@@ -158,17 +158,19 @@ export function ContagionSnapshot({
         {detailCard ? <DependencyContextDetails card={detailCard} context={dependencyContext} marketCapAsOf={marketCapAsOf} /> : null}
         <div className={layoutClass}>
           {hasContagion ? (
-            <LazySection placeholder={<DependencyGraphPlaceholder />}>
-              <ContagionGraph
-                cards={cards}
-                dependencyEdges={rc?.dependencyGraph.edges ?? []}
-                mcapMap={mcapMap}
-                logos={logos}
-                focusCoinId={stablecoinId}
-                minimalChrome
-                maxNodes={DETAIL_NODE_LIMIT}
-              />
-            </LazySection>
+            <div className="min-w-0">
+              <LazySection placeholder={<DependencyGraphPlaceholder />}>
+                <ContagionGraph
+                  cards={cards}
+                  dependencyEdges={rc?.dependencyGraph.edges ?? []}
+                  mcapMap={mcapMap}
+                  logos={logos}
+                  focusCoinId={stablecoinId}
+                  minimalChrome
+                  maxNodes={DETAIL_NODE_LIMIT}
+                />
+              </LazySection>
+            </div>
           ) : null}
           {hasRightColumn ? rightColumn : null}
         </div>

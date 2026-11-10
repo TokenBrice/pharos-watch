@@ -1,4 +1,5 @@
 import type {
+  MintBurnClassification,
   MintBurnCoinCoverage,
   MintBurnCoinFlow,
   MintBurnHourlyBucket,
@@ -30,6 +31,7 @@ export interface FlowPressureReceiptRow {
   completeness: MintBurnValuationCompleteness;
   /** Scan completeness is separate from USD valuation completeness. */
   scanComplete?: boolean;
+  classificationCompleteness?: MintBurnClassification["completeness"];
   /** Accessible reason for a lower bound, unavailable net, or unknown coverage; `null` when complete. */
   note: string | null;
   /** Proven one-sided bound on an unavailable net row. */
@@ -112,6 +114,12 @@ export function buildFlowPressureReceiptModel({
   const weeklyScanComplete = coins.every((coin) => hasCompleteCoinScan(coin, "7d"))
     && (weeklyHourly ?? []).every((bucket) => bucket.scanCoverage?.complete !== false);
 
+  const mintClassification = combineMintBurnValuationCompleteness(
+    ...(weeklyHourly ?? []).map((bucket) => bucket.classification?.mintCompleteness ?? "complete"),
+  );
+  const burnClassification = combineMintBurnValuationCompleteness(
+    ...(weeklyHourly ?? []).map((bucket) => bucket.classification?.burnCompleteness ?? "complete"),
+  );
   const mint7dUsd = sumWeekly(weeklyHourly, "mintVolumeUsd");
   const burn7dUsd = sumWeekly(weeklyHourly, "burnVolumeUsd");
   // Leaders rank only displayable nets; an unavailable net is never ranked as 0.
@@ -141,7 +149,8 @@ export function buildFlowPressureReceiptModel({
         detail: "Hourly covered window",
         completeness: weeklyCompleteness,
         scanComplete: weeklyScanComplete,
-        note: mint7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness, null, weeklyScanComplete),
+        classificationCompleteness: mintClassification,
+        note: mint7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness, null, weeklyScanComplete, mintClassification),
       },
       {
         id: "burn-7d",
@@ -151,7 +160,8 @@ export function buildFlowPressureReceiptModel({
         detail: "Hourly covered window",
         completeness: weeklyCompleteness,
         scanComplete: weeklyScanComplete,
-        note: burn7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness, null, weeklyScanComplete),
+        classificationCompleteness: burnClassification,
+        note: burn7dUsd == null ? null : describeMintBurnVolumeBound(weeklyCompleteness, null, weeklyScanComplete, burnClassification),
       },
       {
         id: "net-7d",

@@ -9,12 +9,12 @@ import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context"
 
 export const handleList: WebhookCommandHandler = async (ctx) => {
   const { db, chatId } = ctx;
-  const [subscriber, subscriptions, presetSubscriptions, diagnostics] = await Promise.all([
+  const [subscriber, subscriptions, presetSubscriptions, diagnosticsRead] = await Promise.all([
     loadSubscriberByChat(db, chatId),
     loadSubscriptionRowsByChat(db, chatId),
     loadPresetSubscriptions(db, chatId),
     // Diagnostics only feed the "Last alert delivered" line; a failed read drops that line.
-    loadTelegramChatHealthDiagnostics(db, chatId).catch(() => null),
+    loadTelegramChatHealthDiagnostics(db, chatId),
   ]);
 
   if (followsNothing({ subscriber, subscriptions, presetSubscriptions })) {
@@ -32,7 +32,7 @@ export const handleList: WebhookCommandHandler = async (ctx) => {
     subscriptions,
     presetSubscriptions,
     presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
-    lastDeliveryAt: diagnostics?.lastSuccessfulDeliveryAt ?? null,
+    lastDeliveryAt: diagnosticsRead.available ? diagnosticsRead.diagnostics?.lastSuccessfulDeliveryAt ?? null : null,
   });
   await replyWithOptionalMiniApp(ctx, message, buildManageAlertsKeyboard());
 };

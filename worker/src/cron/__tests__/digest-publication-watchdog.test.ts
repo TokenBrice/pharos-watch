@@ -33,6 +33,8 @@ interface FixtureOptions {
   twitterState?: string;
   /** Defaults to `twitterState` so a healthy fixture stays healthy on Mondays. */
   weeklyTwitterState?: string;
+  dailyCriticalSources?: string[];
+  weeklyCriticalSources?: string[];
 }
 
 function fakeDb(options: FixtureOptions = {}): D1Database & {
@@ -62,6 +64,8 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
     weeklyRow: options.weeklyRow ?? true,
     dailyTelegram: options.dailyTelegram ?? "sent",
     weeklyTelegram: options.weeklyTelegram ?? "sent",
+    dailyCriticalSources: options.dailyCriticalSources ?? [],
+    weeklyCriticalSources: options.weeklyCriticalSources ?? [],
   };
 
   const db = {
@@ -73,7 +77,21 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
             async first<T>() {
               if (sql.includes("FROM daily_digest")) {
                 const isWeekly = sql.includes("json_extract(digest_meta, '$.type') = 'weekly'");
-                if ((isWeekly ? fixture.weeklyRow : fixture.dailyRow) && sql.includes("SELECT 1 AS present")) {
+                const present = isWeekly ? fixture.weeklyRow : fixture.dailyRow;
+                if (!present) return null;
+                if (sql.includes("sources_json")) {
+                  const sources = (isWeekly
+                    ? fixture.weeklyCriticalSources
+                    : fixture.dailyCriticalSources
+                  );
+                  return {
+                    input_type: "object",
+                    parent_type: "object",
+                    sources_type: "array",
+                    sources_json: JSON.stringify(sources),
+                  } as T;
+                }
+                if (sql.includes("SELECT 1 AS present")) {
                   return { present: 1 } as T;
                 }
                 return null;
@@ -106,6 +124,8 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
       if (next.weeklyRow != null) fixture.weeklyRow = next.weeklyRow;
       if (next.dailyTelegram != null) fixture.dailyTelegram = next.dailyTelegram;
       if (next.weeklyTelegram != null) fixture.weeklyTelegram = next.weeklyTelegram;
+      if (next.dailyCriticalSources != null) fixture.dailyCriticalSources = next.dailyCriticalSources;
+      if (next.weeklyCriticalSources != null) fixture.weeklyCriticalSources = next.weeklyCriticalSources;
     },
   };
   return db as unknown as D1Database & {
@@ -125,7 +145,14 @@ function healthyDigestDb(): ReturnType<typeof fakeDb> {
 }
 
 function mockCurrentMap(date = DATE): void {
-  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ date }), {
+  const asOfSec = Math.floor(Date.parse(`${date}T08:00:00Z`) / 1000);
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+    date,
+    asOfSec,
+    renderedAtSec: asOfSec + 30,
+    edition: "daily",
+    bytes: { png: 1 },
+  }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   })));
@@ -168,6 +195,125 @@ describe("digest publication watchdog", () => {
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
   });
 
+  it("publishes a machine-readable condition when a regime-critical collector was degraded", async () => {
+    const result = await runDigestPublicationWatchdog(
+      fakeDb({
+        dailyCriticalSources: ["active-depegs-query", "yield-anomalies-query"],
+        twitterState: JSON.stringify({ state: "sent" }),
+      }),
+      at("2026-08-31T08:31:00Z"),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.conditions["daily-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: active-depegs-query",
+      advisory: false,
+    });
+    expect(metadata.firedRuleIds).toContain("daily-inputs");
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1] ?? "")
+      .toContain("daily input completeness (degraded: active-depegs-query)");
+  });
+
+  it("ignores non-regime degraded collector keys", async () => {
+    const result = await runDigestPublicationWatchdog(
+      fakeDb({ dailyCriticalSources: ["yield-anomalies-query"], twitterState: JSON.stringify({ state: "sent" }) }),
+      at("2026-08-31T08:31:00Z"),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    expect(JSON.parse(result.metadata ?? "{}").conditions["daily-inputs"]).toMatchObject({
+      state: "ok",
+      detail: "no regime-critical degraded source",
+    });
+    expect(sendToChatMock).not.toHaveBeenCalled();
+  });
+
+  it("checks weekly input completeness against degradedSourcesThisWeek", async () => {
+    const result = await runDigestPublicationWatchdog(
+      fakeDb({
+        weeklyCriticalSources: ["safety-canonical-snapshot"],
+        twitterState: JSON.stringify({ state: "sent" }),
+      }),
+      at("2026-08-31T08:36:00Z"),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const conditions = JSON.parse(result.metadata ?? "{}").conditions;
+    expect(conditions["weekly-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: safety-canonical-snapshot",
+    });
+    expect(String(sendToChatMock.mock.calls[0]?.[1])).toContain("weekly input completeness");
+  });
+
+  it("reads degraded sources from persisted input_data against SQLite", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = at(`${DATE}T09:00:00Z`);
+    sqlite.prepare(
+      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, 'digest', ?, ?)",
+    ).run(
+      now,
+      JSON.stringify({ dataQuality: { degradedSources: ["active-depegs-query"] } }),
+      JSON.stringify({ type: "daily" }),
+    );
+    const metadata = JSON.parse((await runDigestPublicationWatchdog(db, now)).metadata ?? "{}");
+    expect(metadata.conditions["daily-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: active-depegs-query",
+    });
+  });
+
+  it.each(["daily", "weekly"].flatMap((type) => [
+    "{", "null", "[]",
+    ...[null, {}, "psi-unavailable", [1], ["psi-unavailable", 1]].map((sources) => JSON.stringify(
+      type === "daily" ? { dataQuality: { degradedSources: sources } } : { degradedSourcesThisWeek: sources },
+    )),
+    ...(type === "daily" ? ['{"dataQuality":null}', '{"dataQuality":[]}'] : []),
+  ].map((input) => [type, input])))("does not recover %s inputs from unreadable %s", async (type, input) => {
+    const { sqlite, db } = fixtures.open();
+    const now = at(`${DATE}T09:00:00Z`);
+    const condition = `${type}-inputs`;
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    sqlite.prepare(
+      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, 'digest', ?, ?)",
+    ).run(now, JSON.stringify({
+      dataQuality: { degradedSources: ["psi-unavailable"] }, degradedSourcesThisWeek: ["psi-unavailable"],
+    }), JSON.stringify({ type }));
+    await runDigestPublicationWatchdog(db, now, options);
+    sqlite.prepare("UPDATE daily_digest SET input_data = ?").run(input);
+    const metadata = JSON.parse((await runDigestPublicationWatchdog(db, now + 1800, options)).metadata ?? "{}");
+    expect(metadata.conditions[condition]).toMatchObject({ state: "stale", detail: "digest-input-data-unreadable" });
+    expect(metadata.alertTransitions.recovered).not.toContain(condition);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    sqlite.prepare("UPDATE daily_digest SET input_data = '{}'").run();
+    const clean = JSON.parse((await runDigestPublicationWatchdog(db, now + 3600, options)).metadata ?? "{}");
+    expect(clean.conditions[condition].state).toBe("ok");
+    expect(clean.alertTransitions.recovered).toContain(condition);
+  });
+
+  it("ignores a later blocked edition when reading daily degraded sources", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = at(`${DATE}T10:00:00Z`);
+    const insert = sqlite.prepare(
+      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, 'digest', ?, ?)",
+    );
+    insert.run(
+      at(`${DATE}T09:00:00Z`),
+      JSON.stringify({ dataQuality: { degradedSources: ["active-depegs-query"] } }),
+      JSON.stringify({ type: "daily" }),
+    );
+    insert.run(
+      at(`${DATE}T09:30:00Z`),
+      JSON.stringify({ dataQuality: { degradedSources: [] } }),
+      JSON.stringify({ type: "daily", qualityGate: "blocked" }),
+    );
+    const metadata = JSON.parse((await runDigestPublicationWatchdog(db, now)).metadata ?? "{}");
+    expect(metadata.conditions["daily-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: active-depegs-query",
+    });
+  });
+
   it("alerts when the Telegram edition is not sent", async () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ dailyTelegram: "pending", twitterState: JSON.stringify({ state: "sent" }) }),
@@ -202,6 +348,46 @@ describe("digest publication watchdog", () => {
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"].advisory).toBe(true);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Producer-lag notice");
+  });
+
+  it("does not certify a today-dated manifest the digest would reject as data-stale", async () => {
+    const nowSec = at(`${DATE}T08:10:00Z`);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      date: DATE,
+      asOfSec: nowSec - 80 * 3600,
+      renderedAtSec: nowSec - 80 * 3600 + 30,
+      edition: "daily",
+      bytes: { png: 1 },
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })));
+
+    const result = await runDigestPublicationWatchdog(
+      healthyDigestDb(),
+      nowSec,
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const condition = JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"];
+    expect(condition.state).toBe("stale");
+    expect(condition.detail).toContain("72h budget");
+    expect(String(sendToChatMock.mock.calls[0]?.[1])).toContain("Producer-lag notice");
+  });
+
+  it("does not certify a today-dated manifest the digest would reject as invalid", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ date: DATE }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })));
+
+    const result = await runDigestPublicationWatchdog(
+      healthyDigestDb(),
+      at(`${DATE}T08:10:00Z`),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const condition = JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"];
+    expect(condition.state).toBe("stale");
+    expect(condition.detail).toContain("rejected by the digest");
   });
 
   it("does not let the advisory cooldown hide a later blocking daily failure", async () => {
@@ -388,13 +574,24 @@ describe("digest publication watchdog", () => {
     });
     expect(sendToChatMock).not.toHaveBeenCalled();
     expect(db.cache.has("digest-publication-watchdog:state:v1")).toBe(false);
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("operator-alert-credentials-missing");
+    expect(JSON.parse(db.cache.get("operator-alert:receipt:digest:v1")!.value)).toMatchObject({
+      operatorConfigured: false,
+      pendingSince: at("2026-08-31T08:31:00Z"),
+      reason: "operator-alert-credentials-missing",
+    });
 
     const retry = await runDigestPublicationWatchdog(db, at("2026-08-31T08:32:00Z"), {
       operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
     });
     expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["daily-row"], sent: true,
+    });
+    expect(JSON.parse(db.cache.get("operator-alert:receipt:digest:v1")!.value)).toMatchObject({
+      operatorConfigured: true,
+      pendingSince: null,
+      lastDeliveredAt: at("2026-08-31T08:32:00Z"),
     });
   });
 });

@@ -1,14 +1,16 @@
+import { flowResponse } from "./mint-burn-flows.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { DatabaseSync } from "node:sqlite";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
-import { handleMintBurnFlows } from "../mint-burn-flows";
 import { sumMcapForTrackedChains } from "../../lib/mint-burn-mcap-weighting";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { readPublishedMintBurnGauge } from "../../lib/mint-burn-published-gauge";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
+import { getMintBurnTrackedPairs, MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 
 const roster = [...ACTIVE_MINT_BURN_CONFIGS];
 const existing = roster.find((config) => config.stablecoinId === "usdt-tether" && config.chain.chainId === "ethereum")!;
@@ -58,7 +60,7 @@ describe("mint/burn publication scope on real SQLite", () => {
     expect(weight).toBe(100);
     const coin = buildCoinSummaries(data, new Map([[existing.stablecoinId, weight!]]), null).coins[0];
     expect(coin).toMatchObject({ netFlow24hUsd: 10, netFlow7dUsd: 10, netFlow30dUsd: 10, netFlow90dUsd: 10, gaugeWeightUsd: 100 });
-    const response = await handleMintBurnFlows(db, new URL(`https://example.test/api/mint-burn-flows?stablecoin=${existing.stablecoinId}`));
+    const response = await flowResponse(db, `?stablecoin=${existing.stablecoinId}`);
     const body = MintBurnPerCoinResponseSchema.parse(await response.json());
     expect(body.netFlowUsd).toBe(10);
     expect(body.chains.map((chain) => chain.chainId)).toEqual(["ethereum"]);
@@ -93,6 +95,19 @@ describe("mint/burn publication scope on real SQLite", () => {
     expect(buildCoinSummaries(data, new Map(), null).coins[0].netFlow90dUsd).toBe(910);
   });
 
+  it("keeps a fully scanned leg pending while its baseline has unresolved classification", async () => {
+    const { db, sqlite } = await fixture(90);
+    sqlite.prepare("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 1 WHERE chain_id = ?")
+      .run(pending.chain.chainId);
+    let data = await fetchAggregateData(db, buildAggregateQueryParams(end + 60, 24));
+    expect(data.configs).toEqual([existing]);
+    expect(data.publication.legs[1]).toMatchObject({ status: "pending-admission", reason: "classification-incomplete", admittedAt: null });
+    sqlite.prepare("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 0 WHERE chain_id = ?")
+      .run(pending.chain.chainId);
+    data = await fetchAggregateData(db, buildAggregateQueryParams(end + 60, 24));
+    expect(data.configs).toEqual([existing, pending]);
+  });
+
   it("removes disabled cached publications from downstream reads before scanning", async () => {
     const { db, sqlite } = await fixture(90);
     sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24), "{}", end);
@@ -117,5 +132,145 @@ describe("mint/burn publication scope on real SQLite", () => {
     expect(data.watermark).toMatchObject({ timestamp: now, unavailableReason: null });
     expect(data.publication.legs[1].reason).toBe("reactivation-pending");
     expect(buildCoinSummaries(data, new Map(), null).coins[0].netFlow90dUsd).toBe(10);
+  });
+});
+
+// Real-SQLite regression coverage for the tracked-pair filter in
+// fetchAggregateData. The statements pin `(chain_id, stablecoin_id) IN
+// (SELECT ... FROM json_each(?))` against idx_mbh_chain_coin_hour (and the
+// (stablecoin_id, chain_id) form against idx_mbe_coin_chain_ts); a swapped
+// json_extract order or a lost pair filter would only surface against a real
+// database, because the mock-based tests return canned rows per SQL tag.
+const HOUR = 3600;
+
+const NOW = Date.parse("2026-03-10T12:00:00Z") / 1000;
+
+function insertHourly(
+  sqlite: DatabaseSync,
+  stablecoinId: string,
+  chainId: string,
+  hourTs: number,
+  netFlowUsd: number,
+) {
+  sqlite
+    .prepare(
+      `INSERT INTO mint_burn_hourly
+         (stablecoin_id, chain_id, hour_ts, mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+       VALUES (?, ?, ?, 1, 0, ?, 0, ?)`,
+    )
+    .run(stablecoinId, chainId, hourTs, netFlowUsd, netFlowUsd);
+}
+
+function insertEvent(
+  sqlite: DatabaseSync,
+  event: {
+    id: string;
+    stablecoinId: string;
+    chainId: string;
+    timestamp: number;
+    amountUsd: number;
+  },
+) {
+  sqlite
+    .prepare(
+      `INSERT INTO mint_burn_events
+         (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash,
+          block_number, timestamp, explorer_tx_url, flow_type)
+       VALUES (?, ?, 'SYM', ?, 'mint', 1, ?, '0xhash', 1, ?, 'https://explorer', 'standard')`,
+    )
+    .run(event.id, event.stablecoinId, event.chainId, event.amountUsd, event.timestamp);
+}
+
+describe("fetchAggregateData tracked-pair filter on real SQLite", () => {
+  it("aggregates only tracked pairs across the hourly, net-window, and largest-event queries", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    // This case needs the full curated roster, not the publication-scope subset.
+    ACTIVE_MINT_BURN_CONFIGS.splice(0, ACTIVE_MINT_BURN_CONFIGS.length, ...roster);
+
+    const trackedPairs = getMintBurnTrackedPairs(
+      MINT_BURN_CONFIGS.filter((config) => config.chain.chainId !== "ethereum"),
+    );
+    expect(trackedPairs.has("bd-basedollar|base")).toBe(true);
+    expect(trackedPairs.has("usdai-usd-ai|arbitrum")).toBe(true);
+    // Same coin on an untracked chain must not leak into the aggregates.
+    expect(getMintBurnTrackedPairs(MINT_BURN_CONFIGS).has("usdt-tether|base")).toBe(false);
+
+    try {
+      // usdt-tether on its tracked chain across each window boundary.
+      insertHourly(sqlite, "usdt-tether", "ethereum", NOW - HOUR, 10);
+      insertHourly(sqlite, "usdt-tether", "ethereum", NOW - 25 * HOUR, 4);
+      insertHourly(sqlite, "usdt-tether", "ethereum", NOW - 8 * 24 * HOUR, 2);
+      // Other tracked pairs on non-ethereum chains.
+      insertHourly(sqlite, "bd-basedollar", "base", NOW - HOUR, 100);
+      insertHourly(sqlite, "usdai-usd-ai", "arbitrum", NOW - 2 * HOUR, 50);
+      // Decoys: untracked (coin, chain) pairs inside every window.
+      insertHourly(sqlite, "usdt-tether", "base", NOW - HOUR, 999);
+      insertHourly(sqlite, "ghost-coin", "ethereum", NOW - HOUR, 888);
+      // Largest event: tracked pair wins, decoy pair is invisible.
+      insertEvent(sqlite, {
+        id: "evt-tracked",
+        stablecoinId: "usdt-tether",
+        chainId: "ethereum",
+        timestamp: NOW - HOUR,
+        amountUsd: 5_000,
+      });
+      insertEvent(sqlite, {
+        id: "evt-decoy",
+        stablecoinId: "usdt-tether",
+        chainId: "base",
+        timestamp: NOW - HOUR,
+        amountUsd: 50_000,
+      });
+
+      const prepare = vi.spyOn(db, "prepare");
+      const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
+
+      const recentAggregateQueries = prepare.mock.calls.map(([sql]) => ({ sql }))
+        .filter((entry) => entry.sql.includes("FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour"));
+      expect(recentAggregateQueries.length).toBeGreaterThanOrEqual(5);
+    // The tracked-pair filter must stay index-driven: a row-value IN over
+    // json_each lets each (chain, coin) prefix be seeked. A correlated
+    // EXISTS (SELECT ... FROM json_each(?)) re-scans the whole pair array per
+    // index row and turned these into ~1.6M-row reads per call.
+    expect(recentAggregateQueries.every((entry) => entry.sql.includes("json_each(?)"))).toBe(true);
+    expect(
+      recentAggregateQueries.every((entry) => !entry.sql.includes("EXISTS (SELECT 1 FROM json_each")),
+    ).toBe(true);
+    expect(
+      recentAggregateQueries.every((entry) => entry.sql.includes("(chain_id, stablecoin_id) IN")),
+    ).toBe(true);
+    const largestEventQuery = prepare.mock.calls.map(([sql]) => ({ sql }))
+      .find((entry) => entry.sql.includes("WITH ranked_events AS"));
+    expect(largestEventQuery?.sql).toContain("ROW_NUMBER() OVER");
+    expect(largestEventQuery?.sql).toContain("PARTITION BY stablecoin_id");
+    expect(largestEventQuery?.sql).toContain(
+      "ORDER BY amount_usd DESC, timestamp DESC, block_number DESC, id DESC",
+    );
+    expect(largestEventQuery?.sql).toContain("WHERE row_num = 1");
+
+      expect(data.net7dMap.get("usdt-tether")?.netUsd).toBe(14);
+      expect(data.net30dMap.get("usdt-tether")?.netUsd).toBe(16);
+      expect(data.net90dMap.get("usdt-tether")?.netUsd).toBe(16);
+      expect(data.net90dMap.get("bd-basedollar")?.netUsd).toBe(100);
+      expect(data.net90dMap.get("usdai-usd-ai")?.netUsd).toBe(50);
+      expect(data.net90dMap.has("ghost-coin")).toBe(false);
+      // The untracked usdt/base decoy must not inflate the usdt aggregate.
+      expect(data.net90dMap.get("usdt-tether")?.netUsd).not.toBe(16 + 999);
+      expect(data.net90dMap.has("usdt-tether")).toBe(true);
+
+      expect(data.hourlyRows.map((row) => `${row.stablecoin_id}|${row.chain_id}`).sort()).toEqual([
+        "bd-basedollar|base",
+        "usdai-usd-ai|arbitrum",
+        "usdt-tether|ethereum",
+      ]);
+
+      expect(data.largestEventMap.get("usdt-tether")?.amount_usd).toBe(5_000);
+      expect(data.largestEventMap.get("usdt-tether")?.id).toBe("evt-tracked");
+      insertHourly(sqlite, "usdt-tether", "base", NOW - 10 * 24 * HOUR, 999);
+      const withOldDecoy = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
+      expect(withOldDecoy.baselineMap).toEqual(data.baselineMap);
+    } finally {
+      sqlite.close();
+    }
   });
 });

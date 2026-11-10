@@ -316,6 +316,7 @@ export async function fetchTronTokenCurrentBalance(
   if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
 
   try {
+    if (budgetExhausted(budget)) return null;
     budget.count++;
     const json = await rateLimit(async () => {
       const result = await fetchJsonWithRetry<TronAccountResponse>(

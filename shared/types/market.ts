@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
-import { DepegAuditVerdictSchema } from "./depeg-audit";
+import { DepegAuditVerdictSchema, type DepegAuditVerdict } from "./depeg-audit";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
 import { FreshnessAssessmentSchema } from "@pharos/contracts/api-meta";
 import { CoinProjectionMetadataSchema } from "./coin-projection";
@@ -191,8 +191,8 @@ export const SupplyChainGuardProvenanceSchema = z.object({
   status: z.enum(["repaired", "quarantined", "unavailable", "chains-unavailable"]),
   quarantinedSince: z.number().int().nonnegative().optional(),
   /**
-   * Past the carry ceiling, a minority-share material quarantine publishes the observed remainder with
-   * `status: "chains-unavailable"`: the published aggregate excludes the unavailable chains.
+   * A bounded minority-share quarantine, reviewed exclusion, or fill-default native remainder publishes
+   * `status: "chains-unavailable"`: the aggregate excludes unavailable chains; fill-default uses native reads only.
    */
   partialCoverage: z.literal(true).optional(),
   /**
@@ -209,6 +209,13 @@ export const SupplyChainGuardProvenanceSchema = z.object({
     baselineObservedAt: z.number().int().nonnegative(),
     baselineSource: z.enum(["state", "seed", "list-prev-day"]),
     resolution: z.enum(["onchain-total-supply", "defillama-chain-history", "carried-baseline", "unavailable"]),
+    reviewedExclusion: z.object({
+      reason: z.literal("reviewed-excluded"),
+      reviewedAt: z.number().int().nonnegative(),
+      expiresAt: z.number().int().nonnegative(),
+      quarantinedSince: z.number().int().nonnegative(),
+      evidenceUrl: z.string().url(),
+    }).optional(),
     repairedCurrentUsd: z.number().finite().nonnegative().optional(),
     observedAt: z.number().int().nonnegative().optional(),
     /** Native probes carry a local-read clock; daily chart points carry their upstream observation time. */
@@ -228,6 +235,14 @@ export const SupplyObservationProvenanceSchema = z.object({
   supplyChainGuard: SupplyChainGuardProvenanceSchema.nullable(),
 });
 export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProvenanceSchema>;
+
+/**
+ * Why a `supplyRestored` row was carried. Only the DefiLlama-outage fallback sets
+ * `outage-fallback`; routine chain-dropout and coverage carries stay unmarked so
+ * consumers can keep treating them as normal main-path carries.
+ */
+export const SupplyRestoreModeSchema = z.enum(["outage-fallback"]);
+export type SupplyRestoreMode = z.infer<typeof SupplyRestoreModeSchema>;
 
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
@@ -252,6 +267,7 @@ const StablecoinDataRawSchema = z.object({
   supplySource: z.string().optional(),
   supplyObservedAt: z.number().nullable().optional(),
   supplyRestored: z.boolean().optional(),
+  supplyRestoreMode: SupplyRestoreModeSchema.optional(),
   supplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
   supplyPerimeter: SfraxStockPerimeterObservationSchema.optional(),
   supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
@@ -309,6 +325,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   supplySource: asset.supplySource,
   ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
   ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
+  ...(asset.supplyRestoreMode != null ? { supplyRestoreMode: asset.supplyRestoreMode } : {}),
   ...(asset.supplyUnavailableReason != null ? { supplyUnavailableReason: asset.supplyUnavailableReason } : {}),
   ...(asset.supplyPerimeter != null ? { supplyPerimeter: asset.supplyPerimeter } : {}),
   ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
@@ -951,6 +968,8 @@ export interface DepegEventSearchEntry {
   direction: DepegDirection;
   peakDeviationBps: DepegEvent["peakDeviationBps"];
   startedAt: DepegEvent["startedAt"];
+  /** Reviewed audit verdict; absent when the ledger records none. */
+  auditVerdict?: DepegAuditVerdict;
 }
 
 export const DepegEventCloseReasonSchema = z.enum(DEPEG_EVENT_CLOSE_REASON_VALUES);
@@ -1035,14 +1054,13 @@ export const DepegPendingIncidentSchema = z
         message: "A pending incident cannot be last seen before it is first seen",
       });
     }
-    // `expiresAt` is the base expiry (`firstSeenAt + DEPEG_PENDING_EXPIRY_SEC`).
-    // The confirmation cron keeps a row pending past it under the extended and
-    // severe limits, so a row last seen after `expiresAt` is legitimate.
+    // `expiresAt` is the effective expiry: `firstSeenAt` plus the base, extended
+    // or severe limit that applies to the row's current evidence.
     if (incident.expiresAt <= incident.firstSeenAt) {
       ctx.addIssue({
         code: "custom",
         path: ["expiresAt"],
-        message: "A pending incident's base expiry must fall after it is first seen",
+        message: "A pending incident's expiry must fall after it is first seen",
       });
     }
   });
@@ -1395,6 +1413,8 @@ export const StressSignalDataReasonSchema = z.enum([
   "all-current-rows-malformed",
   "single-coin-current-row-missing",
   "current-row-malformed",
+  "publication-pointer-unavailable",
+  "current-rows-read-failed",
   "computed-count-zero",
   "partial-coverage",
 ]);

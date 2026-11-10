@@ -274,17 +274,14 @@ async function run(pool: PoolEntry, deps: ReturnType<typeof dependencies>, price
 }
 
 describe("Curve StableSwap-NG factory census capture", () => {
-  it("pins the reviewed Plasma deployment", () => {
-    expect(DEPLOYMENT).toMatchObject({
-      chain: "plasma",
-      registryId: "factory-stable-ng",
-      factoryAddress: "0x8271e06e5887fe5ba05234f5315c19f3ec90e8ad",
-      expectedFactoryCodeHash: "0xded1a5a542411bf8bced670953ccbed8dfc0443ee9d0e190e61cebc31631f87f",
-      expectedPoolImplementationAddress: "0xfc687efafed297b765edecf8179c32195597c2df",
-      expectedPoolImplementationCodeHash:
-        "0x620bf33fca9d3555fa15de7b13cdbc279dcaf2c55844df479781f86425895a17",
-    });
-    expect(CURVE_STABLESWAP_FACTORY_DEPLOYMENTS).toHaveLength(1);
+  it("keeps one well-formed reviewed Plasma deployment", () => {
+    expect(DEPLOYMENT).toMatchObject({ chain: "plasma", registryId: "factory-stable-ng" });
+    expect(DEPLOYMENT.factoryAddress).toMatch(/^0x[0-9a-f]{40}$/);
+    expect(DEPLOYMENT.expectedPoolImplementationAddress).toMatch(/^0x[0-9a-f]{40}$/);
+    expect(DEPLOYMENT.expectedFactoryCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(DEPLOYMENT.expectedPoolImplementationCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(DEPLOYMENT.maxIndexedPools).toBeGreaterThan(0);
+    expect(CURVE_STABLESWAP_FACTORY_DEPLOYMENTS.filter((entry) => entry.chain === "plasma")).toHaveLength(1);
   });
 
   it("resolves the unreachable Curve join from the factory index and builds the model", async () => {

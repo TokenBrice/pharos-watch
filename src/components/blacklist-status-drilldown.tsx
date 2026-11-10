@@ -24,6 +24,7 @@ interface BlacklistStatusDrilldownProps {
   stablecoins: StablecoinData[] | undefined;
   fxFallbackRates?: Record<string, number>;
   reportCards: Record<string, V9SafetyTableRow> | undefined;
+  reportCardsMethodologyVersion?: string | null;
   sourceGenerations?: StablecoinTableSourceGenerations;
   error?: unknown;
   isLoading?: boolean;
@@ -36,6 +37,7 @@ export function BlacklistStatusDrilldown({
   stablecoins,
   fxFallbackRates,
   reportCards,
+  reportCardsMethodologyVersion,
   sourceGenerations,
   error,
   isLoading = false,
@@ -100,6 +102,7 @@ export function BlacklistStatusDrilldown({
           pegScores={tableInputs.pegScores}
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCards}
+          reportCardsMethodologyVersion={reportCardsMethodologyVersion}
           sourceGenerations={{
             ...sourceGenerations,
             pegSummary: pegSummaryMeta?.updatedAt,

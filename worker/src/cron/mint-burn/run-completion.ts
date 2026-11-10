@@ -17,6 +17,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { rebuildRetainedLegacyValuationHours } from "./valuation-rebuild";
+import { isMintBurnCapacityOnlyRepairDebt } from "./repair-coverage";
 
 // healNullPrices only heals events inside its 48h LOOKBACK_SEC window; events older
 // than that are intentionally left unhealed (their cached prices are no longer
@@ -48,6 +49,7 @@ export interface CompleteMintBurnRunInput {
   /** Extended-lane full-pass verdict; `null` for the critical/all lanes. */
   coverageCycle: MintBurnCoverageCycleSummary | null;
   runDrilldown: { cacheKey: string; persistenceFailed: boolean };
+  recalcFailed?: boolean;
   signal?: AbortSignal;
 }
 
@@ -80,6 +82,13 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     .filter((summary) => summary.conservationFailure).length;
   const admittedConservationFailures = [...admittedBreakdown, ...(phase.coverageRepairs ?? [])]
     .filter((summary) => !isPending(summary.key) && summary.conservationFailure).length;
+  const readbackDeadline = admittedBreakdown.some((summary) =>
+    summary.supplyProofReason === "persisted-event-readback-deadline"
+    || summary.conservationReason === "persisted-event-readback-deadline");
+  const capacityOnlyRepairDebt = (phase.coverageRepairs ?? []).some(isMintBurnCapacityOnlyRepairDebt);
+  const repairFailure = (phase.coverageRepairs ?? []).some((summary) => !isPending(summary.key)
+    && !isMintBurnCapacityOnlyRepairDebt(summary) && summary.errors > 0);
+  const materializationFailure = input.recalcFailed === true && input.lane !== "extended";
   const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
   const scanCoverageUnproven = phase.configBreakdown.filter((summary) =>
     summary.advanceReason === "scan-coverage-unproven").length;
@@ -97,9 +106,10 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   // 39–44 of 129 configs per run is healthy while the pass is still inside the
   // window. `cycle-in-progress` (no completed pass yet) stays neutral.
   const coverageCycleStalled = input.coverageCycle?.status === "stalled";
-  const degradedSignal = admittedScanCoverageUnproven > 0 || admittedFinalityUnavailableChains.length > 0 || admittedConservationFailures > 0 || (
+  const coverageCycleStuck = (input.coverageCycle?.stuckConfigCount ?? 0) > 0;
+  const degradedSignal = materializationFailure || repairFailure || readbackDeadline || admittedScanCoverageUnproven > 0 || admittedFinalityUnavailableChains.length > 0 || admittedConservationFailures > 0 || (
     input.lane === "extended"
-      ? admittedApiErrors > 1 || coverageCycleStalled
+      ? admittedApiErrors > 1 || coverageCycleStalled || coverageCycleStuck
       : criticalCoverageRatio < 1 || admittedApiErrors > 1);
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
@@ -118,8 +128,13 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     status === "ok"
     && (
       admittedConservationFailures > 0
+      || readbackDeadline
+      || repairFailure
+      || capacityOnlyRepairDebt
+      || materializationFailure
       || admittedFinalityUnavailableChains.length > 0
       || coverageCycleStalled
+      || coverageCycleStuck
       || input.attemptCoverage.persistenceFailed
       || input.runDrilldown.persistenceFailed
     )
@@ -274,7 +289,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   const sampledConfigs = [
     ...phase.configBreakdown.slice(0, 6),
     ...phase.configBreakdown.filter(
-      (summary) => summary.errors > 0 || summary.skippedReason != null || summary.rowsInserted > 0,
+      (summary) => summary.errors > 0 || summary.skippedReason != null || summary.rowsInserted > 0
+        || summary.supplyProofStatus === "residual" || summary.supplyProofStatus === "unavailable",
     ),
   ].filter((summary) => {
     if (sampledConfigKeys.has(summary.key)) return false;
@@ -298,6 +314,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       conservationStatus: summary.conservationStatus,
       conservationReason: summary.conservationReason,
       conservationFailure: summary.conservationFailure,
+      supplyProofStatus: summary.supplyProofStatus,
+      supplyProofReason: summary.supplyProofReason,
       scanFrom: summary.scanFrom,
       scanTo: summary.scanTo,
       advancedTo: summary.advancedTo,
@@ -319,14 +337,16 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   const metadata = withBudgetMetadata(input.budget, {
     scanCoverageUnproven,
     admittedScanCoverageUnproven,
-    outputPublishedAt: status !== "error" && admittedBreakdown.some((summary) =>
+    outputPublishedAt: status !== "error" && !materializationFailure && admittedBreakdown.some((summary) =>
       summary.rowsInserted > 0
       || (summary.advancedTo != null && summary.scanFrom != null && summary.advancedTo >= summary.scanFrom)
     ) ? Math.floor(Date.now() / 1000) : null,
     ...(status !== "ok" ? {
       reason: admittedConservationFailures > 0 ? "mint-burn-conservation-failure"
+        : materializationFailure ? "mint-burn-hourly-recalc-failed"
         : admittedFinalityUnavailableChains.length > 0 ? "finality-head-unavailable"
         : coverageCycleStalled ? "mint-burn-coverage-cycle-stalled"
+        : coverageCycleStuck ? "mint-burn-config-stuck"
         : runStatePersistenceFailed || input.attemptCoverage.persistenceFailed || input.runDrilldown.persistenceFailed
           ? "mint-burn-state-persistence-failed"
           : nullPriceBacklogError != null ? "mint-burn-null-price-backlog-unavailable"
@@ -356,6 +376,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     contractsDeferredExtended: phase.contractsDeferredExtended,
     apiErrors: phase.apiErrors,
     admittedApiErrors,
+    capacityOnlyRepairDebt,
     conservationFailures,
     admittedConservationFailures,
     conservationUnavailable,

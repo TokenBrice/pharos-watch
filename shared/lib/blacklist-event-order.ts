@@ -71,6 +71,20 @@ export function blacklistCanonicalEventFilterSql(alias = "blacklist_events"): st
   )`;
 }
 
+/** Exact size of the canonical set without the per-row peer probe: the filter
+ * keeps one row per semantic identity, so the unfiltered total is the number of
+ * distinct identities among non-suppressed rows. The ordered identity index
+ * groups them in one scan; filtered totals must keep the correlated predicate. */
+export function blacklistCanonicalEventCountSql(queryComment?: string): string {
+  if (queryComment && !/^[a-z0-9:-]+$/.test(queryComment)) throw new Error(`Invalid query comment: ${queryComment}`);
+  const comment = queryComment ? `/* ${queryComment} */ ` : "";
+  return `SELECT ${comment}COUNT(*) AS total FROM (
+    SELECT 1 FROM blacklist_events INDEXED BY idx_blacklist_semantic_identity
+    WHERE suppression_reason IS NULL
+    GROUP BY ${blacklistEventIdentitySql()}
+  )`;
+}
+
 /** SQLite numeric key for EVM and transaction-local Tron order. SQL callers
  * must retain ALL Tron rows: across transactions this is only presentation
  * order, and the shared fold explicitly quarantines ambiguous state. */

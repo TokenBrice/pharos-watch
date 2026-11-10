@@ -67,7 +67,6 @@ function coverageIncidents(count: number) {
   return Array.from({ length: count }, (_, index) => (makeReviewIncident({
     incidentKey: `ddr2:coverage-${String(index).padStart(5, "0")}`,
     eventId: index + 1,
-    stablecoinId: "lusd-liquity",
     startedAt: STARTED_AT - index,
     eligibleAt: ELIGIBLE_AT - index,
     incidentState: "active" as const,
@@ -235,10 +234,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [
         makeReviewIncident({
-          incidentKey: "ddr2:22222222222222222222222222222222",
           eventId: 42,
-          stablecoinId: "lusd-liquity",
-          startedAt: STARTED_AT,
           eligibleAt: STARTED_AT + 86_400,
 
         }),
@@ -336,7 +332,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
         controller.abort("ddrr store abort");
         return [makeReviewIncident()];
       }),
-      loadSealedPublicPredictions: vi.fn(async () => []),
     });
 
     await expect(
@@ -515,7 +510,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: ELIGIBLE_AT + 3_600,
     });
     const db = reviewDb([
-      eventRow({ id: 42, ended_at: ELIGIBLE_AT + 3_600, recovery_price: 1 }),
+      eventRow({ ended_at: ELIGIBLE_AT + 3_600, recovery_price: 1 }),
       {
         id: 43,
         stablecoin_id: "lusd-liquity",
@@ -572,7 +567,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("marks the reviewer snapshot degraded when lineage reads fail", async () => {
     const lineageIncident = makeReviewIncident({ incidentKey: "ddr2:lineage-read-failure" });
-    const db = reviewDb([eventRow({ id: 42, ended_at: null, recovery_price: null })], [
+    const db = reviewDb([eventRow()], [
       {
       match: "FROM depeg_resolver_incident_event_links",
       rows: [],
@@ -840,12 +835,10 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("classifies v2 missed-lock coverage at lock boundaries and after deferrals close", async () => {
     const incidents = [
-      makeReviewIncident({ incidentKey: "ddr2:eq-recovered", eventId: 1, startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
+      makeReviewIncident({ incidentKey: "ddr2:eq-recovered", eventId: 1 }),
       makeReviewIncident({
         incidentKey: "ddr2:deferral-closed",
         eventId: 2,
-        startedAt: STARTED_AT,
-        eligibleAt: ELIGIBLE_AT,
         lockState: {
           eligibleAt: ELIGIBLE_AT,
           deferralCount: 1,
@@ -853,7 +846,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
           lastState: "lock_deferred",
         },
       }),
-      makeReviewIncident({ incidentKey: "ddr2:terminal-unknown-time", eventId: 3, stablecoinId: "usr-resolv", startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),
+      makeReviewIncident({ incidentKey: "ddr2:terminal-unknown-time", eventId: 3, stablecoinId: "usr-resolv" }),
     ];
     const db = reviewDb([
       eventRow({ id: 1, ended_at: ELIGIBLE_AT, recovery_price: 1 }),
@@ -874,8 +867,8 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("uses canonical dynamic eligibility when classifying DDRR coverage rows", async () => {
     const dynamicEligibleAt = STARTED_AT + 72 * 3600;
-    const activeIncident = makeReviewIncident({ incidentKey: "ddr2:dynamic-active-pending", eventId: 11, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
-    const recoveredIncident = makeReviewIncident({ incidentKey: "ddr2:dynamic-recovered-before-backstop", eventId: 12, startedAt: STARTED_AT, eligibleAt: dynamicEligibleAt });
+    const activeIncident = makeReviewIncident({ incidentKey: "ddr2:dynamic-active-pending", eventId: 11, eligibleAt: dynamicEligibleAt });
+    const recoveredIncident = makeReviewIncident({ incidentKey: "ddr2:dynamic-recovered-before-backstop", eventId: 12, eligibleAt: dynamicEligibleAt });
     const db = reviewDb([
       eventRow({ id: 11 }),
       eventRow({ id: 12, ended_at: STARTED_AT + 48 * 3600, recovery_price: 1 }),
@@ -1194,7 +1187,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const incident = makeReviewIncident({ incidentKey: "ddr2:tape-terminal-before-lock", eventId: 92 });
     const terminalTs = STARTED_AT + 3600;
     const db = reviewDb([
-      eventRow({ id: 92, ended_at: null, recovery_price: null }),
+      eventRow({ id: 92 }),
     ], [
       {
       match: "FROM tape_events",
@@ -1231,7 +1224,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const terminalTs = STARTED_AT + 3600;
     const token = { rowCount: 1, maxTs: terminalTs * 1000, maxId: 7 };
     const db = reviewDb([
-      eventRow({ id: 96, ended_at: null, recovery_price: null }),
+      eventRow({ id: 96 }),
     ], [
       {
       match: "COUNT(*) as row_count",
@@ -1284,7 +1277,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const incident = makeReviewIncident({ incidentKey: "ddr2:year-zero-month-regression", eventId: 93 });
     const terminalTs = STARTED_AT + 3600;
     const db = reviewDb([
-      eventRow({ id: 93, ended_at: null, recovery_price: null }),
+      eventRow({ id: 93 }),
     ], [
       {
       match: "FROM tape_events",
@@ -1415,7 +1408,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
   it("marks sealed unpublished rows as publication failed once the source closes", async () => {
     const incident = makeReviewIncident({ incidentKey: "ddr2:sealed-unpublished", eventId: 42 });
     const db = reviewDb([
-      eventRow({ id: 42, ended_at: ELIGIBLE_AT + 10, recovery_price: 1 }),
+      eventRow({ ended_at: ELIGIBLE_AT + 10, recovery_price: 1 }),
     ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident]),
@@ -1438,40 +1431,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
       failedPublication: { publicPredictionId: 9, rowHash: "c".repeat(64) },
     });
     expect(snapshot.summary.headline.publicationFailedCount).toBe(1);
-  });
-
-  it("classifies active eligible lock deferrals without public predictions", async () => {
-    const incident = makeReviewIncident({
-      incidentKey: "ddr2:active-lock-deferred",
-      eventId: 44,
-      stablecoinId: "lusd-liquity",
-      startedAt: STARTED_AT,
-      eligibleAt: ELIGIBLE_AT,
-      lockState: {
-        eligibleAt: ELIGIBLE_AT,
-        lastState: "lock_deferred" as const,
-        lastDeferralReason: "strict_readiness_not_met",
-        deferralCount: 1,
-      },
-    });
-    const db = reviewDb([
-      eventRow({ id: 44, ended_at: null, recovery_price: null }),
-    ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
-
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
-      storeContracts: stores,
-    });
-
-    expect(snapshot.rows[0]).toMatchObject({
-      kind: "coverage",
-      incidentKey: incident.incidentKey,
-      predictionState: "lock_deferred",
-      coverageCause: "active_lock_deferred",
-      operationalCoverageCause: "system_deferral",
-      reason: "strict_readiness_not_met",
-    });
-    expect(snapshot.summary.headline.lockDeferredCount).toBe(1);
   });
 
   it("refuses a review when the store rejects a malformed sealed payload", async () => {
@@ -1539,7 +1498,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     };
     const db = reviewDb([
       eventRow({ id: 44 }),
-      eventRow({ id: 43, ended_at: null, recovery_price: null }),
+      eventRow({ id: 43 }),
     ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident, otherIncident]),

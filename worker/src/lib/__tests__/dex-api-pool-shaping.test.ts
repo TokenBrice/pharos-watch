@@ -4,6 +4,7 @@ import { DexAmmExecutionModelSchema } from "@shared/types/market";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import { addSecondaryPoolContribution } from "../../cron/dex-liquidity/pool-contribution";
 import { initSourcePoolGraph } from "../../cron/dex-liquidity/pool-helpers";
+import type { GtNewPool, SourcePoolGraph } from "../../cron/dex-liquidity/types";
 import { convertToGtNewPools, isPreferredDirectApiPool } from "../dex-api-pool-shaping";
 import type { DexApiPool } from "../dex-api-types";
 
@@ -472,6 +473,14 @@ describe("Raydium pool-implied counter-asset reference", () => {
     expect(model!.tokens[0]!.referencePriceUsd).toBeCloseTo(75.86 * 0.9999, 6);
   });
 
+  it("retains the exact execution model in the retained PoolEntry", () => {
+    const shaped = modelFor(raydiumPool())!;
+    expect(shaped.ammExecutionModel).toBeDefined();
+    const metrics = new Map<string, SourcePoolGraph>();
+    addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", shaped);
+    expect(metrics.get("usdc-circle")?.pools[0]?.extra?.ammExecutionModel).toEqual(shaped.ammExecutionModel);
+  });
+
   it("produces a schema-valid model with positive diagnostic capacity and no score eligibility", () => {
     const shaped = modelFor(raydiumPool());
     expect(shaped).not.toBeNull();
@@ -560,5 +569,34 @@ describe("Raydium pool-implied counter-asset reference", () => {
       family: "raydium-amm",
       reason: "incomplete-exact-capture",
     });
+  });
+});
+
+describe("secondary pool telemetry", () => {
+  it("retains case-distinct Solana pools as separate telemetry", () => {
+    const metrics = new Map<string, SourcePoolGraph>();
+    const basePool: GtNewPool = {
+      address: "PoolCase",
+      chain: "solana",
+      dexId: "raydium",
+      name: "raydium:USDC / USDT",
+      tvlUsd: 1_000_000,
+      volume24hUsd: 50_000,
+      qualityMultiplier: 0.8,
+      maturityDays: 30,
+      price: 1,
+      symbol: "USDC / USDT",
+      poolType: "raydium-amm",
+      sourceFamily: "direct_api",
+    };
+
+    addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", basePool);
+    addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", { ...basePool, address: "poolCase" });
+
+    expect(metrics.get("usdc-circle")?.pools).toHaveLength(2);
+    expect(metrics.get("usdc-circle")?.pools.map((pool) => pool.poolId)).toEqual([
+      "solana:PoolCase",
+      "solana:poolCase",
+    ]);
   });
 });

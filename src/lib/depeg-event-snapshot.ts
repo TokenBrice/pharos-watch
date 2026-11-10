@@ -57,7 +57,7 @@ function readDepegEventShard(path: string): DepegEventEntry[] {
   return parseEventArray(readFileSync(path, "utf8"), path);
 }
 
-export function readDepegEventIndex({ missing }: { missing: "empty" | "throw" }): DepegEventIndexEntry[] {
+function readDepegEventIndex({ missing }: { missing: "empty" | "throw" }): DepegEventIndexEntry[] {
   let raw: string;
   try {
     raw = readFileSync(DEPEG_EVENT_INDEX_PATH, "utf8");

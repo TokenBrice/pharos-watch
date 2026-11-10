@@ -41,6 +41,7 @@ describe("ReserveSyncHealthCard", () => {
           status: "degraded",
           freshCoins: 74,
           degradedCoins: 71,
+          healthDegradedCoins: 3,
           deferredCoins: 48,
           freshCoverageRatio: 0.7365,
           authoritativeFreshCoverageRatio: 0.7329,
@@ -54,6 +55,7 @@ describe("ReserveSyncHealthCard", () => {
     );
 
     expect(screen.getByText("Report-card inputs are conservative")).toBeTruthy();
+    expect(screen.getByText("Degraded").parentElement?.textContent).toBe("Degraded3");
     expect(screen.getByText(/Safety scoring only trusts score-grade reserve evidence/)).toBeTruthy();
     expect(screen.getByText("73.7% fresh")).toBeTruthy();
     expect(screen.getByText("73.3% score-grade")).toBeTruthy();
@@ -81,6 +83,26 @@ describe("ReserveSyncHealthCard", () => {
 
     expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
     expect(container.textContent).toContain("73.7% fresh, 73.7% authoritative");
+  });
+
+  it("does not label all-cohort counters as part of a fresh-evidence partition", () => {
+    render(
+      <ReserveSyncHealthCard
+        health={makeReserveHealth({
+          freshCoins: 250,
+          independentFreshUnverified: 8,
+          staticValidatedFresh: 60,
+          weakProbeFresh: 42,
+          independentFreshEligible: 140,
+          writeTimeoutUncertain: 1,
+        })}
+        nowSeconds={1_712_600_120}
+      />,
+    );
+
+    expect(screen.getByText("Snapshot evidence mix")).toBeTruthy();
+    expect(screen.queryByText("Fresh Evidence Mix")).toBeNull();
+    expect(screen.getByText("Write-timeout uncertain")).toBeTruthy();
   });
 
   it("shows the by-design degraded count and keeps pre-split rows unavailable", () => {

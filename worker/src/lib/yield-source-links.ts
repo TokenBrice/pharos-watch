@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { LENDING_PROTOCOL_LABELS } from "./yield-config/yield-config-lending-protocols";
 import { YIELD_POOL_MAP } from "./yield-config/yield-config-pools";
 
 const APP_LINK_LABEL_PRIORITY = ["App", "Portal", "Earn", "Mint", "Stake", "Dashboard"] as const;
@@ -84,6 +85,7 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Yo Protocol": "https://yo.xyz/",
   "Clearpool Lending": "https://app.clearpool.finance/",
   "3Jane": "https://3jane.xyz/",
+  "Hyperliquid Earn": "https://app.hyperliquid.xyz/earn",
   HyperLend: "https://app.hyperlend.finance/",
   "Zest v2": "https://app.zestprotocol.com/",
   "Liquity v2": "https://www.liquity.org/",
@@ -118,6 +120,13 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Save": "https://www.save.finance/",
   // Explicit-pool labels (parenthetical asset suffix is stripped by the label fallback chain)
   "Hydration Omnipool": "https://hydration.net/",
+};
+
+// DeFiLlama projects outside the lending allowlist, keyed by project slug.
+const VENUE_PROTOCOL_SOURCE_URLS: Record<string, string> = {
+  "bitwise-uscc": "https://superstate.com/assets/uscc",
+  "blackrock-buidl": "https://securitize.io/blackrock/buidl",
+  "project-0": "https://app.0.xyz/",
 };
 
 function pickMetaYieldUrl(stablecoinId: string): string | null {
@@ -163,10 +172,33 @@ function resolveLinkedVariantSourceOwnerId(stablecoinId: string, sourceKey: stri
   return ownerMeta?.variantOf === stablecoinId ? ownerId : null;
 }
 
+// Own-key lookup: slugs and labels are upstream strings, so `constructor` or
+// `__proto__` must not resolve to an inherited Object member.
+function ownValue(map: Record<string, string>, key: string | null | undefined): string | null {
+  return key && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : null;
+}
+
+function resolveLabelUrl(label: string | null | undefined): string | null {
+  if (!label) return null;
+  const candidates = [
+    label,
+    label.replace(/\s+\([^)]*\)\s*$/, ""),
+    label.split(":")[0]?.trim(),
+    label.replace(/\s+\([^)]*\)\s*$/, "").split(":")[0]?.trim(),
+  ];
+  for (const candidate of candidates) {
+    const url = ownValue(YIELD_SOURCE_URLS, candidate);
+    if (url) return url;
+  }
+  return null;
+}
+
 export function resolveYieldSourceUrl(params: {
   stablecoinId: string;
   sourceKey: string | null;
   yieldSource?: string | null;
+  /** Published venue protocol (the DeFiLlama project for pool rows), when known. */
+  venueProtocol?: string | null;
 }): string | null {
   const sourceOwnerId = resolveLinkedVariantSourceOwnerId(params.stablecoinId, params.sourceKey);
   const ownerId = sourceOwnerId ?? params.stablecoinId;
@@ -179,13 +211,19 @@ export function resolveYieldSourceUrl(params: {
     const configuredUrl = POOL_SOURCE_URLS[poolId];
     if (configuredUrl) return configuredUrl;
 
-    // Only a pinned native pool can inherit the owner's configured instrument
-    // link. An unrelated deposit venue must never inherit an issuer app URL.
+    // A pinned native pool is the owner's own instrument, so the owner's
+    // configured link is the yield source.
     if (YIELD_POOL_MAP[ownerId] === poolId) {
       const nativeUrl = pickMetaYieldUrl(ownerId);
-      if (nativeUrl && new URL(nativeUrl).pathname !== "/") return nativeUrl;
+      if (nativeUrl) return nativeUrl;
     }
-    return `https://defillama.com/yields/pool/${poolId}`;
+    // Any other pool is a deposit venue: link the venue's own app, named by the
+    // pool's project before the row label. An unrelated deposit venue must never
+    // inherit an issuer app URL; DeFiLlama is the last resort for an unmapped venue.
+    return ownValue(VENUE_PROTOCOL_SOURCE_URLS, params.venueProtocol)
+      ?? resolveLabelUrl(ownValue(LENDING_PROTOCOL_LABELS, params.venueProtocol))
+      ?? resolveLabelUrl(params.yieldSource)
+      ?? `https://defillama.com/yields/pool/${poolId}`;
   }
 
   // A weighted group represents multiple pools, not one addressable DL pool.
@@ -200,21 +238,5 @@ export function resolveYieldSourceUrl(params: {
     return "https://dawn.royco.org/explore";
   }
 
-  const labelCandidates = params.yieldSource
-    ? [
-        params.yieldSource,
-        params.yieldSource.replace(/\s+\([^)]*\)\s*$/, ""),
-        params.yieldSource.split(":")[0]?.trim(),
-        params.yieldSource.replace(/\s+\([^)]*\)\s*$/, "").split(":")[0]?.trim(),
-      ].filter((label): label is string => typeof label === "string" && label.length > 0)
-    : [];
-
-  const overrideByLabel = labelCandidates
-    .map((label) => YIELD_SOURCE_URLS[label] ?? null)
-    .find((value): value is string => typeof value === "string" && value.length > 0) ?? null;
-  if (overrideByLabel) {
-    return overrideByLabel;
-  }
-
-  return pickMetaYieldUrl(ownerId);
+  return resolveLabelUrl(params.yieldSource) ?? pickMetaYieldUrl(ownerId);
 }

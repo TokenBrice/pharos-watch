@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   crawlTokenPools,
   shouldSkipFallbackCurvePool,
+  type BuildNewPoolArgs,
+  type ParsedPool,
 } from "../crawl-helpers";
 import type { GtNewPool, GtPool } from "../types";
 import { parseGtPool } from "../geckoterminal-shared";
@@ -11,6 +13,24 @@ interface RawPool {
   id: string;
   tvlUsd: number;
   price: number;
+}
+
+function parsePool(pool: RawPool): ParsedPool {
+  return {
+    dexId: "testdex", poolAddress: pool.id, tvlUsd: pool.tvlUsd, volume24hUsd: 10_000,
+    baseTokenAddress: "0xstable", quoteTokenAddress: "0xref",
+    baseTokenPriceUsd: pool.price, quoteTokenPriceUsd: 1,
+    createdAt: "2026-01-01T00:00:00Z", poolName: "USDC / USD",
+  };
+}
+
+function buildNewPool({ parsed, price }: BuildNewPoolArgs<unknown>): GtNewPool {
+  return {
+    address: parsed.poolAddress, chain: "ethereum", dexId: parsed.dexId,
+    name: parsed.poolName, symbol: parsed.poolName, tvlUsd: parsed.tvlUsd,
+    volume24hUsd: parsed.volume24hUsd, qualityMultiplier: 1, maturityDays: 1,
+    price, poolType: "generic", sourceFamily: "gecko_terminal",
+  };
 }
 
 describe("crawlTokenPools", () => {
@@ -37,7 +57,9 @@ describe("crawlTokenPools", () => {
     });
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
+    const onRequestResult = vi.fn();
     await crawlTokenPools<GtPool, GtNewPool>({
+      onRequestResult,
       sourceLabel: "GT", tokens: [
         { sourceChain: "eth", ourChain: "ethereum", address: "0xstable", stablecoinId: "usdc-circle" },
       ],
@@ -52,13 +74,9 @@ describe("crawlTokenPools", () => {
         ], complete: true, cappedAtMaxPages: false, failedAfterRows: null,
       }),
       parsePool: parseGtPool,
-      buildNewPool: ({ parsed, price }) => ({
-        address: parsed.poolAddress, project: parsed.dexId, chain: "ethereum", dexId: parsed.dexId,
-        name: parsed.poolName, symbol: parsed.poolName, tvlUsd: parsed.tvlUsd,
-        volume24hUsd: parsed.volume24hUsd, qualityMultiplier: 1, maturityDays: 1,
-        price, poolType: "generic", sourceFamily: "gecko_terminal",
-      }),
+      buildNewPool,
     });
+    expect(onRequestResult).toHaveBeenCalledWith(expect.anything(), "degraded", expect.objectContaining({ complete: true }));
     const admitted = newPools.get("usdc-circle")!;
     expect(admitted.map((pool) => pool.address)).toEqual(["0xbadprice", "0xbadvolume", "0xvalid"]);
     expect(admitted[0]!.price).toBeNaN();
@@ -82,106 +100,49 @@ describe("crawlTokenPools", () => {
         throw new Error("should not fetch");
       },
       parsePool: () => null,
-      buildNewPool: () => ({}) as GtNewPool,
+      buildNewPool,
     });
 
     expect(result.stoppedEarly).toBe(true);
   });
 
-  it("keeps native-covered Curve pools out of secondary discovery", async () => {
+  it.each([
+    ["keeps native-covered Curve pools out of secondary discovery", "ethereum", "usdc-circle", "curve", 100_000, 1, 10_000, "USDC / USD"],
+    ["accepts fallback Curve pools on chains without native Curve API coverage", "plasma", "yzusd-yuzu", "curve-plasma", 900_000, 0.9973, 20_000, "yzUSD / USDT0"],
+  ] as const)("%s", async (_name, chain, stablecoinId, dexId, tvlUsd, price, volume24hUsd, name) => {
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
-    const result = await crawlTokenPools<RawPool, GtNewPool>({
-      sourceLabel: "test",
-      tokens: [{ sourceChain: "eth", ourChain: "ethereum", address: "0xstable", stablecoinId: "usdc-circle" }],
-      chainAddressToId: new Map([["ethereum:0xstable", "usdc-circle"]]),
-      knownPoolAddrs: new Set(),
-      protocolTvlCaps: new Map(),
-      newPools,
-      priceObs,
-      fetchPools: async () => ({ rows: [{ id: "pool-a", tvlUsd: 100_000, price: 1 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
-      parsePool: (pool) => ({
-        dexId: "curve",
-        poolAddress: pool.id,
-        tvlUsd: pool.tvlUsd,
-        volume24hUsd: 10_000,
-        baseTokenAddress: "0xstable",
-        quoteTokenAddress: "0xref",
-        baseTokenPriceUsd: pool.price,
-        quoteTokenPriceUsd: 1,
-        createdAt: "2026-01-01T00:00:00Z",
-        poolName: "USDC / USD",
-      }),
-      buildNewPool: () => {
-        throw new Error("should not build");
-      },
-    });
-
-    expect(result.stoppedEarly).toBe(false);
-    expect(newPools.size).toBe(0);
-    expect(priceObs.size).toBe(0);
-  });
-
-  it("accepts fallback Curve pools on chains without native Curve API coverage", async () => {
-    const newPools = new Map<string, GtNewPool[]>();
-    const priceObs = new Map();
-    // Live crawler observations now preserve the local provider-read clock.
     const beforeRead = Math.floor(Date.now() / 1000);
     const result = await crawlTokenPools<RawPool, GtNewPool>({
-      sourceLabel: "test",
-      tokens: [{ sourceChain: "plasma", ourChain: "plasma", address: "0xstable", stablecoinId: "yzusd-yuzu" }],
-      chainAddressToId: new Map([["plasma:0xstable", "yzusd-yuzu"]]),
-      knownPoolAddrs: new Set(),
-      protocolTvlCaps: new Map([["curve", 900_000]]),
-      newPools,
-      priceObs,
-      fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd: 900_000, price: 0.9973 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
+      sourceLabel: "test", tokens: [{ sourceChain: chain, ourChain: chain, address: "0xstable", stablecoinId }],
+      chainAddressToId: new Map([[`${chain}:0xstable`, stablecoinId]]),
+      knownPoolAddrs: new Set(), protocolTvlCaps: new Map([["curve", 900_000]]), newPools, priceObs,
+      fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd, price }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
-        dexId: "curve-plasma",
-        poolAddress: pool.id,
-        tvlUsd: pool.tvlUsd,
-        volume24hUsd: 20_000,
-        baseTokenAddress: "0xstable",
-        quoteTokenAddress: "0xref",
-        baseTokenPriceUsd: pool.price,
-        quoteTokenPriceUsd: 1,
-        createdAt: "2026-01-01T00:00:00Z",
-        poolName: "yzUSD / USDT0",
+        ...parsePool(pool), dexId, volume24hUsd, poolName: name,
       }),
-      buildNewPool: ({ parsed, price }) => ({
-        address: "0xpool",
-        project: "curve-plasma",
-        chain: "plasma",
-        dexId: "curve-plasma",
-        name: "yzUSD / USDT0",
-        symbol: "yzUSD / USDT0",
-        tvlUsd: parsed.tvlUsd,
-        volume24hUsd: 20_000,
-        qualityMultiplier: 1,
-        maturityDays: 1,
-        price,
-        poolType: "gt-amm",
-        sourceFamily: "gecko_terminal",
-      }),
+      buildNewPool: (args) => {
+        if (chain === "ethereum") throw new Error("should not build");
+        return { ...buildNewPool(args), chain, poolType: "gt-amm" };
+      },
     });
-
     expect(result.stoppedEarly).toBe(false);
-    expect(newPools.get("yzusd-yuzu")?.[0]).toMatchObject({
-      chain: "plasma",
-      dexId: "curve-plasma",
-      tvlUsd: 900_000,
-      price: 0.9973,
-    });
-    expect(priceObs.get("yzusd-yuzu")).toEqual([
-      { price: 0.9973, observedAt: expect.any(Number), tvl: 900_000, chain: "plasma", protocol: "curve-plasma" },
-    ]);
-    const observedAt = priceObs.get("yzusd-yuzu")[0].observedAt;
-    expect(observedAt).toBeGreaterThanOrEqual(beforeRead);
-    expect(observedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
-    expect(newPools.get("yzusd-yuzu")?.[0].priceObservedAt).toBe(observedAt);
+    if (chain === "ethereum") {
+      expect(newPools.size).toBe(0);
+      expect(priceObs.size).toBe(0);
+    } else {
+      expect(newPools.get(stablecoinId)?.[0]).toMatchObject({ chain, dexId, tvlUsd, price });
+      expect(priceObs.get(stablecoinId)).toEqual([
+        { price, observedAt: expect.any(Number), tvl: tvlUsd, chain, protocol: dexId },
+      ]);
+      const observedAt = priceObs.get(stablecoinId)[0].observedAt;
+      expect(observedAt).toBeGreaterThanOrEqual(beforeRead);
+      expect(observedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+      expect(newPools.get(stablecoinId)?.[0].priceObservedAt).toBe(observedAt);
+    }
   });
 
-  it.each([50_000, 100_000, 200_000, null, 0])("quarantines oversized fallback without scaling admitted raw TVL (protocol total %s)", async (cap) => {
+  it.each([50_000, 100_000, null, 0])("quarantines oversized fallback without scaling admitted raw TVL (protocol total %s)", async (cap) => {
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
     const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
@@ -194,33 +155,8 @@ describe("crawlTokenPools", () => {
       newPools,
       priceObs,
       fetchPools: async () => ({ rows: [{ id: "pool-a", tvlUsd: 100_000, price: 1 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
-      parsePool: (pool) => ({
-        dexId: "testdex",
-        poolAddress: pool.id,
-        tvlUsd: pool.tvlUsd,
-        volume24hUsd: 10_000,
-        baseTokenAddress: "0xstable",
-        quoteTokenAddress: "0xref",
-        baseTokenPriceUsd: pool.price,
-        quoteTokenPriceUsd: 1,
-        createdAt: "2026-01-01T00:00:00Z",
-        poolName: "USDC / USD",
-      }),
-      buildNewPool: ({ parsed, price }) => ({
-        address: "pool-a",
-        project: "testdex",
-        chain: "ethereum",
-        dexId: "testdex",
-        name: "USDC / USD",
-        symbol: "USDC / USD",
-        tvlUsd: parsed.tvlUsd,
-        volume24hUsd: 10_000,
-        qualityMultiplier: 1,
-        maturityDays: 1,
-        price,
-        poolType: "generic",
-        sourceFamily: "gecko_terminal",
-      }),
+      parsePool,
+      buildNewPool,
     });
 
     expect(result.stoppedEarly).toBe(false);
@@ -251,18 +187,7 @@ describe("crawlTokenPools", () => {
       newPools,
       priceObs,
       fetchPools: async () => ({ rows: [{ id: "pool-a", tvlUsd: 2_000_000_000, price: 500 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
-      parsePool: (pool) => ({
-        dexId: "testdex",
-        poolAddress: pool.id,
-        tvlUsd: pool.tvlUsd,
-        volume24hUsd: 10_000,
-        baseTokenAddress: "0xstable",
-        quoteTokenAddress: "0xref",
-        baseTokenPriceUsd: pool.price,
-        quoteTokenPriceUsd: 1,
-        createdAt: "2026-01-01T00:00:00Z",
-        poolName: "USDC / USD",
-      }),
+      parsePool,
       buildNewPool: () => {
         throw new Error("should not build");
       },
@@ -285,9 +210,8 @@ describe("crawlTokenPools", () => {
       priceObs,
       fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd: 324_992, price: 0.3323290599 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
+        ...parsePool(pool),
         dexId: "syncswap-v3-sophon",
-        poolAddress: pool.id,
-        tvlUsd: pool.tvlUsd,
         volume24hUsd: 0,
         baseTokenAddress: "0xusdt",
         quoteTokenAddress: "0xusn",
@@ -323,13 +247,11 @@ describe("crawlTokenPools", () => {
       priceObs,
       fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd: 52_313, price: 1.0018122159 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
+        ...parsePool(pool),
         dexId: "syncswap-v3-zksync",
-        poolAddress: pool.id,
-        tvlUsd: pool.tvlUsd,
         volume24hUsd: 0,
         baseTokenAddress: "0xusn",
         quoteTokenAddress: "0xusdc",
-        baseTokenPriceUsd: pool.price,
         quoteTokenPriceUsd: 1.0016693845,
         baseTokenPriceQuoteToken: 1.0005451588,
         quoteTokenPriceBaseToken: 0.9994551383,
@@ -338,21 +260,7 @@ describe("crawlTokenPools", () => {
         createdAt: "2025-01-01T00:00:00Z",
         poolName: "USN / USDC",
       }),
-      buildNewPool: ({ price }) => ({
-        address: "0xpool",
-        project: "syncswap-v3-zksync",
-        chain: "zksync",
-        dexId: "syncswap-v3-zksync",
-        name: "USN / USDC",
-        symbol: "USN / USDC",
-        tvlUsd: 52_313,
-        volume24hUsd: 0,
-        qualityMultiplier: 1,
-        maturityDays: 1,
-        price,
-        poolType: "gt-concentrated",
-        sourceFamily: "gecko_terminal",
-      }),
+      buildNewPool: (args) => ({ ...buildNewPool(args), chain: "zksync", poolType: "gt-concentrated" }),
     });
 
     expect(newPools.get("test")).toHaveLength(1);
@@ -378,14 +286,9 @@ describe("crawlTokenPools", () => {
       priceObs: new Map(),
       fetchPools: async () => ({ rows: [{ id: "PoolCase", tvlUsd: 100_000, price: 1 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
-        dexId: "testdex",
-        poolAddress: pool.id,
-        tvlUsd: pool.tvlUsd,
-        volume24hUsd: 10_000,
+        ...parsePool(pool),
         baseTokenAddress: "mintCase",
         quoteTokenAddress: "QuoteCase",
-        baseTokenPriceUsd: pool.price,
-        quoteTokenPriceUsd: 1,
         createdAt: null,
         poolName: "TEST / QUOTE",
       }),

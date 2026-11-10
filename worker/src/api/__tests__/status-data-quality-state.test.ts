@@ -432,7 +432,12 @@ describe("handleStatus", () => {
     expect(body.causes.availability.find((cause) => cause.code === causeCode)).toMatchObject({ severity });
   });
 
-  it("degrades availability when three or more circuit groups are open", async () => {
+  it.each([
+    ["degrades availability when three or more circuit groups are open",
+      ["circuit:defillama-stablecoins", "circuit:coingecko-prices", "circuit:dexscreener-prices"], "degraded", true],
+    ["keeps availability healthy when only live-reserve circuit groups are open",
+      ["circuit:live-reserves:ethena", "circuit:live-reserves:feusd-felix", "circuit:live-reserves:mtbill-midas"], "healthy", false],
+  ] as const)("%s", async (_name, circuitKeys, expectedStatus, hasOpenCircuitCause) => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
@@ -450,9 +455,9 @@ describe("handleStatus", () => {
     {
       match: "key LIKE 'circuit:%'",
       rows: [
-        { key: "circuit:defillama-stablecoins", value: openCircuitValue(now - 600) },
-        { key: "circuit:coingecko-prices", value: openCircuitValue(now - 540) },
-        { key: "circuit:dexscreener-prices", value: openCircuitValue(now - 480) },
+        { key: circuitKeys[0], value: openCircuitValue(now - 600) },
+        { key: circuitKeys[1], value: openCircuitValue(now - 540) },
+        { key: circuitKeys[2], value: openCircuitValue(now - 480) },
       ],
     },
     { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
@@ -465,45 +470,8 @@ describe("handleStatus", () => {
       causes: { availability: Array<{ code: string }> };
     };
 
-    expect(body.availabilityStatus).toBe("degraded");
-    expect(body.causes.availability.some((cause) => cause.code === "open_circuit_groups")).toBe(true);
-  });
-
-  it("keeps availability healthy when only live-reserve circuit groups are open", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
-    });
-    const cronRows = Object.keys(fixtureCRON_INTERVALS).map((job) => makeCronRow(job, "ok", 60));
-    const openCircuitValue = (openedAt: number) =>
-      JSON.stringify({
-        state: "open",
-        consecutiveFailures: 3,
-        lastFailureAt: openedAt - 30,
-        lastSuccessAt: null,
-        openedAt,
-      });
-    const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },
-    {
-      match: "key LIKE 'circuit:%'",
-      rows: [
-        { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
-        { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
-        { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
-      ],
-    },
-    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
-    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
-
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await res.json()) as {
-      availabilityStatus: string;
-      causes: { availability: Array<{ code: string }> };
-    };
-
-    expect(body.availabilityStatus).toBe("healthy");
-    expect(body.causes.availability.some((cause) => cause.code === "open_circuit_groups")).toBe(false);
+    expect(body.availabilityStatus).toBe(expectedStatus);
+    expect(body.causes.availability.some((cause) => cause.code === "open_circuit_groups")).toBe(hasOpenCircuitCause);
   });
 
   it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {

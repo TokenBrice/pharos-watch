@@ -2,7 +2,6 @@
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ComponentType } from "react";
 
 import { YieldClient } from "@/components/yield/yield-client";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
@@ -193,6 +192,18 @@ describe("YieldClient", () => {
     expect(searchParamsMock.get("yieldType")).toBe("lending-opportunity");
   });
 
+  it("hides Reset on the paramless landing view and shows it once a filter param exists", () => {
+    render(<YieldClient />);
+    expect(screen.getByText("No warnings")).toBeTruthy();
+    expect(screen.getByText("50+ safety")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+
+    cleanup();
+    searchParamsMock.set("minSafety", "80");
+    render(<YieldClient />);
+    expect(screen.getByRole("button", { name: "Reset" })).toBeTruthy();
+  });
+
   it("resolves comparison rows independently of the current filters", () => {
     searchParamsMock.set("q", "zzzz-no-match");
 
@@ -363,50 +374,6 @@ describe("YieldClient", () => {
     };
     expect(props).toHaveProperty("benchmarks");
     expect(props).toHaveProperty("benchmarkAgeEvidence");
-  });
-
-  it("shows the clipped-outlier count and the unscored-row note on the compact hero scatter", async () => {
-    const { YieldScatterPlot } = (await vi.importActual("@/components/yield-scatter-plot")) as {
-      YieldScatterPlot: ComponentType<{
-        rankings: Array<{ safetyScore: number | null; apy30d: number } & Record<string, unknown>>;
-        benchmarkRate: number;
-        compact?: boolean;
-        frame?: "stage" | "bare";
-        usesDefaultBenchmarkFrame?: boolean;
-      }>;
-    };
-    const scatterRows = [
-      ...Array.from({ length: 13 }, (_, index) =>
-        makeYieldRanking({
-          id: `steady-${index}`,
-          symbol: `S${index}`,
-          name: `Steady ${index}`,
-          apy30d: 5,
-          safetyScore: 50 + index,
-        }),
-      ),
-      makeYieldRanking({ id: "rocket", symbol: "RKT", name: "Rocket", apy30d: 200, safetyScore: 70 }),
-      makeYieldRanking({ id: "unscored", symbol: "UNSC", name: "Unscored", apy30d: 6, safetyScore: null }),
-    ];
-
-    render(
-      <YieldScatterPlot
-        rankings={scatterRows}
-        benchmarkRate={4.25}
-        compact
-        frame="bare"
-        usesDefaultBenchmarkFrame
-      />,
-    );
-
-    // E10: the compact hero surface shows the clipped count...
-    expect(screen.getByText(/outlier pinned above/)).toBeTruthy();
-    // E13: ...labelled as the chart-wide USD frame in mixed views.
-    expect(screen.getByText("(USD frame)")).toBeTruthy();
-    // E17: null-safety rows are annotated, not silently dropped.
-    expect(screen.getByText(/1 row without a safety score not shown/)).toBeTruthy();
-    const figure = screen.getByRole("figure");
-    expect(figure.getAttribute("aria-label")).toContain("1 row without a safety score not shown");
   });
 
   it("keeps the build-static adapter manifest out of live freshness aggregation", () => {

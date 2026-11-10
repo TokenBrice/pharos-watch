@@ -45,12 +45,14 @@ export async function reconcileStatusState(
 
   let current: StatusStateRow | null = null;
   try {
-    current = await db
-      .prepare(
-        `SELECT ${STATUS_STATE_SELECT_COLUMNS} FROM status_state WHERE scope = ?`,
-      )
-      .bind(STATUS_SCOPE)
-      .first<StatusStateRow>();
+    current = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT ${STATUS_STATE_SELECT_COLUMNS} FROM status_state WHERE scope = ?`,
+        )
+        .bind(STATUS_SCOPE)
+        .first<StatusStateRow>(),
+    );
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_state_read_failed", "load-status-state", error);
     return {

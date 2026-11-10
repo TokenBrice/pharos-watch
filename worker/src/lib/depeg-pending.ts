@@ -1,4 +1,5 @@
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "@shared/lib/depeg-config";
 import { coerceDepegDirection, pickMoreSevereBps, type DepegDirection } from "@shared/lib/depeg-signals";
 import { NATIVE_ORIGIN_PENDING_REASON_FLAG, type PendingDepegReason } from "./depeg-helpers";
 
@@ -45,6 +46,20 @@ export interface PendingDepegUpsertParams {
   price: number;
   pegReference: number;
   reason: PendingDepegReason;
+}
+
+export function getPendingExpiryLimitSec(params: {
+  primarySameDirectionDepegged: boolean;
+  isExtremeMove: boolean;
+  unavailableSources: string[];
+  circuitOpenSources: string[];
+}): number {
+  let expirySec = DEPEG_PENDING_EXPIRY_SEC;
+  if (params.primarySameDirectionDepegged || params.unavailableSources.length > 0 || params.circuitOpenSources.length > 0) {
+    expirySec = Math.max(expirySec, DEPEG_PENDING_EXTENDED_EXPIRY_SEC);
+  }
+  if (params.isExtremeMove) expirySec = Math.max(expirySec, DEPEG_PENDING_SEVERE_EXPIRY_SEC);
+  return expirySec;
 }
 
 export const SELECT_PENDING_DEPEGS_SQL = `

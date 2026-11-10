@@ -27,13 +27,16 @@ describe("supply publication contracts", () => {
 
   it("bans deleted helpers in imports, aliases, calls and namespace reads across every source root", async () => {
     const eslint = new ESLint({ cache: false, cwd: process.cwd(), overrideConfigFile: "eslint.config.mjs" });
+    const deletedHelperForms = [
+      'import { getCirculatingRaw as read } from "@shared/lib/supply"; read({});',
+      'import * as supply from "@shared/lib/supply"; supply.sumPegBuckets({});',
+      'import * as supply from "@shared/lib/supply"; supply["getPrevDayRaw"]({});',
+      'const getPrevWeekRaw = () => 0; getPrevWeekRaw();',
+    ];
     for (const root of ["src/lib", "shared/lib", "worker/src/cron", "scripts/lib", "functions"]) {
-      for (const source of [
-        'import { getCirculatingRaw as read } from "@shared/lib/supply"; read({});',
-        'import * as supply from "@shared/lib/supply"; supply.sumPegBuckets({});',
-        'import * as supply from "@shared/lib/supply"; supply["getPrevDayRaw"]({});',
-        'const getPrevWeekRaw = () => 0; getPrevWeekRaw();',
-      ]) {
+      // The rule is enabled once globally; one violating probe per root proves
+      // each config block reaches the rule, and src/lib carries every form.
+      for (const source of root === "src/lib" ? deletedHelperForms : deletedHelperForms.slice(0, 1)) {
         const [result] = await eslint.lintText(source, { filePath: `${root}/__supply-probe.ts` });
         expect(result.messages.some((message) => message.ruleId === "pharos/no-zero-coercing-supply-helpers")).toBe(true);
       }

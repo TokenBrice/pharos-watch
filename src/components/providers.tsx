@@ -114,8 +114,9 @@ const InteractiveProviders = lazy(async () => {
           return;
         }
 
+        // `?` opens the shortcuts dialog even when single-key shortcuts are
+        // off: the dialog is the only surface that can turn them back on.
         if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          if (shortcutSettings.isSingleKeyShortcutDisabled()) return;
           event.preventDefault();
           setKeyboardShortcutsLoaded(true);
           setKeyboardShortcutsOpen(true);

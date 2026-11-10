@@ -30,7 +30,11 @@ export function currentDepegBps(depeg: Depeg, generatedAt?: number): number | nu
 export function comparableDepegs(current: Depeg, previous: Depeg, data: DigestInputData, previousData: DigestInputData): boolean {
   return current.stablecoinId != null && current.stablecoinId === previous.stablecoinId
     && current.startedAt != null && current.startedAt === previous.startedAt
-    && current.pegReference === previous.pegReference
+    // Two current-basis USD rows were each measured against that run's reference;
+    // anything else (native-quote or legacy latched rows) must share the reference.
+    && (current.pegReference === previous.pegReference
+      || (current.quoteMode === "usd" && previous.quoteMode === "usd"
+        && current.pegReferenceBasis === "current" && previous.pegReferenceBasis === "current"))
     && current.direction === previous.direction
     && currentDepegBps(current, data.dataQuality?.generatedAt) != null
     && currentDepegBps(previous, previousData.dataQuality?.generatedAt) != null

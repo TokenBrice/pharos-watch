@@ -34,6 +34,7 @@ import {
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import type { CompareRadarCohort } from "@/components/radar-chart-v9";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
 
 export type ComparisonMeta = Pick<
   StablecoinClientDetailMeta,
@@ -237,11 +238,17 @@ export function deriveSupplySeries({
     .map((id, index) => {
       const history = histories[index] ?? [];
       if (history.length === 0) return null;
+      // A recorded partial-chain remainder is not a whole-asset market cap:
+      // omit the day instead of plotting a bounded subtotal or anchoring normalization on it.
+      const data = history
+        .filter((point) => classifySupplyCoverage(point.supplyProvenance) !== "partial")
+        .map((point) => ({ ts: point.date * 1000, value: point.circulatingUsd }));
+      if (data.length === 0) return null;
       const meta = metaMap.get(id);
       return {
         id,
         label: meta?.name ?? id,
-        data: history.map((point) => ({ ts: point.date * 1000, value: point.circulatingUsd })),
+        data,
         color: COMPARE_COLORS[index % COMPARE_COLORS.length],
       };
     })

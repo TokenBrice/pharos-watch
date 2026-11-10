@@ -66,6 +66,7 @@ import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
   isAutoLendingCollisionBlockedForStablecoin,
+  LAYER3_EXCLUDED_VENUE_PROJECTS,
   LENDING_PROTOCOL_ALLOWLIST,
 } from "../../lib/yield-config/yield-config-lending-protocols";
 import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
@@ -104,9 +105,6 @@ import {
 import {
   buildOnChainSourceKey,
 } from "../../lib/yield-utils";
-import {
-  buildInClause,
-} from "../../lib/db";
 import {
   isPriceDerivedYieldEligible,
 } from "../../lib/yield-config/yield-config-registry";
@@ -604,7 +602,7 @@ export function explainDeterministicAutoLendingEligibility(params: {
   if (!LENDING_PROTOCOL_ALLOWLIST.has(params.pool.project)) reasonCodes.push("protocol-allowlist");
   if (params.pool.apy < MIN_LENDING_POOL_APY) reasonCodes.push("apy-floor");
   if (params.pool.tvlUsd < requiredMinTvlUsd) reasonCodes.push("tvl-floor");
-  if (isBlockedYieldOpportunitySource({ poolMeta: params.pool.poolMeta, symbol: params.pool.symbol })) {
+  if (isBlockedYieldOpportunitySource(params.pool)) {
     reasonCodes.push("source-blocked");
   }
 
@@ -803,7 +801,11 @@ function appendResolvedYieldCandidates(
   for (const entry of entries) {
     if (
       isExternalYieldOpportunityType(entry.yield.yieldType) &&
-      isBlockedYieldOpportunitySource({ yieldSource: entry.yield.yieldSource })
+      isBlockedYieldOpportunitySource({
+        project: entry.yield.project ?? entry.yield.venueProtocol,
+        pool: entry.yield.sourcePool,
+        yieldSource: entry.yield.yieldSource,
+      })
     ) {
       blockedDrops += 1;
       continue;
@@ -1326,26 +1328,33 @@ export async function loadTier1PrevRateRows(
   const candidateIds = [...new Set(tier1CandidateIds)];
   if (candidateIds.length === 0) return tier1PrevRateRows;
 
-  const inClause = buildInClause(candidateIds);
+  // Newest published rate at or before the anchor, one row per coin, ties
+  // resolved by rowid DESC. Driving from the id list keeps each coin to index
+  // seeks; ranking the whole 30-day partition read ~124k rows per run.
   const result = await db
     .prepare(
       `SELECT /* pharos:yield-sync:tier1-previous-rate */
-         stablecoin_id, exchange_rate, recorded_at
-       FROM (
-         SELECT stablecoin_id, exchange_rate, recorded_at,
-                ROW_NUMBER() OVER (
-                  PARTITION BY stablecoin_id
-                  ORDER BY recorded_at DESC, rowid DESC
-                ) AS row_rank
-           FROM yield_history
-          WHERE stablecoin_id IN (${inClause.sql})
-            AND recorded_at <= ?
-            AND exchange_rate > 0
-            AND (publication_generation_id IS NULL OR publication_state = 'published')
-       )
-       WHERE row_rank = 1`,
+         h.stablecoin_id, h.exchange_rate, h.recorded_at
+       FROM json_each(?) AS ids
+       JOIN yield_history h ON h.rowid = (
+         SELECT h2.rowid
+           FROM yield_history h2
+          WHERE h2.stablecoin_id = ids.value
+            AND h2.recorded_at = (
+              SELECT MAX(h3.recorded_at)
+                FROM yield_history h3
+               WHERE h3.stablecoin_id = ids.value
+                 AND h3.recorded_at <= ?
+                 AND h3.exchange_rate > 0
+                 AND (h3.publication_generation_id IS NULL OR h3.publication_state = 'published')
+            )
+            AND h2.exchange_rate > 0
+            AND (h2.publication_generation_id IS NULL OR h2.publication_state = 'published')
+          ORDER BY h2.rowid DESC
+          LIMIT 1
+       )`,
     )
-    .bind(...inClause.binds, sevenDaysAgoSec)
+    .bind(JSON.stringify(candidateIds), sevenDaysAgoSec)
     .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
   for (const row of result.results ?? []) {
     if (tier1PrevRateRows.has(row.stablecoin_id)) continue;
@@ -1504,10 +1513,28 @@ export async function resolveTrackedYieldSources(params: {
       }
 
       const fullPool = dlPoolByPoolId.get(dlPool.pool);
-      if (!fullPool) continue;
+      if (!fullPool || isBlockedYieldOpportunitySource({ project: fullPool.project, pool: fullPool.pool })) continue;
 
       const variant = YIELD_VARIANT_MAP[id];
-      const isVariantPool = variant != null && dlPool.pool !== YIELD_POOL_MAP[id];
+      const isNativePool = dlPool.pool === YIELD_POOL_MAP[id];
+      const isVariantPool = variant != null && !isNativePool;
+      const venueProject = fullPool.project.trim().toLowerCase();
+      // Layer 3 has only a base-symbol/address guess, never a curated holder
+      // identity. A match inside a lending venue is a deposit market that holds
+      // the tracked coin, so it can neither publish under the coin's native
+      // label nor skip lending discovery's admission gates (safety, APY floor,
+      // collision/source blocks, measured size). Skip before any bookkeeping so
+      // the coin's own price-derived fallback still runs. An issuer's own pool
+      // in such a project is pinned in YIELD_POOL_MAP; a reviewed vault share
+      // keeps its own venue via YIELD_VARIANT_CHILD_VENUE_PROTOCOLS.
+      const isLayer3Match = !isNativePool && !isVariantPool;
+      if (
+        isLayer3Match
+        && YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[id] !== venueProject
+        && LAYER3_EXCLUDED_VENUE_PROJECTS.has(venueProject)
+      ) {
+        continue;
+      }
       resolved.push({
         id,
         symbol,
@@ -1682,53 +1709,30 @@ interface ResolveYieldSourcesParams {
   onOptionalSourceOutcome?: (outcome: YieldOptionalSourceOutcome) => void;
 }
 
-export async function resolveYieldSources({
-  db,
-  startSec,
-  sevenDaysAgoSec,
-  dlPools,
-  onChainRates,
-  safetyScores,
-  safetySnapshotAvailable,
-  riskFreeRates,
-  signal,
-  chainRpcs,
-  coingeckoApiKey,
-  supplementalCandidates = [],
-  stablecoinSupplyById,
-  stablecoinSupplyMapState,
-  onOptionalSourceOutcome,
-}: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
-  const trackedResolution = await resolveTrackedYieldSources({
-    db,
-    startSec,
-    sevenDaysAgoSec,
-    dlPools,
-    onChainRates,
-    safetyScores,
-    riskFreeRates,
-    signal,
-    chainRpcs,
-    coingeckoApiKey,
-    onOptionalSourceOutcome,
-  });
+export async function resolveYieldSources(params: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
+  const { supplementalCandidates = [], ...sourceParams } = params;
+  const trackedResolution = await resolveTrackedYieldSources(sourceParams);
 
   appendPoolFamilyYieldSources({
+    ...sourceParams,
     resolved: trackedResolution.resolved,
-    dlPools,
     supplementalCandidates,
-    safetyScores,
-    safetySnapshotAvailable,
-    stablecoinSupplyById,
-    stablecoinSupplyMapState,
   });
+
+  // Exact pins and supplemental sources obey the same reviewed holds as discovery.
+  trackedResolution.resolved = trackedResolution.resolved.filter(({ yield: source }) =>
+    !source || !isBlockedYieldOpportunitySource({
+      project: source.project ?? source.venueProtocol,
+      pool: source.sourcePool,
+    })
+  );
 
   const linkedVariantSourceCount = appendLinkedVariantParentYieldSources(trackedResolution.resolved);
   if (linkedVariantSourceCount > 0) {
     logWorkerEventArgs("handler", "info", `[sync-yield-data] Linked variant projection: ${linkedVariantSourceCount} parent sources`);
   }
 
-  enforceExternalOpportunityTvlEligibility(trackedResolution.resolved, stablecoinSupplyById);
+  enforceExternalOpportunityTvlEligibility(trackedResolution.resolved, sourceParams.stablecoinSupplyById);
 
   return trackedResolution;
 }

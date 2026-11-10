@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
-import { HeroPriceMetric } from "@/components/stablecoin-detail/hero-card-metrics";
+import { HeroPriceMetric, HeroSupplyMetric } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
@@ -427,6 +427,33 @@ describe("HeroCard", () => {
     expect(html).toContain("Last observed · 2026-06-30");
   });
 
+  it.each(["card", "cell"] as const)("labels the %s USD fallback price as USD, not the peg currency", (variant) => {
+    const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
+    const html = renderToStaticMarkup(<HeroPriceMetric
+      coin={eurCoin}
+      coinData={{ ...coinData, price: 1.117990454919679 }}
+      price={{ pegRef: null, deviationBps: null, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      variant={variant}
+    />);
+
+    expect(html).toContain("Price (USD)");
+    expect(html).toContain("$1.1180");
+    expect(html).not.toContain("Price (EUR)");
+  });
+
+  it.each(["card", "cell"] as const)("keeps the %s native-unit label when a reference is usable", (variant) => {
+    const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
+    const html = renderToStaticMarkup(<HeroPriceMetric
+      coin={eurCoin}
+      coinData={{ ...coinData, price: 1.11 }}
+      price={{ pegRef: 1.11, deviationBps: 0, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      variant={variant}
+    />);
+
+    expect(html).toContain("Price (EUR)");
+    expect(html).toContain("EUR 1.0000");
+  });
+
   it("renders the active-depeg chip when the peg summary flags one", () => {
     const html = renderHero();
 
@@ -599,5 +626,27 @@ describe("HeroIdentityHeader", () => {
       hydration.hydrated = false;
       vi.restoreAllMocks();
     }
+  });
+});
+
+describe("HeroSupplyMetric", () => {
+  it("renders an em dash when historical supply deltas are unavailable", () => {
+    const markup = renderToStaticMarkup(
+      <HeroSupplyMetric
+        supply={1_000}
+        coinSymbol="USDT"
+        supplyTrend={{
+          current: 1_000,
+          safePrevWeek: null,
+          safePrevMonth: null,
+          hasPrevMonth: true,
+          prevWeekTrendClass: "text-muted-foreground",
+          prevMonthTrendClass: "text-muted-foreground",
+        }}
+      />,
+    );
+
+    expect(markup).toContain("30D");
+    expect(markup.match(/—/g)).toHaveLength(2);
   });
 });

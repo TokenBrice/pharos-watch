@@ -129,6 +129,8 @@ Tracked frozen totals are contract-scoped, last-known successful balance snapsho
 
 A failed refresh preserves the last successful amount, including observed zero, and its original successful-observation clock. A failed first read supplies no successful value. For gold, substituting a positive event-native amount requires an actual observed zero balance and explicit substitution provenance; a null provider read cannot trigger it. Fresh coin-specific prices may value current non-USD balances, never historical events.
 
+Tron current-balance reads try JSON-RPC before REST; the REST fallback requires remaining request budget. If an unavailable JSON-RPC read consumes the last allowance, the balance remains unavailable.
+
 ### Cursor State
 
 Scan progress uses EVM block numbers or Tron millisecond timestamps. A frontier advances only through contiguous complete evidence; partial progress cannot claim current coverage or renew full-coverage freshness.
@@ -137,9 +139,11 @@ Scan progress uses EVM block numbers or Tron millisecond timestamps. A frontier 
 
 Reviewed registry membership determines exposure bucket counts independently of available runtime supply. Market-cap totals include only observed current circulating supply. Missing or invalid supply is excluded and counted as unavailable, never added as $0; observed zero remains measured zero.
 
-Complete coverage supports full-cohort shares. Partial coverage qualifies shares and totals as observed-only and names excluded assets; the share card is withheld. With no observed supply, totals and shares are unavailable while reviewed coin counts remain visible. A bucket with no observed member supply has no value or share; the combined exposed share is also unavailable when no exposed member has observed supply, even if non-freezable supply is known.
+Complete coverage supports full-cohort shares. Partial coverage qualifies shares and totals as observed-only and discloses the excluded-asset count; the share card is withheld. With no observed supply, totals and shares are unavailable while reviewed coin counts remain visible. A bucket with no observed member supply has no value or share; the combined exposed share is also unavailable when no exposed member has observed supply, even if non-freezable supply is known.
 
-An empty chart means no valued ledger snapshots, not no recorded events. Missing or failed summary reads remain unavailable. Fresh blacklist evidence cannot renew supply or Safety Score evidence: each source retains its own clock, budget and read outcome. CSV exports describe only the currently loaded server page and keep native units separate from USD-at-event values; unavailable amounts remain empty.
+An empty chart means no valued ledger snapshots, not no recorded events. The seismograph headline comes from the summary's authoritative `totalEvents`, and its quarterly points aggregate every symbol key in `perCoinQuarterlyEventTypes`, including retired assets. Missing or failed summary reads remain unavailable. Fresh blacklist evidence cannot renew supply or Safety Score evidence: each source retains its own clock, budget and read outcome. CSV exports describe only the currently loaded server page and keep native units separate from USD-at-event values; unavailable amounts remain empty.
+
+Ledger search waits 300 ms after typing and applies to the latest URL filters, preserving unrelated parameters and legacy aliases. Ledger filter changes reset cursor navigation. Browser navigation to a different search cancels pending typing and restores that search in the input.
 
 ## Blacklist Sync State Semantics
 

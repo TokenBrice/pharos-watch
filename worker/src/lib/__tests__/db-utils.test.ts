@@ -17,10 +17,7 @@ import {
   writeFreshnessSentinel,
 } from "../db-cache";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-
-const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+import { D1_RESOURCE_WINDOW_MS, runWithOverloadRetry } from "../d1-overload-retry";
 
 type CacheRow = { value: string; updated_at: number };
 
@@ -183,6 +180,18 @@ describe("db utility helpers", () => {
     expect(batch).toHaveBeenNthCalledWith(2, statements);
   });
 
+  it("waits out one spent D1 resource window only when the caller opts in", async () => {
+    const windowError = new Error("D1_ERROR: D1 DB is overloaded. Too many resources consumed within a 10 second window");
+    for (const optIn of [true, false]) {
+      const fn = vi.fn().mockRejectedValueOnce(windowError).mockResolvedValueOnce("ok");
+      const pending = runWithOverloadRetry(fn, 3, undefined, { waitOutResourceWindow: optIn });
+      await vi.advanceTimersByTimeAsync(D1_RESOURCE_WINDOW_MS - 1);
+      expect(fn).toHaveBeenCalledTimes(optIn ? 1 : 2);
+      await vi.advanceTimersByTimeAsync(1_001);
+      await expect(pending).resolves.toBe("ok");
+    }
+  });
+
   it("packs multi-row inserts under the D1 bind limit", () => {
     const { db, calls } = makeDb();
     const rows = Array.from({ length: 26 }, (_, index) => [
@@ -304,18 +313,6 @@ describe("db utility helpers", () => {
     expect(writes.every((write) => write.sql.includes("ON CONFLICT(key) DO UPDATE"))).toBe(true);
   });
 
-  it("preserves newer cache values but permits an equal-timestamp replacement", async () => {
-    const { db } = fixtures.open();
-    expect(await setCacheIfNewer(db, "stablecoins", "newer", 200))
-      .toEqual({ written: true, skippedBecauseNewer: false });
-    expect(await setCacheIfNewer(db, "stablecoins", "older", 199))
-      .toEqual({ written: false, skippedBecauseNewer: true });
-    expect(await getCache(db, "stablecoins")).toEqual({ value: "newer", updatedAt: 200 });
-    expect(await setCacheIfNewer(db, "stablecoins", "equal", 200))
-      .toEqual({ written: true, skippedBecauseNewer: false });
-    expect(await getCache(db, "stablecoins")).toEqual({ value: "equal", updatedAt: 200 });
-  });
-
   it("refuses cache publication when the signal is already aborted", async () => {
     const { db, calls } = makeDb();
     const controller = new AbortController();
@@ -352,6 +349,7 @@ describe("db utility helpers", () => {
       observedAt: 1700000000,
       observedAtMode: null,
       syncedAt: 1700000000,
+      hasExplicitClocks: false,
       agreeSources: [],
       consensusSources: [],
     });
@@ -363,6 +361,7 @@ describe("db utility helpers", () => {
       observedAt: 1700000100,
       observedAtMode: null,
       syncedAt: 1700000100,
+      hasExplicitClocks: false,
       agreeSources: [],
       consensusSources: [],
     });

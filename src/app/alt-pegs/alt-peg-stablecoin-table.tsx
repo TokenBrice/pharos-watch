@@ -25,6 +25,8 @@ const EMPTY_FILTERS: readonly never[] = [];
 interface AltPegStablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
+  /** True when the stablecoins read failed and retained nothing. */
+  unavailable?: boolean;
   /** Ranking rows: the peg options and counts, from the same core universe as the table. */
   pegRows: readonly AltPegDistributionRow[];
   selectedPeg: PegCurrency | null;
@@ -33,6 +35,7 @@ interface AltPegStablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  reportCardsMethodologyVersion?: string | null;
   sourceGenerations?: StablecoinTableSourceGenerations;
 }
 
@@ -43,6 +46,7 @@ interface AltPegStablecoinTableProps {
 export function AltPegStablecoinTable({
   data,
   isLoading,
+  unavailable = false,
   pegRows,
   selectedPeg,
   onSelectPeg,
@@ -50,6 +54,7 @@ export function AltPegStablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  reportCardsMethodologyVersion,
   sourceGenerations,
 }: AltPegStablecoinTableProps) {
   const pinnedStablecoins = usePinnedStablecoins();
@@ -99,10 +104,12 @@ export function AltPegStablecoinTable({
         data={filteredData}
         isLoading={isLoading}
         activeFilters={EMPTY_FILTERS}
+        unavailable={unavailable}
         logos={logos}
         pegScores={pegScores}
         dexLiquidity={dexLiquidity}
         reportCards={reportCards}
+        reportCardsMethodologyVersion={reportCardsMethodologyVersion}
         sourceGenerations={sourceGenerations}
         pinnedStablecoinIds={pinnedStablecoins.pinnedIds}
         onTogglePinnedStablecoin={pinnedStablecoins.togglePinned}

@@ -527,7 +527,13 @@ it("credits the model that produced the copy when a heavy audit attempt ran last
 });
 // This API-plus-mirror test belongs on the Worker side of ADR-2: scripts
 // must not import Worker handlers merely to exercise the full traversal.
-it("refreshes more than 365 editions from the API without losing permanent slugs", async () => {
+// Nightly tier: a 400-row insert plus a real runDigestSync pass is a script
+// integration fixture, not a handler contract. PR coverage retained by
+// scripts/__tests__/sync-digests.test.ts ("completes a two-page archive
+// traversal beyond the 365-row response window") plus the in-file
+// "keeps published edition numbers stable after the archive exceeds its
+// response window" case.
+it("refreshes more than 365 editions from the API without losing permanent slugs", { tags: ["nightly"] }, async () => {
   await withTempRepo("digest-archive-sync", {}, async (root) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {

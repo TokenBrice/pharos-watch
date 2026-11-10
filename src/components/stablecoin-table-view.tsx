@@ -69,6 +69,7 @@ interface StablecoinTableViewProps {
   searchQuery?: string;
   activeFilters: readonly FilterTag[];
   data: StablecoinData[] | undefined;
+  unavailable?: boolean;
   onClearFilters?: () => void;
   onClearSearch?: () => void;
 }
@@ -286,6 +287,7 @@ function StablecoinRows(props: StablecoinTableViewProps) {
           searchQuery={props.searchQuery}
           activeFilters={props.activeFilters}
           data={props.data}
+          unavailable={props.unavailable}
           logos={props.logos}
           onClearFilters={props.onClearFilters}
           onClearSearch={props.onClearSearch}

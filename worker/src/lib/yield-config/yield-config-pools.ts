@@ -25,6 +25,11 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // reUSD -> reUSDe uses the Re Protocol API; no verified DeFiLlama pool UUID
   // TBILL - openeden-tbill native, Ethereum, $27M TVL, ~3.0% APY
   "tbill-openeden": "e140f3b2-0327-46ea-93f5-88b17b0a0a16",
+  // USDO - openeden-usdo BSC rebase, $144k TVL; pins the pick Layer 3 used to
+  // make now that lending-venue matches are skipped. The Ethereum pool
+  // f083596e-032d-4d6b-a7a8-1836d3f99bcd ($12.6M) is the larger instrument;
+  // switching to it is a curation follow-up.
+  "usdo-openeden": "85d9b9d3-3ca0-410c-bde0-d8ab07fe21c3",
   // YUSD - aegis native, Ethereum, $36M TVL, ~5.7% APY
   "yusd-aegis": "f91b2168-c279-475c-a98a-673220f4fee7",
   // USDB (172) - no native DL pool; Blast native yield is not tracked by DL Yields
@@ -84,8 +89,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
   // Cap stcUSD - cap native staking, Ethereum, $90M+ TVL, ~5.9% APY
   "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
-  // SMARDEX USDN - native rebasing vault, Ethereum, $1M+ TVL
-  "usdn-smardex": "f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109",
   // HedgeCore sUSD's gross Venus USDC pin is permanently excluded (2026-09-27):
   // holder rewards are 93% of Venus APY, not the gross pool quote. Read-only BSC
   // convertToAssets / exchangeRateStored / totalAssets calls revert on sUSD;
@@ -106,4 +109,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "ybold-yearn": "4c29f645-12db-461f-a1d7-16900d624271",
   // yvUSDC - yearn-finance USDC vault, Ethereum, $29M TVL, ~3.43% APY
   "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",
+  // apyUSD holder vault; DL labels its apxUSD deposit asset. RateView measures vested holder income.
+  "apyusd-apyx": "cb6139f9-4a68-4efd-8245-0312a92aee55",
 };

@@ -501,6 +501,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       return [source.chainId];
     }));
     const headers = new Map<string, EvmBlockHeader>();
+    const heads = new Map<string, number>();
     const finalizedHeaders = new Map<string, EvmBlockHeader>();
     const statePin = (chainId: string): RecentFinalizedRpcPin | undefined => {
       const header = headers.get(chainId), finalized = finalizedHeaders.get(chainId);
@@ -552,6 +553,10 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
     const pinEvmHeaders = async (): Promise<boolean> => {
       input.onPhase?.("pinning");
       const options = { chainRpcs: input.chainRpcs, signal: input.signal };
+      const headerOptions = (chainId: string): EvmRpcOptions => {
+        const head = heads.get(chainId);
+        return head === undefined ? options : { ...options, observedHeadBlock: head };
+      };
       for (const row of plan.deployments) {
         if (!evmCallsByChain.has(row.chainId) || headers.has(row.chainId)) continue;
         failedRouteId = row.routeId ?? row.deploymentKey;
@@ -559,6 +564,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         const lag = Math.max(...plan.deployments.filter(other => other.chainId === row.chainId).map(other =>
           "safeBlockLag" in other.read ? other.read.safeBlockLag : 0));
         if (head === null || lag <= 0 || head < lag) return false;
+        heads.set(row.chainId, head);
         // A reviewed lag is not a finality proof: rollup finalized heads can
         // trail it. Holdings and in-flight history must share an actually finalized pin.
         const preferFinalized = plan.deployments.filter(other => other.chainId === row.chainId)
@@ -572,7 +578,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
             ...options, minTimestampSec,
           }) : null;
         if (finalized && preferFinalized) {
-          const canonical = await fetchEvmBlockHeader(row.chainId, finalized.number, options);
+          const canonical = await fetchEvmBlockHeader(row.chainId, finalized.number, headerOptions(row.chainId));
           if (!canonical || canonical.hash !== finalized.hash || canonical.timestamp !== finalized.timestamp ||
             finalized.number > head || finalized.timestamp > input.scoringClockSec ||
             finalized.timestamp < minTimestampSec) finalized = null;
@@ -584,7 +590,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
             initialBlockNumber: Math.min(head - lag, finalized?.number ?? head - lag),
           }),
           scoringClockSec: input.scoringClockSec, signal: input.signal,
-          fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, options),
+          fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, headerOptions(row.chainId)),
         });
         if (!block) return false;
         headers.set(row.chainId, block);
@@ -601,7 +607,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         const aligned = await findEvmBlockHeaderInTimestampWindow({
           initialHeader: header, earliestTimestamp: earliestCoherentSec,
           latestTimestamp: latestCoherentSec, signal: input.signal,
-          fetchHeader: number => fetchEvmBlockHeader(chainId, number, options),
+          fetchHeader: number => fetchEvmBlockHeader(chainId, number, headerOptions(chainId)),
         });
         if (!aligned) return false;
         headers.set(chainId, aligned);

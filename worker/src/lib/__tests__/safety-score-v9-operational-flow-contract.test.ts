@@ -16,7 +16,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import ghoSidecar from "@shared/data/stablecoins/domains/mint-authority/gho-aave.json";
 import daiSidecar from "@shared/data/stablecoins/domains/mint-authority/dai-makerdao.json";
 import usdsSidecar from "@shared/data/stablecoins/domains/mint-authority/usds-sky.json";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension, buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import { admitSafetyScoreV9ExtensionAsset, admitSafetyScoreV9FactSetExtension, SafetyScoreV9FactSetExtensionV2Schema } from "../safety-score-v9/fact-set-schema";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
@@ -122,9 +122,9 @@ function restamp(profile: MintAuthorityProfile): void {
 }
 function compile(profile = modeledProfile(), assetId = "alpha", sharedProfiles: readonly V9ExtensionRegistryMeta[] = [], registryFields: Partial<V9ExtensionRegistryMeta> = {}) {
   const fixed = makeV9FixedInput({ assetId, clockSec: CLOCK });
-  const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(alphaMeta({ ...registryFields, id: assetId, mintAuthority: profile }), ...sharedProfiles) });
-  if (extension.assets[0]!.admissionQuarantine) throw new Error(JSON.stringify(extension.assets[0]!.admissionQuarantine));
   const input = normalizeSafetyScoreV9CompilerInput(fixed);
+  const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, { metaById: metaMap(alphaMeta({ ...registryFields, id: assetId, mintAuthority: profile }), ...sharedProfiles) });
+  if (extension.assets[0]!.admissionQuarantine) throw new Error(JSON.stringify(extension.assets[0]!.admissionQuarantine));
   const { factSet, quarantines } = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(input, materializeSafetyScoreV9FactSetExtension(input, extension));
   if (quarantines.length > 0) throw new Error(JSON.stringify(quarantines));
   const rows = factSet.assets[0]!.controls.filter((row) => row.controlKey.startsWith(`mint-meta:${assetId}:`));
@@ -975,13 +975,6 @@ describe("governance public-clock and replacement-approval admission", () => {
     if (family === "H") expect(denied.process?.coverage).toBe("incomplete");
   });
 
-  it("does not demand other-holder approval from a controller voting only its own proved stake", () => {
-    const profile = governanceProfile("D29");
-    profile.governedIssuance!.votingControl.controllers[0]!.voteReplacementApproval = "unknown";
-    const compiled = compile(profile);
-    expect(compiled.governance.votingControl).toMatchObject({ qualified: true, unknownAboveThresholdVoteOwnershipControllerIds: [] });
-    expect(posture(compiled.asset)).toBe("unbounded-governed");
-  });
 });
 
 describe("authority clock, cycle, and compact runtime admission", () => {

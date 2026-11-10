@@ -232,6 +232,32 @@ describe("handleDepegResolverReview", () => {
     expect(body.rows).toEqual([]);
   });
 
+  it("names a future-dated snapshot clock instead of reporting it missing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(2_000_000 * 1000);
+    const payload = snapshot(2_000_000, 2_000_600);
+    const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [{
+      key: "depeg-resolver-review:snapshot",
+      value: JSON.stringify({
+        generation: DDRR_SNAPSHOT_CACHE_GENERATION,
+        methodologyVersion: DDR_METHODOLOGY_VERSION,
+        reviewerVersion: DDRR_REVIEWER_VERSION,
+        payload,
+      }),
+      updated_at: 2_000_120,
+    }] }]);
+
+    const res = await handleDepegResolverReview(db);
+    const body = (await readJsonResponse(res, 200)) as DdrrApiTestBody;
+
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(body._meta.degraded).toBe(true);
+    // The rejected cache clock is named with the shared freshness vocabulary
+    // (future- vs invalid-timestamp), never collapsed into "missing-cache".
+    expect(body._meta.degradedReason).toBe("future-timestamp");
+    expect(body.rows).toEqual([]);
+  });
+
   it("withholds per-coin aggregates after a methodology cutover rejects the snapshot", async () => {
     const payload = buildDdrrResponseEnvelope({
       nowSec: 1_998_000, summary: buildEmptyDdrrSummary(), rows: [],

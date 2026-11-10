@@ -25,7 +25,7 @@ import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payload
 import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy.test-support";
 import { JPMORGAN_JLTXX_PUBLISHER_URL } from "../jpmorgan-nav";
 import { FRNT_LEDGERLENS_URL } from "../frnt-ledgerlens";
-import { AXIS_TRANSPARENCY_URL } from "../axis-issuer-classes";
+import { AXIS_TRANSPARENCY_API_URL } from "../axis-issuer-classes";
 import { MEGAUSD_CUSTODY_DISCOVERY_URL } from "../megausd-custody-onchain";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
@@ -77,6 +77,11 @@ export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
   CORPUS_NOT_REPLAYABLE_NAMES,
   (name) => `Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by ${name}.test.ts.`,
   {
+    "agora-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "anchorage-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "audd-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "brla-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "cadd-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
     "audx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
     "europ-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
     "straitsx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
@@ -138,13 +143,13 @@ const TETHER_CAPTURE = {
 // Verbatim official publisher capture; this http-html input is text/markdown.
 const JPMORGAN_NAV_CAPTURE = readFileSync(new URL("./fixtures/jpmorgan-nav.html", import.meta.url), "utf8");
 
-// Captured 2026-10-29T18:21Z from the Axis asset-composition tab; the fixture
-// keeps the exact Next.js flight script and no page chrome.
-const AXIS_TRANSPARENCY_CAPTURE = readFileSync(
-  new URL("./fixtures/axis-transparency-2026-10-29.html", import.meta.url),
-  "utf8",
+// Captured 2026-11-03 from the issuer transparency dashboard API
+// (NEXT_PUBLIC_TRANSPARENCY_API_URL) — the payload the geo-restricted page
+// embeds. Trimmed to the fields the adapter reads.
+const AXIS_TRANSPARENCY_CAPTURE: unknown = JSON.parse(
+  readFileSync(new URL("./fixtures/axis-transparency-api-2026-11-02.json", import.meta.url), "utf8"),
 );
-const AXIS_DASHBOARD_ANCHOR = '\\"initialDashboard\\":';
+const AXIS_DASHBOARD_BREAKDOWN = "dashboard_details";
 
 // RA-3b reviewed custodian roster with the packet's exact USDC/USDtb raws at
 // Ethereum block 26300177 (2026-10-29T18:25:11Z). Discovery is answered with a
@@ -256,14 +261,16 @@ export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
   },
   "axis-issuer-classes": {
     coinId: "usdx-axis",
-    nowSec: Math.floor(Date.parse("2026-10-29T18:29:04Z") / 1000),
-    network: { html: { [AXIS_TRANSPARENCY_URL]: AXIS_TRANSPARENCY_CAPTURE } },
+    nowSec: Math.floor(Date.parse("2026-11-02T09:00:00Z") / 1000),
+    network: { json: { [AXIS_TRANSPARENCY_API_URL]: AXIS_TRANSPARENCY_CAPTURE } },
     drift: {
-      label: "the issuer page no longer carries the initialDashboard flight payload",
+      label: "the issuer payload drops the asset-class breakdown",
       network: {
-        html: {
-          [AXIS_TRANSPARENCY_URL]: AXIS_TRANSPARENCY_CAPTURE
-            .split(AXIS_DASHBOARD_ANCHOR).join('\\"initialDashboardRenamed\\":'),
+        json: {
+          [AXIS_TRANSPARENCY_API_URL]: {
+            ...(AXIS_TRANSPARENCY_CAPTURE as object),
+            [AXIS_DASHBOARD_BREAKDOWN]: {},
+          },
         },
       },
       outcome: "error",
@@ -344,6 +351,7 @@ CORPUS_CASES["usdtb-transparency"] = {
 // Trimmed happy-path fixtures from the six adapter tests (not new live captures).
 // Each drift removes a denominator field while leaving plausible holdings intact.
 const ETHENA_ENDPOINT = "https://app.ethena.fi/api/positions/current/collateral";
+const ETHENA_STATUS_ENDPOINT = "https://app.ethena.fi/api/collateralization/status";
 const SKY_ENDPOINT = "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt";
 const FALCON_ENDPOINT = "https://api.falcon.finance/api/v1/transparency";
 const JUPUSD_ENDPOINT = "https://api.jupusd.money/api/data";
@@ -354,6 +362,11 @@ const ETHENA_FIXTURE = {
     { asset: "BTC", exchange: "Binance", timestamp: 1_757_000_000, usdAmount: 20 },
     { asset: "ETH", exchange: "Binance", timestamp: 1_757_000_000, usdAmount: 45 },
   ],
+};
+// The second issuer surface the adapter reconciles the positions total against.
+const ETHENA_STATUS_FIXTURE = {
+  timestamp: "2025-09-04T15:33:20.000000Z",
+  totalBackingAssetsInUsd: 100,
 };
 const SKY_FIXTURE = {
   count: 2,
@@ -398,10 +411,19 @@ const SKY_RPC = {
 CORPUS_CASES.ethena = {
   coinId: "usde-ethena",
   nowSec: 1_757_003_600,
-  network: { json: { [ETHENA_ENDPOINT]: ETHENA_FIXTURE }, rpc: ETHENA_RPC },
+  network: {
+    json: { [ETHENA_ENDPOINT]: ETHENA_FIXTURE, [ETHENA_STATUS_ENDPOINT]: ETHENA_STATUS_FIXTURE },
+    rpc: ETHENA_RPC,
+  },
   drift: {
     label: "totalBackingAssetsInUsd is dropped",
-    network: { json: { [ETHENA_ENDPOINT]: { ...ETHENA_FIXTURE, totalBackingAssetsInUsd: undefined } }, rpc: ETHENA_RPC },
+    network: {
+      json: {
+        [ETHENA_ENDPOINT]: { ...ETHENA_FIXTURE, totalBackingAssetsInUsd: undefined },
+        [ETHENA_STATUS_ENDPOINT]: ETHENA_STATUS_FIXTURE,
+      },
+      rpc: ETHENA_RPC,
+    },
     outcome: "error",
   },
 };

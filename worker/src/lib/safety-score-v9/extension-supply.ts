@@ -43,6 +43,7 @@ type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
 const RAW_UNIT_SHARE_SCALE = 10n ** 18n;
 
 const SUPPLY_ATTRIBUTION_REVIEWS = REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE;
+export type ReviewedProviderRowExclusionRow = ReturnType<typeof ReviewedProviderRowExclusionSchema.parse>;
 const providerRowExclusionRegistry = createReviewedAssetRegistry({
   rows: SUPPLY_ATTRIBUTION_REVIEWS.providerRowExclusionReviews ?? [],
   schema: ReviewedProviderRowExclusionSchema,
@@ -50,7 +51,18 @@ const providerRowExclusionRegistry = createReviewedAssetRegistry({
   keyOf: row => typeof row.providerChainLabel === "string" ? `${row.assetId}:${row.providerChainLabel}` : undefined,
   keyPath: "providerChainLabel",
 });
-export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
+/** Injected reviews replace the shared curated registry; the same schema and key paths admit both. */
+function providerRowExclusionsFor(reviews: readonly ReviewedProviderRowExclusionRow[] | undefined) {
+  if (reviews === undefined) return providerRowExclusionRegistry;
+  return createReviewedAssetRegistry({
+    rows: reviews,
+    schema: ReviewedProviderRowExclusionSchema,
+    path: "supplyAttribution.providerRowExclusionReviews",
+    keyOf: row => typeof row.providerChainLabel === "string" ? `${row.assetId}:${row.providerChainLabel}` : undefined,
+    keyPath: "providerChainLabel",
+  });
+}
+const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
   SUPPLY_ATTRIBUTION_REVIEWS.independentLiabilityAssetIds.sort(compareText),
 );
 const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
@@ -60,6 +72,8 @@ const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
 export interface BuildSafetyScoreV9SupplyReviewOptions {
   meta?: V9ExtensionRegistryMeta;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+  /** Injected reviewed provider-row exclusions; omitted reads the shared curated registry. */
+  providerRowExclusionReviews?: readonly ReviewedProviderRowExclusionRow[];
 }
 
 /**
@@ -99,6 +113,7 @@ const STALE_ATTRIBUTION_REJECTION_CODES = new Set([
 const INTEGRATION_ATTRIBUTION_REJECTION_CODES = new Set([
   "route-inventory-unavailable",
   "deployment-identity-unavailable",
+  "deployment-identity-authored-withholding",
   "deployment-identity-mismatch",
   "transparency-source-config-unavailable",
 ]);
@@ -634,8 +649,9 @@ function admittedProviderRowExclusions(
   assetId: string,
   review: SupplyReview,
   profile: BridgeRouteRiskProfile | undefined,
+  registry: ReturnType<typeof providerRowExclusionsFor>,
 ): SupplyReview["providerRowExclusions"] {
-  const entries = providerRowExclusionRegistry.getAll(assetId);
+  const entries = registry.getAll(assetId);
   if (entries.length === 0) return undefined;
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
   const aggregate = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
@@ -760,7 +776,11 @@ function admitDeploymentSupplyCensus(
     return rejected();
   }
   if (!packet.conservation.rosterComplete) {
-    reject("roster-incomplete");
+    // R5: a producer without an aggregate denominator already named that read;
+    // it is not also a roster gap.
+    const denominatorUnread = packet.rejected.some((rejection) =>
+      rejection.routeId === null && rejection.code === deploymentSupplyCensusRejectionCode("read-unavailable"));
+    if (!denominatorUnread) reject("roster-incomplete");
     return rejected();
   }
   if (!packet.conservation.conserved) {
@@ -873,7 +893,8 @@ function buildSupplyReview(
   options: BuildSafetyScoreV9SupplyReviewOptions,
   census: DeploymentSupplyCensusAdmission,
 ): SupplyReview | null {
-  providerRowExclusionRegistry.getAll(assetId);
+  const exclusionRegistry = providerRowExclusionsFor(options.providerRowExclusionReviews);
+  exclusionRegistry.getAll(assetId);
   const economicPacket = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
   if (economicPacket?.model === "reviewed-economic-deployment-partition-v1") {
     return buildReviewedEconomicDeploymentSupplyReview(fixedInput, assetId, profile);
@@ -1140,7 +1161,7 @@ function buildSupplyReview(
     unreviewedRouteSupplyShare: unreviewedUsd / totalUsd,
     failureDomains,
   });
-  const exclusions = admittedProviderRowExclusions(fixedInput, assetId, review, profile);
+  const exclusions = admittedProviderRowExclusions(fixedInput, assetId, review, profile, exclusionRegistry);
   return exclusions?.length ? { ...review, providerRowExclusions: exclusions } : review;
 }
 

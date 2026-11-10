@@ -87,6 +87,7 @@ import {
   parseYieldHistoryWriterPause,
 } from "../../lib/yield-history-cleanup";
 import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 import {
   createYieldProgressReporter,
 } from "../yield-progress";
@@ -316,6 +317,7 @@ export interface YieldSafetyIdentityChangeMeta {
 }
 
 export function buildYieldSyncMetadata(input: {
+  startSec: number;
   rowsRead: number;
   rowsWritten: number;
   rowsRejected: number;
@@ -352,6 +354,12 @@ export function buildYieldSyncMetadata(input: {
   safetyIdentityChangedBeforePublish?: YieldSafetyIdentityChangeMeta | null;
 }): string {
   const onChain = input.onChain;
+  const qualityReasons = [
+    ...input.qualityReasons,
+    ...YIELD_OPPORTUNITY_EXCLUSIONS
+      .filter((entry) => Date.parse(`${entry.nextReviewAt}T00:00:00Z`) <= input.startSec * 1000)
+      .map((entry) => `yield-opportunity-exclusion-review-due:${entry.projects[0]}`),
+  ];
   const onChainEnvelopeRejections = onChain.envelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
   const advisoryReasons: string[] = [];
   if (input.safetySnapshotHeld) advisoryReasons.push("safety-snapshot-held");
@@ -419,7 +427,7 @@ export function buildYieldSyncMetadata(input: {
       comparisonAnchorFreshness: input.comparisonAnchorFreshness,
       previousTvlRowsTruncated: input.previousTvlRowsTruncated,
     },
-    quality: { degraded: input.qualityReasons.length > 0, reasons: input.qualityReasons, advisoryReasons },
+    quality: { degraded: qualityReasons.length > 0, reasons: qualityReasons, advisoryReasons },
     ...(input.reason ? { reason: input.reason } : {}),
     validationFailures: input.validationFailures,
     riskFreeRate: input.riskFreeRate,
@@ -1222,26 +1230,6 @@ export async function guardPublishedYieldCoverage(params: {
   );
   const currentPublishedRankingCount = countPreviewRankings(params.previewRankingsPayload);
 
-  if (previousRankingsState.malformed) {
-    return {
-      qualityReasons: [],
-      result: createCronResult({
-        status: "degraded",
-        itemCount: currentPublishedYieldBearingCount,
-        metadata: {
-          reason: "previous-yield-rankings-cache-invalid",
-          ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
-        },
-      }),
-      previousPublishedYieldBearingCount: null,
-      currentPublishedYieldBearingCount,
-      previousPublishedOpportunityCount: null,
-      currentPublishedOpportunityCount,
-      previousPublishedRankingCount: null,
-      currentPublishedRankingCount,
-    };
-  }
-
   // An unreadable prior generation is an unavailable observation, not a
   // measured zero; recovery may still publish a valid replacement (R1/R2).
   const previousCountsUnavailable = params.previousYieldPublicationSnapshot.malformed;
@@ -1551,6 +1539,7 @@ export async function runYieldCoordinatorPersistStage(
       }] : [],
     },
     metadata: buildYieldSyncMetadata({
+      startSec: fetched.startSec,
       rowsRead: fetched.yieldCoins.length,
       rowsWritten: publicationResult.updatedCount,
       rowsRejected: normalized.rowsRejected,

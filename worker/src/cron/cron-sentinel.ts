@@ -1,5 +1,6 @@
-import type { TelegramCreds } from "../telegram/delivery/telegram";
+import type { DailyCronSentinelOptions } from "./cron-sentinel-daily";
 import type { CronResult } from "../lib/cron-logger";
+import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
 import { runCronStalenessWatchdog } from "./cron-staleness-watchdog";
 import { runDigestPublicationWatchdog } from "./digest-publication-watchdog";
 import { runDexExitRouteTurnoverWatchdog } from "./dex-exit-route-turnover-watchdog";
@@ -9,11 +10,11 @@ import { runCronSentinelSources, type CronSentinelMode } from "./cron-sentinel-r
 /** `daily` is reached only through `runDailyCronSentinel`, never dispatched here. */
 export type CronSentinelDispatchMode = Exclude<CronSentinelMode, "daily">;
 
-export interface CronSentinelOptions {
+export interface CronSentinelOptions extends Omit<DailyCronSentinelOptions, "nowSec"> {
   mode: CronSentinelDispatchMode;
   nowSec?: number;
-  operatorTelegramCreds?: TelegramCreds | null;
-  signal?: AbortSignal;
+  /** Active canary cohort read by the status-mode freshness watchdog. */
+  workerCanaryMode?: WorkerCanaryMode;
 }
 
 export async function runCronSentinel(
@@ -27,6 +28,7 @@ export async function runCronSentinel(
       source: "freshness",
       run: () => runCronStalenessWatchdog(db, options.signal, {
         operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+        workerCanaryMode: options.workerCanaryMode,
       }),
     });
     sources.push({
@@ -41,7 +43,9 @@ export async function runCronSentinel(
   } else if (options.mode === "turnover") {
     sources.push({
       source: "turnover",
-      run: () => runDexExitRouteTurnoverWatchdog(db, options.signal),
+      run: () => runDexExitRouteTurnoverWatchdog(db, options.signal, {
+        operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+      }),
     });
   } else {
     sources.push({
@@ -50,5 +54,8 @@ export async function runCronSentinel(
     });
   }
 
-  return runCronSentinelSources(db, options.mode, sources, nowSec, options.signal);
+  return runCronSentinelSources(db, options.mode, sources, nowSec, options.signal, async (source) => {
+    const { getDailyCronSentinelSources } = await import("./cron-sentinel-daily");
+    return getDailyCronSentinelSources(db, { ...options, nowSec }).find((entry) => entry.source === source)!.run();
+  });
 }

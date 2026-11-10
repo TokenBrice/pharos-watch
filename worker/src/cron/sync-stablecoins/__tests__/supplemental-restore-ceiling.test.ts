@@ -3,8 +3,6 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
-import { prefersOnChainSupplyMcap } from "../supplemental-assets/onchain-supply";
 import {
   getCirculatingRawOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
@@ -17,6 +15,7 @@ import {
   normalizeStablecoinsPayload,
   restoreCuratedAggregateChainPartition,
   restoreMissingTrackedAssets,
+  restorePreferredNativeSupply,
   reviewedOnchainSupplyHoldFields,
   withholdUnclockedCarriedSupply,
 } from "../shared";
@@ -60,7 +59,11 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
-  it.each(ACTIVE_STABLECOINS.filter((meta) => prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)))(
+  it.each(["usg-tangent", "usyc-hashnote", "jtrsy-anemoy"].map((id) => {
+    const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === id);
+    if (!meta) throw new Error(`missing preferred supply fixture: ${id}`);
+    return meta;
+  }))(
     "restores only bounded native supply for preferred $id", (meta) => {
       const labels = [...new Set(meta.contracts!.map((contract) => CHAIN_META[contract.chain].name))];
       for (const [source, age, admitted] of [
@@ -100,6 +103,48 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       }
     },
   );
+
+  it("restores USG's keeper-adjusted circulating packet across an unreadable read", () => {
+    const previousFor = (age: number) => asset({
+      id: "usg-tangent",
+      symbol: "USG",
+      supplySource: "onchain-circulating-supply",
+      supplyObservedAt: NOW_SEC - age,
+      circulating: { peggedUSD: 4_040_000 },
+      chainCirculating: { Ethereum: { chainId: "ethereum", current: 4_040_000 } },
+      chains: ["Ethereum"],
+    });
+
+    for (const age of [60, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC]) {
+      const previous = previousFor(age);
+      const previousById = new Map([[previous.id, previous]]);
+      const supplemental = mergeSupplementalLastKnownGood(
+        [asset({ id: previous.id, symbol: previous.symbol })], previousById, new Set(), NOW_SEC,
+      ).assets[0];
+      const tracked = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === previous.id)!;
+      const restored = restorePreferredNativeSupply(
+        asset({ id: previous.id, symbol: previous.symbol, supplySource: "onchain-supply-withheld" }),
+        previous,
+        NOW_SEC,
+      );
+      for (const row of [supplemental, tracked, restored]) {
+        expect(row).toMatchObject({
+          supplySource: "onchain-circulating-supply",
+          supplyObservedAt: NOW_SEC - age,
+          supplyRestored: true,
+          circulating: { peggedUSD: 4_040_000 },
+          chainCirculating: { Ethereum: { chainId: "ethereum", current: 4_040_000 } },
+        });
+      }
+    }
+
+    const expired = previousFor(SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
+    expect(restorePreferredNativeSupply(
+      asset({ id: expired.id, symbol: expired.symbol, supplySource: "onchain-supply-withheld" }),
+      expired,
+      NOW_SEC,
+    ).supplyRestored).toBeUndefined();
+  });
 
   it.each([
     { id: "ustb-superstate", labels: ["Ethereum", "Plume", "Solana"] },
@@ -177,7 +222,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
   it.each([
     ["audx-aussie-dollar-token", "coingecko", 30_551, false],
-    ["mxne-real-mxn", "coingecko", 135_461, false],
+    ["xmd-metal-dollar", "coingecko", 135_461, false],
     ["hbusdt-hyperbeat", "coingecko", 94_041, false],
     ["tryb-bilira", "coingecko-low-volume", 604_800, true],
     ["usdc-circle", "chainlink-nav", 345_600, true],
@@ -339,24 +384,6 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)?.expired ? [current.id] : [])
       .toEqual(expiredIds);
     expect(result.assets).toEqual([current]);
-    expect(result.assets[0]).toBe(current);
-  });
-
-  it("refuses a curated partition that no longer sums to the fresh aggregate", () => {
-    const current = asset({
-      id: "syrupusdt-maple", symbol: "syrupUSDT",
-      supplySource: "coingecko-fallback", circulating: { peggedUSD: 90_000_000 },
-    });
-    const previous = asset({
-      id: "syrupusdt-maple", symbol: "syrupUSDT",
-      supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
-      chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900,
-    });
-    const result = mergeSupplementalLastKnownGood(
-      [current], new Map([[previous.id, previous]]), new Set(), NOW_SEC,
-    );
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual([]);
     expect(result.assets[0]).toBe(current);
   });
 

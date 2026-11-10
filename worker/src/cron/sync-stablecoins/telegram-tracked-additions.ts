@@ -3,18 +3,20 @@ import type { PeggedAsset } from "./enrich-prices";
 import { queuePendingTrackedStablecoinAdditions } from "../../telegram/digest/digest-appendices";
 
 /**
- * A CoinGecko-only publication serves the subset it can price, so its asset
- * list is not the tracked-set baseline: treating it as one announces every
- * tracked coin the outage omitted as newly tracked.
+ * A DefiLlama-outage publication observes only the subset CoinGecko can price;
+ * the rest of its tracked set is restored from the previous publication, and
+ * coins the restore cannot vouch for are still omitted. Its asset list is not
+ * the tracked-set baseline: treating it as one announces those omitted coins as
+ * newly tracked. Restored rows therefore count with the CoinGecko rows.
  */
 export function isFallbackBackedTrackedBaseline(
-  previousAssets: Iterable<Pick<PeggedAsset, "supplySource">>,
+  previousAssets: Iterable<Pick<PeggedAsset, "supplySource" | "supplyRestored">>,
 ): boolean {
   let total = 0;
   let fallbackRows = 0;
   for (const asset of previousAssets) {
     total++;
-    if (asset.supplySource === "coingecko-fallback") fallbackRows++;
+    if (asset.supplySource === "coingecko-fallback" || asset.supplyRestored === true) fallbackRows++;
   }
   return fallbackRows * 2 > total;
 }

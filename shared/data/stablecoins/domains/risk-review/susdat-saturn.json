@@ -229,6 +229,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
         "protocol": "Saturn native ERC-4626 vault / CCIP LockRelease home",
+        "providerKeys": [
+          "chainlink-ccip"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "single-chain-or-native",
@@ -285,6 +288,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25",
         "protocol": "Chainlink CCIP BurnWithFromMintTokenPool 1.6.1",
+        "providerKeys": [
+          "chainlink-ccip"
+        ],
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",

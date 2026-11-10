@@ -30,7 +30,7 @@ The detail page at `pharos.watch/stablecoin/{id}` shows live scoring and analyti
 - **Liquidity score**: 0-100 score, DEX TVL, concentration (HHI), and coverage class from `LiquidityCoverageClassSchema` in `shared/types/market.ts`
 - **Redemption backstop**: Route family, access model, settlement model/terms, fees, and capacity ratio; read the current enums in `shared/types/redemption.ts` rather than reducing every route to a permissionless/whitelisted binary
 - **DEWS stress band**: CALM→DANGER scale; the band vocabulary lives in `shared/lib/dews-config.ts` (source file wins)
-- **Yield**: Current APY, yield-to-risk ratio, safety grade
+- **Yield**: Current APY, Pharos Yield Score with its source-risk breakdown, safety grade
 - **Mint/burn flows**: Net flow direction, flow intensity, pressure shift
 
 ### What to Cover — additional angles

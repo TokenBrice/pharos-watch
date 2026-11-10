@@ -126,6 +126,60 @@ const deletedSupplyHelperNames = {
   "sumPegBuckets": true,
 };
 
+// Names that shadow or restate the canonical helpers. A local helper with
+// different semantics takes a name that says so (e.g. asRecordOrArray).
+const localRecordGuardNames = new Set([
+  "asRecord", "isRecord", "readRecord", "isPlainObject", "isPlainRecord",
+  "isObjectRecord", "isUnknownRecord", "asObject", "toRecord",
+]);
+const localJsonParseNames = new Set([
+  "parseJson", "tryParseJson", "parseJsonObject", "parseJsonStringArray", "parseJsonObjectWithSchema",
+]);
+
+function isRecordGuardCopy(fn) {
+  if (fn.params.length !== 1 || fn.params[0].type !== "Identifier") return false;
+  const isParam = (node) => node?.type === "Identifier" && node.name === fn.params[0].name;
+  let expr = fn.body;
+  if (expr?.type === "BlockStatement") {
+    if (expr.body.length !== 1 || expr.body[0].type !== "ReturnStatement") return false;
+    expr = expr.body[0].argument;
+  }
+  if (expr?.type === "ConditionalExpression") {
+    let value = expr.consequent;
+    while (["TSAsExpression", "TSTypeAssertion", "TSNonNullExpression"].includes(value.type)) value = value.expression;
+    if (!isParam(value) || expr.alternate.type !== "Literal" || expr.alternate.value !== null) return false;
+    expr = expr.test;
+  }
+  function conjuncts(node) {
+    return node?.type === "LogicalExpression" && node.operator === "&&"
+      ? [...conjuncts(node.left), ...conjuncts(node.right)] : [node];
+  }
+  const parts = conjuncts(expr);
+  if (parts.length !== 3) return false;
+  const kinds = parts.map((node) => {
+    if (isParam(node) || (node?.type === "UnaryExpression" && node.operator === "!"
+      && node.argument.type === "UnaryExpression" && node.argument.operator === "!" && isParam(node.argument.argument))) return "non-null";
+    if (node?.type === "BinaryExpression") {
+      const pairs = [[node.left, node.right], [node.right, node.left]];
+      if (["===", "=="].includes(node.operator) && pairs.some(([a, b]) =>
+        a.type === "UnaryExpression" && a.operator === "typeof" && isParam(a.argument)
+        && b.type === "Literal" && b.value === "object")) return "object";
+      if (["!==", "!="].includes(node.operator) && pairs.some(([a, b]) =>
+        isParam(a) && b.type === "Literal" && b.value === null)) return "non-null";
+    }
+    if (node?.type === "UnaryExpression" && node.operator === "!") {
+      const call = node.argument;
+      const member = call.callee;
+      if (call.type === "CallExpression" && !call.optional && call.arguments.length === 1 && isParam(call.arguments[0])
+        && member.type === "MemberExpression" && !member.computed && !member.optional
+        && member.object.type === "Identifier" && member.object.name === "Array"
+        && member.property.type === "Identifier" && member.property.name === "isArray") return "array";
+    }
+    return null;
+  });
+  return kinds.includes("object") && kinds.includes("non-null") && kinds.includes("array");
+}
+
 const pharosBoundaryPlugin = {
   rules: {
     "shared-types-imports": {
@@ -227,6 +281,38 @@ const pharosBoundaryPlugin = {
           },
           "MemberExpression[computed=true] > Literal.property"(node) {
             if (Object.hasOwn(deletedSupplyHelperNames, node.value)) context.report({ node, messageId: "unavailable" });
+          },
+        };
+      },
+    },
+    "no-local-helper-copies": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          record: "Use isRecord/readRecord from shared/lib/type-guards.ts instead of declaring a local record guard.",
+          json: "Use the canonical parsers from worker/src/lib/json-parse.ts instead of declaring a local JSON parser.",
+        },
+      },
+      create(context) {
+        const filename = relative(repoRoot, context.filename).replaceAll("\\", "/");
+        function check(node, name, fn = node) {
+          // shared/types and shared/contracts may not import shared/lib, so they keep local guards.
+          if ((localRecordGuardNames.has(name) || isRecordGuardCopy(fn)) && filename !== "shared/lib/type-guards.ts"
+            && !filename.startsWith("shared/types/") && !filename.startsWith("shared/contracts/")) {
+            context.report({ node, messageId: "record" });
+          }
+          if (localJsonParseNames.has(name) && filename.startsWith("worker/")
+            && filename !== "worker/src/lib/json-parse.ts") {
+            context.report({ node, messageId: "json" });
+          }
+        }
+        return {
+          FunctionDeclaration: (node) => check(node, node.id?.name),
+          VariableDeclarator(node) {
+            if (node.init?.type === "ArrowFunctionExpression" || node.init?.type === "FunctionExpression") {
+              check(node, node.id.name, node.init);
+            }
           },
         };
       },
@@ -471,6 +557,7 @@ const eslintConfig = defineConfig([
     // Gate/tooling caches (e.g. the local Worker bundle proof) are
     // gitignored build outputs, never lintable source.
     ".cache/**",
+    ".tmp/**",
     ".claude/**",
     ".worktrees/**",
     "worktrees/**",
@@ -550,6 +637,21 @@ const eslintConfig = defineConfig([
     rules: {
       "pharos/no-zero-coercing-supply-helpers": "error",
     },
+  },
+  {
+    files: [...NON_WORKER_SOURCE_GLOBS, "worker/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"],
+    ignores: [
+      "**/__tests__/**", "**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "**/test-helpers/**", "**/test-utils/**", "**/fixtures/**", "**/__mocks__/**",
+      "**/*test-support.*", "scripts/test/**", "src/test/**",
+      "**/generated/**", "**/*.generated.*", "src/generated/**", "shared/data/**",
+      // Pinned Safety Score evaluator inputs: editing them rotates the
+      // evaluation-build identity and needs the equivalence replay, so their
+      // local copies wait for the next evaluator release.
+      "shared/lib/safety-score-v9/policy.ts", "worker/src/lib/live-reserves/store-row-decoding.ts",
+    ],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: { "pharos/no-local-helper-copies": "error" },
   },
   {
     // Worker tests additionally sign fixtures with throwaway private keys.
@@ -747,6 +849,28 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Delivery v2 fan-out/drain inputs are the only live authority. The retired
+    // target-plan/pre-set-resolution budgets must not become importable again,
+    // and an in-test export denylist would vanish with the test file.
+    files: ["shared/lib/telegram-delivery-policy.ts"],
+    rules: {
+      "no-restricted-exports": [
+        "error",
+        {
+          restrictedNamedExports: [
+            "TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE",
+            "TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE",
+            "TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN",
+            "TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE",
+            "TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN",
+            "TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN",
+            "estimateTelegramTargetPlanCoordinatorBound",
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Force callers to route /api/ paths through the shared registry so the
     // surface stays grep-able and typed. The selector only catches literals
     // passed as function-call arguments — object/JSX-attribute literals (doc
@@ -773,6 +897,106 @@ const eslintConfig = defineConfig([
         "error",
         ...layoutScriptRestrictedSyntax,
         ...apiPathRestrictedSyntax,
+      ],
+    },
+  },
+  {
+    // Generated registry artifacts publish through the atomic writer so a
+    // crashed/parallel build cannot expose a half-written projection. The
+    // lifecycle registry records the helper in the artifact's sourcePaths
+    // (generated-artifact-lifecycle.test.ts); this owns the call site.
+    files: ["scripts/build-data/build-client-registry.mjs"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportSpecifier[imported.name='writeFileSync']",
+          message:
+            "Generated registry artifacts must write through atomicWriteFileSync (scripts/lib/atomic-artifact-write.mts).",
+        },
+        {
+          selector: "CallExpression[callee.name='writeFileSync']",
+          message:
+            "Generated registry artifacts must write through atomicWriteFileSync (scripts/lib/atomic-artifact-write.mts).",
+        },
+        {
+          selector: "CallExpression[callee.property.name='writeFileSync']",
+          message:
+            "Generated registry artifacts must write through atomicWriteFileSync (scripts/lib/atomic-artifact-write.mts).",
+        },
+      ],
+    },
+  },
+  {
+    // Decision B / OP-R0 S-3: the documentation class is derived-only. These
+    // scoring modules must never read it, so the class can annotate evidence
+    // without re-pricing it. Kept last because flat config replaces the
+    // no-restricted-imports/no-restricted-syntax options of every earlier block
+    // that matches the same files, so this must re-apply the shared/lib import
+    // ban and the /api/ literal selectors it would otherwise drop.
+    files: [
+      "shared/lib/safety-score-v9/score.ts",
+      "shared/lib/safety-score-v9/formula.ts",
+      "shared/lib/safety-score-v9/evaluate-set.ts",
+      "shared/lib/safety-score-v9/dependencies.ts",
+      "shared/lib/safety-score-v9/control.ts",
+      "shared/lib/safety-score-v9/evaluate-asset.ts",
+      "shared/lib/safety-score-v9/backing.ts",
+      "shared/lib/safety-score-v9/exit.ts",
+      "shared/lib/safety-score-v9/control-mint-grade.ts",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@shared/*"],
+              message: "Within shared/lib/, use relative imports (./file) instead of @shared/* aliases.",
+            },
+            ...frontendToWorkerRestrictedImportPatterns,
+            {
+              group: ["**/documentation", "./documentation", "**/documentation.js", "./documentation.js"],
+              message:
+                "Scoring modules must not import the documentation class (Decision B / OP-R0 S-3): it annotates evidence without pricing it.",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        ...apiPathRestrictedSyntax,
+        {
+          selector:
+            "Identifier[name=/^(?:V9Documentation|classifyV9DocumentationGap$|documentationGapIds$|isV9DocumentationDatum$|documentationOnlyLimitedPillars$|resolveV9DocumentationControl$)/]",
+          message:
+            "Scoring modules must not reference the documentation class (Decision B / OP-R0 S-3).",
+        },
+        {
+          // Any `.documentation` read, not just `evidence.documentation`: an
+          // alias (`const ev = semantic.evidence; ev.documentation`) or a
+          // destructure would otherwise slip past a selector keyed on `evidence`.
+          // These modules only read `.evidence.rank`, so the broader property ban
+          // cannot mask a legitimate access.
+          selector: "MemberExpression[property.name='documentation']",
+          message:
+            "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
+        },
+        {
+          selector: "MemberExpression[computed=true][property.value='documentation']",
+          message:
+            "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
+        },
+        {
+          selector: "ObjectPattern > Property[key.name='documentation']",
+          message:
+            "Scoring modules must not destructure the documentation policy block (Decision B / OP-R0 S-3).",
+        },
+        {
+          selector: "ImportExpression[source.value=/documentation/]",
+          message:
+            "Scoring modules must not import the documentation class (Decision B / OP-R0 S-3).",
+        },
       ],
     },
   },

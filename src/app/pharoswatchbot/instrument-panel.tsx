@@ -25,10 +25,7 @@ const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
 });
 const MONTH_ONLY_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
-});
-const DAY_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
+  timeZone: "UTC",
 });
 const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -63,7 +60,7 @@ function formatMonthOnlyTick(value: unknown): string {
 
 function formatDayTick(value: unknown): string {
   const timestamp = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(timestamp) ? DAY_TICK_FORMATTER.format(new Date(timestamp)) : "";
+  return Number.isFinite(timestamp) ? formatChartDate(timestamp, "short") : "";
 }
 
 function formatSnapshotAt(value: number | null | undefined): string | null {

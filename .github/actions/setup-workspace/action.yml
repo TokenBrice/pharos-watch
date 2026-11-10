@@ -30,6 +30,13 @@ inputs:
     description: Whether to run npm ci after setup.
     required: false
     default: "true"
+  node-modules-cache:
+    description: >-
+      Whether to restore and save the installed node_modules tree when
+      install-deps is true. Keep this disabled in jobs that hold deploy
+      credentials; cached dependency trees must never be writable there.
+    required: false
+    default: "false"
   bootstrap-generated:
     description: Whether to materialize bootstrap-safe generated projections after npm ci.
     required: false
@@ -136,7 +143,40 @@ runs:
       shell: bash
       run: tar --zstd -xf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.zst" --same-permissions
 
-    - if: ${{ inputs.install-deps == 'true' }}
+    - name: Restore installed dependencies
+      id: node-modules-cache
+      if: ${{ inputs.install-deps == 'true' && inputs.node-modules-cache == 'true' }}
+      # A cache outage or corrupt archive must fall back to npm ci, not fail.
+      continue-on-error: true
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: |
+          node_modules
+          worker/node_modules
+          shared/contracts/node_modules
+        # Exact key only: a tree built from another lockfile, workspace
+        # manifest, Node version, platform or npm config must never be
+        # restored. Generated outputs are deliberately absent so the bootstrap
+        # drift guard keeps its meaning.
+        key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', 'package.json', 'worker/package.json', 'shared/contracts/package.json', '.npmrc') }}
+
+    - if: ${{ inputs.install-deps == 'true' && inputs.node-modules-cache == 'true' && steps.node-modules-cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: npm ci
+
+    - name: Save installed dependencies
+      if: ${{ inputs.install-deps == 'true' && inputs.node-modules-cache == 'true' && steps.node-modules-cache.outputs.cache-hit != 'true' }}
+      # The cache is an optimization: a rejected save must not fail the job.
+      continue-on-error: true
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: |
+          node_modules
+          worker/node_modules
+          shared/contracts/node_modules
+        key: ${{ steps.node-modules-cache.outputs.cache-primary-key }}
+
+    - if: ${{ inputs.install-deps == 'true' && inputs.node-modules-cache != 'true' }}
       shell: bash
       run: npm ci
 

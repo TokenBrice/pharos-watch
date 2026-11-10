@@ -20,7 +20,13 @@ const artifactManifest = {
   reportByteLength: bytes.length,
   reportSha256: createHash("sha256").update(bytes).digest("hex"),
 };
-const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "myrc-blox")!;
+const currentCoin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "myrc-blox")!;
+// Retain the retired binding only for historical examination regression coverage.
+const coin = { ...currentCoin, liveReservesConfig: {
+  adapter: "myrc-independent-assurance", version: 1, semantics: "attestation-mix",
+  inputs: { primary: { kind: "http-json", url: "https://api.blox.my/blox-admin/attestations" } },
+  params: { product: "MYRC", profile: "myrc-v1" },
+} } as const;
 const adapter = getReserveAdapter("myrc-independent-assurance")!;
 
 function installReport(options: { index?: unknown; pdf?: Uint8Array; finalUrl?: string } = {}) {
@@ -48,6 +54,9 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("MYRC hash-pinned examination", () => {
   it("publishes actual examined cash/fund quantities and clock, retaining the three-cent disclosure difference", async () => {
+    expect(currentCoin.liveReservesConfig).toBeUndefined();
+    expect(currentCoin.reserveReview?.compositionAsOf).toBe("2026-08-31");
+    expect(currentCoin.reserves?.map(({ pct }) => pct)).toEqual([66.68, 33.32]);
     installReport();
     const result = await fetchReport();
     expect(result.slices.map((slice) => slice.sourceKey)).toEqual([
@@ -79,7 +88,7 @@ describe("MYRC hash-pinned examination", () => {
     installReport();
     const result = await fetchReport();
     const config = coin.liveReservesConfig!;
-    const now = Date.parse("2026-10-07T21:01:31Z") / 1000;
+    const now = Date.parse("2026-11-04T08:10:00Z") / 1000;
     const snapshot = {
       stablecoinId: coin.id, slices: result.slices,
       fetchedAt: now, attemptId: "myrc-report-success", source: config.adapter,
@@ -98,6 +107,9 @@ describe("MYRC hash-pinned examination", () => {
     expect(evaluateLiveReserveAdmission({ ...snapshot, fetchedAt: timely }, {
       lastSuccessAt: timely, lastSuccessAttemptId: snapshot.attemptId,
     }, coin, timely).eligible).toBe(true);
+    expect(evaluateLiveReserveAdmission(snapshot, {
+      lastSuccessAt: now, lastSuccessAttemptId: snapshot.attemptId,
+    }, currentCoin, now).reasons).toContain("unconfigured");
   });
 
   it("ignores upload/signature clocks and index ordering without renewing the examined instant", async () => {

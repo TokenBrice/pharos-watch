@@ -11,6 +11,7 @@
   "pegMechanism": "USG has no collateral redemption path. Tangent targets the peg with Peg Keeper contracts, price-dependent reward deductions, and dynamic interest: HEC borrowers can be interest-free while USG stays above each market's threshold but lose more collateral rewards as USG falls, while LEC borrowers pay price-dependent interest immediately.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
+  "geckoId": "tangent-usg",
   "launchDate": "2026-05-07",
   "links": [
     {
@@ -41,7 +42,7 @@
   "status": "active",
   "announcedDate": "2026-03",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Five audit reports are referenced in docs (Sherlock, Egis, Pashov x2, plus Zerocool AI audit); beta testing is still disclosed; Ethereum token contract is live with nonzero supply, while the public site still shows placeholder APY/TVL metrics and no CoinGecko or DefiLlama market row is available yet",
+  "launchPhaseDetail": "Five audit reports are referenced in docs (Sherlock, Egis, Pashov x2, plus Zerocool AI audit); beta testing is still disclosed; Ethereum token contract is live with nonzero supply, while the public site still shows placeholder APY/TVL metrics. CoinGecko lists USG (`tangent-usg`, verified 2026-11-02) on the same Ethereum contract; DefiLlama has no market row",
   "featuredContent": [
     {
       "type": "tweet",

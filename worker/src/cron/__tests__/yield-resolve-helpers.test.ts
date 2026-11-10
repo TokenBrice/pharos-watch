@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { enforceExternalOpportunityTvlEligibility, getLendingOpportunityAbsoluteTvlFloor, getRequiredLendingOpportunityTvlUsd } from "../yield-sync/resolve";
-import type { ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
+import {
+  buildWeightedYieldPoolGroupSource,
+  enforceExternalOpportunityTvlEligibility,
+  getLendingOpportunityAbsoluteTvlFloor,
+  getRequiredLendingOpportunityTvlUsd,
+  scanForNewVariants,
+} from "../yield-sync/resolve";
+import { resolveYieldRewardShare } from "../yield-sync/evaluation";
+import type { DlPool, ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
+import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
 import type { YieldType } from "@shared/types/core";
+import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 describe("lending opportunity TVL floors", () => {
   it("uses chain-specific floors and keeps unknown chains on the default floor", () => {
@@ -236,5 +246,196 @@ describe("enforceExternalOpportunityTvlEligibility", () => {
     expect(drops).toEqual({ "tvl-null": 0, "tvl-thin": 0, "supply-unavailable": 2 });
     expect(resolved).toHaveLength(1);
     expect(resolved[0]?.yield?.sourceKey).toBe("protocol-api:native");
+  });
+});
+
+describe("scanForNewVariants", () => {
+  const knownVariants = new Set(["SUSDE", "SDAI", "SUSDS"]);
+
+  it("requires minimum TVL to avoid noise", () => {
+    const pools: DlPool[] = [{
+      pool: "tiny", chain: "Ethereum", project: "unknown",
+      symbol: "sUSDC", tvlUsd: 1_000, apy: 10, apyBase: 10,
+      apyReward: null, apyMean30d: 10, stablecoin: false,
+      exposure: "single", underlyingTokens: null,
+    }];
+    const trackedSymbols = new Set(["USDC"]);
+    const results = scanForNewVariants(pools, trackedSymbols, knownVariants);
+    expect(results).toEqual([]);
+  });
+
+  it("discovers suffix variants at the TVL boundary and deduplicates mixed case", () => {
+    // C20 — the duplicate that survives is the deepest pool, not DeFiLlama's first row.
+    const results = scanForNewVariants([
+      makeDlYieldPool({ pool: "smaller", symbol: "USDCEarn", tvlUsd: 500_000 }),
+      makeDlYieldPool({ pool: "larger", symbol: "usdceARN", tvlUsd: 900_000 }),
+    ], new Set(["USDC"]), knownVariants);
+    expect(results).toEqual([{
+      baseSymbol: "USDC", variantSymbol: "usdceARN", poolId: "larger",
+      chain: "Ethereum", project: "maker", tvlUsd: 900_000, apy: 5,
+    }]);
+  });
+});
+
+function makeWeightedPool(overrides: Partial<DlPool> & Pick<DlPool, "pool" | "tvlUsd" | "apy">): DlPool {
+  return makeDlYieldPool({
+    project: "dtrinity-dusd",
+    symbol: "SDUSD",
+    apyBase: overrides.apy,
+    apyMean30d: overrides.apy,
+    ...overrides,
+  });
+}
+
+function makeWeightedConfig(overrides: Partial<WeightedYieldPoolGroupConfig> = {}): WeightedYieldPoolGroupConfig {
+  return {
+    sourceKey: "defillama-weighted:test",
+    yieldSource: "Test weighted source",
+    yieldType: "lending-vault",
+    poolIds: ["ethereum-pool", "fraxtal-pool"],
+    expectedProject: "dtrinity-dusd",
+    expectedSymbol: "SDUSD",
+    expectedChainsByPoolId: {
+      "ethereum-pool": "ethereum",
+      "fraxtal-pool": "fraxtal",
+      valid: "ethereum",
+      "zero-tvl": "ethereum",
+      multi: "ethereum",
+      "only-one": "ethereum",
+      spoofed: "ethereum",
+    },
+    ...overrides,
+  };
+}
+
+describe("buildWeightedYieldPoolGroupSource", () => {
+  it("builds a TVL-weighted APY row from exact DeFiLlama pool members", () => {
+    const source = buildWeightedYieldPoolGroupSource(
+      makeWeightedConfig(),
+      [
+        makeWeightedPool({ pool: "ethereum-pool", tvlUsd: 282_700, apy: 1.66 }),
+        makeWeightedPool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 135_700, apy: 14.49 }),
+      ],
+    );
+
+    expect(source).toMatchObject({
+      sourceKey: "defillama-weighted:test",
+      sourcePool: null,
+      sourceTvlUsd: 418_400,
+      dataSource: "defillama",
+      yieldSource: "Test weighted source",
+      yieldType: "lending-vault",
+      project: "dtrinity-dusd",
+      chain: "Ethereum, Fraxtal",
+    });
+    expect(source?.currentApy).toBeCloseTo(5.821164, 6);
+    expect(source?.apyBase).toBeCloseTo(5.821164, 6);
+    expect(source?.apyReward).toBe(0);
+  });
+
+  it.each([
+    [1_000_000, 1_000_000, 0],
+    [1_000_000, 3_000_000, -2.5],
+  ])("includes losing constituents in the full weighted denominator (%s / %s)", (positiveTvl, negativeTvl, expectedApy) => {
+    const source = buildWeightedYieldPoolGroupSource(makeWeightedConfig(), [
+      makeWeightedPool({ pool: "ethereum-pool", tvlUsd: positiveTvl, apy: 5 }),
+      makeWeightedPool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: negativeTvl, apy: -5 }),
+    ]);
+    expect(source).toMatchObject({
+      currentApy: expectedApy,
+      apyBase: expectedApy,
+      sourceTvlUsd: positiveTvl + negativeTvl,
+    });
+  });
+
+  it("drops missing, zero-TVL, and non-single-exposure member pools", () => {
+    const source = buildWeightedYieldPoolGroupSource(
+      makeWeightedConfig({
+        poolIds: ["valid", "zero-tvl", "multi", "missing"],
+      }),
+      [
+        makeWeightedPool({ pool: "valid", tvlUsd: 100, apy: 5 }),
+        makeWeightedPool({ pool: "zero-tvl", tvlUsd: 0, apy: 50 }),
+        makeWeightedPool({ pool: "multi", tvlUsd: 100, apy: 50, exposure: "multi" }),
+      ],
+    );
+
+    expect(source?.sourceTvlUsd).toBe(100);
+    expect(source?.currentApy).toBe(5);
+  });
+
+  it("returns null when the configured minimum member count is not met", () => {
+    const source = buildWeightedYieldPoolGroupSource(
+      makeWeightedConfig({
+        poolIds: ["only-one", "missing"],
+        minPools: 2,
+      }),
+      [makeWeightedPool({ pool: "only-one", tvlUsd: 100, apy: 5 })],
+    );
+
+    expect(source).toBeNull();
+  });
+
+  it.each([
+    { chain: "AttackerChain" },
+    { project: "attacker-project" },
+    { symbol: "FAKE" },
+    { stablecoin: false },
+  ])("rejects an independently spoofed identity: %j", (identity) => {
+    const config = makeWeightedConfig({ poolIds: ["spoofed"] });
+    const accepted = makeWeightedPool({ pool: "spoofed", tvlUsd: 1_000_000, apy: 5 });
+    expect(buildWeightedYieldPoolGroupSource(config, [accepted])?.currentApy).toBe(5);
+    expect(buildWeightedYieldPoolGroupSource(config, [{ ...accepted, ...identity }])).toBeNull();
+  });
+
+  it("withholds unresolved components without changing total APY or TVL", () => {
+    const source = buildWeightedYieldPoolGroupSource(makeWeightedConfig(), [
+      makeWeightedPool({ pool: "ethereum-pool", tvlUsd: 100, apy: 4, apyBase: null, apyReward: 2 }),
+      makeWeightedPool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 300, apy: 8, apyBase: 6, apyReward: null }),
+    ]);
+    expect(source).toMatchObject({ currentApy: 7, apyBase: null, apyReward: null, sourceTvlUsd: 400 });
+  });
+
+  it("preserves all-null base and includes zero reward in its denominator", () => {
+    const source = buildWeightedYieldPoolGroupSource(makeWeightedConfig(), [
+      makeWeightedPool({ pool: "ethereum-pool", tvlUsd: 100, apy: 4, apyBase: null, apyReward: 0 }),
+      makeWeightedPool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 300, apy: 8, apyBase: null, apyReward: 4 }),
+    ]);
+    expect(source).toMatchObject({ currentApy: 7, apyBase: null, apyReward: 3 });
+  });
+
+  it("weights proven zero rewards over the same unequal TVL universe as total yield", () => {
+    const source = buildWeightedYieldPoolGroupSource(makeWeightedConfig(), [
+      makeWeightedPool({ pool: "ethereum-pool", tvlUsd: 412_000, apy: 3.2, apyBase: 3.2, apyReward: null }),
+      makeWeightedPool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 48_000, apy: 13, apyBase: 3, apyReward: 10 }),
+    ])!;
+    expect(source.currentApy).toBeCloseTo((412 * 3.2 + 48 * 13) / 460);
+    expect(source.apyBase).toBeCloseTo((412 * 3.2 + 48 * 3) / 460);
+    expect(source.apyReward).toBeCloseTo(480 / 460);
+    const rewardShare = resolveYieldRewardShare(source);
+    expect(rewardShare).toBeCloseTo(480 / (412 * 3.2 + 48 * 13));
+    expect(derivePysSourceRiskPenalty({ rewardShare })).toBe(derivePysSourceRiskPenalty({ rewardShare: 0 }));
+    expect(derivePysSourceRiskPenalty({ rewardShare: 1 })).toBeGreaterThan(derivePysSourceRiskPenalty({ rewardShare }));
+  });
+
+  it.each([
+    { apyBase: null, apyReward: 1, expectedBase: null, expectedReward: 1 },
+    { apyBase: 3, apyReward: null, expectedBase: 3, expectedReward: null },
+    { apyBase: 4, apyReward: null, expectedBase: 3.25, expectedReward: 0.75 },
+  ])("retains only independently complete components: %j", ({ apyBase, apyReward, expectedBase, expectedReward }) => {
+    const source = buildWeightedYieldPoolGroupSource(makeWeightedConfig(), [
+      makeWeightedPool({ pool: "ethereum-pool", tvlUsd: 100, apy: 4, apyBase, apyReward }),
+      makeWeightedPool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 300, apy: 4, apyBase: 3, apyReward: 1 }),
+    ]);
+    expect(source).toMatchObject({ currentApy: 4, apyBase: expectedBase, apyReward: expectedReward, sourceTvlUsd: 400 });
+  });
+
+  it("rejects weighted outputs that overflow finite numeric bounds", () => {
+    const source = buildWeightedYieldPoolGroupSource(
+      makeWeightedConfig({ poolIds: ["ethereum-pool"] }),
+      [makeWeightedPool({ pool: "ethereum-pool", tvlUsd: 2, apy: Number.MAX_VALUE })],
+    );
+
+    expect(source).toBeNull();
   });
 });

@@ -12,6 +12,9 @@ export interface MintBurnRow {
   chain_id: string;
   direction: "mint" | "burn";
   amount: number;
+  /** Exact token units; NULL for rows written before raw-amount accounting. */
+  amount_raw: string | null;
+  below_display_threshold: 0 | 1;
   amount_usd: number | null;
   price_used: number | null;
   price_timestamp: number | null;
@@ -24,6 +27,7 @@ export interface MintBurnRow {
   block_number: number;
   timestamp: number;
   explorer_tx_url: string;
+  supply_proof_id?: string | null;
 }
 
 export interface BurnClassificationCounters {

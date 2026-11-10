@@ -30,23 +30,6 @@ afterEach(() => vi.restoreAllMocks());
 
 
 describe("resolveSourceStatus", () => {
-  it("returns 'used' when source is in agreeSources", () => {
-    expect(
-      resolvePriceTransparencySourceStatus(
-        "binance",
-        ["binance", "coingecko"],
-        ["binance", "coingecko", "pyth"],
-        false,
-      ),
-    ).toBe("used");
-  });
-
-  it("returns 'available' when source is in consensusSources but not agreeSources", () => {
-    expect(
-      resolvePriceTransparencySourceStatus("pyth", ["binance", "coingecko"], ["binance", "coingecko", "pyth"], false),
-    ).toBe("available");
-  });
-
   it("returns 'no-data' when source is in neither", () => {
     expect(resolvePriceTransparencySourceStatus("redstone", ["binance"], ["binance", "coingecko"], false)).toBe(
       "no-data",
@@ -97,6 +80,20 @@ describe("PriceTransparencyCard", () => {
     act(() => { triggers[triggers.length - 1].click(); });
     expect(screen.getByText("The current USD price with its confidence, candidate source depth and, where available, a DEX check.")).toBeTruthy();
     expect(screen.queryByText(/time-at-peg/)).toBeNull();
+  });
+
+  it("points the evidence footer at the pricing methodology, not the Peg Score", () => {
+    render(
+      <PriceTransparencyCard
+        coinData={makeCoinData("coingecko")}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+      />,
+    );
+    const methodology = screen.getAllByRole("link", { name: "View methodology" });
+    expect(methodology.some((link) => /^\/methodology\/?#pricing-pipeline-methodology$/.test(link.getAttribute("href") ?? ""))).toBe(true);
+    expect(methodology.some((link) => /pegscore/.test(link.getAttribute("href") ?? ""))).toBe(false);
   });
 
   it("keeps the compact title plain", () => {

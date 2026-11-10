@@ -5,9 +5,14 @@ import worker from "../index";
 const state = vi.hoisted(() => ({
   scheduled: vi.fn(async () => undefined),
   reserve: vi.fn(async () => undefined),
+  clock: 1_000,
 }));
 vi.mock("../handlers/scheduled", () => ({ handleScheduledEvent: state.scheduled }));
-vi.mock("../handlers/reserve-continuation", () => ({ handleReserveContinuationBatch: state.reserve }));
+vi.mock("../handlers/reserve-continuation", () => {
+  // Model lazy module initialization consuming event wall time.
+  state.clock = 4_000;
+  return { handleReserveContinuationBatch: state.reserve };
+});
 
 // 2027-01-14T08:55:00Z two-hourly yield slot, delivered ten minutes later.
 const SLOT = 1_799_916_900;
@@ -30,6 +35,16 @@ describe("slot catch-up Queue consumer", () => {
     vi.restoreAllMocks();
     state.scheduled.mockClear();
     state.reserve.mockClear();
+  });
+
+  // Must precede the case that imports the reserve-continuation module: the
+  // queue deadline is only observable while that graph is still unloaded.
+  it("captures the Queue deadline clock before loading the consumer graph", async () => {
+    vi.spyOn(Date, "now").mockImplementation(() => state.clock);
+    const batch = { queue: "pharos-reserve-continuation", messages: [] } as unknown as MessageBatch<unknown>;
+    await worker.queue(batch, {} as Env, ctx);
+    expect(state.reserve).toHaveBeenCalledExactlyOnceWith(batch, {} as Env, ctx, 1_000);
+    expect(state.clock).toBe(4_000);
   });
 
   it("runs the armed slot under its own schedule identity and acknowledges it once", async () => {

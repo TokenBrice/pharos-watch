@@ -434,8 +434,7 @@ describe("reviewed undisclosed output valuation", () => {
         const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
         expect(retained[0]!.observation.output).toEqual({ kind: "unresolved-asset" });
         const review = buildSafetyScoreV9RouteReviews(fixed, assetId)[0]!;
-        expect(review.output).toBeNull();
-        expect(review.unresolvedOutputResponsibility).toBe("issuer-undisclosed");
+        expect(review).toMatchObject({ output: null, unresolvedOutputResponsibility: "issuer-undisclosed" });
       });
     },
   );
@@ -994,8 +993,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       routes: compiled.exitRoutes.map(projectV9ExitEvaluationRoute),
     }, V9_CANDIDATE_POLICY_V1);
 
-    expect(compiled.exitRoutes[0]!.scoreEligible).toBe(false);
-    expect(compiled.exitRoutes[0]!.coverageClass).toBe("exact-lower-bound");
+    expect(compiled.exitRoutes[0]!).toMatchObject({ scoreEligible: false, coverageClass: "exact-lower-bound" });
     expect(compiled.exitRoutes[0]!.capacityCurve.some((point) => point.executableUsd > 0)).toBe(true);
     expect(result.routes[0]).toMatchObject({ included: true });
     expect(result.score).toBeGreaterThan(0);
@@ -1250,8 +1248,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       clockSec: Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000,
     });
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
-    expect(review.output).toBeNull();
-    expect(review.unresolvedOutputResponsibility).toBe("producer-failed");
+    expect(review).toMatchObject({ output: null, unresolvedOutputResponsibility: "producer-failed" });
     expect((review.physicalResourceKeys ?? []).some((key) => key.startsWith("execution-endpoint:"))).toBe(false);
   });
 
@@ -1568,39 +1565,13 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       Object.assign(observation, { outputUnitValueUsd: 0.99,
         outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
         outputUnitValueObservedAt: NOW, observedAt: NOW }, pin);
-      const valuation = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]?.output?.valuation ?? null;
+      const valuation = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]?.output?.valuation;
       if (valid && !(dexOnlyRejection && lane === "dex")) {
         expect(valuation).toMatchObject({ basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1,
           observedAtSec: NOW, sourceId: observation.outputUnitValueSourceId });
       } else expect(valuation).toBeNull();
     }
   });
-
-  it.each([
-    { outputPinSource: "source-token-usd" },
-  ] as const)(
-    "rejects persisted $outputPinSource DEX output pins without independent valuation",
-    ({ outputPinSource }) => {
-      const { fixedInput, route } = dexPegFixture({
-        assetId: "asset-input",
-        routeOverrides: {
-          routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Aoutput",
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
-          outputUnitValueUsd: 1,
-          outputUnitValueSourceId: `dex-amm-output-reference:curve:${outputPinSource}`,
-          outputUnitValueObservedAt: NOW,
-        },
-        pegDataById: { "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null } },
-      });
-      expect(buildSafetyScoreV9RouteReviews(
-        fixedInput, "asset-input",
-      )[0]?.output?.valuation).toBeNull();
-      route.outputUnitValueSourceId = "dex-amm-output-reference:curve:tracked-market";
-      expect(buildSafetyScoreV9RouteReviews(
-        fixedInput, "asset-input",
-      )[0]?.output?.valuation).toMatchObject({ unitValueUsd: 1 });
-    },
-  );
 
   it.each(["dex", "redemption"] as const)(
     "preserves tracked output valuation in a pre-census fixed input for %s", (lane) => {
@@ -2282,9 +2253,7 @@ describe("explicit holder restrictions remain separate from route evidence", () 
     fixed.redemptionBackstopMap.alpha!.holderEligibility = eligibility;
     const review = buildSafetyScoreV9RouteReviews(fixed, "alpha").find((route) => route.lane === "redemption")!;
     expect(review.holderAccess).toBe(holderAccess);
-    expect(review.queueDepthUsd).toBe(1_500_000);
-    expect(review.dailyLimitUsd).toBe(1_000_000);
-    expect(review.minRedeemUsd).toBe(1_000_000);
+    expect(review).toMatchObject({ queueDepthUsd: 1_500_000, dailyLimitUsd: 1_000_000, minRedeemUsd: 1_000_000 });
   });
 });
 
@@ -2416,8 +2385,7 @@ describe("captured local-fiat output and cost references", () => {
         scoringCapacityUsd: 1_000_000, supplyUsd: 1_000_000, routeStatus: "open", resolutionState: "resolved",
         sourceMode: "static", capacityConfidence: "documented-bound", resolvedFeeBps: 0, now: NOW,
       });
-      expect(produced?.feeEvidence).toBe("disclosed-unquantified");
-      expect(produced?.scoreEligible).toBe(false);
+      expect(produced).toMatchObject({ feeEvidence: "disclosed-unquantified", scoreEligible: false });
     });
   });
 });

@@ -170,6 +170,24 @@ describe("dexscreener", () => {
     });
   });
 
+  it("classifies a WAF code 1015 body served under a 2xx status as a hard refusal", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response("<html>Access denied. error code: 1015</html>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+
+    await expect(fetchDsTokenPairsWithStatus("base", "0xabc")).resolves.toEqual({
+      ok: false,
+      pairs: [],
+      status: 200,
+      contentType: "text/html",
+      error: "DexScreener hard refusal in a 200 body for https://api.dexscreener.com/token-pairs/v1/base/0xabc",
+      hardRefusal: true,
+    });
+  });
+
   it("bounds and cancels non-OK diagnostic body reads", async () => {
     let bytesPulled = 0;
     let cancelCalled = false;

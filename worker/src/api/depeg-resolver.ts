@@ -421,8 +421,6 @@ async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): 
     ...response,
     _meta: {
       ...response._meta,
-      degraded: true,
-      degradedReason: response._meta.degradedReason ?? "lock-deferral-overlay",
       readOverlay: {
         ...(response._meta.readOverlay ?? DDR_EMPTY_READ_OVERLAY),
         degradedLockDeferralIncidentKeys: [...deferralKeys].sort(),

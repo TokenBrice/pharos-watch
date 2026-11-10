@@ -6,6 +6,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { formatUtcDayLabel, slugifyId } from "@shared/lib/format";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
@@ -315,7 +316,7 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
           <p className="pharos-numeric text-sm text-foreground">
             {study.eventWindow.peakDeviationBps != null
               ? `${study.eventWindow.peakDeviationBps > 0 ? "+" : ""}${study.eventWindow.peakDeviationBps} bps`
-              : "n/a"}
+              : "—"}
             {study.eventWindow.metricScope ? (
               <span className="block font-sans text-xs font-normal text-muted-foreground">
                 Scope: {study.eventWindow.metricScope}
@@ -326,7 +327,7 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
         <div className="space-y-1">
           <p className="pharos-label">Lowest print</p>
           <p className="pharos-numeric text-sm text-foreground">
-            {study.eventWindow.lowPrice != null ? `$${study.eventWindow.lowPrice.toFixed(3)}` : "n/a"}
+            {study.eventWindow.lowPrice != null ? `$${study.eventWindow.lowPrice.toFixed(3)}` : "—"}
           </p>
         </div>
       </div>
@@ -352,7 +353,12 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
 }
 
 function HowPharosSawIt({ study }: { study: CaseStudy }) {
-  const widgets = study.dataWidgets ?? [];
+  // PegDeviationChart draws a $1 tape; NAV-priced and non-USD coins have no
+  // such peg, so they fall back to the archival snapshot instead.
+  const widgets = (study.dataWidgets ?? []).filter((widget) => {
+    const meta = TRACKED_META_BY_ID.get(widget.coinId);
+    return meta != null && !meta.flags.navToken && meta.flags.pegCurrency === "USD";
+  });
   return (
     <section id="peg-on-the-tape" className="space-y-6">
       <div className="space-y-2">

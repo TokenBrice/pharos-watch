@@ -1,13 +1,24 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { StatusResponseSchema } from "@shared/types/status";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { StatusCronDetailResponseSchema, StatusResponseSchema, type StatusResponse } from "@shared/types/status";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
+import { summarizeCronStatus, projectCronRunOutcome, CRON_STATUS_LATEST_FACT_KEYS } from "../../lib/status/cron-status-summary";
+import {
+  loadStatusPublicHealthSnapshot,
+  STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
+  writeStatusPublicHealthSnapshot,
+} from "../../lib/status/public-health-snapshot";
 import { handleStatusCronDetailRoute } from "../status-cron-detail";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConservationCacheKey } from "../../lib/mint-burn-conservation";
 import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
+import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -20,7 +31,9 @@ import {
   buildStatusD1Scenario,
   fixtureMakeApiRequest,
   fixtureDependencyHealthModule,
+  fixtureCRON_INTERVALS,
 } from "./status.test-support";
+import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../telegram/outbox/pending-capacity";
 
 function fixtureMockD1(
   overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = [],
@@ -45,7 +58,7 @@ function fixtureMockD1(
     { match: "FROM mint_burn_hourly INDEXED BY idx_mbh_ts", rows: [] },
     { match: "FROM mint_burn_admission", rows: [] },
     { match: "FROM mint_burn_publication_policy", rows: [] },
-    { match: "FROM mint_burn_scan_coverage", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
     { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "FROM (VALUES", rows: [] },
     { match: "SELECT MAX(snapshot_date) as latest FROM supply_history", rows: [], first: null },
@@ -317,6 +330,48 @@ describe("handleStatus", () => {
     expect(body.causes.overall.find((cause) => cause.code === "degraded_cron_warning")?.value).toBe(1);
   });
 
+  it("drops a cached expected-lane cause the live scheduler observation no longer supports", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const snapshotLaneCause = {
+      code: "expected_scheduled_lane_unhealthy",
+      layer: "availability",
+      severity: "info",
+      message: "1 scheduled slot lane(s) lack a start inside their delivery budget: daily0300Utc (stale 259201s; warn >172800s / stale >259200s).",
+      metric: "unhealthyExpectedLanes",
+      value: 1,
+      threshold: 1,
+    };
+    const laneStarts = Object.fromEntries(
+      Object.keys(SCHEDULED_SLOT_PLANS).map((scheduleKey) => [scheduleKey, now - 30]),
+    );
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
+        makeRawStatusSnapshotRow(now, 120, {
+          causes: {
+            availability: [snapshotLaneCause],
+            dataQuality: [],
+            overall: [snapshotLaneCause],
+          },
+        }),
+      ] },
+      { match: "AS last_any", rows: [], first: {
+        observed_at: now,
+        last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30, heavy: now - 30,
+        lanes: JSON.stringify(laneStarts),
+      } },
+      { match: "cron_runs", rows: Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 60)) },
+    ]);
+
+    const res = await handleStatus({ db, trustedAdmin: true,
+      request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+
+    // The live read has every expected lane inside its budget; the cached
+    // cause must not survive beside healthy live evidence (R5).
+    expect(body.schedulerLiveness?.expectedLanes?.every((lane) => lane.status === "healthy")).toBe(true);
+    expect(body.causes.availability.some((cause) => cause.code === "expected_scheduled_lane_unhealthy")).toBe(false);
+  });
+
   it.each([false, true])("keeps ok quality findings out of degraded counts (live refresh: %s)", async (live) => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
@@ -416,6 +471,13 @@ describe("handleStatus", () => {
 
   it("preserves healthy, public-impact degraded, and publication-query-unavailable status tuples", async () => {
     const now = Math.floor(Date.now() / 1000);
+    // Publication health also reads the V9 Safety Score cohort; keep that
+    // surface healthy so the scenarios' publication outcome is the only one
+    // their fixtures seed.
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort").mockResolvedValue({
+      kind: "v9",
+      snapshot: makeWorkerReportCardsV9Response({ asOfSec: now - 60, updatedAt: now - 30 }),
+    });
     const publicImpactCause = {
       code: "cache_ratio_degraded",
       layer: "availability",
@@ -432,7 +494,7 @@ describe("handleStatus", () => {
         name: "healthy",
         raw: {},
         tables: [],
-        expected: { overallStatus: "healthy", causeCodes: [], sectionErrorCode: null },
+        expected: { overallStatus: "healthy", causeCodes: [], sectionErrorCode: null, sectionErrorMessage: null },
       },
       {
         name: "degraded public impact",
@@ -446,7 +508,7 @@ describe("handleStatus", () => {
           },
         },
         tables: [],
-        expected: { overallStatus: "degraded", causeCodes: ["cache_ratio_degraded"], sectionErrorCode: null },
+        expected: { overallStatus: "degraded", causeCodes: ["cache_ratio_degraded"], sectionErrorCode: null, sectionErrorMessage: null },
       },
       {
         name: "supplement query unavailable",
@@ -460,6 +522,7 @@ describe("handleStatus", () => {
           overallStatus: "healthy",
           causeCodes: [],
           sectionErrorCode: "publication_health_partial_failure",
+          sectionErrorMessage: "Publication health partially unavailable.",
         },
       },
     ];
@@ -483,6 +546,7 @@ describe("handleStatus", () => {
         overallStatus: parsed.overallStatus,
         causeCodes: parsed.causes.overall.map((cause) => cause.code),
         sectionErrorCode: parsed.sectionErrors.publicationHealth?.code ?? null,
+        sectionErrorMessage: parsed.sectionErrors.publicationHealth?.message ?? null,
       }).toEqual(scenario.expected);
       if (scenario.name === "healthy") {
         const malformedPayload = structuredClone(payload) as Record<string, unknown>;
@@ -733,29 +797,13 @@ describe("handleStatus", () => {
   it("returns 200 with status body when authorized", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [
-        {
-          id: "usdt-tether",
-          symbol: "USDT",
-          price: 1.0,
-          consensusSources: ["coingecko", "defillama-list", "pyth"],
-          circulating: { peggedUSD: 100_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          symbol: "USDC",
-          price: 1.0,
-          consensusSources: ["coingecko"],
-          circulating: { peggedUSD: 100_000_000 },
-        },
-        {
-          id: "pyusd-paypal",
-          symbol: "PYUSD",
-          price: 1.0,
-          consensusSources: ["coingecko", "defillama-list", "pyth", "binance", "coinbase"],
-          circulating: { peggedUSD: 100_000_000 },
-        },
-      ],
+      peggedAssets: ([
+        ["usdt-tether", "USDT", ["coingecko", "defillama-list", "pyth"]],
+        ["usdc-circle", "USDC", ["coingecko"]],
+        ["pyusd-paypal", "PYUSD", ["coingecko", "defillama-list", "pyth", "binance", "coinbase"]],
+      ] as const).map(([id, symbol, consensusSources]) => ({
+        id, symbol, price: 1.0, consensusSources, circulating: { peggedUSD: 100_000_000 },
+      })),
     });
 
     const db = fixtureMockD1([
@@ -776,34 +824,13 @@ describe("handleStatus", () => {
             metadata: JSON.stringify({
               priceSourceHealth: {
                 sourceDistribution: {
-                  coingecko: 14,
-                  "coingecko+defillama-list": 118,
-                  defillama: 10,
-                  "defillama-list": 0,
-                  "protocol-redeem": 1,
-                  "defillama-contract": 4,
-                  coinmarketcap: 2,
-                  dexscreener: 1,
-                  jupiter: 0,
-                  pyth: 0,
-                  binance: 0,
-                  kraken: 0,
-                  bitstamp: 0,
-                  coinbase: 0,
-                  redstone: 0,
-                  "curve-onchain": 0,
-                  "dex-promoted": 0,
-                  geckoterminal: 0,
-                  "pool-tvl-weighted": 0,
-                  cached: 4,
-                  missing: 3,
+                  coingecko: 14, "coingecko+defillama-list": 118, defillama: 10, "defillama-list": 0,
+                  "protocol-redeem": 1, "defillama-contract": 4, coinmarketcap: 2, dexscreener: 1,
+                  jupiter: 0, pyth: 0, binance: 0, kraken: 0, bitstamp: 0, coinbase: 0, redstone: 0,
+                  "curve-onchain": 0, "dex-promoted": 0, geckoterminal: 0, "pool-tvl-weighted": 0,
+                  cached: 4, missing: 3,
                 },
-                confidenceDistribution: {
-                  high: 127,
-                  "single-source": 15,
-                  low: 8,
-                  fallback: 6,
-                },
+                confidenceDistribution: { high: 127, "single-source": 15, low: 8, fallback: 6 },
                 totalAssets: 156,
                 lastSync: now - 60,
               },
@@ -825,20 +852,8 @@ describe("handleStatus", () => {
                 nearCoverageGuard: false,
                 nearValueGuard: false,
                 nearMajorCoverageGuard: false,
-                currentCoverageClasses: {
-                  primary: 80,
-                  mixed: 20,
-                  fallback: 20,
-                  legacy: 0,
-                  unobserved: 36,
-                },
-                previousCoverageClasses: {
-                  primary: 82,
-                  mixed: 18,
-                  fallback: 25,
-                  legacy: 0,
-                  unobserved: 31,
-                },
+                currentCoverageClasses: { primary: 80, mixed: 20, fallback: 20, legacy: 0, unobserved: 36 },
+                previousCoverageClasses: { primary: 82, mixed: 18, fallback: 25, legacy: 0, unobserved: 31 },
               },
             }),
           },
@@ -857,58 +872,14 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      timestamp: number;
-      dbHealthy: boolean;
-      overallStatus: string;
-      caches: Record<string, unknown>;
-      crons: Record<string, unknown>;
-      dataQuality: Record<string, unknown>;
-      telegramBot: Record<string, unknown> | null;
-      sectionErrors: Record<string, { code: string; message: string } | undefined>;
-      datasetFreshness: Record<string, number | null>;
-      state: Record<string, unknown>;
-      priceSourceHealth: Record<string, unknown> | null;
-      coingeckoPriceDiff: Record<string, unknown> | null;
-      d1Usage: Record<string, unknown> | null;
-      liquidityHealth: Record<string, unknown> | null;
-      yieldHealth: Record<string, unknown> | null;
-      publicationHealth: Record<string, unknown> | null;
-      dependencyHealth: Record<string, unknown> | null;
-      providerCircuitHealth: Record<string, unknown> | null;
-      canaries: Record<string, unknown> | null;
-      mintBurnReconciliation: Record<string, unknown> | null;
-      reserveComposition: Record<string, unknown>;
-      producerHeads: Array<{
-        observed: boolean;
-        invocationCount: number;
-        productiveCount: number;
-      }>;
-    };
-
-    expect(body).toHaveProperty("timestamp");
-    expect(body).toHaveProperty("dbHealthy");
-    expect(body).toHaveProperty("overallStatus");
-    expect(body).toHaveProperty("caches");
-    expect(body).toHaveProperty("crons");
-    expect(body).toHaveProperty("dataQuality");
-    expect(body).toHaveProperty("telegramBot");
-    expect(body).toHaveProperty("sectionErrors");
-    expect(body).toHaveProperty("datasetFreshness");
-    expect(body).toHaveProperty("state");
-    expect(body).toHaveProperty("priceSourceHealth");
-    expect(body).toHaveProperty("coingeckoPriceDiff");
-    expect(body).toHaveProperty("d1Usage");
-    expect(body).toHaveProperty("liquidityHealth");
-    expect(body).toHaveProperty("yieldHealth");
-    expect(body).toHaveProperty("publicationHealth");
-    expect(body).toHaveProperty("dependencyHealth");
-    expect(body).toHaveProperty("providerCircuitHealth");
-    expect(body).toHaveProperty("canaries");
-    expect(body).toHaveProperty("mintBurnReconciliation");
-    expect(body).toHaveProperty("reserveComposition");
-    expect(body.producerHeads.length).toBeGreaterThan(0);
-    expect(body.producerHeads.every((head) =>
+    const body = (await readJsonResponse(res, 200)) as StatusResponse;
+    for (const key of [
+      "timestamp", "dbHealthy", "overallStatus", "caches", "crons", "dataQuality", "telegramBot", "sectionErrors",
+      "datasetFreshness", "state", "priceSourceHealth", "coingeckoPriceDiff", "d1Usage", "liquidityHealth", "yieldHealth",
+      "publicationHealth", "dependencyHealth", "providerCircuitHealth", "canaries", "mintBurnReconciliation", "reserveComposition",
+    ]) expect(body).toHaveProperty(key);
+    expect(body.producerHeads!.length).toBeGreaterThan(0);
+    expect(body.producerHeads!.every((head) =>
       !head.observed && head.invocationCount === 0 && head.productiveCount === 0,
     )).toBe(true);
     expect(body.sectionErrors).not.toHaveProperty("producerHistory");
@@ -1158,5 +1129,777 @@ describe("handleStatus", () => {
     expect(body.crons["sync-stablecoins"]?.telemetryUnknownReason).toBe("cron-history-query-failed");
     expect(body.causes.availability.some((cause) => cause.code === "cron_history_query_failed")).toBe(true);
     expect(body.causes.availability.some((cause) => cause.code === "mint_burn_health_query_failed")).toBe(true);
+  });
+});
+
+const NOW = 1_800_000_000;
+
+function detailRequest(job: string | null) {
+  const request = new Request(`https://ops-api.pharos.watch/api/status-cron-detail${job ? `?job=${job}` : ""}`);
+  return { trustedAdmin: true, request, url: new URL(request.url) };
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("handleStatusCronDetailRoute", () => {
+  it("returns full run metadata for the requested job with summary outcome fields", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const metadata = { reason: "stale-slot-reconciled", childDisposition: "abandoned", progressUpdatedAt: NOW - 90,
+        reconciledAt: NOW - 30, quality: { reason: "partial-cohort" }, bulky: "x".repeat(4_000) };
+      sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, error, item_count, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`).run("sync-stablecoins", NOW - 120, 1_000, "error", "e".repeat(900), null, JSON.stringify(metadata));
+
+      const res = await handleStatusCronDetailRoute({ db, ...detailRequest("sync-stablecoins") });
+      expect(res.status).toBe(200);
+      const body = StatusCronDetailResponseSchema.parse(await res.json());
+      expect(body.job).toBe("sync-stablecoins");
+      const latest = body.cron.runs[0]!;
+      expect(latest.metadata).toMatchObject({ bulky: "x".repeat(4_000) });
+      expect(latest.error).toHaveLength(900);
+      expect(latest).toMatchObject({
+        reason: "stale-slot-reconciled", childDisposition: "abandoned", progressUpdatedAt: NOW - 90,
+        reconciledAt: NOW - 30, qualityReasons: ["partial-cohort"],
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    [NOW + 61, "future-timestamp"],
+    ["malformed", "invalid-timestamp"],
+  ])("serves rejected progress as diagnostic evidence without changing clock field nullability (%s)", async (updatedAt, reason) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, error)
+        VALUES (?, ?, ?, ?, ?)`).run("sync-stablecoins", NOW - 60, 100, "error", "prior failure");
+      sqlite.prepare(`INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)`).run("sync-stablecoins", "owner", NOW + 300, NOW, NOW);
+      sqlite.prepare(`INSERT INTO cron_run_progress (job, started_at, updated_at, stage, lease_owner)
+        VALUES (?, ?, ?, ?, ?)`).run("sync-stablecoins", NOW - 30, updatedAt, "recovery", "owner");
+      const res = await handleStatusCronDetailRoute({ db, ...detailRequest("sync-stablecoins") });
+      const body = StatusCronDetailResponseSchema.parse(await res.json());
+      expect(body.cron.healthy).toBe(false);
+      expect(body.cron.runs[0].status).toBe("error");
+      expect(body.cron.inFlight).toBeNull();
+      expect(body.cron.inFlightUnavailable).toMatchObject({
+        updatedAt, timestampReason: reason, stale: true, stage: "recovery", leaseOwner: "owner",
+      });
+      expect(summarizeCronStatus("sync-stablecoins", body.cron).inFlightUnavailable).toEqual(body.cron.inFlightUnavailable);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("rejects missing and unknown jobs without reading history", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      expect((await handleStatusCronDetailRoute({ db, ...detailRequest(null) })).status).toBe(400);
+      expect((await handleStatusCronDetailRoute({ db, ...detailRequest("not-a-job") })).status).toBe(404);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+describe("summarizeCronStatus", () => {
+  const detail = {
+    expectedIntervalSec: 300,
+    healthy: true,
+    telemetryUnknown: false,
+    confirmedOutputAt: NOW - 60,
+    inFlight: { startedAt: NOW - 10, updatedAt: NOW - 5, stale: false, metadata: { resourcePressure: undefined, cursor: "a" } },
+    runs: [
+      { startedAt: NOW - 60, durationMs: 10, status: "ok" as const, error: "y".repeat(800), reason: "r",
+        metadata: { messagesSent: 3, pendingDrained: 3, freshSent: 0, perAlertType: { depeg: 0 }, authoritativePlanning: { big: true } } },
+      { startedAt: NOW - 360, durationMs: 10, status: "error" as const, metadata: { large: "z".repeat(2_000) } },
+    ],
+  };
+
+  it("drops metadata, bounds errors and keeps one latest-run fact set", () => {
+    const summary = summarizeCronStatus("dispatch-telegram-alerts", detail);
+    expect(summary.runs).toHaveLength(2);
+    for (const run of summary.runs) expect(run).not.toHaveProperty("metadata");
+    expect(summary.runs[0]!.error!.length).toBeLessThanOrEqual(501);
+    expect(summary.runs[0]!.reason).toBe("r");
+    expect(summary.latestRunFacts).toEqual({ messagesSent: 3, pendingDrained: 3 });
+    expect(Object.keys(summary.latestRunFacts!).every((key) =>
+      CRON_STATUS_LATEST_FACT_KEYS["dispatch-telegram-alerts"]!.includes(key))).toBe(true);
+    expect(summary.inFlight).not.toHaveProperty("metadata");
+    expect(summary).not.toHaveProperty("lastRun");
+    expect(summary).not.toHaveProperty("recentRuns");
+    expect(summary.confirmedOutputAt).toBe(NOW - 60);
+  });
+
+  it("projects a degraded reserve-sync reason into summary runs without full metadata", () => {
+    const metadata = { reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"], failed: 1, synced: 99, bulky: "x".repeat(4_000) };
+    const summary = summarizeCronStatus("sync-live-reserves", {
+      ...detail,
+      runs: [{ startedAt: NOW - 60, durationMs: 10, status: "degraded" as const, ...projectCronRunOutcome(metadata), metadata }],
+    });
+    expect(summary.runs[0]).toMatchObject({ status: "degraded", reason: "reserve-adapter-or-persistence-failed" });
+    expect(summary.runs[0]).not.toHaveProperty("metadata");
+  });
+
+  it("serves no facts for jobs outside the registry", () => {
+    expect(summarizeCronStatus("sync-blacklist", detail)).not.toHaveProperty("latestRunFacts");
+  });
+
+  it("serves validated partition facts from only the selected run without changing its verdict", () => {
+    const onchainPartition = { candidates: 8, entered: 1, retained: 1, carried: 1, divergent: 2,
+      unreadable: 2, deadlineSkipped: 2, carryExpired: 1, divergences: [{ id: "coin-a", ratio: 1.2 }, { id: "coin-b", ratio: 0.8 }],
+      divergencesTruncated: 0 };
+    const run = { ...detail.runs[0], metadata: { onchainPartition } };
+    const summary = summarizeCronStatus("sync-stablecoins", { ...detail, runs: [run] });
+    expect(summary.latestRunFacts).toEqual({ onchainPartition });
+    expect(summary.healthy).toBe(detail.healthy);
+    expect(summary.confirmedOutputAt).toBe(detail.confirmedOutputAt);
+    expect(summary.runs[0].status).toBe("ok");
+    for (const value of [null, undefined, {}, { ...onchainPartition, entered: -1 }, { ...onchainPartition, divergent: "2" },
+      { ...onchainPartition, divergencesTruncated: 1 }, { ...onchainPartition, divergences: [{ id: "coin-a", ratio: NaN }] }]) {
+      const latest = { ...run, metadata: { onchainPartition: value } };
+      expect(summarizeCronStatus("sync-stablecoins", { ...detail, runs: [latest, run] }).latestRunFacts)
+        .toEqual({ onchainPartition: null });
+    }
+  });
+});
+
+describe("public health snapshot independence", () => {
+  it("reads only its own key, never the operator envelope", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const health = makeHealthyHealthResponse();
+      expect(await writeStatusPublicHealthSnapshot(db, NOW, health)).toBe(true);
+      // An unreadable operator envelope must not affect public admission.
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(STATUS_RAW_SNAPSHOT_CACHE_KEY, "{", NOW);
+      const loaded = await loadStatusPublicHealthSnapshot(db, NOW + 30);
+      expect(loaded).toMatchObject({ kind: "fresh", updatedAt: NOW });
+      expect(loaded.kind === "fresh" ? loaded.payload.publicHealth.status : null).toBe(health.status);
+      const rows = sqlite.prepare("SELECT key FROM cache ORDER BY key").all() as Array<{ key: string }>;
+      expect(rows.map((row) => row.key)).toEqual([STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, STATUS_RAW_SNAPSHOT_CACHE_KEY].sort());
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("reports missing when only the operator envelope exists", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(STATUS_RAW_SNAPSHOT_CACHE_KEY, "{}", NOW);
+      await expect(loadStatusPublicHealthSnapshot(db, NOW)).resolves.toMatchObject({ kind: "missing" });
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+function telegramStatusMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = [], healthyLive = false) {
+  return buildStatusD1Scenario({
+    sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
+    overrides,
+    healthyLive,
+    sectionOverrides: {
+      derived: [
+        { match: "pharos:status-derived:mint-burn-24h", rows: [] },
+        { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+        { match: "/* blacklist-gap-metrics-cache-read */", rows: [], first: null },
+        { match: "/* blacklist-gap-metrics-cache-write */", rows: [] },
+        { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
+        { match: "FROM worker_repair_tasks", rows: [] },
+        { match: "FROM onchain_supply", rows: [], first: null },
+        { match: "FROM supply_history", rows: [], first: null },
+        { match: "FROM daily_digest", rows: [], first: null },
+      ],
+    },
+  });
+}
+
+describe("handleStatus telegram and cron surfaces", () => {
+  afterEach(cleanupStatusTest);
+  it("returns Cache-Control: no-store", async () => {
+    const db = telegramStatusMockD1([
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("includes only registered current cron health data", async () => {
+    const db = telegramStatusMockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      {
+        match: "cron_runs",
+        rows: [makeCronRow("sync-stablecoins", "ok", 100)],
+      },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      crons: Record<string, { runs: unknown[]; healthy: boolean; expectedIntervalSec: number }>;
+    };
+
+    expect(body.crons).toHaveProperty("sync-stablecoins");
+    const syncStablecoins = body.crons["sync-stablecoins"];
+    expect(syncStablecoins.runs).toHaveLength(1);
+    expect(syncStablecoins.runs[0]).toMatchObject({ status: "ok" });
+    expect(syncStablecoins).not.toHaveProperty("lastRun");
+    expect(syncStablecoins).not.toHaveProperty("recentRuns");
+    expect(syncStablecoins.runs[0]).not.toHaveProperty("metadata");
+    expect(syncStablecoins).toHaveProperty("healthy");
+    expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
+    expect(body.crons["sync-blacklist"]?.expectedIntervalSec).toBe(6 * 3600);
+    expect(body.crons["sync-dex-discovery"]?.expectedIntervalSec).toBe(6 * 3600);
+    expect(body.crons["sync-live-reserves"]?.expectedIntervalSec).toBe(4 * 3600);
+    expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(2 * 3600);
+    expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
+    expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
+    expect(body.crons).not.toHaveProperty("compute-safety-score-v9-workflow");
+  });
+
+  it("includes budget-only scheduled surface telemetry in status", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = telegramStatusMockD1([
+      {
+        match: "FROM cache",
+        matchBinds: [
+          "cron:budget-surface:price-corroboration",
+          "cron:budget-surface:telegram-registration-reconciliation",
+          "cron:budget-surface:telegram-digest-outbox-drain",
+          "cron:budget-surface:safety-map-producer-kick",
+          "cron:budget-surface:digest-trigger-poll",
+        ],
+        rows: [
+          {
+            key: "cron:budget-surface:digest-trigger-poll",
+            updated_at: now - 45,
+            value: JSON.stringify({
+              version: 1,
+              surface: "digest-trigger-poll",
+              checkedAt: now - 45,
+              durationMs: 64,
+              dueCount: 0,
+              processedCount: 0,
+              outcome: "skipped",
+              skippedReason: "no-pending-request",
+            }),
+          },
+        ],
+      },
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")] },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+
+    const body = (await readJsonResponse(res, 200)) as {
+      budgetOnlySurfaces: Array<{
+        job: string;
+        telemetryStatus: string;
+        outcome: string;
+        skippedReason?: string | null;
+      }>;
+      summary: { budgetOnlySurfaceCount?: number; budgetOnlySurfaceMissingTelemetry?: number };
+    };
+    expect(body.budgetOnlySurfaces).toEqual([
+      expect.objectContaining({
+        job: "price-corroboration",
+        expectedIntervalSec: 900,
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
+        job: "telegram-registration-reconciliation",
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
+        job: "telegram-digest-outbox-drain",
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
+        job: "safety-map-producer-kick",
+        expectedIntervalSec: 86400,
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      expect.objectContaining({
+        job: "digest-trigger-poll",
+        telemetryStatus: "fresh",
+        outcome: "skipped",
+        skippedReason: "no-pending-request",
+      }),
+    ]);
+    expect(body.summary.budgetOnlySurfaceCount).toBe(5);
+    expect(body.summary.budgetOnlySurfaceMissingTelemetry).toBe(4);
+  });
+
+  it("includes in-flight cron progress when a leased job is still running", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = telegramStatusMockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "cron_runs", rows: [makeCronRow("dispatch-telegram-alerts", "ok", 30)] },
+      {
+        match: "cron_leases",
+        rows: [{ job: "dispatch-telegram-alerts", lease_owner: "lease-123", lease_until: now + 600 }],
+      },
+      {
+        match: "cron_run_progress",
+        rows: [
+          {
+            job: "dispatch-telegram-alerts",
+            started_at: now - 120,
+            updated_at: now - 10,
+            stage: "pending-drain",
+            items_done: 2,
+            items_total: 7,
+            message: "Draining due Telegram pending rows",
+            lease_owner: "lease-123",
+            metadata: JSON.stringify({
+              providerFamily: "telegram-api",
+              phase: "pending-drain",
+              countTotals: { pendingAttempted: 2, pendingTotal: 7 },
+              cursor: { queue: "telegram_deliveries" },
+              deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
+            }),
+          },
+        ],
+      },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      crons: Record<
+        string,
+        {
+          inFlight?: {
+            stage?: string;
+            stale: boolean;
+            itemsDone?: number;
+            itemsTotal?: number;
+            metadata?: Record<string, unknown>;
+          } | null;
+        }
+      >;
+    };
+
+    expect(body.crons["dispatch-telegram-alerts"]?.inFlight).toMatchObject({
+      stage: "pending-drain",
+      stale: false,
+      itemsDone: 2,
+      itemsTotal: 7,
+    });
+    expect(body.crons["dispatch-telegram-alerts"]?.inFlight).not.toHaveProperty("metadata");
+    const detailResponse = await handleStatusCronDetailRoute({
+      db, trustedAdmin: true,
+      request: fixtureMakeApiRequest("/api/status-cron-detail?job=dispatch-telegram-alerts", { adminKey: "secret-key" }),
+      url: new URL("https://ops-api.pharos.watch/api/status-cron-detail?job=dispatch-telegram-alerts"),
+    });
+    const detail = await readJsonResponse<{ cron: { inFlight: { metadata?: Record<string, unknown> } } }>(detailResponse, 200);
+    expect(detail.cron.inFlight.metadata).toEqual({
+      providerFamily: "telegram-api",
+      phase: "pending-drain",
+      countTotals: { pendingAttempted: 2, pendingTotal: 7 },
+      cursor: { queue: "telegram_deliveries" },
+      deferredTail: { total: 7, due: 2, deferred: 5, oldestPendingAgeSec: 120 },
+    });
+  });
+
+  it("treats a fresh in-flight recovery run as healthy even if the last completed run errored", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const jobs = Object.keys(fixtureCRON_INTERVALS);
+    const cronRows = [
+      ...jobs.map((job) => makeCronRow(job, job === "sync-blacklist" ? "error" : "ok", 30)),
+      makeCronRow("sync-redemption-backstops", "ok", 30),
+    ];
+    const db = telegramStatusMockD1([{ match: "cron_runs", rows: cronRows },
+    {
+      match: "cron_leases",
+      rows: [{ job: "sync-blacklist", lease_owner: "lease-456", lease_until: now + 600 }],
+    },
+    {
+      match: "cron_run_progress",
+      rows: [
+        {
+          job: "sync-blacklist",
+          started_at: now - 120,
+          updated_at: now - 10,
+          stage: "scan-config",
+          items_done: 4,
+          items_total: 7,
+          message: "Scanning USDT on Ethereum",
+          lease_owner: "lease-456",
+          metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
+        },
+      ],
+    },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "blacklist_events", rows: [], first: { total: 1000, missing: 0, missing_recent: 0 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      summary: { unhealthyCrons: number; cronErrors: number };
+      crons: Record<string, { healthy: boolean }>;
+    };
+
+    expect(body.crons["sync-blacklist"]?.healthy).toBe(true);
+    expect(body.summary.unhealthyCrons).toBe(0);
+    expect(body.summary.cronErrors).toBe(0);
+    expect(body.availabilityStatus).toBe("healthy");
+  });
+
+  it("ignores orphaned in-flight progress when the lease is no longer active", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = telegramStatusMockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "cron_runs", rows: [makeCronRow("sync-blacklist", "error", 30)] },
+      { match: "cron_leases", rows: [] },
+      {
+        match: "cron_run_progress",
+        rows: [
+          {
+            job: "sync-blacklist",
+            started_at: now - 120,
+            updated_at: now - 10,
+            stage: "scan-config",
+            items_done: 4,
+            items_total: 7,
+            message: "Scanning USDT on Ethereum",
+            lease_owner: "stale-lease",
+            metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
+          },
+        ],
+      },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      crons: Record<string, { healthy: boolean; inFlight?: unknown | null }>;
+      summary: { unhealthyCrons: number };
+      availabilityStatus: string;
+    };
+
+    expect(body.crons["sync-blacklist"]?.inFlight).toBeNull();
+    expect(body.crons["sync-blacklist"]?.healthy).toBe(false);
+    expect(body.summary.unhealthyCrons).toBeGreaterThan(0);
+    expect(body.availabilityStatus).toBe("stale");
+  });
+
+  it("keeps availability healthy when only a watch-tier cron is unhealthy", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const cronRows = Object.keys(fixtureCRON_INTERVALS).map((job) =>
+      makeCronRow(job, job === "sync-live-reserves" ? "error" : "ok", 60),
+    );
+    const db = telegramStatusMockD1([{ match: "cron_runs", rows: cronRows },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      summary: {
+        unhealthyCrons: number;
+        availabilityImpactingUnhealthyCrons: number;
+        watchUnhealthyCrons: number;
+        availabilityImpactingCronErrors: number;
+      };
+      causes: { availability: Array<{ code: string; severity: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("healthy");
+    expect(body.summary.unhealthyCrons).toBe(1);
+    expect(body.summary.availabilityImpactingUnhealthyCrons).toBe(0);
+    expect(body.summary.watchUnhealthyCrons).toBe(1);
+    expect(body.summary.availabilityImpactingCronErrors).toBe(0);
+    expect(
+      body.causes.availability.some(
+        (cause) => cause.code === "watch_unhealthy_crons_present" && cause.severity === "info",
+      ),
+    ).toBe(true);
+  });
+
+  it("includes Telegram bot subscriber stats when Telegram tables are present", async () => {
+    const db = telegramStatusMockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "cron_runs", rows: [makeCronRow("dispatch-telegram-alerts", "ok", 60)] },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      {
+        match: "FROM telegram_subscribers s",
+        rows: [],
+        first: {
+          total_chats: 12,
+          alert_enabled_chats: 10,
+          deliverable_chats: 9,
+          subscribed_chats: 11,
+          empty_alert_chats: 1,
+          muted_chats_with_subscriptions: 2,
+          dews_chats: 8,
+          depeg_chats: 7,
+          safety_chats: 6,
+          launch_chats: 5,
+          freeze_chats: 4,
+          all_types_chats: 5,
+          total_subscriptions: 37,
+          avg_subscriptions_per_subscribed_chat: 3.36,
+          last_subscriber_activity_at: 1772000000,
+        },
+      },
+      {
+        match: TELEGRAM_PENDING_CAPACITY_SQL,
+        rows: [],
+        first: {
+          total: 4,
+          expired: 0,
+          due: 4,
+          deferred: 0,
+          near_ttl: 0,
+          pending_sending: 0,
+          pending_execution_unknown: 0,
+          sent_cleanup: 0,
+          fresh_sending: 0,
+          fresh_execution_unknown: 0,
+          fresh_uncertain_sample_count: 0,
+        },
+      },
+      {
+        match: "SELECT COUNT(*) AS pending_count FROM telegram_deliveries WHERE state IN ('pending', 'retry')",
+        rows: [],
+        first: { pending_count: 4 },
+      },
+      {
+        match: "GROUP BY stablecoin_id",
+        rows: [
+          { stablecoin_id: "usdc-circle", subscribers: 7 },
+          { stablecoin_id: "usde-ethena", subscribers: 4 },
+        ],
+      },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      telegramBot: {
+        totalChats: number;
+        deliverableChats: number;
+        totalSubscriptions: number;
+        pendingDeliveries: number;
+        deliverySli: {
+          availability: string;
+          quality: string;
+          freshness: string;
+          acceptanceDefinition: string;
+          rollup: { evidence: { freshness: string } } | null;
+        };
+        customPreferenceChats: number;
+        quietHoursEnabledChats: number;
+        alertTypeChats: {
+          dews: number;
+          depeg: number;
+          safety: number;
+          launch: number;
+          reserve: number;
+          freeze: number;
+          allTypes: number;
+        };
+        topStablecoins: Array<{
+          stablecoinId: string;
+          symbol: string;
+          subscribers: number;
+          explicitSubscribers: number;
+          presetImpliedSubscribers: number;
+        }>;
+      } | null;
+    };
+
+    expect(body.telegramBot).not.toBeNull();
+    expect(body.telegramBot?.totalChats).toBe(12);
+    expect(body.telegramBot?.deliverableChats).toBe(9);
+    expect(body.telegramBot?.totalSubscriptions).toBe(37);
+    expect(body.telegramBot?.pendingDeliveries).toBe(4);
+    expect(body.telegramBot?.deliverySli).toMatchObject({
+      availability: "available",
+      quality: "empty",
+      freshness: "empty",
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+      rollup: { evidence: { freshness: "empty" } },
+    });
+    expect(body.telegramBot?.customPreferenceChats).toBe(0);
+    expect(body.telegramBot?.quietHoursEnabledChats).toBe(0);
+    expect(body.telegramBot?.alertTypeChats).toEqual({
+      dews: 8,
+      depeg: 7,
+      safety: 6,
+      launch: 5,
+      reserve: 0,
+      freeze: 4,
+      allTypes: 5,
+    });
+    expect(body.telegramBot?.topStablecoins).toEqual([
+      {
+        stablecoinId: "usdc-circle",
+        symbol: "USDC",
+        subscribers: 7,
+        explicitSubscribers: 7,
+        presetImpliedSubscribers: 0,
+      },
+      {
+        stablecoinId: "usde-ethena",
+        symbol: "USDe",
+        subscribers: 4,
+        explicitSubscribers: 4,
+        presetImpliedSubscribers: 0,
+      },
+    ]);
+  });
+
+  it("surfaces Telegram subsection loader failures through sectionErrors", async () => {
+    const db = telegramStatusMockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 100)] },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      {
+        match: "FROM telegram_subscribers s",
+        rows: [],
+        throwError: "no such table: telegram_subscribers",
+      },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await readJsonResponse(res, 200)) as {
+      sectionErrors: Record<string, { code: string; message: string } | undefined>;
+      telegramBot: unknown;
+    };
+
+    expect(body.telegramBot).toBeNull();
+    expect(body.sectionErrors.telegramBot).toEqual({
+      code: "telegram_bot_stats_query_failed",
+      message: "Telegram bot diagnostics unavailable.",
+    });
+  });
+
+  it("marks status degraded and skips data-quality queries when DB sentinel fails", async () => {
+    const db = telegramStatusMockD1([
+    ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
+
+    const seenSql: string[] = [];
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      seenSql.push(sql);
+      if (sql.trim() === "SELECT 1") {
+        return {
+          bind: () => ({
+            all: async () => ({ results: [], success: true, meta: {} }),
+            first: async () => {
+              throw new Error("db down");
+            },
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => {
+            throw new Error("db down");
+          },
+          run: async () => ({ success: true, meta: {} }),
+        } as unknown as D1PreparedStatement;
+      }
+      return originalPrepare(sql);
+    }) as typeof db.prepare;
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await readJsonResponse(res, 200)) as {
+      dbHealthy: boolean;
+      rawOverallStatus: string;
+      overallStatus: string;
+    };
+
+    expect(body.dbHealthy).toBe(false);
+    expect(["degraded", "stale"]).toContain(body.rawOverallStatus);
+    expect(["degraded", "stale"]).toContain(body.overallStatus);
+    expect(seenSql.some((sql) => sql.includes("FROM depeg_events"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM onchain_supply"))).toBe(false);
+  });
+
+  it("keeps cron healthy when latest run is skipped_locked but a fresh ok run exists", async () => {
+    const db = telegramStatusMockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      {
+        match: "cron_runs",
+        rows: [makeCronRow("sync-stablecoins", "skipped_locked", 30), makeCronRow("sync-stablecoins", "ok", 90)],
+      },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      crons: Record<string, { healthy: boolean }>;
+    };
+
+    expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
+  });
+
+  it("treats fresh degraded cron runs with confirmed output as warning-only (not availability unhealthy)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const jobs = Object.keys(fixtureCRON_INTERVALS);
+    const cronRows = [
+      ...jobs.map((job) => ({
+        ...makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30),
+        metadata: JSON.stringify({ outputPublishedAt: now - 30 }),
+      })),
+      makeCronRow("sync-redemption-backstops", "ok", 30),
+    ];
+    const db = telegramStatusMockD1([{ match: "cron_runs", rows: cronRows },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "blacklist_events", rows: [], first: { total: 1000, missing: 1, missing_recent: 0 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      summary: { unhealthyCrons: number; degradedCrons: number };
+      crons: Record<string, { healthy: boolean }>;
+    };
+
+    expect(body.crons["fetch-tbill-rate"]?.healthy).toBe(true);
+    expect(body.summary.unhealthyCrons).toBe(0);
+    expect(body.summary.degradedCrons).toBe(1);
+    expect(body.availabilityStatus).toBe("healthy");
   });
 });

@@ -123,13 +123,20 @@
     },
     {
       "sourceKey": "accountable:tori:monad:ausd-morpho-unverified",
-      "name": "Unverified AUSD Morpho position on Monad",
+      "name": "AUSD supplied to Morpho on Monad (Tori token collateral)",
       "pct": 3.181078468840847,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "AUSD - Morpho source label on Monad; AUSD issuer, token contract and Morpho vault unverified",
+      "issuerOrObligor": "Agora AUSD via the SharpByte AUSD Tori Ecosystem vault and direct Morpho AUSD/strUSD lending on Monad",
       "liquidityHorizon": "unknown",
-      "riskFactors": ["credit", "counterparty", "smart-contract"]
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "coinId": "ausd-agora",
+      "depType": "collateral"
     }
   ],
   "reserveReview": {
@@ -137,6 +144,12 @@
     "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
+      {"label": "Tori solvency API: disclosed DeFi Operator and Monad AUSD-Morpho category; source timestamp 2026-11-04T22:01:00.182Z", "url": "https://app.tori.finance/api/solvency"},
+      {"label": "Accountable Tori nested_split: Monad AUSD - Morpho (Tori token collateral), ts 1793829660182", "url": "https://cache.accountable.capital/dashboard/tori"},
+      {"label": "Morpho primary API userByAddress for disclosed DeFi Operator, chainId 143: exact market and VaultV2 positions, reviewed 2026-11-04", "url": "https://api.morpho.org/graphql"},
+      {"label": "MonadScan exact-match verified SharpByte AUSD Tori Ecosystem VaultV2 source, reviewed 2026-11-04", "url": "https://monadscan.com/address/0x790e4f829fe865d432c4ea83b8b15f8871415b6c#code"},
+      {"label": "MonadScan exact-match verified Agora AUSD proxy source, reviewed 2026-11-04", "url": "https://monadscan.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"},
+      {"label": "Pinned Monad asset, operator balance and share-conversion reads at block 119439360 (2026-11-04T21:57:11Z)", "url": "https://api-monad-mainnet-full.n.dwellir.com"},
       {
         "label": "Accountable Tori dashboard API captured 2026-10-27T14:46Z, dashboard ts 1793112360161 (assetBreakdown and reserves.nested_split)",
         "url": "https://cache.accountable.capital/dashboard/tori"
@@ -170,12 +183,12 @@
         "url": "https://eth.blockscout.com/address/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
       }
     ],
-    "rationale": "The Accountable dashboard (ts 2026-10-27T14:46Z) reports $72,431,359.63 of reserves; the leaves below sum to that figure. Money Markets $52,852,347.25, Delta-Neutral Equity Arbitrage $6,710,521.17, Cash & Equivalents $7,439,149.43 (Bank Cash $100,180.99 plus FX Collateral $7,338,968.44, OTC & Exchange Reserve $0). On-chain Liquidity leaves: Ethereum USDC supplied to Morpho $2,190,549.56, idle USDC $714,534.09, USDT $207,477.74, AUSD $12,159.95, ETH $516.29; Monad AUSD - Morpho $2,304,098.39; Base ETH $5.77. AUSD is labeled by symbol only, so both AUSD leaves stay unlinked and unverified rather than assumed to be Agora AUSD. The issuer solvency endpoint corroborates the total (72,431,784.82 at 1793116861832, 15 minutes later). Custodian identities and the Morpho vaults remain undisclosed. Accountable data.liquidity (as_of 2026-10-27, complete true, unmapped_instruments 0) assigns the money_markets class time_to_cash Same day, so the keyed money-market sleeve keeps a one-day operational liquidity horizon; this does not assert a contractual redemption SLA.",
+    "rationale": "The Accountable dashboard (ts 2026-10-27T14:46Z) reports $72,431,359.63 of reserves; the leaves below sum to that figure. Money Markets $52,852,347.25, Delta-Neutral Equity Arbitrage $6,710,521.17, Cash & Equivalents $7,439,149.43 (Bank Cash $100,180.99 plus FX Collateral $7,338,968.44, OTC & Exchange Reserve $0). On-chain Liquidity leaves: Ethereum USDC supplied to Morpho $2,190,549.56, idle USDC $714,534.09, USDT $207,477.74, AUSD $12,159.95, ETH $516.29; Monad AUSD - Morpho $2,304,098.39; Base ETH $5.77. AUSD is labeled by symbol only, so both AUSD leaves stay unlinked and unverified rather than assumed to be Agora AUSD. The issuer solvency endpoint corroborates the total (72,431,784.82 at 1793116861832, 15 minutes later). Custodian identities and the Morpho vaults remain undisclosed. Accountable data.liquidity (as_of 2026-10-27, complete true, unmapped_instruments 0) assigns the money_markets class time_to_cash Same day, so the keyed money-market sleeve keeps a one-day operational liquidity horizon; this does not assert a contractual redemption SLA. Scoped identity review 2026-11-04 supersedes only the earlier Monad AUSD/Morpho non-link. The issuer solvency API names 0xD07d31698E9689Af5954698b08e0c963ad9c00eb as its DeFi Operator; the Accountable source at ts 1793829660182 (2026-11-04T22:01:00.182Z) reports $3,312,442.963488275 under Monad AUSD - Morpho (Tori token collateral). Morpho's primary API resolves that account on chain 143 to the SharpByte AUSD Tori Ecosystem vault 0x790e4f829fe865d432c4ea83b8b15f8871415b6c and direct market 0x58532a6ef16789d5e93f6728e1f53db9ee9a1e4163059c9515684d10b49af464; both identify loan/underlying asset 0x00000000efe302beaa2b3e6e1b18d08d69a9012a, tracked Agora AUSD. MonadScan now publishes exact-match verified source for the SharpByte VaultV2 and AgoraDollarErc1967Proxy. At Monad block 119439360 (hash 0x5d0c345fbcea34640698410fa71b42ca57ea2b647a55a6be9cb380e5a08f90f8, 2026-11-04T21:57:11Z), the exact vault asset() returned Agora AUSD, balanceOf(the disclosed operator) was 2295393810272793563062193 raw shares, and convertToAssets(those shares) returned 2314953747798 raw AUSD (6 decimals). This joins issuer operator, exact held position, verified contract and tracked underlying instead of inferring identity from a symbol. The 3.181078468840847% measured composition weight and all 2026-10-27 composition/review clocks remain unchanged; the current amount corroborates continued identity and does not replace that historical weight. Lending against Tori-token collateral retains circular credit, concentration, smart-contract and unknown-liquidity risk. Ethereum AUSD and Base USDC-Morpho dust remain unlinked. The stable historical sourceKey retains its original -unverified suffix to preserve category identity; its reviewed claim is now identified. Retired non-link disposition (2026-10-27, retained as history): The source labels the position AUSD - Morpho on Monad by symbol only and does not bind the token contract, issuer or Morpho vault to a verified tracked claim.",
     "compositionBasis": "Accountable assetBreakdown category totals and reserves.nested_split leaves, dashboard ts 2026-10-27T14:46Z; issuer solvency total cross-check",
     "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The AUSD holdings on Ethereum and the AUSD - Morpho position on Monad have no verified issuer, token address or vault identity. The Base USDC - Morpho dust has no verified token representation or vault identity. Off-chain custody and Ethereum Morpho vault identity remain unresolved without obscuring measured USDC and USDT exposure.",
-    "knownUnknownExposurePct": 3.1978667097630598,
+    "knownUnknownExposure": "Ethereum AUSD and Base USDC - Morpho dust have no verified reserve-wallet/token binding. The Monad AUSD-Morpho claim is now linked to Agora AUSD via the disclosed DeFi Operator, exact Morpho positions, verified vault source and pinned asset identity; its credit, circular Tori-token collateral, custody and realization risks remain explicit.",
+    "knownUnknownExposurePct": 0.016788240922213017,
     "nonLinkDispositions": [
       {
         "reserveIndex": 6,
@@ -204,13 +217,6 @@
         "pct": 1.3825530376276834e-12,
         "disposition": "insufficient-evidence",
         "rationale": "The source does not bind the Base token representation or Morpho vault to a verified tracked claim."
-      },
-      {
-        "reserveIndex": 10,
-        "reserveName": "Unverified AUSD Morpho position on Monad",
-        "pct": 3.181078468840847,
-        "disposition": "insufficient-evidence",
-        "rationale": "The source labels the position AUSD - Morpho on Monad by symbol only and does not bind the token contract, issuer or Morpho vault to a verified tracked claim."
       }
     ]
   },

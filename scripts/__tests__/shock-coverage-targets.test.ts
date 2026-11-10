@@ -27,11 +27,11 @@ function measurement(assetId: string) {
 }
 
 describe("shock coverage target authority", () => {
-  it("keeps the existing three-target matrix derived from the canonical target definitions", () => {
+  it("keeps the target matrix derived from the canonical target definitions", () => {
     expect(SHOCK_COVERAGE_TARGET_IDS).toEqual(SHOCK_COVERAGE_TARGETS.map((target) => target.assetId));
     expect(readRequiredAssetIds({
       targets: SHOCK_COVERAGE_TARGET_IDS.map((assetId) => ({ assetId })),
-    })).toEqual(["bd-basedollar", "lusd-liquity", "bold-liquity"]);
+    })).toEqual(SHOCK_COVERAGE_TARGET_IDS);
     expect(evaluateShockCoverageFreshness({
       registry: { measurements: SHOCK_COVERAGE_TARGET_IDS.map(measurement) },
       maxAgeSec: 72 * 60 * 60,

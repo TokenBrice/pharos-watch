@@ -4,6 +4,7 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { loadPerCoinStablecoinEntries, STABLECOIN_DOMAIN_SOURCE_DIR } from "../lib/stablecoin-catalog-sources";
 import {
   collectStablecoinDetailDates,
@@ -12,6 +13,9 @@ import {
 } from "../lib/sitemap-detail-dates";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
+import { getIndexableChainIds } from "../../src/lib/chain-indexing";
+import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
+import { ALL_STABLECOIN_TAXONOMY_PAGES } from "../../src/lib/stablecoin-taxonomy";
 import {
   METHODOLOGY_CHANGELOG_REGISTRY,
   type MethodologyChangelogRegistryKey,
@@ -24,9 +28,7 @@ const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/lib/case-studies");
 const BLOG_POSTS_DIR = join(__dirname, "../../src/data/blog/posts");
 const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/sitemap-dates.json.d.ts");
-const CHECK_MODE = process.argv.includes("--check");
 
-assertFullGitHistory("sitemap-dates");
 const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/learn/case-studies/[slug]/page.tsx"),
   join(__dirname, "../../src/app/learn/case-studies/case-study-body.tsx"),
@@ -37,9 +39,9 @@ const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../shared/types/editorial-content.ts"),
 ];
 const BLOG_DETAIL_SHARED_SOURCES = [
+  // Per-post dates must not move with the post registry or a site-wide
+  // metadata module: only the renderer every article body shares.
   join(__dirname, "../../src/app/blog/[slug]/page.tsx"),
-  join(__dirname, "../../src/data/blog/index.ts"),
-  join(__dirname, "../../src/lib/page-metadata.ts"),
 ];
 const METHODOLOGY_CHANGELOG_SHARED_SOURCES = [
   // This route owns the shared display config as well as dynamic route metadata.
@@ -61,13 +63,33 @@ const METHODOLOGY_CHANGELOG_ENTRY_SOURCES: Record<MethodologyChangelogRegistryKe
 const SCORING_CHANGELOG_CONTENT_SOURCES = [
   join(__dirname, "../../src/app/methodology/changelog-content/scoring"),
 ];
+const CHAIN_PROFILE_SOURCES = [
+  join(APP_DIR, "chains/[chain]"),
+  join(APP_DIR, "chains/static-chain-content.ts"),
+];
+const PEG_HUB_SOURCES = [
+  join(APP_DIR, "stablecoins/[peg]"),
+  join(__dirname, "../../src/lib/peg-hub-content.ts"),
+  join(__dirname, "../../src/lib/peg-landing.ts"),
+  join(__dirname, "../../src/lib/peg-taxonomy.ts"),
+];
+const TAXONOMY_SOURCES = [
+  join(APP_DIR, "stablecoins/taxonomy-page.tsx"),
+  join(__dirname, "../../src/lib/stablecoin-taxonomy-urls.ts"),
+  join(__dirname, "../../src/lib/stablecoin-taxonomy.ts"),
+];
 
 const GIT_LOG_MARKER = "--PHAROS-SITEMAP-COMMIT--";
 const GIT_DATE_SCAN_PATHS = [
   "src/app",
   "src/lib/case-studies",
+  "src/lib/chain-indexing.ts",
+  "src/lib/peg-hub-content.ts",
+  "src/lib/peg-landing.ts",
+  "src/lib/peg-taxonomy.ts",
+  "src/lib/stablecoin-taxonomy-urls.ts",
+  "src/lib/stablecoin-taxonomy.ts",
   "src/data/blog",
-  "src/lib/page-metadata.ts",
   "shared/types/editorial-content.ts",
   "shared/data/stablecoins/coins",
   STABLECOIN_DOMAIN_SOURCE_DIR,
@@ -166,11 +188,14 @@ function walkPages(dir: string, prefix: string, dates: Record<string, string>): 
   }
 }
 
-function addStablecoinDetailDates(dates: Record<string, string>): void {
+function addStablecoinDetailDates(
+  dates: Record<string, string>,
+  entries: ReturnType<typeof loadPerCoinStablecoinEntries> = loadPerCoinStablecoinEntries(REPO_ROOT),
+): void {
   Object.assign(
     dates,
     collectStablecoinDetailDates(
-      loadPerCoinStablecoinEntries(REPO_ROOT),
+      entries,
       getLastModified,
       STABLECOIN_DETAIL_CONTENT_REVISED_AT,
       REPO_ROOT,
@@ -211,32 +236,86 @@ function addMethodologyChangelogDates(dates: Record<string, string>): void {
   }
 }
 
-const dates: Record<string, string> = {};
-walkPages(APP_DIR, "/", dates);
-addStablecoinDetailDates(dates);
-addCaseStudyDates(dates);
-addBlogDates(dates);
-addMethodologyChangelogDates(dates);
+function addChainProfileDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...CHAIN_PROFILE_SOURCES.map(getLastModified));
+  for (const chainId of getIndexableChainIds()) {
+    dates[`/chains/${chainId}/`] = sharedLastModified;
+  }
+}
 
-// The mechanism explainer hub date must move when any archetype content
-// module under the cluster changes — per-archetype Article JSON-LD sources
-// its dateModified from this entry — not only when the hub page.tsx does.
-dates["/learn/mechanisms/"] = getLastModified(join(APP_DIR, "learn/mechanisms"));
+function addPegHubDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...PEG_HUB_SOURCES.map(getLastModified));
+  for (const peg of PEG_HUB_PEGS) {
+    const slug = PEG_HUB_SLUGS[peg];
+    if (slug) dates[`/stablecoins/${slug}/`] = sharedLastModified;
+  }
+}
 
-syncGeneratedArtifacts({
-  artifacts: [
-    { path: OUTPUT, contents: JSON.stringify(dates, null, 2) + "\n" },
-    {
-      path: OUTPUT_TYPES,
-      contents: `/** Auto-generated by scripts/maintenance/generate-sitemap-dates.ts during prebuild. */
+function addTaxonomyDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...TAXONOMY_SOURCES.map(getLastModified));
+  for (const page of ALL_STABLECOIN_TAXONOMY_PAGES) {
+    const routeLastModified = getLastModified(join(APP_DIR, "stablecoins", page.kind, `[${page.kind}]`));
+    dates[page.href] = latestIso(sharedLastModified, routeLastModified);
+  }
+}
+
+export interface GenerateSitemapDatesOptions {
+  /** Pass `--check` semantics: verify the committed artifact instead of writing. */
+  check?: boolean;
+  /**
+   * Re-read the Git history instead of reusing the process-wide index. The CLI
+   * reads history once; tests call the generator repeatedly with scripted logs.
+   */
+  freshGitDateIndex?: boolean;
+  /** Pre-loaded per-coin catalog entries; the CLI loads them from the repository. */
+  entries?: ReturnType<typeof loadPerCoinStablecoinEntries>;
+}
+
+export function generateSitemapDates(options: GenerateSitemapDatesOptions = {}): Record<string, string> {
+  if (options.freshGitDateIndex) gitDateIndex = undefined;
+
+  const dates: Record<string, string> = {};
+  walkPages(APP_DIR, "/", dates);
+  // walkPages only descends into directories; the root page owns "/".
+  dates["/"] = getLastModified(join(APP_DIR, "page.tsx"));
+  addStablecoinDetailDates(dates, options.entries);
+  addCaseStudyDates(dates);
+  addBlogDates(dates);
+  addMethodologyChangelogDates(dates);
+  addChainProfileDates(dates);
+  addPegHubDates(dates);
+  addTaxonomyDates(dates);
+
+  // The mechanism explainer hub date must move when any archetype content
+  // module under the cluster changes — per-archetype Article JSON-LD sources
+  // its dateModified from this entry — not only when the hub page.tsx does.
+  dates["/learn/mechanisms/"] = getLastModified(join(APP_DIR, "learn/mechanisms"));
+
+  syncGeneratedArtifacts({
+    artifacts: [
+      { path: OUTPUT, contents: JSON.stringify(dates, null, 2) + "\n" },
+      {
+        path: OUTPUT_TYPES,
+        contents: `/** Auto-generated by scripts/maintenance/generate-sitemap-dates.ts during prebuild. */
 declare const sitemapDates: Record<string, string>;
 export default sitemapDates;
 `,
-    },
-  ],
-  check: CHECK_MODE,
-  staleMessage:
-    "src/generated/sitemap-dates.json is out of date. Run `tsx scripts/maintenance/generate-sitemap-dates.ts`.",
-  currentMessage: `Sitemap dates are current for ${Object.keys(dates).length} pages`,
-  writtenMessage: `Generated sitemap dates for ${Object.keys(dates).length} pages`,
-});
+      },
+    ],
+    check: options.check ?? false,
+    staleMessage:
+      "src/generated/sitemap-dates.json is out of date. Run `tsx scripts/maintenance/generate-sitemap-dates.ts`.",
+    currentMessage: `Sitemap dates are current for ${Object.keys(dates).length} pages`,
+    writtenMessage: `Generated sitemap dates for ${Object.keys(dates).length} pages`,
+  });
+  return dates;
+}
+
+function main(): void {
+  assertFullGitHistory("sitemap-dates");
+  generateSitemapDates({ check: process.argv.includes("--check") });
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main();
+}

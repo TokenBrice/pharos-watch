@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createPrTestPlan } from "../lib/pr-test-plan.mts";
 import { selectPrTestFiles } from "../lib/pr-test-selection.mts";
@@ -62,5 +63,61 @@ describe("declared non-import-graph PR test ownership", () => {
   it("fails closed rather than silently skipping a missing declared invariant", () => {
     expect(() => selectPrTestFiles([], [], ["docs/report-cards.md"], new Map(), (file) => file !== resolve(docRatchet)))
       .toThrow(docRatchet);
+  });
+});
+
+describe("nightly-tier exclusion", () => {
+  const mandatory = "scripts/__tests__/run-pr-tests.test.ts";
+  const nightly = "scripts/__tests__/corpus-sweep.nightly.test.ts";
+
+  it("drops a changed nightly-tier file and its import/declaration selection from the PR plan", () => {
+    const selected = selectPrTestFiles([nightly], [mandatory], [nightly], new Map([[nightly, [nightly]]]), () => true);
+    expect(selected).toEqual([mandatory]);
+  });
+
+  it("fails closed when an always-run contract names a nightly-tier file", () => {
+    expect(() => selectPrTestFiles([], [nightly], [], new Map(), () => true))
+      .toThrow(/always-run PR contract/);
+  });
+});
+
+describe("documentation-owner dedup", () => {
+  const mandatory = "scripts/__tests__/run-pr-tests.test.ts";
+
+  it("drops the docs-driven invariant suites when the docs owner already runs them", () => {
+    expect(selectPrTestFiles([], [mandatory], ["docs/testing.md"], new Map(), () => true, { docsChanged: true }))
+      .toEqual([mandatory]);
+  });
+
+  it("keeps doc-owned tests the docs commands do not run", () => {
+    // The static-guards docs owner runs only the two invariant suites, so a
+    // doc's other declared validators must stay in the test plan.
+    const doc = "docs/process/lane-freshness-matrix.md";
+    const declared = (JSON.parse(readFileSync("docs/doc-ownership.json", "utf8")) as {
+      mappings: Array<{ testOwnership?: Array<{ sources: string[]; tests: string[] }> }>;
+    }).mappings.flatMap((mapping) => mapping.testOwnership ?? [])
+      .filter((owner) => owner.sources.includes(doc))
+      .flatMap((owner) => owner.tests);
+    expect(declared.length).toBeGreaterThan(0);
+    const selected = selectPrTestFiles([], [mandatory], [doc], new Map(), () => true, { docsChanged: true });
+    expect(selected).toEqual(expect.arrayContaining([mandatory, ...declared]));
+  });
+
+  it("keeps a doc-declared suite that a non-doc source also selects", () => {
+    const selected = selectPrTestFiles([], [mandatory], ["docs/testing.md", "package.json"], new Map(), () => true, { docsChanged: true });
+    expect(selected).toContain(docRatchet);
+    // Every router-declaration source is documentation, so the router suite
+    // stays with the static-guards docs owner.
+    expect(selected).not.toContain(router);
+  });
+
+  it("keeps a doc-declared suite that is also a changed test file", () => {
+    const selected = selectPrTestFiles([router], [mandatory], ["docs/testing.md"], new Map(), () => true, { docsChanged: true });
+    expect(selected).toEqual([router, mandatory].sort());
+  });
+
+  it("leaves the docs declarations in place when docs did not change", () => {
+    const selected = selectPrTestFiles([], [mandatory], ["docs/testing.md"], new Map(), () => true);
+    expect(selected).toEqual(expect.arrayContaining([docRatchet, router, mandatory]));
   });
 });

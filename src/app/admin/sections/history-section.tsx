@@ -29,6 +29,8 @@ export interface HistorySectionProps {
   historyLoading: boolean;
   onRetryHistory?: () => void;
   historyRetrying?: boolean;
+  /** The retained history response's own timestamp; used as the timeline clock only while the read is stale. */
+  historyObservedAt?: number | null;
   historyEvidence: {
     source: "history" | "status-fallback";
     state: "loading" | "ready" | "stale" | "error";
@@ -222,12 +224,15 @@ export function HistorySection({
   historyLoading,
   onRetryHistory,
   historyRetrying = false,
+  historyObservedAt = null,
   historyEvidence,
 }: HistorySectionProps) {
   const historyReadFailed = historyEvidence.state === "error";
   const historyComplete = historyEvidence.source === "history" && historyEvidence.completeness === "complete";
   const historyCoverage =
     historyEvidence.source === "status-fallback" ? "status-fallback" : historyEvidence.completeness;
+  const retainedClock = historyEvidence.state === "stale" && historyObservedAt != null;
+  const timelineDurationNowSeconds = retainedClock ? historyObservedAt : nowSeconds;
 
   return (
     <StatusSection
@@ -294,6 +299,7 @@ export function HistorySection({
       <TransitionTimeline
         transitions={allTransitions}
         nowSeconds={nowSeconds}
+        durationNowSeconds={timelineDurationNowSeconds}
         transitionsLast24h={transitionsLast24h}
         window={historyWindow}
         filters={historyFilters}
@@ -302,6 +308,7 @@ export function HistorySection({
         isLoading={historyLoading}
         evidenceScope={historyEvidence.source === "history" ? "loaded-window" : "recent-status-fallback"}
         readFailed={historyReadFailed}
+        retainedClock={retainedClock}
         onRetry={onRetryHistory}
         isRetrying={historyRetrying}
       />

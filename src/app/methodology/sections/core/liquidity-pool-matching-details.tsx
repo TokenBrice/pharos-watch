@@ -132,6 +132,12 @@ export function LiquidityPoolMatchingDetails() {
           weighted rows.
         </p>
         <p>
+          Reviewed native prices use independently admitted quote-token USD values: USDA&apos;s verified PancakeSwap V2
+          reserves and pathUSD&apos;s two-sided Tempo quotes through the OUSD/pathUSD and USDT/OUSD books. Price support
+          is bounded by retained liquidity and observed reserves or demonstrated route notional, retaining the older input
+          clock. Each physical market contributes once; the $50K pool floor and $1M/two-family depeg gate are unchanged.
+        </p>
+        <p>
           CoinGecko discovery tickers are price-only since Liquidity v6.93. When earlier discovery found no pools or no
           usable price, Pharos checks non-stale/non-anomalous USD-equivalent quotes with positive finite prices, exchange
           identity and at least $1,000 reported USD flow. It requests no depth and admits only non-future registry
@@ -176,11 +182,14 @@ export function LiquidityPoolMatchingDetails() {
           Non-Curve rows that share the same token symbols as a Curve pool keep their own mechanism type and TVL.
         </p>
         <p>
-          Address-grade plain Curve StableSwap-NG pools with rate-bearing inputs can publish a route model only after fresh
-          same-block state verifies `get_balances`, amplification, stored rates, ordered coins, and static fee state. Rate
-          scaling adjusts both balances and references; Curve deducts its captured static fee after the full-input
-          invariant. Stale, unpinnable, identity-mismatched, or dynamic-fee state remains capability-gated. Metapools,
-          CryptoSwap, legacy pools, and all other unreviewed Curve shapes are not widened.
+          Address-grade plain Curve StableSwap-NG pools can publish a route model only after fresh same-block state
+          verifies `get_balances`, stored rates, amplification, ordered coins, and static fee state. On-chain stored
+          rates decide the shape: a non-base rate scales both balances and references, while a base-only array shows
+          the pool is plain and is admitted unscaled (rate factor 1). The source-stage 1% price-spread test is only a
+          proxy, so a wider spread on an admitted plain pool is reported as a diagnostic instead of withholding the
+          route. Curve deducts its captured static fee after the full-input invariant. Stale, unpinnable,
+          identity-mismatched, or dynamic-fee state remains capability-gated. Metapools, CryptoSwap, legacy pools, and
+          all other unreviewed Curve shapes are not widened.
         </p>
         <p>
           Explicitly reviewed Curve metapools can instead publish exact same-notional execution through pinned

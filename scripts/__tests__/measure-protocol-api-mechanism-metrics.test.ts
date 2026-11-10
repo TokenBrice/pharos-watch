@@ -474,6 +474,8 @@ describe("Falcon transparency target", () => {
     const missingVenues = falconBody().replace('"venues":{},', "");
     expect(() => buildProtocolApiMeasurement("usdf-falcon", falconInput(missingVenues), CAPTURED_AT)).toThrow();
     expect(() => buildProtocolApiMeasurement("usdf-falcon", falconInput(falconBody({ snapshotDate: "1784751060" })), CAPTURED_AT)).toThrow(/future/);
+    expect(() => buildProtocolApiMeasurement("usdf-falcon", falconInput(falconBody({ reserves: {} })), CAPTURED_AT)).toThrow(/at least one custodian amount/);
+    expect(() => buildProtocolApiMeasurement("usdf-falcon", falconInput(falconBody({ reserves: { ceffu: {} } })), CAPTURED_AT)).toThrow(/at least one custodian amount/);
   });
 
   it("keeps published reserves and insurance outside reconciled backing", () => {

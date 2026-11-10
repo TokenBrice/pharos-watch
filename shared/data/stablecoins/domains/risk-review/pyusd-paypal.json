@@ -42,7 +42,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "PYUSD has five issuer-backed native deployments (Ethereum, Arbitrum, Solana, Stellar, X Layer). Reviewed EVM/Tron expansion is PYUSD0 omnichain representation from Stargate Hydra (LayerZero) adapters or NativeOFT. The canonical Ethereum OFTWrapper's bridge mint/burn, owner, peer, and rate-limit powers are assessed as a separate Bridge Risk control, while native issuer controls remain in Mint Authority. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
+    "summary": "The reviewed issuer-native routes cover Ethereum, Arbitrum, Solana, Stellar and X Layer. The September report also labels Polygon, Ink and Stable as natively minted; their current controller identities and route mappings require a separate review. Reviewed EVM/Tron expansion is PYUSD0 omnichain representation from Stargate Hydra (LayerZero) adapters or NativeOFT. The canonical Ethereum OFTWrapper's bridge mint/burn, owner, peer, and rate-limit powers are assessed as a separate Bridge Risk control, while native issuer controls remain in Mint Authority. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); migration FIX2-14",
     "confidence": "verified",
@@ -80,6 +80,10 @@
       {
         "label": "Paxos PYUSD contract repository",
         "url": "https://github.com/paxosglobal/pyusd-contract"
+      },
+      {
+        "label": "KPMG September 2026 PYUSD native deployment table, Exhibit A pp.5-6, reviewed November 4, 2026 for the existing native identities only",
+        "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
       }
     ],
     "routes": [
@@ -113,6 +117,10 @@
           {
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "KPMG September 2026 PYUSD native deployment table, Exhibit A pp.5-6, reviewed November 4, 2026 for the existing native identities only",
+            "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
           }
         ]
       },
@@ -139,6 +147,10 @@
           {
             "label": "PayPal PYUSD on Arbitrum",
             "url": "https://newsroom.paypal-corp.com/2025-07-17-PayPal-USD-Expands-to-Arbitrum-Bringing-Layer-2-Efficiency-to-Multi-Chain-Development-Stack"
+          },
+          {
+            "label": "KPMG September 2026 PYUSD native deployment table, Exhibit A pp.5-6, reviewed November 4, 2026 for the existing native identities only",
+            "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
           }
         ]
       },
@@ -171,6 +183,10 @@
           {
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "KPMG September 2026 PYUSD native deployment table, Exhibit A pp.5-6, reviewed November 4, 2026 for the existing native identities only",
+            "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
           }
         ]
       },
@@ -203,6 +219,10 @@
           {
             "label": "LayerZero on L2BEAT",
             "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "KPMG September 2026 PYUSD native deployment table, Exhibit A pp.5-6, reviewed November 4, 2026 for the existing native identities only",
+            "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
           }
         ]
       },
@@ -775,6 +795,10 @@
           {
             "label": "GeckoTerminal X Layer PYUSD token metadata (accessed 2026-10-30)",
             "url": "https://api.geckoterminal.com/api/v2/networks/x-layer/tokens/0x87b4a8176b3df6b71e26cc095edcaf4db07506b4"
+          },
+          {
+            "label": "KPMG September 2026 PYUSD native deployment table, Exhibit A pp.5-6, reviewed November 4, 2026 for the existing native identities only",
+            "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
           }
         ]
       }

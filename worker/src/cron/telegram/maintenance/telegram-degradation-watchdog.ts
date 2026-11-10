@@ -25,6 +25,9 @@ import {
 } from "../../../telegram/outbox/pending-capacity";
 import { throwIfAborted } from "../../../lib/abort";
 import { parseJson } from "../../../lib/json-parse";
+import { recordOperatorAlertReceipt } from "../../../lib/status/operator-alert-health";
+import { deliverOperatorAlert } from "../../cron-sentinel-rules";
+import { escapeHtml, type TelegramCreds } from "../../../telegram/delivery/telegram";
 
 /**
  * Telegram dispatch degradation watchdog. Reads fresh signals after each
@@ -36,11 +39,13 @@ import { parseJson } from "../../../lib/json-parse";
 export const PENDING_BACKLOG_THRESHOLD = 500;
 export const PENDING_BACKLOG_SUSTAINED_SEC = 20 * 60;
 export const ZERO_SEND_STREAK_THRESHOLD = 3;
+export const DELIVERY_ALERT_COOLDOWN_SEC = 30 * 60;
 
 export const WATCHDOG_KEYS = {
   pendingSince: "telegram:degradation:pending-since",
   safetySourceSince: "telegram:degradation:safety-source-since",
   zeroSendStreak: "telegram:degradation:zero-send-streak",
+  notifications: "telegram:degradation:notifications:v1",
 } as const;
 
 type WatchdogOutcome = {
@@ -80,15 +85,185 @@ type WatchdogResult = {
   zeroSend: WatchdogOutcome & {
     availability: "available" | "unknown";
     reason: string | null;
-    streak: number;
+    streak: number | null;
     evaluated: boolean;
     runIdentity: string | null;
   };
 };
 
 export interface TelegramDegradationWatchdogOptions {
+  operatorTelegramCreds?: TelegramCreds | null;
   pendingCapacitySnapshot?: TelegramPendingCapacitySnapshot | null;
   safetySourceAssessment?: AlertSafetySourceAssessment | null;
+}
+
+const DELIVERY_CONDITIONS = ["backlog", "near-ttl", "zero-send"] as const;
+type DeliveryCondition = typeof DELIVERY_CONDITIONS[number];
+interface DeliveryObservation {
+  active: boolean;
+  observedAt: number;
+  detail: string;
+}
+interface DeliveryTransition extends DeliveryObservation {
+  condition: DeliveryCondition;
+}
+interface PendingCondition extends DeliveryTransition {
+  latest: DeliveryObservation;
+  transitionCount: number;
+}
+interface NotificationState {
+  version: 2;
+  observed: DeliveryCondition[];
+  acknowledged: DeliveryCondition[];
+  pending: PendingCondition[];
+  lastDeliveredAt: number | null;
+}
+
+function isDeliveryCondition(value: unknown): value is DeliveryCondition {
+  return DELIVERY_CONDITIONS.some((condition) => condition === value);
+}
+
+function isDeliveryObservation(value: unknown): value is DeliveryObservation {
+  const observation = readMetadataRecord(value);
+  return observation != null && typeof observation.active === "boolean" &&
+    typeof observation.observedAt === "number" && Number.isSafeInteger(observation.observedAt) &&
+    observation.observedAt >= 0 && typeof observation.detail === "string";
+}
+
+function isDeliveryTransition(value: unknown): value is DeliveryTransition {
+  return isDeliveryObservation(value) && isDeliveryCondition(readMetadataRecord(value)?.condition);
+}
+
+function isPendingCondition(value: unknown): value is PendingCondition {
+  const entry = readMetadataRecord(value);
+  return entry != null && isDeliveryTransition(value) && isDeliveryObservation(entry.latest) &&
+    typeof entry.transitionCount === "number" && Number.isSafeInteger(entry.transitionCount) && entry.transitionCount > 0;
+}
+
+function captureTransition(pending: PendingCondition[], transition: DeliveryTransition): void {
+  const { condition, active, observedAt, detail } = transition;
+  const latest = { active, observedAt, detail };
+  const prior = pending.find((entry) => entry.condition === condition);
+  if (prior) {
+    prior.latest = latest;
+    prior.transitionCount++;
+  } else {
+    pending.push({ condition, ...latest, latest, transitionCount: 1 });
+  }
+}
+
+async function readNotificationState(db: D1Database, signal?: AbortSignal): Promise<NotificationState> {
+  const cached = await getCache(db, WATCHDOG_KEYS.notifications, signal);
+  if (!cached) return { version: 2, observed: [], acknowledged: [], pending: [], lastDeliveredAt: null };
+  const parsed = parseJson(cached.value);
+  const state = parsed.ok ? readMetadataRecord(parsed.value) : null;
+  if (
+    (state?.version !== 1 && state?.version !== 2) ||
+    !Array.isArray(state.observed) || !state.observed.every(isDeliveryCondition) ||
+    !Array.isArray(state.acknowledged) || !state.acknowledged.every(isDeliveryCondition) ||
+    !Array.isArray(state.pending) ||
+    !(state.lastDeliveredAt === null ||
+      (typeof state.lastDeliveredAt === "number" && Number.isSafeInteger(state.lastDeliveredAt) && state.lastDeliveredAt >= 0))
+  ) throw new Error("telegram delivery notification state invalid");
+  const pending: PendingCondition[] = [];
+  if (state.version === 1) {
+    if (!state.pending.every(isDeliveryTransition)) throw new Error("telegram delivery notification state invalid");
+    for (const transition of state.pending) captureTransition(pending, transition);
+  } else {
+    if (!state.pending.every(isPendingCondition) ||
+      new Set(state.pending.map((entry) => entry.condition)).size !== state.pending.length
+    ) throw new Error("telegram delivery notification state invalid");
+    pending.push(...state.pending);
+  }
+  const normalized: NotificationState = {
+    version: 2, observed: state.observed, acknowledged: state.acknowledged,
+    pending, lastDeliveredAt: state.lastDeliveredAt,
+  };
+  // Upgrade the existing durable key before transport; older writers fail closed on v2.
+  if (state.version === 1) await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(normalized), signal);
+  return normalized;
+}
+
+function formatTransition(condition: DeliveryCondition, observation: DeliveryObservation): string {
+  // Leave room for six HTML-escaped observations plus counts in one Telegram message.
+  return `${observation.active ? "RAISED" : "RECOVERED"} ${condition} observed ${new Date(observation.observedAt * 1000).toISOString()}: ${escapeHtml(observation.detail.slice(0, 96))}`;
+}
+
+async function notifyDeliveryTransitions(
+  db: D1Database,
+  state: NotificationState,
+  result: WatchdogResult,
+  nowSec: number,
+  creds: TelegramCreds | null,
+  signal?: AbortSignal,
+) {
+  const { pendingBacklog, zeroSend } = result;
+  const observations: Array<[DeliveryCondition, boolean | null, string | null]> = [
+    ["backlog", pendingBacklog.availability === "available" && (pendingBacklog.triggered || pendingBacklog.recovered)
+      ? pendingBacklog.triggered : null, pendingBacklog.detail],
+    ["near-ttl", pendingBacklog.availability === "available"
+      ? pendingBacklog.triggered && pendingBacklog.nearTtl != null && pendingBacklog.nearTtl > 0 : null, pendingBacklog.detail],
+    ["zero-send", zeroSend.availability === "available" && zeroSend.runIdentity != null
+      ? zeroSend.triggered : null, zeroSend.detail],
+  ];
+  let changed = false;
+  for (const [condition, active, detail] of observations) {
+    if (active == null || state.observed.includes(condition) === active) continue;
+    captureTransition(state.pending, { condition, active, observedAt: nowSec, detail: detail ?? "threshold cleared" });
+    state.observed = state.observed.filter((value) => value !== condition);
+    if (active) state.observed.push(condition);
+    changed = true;
+  }
+  // Keep recovery evidence until its notification history is durable.
+  if (changed) await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(state), signal);
+  if (pendingBacklog.recovered) await deleteCache(db, WATCHDOG_KEYS.pendingSince);
+  const transitions = state.pending;
+  const cooldown = transitions.length > 0 && state.lastDeliveredAt != null &&
+    nowSec - state.lastDeliveredAt < DELIVERY_ALERT_COOLDOWN_SEC;
+  const unknownReason = pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
+    : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable" : null;
+  let reason = transitions.length === 0 ? unknownReason
+    : !creds ? "operator-alert-credentials-missing"
+      : cooldown ? "operator-alert-cooldown" : "operator-alert-pending";
+  let sent = false;
+  let deliveryFailed = false;
+  const receipt = () => recordOperatorAlertReceipt(db, "telegramDelivery", {
+    nowSec, operatorConfigured: creds != null, pending: state.pending.length > 0, delivered: sent, reason,
+  }, signal);
+  await receipt();
+  if (transitions.length > 0 && creds && !cooldown) {
+    const text = [
+      "<b>Telegram delivery-risk transitions</b>",
+      ...transitions.flatMap((transition) => [
+        `${transition.condition}: ${transition.transitionCount} transitions (${transition.transitionCount > 2 ? transition.transitionCount - 2 : 0} intervening)`,
+        formatTransition(transition.condition, transition),
+        ...(transition.transitionCount > 1 ? [`Latest: ${formatTransition(transition.condition, transition.latest)}`] : []),
+      ]),
+    ].join("\n");
+    try {
+      sent = (await deliverOperatorAlert(creds, text, signal)).ok;
+    } catch {
+      throwIfAborted(signal);
+    }
+    deliveryFailed = !sent;
+    if (sent) {
+      for (const transition of transitions) {
+        state.acknowledged = state.acknowledged.filter((condition) => condition !== transition.condition);
+        if (transition.latest.active) state.acknowledged.push(transition.condition);
+      }
+      state.pending = [];
+      state.lastDeliveredAt = nowSec;
+      await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(state), signal);
+    }
+    reason = !sent ? "operator-alert-delivery-failed"
+      : state.pending.length > 0 ? "operator-alert-cooldown" : unknownReason;
+    await receipt();
+  }
+  return {
+    raised: transitions.filter((transition) => transition.latest.active).map((transition) => transition.condition),
+    recovered: transitions.filter((transition) => !transition.latest.active).map((transition) => transition.condition),
+    sent, cooldown, deliveryFailed, pending: state.pending.length, reason,
+  };
 }
 
 function emptyOutcome(): WatchdogOutcome {
@@ -219,27 +394,32 @@ interface ZeroSendState {
   lastRunIdentity: string | null;
 }
 
-async function readZeroSendState(db: D1Database): Promise<ZeroSendState> {
-  const cached = await getCache(db, WATCHDOG_KEYS.zeroSendStreak);
-  if (!cached) return { streak: 0, lastRunIdentity: null };
+type ZeroSendStateReadResult =
+  | { state: ZeroSendState; reason: null }
+  | { state: null; reason: string };
+
+async function readZeroSendState(db: D1Database): Promise<ZeroSendStateReadResult> {
+  let cached;
   try {
-    const parsedResult = parseJson(cached.value);
-    if (!parsedResult.ok) throw new Error("legacy zero-send state");
-    const parsed = parsedResult.value;
-    if (typeof parsed !== "object" || parsed == null) throw new Error("legacy zero-send state");
-    const state = parsed as Partial<ZeroSendState>;
-    const streak = Number(state.streak);
-    return {
-      streak: Number.isFinite(streak) && streak > 0 ? Math.floor(streak) : 0,
-      lastRunIdentity: typeof state.lastRunIdentity === "string" ? state.lastRunIdentity : null,
-    };
+    cached = await getCache(db, WATCHDOG_KEYS.zeroSendStreak);
   } catch {
-    const legacyStreak = Number(cached.value);
-    return {
-      streak: Number.isFinite(legacyStreak) && legacyStreak > 0 ? Math.floor(legacyStreak) : 0,
-      lastRunIdentity: null,
-    };
+    return { state: null, reason: "streak-state-read-failed" };
   }
+  if (!cached) return { state: { streak: 0, lastRunIdentity: null }, reason: null };
+  const parsed = parseJson(cached.value);
+  const value = parsed.ok ? parsed.value : null;
+  const record = readMetadataRecord(value);
+  if (parsed.ok && typeof value !== "number" && (
+    !record || Object.keys(record).some((key) => key !== "streak" && key !== "lastRunIdentity")
+  )) return { state: null, reason: "unsupported-streak-state" };
+  const streak = typeof value === "number" ? value : record?.streak;
+  const lastRunIdentity = typeof value === "number" ? null : record?.lastRunIdentity;
+  if (
+    typeof streak === "number" && Number.isSafeInteger(streak) && streak >= 0 &&
+    (lastRunIdentity === null || (typeof lastRunIdentity === "string" && lastRunIdentity.length > 0)) &&
+    (record == null || Object.keys(record).length === 2)
+  ) return { state: { streak, lastRunIdentity }, reason: null };
+  return { state: null, reason: "invalid-streak-state" };
 }
 
 async function writeZeroSendState(db: D1Database, state: ZeroSendState): Promise<void> {
@@ -315,11 +495,7 @@ async function evaluatePendingBacklog(
   }
 
   if (flagSince != null) {
-    const cleared = await clearEpisode(
-      db,
-      WATCHDOG_KEYS.pendingSince,
-    );
-    outcome.recovered = cleared.recovered;
+    outcome.recovered = true;
     outcome.detail = `pending=${count}, recovered`;
   }
   return outcome;
@@ -399,20 +575,38 @@ function sumEvents(metadata: TelegramDispatchCronMetadata): number | null {
 
 async function evaluateZeroSendStreak(
   db: D1Database,
+  previouslyTriggered: boolean,
 ): Promise<WatchdogResult["zeroSend"]> {
   const dispatchRead = await readLatestDispatchMetadata(db);
   const latestRun = dispatchRead.availability === "available" ? dispatchRead.value : null;
-  const priorState = await readZeroSendState(db);
-  const priorStreak = priorState.streak;
+  const { state: priorState, reason: stateReason } = await readZeroSendState(db);
   const outcome: WatchdogResult["zeroSend"] = {
     ...emptyOutcome(),
-    triggered: priorStreak >= ZERO_SEND_STREAK_THRESHOLD,
-    availability: dispatchRead.availability,
-    reason: dispatchRead.availability === "unknown" ? dispatchRead.reason : null,
-    streak: priorStreak,
+    triggered: priorState ? priorState.streak >= ZERO_SEND_STREAK_THRESHOLD : previouslyTriggered,
+    availability: priorState ? dispatchRead.availability : "unknown",
+    reason: stateReason ?? (dispatchRead.availability === "unknown" ? dispatchRead.reason : null),
+    streak: priorState?.streak ?? null,
     evaluated: false,
     runIdentity: dispatchRead.availability === "unknown" ? dispatchRead.runIdentity : latestRun?.runIdentity ?? null,
   };
+
+  if (!priorState) {
+    if (
+      stateReason === "invalid-streak-state" && latestRun &&
+      latestRun.metadata.messagesSent != null && latestRun.metadata.messagesSent > 0 &&
+      sumEvents(latestRun.metadata) != null
+    ) {
+      await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
+      return {
+        ...outcome, availability: "available", reason: null, streak: 0, evaluated: true,
+        triggered: false, recovered: previouslyTriggered,
+        detail: "dispatch sent; invalid zero-send state reset",
+      };
+    }
+    outcome.detail = "zero-send state unavailable; existing incident state preserved";
+    return outcome;
+  }
+  const priorStreak = priorState.streak;
 
   if (!latestRun) {
     if (dispatchRead.availability === "available") outcome.reason = "no-completed-run";
@@ -485,13 +679,20 @@ export async function runTelegramDegradationWatchdog(
   throwIfAborted(signal);
 
   const nowSec = Math.floor(Date.now() / 1000);
+  const notificationState = await readNotificationState(db, signal);
 
   const pendingBacklog = await evaluatePendingBacklog(db, nowSec, options.pendingCapacitySnapshot);
   const safetySource = await evaluateSafetySource(db, nowSec, options.safetySourceAssessment);
-  const zeroSend = await evaluateZeroSendStreak(db);
+  const zeroSend = await evaluateZeroSendStreak(db, notificationState.observed.includes("zero-send"));
 
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };
+  const creds = options.operatorTelegramCreds ?? null;
+  const alertTransitions = await notifyDeliveryTransitions(
+    db, notificationState, result, nowSec, creds, signal,
+  );
+  const operatorAlertDegraded = alertTransitions.deliveryFailed || (alertTransitions.pending > 0 && creds == null);
   const degraded =
+    operatorAlertDegraded ||
     pendingBacklog.availability === "unknown" ||
     zeroSend.availability === "unknown" ||
     pendingBacklog.triggered ||
@@ -502,11 +703,14 @@ export async function runTelegramDegradationWatchdog(
     status: degraded ? "degraded" : "ok",
     metadata: {
       ...result,
+      alertTransitions,
       reason: pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
         : pendingBacklog.triggered ? "pending-backlog-threshold"
           : safetySource.triggered ? "safety-source-unavailable"
             : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable"
-              : zeroSend.triggered ? "zero-send-streak" : "watchdog-completed",
+              : zeroSend.triggered ? "zero-send-streak"
+                : alertTransitions.deliveryFailed ? "operator-alert-delivery-failed"
+                  : operatorAlertDegraded ? "operator-alert-credentials-missing" : "watchdog-completed",
     },
   });
 }

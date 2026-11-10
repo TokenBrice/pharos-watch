@@ -112,6 +112,15 @@ describe("CoinEmblem", () => {
     expect(screen.getByRole("link").getAttribute("aria-label")).toContain("%");
   });
 
+  it("prints a nonzero share below 0.05% as <0.1%, not 0.0%", () => {
+    renderAtlas(<CoinEmblem coin={{ ...sample, marketCap: 764_201 }} variant="fiat" cohortMarketCap={5_599_493_275} />);
+    const link = screen.getByRole("link");
+    fireEvent.focus(link);
+    expect(screen.getByText("Cohort share").nextElementSibling?.textContent).toBe("<0.1%");
+    expect(screen.getByRole("tooltip").textContent).not.toContain("0.0%");
+    expect(link.getAttribute("aria-label")).toContain("<0.1% of cohort market cap");
+  });
+
   it("discloses known cohort subtotals and withholds partial-denominator shares", () => {
     const eur = buildPegDiversityHero([makeStablecoin({ id: sample.id, circulating: { usd: sample.marketCap! } })])
       .pegClusters.find((group) => group.peg === "EUR")!;

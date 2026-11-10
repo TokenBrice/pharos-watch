@@ -1,15 +1,31 @@
 import type { DepegEvent } from "@shared/types/market";
-import { formatDeviationBps, formatIsoDate, formatLongDate } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate, formatLongDate, formatNativePrice } from "@shared/lib/format";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
-import { DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
+import { DEPEG_AUDIT_DISPUTED_BADGE, DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 
 export const DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS = Date.parse("2026-07-18T00:00:00Z") / 1000;
 
 export type DepegEventDisplayInput = Pick<
   DepegEvent,
-  "stablecoinId" | "symbol" | "direction" | "peakDeviationBps" | "startedAt" | "endedAt" | "peakPrice" | "recoveryPrice" | "closeReason"
-> & { slug: string };
+  "stablecoinId" | "symbol" | "pegType" | "direction" | "peakDeviationBps" | "startedAt" | "endedAt" | "peakPrice" | "recoveryPrice" | "pegReference" | "closeReason"
+> & {
+  slug: string;
+  /** Absent on legacy unaudited rows, which make no audit claim. */
+  provenance?: DepegEvent["provenance"];
+};
+
+/**
+ * A reviewed audit dispute qualifies the measured figure in place: the number
+ * stays, and the existing Disputed vocabulary says it is contradicted.
+ */
+function disputedQualifier(event: DepegEventDisplayInput): string {
+  return isDisputedAuditVerdict(event.provenance?.auditVerdict)
+    ? ` (${DEPEG_AUDIT_DISPUTED_BADGE.label})`
+    : "";
+}
 
 function collisionKey(event: DepegEventDisplayInput): string {
   return `${event.stablecoinId}:${formatIsoDate(event.startedAt)}:${event.direction}`;
@@ -43,11 +59,28 @@ export function formatEventTimestamp(seconds: number, includeTime: boolean): str
   return includeTime ? `${date} at ${formatEventUtcTime(seconds)}` : date;
 }
 
-export function formatEventPrice(value: number | null): string | null {
+/**
+ * A recorded USD price rendered in the peg's own unit. Non-USD fiat pegs are
+ * converted through the event's peg reference; USD, commodity and variable
+ * pegs keep the USD amount, labeled as such by the shared formatter.
+ */
+export function formatEventPrice(
+  value: number | null,
+  pegType?: string,
+  pegReference?: number | null,
+): string | null {
   if (value == null || !Number.isFinite(value)) return null;
-  if (value < 0.01) return `$${value.toFixed(6)}`;
-  if (value < 1) return `$${value.toFixed(4)}`;
-  return `$${value.toFixed(2)}`;
+  const taxonomy = getPegTaxonomyByType(pegType);
+  const nativeValue = taxonomy != null
+    && taxonomy.nativePriceUsesUsdSymbol !== true
+    && pegReference != null
+    && Number.isFinite(pegReference)
+    && pegReference > 0
+    ? value / pegReference
+    : value;
+  const abs = Math.abs(nativeValue);
+  const decimals = abs < 0.01 ? 6 : abs < 1 ? 4 : 2;
+  return formatNativePrice(value, taxonomy?.currency ?? "USD", pegReference ?? null, decimals);
 }
 
 export function depegDirectionLabel(direction: "above" | "below"): string {
@@ -68,10 +101,11 @@ function formatEventDeviation(event: DepegEventDisplayInput): string | null {
 export function buildDepegEventTitle(event: DepegEventDisplayInput, includeTime: boolean): string {
   const base = `${event.symbol} Depeg, ${formatEventTimestamp(event.startedAt, includeTime)}`;
   const direction = event.direction === "below" ? "Below Peg" : "Above Peg";
+  const qualifier = disputedQualifier(event);
   const deviation = formatEventDeviation(event);
-  const title = deviation ? `${base}: ${deviation} ${direction}` : `${base}: ${direction}`;
+  const title = deviation ? `${base}: ${deviation} ${direction}${qualifier}` : `${base}: ${direction}${qualifier}`;
   if (!includeTime || `${title} | Pharos`.length <= 70) return title;
-  return `${base}: ${direction}`;
+  return `${base}: ${direction}${qualifier}`;
 }
 
 export function getDepegEventClosurePresentation(event: DepegEventDisplayInput) {
@@ -86,7 +120,7 @@ function buildDepegEventOutcome(event: DepegEventDisplayInput, includeEndTime: b
   if (closure === "open" || event.endedAt == null) return "The event remains ongoing.";
   const duration = formatApproxDurationSeconds(event.endedAt - event.startedAt, { style: "long" });
   const endTime = includeEndTime ? ` at ${formatEventUtcTime(event.endedAt)}` : "";
-  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice) : null;
+  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice, event.pegType, event.pegReference) : null;
   return isRecovery
     ? `Recovered after ${duration}${endTime}${recoveryPrice ? ` at ${recoveryPrice}` : ""}.`
     : `${label} after ${duration}${endTime}.`;
@@ -102,7 +136,7 @@ export function buildDepegEventDescription(
     : event.symbol;
   const verb = event.direction === "below" ? "fell" : "rose";
   const deviation = formatEventDeviation(event);
-  const move = `${subject} ${verb}${deviation ? ` ${deviation}` : ""} ${event.direction} its peg`;
+  const move = `${subject} ${verb}${deviation ? ` ${deviation}` : ""} ${event.direction} its peg${disputedQualifier(event)}`;
   const outcome = buildDepegEventOutcome(event, false);
   if (!includeTime) {
     return `${move} on ${formatEventLongDate(event.startedAt)}. ${outcome} Event timeline and Pharos methodology context.`;
@@ -112,9 +146,9 @@ export function buildDepegEventDescription(
 
 export function buildDepegEventSynopsis(event: DepegEventDisplayInput): string {
   const deviation = formatDeviationBps(event.peakDeviationBps);
-  const peakPrice = formatEventPrice(event.peakPrice);
+  const peakPrice = formatEventPrice(event.peakPrice, event.pegType, event.pegReference);
   const outcome = buildDepegEventOutcome(event, true);
-  return `${event.symbol} moved ${depegDirectionLabel(event.direction)} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}, with a peak deviation of ${deviation}${peakPrice ? ` at ${peakPrice}` : ""}. ${outcome}`;
+  return `${event.symbol} moved ${depegDirectionLabel(event.direction)} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}, with a peak deviation of ${deviation}${disputedQualifier(event)}${peakPrice ? ` at ${peakPrice}` : ""}. ${outcome}`;
 }
 
 export function formatEventNavigationLabel(event: DepegEventDisplayInput, includeTime: boolean): string {

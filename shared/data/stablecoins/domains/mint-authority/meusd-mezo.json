@@ -82,8 +82,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "capDescription": "The Mezo owner Safe administers the canonical token's mintList/burnList allowlists (addToMintList/addToBurnList are onlyOwner in MUSD.sol), so it can authorize arbitrary new Mezo minters; it does not itself call mint(). The same Safe's Ethereum/Base token and NTT-manager ownership is bridge administration reviewed separately under bridgeRouteRisk.",
-        "observedAt": "2026-10-30",
-        "observedBlock": 12870000,
+        "observedAt": "2026-11-04",
+        "observedBlock": 13003328,
         "failureDomainKeys": [
           "protocol:mezo",
           "safe:mezo:0x98d8899c3030741925be630c710a98b57f397c7a"
@@ -102,17 +102,18 @@
           ],
           "enabledModules": [],
           "guard": null,
-          "observedBlock": 12870000,
-          "observedAt": "2026-10-30"
+          "observedBlock": 13003328,
+          "observedAt": "2026-11-04"
         },
         "executionScope": {
           "controllerDeployment": "mezo:0x98d8899c3030741925be630c710a98b57f397c7a",
-          "reviewedAt": "2026-10-30",
-          "observedAt": "2026-10-30",
-          "expiresAt": "2026-11-29",
-          "reviewer": "OMP findings-curation renewal 2026-10-30 (Safe state re-read at Mezo block 12870000: threshold 4 and the same seven owners; modules empty and guard slot zero)",
+          "reviewedAt": "2026-11-04",
+          "observedAt": "2026-11-04",
+          "expiresAt": "2026-12-04",
+          "reviewer": "Pharos issue #1707 scoped Safe control review 2026-11-04; pinned threshold/owners, complete modules, guard/fallback, singleton and runtime identities, canonical token owner and BorrowerOperations ProxyAdmin owner",
           "confidence": "verified",
           "sources": [
+            {"label": "Mezo block 13003328, hash 0x1bf2d441833c77a8e11ab51c0fffe45dd32634be5efc46471a48e1cd9466ab3a, 2026-11-04T21:08:30Z; Safe getThreshold/getOwners/getModulesPaginated, guard/fallback storage, masterCopy and runtime code; MUSD and BorrowerOperations ProxyAdmin owner; retrieved 2026-11-04T22:03:15.920Z", "url": "https://mezo-mainnet.boar.network"},
             {"label": "MUSD owner-managed mint allowlist source", "url": "https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/token/MUSD.sol"},
             {"label": "Mezo block 12870000, hash 0xe5752f72f0f70dd96409c2c699d557b651e81b23c8b2194850708ce9d8df218d, 2026-10-30T07:44:05Z; pinned Safe getThreshold/getOwners/getModulesPaginated/guard slot, MUSD owner, ProxyAdmin owner and BorrowerOperations implementation reads", "url": "https://mezo-mainnet.boar.network"},
             {"label": "Mezo block 12220336, hash 0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766, 2026-10-01T16:45:44Z; numeric-pinned executor census and canonical hash-pinned recheck observed 2026-10-09", "url": "https://jsonrpc-mezo.boar.network"},
@@ -120,14 +121,14 @@
             {"label": "Verified CompatibilityFallbackHandler source; exact byte-for-byte correspondence with Mezo fallback runtime at block 12220336", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"}
           ],
           "pin": {
-            "position": "12870000",
-            "hash": "0xe5752f72f0f70dd96409c2c699d557b651e81b23c8b2194850708ce9d8df218d",
+            "position": "13003328",
+            "hash": "0x1bf2d441833c77a8e11ab51c0fffe45dd32634be5efc46471a48e1cd9466ab3a",
             "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
             "signerIdentity": "threshold=4;owners=0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
           },
           "observedState": {
-            "position": "12870000",
-            "hash": "0xe5752f72f0f70dd96409c2c699d557b651e81b23c8b2194850708ce9d8df218d",
+            "position": "13003328",
+            "hash": "0x1bf2d441833c77a8e11ab51c0fffe45dd32634be5efc46471a48e1cd9466ab3a",
             "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
             "signerIdentity": "threshold=4;owners=0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
           },
@@ -165,8 +166,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "12870000",
-                  "hash": "0xe5752f72f0f70dd96409c2c699d557b651e81b23c8b2194850708ce9d8df218d",
+                  "position": "13003328",
+                  "hash": "0x1bf2d441833c77a8e11ab51c0fffe45dd32634be5efc46471a48e1cd9466ab3a",
                   "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
                   "signerIdentity": "threshold=4;owners=0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
                 },
@@ -205,7 +206,7 @@
             "url": "https://etherscan.io/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
           }
         ],
-        "evidence": "At canonical Mezo block 12220336 (2026-10-01T16:45:44Z), MUSD owner() and BorrowerOperations ProxyAdmin owner() return the recorded protocol Safe. Research on 2026-10-09 recovered the same block through the official Mezo RPC because Dwellir has no registered Mezo endpoint; the header hash was rechecked and masterCopy/fallback runtime were also read with EIP-1898 requireCanonical. The Safe returns threshold 5, the same nine owners, empty terminal module pagination, zero guard storage and CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 and fallback runtime exactly match their verified source bytecode. GnosisSafe.execTransaction and Executor.execute positively prove arbitrary CALL/DELEGATECALL; the fallback's simulate path reverts persistent changes. The complete execution certificate is the v10.08 conservative maximal adverse upper envelope with every capability, root/global unbounded reach and zero executor delay, rather than a downstream target census. Historical block/state dates and expiry are preserved; no favorable target exclusions, independent-human-signing or supply reconciliation is inferred. Ethereum/Base bridge administration remains outside native Mint Authority."
+        "evidence": "Reviewed 2026-11-04 at Mezo block 13003328 (0x1bf2d441833c77a8e11ab51c0fffe45dd32634be5efc46471a48e1cd9466ab3a, 2026-11-04T21:08:30Z), retrieved 2026-11-04T22:03:15.920Z from https://mezo-mainnet.boar.network: getThreshold()=4 and getOwners() returns exactly the seven recorded owners. MUSD owner() and BorrowerOperations ProxyAdmin owner() still return this Safe. getModulesPaginated(0x1,100) returns an empty page and terminal sentinel 0x1; the standard guard slot is zero. masterCopy() and fallback-handler storage return the recorded singleton and CompatibilityFallbackHandler, with all three decoded runtime SHA-256 identities unchanged from the reviewed source-correspondence pins. The current certificate therefore records 4-of-7 with the same conservative maximal execution envelope; it grants no new cap, delay, reconciliation or signer-independence credit. The historical 5-of-9 observation below predates the change recorded at block 12530696 and is retained as provenance. Historical review: At canonical Mezo block 12220336 (2026-10-01T16:45:44Z), MUSD owner() and BorrowerOperations ProxyAdmin owner() return the recorded protocol Safe. Research on 2026-10-09 recovered the same block through the official Mezo RPC because Dwellir has no registered Mezo endpoint; the header hash was rechecked and masterCopy/fallback runtime were also read with EIP-1898 requireCanonical. The Safe returns threshold 5, the same nine owners, empty terminal module pagination, zero guard storage and CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 and fallback runtime exactly match their verified source bytecode. GnosisSafe.execTransaction and Executor.execute positively prove arbitrary CALL/DELEGATECALL; the fallback's simulate path reverts persistent changes. The complete execution certificate is the v10.08 conservative maximal adverse upper envelope with every capability, root/global unbounded reach and zero executor delay, rather than a downstream target census. Historical block/state dates and expiry are preserved; no favorable target exclusions, independent-human-signing or supply reconciliation is inferred. Ethereum/Base bridge administration remains outside native Mint Authority."
       },
       {
         "chain": "mezo",

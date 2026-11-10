@@ -3,11 +3,11 @@
   "product": "AUDM",
   "profile": "audm-v1",
   "officialIndexUrl": "https://www.macropod.com/transparency",
-  "reportUrl": "https://docs.macropod.com/legal/reserve-verification-report-2026-09-30.pdf",
-  "reportSha256": "9572753ebf6a7d6bdd97c5e692a0a1c2b3bde6598bbce7083e86ce9389b73bb0",
-  "reportByteLength": 96118,
-  "reportDate": "2026-09-30",
-  "reportAsOf": "2026-09-30T23:59:59+10:00",
+  "reportUrl": "https://docs.macropod.com/legal/reserve-verification-report-31st-october-2026.pdf",
+  "reportSha256": "ec0b147d9ac7f02d09b57daea8d0f3e8745ee4f55f7a2cfc6712aef2c65f896f",
+  "reportByteLength": 85726,
+  "reportDate": "2026-10-31",
+  "reportAsOf": "2026-10-31T23:59:59+10:00",
   "reportTimeZone": "Australian Eastern Standard Time (AEST, UTC+10)",
   "attestor": "Catena Digital Pty Ltd (trading as Macropod Global) — issuer CEO",
   "engagement": "Issuer self-attestation under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867; not an independent examination",
@@ -17,14 +17,14 @@
     {
       "code": "cash",
       "label": "Cash held at Westpac Banking Corporation in the AUDM Trust Class A Reserve",
-      "amount": "3322783.88"
+      "amount": "3487442.07"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "Ethereum AUDM on-chain supply",
-      "amount": "3200441.88"
+      "amount": "3362065.37"
     },
     {
       "code": "redbelly",
@@ -39,16 +39,16 @@
     {
       "code": "base",
       "label": "Base AUDM on-chain supply",
-      "amount": "68155.00"
+      "amount": "71155.00"
     }
   ],
-  "reportedAssetTotal": "3322783.88",
-  "computedAssetTotal": "3322783.88",
-  "reportedLiabilityTotal": "3322070.88",
+  "reportedAssetTotal": "3487442.07",
+  "computedAssetTotal": "3487442.07",
+  "reportedLiabilityTotal": "3486694.37",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.08.0",
-    "normalizedTextSha256": "0cbff76a452b620ef272cb322c81b99d4d80bed5e5c18ac5a75d4a61df4c9bdc",
+    "parserVersion": "26.10.0",
+    "normalizedTextSha256": "5929a5fca43f9997a289303886740868b3957c6af7f21310e749971470a64b4c",
     "pageCount": 2
   },
   "assuranceTier": "issuer-attested"

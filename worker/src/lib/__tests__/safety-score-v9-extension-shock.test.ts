@@ -1,7 +1,6 @@
-import { createHash } from "node:crypto";
-
 import { describe, expect, it } from "vitest";
 
+import shockCoverage from "@shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
 import {
   hydrateSafetyScoreV9ShockCoverageAsset,
   selectSafetyScoreV9CdpShockMeasurement,
@@ -10,11 +9,8 @@ import {
 const CAPTURE_9_CLOCK_SEC = 1_784_225_942;
 const POST_JULY_17_CLOCK_SEC = 1_784_279_256;
 
-const SHOCK_POLICY = {
-  scoreShockFractionPpm: 500_000,
-  sensitivityShockFractionsPpm: [400_000, 500_000, 600_000, 750_000],
-  debtReconciliationTolerancePpm: 1_000,
-};
+type CoverageMeasurement = NonNullable<ReturnType<typeof selectSafetyScoreV9CdpShockMeasurement>>;
+type RegistryRow = (typeof shockCoverage.measurements)[number];
 
 function requireMeasurement(assetId: string, clockSec: number) {
   const measurement = selectSafetyScoreV9CdpShockMeasurement(assetId, clockSec);
@@ -22,78 +18,77 @@ function requireMeasurement(assetId: string, clockSec: number) {
   return measurement;
 }
 
-function sha256Json(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+function latestEligibleRow(assetId: string, clockSec: number): RegistryRow {
+  const row = shockCoverage.measurements
+    .filter((entry) => entry.assetId === assetId && entry.block.timestampUnix <= clockSec)
+    .sort((left, right) => right.block.timestampUnix - left.block.timestampUnix)[0];
+  if (!row) throw new Error(`Expected an eligible registry row for ${assetId}`);
+  return row;
+}
+
+function expectRegisteredSelection(measurement: CoverageMeasurement, row: RegistryRow) {
+  expect(measurement).toMatchObject({
+    family: row.family,
+    applicability: row.applicability,
+    complete: row.complete,
+    exactReplayPassed: row.exactReplayPassed,
+    replayVerification: {
+      attestedAt: row.replayVerification!.attestedAt,
+      mode: row.replayVerification!.mode,
+      callsConsumed: row.replayVerification!.callsConsumed,
+      codePinsConsumed: row.replayVerification!.codePinsConsumed,
+    },
+    source: {
+      journalPath: row.journalPath,
+      journalSha256: row.journalSha256,
+      block: row.block,
+      sourcePin: row.sourcePin,
+    },
+    shockPolicy: row.shockPolicy,
+    stressShockFraction: row.measuredFacts.stressShockFraction,
+    stressLiquidatableDebt: row.measuredFacts.stressLiquidatableDebt,
+    stressPoolOffsetDebt: row.measuredFacts.stressPoolOffsetDebt,
+    stressLiquidationCoverageRatio: row.measuredFacts.stressLiquidationCoverageRatio,
+    branchContributions: row.measuredFacts.branchContributions,
+  });
+  expect(measurement.codeHashPins).toEqual(row.codePins);
+  expect(measurement.codeHashPins).toHaveLength(row.replayVerification!.codePinsConsumed);
+  expect(measurement.codeHashPins.every((pin) => /^0x[0-9a-f]{64}$/.test(pin.codeHash))).toBe(true);
+}
+
+function expectCoverageArithmetic(measurement: CoverageMeasurement) {
+  const debt = BigInt(measurement.stressLiquidatableDebt!);
+  const offset = BigInt(measurement.stressPoolOffsetDebt!);
+  expect(measurement.stressLiquidationCoverageRatio).toBeCloseTo(debt === 0n ? 1 : Math.min(Number(offset) / Number(debt), 1), 10);
+  const branchDebt = measurement.branchContributions.reduce((sum, row) => sum + BigInt(row.stressLiquidatableDebt), 0n);
+  const branchOffset = measurement.branchContributions.reduce((sum, row) => sum + BigInt(row.stressPoolOffsetDebt), 0n);
+  expect(branchDebt).toBe(debt);
+  expect(branchOffset).toBe(offset);
+  for (const branch of measurement.branchContributions) {
+    const branchDebtValue = BigInt(branch.stressLiquidatableDebt);
+    const branchOffsetValue = BigInt(branch.stressPoolOffsetDebt);
+    expect(branch.stressLiquidationCoverageRatio).toBeCloseTo(
+      branchDebtValue === 0n ? 1 : Math.min(Number(branchOffsetValue) / Number(branchDebtValue), 1),
+      10,
+    );
+  }
 }
 
 describe("selectSafetyScoreV9CdpShockMeasurement", () => {
   it("selects Base Dollar's replay-attested five-branch stress measurement", () => {
     const measurement = requireMeasurement("bd-basedollar", 1_787_308_020);
-    expect(measurement).toMatchObject({
-      family: "liquity-v2-shock-v1",
-      applicability: "measured",
-      complete: true,
-      exactReplayPassed: true,
-      replayVerification: {
-        attestedAt: "2026-08-21",
-        mode: "offline-byte-identical",
-        callsConsumed: 224,
-        codePinsConsumed: 92,
-      },
-      source: {
-        journalPath:
-          "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
-        journalSha256: "95ebfb8c569bc9efded67574f8135198c7734dd0d4e89e471541a44d58761f4d",
-        block: { number: 50_259_336, timestampUnix: 1_787_308_019 },
-      },
-      stressLiquidatableDebt: "26262078110240219381698",
-      stressPoolOffsetDebt: "9479247573156543215626",
-      stressLiquidationCoverageRatio: 0.360948114363,
-    });
+    expectRegisteredSelection(measurement, latestEligibleRow("bd-basedollar", 1_787_308_020));
     expect(measurement.branchContributions).toHaveLength(5);
-    expect(measurement.codeHashPins).toHaveLength(92);
+    expectCoverageArithmetic(measurement);
   });
 
   it("selects the complete chronology-valid LUSD and BOLD journals at the capture-9 clock", () => {
+    for (const assetId of ["lusd-liquity", "bold-liquity"]) {
+      const measurement = requireMeasurement(assetId, CAPTURE_9_CLOCK_SEC);
+      expectRegisteredSelection(measurement, latestEligibleRow(assetId, CAPTURE_9_CLOCK_SEC));
+      expectCoverageArithmetic(measurement);
+    }
     const lusd = requireMeasurement("lusd-liquity", CAPTURE_9_CLOCK_SEC);
-    const bold = requireMeasurement("bold-liquity", CAPTURE_9_CLOCK_SEC);
-
-    expect(lusd).toMatchObject({
-      family: "liquity-v1-shock-v1",
-      applicability: "measured",
-      failureReason: null,
-      complete: true,
-      blockers: [],
-      exactReplayPassed: true,
-      replayVerification: {
-        attestedAt: "2026-07-20",
-        mode: "offline-byte-identical",
-        callsConsumed: 265,
-        codePinsConsumed: 14,
-      },
-      source: {
-        journalPath:
-          "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-07-16-block-25546976-shock-coverage.json",
-        journalSha256: "82bc042b7276ab49adba285117d171baf63cb0de85759eaffdb33d437eb8612d",
-        block: {
-          number: 25_546_976,
-          hash: "0xe8218d4a35f40750dbc0f08c2cf74e641694ae2b5aa46150a6849e7d2429e1b5",
-          timestampUnix: 1_784_225_939,
-          timestampIso: "2026-07-16T18:18:59.000Z",
-        },
-        sourcePin: {
-          repository: "https://github.com/liquity/dev",
-          commit: "5174ecd0da4842157aba989499200d690b7e374f",
-          liquidationContractPath: "packages/contracts/contracts/TroveManager.sol",
-        },
-      },
-      shockPolicy: SHOCK_POLICY,
-      stressShockFraction: 0.5,
-      stressLiquidatableDebt: "0",
-      stressPoolOffsetDebt: "0",
-      stressLiquidationCoverageRatio: 1,
-      evidenceRefIds: [],
-    });
     expect(lusd.branchContributions).toEqual([
       {
         branchIndex: 0,
@@ -102,94 +97,8 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
         stressLiquidationCoverageRatio: 1,
       },
     ]);
-    expect(lusd.codeHashPins).toHaveLength(14);
-    expect(sha256Json(lusd.codeHashPins)).toBe("69b88d5cfc04dc03239c922761b3cd5d14a6c71506682cc28e538e31f95beacf");
-    expect(lusd.codeHashPins[0]).toEqual({
-      name: "lusd-token",
-      address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      role: "token",
-      codeHash: "0xa607f4c8379ffb91323184b39d374287ea702b699648610ba87b29fd4f9b00a1",
-    });
-    expect(lusd.codeHashPins[lusd.codeHashPins.length - 1]).toEqual({
-      name: "tellor-oracle",
-      address: "0x88df592f8eb5d7bd38bfef7deb0fbc02cf3778a0",
-      role: "oracle-fallback-source",
-      codeHash: "0x18df49952ae206a293436515440bff85ba7a87d1ddf9ab0aab4e1fba63c11fbb",
-    });
-
-    expect(bold).toMatchObject({
-      family: "liquity-v2-shock-v1",
-      applicability: "measured",
-      failureReason: null,
-      complete: true,
-      blockers: [],
-      exactReplayPassed: true,
-      replayVerification: {
-        attestedAt: "2026-07-20",
-        mode: "offline-byte-identical",
-        callsConsumed: 746,
-        codePinsConsumed: 54,
-      },
-      source: {
-        journalPath:
-          "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-07-16-block-25546976-shock-coverage.json",
-        journalSha256: "51bcb1b5c177ad7b31ff0faab0b055b300edc7ea30be86c0f318ab9fe4056751",
-        block: {
-          number: 25_546_976,
-          hash: "0xe8218d4a35f40750dbc0f08c2cf74e641694ae2b5aa46150a6849e7d2429e1b5",
-          timestampUnix: 1_784_225_939,
-          timestampIso: "2026-07-16T18:18:59.000Z",
-        },
-        sourcePin: {
-          repository: "https://github.com/liquity/bold",
-          commit: "c8a5a4ee2e9dc024905856b6698a77d849c68c7e",
-          liquidationContractPath: "contracts/src/TroveManager.sol",
-        },
-      },
-      shockPolicy: SHOCK_POLICY,
-      stressShockFraction: 0.5,
-      stressLiquidatableDebt: "17754332661241785789222466",
-      stressPoolOffsetDebt: "14478681237083160155930867",
-      stressLiquidationCoverageRatio: 0.815501292745,
-      evidenceRefIds: [],
-    });
-    expect(bold.branchContributions).toEqual([
-      {
-        branchIndex: 0,
-        stressLiquidatableDebt: "7525784708187349934083685",
-        stressPoolOffsetDebt: "4250133284028724300792086",
-        stressLiquidationCoverageRatio: 0.564742873843,
-      },
-      {
-        branchIndex: 1,
-        stressLiquidatableDebt: "9827824276178400497308524",
-        stressPoolOffsetDebt: "9827824276178400497308524",
-        stressLiquidationCoverageRatio: 1,
-      },
-      {
-        branchIndex: 2,
-        stressLiquidatableDebt: "400723676876035357830257",
-        stressPoolOffsetDebt: "400723676876035357830257",
-        stressLiquidationCoverageRatio: 1,
-      },
-    ]);
-    expect(bold.codeHashPins).toHaveLength(54);
-    expect(sha256Json(bold.codeHashPins)).toBe("5506e30422842f1773ed5860b198ac227c5721e5933e19fd6745bc0556098df1");
-    expect(bold.codeHashPins[0]).toEqual({
-      name: "bold-token",
-      address: "0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      role: "token",
-      codeHash: "0xfee79b645b7275fbcb4e4891bb08f7c881e01378af3ecd74fb4dc19c47750d21",
-    });
-    expect(bold.codeHashPins[bold.codeHashPins.length - 1]).toEqual({
-      name: "interest-router-2",
-      address: "0x807def5e7d057df05c796f4bc75c3fe82bd6eee1",
-      role: "liquidation-interest-minting",
-      codeHash: "0x2a91933e7f237a53ed6f699474a7618e16623dbcebb26702e494a9ce6382d5ce",
-    });
-
-    expect(lusd.source?.journalSha256).not.toBe("1743d17ab7921f5711926ae4c0eeac9cb25dbbade7f69ea6318aca5eb8e5ffca");
-    expect(bold.source?.journalSha256).not.toBe("b881670992f4dae0cc94d616e56b6ec617039f45257f056f27cb58acbb76ae65");
+    expect(lusd.codeHashPins[0]).toMatchObject({ name: "lusd-token", role: "token" });
+    expect(lusd.codeHashPins[lusd.codeHashPins.length - 1]).toMatchObject({ role: "oracle-fallback-source" });
   });
 
   it("returns no stress measurement for MIM or an unsupported asset", () => {
@@ -204,7 +113,9 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
     expect(hydrateSafetyScoreV9ShockCoverageAsset(pinnedAsset, CAPTURE_9_CLOCK_SEC)).toBe(pinnedAsset);
     expect(
       hydrateSafetyScoreV9ShockCoverageAsset({ assetId: "bold-liquity", archetype: "cdp" }, CAPTURE_9_CLOCK_SEC),
-    ).toMatchObject({ cdpStressCoverage: { stressLiquidationCoverageRatio: 0.815501292745 } });
+    ).toMatchObject({ cdpStressCoverage: {
+      stressLiquidationCoverageRatio: latestEligibleRow("bold-liquity", CAPTURE_9_CLOCK_SEC).measuredFacts.stressLiquidationCoverageRatio,
+    } });
     expect(
       hydrateSafetyScoreV9ShockCoverageAsset({ assetId: "mim-abracadabra", archetype: "cdp" }, CAPTURE_9_CLOCK_SEC),
     ).not.toHaveProperty("cdpStressCoverage");
@@ -235,8 +146,9 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
   it("admits a journal exactly at its block clock and rejects future pins", () => {
     const blockClock = 1_784_279_255;
     const pinned = requireMeasurement("bold-liquity", blockClock);
-    expect(requireMeasurement("bold-liquity", blockClock - 1).source?.block.number).toBe(25_546_976);
-    expect(pinned.source?.block.number).toBe(25_551_407);
+    expect(requireMeasurement("bold-liquity", blockClock - 1).source?.block.number)
+      .toBe(latestEligibleRow("bold-liquity", blockClock - 1).block.number);
+    expect(pinned.source?.block.number).toBe(latestEligibleRow("bold-liquity", blockClock).block.number);
     expect(() => hydrateSafetyScoreV9ShockCoverageAsset(
       { assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned },
       blockClock - 1,
@@ -247,66 +159,18 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
     const pinned = requireMeasurement("bold-liquity", CAPTURE_9_CLOCK_SEC);
     const input = { assetId: "bold-liquity", archetype: "cdp", cdpStressCoverage: pinned };
     const hydrated = hydrateSafetyScoreV9ShockCoverageAsset(input, POST_JULY_17_CLOCK_SEC) as typeof input;
-    expect(requireMeasurement("bold-liquity", POST_JULY_17_CLOCK_SEC).source?.block.number).toBe(25_551_407);
+    expect(requireMeasurement("bold-liquity", POST_JULY_17_CLOCK_SEC).source?.block.number)
+      .toBe(latestEligibleRow("bold-liquity", POST_JULY_17_CLOCK_SEC).block.number);
     expect(hydrated.cdpStressCoverage).toEqual(pinned);
-    expect(hydrated.cdpStressCoverage.source?.block.number).toBe(25_546_976);
+    expect(hydrated.cdpStressCoverage.source?.block.number).toBe(latestEligibleRow("bold-liquity", CAPTURE_9_CLOCK_SEC).block.number);
   });
 
   it("selects the later LUSD and BOLD journals after the July 17 measurement clock", () => {
-    const lusd = requireMeasurement("lusd-liquity", POST_JULY_17_CLOCK_SEC);
-    const bold = requireMeasurement("bold-liquity", POST_JULY_17_CLOCK_SEC);
-
-    expect(lusd).toMatchObject({
-      source: {
-        journalPath:
-          "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-07-17-block-25551407-shock-coverage.json",
-        journalSha256: "1743d17ab7921f5711926ae4c0eeac9cb25dbbade7f69ea6318aca5eb8e5ffca",
-        block: {
-          number: 25_551_407,
-          hash: "0xb4d76fb030d1970874ad821d279664182222e586d2482493a24dd8717cb81225",
-          timestampUnix: 1_784_279_255,
-          timestampIso: "2026-07-17T09:07:35.000Z",
-        },
-      },
-      stressLiquidatableDebt: "0",
-      stressPoolOffsetDebt: "0",
-      stressLiquidationCoverageRatio: 1,
-    });
-    expect(bold).toMatchObject({
-      source: {
-        journalPath:
-          "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-07-17-block-25551407-shock-coverage.json",
-        journalSha256: "b881670992f4dae0cc94d616e56b6ec617039f45257f056f27cb58acbb76ae65",
-        block: {
-          number: 25_551_407,
-          hash: "0xb4d76fb030d1970874ad821d279664182222e586d2482493a24dd8717cb81225",
-          timestampUnix: 1_784_279_255,
-          timestampIso: "2026-07-17T09:07:35.000Z",
-        },
-      },
-      stressLiquidatableDebt: "17894837454764679091756881",
-      stressPoolOffsetDebt: "14532694197596176032448614",
-      stressLiquidationCoverageRatio: 0.812116580233,
-    });
-    expect(bold.branchContributions).toEqual([
-      {
-        branchIndex: 0,
-        stressLiquidatableDebt: "7611779781059891657766840",
-        stressPoolOffsetDebt: "4249636523891388598458573",
-        stressLiquidationCoverageRatio: 0.558297355694,
-      },
-      {
-        branchIndex: 1,
-        stressLiquidatableDebt: "9882296864938511465684042",
-        stressPoolOffsetDebt: "9882296864938511465684042",
-        stressLiquidationCoverageRatio: 1,
-      },
-      {
-        branchIndex: 2,
-        stressLiquidatableDebt: "400760808766275968305999",
-        stressPoolOffsetDebt: "400760808766275968305999",
-        stressLiquidationCoverageRatio: 1,
-      },
-    ]);
+    for (const assetId of ["lusd-liquity", "bold-liquity"]) {
+      const measurement = requireMeasurement(assetId, POST_JULY_17_CLOCK_SEC);
+      expectRegisteredSelection(measurement, latestEligibleRow(assetId, POST_JULY_17_CLOCK_SEC));
+      expect(measurement.source!.block.timestampUnix).toBeLessThanOrEqual(POST_JULY_17_CLOCK_SEC);
+      expectCoverageArithmetic(measurement);
+    }
   });
 });

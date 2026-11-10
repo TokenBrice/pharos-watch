@@ -7,6 +7,10 @@ import { DailySocialSnapshotSchema, DailySocialTopicSchema, buildDailySocialAltT
 import { DailySocialManifestSchema, dailySocialImageKey, type DailySocialManifest } from "@shared/lib/daily-social-manifest";
 import { dailySocialPreparationWindow, getDailySocialEdition, DAILY_SOCIAL_MAX_SOURCE_AGE_SEC, DAILY_SOCIAL_MAX_CAPTURE_AGE_SEC } from "@shared/lib/daily-social-schedule";
 import { captureDailySocial } from "../lib/daily-social-capture";
+import {
+  DAILY_SOCIAL_SNAPSHOT_DIGEST_SUFFIX,
+  dailySocialSnapshotDigest,
+} from "../lib/daily-social-snapshot-digest";
 import { parseStrictCliArgs, assertCliUsage, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -21,7 +25,7 @@ const HELP = `Usage: npx tsx scripts/maintenance/publish-daily-social.ts <plan|c
 plan checks the 13:00–14:00 Europe/Belgrade preparation window and immutable KV manifest.
 capture writes snapshot.json from fresh Pharos data. On unavailable topic data it tries
 a clearly labelled current market overview. Render it with build-daily-social.ts.
-publish verifies poster.png, writes content-addressed PNG bytes, then the dated manifest.
+publish verifies poster.png against the build's snapshot digest, writes content-addressed PNG bytes, then the dated manifest.
 Nothing posts automatically: an operator tweets the prepared edition by hand.
 Environment: PHAROS_API_KEY (capture; .env.local fallback), CLOUDFLARE_ACCOUNT_ID,
 SAFETY_MAP_KV_TOKEN, KV_NAMESPACE_ID (plan/publish; existing SELECTOR_SNAPSHOTS namespace).`;
@@ -46,6 +50,19 @@ export function makeDailySocialManifest(snapshot: DailySocialSnapshot, png: Uint
   }
   return DailySocialManifestSchema.parse({ schemaVersion: 1, snapshot, imageSha256: sha256(png),
     tweetText: buildDailySocialTweetText(snapshot), altText: buildDailySocialAltText(snapshot) });
+}
+
+/**
+ * The raster is paired with snapshot.json by filename only, so require the
+ * build's sidecar digest to match the snapshot being published. A re-capture
+ * without a rebuild fails closed here instead of binding old bytes to new copy.
+ */
+export function assertPosterSnapshotPairing(outDir: string, snapshot: DailySocialSnapshot): void {
+  const digestPath = resolve(outDir, `poster${DAILY_SOCIAL_SNAPSHOT_DIGEST_SUFFIX}`);
+  const recorded = existsSync(digestPath) ? readFileSync(digestPath, "utf8").trim() : null;
+  if (recorded !== dailySocialSnapshotDigest(snapshot)) {
+    throw new Error("poster.png was not rendered from this snapshot.json; re-run build-daily-social.ts before publishing");
+  }
 }
 
 export async function planDailySocial(kv: DailySocialKv, nowSec: number): Promise<{ shouldPrepare: boolean; reason: string }> {
@@ -166,6 +183,8 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
   const snapshot = DailySocialSnapshotSchema.parse(JSON.parse(readFileSync(resolve(outDir, "snapshot.json"), "utf8")));
+  // Runs for --dry-run too, so the documented rehearsal catches a stale pairing.
+  assertPosterSnapshotPairing(outDir, snapshot);
   const png = readFileSync(resolve(outDir, "poster.png"));
   const manifest = makeDailySocialManifest(snapshot, png, now);
   const status = await publishDailySocial(createKv(), manifest, png, Boolean(values["dry-run"]));

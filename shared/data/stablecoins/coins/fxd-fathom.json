@@ -60,5 +60,16 @@
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "windDownAnnouncedAt": "2026-08-05",
-  "windDownSourceUrl": "https://x.com/Fathom_fi/article/2084909905287487609"
+  "windDownSourceUrl": "https://x.com/Fathom_fi/article/2084909905287487609",
+  "status": "frozen",
+  "frozenAt": "2026-11-08",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-08-26",
+    "epitaph": "Fathom shut down its CDP dollar; the residual token kept trading",
+    "obituary": "Fathom's CDP-backed dollar entered shutdown on August 26, 2026, when its documented ShowStopper contract was caged in XDC transaction 0x07a63d9a4f3ad3859b6fff6d35fbe98074980d3bcac8b26f572532d82c67ffc9 at block 106506290. The shutdown disabled ordinary issuance and peg operations; the contract still reports live() = 0 with the same shutdown timestamp. This followed the issuer's recorded August wind-down announcement. FXD remained a residual traded token, with a sparse CoinGecko observation near $0.8423 at the November 8 archive capture. Pharos preserves its market history as a frozen wind-down asset rather than treating residual trading as an operating stablecoin.",
+    "peakMcap": 3489133,
+    "sourceUrl": "https://xdcscan.com/tx/0x07a63d9a4f3ad3859b6fff6d35fbe98074980d3bcac8b26f572532d82c67ffc9",
+    "sourceLabel": "Fathom ShowStopper on-chain shutdown, August 26, 2026"
+  }
 }

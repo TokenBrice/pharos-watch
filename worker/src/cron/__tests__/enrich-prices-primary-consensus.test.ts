@@ -9,6 +9,7 @@ import {
 } from "../sync-stablecoins/enrich-prices";
 import { fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices-primary";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/constants";
 
 
 // --- fetchPrimaryPrices tests ---
@@ -206,7 +207,9 @@ describe("fetchPrimaryPrices", () => {
       {
         asset: makePeggedAsset({ id: "vusd-virtue", name: "Virtue USD", symbol: "VUSD" }),
         tvl: 725_586,
-        updatedAt: nowSec - 3_601,
+        // One second past the UI freshness window (two hourly producer
+        // intervals plus the stage lead) is no longer eligible.
+        updatedAt: nowSec - (DEX_PRICE_CHECK_FRESHNESS_SEC + 1),
         accepted: false,
       },
     ];
@@ -223,6 +226,11 @@ describe("fetchPrimaryPrices", () => {
             updated_at: testCase.updatedAt,
           },
         ],
+        poolSources: [{
+          stablecoin_id: testCase.asset.id,
+          updated_at: testCase.updatedAt,
+          price_sources_json: JSON.stringify([{ aggregateObservedAt: testCase.updatedAt }]),
+        }],
       });
 
       const { results } = await fetchPrimaryPrices([testCase.asset], db);

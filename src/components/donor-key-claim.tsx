@@ -141,7 +141,12 @@ function describeClaimFailure(error: unknown): ClaimFailure {
     case 429:
       return { status: 429, text: "Too many attempts, wait a minute." };
     case 503:
-      return { status: 503, text: "Supporter key claims are unavailable right now. Claims pause while the current Safety Score publication is held or unavailable. Try again later." };
+      return {
+        status: 503,
+        text: error.reason === "safety_scores_unavailable"
+          ? "Supporter key claims are unavailable right now. Claims pause while the current Safety Score publication is held or unavailable. Try again later."
+          : "Supporter key claims are unavailable right now. Try again later.",
+      };
     default:
       return { status: error.status, text: error.message };
   }

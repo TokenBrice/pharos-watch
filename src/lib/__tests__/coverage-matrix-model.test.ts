@@ -49,7 +49,7 @@ function makeMatrixInput({ activeStablecoins, errors, ...payloads }: MatrixInput
           data: error ? undefined : (payloads[key] ?? DEFAULT_PAYLOADS[key]),
           dataUpdatedAt: 7,
           error,
-          meta: null,
+          meta: { updatedAt: 7, ageSeconds: 0, status: "fresh" as const },
         },
       ];
     }),
@@ -91,6 +91,15 @@ describe("buildCoverageMatrixModel", () => {
     expect(unavailable.rows.every((row) => row.statuses.safety.kind === "data-unavailable")).toBe(true);
     expect(unavailable.featureSummaries.find((summary) => summary.feature.key === "safety")).toMatchObject({
       availableCount: 0, totalCount: 0, coveragePct: null, mcapSharePct: null,
+    });
+    expect(unavailable.featureSummaries.find((summary) => summary.feature.key === "reserves")).toMatchObject({
+      availableCount: 0,
+      totalCount: 0,
+      coveragePct: null,
+      marketCapComplete: false,
+      breakdown: expect.arrayContaining([
+        { key: "data-unavailable", label: "data n/a", count: ids.length },
+      ]),
     });
   });
 
@@ -179,7 +188,7 @@ describe("buildCoverageMatrixModel", () => {
     expect(model.unavailableFeatures).toEqual([]);
     expect(model.isInitialDataLoading).toBe(false);
     expect(model.isStablecoinDataUnavailable).toBe(false);
-    expect(model.dataUpdatedAt).toBe(7);
+    expect(model.dataAsOfMs).toBe(7_000);
     expect(model.staleQueries.every((query) => query.hasData)).toBe(true);
   });
 
@@ -315,6 +324,22 @@ describe("buildCoverageMatrixModel", () => {
     const status = model.rows[0].statuses.dependency;
     expect(status.kind).toBe("unmapped-gap");
     expect(status.detail).toContain("unreviewed-dependency-relationships");
+  });
+
+  it("does not claim dependency evidence for an asset absent from the publication", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      reportCards: makeReportCardsV9Response({
+        cards: [makeV9Card({ id: "usdc-circle", score: 90 })],
+      }),
+      activeStablecoins: [
+        trackedMeta("usdc-circle"),
+        { ...trackedMeta("usdt-tether"), hasAuthoredDependencyEvidence: false },
+      ],
+    }));
+    const status = model.rows.find((row) => row.id === "usdt-tether")!.statuses.dependency;
+    expect(status.kind).toBe("unmapped-gap");
+    expect(status.detail).toBe("No live dependency-map edge was resolved.");
+    expect(status.detail).not.toContain("Dependency evidence exists");
   });
 
   it("selects widest/narrowest/mostConcentrated features consistently with featureSummaries", () => {
@@ -516,6 +541,76 @@ describe("buildCoverageMatrixModel", () => {
       belowTargetCount: 0,
       atTargetPct: null,
       atTargetMcapPct: null,
+    });
+  });
+
+  it("publishes the same Price denominator in the snapshot row and source-depth tile", () => {
+    const ids = ["usdc-circle", "dai-makerdao", "usdt-tether", "lusd-liquity", "susdt-spark"];
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: ids.map(trackedMeta),
+      stablecoins: {
+        peggedAssets: [
+          { id: "usdc-circle", circulating: { peggedUSD: 500 } },
+          { id: "dai-makerdao", circulating: { peggedUSD: 300 } },
+          { id: "usdt-tether", circulating: { peggedUSD: 1_000 } },
+          { id: "lusd-liquity", circulating: { peggedUSD: 100 } },
+          { id: "susdt-spark", circulating: { peggedUSD: 5_000 } },
+        ],
+      },
+      pegSummary: {
+        coins: [
+          { id: "usdc-circle", consensusSources: ["a", "b", "c"] },
+          { id: "dai-makerdao", consensusSources: ["a"] },
+          { id: "usdt-tether" },
+        ],
+      },
+    }));
+
+    const priceSummary = model.featureSummaries.find((summary) => summary.feature.key === "price");
+    expect(priceSummary).toMatchObject({
+      availableCount: 1,
+      totalCount: 3,
+      mcapSharePct: (500 / 900) * 100,
+    });
+    expect(priceSummary?.coveragePct).toBeCloseTo(100 / 3, 10);
+    // Two known rows sit outside the shared denominator, so both the Price row
+    // and the tile qualify their cap share as known market cap.
+    expect(priceSummary?.marketCapComplete).toBe(false);
+    expect(model.sourceDepthProgress).toMatchObject({
+      totalCount: 3,
+      atTargetCount: 1,
+      belowTargetCount: 2,
+      marketCapComplete: false,
+      atTargetMcapPct: (500 / 900) * 100,
+    });
+  });
+
+  it("treats a flagged current-price failure as uncovered at zero source depth", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: [trackedMeta("usdc-circle")],
+      stablecoins: { peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 100 } }] },
+      pegSummary: {
+        coins: [{ id: "usdc-circle", consensusSources: ["a", "b", "c"], currentPriceUnavailable: true }],
+      },
+    }));
+
+    expect(model.rows[0].statuses.price).toMatchObject({
+      kind: "missing",
+      available: false,
+      detail: "No observed market price is available for this asset.",
+    });
+    expect(model.rows[0].statuses.price.sourceCount).toBeUndefined();
+    expect(model.sourceDepthProgress).toMatchObject({
+      totalCount: 1,
+      atTargetCount: 0,
+      belowTargetCount: 1,
+      atTargetPct: 0,
+      atTargetMcapPct: 0,
+    });
+    expect(model.featureSummaries.find((summary) => summary.feature.key === "price")).toMatchObject({
+      availableCount: 0,
+      totalCount: 1,
+      coveragePct: 0,
     });
   });
 });

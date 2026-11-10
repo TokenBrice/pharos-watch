@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildRankChangeChipDisplay, formatSignedPysDelta, YIELD_LEADERBOARD_CSV_COLUMNS, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { buildPysNeutralizeInput, buildRankChangeChipDisplay, formatSignedPysDelta, selectPysRowDrags, YIELD_LEADERBOARD_CSV_COLUMNS, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { computePYS } from "@shared/lib/yield-scoring";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { buildCsvWithPreamble } from "@/lib/exports/csv";
@@ -10,11 +11,41 @@ describe("yield CSV projections", () => {
   const compareHeaders = ["ID", "Symbol", "Name", "APY 30d (%)", "PYS", "PYS qualification", "PYS null reason", "Safety grade", "Safety score", "Safety provenance", "Source", "Source posture", "Source risk score", "Venue risk tier", "Depth", "Stability (%)", "Benchmark", "TVL USD", "Warnings", "Provider URL"];
 
   it.each([
+    ["leaderboard", YIELD_LEADERBOARD_CSV_COLUMNS],
+    ["compare", YIELD_COMPARE_CSV_COLUMNS],
+  ] as const)("exports an unavailable safety card as unknown, never NR in the %s CSV", (_name, columns) => {
+    const row: YieldViewModelRow = {
+      ...makeYieldRanking({
+        pharosYieldScore: null,
+        pysNullReason: "safety-unrated",
+        safetyScore: null,
+        safetyGrade: null,
+        provenance: makeYieldProvenance({ safetyProvenance: "safety-snapshot-unavailable" }),
+      }),
+      peg: "USD", viewRank: 1, rankLabel: "#1", opportunity: "lending-opportunity",
+      sourceDepthLens: "moderate", sourcePosture: "clean", cohortPercentile: null,
+    };
+    const cells = Object.fromEntries(columns.map((column) => [column.header, column.accessor(row, 0)]));
+    expect(cells["Safety grade"]).toBe("unknown");
+    expect(cells["Safety score"]).toBe("unknown");
+    expect(cells["Safety provenance"]).toBe("safety-snapshot-unavailable");
+  });
+
+  it("keeps NR for a row published as not rated", () => {
+    const row: YieldViewModelRow = {
+      ...makeYieldRanking({ safetyScore: null, safetyGrade: "NR" }),
+      peg: "USD", viewRank: 1, rankLabel: "#1", opportunity: "lending-opportunity",
+      sourceDepthLens: "moderate", sourcePosture: "clean", cohortPercentile: null,
+    };
+    const cells = Object.fromEntries(YIELD_LEADERBOARD_CSV_COLUMNS.map((column) => [column.header, column.accessor(row, 0)]));
+    expect(cells["Safety grade"]).toBe("NR");
+    expect(cells["Safety score"]).toBe("NR");
+  });
+
+  it.each([
     ["scored", 50, "live-report-card", 5_000_000],
     ["NR", null, "live-report-card", 5_000_000],
     ["null TVL", 50, "live-report-card", null],
-    ["opportunity safety", 50, "opportunity-safety", 5_000_000],
-    ["default safety", 50, "default-safety", 5_000_000],
     ["unknown provenance", 50, undefined, 5_000_000],
   ] as const)("preserves both CSV byte projections for %s", (_name, pys, safetyProvenance, tvl) => {
     const row: YieldViewModelRow = {
@@ -82,5 +113,32 @@ describe("buildRankChangeChipDisplay", () => {
       short: "Source risk",
     });
     expect(display?.colorClass).toContain("state-danger");
+  });
+});
+
+describe("selectPysRowDrags", () => {
+  // Live USDG inputs (2026-11-02): 7.36% vs the 4.18% USD hurdle, 87 safety,
+  // 63% stability, 1.235x source-risk penalty, published PYS 62.
+  const usdg = buildPysNeutralizeInput({
+    apy30d: 7.357279948805456,
+    safetyScore: 87,
+    scalingFactor: 8,
+    benchmarkSpread: 3.177279948805456,
+    hurdleRebase: 0,
+    sourceRiskPenalty: 1.235,
+    sustainabilityMult: 0.63,
+  });
+
+  it("names stability and source-risk costs in PYS points, largest first", () => {
+    expect(selectPysRowDrags(62, usdg)).toEqual([
+      { label: "stability", points: -37 },
+      { label: "source risk", points: -15 },
+    ]);
+  });
+
+  it("omits costs under five points and unscored rows", () => {
+    const steady = { ...usdg, sourceRiskPenalty: 1.02, apyVarianceScore: 0.02 };
+    expect(selectPysRowDrags(computePYS(steady), steady)).toEqual([]);
+    expect(selectPysRowDrags(null, usdg)).toEqual([]);
   });
 });

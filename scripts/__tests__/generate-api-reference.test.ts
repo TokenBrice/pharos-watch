@@ -69,12 +69,11 @@ describe("API reference endpoint narratives", () => {
 });
 
 describe("generate-api-reference check mode", () => {
-  it.each([
-    { modified: true, exitCode: 1, message: "docs/api-reference.md is out of date" },
-    { modified: false, exitCode: 0, message: "docs/api-reference.md is current" },
-  ])("checks a generated API block without writing the document (modified: $modified)", ({ modified, exitCode, message }) => {
+  it("checks stale and current generated API blocks without writing the document", () => {
     // Keep both the filesystem mocks and exit status out of Vitest's shared
-    // process. Use a path-specific read, not a next-call mock that a loader can consume.
+    // process. Use a path-specific read, not a next-call mock that a loader can
+    // consume. One probe process covers both fixtures: main() is re-entrant and
+    // the per-probe exit status is captured before the next fixture is patched.
     const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", `
       import fs from "node:fs";
       import { resolve } from "node:path";
@@ -82,25 +81,37 @@ describe("generate-api-reference check mode", () => {
       import * as generator from ${JSON.stringify(pathToFileURL(resolve("scripts/maintenance/generate-api-reference.ts")).href)};
       const docPath = resolve("docs/api-reference.md");
       const readFileSync = fs.readFileSync;
+      const writeFileSync = fs.writeFileSync;
       const originalDocument = readFileSync(docPath, "utf8");
-      const block = ${modified}
-        ? generator.START_MARKER + "\\nmodified generated content\\n" + generator.END_MARKER
-        : generator.renderGeneratedBlock(generator.loadOpenapi());
-      const fixture = "hand-authored prefix\\n" + block + "\\nhand-authored suffix";
-      let writes = 0;
-      fs.readFileSync = (path, ...args) => path === docPath ? fixture : readFileSync(path, ...args);
-      fs.writeFileSync = () => { writes++; };
-      syncBuiltinESMExports();
-      generator.main(true);
-      console.log(JSON.stringify({ writes, unchanged: readFileSync(docPath, "utf8") === originalDocument }));
+      const results = [];
+      for (const modified of [true, false]) {
+        const block = modified
+          ? generator.START_MARKER + "\\nmodified generated content\\n" + generator.END_MARKER
+          : generator.renderGeneratedBlock(generator.loadOpenapi());
+        const fixture = "hand-authored prefix\\n" + block + "\\nhand-authored suffix";
+        let writes = 0;
+        fs.readFileSync = (path, ...args) => path === docPath ? fixture : readFileSync(path, ...args);
+        fs.writeFileSync = () => { writes++; };
+        syncBuiltinESMExports();
+        process.exitCode = undefined;
+        generator.main(true);
+        results.push({ modified, status: process.exitCode ?? 0, writes, unchanged: readFileSync(docPath, "utf8") === originalDocument });
+        fs.writeFileSync = writeFileSync;
+      }
+      console.log("@PROBE@" + JSON.stringify(results));
     `], {
       cwd: process.cwd(),
       encoding: "utf8",
       timeout: 15_000,
     });
     expect(result.error).toBeUndefined();
-    expect(result.status).toBe(exitCode);
-    expect(`${result.stdout}${result.stderr}`).toContain(message);
-    expect(result.stdout.trim().split("\n").pop()).toBe('{"writes":0,"unchanged":true}');
+    const output = `${String(result.stdout)}${String(result.stderr)}`;
+    expect(output).toContain("docs/api-reference.md is out of date");
+    expect(output).toContain("docs/api-reference.md is current");
+    const probe = String(result.stdout).split("\n").find((line) => line.startsWith("@PROBE@"));
+    expect(JSON.parse(probe!.slice("@PROBE@".length))).toEqual([
+      { modified: true, status: 1, writes: 0, unchanged: true },
+      { modified: false, status: 0, writes: 0, unchanged: true },
+    ]);
   });
 });

@@ -3,65 +3,139 @@
     "from": "2026-10-26",
     "to": "2026-11-01"
   },
-  "headline": "Safety Score counts each open question once, and /coverage/ publishes the three numbers behind each grade.",
-  "fieldNotes": "Most of the week's Safety Score work went into one question: what is missing, and who is responsible? The publication now counts each open question once at the asset that roots it, splits the total into open questions, not disclosed by issuers and documentation gaps, and refuses to print a zero when a publication predates the counts. Documentation gaps now carry policy reasons, a fail-closed card label and a durable lapse. No score moved.",
+  "headline": "Safety Score ships seven releases to 10.41, and partial-chain supply is no longer published as complete.",
+  "fieldNotes": "Much of the week's work withheld values that only looked observed. A DefiLlama price shared by five or more list assets, or a quote exactly at the peg, now counts as a default, and a lone uncorroborated print no longer opens a backfilled depeg episode. Supply totals that miss chains carry a partial label. At release, Safety Score 10.37 classified 915 of 2,877 open questions as documentation gaps that cannot move a score.",
   "summary": [
     {
-      "label": "Open-question counts",
-      "tag": "coverage",
-      "description": "/coverage/ now opens with three server-counted numbers: open questions, not disclosed by issuers, and documentation gaps. Each is counted once at its root asset, and an older publication reads as unavailable, never zero.",
-      "href": "/coverage/"
-    },
-    {
-      "label": "Report-cards API 9",
+      "label": "Safety Score 10.41",
       "tag": "feature",
-      "description": "The report-cards API gains an additive openEvidence block with the same three totals, owner and reason rows, the issuer review window and per-card rows. Scores, grades and evidence levels stay untouched.",
-      "href": "/api/"
+      "description": "Seven releases, 10.35 to 10.41. 10.37 separates documentation gaps that cannot move a score, /coverage/ publishes open-evidence counts, and a rail withheld by a pipeline gap no longer yields a no-viable-exit verdict.",
+      "href": "/methodology/scoring-changelog/"
     },
     {
-      "label": "Documentation gaps",
+      "label": "Pricing 6.65",
+      "tag": "feature",
+      "description": "Eight releases. DefiLlama fill prices and uncorroborated quotes exactly at the peg are rejected, the RedStone lane is retired after its gateways shut, and Kraken and Coinbase books and Curve routes add second sources.",
+      "href": "/methodology/pricing-pipeline-changelog/"
+    },
+    {
+      "label": "Depeg detection 6.42",
+      "tag": "feature",
+      "description": "Four releases. A lone uncorroborated print no longer opens a backfilled episode, each DDR family shows one public incident, and disputed rows leave counts. DDR 5.1 stops reading unavailable supply as no break.",
+      "href": "/methodology/depeg-changelog/"
+    },
+    {
+      "label": "Partial-chain supply",
+      "tag": "feature",
+      "description": "Supply history, datasets and the homepage keep each reading's partial-chain evidence, so a total missing chains is never shown as complete; 24h, 7d and market-cap changes are withheld on partial coverage."
+    },
+    {
+      "label": "Mint/burn admission gate",
+      "tag": "feature",
+      "description": "Mint/burn 6.31 to 6.33: new issuance legs publish only once their scan history covers the longest window, a stalled leg is quarantined alone, and USDT issuance on Tron is tracked through the gate.",
+      "href": "/methodology/mint-burn-flow-changelog/"
+    },
+    {
+      "label": "Catalog lifecycle",
       "tag": "coverage",
-      "description": "A policy-owned documentation class now marks the open questions whose resolution cannot materially move a score, under six published reasons and two strict bars. Pricing, causes, caps and evidence levels stay byte-identical, and a card reads \"limited · documentation gaps only\" only when every limiting witness is documentation."
+      "description": "Thirteen coins froze, including USDN after Noble's wind-down and dTRINITY's dUSD and sdUSD. swanUSD joined the active catalog and bUSD0 returned (388 active, from 395). EURXT, AEDZ, ZLUSD and DDSC joined /upcoming/.",
+      "href": "/cemetery/"
     },
     {
-      "label": "Missing-data registry v3",
+      "label": "Compliance and crawlable evidence",
+      "tag": "coverage",
+      "description": "101 MiCA and GENIUS rows were backfilled for 96 active coins, and the OCC's final GENIUS rule is recorded. Profiles and chain hubs list contract addresses in static HTML, and public datasets become citable.",
+      "href": "/compliance/"
+    },
+    {
+      "label": "Fail-closed sweep",
       "tag": "infra",
-      "description": "The curation registry gains documentation and issuer bands, keys its questions through the shared counting authority, and drops a supplement only when every obligation it carries is already a compiled task, so the worklist shows 72 supplements instead of 469 on the current capture."
-    },
-    {
-      "label": "Scores dataset v2",
-      "tag": "infra",
-      "description": "The scores dataset display projection carries the same totals with their semantics, plus a machine-readable reason when a generation predates them, so missing counts never read as zero."
-    },
-    {
-      "label": "Plainer gap language",
-      "tag": "design",
-      "description": "A cause-A pillar gap now reads \"data pipeline unavailable\" rather than implying an issuer omission, and one shared vocabulary names all three buckets on the page and in its explanations."
+      "description": "A verified sweep fixed 142 fail-closed findings in Worker, cron, API, Telegram and shared code. Unavailable chain totals and portfolio exposure no longer show $0, and pages keep their data through refresh errors."
     }
   ],
   "stats": {
-    "totalCommits": 360
+    "totalCommits": 617
   },
   "commits": [
-    { "hash": "3fed1765", "message": "feat(safety-score): publish documentation counts and documentation-only annotations" },
-    { "hash": "3c1a7d02", "message": "test(safety-score): pin the documentation-class invariants and fail-closed annotation" },
-    { "hash": "71318c26", "message": "feat(registry): dedupe registry supplements against compiled tasks" },
-    { "hash": "3aec22f3", "message": "feat(safety-score): project documentation carriers and documentation-only limited pillars" },
-    { "hash": "d7186223", "message": "fix(coverage): give every open-evidence owner a distinct rail swatch" },
-    { "hash": "a38c1418", "message": "test(safety-score): prove restatement aliases are score-neutral at the exit pillar" },
-    { "hash": "a47d31b7", "message": "fix(safety-score): let provider-wide reviews omit assetId in the authored envelope" },
-    { "hash": "28f2ae27", "message": "docs(coverage): document the open-evidence counting and API contract" },
-    { "hash": "57bff3ed", "message": "fix(safety-score): finalize the open-evidence contract per contract review" },
-    { "hash": "5cc9369d", "message": "test(safety-score): read the asset score from the trace in the exit-coverage invariant" },
-    { "hash": "ad826a70", "message": "fix(safety-score): gate durable custody lapse on the retention flag alone" },
-    { "hash": "0d779691", "message": "refactor(safety-score): drop per-reason retention from the documentation policy block" },
-    { "hash": "3dd33696", "message": "fix(safety-score): tighten incident-review contracts per contract review" },
-    { "hash": "c666a424", "message": "refactor(safety-score): single authority for documentation retention and thresholds" },
-    { "hash": "c7a1ad5b", "message": "fix(safety-score): serve every archived report8 snapshot through the historical schema" },
-    { "hash": "3c3fc45a", "message": "refactor(curation): key registry questions through the shared open-questions authority" },
-    { "hash": "89f48318", "message": "test(safety-score): pin exit and backing documentation-class invariants" },
-    { "hash": "6ec31640", "message": "feat(curation): missing-data registry schema 3 with documentation and issuer bands" },
-    { "hash": "30afb5a4", "message": "feat(safety-scores): annotate pillars limited only by documentation gaps" },
-    { "hash": "eb95a75d", "message": "fix(safety-score): alias source-less restatements to their compiled gaps" }
+    {
+      "hash": "e478c2be",
+      "message": "data(prelaunch): align the ARC and CZKC summaries with their records"
+    },
+    {
+      "hash": "8dffc0e7",
+      "message": "data(prelaunch): add EURXT, Zand AED, ZelleUSD and DDSC"
+    },
+    {
+      "hash": "92ac651d",
+      "message": "data(prelaunch): weekly refresh of milestones and record corrections"
+    },
+    {
+      "hash": "e5ce5eeb",
+      "message": "data(funding): record three Ethereum donations from 27 to 29 October"
+    },
+    {
+      "hash": "efe3dfd0",
+      "message": "fix(safety): retire and re-author the narrowed USDC issuer row; content-derived observation ids"
+    },
+    {
+      "hash": "18bf849d",
+      "message": "fix(safety): let partial evidence publish A/B causes that own no component"
+    },
+    {
+      "hash": "cebf7259",
+      "message": "fix(safety): retire the dead Spiko safo gap classification"
+    },
+    {
+      "hash": "1bb512a6",
+      "message": "fix(safety): strip unexempted LayerZero lanes from issuer rows; add USDC bridge incidents"
+    },
+    {
+      "hash": "e5716d89",
+      "message": "test(dex): cover mixed-decimal plain NG pools and diagnostic stripping"
+    },
+    {
+      "hash": "43395717",
+      "message": "docs(safety): widen the census read-unavailable vocabulary comment"
+    },
+    {
+      "hash": "fc41c9e4",
+      "message": "fix(dex): admit plain Curve NG pools that on-chain stored rates prove plain"
+    },
+    {
+      "hash": "b683ddcf",
+      "message": "refactor(safety): drop two unreachable lines from the mechanism extension"
+    },
+    {
+      "hash": "88dfd9e0",
+      "message": "fix(safety): name a missing census denominator read-unavailable at both ends"
+    },
+    {
+      "hash": "9cb4a08a",
+      "message": "fix(seo-check): strip script blocks to a fixpoint and accept spaced end tags"
+    },
+    {
+      "hash": "a0915b26",
+      "message": "test: restore critical coverage for Safety redemption quarantine and supply attribution"
+    },
+    {
+      "hash": "e68c02ce",
+      "message": "test: restore critical coverage for Safety mechanism, supply, backing extensions and replay capture"
+    },
+    {
+      "hash": "7fd1aa5c",
+      "message": "test: restore critical coverage for DEWS hydration and Safety accepted projections, census and bridge extension"
+    },
+    {
+      "hash": "43819ac5",
+      "message": "test: restore critical coverage for address/authoritative price providers, EVM RPC, historical prices and the primary collector"
+    },
+    {
+      "hash": "63d9c930",
+      "message": "test: restore critical coverage for sync-stablecoins stages, chain-dropout, primary price collection and on-chain supply"
+    },
+    {
+      "hash": "96904d93",
+      "message": "test: restore critical coverage for depeg detection and resolver crons"
+    }
   ]
 }

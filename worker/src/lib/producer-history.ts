@@ -2,6 +2,7 @@ import type { PublicationSurfaceId } from "@shared/types/status";
 import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { executeAtomicBatch } from "./db";
 import { type CappedDeleteResult, runRetentionPolicies } from "../cron/shared/capped-delete";
 import { producerHistoryRetentionPolicy } from "@shared/lib/retention-policy";
 import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "./bounded-prune";
@@ -98,9 +99,13 @@ interface ProducerHeadRow {
 const MAX_HISTORY_METADATA_CHARS = 16_000;
 const MAX_HISTORY_ERROR_CHARS = 1_000;
 
-function normalizeHistoryMetadata(metadata: string | null | undefined): string | null {
-  const parsed = parseObjectMetadata(metadata);
+function normalizeHistoryMetadata(input: RecordProducerOutcomeInput): string | null {
+  const parsed = parseObjectMetadata(input.metadata);
   if (!parsed) return null;
+  // Budget-only pricing has no cron_runs forensic row; retain its already bounded, identifier-only telemetry.
+  if (input.job === "price-corroboration" && input.producerKind === "budget-only" && parsed.surface === "price-corroboration") {
+    return boundedJson(parsed, MAX_HISTORY_METADATA_CHARS);
+  }
   const scalars: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of Object.entries(parsed)) {
     // cron_runs is the sole forensic payload. History retains only the activation
@@ -220,7 +225,7 @@ export function prepareProducerOutcomeStatements(
   const publications = productive ? normalizePublications(input.productivity?.publications) : [];
   const publicationsJson = publications.length > 0 ? boundedJson(publications, MAX_HISTORY_METADATA_CHARS) : null;
   const publicationAt = latestPublicationAt(publications);
-  const normalizedMetadata = normalizeHistoryMetadata(input.metadata);
+  const normalizedMetadata = normalizeHistoryMetadata(input);
   const metadataJson = guard ? JSON.stringify({
     ...(parseObjectMetadata(normalizedMetadata) ?? {}),
     acceptedTerminalKey: guard.attemptKey,
@@ -380,9 +385,7 @@ export function prepareProducerOutcomeStatements(
 }
 
 export async function recordProducerOutcome(db: D1Database, input: RecordProducerOutcomeInput): Promise<void> {
-  for (const statement of prepareProducerOutcomeStatements(db, input)) {
-    await runWithOverloadRetry(() => statement.run());
-  }
+  await executeAtomicBatch(db, prepareProducerOutcomeStatements(db, input));
 }
 
 export async function loadProducerHeads(

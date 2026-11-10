@@ -60,6 +60,9 @@ const USER_FACING_CONTRACT_TEST_FILES: string[] = [
   "worker/src/lib/__tests__/api-params.test.ts",
   // Freshness headers tell clients whether a public snapshot is trustworthy.
   "worker/src/lib/__tests__/api-freshness.test.ts",
+  // The exported build ID must rotate exactly with client-bundle inputs, and no
+  // client module may import a release-refreshed data path.
+  "scripts/__tests__/next-config-release-typecheck.test.ts",
 ];
 
 export const ALWAYS_RUN_TEST_FILES: string[] = [

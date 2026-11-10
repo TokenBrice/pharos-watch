@@ -7,7 +7,7 @@ what shipped, what's next, and why.
 
 ## Architecture
 
-[`BLOG_POSTS` and `BlogPost`](../../src/data/blog/index.ts) own metadata; bodies live in `src/data/blog/posts/<slug>.md`. The registry drives the hub, feed, sitemap and post metadata. Publication dates are authored metadata, not Git modification times or claims of human review.
+[`BLOG_POSTS` and `BlogPost`](../../src/data/blog/index.ts) own metadata; bodies live in `src/data/blog/posts/<slug>.md`. The registry drives the hub, feed and post metadata. Sitemap dates for post pages derive from the body and the shared renderer only, so a registry-only edit (title, description, cover) does not restamp the sitemap (`scripts/maintenance/generate-sitemap-dates.ts`). Publication dates are authored metadata, not Git modification times or claims of human review.
 
 Post headers credit Pharos and link to `/about/#editorial-ai-policy`. Article bodies use the Georgia editorial register; page chrome stays sans and obeys the One Beam Rule in [DESIGN.md](../../DESIGN.md).
 
@@ -62,8 +62,9 @@ no RSS feed.
   the barrel sorts lexicographically and the archive manifest groups those dates.
 - **One entry per Monday–Sunday week.** `dateRange.from` is a Monday and
   `dateRange.to` the following Sunday (UTC, inclusive). The editorial-content
-  check rejects any other span, and the registry test rejects overlapping
-  weeks; publish a week only once it is complete (on its Sunday or later).
+  check rejects any other span, and duplicate week files are rejected by
+  their filename identity; publish a week only once it is complete (on its
+  Sunday or later).
 - **The commit list is capped; the count is not.** `commits` holds at most the
   20 the card renders, while `stats.totalCommits` is the authoritative
   noise-filtered total for the window and may be larger. Git is the archive —

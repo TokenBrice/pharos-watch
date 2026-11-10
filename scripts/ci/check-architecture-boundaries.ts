@@ -18,6 +18,29 @@ const NETWORK_GLOBALS: Record<string, true> = { fetch: true, XMLHttpRequest: tru
 const GLOBAL_OBJECTS: Record<string, true> = { globalThis: true, window: true, self: true, global: true };
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
 const TELEGRAM_IMPLEMENTATION = /^worker\/src\/(?:telegram\/|cron\/telegram\/)/;
+/** The materialization reader must stay on the cheap projection path; the full
+ * publication parser is reserved for the publication writer. */
+const MATERIALIZATION_READER = "worker/src/lib/report-cards-v9-materialization.ts";
+const FULL_PUBLICATION_PARSER = "parseSafetyScoreV9Publication";
+/** Warning/notice components the homepage must not render. */
+const HOMEPAGE_BANNED_COMPONENTS =
+  /^src\/components\/(?:stale-data-banner|query-freshness-notices|query-error-notice|data-health-banner|query-state-notice|yield\/yield-data-health|safety-score-v9-status-notice|ops-status-chip|section-error-boundary)\.tsx$/;
+/** Reviewed importers reachable from the homepage: importer -> banned targets it may import. */
+const HOMEPAGE_REVIEWED_IMPORTS: Readonly<Record<string, ReadonlySet<string>>> = {
+  // Expanded yield rows only; the homepage renders YieldSafetyBadge from yield-leaderboard-row-parts.
+  "src/components/yield-history-chart.tsx": new Set([
+    "src/components/data-health-banner.tsx",
+    "src/components/query-error-notice.tsx",
+  ]),
+  // The homepage wrapper that supplies the neutral crash fallback.
+  "src/components/home-section-error-boundary.tsx": new Set(["src/components/section-error-boundary.tsx"]),
+};
+const HOMEPAGE_MIN_REACHABLE_MODULES = 100;
+/** Failure-scenario leaves are registry-free: they import only `./context`, and
+ * the context itself only type-imports viem and the shared scenario types. */
+const SCENARIO_CHECKS_DIR = "shared/lib/failure-scenario-checks";
+const SCENARIO_CONTEXT_IMPORTS = ["viem", "../../types/failure-scenarios"];
+const SCENARIO_REGISTRY_EXPORTS = ["FAILURE_SCENARIO_CHECKS"];
 
 // Exact public entries and importer pairs, derived from production referrers.
 const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[] = [
@@ -40,6 +63,7 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
     "worker/src/api/admin-actions.ts",
     "worker/src/cron/cron-sentinel-rules.ts", "worker/src/cron/cron-sentinel.ts",
     "worker/src/cron/cron-staleness-watchdog.ts", "worker/src/cron/daily-digest.ts",
+    "worker/src/cron/dex-exit-route-turnover-watchdog.ts",
     "worker/src/cron/digest-publication-watchdog.ts", "worker/src/cron/digest/publish.ts",
     "worker/src/cron/digest/telegram-transport.ts", "worker/src/cron/digest/wrapper-style-gate.ts",
     "worker/src/cron/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
@@ -89,7 +113,8 @@ for (const [entry, importers] of TELEGRAM_PUBLIC_ENTRIES) {
   }
 }
 
-type Rule = "reserve-network" | "frontend-routes" | "verification-url" | "stability-light" | "telegram-public-surface";
+type Rule = "reserve-network" | "frontend-routes" | "verification-url" | "stability-light" | "telegram-public-surface"
+  | "materialization-no-full-parser" | "homepage-warning-free" | "failure-scenario-checks";
 interface Module {
   dependencies: string[];
   network: boolean;
@@ -280,6 +305,7 @@ class DependencyGraph {
 /** One gate with independently selectable policies for synthetic graph tests. */
 export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] = [
   "reserve-network", "frontend-routes", "verification-url", "stability-light", "telegram-public-surface",
+  "materialization-no-full-parser", "homepage-warning-free", "failure-scenario-checks",
 ]): string[] {
   // Entries and resolved dependencies use real paths; the root must share
   // their identity (for example macOS /var is a symlink to /private/var).
@@ -348,6 +374,96 @@ export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] 
           }
         }
       }
+    } else if (rule === "materialization-no-full-parser") {
+      const absolute = resolve(root, MATERIALIZATION_READER);
+      if (!existsSync(absolute)) {
+        violations.add(`${rule}: ${MATERIALIZATION_READER}: missing module`);
+        continue;
+      }
+      const { sourceFile } = parseSourceFile(absolute);
+      const visit = (node: ts.Node) => {
+        if (ts.isIdentifier(node) && node.text === FULL_PUBLICATION_PARSER) {
+          violations.add(`${rule}: ${MATERIALIZATION_READER}: references the full publication parser`);
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(sourceFile);
+    } else if (rule === "homepage-warning-free") {
+      const visited = new Set<string>();
+      const visit = (file: string, chain: string[]): void => {
+        if (visited.has(file)) return;
+        visited.add(file);
+        const path = [...chain, file];
+        const resolved = graph.module(file);
+        for (const error of resolved.errors) violations.add(`${rule}: ${path.join(" -> ")}: ${error}`);
+        for (const dependency of resolved.dependencies) {
+          const reviewed = HOMEPAGE_REVIEWED_IMPORTS[file];
+          if (HOMEPAGE_BANNED_COMPONENTS.test(dependency) && !reviewed?.has(dependency)) {
+            violations.add(`${rule}: ${path.join(" -> ")} -> ${dependency}: forbidden dependency`);
+          }
+          visit(dependency, path);
+        }
+      };
+      visit("src/app/page.tsx", []);
+      if (visited.size <= HOMEPAGE_MIN_REACHABLE_MODULES) {
+        violations.add(
+          `${rule}: homepage closure has ${visited.size} modules, expected more than ${HOMEPAGE_MIN_REACHABLE_MODULES}`,
+        );
+      }
+    } else if (rule === "failure-scenario-checks") {
+      const files = sources(SCENARIO_CHECKS_DIR);
+      const context = `${SCENARIO_CHECKS_DIR}/context.ts`;
+      const index = `${SCENARIO_CHECKS_DIR}/index.ts`;
+      if (!files.includes(context) || !files.includes(index)) {
+        violations.add(`${rule}: ${SCENARIO_CHECKS_DIR}: missing context or registry module`);
+      }
+      const authored = (file: string) => parseSourceFile(resolve(root, file)).sourceFile;
+      const imports = (file: string) => authored(file).statements
+        .filter(ts.isImportDeclaration)
+        .map((declaration) => ({
+          specifier: ts.isStringLiteralLike(declaration.moduleSpecifier) ? declaration.moduleSpecifier.text : "",
+          typeOnly: declaration.importClause?.isTypeOnly === true,
+        }));
+      const contextImports = files.includes(context) ? imports(context) : [];
+      const contextSpecifiers = contextImports.map((entry) => entry.specifier);
+      if (contextSpecifiers.join("\0") !== SCENARIO_CONTEXT_IMPORTS.join("\0")) {
+        violations.add(
+          `${rule}: ${context}: imports ${contextSpecifiers.join(", ") || "(none)"}, expected ${SCENARIO_CONTEXT_IMPORTS.join(", ")}`,
+        );
+      }
+      if (!contextImports.every((entry) => entry.typeOnly)) {
+        violations.add(`${rule}: ${context}: imports must be type-only`);
+      }
+      for (const file of files) {
+        if (file === context || file === index) continue;
+        const local = imports(file).map((entry) => entry.specifier).filter((specifier) => specifier.startsWith("./"));
+        if (local.length === 0 || local.some((specifier) => specifier !== "./context")) {
+          violations.add(`${rule}: ${file}: imports ${local.join(", ") || "(no local import)"}; expected only ./context`);
+        }
+      }
+      if (files.includes(index)) {
+        const exported = authored(index).statements.flatMap((statement) => {
+          if (ts.isExportDeclaration(statement) && statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+            return statement.isTypeOnly ? [] : statement.exportClause.elements.map((element) => element.name.text);
+          }
+          const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) ?? [] : [];
+          if (!modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) return [];
+          if (ts.isVariableStatement(statement)) {
+            return statement.declarationList.declarations.flatMap((declaration) =>
+              ts.isIdentifier(declaration.name) ? [declaration.name.text] : []);
+          }
+          if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)
+            || ts.isEnumDeclaration(statement)) && statement.name) {
+            return [statement.name.text];
+          }
+          return [];
+        });
+        if (exported.join("\0") !== SCENARIO_REGISTRY_EXPORTS.join("\0")) {
+          violations.add(
+            `${rule}: ${index}: exports ${exported.join(", ") || "(none)"}, expected ${SCENARIO_REGISTRY_EXPORTS.join(", ")}`,
+          );
+        }
+      }
     }
   }
   return [...violations].sort();
@@ -360,6 +476,6 @@ runDirectCli(import.meta.url, () => {
     process.exitCode = 1;
     return;
   }
-  console.log("Architecture boundaries: OK (6 resolved-dependency policies)");
+  console.log("Architecture boundaries: OK (8 policies)");
   process.exitCode = 0;
 });

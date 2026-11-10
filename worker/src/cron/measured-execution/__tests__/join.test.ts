@@ -28,7 +28,7 @@ vi.mock("../uniswap-v4", async () => {
   return { ...actual, validateUniswapV4ProfileProof: vi.fn(() => []) };
 });
 
-import { buildDexMeasuredExecutionTargetId, isDexMeasuredExecutionObservationHistoryMature, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import { DexMeasuredExecutionPublicProfileSchema, buildDexMeasuredExecutionTargetId, isDexMeasuredExecutionObservationHistoryMature, toDexMeasuredExecutionPublicProfile, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { type SolanaDexNativeGeneration } from "@shared/types/solana-dex-bank";
 import { buildNativeDexExecutionTarget } from "../inventory";
@@ -43,7 +43,7 @@ import {
   stripDexMeasuredExecutionInternalFields,
   type DexMeasuredExecutionJoinDiagnostics,
 } from "../join";
-import { buildDexMeasuredExecutionProfile } from "../profiles";
+import { buildDexMeasuredExecutionProfile, createDexMeasuredExecutionRpcBudget } from "../profiles";
 import { getDexMeasuredExecutionDeployment } from "../registry";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
@@ -73,6 +73,7 @@ import {
   makeV3Target,
 } from "./measured-execution.test-support";
 import {
+  makeCurve3PoolReserve,
   makeFlatProvenanceCases,
   makeJoinPoints,
   makeJoinPool,
@@ -215,16 +216,7 @@ describe("measured execution join activation", () => {
         quoteGenerationId: "v4-quote-generation",
         targetGenerationId: "v4-target-generation",
         publishedAt: 1_060,
-        byTargetId: new Map([[measuredTarget.targetId, {
-          quotedTarget: measuredTarget,
-          status: "measured",
-          failureReason: null,
-          profile,
-          quoteGenerationId: "v4-quote-generation",
-          targetGenerationId: "v4-target-generation",
-          resolution: "latest",
-          latestFailureReason: null,
-        }]]),
+        byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile)]]),
       },
       nowSec: 1_060,
     });
@@ -237,8 +229,9 @@ describe("measured execution join activation", () => {
     expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
   });
 
-  it("keeps all ten reviewed metapool quotes display-only behind the activation gate", () => {
-    for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+  it.each([...CURVE_R3_METAPOOL_POLICIES, CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY])(
+    "keeps the reviewed $stablecoinId metapool quote display-only behind the activation gate",
+    (policy) => {
       const { measuredTarget, profile } = makeCurveCompositeRoute(policy);
       const pool: PoolEntry = {
         poolId: measuredTarget.poolId,
@@ -286,103 +279,17 @@ describe("measured execution join activation", () => {
         "shadow-score-ineligible",
       );
       expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 1 });
-    }
-  });
-
-  it("keeps the reviewed USD1 and NXUSD metapool adapters shadow-only", () => {
-    for (const policy of [CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY]) {
-      const { measuredTarget, profile } = makeCurveCompositeRoute(policy);
-      const pool: PoolEntry = {
-        poolId: measuredTarget.poolId,
-        project: "curve",
-        chain: policy.chain,
-        tvlUsd: measuredTarget.retainedTvlUsd,
-        symbol: `${measuredTarget.tokenIn.symbol}-${measuredTarget.tokenOut.symbol}`,
-        volumeUsd1d: 10_000,
-        poolType: "curve-metapool",
-        source: "dl",
-        extra: { measuredExecutionTarget: measuredTarget },
-      };
-      const diagnostics = joinDexMeasuredExecutionEvidence({
-        poolsByStablecoin: new Map([[policy.stablecoinId, [pool]]]),
-        evidence: {
-          quoteGenerationId: "curve-composite-quote-generation",
-          targetGenerationId: "curve-composite-target-generation",
-          publishedAt: 1_060,
-          byTargetId: new Map([[
-            measuredTarget.targetId,
-            {
-              quotedTarget: measuredTarget,
-              status: "measured",
-              failureReason: null,
-              profile,
-              quoteGenerationId: "curve-composite-quote-generation",
-              targetGenerationId: "curve-composite-target-generation",
-              resolution: "latest",
-              latestFailureReason: null,
-            },
-          ]]),
-        },
-        nowSec: 1_060,
-      });
-
-      expect(pool.extra?.measuredExecution).toMatchObject({
-        targetId: measuredTarget.targetId,
-        adapterProfileId: policy.adapterProfileId,
-      });
-      expect(pool.extra?.executionCapabilityGate).toEqual({
-        family: "measured-execution",
-        reason: "activation-pending",
-      });
-      expect(pool.extra?.measuredExecutionDiagnostic?.detail).toContain(
-        "shadow-score-ineligible",
-      );
-      expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 1 });
-    }
-  });
+    },
+  );
 
   it("attaches the reviewed Curve StableSwap directions only as one atomic packet", () => {
     const { targets, profiles } = makeCurve3PoolPacket();
-    const pool: PoolEntry = {
-      poolId: "defillama-3pool-row",
-      project: "curve",
-      chain: "ethereum",
-      tvlUsd: 160_000_000,
-      symbol: "DAI-USDC-USDT",
-      volumeUsd1d: 11_000_000,
-      poolType: "curve-stableswap-high-a",
-      source: "dl",
-      extra: {
-        measuredExecutionTargets: targets,
-        ammExecutionModel: {
-          source: "curve",
-          invariant: "stableswap",
-          trackedTokenIndex: 2,
-          feeRate: 0.001,
-          amplification: 4_000 / 9,
-          tokens: CURVE_3POOL_STABLESWAP_POLICY.poolTokens.map((token, index) => ({
-            ...token,
-            balance: 50_000_000,
-            referencePriceUsd: 1,
-            referencePriceSource: "source-token-usd" as const,
-            trackedAssetId: ["dai-makerdao", "usdc-circle", "usdt-tether"][index],
-          })),
-        },
-      },
-    };
+    const pool = makeCurve3PoolReserve(targets);
     const byTargetId = new Map(targets.map((measuredTarget, index) => [
       measuredTarget.targetId,
-      {
-        quotedTarget: measuredTarget,
-        status: "measured" as const,
-        failureReason: null,
-        profile: profiles[index]!,
-        quoteGenerationId: "curve-quote-generation",
-        targetGenerationId: "curve-target-generation",
-        resolution: "latest" as const,
-        latestFailureReason: null,
+      makeJoinQuote(measuredTarget, profiles[index]!, {
         observationHistory: makeObservationHistory(profiles[index]!),
-      },
+      }),
     ]));
 
     const diagnostics = joinDexMeasuredExecutionEvidence({
@@ -440,21 +347,15 @@ describe("measured execution join activation", () => {
     const { targets, profiles } = makeCurve3PoolPacket();
     const byTargetId = new Map(targets.map((measuredTarget, index) => [
       measuredTarget.targetId,
-      {
-        quotedTarget: measuredTarget,
-        status: "measured" as const,
-        failureReason: null,
-        profile: profiles[index]!,
-        quoteGenerationId: "curve-quote-generation",
-        targetGenerationId: "curve-target-generation",
-        resolution: "last-known-good" as const,
+      makeJoinQuote(measuredTarget, profiles[index]!, {
+        resolution: "last-known-good",
         latestFailureReason: "rpc-failure",
         observationHistory: makeObservationHistory(profiles[index]!, {
           completeProducerCycleCount: 3,
           successfulObservationCount: 3,
           latestOperationalFailureAt: 1_060,
         }),
-      },
+      }),
     ]));
     const evidence = {
       quoteGenerationId: "latest-operational-failure",
@@ -923,16 +824,7 @@ describe("measured execution join activation", () => {
         quoteGenerationId: "quote-generation",
         targetGenerationId: "target-generation",
         publishedAt: 1_060,
-        byTargetId: new Map([[measuredTarget.targetId, {
-          quotedTarget: measuredTarget,
-          status: "measured" as const,
-          failureReason: null,
-          profile,
-          quoteGenerationId: "quote-generation",
-          targetGenerationId: "target-generation",
-          resolution: "latest" as const,
-          latestFailureReason: null,
-        }]]),
+        byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile)]]),
       },
       nowSec: 1_060,
     };
@@ -1200,33 +1092,7 @@ describe("measured execution join AMM invariants", () => {
 
   it("keeps reserve evidence available when one StableSwap direction is missing", () => {
     const { targets, profiles } = makeCurve3PoolPacket();
-    const pool: PoolEntry = {
-      poolId: "defillama-3pool-row",
-      project: "curve",
-      chain: "ethereum",
-      tvlUsd: 160_000_000,
-      symbol: "DAI-USDC-USDT",
-      volumeUsd1d: 11_000_000,
-      poolType: "curve-stableswap-high-a",
-      source: "dl",
-      extra: {
-        measuredExecutionTargets: targets,
-        ammExecutionModel: {
-          source: "curve",
-          invariant: "stableswap",
-          trackedTokenIndex: 2,
-          feeRate: 0.001,
-          amplification: 4_000 / 9,
-          tokens: CURVE_3POOL_STABLESWAP_POLICY.poolTokens.map((token, index) => ({
-            ...token,
-            balance: 50_000_000,
-            referencePriceUsd: 1,
-            referencePriceSource: "source-token-usd" as const,
-            trackedAssetId: ["dai-makerdao", "usdc-circle", "usdt-tether"][index],
-          })),
-        },
-      },
-    };
+    const pool = makeCurve3PoolReserve(targets);
     const diagnostics = joinDexMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([["usdt-tether", [pool]]]),
       evidence: {
@@ -1235,16 +1101,7 @@ describe("measured execution join AMM invariants", () => {
         publishedAt: 1_060,
         byTargetId: new Map([[
           targets[0]!.targetId,
-          {
-            quotedTarget: targets[0]!,
-            status: "measured",
-            failureReason: null,
-            profile: profiles[0]!,
-            quoteGenerationId: "curve-quote-generation",
-            targetGenerationId: "curve-target-generation",
-            resolution: "latest",
-            latestFailureReason: null,
-          },
+          makeJoinQuote(targets[0]!, profiles[0]!),
         ]]),
       },
       nowSec: 1_060,
@@ -1331,5 +1188,129 @@ describe("native diagnostic reader isolation", () => {
     await publishNativeDexGeneration(db, value);
     expect(await loadNativeDexExecutionDiagnostic({ db, profileId: value.profileId, nowSec: 1_060 }))
       .toMatchObject({ status: "missing", reason: "native-target-missing", generationId: value.generationId, quotes: [] });
+  });
+});
+
+const TARGET: DexMeasuredExecutionTarget = {
+  schemaVersion: "dex-measured-target-v1",
+  targetId: "target-usd1-usdc",
+  stablecoinId: "usd1",
+  adapterProfileId: "uniswap-v3-quoter-v2",
+  protocol: "uniswap-v3",
+  chain: "ethereum",
+  poolId: "0x1111111111111111111111111111111111111111",
+  tokenIn: {
+    address: "0x2222222222222222222222222222222222222222",
+    symbol: "USD1",
+    decimals: 6,
+    referencePriceUsd: 1,
+    trackedAssetId: "usd1",
+  },
+  tokenOut: {
+    address: "0x3333333333333333333333333333333333333333",
+    symbol: "USDC",
+    decimals: 6,
+    referencePriceUsd: 1,
+    trackedAssetId: "usdc-circle",
+  },
+  feePips: 100,
+  retainedTvlUsd: 1_000_000,
+  retainedPoolPriceUsd: 1,
+  capturedAt: 1_000,
+};
+
+describe("measured execution RPC budget", () => {
+  it("hard-stops actual request attempts at the configured count", () => {
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 2,
+      deadlineMs: 10_000,
+      now: () => 1_000,
+    });
+
+    expect(budget.tryConsume()).toBe(true);
+    expect(budget.tryConsume()).toBe(true);
+    expect(budget.tryConsume()).toBe(false);
+    expect(budget.requestsUsed).toBe(2);
+    expect(budget.stopReason).toBe("request-budget-exhausted");
+  });
+
+  it("opens one chain circuit after two consecutive transport failures", () => {
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 10,
+      deadlineMs: 10_000,
+      now: () => 1_000,
+    });
+
+    budget.recordChainResult("Ethereum", false);
+    expect(budget.canRequestChain("ethereum")).toBe(true);
+    budget.recordChainResult("ethereum", false);
+
+    expect(budget.canRequestChain("ethereum")).toBe(false);
+    expect(budget.isChainCircuitOpen("ETHEREUM")).toBe(true);
+    expect(budget.canRequestChain("base")).toBe(true);
+    expect(budget.openChains).toEqual(["ethereum"]);
+  });
+
+  it("resets consecutive failures after a successful chain request", () => {
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 10,
+      deadlineMs: 10_000,
+      now: () => 1_000,
+    });
+
+    budget.recordChainResult("base", false);
+    budget.recordChainResult("base", true);
+    budget.recordChainResult("base", false);
+
+    expect(budget.canRequestChain("base")).toBe(true);
+    expect(budget.openChains).toEqual([]);
+  });
+});
+
+describe("measured execution profile construction", () => {
+  it("preserves a deterministic marginal revert as measured zero capacity", () => {
+    const profile = buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
+      target: TARGET,
+      targetGenerationId: "targets-1",
+      quoteGenerationId: "quotes-1",
+      quotedAt: 1_100,
+      blockNumber: 123,
+      endpointAddress: "0x4444444444444444444444444444444444444444",
+      endpointCodeHash: `0x${"ab".repeat(32)}`,
+      points: [{
+        amountInRaw: "1000000000",
+        amountOutRaw: "0",
+        callData: "0x1234",
+        returnData: "0x",
+        inputUsd: 1_000,
+        outputUsd: 0,
+        costBps: 10_000,
+        passesCostBound: false,
+        reverted: true,
+        adapterMetadata: { executionReverted: true },
+      }],
+    });
+
+    expect(profile.quoteProof).toEqual([
+      expect.objectContaining({ reverted: true, amountOutRaw: "0", returnData: "0x" }),
+    ]);
+    expect(profile.marginalOutputRatio).toBe(0);
+    expect(profile.capacityCurve.map(({ requestedNotionalUsd, executableUsd }) => [requestedNotionalUsd, executableUsd]))
+      .toEqual([[100_000, 0], [1_000_000, 0], [10_000_000, 0], [25_000_000, 0]]);
+  });
+});
+
+describe("flat public proof projections", () => {
+  const { profile } = makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]);
+  it.each(makeFlatProvenanceCases(profile))("preserves $name public bytes without private proof fields", ({ proofs, provenance }) => {
+    const expected = { ...toDexMeasuredExecutionPublicProfile(profile), ...provenance };
+    const projected = toDexMeasuredExecutionPublicProfile({ ...profile, ...proofs });
+    expect(JSON.stringify(projected)).toBe(JSON.stringify(expected));
+    expect(projected).toMatchObject({ chain: profile.chain, blockNumber: profile.blockNumber, blockHash: profile.blockHash });
+    expect(JSON.stringify(projected)).not.toMatch(/calldata|returndata|private-future-proof|quoteProof|BindingProof|PoolProof/i);
+    const polluted = { ...projected, ...Object.fromEntries(Object.entries(provenance)
+      .map(([key, value]) => [key, { ...value, callData: "0x12", returnData: "0x34", futurePrivateField: "private-future-proof" }])) };
+    expect(JSON.stringify(DexMeasuredExecutionPublicProfileSchema.parse(polluted))).toBe(JSON.stringify(expected));
   });
 });

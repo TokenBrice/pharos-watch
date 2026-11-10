@@ -28,6 +28,7 @@ import {
 import { collectGitPaths, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { requireCommittedCoverageRebaseline } from "../lib/critical-coverage-rebaseline.mts";
+import { collectTestTierViolations, type TestTierViolation } from "./check-test-tier";
 
 const WAIVER_REVIEW_HARD_FAIL_AGE_DAYS = 30;
 const WAIVER_REVIEW_PRINT_LIMIT = 10;
@@ -70,6 +71,8 @@ interface CriticalCoverageCheckOptions {
   execFile?: GitExec;
   consoleImpl?: CoverageConsole;
   completenessOptions?: Omit<CompletenessOptions, "consoleImpl" | "exit">;
+  /** Nightly-tier violations; defaults to the checkout scan (`check-test-tier.ts`). */
+  testTierViolations?: readonly TestTierViolation[];
   exit?: ExitFunction;
 }
 
@@ -289,14 +292,37 @@ function coverageBaselineCompareRef(env: NodeJS.ProcessEnv): string {
   return ref;
 }
 
+/**
+ * The nightly tier's structural contract (`check-test-tier.ts`) rides the
+ * completeness gate: it runs on every non-doc PR, and a tier move that leaves
+ * the PR tier without a named owner is a coverage gap, not a test-selection
+ * detail. It keeps its own label so the owner stays visible.
+ */
+function reportTestTierViolations(
+  violations: readonly TestTierViolation[],
+  consoleImpl: CoverageConsole,
+  exit: ExitFunction,
+): boolean {
+  if (violations.length === 0) return true;
+  consoleImpl.error("[test-tier] Nightly test tier violations:");
+  for (const violation of violations) consoleImpl.error(`  ${violation.kind}: ${violation.message}`);
+  consoleImpl.error(
+    "[test-tier] Name the PR-tier test or guard in the nightly file header; move the case back to the PR tier instead of relaxing a safety net.",
+  );
+  exit(1);
+  return false;
+}
+
 export function runCriticalCoverageCompletenessCheck({
   env = process.env,
   fsImpl = fs,
   execFile = execFileSync as GitExec,
   consoleImpl = console,
   completenessOptions = {},
+  testTierViolations,
   exit = process.exit,
 }: CriticalCoverageCheckOptions = {}): boolean {
+  if (!reportTestTierViolations(testTierViolations ?? collectTestTierViolations(), consoleImpl, exit)) return false;
   if (!runCriticalCoverageCompletenessGuard({ ...completenessOptions, consoleImpl, exit })) return false;
   const baselinePath = env.CRITICAL_COVERAGE_BASELINE_FILE ?? ".ci/critical-coverage-baseline.json";
   const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
@@ -327,6 +353,7 @@ export function runCriticalCoverageCheck({
   execFile = execFileSync as GitExec,
   consoleImpl = console,
   completenessOptions = {},
+  testTierViolations,
   exit = process.exit,
 }: CriticalCoverageCheckOptions = {}): void {
   let threshold: number;
@@ -343,6 +370,7 @@ export function runCriticalCoverageCheck({
   const compareRef = (env.CRITICAL_COVERAGE_COMPARE_REF ?? "").trim();
   const ratchetAll = env.CRITICAL_COVERAGE_RATCHET_ALL === "1";
 
+  if (!reportTestTierViolations(testTierViolations ?? collectTestTierViolations(), consoleImpl, exit)) return;
   if (!runCriticalCoverageCompletenessGuard({ ...completenessOptions, consoleImpl, exit })) {
     return;
   }

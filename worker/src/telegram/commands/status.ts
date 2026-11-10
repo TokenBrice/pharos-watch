@@ -38,12 +38,12 @@ export const handleStatus: WebhookCommandHandler = async (ctx, args) => {
 async function replyWithChatStatus(ctx: WebhookCommandContext): Promise<void> {
   const nowSec = ctx.operationNowSec ?? unixNow();
   const isPrivate = ctx.chatType === "private";
-  const [subscriber, subscriptions, presetSubscriptions, diagnostics] = await Promise.all([
+  const [subscriber, subscriptions, presetSubscriptions, diagnosticsRead] = await Promise.all([
     loadSubscriberByChat(ctx.db, ctx.chatId),
     loadSubscriptionRowsByChat(ctx.db, ctx.chatId),
     loadPresetSubscriptions(ctx.db, ctx.chatId),
     // Diagnostics only feed the "Last alert delivered" line; a failed read drops that line.
-    loadTelegramChatHealthDiagnostics(ctx.db, ctx.chatId).catch(() => null),
+    loadTelegramChatHealthDiagnostics(ctx.db, ctx.chatId),
   ]);
   if (followsNothing({ subscriber, subscriptions, presetSubscriptions })) {
     const message = "You don't follow any stablecoins yet.";
@@ -60,6 +60,7 @@ async function replyWithChatStatus(ctx: WebhookCommandContext): Promise<void> {
   ];
   const depegLine = await describeFollowedDepegs(ctx.db, subscriber, subscriptions, presetSubscriptions);
   if (depegLine) lines.push(depegLine);
+  const diagnostics = diagnosticsRead.available ? diagnosticsRead.diagnostics : null;
   if (diagnostics?.lastSuccessfulDeliveryAt != null) {
     lines.push(`Last alert delivered ${escapeHtml(formatElapsed(diagnostics.lastSuccessfulDeliveryAt, nowSec))}.`);
   }

@@ -7,6 +7,8 @@ import { offlineTransferMaterialityDependencies } from "@shared/test-utils/v9-re
 
 // No fixture/migration imports: this graph is the measured application closure.
 const output = process.env.PHAROS_RESOURCE_OUTPUT!;
+// Only an explicit single-cycle request reduces the warm sample; anything else keeps two.
+const publicationCycles = process.env.PHAROS_RESOURCE_CYCLES === "1" ? 1 : 2;
 function emit(value: unknown) { appendFileSync(output, `${JSON.stringify(value)}\n`); }
 const observer = (globalThis as typeof globalThis & { __pharosResourcePhase?: (phase: string) => void }).__pharosResourcePhase;
 observer?.("module-initialized");
@@ -50,7 +52,7 @@ try {
     }, offlineTransferMaterialityDependencies);
     observer?.("prep-complete");
   }
-  for (cycle = 1; cycle <= 2; cycle += 1) {
+  for (cycle = 1; cycle <= publicationCycles; cycle += 1) {
     const clockSec = install(cycle);
     emit({ type: "cycle-start", cycle, clockSec });
     const result = await computeSafetyScoreV9(db, undefined, async (progress) => {

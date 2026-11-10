@@ -214,6 +214,25 @@ describe("syncStablecoinCharts", () => {
     expect(typeof cached[0]?.date).toBe("number");
   });
 
+  it("drops future-dated points and reads epoch-millisecond dates as seconds", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const points = makeRawChartPoints(120, nowSec);
+    points[118] = { ...points[118]!, date: nowSec * 1000 };
+    points[119] = { ...points[119]!, date: nowSec + 400 * 86_400 };
+    mockFetch([{ match: "stablecoincharts/all", body: points }]);
+
+    const db = mockD1([{ match: "FROM supply_history", rows: [] }]);
+    const result = await syncStablecoinCharts(db);
+
+    expect(result.status).toBeUndefined();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ invalidDateCount: 1 });
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = normalizeStablecoinChartPoints(JSON.parse(String(insert?.binds[1])));
+    expect(cached).not.toBeNull();
+    expect(cached!.every((point) => point.date <= nowSec + 60)).toBe(true);
+    expect(cached!.some((point) => point.date === nowSec)).toBe(true);
+  });
+
   it("merges structural supplemental supply-history overlays into the cached chart payload", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     mockFetch([
@@ -338,6 +357,50 @@ describe("syncStablecoinCharts", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string; downsampledPoints: number };
     expect(metadata.reason).toBe("downsampled-payload-too-small");
     expect(metadata.downsampledPoints).toBeLessThan(10);
+    expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
+  });
+
+  it("preserves the cached history when the upstream payload is truncated", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousPayload = Array.from({ length: 300 }, (_, index) => ({
+      date: nowSec - (300 - index) * 86_400,
+      totalCirculatingUSD: { peggedUSD: 1_000_000 + index },
+    }));
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: makeRawChartPoints(120, nowSec),
+      },
+    ]);
+
+    const db = mockD1([
+      fxPairRead(nowSec, { peggedUSD: 1 }),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoin-charts"],
+        rows: [],
+        first: { value: JSON.stringify(previousPayload), updated_at: nowSec - 3_600 },
+      },
+      {
+        match: "FROM supply_history",
+        rows: [],
+      },
+    ]);
+
+    const result = await syncStablecoinCharts(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string;
+      quality: { reason: string; codes: string[] };
+      previousPoints: number;
+      nextPoints: number;
+    };
+    expect(metadata.reason).toBe("chart-history-truncated");
+    expect(metadata.quality.codes).toContain("point-count-collapse");
+    expect(metadata.previousPoints).toBe(300);
+    expect(metadata.nextPoints).toBeLessThan(300);
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 

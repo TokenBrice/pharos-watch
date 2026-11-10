@@ -1,0 +1,23 @@
+{
+  "id": "eurgh-gatehub",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Dinaro EURGH white paper, holder rights and freeze powers",
+        "url": "https://dinaro.si/eurgh-whitepaper.html"
+      },
+      {
+        "label": "GateHub announcement naming the EURGH issuer account",
+        "url": "https://gatehub.net/blog/gatehub-partners-with-dinaro-to-launch-gatehub-euro-eurgh/"
+      },
+      {
+        "label": "XRPL public JSON-RPC account_info at validated ledger 108194664",
+        "url": "https://xrplcluster.com"
+      }
+    ],
+    "evidence": "Dinaro's EURGH white paper permits individual and global freezes and recall of issued EURGH. On November 8 2026, XRPL account_info for rDdaSjBbgCGQQsGRSfMidBMyHbPoeE5KQR at validated ledger 108194664 returned Flags 2156527616, allowTrustLineClawback=true, noFreeze=false and globalFreeze=false. Clawback is enabled and freeze capability has not been irrevocably disabled; no global freeze was active at that ledger. gateway_balances at the same ledger reported obligations for the announcement's EURGH currency code 4555524748000000000000000000000000000000, and account_lines at validated ledger 108194675 showed outstanding holder trust-line balances. This is direct holder-control evidence on XRPL. Xahau issuance and account flags were not independently read, so the XRPL observation is not asserted for Xahau.",
+    "reviewer": "Codex weekly pre-launch sweep",
+    "reviewedAt": "2026-11-08"
+  }
+}

@@ -8,6 +8,8 @@ on:
     - cron: "30 7 * * 1"
   workflow_dispatch:
 
+concurrency: {group: ops-followups-publication, cancel-in-progress: false}
+
 permissions:
   issues: write
 

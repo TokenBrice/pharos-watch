@@ -111,4 +111,16 @@ describe("buildFlowSummaryNarrative", () => {
     expect(narrative).toMatch(directionMeaning);
     expect(narrative).toMatch(pressureMeaning);
   });
+
+  it("does not attribute an NR pressure shift to short history", () => {
+    for (const direction of ["burning", "minting", "flat"] as const) {
+      expect(buildFlowSummaryNarrative(direction, "nr")).not.toMatch(/history/i);
+    }
+  });
+
+  it("keeps a null 24h direction cause-neutral", () => {
+    const narrative = buildFlowSummaryNarrative(null, "nr");
+    expect(narrative).toBe("Direction unavailable.");
+    expect(narrative).not.toMatch(/unpriced|scan coverage/i);
+  });
 });

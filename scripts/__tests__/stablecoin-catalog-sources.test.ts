@@ -377,12 +377,13 @@ describe("real stablecoin catalog composed records", () => {
     const entry = composedEntry("usdt-tether");
     const { coin } = entry;
 
-    expect(entry.sidecarFiles).toEqual([
-      "shared/data/stablecoins/domains/compliance/usdt-tether.json",
-      "shared/data/stablecoins/domains/mint-authority/usdt-tether.json",
-      "shared/data/stablecoins/domains/reserves/usdt-tether.json",
-      "shared/data/stablecoins/domains/risk-review/usdt-tether.json",
-    ]);
+    // Each domain lives in its own sidecar; the exact roster is curation data.
+    const sidecarFiles = entry.sidecarFiles ?? [];
+    expect(sidecarFiles.length).toBeGreaterThan(0);
+    expect(new Set(sidecarFiles).size).toBe(sidecarFiles.length);
+    for (const sidecar of sidecarFiles) {
+      expect(sidecar).toMatch(/^shared\/data\/stablecoins\/domains\/[a-z-]+\/usdt-tether\.json$/);
+    }
     // proofOfReserves stays in the base file, compositionAsOf in the reserves
     // sidecar; only the merged record can satisfy the lockstep refinement.
     const periodEnd = coin.proofOfReserves?.latestReport?.periodEnd;
@@ -420,15 +421,19 @@ describe("real stablecoin catalog composed records", () => {
     expect(coin.variantKind).toBe("savings-passthrough");
     expect(coin.mintAuthority?.inheritedFrom).toBe(coin.variantOf);
     // The idle wrapper slice carries the variantOf link; the residual deployed
-    // accrual slice stays unlinked by review.
-    expect(coin.reserves).toEqual([
-      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 99.99996877826727 }),
-      expect.objectContaining({
-        name: "Sky Savings USDS deployed strategy positions",
-        pct: 3.122173273489469e-05,
-        risk: "high",
-      }),
-    ]);
+    // accrual slice stays unlinked by review. Only their split is reviewed data.
+    const [wrapperSlice, residualSlice, ...extraSlices] = coin.reserves ?? [];
+    expect(extraSlices).toEqual([]);
+    expect(wrapperSlice).toMatchObject({ coinId: coin.variantOf, depType: "wrapper" });
+    expect(residualSlice).toMatchObject({
+      name: "Sky Savings USDS deployed strategy positions",
+      risk: "high",
+    });
+    expect(residualSlice?.coinId).toBeUndefined();
+    expect(wrapperSlice?.pct).toBeGreaterThan(0);
+    expect(wrapperSlice?.pct).toBeLessThan(100);
+    expect(residualSlice?.pct).toBeGreaterThan(0);
+    expect((wrapperSlice?.pct ?? 0) + (residualSlice?.pct ?? 0)).toBeCloseTo(100, 10);
     expect(coin.reserveReview?.scope).toBe("full-composition");
     // The attestation lockstep stays silent here: the sidecar review has no
     // base-file attestation to agree with. Custody is reviewed on the reserves
@@ -456,6 +461,23 @@ describe("real stablecoin catalog composed records", () => {
     ]);
     expect(coin.custodyProfile?.segregation).toBe("unknown");
     expect(coin.notices?.map((notice) => notice.type)).toEqual(["warning"]);
-    expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview"]);
+    expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview", "oracleRisk"]);
+  });
+
+  it("keeps every composed wrapper's authority and observed wrapper slice tied to its variant parent", () => {
+    const variants = composedEntries.filter(({ coin }) => coin.variantOf != null);
+    expect(variants.length).toBeGreaterThan(0);
+    for (const { coin } of variants) {
+      expect(coin.pegReferenceId, coin.id).toBe(coin.variantOf);
+      if (coin.mintAuthority?.inheritedFrom != null) {
+        expect(coin.mintAuthority.inheritedFrom, coin.id).toBe(coin.variantOf);
+      }
+      for (const reserve of coin.reserves ?? []) {
+        if (reserve.coinId === coin.variantOf && reserve.depType === "wrapper") {
+          expect(reserve.pct, coin.id).toBeGreaterThanOrEqual(0);
+          expect(reserve.pct, coin.id).toBeLessThanOrEqual(100);
+        }
+      }
+    }
   });
 });

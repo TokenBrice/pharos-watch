@@ -1,8 +1,9 @@
 import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types";
 import type { SupplyUnavailableReason } from "../types/market";
-import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
+import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
+import { XrplIssuedCurrencyAmountSchema } from "../types/deployment-amounts";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
 export const NAV_SUPPLY_LEDGER_FRESHNESS = { maxAgeSec: 600, maxFutureSkewSec: 60 } as const;
@@ -13,6 +14,8 @@ export interface CuratedOnchainSupplyContractConfig {
   address?: string;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  /** Issuer-documented operational holders excluded by XRPL gateway_balances. */
+  hotwallet?: readonly string[];
   /**
    * Some reviewed native deployments are live with zero supply. Keep this
    * opt-in so ordinary aggregate paths still fail closed on empty reads.
@@ -56,7 +59,7 @@ const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
 export const EEARN_SUI_COIN_TYPE = "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN";
 export const USDY_SUI_COIN_TYPE = "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY";
 
-export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui" | "stellar" | "noble";
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui" | "stellar" | "noble" | "xrpl";
 
 const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
   solana: "solana",
@@ -66,6 +69,7 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   icp: "icp",
   stellar: "stellar",
   noble: "noble",
+  xrpl: "xrpl",
 };
 
 /** Owner-reviewed current-token-stock perimeter; pending/retired claims are separate diagnostics. */
@@ -143,6 +147,27 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   "myrc-blox",
   "stac-securitize",
   "eurspkcc-spiko",
+  // Reviewed 2026-11-01: the complete four-chain native roster read
+  // 1,960,810,518.68 USYC against a CoinGecko market cap that still reflected
+  // pre-2026-10-31 BSC burns. Prefer the on-chain stock; never republish the
+  // contradicted cap when a leg is unreadable.
+  // https://bscscan.com/token/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311
+  "usyc-hashnote",
+  // Reviewed 2026-11-07: Centrifuge's complete issuance is 55,613,550.471566
+  // JTRSY; CoinGecko counts only Ethereum's 42,075,827.831111 shares.
+  // https://docs.centrifuge.io/developer/centrifuge-api/#tokens
+  "jtrsy-anemoy",
+  // Reviewed 2026-11-02: USG's circulating stock is its issuer-native Ethereum
+  // totalSupply less the two PegKeeper balances Tangent's own UI excludes
+  // (`CURATED_ONCHAIN_SUPPLY_EXCLUSIONS`). The CoinGecko market cap counts that
+  // keeper inventory, so it must never replace the adjusted read.
+  // https://etherscan.io/token/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1
+  "usg-tangent",
+  // Reviewed 2026-11-04 (owner-approved restatement): the complete native
+  // Base + Solana + Stellar registers read 8,786,145.85 MXNe while the
+  // CoinGecko cap implied ~1.43M; the 2026-10-19 risk review already calls
+  // that cap inconsistent with measured supply. Prefer the native stock.
+  "mxne-real-mxn",
 ]);
 
 export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): boolean {
@@ -154,6 +179,36 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
   "cdp-enosys": [supplyProbeChain("flare")],
+  // Reviewed issuer-native registers (risk-review sidecar); no bridge/inventory subtraction.
+  // 2026-11-07 pinned seven-chain stock: 487,442,380 units. Read every leg to clear ambiguity.
+  "rwausdi-multipli": [
+    { chain: "ethereum" }, { chain: "base" }, supplyProbeChain("monad"), { chain: "arbitrum" },
+    supplyProbeChain("xlayer"), supplyProbeChain("robinhood"),
+    supplyProbeChain("pharos", { rpcUrl: "https://rpc.pharos.xyz", fallbackRpcUrl: undefined }),
+  ],
+  // Curve satellites lock Ethereum shares; reallocate, never add their stock.
+  // Reviewed 2026-11-04: canonical stock / CG cap = 0.953799 at $1.11/share.
+  "scrvusd-curve": [
+    { chain: "ethereum" },
+    { chain: "optimism", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("fraxtal", { allowZeroSupply: true }),
+    { chain: "fantom", rpcUrl: PUBLIC_RPC_URLS.fantom, allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true }, { chain: "avalanche", allowZeroSupply: true },
+    { chain: "xdc", allowZeroSupply: true }, supplyProbeChain("sonic", { allowZeroSupply: true }),
+    supplyProbeChain("etherlink", { allowZeroSupply: true }),
+  ],
+  // Native Ethereum/BNB/Solana plus HyperEVM burn/mint stock; no canonical escrow.
+  // Reviewed 2026-11-04: sum / CG implied shares = 0.999454.
+  "gldon-ondo": [
+    { chain: "ethereum" }, { chain: "bsc" }, { chain: "solana" },
+    supplyProbeChain("hyperevm", { allowZeroSupply: true }),
+  ],
+  // XGLDToken OFTs burn/mint their own stock; Ethereum is live at observed zero.
+  // Reviewed 2026-11-04: sum / CG implied units = 1.000011.
+  "xgld-unitas": [
+    { chain: "bsc" }, { chain: "base", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true }, supplyProbeChain("mantle", { allowZeroSupply: true }),
+  ],
   // Reviewed 2026-10-25: all nine EVM issuer registers sum; Solana/Stellar
   // are Ethereum-escrowed representations listed explicitly below, not new stock.
   "jaaa-janus-henderson-anemoy": [
@@ -253,6 +308,14 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "stellar", allowZeroSupply: true }, { chain: "noble", allowZeroSupply: true },
     { chain: "bsc", allowZeroSupply: true }, supplyProbeChain("tempo", { allowZeroSupply: true }),
   ],
+  // Reviewed issuer-native registers; Polygon/Solana have observed zero stock.
+  // Ondo's manual redemption recipient is operational inventory, not investor float.
+  // https://docs.ondo.finance/addresses
+  "ousg-ondo-finance": [
+    { chain: "ethereum" }, { chain: "polygon", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+    supplyProbeChain("xrpl", { hotwallet: ["rHprwRkvDexV5LF5tzKQmx7U7Ku2836DA1"] }),
+  ],
   // Movement USDCx is a Circle xReserve representation. Its fungible-asset
   // supply is admitted only after the Worker reconciles it to the matching
   // Ethereum xReserve domain balance within one basis point.
@@ -333,8 +396,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "solana" },
     { chain: "arc", allowZeroSupply: true },
   ],
-  // Reviewed 2026-10-25: Centrifuge V3 Spoke burn/reissue shares sum, including
-  // Pharos; the issuer issuance API reconciles the EVM stock. Solana is zero.
+  // Reviewed 2026-11-08: Centrifuge Spoke burn/reissue stocks sum; X Layer/Arc
+  // are required observed-zero legs. Stellar is already in Ethereum's issuer escrow.
   // https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/
   "jtrsy-anemoy": [
     { chain: "ethereum" },
@@ -346,6 +409,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("monad"),
     { chain: "solana", allowZeroSupply: true },
     supplyProbeChain("pharos"),
+    supplyProbeChain("xlayer", { allowZeroSupply: true }),
+    supplyProbeChain("arc", { allowZeroSupply: true }),
   ],
   // Reviewed 2026-10-25: Nest local BoringVault shares and source-debited OFTs
   // sum across the complete issuer roster. Plasma is a verified live zero leg.
@@ -401,6 +466,20 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     supplyProbeChain("monad"),
     supplyProbeChain("pharos"),
+  ],
+  // Reviewed 2026-11-04 (D12): Base vault stock backs the two OFT spokes.
+  // https://docs.yieldpoint.io/protocol/architecture/contracts.md
+  "uty-xsy": [
+    { chain: "base" },
+    { chain: "avalanche", allowZeroSupply: true },
+    supplyProbeChain("katana", { allowZeroSupply: true }),
+  ],
+  // Brale burns on the source register and mints on the destination; no escrow.
+  // https://docs.brale.xyz/guides/stablecoin-to-stablecoin-swap
+  "mxne-real-mxn": [
+    { chain: "base", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true },
   ],
   // Reviewed 2026-10-25: Ethereum LockRelease / BSC+Monad BurnMint pools.
   // https://docs.chain.link/ccip/directory/mainnet/token/sUSDat
@@ -509,8 +588,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // reviewed representation is reallocated out of it. Legs outside
   // buildChainRpcs() carry a verified public endpoint. The TON jetton and the
   // Aptos fungible asset have no supported supply probe, so they stay
-  // unconfigured and their balances remain inside the Ethereum bucket rather
-  // than failing the whole aggregate closed.
+  // unconfigured; the escrow-residual policy publishes their balances under the
+  // unattributed label rather than assigning them to the Ethereum bucket.
   "susde-ethena": [
     { chain: "ethereum" },
     supplyProbeChain("plasma"),
@@ -537,6 +616,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("zksync"),
     { chain: "avalanche" },
     { chain: "solana" },
+    // Reviewed 2026-11-01: Monad's LayerZero OFT held 16,640,244.562356 sUSDe
+    // (MonadScan), previously absorbed by the unattributed escrow residual.
+    supplyProbeChain("monad"),
   ],
   // wsrUSD is an ERC-4626 NAV wrapper with no DefiLlama pegged-asset row
   // (llamaId null), so the CoinGecko fiat-cg lane leaves chainCirculating empty
@@ -806,13 +888,17 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("apechain"),
     supplyProbeChain("pharos"),
   ],
-  // PAXG is issuer-native on Ethereum and Solana. The Ethereum LayerZero OFTWrapper
-  // 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 is a burn/mint SupplyController
-  // (approvalRequired false; balanceOf 0), so Ethereum totalSupply does not escrow
-  // the Solana float and the legs sum. Verified 2026-08-18: Ethereum 434,564.906308
-  // (block 25784877) + Solana 2,382.341744 (slot 440141599) = 436,947.248052,
-  // matching CoinGecko circulating exactly. Do not add CANONICAL_SUPPLY_CHAINS.
-  "paxg-paxos": [{ chain: "ethereum" }, { chain: "solana" }],
+  // PAXG is issuer-native on Ethereum, Solana and Base. The Ethereum LayerZero
+  // OFTWrapper 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 is a burn/mint
+  // SupplyController (approvalRequired false; balanceOf 0), so Ethereum
+  // totalSupply does not escrow the Solana or Base float and the legs sum.
+  // KPMG's 2026-09-30 PAXG examination reconciles 235 Base PAXG among redeemable
+  // tokens (liabilities Ethereum 432,506 / Solana 2,560 / Base 235 / Robinhood 5),
+  // and the Base proxy is reviewed as Paxos issuer-native issuance rather than a
+  // bridge representation. Explorer reads on 2026-11-01: Ethereum
+  // 442,885.899659 + Solana 3,215.284434, with Base the ~235 oz remainder.
+  // Do not add CANONICAL_SUPPLY_CHAINS.
+  "paxg-paxos": [{ chain: "ethereum" }, { chain: "solana" }, { chain: "base" }],
   // DGLD is independently gold-backed on Ethereum and Base after the 2026-06-30
   // bridge close. Verified 2026-08-18: Ethereum 1,603.687 (block 25784877) + Base
   // 401.159 (block 50150845) = 2,004.846. Deprecated Base 0xd02f50…d6c9 reads 0.
@@ -1124,10 +1210,12 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "scrvusd-curve": "ethereum",
   "apyusd-apyx": "ethereum",
   "susn-noon": "ethereum",
   "syrupusdg-maple": "ethereum",
   "strusd-tori": "ethereum",
+  "uty-xsy": "base",
   "susdat-saturn": "ethereum",
   "dusd-dialectic": "ethereum",
   "gldt-gold-dao": "icp",
@@ -1195,11 +1283,15 @@ export const CURATED_AGGREGATE_ESCROW_RESIDUALS: Readonly<
     escrowAddress: "0xe24a3dc889621612422a64e6388927901608b91d",
     unattributedChainLabel: "sUSN unattributed bridge escrow",
   },
-  // Reviewed 2026-10-25: Tori's Ethereum CCIP lockbox also conserves the new
-  // Arbitrum representation (verified zero), outside the catalog probe roster.
+  // D11, re-pinned 2026-11-04: pool.getLockBox()/getToken() bind this custody.
+  // Unprobed CCIP representations remain in the conserved residual.
   "strusd-tori": {
-    escrowAddress: "0xb12e0794fb2191672ba7a1811edc9713c8c2c38b",
+    escrowAddress: "0xc1a9e4bbb58573b8971c9b3c24e17f9851268f86",
     unattributedChainLabel: "strUSD unattributed CCIP escrow",
+  },
+  "uty-xsy": {
+    escrowAddress: "0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1",
+    unattributedChainLabel: "UTY unattributed OFT escrow",
   },
   // Avalanche CCIP LockRelease custody includes the Base, Arbitrum and Movement
   // representations absent from the probe roster. Keep their residual separate
@@ -1247,6 +1339,12 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
         || /^[a-zA-Z0-9]{1,12}-G[A-Z2-7]{55}$/.test(contract.address) ? "stellar" : null;
     case "noble":
       return contract.address === "ausdy" ? "noble" : null;
+    case "xrpl": {
+      const [currency, issuer, extra] = contract.address.split(".");
+      return contract.decimals === null && contract.amountEncoding?.kind === "xrpl-issued-currency"
+        && extra === undefined && XrplIssuedCurrencyAmountSchema.safeParse({ currency, issuer, value: "0" }).success
+        ? "xrpl" : null;
+    }
     default:
       break;
   }

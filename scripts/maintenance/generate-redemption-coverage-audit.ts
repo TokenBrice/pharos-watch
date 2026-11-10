@@ -450,48 +450,23 @@ export function generateRedemptionCoverageAudit(
       );
     });
 
-  const lifecycleExcludedUnconfigured = sortById([
-    ...preLaunchCoins
+  const lifecycleExcludedUnconfigured = sortById(([
+    [preLaunchCoins, "pre-launch"],
+    [frozenCoins, "frozen"],
+    [quarantinedCoins, "quarantined"],
+    [delistedCoins, "delisted"],
+  ] as const).flatMap(([coins, lifecycle]) =>
+    coins
       .filter((coin) => !configuredIds.has(coin.id))
       .map((coin) =>
         toAuditRow(
           coin,
-          classifyLifecycleExcludedCoin(coin, "pre-launch"),
+          classifyLifecycleExcludedCoin(coin, lifecycle),
           trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
-          "pre-launch",
+          lifecycle,
         ),
       ),
-    ...frozenCoins
-      .filter((coin) => !configuredIds.has(coin.id))
-      .map((coin) =>
-        toAuditRow(
-          coin,
-          classifyLifecycleExcludedCoin(coin, "frozen"),
-          trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
-          "frozen",
-        ),
-      ),
-    ...quarantinedCoins
-      .filter((coin) => !configuredIds.has(coin.id))
-      .map((coin) =>
-        toAuditRow(
-          coin,
-          classifyLifecycleExcludedCoin(coin, "quarantined"),
-          trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
-          "quarantined",
-        ),
-      ),
-    ...delistedCoins
-      .filter((coin) => !configuredIds.has(coin.id))
-      .map((coin) =>
-        toAuditRow(
-          coin,
-          classifyLifecycleExcludedCoin(coin, "delisted"),
-          trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
-          "delisted",
-        ),
-      ),
-  ]);
+  ));
 
   const heuristicConfiguredRoutes = sortById(
     Object.entries(configs)

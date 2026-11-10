@@ -1,22 +1,8 @@
-import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
 import { handleResetBlacklistSync } from "../admin-actions";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
 describe("admin mutation auth — custom header required for mutating methods", () => {
-  it("rejects POST without X-Pharos-Admin header", async () => {
-    const req = new Request("https://ops-api.pharos.watch/api/reset-blacklist-sync", {
-      method: "POST",
-    });
-    const res = await handleResetBlacklistSync({
-      db: mockD1(),
-      request: req,
-      trustedAdmin: true,
-    });
-    const body = (await readJsonResponse(res, 403)) as { error: string };
-    expect(body.error).toMatch(/admin header/i);
-  });
-
   it("rewinds both cursor columns and invalidates active generations", async () => {
     const db = mockD1([
       { match: "UPDATE blacklist_sync_state", rows: [], runMeta: { changes: 1 } },

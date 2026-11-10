@@ -40,7 +40,7 @@ export function YieldWhyPysStrip({
         : "—";
   const safetySub = `÷${adjustedRiskPenalty.toFixed(1)}× penalty`;
   const sourceRiskValue = `${sourceRiskPenalty.toFixed(2)}×`;
-  const sourceRiskSub = sourceRiskPenalty === 1 ? "Neutral" : sourceRiskDriverLabel ?? "Neutral";
+  const sourceRiskSub = sourceRiskPenalty <= 1 ? "Neutral" : sourceRiskDriverLabel ?? "—";
 
   const cells: Array<{ title: string; value: string; sublabel: string }> = [
     { title: "Bench spread", value: benchSpreadValue, sublabel: benchSubLabel },

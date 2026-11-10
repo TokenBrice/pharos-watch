@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -16,6 +19,9 @@ import {
 } from "../attestation-pdf-index";
 import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
 import ripioJune from "./fixtures/ripio-wfiat-june-2026.json";
+
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const ZARSC_SUPERCOIN_HTML = readFileSync(join(FIXTURES_DIR, "zarsc-supercoin.html"), "utf8");
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
   slices: [
@@ -155,23 +161,104 @@ describe("adaptAttestationPdfIndex", () => {
     expect(result.slices).toEqual(slices);
   });
 
-  it("uses end-of-month freshness for month-only report dates", () => {
-    const html = `
+  it.each([
+    [
+      "uses end-of-month freshness for month-only report dates",
+      `
       <a href="/attestations/2026_january.pdf">View January report</a>
       <a href="/attestations/2026_february.pdf">View February report</a>
       <a href="/attestations/2025_december.pdf">View December report</a>
-    `;
-
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+        reportDate: "2026-02-28",
+        reportDateLabel: "February 28, 2026",
+        reportDatePrecision: "month",
+        reportPeriod: "February 2026",
+        reportPdfPath: "/attestations/2026_february.pdf",
+      },
+    ],
+    [
+      "uses the href date before link text publication dates",
+      `
+      <a href="/reports/reserve-report-2026-02-28.pdf">
+        Published March 4, 2026
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+        reportDate: "2026-02-28",
+        reportDateSource: "href",
+      },
+    ],
+    [
+      "prefers an explicit day in a URL over the surrounding month-year text",
+      `
+      <a href="/reports/XSGD%20Reserve%20Account%20Report%20(15%20Mar%202026)%20(1).pdf">
+        XSGD Attestation Report Mar 2026
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 2, 15) / 1000,
+        reportDate: "2026-03-15",
+        reportDateLabel: "March 15, 2026",
+        reportDatePrecision: "day",
+      },
+    ],
+    [
+      "parses day-first numeric report dates from PDF filenames before upload-path months",
+      `
+      <a href="https://issuer.example/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf">
+        Download as .pdf
+      </a>
+      <a href="https://issuer.example/wp-content/uploads/2025/07/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
+        Download as .pdf
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+        reportDate: "2026-03-31",
+        reportDateLabel: "March 31, 2026",
+        reportDatePrecision: "day",
+        reportDateSource: "href",
+      },
+    ],
+    [
+      "normalizes two-digit years in day-first numeric PDF filenames",
+      `
+      <a href="/reports/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
+        Download as .pdf
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2025, 5, 30) / 1000,
+        reportDate: "2025-06-30",
+        reportDateLabel: "June 30, 2025",
+        reportDatePrecision: "day",
+      },
+    ],
+    [
+      "parses compact YYYYMMDD report dates in PDF filenames",
+      `
+      <a href="https://action.ripio.com/hubfs/2025/wFIAT/ATTESTATION/31_12_2025__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+        reportDate: "2026-03-31",
+        reportDateLabel: "March 31, 2026",
+        reportDatePrecision: "day",
+        reportDateSource: "href",
+        reportPdfPath: "/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
+      },
+    ],
+  ] as const)("%s", (_name, html, expectedMetadata) => {
     const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
-      reportDate: "2026-02-28",
-      reportDateLabel: "February 28, 2026",
-      reportDatePrecision: "month",
-      reportPeriod: "February 2026",
-      reportPdfPath: "/attestations/2026_february.pdf",
-    });
+    expect(result.metadata).toMatchObject(expectedMetadata);
   });
 
   it("falls back to link text when the PDF href itself is not dated", () => {
@@ -195,123 +282,38 @@ describe("adaptAttestationPdfIndex", () => {
     });
   });
 
-  it("uses the href date before link text publication dates", () => {
-    const html = `
-      <a href="/reports/reserve-report-2026-02-28.pdf">
-        Published March 4, 2026
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
-      reportDate: "2026-02-28",
-      reportDateSource: "href",
-    });
-  });
-
-  it("prefers an explicit day in a URL over the surrounding month-year text", () => {
-    const html = `
-      <a href="/reports/XSGD%20Reserve%20Account%20Report%20(15%20Mar%202026)%20(1).pdf">
-        XSGD Attestation Report Mar 2026
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 2, 15) / 1000,
-      reportDate: "2026-03-15",
-      reportDateLabel: "March 15, 2026",
-      reportDatePrecision: "day",
-    });
-  });
-
-  it("parses day-first numeric report dates from PDF filenames before upload-path months", () => {
-    const html = `
-      <a href="https://issuer.example/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf">
-        Download as .pdf
-      </a>
-      <a href="https://issuer.example/wp-content/uploads/2025/07/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
-        Download as .pdf
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
-      reportDate: "2026-03-31",
-      reportDateLabel: "March 31, 2026",
-      reportDatePrecision: "day",
-      reportDateSource: "href",
-    });
-  });
-
-  it("normalizes two-digit years in day-first numeric PDF filenames", () => {
-    const html = `
-      <a href="/reports/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
-        Download as .pdf
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2025, 5, 30) / 1000,
-      reportDate: "2025-06-30",
-      reportDateLabel: "June 30, 2025",
-      reportDatePrecision: "day",
-    });
-  });
-
-  it("parses compact YYYYMMDD report dates in PDF filenames", () => {
-    const html = `
-      <a href="https://action.ripio.com/hubfs/2025/wFIAT/ATTESTATION/31_12_2025__wBRL__Token-Certification.pdf">
-        wBRL certification
-      </a>
-      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">
-        wBRL certification
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
-      reportDate: "2026-03-31",
-      reportDateLabel: "March 31, 2026",
-      reportDatePrecision: "day",
-      reportDateSource: "href",
-      reportPdfPath: "/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
-    });
-  });
-
   it.each([wars, wbrl, wcop, wmxn])("reads $id's reviewed balance date rather than its upload folder", (coin) => {
     const config = coin.liveReservesConfig as LiveReservesConfig;
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
+    const report = params.reviewedReport!;
     const result = adaptAttestationPdfIndex(ripioJune.html, params, { indexUrl: ripioJune.sourceUrl });
+    const balanceDateMs = Date.parse(`${report.balanceDate}T00:00:00Z`);
+    // The published report date comes from the month.day.year filename in the
+    // reviewed URL; derive it so advancing the reviewed report does not need a
+    // literal edit here.
+    const numericDate = report.url.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+    expect(numericDate, "reviewed report URL carries a month.day.year date").not.toBeNull();
+    const reportDate = `${numericDate![3]}-${numericDate![1]}-${numericDate![2]}`;
 
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 5, 30) / 1000,
-      reportDate: "2026-06-30",
+      sourceTimestamp: balanceDateMs / 1000,
+      reportDate,
       reportDatePrecision: "day",
-      reportBalanceDate: "2026-06-30",
-      reportPdfUrl: params.reviewedReport!.url,
+      reportBalanceDate: report.balanceDate,
+      reportPdfUrl: report.url,
       freshnessMode: "verified",
     });
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).not.toHaveProperty("redemption");
     // Quarterly Ripio reports inherit the lagged-quarterly cap: 100 days after
-    // the June 30 balance date is a healthy cycle, 151 days is not.
+    // the reviewed balance date is a healthy cycle, 151 days is not.
     expect(config.scoring?.maxSourceAgeSec).toBeUndefined();
     const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, {
-      now: Date.UTC(2026, 9, 8) / 1000,
+      now: balanceDateMs / 1000 + 100 * 86_400,
     });
     expect(inCycle.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
     const validation = expectValidAdapterOutput("attestation-pdf-index", result, {
-      now: Date.UTC(2026, 10, 28) / 1000,
+      now: balanceDateMs / 1000 + 151 * 86_400,
     });
     expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
@@ -353,6 +355,20 @@ describe("adaptAttestationPdfIndex", () => {
     expect(expectValidAdapterOutput("attestation-pdf-index", result, {
       now: Date.UTC(2026, 9, 21) / 1000,
     }).warnings).toEqual([]);
+  });
+
+  it("dates the captured Supercoin September report from its reviewed balance date", () => {
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", zarsc.liveReservesConfig.params);
+    const result = adaptAttestationPdfIndex(ZARSC_SUPERCOIN_HTML, params, {
+      indexUrl: "https://www.supercoin.co.za/assurance-reports",
+    });
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.parse("2026-09-30T00:00:00Z") / 1000,
+      freshnessMode: "verified",
+      reportPdfUrl: "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ad8adcc2dde2a518e28202b_6ad8acbed517875aae5c68c9_ZARsc%2520Proof%2520of%2520Reserves%2520Report%2520(Agreed-Upon%2520Procedures)%2520-%2520Sept%2520Snapshot%25202026-09-30%25201400%2520UTC.pdf",
+      compositionSource: "configured-static-slices",
+    });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
   it("uses ZARP's reviewed September balances rather than the October report date", () => {
@@ -564,5 +580,20 @@ describe("fetchAttestationPdfIndexReserves", () => {
       new AbortController().signal,
     )).rejects.toThrow("layout-changed");
     expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects an oversized index page instead of parsing it", async () => {
+    const url = "https://issuer.example/transparency/index.html";
+    installAdapterNetwork({
+      html: {
+        [url]: { body: "x".repeat(1024 * 1024 + 1), headers: { "content-type": "text/html" } },
+      },
+    });
+
+    await expect(fetchAttestationPdfIndexReserves(
+      {} as StablecoinMeta,
+      buildConfig(url),
+      new AbortController().signal,
+    )).rejects.toThrow("Response body exceeded 1048576 bytes");
   });
 });

@@ -1,5 +1,5 @@
 import type { ChainRpcConfig } from "../chain-registry";
-import { logWorkerEventArgs } from "../structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../structured-log";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -14,6 +14,7 @@ import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { PriceValidationReferences } from "../price-validation";
 
 export const ETHEREUM_CHAIN = "ethereum";
@@ -229,6 +230,8 @@ export interface HistoricalPriceResolution {
 }
 
 export interface LivePriceContext {
+  /** Supply-only read of the previous publication; never set by live overrides. */
+  supplyPreviousPayloadParent?: boolean;
   chainRpcs?: Map<string, ChainRpcConfig>;
   assetsById: Map<string, PeggedAsset>;
   validationReferences?: PriceValidationReferences;
@@ -324,6 +327,30 @@ export type HistoricalBlockPriceResolver = (
   signal?: AbortSignal,
 ) => Promise<number | null>;
 
+export function decodeAddressWord(value: `0x${string}` | null): string | null {
+  if (!value || value.length < 66) return null;
+  return `0x${value.slice(26, 66)}`.toLowerCase();
+}
+
+export function decimalFromRaw(value: bigint, decimals: number): number {
+  const scale = 10n ** BigInt(decimals);
+  return Number(value / scale) + Number(value % scale) / Number(scale);
+}
+
+export function encodeIndexedCall(selector: string, index: number): string {
+  return `${selector}${encodeUint256(index)}`;
+}
+
+const USDC_QUOTE_DECIMALS = 6;
+
+/** Per-token price of a pool quote paid out in USDC; null unless finite and positive. */
+export function quoteUsdcPrice(outputRaw: bigint | null, inputTokens: number): number | null {
+  if (outputRaw == null || outputRaw <= 0n) return null;
+  const output = decimalFromRaw(outputRaw, USDC_QUOTE_DECIMALS);
+  const price = output / inputTokens;
+  return Number.isFinite(price) && price > 0 ? price : null;
+}
+
 export function decodeUint256WordBigInt(result: `0x${string}`, wordIndex = 0): bigint | null {
   const start = 2 + wordIndex * 64;
   const end = start + 64;
@@ -391,6 +418,7 @@ function resolveTrustedInheritedParent(
   asset: PeggedAsset,
   nowSec: number,
   options?: LiveParentTrustOptions,
+  maxAgeSec?: number,
 ): TrustedInheritedParentResult {
   const price = getFinitePositivePrice(asset);
   if (price == null) return { parent: null, untrustedReason: "parent-price-missing" };
@@ -455,6 +483,7 @@ function resolveTrustedInheritedParent(
     observedAtMode,
     nowSec,
     requireObservedAt: true,
+    maxAgeSec,
   });
   if (!freshness.accepted || freshness.observedAt == null) {
     return {
@@ -501,11 +530,26 @@ export function resolveTrustedOverrideParent(
     return null;
   }
 
+  const maxAgeSec = context.supplyPreviousPayloadParent
+    ? 2 * CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec : undefined;
   const { parent: trustedParent, untrustedReason } = resolveTrustedInheritedParent(
     parentAsset,
     Math.floor(Date.now() / 1000),
     options,
+    maxAgeSec,
   );
+  if (maxAgeSec != null) {
+    logWorkerEvent({
+      scope: "lib", level: "info", event: "supply-nav-parent-trust",
+      message: "Previous-payload NAV supply parent trust verdict",
+      metadata: {
+        parentId, accepted: trustedParent != null, reason: untrustedReason,
+        budget: "sync-stablecoins-previous-payload-supply-parent", maxAgeSec,
+        generation: "previous-payload", parentPriceSyncedAt: parentAsset.priceSyncedAt ?? null,
+        observedAt: parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null,
+      },
+    });
+  }
   if (!trustedParent) {
     context.lastUntrustedParent = { parentId, reason: untrustedReason ?? "untrusted" };
     logWorkerEventArgs("lib", "warn", untrustedParentMessage());

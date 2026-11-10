@@ -1,4 +1,5 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -31,6 +32,42 @@ import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { EvmV2ExecutionCandidate, SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 import { buildSolidlyV2ExecutionCandidate, enrichSolidlyV2ExecutionModels } from "./solidly-v2";
 import { enrichRaydiumStandardDiscoveryExecutionModels } from "./raydium-standard-discovery";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+
+/** Reuse this run's verified reserves; the target's own cached price never values its quote. */
+export function refreshUsdaV2Price(input: {
+  metrics: ReadonlyMap<string, SourcePoolGraph>;
+  sourceGenerationId: string;
+  nowSec: number;
+}) {
+  const pool = input.metrics.get("usda-alpha-partner")?.pools.find((row) =>
+    row.poolId === "bsc:0xde66f1b24002c1d743ad1ef13cd4b2474295a6f6");
+  const model = pool?.extra?.ammExecutionModel;
+  const capture = model?.source === "pancakeswap-v2" ? model.capture : undefined;
+  const fresh = (clock: number | undefined, budget: number) => Number.isSafeInteger(clock) &&
+    clock! > 0 && clock! <= input.nowSec && input.nowSec - clock! < budget;
+  if (!pool || model?.source !== "pancakeswap-v2" || model.invariant !== "constant-product" ||
+      model.trackedTokenIndex !== 0 || model.tokens.length !== 2 ||
+      capture?.sourceGenerationId !== input.sourceGenerationId || !fresh(capture.blockTimestamp, DEX_FRESHNESS_SEC)) {
+    return { status: "unavailable", reason: "capture-unavailable" } as const;
+  }
+  const [base, quote] = model.tokens;
+  if (base!.address !== "0x17eafd08994305d8ace37efb82f1523177ec70ee" || base!.decimals !== 18 ||
+      quote!.address !== "0x55d398326f99059ff775485246999027b3197955" || quote!.decimals !== 18 ||
+      quote!.trackedAssetId !== "usdt-tether" || quote!.referencePriceSource !== "tracked-market" ||
+      !quote!.referencePriceSourceId || !fresh(quote!.referencePriceObservedAt, DEPEG_PRIMARY_PRICE_MAX_AGE_SEC)) {
+    return { status: "unavailable", reason: "quote-unavailable" } as const;
+  }
+  const priceUsd = quote!.balance / base!.balance * quote!.referencePriceUsd;
+  const supportUsd = Math.min(pool.tvlUsd, 2 * quote!.balance * quote!.referencePriceUsd);
+  if (![base!.balance, quote!.balance, priceUsd, supportUsd].every((value) => Number.isFinite(value) && value > 0) ||
+      supportUsd < DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
+    return { status: "unavailable", reason: "insufficient-support" } as const;
+  }
+  const observedAt = Math.min(capture.blockTimestamp, quote!.referencePriceObservedAt!);
+  Object.assign(pool, { price: priceUsd, priceObservedAt: observedAt, priceSource: "direct_api", priceEvidenceTvlUsd: supportUsd });
+  return { status: "observed", priceUsd, supportUsd, observedAt } as const;
+}
 
 const GET_PAIR_SELECTOR = "0xe6a43905";
 const TOKEN_0_SELECTOR = "0x0dfe1681";
@@ -396,12 +433,12 @@ async function enrichDeployment(input: {
     freshnessFailureReason: "stale-observation",
     fetchBlockNumber: input.dependencies.fetchBlockNumber,
     fetchBlockHeader: input.dependencies.fetchBlockHeader,
-    verifyDeployment: async ({ blockNumber }) => {
+    verifyDeployment: async ({ blockNumber, rpcOptions: captureRpcOptions }) => {
       const factoryCode = await input.dependencies.fetchCodeAtBlock(
         input.deployment.chain,
         input.deployment.factoryAddress,
         blockNumber,
-        rpcOptions,
+        captureRpcOptions,
       );
       if (
         factoryCode == null ||
@@ -412,7 +449,7 @@ async function enrichDeployment(input: {
       }
       return { ok: true };
     },
-    buildCalls: async ({ blockNumber, header }) => {
+    buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
       const actions: Array<() => void> = [];
       const gate = (references: readonly CandidateReference[], reason: V2GateReason) => {
         for (const reference of references) actions.push(() => gateReference(reference, reason));
@@ -447,7 +484,7 @@ async function enrichDeployment(input: {
           input.deployment.chain,
           poolCalls,
           blockNumber,
-          rpcOptions,
+          captureRpcOptions,
         );
         if (!rawResults) {
           // Request-level transport failure: nothing was observed for this

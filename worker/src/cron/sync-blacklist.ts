@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { materializeBlacklistGapMetrics } from "../lib/blacklist-gaps";
 import { materializeBlacklistSummarySnapshot } from "../lib/blacklist-summary-service";
+import { captureBlacklistSummaryFence } from "../lib/blacklist-cache-invalidation";
 import { type RateLimitedFetch, createRateLimiter } from "../lib/evm-logs";
 import { type ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
@@ -25,6 +26,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
 import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, scanBlacklistConfigs } from "./blacklist/config-scan";
 import type { DwellirNativeCapability } from "../lib/dwellir-native";
+import { refreshBlacklistAmountRepairQueue } from "../lib/blacklist/amount-repair-queue";
 import { reconcileCurrentBalanceDebt } from "../lib/blacklist/current-balance-debt";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
@@ -94,6 +96,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     minimumConfigWindowMs: 0,
   };
   const budget = runBudget.subrequestBudget;
+  const summaryFence = await captureBlacklistSummaryFence(db);
   const scan = await scanBlacklistConfigs({
     db,
     etherscanApiKey,
@@ -132,6 +135,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
   let producerSnapshotError: string | null = null;
+  let producerSnapshotReason: "superseded" | null = null;
   // Null until a stage returns: a throw or an admission skip is not observed zero work.
   let amountBackfill: BlacklistAmountBackfillResult | null = null;
   let tronAmountBackfill: TronAmountBackfillResult | null = null;
@@ -140,6 +144,16 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let tronOrderRepair: RepairStageOutcome = REPAIR_OK;
   let tronAmountRepair: RepairStageOutcome = REPAIR_OK;
   let debtRepair: RepairStageOutcome = REPAIR_OK;
+  // Amount-gap rows this run inserted must reach the durable repair queue even
+  // when the maintenance tail loses its window to scan overruns, circuits or
+  // budgets: queue admission is bookkeeping, not a provider repair attempt.
+  // Without it, a skipped tail leaves zero-attempt events absent from the
+  // queue the repair lane and the operator runbook read.
+  try {
+    await refreshBlacklistAmountRepairQueue(db, Math.floor(Date.now() / 1000));
+  } catch (err) {
+    logWorkerEventArgs("handler", "warn", "[sync-blacklist] Amount repair queue refresh failed:", err);
+  }
 
   // Historical amount repair and Tron freeze-amount replay are maintenance work.
   // They run only after every admissible event source has had its turn. A short,
@@ -199,7 +213,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         budget,
         signal,
         pagesFetched: { count: 0 },
-      }, maintenanceRunBudget);
+      }, maintenanceRunBudget, summaryFence);
       tronOrderResolved = true;
     } catch (err) {
       tronOrderRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
@@ -293,8 +307,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           chainName: state.config.chain.chainName,
           lastSucceededAt: state.lastSucceededAt,
         }));
-      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt, behindConfigs);
+      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt, behindConfigs, summaryFence);
       producerSummarySnapshot = summarySnapshot.written;
+      producerSnapshotReason = summarySnapshot.reason ?? null;
     } catch (err) {
       producerSnapshotError = err instanceof Error ? err.name : "UnknownError";
       await reportCronProgress(
@@ -316,6 +331,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
 
   // Final status: publication and repair throws raise ok to degraded, never lower error.
   const failureReasons = [
+    ...(producerSnapshotReason != null ? [producerSnapshotReason] : []),
     ...(producerSnapshotError != null ? ["blacklist-snapshot-publication-failed"] : []),
     ...(amountRepair.outcome === "failed" ? ["blacklist-evm-amount-repair-failed"] : []),
     ...(tronOrderRepair.outcome === "failed" ? ["blacklist-tron-order-repair-failed"] : []),
@@ -444,10 +460,12 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
         currentBalanceCacheSkippedDueBudget: counters.currentBalanceCacheCounters.skippedDueBudget,
         currentBalanceCacheBudgetExhausted: counters.currentBalanceCacheCounters.budgetExhausted,
+        currentBalanceCacheDeferredToDebt: counters.currentBalanceCacheCounters.deferredToDebt,
         producerGapMetricSnapshots,
         producerSummarySnapshot,
         producerSnapshotSkipped,
         producerSnapshotError,
+        producerSnapshotReason,
         producerSnapshotWindowMs: BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS,
         producerSnapshotWindowUnavailable,
       }),

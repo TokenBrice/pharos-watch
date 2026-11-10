@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import * as redemptionBackstops from "@shared/lib/redemption-backstops";
@@ -32,6 +32,10 @@ import type { ExitExecutionModelReview } from "@shared/types/exit-route";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { buildRedemptionBackstopsSnapshot, loadRedemptionBackstopSnapshot, upsertRedemptionBackstopSnapshots } from "../redemption-backstops-store";
+import { buildRedemptionBackstopEntry as buildEntryForMergedCases } from "../redemption-backstop/sources";
+import { getRedemptionBackstopConfig as getRedemptionBackstopConfigForCostTests, type RedemptionBackstopConfig, type RedemptionCostModel } from "@shared/lib/redemption-backstops";
+import { mergeRedemptionRouteStatus } from "../redemption-backstop/route-status";
+import { resolveBoundedFeeScore, resolveCostScenarioScores, resolveRedemptionStaticFields } from "../redemption-backstop/cost";
 
 const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock, observeExecutableRedemptionRouteMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
@@ -121,6 +125,14 @@ describe("buildRedemptionBackstopEntry", () => {
     dexScore,
     nowSec: now,
     options: { exitExecutionReviews: [], ...options },
+  });
+  const directObservation = (overrides: Partial<ExecutableRedemptionObservation> = {}): ExecutableRedemptionObservation => ({
+    capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
+    outputAssetKeys: ["usdc-circle"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
+    freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
+    routeStatusReason: "Pinned controller", holderEligibility: "any-holder", feeBps: 0,
+    allInFeeBps: 1, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
+    sourceUrls: ["https://www.usdfr.com/"], diagnostics: {}, ...overrides,
   });
   it("persists a withheld stale execution price leg and exposes its exit coverage reason", async () => {
     const stablecoinId = "usdc-circle";
@@ -440,14 +452,7 @@ describe("buildRedemptionBackstopEntry", () => {
     { keys: ["usdc-circle", "usdc-circle"], accepted: false },
     { keys: ["usdc-circle"], accepted: true },
   ])("applies exact-output admission to observer favorable terms ($keys)", async ({ keys, accepted }) => {
-    const direct: ExecutableRedemptionObservation = {
-      capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
-      outputAssetKeys: ["usdc-circle"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
-      routeStatusReason: "Pinned controller", holderEligibility: "any-holder", feeBps: 10,
-      allInFeeBps: 10, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
-      sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
-    };
+    const direct: ExecutableRedemptionObservation = directObservation({ feeBps: 10, allInFeeBps: 10 });
     Object.assign(direct, { outputAssetKeys: keys });
     const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
       executableRedemptionObservation: direct,
@@ -483,14 +488,7 @@ describe("buildRedemptionBackstopEntry", () => {
   });
 
   it("retains the exact observer's independently observed pause when payout terms are rejected", async () => {
-    const direct: ExecutableRedemptionObservation = {
-      capacityRaw: 0n, capacitySource: "forest-road-controller", capacityState: "closed",
-      outputAssetKeys: ["usdt-tether"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain", routeStatus: "paused", routeStatusSource: "onchain",
-      routeStatusReason: "Pinned controller pause", holderEligibility: "any-holder", feeBps: 10,
-      allInFeeBps: 10, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
-      sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
-    };
+    const direct: ExecutableRedemptionObservation = directObservation({ capacityRaw: 0n, capacityState: "closed", outputAssetKeys: ["usdt-tether"], routeStatus: "paused", routeStatusReason: "Pinned controller pause", feeBps: 10, allInFeeBps: 10 });
     const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
       executableRedemptionObservation: direct,
     });
@@ -505,15 +503,7 @@ describe("buildRedemptionBackstopEntry", () => {
 
   it.each(["stale", "wrong-output", "unvalued", "unknown-all-in"] as const)(
     "keeps registered USDfr %s observation unavailable without borrowing reserve or supply capacity", async (reason) => {
-      const direct: ExecutableRedemptionObservation = {
-        capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
-        outputAssetKeys: reason === "wrong-output" ? ["usdt-tether"] : ["usdc-circle"],
-        underlyingDecimals: 6, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
-        routeStatus: "open", routeStatusSource: "onchain", routeStatusReason: "Pinned controller",
-        holderEligibility: "any-holder", feeBps: 0, allInFeeBps: reason === "unknown-all-in" ? null : 1,
-        settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: reason === "stale" ? now - 601 : now,
-        sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
-      };
+      const direct: ExecutableRedemptionObservation = directObservation({ outputAssetKeys: reason === "wrong-output" ? ["usdt-tether"] : ["usdc-circle"], allInFeeBps: reason === "unknown-all-in" ? null : 1, sourceTimestamp: reason === "stale" ? now - 601 : now });
       const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
         executableRedemptionObservation: direct,
         executableObserverValuation: reason === "unvalued" ? null : {
@@ -541,14 +531,7 @@ describe("buildRedemptionBackstopEntry", () => {
     [now - 1, now - 1_801, false], [now - 1, now + 1, false],
   ] as const)("preserves the original quote clock and rejects stale/future quotes or cache generations (%s/%s)",
     async (updatedAt, quoteObservedAt, admitted) => {
-    const direct: ExecutableRedemptionObservation = {
-      capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
-      outputAssetKeys: ["usdc-circle"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
-      routeStatusReason: "Pinned controller", holderEligibility: "any-holder", feeBps: 0,
-      allInFeeBps: 1, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
-      sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
-    };
+    const direct: ExecutableRedemptionObservation = directObservation();
     const resolver = vi.spyOn(redemptionCapacity, "resolveRedemptionCapacity");
     try {
       const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
@@ -1097,121 +1080,44 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacityProfile?.eventualUsd).toBeUndefined();
   });
 
-  it("publishes reviewed queued settlement and a zero headline for eEARN-style measured incapacity", async () => {
-    const entry = await buildEntry(
-      "lusd-liquity",
-      route({
-        settlementModel: "atomic",
-        executionModel: "rules-based-nav",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        v9RouteReviewTerms: { settlementModel: "queued" },
+  it.each([
+    { name: "publishes reviewed queued settlement and a zero headline for eEARN-style measured incapacity",
+      redemption: {}, expected: { resolutionState: "resolved", score: 0, capacityScore: 0,
+        settlementModel: "queued", settlementScore: 20, queueEnabled: true },
+      cap: "zero-executable-capacity" },
+    { name: "leaves eEARN-style unproven settlement capacity unrated while retaining the queued trace",
+      redemption: { settlementBoundUnproven: true, routeStatus: "open", routeStatusSource: "onchain" },
+      expected: { resolutionState: "missing-capacity", score: null, capacityScore: null }, cap: null },
+    { name: "keeps a paused flagged queue on the measured-zero path instead of the bounded gap",
+      redemption: { settlementBoundUnproven: true, routeStatus: "paused", routeStatusSource: "onchain",
+        routeStatusReason: "Withdrawals are paused onchain" },
+      expected: { routeStatus: "paused", score: null }, cap: "live-route-status-impairment" },
+  ])("$name", async ({ redemption, expected, cap }) => {
+    const entry = await buildEntry("lusd-liquity", route({
+      settlementModel: "atomic", executionModel: "rules-based-nav",
+      capacityModel: { kind: "reserve-sync-metadata" }, v9RouteReviewTerms: { settlementModel: "queued" },
+    }), 20_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        redemption: { capacityUsd: 0, capacityKind: "live-queue", freshnessKind: "same-run-onchain",
+          settlementDelaySec: 2_592_000, ...redemption },
       }),
-      20_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 0,
-            capacityKind: "live-queue",
-            freshnessKind: "same-run-onchain",
-            settlementDelaySec: 2_592_000,
-          },
-        }, { fetchedAt: now - 120 }),
-      },
-    );
-
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.score).toBe(0);
-    expect(entry.capacityScore).toBe(0);
-    expect(entry.capsApplied).toContain("zero-executable-capacity");
-    expect(entry.settlementModel).toBe("queued");
-    expect(entry.settlementScore).toBe(20);
-    expect(entry.queueEnabled).toBe(true);
-    expect(entry.eventualRedeemabilityScore).toBeNull();
-    expect(entry.capacityProfile?.exitRouteObservations?.[0]?.settlementHorizonSec).toBe(2_592_000);
-  });
-
-  it("leaves eEARN-style unproven settlement capacity unrated while retaining the queued trace", async () => {
-    const entry = await buildEntry(
-      "lusd-liquity",
-      route({
-        settlementModel: "atomic",
-        executionModel: "rules-based-nav",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        v9RouteReviewTerms: { settlementModel: "queued" },
-      }),
-      20_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 0,
-            capacityKind: "live-queue",
-            freshnessKind: "same-run-onchain",
-            settlementBoundUnproven: true,
-            settlementDelaySec: 2_592_000,
-            routeStatus: "open",
-            routeStatusSource: "onchain",
-          },
-        }, { fetchedAt: now - 120 }),
-      },
-    );
-
-    expect(entry.resolutionState).toBe("missing-capacity");
-    expect(entry.score).toBeNull();
-    expect(entry.capacityScore).toBeNull();
-    expect(entry.capsApplied).not.toContain("zero-executable-capacity");
-    expect(entry.eventualRedeemabilityScore).toBeNull();
-    expect(entry.capacityProfile).toMatchObject({
-      scoringUsd: null,
-      settlementBoundUnproven: true,
-      exitRouteObservations: [
-        {
-          settlementBoundUnproven: true,
-          scoreEligible: false,
-          settlementHorizonSec: 2_592_000,
-        },
-      ],
     });
-    expect(entry.capacityProfile?.exitRouteObservations?.[0]).not.toHaveProperty("capacityCurve");
-  });
-
-  it("keeps a paused flagged queue on the measured-zero path instead of the bounded gap", async () => {
-    const entry = await buildEntry(
-      "lusd-liquity",
-      route({
-        settlementModel: "atomic",
-        executionModel: "rules-based-nav",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        v9RouteReviewTerms: { settlementModel: "queued" },
-      }),
-      20_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 0,
-            capacityKind: "live-queue",
-            freshnessKind: "same-run-onchain",
-            settlementBoundUnproven: true,
-            settlementDelaySec: 2_592_000,
-            routeStatus: "paused",
-            routeStatusSource: "onchain",
-            routeStatusReason: "Withdrawals are paused onchain",
-          },
-        }, { fetchedAt: now - 120 }),
-      },
-    );
-
-    // A paused route's zero is the measured pause, not an evidence gap: the
-    // bounded-gap lane must not swallow a live impairment.
-    expect(entry.routeStatus).toBe("paused");
-    expect(entry.capacityProfile?.settlementBoundUnproven).toBe(true);
-    expect(entry.score).toBeNull();
-    expect(entry.capsApplied).toContain("live-route-status-impairment");
+    expect(entry).toMatchObject(expected);
+    if (cap) expect(entry.capsApplied).toContain(cap);
+    if (redemption.settlementBoundUnproven) expect(entry.capacityProfile?.settlementBoundUnproven).toBe(true);
+    if (redemption.routeStatus !== "paused") {
+      expect(entry.eventualRedeemabilityScore).toBeNull();
+      expect(entry.capacityProfile?.exitRouteObservations?.[0]?.settlementHorizonSec).toBe(2_592_000);
+    }
+    if (cap === null) {
+      expect(entry.capsApplied).not.toContain("zero-executable-capacity");
+      expect(entry.capacityProfile).toMatchObject({
+        scoringUsd: null, settlementBoundUnproven: true,
+        exitRouteObservations: [{ settlementBoundUnproven: true, scoreEligible: false, settlementHorizonSec: 2_592_000 }],
+      });
+      expect(entry.capacityProfile?.exitRouteObservations?.[0]).not.toHaveProperty("capacityCurve");
+    }
   });
 
   it("reuses pre-parsed live redemption metadata for capacity and fees", async () => {
@@ -1399,147 +1305,56 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.notes).toContain("Live reserve metadata lacks redeemable-capacity amount");
   });
 
-  it("propagates live route status from reserve metadata", async () => {
-    const entry = await buildEntry(
-      "cusd-cap",
-      route({
-        routeFamily: "basket-redeem",
-        executionModel: "deterministic-basket",
-        outputAssetType: "stable-basket",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
+  it.each([
+    { name: "propagates live route status from reserve metadata", id: "cusd-cap",
+      redemption: { routeStatus: "paused", routeStatusSource: "onchain",
+        routeStatusReason: "All vault assets are paused", routeStatusReviewedAt: "2026-04-15" },
+      expected: { routeStatus: "paused", routeStatusSource: "onchain",
+        routeStatusReason: "All vault assets are paused", routeStatusReviewedAt: "2026-04-15",
+        resolutionState: "impaired", score: null, modelConfidence: "low" }, impaired: true },
+    { name: "treats cohort-limited live route status as an impaired route", id: "cusd-cap",
+      redemption: { routeStatus: "cohort-limited", routeStatusSource: "protocol-api",
+        routeStatusReason: "Redemptions are limited to a reviewed cohort" },
+      expected: { routeStatus: "cohort-limited", routeStatusSource: "protocol-api",
+        resolutionState: "impaired", score: null }, impaired: true },
+    { name: "ignores live route status without source attribution", id: "cusd-cap",
+      redemption: { routeStatus: "paused", routeStatusReason: "All vault assets are paused" },
+      expected: { resolutionState: "resolved", routeStatus: "open", routeStatusSource: "static-config" }, impaired: false },
+    { name: "uses unsourced unknown live route status to suppress optimistic static open status", id: "test-coin",
+      redemption: { routeStatus: "unknown" },
+      expected: { resolutionState: "resolved", routeStatus: "unknown",
+        routeStatusSource: "static-config", modelConfidence: "low" }, impaired: false },
+  ])("$name", async ({ id, redemption, expected, impaired }) => {
+    const unknown = redemption.routeStatus === "unknown";
+    const entry = await buildEntry(id, route({
+      ...(unknown ? {} : { routeFamily: "basket-redeem", executionModel: "deterministic-basket", outputAssetType: "stable-basket" } as const),
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: redemption.routeStatus === "cohort-limited" ? { kind: "fee-bps", feeBps: 0 }
+        : { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
+      ...(redemption.routeStatus === "cohort-limited" ? {} : {
         reviewedAt: "2026-04-15",
-        docs: [{ label: "Cap vault", url: "https://docs.cap.app/concepts/vault" }],
+        docs: [{ label: unknown ? "Fixture route" : "Cap vault",
+          url: unknown ? "https://example.com/redemption" : "https://docs.cap.app/concepts/vault" }],
       }),
-      100_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("cusd-cap", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 10_000_000,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-            routeStatus: "paused",
-            routeStatusSource: "onchain",
-            routeStatusReason: "All vault assets are paused",
-            routeStatusReviewedAt: "2026-04-15",
-          },
-        }, { fetchedAt: now - 120, source: "cap-vault" }),
-      },
-    );
-
-    expect(entry.routeStatus).toBe("paused");
-    expect(entry.routeStatusSource).toBe("onchain");
-    expect(entry.routeStatusReason).toBe("All vault assets are paused");
-    expect(entry.routeStatusReviewedAt).toBe("2026-04-15");
-    expect(entry.resolutionState).toBe("impaired");
-    expect(entry.score).toBeNull();
-    expect(entry.modelConfidence).toBe("low");
-    expect(entry.capsApplied).toContain("live-route-status-impairment");
-  });
-
-  it("treats cohort-limited live route status as an impaired route", async () => {
-    const entry = await buildEntry(
-      "cusd-cap",
-      route({
-        routeFamily: "basket-redeem",
-        executionModel: "deterministic-basket",
-        outputAssetType: "stable-basket",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "fee-bps", feeBps: 0 },
-      }),
-      100_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("cusd-cap", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 10_000_000,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-            routeStatus: "cohort-limited",
-            routeStatusSource: "protocol-api",
-            routeStatusReason: "Redemptions are limited to a reviewed cohort",
-          },
-        }, { fetchedAt: now - 120, source: "cap-vault" }),
-      },
-    );
-
-    expect(entry.routeStatus).toBe("cohort-limited");
-    expect(entry.routeStatusSource).toBe("protocol-api");
-    expect(entry.resolutionState).toBe("impaired");
-    expect(entry.score).toBeNull();
-    expect(entry.capsApplied).toContain("live-route-status-impairment");
-  });
-
-  it("ignores live route status without source attribution", async () => {
-    const entry = await buildEntry(
-      "cusd-cap",
-      route({
-        routeFamily: "basket-redeem",
-        executionModel: "deterministic-basket",
-        outputAssetType: "stable-basket",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
-        reviewedAt: "2026-04-15",
-        docs: [{ label: "Cap vault", url: "https://docs.cap.app/concepts/vault" }],
-      }),
-      100_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("cusd-cap", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 10_000_000,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-            routeStatus: "paused",
-            routeStatusReason: "All vault assets are paused",
-          },
-        }, { fetchedAt: now - 120, source: "cap-vault" }),
-      },
-    );
-
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.routeStatus).toBe("open");
-    expect(entry.routeStatusSource).toBe("static-config");
-    expect(entry.notes).toContain("Live redemption route status omitted source attribution and was ignored");
-    expect(entry.capsApplied).not.toContain("live-route-status-impairment");
-  });
-
-  it("uses unsourced unknown live route status to suppress optimistic static open status", async () => {
-    const entry = await buildEntry(
-      "test-coin",
-      route({
-        capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
-        reviewedAt: "2026-04-15",
-        docs: [{ label: "Fixture route", url: "https://example.com/redemption" }],
-      }),
-      100_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("test-coin", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 10_000_000,
-            capacityKind: "live-proxy-validated",
-            freshnessKind: "same-run-api",
-            routeStatus: "unknown",
-          },
-        }, { fetchedAt: now - 120, source: "fixture" }),
-      },
-    );
-
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.routeStatus).toBe("unknown");
-    expect(entry.routeStatusSource).toBe("static-config");
-    expect(entry.modelConfidence).toBe("low");
-    expect(entry.confidenceDetails?.reasons).toContain(
-      "Route status is unknown without direct live telemetry or a documented capacity bound",
-    );
-    expect(entry.notes).toContain("Live redemption route status is unknown without source attribution");
+    }), 100_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot(id, {
+        freshnessMode: "not-applicable",
+        redemption: { capacityUsd: 10_000_000,
+          capacityKind: unknown ? "live-proxy-validated" : "live-direct-bounded",
+          freshnessKind: unknown ? "same-run-api" : "same-run-onchain", ...redemption },
+      }, { source: unknown ? "fixture" : "cap-vault" }),
+    });
+    expect(entry).toMatchObject(expected);
+    if (impaired) expect(entry.capsApplied).toContain("live-route-status-impairment");
+    else if (unknown) {
+      expect(entry.confidenceDetails?.reasons).toContain(
+        "Route status is unknown without direct live telemetry or a documented capacity bound",
+      );
+      expect(entry.notes).toContain("Live redemption route status is unknown without source attribution");
+    } else {
+      expect(entry.notes).toContain("Live redemption route status omitted source attribution and was ignored");
+      expect(entry.capsApplied).not.toContain("live-route-status-impairment");
+    }
   });
 
   it.each(liveDirectCoinCases)(
@@ -1784,92 +1599,36 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.score).toBeNull();
   });
 
-  it("keeps strong live-direct routes scoreable during severe active depegs", async () => {
-    const entry = await buildEntry(
-      "zchf-frankencoin",
-      route({
-        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
-        costModel: { kind: "fee-bps", feeBps: 0 },
+  it.each([false, true])("evaluates the severe-depeg exemption against final capacity (stale=%s)", async (stale) => {
+    const observedAt = now - (stale ? 7_200 : 120);
+    const entry = await buildEntry("zchf-frankencoin", route({
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+    }), 50_000_000, 33, {
+      reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
+        sourceTimestamp: observedAt,
+        redemption: { capacityUsd: 5_000_000, capacityRatioOfSupply: 0.1,
+          capacityKind: "live-direct", freshnessKind: "same-run-onchain", sourceTimestamp: observedAt,
+          routeStatus: "open", routeStatusSource: "onchain" },
+      }, { fetchedAt: observedAt }),
+      routeAvailability: severeMarketEvidence({
+        routeStatusReason: "Active severe depeg of 3000 bps started 2026-04-14; static redemption route requires current live-open evidence before it can score.",
+        routeStatusReviewedAt: "2026-04-14", activeDepegStartedAt: now,
       }),
-      50_000_000,
-      33,
-      {
-        reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
-          sourceTimestamp: now - 120,
-          redemption: {
-            capacityUsd: 5_000_000,
-            capacityRatioOfSupply: 0.1,
-            capacityKind: "live-direct",
-            freshnessKind: "same-run-onchain",
-            sourceTimestamp: now - 120,
-            routeStatus: "open",
-            routeStatusSource: "onchain",
-          },
-        }, { fetchedAt: now - 120 }),
-        routeAvailability: severeMarketEvidence({
-          routeStatusReason:
-            "Active severe depeg of 3000 bps started 2026-04-14; static redemption route requires current live-open evidence before it can score.",
-          routeStatusReviewedAt: "2026-04-14",
-          activeDepegStartedAt: now,
-        }),
-      },
-    );
-
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.score).not.toBeNull();
-    expect(entry.routeStatus).toBe("open");
-    expect(entry.routeStatusSource).toBe("onchain");
-    expect(entry.modelConfidence).toBe("high");
-    expect(entry.capsApplied).not.toContain("market-implied-depeg-impairment");
-  });
-
-  it("evaluates the severe-depeg exemption against the final downgraded capacity state", async () => {
-    // Same direct-telemetry adapter and severe depeg as the strong live-direct
-    // exemption test above, but the live snapshot is stale, so capacity
-    // resolution downgrades the route to the configured heuristic fallback.
-    // The exemption must be asserted against that FINAL state and not the
-    // optimistic live-direct configuration, so the route is impaired.
-    const entry = await buildEntry(
-      "zchf-frankencoin",
-      route({
-        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
-        costModel: { kind: "fee-bps", feeBps: 0 },
-      }),
-      50_000_000,
-      33,
-      {
-        reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
-          sourceTimestamp: now - 7_200,
-          redemption: {
-            capacityUsd: 5_000_000,
-            capacityRatioOfSupply: 0.1,
-            capacityKind: "live-direct",
-            freshnessKind: "same-run-onchain",
-            sourceTimestamp: now - 7_200,
-            routeStatus: "open",
-            routeStatusSource: "onchain",
-          },
-        }, { fetchedAt: now - 7_200 }),
-        routeAvailability: severeMarketEvidence({
-          routeStatusReason:
-            "Active severe depeg of 3000 bps started 2026-04-14; static redemption route requires current live-open evidence before it can score.",
-          routeStatusReviewedAt: "2026-04-14",
-          activeDepegStartedAt: now,
-        }),
-      },
-    );
-
-    // Capacity resolution downgraded the live-direct route to the fallback
-    expect(entry.provider).toBe("reserve-sync-fallback");
-    expect(entry.sourceMode).toBe("estimated");
-    expect(entry.capacityConfidence).toBe("heuristic");
-    // ...so the strong live-direct severe-depeg exemption does not apply
-    expect(entry.resolutionState).toBe("impaired");
-    expect(entry.score).toBeNull();
-    expect(entry.routeStatus).toBe("degraded");
-    expect(entry.routeStatusSource).toBe("market-implied");
-    expect(entry.modelConfidence).toBe("low");
-    expect(entry.capsApplied).toContain("market-implied-depeg-impairment");
+    });
+    expect(entry).toMatchObject({
+      resolutionState: stale ? "impaired" : "resolved", routeStatus: stale ? "degraded" : "open",
+      routeStatusSource: stale ? "market-implied" : "onchain", modelConfidence: stale ? "low" : "high",
+    });
+    if (stale) {
+      expect(entry).toMatchObject({
+        provider: "reserve-sync-fallback", sourceMode: "estimated", capacityConfidence: "heuristic", score: null,
+      });
+      expect(entry.capsApplied).toContain("market-implied-depeg-impairment");
+    } else {
+      expect(entry.score).not.toBeNull();
+      expect(entry.capsApplied).not.toContain("market-implied-depeg-impairment");
+    }
   });
 
   it("derives modelConfidence correctly for resolved entries", async () => {
@@ -1949,92 +1708,34 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacityRejectionReason).toBe("stale");
   });
 
-  it("keeps GHO resolved when the only live warning is aggregated residual issuance", async () => {
-    const entry = await buildEntry(
-      "gho-aave",
-      route({
-        routeFamily: "psm-swap",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "fee-bps", feeBps: 10 },
+  it.each([false, true])("admits only the GHO residual-issuance warning (blocking=%s)", async (blocking) => {
+    const entry = await buildEntry("gho-aave", route({
+      routeFamily: "psm-swap", capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "fee-bps", feeBps: 10 },
+    }), 584_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot("gho-aave", {
+        redemption: { capacityUsd: 212_370_000, capacityRatioOfSupply: 212_370_000 / 584_000_000,
+          ...(blocking ? {} : { feeBps: 10 }) },
+        freshnessMode: "not-applicable",
+      }, {
+        source: "gho", warningCount: blocking ? 2 : 1,
+        warnings: [
+          { code: "aggregated-residual-issuance",
+            message: "Residual GHO issuance outside tracked GSM backing remains aggregated (63.63%)",
+            severity: "warning", effect: "degraded" },
+          ...(blocking ? [{ code: "tracked-gsm-read-failed", message: "Tracked GSM module could not be read",
+            severity: "warning", effect: "degraded" } as const] : []),
+        ],
+        syncStatus: "degraded",
       }),
-      584_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("gho-aave", {
-          redemption: {
-            capacityUsd: 212_370_000,
-            capacityRatioOfSupply: 212_370_000 / 584_000_000,
-            feeBps: 10,
-          },
-          freshnessMode: "not-applicable",
-        }, {
-          fetchedAt: now - 120,
-          source: "gho",
-          warningCount: 1,
-          warnings: [
-            {
-              code: "aggregated-residual-issuance",
-              message: "Residual GHO issuance outside tracked GSM backing remains aggregated (63.63%)",
-              severity: "warning",
-              effect: "degraded",
-            },
-          ],
-          syncStatus: "degraded",
-        }),
-      },
-    );
-
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.provider).toBe("reserve-sync-metadata");
-    expect(entry.capacityConfidence).toBe("live-direct");
-    expect(entry.immediateCapacityUsd).toBe(212_370_000);
-    expect(entry.notes).toContain(
-      "Using tracked live GSM backing as a lower-bound redemption capacity despite aggregated residual issuance outside configured GSM modules",
-    );
-  });
-
-  it("still blocks GHO when degraded live metadata includes non-allowlisted warnings", async () => {
-    const entry = await buildEntry(
-      "gho-aave",
-      route({
-        routeFamily: "psm-swap",
-        capacityModel: { kind: "reserve-sync-metadata" },
-        costModel: { kind: "fee-bps", feeBps: 10 },
-      }),
-      584_000_000,
-      null,
-      {
-        reserveSnapshotMetadata: liveSnapshot("gho-aave", {
-          redemption: {
-            capacityUsd: 212_370_000,
-            capacityRatioOfSupply: 212_370_000 / 584_000_000,
-          },
-          freshnessMode: "not-applicable",
-        }, {
-          fetchedAt: now - 120,
-          source: "gho",
-          warningCount: 2,
-          warnings: [
-            {
-              code: "aggregated-residual-issuance",
-              message: "Residual GHO issuance outside tracked GSM backing remains aggregated (63.63%)",
-              severity: "warning",
-              effect: "degraded",
-            },
-            {
-              code: "tracked-gsm-read-failed",
-              message: "Tracked GSM module could not be read",
-              severity: "warning",
-              effect: "degraded",
-            },
-          ],
-          syncStatus: "degraded",
-        }),
-      },
-    );
-
-    expect(entry.resolutionState).toBe("missing-capacity");
-    expect(entry.notes).toContain("Live reserve metadata degraded; latest snapshot not in ok state");
+    });
+    expect(entry.resolutionState).toBe(blocking ? "missing-capacity" : "resolved");
+    expect(entry.notes).toContain(blocking
+      ? "Live reserve metadata degraded; latest snapshot not in ok state"
+      : "Using tracked live GSM backing as a lower-bound redemption capacity despite aggregated residual issuance outside configured GSM modules");
+    if (!blocking) expect(entry).toMatchObject({
+      provider: "reserve-sync-metadata", capacityConfidence: "live-direct", immediateCapacityUsd: 212_370_000,
+    });
   });
 
   it("uses fresh live redemption fee telemetry for fixed-fee routes", async () => {
@@ -2194,5 +1895,311 @@ describe("buildRedemptionBackstopEntry", () => {
     delete acceptedLegacy.capacityProfile?.exitRouteObservations;
     delete baselineLegacy.capacityProfile?.exitRouteObservations;
     expect(acceptedLegacy).toEqual(baselineLegacy);
+  });
+});
+const staticOpen = {
+  routeStatus: "open" as const,
+  routeStatusSource: "static-config" as const,
+};
+
+describe("mergeRedemptionRouteStatus", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("constructs the merged entry from supplied metadata without external I/O", async () => {
+    const fetchMock = vi.fn(() => { throw new Error("Unexpected fetch"); });
+    vi.stubGlobal("fetch", fetchMock);
+    const db = mockD1Strict([]);
+    const now = 1_700_000_000;
+    const entry = await buildEntryForMergedCases(db, "zchf-frankencoin", route({
+      capacityModel: { kind: "reserve-sync-metadata" },
+    }), 50_000_000, null, now, {
+      reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
+        redemption: {
+          capacityUsd: 5_000_000,
+          capacityKind: "live-direct",
+          freshnessKind: "same-run-onchain",
+          sourceTimestamp: now - 120,
+          routeStatus: "paused",
+          routeStatusSource: "onchain",
+        },
+      }, { fetchedAt: now - 120 }),
+    });
+    expect(entry).toMatchObject({
+      routeStatus: "paused", routeStatusSource: "onchain", resolutionState: "impaired", score: null,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("falls back to static status when no live route status is present", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: {
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
+      },
+      allowSevereMarketOpenException: false,
+    });
+
+    expect(result.routeStatus).toBe("unknown");
+    expect(result.routeStatusSource).toBe("static-config");
+    expect(result.impaired).toBe(false);
+    expect(result.notes).toEqual([]);
+  });
+
+  it.each([null, 100_000_000])("withholds the reviewed ordinary yUSD suspension with supply %s and no reserve read", async (supplyUsd) => {
+    const db = mockD1Strict([]);
+    const config = getRedemptionBackstopConfig("yusd-yieldfi")!;
+    const entry = await buildEntryForMergedCases(
+      db, "yusd-yieldfi", config, supplyUsd, null, Date.UTC(2026, 9, 12) / 1_000,
+      { reserveSnapshotMetadata: null, routeAvailability: severeMarketEvidence({ routeStatus: "unknown" }) },
+    );
+    expect(entry).toMatchObject({
+      routeStatus: "suspended", routeStatusSource: "operator-notice",
+      routeStatusReviewedAt: "2026-10-11", resolutionState: "impaired",
+      score: null, capacityScore: null, immediateCapacityUsd: null,
+      capsApplied: ["reviewed-route-suspension"],
+    });
+    if (supplyUsd == null) {
+      expect(entry.capacityProfile).toBeUndefined();
+    } else {
+      expect(entry.capacityProfile).toMatchObject({ immediateUsd: null, eventualUsd: null, scoringUsd: null });
+    }
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it.each([
+    { supplyUsd: null, marketStatus: "unknown" as const },
+    { supplyUsd: 1_000_000, marketStatus: "degraded" as const },
+  ])("withholds EURR's suspended issuer channel with $marketStatus market evidence", async ({ supplyUsd, marketStatus }) => {
+    const db = mockD1Strict([]);
+    const config = getRedemptionBackstopConfig("eurr-stablr")!;
+    const entry = await buildEntryForMergedCases(
+      db, "eurr-stablr", config, supplyUsd, null, Date.UTC(2026, 9, 8) / 1_000,
+      { reserveSnapshotMetadata: null, routeAvailability: severeMarketEvidence({ routeStatus: marketStatus }) },
+    );
+    expect(entry).toMatchObject({
+      routeStatus: "suspended",
+      routeStatusSource: "operator-notice",
+      routeStatusReviewedAt: "2026-10-07",
+      resolutionState: "impaired",
+      score: null,
+      capacityScore: null,
+      immediateCapacityUsd: null,
+      capsApplied: ["reviewed-route-suspension"],
+    });
+    if (supplyUsd == null) {
+      expect(entry.capacityProfile).toBeUndefined();
+    } else {
+      expect(entry.capacityProfile).toMatchObject({ immediateUsd: null, eventualUsd: null, scoringUsd: null });
+    }
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("impairs live-open evidence during severe market impairment when the route is not strong live-direct", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      liveEvidence: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+      severeMarketImplied: severeMarketEvidence(),
+      allowSevereMarketOpenException: false,
+    });
+
+    expect(result.routeStatus).toBe("degraded");
+    expect(result.routeStatusSource).toBe("market-implied");
+    expect(result.impaired).toBe(true);
+    expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
+  });
+
+  it("honors a producer-approved strong live-direct exception", () => {
+    // The entry builder sets this flag only when the final live-direct capacity
+    // state also carries explicit live-open status.
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      severeMarketImplied: severeMarketEvidence(),
+      allowSevereMarketOpenException: true,
+    });
+
+    expect(result.routeStatus).toBe("open");
+    expect(result.routeStatusSource).toBe("static-config");
+    expect(result.impaired).toBe(false);
+    expect(result.capsApplied).toEqual([]);
+  });
+
+  it.each([1, undefined])("does not exempt strong live-direct routes from output dependency impairment (share %s)", (share) => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      liveEvidence: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+      severeMarketImplied: severeMarketEvidence({
+        routeStatusReason: "Output asset impairment",
+        outputImpairedDependencyId: "usdc-circle",
+        ...(share === undefined ? {} : { outputImpairedShare: share }),
+      }),
+      allowSevereMarketOpenException: true,
+    });
+
+    expect(result.routeStatus).toBe("degraded");
+    expect(result.routeStatusSource).toBe("market-implied");
+    expect(result.impaired).toBe(true);
+    expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
+  });
+});
+
+describe("resolveBoundedFeeScore", () => {
+  it.each([
+    [0, 100], [10, 100], [11, 80], [50, 80],
+    [51, 60], [100, 60], [101, 40], [500, 40],
+  ])("scores %s bps as %s", (feeBps, score) => {
+    expect(resolveBoundedFeeScore(feeBps)).toBe(score);
+  });
+});
+
+describe("resolveCostScenarioScores", () => {
+  it("makes high fixed network costs expensive for retail users", () => {
+    const scores = resolveCostScenarioScores(
+      {
+        kind: "fee-bps",
+        feeBps: 0,
+        gasOrBridgeCostUsd: 25,
+      },
+      0,
+    );
+
+    expect(scores?.retail).toBe(40);
+    expect(scores?.activeUser).toBe(80);
+    expect(scores?.institutional).toBe(100);
+  });
+
+  it("uses documented fee ranges for scenario scoring", () => {
+    const scores = resolveCostScenarioScores(
+      {
+        kind: "dynamic-or-unclear",
+        confidence: "formula",
+        feeBpsMin: 5,
+        feeBpsMax: 75,
+        feeDescription: "5-75 bps depending on utilization",
+      },
+      null,
+    );
+
+    expect(scores?.activeUser).toBe(60);
+    expect(scores?.institutional).toBe(60);
+  });
+});
+
+describe("fractional live fee precision", () => {
+  const scores = { accessScore: 100, settlementScore: 100, executionCertaintyScore: 100, outputAssetQualityScore: 100 };
+  const config = getRedemptionBackstopConfigForCostTests("rusd-reservoir")!;
+
+  describe.each([
+    { kind: "dynamic-or-unclear", confidence: "formula" },
+    { kind: "fee-bps", feeBps: 0 },
+  ] satisfies RedemptionCostModel[])("$kind", (costModel) => {
+    it.each([0.4, 10, 10.49, 50.49, 100.49])("preserves admitted %s bps in component and scenario scores", (feeBps) => {
+      const now = 1_797_120_000;
+      const fields = resolveRedemptionStaticFields(
+        "rusd-reservoir", { ...config, costModel }, scores, null, now,
+        { ...readRedemptionBackstopLiveMetadata("rusd-reservoir", null, now), canUseFee: true, redemptionFeeBps: feeBps },
+      );
+      const score = resolveBoundedFeeScore(feeBps);
+      expect(fields.selectedLiveFee).toBe(true);
+      expect(fields.feeBps).toBe(feeBps);
+      expect(fields.costScore).toBe(score);
+      expect(fields.costScenarioScores).toEqual({ retail: score, activeUser: score, institutional: score });
+    });
+  });
+});
+
+describe("component cost unavailable reasons", () => {
+  const now = Date.UTC(2026, 6, 13) / 1_000;
+  const scores = { accessScore: 100, settlementScore: 100, executionCertaintyScore: 100, outputAssetQualityScore: 100 };
+  const fiatReferences = {
+    clockSec: now,
+    pegDataById: {
+      captured: { pegCurrency: "EUR", pegReference: { valueUsd: 1.25, source: "fx" as const, contributorCount: 0, asOf: now } },
+    },
+  };
+  const baseConfig: RedemptionBackstopConfig = {
+    routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "atomic",
+    executionModel: "rules-based-nav", outputAssetType: "stable-single",
+    capacityModel: { kind: "fixed-usd", amountUsd: 10_000_000, confidence: "documented-bound" },
+    costModel: { kind: "fee-bps", feeBps: 0 },
+    docs: [{ label: "Synthetic terms", url: "https://example.com/terms", supports: ["fees"] }],
+    reviewedAt: "2026-07-01",
+  };
+
+  it.each([
+    { currency: "USD", bounded: false, withFx: false, reason: "redemption-cost-percentage-ceiling-absent" },
+    { currency: "EUR", bounded: false, withFx: true, reason: "redemption-cost-percentage-ceiling-absent" },
+    { currency: "EUR", bounded: false, withFx: false, reason: "redemption-cost-percentage-ceiling-absent" },
+    { currency: "EUR", bounded: true, withFx: false, reason: "redemption-cost-fiat-reference-unavailable" },
+    { currency: "EUR", bounded: true, withFx: true, reason: null },
+    { currency: "USD", bounded: true, withFx: false, reason: null },
+  ])("names the cause for $currency, bounded=$bounded, withFx=$withFx", ({ currency, bounded, withFx, reason }) => {
+    const costModel: RedemptionCostModel = {
+      kind: "dynamic-or-unclear", confidence: "formula",
+      feeBpsMin: 5,
+      ...(bounded ? { feeBpsMax: 10 } : {}),
+      feeComponents: [{ currency, terms: { flatAmount: 1 } }],
+    };
+    const fields = resolveRedemptionStaticFields(
+      "synthetic-fiat-issuer", { ...baseConfig, costModel }, scores, null, now, undefined,
+      withFx ? fiatReferences : undefined,
+    );
+    expect(fields.feeBps).toBeNull();
+    expect(fields.notes).toEqual(reason ? [reason] : []);
+    if (reason) {
+      expect(fields.costScenarioScores).toBeUndefined();
+      expect(fields.costScore).toBe(40);
+    } else {
+      expect(fields.costScenarioScores).toEqual({ retail: 80, activeUser: 80, institutional: 80 });
+      expect(fields.costScore).toBe(80);
+    }
+  });
+});
+
+describe("USSD BrandedCustodian fee", () => {
+  it("publishes the owner-settable redeemFee() as an unquantified formula cost", () => {
+    const config = getRedemptionBackstopConfigForCostTests("ussd-sonic-labs")!;
+    const fields = resolveRedemptionStaticFields("ussd-sonic-labs", config, {
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      outputAssetQualityScore: 100,
+    });
+
+    expect(fields).toMatchObject({
+      feeBps: null,
+      feeConfidence: "formula",
+      feeModelKind: "formula",
+      costScore: 60,
+    });
+    expect(fields.costScenarioScores).toBeUndefined();
+  });
+});
+
+describe("V8 compatibility", () => {
+  it("does not apply V9-only USDT route terms to legacy cost scenarios", () => {
+    const config = getRedemptionBackstopConfigForCostTests("usdt-tether")!;
+    const fields = resolveRedemptionStaticFields("usdt-tether", config, {
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      outputAssetQualityScore: 100,
+    });
+
+    expect(config.costModel).not.toHaveProperty("minFeeUsd");
+    expect(fields).toMatchObject({
+      costScore: 100,
+      feeBps: null,
+      costScenarioScores: {
+        retail: 100,
+        activeUser: 100,
+        institutional: 100,
+      },
+    });
   });
 });

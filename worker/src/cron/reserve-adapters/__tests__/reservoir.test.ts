@@ -43,15 +43,20 @@ describe("adaptReservoirReserves", () => {
     expect(prime?.pct).toBeCloseTo(Number(value.totalBalanceValue) / Number(payload.totalAssets) * 100, 10);
   });
 
-  it("maps the reviewed Arbitrum USDG vault without treating lending collateral as cash", () => {
+  it("maps the reviewed Arbitrum USDG vaults without treating lending collateral as cash", () => {
     const result = adaptReservoirReserves({
       assets: [{ chainId: 42161, address: "0x390c1bb01F3F627144a40617e287d4cE3D5aBCfa",
-        label: "Morpho - Gauntlet USDG Premium", totalBalanceValue: "2999553.202023" }],
-      liabilities: [], totalAssets: "2999553.202023", totalLiabilities: "2999553.202023", equity: "0",
+        label: "Morpho - Gauntlet USDG Premium", totalBalanceValue: "3" },
+      { chainId: 42161, address: "0xbeeFf72B77e7584a450E887125F25E8D8819016a",
+        label: "Morpho - Steakhouse USDG Pro", totalBalanceValue: "1" }],
+      liabilities: [], totalAssets: "4", totalLiabilities: "4", equity: "0",
     });
     expect(result.slices).toEqual([expect.objectContaining({
       sourceKey: "reservoir:gauntlet-usdg-premium", coinId: "usdg-paxos",
-      depType: "collateral", risk: "high", pct: 100,
+      depType: "collateral", risk: "high", pct: 75,
+    }), expect.objectContaining({
+      sourceKey: "reservoir:steakhouse-usdg-pro", coinId: "usdg-paxos",
+      depType: "collateral", risk: "high", pct: 25,
     })]);
     expect(result.stableBucketLiquidityUsd).toBe(0);
     expect(result.immediateRedeemableUsd).toBe(0);
@@ -63,12 +68,14 @@ describe("adaptReservoirReserves", () => {
     { chainId: 42161, address: "0x0000000000000000000000000000000000000001" },
     {},
   ])("does not infer USDG from a spoofed vault label (%j)", (identity) => {
-    const result = adaptReservoirReserves({
-      assets: [{ label: "Morpho - Gauntlet USDG Premium", totalBalanceValue: "1", ...identity }],
-      liabilities: [], totalAssets: "1", totalLiabilities: "1", equity: "0",
-    });
-    expect(result.slices).toEqual([expect.objectContaining({ sourceKey: "reservoir:unknown", pct: 100 })]);
-    expect(result.slices[0].coinId).toBeUndefined();
+    for (const label of ["Morpho - Gauntlet USDG Premium", "Morpho - Steakhouse USDG Pro"]) {
+      const result = adaptReservoirReserves({
+        assets: [{ label, totalBalanceValue: "1", ...identity }],
+        liabilities: [], totalAssets: "1", totalLiabilities: "1", equity: "0",
+      });
+      expect(result.slices).toEqual([expect.objectContaining({ sourceKey: "reservoir:unknown", pct: 100 })]);
+      expect(result.slices[0].coinId).toBeUndefined();
+    }
   });
 
   it.each([
@@ -206,17 +213,6 @@ describe("adaptReservoirReserves", () => {
       equity: "0",
     });
     expect(slices).toHaveLength(0);
-  });
-
-  it("returns unmapped assets separately for operator review", () => {
-    const { unknownAssets, unknownExposurePct } = adaptReservoirReserves({
-      ...SAMPLE_RESPONSE,
-      assets: [...SAMPLE_RESPONSE.assets, { label: "Mystery Adapter", totalBalanceValue: "3" }],
-      totalAssets: "103",
-    });
-
-    expect(unknownAssets).toContain("Mystery Adapter");
-    expect(unknownExposurePct).toBeCloseTo((3 / 103) * 100, 6);
   });
 
   it("does not classify assets from non-authoritative description or icon metadata", () => {

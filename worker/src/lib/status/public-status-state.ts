@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tryParseJson } from "../json-parse";
 import {
   applyPublicStatusHysteresis,
   getPublicComponentStateRank,
@@ -72,15 +73,6 @@ const PersistedTransitionSchema = z.object({
   components: z.array(PublicStatusTransitionComponentSchema),
 });
 
-function parseJson(text: string | null): unknown {
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
 export interface PublicStatusReconciliation {
   projection: PublicStatusProjection;
   persistenceSucceeded: boolean;
@@ -122,7 +114,7 @@ export async function reconcilePublicStatusState(
     return { projection: projectPublicStatus(health), persistenceSucceeded: false };
   }
 
-  const parsed = row ? PersistedStateSchema.safeParse(parseJson(row.causes_json)) : null;
+  const parsed = row ? PersistedStateSchema.safeParse(tryParseJson(row.causes_json)) : null;
   const previous = parsed?.success ? parsed.data : null;
   const previousById = new Map(previous?.components.map((component) => [component.id, component]) ?? []);
   const sinceMap: PublicComponentSinceMap = Object.fromEntries(
@@ -290,7 +282,7 @@ export async function listPublicStatusTransitions(
   ]);
   const results = rows.results ?? [];
   const transitions = results.slice(0, limit).map((row): PublicStatusTransition => {
-    const parsed = PersistedTransitionSchema.safeParse(parseJson(row.causes_json));
+    const parsed = PersistedTransitionSchema.safeParse(tryParseJson(row.causes_json));
     return {
       id: row.id,
       from: row.previous_status,
@@ -302,14 +294,14 @@ export async function listPublicStatusTransitions(
       ...(parsed.success ? { headline: parsed.data.headline, components: parsed.data.components } : {}),
     };
   });
-  const state = PersistedStateSchema.safeParse(parseJson(first?.state_json ?? null));
+  const state = PersistedStateSchema.safeParse(tryParseJson(first?.state_json ?? null));
   const componentHistoryStartedAt = state.success
     ? state.data.componentHistoryStartedAt ?? Object.fromEntries(
       state.data.components.flatMap((component) => first?.started_at == null ? [] : [[component.id, first.started_at]]),
     )
     : {};
   const hasMore = results.length > limit;
-  const boundaryState = PersistedTransitionSchema.safeParse(parseJson(boundaryRow?.causes_json ?? null));
+  const boundaryState = PersistedTransitionSchema.safeParse(tryParseJson(boundaryRow?.causes_json ?? null));
   const boundary = !hasMore && boundaryState.success && boundaryRow != null
     && Number.isFinite(boundaryRow.created_at) && boundaryRow.created_at >= 0 && boundaryRow.created_at <= from
     ? { at: boundaryRow.created_at, components: boundaryState.data.components }

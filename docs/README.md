@@ -4,7 +4,7 @@ Pharos documentation entry point. Code, schemas, registries and checked runtime 
 
 ## Start Here
 
-- [../README.md](../README.md) - repository overview, local setup, and deployment summary
+- [../README.md](../README.md) - repository overview, local setup, and contribution/security pointers
 - [process/agent-start-here.md](./process/agent-start-here.md) - canonical routing, harness workflow, and handoff guidance
 - [architecture.md](./architecture.md) - runtime boundaries, host model, and architectural decisions
 - [data-flow-map.md](./data-flow-map.md) - source-to-cron-to-API-to-page flow map
@@ -108,7 +108,7 @@ Historical Markdown timeline files are intentionally not maintained.
 - Keep temporary audits, calibration captures, screenshots, and handoffs under ignored `/agents/` paths.
 - Put repeatable operating policy in `docs/process/` and incident remediation in `docs/runbooks/`.
 - Runbook navigation is generated from curated `runbook` labels and applicability (`symptom`, `procedure`, or `reference`) on existing `docs`/`background`, selector `reading.local`/`contract`/`required`, and mapping `required` references in [doc-ownership.json](./doc-ownership.json). Metadata-preserving enumeration deduplicates repeated identical entries and rejects conflicting labels. Label each new incident page there and regenerate with `node --import tsx scripts/maintenance/generate-runbook-index.ts`; the generator rejects missing or stale coverage.
-- Reading selectors apply per input file, with default `docs` fallback; contract refs augment local refs and required refs bypass the six-ref cap. [`agent:route`](./process/agent-start-here.md#2-route-a-task) accepts only `--context=auto|contract`; mode and selectors do not change checks. Enforced context totals union root/scoped/primary reading per file, reporting retained-newline UTF-8 bytes, lines and `ceil(chars/4)` approximate tokens; background, source/tests and skills are excluded. Over-budget routes fail without dropping required refs; use bounded owner sections, reviewed ceiling changes or smaller route groups, while keeping the full affected-file set in check planning.
+- Reading selectors, `--context` modes, the six-ref cap with required-ref bypass and the advisory byte-budget semantics are owned by [Route A Task](./process/agent-start-here.md#2-route-a-task); over-budget routes only warn and never drop required refs, and the full affected-file set stays in check planning.
 - Add a new document only when no existing owner can hold the durable material cleanly.
 
 ## Validation

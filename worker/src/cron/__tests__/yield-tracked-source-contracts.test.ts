@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
 import type * as TrackedUtilsModule from "@shared/lib/tracked-stablecoin-utils";
 import type * as StablecoinRegistryModule from "@shared/lib/stablecoins/registry";
 
@@ -45,6 +45,7 @@ import { FIXED_NOW, makeBenchmarkMeta, makeBenchmarkRegistry, makeSafetySnapshot
 import { TRACKED_OPTIONAL_SOURCE_REGISTRY, TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "../yield-sync/sources-optional";
 import * as fetchRetry from "../../lib/fetch-retry";
 import type { YieldOptionalSourceOutcome } from "../yield-sync/sources-rpc";
+import { STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 
 async function resolvePools(dlPools: DlPool[], onOptionalSourceOutcome?: (outcome: YieldOptionalSourceOutcome) => void) {
   const { startSec, sevenDaysAgoSec, riskFreeRates } = baseEvaluationInput();
@@ -87,12 +88,13 @@ describe("tracked holder source contracts", () => {
     });
   });
 
-  it.each(["throw", "null"] as const)("publishes a negative holder observation to current rows and history with apy-non-positive PYS despite optional %s", async (mode) => {
+  it.each([["throw", false], ["null", false], ["null", true]] as const)("publishes a negative holder observation despite optional %s (stale: %s)", async (mode, stale) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW);
     try {
       const startSec = Math.floor(Date.now() / 1000);
+      const publishedAt = startSec + (stale ? STALE_THRESHOLD_MS / 1000 + 1 : 0);
       const entry = TRACKED_OPTIONAL_SOURCE_REGISTRY.find((source) => source.stablecoinId === "ybold-yearn")!;
       TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.set(entry.stablecoinId, [entry]);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -128,10 +130,10 @@ describe("tracked holder source contracts", () => {
       const artifacts = buildPreviewYieldRankingsArtifacts({
         evaluatedSources: evaluation.evaluatedSources, bestSourceKeyByCoin: evaluation.bestSourceKeyByCoin,
         riskFreeRate: riskFreeRateMeta.rate, riskFreeRateMeta, riskFreeRates,
-        dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: -5, startSec,
+        dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: -5, startSec: publishedAt,
       });
       const result = await publishYieldCoordinatorResults({
-        db, startSec, previewRankingsPayload: artifacts.previewRankingsPayload,
+        db, startSec: publishedAt, previewRankingsPayload: artifacts.previewRankingsPayload,
         publicationViews: artifacts.publicationViews, evaluatedSources: artifacts.acceptedSources,
         degradationReasons: [], resolvedCount: 1, rowsRejected: 0, divergenceFlags: 0, sourceSwitches: 0,
         safetySnapshotHeld: false,
@@ -142,7 +144,8 @@ describe("tracked holder source contracts", () => {
       expect(sqlite.prepare("SELECT apy FROM yield_history").all()).toEqual([{ apy: -5 }]);
       const cache = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get() as { value: string };
       expect(JSON.parse(cache.value).rankings[0]).toMatchObject({
-        currentApy: -5, pharosYieldScore: null, pysNullReason: "apy-non-positive",
+        currentApy: -5, pharosYieldScore: null, pysNullReason: stale ? "source-stale" : "apy-non-positive",
+        provenance: { scoreQualified: !stale },
       });
     } finally {
       TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.clear();
@@ -150,5 +153,21 @@ describe("tracked holder source contracts", () => {
       vi.useRealTimers();
       sqlite.close();
     }
+  });
+
+  it("isolates a D1 anchor-read failure in the Ondo USDY oracle entry", async () => {
+    const db = mockD1(
+      [matchMarker("yield-sync:nav-oracle-prior-anchor", [], { throwError: new Error("D1_ERROR: disk I/O error") })],
+      { assertMatchesUsed: true },
+    );
+    const onOutcome = vi.fn();
+    const entry = TRACKED_OPTIONAL_SOURCE_REGISTRY.find((candidate) => candidate.stablecoinId === "usdy-ondo-finance"
+      && candidate.sourceKey === "protocol-api:ondo-usdy-oracle");
+    expect(entry).toBeDefined();
+
+    // A reader failure is one failed optional source, not a whole-run abort.
+    await expect(entry!.run({ db, startSec: 1_771_000_000, onOutcome })).resolves.toBeNull();
+    expect(onOutcome).toHaveBeenCalledTimes(1);
+    expect(onOutcome).toHaveBeenCalledWith({ label: "Ondo USDY oracle source", outcome: "failed" });
   });
 });

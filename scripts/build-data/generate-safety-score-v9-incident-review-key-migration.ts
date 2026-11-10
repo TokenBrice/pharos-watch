@@ -666,7 +666,8 @@ export function applyIncidentReviewMigration(reviewsValue: unknown, artifact: In
   const envelope = reviewsValue as Record<string, unknown> & { negativeReviews?: unknown[] };
   const byId = new Map(artifact.rows.map((row) => [row.reviewId, row]));
   const negativeReviews = (envelope.negativeReviews ?? []).map((row) => {
-    const review = row as Record<string, unknown> & { reviewId?: unknown };
+    const review = row as Record<string, unknown> & { reviewId?: unknown; scope?: { kind?: unknown } };
+    if (review.scope?.kind === "provider" || review.scope?.kind === "issuer-surface") return review;
     const migration = typeof review.reviewId === "string" ? byId.get(review.reviewId) : undefined;
     if (migration === undefined) {
       throw new Error(`Incident review ${String(review.reviewId)} is missing from the key migration`);

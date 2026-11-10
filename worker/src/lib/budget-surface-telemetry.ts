@@ -6,6 +6,7 @@ import { setCache } from "./db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "./structured-log";
 import { recordProducerOutcome, type ProducerIdentity } from "./producer-history";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 
 const CACHE_PREFIX = "cron:budget-surface:";
 const CACHE_VERSION = 1;
@@ -99,7 +100,9 @@ function parseTelemetryPayload(value: string | null | undefined): BudgetSurfaceT
   }
 }
 
-function buildUnknownSurfaceStatuses(): BudgetOnlySurfaceStatus[] {
+function buildUnknownSurfaceStatuses(
+  telemetryStatus: "missing" | "unreadable" = "missing",
+): BudgetOnlySurfaceStatus[] {
   return BUDGET_ONLY_DEFINITIONS.map((entry) => ({
     job: entry.job,
     label: entry.label,
@@ -109,7 +112,7 @@ function buildUnknownSurfaceStatuses(): BudgetOnlySurfaceStatus[] {
     maxAgeSec: entry.intervalSec * 2,
     maxConnections: entry.maxConnections,
     connectionGroup: entry.connectionGroup,
-    telemetryStatus: "missing",
+    telemetryStatus,
     telemetryUnknown: true,
     checkedAt: null,
     ageSeconds: null,
@@ -122,7 +125,7 @@ function buildUnknownSurfaceStatuses(): BudgetOnlySurfaceStatus[] {
 
 function buildSurfaceStatus(
   row: BudgetSurfaceTelemetryRow,
-  now: number,
+  readNow: number,
 ): BudgetOnlySurfaceStatus {
   const definition = BUDGET_ONLY_BY_KEY.get(row.key);
   if (!definition) {
@@ -131,11 +134,22 @@ function buildSurfaceStatus(
 
   const payload = parseTelemetryPayload(row.value);
   const checkedAt = payload?.checkedAt ?? row.updated_at;
-  const ageSeconds = Math.max(0, now - checkedAt);
+  // A producer clock more than the shared allowance ahead of the reader is a
+  // rejected timestamp, not a clamped healthy age (docs/status-dashboard.md#timestamp-admission).
+  const timestamp = assessFreshnessTimestamp(readNow, checkedAt);
   const maxAgeSec = definition.intervalSec * 2;
-  const telemetryStatus: BudgetOnlySurfaceStatus["telemetryStatus"] = payload
-    ? ageSeconds > maxAgeSec ? "stale" : "fresh"
-    : "unreadable";
+  let telemetryStatus: BudgetOnlySurfaceStatus["telemetryStatus"];
+  let ageSeconds: number | null;
+  if (!payload) {
+    telemetryStatus = "unreadable";
+    ageSeconds = timestamp.ageSeconds;
+  } else if (timestamp.reason != null) {
+    telemetryStatus = "unreadable";
+    ageSeconds = null;
+  } else {
+    ageSeconds = timestamp.ageSeconds;
+    telemetryStatus = ageSeconds > maxAgeSec ? "stale" : "fresh";
+  }
 
   return {
     job: definition.job,
@@ -193,26 +207,40 @@ export async function recordBudgetSurfaceTelemetry(
 
   if (input.producer) {
     const invokedAt = Math.max(0, checkedAt - Math.ceil(payload.durationMs / 1_000));
-    await recordProducerOutcome(db, {
-      ...input.producer,
-      idempotencyKey: `budget-surface:${input.producer.invocationId}:${input.surface}`,
-      invokedAt,
-      completedAt: checkedAt,
-      outcome: input.outcome === "skipped" ? "skipped_neutral" : input.outcome,
-      itemCount: payload.processedCount,
-      metadata: JSON.stringify(payload),
-      error: payload.error ?? null,
-      productivity: {
-        productive: payload.processedCount > 0 && input.outcome !== "error",
-        reason: payload.processedCount > 0 ? "budget-work-processed" : payload.skippedReason ?? "no-due-work",
-      },
-    });
+    try {
+      await recordProducerOutcome(db, {
+        ...input.producer,
+        idempotencyKey: `budget-surface:${input.producer.invocationId}:${input.surface}`,
+        invokedAt,
+        completedAt: checkedAt,
+        outcome: input.outcome === "skipped" ? "skipped_neutral" : input.outcome,
+        itemCount: payload.processedCount,
+        metadata: JSON.stringify(payload),
+        error: payload.error ?? null,
+        productivity: {
+          productive: payload.processedCount > 0 && input.outcome !== "error",
+          reason: payload.processedCount > 0 ? "budget-work-processed" : payload.skippedReason ?? "no-due-work",
+        },
+      });
+    } catch (error) {
+      // Terminal accounting must not relabel a completed surface (or fail its
+      // scheduled slot) when only the producer-history projection failed.
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "budget_surface_telemetry_producer_history_failed",
+        source: input.surface,
+        message: "Budget-only surface producer history could not be persisted",
+        error,
+      });
+    }
   }
 }
 
 export async function loadBudgetOnlySurfaceStatuses(
   db: D1Database,
   now: number,
+  readNow = now,
 ): Promise<{ surfaces: BudgetOnlySurfaceStatus[]; queryFailed: boolean }> {
   const keys = BUDGET_ONLY_DEFINITIONS.map((entry) => budgetSurfaceTelemetryCacheKey(entry.job));
   if (keys.length === 0) return { surfaces: [], queryFailed: false };
@@ -233,7 +261,7 @@ export async function loadBudgetOnlySurfaceStatuses(
       surfaces: BUDGET_ONLY_DEFINITIONS.map((definition) => {
         const key = budgetSurfaceTelemetryCacheKey(definition.job);
         const row = rowByKey.get(key);
-        if (row) return buildSurfaceStatus(row, now);
+        if (row) return buildSurfaceStatus(row, readNow);
         return unknownByJob.get(definition.job)!;
       }),
       queryFailed: false,
@@ -248,6 +276,6 @@ export async function loadBudgetOnlySurfaceStatuses(
       message: "Budget-only scheduled surface telemetry unavailable",
       error: toErrorMessage(error),
     });
-    return { surfaces: buildUnknownSurfaceStatuses(), queryFailed: true };
+    return { surfaces: buildUnknownSurfaceStatuses("unreadable"), queryFailed: true };
   }
 }

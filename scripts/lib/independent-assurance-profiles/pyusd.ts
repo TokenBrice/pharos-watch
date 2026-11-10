@@ -3,7 +3,7 @@ import type { CompilerProfile } from "./shared";
 export const PROFILE: CompilerProfile = {
   product: "PYUSD",
   profile: "pyusd-v1",
-  officialIndexUrl: "https://www.paxos.com/pyusd-transparency",
+  officialIndexUrl: "https://www.paxos.com/transparency/pyusd",
   reportUrl: "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf",
   reportDate: "2026-09-30",
   reportAsOf: "2026-09-30T17:00:00-04:00",

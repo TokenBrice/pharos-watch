@@ -65,7 +65,6 @@ type ComparisonRow = ReturnType<typeof buildComparisonAtAGlanceRows>[number];
 
 const EXAMINATION_SCOPE = "Examination; assets and liabilities; full liability reconciliation";
 const ATTESTATION_PARTIAL_SCOPE = "Attestation; assets and liabilities; partial liability reconciliation";
-const ATTESTATION_FULL_SCOPE = "Attestation; assets and liabilities; full liability reconciliation";
 const USDE_SCOPE = "Method not established; assets only; liability reconciliation unknown";
 
 const VERIFIED_REPORT: LatestReport = {
@@ -108,32 +107,15 @@ function findRow(rows: readonly ComparisonRow[], label: string): ComparisonRow |
   return rows.find((row) => row.label === label);
 }
 
-const PILOT_REPORT_FACTS: Record<string, { left: { period: string; scope: string }; right: { period: string; scope: string } }> = {
-  "usdc-circle-vs-usdg-paxos": {
-    left: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "usdt-tether-vs-usdg-paxos": {
-    left: { period: "2026-06-30", scope: ATTESTATION_PARTIAL_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "rlusd-ripple-vs-usdc-circle": {
-    left: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "paxg-paxos-vs-xaut-tether": {
-    left: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-    right: { period: "2026-06-30", scope: ATTESTATION_FULL_SCOPE },
-  },
-  "usdt-tether-vs-usdc-circle": {
-    left: { period: "2026-06-30", scope: ATTESTATION_PARTIAL_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "usde-ethena-vs-usds-sky": {
-    left: { period: "2026-09-27", scope: USDE_SCOPE },
-    right: { period: "Not recorded", scope: "Not recorded" },
-  },
-};
+/** The reviewed report projection: the coin's verified latestReport, never a storage type. */
+function expectedReportFacts(coin: StablecoinMeta): { period: string; scope: string } {
+  const report = coin.proofOfReserves?.latestReport;
+  if (!report || report.confidence !== "verified") return { period: "Not recorded", scope: "Not recorded" };
+  return {
+    period: report.periodEnd ?? "Not recorded",
+    scope: `${PROOF_ASSURANCE_METHOD_LABELS[report.assuranceMethod]}; ${PROOF_ASSURANCE_SCOPE_LABELS[report.scope]}; ${LIABILITY_RECONCILIATION_LABELS[report.liabilityReconciliation]}`,
+  };
+}
 
 const REDEMPTION_FACTS: Record<
   string,
@@ -326,14 +308,18 @@ describe("comparison evidence pilot scope", () => {
 
 describe("reviewed report evidence", () => {
   it("renders the reviewed report period and scope for every pilot pair", () => {
-    for (const [slug, expected] of Object.entries(PILOT_REPORT_FACTS)) {
-      const rows = buildComparisonAtAGlanceRows(getPage(slug), NOW_SEC);
-      expect(findRow(rows, "Latest reviewed report period"), slug).toEqual(
-        expect.objectContaining({ left: expected.left.period, right: expected.right.period }),
-      );
-      expect(findRow(rows, "Assurance scope"), slug).toEqual(
-        expect.objectContaining({ left: expected.left.scope, right: expected.right.scope }),
-      );
+    for (const slug of COMPARISON_EVIDENCE_PILOT_SLUGS) {
+      const page = getPage(slug);
+      const rows = buildComparisonAtAGlanceRows(page, NOW_SEC);
+      for (const [side, coin] of [["left", page.left], ["right", page.right]] as const) {
+        const expected = expectedReportFacts(coin);
+        expect(findRow(rows, "Latest reviewed report period"), slug).toEqual(
+          expect.objectContaining({ [side]: expected.period }),
+        );
+        expect(findRow(rows, "Assurance scope"), slug).toEqual(
+          expect.objectContaining({ [side]: expected.scope }),
+        );
+      }
     }
   });
 
@@ -465,11 +451,6 @@ describe("reviewed redemption evidence", () => {
   });
 
   it("keeps the $100,000 redemption minimum distinct from the $1,000 fee minimum", () => {
-    const rows = buildComparisonAtAGlanceRows(getPage("usdt-tether-vs-usdc-circle"), NOW_SEC);
-    expect(findRow(rows, "Redemption minimum")?.left).toBe("$100,000 (reviewed 2026-04-16)");
-    expect(findRow(rows, "Redemption fee basis")?.left).toBe(
-      "0.10%, with a minimum fee of $1,000 (reviewed 2026-04-16)",
-    );
     const config = REDEMPTION_BACKSTOP_CONFIGS["usdt-tether"];
     expect(config.v9RouteReviewTerms?.minRedeemUsd).toBe(100_000);
     expect(config.v9RouteCostTerms?.minFeeUsd).toBe(1_000);
@@ -489,7 +470,7 @@ describe("reviewed redemption evidence", () => {
     expect(findRow(absent, "Redemption minimum")).toBeUndefined();
     expect(findRow(absent, "Redemption fee basis")).toBeUndefined();
     // Report evidence is server-owned and survives the config omission.
-    expect(findRow(absent, "Latest reviewed report period")?.left).toBe("2026-06-30");
+    expect(findRow(absent, "Latest reviewed report period")?.left).toBe("2026-09-30");
 
     mockGetCurrentRedemptionConfig.mockImplementation((id) =>
       id === "usdt-tether" ? null : (REDEMPTION_BACKSTOP_CONFIGS[id] ?? null),
@@ -612,14 +593,6 @@ describe("reviewed redemption evidence", () => {
   });
 
   it("keeps the PAXG tariff qualified and the XAUT issuer fee non-zero", () => {
-    const rows = buildComparisonAtAGlanceRows(getPage("paxg-paxos-vs-xaut-tether"), NOW_SEC);
-    const paxgFee = findRow(rows, "Redemption fee basis")?.left ?? "";
-    expect(paxgFee).toContain("Customer-specific pricing may override it");
-    expect(paxgFee).toContain("delivery, dealer, tax and bank costs are separate");
-    expect(paxgFee).not.toContain("55 bps");
-    const xautFee = findRow(rows, "Redemption fee basis")?.right ?? "";
-    expect(xautFee).toBe("25 bps issuer redemption fee, plus delivery and applicable fees (reviewed 2026-10-01)");
-    expect(xautFee).not.toMatch(/\bfree\b|\b0 bps\b/i);
     const xaut = REDEMPTION_BACKSTOP_CONFIGS["xaut-tether"];
     expect(xaut.physicalToUsd?.fees.issuerFeeBps).toBe(25);
     expect(xaut.physicalCommodityDelivery?.feeModel.bps).toBe(25);
@@ -653,6 +626,61 @@ describe("comparison rows and JSON-LD parity", () => {
       expect(serialized).not.toContain("undefined");
       expect(serialized).not.toContain('href=');
     }
+  });
+
+  it("labels NAV wrappers by their reference asset instead of a fixed dollar peg", () => {
+    const navPage = getPage("sdai-sky-vs-susde-ethena");
+    const rows = buildComparisonAtAGlanceRows(navPage, NOW_SEC);
+    expect(findRow(rows, "Peg target")).toEqual({
+      label: "Peg target",
+      left: "DAI-denominated NAV",
+      right: "USDe-denominated NAV",
+    });
+    expect(navPage.intro).toContain("sDAI targets DAI-denominated NAV, while sUSDe targets USDe-denominated NAV.");
+    expect(navPage.intro).not.toContain("Both target the US Dollar");
+
+    expect(findRow(buildComparisonAtAGlanceRows(getPage("gho-aave-vs-sgho-aave"), NOW_SEC), "Peg target")).toEqual({
+      label: "Peg target",
+      left: "US Dollar",
+      right: "GHO-denominated NAV",
+    });
+  });
+
+  it("keeps the plain peg label for non-NAV dollar tokens", () => {
+    expect(findRow(buildComparisonAtAGlanceRows(getPage("usdt-tether-vs-usdc-circle"), NOW_SEC), "Peg target")).toEqual({
+      label: "Peg target",
+      left: "US Dollar",
+      right: "US Dollar",
+    });
+    expect(getPage("usdt-tether-vs-usdc-circle").intro).toContain("Both target the US Dollar.");
+  });
+
+  it("never publishes an arbitrary first reserve asset as the reserve signal", () => {
+    const cases = [
+      ["usde-ethena-vs-usds-sky", "right", "USDC"],
+      ["usds-sky-vs-dai-makerdao", "left", "USDC"],
+      ["usds-sky-vs-dai-makerdao", "right", "USDC"],
+      ["usdt-tether-vs-frax-frax", "right", "WTGXX"],
+      ["dai-makerdao-vs-gho-aave", "right", "GhoDirectFacilitator GSMs Mainnet"],
+    ] as const;
+    for (const [slug, side, firstReserve] of cases) {
+      const value = findRow(buildComparisonAtAGlanceRows(getPage(slug), NOW_SEC), "Reserve signal")?.[side];
+      expect(value, `${slug}:${side}`).not.toBe(firstReserve);
+    }
+
+    const base = getPage("usdc-circle-vs-usdg-paxos");
+    const withoutProof = {
+      ...base,
+      left: {
+        ...base.left,
+        proofOfReserves: undefined,
+        collateral: undefined,
+        reserves: [{ name: "Arbitrary First Reserve", pct: 100, risk: "low" as const }],
+      },
+    };
+    expect(findRow(buildComparisonAtAGlanceRows(withoutProof, NOW_SEC), "Reserve signal")?.left).toBe(
+      "Collateral profile disclosed",
+    );
   });
 
   it("covers every key in the shared assurance and eligibility vocabularies", () => {

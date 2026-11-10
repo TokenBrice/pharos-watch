@@ -4,7 +4,7 @@ import { type CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CASE_STUDY_CLIENT_BY_CEMETERY_ID } from "@/lib/case-study-client-index";
 import { buildCemeteryRegisterRows, buildRegisterFilterOptions } from "@/lib/cemetery-register";
 import { buildCemeteryStats } from "@/lib/cemetery-stats";
-import { formatRegisterDeathDate } from "@/components/cemetery/cemetery-register-model";
+import { formatCemeteryPeg, formatRegisterDeathDate } from "@/components/cemetery/cemetery-register-model";
 
 function entry(id: string, deathDate: string, overrides: Partial<CemeteryEntry> = {}): CemeteryEntry {
   return {
@@ -45,6 +45,15 @@ describe("formatRegisterDeathDate", () => {
   });
 });
 
+describe("formatCemeteryPeg", () => {
+  it("maps every peg enum through the shared label authority", () => {
+    expect(formatCemeteryPeg("VAR")).toBe("CPI");
+    expect(formatCemeteryPeg("OTHER")).toBe("Other");
+    expect(formatCemeteryPeg("CNH")).toBe("Offshore Yuan");
+    expect(formatCemeteryPeg("USD")).toBe("US Dollar");
+  });
+});
+
 describe("buildRegisterFilterOptions", () => {
   const entries = [
     entry("a", "2026-03", { pegCurrency: "EUR", archivedDataAvailable: true }),
@@ -69,5 +78,11 @@ describe("buildRegisterFilterOptions", () => {
     });
     expect(options.facets.peak.find(({ value }) => value === "not-recorded")?.count).toBe(1);
     expect(options.total).toBe(4);
+  });
+
+  it("labels the peg facet with the published peg name while keeping the enum as its value", () => {
+    const entries = [entry("v", "2026-01", { pegCurrency: "VAR" })];
+    const pegOptions = buildRegisterFilterOptions(buildCemeteryStats(entries), buildCemeteryRegisterRows(entries));
+    expect(pegOptions.facets.peg).toEqual([{ value: "VAR", label: "CPI", count: 1 }]);
   });
 });

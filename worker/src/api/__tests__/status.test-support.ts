@@ -345,6 +345,7 @@ function fixtureMockD1(
       ...["FROM reserve_sync_state", "FROM reserve_composition", "FROM reserve_sync_attempt_history"].filter(
         (match) => !tables.some((table) => table.match === match),
       ).map((match) => ({ match, rows: [], allowUnused: true })),
+      { match: "INSERT INTO cache", rows: [], allowUnused: true },
     ],
     options,
   );

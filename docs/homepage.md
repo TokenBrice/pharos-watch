@@ -12,11 +12,11 @@ The hero and market-state line share the site-only compact homepage snapshot, no
 
 The global recent-events rail is in normal flow below sticky navigation on desktop; only navigation remains pinned. On mobile it mounts only on the homepage, not invisibly on interior routes. The fresh-blog banner uses build-time eligibility; expiry disappears on the next deploy, not the visitor's clock, and never precedes the page heading.
 
-Homepage server-only blog/media chrome uses inline decorative SVG and explicit-size, lazy native host-logo images. Do not import shared client icon/image leaves into these server branches: Next's root homepage client-reference group can otherwise attach the homepage and chart chunk list to unrelated routes.
+Homepage server-only blog, API and media chrome uses inline decorative SVG and explicit-size, lazy native logo images. Do not import shared client icon/image leaves into these server branches: Next's root homepage client-reference group can otherwise attach the homepage and chart chunk list to unrelated routes.
 
 ## Data Health
 
-The homepage never renders data-health warnings: no stale/degraded/failed/retained banners, notices, chips, state words, amber/red health tones or retry buttons. Data that is present (fresh, stale, degraded or retained) renders normally, with at most a neutral "as of" producer-generation stamp where a card already dates itself; no usable data keeps the card shape with a neutral placeholder (`—` or "Updating"), never zero, healthy or empty. Neutral data qualifiers stay (unavailable per-value cells, cohort gaps); the hero shows no supply-completeness text. The status bar is a plain muted "System status" link to `/status/`, and section render crashes (`HomeSectionErrorBoundary`) log the error but show only the same neutral placeholder. Ops state lives in admin and alerts. ESLint bans the warning components as direct imports of homepage files. Shared descendants are covered by `homepage-no-health-warnings.test.tsx`, which renders every homepage section (with real dynamic children) under stale, degraded, failed-refresh and 503 states, and walks the homepage import tree for banned components against a reviewed allowlist.
+The homepage never renders data-health warnings: no stale/degraded/failed/retained banners, notices, chips, state words, amber/red health tones or retry buttons. Data that is present (fresh, stale, degraded or retained) renders normally, with at most a neutral "as of" producer-generation stamp where a card already dates itself; no usable data keeps the card shape with a neutral placeholder (`—` or "Updating"), never zero, healthy or empty. Neutral data qualifiers stay (unavailable per-value cells, cohort gaps); the hero shows no supply-completeness text. The status bar is a plain muted "System status" link to `/status/`, and section render crashes (`HomeSectionErrorBoundary`) log the error but show only the same neutral placeholder. Ops state lives in admin and alerts. ESLint bans the warning components as direct imports of homepage files. Shared descendants are covered by `homepage-no-health-warnings.test.tsx`, which renders every homepage section (with real dynamic children) under stale, degraded, failed-refresh and 503 states, and walks the homepage import tree for banned components against a reviewed allowlist. `npm run check:homepage-health-copy` ([`check-homepage-health-copy.ts`](../scripts/ci/check-homepage-health-copy.ts)) enforces this on the authored source (`src/app/page.tsx`, `home-*`/`homepage-*` components and the mini-cards) whenever a PR touches them; the rendered matrix in [`homepage-no-health-warnings.test.tsx`](../src/components/__tests__/homepage-no-health-warnings.test.tsx) proves the mounted behaviour.
 
 ## Query And State Model
 
@@ -53,7 +53,7 @@ The compact homepage snapshot is retained in a versioned, schema-validated Index
 
 ### HomepageTape
 
-`src/components/homepage-tape.tsx` reads the canonical latest-events query through same-origin site data, excludes score events, drops operational-only yield warnings via `projectTapeEventsForReader()` (ADR-42), and applies `collapseForHomepageStrip`. Query errors/valid empty collapsed data render no ticker; smoke checks the underlying endpoint, not visible copy. `formatTapeEventTitle()` maps stored warning keys/chain IDs to shared public labels. Hover/focus pauses motion; reduced motion provides horizontal scrolling. One nonduplicated View all events link opens `/timeline/`; [Timeline](./tape-page.md) owns archival/publication semantics.
+`src/components/homepage-tape.tsx` reads the canonical latest-events query through same-origin site data, excludes score events, drops operational-only yield warnings via `projectTapeEventsForReader()` (ADR-42), and applies `collapseForHomepageStrip`. Query errors/valid empty collapsed data render no ticker; smoke checks the underlying endpoint, not visible copy. `formatTapeEventTitle()` maps stored warning keys/chain IDs to shared public labels. Event ages tick on the viewer's minute clock; the hourly poll is not an age clock. Hover/focus pauses motion; reduced motion provides horizontal scrolling. One nonduplicated View all events link opens `/timeline/`; [Timeline](./tape-page.md) owns archival/publication semantics.
 
 `CoreTopRail` dynamically loads the tape. Text-first routes share `isEditorialPath()` in `src/lib/editorial-routes.ts`: their desktop tape mounts only after document load and an idle opportunity, with a persistent 40 px rail reserve. Interior mobile routes do not mount it. Deferral creates no empty/healthy event claim and does not change polling or producer freshness.
 
@@ -63,7 +63,7 @@ The compact homepage snapshot is retained in a versioned, schema-validated Index
 
 ## Stablecoin Overview
 
-Before hydration, a real leading-core profile directory plus Screener link remains visible/crawlable alongside the shape-matched table placeholder. Background metric refresh preserves page/scroll; filter/search/sort/pinning resets them and shrinking results clamp the page.
+Before hydration, a real core profile directory plus Screener link remains visible/crawlable alongside the shape-matched table placeholder. Background metric refresh preserves page/scroll; filter/search/sort/pinning resets them and shrinking results clamp the page.
 
 Deviation text/severity uses published `peg-summary.currentDeviationBps`, not a second calculation from independently refreshed price. Liquidity zero remains measured/coloured; only missing data is `—`. Mint is the published Economic Control component, never a second score lane; missing breakdowns show NR. Curated route describes review coverage, not score. Shared table/export owners define headers and band keys; homepage suppresses header methodology hints while Screener retains them.
 
@@ -94,6 +94,8 @@ A cohort is null before its first observation and on loading/failure, including 
 ## Shared Shell Loading
 
 Theme, query cache, source navigation and global search remain stable providers across navigation. Optional shortcut/toast/route-progress plumbing is a sibling lazy island, never an async parent of route content. `src/lib/editorial-routes.ts` owns the text-first route policy used by that island and the deferred desktop market tape. PSI chrome imports the narrow classification leaf; `shared/types/stability-constants.ts` owns its band vocabulary without executable schemas, while full API readers still validate before cache admission.
+
+Command-palette history retains up to five deduplicated selections, newest first. Snapshot reads (including mounts and rerenders) and additions reevaluate the seven-day cutoff against each selection's original timestamp, even when stored JSON is unchanged. Unchanged retained entries reuse the same snapshot array; expiry alone does not schedule a render or rewrite storage.
 
 Retained-homepage evidence is route-local: only the homepage mounts its provider under the shared query client. Other routes do not load its persistence module or subscribe to homepage query publications; detail has its own bounded per-coin retained-evidence provider.
 

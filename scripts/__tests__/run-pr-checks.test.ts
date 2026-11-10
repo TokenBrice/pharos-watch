@@ -14,6 +14,7 @@ describe("local PR check orchestration", () => {
     const changedFiles = ["docs/testing.md"];
 
     expect(buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), localDefault)).toEqual([
+      "test-corpus-budget", "incident-review-keys", "new-asset-evidence-packet",
       "classifier-smoke",
       "gitleaks",
       "verified-doc-links",
@@ -27,6 +28,7 @@ describe("local PR check orchestration", () => {
     const plan = buildPrCheckPlan(changedFiles, classifyChangedFiles(changedFiles), optedIn);
 
     expect(plan).toEqual([
+      "test-corpus-budget", "incident-review-keys", "new-asset-evidence-packet",
       "classifier-smoke",
       "gitleaks",
       "pr-static",

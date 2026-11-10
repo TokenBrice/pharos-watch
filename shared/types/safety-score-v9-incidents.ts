@@ -44,8 +44,7 @@ export const V9_INCIDENT_REVIEW_SURFACE_KIND_VALUES = [
   "governance",
   "social",
 ] as const;
-export type V9IncidentReviewSurfaceKind = (typeof V9_INCIDENT_REVIEW_SURFACE_KIND_VALUES)[number];
-export const V9IncidentReviewSurfaceKindSchema = z.enum(V9_INCIDENT_REVIEW_SURFACE_KIND_VALUES);
+const V9IncidentReviewSurfaceKindSchema = z.enum(V9_INCIDENT_REVIEW_SURFACE_KIND_VALUES);
 
 /** The evidence class admitted for automated pinned-log screening; one literal authority. */
 export const V9_LANE_SCREENING_EVIDENCE_CLASS = EXPLORER_EVENTS_SURFACE;
@@ -93,7 +92,6 @@ export const V9AuthoredControlReviewScopeSchema = z
     controlIds: canonicalTextArray(1, "authored control id").optional(),
   })
   .strict();
-export type V9AuthoredControlReviewScope = z.output<typeof V9AuthoredControlReviewScopeSchema>;
 
 /** Authored review scope: control identity tuples plus the unchanged deployment scope. */
 export const V9AuthoredNegativeIncidentReviewScopeSchema = z.discriminatedUnion("kind", [
@@ -130,13 +128,12 @@ export const V9IssuerSurfaceIncidentReviewScopeSchema = z
 export type V9IssuerSurfaceIncidentReviewScope = z.output<typeof V9IssuerSurfaceIncidentReviewScopeSchema>;
 
 /** One reviewed lane in a provider-wide review: which asset's route the provider check speaks to. */
-export const V9ProviderReviewRouteRefSchema = z
+const V9ProviderReviewRouteRefSchema = z
   .object({
     assetId: CanonicalKeySchema,
     routeId: DeploymentIdSchema,
   })
   .strict();
-export type V9ProviderReviewRouteRef = z.output<typeof V9ProviderReviewRouteRefSchema>;
 
 /**
  * Provider scope is provider-wide, not per asset: one review id is authored once
@@ -176,14 +173,13 @@ const EvmBytes32Schema = z.string().regex(/^0x[0-9a-f]{64}$/u, "Expected a lower
 const EvmAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/u, "Expected a lowercase 0x-prefixed 20-byte address");
 
 /** OP-IR ruling 2 incident classes; only `verifier-compromise` can exempt a lane. */
-export const V9_PROVIDER_INCIDENT_CLASS_VALUES = [
+const V9_PROVIDER_INCIDENT_CLASS_VALUES = [
   "verifier-compromise",
   "route-local-exploit",
   "third-party-app-exploit",
   "remediated-vulnerability",
 ] as const;
-export type V9ProviderIncidentClass = (typeof V9_PROVIDER_INCIDENT_CLASS_VALUES)[number];
-export const V9ProviderIncidentClassSchema = z.enum(V9_PROVIDER_INCIDENT_CLASS_VALUES);
+const V9ProviderIncidentClassSchema = z.enum(V9_PROVIDER_INCIDENT_CLASS_VALUES);
 
 /**
  * One lane-level exemption from a `verifier-compromise` exposure interval. Both
@@ -192,7 +188,7 @@ export const V9ProviderIncidentClassSchema = z.enum(V9_PROVIDER_INCIDENT_CLASS_V
  * `threshold-excludes-compromised-verifier` is a pinned read of the effective
  * verification config plus pinned log evidence that it did not change.
  */
-export const V9ProviderIncidentDeployedAfterExposureExemptionSchema = z
+const V9ProviderIncidentDeployedAfterExposureExemptionSchema = z
   .object({
     assetId: CanonicalKeySchema,
     routeId: DeploymentIdSchema,
@@ -203,7 +199,7 @@ export const V9ProviderIncidentDeployedAfterExposureExemptionSchema = z
   })
   .strict();
 
-export const V9ProviderIncidentThresholdExemptionSchema = z
+const V9ProviderIncidentThresholdExemptionSchema = z
   .object({
     assetId: CanonicalKeySchema,
     routeId: DeploymentIdSchema,
@@ -227,11 +223,10 @@ export const V9ProviderIncidentThresholdExemptionSchema = z
   })
   .strict();
 
-export const V9ProviderIncidentExemptionSchema = z.discriminatedUnion("kind", [
+const V9ProviderIncidentExemptionSchema = z.discriminatedUnion("kind", [
   V9ProviderIncidentDeployedAfterExposureExemptionSchema,
   V9ProviderIncidentThresholdExemptionSchema,
 ]);
-export type V9ProviderIncidentExemption = z.output<typeof V9ProviderIncidentExemptionSchema>;
 
 /**
  * A provider security incident the review read, recorded on the review itself
@@ -405,14 +400,12 @@ function validateNegativeIncidentReview(review: NegativeIncidentReviewShape, ctx
  * record schemas below.
  */
 export const V9NegativeIncidentReviewSchema = V9NegativeIncidentReviewObjectSchema.superRefine(validateNegativeIncidentReview);
-export type V9NegativeIncidentReview = z.output<typeof V9NegativeIncidentReviewSchema>;
 
 /** Legacy scope plus retirement, for v10.38's admitted-review union (IR-1b import). */
 export const V9RetirableNegativeIncidentReviewSchema = V9NegativeIncidentReviewObjectSchema
   .extend({ retired: V9IncidentReviewRetirementSchema.optional() })
   .strict()
   .superRefine(validateNegativeIncidentReview);
-export type V9RetirableNegativeIncidentReview = z.output<typeof V9RetirableNegativeIncidentReviewSchema>;
 
 /**
  * Authored-identity control review produced by the review-key migration. The
@@ -427,7 +420,6 @@ export const V9AuthoredNegativeIncidentReviewSchema = V9NegativeIncidentReviewOb
   })
   .strict()
   .superRefine(validateNegativeIncidentReview);
-export type V9AuthoredNegativeIncidentReview = z.output<typeof V9AuthoredNegativeIncidentReviewSchema>;
 
 /**
  * Asset-wide issuer-surface review (task IR-ISS). It records the issuer's own
@@ -441,7 +433,6 @@ export const V9IssuerSurfaceIncidentReviewSchema = V9NegativeIncidentReviewObjec
   })
   .strict()
   .superRefine(validateNegativeIncidentReview);
-export type V9IssuerSurfaceIncidentReview = z.output<typeof V9IssuerSurfaceIncidentReviewSchema>;
 
 /**
  * Provider-wide `no-known-incident` review: one record per provider, authored
@@ -517,7 +508,6 @@ export const V9ProviderIncidentReviewSchema = V9ProviderIncidentReviewObjectSche
     }
   }
 });
-export type V9ProviderIncidentReview = z.output<typeof V9ProviderIncidentReviewSchema>;
 
 /**
  * Admin-relevant event families the pinned-log screening producer reads, named
@@ -590,11 +580,10 @@ export const V9_LANE_ADMIN_EVENT_FAMILY_VALUES = [
   "SetToken",
 ] as const;
 export type V9LaneAdminEventFamily = (typeof V9_LANE_ADMIN_EVENT_FAMILY_VALUES)[number];
-export const V9LaneAdminEventFamilySchema = z.enum(V9_LANE_ADMIN_EVENT_FAMILY_VALUES);
+const V9LaneAdminEventFamilySchema = z.enum(V9_LANE_ADMIN_EVENT_FAMILY_VALUES);
 
-export const V9_LANE_INCIDENT_FINDING_VALUES = ["no-material-admin-event", "material-event"] as const;
-export type V9LaneIncidentFinding = (typeof V9_LANE_INCIDENT_FINDING_VALUES)[number];
-export const V9LaneIncidentFindingSchema = z.enum(V9_LANE_INCIDENT_FINDING_VALUES);
+const V9_LANE_INCIDENT_FINDING_VALUES = ["no-material-admin-event", "material-event"] as const;
+const V9LaneIncidentFindingSchema = z.enum(V9_LANE_INCIDENT_FINDING_VALUES);
 
 /** Machine-readable reasons a lane screening produced no admitted certificate. */
 export const V9_LANE_SCREENING_FAILURE_REASON_VALUES = [
@@ -615,7 +604,7 @@ export type V9LaneScreeningFailureReason = (typeof V9_LANE_SCREENING_FAILURE_REA
  * certificate exists only when every screened emitter's bytecode was the
  * reviewed one (R3). `families` names the events that emitter can emit.
  */
-export const V9LaneCertificateEmitterSchema = z
+const V9LaneCertificateEmitterSchema = z
   .object({
     address: EvmAddressSchema,
     expectedRuntimeCodeSha256: Sha256Schema,
@@ -628,7 +617,6 @@ export const V9LaneCertificateEmitterSchema = z
       issue(ctx, ["runtimeCodeSha256"], "Screened runtime code must match the expected emitter code hash");
     }
   });
-export type V9LaneCertificateEmitter = z.output<typeof V9LaneCertificateEmitterSchema>;
 
 /**
  * One pinned admin-event certificate for a lane. `subjectDeploymentKey` is the
@@ -766,7 +754,7 @@ export type V9LaneIncidentScreeningResult = z.output<typeof V9LaneIncidentScreen
  * descriptor is the reviewed emitter inventory of a whole lane, so a certificate
  * can only exist for emitters the reviewer enumerated.
  */
-export const V9LaneDescriptorEmitterSchema = z
+const V9LaneDescriptorEmitterSchema = z
   .object({
     address: EvmAddressSchema,
     reviewedRuntimePin: z
@@ -775,7 +763,6 @@ export const V9LaneDescriptorEmitterSchema = z
     families: canonicalArrayBy(V9LaneAdminEventFamilySchema, (family) => family, 1, "emitted family"),
   })
   .strict();
-export type V9LaneDescriptorEmitter = z.output<typeof V9LaneDescriptorEmitterSchema>;
 
 /**
  * The reviewed screening descriptor of one bridge lane (IR-3d). `subjectDeploymentKey`
@@ -1027,7 +1014,6 @@ export const V9AttributedNegativeIncidentReviewSchema = z.union([
   V9AuthoredNegativeIncidentReviewSchema,
   V9IssuerSurfaceIncidentReviewSchema,
 ]);
-export type V9AttributedNegativeIncidentReview = z.output<typeof V9AttributedNegativeIncidentReviewSchema>;
 
 // Incident ids are globally unique registry keys, not asset-scoped aliases.
 // Authored review ids are globally unique before fan-out, so `reviewId` stays
@@ -1052,7 +1038,7 @@ export const V9ReviewedIncidentRegistryEnvelopeSchema = z.object({
  * asset-scoped authored review and forbidden on a provider row, so the two
  * identities cannot be confused at the authored boundary.
  */
-export const V9AuthoredNegativeIncidentReviewRowSchema = z
+const V9AuthoredNegativeIncidentReviewRowSchema = z
   .object({
     scope: z.object({ kind: CanonicalTextSchema }).passthrough().optional(),
   })

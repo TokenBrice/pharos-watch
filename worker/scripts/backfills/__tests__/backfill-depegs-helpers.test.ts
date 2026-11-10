@@ -14,13 +14,26 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createDeferredPromise } from "../../../src/lib/__tests__/deferred.test-support";
 
 const fxFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   fxFixtures.closeAll();
 });
+
+/** Run a retry-backed call under fake timers, advancing in 500 ms steps. */
+async function drainRetryBackoff<T>(promise: Promise<T>): Promise<T> {
+  let settled = false;
+  void promise.then(() => { settled = true; }, () => { settled = true; });
+  for (let elapsed = 0; elapsed < 10_000 && !settled; elapsed += 500) {
+    await vi.advanceTimersByTimeAsync(500);
+  }
+  if (!settled) throw new Error("retry backoff did not settle within 10s of fake time");
+  return await promise;
+}
 
 describe("historical FX configuration", () => {
   it("skips a non-USD coin without any FX reference and performs no writes", async () => {
@@ -193,6 +206,46 @@ describe("buildFxLookup", () => {
 });
 
 describe("fetchHistoricalSecondaryFxRates", () => {
+  it.each([[false, false], [true, false], [false, true], [true, true]])(
+    "merges overlapping year writes (retained=%s, unavailable=%s)", async (retained, unavailable) => {
+      const { db, sqlite } = fxFixtures.open();
+      vi.spyOn(Date, "now").mockReturnValue(Date.parse("2025-06-16T00:00:00Z"));
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      const seed = retained ? { "2025-06-13": {}, "2025-06-14": { ars: 1_180 } } : {};
+      if (retained) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("fx-history-secondary:2025", JSON.stringify(seed), Date.now() / 1000);
+      const started = createDeferredPromise();
+      const release = createDeferredPromise();
+      let calls = 0;
+      const fetchSpy = mockFetch([
+        { match: "@2025-06-14/", respond: async () => {
+          if (++calls === 1) {
+            started.resolve();
+            await release.promise;
+            return unavailable ? { body: {}, status: 404 } : { body: { usd: { cnh: 7.2 } } };
+          }
+          return { body: { usd: { kes: 129 } } };
+        } },
+        { match: "@2025-06-15/", body: {}, status: 404 },
+        { match: ".currency-api.pages.dev", body: {}, status: 404 },
+      ], { requireMatch: true });
+      const late = fetchHistoricalSecondaryFxRates(db, ["CNH", "KES"], "2025-06-14", "2025-06-15");
+      await started.promise;
+      await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
+      release.resolve();
+      const series = await late;
+      const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+      expect(JSON.parse(cache.value)).toEqual({
+        ...seed, "2025-06-14": { ...(seed["2025-06-14"] ?? {}), ...(!unavailable ? { cnh: 7.2 } : {}), kes: 129 },
+        "2025-06-15": {},
+      });
+      expect(series.KES).toEqual([{ timestamp: Date.parse("2025-06-14T00:00:00Z") / 1000, rate: 1 / 129 }]);
+      const fetchCount = fetchSpy.mock.calls.length;
+      await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-15");
+      expect(fetchSpy).toHaveBeenCalledTimes(fetchCount);
+    },
+  );
+
   it("refetches and merges missing requested currencies in a partial dated cache, then replays the dated quote", async () => {
     const { db, sqlite } = fxFixtures.open();
     const fetchSpy = mockFetch([{
@@ -347,6 +400,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
   });
 
   it.each([503, 404])("refetches a transiently failed day on the next run (fallback status=%s)", async (fallbackStatus) => {
+    vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch([
       { match: "cdn.jsdelivr.net", body: { error: "unavailable" }, status: 503 },
@@ -363,7 +417,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     ]);
 
     expect(
-      await fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14"),
+      await drainRetryBackoff(fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14")),
     ).toEqual({ ARS: [] });
     expect(
       firstDb.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache")),
@@ -437,6 +491,31 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     ]);
     await fetchHistoricalSecondaryFxRates(secondDb, ["ARS"], "2025-06-14", "2025-06-14");
 
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a 200 secondary FX day without a usd map instead of caching it as empty", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSpy = mockFetch([
+      { match: "cdn.jsdelivr.net", body: { date: "2025-06-14" } },
+    ], { requireMatch: true });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+
+    await expect(
+      fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14"),
+    ).resolves.toEqual({ KES: [] });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache"))).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX validation failed"));
+
+    await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 

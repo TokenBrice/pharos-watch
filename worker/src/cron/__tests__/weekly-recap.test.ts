@@ -362,6 +362,43 @@ describe("generateWeeklyRecap", () => {
     expect(weeklySystem).not.toMatch(/[\u2012-\u2015]/);
   });
 
+  it("reports degraded weekly inputs instead of a clean status", async () => {
+    const rows = buildDailyRows();
+    rows[2].input_data = JSON.stringify({
+      ...JSON.parse(rows[2].input_data),
+      degradedSources: ["safety-canonical-snapshot"],
+    });
+    const db = mockD1(makeTables({ dailyRows: rows }));
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      null,
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("safety-canonical-snapshot");
+  });
+
+  it("keeps chronic partial-supply week metadata out of the run status", async () => {
+    const chronic = ["supply-current-unavailable", "supply-prev-week-baseline"];
+    const rows = buildDailyRows();
+    for (const row of rows) row.input_data = JSON.stringify({ ...JSON.parse(row.input_data), degradedSources: chronic });
+    const db = mockD1(makeTables({ dailyRows: rows }));
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    const result = await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
+
+    // Chronic partial-cohort reasons stay persisted metadata for the prompt and
+    // watchdog, never a standing cron condition (f8a6cdbee).
+    expect(result.status).toBeUndefined();
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBeUndefined();
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert!.binds[3])).degradedSourcesThisWeek).toEqual(expect.arrayContaining(chronic));
+  });
+
   it("keeps weekly enforce independent from daily shadow and blocks the unresolved raw finding", async () => {
     const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
     const db = mockD1(makeTables({

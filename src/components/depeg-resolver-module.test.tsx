@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { compareResolverUrgency, summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
+import { getDisplayedLivePeakDeviationBps } from "@/components/depeg-resolver-row-card-model";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrV2ResponseRowSchema,
@@ -303,8 +304,8 @@ describe("DepegResolverModule", () => {
   });
 
   describe("calibration lineage caption", () => {
-    const lineage = (incidentCount: number, coinCount: number) => ({
-      trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins: 0,
+    const lineage = (incidentCount: number, coinCount: number, quarantinedCoins = 0) => ({
+      trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins,
     });
 
     it.each([[8_466, 41, "8,466"], [0, 0, "0"]] as const)("states %s producer historical incidents", (incidents, coins, shown) => {
@@ -314,6 +315,20 @@ describe("DepegResolverModule", () => {
       expect(caption.textContent).toBe(`Calibrated on ${shown} historical incidents · ${coins} coins`);
       expect(screen.queryByText(/recovered\s+incidents/)).toBeNull();
     });
+
+    it.each([[1, "41 coins (1 excluded)"], [3, "41 coins (3 excluded)"]] as const)(
+      "reconciles %i quarantined coins inside the calibrated coin count",
+      (quarantinedCoins, corpus) => {
+        render(<DepegResolverModule data={response({
+          _meta: { ...meta, lineage: lineage(8_466, 41, quarantinedCoins) },
+          rows: [row],
+        })} />);
+        expect(screen.getByText(/^Calibrated on/).textContent).toBe(
+          `Calibrated on 8,466 historical incidents · ${corpus}`,
+        );
+        expect(screen.queryByText(/coins? excluded/)).toBeNull();
+      },
+    );
 
     it("omits the caption without lineage", () => {
       render(<DepegResolverModule data={response({ rows: [row] })} />);
@@ -445,6 +460,32 @@ describe("DepegResolverModule", () => {
     expect(screen.queryByText(hidden)).toBeNull();
     // Only evidence classes lead with the base-rate blurb; legacy cards render as before.
     expect(Boolean(screen.queryByText(/most comparable breaks still recovered/))).toBe(version === "5.0");
+  });
+
+  it("does not print the no-break blurb on an above-peg recovery_likely row with kill signals", () => {
+    const abovePegRow = makePredictionRow(
+      makeSourceRow({
+        direction: "above",
+        peakDeviationBps: 1_500,
+        currentDeviationBps: 900,
+        resolution: {
+          tier: "recovery_likely",
+          factors: [
+            {
+              code: "K2_backing_impairment",
+              kind: "kill",
+              severity: "severe",
+              label: "Depends on a frozen/dead collateral asset",
+            },
+          ],
+        },
+      }),
+    );
+    render(<DepegResolverModule data={response({ rows: [abovePegRow] })} />);
+
+    expect(screen.getByText("No break signals")).toBeTruthy();
+    expect(screen.queryByText(/No kill signal fired/)).toBeNull();
+    expect(screen.getByText("Will it recover?").parentElement?.textContent).toContain("1 kill signal · 0 anchors");
   });
 
   it("leads a v5 duration with horizon odds and keeps unreached quantiles absent", () => {
@@ -623,6 +664,33 @@ describe("DepegResolverModule", () => {
     expect(screen.queryByText("published prediction")).toBeNull();
   });
 
+  it("shows the live peak at least as deep as the current deviation on an open incident", () => {
+    const source = makeSourceRow({ peakDeviationBps: -129, currentDeviationBps: -742 });
+    render(<StablecoinDepegResolverRows
+      stablecoinId="lusd-liquity"
+      data={response({ rows: [makePredictionRow(source, { peakDeviationBps: -129, currentDeviationBps: -742 })] })}
+    />);
+
+    const liveFacts = screen.getByText("Live incident").parentElement;
+    expect(liveFacts?.textContent).toContain("Peak -742 bps");
+    expect(liveFacts?.textContent).toContain("Now -742 bps");
+  });
+
+});
+
+describe("displayed live peak", () => {
+  it.each([
+    ["active and deeper", "active", "below", -129, -742, -742],
+    ["active but shallower", "active", "below", -320, -180, -320],
+    ["closed", "closed_pending_review", "below", -129, -742, -129],
+    ["opposite direction", "active", "below", -129, 742, -129],
+  ] as const)("%s", (_label, eventState, direction, peakDeviationBps, currentDeviationBps, expected) => {
+    const row = makePredictionRow(
+      makeSourceRow({ direction, peakDeviationBps, currentDeviationBps }),
+      { eventState, peakDeviationBps, currentDeviationBps },
+    );
+    expect(getDisplayedLivePeakDeviationBps(row)).toBe(expected);
+  });
 });
 
 describe("StablecoinDepegResolverRows", () => {

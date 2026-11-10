@@ -6,6 +6,8 @@ import { handleSetupCallback } from "../setup";
 import { buildPickKeyboard, coinIdHash, decodeSubscribeTypes, encodeSubscribeTypes } from "../pick";
 import { parseCallbackData, type CallbackContext } from "../_shared";
 import { resolveTicker } from "../../common/alerts-parser";
+import { prepareSubscriberAndPresetPatchStatements } from "../../store/presets";
+import { forgetSubscriber } from "../../store/subscriber-lifecycle";
 
 vi.mock("../../common/presets", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../common/presets")>();
@@ -201,7 +203,7 @@ describe("setup buttons", () => {
     return (JSON.parse(String(last(answers)![1]!.body)) as { text: string }).text;
   }
 
-  it("follows the top 25 in one tap, then undoes it", async () => {
+  it("follows the top 25 in one tap, then undoes it atomically once", async () => {
     const { sqlite, db } = fixtures.open();
     await tapSetup(db, "setup:top25");
     expect(sqlite.prepare("SELECT preset_id, alert_dews, alert_depeg FROM telegram_preset_subscriptions").all())
@@ -210,10 +212,20 @@ describe("setup buttons", () => {
     expect(done).toContain("<b>Done.</b>");
     expect(done).toContain("Here's what an alert looks like:");
     const undo = lastUndoData()!;
-    expect(undo).toBe(`setup:undo:0:${(NOW + 86_400).toString(36)}`);
+    expect(undo.split(".")[0]).toBe(`setup:undo:0:${(NOW + 86_400).toString(36)}-1`);
+    expect(new TextEncoder().encode(undo).length).toBeLessThanOrEqual(64);
 
-    await tapSetup(db, undo);
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementationOnce((statements) => batch([...statements, db.prepare("SELECT missing_undo_column")]));
+    await expect(tapSetup(db, undo)).rejects.toThrow("missing_undo_column");
+    expect(sqlite.prepare("SELECT preset_id, alert_dews, alert_depeg FROM telegram_preset_subscriptions").all())
+      .toEqual([{ preset_id: "usd-top25", alert_dews: 1, alert_depeg: 1 }]);
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get()).toEqual({ preference_generation: 1 });
+
+    await Promise.all([tapSetup(db, undo), tapSetup(db, undo)]);
     expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
+    expect(fetchSpy.mock.calls.filter(([url, init]) => String(url).endsWith("/answerCallbackQuery") && String(init!.body).includes("expired")))
+      .toHaveLength(1);
   });
 
   it("restores a partial prior follow on Undo instead of deleting it", async () => {
@@ -225,10 +237,60 @@ describe("setup buttons", () => {
     expect(sqlite.prepare("SELECT alert_dews, alert_depeg, alert_safety FROM telegram_preset_subscriptions").get())
       .toEqual({ alert_dews: 1, alert_depeg: 1, alert_safety: 1 });
     const undo = lastUndoData()!;
-    expect(undo).toBe(`setup:undo:6:${(NOW + 86_400).toString(36)}`);
+    expect(undo.split(".")[0]).toBe(`setup:undo:6:${(NOW + 86_400).toString(36)}-1`);
     await tapSetup(db, undo);
     expect(sqlite.prepare("SELECT alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step FROM telegram_preset_subscriptions").get())
       .toEqual({ alert_dews: 0, alert_depeg: 1, alert_safety: 1, depeg_worsening_bps_step: 250 });
+    const generation = sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get();
+    await tapSetup(db, undo);
+    expect(lastAnswer()).toContain("expired");
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get()).toEqual(generation);
+  });
+
+  it.each([[false, "edit"], [true, "edit"], [false, "safety"], [true, "safety"], [false, "setup"], [true, "setup"]] as const)("rejects historical Undo (used: %s, re-follow: %s)", async (used, follow) => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+    await tapSetup(db, "setup:top25");
+    const undo = lastUndoData()!;
+    if (used) await tapSetup(db, undo);
+    if (follow !== "edit") {
+      await forgetSubscriber(db, "42");
+      expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
+      sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+    }
+    if (follow === "setup") await tapSetup(db, "setup:top25");
+    else await db.batch(prepareSubscriberAndPresetPatchStatements(db, "42", null, "usd-top25",
+      { dews: false, depeg: false, safety: true }, undefined));
+    const currentUndo = lastUndoData();
+    const generation = sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get();
+    await tapSetup(db, undo);
+    expect(lastAnswer()).toContain("expired");
+    expect(sqlite.prepare("SELECT alert_dews, alert_depeg, alert_safety FROM telegram_preset_subscriptions").get())
+      .toEqual(follow === "setup" ? { alert_dews: 1, alert_depeg: 1, alert_safety: 0 } : { alert_dews: 0, alert_depeg: 0, alert_safety: 1 });
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get()).toEqual(generation);
+    expect(sqlite.prepare("SELECT stablecoin_id, alert_dews FROM telegram_subscriptions").all())
+      .toEqual([{ stablecoin_id: "usdc-circle", alert_dews: 1 }]);
+    if (follow === "setup") {
+      await tapSetup(db, currentUndo!);
+      expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
+    }
+  });
+
+  it("keeps the meaningful Undo when two Follow taps overlap", async () => {
+    const { sqlite, db } = fixtures.open();
+    const batch = db.batch.bind(db);
+    let undo: string | undefined;
+    vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+      await tapSetup(db, "setup:top25");
+      undo = lastUndoData();
+      return batch(statements);
+    });
+    await tapSetup(db, "setup:top25");
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get()).toEqual({ preference_generation: 1 });
+    expect(lastUndoData()).toBeUndefined();
+    expect(last(sentTexts())).toContain("You already follow");
+    await tapSetup(db, undo!);
+    expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
   });
 
   it("refuses an expired, tampered or bare Undo without writing", async () => {
@@ -237,6 +299,10 @@ describe("setup buttons", () => {
       VALUES ('42', 'usd-top25', 1, 1, 0, 1, 1)`);
     await tapSetup(db, `setup:undo:0:${(NOW - 1).toString(36)}`);
     expect(lastAnswer()).toContain("expired");
+    for (const suffix of ["", "-1", "-0", "-1-extra", "-zzzzzzzzzzz"]) {
+      await tapSetup(db, `setup:undo:0:${(NOW + 60).toString(36)}${suffix}`);
+      expect(lastAnswer()).toContain("expired");
+    }
     await tapSetup(db, `setup:undo:8:${(NOW + 60).toString(36)}`);
     expect(lastAnswer()).toBe("Action not recognized.");
     await tapSetup(db, "setup:undo");

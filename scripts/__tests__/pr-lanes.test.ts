@@ -6,7 +6,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 import { execFileSync } from "node:child_process";
-import { PR_DOC_COMMANDS, PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { PR_DOC_COMMANDS, PR_LANES, PR_PREPARE_BUDGET_SECONDS, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
 import { buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
@@ -32,10 +32,10 @@ describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
     expect(PR_LANES.map((lane) => lane.id)).toEqual([
       "preflight",
-      "static-compile",
+      "v9-resource",
       "static-guards",
       "tests",
-      "v9-resource",
+      "static-compile",
       "pages-artifact",
       "gate",
     ]);
@@ -48,8 +48,8 @@ describe("PR lane manifest", () => {
     expect(Object.keys(WORKFLOW.jobs)).toEqual(["secrets", "prepare", "validation", "pages-artifact", "pr-gate"]);
     expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
     expect(Object.keys(prepare.outputs ?? {})).toEqual([
-      "docs_only", "docs_inline_succeeded", "matrix",
-      "playwright_firefox_required", "pages_artifact_required", "workspace_artifact_name",
+      "docs_only", "docs_inline_succeeded", "matrix", "pages_critical_css_full_pass",
+      "playwright_firefox_required", "pages_artifact_required", "test_corpus_budget", "workspace_artifact_name",
     ]);
     expect(validation.needs).toBe("prepare");
     expect(validation.strategy?.matrix).toBe("${{ fromJSON(needs.prepare.outputs.matrix) }}");
@@ -75,7 +75,7 @@ describe("PR lane manifest", () => {
     ]);
   });
 
-  it.each([4, 8])("generates %i planned test shards in the validation matrix", (testShards) => {
+  it.each([1, 4, 10])("generates %i planned test shards in the validation matrix", (testShards) => {
     const selection = {
       docsOnly: false, testShards,
     };
@@ -88,7 +88,10 @@ describe("PR lane manifest", () => {
     expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
       { lane: "v9-resource", timeout: 8 },
     ]);
-    expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["static-compile", "static-guards"]);
+    // max-parallel: 14 starts matrix jobs in order. The resource lane must be
+    // inside the first fourteen; the shortest lane absorbs any queued slot.
+    expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["v9-resource", "static-guards"]);
+    expect(matrix.at(-1)).toEqual({ lane: "static-compile", timeout: 20 });
     expect(matrix.map((entry) => entry.lane)).not.toContain("docs");
     expect(matrix).toHaveLength(testShards + 3);
     expect(buildPrWorkflowMatrix({ ...classifyChangedFiles(["README.md", "src/app/page.tsx"]), testShards }).include
@@ -109,11 +112,24 @@ describe("PR lane manifest", () => {
     expect(matrix.some((entry) => entry.lane === "v9-resource")).toBe(selected);
   });
 
-  it("selects the resource lane when classification is unavailable", () => {
-    const matrix = buildPrWorkflowMatrix({ docsOnly: false, testShards: 4 }).include;
-    expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
-      { lane: "v9-resource", timeout: 8 },
-    ]);
+  it("declares report-only lane budgets below each job timeout", () => {
+    expect(Object.fromEntries(PR_LANES.map((lane) => [lane.id, lane.budgetSeconds ?? null]))).toEqual({
+      preflight: null,
+      "v9-resource": 220,
+      "static-guards": 120,
+      tests: 200,
+      "static-compile": 150,
+      "pages-artifact": 250,
+      gate: null,
+    });
+    for (const lane of PR_LANES) {
+      if (lane.budgetSeconds === undefined) continue;
+      // A budget is reporting evidence, not a kill switch: an over-budget lane
+      // must still have time left to finish inside its own timeout.
+      expect(lane.budgetSeconds, lane.id).toBeLessThan(lane.timeoutMinutes * 60);
+    }
+    // `prepare` is a workflow job, so its budget lives beside the manifest.
+    expect(PR_PREPARE_BUDGET_SECONDS).toBe(90);
   });
 
   it("uses the same strict commands for local and sharded execution", () => {
@@ -135,7 +151,7 @@ describe("PR lane manifest", () => {
 
   it("rejects invalid test fan-out instead of dropping selected tests", () => {
     const selection = { docsOnly: false };
-    for (const shards of [0, -1, 1.5, 9]) {
+    for (const shards of [0, -1, 1.5, 11]) {
       expect(() => buildPrWorkflowMatrix({ ...selection, testShards: shards })).toThrow(/shard/);
     }
   });
@@ -146,6 +162,7 @@ describe("PR lane manifest", () => {
       SECRETS_RESULT: "success", PREPARE_RESULT: "success", VALIDATION_RESULT: "success",
       DOCS_ONLY: "false", DOCS_INLINE_SUCCEEDED: "false",
       PAGES_ARTIFACT_REQUIRED: "false", PAGES_ARTIFACT_RESULT: "skipped",
+      TEST_CORPUS_BUDGET: "0",
     };
     const docs = { ...code, DOCS_ONLY: "true", DOCS_INLINE_SUCCEEDED: "true", VALIDATION_RESULT: "skipped" };
     const pages = { ...code, PAGES_ARTIFACT_REQUIRED: "true", PAGES_ARTIFACT_RESULT: "success" };
@@ -167,6 +184,11 @@ describe("PR lane manifest", () => {
       expect(() => run({ ...code, PAGES_ARTIFACT_REQUIRED: required })).toThrow();
     }
     expect(() => run({ ...code, PAGES_ARTIFACT_RESULT: "success" })).toThrow();
+    // The corpus budget is enforced from prepare's recorded exit code, and a
+    // missing code is a failure rather than a skipped gate.
+    for (const result of ["1", "", "missing"]) {
+      expect(() => run({ ...code, TEST_CORPUS_BUDGET: result }), `TEST_CORPUS_BUDGET=${result}`).toThrow();
+    }
   });
 
   it("transports every ignored bootstrap output through the required archive, not optional caches", () => {

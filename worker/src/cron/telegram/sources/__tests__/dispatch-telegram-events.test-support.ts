@@ -4,6 +4,14 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import type { DepegSnapshot } from "../telegram-alert-snapshots";
 import type { AlertSafetySourceRow } from "@shared/types/status/telegram";
 
+export function presetFailureCountCache(value: string | null | Error) {
+  return {
+    match: "FROM cache WHERE key = ?", matchBinds: ["telegram:preset-query-failure-count"],
+    rows: typeof value === "string" ? [{ value, updated_at: 1 }] : [],
+    throwError: value instanceof Error ? value : undefined,
+  };
+}
+
 export function makeAlertSafetySourceRow(overrides: Partial<AlertSafetySourceRow> = {}): AlertSafetySourceRow {
   return {
     grade: "A", score: 90, ratingStatus: "rated", partialEvidence: null, methodologyVersion: "v1",

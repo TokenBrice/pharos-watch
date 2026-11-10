@@ -1,16 +1,46 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { applyTelegramTheme, type TelegramWebAppSdk } from "./telegram-sdk";
+import { applyTelegramTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
 import { telegramThemeContrastRatio } from "./telegram-theme";
 
 afterEach(() => {
   document.documentElement.removeAttribute("style");
+  window.history.replaceState({}, "", "/");
 });
 
 function cssVar(name: string): string {
   return document.documentElement.style.getPropertyValue(name);
 }
+
+describe("getTelegramLaunchContext", () => {
+  it("exposes the URL-decoded signed launch payload without an SDK", () => {
+    const signed = "auth_date=1800000000&hash=abc&user=%7B%7D";
+    window.history.replaceState({}, "", `/pharoswatchbot/app/#tgWebAppData=${encodeURIComponent(signed)}&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop`);
+
+    const launch = getTelegramLaunchContext();
+    expect(launch.hasTelegramLaunchHint).toBe(true);
+    expect(launch.webApp).toBeNull();
+    expect(launch.launchInitData).toBe(signed);
+  });
+
+  it("keeps the missing-launch state reachable on a supported host without a payload", () => {
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
+
+    const launch = getTelegramLaunchContext();
+    expect(launch.hasTelegramLaunchHint).toBe(true);
+    expect(launch.initData).toBe("");
+    expect(launch.launchInitData).toBe("");
+  });
+
+  it("keeps an unsupported host in preview without trusting URL launch data", () => {
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=unknown");
+
+    const launch = getTelegramLaunchContext();
+    expect(launch.hasTelegramLaunchHint).toBe(false);
+    expect(launch.launchInitData).toBe("");
+  });
+});
 
 describe("applyTelegramTheme", () => {
   it("publishes accessible semantic variables while preserving viewport and safe-area behavior", () => {

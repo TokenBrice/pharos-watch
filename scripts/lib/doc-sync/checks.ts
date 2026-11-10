@@ -4,6 +4,11 @@ import {
   read,
 } from "./shared";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
+import { getPublicProducerGraceBudget, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
+import { FRESHNESS_RATIOS, getCacheHealthyMaxRatio, getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import {
   ISOLATE_LOCAL_STATE_DOC_END,
   ISOLATE_LOCAL_STATE_DOC_START,
@@ -134,6 +139,124 @@ function checkRedemptionBackstopsDoc(failures: Failure[], readDocument: typeof r
   }
 }
 
+const LANE_FRESHNESS_FILE = "docs/process/lane-freshness-matrix.md";
+const hours = (sec: number) => `${sec / 3_600}h`;
+const minutes = (sec: number) => `${sec / 60}m`;
+
+/** Owner-review boundaries remain authored outside the generated matrix. */
+function checkLaneFreshnessSignOff(failures: Failure[], readDocument: typeof read): void {
+  const matrix = readDocument(LANE_FRESHNESS_FILE);
+  const add = (label: string, expected: string, found: string | null) =>
+    failures.push({ file: LANE_FRESHNESS_FILE, label, expected, found });
+  const expectContains = (label: string, needle: string) => {
+    if (!matrix.includes(needle)) add(label, needle, null);
+  };
+
+  expectContains("draft sign-off boundary", "**Draft for owner sign-off.**");
+  expectContains("sign-off boundary heading", "## Sign-off boundary");
+  expectContains("Safety recovery note", "Safety publishes hourly at :22; :46 preparation is conditional recovery.");
+
+  const start = matrix.indexOf("<!-- GENERATED-START: lane-freshness-matrix -->");
+  const end = matrix.indexOf("<!-- GENERATED-END: lane-freshness-matrix -->");
+  const outside = start < 0 || end < start ? matrix : matrix.slice(0, start) + matrix.slice(end);
+  const strayRow = outside.split("\n").find((line) => line.startsWith("| `"));
+  if (strayRow) add("hand-authored matrix row outside the generated block", "rows only inside the generated block", strayRow);
+}
+
+/** Sentences interpolated from cron/threshold authorities must stay in their
+ * owning docs; the source constants are the only value authority. */
+function checkOwningFreshnessProse(failures: Failure[], readDocument: typeof read): void {
+  const expect = (file: string, label: string, needle: string) => {
+    if (!readDocument(file).includes(needle)) {
+      failures.push({ file, label, expected: needle, found: null });
+    }
+  };
+  const forbid = (file: string, label: string, needle: string) => {
+    if (readDocument(file).includes(needle)) {
+      failures.push({ file, label, expected: `no ${needle}`, found: needle });
+    }
+  };
+
+  const bands = getCacheRatioThresholds("yield-data");
+  const yieldBudget = DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec;
+  expect(
+    "docs/yield-intelligence.md",
+    "yield-data freshness bands",
+    `fresh through ${(yieldBudget * bands.degraded).toLocaleString("en-US")} seconds, degraded through ${(yieldBudget * bands.stale).toLocaleString("en-US")} seconds, then stale.`,
+  );
+  expect(
+    "docs/status-dashboard.md",
+    "yield-data cache ratios",
+    `\`>${bands.degraded}x\` degraded / \`>${bands.stale}x\` stale`,
+  );
+  expect(
+    "docs/status-dashboard.md",
+    "yield-data healthy max ratio",
+    `\`healthyMaxRatio\` is \`${FRESHNESS_RATIOS.DEGRADED}\` by default and \`${getCacheHealthyMaxRatio("yield-data")}\` for \`yield-data\``,
+  );
+
+  const safetyInterval = CRON_INTERVALS["compute-safety-score-v9"]!;
+  const consumerBudget = hours(2 * safetyInterval);
+  expect(
+    "docs/status-dashboard.md",
+    "Safety cadence",
+    `(${safetyInterval.toLocaleString("en-US")}-second cadence)`,
+  );
+  expect("docs/data-flow-map.md", "Safety consumer budget", `past the ${consumerBudget} consumer budget`);
+  const endpointSec = DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec;
+  expect(
+    "docs/data-flow-map.md",
+    "Safety endpoint budget multiple",
+    `(12× the ${hours(endpointSec)} endpoint budget, ${hours(12 * endpointSec)})`,
+  );
+  expect("docs/stablecoin-detail-page.md", "Safety consumer budget", `${consumerBudget} consumer budget`);
+  expect(
+    "docs/dependency-map.md",
+    "Safety polling window",
+    `${safetyInterval / 60}-minute \`staleTime\` and ${(2 * safetyInterval) / 60}-minute \`refetchInterval\`.`,
+  );
+
+  const mintBurnEndpointSec = API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
+  const producer = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn);
+  expect(
+    "docs/status-dashboard.md",
+    "mint/burn endpoint and producer vocabulary",
+    `The critical \`/api/mint-burn-flows\` endpoint is fresh through ${hours(mintBurnEndpointSec * FRESHNESS_RATIOS.FRESH)} and degraded through ${hours(mintBurnEndpointSec * FRESHNESS_RATIOS.DEGRADED)}. `
+      + `Public producer status is Delayed after ${minutes(producer.delayedAfterSec)}, Degraded after ${hours(producer.degradedAfterSec)} and outage after ${hours(producer.outageAfterSec)}.`,
+  );
+  expect(
+    "docs/status-dashboard.md",
+    "mint/burn internal sync window",
+    `against a \`${minutes(mintBurnEndpointSec)}\` window`,
+  );
+  forbid(
+    "docs/status-dashboard.md",
+    "mint/burn floor reuse",
+    "the same floor described under Availability status above",
+  );
+}
+
+/** Methodology pages and their owning pipeline docs must state the same rule;
+ * the page assertion lives in `src/app/methodology/page.test.tsx`, the doc
+ * sentence here. */
+function checkMethodologyOwnerSentences(failures: Failure[], readDocument: typeof read): void {
+  const expect = (file: string, label: string, needle: string) => {
+    if (!readDocument(file).includes(needle)) {
+      failures.push({ file, label, expected: needle, found: null });
+    }
+  };
+  expect(
+    "docs/pricing-pipeline.md",
+    "aggregate DEX suppression owner",
+    "the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.",
+  );
+  expect(
+    "docs/depeg-detection.md",
+    "confirm-required direction lifecycle owner",
+    "`confirm_required` direction changes keep the old-direction lifecycle open",
+  );
+}
+
 export function runDocSyncChecks(readDocument: typeof read = read): Failure[] {
   const failures: Failure[] = [];
 
@@ -141,6 +264,9 @@ export function runDocSyncChecks(readDocument: typeof read = read): Failure[] {
   checkMethodologyCommitProvenance(failures, readDocument);
   checkWorkerInfrastructureIsolateStateDoc(failures, readDocument);
   checkWorkerInfrastructureRuntimeDoc(failures, readDocument);
+  checkLaneFreshnessSignOff(failures, readDocument);
+  checkOwningFreshnessProse(failures, readDocument);
+  checkMethodologyOwnerSentences(failures, readDocument);
   checkRedemptionBackstopsDoc(failures, readDocument);
 
   return failures;

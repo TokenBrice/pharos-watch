@@ -125,19 +125,33 @@ export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
   failureCategory: z.enum([
     "upstream-http", "parser-drift", "parse-failure", "geo-restricted-egress",
     "validation", "corroboration-mismatch", "schema-shape", "unknown",
-  ]),
-  warningCodes: z.array(z.string().min(1)),
+  ]).nullable(),
+  warningCodes: z.array(z.string().min(1)).refine((codes) => new Set(codes).size === codes.length),
   /** Legacy wire name; the entire error must match, never just a prefix. */
   errorPrefix: z.string().min(1).nullable(),
+  /** A primary HTTP status at the configured endpoint, excluding changing query parameters. */
+  errorClass: z.string().regex(/^http-[45]\d{2}$/).optional(),
+  /** Exact original clock reviewed for a stalled-source finding. */
+  sourceTimestamp: z.number().int().positive().optional(),
   owner: z.string().trim().min(1),
   reason: z.string().trim().min(1),
   sources: z.array(z.object({
     url: z.string().url().refine((url) => url.startsWith("https://")),
-    evidenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    evidenceDate: z.string().refine(isValidIsoDateOnly),
   }).strict()).min(1),
   reviewedAt: z.number().int().positive(),
   expiresAt: z.number().int().positive(),
-}).strict())();
+}).strict().superRefine((review, ctx) => {
+  if ((review.errorClass != null && (review.failureCategory !== "upstream-http" || review.errorPrefix !== null))
+    || (review.sourceTimestamp != null && (review.failureCategory !== null || review.errorPrefix !== null
+      || review.sourceTimestamp > review.reviewedAt))
+    || (review.failureCategory === null && (review.errorPrefix !== null
+      || (review.warningCodes.length === 0 && review.sourceTimestamp == null)))
+    || (review.warningCodes.length === 0 && review.errorPrefix === null
+      && review.errorClass == null && review.sourceTimestamp == null)) {
+    ctx.addIssue({ code: "custom", message: "Review must name one compatible failure or snapshot finding" });
+  }
+}))();
 export type ReserveFeedReview = z.output<typeof ReserveFeedReviewSchema>;
 
 export const ReserveContinuationExecutionStatusSchema = /* @__PURE__ */ (() => z.object({
@@ -210,6 +224,7 @@ export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object(
   healthConfiguredCoins: z.number().optional(),
   healthFreshCoins: z.number().optional(),
   healthAuthoritativeFreshCoins: z.number().optional(),
+  healthDegradedCoins: z.number().int().nonnegative().optional(),
   acknowledgedFeedIds: z.array(z.string()).optional(),
   acknowledgedFeeds: z.array(ReserveFeedReviewSchema).optional(),
   expiredFeedReviewIds: z.array(z.string()).optional(),
@@ -249,6 +264,7 @@ export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCom
     healthConfiguredCoins: configuredCoins,
     healthFreshCoins: 0,
     healthAuthoritativeFreshCoins: 0,
+    healthDegradedCoins: 0,
     acknowledgedFeedIds: [],
     acknowledgedFeeds: [],
     expiredFeedReviewIds: [],

@@ -231,6 +231,7 @@ function YieldInstrumentRowBase({
     safetyScore,
     pysColor,
     breakdown,
+    pysDrags,
     confidenceStyle,
     confidenceLabel,
     freshness,
@@ -261,6 +262,10 @@ function YieldInstrumentRowBase({
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const benchmarkRate = resolvedBenchmark.rate;
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
+  // A default-safety score is a scoring input, not a measured Safety Score: the
+  // badge, gauge and zone verdict read it as unavailable.
+  const usedDefaultSafety = row.provenance?.usedDefaultSafety === true;
+  const displayedSafetyScore = usedDefaultSafety ? null : safetyScore;
 
   return (
     <div className={cn(BOARD_SUBGRID_CLASS, "border-b border-border/55 last:border-b-0")}>
@@ -316,7 +321,7 @@ function YieldInstrumentRowBase({
             <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
               {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
             </Badge>
-            <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
+            <YieldZoneChip safetyScore={displayedSafetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
             <YieldSignalsIndicator
               row={row}
               sourceRiskSummary={labels.sourceRiskSummary}
@@ -354,17 +359,18 @@ function YieldInstrumentRowBase({
               safetyScore={safetyScore}
               safetySrLabel={labels.safetySrLabel}
               opportunityDerived={isOpportunityDerivedYieldRow(row)}
+              usedDefaultSafety={usedDefaultSafety}
             />
           </div>
           <div className="mt-1.5">
             <MetricGauge
-              value={safetyScore}
-              tone={safetyBarTone(safetyScore)}
-              ariaLabel={`Safety score ${safetyScore !== null ? Math.round(safetyScore) : "unavailable"} of 100`}
+              value={displayedSafetyScore}
+              tone={safetyBarTone(displayedSafetyScore)}
+              ariaLabel={`Safety score ${displayedSafetyScore !== null ? Math.round(displayedSafetyScore) : "unavailable"} of 100`}
             />
           </div>
           <div className="mt-1 truncate font-mono text-3xs text-muted-foreground">
-            {safetyScore !== null ? `${Math.round(safetyScore)}/100` : "unscored"}
+            {displayedSafetyScore !== null ? `${Math.round(displayedSafetyScore)}/100` : "unscored"}
           </div>
         </div>
 
@@ -393,7 +399,13 @@ function YieldInstrumentRowBase({
             />
           </div>
           <div className="mt-1 truncate text-3xs text-muted-foreground">
-            <YieldCohortChip cohort={row.cohortPercentile} />
+            {pysDrags.length > 0 ? (
+              <span className="tabular-nums text-state-warn-bright" title="PYS points lost to this factor">
+                {pysDrags.map((drag) => `−${Math.abs(drag.points)} ${drag.label}`).join(" · ")}
+              </span>
+            ) : (
+              <YieldCohortChip cohort={row.cohortPercentile} />
+            )}
           </div>
         </div>
 
@@ -443,7 +455,7 @@ function YieldInstrumentRowBase({
           <MetricLabel>30d Range</MetricLabel>
           <div className="mt-1">
             {row.apyMin30d !== null && row.apyMax30d !== null ? (
-              <ApyRangeBar apy30d={row.apy30d} min={row.apyMin30d} max={row.apyMax30d} />
+              <ApyRangeBar currentApy={row.currentApy} min={row.apyMin30d} max={row.apyMax30d} />
             ) : (
               <span className="text-xs text-muted-foreground">{"—"}</span>
             )}

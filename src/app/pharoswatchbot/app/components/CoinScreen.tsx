@@ -90,7 +90,7 @@ export function CoinScreen({ state, nowSec, canEdit, busy, pendingOperation, onM
       <header className="px-1 pt-2">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{symbol}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {[name !== symbol ? name : null, catalogCoin?.peg ? `${catalogCoin.peg} peg` : null].filter(Boolean).join(" · ")
+          {[name !== symbol ? name : null, catalogCoin?.pegLabel ?? (catalogCoin?.peg ? `${catalogCoin.peg} peg` : null)].filter(Boolean).join(" · ")
             || (tracked ? null : "No longer tracked by Pharos")}
         </p>
         {tracked && !subscription ? <p className="mt-1 text-sm text-muted-foreground">Not in your coins yet.</p> : null}
@@ -115,13 +115,14 @@ export function CoinScreen({ state, nowSec, canEdit, busy, pendingOperation, onM
                   subtitle={subtitle}
                   className="min-h-[3.25rem]"
                   // An unfollowed coin is read-only: a switch here would silently follow it.
-                  value={subscription ? undefined : isCoverageActive(entry) ? "On" : "Off"}
+                  // Unreadable coverage is shown as the missing-value dash, never as "Off".
+                  value={subscription ? undefined : entry.kind === "unknown" ? "—" : isCoverageActive(entry) ? "On" : "Off"}
                   trailing={subscription ? (
                     <Switch
                       label={`${symbol} ${ALERT_LABELS[type]}`}
                       description={subtitle}
                       checked={isCoverageActive(entry)}
-                      disabled={controlsDisabled}
+                      disabled={controlsDisabled || entry.kind === "unknown"}
                       loading={pendingFamily(type)}
                       onChange={(next) => setCoin({ alertTypes: { [type]: next } })}
                     />

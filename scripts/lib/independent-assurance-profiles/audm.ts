@@ -6,9 +6,9 @@ export const PROFILE: CompilerProfile = {
   product: "AUDM",
   profile: "audm-v1",
   officialIndexUrl: "https://www.macropod.com/transparency",
-  reportUrl: "https://docs.macropod.com/legal/reserve-verification-report-2026-09-30.pdf",
-  reportDate: "2026-09-30",
-  reportAsOf: "2026-09-30T23:59:59+10:00",
+  reportUrl: "https://docs.macropod.com/legal/reserve-verification-report-31st-october-2026.pdf",
+  reportDate: "2026-10-31",
+  reportAsOf: "2026-10-31T23:59:59+10:00",
   reportTimeZone: "Australian Eastern Standard Time (AEST, UTC+10)",
   attestor: "Catena Digital Pty Ltd (trading as Macropod Global) — issuer CEO",
   engagement:
@@ -19,7 +19,9 @@ export const PROFILE: CompilerProfile = {
     {
       code: "cash",
       label: "Cash held at Westpac Banking Corporation in the AUDM Trust Class A Reserve",
-      pattern: new RegExp(`Cash\\s+\\$${AUD_AMOUNT}`),
+      // October lists four Westpac Class A Reserve accounts whose sum is the
+      // printed Total Reserve Accounts AUD; pin the total line, not the first account.
+      pattern: new RegExp(`Total Reserve Accounts AUD\\s+\\$${AUD_AMOUNT}`),
     },
   ],
   liabilityRows: [
@@ -33,17 +35,17 @@ export const PROFILE: CompilerProfile = {
     { label: "Westpac", pattern: /Westpac Banking Corporation/ },
     { label: "ASIC 2025/867", pattern: /Stablecoin and\s+Wrapped Token Relief/ },
     { label: "1:1 ratio", pattern: /1:1 ratio/ },
-    { label: "AUDM report date", pattern: /30th September 2026/ },
+    { label: "AUDM report date", pattern: /31st October 2026/ },
     { label: "CEO signature", pattern: /CEO/ },
   ],
   rejectedText: [
     { label: "qualified/adverse/disclaimed conclusion", pattern: /qualified opinion|adverse opinion|disclaimer of opinion|except for/i },
   ],
   reportedTotals: [
-    { label: "AUDM reserve total", expected: "3322783.88", pattern: new RegExp(`Total Reserve Accounts AUD\\s+\\$${AUD_AMOUNT}`) },
-    { label: "AUDM on-chain total", expected: "3322070.88", pattern: new RegExp(`Total AUDM\\s+\\$${AUD_AMOUNT}`) },
+    { label: "AUDM reserve total", expected: "3487442.07", pattern: new RegExp(`Total Reserve Accounts AUD\\s+\\$${AUD_AMOUNT}`) },
+    { label: "AUDM on-chain total", expected: "3486694.37", pattern: new RegExp(`Total AUDM\\s+\\$${AUD_AMOUNT}`) },
   ],
-  reportedAssetTotal: "3322783.88",
-  computedAssetTotal: "3322783.88",
-  reportedLiabilityTotal: "3322070.88",
+  reportedAssetTotal: "3487442.07",
+  computedAssetTotal: "3487442.07",
+  reportedLiabilityTotal: "3486694.37",
 };

@@ -42,7 +42,9 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
       kind: "base",
       operator: null,
       value: quality,
-      detail: card.partialEvidence === null
+      // Only a dropped pillar renormalizes the weights; a subcomponent or
+      // A/B cause gap leaves all three pillars priced.
+      detail: (card.partialEvidence?.excludedPillars.length ?? 0) === 0
         ? "Smooth bounded headroom over the included Backing, Exit, and Control pillars."
         : "Smooth bounded headroom over included pillars only; excluded pipeline gaps have zero weight and remaining weights are renormalized.",
     },
@@ -106,6 +108,26 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
       // the reason here would print the same sentence twice.
       detail: null,
     });
+  } else {
+    // An asset premium can be truncated by its own publication ceiling rather
+    // than a card cap. Compare against the full pre-cap chain, including rows
+    // suppressed by a display threshold: a suppressed peg haircut followed by
+    // ordinary rounding is not a ceiling, while a premium above the published
+    // integer is.
+    if (
+      preCap !== null
+      && published !== Math.round(preCap)
+      && preCap - published > POINT_EPSILON
+    ) {
+      steps.push({
+        key: "publication-maximum",
+        label: "Publication maximum",
+        kind: "cap",
+        operator: `max ${published.toFixed(0)}`,
+        value: published,
+        detail: null,
+      });
+    }
   }
 
   // A single stage that never moved the number explains nothing the headline

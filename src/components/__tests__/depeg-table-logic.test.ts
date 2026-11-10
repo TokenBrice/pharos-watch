@@ -45,27 +45,32 @@ describe("compareDepegTrackerRows — __attention sort", () => {
   });
 });
 
-describe("compareDepegTrackerRows — pegScore", () => {
-  it("sorts by pegScore descending", () => {
-    const high = makeRow({ pegScore: 95 });
-    const low = makeRow({ pegScore: 40 });
-    const result = compareDepegTrackerRows(high, low, sort("pegScore", "desc"));
-    expect(result).toBeLessThan(0); // high ranks first
+describe("compareDepegTrackerRows — numeric field keys", () => {
+  // The comparator is shared and covered centrally; one row per extractor pins this module's field
+  // mapping and its absolute transforms. Null handling stays in the per-key cases below.
+  it.each([
+    ["pegScore", "desc", { pegScore: 95 }, { pegScore: 40 }],
+    ["pegScore", "asc", { pegScore: 40 }, { pegScore: 95 }],
+    ["pegPct", "desc", { pegPct: 98 }, { pegPct: 75 }],
+    ["eventCount", "desc", { eventCount: 15 }, { eventCount: 2 }],
+    ["trackingSpanDays", "desc", { trackingSpanDays: 365 }, { trackingSpanDays: 7 }],
+    ["currentDeviationBps", "desc", { currentDeviationBps: -200 }, { currentDeviationBps: 50 }],
+    ["worstDeviationBps", "desc", { worstDeviationBps: -500 }, { worstDeviationBps: 100 }],
+  ] as const)("ranks %s %s by its own extractor, absolute where signed", (key, direction, first, second) => {
+    expect(compareDepegTrackerRows(makeRow(first), makeRow(second), sort(key, direction))).toBeLessThan(0);
   });
+});
 
-  it("sorts by pegScore ascending", () => {
-    const high = makeRow({ pegScore: 95 });
-    const low = makeRow({ pegScore: 40 });
-    const result = compareDepegTrackerRows(high, low, sort("pegScore", "asc"));
-    expect(result).toBeGreaterThan(0); // low ranks first
-  });
-
-  it.each(["asc", "desc"] as const)("sorts unknown peg health last in %s order, after observed zero and nonzero scores", (direction) => {
-    const unknown = makeRow({ pegScore: null });
-    for (const value of observedValues) {
-      const observed = makeRow({ pegScore: value });
-      expect(compareDepegTrackerRows(unknown, observed, sort("pegScore", direction))).toBeGreaterThan(0);
-      expect(compareDepegTrackerRows(observed, unknown, sort("pegScore", direction))).toBeLessThan(0);
+describe.each([
+  ["pegScore", makeRow({ pegScore: null }), observedValues.map((pegScore) => makeRow({ pegScore }))],
+  ["dewsScore", makeRow(), observedValues.map((score) => makeRow({}, makeDews({ score })))],
+  ["currentDeviationBps", makeRow({ currentDeviationBps: null }),
+    [...observedValues, -20].map((currentDeviationBps) => makeRow({ currentDeviationBps }))],
+] as const)("compareDepegTrackerRows — %s availability", (key, unknown, observedRows) => {
+  it.each(["asc", "desc"] as const)("sorts unknown last in %s order, after observed zero and nonzero values", (direction) => {
+    for (const observed of observedRows) {
+      expect(compareDepegTrackerRows(unknown, observed, sort(key, direction))).toBeGreaterThan(0);
+      expect(compareDepegTrackerRows(observed, unknown, sort(key, direction))).toBeLessThan(0);
     }
   });
 });
@@ -77,33 +82,6 @@ describe("compareDepegTrackerRows — dewsScore", () => {
     const result = compareDepegTrackerRows(high, low, sort("dewsScore", "desc"));
     expect(result).toBeLessThan(0);
   });
-
-  it.each(["asc", "desc"] as const)("sorts unknown DEWS last in %s order, after observed zero and nonzero scores", (direction) => {
-    const unknown = makeRow({}, null);
-    for (const value of observedValues) {
-      const observed = makeRow({}, makeDews({ score: value }));
-      expect(compareDepegTrackerRows(unknown, observed, sort("dewsScore", direction))).toBeGreaterThan(0);
-      expect(compareDepegTrackerRows(observed, unknown, sort("dewsScore", direction))).toBeLessThan(0);
-    }
-  });
-});
-
-describe("compareDepegTrackerRows — currentDeviationBps", () => {
-  it("sorts by abs deviation descending", () => {
-    const big = makeRow({ currentDeviationBps: -200 });
-    const small = makeRow({ currentDeviationBps: 50 });
-    const result = compareDepegTrackerRows(big, small, sort("currentDeviationBps", "desc"));
-    expect(result).toBeLessThan(0); // |big| = 200 > |small| = 50
-  });
-
-  it.each(["asc", "desc"] as const)("sorts unknown deviation last in %s order, after observed zero and nonzero deviations", (direction) => {
-    const unknown = makeRow({ currentDeviationBps: null });
-    for (const value of [...observedValues, -20]) {
-      const observed = makeRow({ currentDeviationBps: value });
-      expect(compareDepegTrackerRows(unknown, observed, sort("currentDeviationBps", direction))).toBeGreaterThan(0);
-      expect(compareDepegTrackerRows(observed, unknown, sort("currentDeviationBps", direction))).toBeLessThan(0);
-    }
-  });
 });
 
 describe("compareDepegTrackerRows — pegPct", () => {
@@ -114,32 +92,9 @@ describe("compareDepegTrackerRows — pegPct", () => {
     expect(compareDepegTrackerRows(unknown, zero, sort("pegPct", direction))).toBeGreaterThan(0);
     expect(compareDepegTrackerRows(unknown, perfect, sort("pegPct", direction))).toBeGreaterThan(0);
   });
-
-  it("sorts by peg percentage", () => {
-    const high = makeRow({ pegPct: 98 });
-    const low = makeRow({ pegPct: 75 });
-    const result = compareDepegTrackerRows(high, low, sort("pegPct", "desc"));
-    expect(result).toBeLessThan(0);
-  });
-});
-
-describe("compareDepegTrackerRows — eventCount", () => {
-  it("sorts by event count descending", () => {
-    const many = makeRow({ eventCount: 15 });
-    const few = makeRow({ eventCount: 2 });
-    const result = compareDepegTrackerRows(many, few, sort("eventCount", "desc"));
-    expect(result).toBeLessThan(0);
-  });
 });
 
 describe("compareDepegTrackerRows — worstDeviationBps", () => {
-  it("sorts by abs worst deviation descending", () => {
-    const worst = makeRow({ worstDeviationBps: -500 });
-    const mild = makeRow({ worstDeviationBps: 100 });
-    const result = compareDepegTrackerRows(worst, mild, sort("worstDeviationBps", "desc"));
-    expect(result).toBeLessThan(0);
-  });
-
   it.each(["asc", "desc"] as const)("sorts unknown worst deviation last in %s order", (direction) => {
     const unknown = makeRow({ worstDeviationBps: null });
     for (const value of [...observedValues, -100]) {
@@ -164,15 +119,6 @@ describe("compareDepegTrackerRows — dexAgrees", () => {
     const agrees = makeRow({ dexPriceCheck: { agrees: true, dexPrice: 1, dexDeviationBps: 0, sourcePools: 1, sourceTvl: 1 } });
     const disagrees = makeRow({ dexPriceCheck: { agrees: false, dexPrice: 0.98, dexDeviationBps: 200, sourcePools: 1, sourceTvl: 1 } });
     const result = compareDepegTrackerRows(agrees, disagrees, sort("dexAgrees", "desc"));
-    expect(result).toBeLessThan(0);
-  });
-});
-
-describe("compareDepegTrackerRows — trackingSpanDays", () => {
-  it("sorts by tracking span descending", () => {
-    const long = makeRow({ trackingSpanDays: 365 });
-    const short = makeRow({ trackingSpanDays: 7 });
-    const result = compareDepegTrackerRows(long, short, sort("trackingSpanDays", "desc"));
     expect(result).toBeLessThan(0);
   });
 });

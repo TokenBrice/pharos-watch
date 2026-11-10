@@ -11,10 +11,12 @@ import { classifyBridgeBurnRows } from "../../src/lib/mint-burn-pipeline/classif
 import { fetchMintBurnLogs, getMintBurnFinalizedHead, mintBurnAlchemyEndpoint } from "../../src/lib/mint-burn-pipeline/rpc";
 import { loadMintBurnPriceContextBatch } from "../../src/lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../../src/lib/mint-burn-pipeline/parse";
-import { DECODE_QUARANTINE_REASON, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../src/lib/mint-burn-pipeline/scan-policy";
+import { DECODE_QUARANTINE_REASON, shouldQuarantineDecodeFailure } from "../../src/lib/mint-burn-pipeline/scan-policy";
+import { mintBurnRetainedHourlyFloor } from "../../src/cron/mint-burn/repair-coverage";
 import {
   persistMintBurnRows,
   recalcAffectedHours,
+  collectAffectedHours,
 } from "../../src/lib/mint-burn-pipeline/persistence";
 import {
   ensureMintBurnSyncStateRows,
@@ -232,6 +234,11 @@ export async function handleBackfillMintBurn({
     let burnTypeChanges = 0;
     let rowsReclassifiedUnique = 0;
     const txContextCache = new Map<string, MintBurnTxContext | null>();
+    const affectedHours = new Map<string, MintBurnAffectedHour>();
+    const jobRows: MintBurnRow[] = [];
+    let scanStartTimestamp: number | null = null;
+    let scanEndTimestamp: number | null = null;
+    let incompleteRange = false;
 
     while (cursor <= toBlock && chunksProcessed < maxChunks && !budgetExhausted(budget)) {
       const scanTo = Math.min(cursor + chunkSize - 1, toBlock);
@@ -250,8 +257,9 @@ export async function handleBackfillMintBurn({
           topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
         }
 
-        const fetched = await fetchMintBurnLogs([mintBurnAlchemyEndpoint(alchemyUrl)], config.contractAddress, topics, cursor, scanTo, budget);
-        if (!fetched || !fetched.complete) {
+        const fetched = await fetchMintBurnLogs([mintBurnAlchemyEndpoint(alchemyUrl)], config.contractAddress, topics, cursor, scanTo, budget, undefined,
+          { priorLogs: collectedLogs.flatMap(({ logs }) => logs) });
+        if (!fetched || !fetched.complete || fetched.scannedToBlock < scanTo) {
           failedEventDefs.push(`${eventDef.signature}:${eventDef.direction}:fetch-failed`);
           continue;
         }
@@ -268,7 +276,8 @@ export async function handleBackfillMintBurn({
         );
       }
 
-      const uniqueBlocks = [...new Set(collectedLogs.flatMap(({ logs }) => logs.map((log) => parseInt(log.blockNumber, 16))))];
+      const uniqueBlocks = [...new Set([cursor, scanTo,
+        ...collectedLogs.flatMap(({ logs }) => logs.map((log) => parseInt(log.blockNumber, 16)))])];
       const blockTimestamps =
         uniqueBlocks.length > 0
           ? await resolveBlockTimestamps(alchemyUrl, uniqueBlocks, budget, {
@@ -278,14 +287,14 @@ export async function handleBackfillMintBurn({
             })
           : new Map<number, number>();
 
-      if (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length) {
+      if (uniqueBlocks.some((block) => !Number.isSafeInteger(blockTimestamps.get(block))
+        || (blockTimestamps.get(block) ?? 0) <= 0)) {
         return errorResponse(
           502,
           `Backfill failed for ${mintBurnConfigKey(config)} at ${cursor}-${scanTo}: missing block timestamps`,
         );
       }
 
-      const affectedHours = new Map<string, MintBurnAffectedHour>();
       const allParsedRows: MintBurnRow[] = [];
       let chunkDecodeFailureBlock: number | null = null;
 
@@ -294,8 +303,12 @@ export async function handleBackfillMintBurn({
         for (const log of logs) {
           const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
           if (decodeUint256AtSlotOrNull(log.data, slot, config.decimals) == null) {
+            collectAffectedHours([{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId,
+              timestamp: blockTimestamps.get(parseInt(log.blockNumber, 16))! }], affectedHours);
             const retry = await shouldQuarantineDecodeFailure(db, mintBurnConfigKey(config), log, Math.floor(Date.now() / 1000));
             if (retry.quarantined) {
+              chunkDecodeFailureBlock = Math.min(chunkDecodeFailureBlock ?? Infinity, parseInt(log.blockNumber, 16));
+              earliestDecodeFailureBlock = Math.min(earliestDecodeFailureBlock ?? Infinity, chunkDecodeFailureBlock);
               rowsDropped++;
               rowsDroppedDecode++;
               rowsQuarantinedDecode++;
@@ -333,24 +346,53 @@ export async function handleBackfillMintBurn({
       bridgeBurns += burnCounts.bridgeBurns;
       reviewBurns += burnCounts.reviewBurns;
 
-      const persistResult = await persistMintBurnRows(db, allParsedRows, affectedHours);
-      rowsInserted += persistResult.inserted;
-      rowsIgnored += persistResult.ignored;
-      flowTypeChanges += persistResult.flowTypeChanges;
-      burnTypeChanges += persistResult.burnTypeChanges;
-      rowsReclassifiedUnique += persistResult.rowsUpdated;
+      jobRows.push(...allParsedRows);
+      collectAffectedHours(allParsedRows, affectedHours);
 
-      await recalcAffectedHours(db, affectedHours);
-      const advancedTo = chunkDecodeFailureBlock != null
-        ? chunkDecodeFailureBlock - 1
-        : mintBurnSuccessfulScanFrontier(cursor, scanTo, chainHead);
-      if (advancedTo >= cursor) {
-        await upsertMintBurnSyncState(db, mintBurnConfigKey(config), advancedTo, "monotonic-max");
-      }
-      cursor = Math.max(cursor, advancedTo + 1);
       chunksProcessed++;
-      // Retry held coverage in a subsequent observation, not repeatedly in this request.
-      if (advancedTo < scanTo) break;
+      if (chunkDecodeFailureBlock != null) {
+        incompleteRange = true;
+        break;
+      }
+      scanStartTimestamp ??= blockTimestamps.get(cursor)!;
+      scanEndTimestamp = blockTimestamps.get(scanTo)!;
+      cursor = scanTo + 1;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const retainedFloor = mintBurnRetainedHourlyFloor(now);
+    // This operator selects one config, so a shared historical bucket cannot
+    // establish every constituent in one invocation.
+    const singleConfigBucket = MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === config.stablecoinId
+      && entry.chain.chainId === config.chain.chainId).length === 1;
+    const rebuildHours = new Map<string, MintBurnAffectedHour>();
+    const skippedHours: Array<MintBurnAffectedHour & { reason: string }> = [];
+    for (const [key, hour] of affectedHours) {
+      const retained = hour.hourTs >= retainedFloor && hour.hourTs + 3600 <= now;
+      const scanned = singleConfigBucket && scanStartTimestamp != null && scanEndTimestamp != null
+        && hour.hourTs > scanStartTimestamp && hour.hourTs + 3600 <= scanEndTimestamp;
+      const reason = incompleteRange ? "scan-range-incomplete" : retained || scanned ? null
+        : !singleConfigBucket ? "shared-bucket-configs-not-scanned" : "raw-hour-incomplete";
+      if (reason) skippedHours.push({ ...hour, reason });
+      else rebuildHours.set(key, hour);
+    }
+    // Persistence also queues automatic rebuilds. Refuse the whole write phase
+    // when any hour is unsafe, rather than leaving destructive deferred debt.
+    const scannedToBlock = cursor - 1;
+    if (skippedHours.length > 0 || incompleteRange) {
+      for (const hour of rebuildHours.values()) skippedHours.push({ ...hour, reason: "job-write-refused" });
+      cursor = fromBlock;
+    } else {
+      const persisted = await persistMintBurnRows(db, jobRows, rebuildHours);
+      rowsInserted = persisted.inserted;
+      rowsIgnored = persisted.ignored;
+      flowTypeChanges = persisted.flowTypeChanges;
+      burnTypeChanges = persisted.burnTypeChanges;
+      rowsReclassifiedUnique = persisted.rowsUpdated;
+      await recalcAffectedHours(db, rebuildHours);
+      if (cursor > fromBlock) {
+        await upsertMintBurnSyncState(db, mintBurnConfigKey(config), cursor - 1, "monotonic-max");
+      }
     }
 
     return jsonResponse({
@@ -373,6 +415,10 @@ export async function handleBackfillMintBurn({
       rowsQuarantinedDecode,
       earliestDecodeFailureBlock,
       decodeQuarantines,
+      incompleteRange,
+      scannedToBlock,
+      hoursRebuilt: skippedHours.length > 0 || incompleteRange ? 0 : rebuildHours.size,
+      skippedHours,
       effectiveBurns,
       bridgeBurns,
       reviewBurns,

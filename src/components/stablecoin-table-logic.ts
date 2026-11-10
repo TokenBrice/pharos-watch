@@ -1,9 +1,12 @@
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { createTableComparator } from "@/lib/table-comparator";
+import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
+import { getNavPriceReference } from "@/lib/nav-price-reference";
 import type { ColumnId } from "@/hooks/use-preferences";
-import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
+import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter } from "@shared/lib/filter-tags";
+import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import {
@@ -14,6 +17,7 @@ import {
 import type { DexLiquidityTableMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 
 export type StablecoinTableSourceGenerations = Partial<Record<"stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards", number | null>>;
 
@@ -42,10 +46,48 @@ interface SortState {
 }
 
 export type StablecoinTableRowRiskLevel = "depeg" | "poor" | "warning" | "normal";
-/** Partial-chain remainders cannot be compared with historical totals. */
+
+export interface DisplayedNativePrice {
+  /** USD price converted into the peg quantity the Price cell prints; null when the cell prints "N/A". */
+  value: number | null;
+  /** Peg currency the cell prints (and its symbol). */
+  currency: string;
+  /** Reference used for the conversion; null when the cell prints the USD quote. */
+  reference: number | null;
+}
+
+/**
+ * The Price column's displayed unit: one authority for the cell and its sort,
+ * so sorting never orders a different unit than the reader sees. Null when the
+ * cell prints "—" (no observed price source, or a non-USD fiat peg with no
+ * published reference).
+ */
+export function resolveDisplayedNativePrice(
+  coin: StablecoinData,
+  pegSummary: PegSummaryCoin | undefined,
+  pegScores?: Map<string, PegSummaryCoin>,
+): DisplayedNativePrice | null {
+  if (!isObservedPrice(coin)) return null;
+  const meta = TRACKED_META_BY_ID.get(coin.id);
+  const currency = meta?.flags.pegCurrency ?? "USD";
+  const pegRef = pegSummary?.pegReference?.valueUsd ?? null;
+  const reference = meta?.flags.navToken ? getNavPriceReference(currency, pegScores) : pegRef;
+  const usesUsdSymbol = getPegTaxonomyByCurrency(currency)?.nativePriceUsesUsdSymbol === true;
+  if (reference == null && !meta?.flags.navToken && !usesUsdSymbol) return null;
+  const value = coin.price == null
+    ? null
+    : !usesUsdSymbol && reference != null && Number.isFinite(reference) && reference > 0
+      ? coin.price / reference
+      : coin.price;
+  return { value, currency, reference };
+}
+
+/** Partial-chain remainders cannot be compared with historical totals, and a
+ *  carried observation is not this window's supply. */
 export function getSupplyChangePercent(coin: StablecoinData, previous: number | null): number | null {
   const current = getCirculatingRawOrNull(coin);
   if (current == null || previous == null || previous <= 0) return null;
+  if (coin.supplyRestored === true) return null;
   if (classifySupplyCoverage(buildSupplyObservationProvenance(coin)) === "partial") return null;
   return ((current - previous) / previous) * 100;
 }
@@ -106,9 +148,7 @@ export function buildTrackedIdSet(
       if (!eligibleIds.has(stablecoin.id)) return false;
       // Check regular filters (from metadata tags)
       const tags = getFilterTags(stablecoin);
-      const regularMatch = regularFilters.every((filter) =>
-        filter === "other-peg" ? tags.some((tag) => OTHER_PEG_TAGS.includes(tag)) : tags.includes(filter),
-      );
+      const regularMatch = regularFilters.every((filter) => tags.includes(filter));
       if (!regularMatch) return false;
 
       // Check grade filters (from reportCards)
@@ -187,13 +227,16 @@ export function sortStablecoins({
 }: SortStablecoinsParams): StablecoinData[] {
   const extractors: Record<StablecoinTableSortKey, (row: StablecoinData) => StablecoinSortValue> = {
     name: (r) => r.name.toLowerCase(),
-    price: (r) => isObservedPrice(r) ? r.price ?? null : null,
+    price: (r) => resolveDisplayedNativePrice(r, pegScores?.get(r.id), pegScores)?.value ?? null,
     mcap: (r) => getCirculatingRawOrNull(r),
     change24h: (r) => getSupplyChangePercent(r, getPrevDayRawOrNull(r)),
     change7d: (r) => getSupplyChangePercent(r, getPrevWeekRawOrNull(r)),
     stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
-    grade: (r) => reportCards?.[r.id]?.score ?? null,
+    grade: (r) => {
+      const grade = reportCards?.[r.id]?.grade;
+      return grade == null || grade === "NR" ? null : getReportCardGradeRank(grade);
+    },
     blacklistable: (r) => {
       const status = getResolvedBlacklistStatus(r.id);
       if (status === null) return null;
@@ -219,7 +262,16 @@ export function sortStablecoins({
     .map((row, index) => ({ row, index, value: extractSortValue(row) }))
     .sort((a, b) => {
       const compared = compare(a, b, { key: "value", direction: sort.direction });
-      return compared || a.index - b.index;
+      if (compared) return compared;
+      if (effectiveSortKey === "grade") {
+        // A held letter can sit beside a different raw score band; break the
+        // tie inside one letter by the score, never to reorder the letters.
+        const aScore = reportCards?.[a.row.id]?.score ?? Number.NEGATIVE_INFINITY;
+        const bScore = reportCards?.[b.row.id]?.score ?? Number.NEGATIVE_INFINITY;
+        const byScore = (sort.direction === "desc" ? -1 : 1) * (aScore - bScore);
+        if (Number.isFinite(byScore) && byScore !== 0) return byScore;
+      }
+      return a.index - b.index;
     })
     .map(({ row }) => row);
 }
@@ -231,7 +283,28 @@ export function exportStablecoinsCsv(
   dexLiquidity?: DexLiquidityTableMap,
   reportCards?: Record<string, V9SafetyTableRow>,
   sourceGenerations?: StablecoinTableSourceGenerations,
+  reportCardsMethodologyVersion?: string | null,
 ): void {
+  const generationsBySource = {
+    stablecoins: generationIso(sourceGenerations?.stablecoins),
+    pegSummary: generationIso(sourceGenerations?.pegSummary),
+    dexLiquidity: generationIso(sourceGenerations?.dexLiquidity),
+    reportCards: generationIso(sourceGenerations?.reportCards),
+  };
+  const generationValues = Object.values(generationsBySource);
+  // Mixed-source convention: the oldest known participating generation dates
+  // the export; unread clocks stay null and never withhold those that were read.
+  const knownGenerations = generationValues.filter((generation): generation is string => generation !== null);
+  const asOfISO = knownGenerations.reduce<string | null>(
+    (oldest, generation) => oldest === null || generation < oldest ? generation : oldest,
+    null,
+  ) ?? "unknown";
+  // The Safety Score version belongs in the methodology label only when the
+  // report-card response that supplied the grade/mint columns was loaded.
+  const methodologyLabel = reportCards != null && reportCardsMethodologyVersion
+    ? `published source values · safety-score ${toMethodologyVersionLabel(reportCardsMethodologyVersion)}`
+    : "published source values";
+
   downloadCsvWithPreamble(
     sorted,
     [
@@ -284,15 +357,10 @@ export function exportStablecoinsCsv(
     "pharos-stablecoins",
     {
       endpoint: "stablecoins",
-      asOfISO: generationIso(sourceGenerations?.stablecoins) ?? "unknown",
+      asOfISO,
       sourceUrl: typeof window === "undefined" ? "https://pharos.watch/" : window.location.href,
-      methodologyLabel: "published source values",
-      sourceGenerations: {
-        stablecoins: generationIso(sourceGenerations?.stablecoins),
-        ...(pegScores ? { pegSummary: generationIso(sourceGenerations?.pegSummary) } : {}),
-        ...(dexLiquidity ? { dexLiquidity: generationIso(sourceGenerations?.dexLiquidity) } : {}),
-        ...(reportCards ? { reportCards: generationIso(sourceGenerations?.reportCards) } : {}),
-      },
+      methodologyLabel,
+      sourceGenerations: generationsBySource,
     },
   );
 }

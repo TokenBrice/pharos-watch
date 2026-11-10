@@ -24,14 +24,12 @@ export const GAUGE_BAND_RANGES: readonly { band: GaugeBand; min: number; max: nu
  * Return the band label for the band that contains `score`.
  * Boundary convention: each band is [min, max).  The last band includes 100.
  *
- * NaN/out-of-range returns "NEUTRAL" as a sentinel — intrinsic to the design
- * and documented here; callers do not need to handle it separately.
+ * NaN returns "NEUTRAL" as a sentinel — intrinsic to the design and documented
+ * here; callers do not need to handle it separately. Finite scores follow the
+ * table so float dust just outside a boundary keeps its real band.
  */
 export function getGaugeBand(score: number): GaugeBand {
-  // Score-visible [min, max) assignments; boundary tests pin these labels.
-  // Out-of-range/NaN sentinel (distinct from the real [-10,10) NEUTRAL band below);
-  // unreachable for mcap-weighted intensity inputs, which are already clamped to [-100,100].
-  if (Number.isNaN(score) || score < -100) return "NEUTRAL";
+  if (Number.isNaN(score)) return "NEUTRAL";
   for (const range of GAUGE_BAND_RANGES) {
     if (score < range.max) return range.band;
   }

@@ -1,9 +1,10 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import {
+  buildSafetyMapSummary,
   planSafetyMapPublication,
   publishSafetyMapPublication,
   renderSafetyMapPublication,
@@ -11,6 +12,11 @@ import {
   type SafetyMapKvAdapter,
   type SafetyMapPublishState,
 } from "../maintenance/publish-safety-score-map";
+
+vi.mock("node:fs", async (importOriginal) => {
+  const fs = await importOriginal<typeof import("node:fs")>();
+  return { ...fs, writeFileSync: vi.fn(fs.writeFileSync) };
+});
 
 const temporaryDirectories: string[] = [];
 
@@ -103,6 +109,7 @@ describe("Safety Map publication CLI", () => {
     const result = await publishSafetyMapPublication({ adapter, outDir: directory, statePath });
 
     expect(result.phase).toBe("published");
+    expect(buildSafetyMapSummary(result, "success")).toContain("### Published keys");
     expect(adapter.puts.map(({ key }) => key)).toEqual([
       "safety-map:alt:latest",
       "safety-map:2026-07-27.png",
@@ -130,6 +137,7 @@ describe("Safety Map publication CLI", () => {
 
     const ensured = await planSafetyMapPublication({ adapter, eventName: "workflow_dispatch", mode: "ensure", io, nowSec, statePath });
     expect(ensured.alreadyPublished).toBe(true);
+    expect(buildSafetyMapSummary(ensured, "success")).toContain("### Skipped");
     expect(io.output).toContain("should_render=false");
     expect(adapter.puts).toEqual([]);
 
@@ -214,5 +222,28 @@ describe("Safety Map publication CLI", () => {
       "safety-map:2026-07-27.png",
     ]);
     expect(adapter.puts.some(({ key }) => key === "safety-map:latest.json")).toBe(false);
+  });
+
+  it.each(["safety-map:latest.png", "safety-map:latest.json", "state-save"])("reports uncertain live state after failure at %s", async (failureAt) => {
+    const directory = temporaryDirectory();
+    const statePath = writeRenderedState(directory);
+    const adapter = new MockKvAdapter();
+    const put = adapter.put.bind(adapter);
+    adapter.put = async (key, path) => {
+      await put(key, path);
+      if (failureAt === "state-save" && key === "safety-map:latest.json") {
+        vi.mocked(writeFileSync).mockImplementationOnce(() => { throw new Error("state save failed"); });
+      } else if (key === failureAt) throw new Error("publication response lost");
+    };
+
+    await expect(publishSafetyMapPublication({ adapter, outDir: directory, statePath }))
+      .rejects.toThrow(failureAt === "state-save" ? "state save failed" : "publication response lost");
+    expect(adapter.values.has(failureAt === "state-save" ? "safety-map:latest.json" : failureAt)).toBe(true);
+    const state = JSON.parse(readFileSync(statePath, "utf8")) as SafetyMapPublishState;
+    expect(state.phase).toBe("rendered");
+    const summary = buildSafetyMapSummary(state, "failure");
+    expect(summary).toContain("### Publication incomplete or unverified");
+    expect(summary).toContain("Live keys may have changed");
+    expect(summary).not.toMatch(/Nothing was committed|consumers are unaffected|did not reach the manifest write/);
   });
 });

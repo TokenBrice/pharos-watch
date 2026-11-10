@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   adaptEthenaCollateral,
   buildEthenaRedemptionTelemetry,
+  ETHENA_BACKING_TOTAL_RECONCILIATION_TOLERANCE,
   listUnexpectedEthenaAssets,
+  reconcileEthenaBackingTotal,
   type EthenaCollateralResponse,
   type EthenaMintRedeemReads,
 } from "../ethena";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 describe("adaptEthenaCollateral", () => {
   it("keeps reviewed equity basis collateral separate from crypto and cash", () => {
@@ -25,6 +28,68 @@ describe("adaptEthenaCollateral", () => {
     });
     expect(result.metadata?.unknownExposurePct).toBe(5);
     expect(listUnexpectedEthenaAssets(payload)).toEqual(["UNKNOWN"]);
+  });
+
+  it("publishes the positions total only when the issuer status reconciliation is within tolerance", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [{ asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 100 }],
+    };
+    const reconciled = adaptEthenaCollateral(payload, undefined, {
+      timestamp: "2026-11-01T20:59:58.000000Z",
+      totalBackingAssetsInUsd: 105,
+    });
+    expect(reconciled.metadata).toMatchObject({
+      totalBackingAssetsInUsd: 100,
+      details: {
+        backingTotalReconciliation: "reconciled",
+        issuerStatusTotalBackingAssetsInUsd: 105,
+        issuerStatusTimestamp: "2026-11-01T20:59:58.000000Z",
+      },
+    });
+    expect(reconciled.warnings).toBeUndefined();
+  });
+
+  it("withholds the positions total and degrades when the issuer status disagrees", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 4_794_038_442.46,
+      collateral: [{ asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 4_794_038_442.46 }],
+    };
+    const result = adaptEthenaCollateral(payload, undefined, {
+      timestamp: "2026-10-30T05:59:03Z",
+      totalBackingAssetsInUsd: 5_275_300_000,
+    });
+    expect(result.metadata).not.toHaveProperty("totalBackingAssetsInUsd");
+    expect(result.metadata).toMatchObject({
+      computedTotalBackingAssetsInUsd: 4_794_038_442.46,
+      details: {
+        backingTotalReconciliation: "mismatch",
+        issuerStatusTotalBackingAssetsInUsd: 5_275_300_000,
+      },
+    });
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-total-reconciliation-mismatch", effect: "degraded" }),
+    ]));
+  });
+
+  it("withholds the positions total and degrades when the issuer status is unavailable", () => {
+    const result = adaptEthenaCollateral({
+      totalBackingAssetsInUsd: 100,
+      collateral: [{ asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 100 }],
+    }, undefined, null);
+    expect(result.metadata).not.toHaveProperty("totalBackingAssetsInUsd");
+    expect(result.metadata).toMatchObject({
+      details: { backingTotalReconciliation: "unavailable" },
+    });
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-total-reconciliation-unavailable", effect: "degraded" }),
+    ]));
+  });
+
+  it("applies an inclusive relative tolerance boundary", () => {
+    const tolerance = ETHENA_BACKING_TOTAL_RECONCILIATION_TOLERANCE;
+    expect(reconcileEthenaBackingTotal(100, 100 * (1 + tolerance)).status).toBe("reconciled");
+    expect(reconcileEthenaBackingTotal(100, 100 * (1 + tolerance + 0.0001)).status).toBe("mismatch");
   });
 
   it("groups Ethena collateral into reserve buckets", () => {
@@ -155,6 +220,48 @@ describe("adaptEthenaCollateral", () => {
     }
   });
 
+});
+
+describe("fetchEthenaReserves backing total reconciliation", () => {
+  const POSITIONS_URL = "https://app.ethena.fi/api/positions/current/collateral";
+  const STATUS_URL = "https://app.ethena.fi/api/collateralization/status";
+  const payload = {
+    totalBackingAssetsInUsd: 100,
+    collateral: [{ asset: "Liquid Cash", exchange: "Binance", timestamp: 1_000, usdAmount: 100 }],
+  };
+
+  it("publishes a reconciled total after reading the second issuer surface", async () => {
+    const { result, network } = await runAdapter("ethena", "usde-ethena", {
+      network: installAdapterNetwork({
+        json: {
+          [POSITIONS_URL]: payload,
+          [STATUS_URL]: { timestamp: "2026-11-01T20:59:58.000000Z", totalBackingAssetsInUsd: 105 },
+        },
+      }),
+      nowSec: 1_100,
+    });
+    expect(result.metadata).toMatchObject({
+      totalBackingAssetsInUsd: 100,
+      details: { backingTotalReconciliation: "reconciled" },
+    });
+    expect(network.requests.some((request) => request.url.includes("/api/collateralization/status"))).toBe(true);
+  });
+
+  it("degrades and withholds the total when the second issuer surface disagrees", async () => {
+    const { result } = await runAdapter("ethena", "usde-ethena", {
+      network: installAdapterNetwork({
+        json: {
+          [POSITIONS_URL]: payload,
+          [STATUS_URL]: { timestamp: "2026-11-01T20:59:58.000000Z", totalBackingAssetsInUsd: 94 },
+        },
+      }),
+      nowSec: 1_100,
+    });
+    expect(result.metadata).not.toHaveProperty("totalBackingAssetsInUsd");
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-total-reconciliation-mismatch", effect: "degraded" }),
+    ]));
+  });
 });
 
 // Fixtures mirror the mainnet reads observed on 2026-08-12:

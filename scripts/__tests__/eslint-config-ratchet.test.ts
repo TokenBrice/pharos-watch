@@ -84,8 +84,9 @@ describe("ESLint config ratchets", () => {
     }
   });
 
-  // Cold type-aware ESLint builds the project watch program before either probe;
-  // coverage runs have taken ~35s, beyond the shared 20s test budget.
+  // Type-aware parsing only needs the probe member's own type graph. The full
+  // tsconfig.typecheck.json project (~2,300 files) is covered by `lint:typed`;
+  // this probe keeps identical compilerOptions over a single-file project.
   it("blocks unsafe external-data operations while permitting a reviewed unknown decoder", async () => {
     const typedEslint = new ESLint({
       cache: false,
@@ -93,8 +94,12 @@ describe("ESLint config ratchets", () => {
       overrideConfigFile: "eslint.typed.config.mjs",
       overrideConfig: {
         languageOptions: {
-          // Watch programs typecheck lintText's input, not the on-disk source, even in CI.
-          parserOptions: { disallowAutomaticSingleRunInference: true },
+          parserOptions: {
+            project: "./tsconfig.eslint-ratchet.json",
+            tsconfigRootDir: process.cwd(),
+            // Watch programs typecheck lintText's input, not the on-disk source, even in CI.
+            disallowAutomaticSingleRunInference: true,
+          },
         },
       },
     });
@@ -116,6 +121,7 @@ describe("ESLint config ratchets", () => {
     expect(safeResult?.messages.filter((message) => message.severity === 2)).toEqual([]);
   }, 60_000);
 
+  const guard = 'typeof p === "object" && p !== null && !Array.isArray(p)';
   const styleProbes: Array<{ rule: string; name: string; source: string; count: number; filePath?: string }> = [
     ...([
       ["text pair", 'export const A = () => <p className="text-amber-700 dark:text-amber-400">x</p>;', 2],
@@ -169,6 +175,24 @@ describe("ESLint config ratchets", () => {
     ] satisfies Array<[string, string, number, string?]>).map(([name, source, count, filePath]) => ({
       rule: "pharos/no-arbitrary-radius", name, source, count,
       filePath: filePath ?? "src/components/__radius-fixture.tsx",
+    })),
+    ...([
+      ["Worker guard and parser copies", 4, "worker/src/lib/__helper-copy-fixture.ts"],
+      ["frontend guard copy", 2, "src/lib/__helper-copy-fixture.ts"],
+      ["canonical guards pass", 0, "shared/lib/type-guards.ts"],
+      ["shared/types local guards pass", 0, "shared/types/__helper-copy-fixture.ts"],
+      ["shared/contracts guards pass", 0, "shared/contracts/__helper-copy-fixture.ts"],
+      ["canonical parsers pass", 2, "worker/src/lib/json-parse.ts"],
+      ["pinned evaluator input passes", 0, "shared/lib/safety-score-v9/policy.ts"],
+      ["test files pass", 0, "worker/src/lib/__tests__/__helper-copy-fixture.test.ts"],
+      ["renamed declaration", 1, undefined, `function isObject(p: unknown) { return ${guard}; }`],
+      ["renamed arrows", 2, undefined, 'let record = p => !Array.isArray(p) && !!p && "object" == typeof p; var obj = function(p) { return null != p && typeof p === "object" && !Array.isArray(p); };'],
+      ["conditional record", 4, undefined, ["p", "(p as object)!", "<object>p", "p!"].map((p, i) => `const read${i} = p => ${guard} ? ${p} : null;`).join("\n")],
+      ["array-accepting guard", 0, undefined, 'const record = p => typeof p === "object" && p !== null;'],
+      ["extra conjunct", 0, undefined, `const record = p => ${guard} && "id" in p;`],
+    ] satisfies Array<[string, number, string?, string?]>).map(([name, count, filePath, source]) => ({
+      rule: "pharos/no-local-helper-copies", name, count, filePath: filePath ?? "src/lib/__helper-copy-fixture.ts",
+      source: source ?? `function isRecord() {} let parseJson = () => null; var tryParseJson = function () {}; const record = p => ${guard};`,
     })),
   ];
 

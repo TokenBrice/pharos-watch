@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import reviews from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";
 import { SafetyScoreV9WrapperAllocationReviewSchema } from "@shared/types/safety-score-v9-allocation";
-import { getSafetyScoreV9WrapperAllocationReview, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "../safety-score-v9/extension-wrapper-reviews";
+import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
+import { getSafetyScoreV9WrapperAllocationReview, getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "../safety-score-v9/extension-wrapper-reviews";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta } from "./safety-score-v9-fact-set.test-support";
@@ -25,8 +26,8 @@ describe("wrapper allocation review admission", () => {
     expect(getSafetyScoreV9WrapperAllocationReview("unreviewed-test-asset", 1_800_000_000)).toBeNull();
   });
 
-  it.each(reviews.reviews.map((row) => [row.assetId, row] as const))(
-    "retrieves each authored review by identity and enforces its admission window: %s", (assetId, row) => {
+  it("retrieves every authored review by identity and enforces its admission window", () => {
+    for (const [assetId, row] of reviews.reviews.map((row) => [row.assetId, row] as const)) {
       const parsed = SafetyScoreV9WrapperAllocationReviewSchema.parse(row);
       const reviewedAt = parsed.scopeKind === "whole-allocation"
         ? Date.parse(`${parsed.reviewedAt}T00:00:00.000Z`) / 1000
@@ -40,8 +41,8 @@ describe("wrapper allocation review admission", () => {
         expect(getSafetyScoreV9WrapperAllocationReview(assetId, expiresAt - 1)?.assetId).toBe(assetId);
         expect(getSafetyScoreV9WrapperAllocationReview(assetId, expiresAt)).toBeNull();
       }
-    },
-  );
+    }
+  });
 
   it.each([
     ["allocation", "duplicate", "wrapperAllocationReview"],
@@ -69,5 +70,19 @@ describe("wrapper allocation review admission", () => {
       code: "fact-build-failed", path,
     });
     expect(extension.assets.find((asset) => asset.assetId === "beta")!.admissionQuarantine).toBeUndefined();
+  });
+});
+
+describe("wrapper-local reviewed registry intake contract", () => {
+  it("parses every curated local review under its exact identity schema", () => {
+    const invalid = reviews.localReviews.flatMap((review, index) => {
+      const parsed = SafetyScoreV9WrapperLocalReviewSchema.safeParse(review);
+      return parsed.success ? [] : [{ index, assetId: review.assetId, kind: review.kind, issues: parsed.error.issues }];
+    });
+    expect(invalid).toEqual([]);
+  });
+
+  it("returns no review for an instrument absent from the reviewed registry", () => {
+    expect(getSafetyScoreV9WrapperLocalReviews("unreviewed-wrapper")).toEqual([]);
   });
 });

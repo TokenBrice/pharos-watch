@@ -13,6 +13,7 @@ import {
 } from "@/lib/page-metadata";
 import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { isStablecoinTitleTreatment } from "@/lib/stablecoin-title-cohort";
+import { formatFuzzyDate } from "@/lib/pre-launch";
 
 // Cohort membership is frozen in stablecoin-title-cohort.json.
 const TREATMENT_ID = "usdc-circle";
@@ -178,10 +179,33 @@ describe("pre-launch metadata", () => {
     });
     expect(titleOf(launched)).toBe("TSTX Stablecoin (Test Dollar): Status & Tracking");
     expect(descriptionOf(launched)).toBe(
-      "TSTX is Acme's dollar stablecoin. Latest milestone: Oct 5, 2026. Launched Oct 5, 2026; not yet tracked.",
+      "TSTX is Acme's dollar stablecoin. Launched Oct 5, 2026; not yet tracked. Latest milestone: Oct 5, 2026.",
     );
     expect(descriptionOf(testCoin({ status: "pre-launch", launchPhase: "launched", launchDate: "2026-10-05" })))
       .not.toContain("pre-launch");
+  });
+
+  it("keeps the curated one-liner ahead of the launched caveat, which outranks any milestone, on every launched row", () => {
+    const launchedRows = TRACKED_STABLECOINS.filter(
+      (coin) => coin.status === "pre-launch" && coin.launchPhase === "launched",
+    );
+    expect(launchedRows.length).toBeGreaterThan(0);
+    for (const coin of launchedRows) {
+      const description = descriptionOf(coin);
+      // The curated one-liner is never shortened or displaced by the caveat.
+      expect(description.startsWith(coin.oneLiner!), coin.id).toBe(true);
+      expect(description.length, coin.id).toBeLessThanOrEqual(180);
+      const caveatIndex = description.indexOf("not yet tracked");
+      const milestoneIndex = description.indexOf("Latest milestone:");
+      if (caveatIndex >= 0 && milestoneIndex >= 0) {
+        expect(caveatIndex, coin.id).toBeLessThan(milestoneIndex);
+      }
+      if (caveatIndex < 0) {
+        // Dropped only because the whole one-liner plus the caveat cannot fit.
+        const caveat = coin.launchDate ? `Launched ${formatFuzzyDate(coin.launchDate)}; not yet tracked.` : "Launched; not yet tracked.";
+        expect(coin.oneLiner!.length + 1 + caveat.length, coin.id).toBeGreaterThan(180);
+      }
+    }
   });
 });
 
@@ -204,6 +228,27 @@ describe("inactive profile metadata", () => {
     });
     expect(titleOf(delisted)).toBe("TSTX: Profile & Listing Status");
     expect(descriptionOf(delisted)).toContain("Not currently scored by Pharos: outside the listing scope.");
+  });
+});
+
+describe("frozen profile metadata", () => {
+  it("claims no Pharos tracking window and never repeats a name as its own symbol", () => {
+    for (const coin of TRACKED_STABLECOINS.filter((candidate) => candidate.status === "frozen")) {
+      const description = descriptionOf(coin);
+      expect(description, coin.id).not.toContain("tracked by Pharos through");
+      expect(description, coin.id).not.toContain("freeze date");
+      expect(description, coin.id).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+      if (coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase()) {
+        expect(description, coin.id).not.toContain(`${coin.name} (${coin.symbol})`);
+      }
+    }
+  });
+
+  it("drops the redundant parenthetical and keeps the epitaph", () => {
+    const coin = TRACKED_META_BY_ID.get("usdkg-gold-dollar")!;
+    expect(descriptionOf(coin)).toBe(
+      `Historical data and obituary for USDKG, a now-defunct stablecoin that died in Oct 2026. ${coin.obituary?.epitaph}`,
+    );
   });
 });
 

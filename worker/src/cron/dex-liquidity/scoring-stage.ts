@@ -62,12 +62,13 @@ const dexLiquidityScoringStageStore = createDexGenerationStore({
 
 type SourceHeader = Omit<
   DexLiquidityScoringSourceState,
-  "stablecoinPriceById" | "stablecoinMcapById" | "protocolTvlCaps" | "priceObservations"
+  "stablecoinPriceById" | "primaryPriceById" | "stablecoinMcapById" | "protocolTvlCaps" | "priceObservations"
 >;
 
 type EncodedSourceHeader = SourceHeader & {
   /** Additive schema-v1 field; old consumers ignore it and reload the cache. */
   stablecoinPrices?: Array<[stablecoinId: string, price: number]>;
+  primaryPrices?: Array<[stablecoinId: string, price: number]>;
 };
 
 type PoolHeader = Omit<
@@ -302,12 +303,14 @@ function* iterateScoringStageRecords(
     source: {
       ...source,
       stablecoinPrices: [...stablecoinPriceById],
+      primaryPrices: sourceState.primaryPriceById ? [...sourceState.primaryPriceById] : undefined,
     },
     pool,
   };
   if (consumeInput) {
     stablecoinPriceById.clear();
     sourceState.stablecoinPriceById = new Map();
+    sourceState.primaryPriceById?.clear();
     stablecoinPriceById = null;
   }
   for (const [key, value] of stablecoinMcapById) {
@@ -646,7 +649,10 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
   if (!decoder.sourceHeader || !decoder.poolHeader) {
     throw new Error("DEX liquidity scoring stage is missing its header record");
   }
-  const { stablecoinPrices = [], ...sourceHeader } = decoder.sourceHeader;
+  if (decoder.poolHeader.poolRejections?.some((row) => row.scope == null)) {
+    throw new Error("pool-rejection-scope-unavailable");
+  }
+  const { stablecoinPrices = [], primaryPrices, ...sourceHeader } = decoder.sourceHeader;
   const stablecoinPriceById = new Map<string, number>();
   for (const entry of stablecoinPrices) {
     if (
@@ -661,10 +667,24 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
     assertUniqueMapKey(stablecoinPriceById, entry[0], "stablecoin price");
     stablecoinPriceById.set(entry[0], price);
   }
+  if (primaryPrices !== undefined && !Array.isArray(primaryPrices)) {
+    throw new Error("DEX liquidity scoring stage contains an invalid primary price map");
+  }
+  const primaryPriceById = primaryPrices === undefined ? undefined : new Map<string, number>();
+  for (const entry of primaryPrices ?? []) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" || !entry[0]) {
+      throw new Error("DEX liquidity scoring stage contains an invalid primary price entry");
+    }
+    const price = requireFiniteNumber(entry[1], "primary price");
+    if (price <= 0) throw new Error("DEX liquidity scoring stage contains a nonpositive primary price");
+    assertUniqueMapKey(primaryPriceById!, entry[0], "primary price");
+    primaryPriceById!.set(entry[0], price);
+  }
   return {
     sourceState: {
       ...sourceHeader,
       stablecoinPriceById,
+      primaryPriceById,
       stablecoinMcapById: decoder.stablecoinMcapById,
       protocolTvlCaps: decoder.protocolTvlCaps,
       priceObservations: decoder.priceObservations,

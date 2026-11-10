@@ -3,7 +3,7 @@ import { StablecoinFilteredTable } from "@/components/stablecoin-filtered-table"
 import { StablecoinTaxonomyShell } from "@/components/stablecoin-taxonomy-shell";
 import { TaxonomyHeaderActions } from "@/components/taxonomy-header-actions";
 import type { InfrastructureTaxonomyValue, StablecoinTaxonomyPage as StablecoinTaxonomyPageConfig } from "@/lib/stablecoin-taxonomy";
-import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
+import { ALL_STABLECOIN_TAXONOMY_PAGES, getTopCohortCoinIds } from "@/lib/stablecoin-taxonomy";
 
 interface StablecoinTaxonomyPageProps {
   page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType | InfrastructureTaxonomyValue>;
@@ -45,7 +45,7 @@ export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
       headerActions={
         <TaxonomyHeaderActions
           shortLabel={page.shortLabel}
-          topCoinIds={page.coins.slice(0, 4).map((coin) => coin.id)}
+          topCoinIds={getTopCohortCoinIds(page.coins)}
           bucketNoun={bucketNoun}
         />
       }

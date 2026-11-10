@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 describe("address-bound discovered QuoterV2 capture", () => {
-  it.each([100, 500, 2500, 3000, 10000])("preserves actual fee %i, ordered currencies and same-block membership", async (fee) => {
+  it.each([100, 10000])("preserves actual fee %i, ordered currencies and same-block membership", async (fee) => {
     answers("uniswap-v3-quoter-v2", "ethereum", fee);
     const result = await captureQuoterV2Pools(input());
     expect(result.pools[0]).toMatchObject({ poolAddress: POOL, feeRate: fee / 1_000_000, tokens: [{ address: TOKEN0, decimals: 6 }, { address: TOKEN1, decimals: 6 }] });

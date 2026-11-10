@@ -295,6 +295,11 @@ export function YieldClient() {
     [searchParams],
   );
   const yieldUniverse = useMemo(() => prepareYieldUniverse(rankings, watchlist.idSet), [rankings, watchlist.idSet]);
+  // The landing risk band is implicit, so only URL params make Reset meaningful.
+  const hasExplicitFilterParams = useMemo(
+    () => Object.values(urlParams).some((value) => value != null && value.trim() !== ""),
+    [urlParams],
+  );
   const viewModel = useMemo<YieldViewModel>(
     () =>
       buildYieldViewModel(yieldUniverse, urlParams, {
@@ -650,6 +655,7 @@ export function YieldClient() {
         <section className="order-3" aria-label="Yield filters">
           <YieldLeaderboardControls
             viewModel={viewModel}
+            hasExplicitFilterParams={hasExplicitFilterParams}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
             onApplyPreset={handleApplyPreset}

@@ -71,6 +71,7 @@ function computeLiquidityStats(
   let fallbackCoverage = 0;
   let tvlForChange = 0;
   let totalPrevTvl = 0;
+  let hasNonInvertibleBaseline = false;
   let totalBalance = 0;
   let balanceWeight = 0;
   let totalOrganic = 0;
@@ -87,9 +88,18 @@ function computeLiquidityStats(
       if (liq.coverageClass === "fallback") fallbackCoverage++;
     }
     if (liq.tvlChange7d != null && liq.totalTvlUsd > 0) {
-      const prevTvl = liq.totalTvlUsd / (1 + liq.tvlChange7d / 100);
-      tvlForChange += liq.totalTvlUsd;
-      totalPrevTvl += prevTvl;
+      // A published -100.00% (any >99.996% collapse) has no invertible prior
+      // value; adding Infinity would turn the whole aggregate into NaN.
+      const denominator = 1 + liq.tvlChange7d / 100;
+      const prevTvl = denominator > 0 ? liq.totalTvlUsd / denominator : null;
+      if (prevTvl != null && Number.isFinite(prevTvl)) {
+        tvlForChange += liq.totalTvlUsd;
+        totalPrevTvl += prevTvl;
+      } else {
+        // Publishing the aggregate over the surviving members would claim a
+        // market move the observed collapse contradicts.
+        hasNonInvertibleBaseline = true;
+      }
     }
     if (liq.weightedBalanceRatio != null && liq.balanceMeasuredTvlUsd != null) {
       const measuredTvl = liq.balanceMeasuredTvlUsd;
@@ -103,7 +113,10 @@ function computeLiquidityStats(
     }
   }
 
-  const agg7dChange = totalPrevTvl > 0 ? ((tvlForChange - totalPrevTvl) / totalPrevTvl) * 100 : null;
+  const agg7dChange =
+    !hasNonInvertibleBaseline && totalPrevTvl > 0
+      ? ((tvlForChange - totalPrevTvl) / totalPrevTvl) * 100
+      : null;
 
   return {
     totalTvl,
@@ -118,7 +131,7 @@ function computeLiquidityStats(
     highConfidenceCoverage,
     fallbackCoverage,
     totalTracked: ACTIVE_STABLECOINS.length,
-    agg7dChange: agg7dChange != null ? Math.round(agg7dChange * 10) / 10 : null,
+    agg7dChange: agg7dChange != null && Number.isFinite(agg7dChange) ? Math.round(agg7dChange * 10) / 10 : null,
     avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
     avgOrganic: organicWeight > 0 ? Math.round((totalOrganic / organicWeight) * 100) : null,
   };

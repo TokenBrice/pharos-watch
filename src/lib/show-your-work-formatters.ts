@@ -10,6 +10,9 @@
  */
 
 import { formatPercent } from "@shared/lib/format";
+import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
+import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
+import { EVIDENCE_STRESS_THRESHOLD, SEVERE_ISSUER_CONTROL_THRESHOLD, WATCH_MAX_SCORE } from "@shared/lib/dews-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import {
   BACKING_DIVERSITY_WEIGHT,
@@ -341,7 +344,8 @@ export function formatDews(current: StressSignalEntry): ShowYourWorkTable {
   return {
     rows,
     formula:
-      "score = weighted average of available stress signals with weights redistributed, then × PSI amplifier × contagion amplifier and clamped to 0..100; band maps to Calm/Watch/Alert/Warning/Danger",
+      "score = weighted average of available stress signals with weights redistributed, then × PSI amplifier × contagion amplifier and clamped to 0..100; a preliminary score above " +
+      `${WATCH_MAX_SCORE} is capped to ${WATCH_MAX_SCORE} (WATCH) unless qualifying market-price or DEX-liquidity stress evidence is ≥${EVIDENCE_STRESS_THRESHOLD} or Blacklist Activity is ≥${SEVERE_ISSUER_CONTROL_THRESHOLD}; band maps to Calm/Watch/Alert/Warning/Danger`,
     topic: "dews",
   };
 }
@@ -384,16 +388,30 @@ export function formatPsi(current: StabilityIndexCurrent): ShowYourWorkTable {
     { label: "Stress breadth penalty", value: fmtNum(current.components.stressBreadth, 1) },
     { label: "Trend offset", value: fmtNum(current.components.trend, 1) },
   ];
-  rows.push({ label: "Composite score", value: current.score.toFixed(1) });
-  rows.push({ label: "Band", value: current.band });
+  const displayed = getDisplayedPsi(current);
+  const basis = getDisplayedPsiBasis(current);
+  rows.push({ label: `Composite score (${basis})`, value: displayed.score.toFixed(1) });
+  rows.push({ label: `Band (${basis})`, value: displayed.band });
 
-  if (current.contributors && current.contributors.length > 0) {
-    const top = current.contributors.slice(0, 5);
+  const totalMcapUsd = current.totalMcapUsd;
+  if (current.contributors && current.contributors.length > 0 && totalMcapUsd != null) {
+    const top = current.contributors
+      .map((c) => ({
+        ...c,
+        total: computePsiDepegContribution({
+          bps: c.bps,
+          mcapUsd: c.mcapUsd,
+          totalMcapUsd,
+          factor: c.factor,
+        }).total,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
     for (const c of top) {
       rows.push({
         label: `Top contributor · ${c.symbol}`,
         value: `${c.bps.toFixed(1)} bps`,
-        contribution: c.factor.toFixed(2),
+        contribution: c.total.toFixed(2),
       });
     }
   }

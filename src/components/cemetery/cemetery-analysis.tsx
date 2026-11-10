@@ -77,6 +77,7 @@ export function CemeteryAnalysis({ stats }: { stats: CemeteryStats }) {
     counts: CAUSE_ORDER.map((cause) => year.byCause[cause]),
     tracked: CAUSE_ORDER.map((cause) => year.trackedByCause[cause]),
     medianPeakLabel: year.medianPeak === null ? null : formatCemeteryPeak(year.medianPeak),
+    recordedPeakCount: year.recordedPeakCount,
     partial: year.partial,
   }));
 
@@ -148,7 +149,7 @@ export function CemeteryAnalysis({ stats }: { stats: CemeteryStats }) {
               kicker="Timeline"
               title="Documented deaths per year, by cause"
               headlines={headlinesFor(YEAR_HEADLINE_KEYS)}
-              description="Bars count records by death year. The row under the axis is the median peak market cap of that year's deaths."
+              description="Bars count records by death year. The row under the axis is the median recorded peak market cap of that year's deaths."
               legend={
                 <>
                   <CauseLegendChips />

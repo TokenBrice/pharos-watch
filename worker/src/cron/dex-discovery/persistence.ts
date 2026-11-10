@@ -4,9 +4,13 @@ import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chains";
-import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
+import {
+  CURVE_NATIVE_DISCOVERY_CHAINS,
+  type DexDeploymentOutcome,
+} from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
+import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
 import { tryParseJson } from "../../lib/json-parse";
 import {
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
@@ -494,6 +498,67 @@ export async function readDiscoveryCensusSummaries(
     });
   }
   return summaries;
+}
+
+/**
+ * Read the complete stored outcomes that could still certify a deployment for
+ * this run, in one bounded indexed pass. An older row is due by construction,
+ * so callers treat its absence as due instead of reading the whole census;
+ * `minObservedAtSec` is the caller's revisit bound, not a second freshness
+ * authority. Rows already superseded by a later attempt are returned with their
+ * fence so the caller can classify them rather than assume they are current.
+ */
+export async function readDiscoveryDeploymentOutcomes(
+  db: D1Database,
+  minObservedAtSec: number,
+  signal?: AbortSignal,
+): Promise<DexDeploymentCensusRow[]> {
+  throwIfAborted(signal);
+  const rows = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT o.stablecoin_id, o.chain, o.contract_address, o.outcome,
+                  o.provider_set_json, o.reason, o.observed_pool_count, o.observed_at,
+                  o.last_attempt_at AS deployment_last_attempt_at,
+                  m.last_crawl_at AS discovery_last_crawl_at,
+                  m.deployment_fence_attribution_at
+             FROM dex_deployment_outcomes AS o
+             LEFT JOIN dex_discovery_meta AS m ON m.stablecoin_id = o.stablecoin_id
+            WHERE o.outcome IN ('observed_pools', 'verified_no_pools')
+              AND o.observed_at >= ?`,
+        )
+        .bind(minObservedAtSec)
+        .all<{
+          stablecoin_id: string;
+          chain: string;
+          contract_address: string;
+          outcome: DexDeploymentOutcome;
+          provider_set_json: string;
+          reason: string;
+          observed_pool_count: number;
+          observed_at: number;
+          deployment_last_attempt_at: number | null;
+          discovery_last_crawl_at: number | null;
+          deployment_fence_attribution_at: number | null;
+        }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return (rows.results ?? []).map((row) => ({
+    stablecoin_id: row.stablecoin_id,
+    chain: row.chain,
+    contract_address: row.contract_address,
+    outcome: row.outcome,
+    provider_set_json: row.provider_set_json,
+    reason: row.reason,
+    observed_pool_count: row.observed_pool_count,
+    observed_at: row.observed_at,
+    deployment_last_attempt_at: row.deployment_last_attempt_at ?? null,
+    discovery_last_crawl_at: row.discovery_last_crawl_at ?? null,
+    deployment_fence_attribution_at: row.deployment_fence_attribution_at ?? null,
+  }));
 }
 
 /**

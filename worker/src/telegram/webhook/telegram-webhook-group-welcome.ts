@@ -1,11 +1,22 @@
 import { TELEGRAM_BOT_URL, TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../delivery/telegram";
-import { deleteCache, getCache, setCacheIfAbsent } from "../../lib/db-cache";
-import { logTelegramEvent } from "../common/log";
+import { deleteCache, getCache } from "../../lib/db-cache";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { classifyTelegramLogError, logTelegramEvent } from "../common/log";
 import { isChannelChatType, isGroupChatType } from "./telegram-webhook-auth";
-import { forgetSubscriber } from "../store/subscriber-lifecycle";
+import { forgetSubscriber, telegramGroupWelcomeDeadlineSql } from "../store/subscriber-lifecycle";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
-import { TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC } from "../common/constants";
+import {
+  TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC,
+  TELEGRAM_GROUP_WELCOME_PENDING_PREFIX,
+  TELEGRAM_PROCESSING_STALE_SEC,
+} from "../common/constants";
+
+export class TelegramGroupWelcomeBusyError extends Error {
+  constructor(readonly retryAfterSec = TELEGRAM_PROCESSING_STALE_SEC) {
+    super("telegram group welcome is still pending");
+  }
+}
 
 /**
  * Local `my_chat_member` shape. Lives in the group-welcome module (the Ingress
@@ -120,24 +131,35 @@ export async function handleMyChatMember(
     return;
   }
 
-  // Claim before the irreversible send so overlapping Telegram redeliveries
-  // cannot both welcome the same group.
   const cacheKey = `telegram:group-welcome:${chatIdStr}`;
   const nowSec = Math.floor(Date.now() / 1000);
   const cached = await getCache(db, cacheKey);
-  if (cached && nowSec - cached.updatedAt < TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC) {
-    return;
-  }
   if (cached) {
-    await deleteCache(db, cacheKey);
+    const pending = cached.value.startsWith(TELEGRAM_GROUP_WELCOME_PENDING_PREFIX);
+    const deadline = cached.updatedAt + (pending ? TELEGRAM_PROCESSING_STALE_SEC : TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC);
+    if (deadline > nowSec) {
+      if (pending) throw new TelegramGroupWelcomeBusyError(deadline - nowSec);
+      return;
+    }
   }
-  if (!await setCacheIfAbsent(db, cacheKey, "1", nowSec)) {
-    return;
-  }
-
+  const owner = `${TELEGRAM_GROUP_WELCOME_PENDING_PREFIX}${crypto.randomUUID()}`;
+  // Exact-owner retries also succeed when D1 committed before losing the response.
+  const claim = await runWithOverloadRetry(() => db.prepare(`
+    INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    WHERE cache.value = excluded.value OR ${telegramGroupWelcomeDeadlineSql("cache")} <= ?
+  `).bind(cacheKey, owner, nowSec, nowSec).run());
+  if (!claim.meta.changes) throw new TelegramGroupWelcomeBusyError();
+  const release = () => runWithOverloadRetry(() => db.prepare("DELETE FROM cache WHERE key = ? AND value = ?")
+    .bind(cacheKey, owner).run());
   try {
     const adderMention = formatAdderMention(payload.from);
     await options.beforeIrreversibleEffect?.("group-welcome");
+    const sendStart = Math.floor(Date.now() / 1000);
+    const started = await runWithOverloadRetry(() => db.prepare(`
+      UPDATE cache SET updated_at = ? WHERE key = ? AND value = ? AND updated_at > ?
+    `).bind(sendStart, cacheKey, owner, sendStart - TELEGRAM_PROCESSING_STALE_SEC).run());
+    if (!started.meta.changes) throw new TelegramGroupWelcomeBusyError();
     const welcomeSend = await sendAuditedTelegramReply(
       db,
       chatIdStr,
@@ -149,10 +171,17 @@ export async function handleMyChatMember(
       },
     );
     if (!welcomeSend.ok) {
-      await deleteCache(db, cacheKey);
+      await release();
+      return;
     }
   } catch (err) {
-    await deleteCache(db, cacheKey);
+    await release();
     throw err;
   }
+  // The welcome is out. A failed stamp must neither release the claim nor fail
+  // the update into a redelivery, either of which would send a second welcome.
+  await runWithOverloadRetry(() => db.prepare("UPDATE cache SET value = '1', updated_at = ? WHERE key = ? AND value = ?")
+    .bind(Math.floor(Date.now() / 1000), cacheKey, owner).run()).catch((err: unknown) => {
+    logTelegramEvent({ message: "group welcome sent stamp failed", action: "my_chat_member", errorClass: classifyTelegramLogError(err) });
+  });
 }

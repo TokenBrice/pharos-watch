@@ -2,13 +2,16 @@ import { Banknote, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { RailArrow, RailStationChip, StationLabel } from "@/components/stablecoin-detail/rail-station";
-import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/classification";
-import type { RedemptionAccessModel } from "@shared/types/redemption";
+import { REDEMPTION_ACCESS_PASSPORT_LABELS, REDEMPTION_HOLDER_ELIGIBILITY_LABELS } from "@shared/lib/classification";
+import type { RedemptionAccessModel, RedemptionHolderEligibility } from "@shared/types/redemption";
 
 /**
  * The access gate, drawn: restriction is geometry, not adjectives. A
- * permissionless route renders an open (dashed) gate; whitelisted, issuer,
- * and manual routes render it closed, with the bounded access label beneath.
+ * permissionless route whose holders are any-holder renders an open (dashed)
+ * gate; whitelisted, issuer, and manual routes render it closed, with the
+ * bounded access label beneath. A permissionless contract whose reviewed
+ * holder eligibility is anything else also renders closed, named by that
+ * eligibility instead of the open gate.
  *
  * It carries the authored-short access vocabulary rather than the full label,
  * which truncated on every bounded route (`ISSUER / INSTITUTIO…`); the full
@@ -19,9 +22,18 @@ import type { RedemptionAccessModel } from "@shared/types/redemption";
  * unlabelled bars floating between boxed neighbours read as a rendering
  * artifact rather than as a closed gate (owner feedback 2026-08-11).
  */
-function AccessGate({ accessModel, accessLabel }: { accessModel: RedemptionAccessModel; accessLabel: string }) {
-  const open = accessModel === "permissionless-onchain";
-  const shortLabel = REDEMPTION_ACCESS_PASSPORT_LABELS[accessModel];
+function AccessGate({
+  accessModel,
+  accessLabel,
+  eligibilityLabel,
+}: {
+  accessModel: RedemptionAccessModel;
+  accessLabel: string;
+  /** Set when a permissionless contract's holders are not any-holder; it closes the gate. */
+  eligibilityLabel: string | null;
+}) {
+  const open = accessModel === "permissionless-onchain" && eligibilityLabel === null;
+  const shortLabel = eligibilityLabel ?? REDEMPTION_ACCESS_PASSPORT_LABELS[accessModel];
   const barClass = open
     ? "border-l border-dashed border-state-positive-solid/70"
     : "w-0.5 rounded-full bg-foreground/60";
@@ -52,28 +64,36 @@ function AccessGate({ accessModel, accessLabel }: { accessModel: RedemptionAcces
 /**
  * The exit rail — the mirror of the mint rail: holder → access gate → venue →
  * output, with settlement annotated on the final leg. Every mark encodes a
- * published field (gate geometry = access model, arrow label = settlement,
- * terminal chip = output asset). Below `sm` the same four facts render as the
- * passport FactGrid — the rail needs more width than a phone column gives.
+ * published field (gate geometry = access model and holder eligibility, arrow
+ * label = settlement, terminal chip = output asset). Below `sm` the same four
+ * facts render as the passport FactGrid — the rail needs more width than a
+ * phone column gives.
  */
 export function RedemptionRouteRail({
   accessModel,
+  holderEligibility,
   accessLabel,
   settlementLabel,
   outputAssetLabel,
   routeFamilyLabel,
 }: {
   accessModel: RedemptionAccessModel;
+  holderEligibility: RedemptionHolderEligibility;
   accessLabel: string;
   settlementLabel: string;
   outputAssetLabel: string;
   routeFamilyLabel: string;
 }) {
+  // An open contract is drawn open only when every holder may use it.
+  const eligibilityLabel =
+    accessModel === "permissionless-onchain" && holderEligibility !== "any-holder"
+      ? REDEMPTION_HOLDER_ELIGIBILITY_LABELS[holderEligibility]
+      : null;
   return (
     <>
       <div
         role="img"
-        aria-label={`Redemption route: holders exit through ${accessLabel} access to ${routeFamilyLabel}, settling ${settlementLabel} into ${outputAssetLabel}.`}
+        aria-label={`Redemption route: holders exit through ${accessLabel} access${eligibilityLabel ? ` (${eligibilityLabel})` : ""} to ${routeFamilyLabel}, settling ${settlementLabel} into ${outputAssetLabel}.`}
         className="hidden items-center gap-3 sm:flex"
       >
         {/* The kicker already names the station, so the chip carries only the
@@ -89,7 +109,7 @@ export function RedemptionRouteRail({
         <RailArrow />
         <div className="flex shrink-0 flex-col gap-0.5">
           <StationLabel>Access</StationLabel>
-          <AccessGate accessModel={accessModel} accessLabel={accessLabel} />
+          <AccessGate accessModel={accessModel} accessLabel={accessLabel} eligibilityLabel={eligibilityLabel} />
         </div>
         <RailArrow />
         <div className="flex min-w-0 flex-col gap-0.5">

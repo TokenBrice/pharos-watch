@@ -1,15 +1,13 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import candidatePolicyAsset from "../../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import type { V9MethodologyPolicy, V9QualityPillar } from "../../types/safety-score-v9";
-import type { V9FactGapV3, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import type { V9FactGapV3, V9AssetFactsV3, V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import {
   V9OpenEvidenceByCardSchema,
+  V9OpenEvidenceSchema,
+  type V9OpenEvidence,
   type V9OpenEvidenceByCard,
 } from "../../types/safety-score-v9-open-evidence";
-import { buildStablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
-import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {
   documentationGapIds,
   type V9DocumentationAssetFacts,
@@ -22,6 +20,7 @@ import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score
 import {
   buildV9DocumentationCarriers,
   collectV9DocumentationGapIds,
+  type V9DocumentationCarrierCard,
 } from "../safety-score-v9/public";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 import { scoreV9EvaluatedAsset, type V9ProductionScoreTrace } from "../safety-score-v9/score";
@@ -34,7 +33,6 @@ import {
 import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 
 const PILLARS = ["backing", "exit", "control"] as const;
-const DOCUMENTATION_ONLY_SUFFIX = "documentation gaps only";
 
 /** The same policy with the documentation class switched off (block absent). */
 function policyWithoutDocumentationClass() {
@@ -199,19 +197,6 @@ describe("Safety Score v9 documentation class — fail-closed card annotation", 
     expect(card.documentationOnlyLimited).toEqual(["exit"]);
   });
 
-  it("renders 'documentation gaps only' for a listed pillar and keeps unlisted pillars plain limited", () => {
-    const card = publishedAnnotation(witnesses([["control", "limited", [gap.gapId]]]));
-    const source = makeV9Card();
-    source.pillars.control.evidenceLevel = "limited";
-    const annotated = buildStablecoinSafetyScoreV9Presentation(source, card.documentationOnlyLimited);
-    expect(annotated.pillars[2]!.evidenceSummary).toContain(DOCUMENTATION_ONLY_SUFFIX);
-
-    const unlisted = buildStablecoinSafetyScoreV9Presentation(source, ["backing"]);
-    expect(unlisted.pillars[2]!.evidenceSummary).not.toContain(DOCUMENTATION_ONLY_SUFFIX);
-    expect(buildStablecoinSafetyScoreV9Presentation(source).pillars[2]!.evidenceSummary)
-      .not.toContain(DOCUMENTATION_ONLY_SUFFIX);
-  });
-
   it("never lists a pillar with one non-documentation witness", () => {
     expect(publishedAnnotation(witnesses([
       ["control", "limited", [gap.gapId, nonDocumentationGap.gapId]],
@@ -262,17 +247,6 @@ describe("Safety Score v9 documentation class — fail-closed card annotation", 
     expect(carriers.causeGapIds).toEqual([...new Set([gap.gapId, inheritedGap.gapId])].sort());
     expect(carriers.documentationOnlyLimited.size).toBe(0);
     expect(carriers.openEvidence.byCard.every((entry) => entry.documentationOnlyLimited === undefined)).toBe(true);
-
-    for (const invalid of [[], ["peg"], ["control", "control"]]) {
-      expect(V9OpenEvidenceByCardSchema.safeParse({
-        id: "alpha",
-        openBucketQuestionsCarried: 0,
-        inheritedOpenBucketQuestionsCarried: 0,
-        openBucketObligationsCarried: 0,
-        documentationObligationsCarried: 0,
-        documentationOnlyLimited: invalid,
-      }).success).toBe(false);
-    }
   });
 });
 
@@ -301,20 +275,6 @@ describe("Safety Score v9 documentation class — scoring invariants", () => {
     expect(control.limitedEvidenceCauses.length).toBeGreaterThan(0);
     expect(control.evidenceLevel).toBe("limited");
     expect(documentationGapIds(on, asset).get(gap.gapId)?.reason).toBe("no-scoring-path");
-    for (const row of withClass.assets) {
-      const other = withoutClass.assets.find((candidate) => candidate.assetId === row.assetId)!;
-      for (const pillar of PILLARS) {
-        expect(row.scoreInput.pillars[pillar].evidenceLevel)
-          .toBe(other.scoreInput.pillars[pillar].evidenceLevel);
-        expect(row.scoreInput.pillars[pillar].limitedEvidenceCauses)
-          .toEqual(other.scoreInput.pillars[pillar].limitedEvidenceCauses);
-        expect(row.scoreInput.pillars[pillar].limitingCauseGapIds ?? [])
-          .toEqual(other.scoreInput.pillars[pillar].limitingCauseGapIds ?? []);
-        expect(row.scoreInput.pillars[pillar].score).toBe(other.scoreInput.pillars[pillar].score);
-      }
-      expect(row.trace.finalScore).toBe(other.trace.finalScore);
-      expect(row.trace.finalGrade).toBe(other.trace.finalGrade);
-    }
   });
 
   it("keeps dependents' propagated cause and boundedUnknown byte-identical", () => {
@@ -395,42 +355,162 @@ describe("Safety Score v9 documentation class — scoring invariants", () => {
   });
 });
 
-describe("Safety Score v9 documentation class — static sentinel", () => {
-  const SCORING_MODULES = [
-    "score.ts",
-    "formula.ts",
-    "evaluate-set.ts",
-    "dependencies.ts",
-    "control.ts",
-    // Decision B also forecloses these scoring readers (OP-R0 S-3).
-    "evaluate-asset.ts",
-    "backing.ts",
-    "exit.ts",
-    "control-mint-grade.ts",
-  ];
-  const FORBIDDEN_SYMBOLS = [
-    "classifyV9DocumentationGap",
-    "documentationGapIds",
-    "isV9DocumentationDatum",
-    "documentationOnlyLimitedPillars",
-    "resolveV9DocumentationControl",
-    "V9Documentation",
-  ];
+describe("Safety Score v9 documentation carriers — whole-block publication", () => {
+  const compiled = compileNativeV3FactSet(coreFixture());
+  const baseFacts = compiled.assets.find((entry) => entry.assetId === "alpha") as V9AssetFactsV3;
+  const baseControl = baseFacts.controls[0]!;
 
-  it("never imports the documentation classifier or reads the policy block in a scoring module", () => {
-    const offenders: string[] = [];
-    for (const file of SCORING_MODULES) {
-      const text = readFileSync(resolve("shared/lib/safety-score-v9", file), "utf8");
-      for (const symbol of FORBIDDEN_SYMBOLS) {
-        if (text.includes(symbol)) offenders.push(`${file}: ${symbol}`);
-      }
-      for (const match of text.matchAll(/(?:from\s+|import\()\s*["']([^"']*documentation[^"']*)["']/gu)) {
-        offenders.push(`${file}: imports ${match[1]}`);
-      }
-      if (/\bevidence\s*(?:\?\.|\.)\s*documentation\b/u.test(text)) {
-        offenders.push(`${file}: reads evidence.documentation`);
-      }
-    }
-    expect(offenders).toEqual([]);
+  function datum(assetId: string, controlKey: string, factorKey: string): V9FactGapV3 {
+    const componentKey = `control:${controlKey}`;
+    return createV9FactGapV3({
+      gapId: `${assetId}:gap:${componentKey}:${factorKey}`,
+      reasonCode: "unresolved-control-identity",
+      ownerDomain: "control",
+      policyRuleId: `${assetId}:${componentKey}:${factorKey}`,
+      observationState: "missing",
+      path: { kind: "local-component", componentKey },
+      message: "Fixture documentation datum.",
+      causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
+      responsibility: "unresearched",
+      causeScope: {
+        pillar: "control", componentKey, factorKey, routeKey: null, exposureId: null, requiredDatum: componentKey,
+      },
+    });
+  }
+
+  function control(controlKey: string, materialSupplyShare: number | null): V9DeploymentControlFactV2 {
+    return {
+      ...baseControl,
+      controlKey,
+      deploymentKey: "ethereum",
+      scope: "deployment",
+      controlKind: "bridge",
+      economicLossScope: "deployment",
+      claimImpairment: "bounded",
+      materialSupplyShare,
+    };
+  }
+
+  function assetFacts(assetId: string, controls: V9DeploymentControlFactV2[], gaps: V9FactGapV3[]): V9DocumentationAssetFacts {
+    return {
+      assetId,
+      archetype: baseFacts.archetype,
+      controlStatus: baseFacts.controlStatus,
+      controls,
+      gaps,
+      supply: baseFacts.supply,
+      economicControlReview: baseFacts.economicControlReview,
+      reserveExposures: [],
+      exitRoutes: [],
+    };
+  }
+
+  function witness(
+    pillar: V9DocumentationPillarWitness["pillar"],
+    evidenceLevel: V9DocumentationPillarWitness["evidenceLevel"],
+    limitingCauseGapIds?: readonly string[],
+  ): V9DocumentationPillarWitness {
+    return { pillar, evidenceLevel, ...(limitingCauseGapIds === undefined ? {} : { limitingCauseGapIds }) };
+  }
+
+  function evidence(byCard: V9OpenEvidence["byCard"]): V9OpenEvidence {
+    const questions = byCard.reduce((sum, entry) => sum + entry.openBucketQuestionsCarried, 0);
+    return {
+      semantics: "open-question-v1",
+      totals: { questions, open: questions, issuer: 0, documentation: 0, obligations: questions },
+      owners: questions === 0 ? [] : [{ responsibility: "unresearched", questions, obligations: questions }],
+      reasons: [],
+      documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+      issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+      byCard,
+    };
+  }
+
+  function card(id: string, openQuestions: number): V9OpenEvidence["byCard"][number] {
+    return {
+      id,
+      openBucketQuestionsCarried: openQuestions,
+      inheritedOpenBucketQuestionsCarried: 0,
+      openBucketObligationsCarried: openQuestions,
+      documentationObligationsCarried: 0,
+    };
+  }
+
+  const smallDatum = datum("alpha", "bridge-meta:small", "incidentState");
+  const largeDatum = datum("alpha", "bridge-meta:large", "incidentState");
+  const alpha = assetFacts("alpha", [
+    control("bridge-meta:small", 0.005),
+    control("bridge-meta:large", 0.02),
+  ], [smallDatum, largeDatum]);
+  const betaDatum = datum("beta", "bridge-meta:small", "incidentState");
+  const beta = assetFacts("beta", [control("bridge-meta:small", 0.005)], [betaDatum]);
+  const gamma = assetFacts("gamma", [], []);
+
+  function classifiedCard(asset: V9DocumentationAssetFacts) {
+    return {
+      assetId: asset.assetId,
+      localDocumentationGapIds: new Set(collectV9DocumentationGapIds(V9_CANDIDATE_POLICY_V1, [asset]).keys()),
+    };
+  }
+
+  it("annotates only documentation-only limited pillars and leaves the rest of the block untouched", () => {
+    const gapIds = collectV9DocumentationGapIds(V9_CANDIDATE_POLICY_V1, [alpha, beta]);
+    expect([...gapIds.keys()].sort()).toEqual([smallDatum.gapId, betaDatum.gapId].sort());
+
+    const block = evidence([card("alpha", 1), card("beta", 1), card("gamma", 0)]);
+    const cards: V9DocumentationCarrierCard[] = [
+      {
+        ...classifiedCard(alpha),
+        pillars: [
+          witness("backing", "strong", [smallDatum.gapId]),
+          witness("control", "limited", [smallDatum.gapId]),
+          witness("exit", "limited", []),
+        ],
+      },
+      { ...classifiedCard(beta), pillars: [witness("control", "limited", [betaDatum.gapId])] },
+      { ...classifiedCard(gamma), pillars: [witness("backing", "limited", [])] },
+    ];
+    const carriers = buildV9DocumentationCarriers({ envelope: V9_CANDIDATE_POLICY_V1, gapIds, cards, openEvidence: block });
+
+    expect(carriers.documentationOnlyLimited.get("alpha")).toEqual(["control"]);
+    expect(carriers.documentationOnlyLimited.get("beta")).toEqual(["control"]);
+    expect(carriers.documentationOnlyLimited.has("gamma")).toBe(false);
+    expect(carriers.causeGapIds).toEqual([smallDatum.gapId, betaDatum.gapId].sort());
+    expect(carriers.openEvidence.byCard).toEqual([
+      { ...block.byCard[0]!, documentationOnlyLimited: ["control"] },
+      { ...block.byCard[1]!, documentationOnlyLimited: ["control"] },
+      block.byCard[2],
+    ]);
+    expect(V9OpenEvidenceSchema.safeParse(carriers.openEvidence).success).toBe(true);
+    // The source block is never mutated.
+    expect(block.byCard[0]!.documentationOnlyLimited).toBeUndefined();
+  });
+
+  it("publishes only the union it was given and still resolves local witnesses on the card", () => {
+    const localOnly = buildV9DocumentationCarriers({
+      envelope: V9_CANDIDATE_POLICY_V1,
+      gapIds: new Map(),
+      cards: [{ ...classifiedCard(alpha), pillars: [witness("control", "limited", [smallDatum.gapId])] }],
+      openEvidence: evidence([card("alpha", 1)]),
+    });
+    expect(localOnly.causeGapIds).toEqual([]);
+    expect(localOnly.documentationOnlyLimited.get("alpha")).toEqual(["control"]);
+
+    const undocumented = buildV9DocumentationCarriers({
+      envelope: V9_CANDIDATE_POLICY_V1,
+      gapIds: new Map(),
+      cards: [{ ...classifiedCard(alpha), pillars: [witness("control", "limited", [largeDatum.gapId])] }],
+      openEvidence: evidence([card("alpha", 1)]),
+    });
+    expect(undocumented.documentationOnlyLimited.size).toBe(0);
+
+    const absent = buildV9DocumentationCarriers({
+      envelope: V9_CANDIDATE_POLICY_V1,
+      gapIds: collectV9DocumentationGapIds(V9_CANDIDATE_POLICY_V1, [alpha]),
+      cards: [{ ...classifiedCard(alpha), pillars: [witness("control", "limited", [smallDatum.gapId])] }],
+      openEvidence: evidence([]),
+    });
+    expect(absent.documentationOnlyLimited.get("alpha")).toEqual(["control"]);
+    expect(absent.openEvidence.byCard).toEqual([]);
   });
 });

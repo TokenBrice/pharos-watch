@@ -1,13 +1,23 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { assertResourceProbeCatalog, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
+import { assertResourceProbeCatalog, buildResourceProbe, buildSafetyScoreV9ContagionProbe, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
 import type * as Esbuild from "esbuild";
 import { calibrateV9Resource } from "../calibrate-v9-resource";
-import { GLOBAL_HEAP_BYTES, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
+// Static edge so any change in the contagion closure selects this tripwire.
+import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
+import { GLOBAL_HEAP_BYTES, hasV9ContagionInput, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
+
+// The lane selector lives with the deploy classifier, whose registry graph the
+// Worker type program does not compile (ADR-2). Resolve it by path at runtime so
+// this tripwire stays in the suite that owns the bundles it proves.
+const CLASSIFIER_MODULE = "../../../scripts/ci/classify-deploy-changes";
+const { hasV9ResourceImpact } = await import(CLASSIFIER_MODULE) as {
+  hasV9ResourceImpact(files: readonly string[]): boolean;
+};
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -28,6 +38,13 @@ describe("V9 resource diagnostic failure modes", () => {
       { reason: "missing-phase", phase: "facts-compiled", cycle: 1 },
       { reason: "missing-phase", phase: "facts-compiled", cycle: 2 },
     ]);
+  });
+
+  it("requires only the configured publication cycles", () => {
+    const memory = process.memoryUsage();
+    const sample = { type: "phase" as const, cycle: 1, phase: "facts-compiled", before: memory, after: memory };
+    expect(validateResourceSamples([sample], ["facts-compiled"], undefined, [1])).toEqual([]);
+    expect(validateResourceSamples([sample], ["facts-compiled"])).toEqual([{ reason: "missing-phase", phase: "facts-compiled", cycle: 2 }]);
   });
 
   it("retains a readable report on construction failure and classifies a crashing child", async () => {
@@ -71,7 +88,13 @@ describe("V9 resource diagnostic failure modes", () => {
     expect(() => readFileSync(marker)).toThrow();
   });
 
-  it("proves alias, minify and keep_names translation through bundled behavior", async () => {
+  // Nightly tier: two real wrangler/esbuild builds (~2.6 s on CI). On a selected
+  // PR the v9 lane's safety-score-v9-resource-budget harness builds both probes
+  // through buildResourceProbe (readHeavyProbeBuildSettings alias plus
+  // assertResourceProbeCatalog), and the crash, network-denial and wall-timeout
+  // cases above stay on the PR tier. The minify/keep_names effect assertions and
+  // the wrong-loader rejection are nightly only.
+  it("proves alias, minify and keep_names translation through bundled behavior", { tags: ["nightly"] }, async () => {
     const root = temporary();
     mkdirSync(join(root, "worker"));
     writeFileSync(join(root, "worker/wrangler.heavy.toml"), 'minify = true\nkeep_names = true\n[alias]\n"#pharos-full-catalog" = "./packed.ts"\n');
@@ -94,6 +117,70 @@ describe("V9 resource diagnostic failure modes", () => {
       lengths.push(result[2]);
     }
     expect(lengths[0]).toBeLessThan(lengths[1]);
+  });
+});
+
+describe("V9 contagion input decision", () => {
+  it("covers every input the nine-scenario probe bundles", () => {
+    expect(typeof evaluateV9ContagionScenario).toBe("function");
+    const root = resolve(import.meta.dirname, "../../..");
+    const { inputs: bundled } = buildSafetyScoreV9ContagionProbe(root, temporary());
+    // Third-party modules are pinned by the lockfiles, themselves contagion
+    // inputs; CI checks out node_modules inside the repo, local worktrees may not.
+    const inputs = bundled
+      .map((input) => relative(root, input).replaceAll("\\", "/"))
+      .filter((input) => !input.startsWith("..") && !/(^|\/)node_modules\//.test(input));
+    expect(hasV9ContagionInput(["package-lock.json"]) && hasV9ContagionInput(["worker/package-lock.json"])).toBe(true);
+    for (const expected of [
+      "shared/lib/safety-score-v9/contagion.ts",
+      "shared/lib/peg-score.ts",
+      "shared/lib/report-card-evidence-journal.ts",
+      "shared/data/stablecoins/coins.generated.json",
+      "worker/src/test-helpers/v9-fixed-input.ts",
+      "worker/src/lib/safety-score-v9/candidate.ts",
+    ]) expect(inputs, expected).toContain(expected);
+    expect(inputs.filter((input) => !hasV9ContagionInput([input]))).toEqual([]);
+  });
+
+  it("matches the probe harness and toolchain while unrelated diffs skip contagion", () => {
+    for (const file of ["worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
+      "worker/scripts/lib/v9-resource-policy.ts", "worker/scripts/measure-v9-resource.ts",
+      "shared/lib/peg-score.ts", "shared/lib/report-card-evidence-journal.ts",
+      "shared/data/stablecoins/coins.generated.json", "worker/src/test-helpers/v9-fixed-input.ts",
+      "package.json", "package-lock.json", "worker/wrangler.heavy.toml", "tsconfig.base.json", ".nvmrc"]) {
+      expect(hasV9ContagionInput([file]), file).toBe(true);
+    }
+    expect(hasV9ContagionInput(["README.md", "src/app/page.tsx", "shared/lib/blacklist.ts"])).toBe(false);
+  });
+});
+
+describe("V9 resource lane selection", () => {
+  // Bundling both real probes takes ~25 s on a CI runner, so this whole-closure
+  // proof is nightly-tier; the PR tier keeps the per-path rows in
+  // scripts/__tests__/classify-deploy-changes.test.ts and the contagion bundle check above.
+  it("selects every input the measured setup and live bundles contain", { tags: ["nightly"], timeout: 120_000 }, async () => {
+    const root = resolve(import.meta.dirname, "../../..");
+    const directory = temporary();
+    const modes = ["setup", "live"] as const;
+    const built = await Promise.all(modes.map((mode) => buildResourceProbe(root, directory, mode)));
+    for (const [index, mode] of modes.entries()) {
+      const bundled = built[index].inputs
+        .map((input) => relative(root, input).replaceAll("\\", "/"))
+        .filter((input) => !input.startsWith(".."));
+      // Vendor packages and builtins are external; the toolchain pattern owns those.
+      expect(bundled.length, mode).toBeGreaterThan(100);
+      expect(bundled.filter((input) => !hasV9ResourceImpact([input])), mode).toEqual([]);
+    }
+  });
+
+  it("selects the harness that builds and drives those children", () => {
+    for (const file of [
+      "worker/scripts/measure-v9-resource.ts",
+      "scripts/maintenance/run-v9-resource-lane.ts",
+      "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
+      "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
+      "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
+    ]) expect(hasV9ResourceImpact([file]), file).toBe(true);
   });
 });
 

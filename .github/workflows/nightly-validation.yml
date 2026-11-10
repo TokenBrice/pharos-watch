@@ -26,6 +26,7 @@ jobs:
         id: workspace
         with:
           bootstrap-history: "true"
+          node-modules-cache: "true"
           static-cache: "true"
       - run: npm run lint
         id: lint
@@ -59,6 +60,13 @@ jobs:
       - run: npm run check:sensitive-page-copy
         id: sensitive-page-copy
         if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+      - name: Check test corpus budget (H2)
+        # The PR gate runs H2/H3 against a frozen base; a schedule has none, so
+        # the nightly runs the metrics half only. This is the backstop that
+        # surfaces corpus debt admitted by a `test-budget-override` PR.
+        run: npm run check:test-corpus-budget -- --metrics-only
+        id: test-corpus-budget
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - name: Report mandatory static outcomes
         if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
         env:
@@ -70,6 +78,7 @@ jobs:
           STRUCTURAL_OUTCOME: ${{ steps.structural.outcome }}
           UNUSED_CODE_OUTCOME: ${{ steps.unused-code.outcome }}
           SENSITIVE_COPY_OUTCOME: ${{ steps.sensitive-page-copy.outcome }}
+          TEST_CORPUS_BUDGET_OUTCOME: ${{ steps.test-corpus-budget.outcome }}
         run: |
           failed=()
           for leaf in \
@@ -80,7 +89,8 @@ jobs:
             "typecheck:tests:$TEST_TYPES_OUTCOME" \
             "check:structural:$STRUCTURAL_OUTCOME" \
             "check:unused-code:$UNUSED_CODE_OUTCOME" \
-            "check:sensitive-page-copy:$SENSITIVE_COPY_OUTCOME"; do
+            "check:sensitive-page-copy:$SENSITIVE_COPY_OUTCOME" \
+            "check:test-corpus-budget -- --metrics-only:$TEST_CORPUS_BUDGET_OUTCOME"; do
             outcome="${leaf##*:}"
             command="${leaf%:*}"
             printf '%s: %s\n' "$command" "$outcome"
@@ -94,13 +104,13 @@ jobs:
           fi
 
   full-tests:
-    name: Full test suite (${{ matrix.shard }}/2)
+    name: Full test suite (${{ matrix.shard }}/4)
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,7 +119,105 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-      - run: npm test -- --shard=${{ matrix.shard }}/2
+          node-modules-cache: "true"
+      - name: Run the full suite shard with JSON timings
+        run: |
+          mkdir -p .tmp
+          npm test -- --shard=${{ matrix.shard }}/4 --reporter=default --reporter=github-actions --reporter=json --outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json
+      - name: Retain the shard timing report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vitest-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/vitest-shard-${{ matrix.shard }}.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+
+  test-timings:
+    name: Test timings report
+    needs: full-tests
+    if: ${{ always() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.16.0"
+      - name: Download the shard timing reports
+        # Telemetry must never mask the suite result: a shard that died before
+        # writing its report simply contributes nothing.
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: vitest-shard-*
+          path: .tmp/test-timings-input
+          merge-multiple: true
+      - name: Merge the shard timing reports
+        # Telemetry must never turn a green nightly red; a malformed report only
+        # skips the timing artifact.
+        continue-on-error: true
+        run: |
+          if ! compgen -G ".tmp/test-timings-input/*.json" > /dev/null; then
+            echo "No shard timing reports were produced; skipping the timing artifact."
+            exit 0
+          fi
+          # This job installs nothing: run the dependency-free merge script directly.
+          node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/maintenance/build-test-timings.ts --input .tmp/test-timings-input --output .tmp/test-timings.json
+      - name: Retain the nightly test timings
+        if: ${{ always() && hashFiles('.tmp/test-timings.json') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-timings
+          path: .tmp/test-timings.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  test-plan-parity:
+    name: Static test-plan parity
+    # Full-history main-only canary: the static planner must keep covering
+    # Vitest's `--changed` selection for recent first-parent commits.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-history: "true"
+          node-modules-cache: "true"
+      - run: npm run check:test-plan-parity -- --commits=5
+
+  worker-shared-stability:
+    name: Worker-shared shuffled isolation backstop
+    # The PR tier reuses one module cache for the classified `worker-shared`
+    # files. Re-run that same classified set isolated and shuffled nightly: an
+    # order-dependent file that a PR run happens not to expose fails here, and
+    # the isolated result separates a real regression from shared-state leakage.
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
+      # Shuffled in one shared module cache: the PR tier runs these files
+      # non-isolated in a fixed order, so only this run explores other orders.
+      - name: Run the classified worker-shared files shared and shuffled
+        run: npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}
+      # Isolated: catches a file that only passes on state another file leaked.
+      - name: Run the classified worker-shared files isolated
+        run: npm test -- --project worker-shared --isolate
 
   v9-resource:
     name: V9 resource budget
@@ -120,6 +228,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
       - run: npm run test:v9-resource
       - name: Retain V9 resource results
         if: ${{ always() }}
@@ -151,6 +261,7 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
+          node-modules-cache: "true"
       - name: Acquire trusted retained release data
         # The token is confined to this acquisition step; the build step below
         # consumes only the directory and runs without credentials.
@@ -162,9 +273,12 @@ jobs:
         run: npm run check:pages-artifact
         env:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
-          # Advisory for two weeks; ratchet from measured p50 before enabling.
+          # Presence opts this job into the audit; the PR lane omits it.
+          # "1" blocks on the ratcheted routes (/depeg/, /safety-scores/, /stablecoins/;
+          # thresholds live in run-pages-artifact-lane.ts). "/" and the USDC profile
+          # stay advisory at this threshold.
           PHAROS_LIGHTHOUSE_THRESHOLD: "70"
-          PHAROS_LIGHTHOUSE_ENFORCE: "0"
+          PHAROS_LIGHTHOUSE_ENFORCE: "1"
       - name: Retain Lighthouse reports
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -185,6 +299,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
       - name: Select weekly window
         id: window
         env:
@@ -218,3 +334,85 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
+
+  nightly-red:
+    name: Nightly red issue
+    needs: [full-static, full-tests, v9-resource, lighthouse, web-vitals, test-timings, test-plan-parity, worker-shared-stability]
+    if: ${{ always() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      FULL_STATIC_RESULT: ${{ needs.full-static.result }}
+      FULL_TESTS_RESULT: ${{ needs.full-tests.result }}
+      V9_RESOURCE_RESULT: ${{ needs.v9-resource.result }}
+      LIGHTHOUSE_RESULT: ${{ needs.lighthouse.result }}
+      WEB_VITALS_RESULT: ${{ needs.web-vitals.result }}
+      TEST_TIMINGS_RESULT: ${{ needs.test-timings.result }}
+      TEST_PLAN_PARITY_RESULT: ${{ needs.test-plan-parity.result }}
+      WORKER_SHARED_STABILITY_RESULT: ${{ needs.worker-shared-stability.result }}
+    steps:
+      - name: Upsert the nightly-red issue
+        # One owned issue tracks the nightly state: failed leaves are listed
+        # while it is red, and a green run closes it with the run link.
+        run: |
+          set -u
+          failed=()
+          cancelled=false
+          for entry in \
+            "full-static:${FULL_STATIC_RESULT}" \
+            "full-tests:${FULL_TESTS_RESULT}" \
+            "v9-resource:${V9_RESOURCE_RESULT}" \
+            "lighthouse:${LIGHTHOUSE_RESULT}" \
+            "web-vitals:${WEB_VITALS_RESULT}" \
+            "test-timings:${TEST_TIMINGS_RESULT}" \
+            "test-plan-parity:${TEST_PLAN_PARITY_RESULT}" \
+            "worker-shared-stability:${WORKER_SHARED_STABILITY_RESULT}"; do
+            job="${entry%:*}"
+            result="${entry##*:}"
+            case "${result}" in
+              # Skipped lanes (e.g. web-vitals without a GA4 property) are green.
+              success|skipped) ;;
+              # A cancelled run is incomplete evidence: neither open nor close.
+              cancelled) cancelled=true ;;
+              *) failed+=("${job} (${result})") ;;
+            esac
+          done
+          if [[ "${cancelled}" == "true" ]]; then
+            echo "Nightly run was cancelled; leaving the ci:nightly-red issue unchanged."
+            exit 0
+          fi
+          gh label create "ci:nightly-red" --color B60205 \
+            --description "Nightly validation is failing" --force >/dev/null 2>&1 || true
+          open_issues="$(gh issue list --label ci:nightly-red --state open --limit 20 \
+            --json number,title --jq '.[] | select(.title == "Nightly validation is red") | .number')"
+          body_file="${RUNNER_TEMP}/nightly-red.md"
+          if (( ${#failed[@]} > 0 )); then
+            {
+              echo "Nightly validation failed."
+              echo
+              echo "Failed jobs:"
+              for job in "${failed[@]}"; do echo "- ${job}"; done
+              echo
+              echo "Run: ${RUN_URL}"
+            } > "${body_file}"
+            if [[ -n "${open_issues}" ]]; then
+              while IFS= read -r issue_number; do
+                gh issue comment "${issue_number}" --body-file "${body_file}"
+              done <<< "${open_issues}"
+            else
+              gh issue create --title "Nightly validation is red" --label ci:nightly-red --body-file "${body_file}"
+            fi
+          else
+            # Close only when every needed leaf is success or skipped; a
+            # cancelled run returned above without touching the issue.
+            while IFS= read -r issue_number; do
+              [[ -n "${issue_number}" ]] || continue
+              gh issue close "${issue_number}" --comment "Nightly validation is green again: ${RUN_URL}"
+            done <<< "${open_issues}"
+          fi

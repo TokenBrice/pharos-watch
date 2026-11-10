@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDailyDigest, useDigestArchive } from "@/hooks/api-hooks";
+import { useDigestArchive } from "@/hooks/api-hooks";
+import { digestDateSlug, useDigestLead } from "@/hooks/use-digest-lead";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -14,8 +15,10 @@ import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
 import type { DigestArchiveEntry, DigestContentEntry, DigestRiskSignal } from "@shared/types";
 import {
   buildDigestTriggerRecord,
+  digestMonthKey,
   EDITORIAL_BODY_STYLE,
   EDITORIAL_META_STYLE,
+  formatDigestMonthLabel,
   formatDigestTriggerRate,
   parseDigestParagraph,
   splitDigestParagraphs,
@@ -26,23 +29,9 @@ import { cn } from "@/lib/utils";
 
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, i) => i);
 
-function tsToDateSlug(ts: number): string {
-  return new Date(ts * 1000).toISOString().slice(0, 10);
-}
-
 function toDigestSlug(ts: number, digestType: "daily" | "weekly"): string {
-  const date = tsToDateSlug(ts);
+  const date = digestDateSlug(ts);
   return digestType === "weekly" ? `${date}-weekly` : date;
-}
-
-function tsToMonthKey(ts: number): string {
-  return new Date(ts * 1000).toISOString().slice(0, 7);
-}
-
-function formatMonthLabel(key: string): string {
-  const [y, m] = key.split("-");
-  const date = new Date(Date.UTC(Number(y), Number(m) - 1));
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function formatWireDate(ts: number): string {
@@ -92,7 +81,7 @@ function filterDigestArchiveEntries(
       return false;
     }
     if (options.view !== "all" && (isWeekly ? "weekly" : "daily") !== options.view) return false;
-    if (options.month && tsToMonthKey(entry.generatedAt) !== options.month) return false;
+    if (options.month && digestMonthKey(entry.generatedAt) !== options.month) return false;
     if (query) {
       const haystack = [entry.digestTitle, entry.digestText, entry.digestExtended]
         .filter((value): value is string => Boolean(value))
@@ -275,25 +264,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
 }
 
 export function DigestArchiveClient({ initialLead }: { initialLead?: DigestContentEntry } = {}) {
-  const [seed] = useState(initialLead);
-  const archiveQuery = useDigestArchive();
-  const { data: dailyLead } = useDailyDigest();
-  const archiveLead = seed ? archiveQuery.data?.digests.find((entry) => entry.digestType !== "weekly") : null;
-  const liveLead = archiveLead && (!dailyLead?.digest || !dailyLead.generatedAt || archiveLead.generatedAt > dailyLead.generatedAt)
-    ? { ...archiveLead, digest: archiveLead.digestText }
-    : dailyLead;
-  const liveSlug = liveLead?.digest && liveLead.generatedAt ? tsToDateSlug(liveLead.generatedAt) : null;
-  const seedData = seed ? {
-    digest: seed.text, digestTitle: seed.title, digestExtended: seed.extended, generatedAt: seed.generatedAt,
-  } : null;
-  const lead = liveSlug && (!seed || liveSlug > seed.date) ? liveLead : seedData && liveSlug === seed?.date ? {
-    ...seedData,
-    riskSignal: liveLead?.riskSignal,
-    riskTape: liveLead?.riskTape,
-    nextTriggers: liveLead?.nextTriggers,
-  } : seedData;
-  const leadSlug = lead?.generatedAt ? tsToDateSlug(lead.generatedAt) : null;
-  const leadDate = lead?.generatedAt ? formatLongDate(new Date(lead.generatedAt * 1000), { utc: true }) : null;
+  const { lead, leadSlug, leadDate, archiveQuery } = useDigestLead(initialLead);
 
   return (
     <div className="space-y-8">
@@ -330,10 +301,10 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
     const seen = new Set<string>();
     const options: { key: string; label: string }[] = [];
     for (const d of data.digests) {
-      const key = tsToMonthKey(d.generatedAt);
+      const key = digestMonthKey(d.generatedAt);
       if (!seen.has(key)) {
         seen.add(key);
-        options.push({ key, label: formatMonthLabel(key) });
+        options.push({ key, label: formatDigestMonthLabel(key) });
       }
     }
     return options;
@@ -342,9 +313,24 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
   const activeView = normalizeDigestArchiveView(searchParams.get("view"));
   const searchQuery = searchParams.get("q") ?? "";
   const requestedMonth = searchParams.get("month");
+  // Everything except the month filter, so a selected month always has a row
+  // unless the reader explicitly chose an empty one.
+  const matchingEntries = useMemo(
+    () => filterDigestArchiveEntries(data?.digests ?? [], {
+      view: activeView,
+      month: null,
+      query: searchQuery,
+      latestDailySlug,
+    }),
+    [data, activeView, latestDailySlug, searchQuery],
+  );
+  const defaultMonth = useMemo(
+    () => matchingEntries[0] ? digestMonthKey(matchingEntries[0].generatedAt) : monthOptions[0]?.key ?? null,
+    [matchingEntries, monthOptions],
+  );
   const activeMonth = requestedMonth && monthOptions.some((month) => month.key === requestedMonth)
     ? requestedMonth
-    : monthOptions[0]?.key ?? null;
+    : defaultMonth;
 
   // Latest weekly recap (if any)
   const latestWeekly = useMemo(() => {
@@ -352,13 +338,10 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
   }, [data]);
 
   const wireDigests = useMemo(
-    () => filterDigestArchiveEntries(data?.digests ?? [], {
-      view: activeView,
-      month: activeMonth,
-      query: searchQuery,
-      latestDailySlug,
-    }),
-    [data, activeMonth, activeView, latestDailySlug, searchQuery],
+    () => activeMonth
+      ? matchingEntries.filter((entry) => digestMonthKey(entry.generatedAt) === activeMonth)
+      : matchingEntries,
+    [matchingEntries, activeMonth],
   );
 
   const triggerRecord = useMemo(() => buildDigestTriggerRecord(data?.digests ?? []), [data]);
@@ -464,7 +447,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
                   aria-label="Filter by month"
                   value={activeMonth ?? ""}
                   onChange={(event) => setParam("month", event.target.value)}
-                  className="min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-8 md:py-1"
+                  className="min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-8 md:py-1"
                 >
                   {monthOptions.map((month) => (
                     <option key={month.key} value={month.key} className="bg-background text-foreground">
@@ -488,7 +471,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search the archive"
                 aria-label="Search digest title and body"
-                className="min-h-10 w-full rounded-md border border-border bg-background py-2 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="min-h-10 w-full rounded-md border border-border bg-background py-2 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               />
               {searchQuery && (
                 <button
@@ -521,7 +504,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
               ? "Mcap unavailable (0 coins observed)"
               : d.totalMcapUsd == null ? null
                 : `${coverage?.complete ? "Total mcap" : "Known mcap subtotal"}: ${formatCurrency(d.totalMcapUsd, 0)} · ${
-                  coverage ? `${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount} coins observed` : "coverage unproven"
+                  coverage ? `${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount + (coverage.carriedCount ?? 0)} coins observed` : "coverage unproven"
                 }`;
             // The risk signal often repeats verbatim across consecutive editions;
             // show it where it first appears or changes, not on every row.

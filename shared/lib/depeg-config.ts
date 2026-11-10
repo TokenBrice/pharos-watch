@@ -40,4 +40,8 @@ export const DEPEG_SEVERITY_BPS = {
 } as const;
 export const DEPEG_PENDING_MIN_AGE_SEC = 900;
 export const DEPEG_PENDING_EXPIRY_SEC = 2700;
+// Same-direction primary evidence or an unavailable/circuit-open confirmer may
+// keep a candidate pending to the extended limit; extreme moves get the final one.
+export const DEPEG_PENDING_EXTENDED_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 3;
+export const DEPEG_PENDING_SEVERE_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 4;
 export const DEPEG_SECONDARY_THRESHOLD_RATIO = 1;

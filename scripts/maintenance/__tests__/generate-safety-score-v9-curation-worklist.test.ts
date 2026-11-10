@@ -15,7 +15,20 @@ const agentProtocol = {
   editPolicy: "Registry edit-policy instruction.",
 };
 
-function bandFixture(reasons, missingItems) {
+interface ReasonFixture {
+  code: string;
+  path: string;
+  causeGapIds: string[];
+}
+
+interface RegistryRowFixture {
+  gapId: string;
+  claimGroupId: string;
+  cause: string;
+  reasonCode: string;
+}
+
+function bandFixture(reasons: ReasonFixture[], missingItems: RegistryRowFixture[]) {
   const replay = {
     pipeline: {
       candidate: { cards: [{ id: "alpha", ratingStatus: "rated", grade: "B", score: 75 }] },
@@ -41,8 +54,8 @@ function bandFixture(reasons, missingItems) {
   return { replay, registry };
 }
 
-const reason = (code, gapIds, path = "control:alpha") => ({ code, path, causeGapIds: gapIds });
-const registryRow = (gapId, claimGroupId, cause = "C") => ({ gapId, claimGroupId, cause, reasonCode: "unresolved-control-identity" });
+const reason = (code: string, gapIds: string[], path = "control:alpha"): ReasonFixture => ({ code, path, causeGapIds: gapIds });
+const registryRow = (gapId: string, claimGroupId: string, cause = "C"): RegistryRowFixture => ({ gapId, claimGroupId, cause, reasonCode: "unresolved-control-identity" });
 
 describe("Safety Score v9 curation worklist bands", () => {
   it("hides documentation-class items from the default streams and lists them only under the explicit band", () => {
@@ -113,7 +126,7 @@ describe("Safety Score v9 curation worklist bands", () => {
     const docGap = "alpha:gap:economic-control:custody";
     const { replay, registry } = bandFixture(
       [
-        { code: "unresolved-control-identity", path: "control:alpha" },
+        { code: "unresolved-control-identity", path: "control:alpha", causeGapIds: [] },
         reason("missing-mint-authority", [docGap, "alpha:gap:economic-control:authority"], "economic-control:mint"),
       ],
       [registryRow(docGap, "DEPLOYMENT_CONTROLS:alpha"), registryRow("alpha:gap:economic-control:authority", "MINT_AUTHORITY:alpha")],

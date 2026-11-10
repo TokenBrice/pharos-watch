@@ -340,7 +340,7 @@ export function ComplianceClient() {
   const activeModel = regimeFilter === "mica" ? mica : regimeFilter === "genius" ? genius : null;
   const statusOptions = regimeFilter === "genius" ? GENIUS_STATUS_FILTER_OPTIONS : MICA_STATUS_FILTER_OPTIONS;
   const matchingCount = activeModel ? activeModel.rows.length + activeModel.watchRows.length : overview.rows.length;
-  const totalCount = activeModel ? activeModel.totalTracked : overview.totalCoins;
+  const totalCount = activeModel ? activeModel.regimeTotal : overview.totalCoins;
   // A shared search exposes matches in both panels; a regime status filter only
   // opens the selected regime's bands, so an inactive panel stays collapsed.
   const searchForcesBandsOpen = deferredSearch.trim().length > 0;

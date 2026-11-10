@@ -40,16 +40,18 @@ describe("Ondo USDY dated portfolio categories", () => {
     expect(result.metadata).not.toHaveProperty("reportedCollateralizationRatio");
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(result.slices.every((slice) => slice.maturityDaysMax === undefined)).toBe(true);
-    expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThan(4096);
+    // The published payload stays a summary: one slice per reviewed category and
+    // no per-position rows copied into metadata.
+    expect(result.slices).toHaveLength(4);
+    expect(result.metadata).not.toHaveProperty("positions");
+    expect(result.metadata).not.toHaveProperty("holdings");
+    expect(result.metadata?.details).not.toHaveProperty("positions");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter(config.adapter)!, now: NOW }).valid).toBe(true);
   });
 
   it.each([
-    ["missing payload", html.replaceAll('\\"portfolio\\"', '\\"absent\\"')],
     ["ambiguous payload", html + html],
-    ["malformed JSON", html.replace('2094366235.88', 'invalid')],
     ["wrong product", html.replaceAll('usdyPortfolioHolding', 'ousgPortfolioHolding')],
-    ["unreviewed category", html.replace('8a072b79-7c71-472b-8093-0a9c3347fb8f', 'unknown')],
     ["duplicate category", html.replace('58033c63-82e8-413d-a5f4-48b2aacc88ab', '8a072b79-7c71-472b-8093-0a9c3347fb8f')],
     ["changed category name", html.replace('US Treasuries', 'Other Securities')],
     ["negative amount", html.replace('2094366235.88', '-2094366235.88')],

@@ -38,6 +38,8 @@ vi.mock("@/components/query-error-notice", () => ({
 }));
 
 vi.mock("@/lib/digest", () => ({
+  digestMonthKey: (ts: number) => new Date(ts * 1000).toISOString().slice(0, 7),
+  formatDigestMonthLabel: (key: string) => key,
   buildDigestTriggerRecord: () => ({
     total: 0,
     hit: 0,
@@ -213,6 +215,26 @@ describe("DigestArchiveClient UTC dates", () => {
   });
 });
 
+describe("DigestArchiveClient month default", () => {
+  it("defaults to the newest month that still has archive rows after the lead is removed", () => {
+    const leadAt = Date.parse("2026-11-01T00:30:00Z") / 1000;
+    const archivedAt = Date.parse("2026-10-31T00:30:00Z") / 1000;
+    useDigestArchiveMock.mockReturnValue({
+      data: { digests: [digest(leadAt, "Lead edition"), digest(archivedAt, "Archived edition")] },
+      isLoading: false, dataUpdatedAt: 0, error: null, refetch: vi.fn(), meta: null,
+    });
+    useUrlFiltersMock.mockReturnValue({
+      searchParams: new URLSearchParams(), setParam: vi.fn(), replaceParams: vi.fn(),
+    });
+
+    render(<DigestArchiveClient initialLead={{ ...leadEdition, date: "2026-11-01", generatedAt: leadAt, title: "Lead edition" }} />);
+
+    expect(screen.getByText("Showing 1 archive entry.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Archived edition/ }).getAttribute("href")).toBe("/digest/2026-10-31");
+    expect(screen.queryByText("No digests match these filters.")).toBeNull();
+  });
+});
+
 describe("DigestArchiveClient risk-signal badges", () => {
   it("renders below-peg risk signals with a negative bps sign", () => {
     useDigestArchiveMock.mockReturnValue({
@@ -248,6 +270,7 @@ describe("DigestArchiveClient supply coverage", () => {
   it.each([
     [0, { complete: false, observedCount: 0, unavailableCount: 2 }, "Mcap unavailable", null],
     [100e9, { complete: false, observedCount: 1, unavailableCount: 1 }, "Known mcap subtotal", "1/2 coins observed"],
+    [100e9, { complete: false, observedCount: 1, unavailableCount: 1, carriedCount: 1 }, "Known mcap subtotal", "1/3 coins observed"],
     [100e9, undefined, "Known mcap subtotal", "coverage unproven"],
     [0, { complete: true, observedCount: 2, unavailableCount: 0 }, "Total mcap: $0", "2/2 coins observed"],
   ])("keeps supply evidence qualified in archive links", (totalMcapUsd, supplyCoverage, label, qualifier) => {

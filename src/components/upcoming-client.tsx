@@ -24,7 +24,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
+import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
 import {
   PHASE_DOT,
   dateScore,
@@ -409,7 +409,7 @@ export function UpcomingClient({
               onClick={() => togglePhase(phase)}
               className={filterPillClass(phaseFilter.has(phase))}
             >
-              {phase === "unphased" ? "Unphased" : LAUNCH_PHASE_LABELS[phase]}
+              {phase === "unphased" ? PRE_LAUNCH_UNPHASED_LABEL : LAUNCH_PHASE_LABELS[phase]}
               <span className="pharos-numeric text-muted-foreground">{phaseCounts.get(phase) ?? 0}</span>
             </button>
           ))}
@@ -644,7 +644,7 @@ function UpcomingRow({
           {coin.launchPhase ? (
             <LaunchPhaseBadge phase={coin.launchPhase} />
           ) : (
-            <span className="text-xs text-muted-foreground">Unphased</span>
+            <span className="text-xs text-muted-foreground">{PRE_LAUNCH_UNPHASED_LABEL}</span>
           )}
         </TableCell>
         <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
@@ -695,7 +695,7 @@ function UpcomingRow({
               {teaserText ?? "No summary written yet; the dossier carries the sourced milestones."}
             </p>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-muted-foreground">
-              {coin.launchPhase ? <LaunchPhaseBadge phase={coin.launchPhase} /> : <span>Unphased</span>}
+              {coin.launchPhase ? <LaunchPhaseBadge phase={coin.launchPhase} /> : <span>{PRE_LAUNCH_UNPHASED_LABEL}</span>}
               <span>{PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}</span>
               <span aria-hidden="true">·</span>
               <span>{BACKING_LABELS_SHORT[coin.flags.backing] ?? coin.flags.backing}</span>

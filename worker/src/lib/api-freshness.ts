@@ -34,7 +34,7 @@ import {
   measureFreshnessAge,
 } from "./api-freshness-age";
 import { addFreshnessHeaders } from "./api-freshness-headers";
-import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "./cron-output";
+import { CONFIRMED_CRON_OUTPUT_AT_SQL, LATEST_CONFIRMED_CRON_OUTPUT_SQL } from "./cron-output";
 import { assessFreshnessTimestamp, type FreshnessTimestampReason } from "./api-freshness-age";
 
 export { addFreshnessHeaders } from "./api-freshness-headers";
@@ -199,7 +199,9 @@ async function readProducerCronHistory(
     const inClause = buildInClause(producerJobs);
     const rows = await db
       .prepare(
-        `WITH producer_runs AS (
+        // Materialized once: the aggregate references this row set four times,
+        // and an inlined CTE re-parsed each run's metadata on every reference.
+        `WITH producer_runs AS MATERIALIZED (
            SELECT job, started_at, status, degraded_reason, ${CONFIRMED_CRON_OUTPUT_AT_SQL} AS output_at,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.persistence.generationId') END AS generation_id,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality.degraded') ELSE 0 END AS quality_degraded,
@@ -697,34 +699,15 @@ export async function getLatestSuccessfulCronTimestampResult(
 ): Promise<CronTimestampLookupResult> {
   const jobs = typeof job === "string" ? [job] : [...job];
   try {
-    if (jobs.length === 1) {
-      const row = await db
-        .prepare(`SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`)
-        .bind(jobs[0])
-        .first<{ started_at: number | null }>();
-      if (row?.started_at != null) {
-        return {
-          timestamp: row.started_at,
-          status: "ok",
-        };
-      }
-      return {
-        timestamp: null,
-        status: "missing",
-      };
-    }
     // Several producer lanes can write one served row set; it is only as fresh
     // as its oldest lane, and a lane without confirmed output fails closed.
-    const row = await db
-      .prepare(`SELECT COUNT(*) AS lane_count, MIN(COALESCE(output_at, 0)) AS started_at FROM (
-        SELECT job, MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) AS output_at
-          FROM cron_runs WHERE job IN (${jobs.map(() => "?").join(", ")}) GROUP BY job
-      )`)
-      .bind(...jobs)
-      .first<{ lane_count: number; started_at: number | null }>();
-    if (row?.lane_count === jobs.length && (row.started_at ?? 0) > 0) {
+    const outputs = await Promise.all(jobs.map(async (lane) => (await db
+      .prepare(LATEST_CONFIRMED_CRON_OUTPUT_SQL)
+      .bind(lane)
+      .first<{ started_at: number | null }>())?.started_at ?? null));
+    if (outputs.length > 0 && outputs.every((output) => output != null && output > 0)) {
       return {
-        timestamp: row.started_at,
+        timestamp: Math.min(...(outputs as number[])),
         status: "ok",
       };
     }

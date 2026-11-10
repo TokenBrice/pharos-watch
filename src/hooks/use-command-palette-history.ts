@@ -45,10 +45,20 @@ const historyStore = createCachedJsonStorageStore<HistoryItem[]>({
   isEqual: (a, b) => a === b || (a.length === 0 && b.length === 0),
 });
 
+let retainedHistory = EMPTY_HISTORY;
+
+function getHistorySnapshot(): HistoryItem[] {
+  const next = normalizeHistory(historyStore.getSnapshot());
+  if (next.length !== retainedHistory.length || next.some((item, index) => item !== retainedHistory[index])) {
+    retainedHistory = next;
+  }
+  return retainedHistory;
+}
+
 export function useCommandPaletteHistory() {
   const history = useSyncExternalStore(
     historyStore.subscribe,
-    historyStore.getSnapshot,
+    getHistorySnapshot,
     historyStore.getServerSnapshot,
   );
 
@@ -59,7 +69,7 @@ export function useCommandPaletteHistory() {
     sublabel: string | undefined,
     href: string
   ) => {
-    const filtered = historyStore.getSnapshot().filter((item) => item.id !== id);
+    const filtered = getHistorySnapshot().filter((item) => item.id !== id);
     const newItem: HistoryItem = {
       id,
       type,

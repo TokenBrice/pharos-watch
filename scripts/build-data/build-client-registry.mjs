@@ -29,6 +29,8 @@ import {
 } from "../../shared/types/stablecoin-client-meta.ts";
 import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
 import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
+import { getHeroPegLabel } from "../../shared/lib/classification.ts";
+import { isRecord as isPlainObject } from "../../shared/lib/type-guards.ts";
 import { atomicWriteFileSync } from "../lib/atomic-artifact-write.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -66,6 +68,7 @@ const MICA_COMPLIANCE_FIELDS = [
   "references",
 ];
 const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
+const HAS_CURATED_RESERVES_FIELD = "hasCuratedReserves";
 const GENIUS_FIELD = "genius";
 const LISTING_CLASS_FIELD = "listingClass";
 const CHAIN_IDS_FIELD = "chainIds";
@@ -164,6 +167,7 @@ export function projectListCoin(coin, listFields, listingClass, sourceById) {
   }
   const liveReserveAdapter = projectLiveReserveAdapter(coin);
   if (liveReserveAdapter !== undefined) projected[LIVE_RESERVE_ADAPTER_FIELD] = liveReserveAdapter;
+  if ((coin?.reserves?.length ?? 0) > 0) projected[HAS_CURATED_RESERVES_FIELD] = true;
   const mintAuthorityStatus = projectMintAuthorityStatus(coin);
   if (mintAuthorityStatus !== undefined) projected[MINT_AUTHORITY_STATUS_FIELD] = mintAuthorityStatus;
   const yieldType = coin?.yieldConfig?.yieldType;
@@ -271,10 +275,6 @@ function projectGeniusNegativeEvidenceReview(value) {
     projected.references = references;
   }
   return projected;
-}
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function projectLinks(links) {
@@ -574,6 +574,9 @@ export function validateListProjection(slim, sourceCoin, index, listFields, list
   if (slim[LIVE_RESERVE_ADAPTER_FIELD] !== projectLiveReserveAdapter(sourceCoin)) {
     throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${LIVE_RESERVE_ADAPTER_FIELD} diverges from source`);
   }
+  if ((slim[HAS_CURATED_RESERVES_FIELD] === true) !== ((sourceCoin?.reserves?.length ?? 0) > 0)) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${HAS_CURATED_RESERVES_FIELD} diverges from source`);
+  }
   if (slim.yieldType !== sourceCoin?.yieldConfig?.yieldType) {
     throw new Error(`[client-registry] entry ${index} (${slim.id}): field yieldType diverges from source`);
   }
@@ -670,6 +673,11 @@ export function buildTelegramMiniAppCatalogOutput({
 
   // `rank` is the 1-based position in the curated canonical market-cap order.
   // The Mini App uses it only to sort search results and followed coins.
+  const symbolsById = new Map(
+    parsed
+      .filter((coin) => typeof coin?.id === "string" && typeof coin?.symbol === "string")
+      .map((coin) => [coin.id, coin.symbol]),
+  );
   const searchableCoins = orderSourceCoins(parsed, readCanonicalOrder(canonicalOrderJsonPath))
     .filter((coin) => !["frozen", "quarantined", "delisted"].includes(coin.status ?? "active"))
     .map((coin, index) => {
@@ -681,11 +689,18 @@ export function buildTelegramMiniAppCatalogOutput({
       ) {
         throw new Error(`[client-registry] Mini App catalog entry ${index} has invalid metadata`);
       }
+      const pegLabel = coin.flags.navToken === true
+        ? getHeroPegLabel(
+            coin.flags,
+            typeof coin.pegReferenceId === "string" ? symbolsById.get(coin.pegReferenceId) : undefined,
+          )
+        : null;
       return {
         stablecoinId: coin.id,
         symbol: coin.symbol,
         name: coin.name,
         peg: coin.flags.pegCurrency,
+        ...(pegLabel ? { pegLabel } : {}),
         status: coin.status ?? "active",
         rank: index + 1,
         // Wrapped, savings, vault and yield-bearing variants; the Mini App lists base coins first.

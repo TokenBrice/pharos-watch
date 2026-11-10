@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import incidentReviewsAsset from "../../data/safety-score-v9/incident-reviews-v1.json";
 import {
   V9DeploymentControlFactBaseSchema,
   V9DeploymentControlFactV2Schema,
@@ -509,6 +508,5 @@ describe("authored registry envelope attribution (provider-wide rows)", () => {
         ...envelope, negativeReviews: [{ reviewId: "fixture-row", assetId: ASSET, scope }],
       }).success).toBe(true);
     }
-    expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse(incidentReviewsAsset).success).toBe(true);
   });
 });

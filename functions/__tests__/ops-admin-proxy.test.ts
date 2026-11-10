@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_OPS_ADMIN_REQUEST_BODY_BYTES, onRequest } from "../api/admin/[[path]].ts";
-import type { OpsAdminProxyEnv } from "../lib/ops-env";
+import { resolveOpsApiOrigin, validatePagesOpsProxyEnv, type OpsAdminProxyEnv } from "../lib/ops-env";
 import { makePagesProxyContext } from "./helpers/pages-context";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockUpstream } from "./helpers/mock-upstream";
@@ -222,6 +222,41 @@ describe("ops admin proxy", () => {
     expect(await response.json()).toEqual({ error: "Forbidden" });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it.each(["cross-site", "same-site"])(
+    "returns 403 before proxying GET requests with Sec-Fetch-Site: %s",
+    async (secFetchSite) => {
+      const fetchSpy = mockFetch([], { requireMatch: true });
+
+      const response = await onRequest(
+        adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/backfill-dews", {
+          headers: { "Sec-Fetch-Site": secFetchSite },
+        })),
+      );
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: "Forbidden" });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["same-origin", "none"])(
+    "proxies GET requests with Sec-Fetch-Site: %s",
+    async (secFetchSite) => {
+      const fetchSpy = opsApi.json("/api/status", { ok: true });
+
+      const response = await onRequest(
+        adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status", {
+          headers: { "Sec-Fetch-Site": secFetchSite },
+        })),
+      );
+
+      expect(response.status).toBe(200);
+      expect(fetchSpy.getHistory()).toHaveLength(1);
+    },
+  );
 
   it.each([
     "file:///x",
@@ -531,6 +566,25 @@ describe("ops admin proxy", () => {
     const response = await responsePromise;
     expect(response.status).toBe(504);
     await expect(response.json()).resolves.toEqual({ error: "Operator API upstream timed out" });
+  });
+
+});
+
+describe("ops env contract", () => {
+  it("rejects non-canonical credential-bearing ops origins", () => {
+    for (const origin of [
+      "http://ops-api.pharos.watch",
+      "ftp://ops-api.pharos.watch",
+      "https://attacker.example",
+      "https://ops-api.pharos.watch/path",
+      "data:text/plain,opaque",
+    ]) {
+      expect(resolveOpsApiOrigin({ OPS_API_ORIGIN: origin })).toBeNull();
+    }
+    expect(validatePagesOpsProxyEnv({ OPS_API_ORIGIN: "https://attacker.example" })).toContainEqual({
+      code: "ops-api-origin-invalid",
+      message: "OPS_API_ORIGIN must be the canonical HTTPS origin https://ops-api.pharos.watch.",
+    });
   });
 
 });

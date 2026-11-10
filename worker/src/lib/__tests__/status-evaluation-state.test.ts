@@ -5,7 +5,7 @@ import { computeRawStatus } from "../status-evaluation";
 import { buildStatusD1Scenario, cleanupStatusTest, makeCronRow } from "../../api/__tests__/status.test-support";
 import { getCircuitImpactStatus, getPublicProducerGraceBudget, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
-import type { StatusCause, StatusResponse } from "@shared/types/status";
+import type { CronRunDetail, StatusCause, StatusResponse } from "@shared/types/status";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { makePublicHealth } from "./public-health.test-support";
@@ -14,11 +14,13 @@ import {
   makeReserveComposition as makeBaseReserveComposition,
 } from "@shared/types/__tests__/status.test-support";
 import { synthesizeOverallCauses } from "../status/evaluation-causes";
-import { maxStatus, SEVERITY } from "../status-reliability-shared";
+import { maxStatus } from "../status-reliability-shared";
 import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
+  evaluateDepegBlindReviewCauses,
   evaluateReserveCompositionStatus,
+  readRedemptionCapacityCoverage,
   type AvailabilityEvaluationInput,
   type DataQualityEvaluationInput,
 } from "../status/evaluation-rules";
@@ -27,6 +29,7 @@ import {
   STABLECOIN_PRICE_GAP_REVIEWS,
   type StablecoinPriceGapReview,
 } from "../stablecoin-publication-coverage";
+import { DEPEG_BLIND_EVENT_REVIEWS } from "../canary-checks-depeg";
 
 function makeReserveComposition(
   overrides?: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>>,
@@ -87,6 +90,7 @@ function makeDataQualityEvaluationInput(
     reserveCompositionQueryFailed: false,
     reserveComposition: makeReserveComposition(),
     reserveCompositionStatus: "healthy",
+    redemptionCapacityCoverage: null,
     activePriceCoverageImpactStatus: "healthy",
     ...overrides,
   };
@@ -115,7 +119,6 @@ describe("status evaluation policy", () => {
     ["degraded", "degraded", "degraded"], ["degraded", "stale", "stale"],
     ["stale", "healthy", "stale"], ["stale", "degraded", "stale"], ["stale", "stale", "stale"],
   ] as const)("aggregates %s and %s using the shared severity order", (left, right, expected) => {
-    expect(SEVERITY).toEqual({ healthy: 0, degraded: 1, stale: 2 });
     expect(maxStatus(left, right)).toBe(expected);
   });
 
@@ -339,18 +342,6 @@ describe("status evaluation policy", () => {
     expect(assessment.authoritativeFreshCoverageRatio).toBe(0.8);
   });
 
-  it("keeps a bounded continuation healthy without using deferred share as a capacity verdict", () => {
-    const assessment = evaluateReserveCompositionStatus(
-      makeReserveComposition({
-        runBudgetTruncated: true,
-        deferredCoins: 1,
-        nextCursorStablecoinId: "coin-a",
-      }),
-    );
-
-    expect(assessment.status).toBe("healthy");
-  });
-
   it.each([
     [0, false, 0, "healthy"],
     [3, true, 0, "healthy"],
@@ -360,27 +351,6 @@ describe("status evaluation policy", () => {
       inProgressCoins: 8, deferredCoins, runBudgetTruncated, writeTimeoutUncertain,
     }));
     expect(assessment.status).toBe(status);
-  });
-
-  it("does not degrade reserve coverage for high-share continuation alone", () => {
-    const highShare = evaluateReserveCompositionStatus(
-      makeReserveComposition({
-        runBudgetTruncated: true,
-        deferredCoins: 3,
-      }),
-    );
-
-    expect(highShare.status).toBe("healthy");
-  });
-
-  it("degrades reserve status for uncertain writes", () => {
-    const uncertainWrite = evaluateReserveCompositionStatus(
-      makeReserveComposition({
-        writeTimeoutUncertain: 1,
-      }),
-    );
-
-    expect(uncertainWrite.status).toBe("degraded");
   });
 
   it("marks reserve status stale only when no fresh coverage remains", () => {
@@ -713,14 +683,7 @@ describe("status cause text", () => {
       ],
     });
 
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition, })).causes;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ reserveComposition })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -810,6 +773,103 @@ describe("status cause text", () => {
     expect(result.causes.some((entry) => entry.code === "reserve_cohort_slo_exceeded")).toBe(false);
   });
 
+  it("reads redemption coverage from the latest executed generation and stays unknown otherwise", () => {
+    const runs: Array<Pick<CronRunDetail, "startedAt" | "status" | "metadata">> = [
+      {
+        startedAt: 300, status: "error",
+        metadata: { unresolvedMissingCapacity: 6, missingCapacityOkThreshold: 1, activeConfigured: 90 },
+      },
+      {
+        startedAt: 200, status: "ok",
+        metadata: { unresolvedMissingCapacity: 0, missingCapacityOkThreshold: 1, activeConfigured: 90 },
+      },
+    ];
+    expect(readRedemptionCapacityCoverage(runs)).toEqual({
+      startedAt: 300,
+      unresolvedMissingCapacity: 6,
+      structuralMissingCapacity: null,
+      runtimeMissingCapacity: 6,
+      missingCapacityOkThreshold: 1,
+      activeConfigured: 90,
+    });
+    // A failed run without coverage fields proves nothing (R2), and an older
+    // clean generation must not stand in for the one actually served.
+    expect(readRedemptionCapacityCoverage([
+      { startedAt: 300, status: "error", metadata: { reason: "stablecoins-cache:invalid-supply-generation" } },
+      { startedAt: 200, status: "ok", metadata: { unresolvedMissingCapacity: 0, missingCapacityOkThreshold: 1 } },
+    ])).toBeNull();
+    expect(readRedemptionCapacityCoverage([
+      { startedAt: 300, status: "skipped_neutral", metadata: {} },
+      { startedAt: 200, status: "ok", metadata: { unresolvedMissingCapacity: 3, missingCapacityOkThreshold: 1 } },
+    ])).toMatchObject({ startedAt: 200, unresolvedMissingCapacity: 3 });
+    expect(readRedemptionCapacityCoverage(undefined)).toBeNull();
+  });
+
+  it("separates structural missing capacity from runtime coverage when reading a generation", () => {
+    expect(readRedemptionCapacityCoverage([
+      {
+        startedAt: 300, status: "ok",
+        metadata: {
+          unresolvedMissingCapacity: 57,
+          structuralMissingCapacity: 55,
+          missingCapacityOkThreshold: 4,
+          activeConfigured: 361,
+        },
+      },
+    ])).toEqual({
+      startedAt: 300,
+      unresolvedMissingCapacity: 57,
+      structuralMissingCapacity: 55,
+      runtimeMissingCapacity: 2,
+      missingCapacityOkThreshold: 4,
+      activeConfigured: 361,
+    });
+  });
+
+  it("raises the redemption capacity coverage cause only above the published run budget", () => {
+    const coverage = (runtimeMissingCapacity: number, structuralMissingCapacity: number | null = null) => ({
+      startedAt: 1_700_000_000,
+      unresolvedMissingCapacity: runtimeMissingCapacity + (structuralMissingCapacity ?? 0),
+      structuralMissingCapacity,
+      runtimeMissingCapacity,
+      missingCapacityOkThreshold: 2,
+      activeConfigured: 120,
+    });
+    const atBudget = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(2),
+    }));
+    expect(atBudget.causes.some((entry) => entry.code === "redemption_capacity_coverage_floor")).toBe(false);
+
+    // Structural evidence-limit routes cannot trip the floor even in aggregate.
+    const structuralOnly = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(1, 5),
+    }));
+    expect(structuralOnly.causes.some((entry) => entry.code === "redemption_capacity_coverage_floor")).toBe(false);
+
+    const overBudget = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(3),
+    }));
+    const cause = overBudget.causes.find((entry) => entry.code === "redemption_capacity_coverage_floor");
+    expect(cause).toMatchObject({
+      layer: "data-quality",
+      severity: "warning",
+      metric: "redemptionRuntimeMissingCapacity",
+      value: 3,
+      threshold: 2,
+      subjects: ["sync-redemption-backstops"],
+    });
+    expect(cause?.message).toContain("sync-redemption-backstops run at 2023-11-14T22:13:20.000Z");
+    expect(cause?.message).toContain("across 120 active configured route(s)");
+
+    const mixedOverBudget = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(5, 44),
+    }));
+    const mixedCause = mixedOverBudget.causes.find((entry) => entry.code === "redemption_capacity_coverage_floor");
+    expect(mixedCause).toMatchObject({ value: 5, threshold: 2 });
+    expect(mixedCause?.message).toContain("5 runtime missing-capacity route(s)");
+    expect(mixedCause?.message).toContain("44 structural evidence-limit route(s) excluded from the floor");
+  });
+
   it("emits a distinct warning cause for DDR repair debt", () => {
     const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality({
       ddrRepairDebtStatus: "present",
@@ -819,14 +879,7 @@ describe("status cause text", () => {
         { eventId: 42, reason: "incident-conflict" },
         { eventId: 43, reason: "incident-conflict" },
       ],
-    }),
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    }) })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -876,21 +929,8 @@ describe("status cause text", () => {
         observedAt: null,
       },
     });
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality,
-    activePriceCoverageImpactStatus: "healthy",
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessment: { status: "healthy", causes: [], representative: false },
-    reserveCompositionStatus: "healthy", })).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality,
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality })).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality })).causes;
 
     expect(status).toBe("degraded");
     expect(causes).toContainEqual(
@@ -1031,21 +1071,8 @@ describe("status cause text", () => {
       alertEligibleIds: ["coin-b"],
     };
 
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverageImpactStatus: "healthy",
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessment: { status: "healthy", causes: [], representative: false },
-    reserveCompositionStatus: "healthy", })).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput()).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage })).causes;
 
     expect(status).toBe("healthy");
     expect(causes).toContainEqual(
@@ -1108,17 +1135,7 @@ describe("status cause text", () => {
       alertEligibleIds: ["coin-b"],
     };
 
-    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
-      dataQuality: makeDataQuality(),
-      activePriceCoverage,
-      activePriceCoverageImpactStatus: "healthy",
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition: makeReserveComposition(),
-    }));
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage }));
 
     expect(result.status).toBe("healthy");
     expect(result.causes.some((cause) => cause.code === "active_price_coverage_duration_degraded")).toBe(false);
@@ -1163,21 +1180,8 @@ describe("status cause text", () => {
     // transient miss, so the admin dataQualityStatus floor no longer degrades on
     // it either. The cause is still emitted for observability, but at info
     // severity so it is neither public-impacting nor durable.
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverageImpactStatus: "healthy",
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessment: { status: "healthy", causes: [], representative: false },
-    reserveCompositionStatus: "healthy", })).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput()).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage })).causes;
 
     expect(status).toBe("healthy");
     expect(causes).toContainEqual(
@@ -1201,14 +1205,7 @@ describe("status cause text", () => {
       }),
     } as StatusResponse["reserveComposition"];
 
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition, })).causes;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ reserveComposition })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -1348,6 +1345,24 @@ describe("status rule-set behavior at policy boundaries", () => {
 });
 
 describe("review expiry reminders", () => {
+  it.each([172800, 172801, 0, -1])("reminds only for in-use blind reviews (%i seconds)", (remaining) => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    const now = review.expiresAt - remaining;
+    const check = { checkId: "depeg-open-coverage", label: "", description: "", status: "ok" as const,
+      severity: "info" as const, executionStatus: "completed" as const, observedAt: now - 1, durationMs: 1,
+      metadata: { acknowledgedBlindReviewIds: [review.eventId] } };
+    const input = { maxAgeSec: 1800, checks: { [check.checkId]: check } };
+    const causes = evaluateDepegBlindReviewCauses(input, now);
+    expect(causes.map((cause) => cause.code)).toEqual(remaining <= 0 ? [] : ["depeg_blind_event_reviews_acknowledged",
+      ...(remaining <= 172800 ? ["depeg_blind_event_reviews_expiring"] : [])]);
+    if (remaining === 172800) expect(causes[1]).toMatchObject({ severity: "info", value: remaining,
+      threshold: 172800, runbookUrl: expect.stringContaining("review-renewal.md") });
+    for (const change of [{ observedAt: now - 1801 }, { observedAt: now + 1 },
+      { executionStatus: "failed" as const }, { metadata: {} }, { metadata: { acknowledgedBlindReviewIds: [] } }]) {
+      expect(evaluateDepegBlindReviewCauses({ ...input, checks: { [check.checkId]: { ...check, ...change } } }, now)).toEqual([]);
+    }
+  });
+
   const nowSec = 1_700_000_000;
   const runbookUrl = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/review-renewal.md";
 

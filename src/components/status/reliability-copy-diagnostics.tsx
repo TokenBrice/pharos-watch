@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { copyText } from "@/lib/clipboard";
+import { RequestSequence, isRequestCancellation } from "@/lib/request";
 
 export function ReliabilityCopyDiagnostics({ text }: { text: string }) {
-  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const [outcome, setOutcome] = useState<{ text: string; status: "copied" | "failed" } | null>(null);
+  const [pending, setPending] = useState(false);
+  const requests = useRef(new RequestSequence());
+  const status = outcome?.text === text ? outcome.status : "idle";
+
+  useEffect(() => () => requests.current.cancel(), [text]);
 
   const copy = async () => {
-    const result = await copyText(text);
-    if (result.ok) {
-      setStatus("copied");
-    } else {
-      setStatus("failed");
+    if (pending) return;
+    setPending(true);
+    setOutcome(null);
+    try {
+      const result = await requests.current.run(() => copyText(text));
+      setOutcome({ text, status: result.ok ? "copied" : "failed" });
+    } catch (error) {
+      if (!isRequestCancellation(error)) setOutcome({ text, status: "failed" });
+    } finally {
+      setPending(false);
     }
   };
 
@@ -20,6 +31,7 @@ export function ReliabilityCopyDiagnostics({ text }: { text: string }) {
     <div className="flex items-center gap-2">
       <button
         type="button"
+        aria-disabled={pending}
         onClick={() => void copy()}
         className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-muted/50"
         aria-label="Copy secret-free reliability diagnostics"

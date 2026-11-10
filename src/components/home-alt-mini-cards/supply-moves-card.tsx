@@ -195,7 +195,7 @@ function MoverList({
                 className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50"
               >
                 <CoinCell logoSrc={logoSrc} />
-                <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
+                <span className="truncate tracking-tight text-foreground">{row.symbol}</span>
                 <span
                   className={`font-semibold pharos-numeric ${
                     row.pctChange >= 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down

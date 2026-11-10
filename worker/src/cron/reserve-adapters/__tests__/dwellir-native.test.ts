@@ -101,18 +101,18 @@ describe("native Dwellir supported-operation preference", () => {
       .toEqual([base, `${base}/blocks/by_version/200?with_transactions=false`]);
   });
 
-  it("tries Dwellir Starknet first, then configured and Cartridge fallbacks with unchanged block semantics", async () => {
+  it("tries Dwellir Starknet first, then configured and PublicNode fallbacks with unchanged block semantics", async () => {
     const base = DWELLIR_NATIVE_ENDPOINTS.find(entry => entry.network === "starknet")!.baseUrl;
     const fetcher = mockFetch([
       { match: base, body: { result: ["bad", "0x0"] } },
       { match: "https://starknet.example", body: { error: { message: "unavailable" } } },
-      { match: "https://api.cartridge.gg", body: { result: ["0xa", "0x1"] } },
+      { match: "https://starknet-rpc.publicnode.com", body: { result: ["0xa", "0x1"] } },
     ], { requireMatch: true });
     expect(await fetchStarknetTotalSupply({ contract: ADDRESS, signal: SIGNAL, rpcUrl: "https://starknet.example", ctx }))
       .toBe((1n << 128n) + 10n);
     const history = fetcher.getHistory();
     expect(history.map(request => new URL(request.url).host))
-      .toEqual([new URL(base).host, "starknet.example", "api.cartridge.gg"]);
+      .toEqual([new URL(base).host, "starknet.example", "starknet-rpc.publicnode.com"]);
     expect(history.map(request => request.headers["x-api-key"])).toEqual([KEY, undefined, undefined]);
     expect(history.every(request => JSON.parse(request.body!).params.block_id === "latest")).toBe(true);
     expect(budget.recordDwellirCredits).toHaveBeenCalledTimes(1);
@@ -122,7 +122,7 @@ describe("native Dwellir supported-operation preference", () => {
     const base = DWELLIR_NATIVE_ENDPOINTS.find(entry => entry.network === "starknet")!.baseUrl;
     const fetcher = mockFetch([
       { match: base, body: { result: ["0x1", "0x0"] } },
-      { match: "https://api.cartridge.gg", body: { result: ["0x2", "0x0"] } },
+      { match: "https://starknet-rpc.publicnode.com", body: { result: ["0x2", "0x0"] } },
     ], { requireMatch: true });
     expect(await fetchStarknetTotalSupply({ contract: ADDRESS, signal: SIGNAL, ctx })).toBe(1n);
     expect(await fetchStarknetTotalSupply({ contract: ADDRESS, signal: SIGNAL })).toBe(2n);
@@ -200,9 +200,13 @@ describe("native credential redirect scoping", () => {
       .toEqual({ result: ["0x1", "0x0"] });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it.each(DWELLIR_NATIVE_ENDPOINTS.flatMap(endpoint =>
-    [301, 302, 303, 307, 308].map(status => ({ endpoint, status })),
-  ))("rejects $status from $endpoint.network without forwarding credentials", async ({ endpoint, status }) => {
+  // Every redirect status funnels into the same non-2xx refusal branch, so one
+  // status per endpoint proves the refusal (and credential non-forwarding) on
+  // each endpoint; the statuses rotate across endpoints for breadth.
+  it.each(DWELLIR_NATIVE_ENDPOINTS.map((endpoint, index) => ({
+    endpoint,
+    status: [301, 302, 307, 308][index % 4],
+  })))("rejects $status from $endpoint.network without forwarding credentials", async ({ endpoint, status }) => {
     const response = new Response(JSON.stringify({ result: ["0x1", "0x0"] }), {
       status, headers: { Location: "https://unapproved.example/native" },
     });
@@ -223,7 +227,7 @@ describe("native RPC error credential redaction", () => {
   it("redacts a credential echoed in a Starknet RPC error before reader diagnostics", async () => {
     const base = DWELLIR_NATIVE_ENDPOINTS.find(entry => entry.network === "starknet")!.baseUrl;
     mockFetch([
-      { match: "https://api.cartridge.gg", body: { error: { message: "unavailable" } } },
+      { match: "https://starknet-rpc.publicnode.com", body: { error: { message: "unavailable" } } },
       { match: base, body: { error: { message: `unauthorized ${KEY}` } } },
     ], { requireMatch: true });
     const error = await fetchStarknetTotalSupply({ contract: ADDRESS, signal: SIGNAL, ctx }).catch(error => error);

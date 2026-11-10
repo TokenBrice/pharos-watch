@@ -23,6 +23,7 @@ import {
 import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request";
 import { reportCronProgress } from "../lib/cron-progress";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "./digest-input-quality";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
@@ -202,6 +203,7 @@ export async function generateWeeklyRecap(
         title: existing.digest_title ?? "",
         text: existing.digest_text,
         extended: existing.digest_extended ?? existing.digest_text,
+        meta: existing.digest_meta,
       },
       safetyContext,
       qualityGateStatus: null,
@@ -450,6 +452,15 @@ export async function generateWeeklyRecap(
   if (digestCopy.usedRawTextFallback) degradedReasons.push("raw-text-fallback");
   if (safetyContext.status === "unavailable") degradedReasons.push("safety-context-unavailable");
   if (safetyCopyIssues.length > 0) degradedReasons.push("unbound-safety-copy");
+  // A week built from regime-critically degraded daily inputs is not a fully
+  // observed week. Chronic partial-cohort metadata (supply-current-unavailable
+  // and friends) stays recorded in `weeklyData.degradedSourcesThisWeek` for the
+  // prompt and the publication watchdog, which own those signals; escalating
+  // it here would hold the cron degraded permanently (f8a6cdbee).
+  const criticalSources = REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[];
+  for (const source of weeklyData.degradedSourcesThisWeek ?? []) {
+    if (criticalSources.includes(source) && !degradedReasons.includes(source)) degradedReasons.push(source);
+  }
   await reportDigestGenerationComplete(
     reportProgress,
     "weekly recap",

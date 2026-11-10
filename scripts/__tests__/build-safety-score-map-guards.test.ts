@@ -5,6 +5,10 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from "vitest";
 import { firefox } from "playwright";
+
+// Every guard below stops before the headless render, so the browser package is
+// never needed: stub it to keep its heavy module graph out of this suite.
+vi.mock("playwright", () => ({ firefox: { launch: vi.fn() } }));
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 import { runSafetyScoreMapCli, parseMapReportCards, mapPublicationHealth } from "../maintenance/build-safety-score-map";

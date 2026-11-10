@@ -3,7 +3,6 @@ import {
   DEX_MEASURED_MAX_COST_BPS,
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
   buildDexMeasuredExecutionTargetId,
-  type DexMeasuredExecutionQuotePointProof,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -32,11 +31,6 @@ export interface EvmV2ReplayCase {
   readonly counterDecimals: number;
   readonly poolAddress: `0x${string}`;
   readonly pairTokenOrder: "stable-first" | "counter-first";
-  readonly fact: {
-    readonly assetId: string;
-    readonly reasonCode: string;
-    readonly exactFactPath: string;
-  };
 }
 
 export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
@@ -51,11 +45,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005001",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "idrt-rupiah-token",
-      reasonCode: "unsupported-same-notional-route",
-      exactFactPath: "exit:unsupported-same-notional-route",
-    },
   },
   {
     assetId: "spusd-soulpeg",
@@ -68,11 +57,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005002",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "spusd-soulpeg",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:spusd-soulpeg:gap:exit-routes",
-    },
   },
   {
     assetId: "stusd-stoneyield",
@@ -85,11 +69,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005003",
     pairTokenOrder: "counter-first",
-    fact: {
-      assetId: "stusd-stoneyield",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:stusd-stoneyield:gap:exit-routes",
-    },
   },
   {
     assetId: "susd-hedgecore",
@@ -102,11 +81,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005004",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "susd-hedgecore",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:susd-hedgecore:gap:exit-routes",
-    },
   },
   {
     assetId: "usda-alpha-partner",
@@ -119,11 +93,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005005",
     pairTokenOrder: "counter-first",
-    fact: {
-      assetId: "usda-alpha-partner",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:usda-alpha-partner:gap:exit-routes",
-    },
   },
   {
     assetId: "uusd-anything-labs",
@@ -136,11 +105,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005006",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "uusd-anything-labs",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:uusd-anything-labs:gap:exit-routes",
-    },
   },
 ] as const;
 
@@ -317,13 +281,27 @@ export function buildReviewedV2Profile(input: {
   const pancakeDeployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
     (deployment) => deployment.source === "pancakeswap-v2",
   )!;
+  const callData = `0xe6a43905${addressWord(replay.stablecoinAddress).slice(2)}${addressWord(
+    replay.counterAddress,
+  ).slice(2)}`;
   const profile = {
-    ...buildMeasuredProfile({
-      replay,
+    ...buildDexMeasuredExecutionProfile({
+      blockHash: `0x${"ab".repeat(32)}`,
       target,
+      targetGenerationId: "evm-v2-fixture-targets",
+      quoteGenerationId: "evm-v2-fixture-quotes",
+      quotedAt: target.capturedAt + 1,
+      blockNumber: EVM_V2_REPLAY_BLOCK,
+      endpointAddress: replay.poolAddress,
+      endpointCodeHash: `0x${"ab".repeat(32)}`,
+      poolBindingProof: {
+        factoryAddress: pancakeDeployment.factoryAddress,
+        factoryCodeHash: pancakeDeployment.expectedFactoryCodeHash,
+        resolvedPoolAddress: replay.poolAddress,
+        callData,
+        returnData: addressWord(replay.poolAddress),
+      },
       points,
-      factoryAddress: pancakeDeployment.factoryAddress,
-      factoryCodeHash: pancakeDeployment.expectedFactoryCodeHash,
     }),
   };
 
@@ -331,34 +309,4 @@ export function buildReviewedV2Profile(input: {
     profile,
     capacityCurve,
   };
-}
-
-function buildMeasuredProfile(input: {
-  replay: EvmV2ReplayCase;
-  target: DexMeasuredExecutionTarget;
-  points: DexMeasuredExecutionQuotePointProof[];
-  factoryAddress: `0x${string}`;
-  factoryCodeHash: `0x${string}`;
-}): DexMeasuredExecutionProfile {
-  const callData = `0xe6a43905${addressWord(input.replay.stablecoinAddress).slice(2)}${addressWord(
-    input.replay.counterAddress,
-  ).slice(2)}`;
-  return buildDexMeasuredExecutionProfile({
-    blockHash: `0x${"ab".repeat(32)}`,
-    target: input.target,
-    targetGenerationId: "evm-v2-fixture-targets",
-    quoteGenerationId: "evm-v2-fixture-quotes",
-    quotedAt: input.target.capturedAt + 1,
-    blockNumber: EVM_V2_REPLAY_BLOCK,
-    endpointAddress: input.replay.poolAddress,
-    endpointCodeHash: `0x${"ab".repeat(32)}`,
-    poolBindingProof: {
-      factoryAddress: input.factoryAddress,
-      factoryCodeHash: input.factoryCodeHash,
-      resolvedPoolAddress: input.replay.poolAddress,
-      callData,
-      returnData: addressWord(input.replay.poolAddress),
-    },
-    points: input.points,
-  });
 }

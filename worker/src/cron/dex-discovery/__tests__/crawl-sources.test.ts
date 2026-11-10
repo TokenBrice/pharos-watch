@@ -176,31 +176,15 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
-        {
-          chainId: "ethereum",
-          dexId: "uniswap-v3",
-          pairAddress: "0xbadpool",
-          labels: ["V3"],
-          baseToken: { address: undefined, name: "Broken Token", symbol: "BROKE" },
-          quoteToken: { address: "0xquote", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "1.00",
-          volume: { h24: 12_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 60_000, base: 0, quote: 0 },
-          pairCreatedAt: null,
-        } as never,
-        {
-          chainId: "ethereum",
-          dexId: "uniswap-v3",
-          pairAddress: "0xgoodpool",
-          labels: ["V3"],
-          baseToken: { address: "0xabc", name: "Test USD", symbol: "TUSD" },
-          quoteToken: { address: "0xquote", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "1.00",
-          volume: { h24: 15_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 75_000, base: 0, quote: 0 },
-          pairCreatedAt: null,
-        } as never,
-      ],
+        ["0xbadpool", undefined, "Broken Token", "BROKE", 12_000, 60_000],
+        ["0xgoodpool", "0xabc", "Test USD", "TUSD", 15_000, 75_000],
+      ].map(([pairAddress, address, name, symbol, volume, liquidity]) => ({
+        chainId: "ethereum", dexId: "uniswap-v3", pairAddress, labels: ["V3"],
+        baseToken: { address, name, symbol },
+        quoteToken: { address: "0xquote", name: "USD Coin", symbol: "USDC" }, priceUsd: "1.00",
+        volume: { h24: volume, h6: 0, h1: 0, m5: 0 },
+        liquidity: { usd: liquidity, base: 0, quote: 0 }, pairCreatedAt: null,
+      })) as never,
     });
 
     const result = await crawlCoin(
@@ -471,7 +455,7 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
-  it("records DexScreener discovery success when a hard refusal follows a successful request", async () => {
+  it("records DexScreener discovery failure when a hard refusal follows a successful request", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(fetchDsTokenPairsWithStatus)
       .mockResolvedValueOnce({ ok: true, pairs: [] })
@@ -512,13 +496,57 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(2);
     expect(recordOutcome).toHaveBeenCalledTimes(1);
-    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, true);
+    // The refusal poisons the run: an earlier success is not evidence of health.
+    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
     expect(runState).toMatchObject({
       attemptedRequests: 2,
       successfulRequests: 1,
       hardRefusal: { status: 429 },
       outcomeRecorded: true,
     });
+  });
+
+  it("stops later targets after a refusal and records the failure immediately", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
+      ok: false,
+      pairs: [],
+      status: 429,
+      contentType: "text/plain",
+      error: "HTTP 429",
+      hardRefusal: true,
+    });
+    const runState = createDexScreenerDiscoveryRunState();
+    const context = createCrawlStageContext({
+      stablecoinId: "test-coin",
+      knownPoolIds: new Set(),
+      nowSec: 1_800_000_000,
+      pools: [],
+    });
+
+    const { providerChecks, stoppedEarly } = await crawlDexScreenerPoolsStage({
+      db: createMockDb(),
+      targets: [
+        ["ethereum", "0xabc"],
+        ["bsc", "0xdef"],
+      ],
+      context,
+      runState,
+    });
+
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
+    expect(stoppedEarly).toBe(false);
+    expect(providerChecks).toEqual([
+      expect.objectContaining({ provider: "dexscreener", status: "failure", retryable: true }),
+    ]);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
+    expect(runState).toMatchObject({ outcomeRecorded: true, successfulRequests: 0 });
+  });
+
+  it("records nothing when the provider was never attempted", async () => {
+    await finalizeDexScreenerDiscoveryRun(createMockDb(), createDexScreenerDiscoveryRunState());
+
+    expect(recordOutcome).not.toHaveBeenCalled();
   });
 
   it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {
@@ -612,31 +640,15 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
-        {
-          chainId: "solana",
-          dexId: "raydium",
-          pairAddress: "PoolCase",
-          baseToken: { address: "MintCase", name: "Test USD", symbol: "TUSD" },
-          quoteToken: { address: "QuoteCase", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "1",
-          priceNative: "1",
-          volume: { h24: 15_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 75_000, base: 0, quote: 0 },
-          pairCreatedAt: null,
-        },
-        {
-          chainId: "solana",
-          dexId: "raydium",
-          pairAddress: "poolCase",
-          baseToken: { address: "mintCase", name: "Different Token", symbol: "OTHER" },
-          quoteToken: { address: "QuoteCase", name: "USD Coin", symbol: "USDC" },
-          priceUsd: "1",
-          priceNative: "1",
-          volume: { h24: 15_000, h6: 0, h1: 0, m5: 0 },
-          liquidity: { usd: 75_000, base: 0, quote: 0 },
-          pairCreatedAt: null,
-        },
-      ],
+        ["PoolCase", "MintCase", "Test USD", "TUSD"],
+        ["poolCase", "mintCase", "Different Token", "OTHER"],
+      ].map(([pairAddress, address, name, symbol]) => ({
+        chainId: "solana", dexId: "raydium", pairAddress,
+        baseToken: { address, name, symbol },
+        quoteToken: { address: "QuoteCase", name: "USD Coin", symbol: "USDC" },
+        priceUsd: "1", priceNative: "1", volume: { h24: 15_000, h6: 0, h1: 0, m5: 0 },
+        liquidity: { usd: 75_000, base: 0, quote: 0 }, pairCreatedAt: null,
+      })),
     });
 
     const result = await crawlCoin(
@@ -746,34 +758,18 @@ describe("crawlCoin DexScreener hardening", () => {
     // Live CG-onchain shape of the Sophon USDT/USN pool: both leg USD prices
     // published, every pair-ratio input null or "0.0" — the provider pricing
     // break that printed USN at $0.3323 against an on-chain tick of 0.998.
-    const brokenPool = {
-      ...coinGeckoPool({
-        id: "sophon_0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
-        address: "0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
-        name: "USDT / USN 0.04%",
-        network: "sophon",
-        basePrice: "0.3323456606",
-        quotePrice: "0.3323290599",
-        reserve: "324992.0345",
-        volume: "0",
-        baseToken: "0x6386da",
-        quoteToken: "0xc1aa99",
-        dex: "syncswap-v3-sophon",
-      }),
-      attributes: {
-        ...coinGeckoPool().attributes,
-        address: "0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
-        name: "USDT / USN 0.04%",
-        base_token_price_usd: "0.3323456606",
-        quote_token_price_usd: "0.3323290599",
-        reserve_in_usd: "324992.0345",
-        volume_usd: { h24: "0" },
-        base_token_price_native_currency: "0.0",
-        quote_token_price_native_currency: "0.0",
-        base_token_price_quote_token: null,
-        quote_token_price_base_token: null,
-      },
-    } as never;
+    const brokenPool = coinGeckoPool({
+      id: "sophon_0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
+      address: "0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
+      name: "USDT / USN 0.04%", network: "sophon",
+      basePrice: "0.3323456606", quotePrice: "0.3323290599",
+      reserve: "324992.0345", volume: "0", baseToken: "0x6386da", quoteToken: "0xc1aa99",
+      dex: "syncswap-v3-sophon",
+    });
+    Object.assign(brokenPool.attributes, {
+      base_token_price_native_currency: "0.0", quote_token_price_native_currency: "0.0",
+      base_token_price_quote_token: null, quote_token_price_base_token: null,
+    });
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
@@ -793,33 +789,15 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("keeps admitting coherent CoinGecko onchain pools that carry healthy pair ratios", async () => {
-    const coherentPool = {
-      ...coinGeckoPool({
-        address: "0xpool",
-        name: "USN / USDC",
-        network: "zksync",
-        basePrice: "1.0018122159",
-        quotePrice: "1.0016693845",
-        reserve: "52313.2779",
-        volume: "0",
-        baseToken: "0xusn",
-        quoteToken: "0xusdc",
-        dex: "syncswap-v3-zksync",
-      }),
-      attributes: {
-        ...coinGeckoPool().attributes,
-        address: "0xpool",
-        name: "USN / USDC",
-        base_token_price_usd: "1.0018122159",
-        quote_token_price_usd: "1.0016693845",
-        reserve_in_usd: "52313.2779",
-        volume_usd: { h24: "0" },
-        base_token_price_quote_token: "1.0005451588",
-        quote_token_price_base_token: "0.9994551383",
-        base_token_price_native_currency: "0.000401420873955884",
-        quote_token_price_native_currency: "0.000401202155087959",
-      },
-    } as never;
+    const coherentPool = coinGeckoPool({
+      address: "0xpool", name: "USN / USDC", network: "zksync",
+      basePrice: "1.0018122159", quotePrice: "1.0016693845", reserve: "52313.2779", volume: "0",
+      baseToken: "0xusn", quoteToken: "0xusdc", dex: "syncswap-v3-zksync",
+    });
+    Object.assign(coherentPool.attributes, {
+      base_token_price_quote_token: "1.0005451588", quote_token_price_base_token: "0.9994551383",
+      base_token_price_native_currency: "0.000401420873955884", quote_token_price_native_currency: "0.000401202155087959",
+    });
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
@@ -839,28 +817,61 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(result.pools[0]).toMatchObject({ poolId: "zksync:0xpool", priceUsd: 1.0018122159 });
   });
 
-  it("records CoinGecko onchain failures when the helper reports a bad response", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
-      transportOk: false,
-      schemaDegraded: false,
-      complete: false,
-      pools: [],
+  it.each<readonly [string, unknown, boolean]>([
+    ["null row", null, false], ["throwing parse", {}, false],
+    ["dex type", 7, false], ["dex blank", " ", false],
+    ...["dex", "pool", "base_token", "quote_token"].map((field) => ["identity", field, false] as const),
+    ...[null, undefined, "bad", "NaN", "Infinity", "-1"].map((tvl) => ["TVL", tvl, false] as const),
+    ["known invalid", "bad", true], ["mixed valid/unreadable", "mixed", false],
+    ["zero", "0", false], ["sub-floor", "999", false],
+    ["blocked venue", "blocked", false], ["explicit empty", "empty", false],
+  ])("inspects CG required evidence before census/dedupe: %s %s", async (kind, tvl, known) => {
+    const row = coinGeckoPool();
+    Object.assign(row.attributes, { reserve_in_usd: kind === "identity" ? "75000" : tvl });
+    if (kind.startsWith("dex ")) {
+      row.attributes.reserve_in_usd = "75000";
+      Object.assign(row.relationships.dex.data, { id: tvl });
+    }
+    if (kind === "identity") {
+      if (tvl === "pool") row.attributes.address = "";
+      else row.relationships[tvl as "dex" | "base_token" | "quote_token"].data.id = "";
+    }
+    if (tvl === "blocked") {
+      row.attributes.reserve_in_usd = "75000";
+      row.relationships.dex.data.id = "near-intents";
+    }
+    const pools = kind === "null row" ? [null] : kind === "throwing parse" ? [{}]
+      : tvl === "empty" ? [] : tvl === "mixed" ? [null, coinGeckoPool()] : [row];
+    const degraded = !["zero", "sub-floor", "blocked venue", "explicit empty"].includes(kind);
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
+      transportOk: true, schemaDegraded: false, complete: true, pools: pools as never,
     });
-
-    const result = await crawlCoin(
-      createMockDb(),
-      "usdc-circle",
-      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
-      "test-key",
-      new Set(),
-    );
-
-    expect(result.pools).toEqual([]);
-    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, false);
+    const context = createCoinGeckoStageContext();
+    const knownIds = new Set(known ? [knownPoolIdKey("usdc-circle", "ethereum:0xpool")] : []);
+    for (const id of knownIds) context.knownPoolIds.add(id);
+    const stage = await crawlCoinGeckoPoolsStage({
+      db: createMockDb(), coinTargets: [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
+      cgApiKey: "test-key", context,
+    });
+    expect(stage.providerChecks).toEqual([expect.objectContaining({
+      status: degraded ? "degraded" : "success", paginationComplete: true,
+      ...(degraded ? { error: "coingecko-malformed-payload" } : {}),
+    })]);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, true);
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, degraded: true, pairs: [] });
+    const result = await crawlCoin(createMockDb(), "usdc-circle",
+      [{ chain: "ethereum", address: "0xabc", decimals: 6 }], "test-key", knownIds);
+    expect(crawlTokenPools).toHaveBeenCalledTimes(degraded ? 1 : 0);
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(degraded ? 1 : 0);
+    expect(result.pools).toHaveLength(tvl === "mixed" ? 1 : 0);
+    expect(result.deploymentOutcomes[0]).toMatchObject({
+      outcome: tvl === "mixed" ? "observed_pools" : degraded ? "provider_inaccessible" : "verified_no_pools",
+      ...(degraded && tvl !== "mixed" ? { reason: "Provider census is not exhaustive for this chain" } : {}),
+    });
   });
 
-  it("marks CoinGecko transport failures retryable with a provider-specific class", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+  it("records bad responses as CoinGecko transport failures, retryable with a provider-specific class", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
       transportOk: false,
       schemaDegraded: false,
       complete: false,
@@ -885,6 +896,18 @@ describe("crawlCoin DexScreener hardening", () => {
         error: "coingecko-transport-failure",
       },
     ]);
+
+    vi.mocked(recordOutcome).mockClear();
+    const crawl = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(crawl.pools).toEqual([]);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, false);
   });
 
   it("keeps timeout and fetch exceptions retryable but malformed payloads non-retryable", async () => {
@@ -970,20 +993,30 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
-  it.each([false, true])("allows fallback after a capped CG census and only complete GT suppresses DexScreener: %s", async (gtComplete) => {
+  it.each([false, true, "unreadable"] as const)("allows fallback after a capped CG census and only complete GT suppresses DexScreener: %s", async (gtComplete) => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true, schemaDegraded: false, complete: false, pools: [],
     });
     vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
+      if (gtComplete === "unreadable") {
+        const actual = await vi.importActual<typeof import("../../dex-liquidity/crawl-helpers")>("../../dex-liquidity/crawl-helpers");
+        return actual.crawlTokenPools({ ...config, fetchPools: async () => ({
+          rows: [null, coinGeckoPool({ reserve: "bad" })] as never,
+          complete: true, cappedAtMaxPages: false, failedAfterRows: null,
+        }) });
+      }
       for (const token of config.tokens) config.onRequestResult?.(token, "success", {
         complete: gtComplete, cappedAtMaxPages: !gtComplete, failedAfterRows: null,
       });
       return { stoppedEarly: false };
     });
-    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
-    await crawlCoin(createMockDb(), "usdc-circle", [{ chain: "ethereum", address: "0xAbC", decimals: 6 }], "test-key", new Set());
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, degraded: true, pairs: [] });
+    const result = await crawlCoin(createMockDb(), "usdc-circle", [{ chain: "ethereum", address: "0xAbC", decimals: 6 }], "test-key", new Set());
     expect(crawlTokenPools).toHaveBeenCalledTimes(1);
-    if (gtComplete) expect(fetchDsTokenPairsWithStatus).not.toHaveBeenCalled();
+    if (gtComplete === "unreadable") expect(result.deploymentOutcomes[0]).toMatchObject({
+      outcome: "provider_inaccessible", reason: "Provider census is not exhaustive for this chain",
+    });
+    if (gtComplete === true) expect(fetchDsTokenPairsWithStatus).not.toHaveBeenCalled();
     else expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
   });
 
@@ -1232,33 +1265,14 @@ describe("crawlCoin DexScreener hardening", () => {
       response: new Response(null, { status: 200 }),
       body: {
         tickers: [
-          {
-            base: "USDC",
-            target: "USD",
-            market: { name: "Kinesis", identifier: "kinesis" },
-            converted_last: { usd: 1.001 },
-            converted_volume: { usd: 20_000 },
-            cost_to_move_down_usd: 40_000,
-            cost_to_move_up_usd: 45_000,
-            target_coin_id: undefined,
-            is_anomaly: false,
-            is_stale: false,
-            trust_score: null,
-          },
-          {
-            base: "USDC",
-            target: "USDT",
-            market: { name: "Kinesis", identifier: "kinesis" },
-            converted_last: { usd: 0.999 },
-            converted_volume: { usd: 10_000 },
-            cost_to_move_down_usd: 20_000,
-            cost_to_move_up_usd: 25_000,
-            target_coin_id: "tether",
-            is_anomaly: false,
-            is_stale: false,
-            trust_score: null,
-          },
-        ],
+          ["USD", 1.001, 20_000, 40_000, 45_000, undefined],
+          ["USDT", 0.999, 10_000, 20_000, 25_000, "tether"],
+        ].map(([target, price, volume, down, up, targetCoinId]) => ({
+          base: "USDC", target, market: { name: "Kinesis", identifier: "kinesis" },
+          converted_last: { usd: price }, converted_volume: { usd: volume },
+          cost_to_move_down_usd: down, cost_to_move_up_usd: up, target_coin_id: targetCoinId,
+          is_anomaly: false, is_stale: false, trust_score: null,
+        })),
       },
     });
 

@@ -33,9 +33,11 @@ import {
   writeStoredSelectorRun,
 } from "./session-storage";
 import { useSelector } from "@/hooks/use-selector";
-import { RequestSequence, requestJson } from "@/lib/request";
+import { RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 import { copyText } from "@/lib/clipboard";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import type { SchemaLike } from "@shared/lib/schema-like";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 interface SnapshotWriteResponse {
   sid: string;
@@ -73,6 +75,12 @@ export function SelectorClient() {
   const renderResult = state.step === "result" || state.sid != null;
   const selector = useSelector(input, state.sid, renderResult);
   const output = "output" in selector ? selector.output : null;
+  const shareInputKey = JSON.stringify(output?.input);
+  const [previousShareInputKey, setPreviousShareInputKey] = useState(shareInputKey);
+  if (previousShareInputKey !== shareInputKey) {
+    setPreviousShareInputKey(shareInputKey);
+    setShareFallbackUrl(null);
+  }
   const profile = state.profile;
   const totalSteps = computeTotalSteps(state.profile, state.horizon, state.depegTolerance);
   const restorableRun = useMemo(
@@ -88,7 +96,7 @@ export function SelectorClient() {
     return () => cancelAnimationFrame(frame);
   }, [state.step, hydrated]);
 
-  useEffect(() => () => shareRequests.current.cancel(), []);
+  useEffect(() => () => shareRequests.current.cancel(), [shareInputKey]);
 
   useEffect(() => {
     if (!announceRef.current) return;
@@ -146,10 +154,10 @@ export function SelectorClient() {
   const handleCopyShareLink = useCallback(async () => {
     if (!output) throw new Error("No engine output to share");
     setShareFallbackUrl(null);
-    let payload: SnapshotWriteResponse;
-    try {
-      payload = await shareRequests.current.run((signal) =>
-        requestJson<SnapshotWriteResponse>("/selector-snapshot/", {
+    const { shareUrl, copyResult } = await shareRequests.current.run(async (signal) => {
+      let payload: SnapshotWriteResponse;
+      try {
+        payload = await requestJson<SnapshotWriteResponse>("/selector-snapshot/", {
           signal,
           schema: SnapshotWriteResponseSchema,
           init: {
@@ -157,19 +165,20 @@ export function SelectorClient() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ input: output.input }),
           },
-        }),
-      );
-    } catch (error) {
-      throw new Error("Share link service unavailable", { cause: error });
-    }
-    if (!isValidSelectorSnapshotId(payload.sid)) {
-      throw new Error("Share link service returned an invalid snapshot id");
-    }
-    const params = new URLSearchParams();
-    params.set("sid", payload.sid);
-    if (payload.ev) params.set("ev", payload.ev);
-    const shareUrl = `${window.location.origin}/screener/picker/?${params.toString()}`;
-    const copyResult = await copyText(shareUrl);
+        });
+      } catch (error) {
+        if (isRequestCancellation(error)) throw error;
+        throw new Error("Share link service unavailable", { cause: error });
+      }
+      if (!isValidSelectorSnapshotId(payload.sid)) {
+        throw new Error("Share link service returned an invalid snapshot id");
+      }
+      const params = new URLSearchParams();
+      params.set("sid", payload.sid);
+      if (payload.ev) params.set("ev", payload.ev);
+      const shareUrl = `${window.location.origin}/screener/picker/?${params.toString()}`;
+      return { shareUrl, copyResult: await copyText(shareUrl) };
+    });
     if (!copyResult.ok) {
       setShareFallbackUrl(shareUrl);
       throw new Error("Clipboard blocked. Select and copy the share URL below.");
@@ -194,6 +203,7 @@ export function SelectorClient() {
 
       {renderResult ? (
         <ResultPane
+          key={shareInputKey}
           selectorResult={selector}
           input={input}
           state={state}
@@ -328,10 +338,11 @@ function SessionRestorePanel({
 function isTradingDataStale(output: SelectorOutput | null): boolean {
   if (!output || output.profile !== "trading") return false;
   const enforceAllKeys = output.input.pegCurrency === "USD";
+  // The share-link block follows the ADR-42 stale band: 12x each producer cadence.
   const limits: Record<string, number> = {
-    pegSummary: 10 * 60,
-    dexTvl: 15 * 60,
-    dews: 35 * 60,
+    pegSummary: CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec * FRESHNESS_RATIOS.DEGRADED,
+    dexTvl: CACHE_FRESHNESS_LANES.dexLiquidity.producerIntervalSec * FRESHNESS_RATIOS.DEGRADED,
+    dews: CACHE_FRESHNESS_LANES.dews.producerIntervalSec * FRESHNESS_RATIOS.DEGRADED,
   };
   return output.recommended.some((rec) => {
     if (rec.profile !== "trading") return false;

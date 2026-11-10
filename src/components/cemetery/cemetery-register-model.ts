@@ -5,7 +5,9 @@
  * string arithmetic, so server and client render byte-identical text.
  */
 import { CAUSE_META } from "@shared/lib/cause-of-death";
+import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { parseCemeteryDeathDate, sortCemeteryCoins } from "@shared/lib/cemetery";
+import type { PegCurrency } from "@shared/types/core";
 import {
   peakBucketOf,
   type CemeteryRegisterFilters,
@@ -29,6 +31,11 @@ export function formatRegisterDeathDate(deathDate: string): string {
   if (parsed?.month == null) return deathDate;
   const month = SHORT_MONTHS[parsed.month - 1];
   return parsed.day === null ? `${month} ${parsed.year}` : `${month} ${parsed.day}, ${parsed.year}`;
+}
+
+/** The published peg label, never the raw `PegCurrency` enum code. */
+export function formatCemeteryPeg(peg: PegCurrency): string {
+  return PEG_LABELS_SHORT[peg] ?? peg;
 }
 
 /** URL filters that narrow the rows; `sort` and `dir` only reorder them. */

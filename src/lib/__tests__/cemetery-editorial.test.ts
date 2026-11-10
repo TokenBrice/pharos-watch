@@ -12,9 +12,20 @@ function entry(id: string) {
   return found;
 }
 
-describe("obituary previews on real records", () => {
-  it("closes IRON's lead on the quoted sentence without adding a stop", () => {
-    expect(getObituaryLead(entry("iron-iron-2021-06").obituary)).toBe("Dubbed crypto's \"first large-scale bank run.\"");
+describe("obituary previews", () => {
+  it("closes a quoted lead on the quoted sentence without adding a stop", () => {
+    expect(
+      getObituaryLead('Dubbed crypto\'s "first large-scale bank run." The collapse followed within days.'),
+    ).toBe('Dubbed crypto\'s "first large-scale bank run."');
+  });
+
+  it("returns the first sentence of every recorded obituary as a prefix ending on terminal punctuation", () => {
+    expect(CEMETERY_ENTRIES.length).toBeGreaterThan(0);
+    for (const coin of CEMETERY_ENTRIES) {
+      const lead = getObituaryLead(coin.obituary);
+      expect(coin.obituary.trim().startsWith(lead), coin.id).toBe(true);
+      expect(lead, coin.id).toMatch(/[.!?]["'\u201D\u2019)\]]*$/);
+    }
   });
 });
 

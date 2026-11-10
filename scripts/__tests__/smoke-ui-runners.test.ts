@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
 
-import { runSmokeRun, HOMEPAGE_RECENT_EVENTS_SMOKE_PATH } from "../maintenance/smoke-ui.mjs";
+import { chunkOverflowRoutes, getOverflowWorkerCount, runSmokeRun, HOMEPAGE_RECENT_EVENTS_SMOKE_PATH } from "../maintenance/smoke-ui.mjs";
 import { ROUTE_CAPTURE_FN } from "../maintenance/smoke-mobile-ui.mjs";
+import { withEnv } from "./helpers/test-state";
 
 function makeFixture(html: string, { stubGeometry = false } = {}) {
   const dom = new JSDOM(`<!doctype html><html><body>${html}</body></html>`, { url: "https://example.com" });
@@ -224,5 +225,21 @@ describe("smoke-mobile-ui table scan", () => {
     expect(summary.tableScan.issues[0].kind).toBe("header-overlap");
     expect(summary.tableScan.issues[0].selector).toContain("visible");
     dom.window.close();
+  });
+});
+
+describe("getOverflowWorkerCount", () => {
+  it("allows env overrides while capping workers to six and route count", () => {
+    withEnv("SMOKE_UI_OVERFLOW_WORKERS", "8", () => {
+      expect(getOverflowWorkerCount("local", 11)).toBe(6);
+      expect(getOverflowWorkerCount("local", 2)).toBe(2);
+    });
+  });
+});
+
+describe("chunkOverflowRoutes", () => {
+  it("returns no chunks for empty input or disabled workers", () => {
+    expect(chunkOverflowRoutes([], 2)).toEqual([]);
+    expect(chunkOverflowRoutes(["/"], 0)).toEqual([]);
   });
 });

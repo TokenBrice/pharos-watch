@@ -117,7 +117,7 @@ export function computeSupplySignal(input: DEWSInput): SignalResult {
 
   const rawVelocity = (0.6 * norm1d + 0.4 * norm7d) / componentCoverage;
 
-  // Size-adjusted dampening: small coins (<$50M) have naturally volatile supply
+  // Size-adjusted dampening: coins below $1B have naturally volatile supply
   const sizeFactor = Math.min(1, Math.log10(Math.max(mcapUsd, 1e6) / 1e6) / 3);
 
   const value = clamp(rawVelocity * sizeFactor, 0, 100);
@@ -466,8 +466,7 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
   }
   // Missing USD valuation is never read as zero dollars (D11-2): unpriced 24h
   // burns understate the surge and unpriced 24h mints overstate the ratio, and
-  // unpriced baseline burns overstate the surge. Unknown (pre-completeness)
-  // baseline coverage is tolerated until legacy hourly buckets age out.
+  // unpriced baseline burns overstate the surge. Both windows must be complete.
   if (input.flowValuation24h !== "complete") {
     return {
       value: 0,
@@ -476,8 +475,9 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
       unavailableReason: input.flowValuation24h === "partial" ? "mint-burn-valuation-partial" : "mint-burn-valuation-unknown",
     };
   }
-  if (input.flowBurnBaselineValuation === "partial") {
-    return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-baseline-valuation-partial" };
+  if (input.flowBurnBaselineValuation !== "complete") {
+    return { value: 0, available: false, baselineDays, unavailableReason: input.flowBurnBaselineValuation === "partial"
+      ? "mint-burn-baseline-valuation-partial" : "mint-burn-baseline-valuation-unknown" };
   }
 
   // Burn surge: how much 24h burns exceed the 30d daily average

@@ -119,7 +119,7 @@ function buildLede(summary: {
   const { reviewedForecastCount, scoredCount, correctCount, notCalledCount } = summary;
   let lede =
     reviewedForecastCount > 0
-      ? `${reviewedForecastCount} frozen DDR ${pluralize(reviewedForecastCount, "forecast", "forecasts")} published for this coin, graded against the confirmed outcome.`
+      ? `${reviewedForecastCount} frozen DDR ${pluralize(reviewedForecastCount, "forecast", "forecasts")} published for this coin${scoredCount === reviewedForecastCount ? ", graded against the confirmed outcome" : ""}.`
       : "No frozen DDR forecast for this coin has been graded yet.";
   if (scoredCount > 0) {
     lede += ` ${correctCount} of ${scoredCount} scored recovery ${pluralize(scoredCount, "call", "calls")} correct.`;

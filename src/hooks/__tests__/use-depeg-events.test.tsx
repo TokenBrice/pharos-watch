@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveSchemaLike } from "@shared/lib/schema-like";
 
-const { useInfiniteQueryMock, apiFetchWithMetaMock } = vi.hoisted(() => ({
+const { useInfiniteQueryMock, apiFetchWithMetaMock, useRegisteredApiQueryMock } = vi.hoisted(() => ({
   useInfiniteQueryMock: vi.fn(),
   apiFetchWithMetaMock: vi.fn(),
+  useRegisteredApiQueryMock: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -18,8 +20,14 @@ vi.mock("@/lib/api", () => ({
   apiFetchWithMeta: apiFetchWithMetaMock,
 }));
 
+vi.mock("../api-hooks", () => ({
+  useRegisteredApiQuery: useRegisteredApiQueryMock,
+}));
+
+import { CRON_TAPE } from "@/lib/cron-intervals";
 import { DEFAULT_MAX_AUTO_PAGES } from "../use-auto-load-infinite-pages";
 import { useActiveDepegEvents, useInfiniteDepegEvents } from "../use-depeg-events";
+import { useEvents, useLatestEvents } from "../use-events";
 import { latestInfiniteQueryOptions, makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
 import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
 import { DepegEventsResponseSchema } from "@shared/types/market";
@@ -242,7 +250,9 @@ describe("useInfiniteDepegEvents", () => {
     useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([first, last], { error: new Error("refresh failed") }));
     rerender();
     expect(result.current.data?.events).toHaveLength(2);
+    // A failed refresh keeps the complete retained pages and their exhaustion.
     expect(result.current.isFullyLoaded).toBe(false);
+    expect(result.current.hasLoadedAllPages).toBe(true);
   });
 
   it("requests pending incidents when enabled", async () => {
@@ -264,5 +274,171 @@ describe("useInfiniteDepegEvents", () => {
       expect.anything(),
       { signal: undefined },
     );
+  });
+});
+
+/**
+ * Cursor pages as the events endpoint serves them: the terminal page carries
+ * no cursor, and only the first page pays for the `total` count.
+ */
+interface EventsPageFixtureData {
+  events: { id: string }[];
+  nextCursor: string | null;
+  droppedRows: number;
+  total?: number;
+}
+
+const TAPE_FIRST_PAGE: CursorPageFixture<EventsPageFixtureData> = {
+  data: {
+    events: [{ id: "evt-1" }, { id: "evt-2" }],
+    droppedRows: 1,
+    nextCursor: "cursor-2",
+    total: 3,
+  },
+  meta: { status: "fresh" },
+};
+
+const TAPE_TERMINAL_PAGE: CursorPageFixture<EventsPageFixtureData> = {
+  data: {
+    events: [{ id: "evt-3" }],
+    droppedRows: 2,
+    nextCursor: null,
+  },
+  meta: null,
+};
+
+describe("useEvents", () => {
+  beforeEach(() => {
+    useInfiniteQueryMock.mockReset();
+    apiFetchWithMetaMock.mockReset();
+    useRegisteredApiQueryMock.mockReset();
+  });
+
+  it.each([
+    ["loading", makeInfiniteQueryResult([], { isLoading: true }), true, false],
+    ["disabled", makeInfiniteQueryResult([]), false, false],
+    ["failed", makeInfiniteQueryResult([], { isError: true, error: new Error("unavailable") }), true, false],
+    ["no pages", { ...makeInfiniteQueryResult([]), data: { pages: [] } }, true, false],
+    ["empty success", makeInfiniteQueryResult([{ data: { ...TAPE_TERMINAL_PAGE.data, events: [] } }]), true, true],
+    ["retained terminal", makeInfiniteQueryResult([TAPE_TERMINAL_PAGE], { error: new Error("refresh failed") }), true, true],
+    ["retained cursor", makeInfiniteQueryResult([TAPE_FIRST_PAGE], { error: new Error("refresh failed") }), true, false],
+  ] as const)("reports completeness from admitted pages: %s", (_state, query, enabled, complete) => {
+    useInfiniteQueryMock.mockReturnValue(query);
+    const { result } = renderHook(() => useEvents({}, { enabled }));
+    expect(result.current.isFullyLoaded).toBe(complete);
+  });
+
+  it("auto-loads the outstanding cursor page exactly once and flattens the result", async () => {
+    const fetchNextPage = vi.fn(async () => undefined);
+    // The first render still has a cursor; after the fetch the query reports both
+    // pages and no cursor, which is the only exhausted state real pagination produces.
+    useInfiniteQueryMock.mockReturnValueOnce(
+      makeInfiniteQueryResult([TAPE_FIRST_PAGE], { fetchNextPage, hasNextPage: true }),
+    );
+    useInfiniteQueryMock.mockReturnValue(
+      makeInfiniteQueryResult([TAPE_FIRST_PAGE, TAPE_TERMINAL_PAGE], { fetchNextPage }),
+    );
+
+    const { result, rerender } = renderHook(() => useEvents({ coin: "usdc-circle" }, { autoLoadAll: true }));
+
+    await waitFor(() => expect(fetchNextPage).toHaveBeenCalledOnce());
+    expect(result.current.isFullyLoaded).toBe(false);
+
+    rerender();
+
+    expect(result.current.data).toEqual({
+      events: [{ id: "evt-1" }, { id: "evt-2" }, { id: "evt-3" }],
+      nextCursor: null,
+    });
+    expect(result.current.loadedCount).toBe(3);
+    expect(result.current.isFullyLoaded).toBe(true);
+    expect(result.current.meta).toEqual({ status: "fresh" });
+    expect(result.current.total).toBe(3);
+    expect(result.current.droppedRows).toBe(3);
+    // Traversal stops at exhaustion instead of re-firing on every render.
+    rerender();
+    expect(fetchNextPage).toHaveBeenCalledOnce();
+  });
+
+  it("builds stable infinite query keys and cursor paths", async () => {
+    useInfiniteQueryMock.mockReturnValue({
+      data: undefined,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      isError: false,
+    });
+
+    renderHook(() => useEvents({ coin: "usdc-circle", type: ["peg.alert", "depeg.confirmed"] }));
+
+    const options = useInfiniteQueryMock.mock.calls[0][0] as {
+      queryKey: unknown[];
+      staleTime: number;
+      refetchInterval: number;
+      queryFn: ({ pageParam, signal }: { pageParam: string | null; signal?: AbortSignal }) => Promise<unknown>;
+    };
+
+    expect(options.staleTime).toBe(CRON_TAPE);
+    expect(options.refetchInterval).toBe(2 * CRON_TAPE);
+
+    expect(options.queryKey).toEqual([
+      "events",
+      "infinite",
+      {
+        type: ["depeg.confirmed", "peg.alert"],
+        coin: "usdc-circle",
+        pegCurrency: null,
+        chain: null,
+        severityFloor: null,
+        since: null,
+        until: null,
+        q: null,
+      },
+    ]);
+
+    await options.queryFn({ pageParam: "cursor-2" });
+    expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
+      "/api/events?type=peg.alert&type=depeg.confirmed&coin=usdc-circle&limit=500&cursor=cursor-2",
+      expect.any(Function),
+      expect.objectContaining({
+        signal: undefined,
+      }),
+    );
+
+    const schema = await resolveSchemaLike(apiFetchWithMetaMock.mock.calls[0]?.[1]);
+    expect(schema?.safeParse({ events: [{ id: "incomplete" }], nextCursor: null }).success).toBe(false);
+  });
+
+  it("resolves one exact permalink without reading a capped latest buffer", () => {
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, meta: null });
+    renderHook(() => useLatestEvents({ eventId: "old freeze/id", coin: "usdc-circle", limit: 200 }));
+    expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: "/api/events?event=old+freeze%2Fid",
+        queryKey: ["events", "latest", expect.objectContaining({ event: "old freeze/id" })],
+      }),
+      { enabled: true },
+    );
+  });
+
+  it("uses the canonical Tape events runtime schema for latest-event queries", async () => {
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, meta: null });
+
+    renderHook(() => useLatestEvents({ coin: "usdc-circle", limit: 10 }));
+
+    expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: expect.any(Array),
+        path: "/api/events?coin=usdc-circle&limit=10",
+        producerIntervalMs: CRON_TAPE,
+        schema: expect.any(Function),
+      }),
+      { enabled: true },
+    );
+    const schema = await useRegisteredApiQueryMock.mock.calls[0]?.[0]?.schema();
+    expect(schema.safeParse({ events: [], droppedRows: 0, nextCursor: null, total: null, totalExact: true }).success).toBe(true);
+    expect(schema.safeParse({ events: [], nextCursor: null }).success).toBe(false);
   });
 });

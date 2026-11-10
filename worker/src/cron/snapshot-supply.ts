@@ -113,6 +113,7 @@ export async function snapshotSupply(
       const requiredActiveIdSet = new Set(requiredActiveIds);
       const cachedIds = new Set(payload.peggedAssets.map((asset) => asset.id));
       const restoredSnapshotIds = new Set<string>();
+      const unavailableSnapshotIds = new Set<string>();
       const nonRestoredSnapshotIds = new Set<string>();
       const validSnapshotIds = new Set<string>();
       const snapshotRows: SupplySnapshotRow[] = [];
@@ -126,9 +127,9 @@ export async function snapshotSupply(
         nonRestoredSnapshotIds.add(asset.id);
 
         const circ = asset.circulating;
-        if (!circ) continue;
+        if (!circ) { unavailableSnapshotIds.add(asset.id); continue; }
         const circulatingUsd = getCirculatingRawOrNull(asset);
-        if (circulatingUsd === null) continue;
+        if (circulatingUsd === null) { unavailableSnapshotIds.add(asset.id); continue; }
         validSnapshotIds.add(asset.id);
 
         // A nominal par reference (or other non-observed provenance) is not a
@@ -150,6 +151,10 @@ export async function snapshotSupply(
         ]);
       }
 
+      const unavailableActiveIds = [...requiredActiveIdSet]
+        .filter((id) => cachedIds.has(id) && !validSnapshotIds.has(id) && !restoredSnapshotIds.has(id))
+        .sort();
+
       return {
         accountedIds: new Set([...validSnapshotIds, ...restoredSnapshotIds]),
         context: {
@@ -158,7 +163,9 @@ export async function snapshotSupply(
           restoredOnlyIds: [...restoredSnapshotIds]
             .filter((id) => requiredActiveIdSet.has(id) && !nonRestoredSnapshotIds.has(id))
             .sort(),
+          unavailableActiveIds,
           snapshotRows,
+          unavailableSnapshotIds,
           validSnapshotIds,
         },
       };
@@ -183,7 +190,7 @@ export async function snapshotSupply(
   const {
     cache: stablecoinsCache,
     cacheAgeSec: cacheAge,
-    context: { cachedIds, requiredActiveIdSet, restoredOnlyIds, snapshotRows, validSnapshotIds },
+    context: { cachedIds, requiredActiveIdSet, restoredOnlyIds, snapshotRows, unavailableActiveIds, unavailableSnapshotIds, validSnapshotIds },
     coverageExpectation,
     lastWrite,
     nowSec,
@@ -217,6 +224,19 @@ export async function snapshotSupply(
       (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
     )
     : [];
+  // Restored rows are never written, so a replacement keeps the day's admitted row of an owned coin
+  // this generation can only restore instead of deleting it (a DefiLlama-outage generation restores
+  // most of the cohort); every other owned row is rewritten from the current observations.
+  const restoredOwnedIds = lastWrite?.snapshotDate === snapshotDate
+    ? restoredOnlyIds.filter((id) => (lastWrite.ownedRowIds ?? []).includes(id))
+    : [];
+  // A coin whose supply read is unavailable now also keeps the observation this day already wrote.
+  // The absence is not a redemption, and it is already named in the marker's unavailableActiveIds
+  // and publication coverage; the earlier observation is not evidence a replacement may delete (R1).
+  const unavailableOwnedIds = lastWrite?.snapshotDate === snapshotDate
+    ? (lastWrite.ownedRowIds ?? []).filter((id) => unavailableSnapshotIds.has(id))
+    : [];
+  const keptOwnedRowIds = [...new Set([...restoredOwnedIds, ...unavailableOwnedIds])];
   const alreadyWritten = publicationGapBand !== "systemic"
     && lastWrite?.snapshotDate === snapshotDate
     && lastWrite.coverageIdentityVerified
@@ -323,16 +343,18 @@ export async function snapshotSupply(
           coverage: coverageExpectation,
           accountedActiveCount:
             publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
-          ownedRowIds: snapshotRows.map(([stablecoinId]) => stablecoinId),
+          ownedRowIds: [...snapshotRows.map(([stablecoinId]) => stablecoinId), ...keptOwnedRowIds],
           missingActiveIds: publicationCoverage.missingActiveIds,
+          unavailableActiveIds,
         }),
         generationId: crypto.randomUUID(),
         writtenRows: snapshotRows.length,
       });
+      const keptRowIds = new Set(keptOwnedRowIds);
       const ownedStablecoinIds = [...new Set([
         ...snapshotEligibleIds,
         ...(lastWrite?.ownedRowIds ?? []),
-      ])].sort();
+      ])].filter((stablecoinId) => !keptRowIds.has(stablecoinId)).sort();
       const deleteStatements = chunkArray(
         ownedStablecoinIds,
         D1_MAX_BOUND_PARAMETERS - 1,

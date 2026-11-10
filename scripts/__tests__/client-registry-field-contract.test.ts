@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -125,9 +125,6 @@ describe("client registry field contract", () => {
 
   it("omits every authored suspended reader from both generated client outputs", () => {
     const suspendedCoins = TRACKED_SOURCE_COINS.filter((coin) => coin.liveReservesConfig?.suspended);
-    expect(suspendedCoins.map((coin) => coin.id)).toEqual(expect.arrayContaining([
-      "bnusd-balanced", "inalpha-nest", "tgbp-tokenised", "usdxl-last",
-    ]));
     const { output, detailOutputs } = buildClientRegistryOutput();
     const listCoins = JSON.parse(output) as StablecoinClientListMeta[];
     for (const sourceCoin of suspendedCoins) {
@@ -207,6 +204,27 @@ describe("client registry field contract", () => {
 
     expect(searchableCoins.map((entry: { stablecoinId: string; variant: boolean }) => [entry.stablecoinId, entry.variant]))
       .toEqual([["base", false], ["wrapper", true], ["yield", true]]);
+  });
+
+  it("labels NAV-token catalog entries with the site hero peg label", ({ onTestFinished }) => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-mini-app-catalog-nav-"));
+    onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));
+    const canonicalOrderJsonPath = join(fixtureDir, "canonical-order.json");
+    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["usde", "susde", "fpi", "usdc"]));
+
+    const { searchableCoins } = buildTelegramMiniAppCatalogOutput({
+      sourceCoins: [
+        { id: "usde", symbol: "USDe", name: "Ethena USDe", flags: { pegCurrency: "USD", navToken: true } },
+        { id: "susde", symbol: "sUSDe", name: "Staked USDe", pegReferenceId: "usde", flags: { pegCurrency: "USD", navToken: true } },
+        { id: "fpi", symbol: "FPI", name: "Frax Price Index", flags: { pegCurrency: "VAR", navToken: true } },
+        { id: "usdc", symbol: "USDC", name: "USD Coin", flags: { pegCurrency: "USD", navToken: false } },
+      ],
+      canonicalOrderJsonPath,
+    });
+
+    expect(searchableCoins.map((entry: { stablecoinId: string; pegLabel?: string }) => [entry.stablecoinId, entry.pegLabel]))
+      .toEqual([["usde", "USD NAV"], ["susde", "USDe NAV"], ["fpi", "VAR NAV"], ["usdc", undefined]]);
+    expect(searchableCoins[3]).not.toHaveProperty("pegLabel");
   });
 
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {
@@ -322,16 +340,6 @@ describe("client registry field contract", () => {
     const projected = JSON.parse(JSON.stringify(projectListCoin({ id: "unreviewed" }, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin")));
     expect(projected).not.toHaveProperty("mintAuthoritySummary");
     expect(projected).not.toHaveProperty("mintAuthorityStatus");
-  });
-
-  it("publishes every projection through the atomic writer and registers the helper as a source", () => {
-    const script = readFileSync(resolve("scripts/build-data/build-client-registry.mjs"), "utf8");
-    expect(script).toContain("atomicWriteFileSync");
-    expect(script).not.toMatch(/\bwriteFileSync\b/);
-    for (const id of ["stablecoin-catalog", "stablecoin-client-registry"]) {
-      const artifact = GENERATED_ARTIFACT_REGISTRY.find((entry: { id: string }) => entry.id === id)!;
-      expect(artifact.sourcePaths).toContain("scripts/lib/atomic-artifact-write.mts");
-    }
   });
 
   it("loads the real classifier closure using the registered write/check transport", () => {

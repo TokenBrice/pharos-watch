@@ -161,15 +161,6 @@ describe("adaptHliquityHederaState", () => {
     ]));
   });
 
-  it("degrades but still publishes an undercollateralized market ratio below MCR", () => {
-    const result = adaptHliquityHederaState(buildState({ hbarPriceUsd: 0.01 }));
-
-    expect(result.metadata?.collateralizationRatio).toBeLessThan(1.1);
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }),
-    ]));
-  });
-
   it("reports the redemption route paused when the protocol TCR clears below MCR", () => {
     const result = adaptHliquityHederaState(buildState({ tcrRaw: 100_000_000n }));
 

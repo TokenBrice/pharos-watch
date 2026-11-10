@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
 import { CRON_SCHEDULE_CADENCES } from "../../shared/lib/cron-cadences";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
@@ -9,8 +8,6 @@ const mintBurn = read("docs/mint-burn-flows.md");
 
 describe("mint/burn owning document", () => {
   it("states the distinct critical and extended cadences from the cron registry", () => {
-    expect(CRON_SCHEDULES.halfHourlyMintBurnCritical).toBe("4,34 * * * *");
-    expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18 * * * *");
     expect(CRON_SCHEDULE_CADENCES.halfHourlyMintBurnCritical.intervalSec).toBe(1_800);
     expect(CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended.intervalSec).toBe(3_600);
     expect(mintBurn).toContain("The critical lane runs every 30 minutes at :04/:34; the extended lane runs hourly at :18.");

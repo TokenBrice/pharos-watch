@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
-import jltxxSource from "@shared/data/stablecoins/coins/jltxx-jpmorgan.json";
 import {
   computeLiveReserveConfigFingerprint,
   isReserveSupplyAdmissionBootstrapAuthorized,
-  LiveReservesConfigSchema,
 } from "@shared/lib/live-reserve-adapters";
 import {
+  getCollidingSymbolContractIssues,
   getCommodityProtocolSlugIssue,
   getContractDeploymentIssues,
   getCommodityAllocatedPegMatchIssues,
   getDependencyReserveOverlapIssues,
+  getRemovedStablecoinRedirectIssues,
   getReservePublicLabelIssues,
   getReserveDependencyTypeLinkIssues,
   getLiveReserveDependencyTypeLinkIssues,
@@ -70,6 +70,29 @@ describe("overdue listing status review warning", () => {
   });
 });
 
+describe("colliding symbol contract identity", () => {
+  const deployment = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000000", decimals: 6 };
+  const coin = (id: string, symbol: string, overrides: Record<string, unknown> = {}) =>
+    ({ id, symbol, ...overrides }) as unknown as StablecoinMeta;
+
+  it("rejects a namesake with neither a contract footprint nor an external provider id", () => {
+    expect(getCollidingSymbolContractIssues([
+      coin("alpha-usd", "FIX", { contracts: [deployment] }),
+      coin("beta-usd", "FIX"),
+    ])).toEqual([expect.stringContaining("beta-usd")]);
+  });
+
+  it("admits contract, traded-contract and provider-id disambiguation", () => {
+    expect(getCollidingSymbolContractIssues([
+      coin("alpha-usd", "FIX", { contracts: [deployment] }),
+      coin("beta-usd", "FIX", { tradedContracts: [deployment] }),
+      coin("gamma-usd", "FIX", { geckoId: "fixture-coin" }),
+      coin("delta-usd", "FIX", { cmcSlug: "fixture-coin" }),
+    ])).toEqual([]);
+    expect(getCollidingSymbolContractIssues([coin("alpha-usd", "FIX"), coin("solo-usd", "SOLO")])).toEqual([]);
+  });
+});
+
 describe("terminal live-reserve binding gate", () => {
   const config: NonNullable<StablecoinMeta["liveReservesConfig"]> = {
     adapter: "jpmorgan-nav", version: 1, semantics: "single-asset",
@@ -86,11 +109,8 @@ describe("terminal live-reserve binding gate", () => {
     }, Date.parse("2026-10-11T00:00:00Z"))).toBeNull();
     expect(getExpiredReserveSupplyAdmissionBootstrapIssue({})).toBeNull();
   });
-  it("retires JLTXX's expired bootstrap without reauthorizing recovery or changing reserve identity", () => {
-    const config = LiveReservesConfigSchema.parse(jltxxSource.liveReservesConfig);
+  it("retires an expired bootstrap without reauthorizing recovery or changing reserve identity", () => {
     const expiryMs = Date.parse("2026-10-10T00:00:00Z");
-    expect(jltxxSource.status).toBe("quarantined");
-    expect(config.adapter).toBe("jpmorgan-nav");
     expect(config.bootstrapForSupplyAdmission).toBeUndefined();
     expect(getExpiredReserveSupplyAdmissionBootstrapIssue({ liveReservesConfig: config }, expiryMs)).toBeNull();
     expect(isReserveSupplyAdmissionBootstrapAuthorized(config, expiryMs - 1)).toBe(false);
@@ -379,5 +399,68 @@ describe("listing class during unresolved mechanism review", () => {
     }], { ...decisions, listingClassById: { "fixture-usd": "excluded" } })).toContain(
       'listing-decisions.json marks non-delisted "fixture-usd" as excluded',
     );
+  });
+});
+
+describe("removed-stablecoin redirect guard", () => {
+  const removed = [{
+    id: "old-coin", name: "Old Coin", symbol: "OLD", pegCurrency: "USD" as const,
+    removedAt: "2026-07-19", reason: "no-live-data" as const, cemeteryId: "old-coin",
+  }];
+  const redirects = (destination = "/cemetery/#old-coin", status = "301") =>
+    [`/stablecoin/old-coin ${destination} ${status}`, `/stablecoin/old-coin/* ${destination} ${status}`].join("\n");
+  const options = { removed, cemeteryIds: new Set(["old-coin"]) };
+
+  it.each([
+    {
+      name: "passes a clean redirect pair",
+      source: redirects(),
+      options,
+      expected: [],
+    },
+    {
+      name: "flags a missing forward redirect",
+      source: `/stablecoin/old-coin/* /cemetery/#old-coin 301`,
+      options,
+      expected: ["/stablecoin/old-coin: expected a 301 to /cemetery/#old-coin"],
+    },
+    {
+      name: "flags a temporary redirect status",
+      source: redirects("/cemetery/#old-coin", "302"),
+      options,
+      expected: [
+        "/stablecoin/old-coin: expected a 301 to /cemetery/#old-coin",
+        "/stablecoin/old-coin/*: expected a 301 to /cemetery/#old-coin",
+      ],
+    },
+    {
+      name: "flags a wrong destination",
+      source: redirects("/stablecoins/usd/"),
+      options,
+      expected: [
+        "/stablecoin/old-coin: expected a 301 to /cemetery/#old-coin",
+        "/stablecoin/old-coin/*: expected a 301 to /cemetery/#old-coin",
+      ],
+    },
+    {
+      name: "flags reverse drift to an unnamed retired profile",
+      source: `${redirects()}\n/stablecoin/ghost-coin /coverage/ 301`,
+      options,
+      expected: ["/stablecoin/ghost-coin: redirect points at a retired profile the removal list does not name"],
+    },
+    {
+      name: "flags a still-tracked removed stablecoin",
+      source: redirects(),
+      options: { ...options, trackedIds: new Set(["old-coin"]) },
+      expected: ["old-coin: removed stablecoin is still in the tracked registry"],
+    },
+    {
+      name: "fails closed on an empty removal list",
+      source: "",
+      options: { removed: [] },
+      expected: ["removed-stablecoin list is empty, so no retired profile redirect can be verified"],
+    },
+  ])("$name", ({ source, options: guardOptions, expected }) => {
+    expect(getRemovedStablecoinRedirectIssues(source, guardOptions)).toEqual(expected);
   });
 });

@@ -167,7 +167,10 @@ describe.each([StablecoinMetaAssetArraySchema, StablecoinMetaCatalogInvariantsSc
   (schema) => {
     const deployment = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000000", decimals: 6 };
 
-    it("admits the full tracked source catalog", () => {
+    // Nightly tier: parses the whole tracked source catalog. The PR tier keeps
+    // `npm run check:stablecoin-data` (scripts/lib/stablecoin-catalog-sources.ts loads
+    // every source through this schema family) and `npm run check:generated-artifacts`.
+    it("admits the full tracked source catalog", { tags: ["nightly"] }, () => {
       expect(schema.safeParse(TRACKED_SOURCE_COINS).success).toBe(true);
     });
 
@@ -279,38 +282,32 @@ describe("StablecoinMeta schema — reserve and manual dependency roles", () => 
 
 describe("StablecoinMeta schema — MiCA profile", () => {
   it("requires source references for assessed in-scope MiCA statuses", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mica-negative",
-        mica: {
-          status: "non-compliant",
-          tokenType: "EMT",
-        },
-      }),
-    ], "fixture")).toThrow(/source reference/);
+    expect(() => parseCoin({
+      id: "fixture-mica-negative",
+      mica: {
+        status: "non-compliant",
+        tokenType: "EMT",
+      },
+    })).toThrow(/source reference/);
   });
 
   it("allows explicit MiCA out-of-scope rows without references", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mica-out-of-scope",
-        mica: {
-          status: "out-of-scope",
-        },
-      }),
-    ], "fixture")).not.toThrow();
+    expect(() => parseCoin({
+      id: "fixture-mica-out-of-scope",
+      mica: {
+        status: "out-of-scope",
+      },
+    })).not.toThrow();
   });
 
   it("rejects MiCA out-of-scope rows with in-scope classification fields", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mica-out-of-scope-token-type",
-        mica: {
-          status: "out-of-scope",
-          tokenType: "EMT",
-        },
-      }),
-    ], "fixture")).toThrow(/out-of-scope/);
+    expect(() => parseCoin({
+      id: "fixture-mica-out-of-scope-token-type",
+      mica: {
+        status: "out-of-scope",
+        tokenType: "EMT",
+      },
+    })).toThrow(/out-of-scope/);
   });
 });
 
@@ -334,6 +331,14 @@ function makeMintAuthority(overrides: Record<string, unknown> = {}): Record<stri
     },
     ...overrides,
   };
+}
+
+function parseCoin(overrides: Record<string, unknown>) {
+  return parseStablecoinMetaAssets([makeCoin(overrides)], "fixture");
+}
+
+function parseMint(overrides: Record<string, unknown> = {}) {
+  return parseCoin({ mintAuthority: makeMintAuthority(overrides) });
 }
 
 function governedMintAuthority() {
@@ -910,22 +915,6 @@ function makeInheritanceChain(ids: string[], terminal = makeCoin({
 }
 
 describe("StablecoinMeta schema — frozen status", () => {
-  it("accepts a well-formed frozen coin", () => {
-    const json = [
-      makeCoin({ id: "fixture-frozen", status: "frozen",
-      frozenAt: "2026-04-27",
-      obituary: {
-        causeOfDeath: "abandoned",
-        deathDate: "2026-04",
-        epitaph: "Closed without ceremony.",
-        obituary: "FXT was sunset by its issuer.",
-        sourceUrl: "https://example.com/x",
-        sourceLabel: "Issuer announcement",
-      }, }),
-    ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
-  });
-
   it("rejects a frozen coin missing the obituary block", () => {
     const json = [
       makeCoin({ id: "fixture-frozen-bad", status: "frozen",
@@ -967,68 +956,58 @@ describe("StablecoinMeta schema — frozen status", () => {
 
 describe("StablecoinMeta schema — issuer wind-down evidence", () => {
   it("accepts a dated issuer announcement with a source URL", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        windDownAnnouncedAt: "2026-05-24",
-        windDownSourceUrl: "https://issuer.example.com/wind-down",
-      }),
-    ], "fixture")).not.toThrow();
+    expect(() => parseCoin({
+      windDownAnnouncedAt: "2026-05-24",
+      windDownSourceUrl: "https://issuer.example.com/wind-down",
+    })).not.toThrow();
   });
 
 });
 
 describe("StablecoinMeta schema — listing lifecycle status", () => {
   it("accepts a quarantined record with a dated manual review", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        status: "quarantined",
-        listingStatusReview: {
-          changedAt: "2026-07-15",
-          reason: "Runtime price and supply coverage require remediation.",
-          reviewBy: "2026-08-15",
-        },
-      }),
-    ], "fixture")).not.toThrow();
+    expect(() => parseCoin({
+      status: "quarantined",
+      listingStatusReview: {
+        changedAt: "2026-07-15",
+        reason: "Runtime price and supply coverage require remediation.",
+        reviewBy: "2026-08-15",
+      },
+    })).not.toThrow();
   });
 
   it("rejects quarantine without a review deadline", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        status: "quarantined",
-        listingStatusReview: {
-          changedAt: "2026-07-15",
-          reason: "Runtime coverage is unresolved.",
-        },
-      }),
-    ], "fixture")).toThrow(/reviewBy/);
+    expect(() => parseCoin({
+      status: "quarantined",
+      listingStatusReview: {
+        changedAt: "2026-07-15",
+        reason: "Runtime coverage is unresolved.",
+      },
+    })).toThrow(/reviewBy/);
   });
 
   it("accepts a delisted record with durable source evidence", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        status: "delisted",
-        listingStatusReview: {
-          changedAt: "2026-07-15",
-          reason: "The asset is outside the stablecoin listing scope.",
-          source: {
-            label: "Issuer product terms",
-            url: "https://example.com/product-terms",
-          },
+    expect(() => parseCoin({
+      status: "delisted",
+      listingStatusReview: {
+        changedAt: "2026-07-15",
+        reason: "The asset is outside the stablecoin listing scope.",
+        source: {
+          label: "Issuer product terms",
+          url: "https://example.com/product-terms",
         },
-      }),
-    ], "fixture")).not.toThrow();
+      },
+    })).not.toThrow();
   });
 
   it("rejects lifecycle review metadata on an active row", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        status: "active",
-        listingStatusReview: {
-          changedAt: "2026-07-15",
-          reason: "Stray review metadata.",
-        },
-      }),
-    ], "fixture")).toThrow(/only allowed/);
+    expect(() => parseCoin({
+      status: "active",
+      listingStatusReview: {
+        changedAt: "2026-07-15",
+        reason: "Stray review metadata.",
+      },
+    })).toThrow(/only allowed/);
   });
 });
 
@@ -1149,90 +1128,77 @@ describe("StablecoinMeta schema — GENIUS profile", () => {
   };
 
   it("accepts a source-backed issuer-announced GENIUS watch profile", () => {
-    const parsed = parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-genius-intent",
-        genius: {
-          applicability: "apparent-payment-stablecoin",
-          authorizationStatus: "issuer-announced-intent",
-          issuerPathway: "unknown",
-          issuerEntity: "Fixture Issuer, N.A.",
-          issuerDomicile: "United States",
-          licensingRegulator: "OCC",
-          primaryFederalRegulator: "OCC",
-          foreignExceptionStatus: "not-applicable",
-          enforcementStatus: "no-public-action-found",
-          daspOfferSaleStatus: "not-yet-restricted",
-          reserveDisclosurePresent: true,
-          reserveDisclosureUrl: "https://example.com/reserves",
-          redemptionPolicyPresent: true,
-          monthlyAttestationPresent: true,
-          references: [issuerDisclosure],
-          reviewer: "Fixture Reviewer",
-          reviewedAt: "2026-05-27",
-        },
-      }),
-    ], "fixture");
+    const parsed = parseCoin({
+      id: "fixture-genius-intent",
+      genius: {
+        applicability: "apparent-payment-stablecoin",
+        authorizationStatus: "issuer-announced-intent",
+        issuerPathway: "unknown",
+        issuerEntity: "Fixture Issuer, N.A.",
+        issuerDomicile: "United States",
+        licensingRegulator: "OCC",
+        primaryFederalRegulator: "OCC",
+        foreignExceptionStatus: "not-applicable",
+        enforcementStatus: "no-public-action-found",
+        daspOfferSaleStatus: "not-yet-restricted",
+        reserveDisclosurePresent: true,
+        reserveDisclosureUrl: "https://example.com/reserves",
+        redemptionPolicyPresent: true,
+        monthlyAttestationPresent: true,
+        references: [issuerDisclosure],
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-27",
+      },
+    });
     expect(parsed[0]?.genius?.authorizationStatus).toBe("issuer-announced-intent");
   });
 
   it("rejects official GENIUS authorization claims without a regulator reference", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-genius-official",
-        genius: {
-          applicability: "apparent-payment-stablecoin",
-          authorizationStatus: "ppsi-approved",
-          issuerPathway: "federal-qualified-nonbank",
-          references: [issuerDisclosure],
-          reviewer: "Fixture Reviewer",
-          reviewedAt: "2026-05-27",
-        },
-      }),
-    ], "fixture")).toThrow(/official authorization/);
+    expect(() => parseCoin({
+      id: "fixture-genius-official",
+      genius: {
+        applicability: "apparent-payment-stablecoin",
+        authorizationStatus: "ppsi-approved",
+        issuerPathway: "federal-qualified-nonbank",
+        references: [issuerDisclosure],
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-27",
+      },
+    })).toThrow(/official authorization/);
   });
 
   it("requires no-public-authorization-found to include a dated negative evidence review", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-genius-negative",
-        genius: {
-          applicability: "apparent-payment-stablecoin",
-          authorizationStatus: "no-public-authorization-found",
-          issuerPathway: "unknown",
-          reviewer: "Fixture Reviewer",
-          reviewedAt: "2026-05-27",
-        },
-      }),
-    ], "fixture")).toThrow(/negative evidence review/);
+    expect(() => parseCoin({
+      id: "fixture-genius-negative",
+      genius: {
+        applicability: "apparent-payment-stablecoin",
+        authorizationStatus: "no-public-authorization-found",
+        issuerPathway: "unknown",
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-27",
+      },
+    })).toThrow(/negative evidence review/);
   });
 
   it("rejects unknown nested GENIUS fields", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-genius-strict",
-        genius: {
-          applicability: "apparent-payment-stablecoin",
-          authorizationStatus: "issuer-announced-intent",
-          issuerPathway: "unknown",
-          references: [issuerDisclosure],
-          reviewer: "Fixture Reviewer",
-          reviewedAt: "2026-05-27",
-          complianceScore: 100,
-        },
-      }),
-    ], "fixture")).toThrow(/complianceScore/);
+    expect(() => parseCoin({
+      id: "fixture-genius-strict",
+      genius: {
+        applicability: "apparent-payment-stablecoin",
+        authorizationStatus: "issuer-announced-intent",
+        issuerPathway: "unknown",
+        references: [issuerDisclosure],
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-27",
+        complianceScore: 100,
+      },
+    })).toThrow(/complianceScore/);
   });
 });
 
 describe("StablecoinMeta schema — mint authority", () => {
   it("accepts a verified Safe mint authority profile", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-safe",
-        mintAuthority: makeMintAuthority(),
-      }),
-    ], "fixture")).not.toThrow();
+    expect(() => parseMint({})).not.toThrow();
   });
 
   it.each([
@@ -1261,58 +1227,38 @@ describe("StablecoinMeta schema — mint authority", () => {
   });
 
   it("requires verified and probable profiles to include a source link", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-source",
-        mintAuthority: makeMintAuthority({
-          review: {
-            sourceFreeRationale: "Internal review found no public source for this fixture.",
-            evidence: "The fixture intentionally omits a source link for confidence validation.",
-            reviewer: "Fixture Reviewer",
-            reviewedAt: "2026-05-24",
-          },
-        }),
-      }),
-    ], "fixture")).toThrow(/source link/);
+    expect(() => parseMint({
+      review: {
+        sourceFreeRationale: "Internal review found no public source for this fixture.",
+        evidence: "The fixture intentionally omits a source link for confidence validation.",
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-24",
+      },
+    })).toThrow(/source link/);
   });
 
   it("accepts verified profiles whose public source links live on controls", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-control-source",
-        mintAuthority: makeMintAuthority({
-          review: {
-            sourceFreeRationale: "Profile source links are attached to the reviewed control row.",
-            evidence: "The fixture keeps source links at control level for validation.",
-            reviewer: "Fixture Reviewer",
-            reviewedAt: "2026-05-24",
-          },
-          controls: [makeSafeControl({ sources: [mintAuthoritySource] })],
-        }),
-      }),
-    ], "fixture")).not.toThrow();
+    expect(() => parseMint({
+      review: {
+        sourceFreeRationale: "Profile source links are attached to the reviewed control row.",
+        evidence: "The fixture keeps source links at control level for validation.",
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-24",
+      },
+      controls: [makeSafeControl({ sources: [mintAuthoritySource] })],
+    })).not.toThrow();
   });
 
   it("requires privileged non-unknown profiles to include controls", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-controls",
-        mintAuthority: makeMintAuthority({
-          controls: [],
-        }),
-      }),
-    ], "fixture")).toThrow(/requires at least one control/);
+    expect(() => parseMint({
+      controls: [],
+    })).toThrow(/requires at least one control/);
   });
 
   it("validates Safe threshold and signer counts", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-threshold",
-        mintAuthority: makeMintAuthority({
-          controls: [makeSafeControl({ threshold: 4 }, { threshold: 4 })],
-        }),
-      }),
-    ], "fixture")).toThrow(/threshold/);
+    expect(() => parseMint({
+      controls: [makeSafeControl({ threshold: 4 }, { threshold: 4 })],
+    })).toThrow(/threshold/);
   });
 
   it.each([
@@ -1353,7 +1299,10 @@ describe("StablecoinMeta schema — mint authority", () => {
     expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority({ controls: [control] })).success).toBe(false);
   });
 
-  it("admits current corpus authority profiles, including weighted and same-chain system transport controls", () => {
+  // Nightly tier: projects every authored mint-authority and bridge-risk profile in the
+  // catalog. The PR tier keeps `npm run check:stablecoin-data`, which parses each source
+  // through StablecoinMetaSourceAssetSchema including these control schemas.
+  it("admits current corpus authority profiles, including weighted and same-chain system transport controls", { tags: ["nightly"] }, () => {
     for (const coin of TRACKED_SOURCE_COINS) {
       if (coin.mintAuthority) {
         expect(MintAuthorityProfileSchema.safeParse(coin.mintAuthority).success, `${coin.id} mint`).toBe(true);
@@ -1382,58 +1331,43 @@ describe("StablecoinMeta schema — mint authority", () => {
   });
 
   it("requires verified Safe controls to include modules or guards status", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-modules",
-        mintAuthority: makeMintAuthority({
-          controls: [makeSafeControl({ modulesOrGuardsStatus: undefined })],
-        }),
-      }),
-    ], "fixture")).toThrow(/modulesOrGuardsStatus/);
+    expect(() => parseMint({
+      controls: [makeSafeControl({ modulesOrGuardsStatus: undefined })],
+    })).toThrow(/modulesOrGuardsStatus/);
   });
 
   it("caps unknown Safe module or guard status below probable confidence", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-unknown-modules",
-        mintAuthority: makeMintAuthority({
-          confidence: "probable",
-          controls: [
-            {
-              label: "Unresolved Safe",
-              role: "direct-minter",
-              authorityType: "safe",
-              directMintAbility: "direct",
-              modulesOrGuardsStatus: "unknown",
-              safe: {
-                source: "manual",
-              },
-            },
-          ],
-        }),
-      }),
-    ], "fixture")).toThrow(/caps confidence/);
+    expect(() => parseMint({
+      confidence: "probable",
+      controls: [
+        {
+          label: "Unresolved Safe",
+          role: "direct-minter",
+          authorityType: "safe",
+          directMintAbility: "direct",
+          modulesOrGuardsStatus: "unknown",
+          safe: {
+            source: "manual",
+          },
+        },
+      ],
+    })).toThrow(/caps confidence/);
   });
 
   it("keeps none-resolved posture limited to non-privileged mint paths and controls", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-none",
-        mintAuthority: makeMintAuthority({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved",
-          confidence: "verified",
-          controls: [
-            {
-              label: "Not actually passive",
-              role: "direct-minter",
-              authorityType: "contract",
-              directMintAbility: "can-authorize",
-            },
-          ],
-        }),
-      }),
-    ], "fixture")).toThrow(/none-resolved/);
+    expect(() => parseMint({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved",
+      confidence: "verified",
+      controls: [
+        {
+          label: "Not actually passive",
+          role: "direct-minter",
+          authorityType: "contract",
+          directMintAbility: "can-authorize",
+        },
+      ],
+    })).toThrow(/none-resolved/);
   });
 
   it.each([
@@ -1513,65 +1447,45 @@ describe("StablecoinMeta schema — mint authority", () => {
         evidence: "The fixture models an upgrade admin that holds no mint ability.",
       },
     ];
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-scoped",
-        mintAuthority: makeMintAuthority({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved-mint",
-          confidence: "verified",
-          controls,
-        }),
-      }),
-    ], "fixture")).not.toThrow();
+    expect(() => parseMint({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved-mint",
+      confidence: "verified",
+      controls,
+    })).not.toThrow();
 
     // The same controls under the whole-of-chain value stay rejected.
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-scoped",
-        mintAuthority: makeMintAuthority({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved",
-          confidence: "verified",
-          controls,
-        }),
-      }),
-    ], "fixture")).toThrow(/none-resolved cannot include mint-capable controls/);
+    expect(() => parseMint({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved",
+      confidence: "verified",
+      controls,
+    })).toThrow(/none-resolved cannot include mint-capable controls/);
   });
 
   it.each(["direct", "unknown"] as const)("rejects none-resolved-mint with a %s mint control", (directMintAbility) => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-scoped-minter",
-        mintAuthority: makeMintAuthority({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved-mint",
-          confidence: "verified",
-          controls: [
-            {
-              label: "Real minter",
-              role: "direct-minter",
-              authorityType: "contract",
-              directMintAbility,
-            },
-          ],
-        }),
-      }),
-    ], "fixture")).toThrow(/none-resolved-mint cannot include a control that can mint/);
+    expect(() => parseMint({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved-mint",
+      confidence: "verified",
+      controls: [
+        {
+          label: "Real minter",
+          role: "direct-minter",
+          authorityType: "contract",
+          directMintAbility,
+        },
+      ],
+    })).toThrow(/none-resolved-mint cannot include a control that can mint/);
   });
 
   it("requires none-resolved-mint to use a non-privileged mintPath", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-scoped-path",
-        mintAuthority: makeMintAuthority({
-          mintPath: "issuer-direct-mint",
-          authorityPosture: "none-resolved-mint",
-          confidence: "verified",
-          controls: undefined,
-        }),
-      }),
-    ], "fixture")).toThrow(/none-resolved-mint requires a non-privileged mintPath/);
+    expect(() => parseMint({
+      mintPath: "issuer-direct-mint",
+      authorityPosture: "none-resolved-mint",
+      confidence: "verified",
+      controls: undefined,
+    })).toThrow(/none-resolved-mint requires a non-privileged mintPath/);
   });
 
   function externalOnlyMintAuthority(overrides: Record<string, unknown> = {}) {
@@ -1650,21 +1564,15 @@ describe("StablecoinMeta schema — mint authority", () => {
         },
       });
 
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({ id: "fixture-recon-bare", mintAuthority: withoutEvidence({ reconciliation: "periodic" }) }),
-    ], "fixture")).toThrow(/reconciliation periodic requires a review evidence sentence/);
+    expect(() => parseCoin({ id: "fixture-recon-bare", mintAuthority: withoutEvidence({ reconciliation: "periodic" }) })).toThrow(/reconciliation periodic requires a review evidence sentence/);
 
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({ id: "fixture-super-bare", mintAuthority: withoutEvidence({ supervision: "prudential" }) }),
-    ], "fixture")).toThrow(/supervision prudential requires a review evidence sentence/);
+    expect(() => parseCoin({ id: "fixture-super-bare", mintAuthority: withoutEvidence({ supervision: "prudential" }) })).toThrow(/supervision prudential requires a review evidence sentence/);
 
     // Both claims at once are named together in a single issue.
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-both-bare",
-        mintAuthority: withoutEvidence({ reconciliation: "continuous", supervision: "prudential" }),
-      }),
-    ], "fixture")).toThrow(/reconciliation continuous and supervision prudential/);
+    expect(() => parseCoin({
+      id: "fixture-both-bare",
+      mintAuthority: withoutEvidence({ reconciliation: "continuous", supervision: "prudential" }),
+    })).toThrow(/reconciliation continuous and supervision prudential/);
   });
 
   it.each([
@@ -1708,60 +1616,45 @@ describe("StablecoinMeta schema — mint authority", () => {
       { supervision: "none" },
       { supervision: "unknown" },
     ]) {
-      expect(() => parseStablecoinMetaAssets([
-        makeCoin({
-          id: "fixture-inert-claim",
-          mintAuthority: makeMintAuthority({
-            ...overrides,
-            review: {
-              sources: [mintAuthoritySource],
-              evidence: "The reviewer checked this.",
-              reviewer: "Fixture Reviewer",
-              reviewedAt: "2026-05-24",
-            },
-          }),
-        }),
-      ], "fixture")).not.toThrow();
+      expect(() => parseMint({
+        ...overrides,
+        review: {
+          sources: [mintAuthoritySource],
+          evidence: "The reviewer checked this.",
+          reviewer: "Fixture Reviewer",
+          reviewedAt: "2026-05-24",
+        },
+      })).not.toThrow();
     }
   });
 
   it("accepts a scored economic-control claim carrying a substantive evidence sentence", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-recon-evidenced",
-        mintAuthority: makeMintAuthority({
-          reconciliation: "periodic",
-          supervision: "prudential",
-          review: {
-            sources: [mintAuthoritySource],
-            evidence:
-              "Monthly attestations reconcile circulating supply against segregated reserves, and the issuer holds an e-money licence from the named competent authority.",
-            reviewer: "Fixture Reviewer",
-            reviewedAt: "2026-05-24",
-          },
-        }),
-      }),
-    ], "fixture")).not.toThrow();
+    expect(() => parseMint({
+      reconciliation: "periodic",
+      supervision: "prudential",
+      review: {
+        sources: [mintAuthoritySource],
+        evidence:
+          "Monthly attestations reconcile circulating supply against segregated reserves, and the issuer holds an e-money licence from the named competent authority.",
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-24",
+      },
+    })).not.toThrow();
   });
 
   it("keeps unknown mint paths paired with unknown posture unless known unbounded authority is evidenced", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-mint-unknown",
-        mintAuthority: makeMintAuthority({
-          mintPath: "unknown",
-          authorityPosture: "bounded-admin",
-          confidence: "unknown",
-          controls: undefined,
-          review: {
-            sourceFreeRationale: "No public source was available for this fixture.",
-            evidence: "The fixture intentionally models an unknown mint authority review.",
-            reviewer: "Fixture Reviewer",
-            reviewedAt: "2026-05-24",
-          },
-        }),
-      }),
-    ], "fixture")).toThrow(/mintPath unknown/);
+    expect(() => parseMint({
+      mintPath: "unknown",
+      authorityPosture: "bounded-admin",
+      confidence: "unknown",
+      controls: undefined,
+      review: {
+        sourceFreeRationale: "No public source was available for this fixture.",
+        evidence: "The fixture intentionally models an unknown mint authority review.",
+        reviewer: "Fixture Reviewer",
+        reviewedAt: "2026-05-24",
+      },
+    })).toThrow(/mintPath unknown/);
   });
 
   it("validates inherited mint authority references at catalog scope", () => {
@@ -1826,13 +1719,11 @@ describe("StablecoinMeta schema — mint authority", () => {
   });
 
   it("rejects active variants without an explicit mint authority review", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "variant-without-mint-review",
-        variantOf: "parent-usd",
-        variantKind: "savings-passthrough",
-      }),
-    ], "fixture")).toThrow(/active variants require mintAuthority review/);
+    expect(() => parseCoin({
+      id: "variant-without-mint-review",
+      variantOf: "parent-usd",
+      variantKind: "savings-passthrough",
+    })).toThrow(/active variants require mintAuthority review/);
   });
 
   it("rejects active wrappers inheriting from frozen mint authority parents", () => {
@@ -1915,17 +1806,12 @@ describe("StablecoinMeta schema — mint authority", () => {
   });
 
   it("keeps single-record validation lenient on parent lookups it cannot perform", () => {
-    const parsed = parseStablecoinMetaAssets([
-      makeCoin({
-        id: "fixture-wrapped-single",
-        mintAuthority: makeMintAuthority({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "none-resolved",
-          inheritedFrom: "parent-not-in-this-catalog",
-          controls: undefined,
-        }),
-      }),
-    ], "fixture");
+    const parsed = parseMint({
+      mintPath: "wrapped-or-variant-inherited",
+      authorityPosture: "none-resolved",
+      inheritedFrom: "parent-not-in-this-catalog",
+      controls: undefined,
+    });
     expect(parsed[0]!.mintAuthority?.authorityPosture).toBe("none-resolved");
   });
 
@@ -1998,28 +1884,6 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
-  it("accepts a coin with variantOf only (no pegReferenceId)", () => {
-    const json = [
-      makeCoin({
-        id: "variant-parent-no-peg",
-        mintAuthority: makeMintAuthority({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved",
-          controls: undefined,
-        }),
-      }),
-      makeCoin({ id: "fixture-variant-no-peg", variantOf: "variant-parent-no-peg",
-      variantKind: "savings-passthrough",
-      mintAuthority: makeMintAuthority({
-        mintPath: "wrapped-or-variant-inherited",
-        authorityPosture: "none-resolved",
-        inheritedFrom: "variant-parent-no-peg",
-        controls: undefined,
-      }), }),
-    ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
-  });
-
   it("rejects a coin with pegReferenceId only (no variantOf)", () => {
     const json = [
       makeCoin({ id: "fixture-peg-only", pegReferenceId: "usdt-tether", }),
@@ -2063,14 +1927,12 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
   });
 
   it("rejects wrapperOperator on unambiguous variant kinds", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "strategy-child",
-        variantOf: "strategy-parent",
-        variantKind: "strategy-vault",
-        wrapperOperator: "third-party",
-      }),
-    ], "fixture")).toThrow(/wrapperOperator/);
+    expect(() => parseCoin({
+      id: "strategy-child",
+      variantOf: "strategy-parent",
+      variantKind: "strategy-vault",
+      wrapperOperator: "third-party",
+    })).toThrow(/wrapperOperator/);
   });
 });
 
@@ -2080,11 +1942,9 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
 // See: shared/data/stablecoins/coins/srusd-reservoir.json reserves[0]
 describe("StablecoinMeta schema — reserves depType valid cases", () => {
   it("rejects authored linked reserves without depType", () => {
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({ id: "fixture-untyped", reserves: [
-        { name: "Parent token", pct: 100, risk: "low", coinId: "usdt-tether" },
-      ] }),
-    ], "fixture")).toThrow(/linked reserve slices require depType/);
+    expect(() => parseCoin({ id: "fixture-untyped", reserves: [
+      { name: "Parent token", pct: 100, risk: "low", coinId: "usdt-tether" },
+    ] })).toThrow(/linked reserve slices require depType/);
   });
 
   it("accepts a reserves entry with depType 'wrapper' and coinId set", () => {

@@ -34,7 +34,7 @@
       },
       {
         "label": "Pax Dollar transparency and attestation index",
-        "url": "https://www.paxos.com/usdp-transparency"
+        "url": "https://www.paxos.com/transparency/usdp"
       }
     ],
     "rationale": "Exhibit B of the KPMG-examined USDP report at September 30, 2026, 5:00 PM Eastern Time discloses USD $14,178,649 cash, $11,935,000 Treasury-collateralized reverse repos, no government money-market funds or direct Treasury obligations, and total redemption assets $26,113,649. Independently reproduced division by that disclosed total and rounding to two decimal places yields 54.30% cash and 45.70% repo. The complete repo maturity table contains one position purchased September 30 and maturing October 1; maturityDaysMax is therefore one day for this dated composition, not a standing investment-policy maximum. The report separately states that the repurchase agreements mature overnight. Repo collateral may not be sold or repledged. Asset categories and existing liquidity labels are unchanged.",

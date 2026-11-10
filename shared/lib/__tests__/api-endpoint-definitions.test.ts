@@ -16,7 +16,7 @@ expectTypeOf<EndpointDefinitionByKey<"backfill-dews">["methods"]>()
 const ENDPOINT_DEFINITION_KEYS = [
   "key", "path", "methods", "adminRequired", "mutatingAdmin", "cacheBypass",
   "publicApiAccess", "siteDataAccess", "strictContract", "probeGroup", "probePath",
-  "cacheKeyIgnoresQuery", "opsProxyTimeoutMs", "probeSemanticKind", "statusPageAction",
+  "cacheKeyIgnoresQuery", "cacheKeyQueryParams", "opsProxyTimeoutMs", "probeSemanticKind", "statusPageAction",
   "routeDependencies",
 ] as const satisfies readonly (keyof EndpointDefinition)[];
 
@@ -24,7 +24,9 @@ expectTypeOf<Exclude<keyof EndpointDefinition, (typeof ENDPOINT_DEFINITION_KEYS)
   .toEqualTypeOf<never>();
 
 describe("endpoint definition factory parity", () => {
-  it.each(["PUT", "DELETE", "PATCH"])("advertises only actual endpoint methods for %s", (method) => {
+  // The method guard rejects before inspecting the endpoint's allowed methods,
+  // so one non-GET/HEAD/POST representative covers the branch for either list.
+  it.each(["PUT"])("advertises only actual endpoint methods for %s", (method) => {
     expect(validateAllowedEndpointMethods(method, ["POST"])).toEqual({
       message: "Method not allowed", allowedMethods: ["POST"],
     });
@@ -59,6 +61,14 @@ describe("endpoint definition factory parity", () => {
       path: "/api/donor-key-claims", methods: ["POST"],
       adminRequired: false, mutatingAdmin: false, cacheBypass: true,
       publicApiAccess: "exempt", siteDataAccess: "denied",
+    });
+  });
+
+  it("keeps the multi-megabyte DEX history route off the public site-data lane", () => {
+    expect(ENDPOINT_DEFINITIONS.find((endpoint) => endpoint.key === "dex-liquidity-history")).toMatchObject({
+      path: "/api/dex-liquidity-history",
+      publicApiAccess: "protected",
+      siteDataAccess: "denied",
     });
   });
 

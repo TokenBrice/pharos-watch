@@ -22,10 +22,16 @@ export function addFreshnessHeaders(
   if (futureSkewSeconds > API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC) {
     result.Warning = `199 - "Response timestamp is ${futureSkewSeconds}s in the future"`;
     result["Cache-Control"] = "no-store";
+    result["X-Data-Freshness"] = "degraded";
+    result["X-Data-Freshness-Reason"] = "future-timestamp";
     return result;
   }
   if (age > freshBudgetSec) {
-    result.Warning = `110 - "Response is stale (${age}s old, fresh budget ${freshBudgetSec}s)"`;
+    // A route's own 110 verdict (and its advisory elements) owns the label; the
+    // generic text may only stand in when the caller supplied none.
+    if (!result.Warning || !/(?:^|,\s*)110\b/.test(result.Warning)) {
+      result.Warning = `110 - "Response is stale (${age}s old, fresh budget ${freshBudgetSec}s)"`;
+    }
     result["Cache-Control"] = "no-store";
     return result;
   }

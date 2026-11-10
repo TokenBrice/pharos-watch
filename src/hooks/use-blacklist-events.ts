@@ -17,7 +17,7 @@ export function useBlacklistEventsPage(params: FetchBlacklistEventsParams) {
     queryKey: [
       "blacklist-events",
       params.stablecoin ?? "all",
-      params.chainName ?? "all",
+      params.chainId ?? "all",
       params.eventType ?? "all",
       params.query ?? "",
       params.sortBy ?? "date",

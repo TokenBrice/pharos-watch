@@ -234,9 +234,11 @@ describe("handleRequestSourceStats", () => {
     const { sqlite } = fixtures.open();
     const worker = sqlite.prepare("INSERT INTO api_request_source_samples VALUES (?, ?, ?, 'public-api', 'external', 'unkeyed', 64, 1)");
     const pages = sqlite.prepare("INSERT INTO site_data_request_samples VALUES (?, ?, ?, 'pages-upstream-fetch', 'site-api', 64, 1)");
+    // No ANALYZE/stat1 runs here, so the plan is schema/index-derived; a small
+    // corpus exercises the same index_list and EXPLAIN assertions.
     sqlite.exec("BEGIN");
-    for (let hour = 0; hour < 35 * 24; hour++) {
-      for (let route = 0; route < 20; route++) {
+    for (let hour = 0; hour < 5; hour++) {
+      for (let route = 0; route < 4; route++) {
         const bucket = NOW - (hour + 1) * 3600;
         worker.run(bucket, `r${route}`, `/r${route}`);
         pages.run(bucket, `r${route}`, `/r${route}`);

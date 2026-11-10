@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
 import { adaptJupUsdData } from "../jupusd";
-import { runAdapter } from "./reserve-adapter.test-support";
+import { runAdapter, runAdapterWithFakeTimers } from "./reserve-adapter.test-support";
 
 describe("adaptJupUsdData", () => {
   it("groups published JupUSD holdings and emits whitelisted redemption capacity", () => {
@@ -307,10 +307,10 @@ describe("fetchJupUsdReserves", () => {
   });
 
   it("emits jupusd-snapshots-unavailable info warning when snapshots feed fails", async () => {
-    const { result } = await runAdapter("jupusd", makeCoin(), {
+    const { result } = await runAdapterWithFakeTimers(() => runAdapter("jupusd", makeCoin(), {
       network: network({ snapshots: { status: 503, body: "snapshots unavailable" } }),
       nowSec: 1_776_003_600,
-    });
+    }));
 
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -321,10 +321,10 @@ describe("fetchJupUsdReserves", () => {
   });
 
   it("marks route unknown and degrades when the configured oracle probe fails", async () => {
-    const { result } = await runAdapter("jupusd", makeCoin(), {
+    const { result } = await runAdapterWithFakeTimers(() => runAdapter("jupusd", makeCoin(), {
       network: network({ oracle: { status: 502, body: "oracle unavailable" } }),
       nowSec: 1_776_003_600,
-    });
+    }));
 
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -397,10 +397,10 @@ describe("fetchJupUsdReserves", () => {
   });
 
   it("labels core transparency data fetch failures with the failing fetch", async () => {
-    await expect(runAdapter("jupusd", makeCoin(), {
+    await expect(runAdapterWithFakeTimers(() => runAdapter("jupusd", makeCoin(), {
       network: network({ data: { status: 500, body: "data unavailable" } }),
       nowSec: 1_776_003_600,
-    })).rejects.toThrow(/transparency data fetch failed/);
+    }))).rejects.toThrow(/transparency data fetch failed/);
   });
 
   it("rethrows the original error untouched when the adapter attempt signal aborted", async () => {

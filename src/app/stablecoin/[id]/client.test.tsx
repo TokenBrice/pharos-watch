@@ -387,6 +387,32 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByText("Explore cards")).toBeTruthy();
   });
 
+  it("keeps the #contracts destination in the loading dossier from registry deployments", () => {
+    const content = (coinId: string) => {
+      const coin = TRACKED_META_BY_ID.get(coinId)!;
+      return (
+        <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />
+      );
+    };
+
+    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading", handleRetryAll: vi.fn() });
+    const { container, rerender, unmount } = render(content("usds-sky"));
+    // The real in-flow module owns the anchor while the shell stands in for the dossier.
+    expect(container.querySelectorAll("#contracts")).toHaveLength(1);
+    expect(container.textContent).toContain("Contract addresses");
+
+    // The loaded layout replaces the shell and keeps that one owner.
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    rerender(content("usds-sky"));
+    expect(container.querySelectorAll("#contracts")).toHaveLength(1);
+    unmount();
+
+    // A coin with no recorded deployment renders no card and no anchor.
+    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading", handleRetryAll: vi.fn() });
+    const { container: bare } = render(content("hbd-hive"));
+    expect(bare.querySelector("#contracts")).toBeNull();
+  });
+
   it("drops the loading mechanism CTA when the ready dossier replaces the shell", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const content = () => (

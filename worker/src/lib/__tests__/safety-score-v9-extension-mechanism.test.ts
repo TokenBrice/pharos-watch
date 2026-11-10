@@ -5,6 +5,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9Backing } from "@shared/lib/safety-score-v9/archetypes";
 import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
 import { V9MechanismRiskReviewSchema } from "@shared/types/safety-score-v9-backing";
+import { SafetyScoreV9MechanismReviewOverlaySchema } from "@shared/types/safety-score-v9-mechanism-overlays";
 import { asset as backingAsset, exposure, knownStatus } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -759,6 +760,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     if (review.archetype !== "fiat-cash") throw new Error("unexpected archetype");
     expect(review.custodyContinuity.status.applicability.state).toBe("required");
     expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
+    expect(review.custodyContinuity.status.gapIds).not.toHaveLength(0);
     expect(review.custodyContinuity.status.evidenceRefIds).toHaveLength(1);
     expect(review.custodyContinuity.quality).toBeNull();
 
@@ -1020,9 +1022,12 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     });
   });
 
-  it.each((["failed", "weak", "strong"] as const).flatMap((quality) =>
-    (["issuer-undisclosed", "integration-missing", "method-unsupported"] as const).map((disposition) => ({ quality, disposition })),
-  ))("compiles $quality with $disposition without losing either profile constituent", ({ quality, disposition }) => {
+  it.each([
+    { quality: "failed", disposition: "issuer-undisclosed" },
+    { quality: "weak", disposition: "issuer-undisclosed" },
+    { quality: "strong", disposition: "issuer-undisclosed" },
+    { quality: "strong", disposition: "method-unsupported" },
+  ] as const)("compiles $quality with $disposition without losing either profile constituent", ({ quality, disposition }) => {
     const fixed = makeV9FixedInput();
     const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
     const review = expandOverlayReview(MechanismReviewOverlaySchema.parse({
@@ -1177,5 +1182,47 @@ describe("v10.01 mechanism research expiry history", () => {
       observedAtSec: Date.parse("2026-08-08T00:00:00Z") / 1000,
     })]));
     expect(asset.implementation.status.observationState).toBe("known");
+  });
+});
+
+const COMPONENT_SOURCE = { label: "Pinned bridge state", url: "https://example.org/bridge" };
+const COMPONENT_OVERLAY = SafetyScoreV9MechanismReviewOverlaySchema.parse({
+  assetId: "test-asset", archetype: "cdp", reviewedAt: "2026-08-08", sources: [COMPONENT_SOURCE], notes: "Historical portfolio; independently reviewed adverse bridge state.",
+  metrics: { collateralizationRatio: 1.041014, liquidationCapacityRatio: null },
+  metricApplicability: { liquidationCapacityRatio: { state: "unavailable", rationale: "No liquidation inventory", sourceUrl: COMPONENT_SOURCE.url } },
+  components: {
+    collateralizationParameters: { quality: "adequate" },
+    branchIsolation: { quality: "weak", review: { reviewedAt: "2026-10-10", reviewer: "Test reviewer", rationale: "Pinned isolation is disabled", sources: [COMPONENT_SOURCE] } },
+  },
+});
+
+describe("independent mechanism component provenance", () => {
+  it("does not renew collateralization or sibling evidence", () => {
+    const review = expandOverlayReview(COMPONENT_OVERLAY, null, Date.parse("2026-10-11T00:00:00Z") / 1000);
+    expect(review.archetype).toBe("cdp");
+    if (review.archetype !== "cdp") throw new Error("wrong family");
+    expect(review.collateralizationRatio).toBe(1.041014);
+    expect(review.branchIsolation.quality).toBe("weak");
+    expect(review.branchIsolation.status.observationState).toBe("known");
+    expect(COMPONENT_OVERLAY.reviewedAt).toBe("2026-08-08");
+    expect(review.collateralizationParameters.quality).toBe("adequate");
+  });
+  it.each([
+    ["2026-10-09T23:59:59Z", "missing"],
+    ["2026-10-10T12:00:00Z", "unsupported"],
+    ["2027-10-10T00:00:00Z", "stale"],
+  ])("withholds future, same-day and expired component at %s", (clock, state) => {
+    const review = expandOverlayReview(COMPONENT_OVERLAY, null, Date.parse(clock) / 1000);
+    if (review.archetype !== "cdp") throw new Error("wrong family");
+    expect(review.branchIsolation.quality).toBeNull();
+    expect(review.branchIsolation.status.observationState).toBe(state);
+    expect(review.collateralizationParameters.quality).toBe("adequate");
+  });
+  it("rejects unpinned component sources and incomplete reviews", () => {
+    const changed = structuredClone(COMPONENT_OVERLAY);
+    changed.components.branchIsolation.review!.sources[0]!.url = "https://example.org/unpinned";
+    expect(SafetyScoreV9MechanismReviewOverlaySchema.safeParse(changed).success).toBe(false);
+    const incomplete = { ...COMPONENT_OVERLAY, components: { branchIsolation: { quality: "weak", review: { reviewedAt: "2026-10-10" } } } };
+    expect(SafetyScoreV9MechanismReviewOverlaySchema.safeParse(incomplete).success).toBe(false);
   });
 });

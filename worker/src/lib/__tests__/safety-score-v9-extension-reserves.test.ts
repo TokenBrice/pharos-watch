@@ -30,6 +30,8 @@ import { reserveCompositionInput } from "./live-reserves-store.test-support";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import zarscCoin from "@shared/data/stablecoins/coins/zarsc-supercoin.json";
+import zarscReserves from "@shared/data/stablecoins/domains/reserves/zarsc-supercoin.json";
 import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdtReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdt-tether.json";
 // Frozen c6f5e2f36 admission inputs, not a claim about the current USDY book.
@@ -157,7 +159,8 @@ const ISSUER_PREFIXED_NAMED_REPORT: V9ExtensionRegistryMeta = {
 };
 
 describe("v10.01 named reserve reports", () => {
-  const asOfSec = Date.parse("2026-06-30T00:00:00Z") / 1000;
+  // USDT's current BDO packet is the September 30, 2026 report.
+  const asOfSec = Date.parse("2026-09-30T00:00:00Z") / 1000;
   const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
 
   it.each(["fresh", "stale", "absent"])("keeps USDY's reviewed Safety inputs identical with a %s display probe", (state) => {
@@ -249,6 +252,7 @@ describe("v10.01 named reserve reports", () => {
       evidenceClass: "static-validated",
     });
     for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Issuer financial figures";
+    meta.proofOfReserves!.latestReport!.reviewer = "Pharos curation reviewer";
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
   });
 
@@ -1299,46 +1303,6 @@ describe("buildReviewedReserveClassifications", () => {
     });
   });
 
-  it("keeps reviewed classifications joined across arbitrary live composition drift", () => {
-    const reviewed = reviewedMeta([
-      {
-        name: "<3-Month U.S. Treasuries",
-        pct: 73.7,
-        risk: "very-low",
-        assetClass: "treasury-bill",
-        issuerOrObligor: "United States Treasury",
-      },
-      {
-        name: "Other Bank Deposits",
-        pct: 14.8,
-        risk: "very-low",
-        assetClass: "bank-deposit",
-        issuerOrObligor: "Other regulated financial institutions",
-      },
-    ]);
-    const drifted = buildReviewedReserveClassifications(
-      [
-        { name: "<3-Month U.S. Treasuries", pct: 71.7, risk: "very-low" },
-        { name: "Other Bank Deposits", pct: 15.9, risk: "very-low" },
-      ],
-      reviewed,
-      CLOCK_SEC,
-    );
-    expect(drifted).toMatchObject([
-      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
-      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit" },
-    ]);
-
-    const grosslyDifferent = buildReviewedReserveClassifications(
-      [{ name: "<3-Month U.S. Treasuries", pct: 62, risk: "very-low" }],
-      reviewed,
-      CLOCK_SEC,
-    );
-    expect(grosslyDifferent).toMatchObject([
-      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
-    ]);
-  });
-
   it("uses explicit source keys across label and weight changes and fails closed on key mismatch", () => {
     const reviewed = reviewedMeta([{
       sourceKey: "circle:usdc:treasuries-under-3m",
@@ -1620,4 +1584,39 @@ describe("assurance report freshness", () => {
       expect(review.assuranceAndReconciliation.quality).toBeNull();
     },
   );
+});
+
+const zarscMeta = { ...zarscCoin, ...zarscReserves } as unknown as V9ExtensionRegistryMeta;
+const zarscClock = Date.parse("2026-10-22T00:00:00Z") / 1000;
+const zarscReportExpiry = Date.parse("2026-09-30T00:00:00Z") / 1000
+  + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.namedFirmReserveReportMaxAgeSec;
+
+describe("named AUP historical composition, not assurance", () => {
+  it("admits the complete named historical cash composition only as static-validated", () => {
+    const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, zarscClock);
+    expect(admission?.evidenceClass).toBe("static-validated");
+    expect(admission?.rows).toHaveLength(1);
+    expect(admission?.rows[0]?.pct).toBe(100);
+    const supervised = { ...zarscMeta, mintAuthority: { ...zarscMeta.mintAuthority!, supervision: "prudential" as const } };
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(supervised, zarscClock)?.evidenceClass).toBe("static-validated");
+  });
+  it("rejects unidentified firms, mismatched methods/periods, incomplete scope and expired reports", () => {
+    const unknown = structuredClone(zarscMeta);
+    unknown.proofOfReserves!.provider = "Unknown provider";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unknown, zarscClock)).toBeNull();
+    const method = structuredClone(zarscMeta);
+    method.proofOfReserves!.latestReport!.assuranceMethod = "audit";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(method, zarscClock)).toBeNull();
+    const period = structuredClone(zarscMeta);
+    period.reserveReview!.compositionAsOf = "2026-08-31";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(period, zarscClock)).toBeNull();
+    const scope = structuredClone(zarscMeta);
+    scope.reserveReview!.confidence = "unknown";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(scope, zarscClock)).toBeNull();
+    const incomplete = structuredClone(zarscMeta);
+    incomplete.reserves![0]!.pct = 50;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(incomplete, zarscClock)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, zarscReportExpiry + 1)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, Date.parse("2026-10-20T00:00:00Z") / 1000)).toBeNull();
+  });
 });

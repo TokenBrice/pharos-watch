@@ -15,6 +15,7 @@
  * `--check` mode: verify that every latest/Sheets rewrite resolves directly to
  * an existing dated file, that artifacts carry recognizable preambles, and that
  * each topic satisfies its row floor. Does NOT re-fetch (network-flakey in CI).
+ * `--check --integrity-only` waives only maximum mirror age for PR validation.
  *
  * CLI option: `--repoint-current` allows a historical run to replace latest aliases/current frontend imports.
  *
@@ -36,7 +37,9 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
+import { isRecord } from "@shared/lib/type-guards";
 import type { DepegEvent, SupplyObservationProvenance } from "@shared/types/market";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { formatUtcDateOnly } from "@shared/lib/format";
@@ -66,11 +69,10 @@ import {
 import {
   V9_OPEN_EVIDENCE_SEMANTICS,
   V9OpenEvidenceTotalsSchema,
-  type V9OpenEvidenceTotals,
 } from "@shared/types/safety-score-v9-open-evidence";
 import { z } from "zod";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
-import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { buildPublicDatasetArtifacts, type DatasetColumn } from "../lib/public-dataset-artifacts";
 import { readDepegLedgerCapture, type DepegLedgerCapture } from "../lib/depeg-ledger-capture";
 import {
@@ -89,9 +91,6 @@ const CURRENT_DATASET_MODULE_PATH = join(REPO_ROOT, "src/lib/datasets/public-dat
 const RETENTION_DAYS = 90;
 const REDIRECT_BLOCK_START = "# BEGIN GENERATED PUBLIC DATASET ALIASES";
 const REDIRECT_BLOCK_END = "# END GENERATED PUBLIC DATASET ALIASES";
-const CHECK_MODE = parseCheckMode(process.argv);
-const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
-const REPOINT_CURRENT = process.argv.includes("--repoint-current");
 const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
 const MAX_CURRENT_DATASET_AGE_DAYS = 2;
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
@@ -380,35 +379,6 @@ type ArchivedSafetyPublication = z.infer<typeof HistoricalResolvedReportCardsV9R
 type AcceptedSafetyPublication = CurrentSafetyPublication | ArchivedSafetyPublication;
 type AcceptedSafetyCard = AcceptedSafetyPublication["cards"][number];
 
-/**
- * The three server-computed question counts, copied from the publication's
- * `openEvidence` block. `semantics` travels with the counts so a definition
- * change never reads as a moved series, and the dataset never recomputes them.
- */
-interface ScoresLatestOpenEvidenceProjection {
-  semantics: typeof V9_OPEN_EVIDENCE_SEMANTICS;
-  totals: V9OpenEvidenceTotals;
-}
-
-interface ScoresLatestDisplayProjection {
-  version: 2;
-  snapshotDate: string;
-  capturedAtSec: number;
-  sourceSnapshotPath: string;
-  safety: {
-    identity: unknown;
-    asOfSec: number;
-    publishedAtSec: number;
-    sourceGenerations: Record<string, string>;
-    publicationHealth: unknown;
-    completeness: unknown;
-  } | null;
-  safetyUnavailableReason: "legacy-source-metadata-unavailable" | null;
-  openEvidence: ScoresLatestOpenEvidenceProjection | null;
-  /** Names why the counts are absent; a missing block never reads as zero questions. */
-  openEvidenceUnavailableReason: ScoresLatestOpenEvidenceUnavailableReason | null;
-}
-
 type ScoresLatestOpenEvidenceUnavailableReason =
   | "safety-publication-unavailable"
   | "open-evidence-unavailable";
@@ -418,6 +388,11 @@ const SCORES_LATEST_OPEN_EVIDENCE_UNAVAILABLE_REASONS = [
   "open-evidence-unavailable",
 ] as const satisfies readonly ScoresLatestOpenEvidenceUnavailableReason[];
 
+/**
+ * The three server-computed question counts, copied from the publication's
+ * `openEvidence` block. `semantics` travels with the counts so a definition
+ * change never reads as a moved series, and the dataset never recomputes them.
+ */
 const ScoresLatestOpenEvidenceProjectionSchema = z
   .object({
     semantics: z.literal(V9_OPEN_EVIDENCE_SEMANTICS),
@@ -444,6 +419,7 @@ const ScoresLatestDisplayProjectionSchema = z
       .nullable(),
     safetyUnavailableReason: z.literal("legacy-source-metadata-unavailable").nullable(),
     openEvidence: ScoresLatestOpenEvidenceProjectionSchema.nullable(),
+    /** Names why the counts are absent; a missing block never reads as zero questions. */
     openEvidenceUnavailableReason: z
       .enum(SCORES_LATEST_OPEN_EVIDENCE_UNAVAILABLE_REASONS)
       .nullable(),
@@ -465,13 +441,11 @@ const ScoresLatestDisplayProjectionSchema = z
     });
   });
 
+type ScoresLatestDisplayProjection = z.infer<typeof ScoresLatestDisplayProjectionSchema>;
+
 interface ScoresLatestProjection {
   rows: ScoreLatestRow[];
   displayProjection: ScoresLatestDisplayProjection | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function sameSafetyIdentity(left: unknown, right: unknown): boolean {
@@ -1143,21 +1117,26 @@ function checkTopic(
   return { ok: true };
 }
 
-function checkCurrentDatasetModule(dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS): { ok: boolean; reason?: string } {
+function checkCurrentDatasetModule(
+  dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS,
+  integrityOnly = false,
+): { ok: boolean; reason?: string } {
   const rule = readRedirectRules(dirs.redirectsPath).get("/datasets/top-stablecoins/latest.json");
   const snapshotDate = /^\/datasets\/top-stablecoins\/(\d{4}-\d{2}-\d{2})\.json$/.exec(rule?.destination ?? "")?.[1];
   if (!snapshotDate) {
     return { ok: false, reason: "top-stablecoins latest.json is not a dated rewrite" };
   }
   const today = formatUtcDateOnly(new Date());
+  const snapshotMs = Date.parse(`${snapshotDate}T00:00:00Z`);
   const ageDays =
-    (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${snapshotDate}T00:00:00Z`)) / 86_400_000;
-  if (!Number.isInteger(ageDays) || ageDays < 0 || ageDays > MAX_CURRENT_DATASET_AGE_DAYS) {
+    (Date.parse(`${today}T00:00:00Z`) - snapshotMs) / 86_400_000;
+  if (!Number.isInteger(ageDays) || new Date(snapshotMs).toISOString().slice(0, 10) !== snapshotDate
+    || ageDays < 0 || (!integrityOnly && ageDays > MAX_CURRENT_DATASET_AGE_DAYS)) {
     return {
       ok: false,
       reason:
-        `latest.json points to ${snapshotDate}; expected a snapshot no more than `
-        + `${MAX_CURRENT_DATASET_AGE_DAYS} days old`,
+        `latest.json points to ${snapshotDate}; expected a valid non-future snapshot date`
+        + (integrityOnly ? "" : ` no more than ${MAX_CURRENT_DATASET_AGE_DAYS} days old`),
     };
   }
   const expected = buildPublicDatasetCurrentModule(snapshotDate);
@@ -1330,6 +1309,7 @@ export const testExports = {
   buildTopicSpecs,
   buildTopicArtifacts,
   checkTopic,
+  checkAllTopics,
   checkCurrentDatasetModule,
   cutoffSecForSnapshotDate,
   isHistoricalSnapshotDate,
@@ -1343,12 +1323,15 @@ export const testExports = {
   validateTopicRowFloor,
 };
 
-function checkAllTopics(dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS): { ok: boolean; reason?: string } {
+function checkAllTopics(
+  dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS,
+  integrityOnly = false,
+): { ok: boolean; reason?: string } {
   for (const topic of PUBLIC_DATASET_TOPICS) {
     const result = checkTopic(topic, dirs);
     if (!result.ok) return result;
   }
-  return checkCurrentDatasetModule(dirs);
+  return checkCurrentDatasetModule(dirs, integrityOnly);
 }
 
 function shouldPreserveExistingDatasetMirrorsAfterFetchFailure(): boolean {
@@ -1377,18 +1360,30 @@ function preserveExistingDatasetMirrorsAfterFetchFailure(error: unknown): boolea
 // --- Main -------------------------------------------------------------------
 
 async function main(): Promise<void> {
+  const { values } = parseArgs({
+    options: {
+      check: { type: "boolean", default: false },
+      "allow-stub": { type: "boolean", default: false },
+      "repoint-current": { type: "boolean", default: false },
+      "integrity-only": { type: "boolean", default: false },
+    },
+  });
+  if (values["integrity-only"] && !values.check) {
+    throw new Error("--integrity-only requires --check");
+  }
+  const allowStub = values["allow-stub"] || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
   const requestedSnapshotDate = resolveSnapshotDate();
   let snapshotDate = requestedSnapshotDate;
 
-  if (CHECK_MODE) {
-    const result = checkAllTopics();
+  if (values.check) {
+    const result = checkAllTopics(DEFAULT_ARTIFACT_DIRS, values["integrity-only"]);
     if (!result.ok) {
       console.error(
-        `Public dataset mirrors are out of date. Run \`tsx scripts/maintenance/generate-public-datasets.ts\`. (${result.reason})`,
+        `Public dataset mirrors failed validation. Run \`tsx scripts/maintenance/generate-public-datasets.ts\`. (${result.reason})`,
       );
       process.exit(1);
     }
-    console.log("Public dataset mirrors are current");
+    console.log(values["integrity-only"] ? "Public dataset mirror integrity passed" : "Public dataset mirrors are current");
     return;
   }
 
@@ -1423,7 +1418,7 @@ async function main(): Promise<void> {
         "No public dataset API source configured. Set PUBLIC_DATASETS_API_URL, SMOKE_API_BASE, or API_BASE_URL; use --allow-stub only for explicit local placeholder regeneration.",
       );
     }
-    if (!ALLOW_STUB_MODE) {
+    if (!allowStub) {
       const existing = checkAllTopics();
       if (existing.ok) {
         console.log(
@@ -1459,7 +1454,7 @@ async function main(): Promise<void> {
     totalWritten += result.written;
     totalPruned += pruneOldSnapshots(join(DATASETS_DIR, spec.topic), snapshotDate);
   }
-  const repointCurrent = !isHistoricalSnapshotDate(requestedSnapshotDate) || REPOINT_CURRENT;
+  const repointCurrent = !isHistoricalSnapshotDate(requestedSnapshotDate) || values["repoint-current"];
   if (repointCurrent) {
     if (writePublicDatasetRedirects(snapshotDate).changed) totalWritten += 1;
     if (writePublicDatasetCurrentModule(snapshotDate).changed) totalWritten += 1;

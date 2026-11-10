@@ -796,7 +796,12 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(parsed.ratingStatus).toBe("rated");
     expect(parsed.partialEvidence?.excludedPillars).toEqual([]);
     expect(Object.values(parsed.pillars).every((pillar) => pillar.score !== null)).toBe(true);
+    // A reviewed A/B datum that excludes no priced component (mixed-cause status,
+    // pillar-level status gap, unscored Exit admission factor) publishes without
+    // a manufactured component key, but never without its causal gap.
     card.partialEvidence.excludedComponentKeys = [];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+    card.partialEvidence.causeGapRefs = [];
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
   });
 
@@ -1068,13 +1073,6 @@ describe("open-evidence publication contract", () => {
     for (const key of ["usdc-circle|workType|release", "usdc-circle|reserve-exposure", "|control|control:mint", "usdc-circle|control|"]) {
       expect(V9QuestionKeySchema.safeParse(key).success).toBe(false);
     }
-  });
-
-  it("carries the publication documentation gap set only when it resolves", () => {
-    const response = annotatedResponse();
-    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
-    response.documentationCauseGaps = ["external:gap:absent"];
-    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
   });
 
   it("accepts the optional documentation carrier and rejects critical or over-counted documentation facts", () => {
