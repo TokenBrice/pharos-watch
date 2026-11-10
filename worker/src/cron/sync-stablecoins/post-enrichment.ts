@@ -495,7 +495,7 @@ export async function runSharedPriceCompletion(
     authoritativeOverrideStats,
   }, abortStagePrefix);
   if (isAbortResult(priceResult)) return priceResult;
-  settleNominalPriceReferences(input.assets, input.syncStartSec);
+  settleNominalPriceReferences(input.assets, input.syncStartSec, input.validationReferences);
 
   return {
     authoritativeOverrideCount,

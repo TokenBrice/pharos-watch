@@ -3,13 +3,16 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import {
   buildPriceValidationContext,
+  getFreshReferencePriceForContext,
   type PriceValidationContext,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import { clearPriceMetadata, stampPriceMetadata } from "./shared";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
-import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
+import { getPricingSourceRegistryEntry, isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
+import { mentoBrokerProvider } from "../../lib/authoritative-price-sources/mento-broker";
+import { getProtocolParPriceOverride, protocolParProvider } from "../../lib/authoritative-price-sources/protocol-par";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { NominalPriceReference } from "@shared/types/core";
@@ -474,6 +477,17 @@ export function isTrustedMarketQuote(asset: PeggedAsset, nowSec: number): boolea
   return classifyPrimaryDepegTrust(asset, nowSec) === "authoritative";
 }
 
+/** Reviewed Mento executable quotes can beat nominal par without gaining depeg authority. */
+function hasFreshMentoBrokerQuote(asset: PeggedAsset, nowSec: number, references?: PriceValidationReferences): boolean {
+  const observedAt = asset.priceObservedAt;
+  const maxAgeSec = getPricingSourceRegistryEntry("mento-broker")?.maxTrustedAgeSec;
+  return hasCurrentAssetPrice(asset) && mentoBrokerProvider.matches(asset.id) && asset.priceSource === "mento-broker" &&
+    asset.priceConfidence === "fallback" && asset.priceObservedAtMode === "upstream" &&
+    observedAt != null && Number.isFinite(observedAt) && observedAt > 0 && observedAt <= nowSec &&
+    maxAgeSec != null && nowSec - observedAt < maxAgeSec &&
+    getFreshReferencePriceForContext(buildPriceValidationContext({ stablecoinId: asset.id }), references, nowSec) != null;
+}
+
 /** Publishes par explicitly as a nominal reference: no observation clock, no confidence, no consensus. */
 function publishNominalPriceReference(asset: PeggedAsset, reference: NominalPriceReference, syncStartSec: number): void {
   asset.price = reference.price;
@@ -495,8 +509,8 @@ function publishNominalPriceReference(asset: PeggedAsset, reference: NominalPric
  * Applies protocol-backed live overrides. Nominal par overrides
  * (`observedAtMode: "nominal_reference"`) never become observed prices: each
  * sets the asset's `nominalPriceReference`, and the reference is published as
- * the price only while no trusted market quote is admitted
- * (`isTrustedMarketQuote`). References and nominal prices are derived from this
+ * the price only while no trusted market or reviewed guarded Mento quote is admitted.
+ * References and nominal prices are derived from this
  * pass only: an asset without an accepted nominal override loses any carried
  * reference and any carried nominal price.
  */
@@ -524,6 +538,19 @@ export function applyProtocolPriceOverrides(input: {
     const override = overrides.get(asset.id);
     delete asset.nominalPriceReference;
     if (hasCurrentAssetPrice(asset) && !isObservedPrice(asset)) clearPriceMetadata(asset);
+    // The first-match live registry selects Broker for reviewed Mento routes;
+    // compute their nominal fallback locally even when that lane is skipped or rejected.
+    const nominal = mentoBrokerProvider.matches(asset.id)
+      ? getProtocolParPriceOverride(asset.id, validationReferences) : null;
+    if (nominal && validatePrimaryPriceCandidate({
+      price: nominal.price, source: nominal.source, confidence: nominal.confidence,
+      validationContext: validationContexts.get(asset), validationReferences,
+    }).accepted) {
+      asset.nominalPriceReference = { price: nominal.price, source: "protocol-par", mode: "nominal_reference", ...nominal.nominalFx };
+      if (!isTrustedMarketQuote(asset, syncStartSec) && !hasFreshMentoBrokerQuote(asset, syncStartSec, validationReferences)) {
+        publishNominalPriceReference(asset, asset.nominalPriceReference, syncStartSec);
+      }
+    }
     if (!override) continue;
 
     const decision = validatePrimaryPriceCandidate({
@@ -598,14 +625,17 @@ export function applyProtocolPriceOverrides(input: {
 /**
  * Final DEC-02 precedence after post-enrichment validation and cached fallback:
  * an asset carrying this run's nominal reference publishes it unless its
- * current price is still a trusted market quote. A rejected market quote, or a
- * cached/fallback fill, never displaces par.
+ * current price is still a trusted market or fresh reviewed Mento Broker quote.
+ * Other cached/fallback fills never displace par.
  */
-export function settleNominalPriceReferences(assets: PeggedAsset[], syncStartSec: number): void {
+export function settleNominalPriceReferences(assets: PeggedAsset[], syncStartSec: number, references?: PriceValidationReferences): void {
   for (const asset of assets) {
+    if (asset.priceSource === "mento-broker" && protocolParProvider.matches(asset.id) &&
+      !hasFreshMentoBrokerQuote(asset, syncStartSec, references)) clearPriceMetadata(asset);
     const reference = asset.nominalPriceReference;
     if (!reference || asset.priceObservedAtMode === "nominal_reference") continue;
     if (isTrustedMarketQuote(asset, syncStartSec)) continue;
+    if (hasFreshMentoBrokerQuote(asset, syncStartSec, references)) continue;
     publishNominalPriceReference(asset, reference, syncStartSec);
   }
 }
