@@ -962,10 +962,6 @@ export function buildCoinCoverageMap(
   return coverageMap;
 }
 
-export async function readCachedFlow(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
-  return getCache(db, key);
-}
-
 /**
  * Purge cached mint-burn-flows API responses. Called from the cron at end
  * of a successful run so the next API call recomputes against fresh events.
