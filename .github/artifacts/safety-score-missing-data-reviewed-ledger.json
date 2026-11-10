@@ -300551,6 +300551,210 @@
           "agents/w3jt-evidence/arc-hash-identity.json"
         ]
       }
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:iusd-initia",
+      "taskIds": [
+        "V9G-f6d5d37c67891277"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-11-10",
+      "reviewer": "Safety evidence refutation review (#1922)",
+      "evidence": [
+        "https://initia-api.polkachu.com: explicit height 23680323 state responses with acknowledged X-Cosmos-Block-Height; complete registered collateral table, vault balance, bank and metadata supply; all exact requests/raw bodies and header checks in agents/curation-1922/iusd-initia/",
+        "https://rpc.initia.xyz/block?height=23680323: matching block hash/time",
+        "agents/curation-1922/iusd-initia/refutation.md"
+      ],
+      "rationale": "Fact survived: one registered direct collateral (AUSD0) and raw 1641448540907 equals pinned iUSD supply. New measured composition and Agora link replace only the unmeasured direct inventory. Upstream bridge backing, restart/redemption health, custody safeguards, active incident and adapter suspension are not proved or renewed. No C: the fact is public. No production capture is present; source readiness is promoted, factsClosed remains 0 pending an authentic replay sentinel check.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/iusd-initia.json",
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "iusd-initia:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Fresh genuine production replay after the November 10 evidence admission; also re-review by 2026-11-14 or on any vault registered-collateral change. Require separate post-restart bridge/reserve/redemption evidence before incident or producer changes.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:hyusd-hylo",
+      "taskIds": [
+        "V9G-d3c6cbdaaee273ea"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-11-10",
+      "reviewer": "Safety evidence refutation review (#1922)",
+      "evidence": [
+        "https://rpc.mainnet.near.org: get_token_id/get_token_address at explicit block C1zxbbZUnfPbNGFTccw5SCbBbHHsa4s35bMCWxwJKZCw (height 223940163), reciprocal exact-mint mapping",
+        "https://docs.agentsonintents.com/learn/omni-bridge/overview: names Near One",
+        "https://docs.near-intents.org/security-compliance/terms-of-service.md: Intents Technology Limited operates PoA; October 7 terms",
+        "https://github.com/Near-One/bridge-sdk-js/blob/37baf09fedb0e4d37901125727325dbcc78a0735/.changeset/nzec-bridge-near-to-zec-omft-near.md",
+        "agents/curation-1922/hyusd-hylo/refutation.md"
+      ],
+      "rationale": "Fact survived for named operational serial counterparties only: exact Hylo ZEC mint maps to zec.omft.near, binding Near One/Omni Bridge and Intents Technology Limited/PoA. No legal redemption guarantee, custody safeguard or native-Zcash issuer is inferred. Preserve the original composition/review clocks, weights, ZEC pause and separately retained liquidity C record. No new C record. Closure awaits genuine replay; no capture exists in this worktree.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/hyusd-hylo.json",
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "hyusd-hylo:gap:reserve:reserve:7b798c35431173eb578d871f:obligorConcentration",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Fresh production replay after integration; re-review by 2026-11-14 or earlier upon exact token-mapping/operator migration.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:iusd-infinifi",
+      "taskIds": [
+        "V9G-00fcac19b4548a41",
+        "V9G-239e8c6ed770091a",
+        "V9G-51d14fac57335587",
+        "V9G-777a8b72a8aed0aa",
+        "V9G-dddf432d4831bf34"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-10",
+      "reviewer": "Safety evidence refutation review (#1922)",
+      "evidence": [
+        "https://eth-api.infinifi.xyz/api/protocol/data: exact jet-stream MAINNET farm, JetStream label, strategy and assetsNormalized 3002738.497834, retrieved 2026-11-10T16:12:08.406200Z",
+        "https://ethereum-rpc.publicnode.com: exact farm pinned at block 26385639/hash 0xb7e2a55a33b01b5ec78361df2018b08e22e39cc4ffd92e330b52a00131a695b6, timestamp 2026-11-10T16:14:35Z, accounted assets, five-dollar liquidity and rolling maturity",
+        "https://www.jetstream.markets/blog/jetstream-what-is-global-basis-plus: general fund documentation does not bind exact farm entitlement",
+        "agents/curation-1922/iusd-infinifi/refutation.md"
+      ],
+      "rationale": "Partial facts survive: exact named JetStream accounted exposure/strategy and named counterparty. Added source-keyed zero-percent classification placeholder, not observed zero or refreshed portfolio weight. Exact instrument/assetClass, whole-position final liquidity and contractual maximum maturity remain U/unresearched, with no new cause override. Traditional equity/commodity cash/perpetual strategy does not establish hedged-crypto; generic USDJ terms do not prove fund-share. Verified perpetual=true and now+604800 maturity refute seven-day maturity/settlement. App403 and unchecked exact offering documents defeat C. Existing review/composition clocks stay unchanged. Whole-structure sentinel may remain because class is still absent; partial facts are not whole-group closure.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/iusd-infinifi.json",
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:assetClass",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:maturity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:obligorConcentration",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Curation maintainer rechecks by 2026-11-14, or earlier when exact-farm instrument/receipt/contractual terms are published or independently pinned. Recover issuer app and exact offering documents before any nondisclosure claim; genuine production replay must test partial identity admission.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:susd-solayer",
+      "taskIds": [
+        "V9G-1a2ac93120c1ec08"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-10",
+      "reviewer": "Safety evidence refutation review (#1922)",
+      "evidence": [
+        "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders.md: standing cUSDO claim inspected",
+        "https://app.solayer.org/?asset=susd: HTTP 403 not inspectable; browser origin approval declined",
+        "https://api.mainnet-beta.solana.com: current-context token accounts/supply diagnostics at differing slots; not an exact-slot reserve proof",
+        "agents/curation-1922/susd-solayer/refutation.md"
+      ],
+      "rationale": "No fact/C survives for whole composition. Documented pool current observations show zero cUSDO and USDC, but separate context slots and missing complete QLP/PDA census cannot establish coherent holdings, liabilities or a 100% allocation. Static exclusivity does not prove current inventory. App is not inspectable; failed exact-pin capability is not nondisclosure. Preserve existing data/dates and U/unresearched composition gap. Owner: curation maintainer.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "susd-solayer:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Recheck 2026-11-14, or earlier upon accessible issuer app/detailed inventory and complete issuer-bound QLP/PDA holdings reconciled with liabilities at one supported exact Solana slot, resolving USDC versus cUSDO wording.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:nopal-nest",
+      "taskIds": [
+        "V9G-251474abc8809960",
+        "V9G-ad5bf0a21492d151"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-10",
+      "reviewer": "Safety evidence refutation review (#1922)",
+      "evidence": [
+        "https://cms.nest.credit/api/assets?where%5Bslug%5D%5Bequals%5D=liquid-stone&depth=5: exact issuer-linked risk scorecard",
+        "https://docsend.com/view/52xpfvpqng2ivv6v: HTTP200 displays unavailable document; not inspectable",
+        "https://docs.nest.credit/llms.mdx/security-and-compliance/audits: exact issuer-linked transparency board",
+        "https://airtable.com/appXyH9re7Q1awigg/shrcPf6VbAJk1SXj9: HTTP404 private share link no longer available; not inspectable",
+        "agents/curation-1922/nopal-nest/refutation.md"
+      ],
+      "rationale": "Both exact pending-withdrawals OALS2T liquidity/maturity remain deferred U/unresearched. Issuer-linked risk assessment and transparency board were located but neither is inspectable. Typical 1-4-day vault exits, aggregate liquidity schedules and 45-day average receivables do not state a whole-receivable final-settlement or contractual maturity maximum. Current empty pendingTransactions does not prove historic request 15 settled. No fact/C record, no date changes. Owner: curation maintainer.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "nopal-nest:gap:reserve:reserve:bc62d3fb832faf05e1ca56e7:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "nopal-nest:gap:reserve:reserve:bc62d3fb832faf05e1ca56e7:maturity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Recheck 2026-11-14, or earlier upon restored risk assessment/transparency board, exact OALS2T/request 15 binding settlement/maturity terms or independently verified request 15 settlement evidence.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:susd-solayer",
+      "taskIds": [
+        "V9G-1a2ac93120c1ec08"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-10",
+      "reviewer": "Safety evidence refutation review (#1922), balance-wording correction",
+      "evidence": [
+        "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders.md: standing cUSDO claim inspected",
+        "https://app.solayer.org/?asset=susd: HTTP 403 not inspectable; browser origin approval declined",
+        "https://api.mainnet-beta.solana.com: current-context token accounts/supply diagnostics at differing slots; not an exact-slot reserve proof",
+        "agents/curation-1922/susd-solayer/refutation.md",
+        "agents/curation-1922/susd-solayer/refutation.md and evidence-manifest.json: documented pool has positive 702805.901162 USDC in the current-context diagnostic; this is not a common exact-slot portfolio"
+      ],
+      "rationale": "Wording correction to the preceding November10 decision, with the same deferred disposition: the documented pool current-context diagnostics show zero cUSDO and POSITIVE USDC (702805.901162 units), not zero balances of both assets. Different context slots and an incomplete market-maker/PDA census still defeat a complete measured composition. The raw responses and November10 refutation already record this distinction; no new fact, date renewal, C record or closure is introduced. All historical ledger decisions remain intact. App/whole-census/exact-slot prerequisites and the November14/source-recovery trigger are unchanged.",
+      "changeRefs": [
+        "docs/process/report-cards-evidence-log.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "susd-solayer:gap:reserve-composition",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Recheck 2026-11-14, or earlier upon accessible issuer app/detailed inventory and complete issuer-bound QLP/PDA holdings reconciled with liabilities at one supported exact Solana slot, resolving USDC versus cUSDO wording.",
+      "factsClosed": 0
     }
   ]
 }

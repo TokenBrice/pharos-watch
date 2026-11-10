@@ -2,17 +2,28 @@
   "id": "iusd-initia",
   "reserves": [
     {
-      "name": "iUSD collateral (unmeasured)",
+      "sourceKey": "initia-wrapper-vault:ausd",
+      "name": "Agora AUSD bridged via LayerZero (Initia AUSD0)",
       "pct": 100,
       "risk": "high",
-      "assetClass": "other",
+      "coinId": "ausd-agora",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora AUSD via AUSD0 on Initia",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-30",
-    "reviewer": "OpenAI Codex reserve review 2026-08-29; post-halt reclassification 2026-10-30",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-11-10",
+    "reviewer": "Safety evidence refutation review 2026-11-10 (#1922)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Initia iUSD FAQ",
@@ -53,22 +64,22 @@
       {
         "label": "Initia: restart Monday 2026-11-02 (2026-10-30)",
         "url": "https://x.com/initia/status/2116087208688099687"
+      },
+      {
+        "label": "Initia public LCD: all state reads pinned with X-Cosmos-Block-Height 23680323, retrieved 2026-11-10",
+        "url": "https://initia-api.polkachu.com"
+      },
+      {
+        "label": "Initia official RPC: header 23680323, independently matched before/after LCD reads",
+        "url": "https://rpc.initia.xyz/block?height=23680323"
       }
     ],
-    "rationale": "Re-reviewed 2026-08-29. Initia's FAQ says iUSD is backed 1:1 by Agora AUSD and that supply expands on deposits and contracts on withdrawals. At interwoven-1 block 21248472 (hash oLp2oqBrLNW+e3Jbsmn+wta6wc9+Qum61EFE+Flexgo=; 2026-08-29T18:49:43.399544346Z), the current iUSD metadata object 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e has supply 2,511,330.584682 (6 decimals), and the bank supply endpoint reports the same amount. A pinned primary_fungible_store::balance view for owner vault object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a and AUSD0 metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef returns exactly 2,511,330.584682 AUSD0. AUSD0 total supply is 2,511,333.142661, leaving only 2.557979 AUSD0 outside the iUSD vault. Initia reports iUSD collateral held AUSD0, Noble USDC and WETH; shares unmeasured since the 2026-10-23 halt.",
-    "compositionBasis": "Pinned Initia primary_fungible_store::balance and bank-supply reads at interwoven-1 block 21248472, plus official iUSD/AUSD and LayerZero documentation",
-    "scope": "classification-only",
-    "knownUnknownExposure": "Unmeasured: Initia reports iUSD collateral held AUSD0, Noble USDC and WETH, drained on 2026-10-23.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "iUSD collateral (unmeasured)",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "Initia reports collateral held AUSD0, Noble USDC and WETH; shares unmeasured since the 2026-10-23 halt."
-      }
-    ]
+    "rationale": "Re-reviewed 2026-08-29. Initia's FAQ says iUSD is backed 1:1 by Agora AUSD and that supply expands on deposits and contracts on withdrawals. At interwoven-1 block 21248472 (hash oLp2oqBrLNW+e3Jbsmn+wta6wc9+Qum61EFE+Flexgo=; 2026-08-29T18:49:43.399544346Z), the current iUSD metadata object 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e has supply 2,511,330.584682 (6 decimals), and the bank supply endpoint reports the same amount. A pinned primary_fungible_store::balance view for owner vault object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a and AUSD0 metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef returns exactly 2,511,330.584682 AUSD0. AUSD0 total supply is 2,511,333.142661, leaving only 2.557979 AUSD0 outside the iUSD vault. Initia reports iUSD collateral held AUSD0, Noble USDC and WETH; shares unmeasured since the 2026-10-23 halt. New direct-vault observation at interwoven-1 height 23680323 (hash AFD8D107D545059342A7EB5F32325380AA439CF3BFF7DB429D76B250A234541C; 2026-11-10T06:18:40.643481570Z): vault::ModuleStore base_tokens.length is 1 and the exhausted registered-collateral table contains only AUSD0 metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef. get_vault_address() identifies owner 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a and get_iusd_metadata() identifies the tracked token. primary_fungible_store::balance(owner, AUSD0) returns raw 1641448540907, matching both bank supply/by_denom and iUSD fungible_asset::Supply.current; both tokens have six decimals. This is 1,641,448.540907 AUSD0 against the same iUSD token supply. All state responses acknowledge the requested height; numeric-height headers agree before/after and with the official RPC. The reopened issuer FAQ and AUSD0 metadata bind Agora AUSD. Only direct registered collateral is measured: this neither proves upstream bridge reserves or current redemption nor resolves the October incident. The source block precedes retrieval by about ten hours. Existing custody, incident, adapter-suspension and upstream evidence clocks are retained.",
+    "compositionBasis": "Complete registered direct-vault collateral table and exact AUSD0 balance/iUSD supply at Initia interwoven-1 height 23680323, 2026-11-10T06:18:40.643481570Z; X-Cosmos-Block-Height acknowledged on every state response, with matching before/after and official RPC headers.",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct registered inventory is AUSD0 at this dated pin. Upstream AUSD0 bridge solvency, Agora reserves, post-restart health and executable redemption remain separate, unproved claims; the October incident and adapter suspension remain in force.",
+    "knownUnknownExposurePct": 0,
+    "compositionAsOf": "2026-11-10"
   },
   "custodyProfile": {
     "providers": [

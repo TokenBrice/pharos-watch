@@ -76,7 +76,8 @@
         "liquidity",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "issuerOrObligor": "Near One Omni Bridge (Solana wrapper) / Intents Technology Limited PoA Bridge (zec.omft.near)"
     }
   ],
   "reserveReview": {
@@ -91,13 +92,29 @@
       {
         "label": "Solana mainnet getMultipleAccounts and getBlock at finalized slot 462444855, observed 2026-10-28T10:36:45.986Z",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "NEAR Intents Omni Bridge operator documentation, retrieved 2026-11-10",
+        "url": "https://docs.agentsonintents.com/learn/omni-bridge/overview"
+      },
+      {
+        "label": "Near One SDK 37baf09: exact ZEC PoA token identity",
+        "url": "https://github.com/Near-One/bridge-sdk-js/blob/37baf09fedb0e4d37901125727325dbcc78a0735/.changeset/nzec-bridge-near-to-zec-omft-near.md"
+      },
+      {
+        "label": "Intents Technology 1ClickSwap terms, October 7, 2026, sections Purpose and Scope and 7.7",
+        "url": "https://docs.near-intents.org/security-compliance/terms-of-service.md"
+      },
+      {
+        "label": "NEAR RPC block 223940163: reciprocal exact-mint get_token_id/get_token_address views, read 2026-11-10",
+        "url": "https://rpc.mainnet.near.org"
       }
     ],
-    "rationale": "At finalized Solana slot 462444855 (block time 2026-10-28T10:36:45Z; observed 2026-10-28T10:36:45.986Z), one getMultipleAccounts response covered all 33 reviewed accounts, including the complete SDK pair inventory, two LST headers and vaults, all active exogenous vaults, USDC, hyUSD supply and five Pyth price accounts. The accounts measured 226,446.085483504 jitoSOL at 1.307267444 SOL each, 21,679.335930694 hyloSOL at 1.081731677 SOL each, 41.57701554 cbBTC, 26,258.208405277 HYPE, 0.00104739 ZEC and 0.036936 USDC. Fully verified Pyth observations published at 2026-10-28T10:36:44Z valued SOL/BTC/HYPE/ZEC/USDC at $102.99443135/$81,429.7495982/$82.09281943/$1,313.43852276/$0.99969857. Gross collateral totals $38,445,551.121644445. Pool liabilities total 24,202,936.268997 hyUSD against mint supply 24,202,914.594102, a 21.674895 difference within the existing 24.202914594102 tolerance. ZEC is paused; ONYC, PST and WETH pair accounts are absent. The capture establishes held-token identity and valuation, not ZEC issuer, bridge or custody guarantees.",
+    "rationale": "At finalized Solana slot 462444855 (block time 2026-10-28T10:36:45Z; observed 2026-10-28T10:36:45.986Z), one getMultipleAccounts response covered all 33 reviewed accounts, including the complete SDK pair inventory, two LST headers and vaults, all active exogenous vaults, USDC, hyUSD supply and five Pyth price accounts. The accounts measured 226,446.085483504 jitoSOL at 1.307267444 SOL each, 21,679.335930694 hyloSOL at 1.081731677 SOL each, 41.57701554 cbBTC, 26,258.208405277 HYPE, 0.00104739 ZEC and 0.036936 USDC. Fully verified Pyth observations published at 2026-10-28T10:36:44Z valued SOL/BTC/HYPE/ZEC/USDC at $102.99443135/$81,429.7495982/$82.09281943/$1,313.43852276/$0.99969857. Gross collateral totals $38,445,551.121644445. Pool liabilities total 24,202,936.268997 hyUSD against mint supply 24,202,914.594102, a 21.674895 difference within the existing 24.202914594102 tolerance. ZEC is paused; ONYC, PST and WETH pair accounts are absent. The capture establishes held-token identity and valuation, not ZEC issuer, bridge or custody guarantees. Scoped identity research on 2026-11-10 identifies the ZEC parties only. The exact Hylo SDK mint A7bdiYdS5GjqGFtxf17ppRHtDKPkkRqbKtR27dxvQXaS maps to zec.omft.near in omni.bridge.near get_token_id, and get_token_address(Sol, zec.omft.near) returns that mint, at NEAR height 223940163, block C1zxbbZUnfPbNGFTccw5SCbBbHHsa4s35bMCWxwJKZCw (2026-11-10T16:18:29.910769385Z). The pinned Near One SDK calls zec.omft.near the PoA version; current NEAR Intents docs name Near One for Omni Bridge, while the October 7 terms name Intents Technology Limited as PoA developer/operator. The combined identity names serial bridge counterparties, without asserting a legal redemption guarantee, independent custodians or a final-cash deadline. Existing weights, composition/review clocks, paused ZEC state and liquidity classification are unchanged.",
     "compositionBasis": "Single finalized Solana account census with SDK v2.0.5 layouts, derived vault identities, current LST SOL conversions, same-slot fully verified Pyth SOL/USD, BTC/USD, HYPE/USD, ZEC/USD and USDC/USD prices, and pool-liability reconciliation to the hyUSD mint",
     "compositionAsOf": "2026-10-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete reviewed SDK inventory contains two LST headers, cbBTC/HYPE/ZEC exogenous pools and USDC; the three other SDK candidates remain absent. ZEC issuer, bridge and underlying custody are unverified and omitted from its classification. Its observed paused state remains adverse. Identified cryptoasset pools have no tracked stablecoin dependency.",
+    "knownUnknownExposure": "The complete reviewed SDK inventory contains two LST headers, cbBTC/HYPE/ZEC exogenous pools and USDC; the three other SDK candidates remain absent. ZEC serial bridge parties are identified by the scoped November 10 research; underlying custody and redemption guarantees remain unverified. Its observed paused state remains adverse. Identified cryptoasset pools have no tracked stablecoin dependency.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -126,7 +143,7 @@
         "reserveName": "ZEC pool collateral at current Hylo program state",
         "pct": 3.578261552294672e-06,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The SDK identifies this exact mint as ZEC collateral. It is an exogenous cryptoasset without a tracked stablecoin ID; issuer, bridge and underlying custody are unverified."
+        "rationale": "The exact SDK mint is ZEC collateral linked by pinned Omni Bridge views to zec.omft.near. Near One/Omni Bridge and Intents Technology Limited/PoA are the named serial parties; underlying custody and a legal redemption guarantee remain unproved. This exogenous cryptoasset has no tracked stablecoin ID."
       }
     ]
   }
