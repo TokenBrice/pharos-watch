@@ -199,7 +199,7 @@ function timestampRequiredBlockForLog(
 ): number | null {
   const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
   const amount = decodeUint256AtSlotOrNull(log.data, slot, config.decimals);
-  if (amount == null || amount <= 0 || amount < config.dustThreshold) return null;
+  if (amount == null || amount <= 0) return null;
 
   const blockNum = parseInt(log.blockNumber, 16);
   const logIndex = parseInt(log.logIndex, 16);
@@ -495,7 +495,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.eventCoverage.length === config.events.length &&
     summary.eventCoverage.every((coverage) => coverage.complete && coverage.scannedToBlock >= scanTo) &&
     summary.rowsDroppedDecode === (summary.rowsQuarantinedDecode ?? 0) &&
-    // A decodable non-dust log dropped for a malformed event identity is an
+    // Every decodable positive log belongs in accounting, regardless of display size.
+    // One dropped for a malformed event identity is an
     // observed event that no row carries, so the range is not exhaustively covered.
     rowsDroppedMalformed === 0;
   let conservationFence = false;
@@ -514,7 +515,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     ].includes(audit.reason ?? "");
     if (fullEventCoverage && summary.missingTimestampCount === 0) {
       try {
-        validateMintBurnParsedConservation(config, allConfigLogs, fromBlock, scanTo, allParsedRows);
+        // The threshold is presentation-only; correspondence must cover every positive raw event.
+        validateMintBurnParsedConservation({ ...config, dustThreshold: 0 }, allConfigLogs, fromBlock, scanTo, allParsedRows);
       } catch {
         conservationFence = true;
         if (audit.status !== "mismatch") audit.status = "unavailable";
@@ -542,7 +544,11 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     // cursor, so a clean retry re-covers this range; rows written now could outlive the
     // fence because the retry's persisted-row readback only verifies the rows that the
     // retry itself returned.
-    persistResult = await persistMintBurnRows(db, conservationFence ? [] : persistableRows, affectedHours, { signal });
+    persistResult = await persistMintBurnRows(db, conservationFence ? [] : persistableRows, affectedHours, {
+      signal,
+      knownCompleteConfigKey: fullEventCoverage && summary.rowsDroppedDecode === 0
+        && summary.missingTimestampCount === 0 && summary.txContextShortfalls === 0 ? key : undefined,
+    });
   } catch (error) {
     if (conservationAudit && conservationAudit.status !== "mismatch") {
       await persistMintBurnConservation(db, { ...conservationAudit, status: "unavailable", reason: "event-row-write-failed" }, signal);

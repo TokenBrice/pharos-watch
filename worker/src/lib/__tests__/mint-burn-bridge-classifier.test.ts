@@ -170,7 +170,7 @@ describe("receipt-bound bridge classification", () => {
     const fixture = sample("usdai-wrapped-mixed"), config = receiptConfig(fixture, bridgeConfigs);
     const rows: MintBurnRow[] = receiptRows(fixture, config).map((row) => ({ ...row,
       stablecoin_id: config.stablecoinId, symbol: config.symbol, chain_id: config.chain.chainId,
-      amount: 10000, amount_usd: 10000, price_used: 1, price_timestamp: 3601, price_source: "supply-history",
+      amount: 10000, amount_raw: "10000000000", below_display_threshold: 0, amount_usd: 10000, price_used: 1, price_timestamp: 3601, price_source: "supply-history",
       block_number: fixture.blockNumber, timestamp: 3601, explorer_tx_url: `https://arbiscan.io/tx/${fixture.transactionHash}` }));
     classifyBridgeAwareBurnRows(rows, config.bridgeDetection, new Map([[fixture.transactionHash, receiptContext(fixture)]]));
     const { sqlite, db } = fixtures.open(), affected = collectAffectedHours(rows);

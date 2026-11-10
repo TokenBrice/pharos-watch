@@ -43,7 +43,8 @@ describe("handleMintBurnEvents", () => {
     ACTIVE_MINT_BURN_CONFIGS.push(pending);
     try {
       for (const event of [makeMintBurnRow({ id: "pending", chain_id: pending.chain.chainId, timestamp: 100 }),
-        makeMintBurnRow({ id: "admitted", timestamp: 99 })]) {
+        makeMintBurnRow({ id: "admitted", timestamp: 99 }),
+        makeMintBurnRow({ id: "dust", timestamp: 101, amount_usd: 1e12, below_display_threshold: 1 })]) {
         sqlite.prepare(`INSERT INTO mint_burn_events (${Object.keys(event).join(",")}) VALUES (${Object.keys(event).map(() => "?").join(",")})`)
           .run(...Object.values(event));
       }

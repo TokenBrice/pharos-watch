@@ -1,5 +1,22 @@
 [
   {
+    "version": "6.41",
+    "title": "Exact roundtrip conservation and dust-inclusive accounting",
+    "date": "2026-11-10",
+    "effectiveAt": 1794362152,
+    "summary": "Atomic suppression requires exact raw-unit equality among resolved standard legs; positive sub-threshold events join accounting while display cutoffs remain.",
+    "impact": [
+      "Nullable decimal-string raw amounts are written for every new event. BigInt comparisons replace the 0.5% tolerance; unequal groups stay standard so their full signed residual remains counted, without invented partial rows.",
+      "Ingestion, the recent sweep and the operator use one resolved-standard candidate rule over all persisted transaction peers. Bridge, internal and unproven legs cannot establish neutrality. Shared-bucket source cursors, the one-sided replay guard and concurrent-population fences preserve complete-group evidence.",
+      "Legacy rows without raw amounts keep their existing atomic tags and cannot be newly tagged by the sweep. Complete raw history is required for a separate repair; pruned hourly history is not reconstructed. The sweep advances past unchanged groups, and operator batches expose an explicit continuation cursor.",
+      "Every positive decodable event becomes a priced/classified ledger row, flagged below_display_threshold when its exact raw amount is below the native display cutoff. Counted dust contributes to hourly/window volumes, nets, counts and activity; bridge/internal exclusions and unresolved/valuation gates apply normally. Event lists in every scope, Tape eligibility and largest-event ranking hide flagged rows.",
+      "Dust-inclusive accounting is prospective from the v6.41 writer activation and fully scanned hours; the first whole UTC hour after activation is the conservative fresh-ingestion boundary. Previously materialized hours retain their original cutoff and are not fabricated or backfilled. Windows spanning that boundary mix scopes, so changes in counts/volumes do not alone establish an activity anomaly.",
+      "A complete 2026-11-08 UTC census of all 135 configured contracts used 585 serial requests: 3,700 rows/day at the old cutoff plus 8,254 additions/day, led by USDC 4,642, USDS 1,549 and DAI 1,125. Context/header batching and existing certified-prefix retries fit measured demand without raising request or connection caps. The absolute growth watchdog remains at 2.3M retained rows; protected debt can outlive nominal eight-day retention."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.40",
     "title": "Complete admitted-chain gauge weights and validated EVM log identities",
     "date": "2026-11-10",

@@ -952,8 +952,7 @@ describe("reviewed burn economic materialization", () => {
     const row = parseMintBurnLogs(fixture.config, fixture.eventDef, [fixture.log],
       fixture.timestamps, fixture.priceContext).rows[0];
     await insertMintBurnRows(db, [{ ...row, burn_type: "effective_burn", burn_review_reason: null }]);
-    // The insert itself enqueues its hour; settle it so only the failed repair is measured.
-    sqlite.exec("DELETE FROM mint_burn_dirty_hours");
+    await recalcAffectedHours(db, collectAffectedHours([row]));
     sqlite.exec(`CREATE TRIGGER refuse_burn_repair BEFORE UPDATE OF burn_type ON mint_burn_events
       BEGIN SELECT RAISE(ABORT, 'refused repair'); END`);
     await expect(updateEventClassifications(db, [row])).rejects.toThrow("refused repair");

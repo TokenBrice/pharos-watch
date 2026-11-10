@@ -38,7 +38,8 @@ vi.mock("../../lib/mint-burn-pipeline/rpc", async (importOriginal) => ({
   getMintBurnFinalizedHead: vi.fn(),
 }));
 
-vi.mock("../../lib/evm-logs", () => ({
+vi.mock("../../lib/evm-logs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/evm-logs")>()),
   createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((budget: { count: number; limit: number }) => budget.count >= budget.limit),
   decodeUint256AtSlotOrNull: vi.fn(() => 50_000),

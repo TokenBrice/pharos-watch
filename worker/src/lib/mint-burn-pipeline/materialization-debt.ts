@@ -16,8 +16,9 @@ export async function executeMintBurnMaintenanceMutations(
   db: D1Database,
   mutations: MaintenanceMutation[],
   options: { signal?: AbortSignal } = {},
-): Promise<{ changed: number; affectedHours: Map<string, MintBurnAffectedHour> }> {
+): Promise<{ changed: number; changesByMutation: number[]; affectedHours: Map<string, MintBurnAffectedHour> }> {
   let changed = 0;
+  const changesByMutation: number[] = [];
   const affectedHours = new Map<string, MintBurnAffectedHour>();
   // 40 pairs = 80 statements, below executeAtomicBatch's 100-statement ceiling.
   for (let offset = 0; offset < mutations.length; offset += 40) {
@@ -30,14 +31,16 @@ export async function executeMintBurnMaintenanceMutations(
     }
     const results = await executeAtomicBatch(db, statements, { signal: options.signal, returnResults: true });
     for (let index = 0; index < results.length; index += 2) {
-      changed += Number(results[index + 1]?.meta?.changes ?? 0);
+      const sourceChanges = Number(results[index + 1]?.meta?.changes ?? 0);
+      changed += sourceChanges;
+      changesByMutation.push(sourceChanges);
       for (const row of results[index].results as Array<{ stablecoin_id: string; chain_id: string; hour_ts: number }>) {
         const hour = { stablecoinId: row.stablecoin_id, chainId: row.chain_id, hourTs: row.hour_ts };
         affectedHours.set(`${hour.stablecoinId}-${hour.chainId}-${hour.hourTs}`, hour);
       }
     }
   }
-  return { changed, affectedHours };
+  return { changed, changesByMutation, affectedHours };
 }
 
 export async function seedMintBurnLegacyMaterializationDebt(

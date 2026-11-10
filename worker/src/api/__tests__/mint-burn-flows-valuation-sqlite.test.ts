@@ -51,7 +51,7 @@ function event(
   seq += 1;
   return {
     id: `evt-${seq}`, stablecoin_id: stablecoinId, symbol: "SYM", chain_id: chainId, direction, amount: amountUsd ?? 1_000_000,
-    amount_usd: amountUsd, price_used: amountUsd === null ? null : 1, price_timestamp: amountUsd === null ? null : timestamp,
+    amount_raw: null, below_display_threshold: 0, amount_usd: amountUsd, price_used: amountUsd === null ? null : 1, price_timestamp: amountUsd === null ? null : timestamp,
     price_source: amountUsd === null ? null : "test", burn_type: direction === "burn" ? "effective_burn" : null,
     burn_review_reason: null, flow_type: "standard", counterparty: null, tx_hash: `0x${seq}`,
     block_number: seq, timestamp, explorer_tx_url: "https://explorer",
@@ -124,11 +124,23 @@ to_timestamp, finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 2,
     }
     expect(published).toBe(true);
   });
+  it("counts dust in hourly totals while ranking only visible events", async () => {
+    const { db } = await provenFixture();
+    const visible = event("usdt-tether", "ethereum", "mint", NOW - HOUR, 10);
+    const dust = { ...event("usdt-tether", "ethereum", "mint", NOW - HOUR, 1e12), below_display_threshold: 1 as const };
+    await produce(db, [visible, dust]);
+    const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
+    expect(data.largestEventMap.get("usdt-tether")?.id).toBe(visible.id);
+    expect(buildCoinSummaries(data, new Map(), null).coins.find((c) => c.stablecoinId === "usdt-tether"))
+      .toMatchObject({ mintCount24h: 2, mintVolume24hUsd: 1e12 + 10, largestEvent24h: { amountUsd: 10 } });
+  });
+
   it("withholds generic unresolved classification independently of static holds and discloses its gauge weight", async () => {
     const { db } = await provenFixture();
     const id = "gho-aave";
     const burn = event(id, "ethereum", "burn", NOW - 2 * HOUR + 60, 2_000_000);
     burn.burn_type = "review_required";
+    burn.below_display_threshold = 1;
     burn.burn_review_reason = "supply-proof-context-unavailable";
     await produce(db, [event(id, "ethereum", "mint", NOW - 2 * HOUR, 2_000_000), burn,
       event(id, "ethereum", "mint", NOW - 10 * 86400, 1_000_000),

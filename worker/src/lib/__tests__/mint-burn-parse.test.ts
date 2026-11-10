@@ -98,6 +98,8 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].direction).toBe("mint");
     expect(rows[0].amount).toBe(10_000);
+    expect(rows[0].amount_raw).toBe("10000000000");
+    expect(rows[0].below_display_threshold).toBe(0);
     expect(rows[0].amount_usd).toBe(10_000);
     expect(rows[0].symbol).toBe("USDT");
     expect(rows[0].stablecoin_id).toBe("usdt-tether");
@@ -143,7 +145,7 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     expect(dropped).toBe(0);
   });
 
-  it("drops Issue events below dust threshold", () => {
+  it("retains, prices and flags positive Issue events below the display threshold", () => {
     const config = makeUsdtConfig();
     // 9,999 USDT = below 10,000 dust threshold
     const dustHex = "0x" + BigInt(9_999_000_000).toString(16).padStart(64, "0");
@@ -156,8 +158,12 @@ describe("parseMintBurnLogs — custom event encodings", () => {
       usdtPriceContext,
     );
 
-    expect(rows).toHaveLength(0);
-    expect(dropped).toBe(1);
+    expect(rows[0]).toMatchObject({ amount: 9_999, amount_raw: "9999000000", amount_usd: 9_999, below_display_threshold: 1 });
+    expect(dropped).toBe(0);
+    config.decimals = 18;
+    const raw = 10_000n * 10n ** 18n - 1n;
+    const exact = parseMintBurnLogs(config, usdtIssueEventDef, [makeLog({ data: abiWord(raw) })], blockTimestamps, usdtPriceContext);
+    expect(exact.rows[0]).toMatchObject({ amount_raw: raw.toString(), below_display_threshold: 1 });
   });
 
   it("drops logs with a non-hex logIndex to avoid a NaN event id", () => {

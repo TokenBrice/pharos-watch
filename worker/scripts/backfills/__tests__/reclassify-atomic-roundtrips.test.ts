@@ -1,236 +1,130 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { handleReclassifyAtomicRoundtripsTrusted } from "../reclassify-atomic-roundtrips";
-import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { handleReclassifyAtomicRoundtripsTrusted } from "../reclassify-atomic-roundtrips";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
-
-function seedRoundtrips(sqlite: DatabaseSync, flowType: "standard" | "atomic_roundtrip", count = 1) {
-  const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-    (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url, burn_type, flow_type)
-    VALUES (?, 'usdc-circle', 'USDC', 'ethereum', ?, ?, ?, ?, 1, 1700000000, '', 'effective_burn', ?)`);
-  for (let index = 0; index < count; index++) {
-    const tx = `tx-${index.toString().padStart(3, "0")}`;
-    for (const direction of ["mint", "burn"]) {
-      const amount = direction === "burn" && flowType === "atomic_roundtrip" ? 50 : 100;
-      insert.run(`${tx}-${direction}`, direction, amount, amount, tx, flowType);
-    }
-  }
-  sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_volume_usd, burn_volume_usd)
-    VALUES ('usdc-circle', 'ethereum', 1699999200, ?, ?)`)
-    .run(flowType === "standard" ? count * 100 : 0, flowType === "standard" ? count * 100 : 0);
-}
-
 const run = (db: D1Database, query = "since=0") => handleReclassifyAtomicRoundtripsTrusted({
   db, url: new URL(`https://operator.invalid/jobs/reclassify-atomic-roundtrips?${query}`),
 });
+const debt = (sql: DatabaseSync) => sql.prepare("SELECT COUNT(*) AS n FROM mint_burn_dirty_hours").get()!.n;
+const totals = (sql: DatabaseSync) => sql.prepare("SELECT mint_volume_usd, burn_volume_usd FROM mint_burn_hourly ORDER BY hour_ts").all()
+  .map((r) => [r.mint_volume_usd, r.burn_volume_usd]);
+const flows = (sql: DatabaseSync) => sql.prepare("SELECT DISTINCT flow_type FROM mint_burn_events").all().map((r) => r.flow_type);
 
-function totals(sqlite: DatabaseSync) {
-  return sqlite.prepare("SELECT mint_volume_usd, burn_volume_usd FROM mint_burn_hourly WHERE stablecoin_id = 'usdc-circle' AND chain_id = 'ethereum' AND hour_ts = 1699999200").get();
-}
-
-function debtCount(sqlite: DatabaseSync) {
-  return Number(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get()!.count);
+function seed(sql: DatabaseSync, flow = "standard", count = 1) {
+  const insert = sql.prepare(`INSERT INTO mint_burn_events
+    (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url, burn_type, flow_type)
+    VALUES (?, 'usdc-circle', 'USDC', 'ethereum', ?, ?, ?, ?, ?, 1, 1700000000, '', 'effective_burn', ?)`);
+  for (let i = 0; i < count; i++) {
+    const tx = `tx-${String(i).padStart(4, "0")}`;
+    for (const direction of ["mint", "burn"]) {
+      const amount = direction === "burn" && flow === "atomic_roundtrip" ? 50 : 100;
+      insert.run(`${tx}-${direction}`, direction, amount, String(amount), amount, tx, flow);
+    }
+  }
+  sql.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_volume_usd, burn_volume_usd)
+    VALUES ('usdc-circle', 'ethereum', 1699999200, ?, ?)`).run(flow === "standard" ? count * 100 : 0, flow === "standard" ? count * 100 : 0);
 }
 
 describe("reclassify-atomic-roundtrips", () => {
-  it("returns done:true when no roundtrips found", async () => {
+  it("handles empty scans and rejects malformed inputs before touching storage", async () => {
     const { db } = fixtures.open();
-    const url = new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips");
-    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
-    const body = await res.json() as {
-      done: boolean;
-      updated: number;
-      toRoundtrip: number;
-      toStandard: number;
-    };
-    expect(body.done).toBe(true);
-    expect(body.updated).toBe(0);
-    expect(body.toRoundtrip).toBe(0);
-    expect(body.toStandard).toBe(0);
+    expect(await (await run(db, "")).json()).toMatchObject({ done: true, updated: 0, toRoundtrip: 0, toStandard: 0 });
+    const prepare = vi.spyOn(db, "prepare");
+    for (const query of ["since=0foo", "since=0&cursor=broken"]) {
+      prepare.mockClear();
+      expect((await run(db, query)).status).toBe(400);
+      expect(prepare).not.toHaveBeenCalled();
+    }
   });
 
-  it("batches updates without per-tx queries (no N+1)", async () => {
+  it("batches source writes with bounded reads and conserves the old tolerance residual", async () => {
     const { sqlite } = fixtures.open();
+    seed(sqlite, "standard", 41);
     let reads = 0;
     const db = createSqliteD1(sqlite, { onAll: () => { reads++; } });
-    seedRoundtrips(sqlite, "standard", 41);
     const batch = vi.spyOn(db, "batch");
-
-    const url = new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips?since=0");
-    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
-    const body = await res.json() as {
-      done: boolean;
-      updated: number;
-      toRoundtrip: number;
-      toStandard: number;
-    };
-
-    expect(body.done).toBe(true);
-    expect(body.updated).toBeGreaterThan(0);
-    expect(body.toRoundtrip).toBeGreaterThan(0);
-    expect(body.toStandard).toBe(0);
-    expect(body.toRoundtrip).toBe(82);
-    expect(totals(sqlite)).toEqual({ mint_volume_usd: 0, burn_volume_usd: 0 });
-    expect(debtCount(sqlite)).toBe(0);
-    // Source writes remain bounded even when discovery exceeds one atomic chunk.
-    expect(batch.mock.calls.every(([statements]) => statements.length <= 100)).toBe(true);
+    expect(await (await run(db)).json()).toMatchObject({ done: true, toRoundtrip: 82, toStandard: 0 });
+    expect(totals(sqlite)).toEqual([[0, 0]]);
+    expect(debt(sqlite)).toBe(0);
     expect(reads).toBeLessThanOrEqual(4);
+    expect(batch.mock.calls.every(([statements]) => statements.length <= 100)).toBe(true);
+    sqlite.exec(`UPDATE mint_burn_events SET amount = 100.4, amount_usd = 100.4, amount_raw = '100400' WHERE id = 'tx-0000-burn';
+      UPDATE mint_burn_events SET amount_raw = '100000' WHERE id = 'tx-0000-mint';
+      UPDATE mint_burn_events SET amount_raw = NULL WHERE tx_hash = 'tx-0001';`);
+    expect(await (await run(db)).json()).toMatchObject({ done: true, toStandard: 2, toRoundtrip: 0 });
+    expect(sqlite.prepare("SELECT net_flow_usd FROM mint_burn_hourly").get()!.net_flow_usd).toBeCloseTo(-0.4);
+    expect(sqlite.prepare("SELECT DISTINCT flow_type FROM mint_burn_events WHERE tx_hash = 'tx-0001'").get())
+      .toEqual({ flow_type: "atomic_roundtrip" });
   });
 
-  it("persists forward/reverse tags and hourly totals without touching neighboring identities", async () => {
+  it("isolates transaction groups by coin and chain", async () => {
     const { sqlite, db } = fixtures.open();
+    seed(sqlite);
     const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url, burn_type, flow_type)
-      VALUES (?, ?, 'USDC', ?, ?, ?, ?, ?, 1, ?, '', 'effective_burn', ?)`);
-    insert.run("match-mint", "usdc-circle", "ethereum", "mint", 100, 100, "shared", 1700000000, "standard");
-    insert.run("match-burn", "usdc-circle", "ethereum", "burn", 100, 100, "shared", 1700000000, "standard");
-    insert.run("mismatch-mint", "usdc-circle", "ethereum", "mint", 100, 100, "forward-mismatch", 1700000000, "standard");
-    insert.run("mismatch-burn", "usdc-circle", "ethereum", "burn", 50, 50, "forward-mismatch", 1700000000, "standard");
-    insert.run("other-chain", "usdc-circle", "arbitrum", "mint", 70, 70, "shared", 1700000000, "standard");
-    insert.run("other-coin", "usdt-tether", "ethereum", "mint", 80, 80, "shared", 1700000000, "standard");
-    insert.run("reverse-mint", "usdc-circle", "ethereum", "mint", 100, 100, "mismatch", 1700003600, "atomic_roundtrip");
-    insert.run("reverse-burn", "usdc-circle", "ethereum", "burn", 50, 50, "mismatch", 1700003600, "atomic_roundtrip");
-    sqlite.exec(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_volume_usd)
-      VALUES ('usdc-circle', 'ethereum', 1699999200, 100), ('usdc-circle', 'ethereum', 1700002800, 0),
-             ('usdc-circle', 'arbitrum', 1699999200, 70), ('usdt-tether', 'ethereum', 1699999200, 80)`);
-
-    const response = await handleReclassifyAtomicRoundtripsTrusted({
-      db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips?since=0"),
-    });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ toRoundtrip: 2, toStandard: 2, hoursRecalculated: 2 });
-    expect(sqlite.prepare("SELECT id, flow_type FROM mint_burn_events ORDER BY id").all()).toEqual([
-      { id: "match-burn", flow_type: "atomic_roundtrip" }, { id: "match-mint", flow_type: "atomic_roundtrip" },
-      { id: "mismatch-burn", flow_type: "standard" }, { id: "mismatch-mint", flow_type: "standard" },
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
+      VALUES (?, ?, 'USDC', ?, 'mint', 7, '7', 7, 'tx-0000', 1, 1700000000, '', 'standard')`);
+    insert.run("other-coin", "usdt-tether", "ethereum");
+    insert.run("other-chain", "usdc-circle", "arbitrum");
+    expect(await (await run(db)).json()).toMatchObject({ toRoundtrip: 2 });
+    expect(sqlite.prepare("SELECT id, flow_type FROM mint_burn_events WHERE id LIKE 'other-%' ORDER BY id").all()).toEqual([
       { id: "other-chain", flow_type: "standard" }, { id: "other-coin", flow_type: "standard" },
-      { id: "reverse-burn", flow_type: "standard" }, { id: "reverse-mint", flow_type: "standard" },
-    ]);
-    expect(sqlite.prepare("SELECT stablecoin_id, chain_id, hour_ts, mint_volume_usd, burn_volume_usd FROM mint_burn_hourly ORDER BY stablecoin_id, chain_id, hour_ts").all()).toEqual([
-      { stablecoin_id: "usdc-circle", chain_id: "arbitrum", hour_ts: 1699999200, mint_volume_usd: 70, burn_volume_usd: 0 },
-      { stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1699999200, mint_volume_usd: 100, burn_volume_usd: 50 },
-      { stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1700002800, mint_volume_usd: 100, burn_volume_usd: 50 },
-      { stablecoin_id: "usdt-tether", chain_id: "ethereum", hour_ts: 1699999200, mint_volume_usd: 80, burn_volume_usd: 0 },
     ]);
   });
 
-  it("retains forward debt after a reverse-read failure and drains it outside the retry discovery scope", async () => {
+  it.each(["read", "rebuild"])("repairs %s interruption debt outside the retry discovery scope", async (failure) => {
     const { sqlite } = fixtures.open();
-    seedRoundtrips(sqlite, "standard");
-    let fail = true;
+    seed(sqlite);
     const db = createSqliteD1(sqlite, {
-      onAll: (sql) => {
-        if (fail && sql.includes("WHERE flow_type = 'atomic_roundtrip'")) {
-          fail = false;
-          throw new Error("reverse discovery interrupted");
-        }
-      },
+      onAll(sql) { if (failure === "read" && sql.includes("FROM mint_burn_dirty_hours") && debt(sqlite)) throw Error("interrupted"); },
+      onRun(sql) { if (failure === "rebuild" && sql.includes("INSERT INTO mint_burn_hourly")) throw Error("interrupted"); },
     });
     expect((await run(db)).status).toBe(503);
-    expect(sqlite.prepare("SELECT DISTINCT flow_type FROM mint_burn_events").all()).toEqual([{ flow_type: "atomic_roundtrip" }]);
-    expect(totals(sqlite)).toEqual({ mint_volume_usd: 100, burn_volume_usd: 100 });
-    expect(debtCount(sqlite)).toBe(1);
-    const retry = await run(db, "since=1800000000&stablecoinId=usdt-tether");
-    expect(retry.status).toBe(200);
-    expect(await retry.json()).toMatchObject({ done: true, updated: 0, hoursRecalculated: 1 });
-    expect(totals(sqlite)).toEqual({ mint_volume_usd: 0, burn_volume_usd: 0 });
-    expect(debtCount(sqlite)).toBe(0);
+    expect(flows(sqlite)).toEqual(["atomic_roundtrip"]);
+    expect(totals(sqlite)).toEqual([[100, 100]]);
+    expect(debt(sqlite)).toBe(1);
+    const retry = createSqliteD1(sqlite);
+    expect(await (await run(retry, "since=1800000000&stablecoinId=usdt-tether")).json())
+      .toMatchObject({ done: true, updated: 0, hoursRecalculated: 1 });
+    expect(totals(sqlite)).toEqual([[0, 0]]);
+    expect(debt(sqlite)).toBe(0);
   });
 
-  it.each(["standard", "atomic_roundtrip"] as const)("heals committed chunks after a partial %s write failure", async (flowType) => {
+  it.each(["standard", "atomic_roundtrip"])("repairs partial %s source chunks", async (flow) => {
     const { sqlite } = fixtures.open();
-    seedRoundtrips(sqlite, flowType, 41);
-    sqlite.exec("UPDATE mint_burn_events SET timestamp = 1700003600 WHERE tx_hash = 'tx-040'");
-    sqlite.prepare("UPDATE mint_burn_hourly SET mint_volume_usd = ?, burn_volume_usd = ?")
-      .run(flowType === "standard" ? 4000 : 0, flowType === "standard" ? 4000 : 0);
-    sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_volume_usd, burn_volume_usd)
-      VALUES ('usdc-circle', 'ethereum', 1700002800, ?, ?)`)
-      .run(flowType === "standard" ? 100 : 0, flowType === "standard" ? 100 : 0);
+    seed(sqlite, flow, 41);
     let writes = 0;
-    const db = createSqliteD1(sqlite, {
-      onRun: (sql) => {
-        if (sql.includes("SET flow_type = ?") && ++writes === 41) throw new Error("source write interrupted");
-      },
-    });
+    const db = createSqliteD1(sqlite, { onRun(sql) {
+      if (sql.includes("SET flow_type = CASE") && ++writes === 41) throw Error("interrupted");
+    } });
     expect((await run(db)).status).toBe(503);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_events WHERE flow_type = ?").get(flowType)!.count).toBe(2);
-    expect(debtCount(sqlite)).toBe(1);
-    expect(totals(sqlite)).toEqual({
-      mint_volume_usd: flowType === "standard" ? 4000 : 0,
-      burn_volume_usd: flowType === "standard" ? 4000 : 0,
-    });
-    const retry = await run(db);
-    expect(retry.status).toBe(200);
-    expect(await retry.json()).toMatchObject({ done: true, updated: 2 });
-    expect(totals(sqlite)).toEqual({
-      mint_volume_usd: flowType === "standard" ? 0 : 4000,
-      burn_volume_usd: flowType === "standard" ? 0 : 2000,
-    });
-    expect(sqlite.prepare("SELECT mint_volume_usd, burn_volume_usd FROM mint_burn_hourly WHERE hour_ts = 1700002800").get()).toEqual({
-      mint_volume_usd: flowType === "standard" ? 0 : 100,
-      burn_volume_usd: flowType === "standard" ? 0 : 50,
-    });
-    expect(debtCount(sqlite)).toBe(0);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events WHERE flow_type = ?").get(flow)!.n).toBe(2);
+    expect(debt(sqlite)).toBe(1);
+    expect(totals(sqlite)).toEqual([flow === "standard" ? [4100, 4100] : [0, 0]]);
+    expect(await (await run(createSqliteD1(sqlite))).json()).toMatchObject({ done: true, updated: 2 });
+    expect(totals(sqlite)).toEqual([flow === "standard" ? [0, 0] : [4100, 2050]]);
+    expect(debt(sqlite)).toBe(0);
   });
 
-  it("drains more than one bounded debt chunk before a no-discovery run reports done", async () => {
+  it("drains multiple debt pages and every hour of a cross-hour transaction", async () => {
     const { sqlite, db } = fixtures.open();
-    sqlite.exec(`WITH RECURSIVE hours(value) AS (
-      VALUES (0) UNION ALL SELECT value + 1 FROM hours WHERE value < 1000)
-      INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
-      SELECT 'usdc-circle', 'ethereum', 1699999200 + value * 3600 FROM hours;`);
-    const response = await run(db);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ done: true, updated: 0, hoursRecalculated: 1001 });
-    expect(debtCount(sqlite)).toBe(0);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()!.count).toBe(0);
+    sqlite.exec(`WITH RECURSIVE hours(n) AS (VALUES (0) UNION ALL SELECT n + 1 FROM hours WHERE n < 1000)
+      INSERT INTO mint_burn_dirty_hours SELECT 'usdc-circle', 'ethereum', 1699999200 + n * 3600 FROM hours;`);
+    expect(await (await run(db)).json()).toMatchObject({ done: true, hoursRecalculated: 1001 });
+    expect(totals(sqlite)).toEqual([]);
+    seed(sqlite);
+    sqlite.exec("UPDATE mint_burn_events SET timestamp = 1700003600 WHERE direction = 'burn'");
+    expect(await (await run(db)).json()).toMatchObject({ updated: 2, hoursRecalculated: 2 });
+    expect(totals(sqlite)).toEqual([[0, 0], [0, 0]]);
+    expect(debt(sqlite)).toBe(0);
   });
 
-  it("rolls back an interrupted hourly replacement without losing debt and heals a no-discovery retry", async () => {
+  it.each(["before", "after"])("keeps a concurrent source mutation %s the drain", async (timing) => {
     const { sqlite } = fixtures.open();
-    seedRoundtrips(sqlite, "standard");
-    let fail = true;
-    const db = createSqliteD1(sqlite, {
-      onRun: (sql) => {
-        if (fail && sql.includes("INSERT INTO mint_burn_hourly")) {
-          fail = false;
-          throw new Error("hourly rebuild interrupted");
-        }
-      },
-    });
-    expect((await run(db)).status).toBe(503);
-    expect(totals(sqlite)).toEqual({ mint_volume_usd: 100, burn_volume_usd: 100 });
-    expect(debtCount(sqlite)).toBe(1);
-    const retry = await run(db);
-    expect(retry.status).toBe(200);
-    expect(await retry.json()).toMatchObject({ done: true, updated: 0, hoursRecalculated: 1 });
-    expect(totals(sqlite)).toEqual({ mint_volume_usd: 0, burn_volume_usd: 0 });
-    expect(debtCount(sqlite)).toBe(0);
-  });
-
-  it("enqueues all source hours when one discovered transaction spans buckets", async () => {
-    const { sqlite, db } = fixtures.open();
-    seedRoundtrips(sqlite, "standard");
-    sqlite.exec(`UPDATE mint_burn_events SET timestamp = 1700003600 WHERE direction = 'burn';
-      UPDATE mint_burn_hourly SET burn_volume_usd = 0;
-      INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, burn_volume_usd)
-      VALUES ('usdc-circle', 'ethereum', 1700002800, 100);`);
-    const response = await run(db);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ done: true, updated: 2, hoursRecalculated: 2 });
-    expect(sqlite.prepare("SELECT hour_ts, mint_volume_usd, burn_volume_usd FROM mint_burn_hourly ORDER BY hour_ts").all()).toEqual([
-      { hour_ts: 1699999200, mint_volume_usd: 0, burn_volume_usd: 0 },
-      { hour_ts: 1700002800, mint_volume_usd: 0, burn_volume_usd: 0 },
-    ]);
-    expect(debtCount(sqlite)).toBe(0);
-  });
-
-  it.each(["before", "after"] as const)("preserves a concurrent source mutation %s the drain transaction", async (timing) => {
-    const { sqlite } = fixtures.open();
-    seedRoundtrips(sqlite, "standard");
+    seed(sqlite);
     sqlite.exec(`INSERT INTO mint_burn_events
       (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
       VALUES ('concurrent', 'usdc-circle', 'USDC', 'ethereum', 'mint', 7, 7, 'unpaired', 1, 1700000000, '', 'standard');
@@ -238,19 +132,13 @@ describe("reclassify-atomic-roundtrips", () => {
     let injected = false;
     let rebuilding = false;
     const mutate = () => {
-      sqlite.exec(`BEGIN IMMEDIATE;
-        UPDATE mint_burn_events SET amount = 9, amount_usd = 9 WHERE id = 'concurrent';
-        INSERT OR IGNORE INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', 1699999200);
-        COMMIT;`);
+      sqlite.exec(`UPDATE mint_burn_events SET amount = 9, amount_usd = 9 WHERE id = 'concurrent';
+        INSERT OR IGNORE INTO mint_burn_dirty_hours VALUES ('usdc-circle', 'ethereum', 1699999200);`);
       injected = true;
     };
     const db = createSqliteD1(sqlite, {
-      onAll: (sql) => {
-        if (!injected && timing === "before" && sql.includes("FROM mint_burn_dirty_hours") && debtCount(sqlite) > 0) mutate();
-      },
-      onRun: (sql) => {
-        if (sql.includes("DELETE FROM mint_burn_dirty_hours")) rebuilding = true;
-      },
+      onAll(sql) { if (!injected && timing === "before" && sql.includes("FROM mint_burn_dirty_hours") && debt(sqlite)) mutate(); },
+      onRun(sql) { if (sql.includes("DELETE FROM mint_burn_dirty_hours")) rebuilding = true; },
     });
     const batch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
@@ -258,26 +146,21 @@ describe("reclassify-atomic-roundtrips", () => {
       if (!injected && timing === "after" && rebuilding) mutate();
       return result;
     });
-    const response = await run(db);
-    expect(response.status).toBe(200);
+    expect(await (await run(db)).json()).toMatchObject({ done: timing === "before", updated: 2 });
     expect(injected).toBe(true);
-    expect(await response.json()).toMatchObject({ done: timing === "before", updated: 2 });
-    expect(totals(sqlite)).toEqual({ mint_volume_usd: timing === "before" ? 9 : 7, burn_volume_usd: 0 });
-    expect(debtCount(sqlite)).toBe(timing === "before" ? 0 : 1);
-    if (timing === "after") {
-      const retry = await run(db);
-      expect(await retry.json()).toMatchObject({ done: true, updated: 0 });
-      expect(totals(sqlite)).toEqual({ mint_volume_usd: 9, burn_volume_usd: 0 });
-      expect(debtCount(sqlite)).toBe(0);
-    }
+    expect(totals(sqlite)).toEqual([[timing === "before" ? 9 : 7, 0]]);
+    expect(debt(sqlite)).toBe(timing === "before" ? 0 : 1);
+    expect(await (await run(db)).json()).toMatchObject({ done: true, updated: 0 });
+    expect(totals(sqlite)).toEqual([[9, 0]]);
   });
 
-  it("rejects malformed since values", async () => {
-    const db = mockD1([]);
-    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips?since=0foo") });
-
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid since: must be a non-negative integer" });
-    expect(db.getHistory()).toHaveLength(0);
+  it("continues past unequal groups using the explicit cursor", async () => {
+    const { sqlite, db } = fixtures.open();
+    seed(sqlite, "standard", 1001);
+    sqlite.exec("UPDATE mint_burn_events SET amount_raw = '99' WHERE direction = 'burn' AND tx_hash != 'tx-1000'");
+    const first = await (await run(db)).json() as { nextCursor: string };
+    expect(first).toMatchObject({ done: false, updated: 0 });
+    expect(await (await run(db, `since=0&cursor=${encodeURIComponent(first.nextCursor)}`)).json())
+      .toMatchObject({ done: true, updated: 2, nextCursor: null });
   });
 });

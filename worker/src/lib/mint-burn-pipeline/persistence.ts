@@ -1,6 +1,6 @@
 import { batchExecute, executeAtomicBatch } from "../db";
 import { throwIfAborted } from "../abort";
-import { detectAtomicRoundtrips } from "./roundtrip-detection";
+import { reconcileAtomicRoundtripGroups } from "./roundtrip-detection";
 import { applyReviewedProtocolInternalFlows, applySupplyExcludedProtocolInternalFlows } from "./reviewed-protocol-flows";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
@@ -9,6 +9,8 @@ const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
 
 export interface MintBurnPersistenceOptions {
   signal?: AbortSignal;
+  /** Only supplied for a complete, decoded and classified current-config scan. */
+  knownCompleteConfigKey?: string;
 }
 
 export async function insertMintBurnRows(
@@ -26,8 +28,9 @@ export async function insertMintBurnRows(
     db.prepare(
       `INSERT OR IGNORE INTO mint_burn_events
        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
-        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type, amount_raw,
+        below_display_threshold)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       row.id,
       row.stablecoin_id,
@@ -47,6 +50,8 @@ export async function insertMintBurnRows(
       row.timestamp,
       row.explorer_tx_url,
       row.flow_type,
+      row.amount_raw,
+      row.below_display_threshold,
     ),
   ]);
 
@@ -230,8 +235,7 @@ export async function persistMintBurnRows(
   roundtripsDetected: number;
   reviewedProtocolInternal: number;
 }> {
-  const roundtripsDetected = detectAtomicRoundtrips(rows);
-  // Curated non-circulating inventory and reviewed internal events win over heuristic tagging.
+  // Excluded legs cannot establish the neutrality of a standard-flow group.
   applySupplyExcludedProtocolInternalFlows(rows);
   const reviewedProtocolInternal = applyReviewedProtocolInternalFlows(rows);
   if (rows.length === 0) {
@@ -241,7 +245,7 @@ export async function persistMintBurnRows(
       flowTypeChanges: 0,
       burnTypeChanges: 0,
       rowsUpdated: 0,
-      roundtripsDetected,
+      roundtripsDetected: 0,
       reviewedProtocolInternal,
     };
   }
@@ -249,19 +253,21 @@ export async function persistMintBurnRows(
 
   const insertResult = await insertMintBurnRows(db, rows, options);
   const { flowTypeChanges, burnTypeChanges, rowsUpdated } = await updateEventClassifications(db, rows, options);
+  const roundtrips = await reconcileAtomicRoundtripGroups(db, rows, options);
   // A held cursor replays already-persisted rows after a failed hourly rebuild.
   // Their buckets still need materialization even when every insert is ignored.
   if (affectedHours) {
     throwIfAborted(options.signal);
     collectAffectedHours(rows, affectedHours);
+    for (const [key, hour] of roundtrips.affectedHours) affectedHours.set(key, hour);
   }
   return {
     inserted: insertResult.inserted,
     ignored: insertResult.ignored,
-    flowTypeChanges,
+    flowTypeChanges: flowTypeChanges + roundtrips.changed,
     burnTypeChanges,
-    rowsUpdated,
-    roundtripsDetected,
+    rowsUpdated: rowsUpdated + roundtrips.changed,
+    roundtripsDetected: roundtrips.toRoundtrip,
     reviewedProtocolInternal,
   };
 }

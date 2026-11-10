@@ -87,6 +87,7 @@
 | 0297     | `0297_daily_digest_read_numbering_index.sql`                | Cover the public digest archive, promo and edition-count passes so they number history from generated_at/rowid/digest_meta instead of every wide digest body; the body is joined by rowid for the returned page only; no row mutation. |
 | 0298     | `0298_producer_history_retention_index.sql`                | Add a partial non-calendar completion-clock index for per-window producer-history retention; reuse existing calendar/kind indexes and preserve all rows and older Worker reads/writes. |
 | 0299     | `0299_mint_burn_hourly_classification_completeness.sql`       | Add nullable per-direction unresolved-classification counts to hourly flows and a bounded completeness-rebuild index; historical NULL hours remain unknown until rebuilt from complete retained raw hours. |
+| 0300     | `0300_mint_burn_raw_amount.sql`                             | Add nullable decimal-string raw amounts, default-zero display-threshold flags and an across-flow transaction lookup index; no legacy inference or row rewrite. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -557,3 +558,5 @@ Cloudflare D1 Time Travel has a maximum retention of 30 days on Paid plans / 7 d
 ## Related process docs
 
 - [`docs/process/d1-baseline-squash-plan.md`](../../docs/process/d1-baseline-squash-plan.md) — cadence, procedure, and risks for the next baseline squash.
+
+`0300_mint_burn_raw_amount.sql` applies before the v6.41 Worker: old named-column writers remain compatible and leave raw amounts NULL and display flags zero. It adds no historical data rewrite. Keep both columns and the transaction index on rollback. Retain the pre-window Time Travel bookmark, ledger and Worker versions; observe the first positive dust insert, exact-group reconciliation, hourly/classification rebuild and display filtering separately from migration success. A pre-v6.41 code rollback restores tolerance-based tagging and readers that expose flagged rows, so it is not an accounting rollback. Restore D1 only for unexpected mutation using the verified bookmark.

@@ -261,6 +261,7 @@ export async function fetchAggregateData(
                AND e.timestamp >= ? AND e.timestamp < ?
                AND ((e.direction = 'mint' AND e.burn_type IS NOT 'review_required') OR e.burn_type = 'effective_burn')
                AND e.flow_type = 'standard'
+               AND e.below_display_threshold = 0
                AND e.amount_usd IS NOT NULL
            )
            SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,

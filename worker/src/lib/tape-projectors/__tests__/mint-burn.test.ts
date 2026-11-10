@@ -43,6 +43,7 @@ function makeFlow(overrides: Partial<Record<string, unknown>> = {}): Record<stri
     chain_id: "ethereum",
     direction: "mint",
     amount_usd: 15_000_000,
+    below_display_threshold: 0,
     counterparty: null,
     timestamp: SEC,
     flow_type: "standard",
@@ -116,14 +117,15 @@ describe("mint_burn projector", () => {
       makeFlow({ id: "mint-review", burn_type: "review_required" }),
       makeFlow({ id: "burn-null", direction: "burn", burn_type: null }),
       makeFlow({ id: "burn-unknown", direction: "burn", burn_type: "legacy-unknown" }),
+      makeFlow({ id: "dust", amount_usd: 1e12, below_display_threshold: 1 }),
     ];
     for (const row of rows) {
       sqlite.prepare(`INSERT INTO mint_burn_events
-        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, counterparty, timestamp, flow_type, burn_type, tx_hash, block_number, explorer_tx_url)
-        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, '0xtest', 1, 'https://example.com')`)
+        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, counterparty, timestamp, flow_type, burn_type, below_display_threshold, tx_hash, block_number, explorer_tx_url)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, '0xtest', 1, 'https://example.com')`)
         .run(row.id as string, row.stablecoin_id as string, row.symbol as string, row.chain_id as string,
           row.direction as string, row.amount_usd as number | null, row.counterparty as null,
-          row.timestamp as number, row.flow_type as string, row.burn_type as string | null);
+          row.timestamp as number, row.flow_type as string, row.burn_type as string | null, row.below_display_threshold as number);
     }
     await projectMintBurnLargeFlows(db);
     const select = sqlite.prepare("SELECT event_id, source_row_id, type, severity FROM tape_events ORDER BY source_row_id");
@@ -203,7 +205,7 @@ describe("mint_burn projector", () => {
       (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
        flow_type, burn_type, tx_hash, block_number, explorer_tx_url)
       VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 1, 20000000, ?, 'standard', ?, '0xtest', 1, 'https://example.com')`);
-    for (const id of ["internal", "small", "unpriced", "review", "bridge", "amount", "same", "pruned"]) {
+    for (const id of ["internal", "small", "unpriced", "review", "bridge", "amount", "same", "pruned", "dust"]) {
       insert.run(id, id === "review" ? "burn" : "mint", SEC - 100, id === "review" ? "effective_burn" : null);
     }
     await projectMintBurnLargeFlows(db);
@@ -218,6 +220,7 @@ describe("mint_burn projector", () => {
     update("amount_usd = NULL", "unpriced");
     update("burn_type = 'review_required'", "review");
     update("flow_type = 'bridge_transfer'", "bridge");
+    update("below_display_threshold = 1", "dust");
     update("amount_usd = 30000000", "amount");
     sqlite.prepare("DELETE FROM mint_burn_events WHERE id = 'pruned'").run();
 
@@ -226,7 +229,7 @@ describe("mint_burn projector", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events WHERE suppressed_at IS NOT NULL").get()).toEqual({ n: 0 });
 
     await projectMintBurnLargeFlows(db);
-    for (const id of ["internal", "small", "unpriced", "review", "bridge"]) {
+    for (const id of ["internal", "small", "unpriced", "review", "bridge", "dust"]) {
       expect(claim(id)).toMatchObject({ suppressed_at: SEC, suppression_reason: "flow-claim-retracted" });
     }
     // Eligible correction keeps identity and clocks; only presentation fields change.

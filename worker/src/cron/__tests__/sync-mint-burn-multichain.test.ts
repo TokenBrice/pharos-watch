@@ -19,7 +19,7 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
     MINT_BURN_CONFIGS: [
       makeMintBurnConfig({
         asset: {
-          contractAddress: USDT_CONTRACT,
+          contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
           tier: "critical",
         },
         adapter: "mixed",

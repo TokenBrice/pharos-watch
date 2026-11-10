@@ -28,7 +28,10 @@ export const MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD = 2_300_000;
 /**
  * Per-leg volume collapse: a leg with a real 30-day baseline that records no
  * counted event for a full week is silent unless a content check compares it
- * with history. Unsupported conservation legs never had a supply-delta fence.
+ * with history. Counts include dust since v6.41; only zero recent activity fires,
+ * so the accounting step cannot itself trigger a collapse. The absolute row
+ * threshold still counts all retained ledger rows, including protected debt.
+ * Unsupported conservation legs never had a supply-delta fence.
  */
 const MINT_BURN_ACTIVITY_BASELINE_WINDOW_SEC = 30 * DAY_SECONDS;
 const MINT_BURN_ACTIVITY_RECENT_WINDOW_SEC = 7 * DAY_SECONDS;

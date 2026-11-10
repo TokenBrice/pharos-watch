@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../mint-burn-pipeline/materialization-debt", async (importOriginal) => {
   const actual = await importOriginal<typeof DebtModule>();
-  return { ...actual, executeMintBurnMaintenanceMutations: vi.fn().mockResolvedValue({ changed: 0, affectedHours: new Map() }) };
+  return { ...actual, executeMintBurnMaintenanceMutations: vi.fn().mockResolvedValue({ changed: 0, changesByMutation: [], affectedHours: new Map() }) };
 });
 
 import { healNullPrices } from "../mint-burn-pipeline/price-heal";
@@ -107,7 +107,7 @@ describe("healNullPrices", () => {
       [{ stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 0.98, price_observed_at: NOW - 7200 }],
       [cacheRow({ asset_id: "usdc-circle", price: 1.05 })],
     );
-    vi.mocked(executeMintBurnMaintenanceMutations).mockResolvedValueOnce({ changed: 1, affectedHours: new Map() });
+    vi.mocked(executeMintBurnMaintenanceMutations).mockResolvedValueOnce({ changed: 1, changesByMutation: [1], affectedHours: new Map() });
 
     expect((await healNullPrices(db, NOW)).healed).toBe(1);
     expect(healedArgs()).toEqual([[980, 0.98, NOW - 7200, "supply-history-heal", "e1"]]);
@@ -125,7 +125,7 @@ describe("healNullPrices", () => {
       ],
       [cacheRow({ asset_id: "usdc-circle", observed_at: NOW - 600, updated_at: NOW - 600 })],
     );
-    vi.mocked(executeMintBurnMaintenanceMutations).mockResolvedValueOnce({ changed: 1, affectedHours: new Map() });
+    vi.mocked(executeMintBurnMaintenanceMutations).mockResolvedValueOnce({ changed: 1, changesByMutation: [1], affectedHours: new Map() });
 
     expect((await healNullPrices(db, NOW)).healed).toBe(1);
     expect(healedArgs()).toEqual([[1000, 1, NOW - 600, "price_cache_heal", "e1"]]);
@@ -172,7 +172,7 @@ describe("healNullPrices", () => {
     });
 
     afterEach(() => {
-      vi.mocked(executeMintBurnMaintenanceMutations).mockReset().mockResolvedValue({ changed: 0, affectedHours: new Map() });
+      vi.mocked(executeMintBurnMaintenanceMutations).mockReset().mockResolvedValue({ changed: 0, changesByMutation: [], affectedHours: new Map() });
       vi.useRealTimers();
     });
 

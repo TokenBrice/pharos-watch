@@ -105,6 +105,19 @@ export function MintBurnFlowMethodologySection() {
                 all other internal-flow exclusions require per-event review. These rows remain in the event ledger.
               </p>
               <p>
+                Atomic roundtrips require exactly equal mint and burn sums in raw token units among resolved standard
+                rows for the complete transaction, coin and chain. Unequal groups remain counted with their real net
+                residual; bridge, internal and unproven legs cannot establish neutrality. Historical groups without
+                recorded raw amounts retain their existing classification until separately repaired.
+              </p>
+              <p>
+                Positive events below the native display threshold remain priced and classified accounting rows.
+                Counted dust contributes to volumes, nets, counts and activity; event feeds, Tape and largest-event
+                ranking hide it. Dust-inclusive accounting starts with fully scanned hours from the v6.41 writer.
+                Previously materialized hours keep the earlier cutoff, so windows spanning activation mix accounting
+                scopes and a count increase alone does not establish an activity change.
+              </p>
+              <p>
                 Reviewed issuance coverage includes Ethereum BRSRV, CHFSAFO and GLDon. Exact start blocks and
                 token thresholds remain explicit in the contract registry; GLDon&apos;s reviewed OFT adapter
                 preserves bridge-transfer classification. Other native deployments are not implicitly covered,

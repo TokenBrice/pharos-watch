@@ -290,9 +290,9 @@ Decode failures count in `rowsDropped` and `rowsDroppedDecode`; valid peers pers
 
 ## reclassify-atomic-roundtrips
 
-Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using the shared amount-match tolerance. Apply migration `0280_mint_burn_dirty_hours.sql` and the compatible maintenance writers/drain before running this job; production writes still require a coordinated maintenance window and `--execute --allow-atomic-import`.
+Retroactively reclassifies `(tx_hash, stablecoin_id, chain_id)` groups using exact BigInt equality of raw token-unit sums among resolved standard legs. Excluded bridge/internal legs and unproven burns cannot prove neutrality. Complete source-config cursors are required for every shared-bucket sibling; differently scaled share classes are skipped. Groups containing candidate or existing atomic rows with NULL raw amounts are left unchanged, so this cannot repair pre-`0300` tags from REAL amounts. Apply migrations `0300_mint_burn_raw_amount.sql` and `0280_mint_burn_dirty_hours.sql` and the compatible maintenance writers/drain before running this job; production writes still require a coordinated maintenance window and `--execute --allow-atomic-import`.
 
-Every tag update atomically enqueues all matching source hours in `mint_burn_dirty_hours`, including hours beyond the discovery group's earliest timestamp. Source writes use bounded atomic batches; they are not one whole-job transaction. The job drains persisted debt on entry and after both passes, independently of `since` and `stablecoinId`, so an interrupted run is repairable even when its changed transactions no longer match either scan. Each shared drain atomically rebuilds current hourly totals, finalizes eligible priced `pending_aggregate` repairs and removes that hour's debt. A concurrent mutation either enters that rebuild or leaves fresh debt afterward; it is never cleared against a stale pre-read aggregate.
+Every tag update atomically enqueues all matching source hours in `mint_burn_dirty_hours`, including hours beyond the discovery group's earliest timestamp. Source writes use bounded atomic batches; they are not one whole-job transaction. The job drains persisted debt on entry and after the group pass, independently of `since` and `stablecoinId`, so an interrupted run is repairable even when its changed transactions no longer match either scan. Each shared drain atomically rebuilds current hourly totals, finalizes eligible priced `pending_aggregate` repairs and removes that hour's debt. A concurrent mutation either enters that rebuild or leaves fresh debt afterward; it is never cleared against a stale pre-read aggregate.
 
 After any failure, reconcile uncertain atomic-import receipts using [Interruption and cleanup](#interruption-and-cleanup) before an explicitly authorized retry. Keep every dirty-hour row and the additive table through code rollback; do not manually delete debt or rely on process cleanup to repair aggregates.
 
@@ -300,8 +300,9 @@ After any failure, reconcile uncertain atomic-import receipts using [Interruptio
 
 | Param          | Type      | Default         | Description                                                                                                                                 |
 | -------------- | --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `since`        | `integer` | `now - 90 days` | Unix seconds cutoff for both forward and reverse scans; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
-| `stablecoinId` | `string`  | —               | Optional Pharos stablecoin ID filter applied to both scans                                                                                  |
+| `since`        | `integer` | `now - 90 days` | Unix seconds cutoff for group discovery; `0` requests a full-table sweep and may exceed D1 CPU limits without `stablecoinId` |
+| `stablecoinId` | `string`  | —               | Optional Pharos stablecoin ID filter applied to group discovery                                                                                  |
+| `cursor` | `string` | — | JSON string returned as `nextCursor`; continue with the same `since` and `stablecoinId` |
 
 **Response**
 
@@ -310,6 +311,7 @@ After any failure, reconcile uncertain atomic-import receipts using [Interruptio
   "done": false,
   "since": 1765218367,
   "stablecoinId": "usdt-tether",
+  "nextCursor": "{\"timestamp\":1765221967,\"stablecoin_id\":\"usdt-tether\",\"tx_hash\":\"0xabc\",\"chain_id\":\"ethereum\"}",
   "updated": 428,
   "toRoundtrip": 420,
   "toStandard": 8,
@@ -318,7 +320,7 @@ After any failure, reconcile uncertain atomic-import receipts using [Interruptio
 }
 ```
 
-Each forward and reverse pass processes up to 1000 `(tx_hash, stablecoin_id, chain_id)` groups. Repeat until `done=true`: both scans must return fewer than 1000 groups and the final durable-debt read must be empty. Entry/exit drains process bounded chunks until the selected backlog is exhausted; `hoursRecalculated` counts completed hour rebuilds, including debt from prior runs and other discovery scopes, rather than newly changed transaction groups. A failed read, write or rebuild fails the job, not an empty-success response. New debt observed after the final drain keeps `done=false` for the next run.
+Each request processes up to 1000 `(tx_hash, stablecoin_id, chain_id)` groups. Pass `nextCursor` back as `cursor`, preserving `since` and `stablecoinId`; unchanged unequal and legacy groups advance too. Repeat until `done=true`: group discovery must be exhausted and the final durable-debt read empty. `nextCursor=null` means discovery is exhausted; if debt alone keeps `done=false`, repeat the same scope after reconciling the debt. A malformed cursor returns 400. Entry/exit drains process bounded chunks until the selected backlog is exhausted; `hoursRecalculated` counts completed hour rebuilds, including debt from prior runs and other discovery scopes, rather than newly changed transaction groups. A failed read, write or rebuild fails the job, not an empty-success response. New debt observed after the final drain keeps `done=false` for the next run.
 
 ## audit-depeg-history
 

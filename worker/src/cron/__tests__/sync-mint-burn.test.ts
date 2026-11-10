@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
+  mintBurnEventInsertBinds,
   makeMintBurnDb,
   mintBurnTestHash,
   makeMintBurnMintLog as makeMintLog,
@@ -793,20 +794,20 @@ describe("syncMintBurn", () => {
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
-  it("does not require individual log timestamps for dust-only logs", async () => {
+  it("resolves dust timestamps and persists dust rows in the accounting ledger", async () => {
     const db = makeDb();
 
     vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(1);
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
-        logs: [makeMintLog({ blockNumber: 21_950_001 })],
+        logs: [{ ...makeMintLog({ blockNumber: 21_950_001 }), data: `0x${(1_000_000n).toString(16).padStart(64, "0")}` }],
         complete: true,
         scannedToBlock: 22_000_000,
         calls: 1,
         maxDepth: 0,
       })
       .mockResolvedValueOnce({
-        logs: [makeBurnLog({ blockNumber: 21_950_002 })],
+        logs: [{ ...makeBurnLog({ blockNumber: 21_950_002 }), data: `0x${(1_000_000n).toString(16).padStart(64, "0")}` }],
         complete: true,
         scannedToBlock: 22_000_000,
         calls: 1,
@@ -817,13 +818,12 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
     const usdt = (meta.configSamples as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
-    // Durable scan proof now probes boundaries even for quiet/dust-only scans;
-    // missing headers must not turn dropped dust into missing event timestamps.
-    expect(resolveBlockTimestamps).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(resolveBlockTimestamps).mock.calls[0]?.[1]).toEqual([21_950_001, 22_000_000]);
+    expect(vi.mocked(resolveBlockTimestamps).mock.calls[0]?.[1]).toEqual([21_950_001, 21_950_002]);
     expect(usdt?.missingTimestampCount).toBe(0);
-    expect(usdt?.rowsDropped).toBe(2);
-    expect(usdt?.advanceReason).toBe("full-success-empty");
+    expect(usdt?.rowsDropped).toBe(0);
+    expect(meta.rowsParsed).toBe(2);
+    expect(mintBurnEventInsertBinds.slice(0, 2).map((row) => row[19])).toEqual([1, 1]);
+    expect(usdt?.advanceReason).toBe("full-success-events");
     expect(usdt?.advancedTo).toBe(22_000_000);
     expect(meta.retention).toMatchObject({
       error: null,
@@ -1174,7 +1174,8 @@ describe("syncMintBurn", () => {
     expect(meta.nullPriceBacklogRecent).toBe(12);
     expect(meta.nullPriceBacklogHistorical).toBe(45);
     expect(meta.roundtripsBacklogSaturated).toBe(true);
-    expect(meta.atomicRoundtripsDetected).toBe(2);
+    // This mock has no persisted transaction population to prove a roundtrip.
+    expect(meta.atomicRoundtripsDetected).toBe(0);
   });
 
   it("emits budgetUsed and budgetLimit in metadata via withBudgetMetadata", async () => {

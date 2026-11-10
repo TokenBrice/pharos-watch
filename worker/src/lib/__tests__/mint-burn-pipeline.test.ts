@@ -68,10 +68,11 @@ import {
 } from "../mint-burn-pipeline/sync-state";
 import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
-import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnEventDef } from "../mint-burn-contracts";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/sync-state";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/materialization-debt";
@@ -80,40 +81,22 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 const realDb = await vi.importActual<{ batchExecute: typeof batchExecute }>("../db");
 
-function makeDb(): D1Database {
-  return makeNoopD1({
-    batch: async (statements: D1PreparedStatement[]) => statements.map(() => ({ success: true, results: [], meta: { changes: 0 } })),
-    prepare: () => ({
-      bind: () => ({
-        run: async () => ({ success: true, meta: {} }),
-      }),
-    }),
+function makeRow(overrides: Partial<MintBurnRow> = {}): MintBurnRow {
+  return makeMintBurnRow({
+    id: "id-1", amount: 100, amount_usd: 100, price_timestamp: 1_700_000_000,
+    price_source: "price-cache-event-window", burn_type: null, counterparty: null,
+    tx_hash: "0xtx-1", block_number: 22_000_000, timestamp: 1_718_650_752,
+    ...overrides,
+    amount_raw: overrides.amount_raw === undefined ? String(Math.round((overrides.amount ?? 100) * 1e6)) : overrides.amount_raw,
   });
 }
-
-
-function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
-  return {
-    id: overrides?.id ?? "id-1",
-    stablecoin_id: overrides?.stablecoin_id ?? "usdt-tether",
-    symbol: overrides?.symbol ?? "USDT",
-    chain_id: overrides?.chain_id ?? "ethereum",
-    direction: overrides?.direction ?? "mint",
-    amount: overrides?.amount ?? 100,
-    amount_usd: overrides?.amount_usd ?? 100,
-    price_used: overrides?.price_used ?? 1,
-    price_timestamp: overrides?.price_timestamp ?? 1_700_000_000,
-    price_source: overrides?.price_source ?? "price-cache-event-window",
-    burn_type: overrides?.burn_type ?? null,
-    burn_review_reason: overrides?.burn_review_reason ?? null,
-    flow_type: overrides?.flow_type ?? "standard",
-    counterparty: overrides?.counterparty ?? null,
-    tx_hash: overrides?.tx_hash ?? "0xtx-1",
-    block_number: overrides?.block_number ?? 22_000_000,
-    timestamp: overrides?.timestamp ?? 1_718_650_752,
-    explorer_tx_url: overrides?.explorer_tx_url ?? "https://etherscan.io/tx/0xtx-1",
-  };
-}
+const bridgeConfig = makeMintBurnConfig({
+  asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+  adapter: "transfer-zero-address",
+  bridgeDetection: { protocol: "ccip", knownBridgePoolAddresses: ["0xpool"],
+    tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+});
+const rpc = [mintBurnAlchemyEndpoint("https://rpc.invalid")];
 
 describe("mint-burn shared pipeline modules", () => {
   beforeEach(() => {
@@ -195,7 +178,6 @@ describe("mint-burn shared pipeline modules", () => {
   });
 
   it("returns bridge/review/effective burn counters", async () => {
-    const db = makeDb();
     const rows: MintBurnRow[] = [
       makeRow({ id: "mint-1", direction: "mint", tx_hash: "0xmint" }),
       makeRow({ id: "burn-bridge", direction: "burn", tx_hash: "0xbridge" }),
@@ -205,16 +187,8 @@ describe("mint-burn shared pipeline modules", () => {
 
     const counters = await classifyBridgeBurnRows(
       rows,
-      makeMintBurnConfig({
-        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
-        adapter: "transfer-zero-address",
-        bridgeDetection: {
-          protocol: "ccip",
-          knownBridgePoolAddresses: ["0xpool"],
-          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        },
-      }),
-      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
+      bridgeConfig,
+      rpc,
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -228,7 +202,6 @@ describe("mint-burn shared pipeline modules", () => {
     });
     expect(vi.mocked(getAlchemyTransactionContextBatchMany)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
-    expect(db).toBeDefined();
   });
 
   it("fetches tx contexts with bounded concurrency", async () => {
@@ -251,16 +224,8 @@ describe("mint-burn shared pipeline modules", () => {
 
     await classifyBridgeBurnRows(
       rows,
-      makeMintBurnConfig({
-        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
-        adapter: "transfer-zero-address",
-        bridgeDetection: {
-          protocol: "ccip",
-          knownBridgePoolAddresses: ["0xpool"],
-          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        },
-      }),
-      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
+      bridgeConfig,
+      rpc,
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -280,16 +245,8 @@ describe("mint-burn shared pipeline modules", () => {
 
     const counters = await classifyBridgeBurnRows(
       rows,
-      makeMintBurnConfig({
-        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
-        adapter: "transfer-zero-address",
-        bridgeDetection: {
-          protocol: "ccip",
-          knownBridgePoolAddresses: ["0xpool"],
-          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        },
-      }),
-      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
+      bridgeConfig,
+      rpc,
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -339,16 +296,8 @@ describe("mint-burn shared pipeline modules", () => {
 
     const counters = await classifyBridgeBurnRows(
       rows,
-      makeMintBurnConfig({
-        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
-        adapter: "transfer-zero-address",
-        bridgeDetection: {
-          protocol: "ccip",
-          knownBridgePoolAddresses: ["0xpool"],
-          tokenAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        },
-      }),
-      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
+      bridgeConfig,
+      rpc,
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -360,7 +309,23 @@ describe("mint-burn shared pipeline modules", () => {
     });
   });
 
-  it("excludes atomic roundtrip and bridge-transfer rows from hourly aggregation", async () => {
+  it("retains split dust burns so a 15000 mint and three 5000 burns conserve zero", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    const config = makeMintBurnConfig({ asset: { stablecoinId: "split", startBlock: 1 } });
+    const rows = [15000, 5000, 5000, 5000].flatMap((amount, index) => parseMintBurnLogs(config, {
+      signature: "Transfer(address,address,uint256)", topicHash: "0x0", direction: index ? "burn" : "mint", amountEncoding: "transfer-value",
+    }, [{ address: config.contractAddress, topics: [], data: `0x${BigInt(amount * 1e6).toString(16).padStart(64, "0")}`,
+      transactionHash: "0xsplit", blockNumber: "0x1", logIndex: `0x${index}`, blockHash: "0x0", transactionIndex: "0x0", removed: false }],
+    new Map([[1, 3601]]), { priceObservations: new Map([["split", { price: 1, observedAt: 3601, source: "binance", observedAtMode: "local_fetch" }]]), priceHistory: new Map() }).rows);
+    const hours = collectAffectedHours(rows);
+    await persistMintBurnRows(db, rows, hours);
+    await recalcAffectedHours(db, hours);
+    expect(sqlite.prepare("SELECT COUNT(*) AS events, SUM(below_display_threshold) AS dust FROM mint_burn_events").get()).toEqual({ events: 4, dust: 3 });
+    expect(sqlite.prepare("SELECT net_flow_usd FROM mint_burn_hourly").get()).toEqual({ net_flow_usd: 0 });
+  });
+
+  it("accounts for dust normally while excluding atomic, bridge and unresolved legs", async () => {
     const { db, sqlite } = fixtures.open();
     vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
@@ -412,6 +377,7 @@ describe("mint-burn shared pipeline modules", () => {
       makeRow({ id: "burn-unresolved", direction: "burn", timestamp: 3610, burn_type: "review_required", amount_usd: 500, tx_hash: "0xreview-burn" }),
     ];
 
+    for (const row of rows) row.below_display_threshold = 1;
     await insertMintBurnRows(db, rows);
     await recalcAffectedHours(db, collectAffectedHours(rows));
 
@@ -436,9 +402,9 @@ describe("mint-burn shared pipeline modules", () => {
     vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const timestamp = 3_610;
     const insert = sqlite.prepare(`INSERT INTO mint_burn_events
-      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, burn_type, tx_hash, block_number,
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, amount_usd, burn_type, tx_hash, block_number,
        timestamp, explorer_tx_url, flow_type)
-      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 100, 100, ?, '0xroundtrip', 1, ?, '', 'standard')`);
+      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 100, '1000000000000', 100, ?, '0xroundtrip', 1, ?, '', 'standard')`);
     insert.run("mint", "mint", null, timestamp);
     insert.run("burn", "burn", "effective_burn", timestamp);
     // The post-run sweep tags the cross-config pair while both sides are stored.
@@ -464,6 +430,39 @@ describe("mint-burn shared pipeline modules", () => {
     ]);
     expect.soft(sqlite.prepare("SELECT mint_count, burn_count, burn_volume_usd, net_flow_usd FROM mint_burn_hourly WHERE hour_ts = 3600").get())
       .toEqual({ mint_count: 0, burn_count: 0, burn_volume_usd: 0, net_flow_usd: 0 });
+  });
+
+  it("waits for every shared-bucket config and uses the whole persisted transaction", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    const [first, second] = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock"
+      && config.chain.chainId === "ethereum");
+    const block = Math.max(first.startBlock, second.startBlock) + 1;
+    const rows = [
+      makeRow({ id: "class-a-mint", stablecoin_id: first.stablecoinId, tx_hash: "shared-classes", block_number: block }),
+      makeRow({ id: "class-a-burn", stablecoin_id: first.stablecoinId, direction: "burn", burn_type: "effective_burn",
+        tx_hash: "shared-classes", block_number: block }),
+    ];
+    const affected = new Map();
+    // A complete first-config pair is insufficient while the sibling has not scanned this block.
+    expect((await persistMintBurnRows(db, rows, affected, { knownCompleteConfigKey: mintBurnConfigKey(first) })).roundtripsDetected).toBe(0);
+    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(mintBurnConfigKey(first), block);
+    // The sibling contributes a real residual, so the earlier apparent pair stays standard.
+    await persistMintBurnRows(db, [makeRow({ id: "class-b-mint", stablecoin_id: first.stablecoinId,
+      tx_hash: "shared-classes", amount: 1, amount_usd: 1, block_number: block })], affected, { knownCompleteConfigKey: mintBurnConfigKey(second) });
+    expect(sqlite.prepare("SELECT DISTINCT flow_type FROM mint_burn_events").all()).toEqual([{ flow_type: "standard" }]);
+    await recalcAffectedHours(db, affected);
+    expect(sqlite.prepare("SELECT net_flow_usd FROM mint_burn_hourly").get()).toEqual({ net_flow_usd: 1 });
+
+    // A separate transaction split across configs cancels only once both populations are stored.
+    await persistMintBurnRows(db, [makeRow({ id: "split-mint", stablecoin_id: first.stablecoinId,
+      tx_hash: "split-classes", block_number: block })], affected, { knownCompleteConfigKey: mintBurnConfigKey(first) });
+    const result = await persistMintBurnRows(db, [makeRow({ id: "split-burn", stablecoin_id: first.stablecoinId,
+      tx_hash: "split-classes", direction: "burn", burn_type: "effective_burn", block_number: block })], affected,
+    { knownCompleteConfigKey: mintBurnConfigKey(second) });
+    expect(result.roundtripsDetected).toBe(2);
+    expect(sqlite.prepare("SELECT DISTINCT flow_type FROM mint_burn_events WHERE tx_hash = 'split-classes'").all())
+      .toEqual([{ flow_type: "atomic_roundtrip" }]);
   });
 
   it("removes stale hourly rows when an affected bucket has no rows left after recompute", async () => {
@@ -722,73 +721,20 @@ describe("mint-burn shared pipeline modules", () => {
     expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state").get()).toEqual({ last_block: 100 });
   });
 
-  it("reads sync state in chunked IN-clause queries instead of one select per config", async () => {
-    const history: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...binds: unknown[]) => ({
-          all: async <T>() => {
-            history.push({ sql, binds });
-            return {
-              results: [{
-                config_key: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                last_block: 22_345_678,
-              }] as T[],
-              success: true,
-              meta: {},
-            };
-          },
-        }),
-      }),
-    });
-
-    const makeConfig = (stablecoinId: string, symbol: string, contractAddress: string) => ({
-      chain: {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        evmChainId: 1,
-        explorerUrl: "https://etherscan.io",
-        type: "evm" as const,
-      },
-      stablecoinId,
-      symbol,
-      contractAddress,
-      decimals: 6,
-      dustThreshold: 10_000,
-      startBlock: 21_900_000,
-      adapterKind: "transfer-zero-address" as const,
-      startBlockSource: "reviewed-contract-specific" as const,
-      startBlockConfidence: "high" as const,
-      events: [],
-    });
-
-    const configs = [
-      makeConfig("usdc-circle", "USDC", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
-      ...Array.from({ length: 99 }, (_, index) =>
-        makeConfig(
-          `synthetic-${index + 1}`,
-          `S${index + 1}`,
-          `0x${(index + 1).toString(16).padStart(40, "0")}`,
-        )
-      ),
-      makeConfig("usdt-tether", "USDT", "0xdac17f958d2ee523a2206206994597c13d831ec7"),
-    ];
-
+  it("reads actual sync rows in chunks, preserving absent-config defaults", async () => {
+    const { sqlite } = fixtures.open();
+    const configs = Array.from({ length: 101 }, (_, i) => makeMintBurnConfig({
+      asset: { contractAddress: `0x${i.toString(16).padStart(40, "0")}` },
+    }));
+    const key = mintBurnConfigKey(configs[0]);
+    sqlite.prepare("INSERT INTO mint_burn_sync_state VALUES (?, ?)").run(key, 22_345_678);
+    let reads = 0;
+    const db = createSqliteD1(sqlite, { onAll() { reads++; } });
     const results = await readMintBurnSyncStateBatch(db, configs);
-
-    expect(history).toHaveLength(2);
-    expect(history[0]?.sql).toContain("WHERE config_key IN");
-    expect(history[0]?.binds).toHaveLength(90);
-    expect(history[1]?.binds).toHaveLength(11);
-    expect(history[0]?.binds?.[0]).toBe("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-    expect(history.flatMap((entry) => entry.binds)).not.toContain(
-      "usdc-circle:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-    );
-    expect(history[1]?.binds?.[history[1].binds.length - 1]).toBe(
-      "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-    );
-    expect(results.get("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).toBe(22_345_678);
-    expect(results.get("ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe(21_899_999);
+    expect(reads).toBe(2);
+    expect(results.size).toBe(101);
+    expect(results.get(key)).toBe(22_345_678);
+    expect(results.get(mintBurnConfigKey(configs[100]))).toBe(configs[100].startBlock - 1);
   });
 });
 
@@ -803,19 +749,10 @@ const AMOUNT_DATA = "0000000000000000000000000000000000000000000000000de0b6b3a76
 
 describe("parseMintBurnLogs — custom counterparty encoding", () => {
   it("extracts counterparty from data slot when counterpartyEncoding is set", () => {
-    const config: MintBurnContractConfig = {
-      chain: { chainId: "ethereum", explorerUrl: "https://etherscan.io" } as MintBurnContractConfig["chain"],
-      stablecoinId: "test",
-      symbol: "TEST",
-      contractAddress: "0xc0",
-      decimals: 18,
-      dustThreshold: 0,
-      startBlock: 1,
-      events: [],
-      adapterKind: "custom-events",
-      startBlockSource: "test-fixture",
-      startBlockConfidence: "high",
-    };
+    const config = makeMintBurnConfig({
+      asset: { stablecoinId: "test", symbol: "TEST", contractAddress: "0xc0", decimals: 18, dustThreshold: 0, startBlock: 1 },
+      adapter: "custom-events",
+    });
     const eventDef: MintBurnEventDef = {
       signature: "Deposited(address,address,uint256)",
       topicHash: FAKE_TOPIC,

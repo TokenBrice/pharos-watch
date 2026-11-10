@@ -366,7 +366,7 @@ describe("mint/burn ordered RPC fallback", () => {
     const txHash = word(20);
     const row: MintBurnRow = {
       id: "event", stablecoin_id: config.stablecoinId, symbol: config.symbol, chain_id: "base",
-      tx_hash: txHash, direction: "burn", counterparty: null, amount: 1, amount_usd: null,
+      tx_hash: txHash, direction: "burn", counterparty: null, amount: 1, amount_raw: null, below_display_threshold: 0, amount_usd: null,
       price_used: null, price_timestamp: null, price_source: null, burn_type: null,
       burn_review_reason: null, flow_type: "standard", block_number: 102, timestamp: 1024,
       explorer_tx_url: "https://basescan.org/tx/" + txHash,

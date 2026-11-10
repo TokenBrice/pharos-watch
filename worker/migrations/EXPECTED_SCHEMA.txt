@@ -158,6 +158,7 @@ index	idx_mbe_historical_price_repair_backlog
 index	idx_mbe_null_price_ts
 index	idx_mbe_roundtrip_group
 index	idx_mbe_symbol_ts
+index	idx_mbe_transaction_group
 index	idx_mbh_chain_coin_hour
 index	idx_mbh_chain_hour_coin
 index	idx_mbh_coin
