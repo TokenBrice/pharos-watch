@@ -16,6 +16,7 @@ import {
   type PoolProcessingContext,
   type PoolRejectionLookups,
   type PoolProcessingRejection,
+  type PoolRejectionDetail,
   type ProcessPoolMetricsInput,
   type ProcessPoolMetricsResult,
   type ResolvedPoolIdentity,
@@ -30,18 +31,29 @@ export type {
   ProcessPoolMetricsResult,
 } from "./process-pool-types";
 
-/** Apply the same project-only gate as admission, then collapse transient project groups. */
+const REJECTION_DETAIL_LIMIT = 8;
+const REJECTION_DETAIL_BYTES = 1_024;
+
+function compareRejectionDetails(a: PoolRejectionDetail, b: PoolRejectionDetail): number {
+  return Number(a.scope === "non-dex-project") - Number(b.scope === "non-dex-project")
+    || (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0);
+}
+
+/** Only affirmative non-DEX evidence may exclude a rejected project from health. */
 export function scopePoolRejections(
   rejections: readonly PoolProcessingRejection[], dexProjects: ReadonlySet<string>,
+  nonDexProjects: ReadonlySet<string> = new Set(),
 ): PoolProcessingRejection[] {
   const groups = new Map<string, PoolProcessingRejection>();
   for (const { project, ...row } of rejections) {
-    const scope = typeof project !== "string" || project.trim().length === 0 || dexProjects.size === 0
-      ? "unknown-project" : dexProjects.has(project) ? "dex-project" : "non-dex-project";
+    const projectReadable = typeof project === "string" && project.trim().length > 0;
+    const scope = !projectReadable
+      ? "unknown-project" : dexProjects.has(project) ? "dex-project"
+        : nonDexProjects.has(project) ? "non-dex-project" : "unknown-project";
     const key = `${row.reason}:${scope}`;
     const scoped = { ...row, scope,
       tvlUsdByStablecoin: row.tvlUsdByStablecoin == null ? undefined : { ...row.tvlUsdByStablecoin },
-      attributionUnavailable: scope === "unknown-project" || row.attributionUnavailable || row.tvlUsdByStablecoin == null,
+      attributionUnavailable: !projectReadable || row.attributionUnavailable || row.tvlUsdByStablecoin == null,
       details: (row.details ?? []).map((detail) => ({ ...detail, scope })),
     } satisfies PoolProcessingRejection;
     const group = groups.get(key);
@@ -57,11 +69,11 @@ export function scopePoolRejections(
     }
     group.poolIds = [...new Set([...group.poolIds, ...row.poolIds])].slice(0, POOL_REJECTION_POOL_ID_LIMIT);
     group.details = boundTelemetryEntries([...(group.details ?? []), ...scoped.details]
-      .sort((a, b) => (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0)), 32, 8_192);
+      .sort(compareRejectionDetails), REJECTION_DETAIL_LIMIT, REJECTION_DETAIL_BYTES);
   }
   const scoped = [...groups.values()];
   const kept = new Set(boundTelemetryEntries(scoped.flatMap((row) => row.details ?? [])
-    .sort((a, b) => (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0)), 32, 8_192));
+    .sort(compareRejectionDetails), REJECTION_DETAIL_LIMIT, REJECTION_DETAIL_BYTES));
   for (const row of scoped) row.details = row.details?.filter((detail) => kept.has(detail));
   return scoped;
 }
@@ -137,7 +149,7 @@ export function buildPoolRejectionMetadata(
   const candidates = getDexPoolRejectionCandidates(rejections);
   const outOfScope = rejections.filter((row) => !candidates.includes(row));
   const poolRejections = boundTelemetryEntries(rejections.flatMap((row) => row.details ?? [])
-    .sort((a, b) => (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0)), 32, 8_192);
+    .sort(compareRejectionDetails), REJECTION_DETAIL_LIMIT, REJECTION_DETAIL_BYTES);
   return { poolRejections, poolRejectionMateriality: {
     thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD, thresholdShare: POOL_REJECTION_MATERIAL_SHARE,
     rejectedPoolCount, rejectedPoolTvlUsd: rejections.reduce((sum, row) => sum + row.tvlUsd, 0),
@@ -207,8 +219,9 @@ export function recordPoolRejection(
     underlyingTokens: Array.isArray(pool.underlyingTokens)
       ? pool.underlyingTokens.filter((token) => typeof token === "string") : null,
   }, lookups) : null;
-  const attributable = chainKnown && tokensKnown && (symbolKnown || match?.hasUnderlyingTokenAddresses === true);
   const stablecoinIds = [...(match?.matchedIds ?? [])].sort();
+  // Syntactically present tokens (including the zero address) prove no attribution.
+  const attributable = chainKnown && tokensKnown && stablecoinIds.length > 0;
   rejection.attributionUnavailable ||= !attributable;
   for (const id of stablecoinIds) {
     rejection.tvlUsdByStablecoin![id] = (rejection.tvlUsdByStablecoin![id] ?? 0) + (tvlUsd ?? 0);
@@ -219,7 +232,7 @@ export function recordPoolRejection(
     chain: typeof pool?.chain === "string" ? canonicalExitRouteChain(pool.chain).slice(0, 100) : null,
     poolId: typeof pool?.pool === "string" ? pool.pool.slice(0, 160) : null,
     tvlUsd, stablecoinIds,
-  }].sort((a, b) => (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0)), 32, 8_192);
+  }].sort(compareRejectionDetails), REJECTION_DETAIL_LIMIT, REJECTION_DETAIL_BYTES);
   const poolId = rejectionPoolId(pool);
   if (
     rejection.poolIds.length < POOL_REJECTION_POOL_ID_LIMIT &&

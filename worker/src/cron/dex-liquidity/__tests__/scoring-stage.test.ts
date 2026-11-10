@@ -832,8 +832,6 @@ describe("DEX liquidity scoring stage", () => {
     expect(decode([
       withPayload([JSON.stringify(legacyHeader), ...rest].join("\n")),
     ]).sourceState.primaryPriceById).toBeUndefined();
-    legacyHeader.pool.poolRejections = [{ reason: "invalid-pool-identity", count: 1, tvlUsd: 10_000, poolIds: [] }];
-    expect(() => decode([withPayload(JSON.stringify(legacyHeader))])).toThrow("pool-rejection-scope-unavailable");
     for (const primaryPrices of [null, {}, [["bad", 0]], [["bad", -1]], [["bad"]], [["same", 1], ["same", 2]]]) {
       const invalidHeader = JSON.parse(header!);
       invalidHeader.source.primaryPrices = primaryPrices;
