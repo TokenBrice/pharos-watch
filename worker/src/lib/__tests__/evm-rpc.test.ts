@@ -112,6 +112,32 @@ describe("evm-rpc helpers", () => {
     vi.restoreAllMocks();
   });
 
+  it.each(["https://rpc.hyperliquid.xyz/evm/", "https://rpc.hypurrscan.io/?test=1"])("excludes latest-only %s before pinned failover", async url => {
+    const dwellir = dwellirEndpoint("https://hyper-test.dwellir.com");
+    const history = "https://hyperliquid.drpc.org";
+    const options = { chainRpcs: chainRpcsWith("hyperevm", [dwellir, registryEndpoint(url)]), extraRpcUrls: [url, history], maxRetries: 0 };
+    fetchWithRetryMock.mockImplementation(async (rpcUrl, init) => {
+      const request = JSON.parse(init.body);
+      const rows = (Array.isArray(request) ? request : [request]).map(({ id, method }: { id: number; method: string }) => ({ id,
+        ...(method === "eth_getBlockByNumber" ? { result: blockResult(100, "0x64") }
+          : rpcUrl === dwellir.url ? { error: { code: -32000, message: "HeaderNotFound: unsupported block selector" } }
+          : { result: rpcUrl === history ? "0x01" : "0xdead" }),
+      }));
+      return rpcResponse(Array.isArray(request) ? rows : rows[0]);
+    });
+    expect(await fetchEvmBlockHeader("hyperevm", 100, { extraRpcUrls: [url] })).toMatchObject({ number: 100 });
+    fetchWithRetryMock.mockClear();
+    for (const stateBlockHash of [undefined, `0x${"a".repeat(64)}` as `0x${string}`]) {
+      expect(await fetchEvmCallHexAtBlock("hyperevm", "0xabc", "0x1234", 100, { ...options, stateBlockHash })).toBe("0x01");
+      expect(await fetchEvmRpcBatch("hyperevm", [{ method: "eth_call", params: [{}, stateBlockHash ? { blockHash: stateBlockHash } : "0x64"] }], {
+        ...options, chainRpcs: chainRpcsWith("hyperevm", [dwellir]),
+      })).toEqual(["0x01"]);
+    }
+    expect(attemptedUrls()).not.toContain(url);
+    expect(await fetchJsonRpcHexAtUrl(url, "eth_call", [{}, "0x64"])).toBeNull();
+    expect(await fetchEvmCallHexAtBlock("hyperevm", "0xabc", "0x1234", "latest", { extraRpcUrls: [url] })).toBe("0xdead");
+  });
+
   it.each([false, true])("fails over on null receipt evidence only when required=%s", async required => {
     const dwellir = dwellirEndpoint("https://receipt-dwellir.example");
     const fallback = registryEndpoint("https://receipt-alchemy.example", "alchemy");

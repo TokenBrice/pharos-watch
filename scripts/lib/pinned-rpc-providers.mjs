@@ -40,8 +40,10 @@ export async function resolvePinnedProvider(chain, provider) {
     // https://docs.assetchain.org/general-info/network-details — mainnet 42420.
     if (canonicalChain === "assetchain") return { endpoint: "https://mainnet-rpc.assetchain.org", protocol: "evm" };
     const { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } = await import("../../shared/lib/chain-rpc-registry.ts");
-    const endpoint = PUBLIC_RPC_URLS[canonicalChain] ?? SUPPLY_RPC_DEFAULTS[canonicalChain]?.rpcUrl;
-    if (endpoint && meta?.type === "evm") return { endpoint, protocol: "evm" };
+    const { HYPEREVM_HISTORY_RPC_URL, supportsEvmRpcBlockSelectors } = await import("../../shared/lib/evm-rpc-capabilities.ts");
+    const endpoint = canonicalChain === "hyperevm" ? HYPEREVM_HISTORY_RPC_URL
+      : PUBLIC_RPC_URLS[canonicalChain] ?? SUPPLY_RPC_DEFAULTS[canonicalChain]?.rpcUrl;
+    if (endpoint && meta?.type === "evm") return supportsEvmRpcBlockSelectors(endpoint) ? { endpoint, protocol: "evm" } : null;
     if (endpoint && ["aptos", "movement"].includes(canonicalChain)) return { endpoint, protocol: "aptos-rest" };
     if (endpoint && canonicalChain === "hedera") return { endpoint, protocol: "hedera-rest" };
     return null;

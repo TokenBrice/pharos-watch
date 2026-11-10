@@ -1,6 +1,7 @@
 import { toFunctionSelector } from "viem";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { isTronRpcUrl, requiresHistoricalEvmState } from "@shared/lib/tron-rpc";
+import { supportsEvmRpcBlockSelectors } from "@shared/lib/evm-rpc-capabilities";
 import type { MeasurementCall, MeasurementLog, MeasurementLogQuery } from "./schema";
 
 export interface PinnedBlock {
@@ -17,6 +18,9 @@ interface JsonRpcResponse {
 }
 
 async function rpcRequest(rpcUrl: string, method: string, params: unknown[]): Promise<unknown> {
+  if (!supportsEvmRpcBlockSelectors(rpcUrl) && requiresHistoricalEvmState(method, params)) {
+    throw new Error("historical-state-unsupported: RPC executes latest state regardless of block selector");
+  }
   if (isTronRpcUrl(rpcUrl) && requiresHistoricalEvmState(method, params)) {
     throw new Error("historical-state-unsupported: TRON constant calls execute latest state");
   }
