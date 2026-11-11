@@ -8,6 +8,8 @@ import { rethrowIfAborted, throwIfAborted } from "./abort";
 import { requestJsonRpcAtUrl } from "./evm-rpc";
 import { logWorkerEvent } from "./structured-log";
 import type { CacheRetentionPolicy } from "./db-cache";
+import { runWithOverloadRetry } from "./d1-overload-retry";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 const ALCHEMY_RPC_TIMEOUT_MS = 30_000;
@@ -874,26 +876,40 @@ export async function resolveBlockTimestamps(
   if (persistentCache && unresolved.length > 0) {
     const maxAgeSec = persistentCache.maxAgeSec ?? ALCHEMY_BLOCK_TIMESTAMP_CACHE_POLICY.ttlSec;
     const cutoff = nowSec - maxAgeSec;
-    for (let i = 0; i < unresolved.length; i += TIMESTAMP_CACHE_READ_CHUNK) {
-      throwIfAborted(options?.signal);
-      const batchBlocks = unresolved.slice(i, i + TIMESTAMP_CACHE_READ_CHUNK);
-      const blockInClause = buildInClause(batchBlocks);
-      const rows = await persistentCache.db
-        .prepare(
-          `SELECT block_number, timestamp, block_hash
-           FROM block_timestamp_cache
-           WHERE chain_id = ?
-             AND updated_at >= ?
-             AND block_number IN (${blockInClause.sql})`,
-        )
-        .bind(persistentCache.chainId, cutoff, ...blockInClause.binds)
-        .all<{ block_number: number; timestamp: number; block_hash: string | null }>();
+    const timeout = options?.deadlineMs != null ? createTimeoutSignal({
+      timeoutMs: Math.max(0, options.deadlineMs - Date.now()),
+      timeoutReason: "Block timestamp cache deadline exceeded",
+      parentSignal: options.signal,
+    }) : undefined;
+    try {
+      for (let i = 0; i < unresolved.length; i += TIMESTAMP_CACHE_READ_CHUNK) {
+        throwIfAborted(options?.signal);
+        const batchBlocks = unresolved.slice(i, i + TIMESTAMP_CACHE_READ_CHUNK);
+        const blockInClause = buildInClause(batchBlocks);
+        const rows = await runWithOverloadRetry(() => {
+          if (options?.deadlineMs != null && Date.now() >= options.deadlineMs) {
+            throw new Error("Block timestamp cache deadline exceeded");
+          }
+          return persistentCache.db
+            .prepare(
+              `SELECT block_number, timestamp, block_hash
+               FROM block_timestamp_cache
+               WHERE chain_id = ?
+                 AND updated_at >= ?
+                 AND block_number IN (${blockInClause.sql})`,
+            )
+            .bind(persistentCache.chainId, cutoff, ...blockInClause.binds)
+            .all<{ block_number: number; timestamp: number; block_hash: string | null }>();
+        }, 1, timeout?.signal ?? options?.signal, { waitOutResourceWindow: true });
 
-      for (const row of rows.results ?? []) {
-        if (expectedHash(row.block_number) != null && row.block_hash?.toLowerCase() !== expectedHash(row.block_number)) continue;
-        timestamps.set(row.block_number, row.timestamp);
-        localCache?.set(localKey(row.block_number), row.timestamp);
+        for (const row of rows.results ?? []) {
+          if (expectedHash(row.block_number) != null && row.block_hash?.toLowerCase() !== expectedHash(row.block_number)) continue;
+          timestamps.set(row.block_number, row.timestamp);
+          localCache?.set(localKey(row.block_number), row.timestamp);
+        }
       }
+    } finally {
+      timeout?.dispose();
     }
     unresolved = uniqueBlocks.filter((block) => !timestamps.has(block));
   }

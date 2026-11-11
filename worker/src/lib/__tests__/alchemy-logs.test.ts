@@ -18,6 +18,7 @@ import * as evmRpc from "../evm-rpc";
 import { withRpcRequestObserver } from "../rpc-request-observer";
 
 let fetchMock: ReturnType<typeof mockFetch>;
+const url = "https://eth-mainnet.g.alchemy.com/v2/key";
 
 function makeLog(txHash: string, blockNumber = 0x176f050) {
   return {
@@ -34,7 +35,7 @@ function makeLog(txHash: string, blockNumber = 0x176f050) {
 }
 
 const timestampFixtures = createLatestSchemaFixtureTracker();
-afterEach(() => timestampFixtures.closeAll());
+afterEach(() => { timestampFixtures.closeAll(); vi.useRealTimers(); });
 
 function makeDbForTimestampCache(
   opts: {
@@ -93,7 +94,7 @@ describe("getAlchemyBlockNumber", () => {
     fetchMock.mockResolvedValueOnce(new Response("error", { status: 500 }));
 
     const budget = createBudget(100);
-    const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+    const result = await getAlchemyBlockNumber(url, budget);
 
     expect(result).toBeNull();
     expect(budget.count).toBe(1);
@@ -109,7 +110,7 @@ describe("getAlchemyBlockNumber", () => {
     );
 
     const budget = createBudget(100);
-    const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+    const result = await getAlchemyBlockNumber(url, budget);
 
     expect(result).toBeNull();
     expect(JSON.parse(String(warnSpy.mock.calls[0]?.[0]))).toMatchObject({
@@ -129,7 +130,7 @@ describe("getAlchemyBlockNumber", () => {
 
   it("returns null when budget exhausted", async () => {
     const budget = createBudget(0);
-    const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+    const result = await getAlchemyBlockNumber(url, budget);
 
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -143,7 +144,7 @@ describe("getAlchemyBlockNumber", () => {
     });
     fetchMock = mockFetch([
       {
-        match: "https://eth-mainnet.g.alchemy.com/v2/key",
+        match: url,
         matchBody: "eth_blockNumber",
         respond: async () => {
           markFetchStarted();
@@ -152,7 +153,7 @@ describe("getAlchemyBlockNumber", () => {
       },
     ], { requireMatch: true });
 
-    const head = getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", createBudget(100), controller.signal);
+    const head = getAlchemyBlockNumber(url, createBudget(100), controller.signal);
     await fetchStarted;
     controller.abort(new Error("cron slot abandoned"));
 
@@ -285,7 +286,7 @@ describe("fetchAlchemyLogs runtime deadline", () => {
   it("does not start eth_getLogs when the run deadline is already exhausted", async () => {
     const budget = createBudget(10);
     const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       [{ index: 0, value: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" }],
       22_000_000,
@@ -375,7 +376,7 @@ describe("getAlchemyTransactionContextBatchMany", () => {
 
     const budget = createBudget(100);
     const result = await getAlchemyTransactionContextBatchMany(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       ["0xaaa", "0xbbb"],
       budget,
     );
@@ -413,7 +414,7 @@ describe("getAlchemyTransactionContextBatchMany", () => {
 
     try {
       const result = await getAlchemyTransactionContextBatchMany(
-        "https://eth-mainnet.g.alchemy.com/v2/key",
+        url,
         ["0xaaa", "0xbbb"],
         createBudget(100),
       );
@@ -430,7 +431,7 @@ describe("getAlchemyTransactionContextBatchMany", () => {
   it("returns null contexts without fetching when budget is exhausted", async () => {
     const budget = createBudget(0);
     const result = await getAlchemyTransactionContextBatchMany(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       ["0xaaa"],
       budget,
     );
@@ -450,7 +451,7 @@ describe("fetchAlchemyLogs", () => {
   it("returns incomplete coverage when budget is exhausted before the call starts", async () => {
     const budget = createBudget(0);
     const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xcontract",
       [{ index: 0, value: "0xtopic" }],
       100,
@@ -484,7 +485,7 @@ describe("fetchAlchemyLogs", () => {
 
     const budget = createBudget(100);
     const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xcontract",
       [{ index: 0, value: ["0xtopic-a", "0xtopic-b"] }],
       100,
@@ -510,7 +511,7 @@ describe("fetchAlchemyLogs", () => {
     );
 
     await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xcontract",
       [{ index: 0, value: ["0xtopic-a", "0xtopic-b"] }],
       100,
@@ -552,7 +553,7 @@ describe("fetchAlchemyLogs", () => {
 
     const budget = createBudget(100);
     const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xcontract",
       [{ index: 0, value: "0xtopic" }],
       100,
@@ -599,7 +600,7 @@ describe("fetchAlchemyLogs", () => {
 
     const budget = createBudget(100);
     const pending = fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xcontract",
       [{ index: 0, value: "0xtopic" }],
       100,
@@ -626,7 +627,7 @@ describe("fetchAlchemyLogs", () => {
 
     const budget = createBudget(100);
     await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xcontract",
       [
         { index: 0, value: "0xddf252ad..." },
@@ -653,7 +654,7 @@ describe("fetchAlchemyLogs", () => {
     });
     fetchMock = mockFetch([
       {
-        match: "https://eth-mainnet.g.alchemy.com/v2/key",
+        match: url,
         matchBody: "eth_getLogs",
         respond: async () => {
           markFetchStarted();
@@ -663,7 +664,7 @@ describe("fetchAlchemyLogs", () => {
     ], { requireMatch: true });
 
     const run = fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       [{ index: 0, value: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" }],
       22_000_000,
@@ -755,7 +756,7 @@ describe("resolveBlockTimestamps", () => {
 
     const budget = createBudget(100);
     const result = await resolveBlockTimestamps(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       [0x176f050, 0x176f051],
       budget,
     );
@@ -782,7 +783,7 @@ describe("resolveBlockTimestamps", () => {
 
     const budget = createBudget(100);
     const result = await resolveBlockTimestamps(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
+      url,
       [0x176f050, 0x176f051, 0x176f052],
       budget,
     );
@@ -798,7 +799,7 @@ describe("resolveBlockTimestamps", () => {
     const budget = createBudget(100);
     const local = new Map<string, number>([[`${0x176f050}:unverified`, 0x6651a2c0]]);
 
-    const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [0x176f050], budget, {
+    const result = await resolveBlockTimestamps(url, [0x176f050], budget, {
       localCache: local,
     });
 
@@ -807,17 +808,32 @@ describe("resolveBlockTimestamps", () => {
     expect(budget.count).toBe(0);
   });
 
-  it("reads from persistent timestamp cache before fetching", async () => {
+  it.each(["ok", "recover", "abort", "deadline", "exhaust"])("persistent timestamp cache %s holds progress on failed reads", async (mode) => {
+    vi.useFakeTimers();
+    let reads = 0;
+    const error = new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
     const db = makeDbForTimestampCache({
-      cachedRows: [{ block_number: 0x176f050, timestamp: 0x6651a2c0 }],
+      cachedRows: [{ block_number: 100, timestamp: 200 }],
+      onCacheReadBindCount: () => {
+        if (++reads === 1 && mode !== "ok" || mode === "exhaust") throw error;
+      },
     });
-
+    const controller = new AbortController();
     const budget = createBudget(100);
-    const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [0x176f050], budget, {
-      persistentCache: { db, chainId: "ethereum" },
+    const localCache = new Map<string, number>();
+    const pending = resolveBlockTimestamps("https://rpc.invalid", [100], budget, {
+      persistentCache: { db, chainId: "ethereum" }, localCache,
+      signal: controller.signal, deadlineMs: Date.now() + (mode === "deadline" ? 500 : 20_000),
     });
-
-    expect(result.get(0x176f050)).toBe(0x6651a2c0);
+    const success = mode === "ok" || mode === "recover";
+    const checked = success ? pending : expect(pending).rejects.toThrow(mode === "deadline" ? "deadline exceeded" : error.message);
+    await vi.advanceTimersByTimeAsync(mode === "deadline" ? 500 : 9_999);
+    expect(reads).toBe(1);
+    if (mode === "abort") controller.abort(error);
+    await vi.runAllTimersAsync();
+    if (success) expect([...await pending]).toEqual([[100, 200]]);
+    else { await checked; expect(localCache.size).toBe(0); }
+    expect(reads).toBe(mode === "recover" || mode === "exhaust" ? 2 : 1);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(budget.count).toBe(0);
   });
@@ -831,7 +847,7 @@ describe("resolveBlockTimestamps", () => {
         { block_number: 102, timestamp: 1700000102 },
       ],
     });
-    const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [100, 101], createBudget(0), {
+    const result = await resolveBlockTimestamps(url, [100, 101], createBudget(0), {
       persistentCache: { db, chainId: "ethereum" },
     });
     expect([...result]).toEqual([[100, 1700000100]]);
@@ -846,12 +862,12 @@ describe("resolveBlockTimestamps", () => {
     const db = makeDbForTimestampCache();
 
     const budget = createBudget(100);
-    const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [0x176f050], budget, {
+    const result = await resolveBlockTimestamps(url, [0x176f050], budget, {
       persistentCache: { db, chainId: "ethereum" },
     });
 
     expect(result.get(0x176f050)).toBe(0x6651a2c0);
-    const cached = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", [0x176f050], createBudget(0), {
+    const cached = await resolveBlockTimestamps(url, [0x176f050], createBudget(0), {
       persistentCache: { db, chainId: "ethereum" },
     });
     expect([...cached]).toEqual([[0x176f050, 0x6651a2c0]]);
@@ -910,7 +926,7 @@ describe("resolveBlockTimestamps", () => {
     );
 
     const budget = createBudget(1);
-    const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", blocks, budget);
+    const result = await resolveBlockTimestamps(url, blocks, budget);
 
     expect(result.size).toBe(50);
   });
@@ -928,7 +944,7 @@ describe("resolveBlockTimestamps", () => {
     });
 
     const budget = createBudget(100);
-    const result = await resolveBlockTimestamps("https://eth-mainnet.g.alchemy.com/v2/key", blocks, budget, {
+    const result = await resolveBlockTimestamps(url, blocks, budget, {
       persistentCache: { db, chainId: "ethereum" },
     });
 
