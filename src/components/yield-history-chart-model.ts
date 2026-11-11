@@ -426,7 +426,11 @@ export function useYieldHistoryChartModel({
       .sort((a, b) => a.date - b.date);
   }, [historyQuery.data]);
 
-  const overlayData = overlaySources.map((source) => source.series);
+  const overlayData = useMemo(
+    () => overlaySources.map((source) => source.series),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- overlay slots are fixed-width and each series is memoised per slot
+    [overlaySources.length, overlaySources[0]?.series, overlaySources[1]?.series, overlaySources[2]?.series, overlaySources[3]?.series, overlaySources[4]?.series, overlaySources[5]?.series, overlaySources[6]?.series],
+  );
 
   const mergedChartData = useMemo(
     () => mergeHistorySeries(chartData, overlayData, nowMs),
