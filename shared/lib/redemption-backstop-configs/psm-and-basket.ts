@@ -111,7 +111,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     outputAssets: ["usdc-circle", "usdt-tether", "pyusd-paypal", "usde-ethena"],
     costModel: {
       ...documentedVariableFee(
-        "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead. The current collateral-specific fee table (reviewed 2026-10-03) caps the redemption fee at 5 bps; gas and live redeem-rate constraints remain",
+        "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead. The current collateral-specific fee table (reviewed 2026-10-03) caps the redemption fee at 5 bps; gas and live redeem-rate constraints remain", "documented-variable",
       ),
       feeBpsMin: 0,
       feeBpsMax: 5,
@@ -211,7 +211,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     outputAssetType: "stable-basket",
     outputAssets: ["dllr-sovryn", "doc-money-on-chain", "usdt-tether", "usdc-circle", "dai-makerdao", "usdrif-rif"],
     costModel: documentedVariableFee(
-      "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
+      "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee", "documented-variable",
     ),
     v9RouteCostTerms: {
       feeBpsMax: 1_000,
@@ -360,7 +360,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     unresolvedOutputDisposition: "reviewed-external",
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: documentedVariableFee(
-      "Hydration's HSM charges a per-collateral `buy_back_fee` held on-chain as a Permill in the pallet's Collaterals storage; the published HOLLAR documentation does not publish that fee as a number",
+      "Hydration's HSM charges a per-collateral `buy_back_fee` held on-chain as a Permill in the pallet's Collaterals storage; the published HOLLAR documentation does not publish that fee as a number", "undisclosed-reviewed",
     ),
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [

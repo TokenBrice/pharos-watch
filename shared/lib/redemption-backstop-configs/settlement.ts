@@ -5,37 +5,8 @@ import type { RedemptionV9RouteReviewTerms } from "./schema";
 import type { RedemptionBackstopConfig } from "./schema";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "../../types/safety-score-v9-allocation";
 
-const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
-  "atomic",
-  "immediate",
-  "same-day",
-  "days",
-  "queued",
-];
-
-function isRedemptionSettlementAtLeastAsConservative(
-  candidate: RedemptionSettlementModel,
-  baseline: RedemptionSettlementModel,
-): boolean {
-  return (
-    REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(candidate) >=
-    REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(baseline)
-  );
-}
-
-export function isRedemptionSettlementFaster(
-  candidate: RedemptionSettlementModel,
-  baseline: RedemptionSettlementModel,
-): boolean {
-  return !isRedemptionSettlementAtLeastAsConservative(candidate, baseline);
-}
-
-export function resolveMoreConservativeRedemptionSettlement(
-  left: RedemptionSettlementModel,
-  right: RedemptionSettlementModel,
-): RedemptionSettlementModel {
-  return isRedemptionSettlementAtLeastAsConservative(right, left) ? right : left;
-}
+import { isRedemptionSettlementFaster } from "./settlement-order";
+export { isRedemptionSettlementFaster, resolveMoreConservativeRedemptionSettlement } from "./settlement-order";
 
 /** Completed settlement bounds require current settlement-scoped sources, never target/process gaps. */
 export function resolveReviewedRedemptionSettlementDelay(

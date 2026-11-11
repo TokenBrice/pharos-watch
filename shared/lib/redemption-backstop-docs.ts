@@ -1,6 +1,6 @@
 import { WORKER_TRACKED_META_BY_ID } from "./stablecoins/worker-runtime-registry";
 import type { RedemptionBackstopEntry, RedemptionDocSource, RedemptionDocsProvenance } from "../types/redemption";
-import type { RedemptionBackstopConfig } from "./redemption-backstops";
+import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/schema";
 
 type RedemptionDocs = NonNullable<RedemptionBackstopEntry["docs"]>;
 type RedemptionDocSources = NonNullable<RedemptionDocs["sources"]>;
