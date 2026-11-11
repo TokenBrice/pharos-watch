@@ -3,15 +3,16 @@ import {
   STATUS_CACHE_RATIO_THRESHOLDS,
 } from "@shared/lib/status-thresholds";
 import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
-import type { CacheStatus } from "@shared/types";
+import type { CacheStatus, PublicComponentState } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { getCacheFreshnessRatio } from "@shared/lib/cache-health";
+import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { projectPublicCacheStatus } from "@shared/lib/public-status-components";
 import { PrioritySplitTable } from "./priority-split-table";
 import { TableCell, TableRow } from "@/components/table";
 import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
 import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+import { getAgeBandState } from "@/lib/status/public-status";
 import { ComponentStatePill, defineStatusColumns } from "./page-primitives";
 
 interface CacheFreshnessTableProps {
@@ -31,8 +32,11 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return ratioB - ratioA;
   });
 
+  // The shared cache impact floor (ADR-32): age alone is not health, and a
+  // cached fallback or an explicitly degraded producer is not a healthy cache.
+  // Unknown quality (`degraded: null`) is a notice, as in the public projection.
   const isImpacted = (cache: CacheStatus, key: string) =>
-    projectPublicCacheStatus(key, cache).state !== "operational";
+    getCacheImpactStatus(cache, key) !== "healthy" || cache.degraded === true;
 
   const describeBand = (cache: CacheStatus, key: string) => {
     const thresholds = getCacheRatioThresholds(key);
@@ -43,7 +47,14 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         ? `Delayed >${thresholds.degraded.toFixed(2)}x · degraded >${thresholds.stale.toFixed(2)}x · outage >${outageRatio.toFixed(2)}x`
         : null;
     const ratio = getCacheFreshnessRatio(cache);
-    return { ...projectPublicCacheStatus(key, cache), ratio, thresholdLabel };
+    // Missing age grades as Degraded, matching the public component projection.
+    const ageState: PublicComponentState = ratio == null
+      ? "degraded"
+      : getAgeBandState(ratio, thresholds.degraded, thresholds.stale);
+    // An impacted cache lifts only an otherwise operational age band: a delayed
+    // cache stays Delayed here, where the public projection takes the worst finding.
+    const state: PublicComponentState = isImpacted(cache, key) && ageState === "operational" ? "degraded" : ageState;
+    return { state, findings: projectPublicCacheStatus(key, cache).findings, ratio, thresholdLabel };
   };
 
   const describeSource = (cache: CacheStatus): string => {
