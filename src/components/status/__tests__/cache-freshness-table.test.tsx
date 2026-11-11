@@ -7,6 +7,19 @@ import type { CacheStatus } from "@shared/types";
 
 
 describe("CacheFreshnessTable", () => {
+  it("keeps fresh data operational when input quality is unknown and shows the notice", async () => {
+    render(<CacheFreshnessTable caches={{ "fx-rates": {
+      ageSeconds: 60, maxAge: 1_800, healthy: true, degraded: null,
+    } }} />);
+
+    expect(screen.queryByTestId("cache-freshness-unhealthy-table")).toBeNull();
+    fireEvent.click(screen.getByText("1 healthy cache"));
+    const table = await screen.findByTestId("cache-freshness-healthy-table");
+    const row = within(table).getByText("fx-rates").closest("tr")!;
+    expect(within(row).getByText("Operational")).toBeTruthy();
+    expect(within(row).getByText(/input quality for the latest update could not be read, so it is unknown/i)).toBeTruthy();
+  });
+
   it("distinguishes producer cadence, endpoint target, and availability budget", async () => {
     const dexCache: CacheStatus = {
       ageSeconds: 7_200,

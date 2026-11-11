@@ -9,6 +9,7 @@ import {
   getReserveProducerPriority,
   RESERVE_SLOT_NEVER_DELIVERED_GRACE_SEC,
   reserveRecoveryAdmissionSql,
+  reserveRecoveryLeaseAdmission,
   resolveReserveProducerAdmission,
 } from "../reserve-producer-priority";
 import { runCronWithLease } from "../cron-lease-primitives";
@@ -230,7 +231,7 @@ describe("reserve recovery admission", () => {
       expect(await claimNextLiveReserveCheckpointRecovery(fixture.db, { owner: "new", leaseSec: 900 }))
         .toMatchObject({ disposition: "claimed" });
       const work = vi.fn(async () => "published");
-      expect(await runCronWithLease(fixture.db, "sync-live-reserves", work, { reserveRecoveryAdmission: true }))
+      expect(await runCronWithLease(fixture.db, "sync-live-reserves", work, { admissionPolicy: reserveRecoveryLeaseAdmission }))
         .toMatchObject({ status: "ok", result: "published" });
       expect(work).toHaveBeenCalledTimes(1);
     },
@@ -245,7 +246,7 @@ describe("reserve recovery admission", () => {
           VALUES (?, ?, 'running', 'late-slot', 1, ?, ?)`).run(scheduleKey, fixture.now, fixture.now, fixture.now);
       } });
       const work = vi.fn(async () => "published");
-      const result = await runCronWithLease(db, "sync-live-reserves", work, { reserveRecoveryAdmission: true });
+      const result = await runCronWithLease(db, "sync-live-reserves", work, { admissionPolicy: reserveRecoveryLeaseAdmission });
       expect(result.status).toBe(scheduleKey === "fourHourlyReserveSync" ? "skipped_neutral" : "ok");
       expect(work).toHaveBeenCalledTimes(scheduleKey === "fourHourlyReserveSync" ? 0 : 1);
     },
@@ -281,7 +282,7 @@ describe("reserve recovery admission", () => {
       if (sql.includes("INSERT INTO cron_leases")) fixture.sqlite.prepare("UPDATE cron_slot_executions SET state = 'running'").run();
     } });
     const work = vi.fn(async () => "published");
-    const result = await runCronWithLease(db, "sync-live-reserves", work, { reserveRecoveryAdmission: true });
+    const result = await runCronWithLease(db, "sync-live-reserves", work, { admissionPolicy: reserveRecoveryLeaseAdmission });
     expect(result).toMatchObject({ status: "skipped_neutral", producerPriority: { reason: "producer-slot-priority" } });
     expect(work).not.toHaveBeenCalled();
     expect(fixture.sqlite.prepare("SELECT lease_owner FROM cron_leases").all()).toEqual(conflict ? [{ lease_owner: "expired" }] : []);

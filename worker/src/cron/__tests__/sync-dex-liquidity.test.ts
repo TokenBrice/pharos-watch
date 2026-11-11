@@ -20,6 +20,7 @@ import * as v2Enrichment from "../dex-liquidity/constant-product-v2";
 import * as quoterEnrichment from "../dex-liquidity/enrich-quoter-v2-targets";
 import * as v4Enrichment from "../dex-liquidity/uniswap-v4-identity";
 import * as priceRefresh from "../dex-liquidity/price-refresh";
+import { buildStagedPoolWriteback } from "../dex-liquidity/staged-pool-writeback";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -155,9 +156,17 @@ vi.mock("../dex-liquidity/process-pools", async (importOriginal) => ({
   processPoolMetrics: vi.fn(() => phaseFixtures.current.poolMetrics),
 }));
 
-vi.mock("../dex-liquidity/staging-merge", () => ({
-  mergeStagedPools: vi.fn(async () => phaseFixtures.current.stagedPools),
-}));
+vi.mock("../dex-liquidity/staging-merge", async () => {
+  const { buildStagedPoolWriteback } = await import("../dex-liquidity/staged-pool-writeback");
+  const { captureObservedPoolPrices } = await import("../dex-liquidity/price-refresh");
+  return {
+    mergeStagedPools: vi.fn<typeof import("../dex-liquidity/staging-merge").mergeStagedPools>(async (_db, metrics, _known, now, _tracked, _references, _confirmation, _counters, _signal, priceObservations) => ({
+      ...phaseFixtures.current.stagedPools,
+      stagedWriteback: buildStagedPoolWriteback(metrics, now),
+      observedThisRun: captureObservedPoolPrices({ metrics, priceObservations }, now),
+    })),
+  };
+});
 
 vi.mock("../dex-liquidity/scoring", () => ({
   loadCurrentDexScoringGenerationId: vi.fn(async () => null),
@@ -1009,7 +1018,7 @@ describe("dex liquidity scoring stage cycle", () => {
       chainFailures: [],
     });
     vi.mocked(mergeStagedPools).mockImplementationOnce(
-      async (_db, _metrics, _known, _now, _trackedDeployments, _references, confirmation) => {
+      async (_db, _metrics, _known, _now, _trackedDeployments, _references, confirmation, _counters, _signal, priceObservations) => {
         expect(sourceData.pools).toEqual([]);
         expect(sourceData.dexProjects.size).toBe(0);
         expect(directResult.pools).toEqual([]);
@@ -1019,7 +1028,11 @@ describe("dex liquidity scoring stage cycle", () => {
         expect(uniV3ExecutionCandidates.size).toBe(1);
         expect(confirmation?.enforcedChainsByProtocol.get("fluid")).toBeUndefined();
         expect(confirmation?.confirmedExactKeysByProtocol.get("fluid")).toBeUndefined();
-        return phaseFixtures.stagedPools();
+        return {
+          ...phaseFixtures.stagedPools(),
+          stagedWriteback: buildStagedPoolWriteback(_metrics, _now),
+          observedThisRun: priceRefresh.captureObservedPoolPrices({ metrics: _metrics, priceObservations }, _now),
+        };
       },
     );
 

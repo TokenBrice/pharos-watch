@@ -555,9 +555,7 @@ export function selectExpiringScoreBearingPriorityPacket(
           ...packet.map(
             (row) =>
               row.observedAtSec +
-              getDexMeasuredExecutionFreshnessMaxSec(
-                row.target.adapterProfileId,
-              ),
+              getDexMeasuredExecutionFreshnessMaxSec(),
           ),
         );
         return {

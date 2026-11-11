@@ -278,6 +278,8 @@ export interface PriceSourceProvider {
    * or cache-only providers so slow RPC probes cannot starve cheap repairs.
    */
   livePriority?: number;
+  /** This provider can repair dependencies without live I/O after fallback. */
+  supportsLocalRepair?: boolean;
   /**
    * Optional per-candidate wall-clock cap inside the shared live override
    * budget. Use this for heavier audited routes that need more than the

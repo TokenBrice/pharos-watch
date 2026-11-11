@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
+import { API_HOSTNAME, OPS_API_HOSTNAME, SITE_API_HOSTNAME, API_ORIGIN, SITE_API_ORIGIN, SITE_ORIGIN, PAGES_APP_ORIGIN } from "@shared/lib/runtime-origins";
+import { parse as parseYaml } from "yaml";
 
-const EXPECTED_CUSTOM_DOMAINS = ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"] as const;
+const EXPECTED_CUSTOM_DOMAINS = [API_HOSTNAME, OPS_API_HOSTNAME, SITE_API_HOSTNAME].sort();
 const EXPECTED_RULE_GLOBS: Record<string, string> = {
   CompiledWasm: "**/*.wasm",
   Data: "**/*.ttf",
@@ -245,6 +247,38 @@ export function checkWorkerWranglerConfig(
   for (const { section, key } of PAIRED_RUNTIME_FIELDS) {
     const field = assignmentKey(section, key);
     if (publicValues.get(field) !== heavyValues.get(field)) issues.push(`Paired runtime configuration differs at ${field}.`);
+  }
+  // Workflow literals cannot import the runtime owner; guard their projections here.
+  const workflowOrigins = {
+    "pages-release.yml": {
+      DIGEST_API_URL: `${PAGES_APP_ORIGIN}/_site-data`,
+      DEPEG_EVENTS_API_URL: `${PAGES_APP_ORIGIN}/_site-data`,
+      PUBLIC_DATASETS_API_URL: `${PAGES_APP_ORIGIN}/_site-data`,
+    },
+    "production-canaries.yml": {
+      SMOKE_API_BASE: API_ORIGIN,
+      SMOKE_API_BASE_URL: API_ORIGIN,
+      SMOKE_PAGES_ASSET_URL: SITE_ORIGIN,
+      SMOKE_TRANSPORT_API_URL: `${API_ORIGIN.replace(/^https:/, "http:")}/api/health?smoke=transport`,
+      SMOKE_TRANSPORT_SITE_API_URL: `${SITE_API_ORIGIN.replace(/^https:/, "http:")}/api/stablecoins?limit=1&smoke=transport`,
+    },
+  };
+  for (const [file, expected] of Object.entries(workflowOrigins)) {
+    const workflow = parseYaml(readFileSync(resolve(process.cwd(), ".github/workflows", file), "utf8")) as {
+      jobs: Record<string, { steps?: Array<{ env?: Record<string, unknown>; run?: string }> }>;
+    };
+    const steps = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []);
+    const envs = steps.map((step) => step.env ?? {});
+    for (const [key, origin] of Object.entries(expected)) {
+      const literals = envs.filter((env) => env[key] != null && env[key] !== "").map((env) => env[key]);
+      if (literals.length === 0 || literals.some((value) => value !== origin)) {
+        issues.push(`${file} ${key} must equal ${origin} from runtime-origins.json.`);
+      }
+    }
+    if (file === "production-canaries.yml" && !steps.some((step) =>
+      step.run === `npm run test:smoke-pages-assets -- --mode live --url ${SITE_ORIGIN}`)) {
+      issues.push(`${file} live Pages asset command must use ${SITE_ORIGIN} from runtime-origins.json.`);
+    }
   }
   return { failed: issues.length > 0, issues };
 }

@@ -6,8 +6,8 @@ import { resolveLiveReserveSyncBudgetConfig } from "../cron/sync-live-reserves-c
 import { CRON_TIMEOUT_MS, SCHEDULED_SLOT_JOB_BUDGET_MS } from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { resolveScheduledSlotPolicy } from "./scheduled-slot-policy";
+import { CRON_LEASE_TTL_ALLOWANCE_SEC, type CronLeaseAdmissionPolicy } from "./cron-lease-primitives";
 
-export const CRON_LEASE_TTL_ALLOWANCE_SEC = 60;
 export const RESERVE_RECOVERY_CLAIM_SEC = 15 * 60;
 export const RESERVE_CONFIG_RECOVERY_LEASE_SEC = 180;
 export const RESERVE_PRODUCER_FINALIZATION_MARGIN_MS = 35_000;
@@ -64,6 +64,11 @@ export function reserveRecoveryAdmissionSql(clockSql = "unixepoch()") {
       ...(conflicts.length === 0 ? [] : [...conflicts, SCHEDULED_SLOT_JOB_BUDGET_MS / 1000])],
   };
 }
+
+export const reserveRecoveryLeaseAdmission: CronLeaseAdmissionPolicy<ReserveProducerPriority> = {
+  getPriority: getReserveProducerPriority,
+  sql: reserveRecoveryAdmissionSql,
+};
 
 /** Machine-readable note that recovery proceeds past a never-delivered current slot. */
 export type ReserveCurrentSlotAdmission = {

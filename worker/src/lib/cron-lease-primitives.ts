@@ -12,15 +12,16 @@ import {
 } from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import {
-  CRON_LEASE_TTL_ALLOWANCE_SEC,
-  getReserveProducerPriority,
-  reserveRecoveryAdmissionSql,
-  type ReserveProducerPriority,
-} from "./reserve-producer-priority";
 import { parseJsonObject } from "./json-parse";
 
-export interface CronLeaseOptions<T = unknown> {
+export const CRON_LEASE_TTL_ALLOWANCE_SEC = 60;
+
+export interface CronLeaseAdmissionPolicy<P extends { reason: string } = { reason: string }> {
+  getPriority: (db: D1Database) => Promise<P | null>;
+  sql: () => { sql: string; binds: unknown[] };
+}
+
+export interface CronLeaseOptions<T = unknown, P extends { reason: string } = { reason: string }> {
   ttlSec?: number;
   heartbeatSec?: number;
   owner?: string;
@@ -30,7 +31,7 @@ export interface CronLeaseOptions<T = unknown> {
   deadline?: SlotDeadline;
   onLeaseState?: (state: CronLeaseStateUpdate) => Promise<void> | void;
   leaseStateObserverMode?: "best-effort" | "required";
-  reserveRecoveryAdmission?: boolean;
+  admissionPolicy?: CronLeaseAdmissionPolicy<P>;
   /** Explicit result admission after cooperative abort settlement; omitted by default. */
   settledAbortResult?: (result: T | undefined) => T | undefined;
   acquisitionWait?: {
@@ -48,7 +49,7 @@ export interface CronLeaseStateUpdate {
   ttlSec: number;
 }
 
-export interface CronLeaseRunResult<T> {
+export interface CronLeaseRunResult<T, P extends { reason: string } = { reason: string }> {
   status: "ok" | "skipped_locked" | "skipped_neutral";
   leaseOwner: string;
   renewFailures: number;
@@ -61,7 +62,7 @@ export interface CronLeaseRunResult<T> {
   leaseLastRenewedAt: number | null;
   leaseLost?: boolean;
   result?: T;
-  producerPriority?: ReserveProducerPriority;
+  producerPriority?: P;
   blockedBy?: CronLeaseBlocker | null;
   leaseWaitDurationMs?: number;
   leaseAcquisitionAttempts?: number;
@@ -190,11 +191,11 @@ async function acquireCronLeaseState(
   job: string,
   owner: string,
   ttlSec: number,
-  reserveRecoveryAdmission = false,
+  admissionPolicy?: CronLeaseAdmissionPolicy,
 ): Promise<{ acquired: boolean; leaseUntil: number; heartbeatAt: number }> {
   const nowSec = Math.floor(Date.now() / 1000);
   const leaseUntil = nowSec + ttlSec;
-  const admission = reserveRecoveryAdmission ? reserveRecoveryAdmissionSql() : null;
+  const admission = admissionPolicy?.sql() ?? null;
   const result = await db
     .prepare(
       `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
@@ -259,12 +260,12 @@ export async function releaseCronLease(db: D1Database, job: string, owner: strin
  *
  * This helper does not yet wire cron status logging; integration is handled separately.
  */
-export async function runCronWithLease<T>(
+export async function runCronWithLease<T, P extends { reason: string } = { reason: string }>(
   db: D1Database,
   job: string,
   fn: (ctx: { leaseOwner: string; signal: AbortSignal }) => Promise<T>,
-  opts?: CronLeaseOptions<T>,
-): Promise<CronLeaseRunResult<T>> {
+  opts?: CronLeaseOptions<T, P>,
+): Promise<CronLeaseRunResult<T, P>> {
   const timeoutBudget = opts?.timeoutBudget ?? resolveCronTimeoutBudget(job, { deadline: opts?.deadline });
   const timeoutMs = timeoutBudget.effectiveTimeoutMs;
   const timeoutMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
@@ -310,7 +311,7 @@ export async function runCronWithLease<T>(
   let waitDeadlineMs = opts?.acquisitionWait?.deadlineMs ?? acquisitionStartedMs;
   let blockerDeadlineCaptured = false;
   let acquisition: { acquired: boolean; leaseUntil: number; heartbeatAt: number };
-  const skipped = (producerPriority?: ReserveProducerPriority): CronLeaseRunResult<T> => ({
+  const skipped = (producerPriority?: P): CronLeaseRunResult<T, P> => ({
     status: producerPriority ? "skipped_neutral" : "skipped_locked",
     leaseOwner: owner, renewFailures: 0, ...buildLeaseTelemetry(),
     ...(producerPriority ? { producerPriority } : {}),
@@ -332,19 +333,19 @@ export async function runCronWithLease<T>(
       assertSlotDeadline(opts?.deadline);
       return skipped();
     }
-    if (opts?.reserveRecoveryAdmission) {
-      const priority = await getReserveProducerPriority(db);
+    if (opts?.admissionPolicy) {
+      const priority = await opts.admissionPolicy.getPriority(db);
       assertSlotDeadline(opts?.deadline);
       if (priority) return skipped(priority);
     }
     attempts++;
     acquisition = await runWithOverloadRetry(
-      () => acquireCronLeaseState(db, job, owner, ttlSec, opts?.reserveRecoveryAdmission), 3, opts?.abortSignal,
+      () => acquireCronLeaseState(db, job, owner, ttlSec, opts?.admissionPolicy), 3, opts?.abortSignal,
     );
     assertSlotDeadline(opts?.deadline);
     if (acquisition.acquired) break;
-    if (opts?.reserveRecoveryAdmission) {
-      const priority = await getReserveProducerPriority(db);
+    if (opts?.admissionPolicy) {
+      const priority = await opts.admissionPolicy.getPriority(db);
       assertSlotDeadline(opts?.deadline);
       if (priority) return skipped(priority);
     }

@@ -135,7 +135,7 @@ function routeEvidence(
   const maxAgeSec = observation.executionCertificate?.sourceMaxAgeSec ?? (
     lane === "dex"
       ? observation.evidenceKind === "measured-executable-depth"
-        ? Math.max(context.extension.routeFreshness.dexMaxAgeSec, getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""))
+        ? Math.max(context.extension.routeFreshness.dexMaxAgeSec, getDexMeasuredExecutionFreshnessMaxSec())
         : context.extension.routeFreshness.dexMaxAgeSec
       : observation.evidenceKind === "documented-terms"
         ? context.extension.routeFreshness.documentedTermsMaxAgeSec

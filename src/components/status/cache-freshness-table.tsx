@@ -5,15 +5,14 @@ import {
 import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
+import { getCacheFreshnessRatio } from "@shared/lib/cache-health";
+import { projectPublicCacheStatus } from "@shared/lib/public-status-components";
 import { PrioritySplitTable } from "./priority-split-table";
 import { TableCell, TableRow } from "@/components/table";
 import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
 import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
 import { ComponentStatePill, defineStatusColumns } from "./page-primitives";
-import { getAgeBandState } from "@/lib/status/public-status";
-import type { PublicComponentState } from "@shared/types";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
@@ -32,11 +31,8 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return ratioB - ratioA;
   });
 
-  // The shared cache impact floor (ADR-32): age alone is not health, and
-  // explicit degraded/unreadable producer quality (yield sentinel, fx
-  // provenance) is not a healthy cache.
   const isImpacted = (cache: CacheStatus, key: string) =>
-    getCacheImpactStatus(cache, key) !== "healthy" || cache.degraded === true || cache.degraded === null;
+    projectPublicCacheStatus(key, cache).state !== "operational";
 
   const describeBand = (cache: CacheStatus, key: string) => {
     const thresholds = getCacheRatioThresholds(key);
@@ -47,14 +43,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         ? `Delayed >${thresholds.degraded.toFixed(2)}x · degraded >${thresholds.stale.toFixed(2)}x · outage >${outageRatio.toFixed(2)}x`
         : null;
     const ratio = getCacheFreshnessRatio(cache);
-    // Missing age grades as Degraded, matching the public component projection.
-    const ageState: PublicComponentState = ratio == null
-      ? "degraded"
-      : getAgeBandState(ratio, thresholds.degraded, thresholds.stale);
-    // The shared cache impact floor (ADR-32): a fresh lane serving a cached
-    // fallback or a quality-degraded producer is degraded, not operational.
-    const state: PublicComponentState = isImpacted(cache, key) && ageState === "operational" ? "degraded" : ageState;
-    return { state, ratio, thresholdLabel };
+    return { ...projectPublicCacheStatus(key, cache), ratio, thresholdLabel };
   };
 
   const describeSource = (cache: CacheStatus): string => {
@@ -79,6 +68,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
       cache.endpointMaxAge != null && cache.endpointMaxAge !== (cache.availabilityMaxAge ?? cache.maxAge);
     const noteParts = [
       cache.warning,
+      ...band.findings.filter((finding) => finding.state === "operational").map((finding) => finding.summary),
       cache.degraded === true ? cache.degradedReason : null,
       budgetsDiffer ? cache.endpointBudgetReason : null,
       budgetsDiffer ? cache.availabilityBudgetReason : null,

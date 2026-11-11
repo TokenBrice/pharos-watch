@@ -363,9 +363,9 @@ describe("DEX measured execution contract", () => {
     // Three hours, one publication cycle wider than the two-hour score-bearing
     // cadence, so a single missed even-hour `:16` publication cannot expire
     // every measured profile at once.
-    expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(10_800);
-    expect(getDexMeasuredExecutionFreshnessMaxSec(DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg)).toBe(10_800);
-    expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(10_800);
+    expect(getDexMeasuredExecutionFreshnessMaxSec()).toBe(10_800);
+    expect(getDexMeasuredExecutionFreshnessMaxSec()).toBe(10_800);
+    expect(getDexMeasuredExecutionFreshnessMaxSec()).toBe(10_800);
     expect(validateDexMeasuredExecutionProfile(validationInput(retainedProfile, nowSec, {
       quotedTarget: currentTarget, currentTarget,
     }))).not.toContain("stale-observation");

@@ -98,7 +98,7 @@ const capabilityRegistration = (
   registration: Omit<DexExecutionCapabilityRegistration, "freshnessMaxSec" | "failureDomainVersion" | "routeSemanticsVersion">,
 ): DexExecutionCapabilityRegistration => ({
   ...registration,
-  freshnessMaxSec: getDexMeasuredExecutionFreshnessMaxSec(registration.profileId),
+  freshnessMaxSec: getDexMeasuredExecutionFreshnessMaxSec(),
   failureDomainVersion: "dex-failure-domains-v1",
   routeSemanticsVersion: "v9-exit-route-semantics-v1",
 });

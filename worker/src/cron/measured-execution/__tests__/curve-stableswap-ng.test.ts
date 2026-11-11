@@ -346,9 +346,7 @@ describe("reviewed Curve StableSwap-NG policy", () => {
   });
 
   it("uses the shared three-hour Curve freshness boundary in producer eligibility", async () => {
-    const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
-      CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-    );
+    const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec();
     expect(freshnessMaxSec).toBe(10_800);
 
     const verify = createCurveStableSwapNgDeploymentVerifier({
@@ -620,7 +618,7 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
     expect(validateCurveStableSwapNgProfileProof(profile)).toEqual([]);
     expect(validateDexMeasuredExecutionProfile(validationInput)).toEqual([]);
     expect(validateDexMeasuredExecutionProfile({ ...validationInput,
-      nowSec: BLOCK_TIMESTAMP + getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId) + 1,
+      nowSec: BLOCK_TIMESTAMP + getDexMeasuredExecutionFreshnessMaxSec() + 1,
     })).toContain("stale-observation");
   });
 

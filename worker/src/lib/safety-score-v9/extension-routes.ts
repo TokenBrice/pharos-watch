@@ -617,7 +617,7 @@ function buildDexRouteReview(
     isDexMeasuredExecutionObservationHistoryMature(observationHistory) &&
     observationHistory != null &&
     fixedInput.clockSec - observationHistory.observationWindowEndedAt <=
-      getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? "") &&
+      getDexMeasuredExecutionFreshnessMaxSec() &&
     observationHistory.observationWindowEndedAt <= fixedInput.clockSec + 60;
   return {
     lane: "dex",

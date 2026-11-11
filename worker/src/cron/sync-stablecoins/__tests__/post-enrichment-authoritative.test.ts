@@ -75,7 +75,7 @@ describe("runSharedPriceCompletion authoritative repair", () => {
       [asset],
       undefined,
       undefined,
-      expect.objectContaining({ maxProviderLivePriority: 0, chainRpcs }),
+      expect.objectContaining({ localRepairOnly: true, chainRpcs }),
     );
     expect(asset).toMatchObject({
       price: 0.9998,
