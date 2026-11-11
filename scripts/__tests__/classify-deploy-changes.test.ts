@@ -272,7 +272,7 @@ describe("V9 resource selection", () => {
     "worker/src/lib/db-cache.ts",
     "worker/src/lib/report-cards-snapshot.ts",
     "worker/src/cron/compute-safety-score-v9.ts",
-    "worker/src/cron/reserve-adapters/token-supply.ts",
+    "worker/src/lib/native-token-supply.ts",
     "worker/src/test-helpers/v9-fixed-input.ts",
     "worker/migrations/0263_safety_score_capture_archive.sql",
     "shared/test-utils/sqlite-d1.ts",

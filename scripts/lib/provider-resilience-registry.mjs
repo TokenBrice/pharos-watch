@@ -368,6 +368,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     description: "Live reserve adapter HTTP helpers and per-coin breaker orchestration.",
     files: [
       "worker/src/cron/reserve-adapters/request.ts",
+      "worker/src/lib/json-request.ts",
       "worker/src/cron/sync-live-reserves-core.ts",
       "worker/src/cron/sync-live-reserves-finalize.ts",
     ],

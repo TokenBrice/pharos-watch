@@ -528,4 +528,3 @@ export async function fetchSolanaTokenSupply(
   if (lastError) throw lastError;
   return null;
 }
-

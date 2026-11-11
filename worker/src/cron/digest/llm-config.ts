@@ -82,4 +82,3 @@ export const WEEKLY_RECAP_LLM_CONFIG: DigestLlmConfig = {
   effort: "high",
   maxTokens: DIGEST_MAX_TOKENS,
 };
-

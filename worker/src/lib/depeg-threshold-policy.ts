@@ -16,4 +16,3 @@ export function getDepegThresholdBpsForPegCurrency(pegCurrency: string | undefin
 export function getDepegRecoveryThresholdBps(pegType: string | undefined): number {
   return Math.round(getDepegThresholdBps(pegType) * DEPEG_RECOVERY_THRESHOLD_RATIO);
 }
-

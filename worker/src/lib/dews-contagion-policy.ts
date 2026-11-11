@@ -8,4 +8,3 @@ export const CONTAGION_BUMP_WARNING = 1.08;
 
 /** Upper cap on the cross-asset contagion amplifier (applied after bump selection). */
 export const CONTAGION_AMPLIFIER_CAP = 1.2;
-

@@ -51,4 +51,3 @@ export function corroboratingProtocolGroupsOutvote(params: {
   return params.corroboratingCount >= POOL_CHALLENGE_CONFIRM_MIN &&
     params.corroboratingCount > params.divergingCount;
 }
-

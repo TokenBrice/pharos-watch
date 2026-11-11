@@ -14,4 +14,3 @@ export const MIN_LENDING_POOL_TVL_USD = 100_000;
 export const MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM = 25_000;
 /** Minimum lending-opportunity venue size relative to the tracked stablecoin's current supply. */
 export const MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY = 0.001;
-
