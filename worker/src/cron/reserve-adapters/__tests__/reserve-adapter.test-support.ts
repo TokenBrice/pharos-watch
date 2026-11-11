@@ -679,7 +679,8 @@ export async function runAdapter(
     ? (isInstalledNetwork(options.network) ? options.network : installAdapterNetwork(options.network))
     : installAdapterNetwork();
 
-  const signal = options.signal ?? new AbortController().signal;
+  const controller = new AbortController();
+  const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
   const ctx: AdapterContext = {
     chainRpcs: network.chainRpcs,
@@ -700,6 +701,10 @@ export async function runAdapter(
       );
     }
     throw error;
+  } finally {
+    // Promise.all can reject while sibling reads are still queued or retrying;
+    // without this they reach the next test's fetch mock, or the real network.
+    controller.abort();
   }
   if (!options.allowUnmatched && network.unmatched.length > 0) {
     throw new Error(
