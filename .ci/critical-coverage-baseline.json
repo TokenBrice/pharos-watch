@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-30",
+  "generatedAt": "2026-11-11",
   "files": {
     "functions/lib/pages-proxy-harness.ts": 100,
     "functions/lib/proxy-paths.ts": 100,
@@ -31,12 +31,16 @@
     "shared/lib/status-dataset-freshness.ts": 100,
     "shared/lib/yield-benchmark-freshness.ts": 100,
     "shared/lib/yield-scoring.ts": 100,
+    "worker/src/api/health.ts": 92.3,
     "worker/src/api/report-cards-v9-freshness.ts": 100,
     "worker/src/api/safety-score-history-v2.ts": 100,
     "worker/src/api/safety-score-history.ts": 100,
+    "worker/src/api/stablecoin-detail.ts": 95.1,
+    "worker/src/api/status.ts": 93,
     "worker/src/cron/compute-depeg-resolver-review.ts": 100,
     "worker/src/cron/compute-depeg-resolver.ts": 100,
     "worker/src/cron/confirm-pending-depegs.ts": 98.3,
+    "worker/src/cron/daily-digest.ts": 95.2,
     "worker/src/cron/depeg-detection/decision-engine.ts": 99,
     "worker/src/cron/depeg-detection/hydration.ts": 100,
     "worker/src/cron/depeg-detection/native-quote-policy.ts": 100,
@@ -55,6 +59,7 @@
     "worker/src/cron/depeg-resolver/training-history.ts": 100,
     "worker/src/cron/depeg-resolver/utils.ts": 93,
     "worker/src/cron/detect-depegs.ts": 100,
+    "worker/src/cron/dex-liquidity/orchestrator.ts": 93.7,
     "worker/src/cron/pending-depeg-confirmation-decision.ts": 100,
     "worker/src/cron/pending-depeg-confirmation-evidence.ts": 100,
     "worker/src/cron/pending-depeg-confirmation.ts": 100,
@@ -114,6 +119,7 @@
     "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts": 95.4,
     "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts": 100,
     "worker/src/cron/sync-stablecoins/zephyr-zsd.ts": 93.5,
+    "worker/src/handlers/scheduled.ts": 91.5,
     "worker/src/lib/address-price-providers/coingecko-onchain.ts": 96.1,
     "worker/src/lib/address-price-providers/index.ts": 92.9,
     "worker/src/lib/address-price-providers/reviewed-target-overrides.ts": 100,
@@ -121,6 +127,7 @@
     "worker/src/lib/api-freshness-age.ts": 91.7,
     "worker/src/lib/api-freshness-headers.ts": 100,
     "worker/src/lib/api-freshness.ts": 97.9,
+    "worker/src/lib/api-pagination.ts": 97.7,
     "worker/src/lib/auth.ts": 100,
     "worker/src/lib/authoritative-price-sources/aznd-curve-pool.ts": 98.4,
     "worker/src/lib/authoritative-price-sources/bd-aerodrome.ts": 98.1,
@@ -305,6 +312,7 @@
     "worker/src/lib/stablecoin-publication-coverage.ts": 98.4,
     "worker/src/lib/stablecoin-publication-health.ts": 100,
     "worker/src/lib/stablecoin-publication-reviews.ts": 100,
+    "worker/src/lib/stablecoins-cache.ts": 100,
     "worker/src/lib/stress-signals-current-rows.ts": 100
   }
 }

@@ -4,11 +4,12 @@ import { dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  CRITICAL_COVERAGE_LINE_FLOORS,
   CRITICAL_FILES,
   findCoverageFor,
   parseLcov,
 } from "../lib/critical-coverage.mjs";
-import { CRITICAL_COVERAGE_BRANCH_FLOORS, CRITICAL_COVERAGE_LINE_FLOORS, parseCoveragePercentage } from "../ci/check-critical-coverage.ts";
+import { CRITICAL_COVERAGE_BRANCH_FLOORS, parseCoveragePercentage } from "../ci/check-critical-coverage.ts";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
   REBASELINE_DIRECTORY,
