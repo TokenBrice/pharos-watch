@@ -25,6 +25,10 @@ export const ISOLATED_NODE_TESTS = [
   // The route's cached import must not retain this suite's evidence-free
   // recomputer mock when canonical snapshot integration tests run afterward.
   "functions/__tests__/selector-snapshot.test.ts",
+  // Its vi.mock("playwright") only stops the real Firefox launch when this file
+  // loads the map builder first; under isolate:false a sibling map suite that
+  // already imported the builder leaves the real browser in place.
+  "scripts/__tests__/build-safety-score-map-key.test.ts",
   "scripts/__tests__/remote-d1.test.ts",
   // Its vi.mock of collectChangedFiles only applies when this file loads the
   // runner first; under isolate:false a sibling suite that already imported
@@ -34,6 +38,9 @@ export const ISOLATED_NODE_TESTS = [
   // only happens when this file loads the router first in its own module cache.
   "scripts/__tests__/pharos-change-contract.test.ts",
   "scripts/__tests__/serve-static-export.test.ts",
+  // Its vi.mock("node:fs") rename failure must reach the catalog helper's fs
+  // binding, which only happens when this file loads the helper first.
+  "scripts/__tests__/stablecoin-catalog-sources.test.ts",
   "shared/lib/__tests__/psi-eligible.test.ts",
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",
   // vi.mock("vitest") only intercepts mock-d1's onTestFinished import when
