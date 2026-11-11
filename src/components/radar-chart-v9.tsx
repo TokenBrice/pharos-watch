@@ -6,6 +6,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { SafetyScorePublicationIdentity } from "@shared/types";
 import type { ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { median } from "@shared/lib/stats";
+import { ECONOMIC_CONTROL_SHORT_LABEL } from "@shared/lib/classification";
 import { formatPricedUnknown } from "@/lib/safety-score-reason-labels";
 import {
   hasCompleteV9RadarPillars,
@@ -23,7 +24,7 @@ type V9Pillar = (typeof V9_PILLARS)[number];
 const V9_PILLAR_LABELS: Record<V9Pillar, string> = {
   backing: "Backing",
   exit: "Exit",
-  control: "Control",
+  control: ECONOMIC_CONTROL_SHORT_LABEL,
 };
 
 const COMPACT_RADAR_BREAKPOINT = 280;

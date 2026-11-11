@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { waitFor } from "@testing-library/react";
+import { ALL_COLUMNS } from "@/lib/column-visibility";
 
 import {
   DEFAULT_VISIBLE_COLUMNS,
@@ -30,6 +31,15 @@ function renderToStringWithoutWindow(element: React.ReactElement): string {
 }
 
 describe("normalizeVisibleColumns", () => {
+  it("uses the table's Blacklist and Mint Score labels in the column picker", () => {
+    expect(ALL_COLUMNS.filter((column) => ["blacklistable", "mintAuthority", "mcap"].includes(column.id)))
+      .toEqual([
+        { id: "mcap", label: "Market cap" },
+        { id: "blacklistable", label: "Blacklist", hiddenMobile: true },
+        { id: "mintAuthority", label: "Mint Score", hiddenMobile: true },
+      ]);
+  });
+
   it("keeps locked columns, drops invalid values, and de-duplicates by canonical order", () => {
     expect(
       normalizeVisibleColumns(["flags", "bogus", "mcap", "rank", "flags"], DEFAULT_VISIBLE_COLUMNS),

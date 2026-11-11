@@ -100,8 +100,11 @@ import {
   buildComplianceStatusDistribution,
   buildComplianceSummary,
   buildComplianceViewModel,
+  GENIUS_STATUS_DISPLAY_ORDER,
+  GENIUS_STATUS_FILTER_OPTIONS,
 } from "@/lib/compliance-model";
 import type { ComplianceFilters, ComplianceRow } from "@/lib/compliance-model";
+import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES } from "@shared/lib/genius";
 
 const NO_FILTERS: ComplianceFilters = {
   regime: "all",
@@ -125,6 +128,17 @@ beforeEach(() => {
 });
 
 describe("Compliance model", () => {
+  it("keeps GENIUS filters in distribution order with shared badge labels", () => {
+    expect(GENIUS_STATUS_FILTER_OPTIONS[0]).toEqual({ value: "all", label: "All statuses" });
+    const statuses = GENIUS_STATUS_FILTER_OPTIONS.slice(1);
+    expect(statuses.map((option) => option.value)).toEqual(GENIUS_STATUS_DISPLAY_ORDER);
+    expect(statuses.slice(-2).map((option) => option.value)).toEqual(["unknown", "not-applicable"]);
+    for (const status of GENIUS_STATUS_DISPLAY_ORDER) {
+      expect(statuses.find((option) => option.value === status)?.label).toBe(GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status].label);
+    }
+    expect(statuses.find((option) => option.value === "no-public-authorization-found")?.label).toBe("No Public Auth Found");
+  });
+
   it.each([
     ["pre-launch", false, false, true],
     ["pre-launch", true, false, true],

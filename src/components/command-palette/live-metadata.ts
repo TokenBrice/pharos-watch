@@ -1,6 +1,6 @@
-import { deriveIndicativeDeviationBps } from "@/lib/stablecoin-detail-derive";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { DEPEG_RECOVERY_THRESHOLD_RATIO, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { formatCompactUsd } from "@shared/lib/format";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -86,11 +86,15 @@ export function buildStablecoinLiveMetadata(
           pegRateContributorCount: counts[peg] ?? null,
         });
       const reference = referenceIsAuthoritative ? getPegReference(peg, rates, meta?.commodityOunces) : null;
-      const deviationBps = reference != null ? deriveIndicativeDeviationBps(asset.price, reference) : null;
-      if (deviationBps != null) {
-        const bps = Math.abs(deviationBps);
+      const signal = reference != null ? deriveDepegSignal(asset.price, reference) : null;
+      if (signal != null) {
         const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
-        health = { kind: "peg", status: bps >= threshold ? "alert" : bps >= threshold / 2 ? "watch" : "calm" };
+        health = {
+          kind: "peg",
+          status: signalCrossesThreshold(signal, threshold)
+            ? "alert"
+            : signalCrossesThreshold(signal, threshold * DEPEG_RECOVERY_THRESHOLD_RATIO) ? "watch" : "calm",
+        };
       }
     }
     if (marketCapUsd !== null || health) {

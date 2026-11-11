@@ -1,6 +1,9 @@
 // Nightly tier: PR coverage retained by scripts/maintenance/run-pr-static-checks.ts
 // (`check:generated-artifacts --only=compact-logos` runs the registered `--check` on affected PRs).
 import sharp from "sharp";
+import path from "node:path";
+import { runInNewContext } from "node:vm";
+import ts from "typescript";
 import {
   existsSync,
   mkdirSync,
@@ -12,7 +15,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   checkCompactLogos,
   generateCompactLogos,
@@ -213,4 +216,42 @@ describe("checkCompactLogos", () => {
     expect(result.ok).toBe(false);
     expect(result.problems.map((problem) => problem.kind)).toEqual(["collision", "collision"]);
   });
+});
+
+it("refreshes logos only from an existing valid seed or an absent file", async () => {
+  const source = readFileSync(new URL("../maintenance/fetch-logos.ts", import.meta.url), "utf8")
+    .replace("import.meta.url", JSON.stringify("file:///fixture/scripts/maintenance/fetch-logos.ts"));
+  const script = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const missing = Object.assign(new Error("missing"), { code: "ENOENT" });
+  const unreadable = Object.assign(new Error("unreadable"), { code: "EACCES" });
+  for (const seed of [JSON.stringify({ manual: "/logos/manual.svg" }), missing, "{broken", unreadable]) {
+    const write = vi.fn();
+    const io = {
+      mkdirSync: vi.fn(), writeFileSync: write,
+      readFileSync: () => { if (seed instanceof Error) throw seed; return seed; },
+    };
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ peggedAssets: [{ gecko_id: "fixture-gecko" }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => [{ id: "fixture-gecko", image: "https://example.test/large/coin.png" }] });
+    const result = runInNewContext(script, {
+      exports: {}, console: { log: () => {}, error: () => {} }, fetch: request,
+      require: (name: string) => {
+        if (name === "node:fs") return io;
+        if (name === "node:path") return path;
+        if (name === "node:url") return { fileURLToPath: () => "/fixture/scripts/maintenance/fetch-logos.ts" };
+        if (name === "@shared/data/stablecoins/coins.generated.json") return [{ id: "fixture", geckoId: "fixture-gecko" }];
+        throw new Error(`Unexpected import ${name}`);
+      },
+    }) as Promise<void>;
+    if (seed === unreadable || seed === "{broken") {
+      await expect(result).rejects.toThrow(seed === unreadable ? "unreadable" : /JSON/);
+      expect(write).not.toHaveBeenCalled();
+    } else {
+      await result;
+      const expected = { fixture: "https://example.test/small/coin.png", ...(seed === missing ? {} : { manual: "/logos/manual.svg" }) };
+      expect(write).toHaveBeenCalledWith("/fixture/data/logos.json", JSON.stringify(expected, null, 2));
+    }
+  }
 });

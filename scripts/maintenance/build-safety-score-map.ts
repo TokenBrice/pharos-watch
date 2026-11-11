@@ -2253,10 +2253,10 @@ function buildSvg({
   }
   parts.push(`</g>`);
   parts.push(`<g data-masthead-lockup="true">`);
-  parts.push(svgText({ x: MARGIN_X - 2, y: 82, size: 44, text: "The Stablecoin", font: "serif", weight: 500, spacing: "-0.8" }));
+  parts.push(svgText({ x: MARGIN_X, y: 82, size: 44, text: "The Stablecoin", font: "serif", weight: 500, spacing: "-0.8" }));
   parts.push(`</g>`);
   parts.push(`<g data-masthead-tail="true">`);
-  parts.push(svgText({ x: MARGIN_X - 2, y: 126, size: 44, text: "Safety Map", font: "serif", weight: 500, spacing: "-0.8" }));
+  parts.push(svgText({ x: MARGIN_X, y: 126, size: 44, text: "Safety Map", font: "serif", weight: 500, spacing: "-0.8" }));
   parts.push(svgText({ x: MARGIN_X, y: 154, size: 15, text: "Safer toward the centre", font: "sans", weight: 500, fill: INK_DECK }));
   parts.push(`</g>`);
 

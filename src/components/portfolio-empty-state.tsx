@@ -3,6 +3,7 @@
 import { Lock, ShieldCheck } from "lucide-react";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import { buildPresetPreview, PresetCard } from "@/components/preset-card";
+import { ECONOMIC_CONTROL_LABEL } from "@shared/lib/classification";
 
 export interface PortfolioPreset {
   title: string;
@@ -45,7 +46,7 @@ function PortfolioPreview() {
             {[
               ["Backing", 86],
               ["Exit", 79],
-              ["Economic control", 74],
+              [ECONOMIC_CONTROL_LABEL, 74],
             ].map(([label, value]) => (
               <div key={label} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
@@ -73,7 +74,7 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
       <EmptyStateSurface
         eyebrow="Personal Risk View"
         title="Model your stablecoin stack before you commit real size."
-        description="Add holdings in USD terms, then Pharos rolls them into one weighted safety aggregate with Backing, Exit and Economic control subtotals, next to each holding's own grade."
+        description={`Add holdings in USD terms, then Pharos rolls them into one weighted safety aggregate with Backing, Exit and ${ECONOMIC_CONTROL_LABEL} subtotals, next to each holding's own grade.`}
         steps={[
           {
             title: "Add holdings or load a starter mix",

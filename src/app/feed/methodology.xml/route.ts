@@ -37,7 +37,7 @@ export const GET = createRssRoute({
   link: `${SITE_URL}/methodology/`,
   feedUrl: `${SITE_URL}${FEED_PATH}`,
   description:
-    "Versioned methodology updates from pharos.watch — Safety Score, DEWS, DDR, PSI, Liquidity, Chain Health, Blacklist Tracker, Mint/Burn Flow, Pricing Pipeline, and Yield Intelligence.",
+    `Versioned methodology updates from pharos.watch — ${METHODOLOGY_CHANGELOG_REGISTRY.map(({ feedLabel }) => feedLabel).join(", ")}.`,
   lastBuildDate: () => toRfc822(new Date()),
   items: methodologyItems,
 });

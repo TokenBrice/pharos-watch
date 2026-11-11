@@ -45,6 +45,24 @@ describe("command palette live supply metadata", () => {
     expect(buildStablecoinLiveMetadata(data, query, nowMs + 60_001).get("usdc-circle")?.health).toBeUndefined();
   });
 
+  it("grades raw deviations before rounding at the watch and off-peg boundaries", () => {
+    const cases = [
+      [0.99504, "calm"],
+      [0.99496, "watch"],
+      [0.99004, "watch"],
+      [0.98996, "alert"],
+      [1.00496, "calm"],
+      [1.00504, "watch"],
+      [1.00996, "watch"],
+      [1.01004, "alert"],
+    ] as const;
+    for (const [price, status] of cases) {
+      const data = { peggedAssets: [makeStablecoin({ id: "usdc-circle", price })] };
+      expect(buildStablecoinLiveMetadata(data, query, nowMs).get("usdc-circle")?.health, String(price))
+        .toEqual({ kind: "peg", status });
+    }
+  });
+
   it("withholds peg health when the only reference is a single coin's own price", () => {
     const data = { peggedAssets: [makeStablecoin({ id: "kgst-kyrgyz-som", pegType: "peggedKGS", price: 0.010856 })] };
     expect(buildStablecoinLiveMetadata(data, query, nowMs).get("kgst-kyrgyz-som")?.health).toBeUndefined();

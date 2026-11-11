@@ -450,4 +450,9 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByRole("alert").textContent).toContain("V8 ratings are not used as a fallback");
     vi.useRealTimers();
   });
+  it("uses Control for the compact pillar sort label", async () => {
+    await render(<ReportCardsV9Client />);
+    expect(screen.getAllByRole("button", { name: "Control" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Econ. Control" })).toBeNull();
+  });
 });

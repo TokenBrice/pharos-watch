@@ -52,6 +52,8 @@ export function getDexDurabilityStyle(score: number) {
 }
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
+export const ECONOMIC_CONTROL_LABEL = "Economic Control";
+export const ECONOMIC_CONTROL_SHORT_LABEL = "Control";
 export const FLOW_COVERAGE_LABELS = { tracked: "Tracked", lagging: "Lagging" } as const;
 /** Reserve-access diagnostics never describe local holder-transfer restrictions. */
 export const ACCESS_LOOKTHROUGH_COVERAGE_LABELS: Record<string, string> = {

@@ -21,6 +21,7 @@ import { getListedDefinitions } from "../../src/lib/definitions";
 import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/lib/methodology-content";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -356,6 +357,12 @@ describe("fixed Markdown renderer examples", () => {
 });
 
 describe("public llms index", () => {
+  it("derives the methodology feed dataset count from its registry", () => {
+    const llms = readFileSync(new URL("../../public/llms.txt", import.meta.url), "utf8");
+    expect(llms).toContain(`Unified methodology changelog across ${METHODOLOGY_CHANGELOG_REGISTRY.length} datasets.`);
+  });
+
+
   it("lists the compliance page and both snapshot datasets with their scope", () => {
     const llms = readFileSync(new URL("../../public/llms.txt", import.meta.url), "utf8");
     expect(llms).toContain(

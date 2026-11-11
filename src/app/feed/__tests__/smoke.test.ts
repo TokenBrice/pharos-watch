@@ -133,6 +133,14 @@ describe("feed routes smoke", () => {
     }
   });
 
+  it("describes every registered methodology dataset in registry order", async () => {
+    const loaded = await loadRoutes();
+    const xml = await (await loaded.methodology.GET()).text();
+    expect(xml).toContain(
+      `Versioned methodology updates from pharos.watch — ${METHODOLOGY_CHANGELOG_REGISTRY.map(({ feedLabel }) => feedLabel).join(", ")}.`,
+    );
+  });
+
   it("keeps live methodology dates descending and bounded by the build clock", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const now = Math.max(...METHODOLOGY_CHANGELOG_REGISTRY.flatMap(({ entries }) =>

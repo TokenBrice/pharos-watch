@@ -2,6 +2,7 @@ import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES } from "@shared/lib/genius";
 import {
   GENIUS_AUTHORIZATION_STATUS_VALUES,
   MICA_STATUS_VALUES,
@@ -162,13 +163,10 @@ export const MICA_STATUS_FILTER_OPTIONS: { value: MicaStatus | "all"; label: str
 
 export const GENIUS_STATUS_FILTER_OPTIONS: { value: GeniusAuthorizationStatus | "all"; label: string }[] = [
   { value: "all", label: "All statuses" },
-  { value: "ppsi-approved", label: "PPSI Approved" },
-  { value: "state-qualified", label: "State Qualified" },
-  { value: "official-application-pending", label: "Official Pending" },
-  { value: "issuer-announced-intent", label: "Issuer Intent" },
-  { value: "no-public-authorization-found", label: "No Public Auth" },
-  { value: "not-applicable", label: "Not Applicable" },
-  { value: "unknown", label: "Unknown" },
+  ...GENIUS_STATUS_DISPLAY_ORDER.map((value) => ({
+    value,
+    label: GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[value].label,
+  })),
 ];
 
 export const MICA_TOKEN_TYPE_FILTER_OPTIONS: { value: MicaTokenType | "all"; label: string }[] = [
