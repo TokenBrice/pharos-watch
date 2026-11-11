@@ -271,7 +271,9 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   const dataConditions = [...config.conditions];
   const dataFilterBindings = [...config.filterBindings];
   if (config.cursor && config.cursorValues) {
-    const cursorClause = buildCursorWhereClause(config.cursor, config.cursorValues);
+    const cursorClause = config.tableName === "depeg_events_public"
+      ? { condition: "(effective_started_at, id) < (?, ?)", bindings: config.cursorValues }
+      : buildCursorWhereClause(config.cursor, config.cursorValues);
     dataConditions.push(cursorClause.condition);
     dataFilterBindings.push(...cursorClause.bindings);
   }

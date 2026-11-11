@@ -59,7 +59,7 @@ import {
 } from "../mint-burn-pipeline/sync-state";
 import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
 import { reconcileAtomicRoundtripGroups } from "../mint-burn-pipeline/roundtrip-detection";
-import type { MintBurnRow } from "../mint-burn-pipeline/types";
+import type { MintBurnAffectedHour, MintBurnRow } from "../mint-burn-pipeline/types";
 import { MINT_BURN_CONFIGS, type MintBurnEventDef } from "../mint-burn-contracts";
 import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import type { AlchemyLogEntry } from "../alchemy-logs";
@@ -100,7 +100,7 @@ describe("mint-burn shared pipeline modules", () => {
     await insertMintBurnRows(db, [first]);
     sqlite.exec("DELETE FROM mint_burn_dirty_hours");
 
-    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+    const affectedHours = new Map<string, MintBurnAffectedHour>();
     const result = await persistMintBurnRows(
       db,
       [
@@ -115,7 +115,7 @@ describe("mint-burn shared pipeline modules", () => {
     expect(sqlite.prepare("SELECT hour_ts FROM mint_burn_dirty_hours").all()).toEqual([{ hour_ts: 7200 }]);
     for (const failure of ["enqueue", "insert"]) {
       const failingDb = createSqliteD1(sqlite, { onRun(sql) {
-        if ((failure === "enqueue" && sql.includes("INSERT OR REPLACE INTO mint_burn_dirty_hours"))
+        if ((failure === "enqueue" && sql.includes("INTO mint_burn_dirty_hours"))
           || (failure === "insert" && sql.includes("INSERT OR IGNORE INTO mint_burn_events"))) throw new Error("insert interrupted");
       } });
       await expect(insertMintBurnRows(failingDb, [makeRow({ id: "failed-insert", timestamp: 10_801 })]))
@@ -135,6 +135,7 @@ describe("mint-burn shared pipeline modules", () => {
     );
 
     expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([100, 12]);
+    expect(sqlite.prepare("SELECT rowid FROM mint_burn_dirty_hours").all()).toEqual([{ rowid: 1 }]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_events").get()).toEqual({ count: 56 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get()).toEqual({ count: 1 });
   });
@@ -414,7 +415,6 @@ describe("mint-burn shared pipeline modules", () => {
       VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 100, '1000000000000', 100, ?, '0xroundtrip', 1, ?, '', 'standard')`);
     insert.run("mint", "mint", null, timestamp);
     insert.run("burn", "burn", "effective_burn", timestamp);
-    // The post-run sweep tags the cross-config pair while both sides are stored.
     await sweepRecentRoundtrips(db, timestamp + 1_000);
     expect(sqlite.prepare("SELECT direction, flow_type FROM mint_burn_events ORDER BY direction").all()).toEqual([
       { direction: "burn", flow_type: "atomic_roundtrip" },
@@ -425,7 +425,7 @@ describe("mint-burn shared pipeline modules", () => {
 
     // A coverage-repair / held-cursor replay re-observes one side only; the
     // in-memory detector cannot see the stored peer and reports it standard.
-    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+    const affectedHours = new Map<string, MintBurnAffectedHour>();
     await persistMintBurnRows(db, [
       makeRow({ id: "burn", direction: "burn", burn_type: "effective_burn", tx_hash: "0xroundtrip", timestamp }),
     ], affectedHours);
@@ -507,12 +507,10 @@ describe("mint-burn shared pipeline modules", () => {
 
   it("records unpriced counted events beside known subtotals instead of zero dollars", async () => {
     const { db, sqlite } = fixtures.open();
-    // Mixed hour: one unpriced standard mint and one priced $1M effective burn.
     const unpricedMint = { ...makeRow({ id: "mint-unpriced", direction: "mint", timestamp: 3_605, tx_hash: "0xmint" }), amount_usd: null };
     const pricedBurn = makeRow({
       id: "burn-priced", direction: "burn", burn_type: "effective_burn", amount_usd: 1_000_000, timestamp: 3_610, tx_hash: "0xburn",
     });
-    // All-unpriced hour.
     const unpricedBurn = {
       ...makeRow({ id: "burn-unpriced", direction: "burn", burn_type: "effective_burn", timestamp: 7_210, tx_hash: "0xburn-2" }),
       amount_usd: null,
@@ -537,7 +535,6 @@ describe("mint-burn shared pipeline modules", () => {
       },
     ]);
 
-    // Heal: the mint gains its valuation; one recalc rewrites count and subtotals together.
     sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 3000000 WHERE id = 'mint-unpriced'").run();
     await recalcAffectedHours(db, collectAffectedHours([unpricedMint]));
     expect(hourly()[0]).toEqual({
@@ -575,14 +572,12 @@ describe("mint-burn shared pipeline modules", () => {
     const reviewed = makeRow({ ...base, id: reviewedId, amount: 128_895_244.1, amount_usd: 128_889_257.84 });
     const drifted = makeRow({ ...base, id: "arbitrum-0xother-1", amount: 50, amount_usd: 50 });
 
-    // First ingestion predates the review: both burns count.
     await insertMintBurnRows(db, [reviewed, drifted]);
     await recalcAffectedHours(db, collectAffectedHours([reviewed, drifted]));
     expect(sqlite.prepare("SELECT burn_count, net_flow_usd FROM mint_burn_hourly").get())
       .toEqual({ burn_count: 2, net_flow_usd: -128_889_307.84 });
 
-    // Replay re-parses the same logs; the reviewed event leaves counted flow.
-    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+    const affectedHours = new Map<string, MintBurnAffectedHour>();
     const result = await persistMintBurnRows(db, [{ ...reviewed }, { ...drifted }], affectedHours);
     await recalcAffectedHours(db, affectedHours);
     expect(result.reviewedProtocolInternal).toBe(1);
@@ -593,7 +588,6 @@ describe("mint-burn shared pipeline modules", () => {
     expect(sqlite.prepare("SELECT burn_count, net_flow_usd FROM mint_burn_hourly").get())
       .toEqual({ burn_count: 1, net_flow_usd: -50 });
 
-    // A reviewed id whose amount no longer matches its review stays economic.
     const mismatched = { ...reviewed, amount: 128_000_000 };
     await persistMintBurnRows(db, [mismatched]);
     expect(sqlite.prepare("SELECT flow_type FROM mint_burn_events WHERE id = ?").get(reviewedId))
@@ -659,14 +653,16 @@ describe("mint-burn shared pipeline modules", () => {
         const before = sqlite.prepare("SELECT flow_type, burn_type FROM mint_burn_events WHERE id = ?").get(original.id);
         for (const failure of ["enqueue", "update"]) {
           const failingDb = createSqliteD1(sqlite, { onRun(sql) {
-            if ((failure === "enqueue" && sql.includes("INSERT OR REPLACE INTO mint_burn_dirty_hours"))
+            if ((failure === "enqueue" && sql.includes("INTO mint_burn_dirty_hours"))
               || (failure === "update" && sql.includes("UPDATE mint_burn_events"))) throw new Error("classification interrupted");
           } });
           await expect(updateEventClassifications(failingDb, [revision])).rejects.toThrow("classification interrupted");
           expect(sqlite.prepare("SELECT flow_type, burn_type FROM mint_burn_events WHERE id = ?").get(original.id)).toEqual(before);
           expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
         }
+        sqlite.exec("INSERT INTO mint_burn_dirty_hours (rowid, stablecoin_id, chain_id, hour_ts) VALUES (91, 'usdt-tether', 'ethereum', 3600)");
         expect(await updateEventClassifications(db, [revision])).toMatchObject({ rowsUpdated: 1 });
+        expect(sqlite.prepare("SELECT rowid FROM mint_burn_dirty_hours").all()).toEqual([{ rowid: 91 }]);
         expect(sqlite.prepare("SELECT hour_ts FROM mint_burn_dirty_hours").all()).toEqual([{ hour_ts: 3600 }]);
         const failingRebuild = createSqliteD1(sqlite, { onRun(sql) {
           if (sql.includes("DELETE FROM mint_burn_dirty_hours")) throw new Error("rebuild interrupted");
@@ -692,7 +688,6 @@ describe("mint-burn shared pipeline modules", () => {
       .toEqual({ flowTypeChanges: 0, burnTypeChanges: 1, rowsUpdated: 0 });
     expect(stored()).toEqual({ burn_type: "effective_burn", burn_review_reason: null, flow_type: "standard" });
 
-    // A genuine revision lands and is counted.
     expect(await updateEventClassifications(db, [
       { ...burn, burn_type: "bridge_burn", burn_review_reason: "bridge-context" },
     ])).toMatchObject({ rowsUpdated: 1 });

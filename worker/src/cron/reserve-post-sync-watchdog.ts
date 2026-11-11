@@ -442,7 +442,7 @@ export async function runReservePostSyncWatchdog(
 
   try {
     throwIfAborted(signal);
-    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000), resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000), resolveScheduledSlotPolicy("fourHourlyReserveSync"), undefined, { adapterReliability: false });
     throwIfAborted(signal);
     const persistentlyStale = overview.persistentlyStaleIndependentCoins;
     persistentlyStaleIndependentCoinCount = persistentlyStale.length;

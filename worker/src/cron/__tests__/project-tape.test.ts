@@ -28,13 +28,6 @@ const SEC = 1_700_000_000;
 beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(SEC * 1000));
 const RECONCILIATION_SINCE = SEC - SOURCE_RECONCILIATION_LOOKBACK_SEC;
 
-/**
- * Pull only the inserts emitted for one event-type slug. The static
- * first-observation projectors (methodology / cemetery / lifecycle) run on
- * every cron tick and will emit on an empty in-memory mock; filtering by type
- * keeps each test focused on the projector under exam.
- */
-// Match substrings deliberately tolerate the SQL's line-wrapped formatting.
 const MATCH_DEPEG_OPEN_PEAK = "ended_at IS NULL";
 const MATCH_DEPEG_OPENED = "started_at > ?";
 const MATCH_DEPEG_RESOLVED = "AND source = 'live' AND ended_at IS NOT NULL";
@@ -44,8 +37,8 @@ const MATCH_SAFETY = "FROM safety_grade_history";
 function baseTables(): MockTableConfig[] {
   return [
     { match: "FROM cache WHERE key", rows: [] },
-    { match: "FROM tape_events INDEXED BY idx_tape_source_key", rows: [] },
-    { match: "FROM tape_events INDEXED BY idx_tape_type_ts", rows: [] },
+    { match: "INDEXED BY idx_tape_source_key", rows: [] },
+    { match: "INDEXED BY idx_tape_type_ts", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
@@ -63,8 +56,6 @@ function baseTables(): MockTableConfig[] {
 }
 
 function dbWithOverride(override: MockTableConfig): MockD1Database {
-  // Place override BEFORE the empty defaults so substring-matching picks it
-  // up first.
   return mockTapeD1([
     { match: "FROM cache WHERE key", rows: [] },
     override,
@@ -75,7 +66,7 @@ function dbWithOverride(override: MockTableConfig): MockD1Database {
 describe("projectTape", () => {
   it("emits binding-call costs while preserving SQL rows and projector failures", async () => {
     const rows = [{ id: "observed" }];
-    const failure = new Error("original SQL failure");
+    const failure = new Error("original SQL failure Bearer test-secret");
     const db = mockD1([
       { match: "SELECT id", rows },
       { match: "UPDATE tape", rows: [] },
@@ -85,22 +76,17 @@ describe("projectTape", () => {
     const jobs = TAPE_PROJECTOR_JOBS as unknown as Array<(typeof TAPE_PROJECTOR_JOBS)[number]>;
     const originalJobs = [...jobs];
     jobs.splice(0, jobs.length, {
+      name: "test.failure",
+      run: async (trackedDb) => {
+        await expect(trackedDb.prepare("SELECT failed").all()).rejects.toBe(failure);
+        throw failure;
+      },
+    }, {
       name: "test.sql",
       run: async (trackedDb) => {
         expect((await trackedDb.prepare("SELECT id").all()).results).toBe(rows);
         await trackedDb.batch([trackedDb.prepare("UPDATE tape"), trackedDb.prepare("UPDATE tape")]);
         return { projected: rows.length, advanced: null };
-      },
-    }, {
-      name: "test.failure",
-      run: async (trackedDb) => {
-        try {
-          await trackedDb.prepare("SELECT failed").all();
-        } catch (error) {
-          expect(error).toBe(failure);
-          throw error;
-        }
-        throw new Error("expected original SQL failure");
       },
     });
     try {
@@ -109,7 +95,14 @@ describe("projectTape", () => {
         productivity: { productive: false, reason: "tape-projector-failed" } });
       expect(assertCost(result)).toMatchObject({ queries: 4, bindingCalls: 3, batchCalls: 1 });
       expect(JSON.parse(result.metadata)).toMatchObject({ reason: "tape-projector-failed",
-        perClass: { "test.sql": 1, "test.failure": -1 } });
+        perClass: { "test.sql": 1, "test.failure": -1 },
+        classFailures: { "test.failure": { name: "Error", message: "original SQL failure Bearer [redacted]" } } });
+      jobs.splice(0, jobs.length, ...originalJobs.map(({ name }) => ({ name, run: async () => {
+        throw Object.assign(new Error("\u0001".repeat(500)), { name: "\u0001".repeat(100) });
+      } })));
+      const failed = await projectTape(db);
+      expect(Object.keys(JSON.parse(failed.metadata).classFailures)).toHaveLength(originalJobs.length);
+      expect(new TextEncoder().encode(failed.metadata).length).toBeLessThan(8192);
     } finally {
       jobs.splice(0, jobs.length, ...originalJobs);
     }
@@ -157,7 +150,6 @@ describe("projectTape", () => {
     expect(historical.safeParse(result).success).toBe(false);
     const inserts = tapeInsertBindsForType(db, "depeg.opened");
     expect(inserts).toHaveLength(2);
-    // bind order: eventId, type, severity, ts, ends_at, coin_id, issuer_id, peg_currency, ...
     expect(inserts[0]![2]).toBe("critical");
     expect(inserts[1]![2]).toBe("notice");
   });
@@ -190,8 +182,6 @@ describe("projectTape", () => {
   });
 
   it("emits depeg.peak_worsened when an open row's magnitude exceeds the last-seen peak", async () => {
-    // First run: open row at -1500 bps; seen-map is empty so it becomes the
-    // baseline observation and no event is emitted.
     const dbBaseline = dbWithOverride({
       match: MATCH_DEPEG_OPEN_PEAK,
       rows: [
@@ -213,8 +203,6 @@ describe("projectTape", () => {
     await projectTape(dbBaseline);
     expect(tapeInsertBindsForType(dbBaseline, "depeg.peak_worsened")).toHaveLength(0);
 
-    // Second run: same row now reports a larger magnitude AND the cache holds
-    // the prior baseline. A `depeg.peak_worsened` event should fire.
     const dbWorsened = mockTapeD1([
       {
         match: "FROM cache WHERE key",
@@ -247,7 +235,6 @@ describe("projectTape", () => {
     await projectTape(dbWorsened);
     const worsened = tapeInsertBindsForType(dbWorsened, "depeg.peak_worsened");
     expect(worsened).toHaveLength(1);
-    // severity for 2700 bps abs → critical
     expect(worsened[0]![2]).toBe("critical");
   });
 
@@ -380,8 +367,6 @@ describe("projectTape", () => {
   it("emits no relational-class events when the source tables are empty", async () => {
     const db = mockTapeD1(baseTables()) as MockD1Database;
     await projectTape(db);
-    // Static first-observation projectors still fire on a fresh mock; only
-    // assert that the watermark-driven relational projectors emitted nothing.
     expect(tapeInsertBindsForType(db, "depeg.opened")).toHaveLength(0);
     expect(tapeInsertBindsForType(db, "depeg.resolved")).toHaveLength(0);
     expect(tapeInsertBindsForType(db, "depeg.peak_worsened")).toHaveLength(0);
@@ -486,16 +471,12 @@ describe("projectTape quiet publication", () => {
     try {
       vi.setSystemTime(NOW * 1000);
       const { db } = fixtures.open();
-      // A productive tick one interval before the quiet ticks established the
-      // last publication.
       await logCronRun(db, "project-tape", async () => ({
         status: "ok",
         itemCount: 2,
         metadata: JSON.stringify({ reason: "tape-projection-completed" }),
       }));
 
-      // No event was inserted, but every class read its source and persisted an
-      // advanced watermark, so each pass is a confirmed quiet observation.
       let quietResult: CronResult | void | null = null;
       for (const offset of [HALF_HOUR, HALF_HOUR * 2, HALF_HOUR * 3]) {
         vi.setSystemTime((NOW + offset) * 1000);

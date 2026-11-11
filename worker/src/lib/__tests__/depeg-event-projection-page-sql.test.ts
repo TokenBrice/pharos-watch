@@ -278,7 +278,6 @@ describe("public depeg page effective onset", () => {
       }
       return current;
     };
-    // Every filter includes projected rows.
     for (const query of FILTERS) {
       const legacy = rows(fixture, LEGACY_PUBLIC_DEPEG_EVENTS_SQL, query, 1000, 0);
       const current = parity(query, 1000, 0);
@@ -291,20 +290,22 @@ describe("public depeg page effective onset", () => {
       for (const [limit, offset] of [[1, 0], [1, 1], [3, 0], [3, 3], [2, 5], [100, 0]]) {
         parity(query, limit, offset);
       }
-      // Include cursors on projected ties.
       const first = parity(query, 2, 0);
       expect(first).toHaveLength(2);
       for (const last of parity(query, 1000, 0)) {
-        parity({
-          conditions: [...query.conditions, "((effective_started_at < ?) OR (effective_started_at = ? AND id < ?))"],
-          bindings: [...query.bindings, last.effective_started_at as number, last.effective_started_at as number, last.id as number],
-        }, 2, 0);
+        const [time, id] = [last.effective_started_at as number, last.id as number];
+        expect(parity({
+          conditions: [...query.conditions, "(effective_started_at, id) < (?, ?)"],
+          bindings: [...query.bindings, time!, id!],
+        }, 2, 0)).toEqual(parity({
+          conditions: [...query.conditions, "(effective_started_at < ? OR (effective_started_at = ? AND id < ?))"],
+          bindings: [...query.bindings, time!, time!, id!],
+        }, 2, 0));
       }
     }
     for (const [condition, ids] of [["id = 9", [9]], ["id = -1", []], ["provenance_audit_verdict = 'disputed'", [13]]] as const) {
       expect(parity({ conditions: [condition], bindings: [] }, 3, 0).map((row) => row.id)).toEqual(ids);
     }
-    // Nonempty deep-offset pages.
     fixture.sqlite.exec(`WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<50010)
       INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
       SELECT 100+x, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 200, ${BASE}-x, .98, 1 FROM n`);
@@ -385,7 +386,6 @@ describe("public depeg page effective onset", () => {
     const exclusion: Query = { conditions: [EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL], bindings: [] };
     const current = pageSql(PUBLIC_DEPEG_EVENTS_SQL, exclusion, 50, 0);
     const expectIndexedLookupPlan = (plan: string[]) => {
-      // No materialized projection subquery is joined (or scanned) per event row.
       expect(plan.filter((detail) => /MATERIALIZE|SCAN projection/.test(detail))).toEqual([]);
       expect(plan).toContain(`SEARCH owner USING INDEX ${CURRENT_EVENT_INDEX} (current_event_id=?)`);
       expect(plan).toContain(`SEARCH alias USING INDEX ${ALIAS_INDEX} (superseded_by_incident_key=? AND incident_state=?)`);
@@ -403,14 +403,13 @@ describe("public depeg page effective onset", () => {
       expect(plan).toContain(`SEARCH owner USING INDEX ${CURRENT_EVENT_INDEX} (current_event_id=?)`);
       expect(plan).toContain(`SEARCH alias USING INDEX ${ALIAS_INDEX} (superseded_by_incident_key=? AND incident_state=?)`);
       if (query.includes("cursor=")) {
-        expect(page.sql).toContain("effective_started_at < ?");
-        expect(page.sql).toContain("id < ?");
+        expect(page.sql).toContain("(effective_started_at, id) < (?, ?)");
+        expect(ordinary.some((detail) => /SEARCH .*idx_depeg_started_id \(started_at<\?\)/.test(detail))).toBe(true);
         expect(page.bindings).toContain(BASE + 10);
         expect(page.bindings).toContain(16);
       }
     }
 
-    // The migration, not test-only SQL, is what supplies both access paths.
     fixture.sqlite.exec(`DROP INDEX ${CURRENT_EVENT_INDEX}`);
     fixture.sqlite.exec(`DROP INDEX ${ALIAS_INDEX}`);
     const unindexed = queryPlan(fixture, current.sql, []);

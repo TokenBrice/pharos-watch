@@ -1,3 +1,4 @@
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DlPool, ResolvedYieldEntry, SafetyScoreSnapshot, YieldResolutionResult } from "./types";
 import { resolveYieldTypeLabel } from "./source-risk";
@@ -51,6 +52,7 @@ export async function loadTier1PrevRateRows(
   db: D1Database,
   tier1CandidateIds: string[],
   sevenDaysAgoSec: number,
+  signal?: AbortSignal,
 ): Promise<Map<string, { exchangeRate: number | null; recordedAt: number }>> {
   const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
   const candidateIds = [...new Set(tier1CandidateIds)];
@@ -59,7 +61,7 @@ export async function loadTier1PrevRateRows(
   // Newest published rate at or before the anchor, one row per coin, ties
   // resolved by rowid DESC. Driving from the id list keeps each coin to index
   // seeks; ranking the whole 30-day partition read ~124k rows per run.
-  const result = await db
+  const result = await runWithOverloadRetry(() => db
     .prepare(
       `SELECT /* pharos:yield-sync:tier1-previous-rate */
          h.stablecoin_id, h.exchange_rate, h.recorded_at
@@ -83,7 +85,8 @@ export async function loadTier1PrevRateRows(
        )`,
     )
     .bind(JSON.stringify(candidateIds), sevenDaysAgoSec)
-    .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
+    .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>(),
+    3, signal, { waitOutResourceWindow: true });
   for (const row of result.results ?? []) {
     if (tier1PrevRateRows.has(row.stablecoin_id)) continue;
     tier1PrevRateRows.set(row.stablecoin_id, {
@@ -125,7 +128,7 @@ export async function resolveTrackedYieldSources(params: {
       tier1CandidateIds.push(meta.id);
     }
   }
-  const tier1PrevRateRows = await loadTier1PrevRateRows(params.db, tier1CandidateIds, params.sevenDaysAgoSec);
+  const tier1PrevRateRows = await loadTier1PrevRateRows(params.db, tier1CandidateIds, params.sevenDaysAgoSec, params.signal);
 
   for (const meta of ACTIVE_YIELD_BEARING_STABLECOINS) {
     if (params.signal?.aborted) {
@@ -259,7 +262,7 @@ export async function resolveTrackedYieldSources(params: {
       && isPriceDerivedYieldEligible(id, INTENTIONAL_GAP_REASONS[id])
       && (!hasAnySource || allDlSourcesZero);
     if (shouldTryPriceDerived) {
-      const priceDerived = await getPriceDerivedApy(params.db, id);
+      const priceDerived = await getPriceDerivedApy(params.db, id, params.signal);
       if (priceDerived != null) {
         const nativePoolId = YIELD_POOL_MAP[id] ?? null;
         resolved.push({

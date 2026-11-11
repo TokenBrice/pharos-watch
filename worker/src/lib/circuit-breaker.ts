@@ -410,7 +410,8 @@ export async function recordOutcomeSafe(
 /** Read all known circuit states for health/status endpoints */
 export async function getCircuitStates(db: D1Database): Promise<Record<string, CircuitRecord>> {
   const result = await db
-    .prepare("SELECT key, value FROM cache WHERE key LIKE 'circuit:%'")
+    // Rowid order keeps the listing (and the health payload built from it) in the order the old table scan returned.
+    .prepare("SELECT key, value FROM cache WHERE key >= 'circuit:' AND key < 'circuit;' ORDER BY rowid")
     .all<{ key: string; value: string }>();
   const states: Record<string, CircuitRecord> = {};
   for (const row of result.results ?? []) {

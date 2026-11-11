@@ -23,7 +23,7 @@ export async function insertMintBurnRows(
   throwIfAborted(options.signal);
 
   const mutations = rows.map((row) => [
-    db.prepare(`INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+    db.prepare(`INSERT OR IGNORE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
       SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM mint_burn_events WHERE id = ?)`)
       .bind(row.stablecoin_id, row.chain_id, Math.floor(row.timestamp / 3600) * 3600, row.id),
     db.prepare(
@@ -119,7 +119,7 @@ export async function updateEventClassifications(
     const changedSql = `(${assignments.map(({ column, sql }) => `${column} IS NOT (${sql})`).join(" OR ")})`;
     const changedBinds = assignments.flatMap(({ binds }) => binds);
     return [
-      db.prepare(`INSERT OR REPLACE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+      db.prepare(`INSERT OR IGNORE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
         SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
         FROM mint_burn_events WHERE id = ? AND ${changedSql}`)
         .bind(row.id, ...changedBinds),

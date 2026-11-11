@@ -163,7 +163,8 @@ describe("tracked optional source anchors", () => {
     db.assertAllMatchesUsed();
   });
 
-  it("ignores unpublished deterministic on-chain anchor rows when selecting prior rates", async () => {
+  it.each([false, true])("keeps published anchor selection after transient overload: %s", async (overload) => {
+    vi.useFakeTimers();
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       const insertHistory = sqlite.prepare(
@@ -178,11 +179,21 @@ describe("tracked optional source anchors", () => {
       insertHistory.run("100", 1.07, sevenDaysAgoSec - 3, "gen-published", "published");
       insertHistory.run("100", 1.06, sevenDaysAgoSec - 4, null, null);
 
-      const rows = await loadTier1PrevRateRows(createSqliteD1(sqlite), ["100"], sevenDaysAgoSec);
+      let reads = 0;
+      const db = createSqliteD1(sqlite, { onAll: () => {
+        if (++reads === 1 && overload) throw new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
+      } });
+      const pending = loadTier1PrevRateRows(db, ["100"], sevenDaysAgoSec);
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(reads).toBe(1);
+      await vi.runAllTimersAsync();
+      const rows = await pending;
+      expect(reads).toBe(overload ? 2 : 1);
 
       expect(rows.get("100")?.exchangeRate).toBe(1.07);
     } finally {
       sqlite.close();
+      vi.useRealTimers();
     }
   });
 
@@ -211,11 +222,7 @@ describe("tracked optional source anchors", () => {
   });
 
   it("falls back to the daily tier for an anchor older than the raw retention window", async () => {
-    // Raw history keeps 30 days, but the Ondo/Midas NAV anchors deliberately
-    // look back 45. Once the raw 30-45 day band is pruned, the anchor must still
-    // resolve from the daily tier (which keeps a year); otherwise a
-    // sparsely-updating NAV oracle silently loses its anchor and stops
-    // publishing — Midas has no shorter-window fallback, unlike Ondo.
+    // Daily history must cover the 30–45 day NAV window after raw retention.
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       const nowSec = 1_747_000_000;
@@ -228,7 +235,6 @@ describe("tracked optional source anchors", () => {
         )
         .run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
 
-      // Nothing inside the raw tier's window for this source.
       const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
 
       expect(row?.exchange_rate).toBe(1.11);

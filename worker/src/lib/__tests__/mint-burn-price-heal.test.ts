@@ -21,8 +21,13 @@ const insertCache = (sqlite: DatabaseSync, assetId: string, observedAt: number,
 describe("healNullPrices", () => {
   beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(NOW * 1000); });
 
-  it("returns healed=0 when no NULL events exist", async () => {
-    const result = await healNullPrices(fixtures.open().db, NOW);
+  it("seeks the null-price index even when no NULL events exist", async () => {
+    const { db, sqlite } = fixtures.open();
+    const prepare = vi.spyOn(db, "prepare");
+    const result = await healNullPrices(db, NOW);
+    expect(sqlite.prepare(`EXPLAIN QUERY PLAN ${prepare.mock.calls[0][0]}`).all(NOW)).toContainEqual(
+      expect.objectContaining({ detail: expect.stringMatching(/SEARCH mint_burn_events USING INDEX idx_mbe_null_price_ts \(timestamp>\?\)/) }),
+    );
     expect(result.healed).toBe(0);
     expect(result.affectedHours.size).toBe(0);
   });
@@ -127,7 +132,6 @@ describe("healNullPrices", () => {
 
     it("admits observations within ±24h inclusive of the event and rejects ±24h±1s and old events", async () => {
       const { db, sqlite } = fixtures.open();
-      // Observation clocks sit before and after the events so both window edges are exercised.
       const usdtObservedAt = NOW - 1_000;
       const usdcObservedAt = NOW - 100_000;
       insertCache(sqlite, "usdt-tether", usdtObservedAt);
@@ -177,12 +181,10 @@ describe("healNullPrices", () => {
       const insertParRow = sqlite.prepare(`INSERT OR REPLACE INTO price_cache
         (asset_id, price, updated_at, source, observed_at, observed_at_mode, synced_at)
         VALUES (?, 1, ?, 'protocol-redeem', ?, 'local_fetch', ?)`);
-      // usbd-bima is a protocol-par route; its in-window legacy row is par, not an observation.
       insertParRow.run("usbd-bima", NOW - 60, NOW - 60, NOW - 60);
       insertEvent(sqlite, "usbd", "usbd-bima", NOW - 120);
       expect((await healNullPrices(db, NOW)).healed).toBe(0);
 
-      // A real observation of the same route is still admissible.
       sqlite.prepare("DELETE FROM price_cache WHERE asset_id = 'usbd-bima'").run();
       insertCache(sqlite, "usbd-bima", NOW - 60);
       expect((await healNullPrices(db, NOW)).healed).toBe(1);
@@ -190,7 +192,6 @@ describe("healNullPrices", () => {
 
     it("skips coins without admissible evidence so their rows cannot starve healable coins", async () => {
       const { db, sqlite } = fixtures.open();
-      // 600 newer rows of a coin whose only price is weeks old fill more than the 500-row budget.
       for (let index = 0; index < 600; index++) {
         insertEvent(sqlite, `stale-${String(index).padStart(3, "0")}`, "usdc-circle", NOW - index);
       }
@@ -232,7 +233,6 @@ describe("healNullPrices", () => {
       expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly").get()).toEqual({ mint_volume_usd: 101 });
       expect(sqlite.prepare("SELECT * FROM mint_burn_dirty_hours").all()).toEqual([]);
 
-      // Exhaustion wraps, so newly available evidence revisits previously inspected NULLs.
       sqlite.prepare("UPDATE price_cache SET observed_at = ?, updated_at = ?").run(NOW - 60, NOW - 60);
       for (const expected of [500, 500, 1]) {
         expect((await healNullPrices(createSqliteD1(sqlite), NOW + 2)).healed).toBe(expected);

@@ -176,14 +176,24 @@ describe("persistDewsResults", () => {
   });
 
   it("updates every latest-row field in place while preserving publication and sparse history clocks", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    let prune = "";
+    const { sqlite, db } = createLatestSchemaSqlite({ onRun: (sql) => {
+      if (sql.includes("pharos:dews:stress-current-prune-old")) prune = sql;
+    } });
     const nowSec = Math.floor(Date.now() / 1000);
     const ids = ["usdc-circle", "usdt-tether"];
     const persist = (rows: DewsComputedRow[], clock: number) => persistDewsResults({
       db, results: rows, eligibleIds: new Set(ids), degradedSources: [], nowSec: clock,
     });
     try {
+      const frozen = [...FROZEN_IDS][0]!;
+      for (const id of [ids[0]!, frozen, "orphan"]) {
+        sqlite.prepare("INSERT INTO stress_signals VALUES (?, ?, 1, 'CALM', '{}')").run(id, nowSec - 8 * 86_400);
+      }
       await persist(ids.map((id) => buildDewsRow(id)), nowSec - 120);
+      expect(readDewsRows(sqlite, "stress_signals").map((row) => row.stablecoinId).sort()).toEqual([...ids, frozen].sort());
+      expect(sqlite.prepare(`EXPLAIN QUERY PLAN ${prune}`).all(...FROZEN_IDS, nowSec - 7 * 86_400)
+        .map((row) => row.detail)).toContain("SEARCH s USING COVERING INDEX idx_stress_coin_date (stablecoin_id=? AND computed_at<?)");
       const identity = sqlite.prepare("SELECT rowid FROM stress_signals_latest WHERE stablecoin_id = ?")
         .get(ids[0]!);
       const changed = {
@@ -215,8 +225,6 @@ describe("persistDewsResults", () => {
         .all(ids[0]!)).toEqual([
           { computed_at: nowSec - 120, score: 12 }, { computed_at: nowSec, score: 44 },
         ]);
-      // Latest has always been unconditional; pointer CAS remains the authority
-      // that prevents an older attempt from becoming the served generation.
       await persist([changed, buildDewsRow(ids[1]!)], nowSec - 60);
       expect(sqlite.prepare("SELECT computed_at, updated_at FROM stress_signals_latest WHERE stablecoin_id = ?")
         .get(ids[0]!)).toEqual({ computed_at: nowSec - 60, updated_at: nowSec - 60 });
@@ -260,8 +268,6 @@ describe("persistDewsResults", () => {
       expect(stored.score).toBe(changed.score);
       expect(stored.band).toBe(changed.band);
       expect(JSON.parse(String(stored.signals_json)).signals).toEqual(changed.signals);
-      // Exact-ID early return is deliberately unchanged: daily values are not
-      // refreshed just because a later run computed different same-day scores.
       results[1] = buildDewsRow("changed", 99);
       expect(await reconcileDailyDewsHistorySnapshot(db, results, snapshotDate)).toMatchObject({ rewritten: false });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM daily_write_audit").get()).toEqual({ count: 3 });
@@ -583,8 +589,6 @@ describe("persistDewsResults", () => {
       });
     try {
       await persist(published, 12, "CALM", []);
-      // The withheld run materializes stress_signals_latest with its rejected
-      // WARNING; the next accepted generation publishes the same WARNING.
       await expect(persist(withheld, 62, "WARNING", ["dex-liquidity-freshness"]))
         .resolves.toMatchObject({ publicationPointerWritten: false, publishedGeneration: null });
       await expect(persist(accepted, 62, "WARNING", [])).resolves.toMatchObject({
@@ -592,8 +596,6 @@ describe("persistDewsResults", () => {
         publishedGeneration: accepted,
       });
 
-      // A published band change must leave a history row at its own generation;
-      // the public tape only joins published generations.
       expect(sqlite.prepare(
         "SELECT computed_at, score, band FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at",
       ).all("usdt-tether")).toEqual([

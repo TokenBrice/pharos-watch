@@ -1022,7 +1022,7 @@ describe("syncLiveReserves", () => {
 
     const db = mockD1([
       {
-        match: "key LIKE 'circuit:%'",
+        match: "key >= 'circuit:' AND key < 'circuit;'",
         rows: [
           { key: `circuit:${staleBreakerKey}`, value: staleState },
           { key: `circuit:${configuredBreakerKey}`, value: configuredState },
@@ -1056,7 +1056,7 @@ describe("syncLiveReserves", () => {
     try {
       const db = mockD1([
         {
-          match: "key LIKE 'circuit:%'",
+          match: "key >= 'circuit:' AND key < 'circuit;'",
           rows: [
             { key: "circuit:live-reserves:removed-a", value: staleState },
             { key: "circuit:live-reserves:removed-b", value: staleState },
@@ -1099,7 +1099,7 @@ describe("syncLiveReserves", () => {
 
     const db = mockD1([
       {
-        match: "key LIKE 'circuit:%'",
+        match: "key >= 'circuit:' AND key < 'circuit;'",
         rows: [{ key: "circuit:live-reserves:removed-adapter-key", value: staleState }],
       },
     ]);

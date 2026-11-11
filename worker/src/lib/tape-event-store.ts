@@ -158,28 +158,30 @@ export async function filterUnprojectedTapeEvents(
 ): Promise<TapeEventInsert[]> {
   if (events.length === 0) return [];
   const unprojected: TapeEventInsert[] = [];
-  for (let offset = 0; offset < events.length; offset += D1_BATCH_SIZE) {
-    const chunk = events.slice(offset, offset + D1_BATCH_SIZE);
+  // Thirty identity triples stay below D1's 100-bound-parameter limit.
+  const chunkSize = 30;
+  for (let offset = 0; offset < events.length; offset += chunkSize) {
+    const chunk = events.slice(offset, offset + chunkSize);
     const observed = await runWithOverloadRetry(
       () =>
-        db.batch(
-          chunk.map((event) =>
-            db
-              .prepare(
-                `SELECT 1 AS observed
-                   FROM tape_events INDEXED BY idx_tape_source_key
-                  WHERE source_table = ?
-                    AND source_row_id = ?
-                    AND transition = ?
-                  LIMIT 1`,
-              )
-              .bind(event.sourceTable, event.sourceRowId, event.transition),
-          ),
-        ),
+        db.batch<{ ordinal: number }>([
+          db.prepare(
+            `WITH requested(ordinal, source_table, source_row_id, transition) AS (
+               VALUES ${chunk.map((_, index) => `(${index}, ?, ?, ?)`).join(", ")}
+             )
+             SELECT requested.ordinal
+               FROM requested
+               CROSS JOIN tape_events AS t INDEXED BY idx_tape_source_key
+              WHERE t.source_table = requested.source_table
+                AND t.source_row_id = requested.source_row_id
+                AND t.transition = requested.transition`,
+          ).bind(...chunk.flatMap((event) => [event.sourceTable, event.sourceRowId, event.transition])),
+        ]),
       3,
     );
+    const observedOrdinals = new Set(observed[0]?.results?.map((row) => row.ordinal));
     for (let index = 0; index < chunk.length; index += 1) {
-      if ((observed[index]?.results?.length ?? 0) === 0) {
+      if (!observedOrdinals.has(index)) {
         unprojected.push(chunk[index]!);
       }
     }

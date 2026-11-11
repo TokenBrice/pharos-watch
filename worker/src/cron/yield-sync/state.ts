@@ -1,3 +1,4 @@
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield-vocabulary";
 import {
   DAY_SECONDS,
@@ -81,6 +82,7 @@ const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
+  signal?: AbortSignal,
 ): Promise<{
   apy: number;
   sourceObservedAt: number;
@@ -91,13 +93,14 @@ export async function getPriceDerivedApy(
   const maxLookbackSec = 45 * DAY_SECONDS;
 
   const [recentRow, anchoredRow] = await Promise.all([
-    db
+    runWithOverloadRetry(() => db
       .prepare(
         "SELECT price, snapshot_date, price_observed_at FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
       )
       .bind(stablecoinId)
       .first<{ price: number; snapshot_date: number; price_observed_at: number | null }>(),
-    db
+      3, signal, { waitOutResourceWindow: true }),
+    runWithOverloadRetry(() => db
       .prepare(
         `SELECT price, snapshot_date, price_observed_at
          FROM supply_history
@@ -110,6 +113,7 @@ export async function getPriceDerivedApy(
       )
       .bind(stablecoinId, now - maxLookbackSec, now - minLookbackSec)
       .first<{ price: number; snapshot_date: number; price_observed_at: number | null }>(),
+      3, signal, { waitOutResourceWindow: true }),
   ]);
 
   if (!recentRow?.price || !anchoredRow?.price || anchoredRow.price <= 0) return null;

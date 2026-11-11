@@ -110,7 +110,7 @@ Reserve recovery: `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`; checked-in c
 
 Only `project-tape` on public's `dewsPsiOffset` may delegate through heavy's private default-fetch service binding; DEWS and PSI remain serial/in-process. `PROJECT_TAPE_PLACED_EXECUTOR` accepts exact `on`/`off`; checked-in `on` requires matching secrets on both Workers. Invalid modes warn and run locally; failed remote execution never retries or falls back within the slot.
 
-The public driver retains the original deadline, generation, lease and terminal accounting. Executor delivery is one-shot and every write is fenced; rollback affects future slots only. Placement is a fetch-only hint, not a pinned location. [Placed-fetch operation and qualification](process/worker-infrastructure-appendix.md#project-tape-placed-fetch-details) owns secret provisioning, failure diagnostics, transport/settlement guards, evidence and the mandatory go/no-go before any second lane.
+The public driver retains the original deadline, generation, lease and terminal accounting. Executor delivery is one-shot and every write is fenced; rollback affects future slots only. Rejected executor work logs its underlying sanitized error with phase `claim`, `projection` or `final-fence` before returning `placed-executor-execution-failed`; timeout and transport reasons remain distinct. Placement is a fetch-only hint, not a pinned location. [Placed-fetch operation and qualification](process/worker-infrastructure-appendix.md#project-tape-placed-fetch-details) owns secret provisioning, failure diagnostics, transport/settlement guards, evidence and the mandatory go/no-go before any second lane.
 
 
 ### V9 public response materialization

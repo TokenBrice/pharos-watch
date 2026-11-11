@@ -21,7 +21,7 @@ export const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
   { match: "INSERT INTO reserve_sync_attempts", rows: [] },
   { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
   { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
-  { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
+  { match: "SELECT key, value FROM cache WHERE key >= 'circuit:' AND key < 'circuit;'", rows: [] },
   { match: "SELECT key FROM cache WHERE key LIKE", rows: [] },
   { match: "INSERT INTO cache", rows: [] },
   { match: "DELETE FROM cache", rows: [] },

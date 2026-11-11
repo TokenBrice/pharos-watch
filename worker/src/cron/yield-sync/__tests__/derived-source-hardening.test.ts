@@ -203,6 +203,31 @@ describe("derived source admission", () => {
     expect(result.envelopeRejections).toContainEqual(expect.objectContaining({ stablecoinId: "sdai-sky", computedApy: null, rejectionReason: "non-finite-annualization" }));
   });
 
+  it.each(["latest", "anchor"])("retries mandatory %s prices without changing APY/clocks; aborts and exhausts", async (read) => {
+    vi.useFakeTimers().setSystemTime(now * 1000);
+    const error = new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
+    for (const mode of ["recover", "abort", "exhaust"]) {
+      const latest = { match: "ORDER BY snapshot_date DESC", rows: [{ price: 1.01, snapshot_date: now, price_observed_at: now - 1 }] };
+      const anchor = { match: "snapshot_date BETWEEN", rows: [{ price: 1, snapshot_date: now - 30 * DAY_SECONDS, price_observed_at: now - 30 * DAY_SECONDS + 1 }] };
+      const failed = { ...(read === "latest" ? latest : anchor), throwError: error as unknown };
+      const db = mockD1(read === "latest" ? [failed, anchor] : [latest, failed]);
+      const controller = new AbortController();
+      const pending = getPriceDerivedApy(db, "sdai-sky", controller.signal);
+      const checked = mode === "recover" ? pending : expect(pending).rejects.toBe(error);
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(db.getHistory()).toHaveLength(2);
+      if (mode === "abort") controller.abort(error);
+      if (mode === "recover") failed.throwError = undefined;
+      await vi.runAllTimersAsync();
+      if (mode === "recover") expect(await checked).toEqual({
+        apy: (Math.pow(1.01, 365.25 / 30) - 1) * 100,
+        sourceObservedAt: now - 1, comparisonAnchorObservedAt: now - 30 * DAY_SECONDS + 1,
+      });
+      else await checked;
+      expect(db.getHistory()).toHaveLength(mode === "abort" ? 2 : mode === "recover" ? 3 : 5);
+    }
+  });
+
   it("rejects overflowing price annualization rather than returning a zero observation", async () => {
     vi.useFakeTimers().setSystemTime(now * 1000);
     const db = mockD1([
