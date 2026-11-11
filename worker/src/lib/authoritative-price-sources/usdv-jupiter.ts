@@ -1,4 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { getRpcAuthHeaders, registryRpcUrls } from "../chain-registry";
@@ -28,7 +29,8 @@ interface State { context: { slot: number }; value: (Account | null)[] }
 interface Quote { inputMint: string; outputMint: string; inAmount: string; outAmount: string; swapMode: string;
   contextSlot: number; platformFee?: { feeBps: number } | null; priceImpactPct: string;
   routePlan: { percent: number; swapInfo: { ammKey: string; inputMint: string; outputMint: string; inAmount: string; outAmount: string; updateContextSlot: string } }[] }
-const fresh = (time: number) => Number.isSafeInteger(time) && time > 0 && time <= Math.floor(Date.now() / 1000) && Math.floor(Date.now() / 1000) - time < 300;
+const MAX_OBSERVATION_AGE_SEC = getPricingSourceRegistryEntry("jupiter-exact")?.maxTrustedAgeSec;
+const fresh = (time: number) => MAX_OBSERVATION_AGE_SEC != null && Number.isSafeInteger(time) && time > 0 && time <= Math.floor(Date.now() / 1000) && Math.floor(Date.now() / 1000) - time < MAX_OBSERVATION_AGE_SEC;
 const positiveInteger = (value: unknown): value is string => typeof value === "string" && /^[1-9][0-9]*$/.test(value);
 const bytes = (a: Account) => Uint8Array.from(atob(a.data[0]), (c) => c.charCodeAt(0));
 const hex = (b: Uint8Array, offset: number, length = 32) => Array.from(b.slice(offset, offset + length), (n) => n.toString(16).padStart(2, "0")).join("");

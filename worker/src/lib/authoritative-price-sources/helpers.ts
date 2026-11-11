@@ -2,12 +2,13 @@ import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEvent, logWorkerEventArgs } from "../structured-log";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { PriceDerivationSchema, type PriceDerivation } from "@shared/types/market";
-import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock, fetchEvmRpcBatch, isHexResult, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { throwIfAborted } from "../abort";
@@ -16,6 +17,7 @@ import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { PriceValidationReferences } from "../price-validation";
+import type { PriceCacheEntry } from "../price-cache";
 
 export const ETHEREUM_CHAIN = "ethereum";
 
@@ -252,6 +254,12 @@ export interface LivePriceContext {
   vaultRateCacheOnly?: boolean;
 }
 
+/** Original-clock references for routes with an asset-specific reference policy. */
+export interface LivePriceReferenceContext extends LivePriceContext {
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>;
+  priceCache?: ReadonlyMap<string, PriceCacheEntry>;
+}
+
 export interface LivePriceDiagnosticTarget {
   chain: string;
   target: string;
@@ -349,6 +357,114 @@ export function quoteUsdcPrice(outputRaw: bigint | null, inputTokens: number): n
   const output = decimalFromRaw(outputRaw, USDC_QUOTE_DECIMALS);
   const price = output / inputTokens;
   return Number.isFinite(price) && price > 0 ? price : null;
+}
+
+interface GuardedCurvePoolToken {
+  address: string;
+  index: number;
+  decimals: number;
+  minBalance: number;
+}
+
+interface GuardedCurvePoolConfig {
+  assetId: string;
+  source: string;
+  chain: string;
+  pool: string;
+  tokens: readonly [GuardedCurvePoolToken, GuardedCurvePoolToken];
+  coinsSelector: string;
+  balancesSelector: string;
+  quoteSelector: string;
+  quoteInputIndex: number;
+  quoteOutputIndex: number;
+  quoteInputDecimals: number;
+  smallQuoteTokens: number;
+  impactQuoteTokens: number;
+  maxQuoteImpactRatio: number;
+  maxBlockAgeSec: number;
+}
+
+/** Guarded direct pool reads; underlying quote indices may differ from pool-token indices. */
+export async function fetchGuardedCurvePoolPrice(
+  config: GuardedCurvePoolConfig,
+  context: LivePriceContext,
+  signal?: AbortSignal,
+): Promise<CurrentPriceOverride | null> {
+  const quoteParent = resolveTrustedOverrideParent(
+    context,
+    USDC_CIRCLE_ID,
+    () => `[authoritative-price-sources] ${config.assetId}: trusted USDC quote dependency unavailable`,
+    {
+      allowFreshNonReplaySafeParent: true,
+      allowFreshReplaySafeSingleSourceParent: true,
+    },
+  );
+  if (!quoteParent) return null;
+  const maxObservationAgeSec = getPricingSourceRegistryEntry(config.source)?.maxTrustedAgeSec;
+  if (maxObservationAgeSec == null || Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > maxObservationAgeSec) return null;
+
+  // Configured Worker RPCs first; public endpoints are only the fallback tail.
+  const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(config.chain) };
+  const blockNumber = await fetchEvmBlockNumber(config.chain, rpcOptions);
+  if (blockNumber == null) return null;
+  const blockTimestamp = await fetchEvmBlockTimestamp(config.chain, blockNumber, rpcOptions);
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (blockTimestamp == null || blockTimestamp > nowSec + 60 || nowSec - blockTimestamp > config.maxBlockAgeSec) {
+    return null;
+  }
+
+  const encodeQuote = (inputTokens: number): string => {
+    const inputRaw = BigInt(inputTokens) * 10n ** BigInt(config.quoteInputDecimals);
+    return `${config.quoteSelector}${encodeUint256(config.quoteInputIndex)}${encodeUint256(config.quoteOutputIndex)}${encodeUint256(inputRaw)}`;
+  };
+  // Six direct eth_call envelopes retain caller semantics and one pinned block.
+  const results = await fetchEvmRpcBatch(config.chain, [
+    ...config.tokens.map((token) => encodeIndexedCall(config.coinsSelector, token.index)),
+    ...config.tokens.map((token) => encodeIndexedCall(config.balancesSelector, token.index)),
+    encodeQuote(config.smallQuoteTokens),
+    encodeQuote(config.impactQuoteTokens),
+  ].map((data) => ({
+    method: "eth_call",
+    params: [{ to: config.pool, data }, `0x${blockNumber.toString(16)}`],
+  })), rpcOptions);
+  if (!results || results.length !== 6) return null;
+  const [coin0Raw, coin1Raw, balance0Raw, balance1Raw, smallQuoteRaw, impactQuoteRaw] = results.map(
+    (value) => typeof value === "string" && isHexResult(value) ? value : null,
+  );
+
+  if (decodeAddressWord(coin0Raw) !== config.tokens[0].address || decodeAddressWord(coin1Raw) !== config.tokens[1].address) return null;
+  const balance0 = balance0Raw ? decodeUint256WordBigInt(balance0Raw) : null;
+  const balance1 = balance1Raw ? decodeUint256WordBigInt(balance1Raw) : null;
+  if (balance0 == null || balance1 == null) return null;
+  if (
+    decimalFromRaw(balance0, config.tokens[0].decimals) < config.tokens[0].minBalance ||
+    decimalFromRaw(balance1, config.tokens[1].decimals) < config.tokens[1].minBalance
+  ) {
+    return null;
+  }
+
+  const smallPrice = quoteUsdcPrice(
+    smallQuoteRaw ? decodeUint256WordBigInt(smallQuoteRaw) : null,
+    config.smallQuoteTokens,
+  );
+  const impactPrice = quoteUsdcPrice(
+    impactQuoteRaw ? decodeUint256WordBigInt(impactQuoteRaw) : null,
+    config.impactQuoteTokens,
+  );
+  if (smallPrice == null || impactPrice == null) return null;
+  if (Math.abs(impactPrice - smallPrice) / smallPrice > config.maxQuoteImpactRatio) return null;
+
+  // Multiplication must preserve the older dependency clock under this route's budget.
+  const parentClockSelected = quoteParent.trustedParent.observedAt < blockTimestamp;
+  const observedAt = parentClockSelected ? quoteParent.trustedParent.observedAt : blockTimestamp;
+  if (Math.floor(Date.now() / 1000) - observedAt > maxObservationAgeSec) return null;
+  return {
+    price: smallPrice * quoteParent.trustedParent.price,
+    source: config.source,
+    confidence: "fallback",
+    observedAt,
+    observedAtMode: parentClockSelected ? quoteParent.trustedParent.observedAtMode ?? "upstream" : "upstream",
+  };
 }
 
 export function decodeUint256WordBigInt(result: `0x${string}`, wordIndex = 0): bigint | null {

@@ -15,7 +15,8 @@ import {
 } from "./authoritative-price-sources.test-support";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
-import { usd3CurvePoolProvider, type Usd3PriceContext } from "../authoritative-price-sources/usd3-curve-pool";
+import { usd3CurvePoolProvider } from "../authoritative-price-sources/usd3-curve-pool";
+import type { LivePriceReferenceContext as Usd3PriceContext } from "../authoritative-price-sources/helpers";
 import { createAuthoritativeLivePriceOverrideStats as overrideStats } from "../authoritative-price-sources";
 import { buildPriceValidationContext } from "../price-validation";
 import { validatePublishedAssetPrice } from "../price-publish-policy";
