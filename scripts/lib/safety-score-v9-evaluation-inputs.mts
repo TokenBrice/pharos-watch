@@ -173,7 +173,6 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/business-calendars.ts",
   "shared/types/chain-identity.ts",
   "shared/types/coin-projection.ts",
-  "shared/types/compliance-vocabulary.ts",
   "shared/types/core.ts",
   "shared/types/custody.ts",
   "shared/types/date-primitives.ts",
