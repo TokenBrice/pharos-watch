@@ -1,4 +1,4 @@
-import { AUTO_LENDING_POOL_MAP } from "@shared/lib/yield-auto-lending";
+import { AUTO_LENDING_OVERRIDES, AUTO_LENDING_POOL_MAP } from "@shared/lib/yield-auto-lending";
 
 export { AUTO_LENDING_POOL_MAP };
 
@@ -255,12 +255,8 @@ export function isAutoLendingCollisionBlockedForStablecoin(
  * Deterministic IDs that may bypass MIN_SAFETY_SCORE_FOR_YIELD.
  * Reserved for explicit edge-case inclusions.
  */
-export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
-  "u-united-stables",
-  "usdx-hex-trust",
-  "usdo-openeden",
-  "usdm-moneta",
-  // reusd-resupply and xusd-babelfish bypasses were removed with their stale
-  // pins in the 2026-09-23 audit drain (pinned pools no longer exist on
-  // DeFiLlama; a bypass without its pinned pool has no effect).
-]);
+export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set(
+  Object.entries(AUTO_LENDING_OVERRIDES)
+    .filter(([, override]) => override.bypassSafety)
+    .map(([id]) => id),
+);

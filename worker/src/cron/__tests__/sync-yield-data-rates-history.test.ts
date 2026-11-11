@@ -28,7 +28,7 @@ import {
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type * as YieldHelpers from "../yield-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { getPublishableNonOnchainCoverageIds } from "../yield-sync/coordinator";
+import { getPublishableNonOnchainCoverageIds } from "../yield-sync/health-policy";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();

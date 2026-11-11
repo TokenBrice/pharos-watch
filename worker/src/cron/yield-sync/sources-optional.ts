@@ -1,3 +1,4 @@
+import { buildTrackedYieldAssetIndex } from "./identity";
 import {
   DAY_SECONDS,
 } from "@shared/lib/time-constants";
@@ -91,9 +92,6 @@ import {
 import {
   getCronJobMeta,
 } from "@shared/lib/cron-jobs";
-import type {
-  StablecoinMeta,
-} from "@shared/types/core";
 import type {
   YieldMarketStatus,
   YieldSourceRisk,
@@ -873,9 +871,7 @@ const MIDAS_NAV_ORACLE_MAX_DECIMALS = 36;
 const MIDAS_NAV_ORACLE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 
 interface MidasMmevNavOracleOptions {
-  prevExchangeRate?: number | null;
-  comparisonAnchorObservedAt?: number | null;
-  loadAnchor?: (observedAt: number) => Promise<{ exchangeRate: number; observedAt: number } | null>;
+  loadAnchor: (observedAt: number) => Promise<{ exchangeRate: number; observedAt: number } | null>;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   nowSec?: number;
@@ -926,11 +922,9 @@ function buildMidasMmevNavCandidate(params: {
 }
 
 export async function fetchMidasMmevNavOracleSource(
-  options: MidasMmevNavOracleOptions = {},
+  options: MidasMmevNavOracleOptions,
 ): Promise<ResolvedYieldCandidate | null> {
   const {
-    prevExchangeRate = null,
-    comparisonAnchorObservedAt = null,
     loadAnchor,
     signal,
     chainRpcs,
@@ -970,9 +964,7 @@ export async function fetchMidasMmevNavOracleSource(
   const currentPriceFloat = finiteDecimalNumberFromBigInt(round.answer, decimals);
   if (currentPriceFloat == null || currentPriceFloat <= 0) return null;
 
-  const anchor = loadAnchor ? await loadAnchor(round.updatedAt) : {
-    exchangeRate: prevExchangeRate, observedAt: comparisonAnchorObservedAt,
-  };
+  const anchor = await loadAnchor(round.updatedAt);
   const prevPriceFloat = typeof anchor?.exchangeRate === "number" && Number.isFinite(anchor.exchangeRate) && anchor.exchangeRate > 0
     ? anchor.exchangeRate : null;
   const anchorObservedAt = anchor?.observedAt;
@@ -1393,27 +1385,12 @@ const BEEFY_MAX_APY = 0.5;
 const BEEFY_MIN_TVL_USD = 100_000;
 
 function buildMorphoFilters(): TrackedMorphoFilters {
-  const symbols = new Set<string>();
-  const assetsByChainAddress = new Map<string, TrackedMorphoAsset>();
-
-  for (const meta of ACTIVE_STABLECOINS) {
-    if (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") continue;
-    symbols.add(meta.symbol);
-
-    for (const contract of [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]) {
-      const chain = normalizeChainId(contract.chain);
-      const address = contract.address?.trim() ?? "";
-      if (!chain || !address) continue;
-      assetsByChainAddress.set(buildChainAddressKey(chain, address), {
-        stablecoinId: meta.id,
-        symbol: meta.symbol,
-      });
-    }
-  }
-
+  const stablecoins = ACTIVE_STABLECOINS.filter(
+    (meta) => meta.flags.pegCurrency !== "GOLD" && meta.flags.pegCurrency !== "SILVER",
+  );
   return {
-    symbols: [...symbols].sort((a, b) => a.localeCompare(b)),
-    assetsByChainAddress,
+    symbols: [...new Set(stablecoins.map((meta) => meta.symbol))].sort((a, b) => a.localeCompare(b)),
+    assetsByChainAddress: buildTrackedYieldAssetIndex(stablecoins),
   };
 }
 
@@ -1945,40 +1922,6 @@ interface RoycoTrackedAsset {
   symbol: string;
 }
 
-function stablecoinContracts(meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">) {
-  return [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
-}
-
-function buildTrackedAssetByChainAddress(): Map<string, RoycoTrackedAsset> {
-  const byChainAddress = new Map<string, RoycoTrackedAsset>();
-
-  for (const meta of ACTIVE_STABLECOINS) {
-    for (const contract of stablecoinContracts(meta)) {
-      const chain = normalizeChainId(contract.chain);
-      const address = contract.address.trim();
-      if (!chain || !address) continue;
-      byChainAddress.set(buildChainAddressKey(chain, address), {
-        stablecoinId: meta.id,
-        symbol: meta.symbol,
-      });
-    }
-  }
-
-  for (const [stablecoinId, variant] of Object.entries(YIELD_VARIANT_MAP)) {
-    if (!variant.variantAddress || !variant.variantChain) continue;
-    const chain = normalizeChainId(variant.variantChain);
-    const address = variant.variantAddress.trim();
-    const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === stablecoinId);
-    if (!chain || !address || !meta) continue;
-    byChainAddress.set(buildChainAddressKey(chain, address), {
-      stablecoinId: meta.id,
-      symbol: meta.symbol,
-    });
-  }
-
-  return byChainAddress;
-}
-
 function resolveVaultDepositToken(
   vault: RoycoVault,
   chain: string,
@@ -2134,7 +2077,7 @@ export interface RoycoDawnSourceResult {
 
 export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<RoycoDawnSourceResult> {
   const budget = createOptionalSourceBudget("Royco Dawn sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
-  const trackedByAddress = buildTrackedAssetByChainAddress();
+  const trackedByAddress = buildTrackedYieldAssetIndex(ACTIVE_STABLECOINS, YIELD_VARIANT_MAP);
   const observedAt = Math.floor(Date.now() / 1000);
   const results: ResolvedYieldCandidate[] = [];
 

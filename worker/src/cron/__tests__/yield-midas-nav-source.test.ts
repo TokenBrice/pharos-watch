@@ -102,8 +102,7 @@ describe("fetchMidasMmevNavOracleSource", () => {
     const fetchSpy = mockMidasRpc({ answer: 104_200_000n, updatedAt });
 
     const result = await fetchMidasMmevNavOracleSource({
-      prevExchangeRate: 1.03,
-      comparisonAnchorObservedAt: NOW_SEC - 7 * 86_400,
+      loadAnchor: async () => ({ exchangeRate: 1.03, observedAt: NOW_SEC - 7 * 86_400 }),
       chainRpcs: makeChainRpcs(),
       nowSec: NOW_SEC,
     });
@@ -139,7 +138,7 @@ describe("fetchMidasMmevNavOracleSource", () => {
     const anchor = NOW_SEC - 7 * 86_400;
     mockMidasRpc({ answer: 99_000_000n, updatedAt });
     const result = await fetchMidasMmevNavOracleSource({
-      prevExchangeRate: 1, comparisonAnchorObservedAt: anchor,
+      loadAnchor: async () => ({ exchangeRate: 1, observedAt: anchor }),
       chainRpcs: makeChainRpcs(), nowSec: NOW_SEC,
     });
     expect(result?.yield.currentApy).toBeCloseTo((Math.pow(0.99, 365.25 / ((updatedAt - anchor) / 86_400)) - 1) * 100);
@@ -184,14 +183,15 @@ describe("fetchMidasMmevNavOracleSource", () => {
 
   it("rejects repeated rounds rather than annualizing a zero observation interval", async () => {
     mockMidasRpc({ answer: 100_200_000n, updatedAt: NOW_SEC });
-    await expect(fetchMidasMmevNavOracleSource({ prevExchangeRate: 1.002,
-      comparisonAnchorObservedAt: NOW_SEC, nowSec: NOW_SEC, chainRpcs: makeChainRpcs() })).resolves.toBeNull();
+    await expect(fetchMidasMmevNavOracleSource({
+      loadAnchor: async () => ({ exchangeRate: 1.002, observedAt: NOW_SEC }), nowSec: NOW_SEC, chainRpcs: makeChainRpcs() })).resolves.toBeNull();
   });
 
   it("returns a seed candidate when no prior NAV anchor is available", async () => {
     mockMidasRpc({ answer: 104_200_000n, updatedAt: NOW_SEC - 60 });
 
     const result = await fetchMidasMmevNavOracleSource({
+      loadAnchor: async () => null,
       chainRpcs: makeChainRpcs(),
       nowSec: NOW_SEC,
     });
@@ -208,7 +208,7 @@ describe("fetchMidasMmevNavOracleSource", () => {
   it("keeps a flat measured NAV return distinct from a bootstrap anchor", async () => {
     mockMidasRpc({ answer: 100_000_000n, updatedAt: NOW_SEC });
     const result = await fetchMidasMmevNavOracleSource({
-      prevExchangeRate: 1, comparisonAnchorObservedAt: NOW_SEC - 7 * 86400,
+      loadAnchor: async () => ({ exchangeRate: 1, observedAt: NOW_SEC - 7 * 86400 }),
       chainRpcs: makeChainRpcs(), nowSec: NOW_SEC,
     });
     expect(result?.yield).toMatchObject({ currentApy: 0, apyBase: 0, exchangeRate: 1 });
@@ -219,6 +219,7 @@ describe("fetchMidasMmevNavOracleSource", () => {
     mockMidasRpc({ answer: 104_200_000n, updatedAt: NOW_SEC - 3 * 86_400 - 1 });
 
     await expect(fetchMidasMmevNavOracleSource({
+      loadAnchor: async () => null,
       chainRpcs: makeChainRpcs(),
       nowSec: NOW_SEC,
     })).resolves.toBeNull();
@@ -228,6 +229,7 @@ describe("fetchMidasMmevNavOracleSource", () => {
     mockMidasRpc({ answer: 0n, updatedAt: NOW_SEC - 60 });
 
     await expect(fetchMidasMmevNavOracleSource({
+      loadAnchor: async () => null,
       chainRpcs: makeChainRpcs(),
       nowSec: NOW_SEC,
     })).resolves.toBeNull();
