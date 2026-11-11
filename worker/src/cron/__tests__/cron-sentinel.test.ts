@@ -138,11 +138,12 @@ describe("runCronSentinel", () => {
   });
   it("lifts a reserve source quality finding into the sentinel run summary", async () => {
     const db = emptyDb();
+    const reason = "reserve-score-ineligible-sustained:iusd-infinifi";
     mocks.reserve.mockResolvedValueOnce({
       status: "ok", itemCount: 1,
       metadata: JSON.stringify({
         firedRuleIds: ["reserve-score-ineligible-sustained"],
-        quality: { reasons: ["reserve-score-ineligible-sustained"] },
+        quality: { reasons: [reason] },
       }),
     });
     const result = await runCronSentinel(db, { mode: "reserve-post-sync", nowSec: 500 });
@@ -150,10 +151,10 @@ describe("runCronSentinel", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.quality).toEqual({
       reason: "sentinel-source-findings",
-      sources: { "reserve-post-sync": { reasons: ["reserve-score-ineligible-sustained"] } },
+      sources: { "reserve-post-sync": { reasons: [reason] } },
     });
     expect(getCronQualityReasons(metadata)).toEqual([
-      "sentinel-source-findings", "reserve-post-sync:reserve-score-ineligible-sustained",
+      "sentinel-source-findings", `reserve-post-sync:${reason}`,
     ]);
     const retained = await runCronSentinel(db, { mode: "status", nowSec: 600 });
     expect(retained.status).toBe("ok");
