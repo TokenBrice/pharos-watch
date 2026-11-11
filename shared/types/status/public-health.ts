@@ -167,8 +167,10 @@ const MintBurnHealthQueryErrorsSchema = z.object({
   rowCount: z.string().nullable(),
 });
 
+const SchedulerStateSchema = z.enum(["healthy", "degraded", "stale", "unavailable"]);
+
 export const SchedulerLivenessSchema = z.object({
-  status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
+  status: SchedulerStateSchema,
   observedAt: z.number().finite(),
   /** Permanent context subject to clock validity; never renews either role's freshness. */
   lastAnyStartedAt: z.number().finite().nullable(),
@@ -187,7 +189,7 @@ export const SchedulerLivenessSchema = z.object({
     ageSeconds: z.number().finite().nonnegative().nullable(),
     warningAfterSec: z.number().positive(),
     staleAfterSec: z.number().positive(),
-    status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
+    status: SchedulerStateSchema,
     unavailableReason: z.string().nullable(),
   }),
   /**
@@ -200,7 +202,7 @@ export const SchedulerLivenessSchema = z.object({
     ageSeconds: z.number().finite().nonnegative().nullable(),
     warningAfterSec: z.number().positive(),
     staleAfterSec: z.number().positive(),
-    status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
+    status: SchedulerStateSchema,
     unavailableReason: z.string().nullable(),
   })).optional(),
 });

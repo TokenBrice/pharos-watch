@@ -471,7 +471,7 @@ export function deriveCronVerdict(
   if (qualityReasons.length > 0) {
     return {
       // DEX producer findings need attention even when publication completed.
-      verdict: critical || job === "sync-dex-liquidity" || job === "sync-dex-liquidity-stage" ? "watch" : "ok",
+      verdict: critical || (job != null && getCronJobMeta(job)?.operatorSuccessfulFindingsAttention === true) ? "watch" : "ok",
       code: "findings",
       sentence: `The latest run succeeded with findings: ${qualityReasons.join(", ")}.`,
     };

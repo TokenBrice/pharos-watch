@@ -63,12 +63,6 @@ export interface ProducerFreshnessLane {
   livenessOnly?: boolean;
 }
 
-/**
- * Control-plane producers with no consumer freshness surface but whose total
- * silence removes user-facing or operator-facing delivery work.
- */
-const LIVENESS_ONLY_PRODUCERS = new Set(["dispatch-telegram-alerts"]);
-
 export function deriveCronFreshnessProducers(
   definitions: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS,
 ): ProducerFreshnessLane[] {
@@ -79,7 +73,7 @@ export function deriveCronFreshnessProducers(
   );
 
   return definitions.flatMap((definition): ProducerFreshnessLane[] => {
-    const livenessOnly = LIVENESS_ONLY_PRODUCERS.has(definition.job);
+    const livenessOnly = definition.operatorFreshness?.observation === "completed-run";
     if (definition.freshnessSurface === "none" && !livenessOnly) return [];
     const cacheLane = cacheLaneByProducer.get(definition.job);
     if (cacheLane) {
@@ -96,7 +90,7 @@ export function deriveCronFreshnessProducers(
     // runs and become stale at 3x their canonical producer interval. A
     // liveness-only control-plane job publishes no consumer output, so one
     // missed invocation is the reviewed budget and the alert names it.
-    const thresholdSec = livenessOnly ? definition.intervalSec * 2 : definition.intervalSec * 3;
+    const thresholdSec = definition.intervalSec * (definition.operatorFreshness?.staleAfterIntervals ?? 3);
     if (thresholdSec > CRON_RUNS_RETENTION_SEC) return [];
     return [{
       producerJob: definition.job,
@@ -350,37 +344,41 @@ function buildDependencyRecoveryChecks(observations: readonly CronStalenessObser
   const byCacheKey = new Map(
     observations.flatMap((observation) => observation.cacheKey == null ? [] : [[observation.cacheKey, observation] as const]),
   );
-  const dexLiquidity = byCacheKey.get("dex-liquidity");
-  const dews = byCacheKey.get("dews");
-  if (!dexLiquidity || !dews) {
-    return [
-      {
-        root: "dex-liquidity",
-        dependent: "dews",
-        state: "unknown",
-        rootAgeSeconds: dexLiquidity?.ageSeconds ?? null,
-        dependentAgeSeconds: dews?.ageSeconds ?? null,
-      },
-    ];
-  }
+  return CRON_JOB_DEFINITIONS.flatMap((definition) =>
+    (definition.operatorRecoveryDependencies ?? []).flatMap(({ rootCacheKey, dependentCacheKey }) => {
+      const dexLiquidity = byCacheKey.get(rootCacheKey);
+      const dews = byCacheKey.get(dependentCacheKey);
+      if (!dexLiquidity || !dews) {
+        return [
+          {
+            root: rootCacheKey,
+            dependent: dependentCacheKey,
+            state: "unknown",
+            rootAgeSeconds: dexLiquidity?.ageSeconds ?? null,
+            dependentAgeSeconds: dews?.ageSeconds ?? null,
+          },
+        ];
+      }
 
-  const rootStale = isStale(dexLiquidity);
-  const dependentStale = isStale(dews);
-  const state =
-    rootStale && dependentStale
-      ? "both-stale"
-      : !rootStale && dependentStale
-        ? "root-recovered-dependent-stale"
-        : "healthy";
-  return [
-    {
-      root: "dex-liquidity",
-      dependent: "dews",
-      state,
-      rootAgeSeconds: dexLiquidity.ageSeconds,
-      dependentAgeSeconds: dews.ageSeconds,
-    },
-  ];
+      const rootStale = isStale(dexLiquidity);
+      const dependentStale = isStale(dews);
+      const state =
+        rootStale && dependentStale
+          ? "both-stale"
+          : !rootStale && dependentStale
+            ? "root-recovered-dependent-stale"
+            : "healthy";
+      return [
+        {
+          root: rootCacheKey,
+          dependent: dependentCacheKey,
+          state,
+          rootAgeSeconds: dexLiquidity.ageSeconds,
+          dependentAgeSeconds: dews.ageSeconds,
+        },
+      ];
+    }),
+  );
 }
 
 function buildObservation(

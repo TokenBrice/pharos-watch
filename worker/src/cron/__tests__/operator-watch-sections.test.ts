@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -22,7 +23,6 @@ import {
   loadMintBurnStuckConfigWatchConditions,
 } from "../operator-watch-mintburn";
 import {
-  DAILY_LANE_COMPLETION_GRACE_SEC,
   buildPricingOperatorConditions,
   pricingOperatorRuleIds,
 } from "../operator-watch-pricing";
@@ -463,7 +463,7 @@ describe("pricing operator conditions", () => {
 
     const early = await buildPricingOperatorConditions(bluechipDb(bluechipRatings()), {
       caches: { [CACHE_FRESHNESS_LANES.usdsStatus.cacheKey]: { publishedAt: SLOT_START - 86_400 + 60 } },
-      nowSec: SLOT_START + DAILY_LANE_COMPLETION_GRACE_SEC,
+      nowSec: SLOT_START + getCronJobMeta("sync-usds-status")!.operatorCompletionGraceSec!,
     });
     expect(early.find((condition) => condition.id === "sync-usds-status-slot")?.active).toBe(false);
   });
