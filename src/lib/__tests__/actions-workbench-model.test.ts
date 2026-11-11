@@ -12,6 +12,7 @@ import {
   type SessionActionExecutionLike,
 } from "@/lib/actions-workbench-model";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
+import { AdminActionAuditLogResponseSchema } from "@shared/types/admin-action-audit";
 
 function action(overrides: Partial<StatusPageAction> = {}): StatusPageAction {
   return {
@@ -83,6 +84,12 @@ function canonicalAudit(intentId = "intent-1", overrides: Partial<AdminActionAud
 }
 
 describe("actions workbench model", () => {
+  it("admits audit entries with nullable fields and rejects unknown result values", () => {
+    const response = { entries: [auditEntry, { ...auditEntry, result: "error", target: null, httpStatus: null, details: { reason: "failed" } }] };
+    expect(AdminActionAuditLogResponseSchema.parse(response)).toEqual(response);
+    expect(AdminActionAuditLogResponseSchema.safeParse({ entries: [{ ...auditEntry, result: "pending" }] }).success).toBe(false);
+  });
+
   it("preserves canonical unknown outcomes from persisted audit details", () => {
     const activities = reconcileActionActivity(
       [action()],

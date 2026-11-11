@@ -23,7 +23,7 @@ import {
   type SafetyScoreV9PegProvenanceSeed,
 } from "../lib/safety-score-v9/peg-provenance";
 import { runSafetyScoreV9Publication } from "../lib/safety-score-v9/publication-runner";
-import { loadSafetyScoreV9PublicationHealth } from "../lib/safety-score-v9/publication-health";
+import { loadSafetyScoreV9PublicationHealth, SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-health";
 import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
 } from "../lib/safety-score-v9/supply-attribution";
@@ -708,7 +708,7 @@ export async function computeSafetyScoreV9(
                 candidateRows: inputSummary.activeAssets,
                 publishedRows: inputSummary.activeAssets,
                 expectedRows: inputSummary.activeAssets,
-                artifactCacheKey: "report-cards:v9",
+                artifactCacheKey: SAFETY_SCORE_V9_CACHE_KEYS.publication,
                 validationSummary: {
                   outcome: publication.outcome,
                   quarantinedAssetCount:

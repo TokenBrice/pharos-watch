@@ -9,7 +9,7 @@ import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-so
 import { ApiKeyAuditLogResponseSchema, ApiKeyListResponseSchema, CredentialLifecycleSummaryResponseSchema } from "@pharos/contracts/api-keys";
 import { ApiRequestAttributionResponseSchema, REQUEST_SOURCE_MEASUREMENT_VERSION } from "@pharos/contracts/request-source";
 import { StatusCronDetailResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "@shared/types/status";
-import { AdminActionAuditLogResponseSchema, type AdminActionAuditLogResponse } from "@/lib/actions-workbench-model";
+import { AdminActionAuditLogResponseSchema, type AdminActionAuditLogResponse } from "@shared/types/admin-action-audit";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import type { SchemaLikeSource } from "@shared/lib/schema-like";
 

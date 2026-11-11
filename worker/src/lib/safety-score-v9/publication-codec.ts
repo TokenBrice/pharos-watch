@@ -32,8 +32,10 @@ const STORAGE_SCHEMA_VERSION = 1;
 
 // One retained accepted generation for offline scenario replay. Both rows
 // advance with the canonical publication batch (or neither does).
-export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY = "report-cards:v9:accepted-replay:v1";
-export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v9:accepted-replay-base:v1";
+export {
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+} from "@shared/types/safety-score-cache-keys";
 
 export class SafetyScoreV9SchemaCutoverPendingError extends Error {
   readonly code = "publication-schema-cutover-pending";

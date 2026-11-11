@@ -14,6 +14,7 @@ import type {
   YieldSourceRisk,
   YieldDeploymentPlace,
   YieldSourceInputMeta,
+  YieldSourceConfidenceTier,
 } from "@shared/types/yield";
 import {
   type PysSourceRiskPenaltyReason,
@@ -105,7 +106,7 @@ import {
   resolveYieldBenchmarkDependencies,
 } from "../../lib/yield-config/yield-benchmark-dependencies";
 
-export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
+export type ConfidenceTier = YieldSourceConfidenceTier;
 
 export interface EvaluatedYieldSource {
   id: string;
