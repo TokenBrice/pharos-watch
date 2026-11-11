@@ -93,95 +93,90 @@ const midasLytBase: RedemptionBackstopConfig = {
   ],
 };
 
-const MIDAS_LYT_VAULTS = [
-  { id: "mf-one-midas", ticker: "mF-ONE", productUrl: "https://midas.app/mfone" },
-  { id: "mglobal-midas-fasanara", ticker: "mGLOBAL", productUrl: "https://midas.app/mglobal" },
-  { id: "mhyper-midas", ticker: "mHYPER", productUrl: "https://midas.app/mhyper" },
-  { id: "mmev-midas", ticker: "mMEV", productUrl: "https://docs.midas.app/tokens/mmev" },
-  { id: "mapollo-midas", ticker: "mAPOLLO", productUrl: "https://midas.app/mapollo" },
-] as const;
-
-const MIDAS_LYT_FEE_DISCLOSURES: Partial<
-  Record<string, { statement: string; feeBpsMax: number; label: string; url: string }>
-> = {
-  "mf-one-midas": {
-    statement: "Standard Redemption: This is a fee-free exit option.",
-    feeBpsMax: 0,
-    label: "Midas Open Liquidity Architecture",
-    url: "https://docs.midas.app/liquidity-and-composability/open-liquidity-architecture",
-  },
-  "mglobal-midas-fasanara": {
-    statement:
-      "Standard redemption, settled monthly at the official NAV with no fee; this does not apply to instant-liquidity routes.",
-    feeBpsMax: 0,
-    label: "Midas mGLOBAL Aave Horizon launch (2026-06-23; reviewed 2026-10-03)",
-    url: "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
-  },
-  "mhyper-midas": {
-    statement:
-      "The signed July 17, 2026 mHYPER Final Terms specify Redemption Fees 0% for standard redemption; the separate 0.5% Instant Redemption Fee and up-to-50% deferred-price holdback do not establish standard-route all-in execution cost or funded capacity.",
-    feeBpsMax: 0,
-    label: "Midas mHYPER signed Final Terms (July 17, 2026; reviewed October 9, 2026)",
-    url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
-  },
-  "mmev-midas": {
-    statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
-    feeBpsMax: 50,
-    label: "Midas mMEV Final Terms",
-    url: "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf",
-  },
-  "mapollo-midas": {
-    statement:
-      "mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% for standard redemption; the separate Instant Redemption Fee of 0.5% does not apply to this route, and all-in transaction cost is not asserted zero.",
-    feeBpsMax: 0,
-    label: "Midas mAPOLLO Final Terms (signed 2026-07-17; reviewed 2026-10-03)",
-    url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
-  },
-};
-assertKnownTableKeys(
-  "MIDAS_LYT_FEE_DISCLOSURES",
-  MIDAS_LYT_VAULTS.map(({ id }) => id),
-  MIDAS_LYT_FEE_DISCLOSURES,
-);
-
-
 type MidasLytTermsGap = Required<
   Pick<RedemptionV9RouteReviewTerms, "missingScoringFields" | "rationale">
 >;
 
-const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
-  "mf-one-midas": {
-    missingScoringFields: ["capacity", "settlement"],
-    rationale:
-      "The reviewed standard-redemption fee is retained. At Ethereum block 26103201 on 2026-10-02, the official mF-ONE vault is unpaused but greenlist-gated, charges 100 bps for instant redemption, and can source USDC through its mTBILL holdings and the upstream mTBILL vault. Those balances and a 30-million-mToken daily limit do not prove executable capacity for an authorized holder at the scoring notional. The recovered issuer documentation describes a queued fallback without product-specific binding calendar-day settlement or holdback-release terms, so capacity and settlement remain withheld.",
+const MIDAS_LYT_VAULTS: readonly {
+  id: string;
+  ticker: string;
+  productUrl: string;
+  feeDisclosure?: { statement: string; feeBpsMax: number; label: string; url: string };
+  termsGap?: MidasLytTermsGap;
+}[] = [
+  {
+    id: "mf-one-midas", ticker: "mF-ONE", productUrl: "https://midas.app/mfone",
+    feeDisclosure: {
+      statement: "Standard Redemption: This is a fee-free exit option.",
+      feeBpsMax: 0,
+      label: "Midas Open Liquidity Architecture",
+      url: "https://docs.midas.app/liquidity-and-composability/open-liquidity-architecture",
+    },
+    termsGap: {
+      missingScoringFields: ["capacity", "settlement"],
+      rationale:
+        "The reviewed standard-redemption fee is retained. At Ethereum block 26103201 on 2026-10-02, the official mF-ONE vault is unpaused but greenlist-gated, charges 100 bps for instant redemption, and can source USDC through its mTBILL holdings and the upstream mTBILL vault. Those balances and a 30-million-mToken daily limit do not prove executable capacity for an authorized holder at the scoring notional. The recovered issuer documentation describes a queued fallback without product-specific binding calendar-day settlement or holdback-release terms, so capacity and settlement remain withheld.",
+    },
   },
-  "mhyper-midas": {
-    missingScoringFields: ["capacity", "settlement"],
-    rationale:
-      "The captured fee and vault observations remain unchanged; daily limits alone are not funded capacity. The signed July 17, 2026 mHYPER Final Terms and incorporated 2026 base specify one Business Day realisation plus five Business Days payment from the Redemption Request Effective Date under condition 8.1, with 23:59 CET/CEST cutoff, relevant commercial-bank/Frankfurt Business Day definition and 15% of aggregate outstanding mTokens per settlement day gate. These exact terms are curated in businessDayTerms. Conditions 12.2-12.5 allow postponed/fallback valuation and payment five Business Days after that valuation, without overriding gates; condition 14 restricts subordinated payment. No unconditional same-notional request-to-completion maximum is disclosed.",
+  {
+    id: "mglobal-midas-fasanara", ticker: "mGLOBAL", productUrl: "https://midas.app/mglobal",
+    feeDisclosure: {
+      statement:
+        "Standard redemption, settled monthly at the official NAV with no fee; this does not apply to instant-liquidity routes.",
+      feeBpsMax: 0,
+      label: "Midas mGLOBAL Aave Horizon launch (2026-06-23; reviewed 2026-10-03)",
+      url: "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
+    },
   },
-  "mmev-midas": {
-    missingScoringFields: ["capacity", "settlement", "cost"],
-    rationale:
-      "The existing discontinued-product and post-retirement capacity/cost findings remain unchanged. The July 17, 2025 mMEV Final Terms incorporate the 2025 base: its condition 5.3 requires payment within ten Business Days only after issuer notice for a Greenlisted holder, with token delivery, the exact relevant-clearing-system/commercial-bank/Frankfurt definition, market-disruption and underlying-illiquidity deferrals, and qualified subordination retained in the reviewed businessDayTerms. No unconditional request-to-completion maximum is disclosed; these terms do not prove a residual executable route or reopen the discontinued channel.",
+  {
+    id: "mhyper-midas", ticker: "mHYPER", productUrl: "https://midas.app/mhyper",
+    feeDisclosure: {
+      statement:
+        "The signed July 17, 2026 mHYPER Final Terms specify Redemption Fees 0% for standard redemption; the separate 0.5% Instant Redemption Fee and up-to-50% deferred-price holdback do not establish standard-route all-in execution cost or funded capacity.",
+      feeBpsMax: 0,
+      label: "Midas mHYPER signed Final Terms (July 17, 2026; reviewed October 9, 2026)",
+      url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
+    },
+    termsGap: {
+      missingScoringFields: ["capacity", "settlement"],
+      rationale:
+        "The captured fee and vault observations remain unchanged; daily limits alone are not funded capacity. The signed July 17, 2026 mHYPER Final Terms and incorporated 2026 base specify one Business Day realisation plus five Business Days payment from the Redemption Request Effective Date under condition 8.1, with 23:59 CET/CEST cutoff, relevant commercial-bank/Frankfurt Business Day definition and 15% of aggregate outstanding mTokens per settlement day gate. These exact terms are curated in businessDayTerms. Conditions 12.2-12.5 allow postponed/fallback valuation and payment five Business Days after that valuation, without overriding gates; condition 14 restricts subordinated payment. No unconditional same-notional request-to-completion maximum is disclosed.",
+    },
   },
-  "mapollo-midas": {
-    missingScoringFields: ["capacity", "settlement"],
-    rationale:
-      "The reviewed standard-redemption fee is retained: the mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% and a separate 0.5% Instant Redemption Fee. The shared Midas liquidity architecture establishes a redemption mechanism, but the mAPOLLO materials publish no current executable capacity or binding calendar-day fallback SLA, so capacity and settlement remain withheld.",
+  {
+    id: "mmev-midas", ticker: "mMEV", productUrl: "https://docs.midas.app/tokens/mmev",
+    feeDisclosure: {
+      statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
+      feeBpsMax: 50,
+      label: "Midas mMEV Final Terms",
+      url: "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf",
+    },
+    termsGap: {
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The existing discontinued-product and post-retirement capacity/cost findings remain unchanged. The July 17, 2025 mMEV Final Terms incorporate the 2025 base: its condition 5.3 requires payment within ten Business Days only after issuer notice for a Greenlisted holder, with token delivery, the exact relevant-clearing-system/commercial-bank/Frankfurt definition, market-disruption and underlying-illiquidity deferrals, and qualified subordination retained in the reviewed businessDayTerms. No unconditional request-to-completion maximum is disclosed; these terms do not prove a residual executable route or reopen the discontinued channel.",
+    },
   },
-};
-assertKnownTableKeys(
-  "MIDAS_LYT_TERMS_GAPS",
-  MIDAS_LYT_VAULTS.map(({ id }) => id),
-  MIDAS_LYT_TERMS_GAPS,
-);
-
+  {
+    id: "mapollo-midas", ticker: "mAPOLLO", productUrl: "https://midas.app/mapollo",
+    feeDisclosure: {
+      statement:
+        "mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% for standard redemption; the separate Instant Redemption Fee of 0.5% does not apply to this route, and all-in transaction cost is not asserted zero.",
+      feeBpsMax: 0,
+      label: "Midas mAPOLLO Final Terms (signed 2026-07-17; reviewed 2026-10-03)",
+      url: "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+    },
+    termsGap: {
+      missingScoringFields: ["capacity", "settlement"],
+      rationale:
+        "The reviewed standard-redemption fee is retained: the mAPOLLO Final Terms signed July 17, 2026 list Redemption Fees 0% and a separate 0.5% Instant Redemption Fee. The shared Midas liquidity architecture establishes a redemption mechanism, but the mAPOLLO materials publish no current executable capacity or binding calendar-day fallback SLA, so capacity and settlement remain withheld.",
+    },
+  },
+];
 
 const MIDAS_LYT_CONFIGS = defineConfigFamily(
   MIDAS_LYT_VAULTS,
-  ({ id, ticker, productUrl }) => {
-    const feeDisclosure = MIDAS_LYT_FEE_DISCLOSURES[id];
+  ({ id, ticker, productUrl, feeDisclosure, termsGap }) => {
     const docs = [
       sourceRefFull(`Midas ${ticker}`, productUrl),
       ...(feeDisclosure ? [sourceRef(feeDisclosure.label, feeDisclosure.url, ["fees"])] : []),
@@ -194,7 +189,6 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
       ] : []),
       ...midasLytBase.docs!,
     ];
-    const termsGap = MIDAS_LYT_TERMS_GAPS[id];
     const calendarReview = id === "mapollo-midas"
       ? {
           businessDayTerms: {
