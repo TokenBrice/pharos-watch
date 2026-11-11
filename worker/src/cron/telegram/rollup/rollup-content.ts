@@ -1,3 +1,4 @@
+import { TELEGRAM_ROLLUP_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { isValidIanaTimezone, localDateInIanaTimezone } from "@shared/lib/iana-local-time";
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
@@ -109,8 +110,6 @@ function isDewsEasing(from: string, to: string): boolean {
   return isThreatBand(from) && isThreatBand(to) && THREAT_BAND_ORDER[to] < THREAT_BAND_ORDER[from];
 }
 
-const FAMILY_ORDER = { safety: 0, dews: 1, freeze: 2, reserve: 3 } as const;
-
 const FAMILY_LABEL = {
   safety: "Safety grades",
   dews: "Early-warning stress",
@@ -164,7 +163,7 @@ export function formatRollupMessage(input: {
   if (input.changes.length === 0 && overflowCount === 0) return null;
   const ordered = [...input.changes].sort((a, b) =>
     Number(isImprovement(a)) - Number(isImprovement(b)) ||
-    FAMILY_ORDER[a.kind] - FAMILY_ORDER[b.kind] ||
+    TELEGRAM_ROLLUP_ALERT_TYPES.indexOf(a.kind) - TELEGRAM_ROLLUP_ALERT_TYPES.indexOf(b.kind) ||
     a.symbol.localeCompare(b.symbol));
   const listed = ordered.slice(0, ROLLUP_POLICY.maxListedChanges);
   const unlisted = ordered.length - listed.length;
@@ -173,7 +172,7 @@ export function formatRollupMessage(input: {
     ? `<b>Daily changes</b>: ${plural(ordered.length, "change")} on your coins, led by ${formatNetChangeLine(listed[0]!).replace(/<\/?b>/g, "")}`
     : `<b>Daily changes</b>: ${plural(overflowCount, "alert")} held back`;
   const sections: string[] = [headline];
-  for (const kind of ["safety", "dews", "freeze", "reserve"] as const) {
+  for (const kind of TELEGRAM_ROLLUP_ALERT_TYPES) {
     const lines = listed.filter((change) => change.kind === kind).map(formatNetChangeLine);
     if (lines.length > 0) sections.push(`<b>${FAMILY_LABEL[kind]}</b>\n${lines.join("\n")}`);
   }

@@ -1,5 +1,6 @@
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { TELEGRAM_LIVE_ALERT_TYPES } from "@shared/types/status/telegram";
+import { TELEGRAM_MINI_APP_ALERT_LABELS, TELEGRAM_MINI_APP_ALERT_DESCRIPTIONS, TELEGRAM_ALERT_FAMILY_SHORT_LABELS, TELEGRAM_PRESET_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_ALERT_TYPES, TELEGRAM_LIVE_ALERT_TYPES } from "@shared/types/status/telegram";
 import type {
   TelegramAlertType,
   TelegramDepegStepBps,
@@ -10,39 +11,20 @@ import type {
 } from "./types";
 
 /** Plain-language family names; retired launch keeps a label for legacy rows only. */
-export const ALERT_LABELS = {
-  dews: "Early warning",
-  depeg: "Depeg",
-  safety: "Safety Score",
-  launch: "Launch",
-  reserve: "Reserve changes",
-  freeze: "Freezes",
-} as const satisfies Record<TelegramAlertType, string>;
+export const ALERT_LABELS = TELEGRAM_MINI_APP_ALERT_LABELS;
 
 /** One-line explanation shown under each family switch. */
-export const ALERT_DESCRIPTIONS = {
-  dews: "Stress rises on the DEWS radar",
-  depeg: "Price moves away from the peg",
-  safety: "Severe grade drops live, other moves daily",
-  launch: "Retired",
-  reserve: "Reserve mix shifts",
-  freeze: "Large issuer freezes and token destroys",
-} as const satisfies Record<TelegramAlertType, string>;
+export const ALERT_DESCRIPTIONS = TELEGRAM_MINI_APP_ALERT_DESCRIPTIONS;
 
 /** Compact names for one-line coin summaries. */
-export const ALERT_SHORT_LABELS = {
-  dews: "DEWS",
-  depeg: "Depeg",
-  safety: "Safety",
-  launch: "Launch",
-  reserve: "Reserve",
-  freeze: "Freeze",
-} as const satisfies Record<TelegramAlertType, string>;
+export const ALERT_SHORT_LABELS = Object.fromEntries(
+  TELEGRAM_ALERT_TYPES.map((type) => [type, TELEGRAM_ALERT_FAMILY_SHORT_LABELS[type]]),
+) as Record<TelegramAlertType, string>;
 
 /** Families with switches; retired launch alerts are neither shown nor written. */
 export const LIVE_ALERT_TYPES = TELEGRAM_LIVE_ALERT_TYPES;
 
-export const PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const satisfies readonly TelegramAlertType[];
+export const PRESET_ALERT_TYPES = TELEGRAM_PRESET_ALERT_TYPES;
 export type PresetAlertType = (typeof PRESET_ALERT_TYPES)[number];
 
 /** Null keeps the default; each option is distinct (no "Default" duplicate of a real value). */

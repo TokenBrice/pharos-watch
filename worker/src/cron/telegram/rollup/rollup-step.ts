@@ -1,4 +1,5 @@
 import { TELEGRAM_ALERT_POLICY, TELEGRAM_ALERT_TTL_SEC, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
+import { TELEGRAM_ROLLUP_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import { D1_BATCH_SIZE } from "../../../lib/constants";
 import { buildInClause, chunkArray, executeAtomicBatch } from "../../../lib/db";
@@ -394,7 +395,7 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
   if (coverage == null) return { ...result, state: "preset-resolution-failed", deferredChats: due.length };
   const minSince = Math.min(...batch.map(({ sinceSec }) => sinceSec));
   const changes = await withoutRetractedFreezes(
-    db, await loadCoinChanges(db, ["safety", "dews", "freeze", "reserve"], minSince, nowSec),
+    db, await loadCoinChanges(db, TELEGRAM_ROLLUP_ALERT_TYPES, minSince, nowSec),
   );
   const overflowCounts = await loadOverflowCounts(
     db,

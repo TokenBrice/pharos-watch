@@ -13,6 +13,7 @@
 
 import { TELEGRAM_BOT_URL, TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
+import { TELEGRAM_PRESET_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import { escapeHtml, type InlineKeyboardButton, type InlineKeyboardMarkup } from "../delivery/telegram";
 import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
@@ -149,7 +150,7 @@ export async function handleSetupFollowTop(context: SetupCallbackContext): Promi
   const alreadyFollowing = result.kind === "unchanged";
   let undoData: string | undefined;
   if (result.kind === "applied") {
-    const prior = new Set((["dews", "depeg", "safety"] as const).filter((type) => result.prior?.[`alert_${type}`] === 1));
+    const prior = new Set(TELEGRAM_PRESET_ALERT_TYPES.filter((type) => result.prior?.[`alert_${type}`] === 1));
     undoData = `setup:undo:${encodeAlertTypes(prior)}:${(unixNow() + UNDO_TTL_SEC).toString(36)}-${result.generation.toString(36)}.${result.identity}`;
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
@@ -189,7 +190,7 @@ export async function handleSetupUndo(
   expiryCode: string | undefined,
 ): Promise<{ text: string }> {
   const prior = maskCode === "0" ? new Set<string>() : decodeAlertTypes(maskCode);
-  if (!prior || [...prior].some((type) => type !== "dews" && type !== "depeg" && type !== "safety")) {
+  if (!prior || [...prior].some((type) => !(TELEGRAM_PRESET_ALERT_TYPES as readonly string[]).includes(type))) {
     return { text: "Action not recognized." };
   }
   const [fence, identity, extraIdentity] = expiryCode?.split(".") ?? [];

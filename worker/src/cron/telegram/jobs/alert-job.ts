@@ -1,3 +1,4 @@
+import { TELEGRAM_ALERT_JOB_FAMILIES } from "@shared/lib/telegram-alert-families";
 import type { TelegramAlertType } from "@shared/types/status";
 import { TELEGRAM_ALERT_POLICY, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { chunkArray } from "../../../lib/db";
@@ -46,12 +47,9 @@ const ROLLUP_ONLY_GLOBAL_FAMILIES: ReadonlySet<string> = new Set(TELEGRAM_ALERT_
 const PRESET_CHAT_CHUNK = 80;
 
 function eventAlertTypes(events: TelegramDispatchEvents): TelegramAlertType[] {
-  const types: TelegramAlertType[] = [];
-  if (events.dewsIds.length > 0) types.push("dews");
-  if (events.depegIds.length > 0) types.push("depeg");
-  if (events.safetyIds.length > 0) types.push("safety");
-  if (events.reserveIds.length > 0) types.push("reserve");
-  return types;
+  return TELEGRAM_ALERT_JOB_FAMILIES
+    .filter((spec) => events[spec.idsKey].length > 0)
+    .map((spec) => spec.family);
 }
 
 /**

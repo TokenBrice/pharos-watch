@@ -12,6 +12,7 @@ import { buildTelegramMiniAppUrl } from "../common/mini-app-url";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
+  TELEGRAM_PRESET_ALERT_TYPES,
   DEWS_BAND_CODE_BY_VALUE,
   SAFETY_MODE_CODE_BY_VALUE,
   type SafetyModeCode,
@@ -255,7 +256,7 @@ function isExplicitOff(row: SubscriptionRow | null, type: TelegramAlertType): bo
 function describeLocalState(row: SubscriptionRow | null, type: TelegramAlertType): string {
   if (row?.[TELEGRAM_ALERT_PERSISTENCE[type].subscriptionColumn] === 1) return "on";
   if (isExplicitOff(row, type)) return "off (local override)";
-  return type === "dews" || type === "depeg" || type === "safety"
+  return (TELEGRAM_PRESET_ALERT_TYPES as readonly TelegramAlertType[]).includes(type)
     ? "inherits chat/preset policy"
     : "inherits chat policy";
 }

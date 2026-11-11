@@ -1,3 +1,4 @@
+import { TELEGRAM_PRESET_ALERT_TYPES, type TelegramPresetAlertType } from "@shared/lib/telegram-alert-families";
 import { executeAtomicBatch } from "../../lib/db";
 import { bytesToBase64Url } from "@shared/lib/base64url";
 import type { PresetSubscriptionRow } from "../webhook/telegram-webhook-shared";
@@ -88,7 +89,7 @@ export function prepareSubscriberAndPresetStatements(
   options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
 ): D1PreparedStatement[] {
   return [
-    ...(presetIds.length > 0 && (options?.depegWorseningBpsStep !== undefined || ["dews", "depeg", "safety"].some((type) => alertTypes.has(type)))
+    ...(presetIds.length > 0 && (options?.depegWorseningBpsStep !== undefined || TELEGRAM_PRESET_ALERT_TYPES.some((type) => alertTypes.has(type)))
       ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: unixNow(), feature: "preset" })
       : []),
     ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, directStablecoinIds, options),
@@ -102,7 +103,7 @@ export function prepareSubscriberAndPresetPatchStatements(
   chatId: string,
   username: string | null,
   presetId: string,
-  alertTypes: Partial<Record<"dews" | "depeg" | "safety", boolean>>,
+  alertTypes: Partial<Record<TelegramPresetAlertType, boolean>>,
   depegWorseningBpsStep: 100 | 250 | 500 | null | undefined,
   guard?: { sql: string; binds: unknown[] },
 ): D1PreparedStatement[] {

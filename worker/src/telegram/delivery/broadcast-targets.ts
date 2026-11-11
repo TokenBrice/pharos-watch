@@ -3,13 +3,9 @@ import {
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   TELEGRAM_ALERT_PERSISTENCE,
 } from "@shared/lib/telegram-alert-families";
+import type { TelegramBroadcastScope } from "@shared/lib/telegram-broadcast-contract";
 import { splitMessage } from "../common/alerts-formatting";
 import type { TelegramDeliveryInput } from "./jobs";
-
-export type TelegramBroadcastScope =
-  | "all"
-  | "deliverable-watchers"
-  | "global-subscribers";
 
 export async function loadBroadcastTargetChatIds(
   db: D1Database,

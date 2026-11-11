@@ -4,7 +4,7 @@ import {
   D1_SAFE_IN_CLAUSE_BIND_LIMIT,
   executeAtomicBatch,
 } from "../../lib/db";
-import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_ALERT_PERSISTENCE, TELEGRAM_TUNED_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
 import type { TelegramDewsBand, TelegramSafetyMode, TelegramDepegStepBps } from "@shared/types/status/telegram";
 import type { ResolvedCoin } from "../common/alerts-parser";
@@ -45,10 +45,10 @@ function bindSubscriptionUpsert(db: D1Database, upsert: BuiltSubscriptionUpsert)
  * `settingsColumn` in the alert-type registry. `subscription-registry` test
  * asserts the two stay in step.
  */
-export type PlainAlertType = Exclude<TelegramAlertType, "dews" | "depeg" | "safety">;
+export type PlainAlertType = Exclude<TelegramAlertType, (typeof TELEGRAM_TUNED_ALERT_TYPES)[number]>;
 
 /** Base columns every per-coin upsert seeds, in canonical column order. */
-const SEEDED_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
+const SEEDED_ALERT_TYPES = TELEGRAM_TUNED_ALERT_TYPES;
 
 type UpsertFlag =
   | { kind: "bound"; value: 0 | 1 }

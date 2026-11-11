@@ -1,4 +1,4 @@
-import type { TelegramAlertType } from "@shared/types/status";
+import { TELEGRAM_ALERT_JOB_FAMILIES, type TelegramAlertJobType, type TelegramPresetAlertType } from "@shared/lib/telegram-alert-families";
 import type { ConsolidatedAlerts } from "../../../telegram/common/alerts-formatting";
 import type { TelegramFanoutPlanEvents } from "../sources/dispatch-telegram-events";
 import {
@@ -9,8 +9,8 @@ import {
 } from "./dispatch-telegram-predicates";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 
-export type LegacyFanoutAlertType = Exclude<TelegramAlertType, "freeze" | "launch">;
-export type PresetFanoutAlertType = Exclude<LegacyFanoutAlertType, "reserve">;
+export type LegacyFanoutAlertType = TelegramAlertJobType;
+export type PresetFanoutAlertType = TelegramPresetAlertType;
 
 interface FanoutSubscriberLoadOptions {
   chatIds?: readonly string[];
@@ -23,12 +23,7 @@ export type FanoutLoaderFamily =
   | "global"
   | "snooze-explicit-off";
 
-export interface AlertStablecoinIds {
-  dewsIds: string[];
-  depegIds: string[];
-  safetyIds: string[];
-  reserveIds: string[];
-}
+export type AlertStablecoinIds = Record<(typeof TELEGRAM_ALERT_JOB_FAMILIES)[number]["idsKey"], string[]>;
 
 type RoutedEventKey = Exclude<keyof TelegramFanoutPlanEvents, "safetyScoreIdentity">;
 type RoutedAlertKey = Exclude<keyof ConsolidatedAlerts, "freeze">;
@@ -52,30 +47,23 @@ function route<K extends RoutedEventKey>(
   };
 }
 
-export const TELEGRAM_FANOUT_FAMILIES = [
-  {
-    family: "dews", idsKey: "dewsIds", presetFamily: "dews",
-    routes: [route("dewsChanges", "dews", (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band))],
-  },
-  {
-    family: "depeg", idsKey: "depegIds", presetFamily: "depeg",
-    routes: [
-      route("depegTriggered", "depegTriggered", (sub, event) =>
-        meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step)),
-      route("depegResolved", "depegResolved", (sub, event) =>
-        meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step)),
-      route("depegWorsening", "depegWorsening", shouldIncludeDepegWorsening),
-    ],
-  },
-  {
-    family: "safety", idsKey: "safetyIds", presetFamily: "safety",
-    routes: [route("safetyChanges", "safety", shouldIncludeSafetyForSubscriber)],
-  },
-  {
-    family: "reserve", idsKey: "reserveIds", presetFamily: null,
-    routes: [route("reservePromoted", "reserve")],
-  },
-] as const;
+const FAMILY_ROUTES: Record<LegacyFanoutAlertType, readonly TelegramFanoutRoute[]> = {
+  dews: [route("dewsChanges", "dews", (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band))],
+  depeg: [
+    route("depegTriggered", "depegTriggered", (sub, event) =>
+      meetsDepegStepThreshold(event.deviationBps, sub.depeg_worsening_bps_step)),
+    route("depegResolved", "depegResolved", (sub, event) =>
+      meetsDepegStepThreshold(event.peakDeviationBps, sub.depeg_worsening_bps_step)),
+    route("depegWorsening", "depegWorsening", shouldIncludeDepegWorsening),
+  ],
+  safety: [route("safetyChanges", "safety", shouldIncludeSafetyForSubscriber)],
+  reserve: [route("reservePromoted", "reserve")],
+};
+
+export const TELEGRAM_FANOUT_FAMILIES = TELEGRAM_ALERT_JOB_FAMILIES.map((spec) => ({
+  ...spec,
+  routes: FAMILY_ROUTES[spec.family],
+}));
 
 export type PresetSubscriberLoadResult =
   | { kind: "ok"; rows: Map<string, SubscriberRow[]> }
@@ -147,7 +135,9 @@ export async function loadFanoutSubscriptionInputs(
   };
   const emptyPresetResult = (): PresetSubscriberLoadResult => ({ kind: "ok", rows: new Map() });
   const families = TELEGRAM_FANOUT_FAMILIES.map((spec) => ({ ...spec, stablecoinIds: ids[spec.idsKey] }));
-  const presetFamilies = families.filter((spec) => spec.presetFamily != null);
+  const presetFamilies = families.filter(
+    (spec): spec is typeof spec & { presetFamily: PresetFanoutAlertType } => spec.presetFamily != null,
+  );
   const loadFamily = <T>(
     spec: (typeof families)[number],
     empty: T,
