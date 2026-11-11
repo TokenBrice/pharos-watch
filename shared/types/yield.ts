@@ -93,20 +93,10 @@ const YieldBenchmarkMetaSchema = z.object({
   recordAgeSec: z.number().nullable().optional(),
 });
 
-const YieldBenchmarkRegistrySchema = z.object({
-  USD: YieldBenchmarkMetaSchema,
-  USD_EFFR: YieldBenchmarkMetaSchema.nullable().optional(),
-  EUR: YieldBenchmarkMetaSchema.nullable().optional(),
-  CHF: YieldBenchmarkMetaSchema.nullable().optional(),
-  GBP: YieldBenchmarkMetaSchema.nullable().optional(),
-  JPY: YieldBenchmarkMetaSchema.nullable().optional(),
-  MXN: YieldBenchmarkMetaSchema.nullable().optional(),
-  BRL: YieldBenchmarkMetaSchema.nullable().optional(),
-  AUD: YieldBenchmarkMetaSchema.nullable().optional(),
-  CAD: YieldBenchmarkMetaSchema.nullable().optional(),
-  RUB: YieldBenchmarkMetaSchema.nullable().optional(),
-  TRY: YieldBenchmarkMetaSchema.nullable().optional(),
-  SGD: YieldBenchmarkMetaSchema.nullable().optional(),
+const YieldBenchmarkRegistrySchema = z.object(Object.fromEntries(
+  YIELD_BENCHMARK_KEY_VALUES.map((key) => [key, key === "USD" ? YieldBenchmarkMetaSchema : YieldBenchmarkMetaSchema.nullable().optional()]),
+) as { USD: typeof YieldBenchmarkMetaSchema } & {
+  [K in Exclude<(typeof YIELD_BENCHMARK_KEY_VALUES)[number], "USD">]: z.ZodOptional<z.ZodNullable<typeof YieldBenchmarkMetaSchema>>;
 });
 
 const YieldSourceInputMetaSchema = z.object({

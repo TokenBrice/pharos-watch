@@ -82,28 +82,6 @@ export interface BenchmarkFetchFailure {
 }
 export type BenchmarkProviderFetchOutcome = BenchmarkFetchResult | BenchmarkFetchFailure;
 export type BenchmarkProviderKey = Exclude<YieldBenchmarkKey, "USD" | "SGD">;
-export type StandardBenchmarkProviderKey = Exclude<BenchmarkProviderKey, "MXN">;
-
-export interface BenchmarkProvider {
-  key: StandardBenchmarkProviderKey;
-  fetch: (params: {
-    signal?: AbortSignal;
-  }) => Promise<BenchmarkProviderFetchOutcome | null>;
-  source: string;
-  fallbackMode: string;
-}
-
-export type BenchmarkDescriptorProvider = BenchmarkProvider | "USD" | "MXN" | "SGD";
-
-export interface BenchmarkDescriptor {
-  key: YieldBenchmarkKey;
-  metadataPrefix: string | null;
-  fetchOrder: number | null;
-  degradationOrder: number | null;
-  provider: BenchmarkDescriptorProvider;
-  includeInCache: boolean;
-}
-
 export function parseRate(rateRaw: string | number | null | undefined): number {
   if (typeof rateRaw === "number") return rateRaw;
   if (typeof rateRaw !== "string") return Number.NaN;

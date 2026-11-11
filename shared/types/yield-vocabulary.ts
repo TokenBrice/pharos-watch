@@ -14,22 +14,190 @@ export interface YieldAdapterLifecycleReason {
   note?: string;
 }
 
-export const YIELD_BENCHMARK_KEY_VALUES = [
-  "USD",
-  "USD_EFFR",
-  "EUR",
-  "CHF",
-  "GBP",
-  "JPY",
-  "MXN",
-  "BRL",
-  "AUD",
-  "CAD",
-  "RUB",
-  "TRY",
-  "SGD",
-] as const;
-export type YieldBenchmarkKey = (typeof YIELD_BENCHMARK_KEY_VALUES)[number];
+// Definition order is the registry/wire order; execution and policy-map orders remain explicit.
+export const YIELD_BENCHMARK_DEFINITIONS = {
+  USD: {
+    label: "USD 3M T-Bill",
+    currency: "USD",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 0,
+    nativePeg: true,
+    metadataPrefix: "usd",
+    fetchOrder: 0,
+    degradationOrder: 0,
+    includeInCache: true,
+  },
+  USD_EFFR: {
+    label: "USD effective federal funds rate",
+    currency: "USD",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 1,
+    nativePeg: false,
+    metadataPrefix: "usdEffr",
+    fetchOrder: 1,
+    degradationOrder: 1,
+    includeInCache: true,
+  },
+  EUR: {
+    label: "EUR 3M compounded €STR",
+    currency: "EUR",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 2,
+    nativePeg: true,
+    metadataPrefix: "eur",
+    fetchOrder: 2,
+    degradationOrder: 2,
+    includeInCache: true,
+  },
+  // SAR3MC publishes T+1; Good Friday + Easter Monday can leave the newest print exactly 5d old.
+  CHF: {
+    label: "CHF 3M compounded SARON",
+    currency: "CHF",
+    isProxy: false,
+    recordMaxAgeDays: 7,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 3,
+    nativePeg: true,
+    metadataPrefix: "chf",
+    fetchOrder: 3,
+    degradationOrder: 3,
+    includeInCache: true,
+  },
+  // Bank of England IADB IUDZOS2 SONIA Compounded Index, annualized over a trailing 3M window.
+  GBP: {
+    label: "GBP 3M compounded SONIA",
+    currency: "GBP",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 4,
+    nativePeg: true,
+    metadataPrefix: "gbp",
+    fetchOrder: 4,
+    degradationOrder: 4,
+    includeInCache: true,
+  },
+  // Bank of Japan STRDCLUCON uncollateralized overnight call rate (TONA-equivalent proxy).
+  JPY: {
+    label: "JPY overnight call (TONA proxy)",
+    currency: "JPY",
+    isProxy: true,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 5,
+    nativePeg: true,
+    metadataPrefix: "jpy",
+    fetchOrder: 5,
+    degradationOrder: 5,
+    includeInCache: true,
+  },
+  // Banxico SF43936 — CETES 28-day primary auction yield.
+  MXN: {
+    label: "MXN CETES 28d",
+    currency: "MXN",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 1,
+    relativeChangeOrder: 9,
+    nativePeg: true,
+    metadataPrefix: "mxn",
+    fetchOrder: 7,
+    degradationOrder: 6,
+    includeInCache: true,
+  },
+  // Effective SELIC over: SGS11 daily compounded over 252 days, or SGS1178 already annualized.
+  BRL: {
+    label: "BRL SELIC over",
+    currency: "BRL",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 1,
+    relativeChangeOrder: 10,
+    nativePeg: true,
+    metadataPrefix: "brl",
+    fetchOrder: 8,
+    degradationOrder: 7,
+    includeInCache: true,
+  },
+  // Reserve Bank of Australia F1 cash-rate target.
+  AUD: {
+    label: "AUD cash-rate target",
+    currency: "AUD",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 7,
+    nativePeg: true,
+    metadataPrefix: "aud",
+    fetchOrder: 6,
+    degradationOrder: 8,
+    includeInCache: true,
+  },
+  // BoC Valet V122530 is the monthly administered Bank rate, not daily CORRA.
+  CAD: {
+    label: "CAD Bank rate (policy, monthly)",
+    currency: "CAD",
+    isProxy: true,
+    recordMaxAgeDays: 45,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 6,
+    nativePeg: true,
+    metadataPrefix: "cad",
+    fetchOrder: 9,
+    degradationOrder: 9,
+    includeInCache: true,
+  },
+  // CBR DailyInfo KeyRateXML; prints can sit ~9-10 days old across Jan 1-8 closures.
+  RUB: {
+    label: "RUB CBR key rate",
+    currency: "RUB",
+    isProxy: false,
+    recordMaxAgeDays: 12,
+    maxRelativeChange: 1,
+    relativeChangeOrder: 11,
+    nativePeg: true,
+    metadataPrefix: "rub",
+    fetchOrder: 10,
+    degradationOrder: 10,
+    includeInCache: true,
+  },
+  // CBRT EVDS TP.BISTTLREF.ORAN; Kurban/Bayram holidays can leave prints past 5d.
+  TRY: {
+    label: "TRY BIST TLREF overnight",
+    currency: "TRY",
+    isProxy: false,
+    recordMaxAgeDays: 10,
+    maxRelativeChange: 1,
+    relativeChangeOrder: 12,
+    nativePeg: true,
+    metadataPrefix: "try",
+    fetchOrder: 11,
+    degradationOrder: 11,
+    includeInCache: true,
+  },
+  // TODO: wire MAS SORA when a stable public endpoint is identified; SGD pegs fall back to USD.
+  SGD: {
+    label: "SGD SORA (unavailable)",
+    currency: "SGD",
+    isProxy: false,
+    recordMaxAgeDays: 5,
+    maxRelativeChange: 0.3,
+    relativeChangeOrder: 8,
+    nativePeg: false,
+    metadataPrefix: null,
+    fetchOrder: null,
+    degradationOrder: null,
+    includeInCache: true,
+  },
+} as const;
+export type YieldBenchmarkKey = keyof typeof YIELD_BENCHMARK_DEFINITIONS;
+export const YIELD_BENCHMARK_KEY_VALUES = Object.keys(YIELD_BENCHMARK_DEFINITIONS) as unknown as readonly [YieldBenchmarkKey, ...YieldBenchmarkKey[]];
 
 /**
  * Closed vocabulary of per-source yield warning keys. `detectWarningSignals()`
@@ -53,21 +221,9 @@ export type YieldWarningSignalKey = (typeof YIELD_WARNING_SIGNAL_KEYS)[number];
  * skipped when the row's benchmark currency is already USD (B24), so callers
  * replaying stored inputs need the key → currency mapping.
  */
-export const YIELD_BENCHMARK_KEY_CURRENCY: Record<YieldBenchmarkKey, string> = {
-  USD: "USD",
-  USD_EFFR: "USD",
-  EUR: "EUR",
-  CHF: "CHF",
-  GBP: "GBP",
-  JPY: "JPY",
-  MXN: "MXN",
-  BRL: "BRL",
-  AUD: "AUD",
-  CAD: "CAD",
-  RUB: "RUB",
-  TRY: "TRY",
-  SGD: "SGD",
-};
+export const YIELD_BENCHMARK_KEY_CURRENCY: Record<YieldBenchmarkKey, string> = Object.fromEntries(
+  YIELD_BENCHMARK_KEY_VALUES.map((key) => [key, YIELD_BENCHMARK_DEFINITIONS[key].currency]),
+) as Record<YieldBenchmarkKey, string>;
 export const YIELD_PYS_NULL_REASONS = [
   "apy-non-positive",
   "effective-yield-non-positive",

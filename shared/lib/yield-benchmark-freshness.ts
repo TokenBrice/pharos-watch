@@ -1,6 +1,6 @@
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "./status-thresholds";
 import { DAY_SECONDS } from "./time-constants";
-import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode } from "../types/yield";
+import { YIELD_BENCHMARK_DEFINITIONS, YIELD_BENCHMARK_KEY_VALUES, type YieldBenchmarkKey, type YieldBenchmarkSelectionMode } from "../types/yield-vocabulary";
 
 export type YieldBenchmarkFreshness = "healthy" | "degraded" | "stale";
 
@@ -18,25 +18,9 @@ const YIELD_BENCHMARK_MAX_FUTURE_SKEW_SEC = 5 * 60;
  * multi-day holiday clusters carry more (see per-key comments), and CAD is
  * the Bank of Canada's monthly announced Bank rate.
  */
-export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, number> = {
-  USD: 5 * DAY_SECONDS,
-  USD_EFFR: 5 * DAY_SECONDS,
-  EUR: 5 * DAY_SECONDS,
-  // SAR3MC publishes T+1 and the Good Friday + Easter Monday cluster lands the
-  // newest print exactly 5d old, tripping the daily bound every year.
-  CHF: 7 * DAY_SECONDS,
-  GBP: 5 * DAY_SECONDS,
-  JPY: 5 * DAY_SECONDS,
-  MXN: 5 * DAY_SECONDS,
-  BRL: 5 * DAY_SECONDS,
-  AUD: 5 * DAY_SECONDS,
-  CAD: 45 * DAY_SECONDS,
-  // CBR key-rate prints sit ~9-10 days old across every Jan 1-8 holiday cluster.
-  RUB: 12 * DAY_SECONDS,
-  // TCMB Kurban/Bayram holiday clusters can leave the newest print past 5d.
-  TRY: 10 * DAY_SECONDS,
-  SGD: 5 * DAY_SECONDS,
-};
+export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, number> = Object.fromEntries(
+  YIELD_BENCHMARK_KEY_VALUES.map((key) => [key, YIELD_BENCHMARK_DEFINITIONS[key].recordMaxAgeDays * DAY_SECONDS]),
+) as Record<YieldBenchmarkKey, number>;
 
 /**
  * Per-key bound on a newly fetched market rate's relative move against the last
@@ -47,21 +31,11 @@ export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, numbe
  * whole points) get a wider band; the unit-scale window below still catches a
  * silent 10x/0.1x rescale for every key.
  */
-const YIELD_BENCHMARK_MAX_RELATIVE_CHANGE: Record<YieldBenchmarkKey, number> = {
-  USD: 0.3,
-  USD_EFFR: 0.3,
-  EUR: 0.3,
-  CHF: 0.3,
-  GBP: 0.3,
-  JPY: 0.3,
-  CAD: 0.3,
-  AUD: 0.3,
-  SGD: 0.3,
-  MXN: 1,
-  BRL: 1,
-  RUB: 1,
-  TRY: 1,
-};
+const YIELD_BENCHMARK_MAX_RELATIVE_CHANGE: Record<YieldBenchmarkKey, number> = Object.fromEntries(
+  [...YIELD_BENCHMARK_KEY_VALUES]
+    .sort((a, b) => YIELD_BENCHMARK_DEFINITIONS[a].relativeChangeOrder - YIELD_BENCHMARK_DEFINITIONS[b].relativeChangeOrder)
+    .map((key) => [key, YIELD_BENCHMARK_DEFINITIONS[key].maxRelativeChange]),
+) as Record<YieldBenchmarkKey, number>;
 
 /**
  * Ratios only a unit change produces, whatever the key's own band. The bounds

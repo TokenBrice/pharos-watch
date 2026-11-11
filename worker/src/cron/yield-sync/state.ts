@@ -1,3 +1,4 @@
+import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield-vocabulary";
 import {
   DAY_SECONDS,
 } from "@shared/lib/time-constants";
@@ -135,21 +136,9 @@ export async function getPriceDerivedApy(
 }
 
 function emptyBenchmarkRegistry(usd: ParsedYieldBenchmarkMeta): ParsedYieldBenchmarkRegistry {
-  return {
-    USD: usd,
-    USD_EFFR: null,
-    EUR: null,
-    CHF: null,
-    GBP: null,
-    JPY: null,
-    MXN: null,
-    BRL: null,
-    AUD: null,
-    CAD: null,
-    RUB: null,
-    TRY: null,
-    SGD: null,
-  };
+  return Object.fromEntries(
+    YIELD_BENCHMARK_KEY_VALUES.map((key) => [key, key === "USD" ? usd : null]),
+  ) as ParsedYieldBenchmarkRegistry;
 }
 
 /**
