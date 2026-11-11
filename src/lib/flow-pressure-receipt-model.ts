@@ -57,7 +57,6 @@ export interface FlowPressureReceiptModel {
 const COVERAGE_ORDER: MintBurnCoinCoverage["status"][] = [
   "full",
   "partial-history",
-  "lagging",
   "bootstrapping",
   "unknown",
   "disabled",
@@ -66,8 +65,12 @@ const COVERAGE_ORDER: MintBurnCoinCoverage["status"][] = [
 function buildCoverageRows(coins: readonly MintBurnCoinFlow[]): FlowPressureReceiptCoverageRow[] {
   const counts = new Map<MintBurnCoinCoverage["status"], number>();
   for (const coin of coins) {
-    const status = coin.coverage?.status;
+    let status = coin.coverage?.status;
     if (!status) continue;
+    if (status === "lagging") {
+      const fullHistory = coin.coverage?.windows?.window30d.complete ?? coin.coverage?.has30dWindow;
+      status = fullHistory ? "full" : "partial-history";
+    }
     counts.set(status, (counts.get(status) ?? 0) + 1);
   }
   return COVERAGE_ORDER
@@ -78,8 +81,6 @@ function buildCoverageRows(coins: readonly MintBurnCoinFlow[]): FlowPressureRece
 function summarizeCoverage(rows: readonly FlowPressureReceiptCoverageRow[], syncWarning: string | null): string {
   if (syncWarning) return "Lag warning active";
   if (rows.length === 0) return "Coverage metadata unavailable";
-  const lagging = rows.find((row) => row.status === "lagging")?.count ?? 0;
-  if (lagging > 0) return `${lagging} lagging ${lagging === 1 ? "coin" : "coins"}`;
   const unknown = rows.find((row) => row.status === "unknown")?.count ?? 0;
   if (unknown > 0) return `${unknown} unknown ${unknown === 1 ? "coin" : "coins"}`;
   const partial = rows

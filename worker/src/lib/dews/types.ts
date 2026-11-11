@@ -70,6 +70,9 @@ export interface SignalResult {
   burnSurge?: number;
   burnToMintRatio?: number;
   net24hUsd?: number;
+  /** Partial-coin evidence never describes the full coin's net. */
+  flowScope?: "isolated-canonical-leg";
+  isolatedNet24hUsd?: number;
   baselineDays?: number;
   warnings?: string[];
   unavailableReason?: string;
@@ -102,6 +105,9 @@ export interface DEWSInput {
   priceConfidence: string | null;
   prevPriceConfidence: string | null;
   price: number | null;
+  /** Admitted primary provenance; agreeing source families may confirm a Broker mark. */
+  priceSource?: string | null;
+  agreeSources?: readonly string[] | null;
   /**
    * Historical reconstruction never reads a price. A `null` price otherwise
    * carries live semantics (maximum concern), so callers that know the price
@@ -115,12 +121,16 @@ export interface DEWSInput {
   pegRateSource?: string | null;
   pegRateContributorCount?: number | null;
   dexPriceUsd: number | null;
+  /** Individually admitted non-Mento protocol marks; the aggregate cannot prove independence. */
+  independentDexPrices?: readonly number[];
   // Blacklist activity
   blacklistEvents24h: number;
   blacklistEvents7d: number;
   hasBlacklistTracking: boolean;
   blacklistSourceOk?: boolean;
   // Mint/burn flow (optional — from mint_burn_hourly)
+  /** Only an independently proven canonical leg; may raise stress, never dilute it. */
+  flowIsolated?: boolean;
   burnVolume24hUsd: number | null;
   mintVolume24hUsd: number | null;
   burnBaseline30dUsd: number | null;

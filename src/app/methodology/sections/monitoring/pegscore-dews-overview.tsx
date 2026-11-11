@@ -104,8 +104,12 @@ export function PegScoreDewsOverview() {
             tracker artifacts while retaining unsuppressed events. Hourly DEX prices require both original aggregate and publication ages below 75 minutes, with source ages
             and snapshots retaining the original clock. Its divergence input reuses the live depeg DEX trust floor, so fresh-but-thin rows stay visible for analytics but do not affect the score unless they
             pass the same `$1M` aggregate-TVL gate. The Mint/Burn Flow signal separates 30-day baseline coverage from
-            source freshness: a fresh zero-volume 24-hour row is calm, while a mature baseline with no fresh 24-hour row
-            is unavailable and recorded as stale.
+            source freshness: a fully proved quiet window can be calm; a stale published window is unavailable.
+            An established isolated canonical leg needs its own current-configuration 30-day scan proof, including
+            the latest 24 hours, complete classification and valuation, and a fresh published watermark.
+            Its outflow can contribute only when the other signals already provide sufficient coverage and its
+            stress exceeds their weighted mean. Quiet, inflowing or unproved isolated evidence cannot lower stress.
+            The signal labels this as isolated canonical-leg evidence rather than publishing a full-coin net.
             Divergence admits observed primary and trusted DEX legs independently; a stressed DEX-only observation remains
             market evidence when the primary is missing or nominal. Neither missing leg is a measured calm zero.
             The foundational stablecoins snapshot must fit its producer cadence plus runtime freshness budget; a stale,

@@ -63,6 +63,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   deuroEurcBridgeProvider,
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
+  mentoBrokerProvider,
   protocolParProvider,
   azndCurvePoolProvider,
   swanusdCurvePoolProvider,
@@ -75,7 +76,6 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   usdafUniswapV4Provider,
   usduUniswapV3Provider,
   mentoFpmmProvider,
-  mentoBrokerProvider,
   kavaUsdxPricefeedProvider,
   erc4626NavProvider,
   previewRedeemProvider,
@@ -337,7 +337,8 @@ export async function fetchAuthoritativeLivePriceOverrides(
     .filter(
       (entry): entry is AuthoritativeLivePriceCandidate =>
         typeof entry.provider?.fetchLivePrice === "function" &&
-        !(entry.provider.liveMissingOnly && hasUsableLivePrice(entry.asset)) &&
+        !(entry.provider.liveMissingOnly && hasUsableLivePrice(entry.asset) &&
+          !(entry.provider === mentoBrokerProvider && protocolParProvider.matches(entry.asset.id))) &&
         (options?.maxProviderLivePriority == null ||
           getProviderLivePriority(entry.provider) <= options.maxProviderLivePriority),
     );

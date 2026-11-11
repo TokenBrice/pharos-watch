@@ -25,8 +25,14 @@ vi.mock("next/dynamic", () => ({ default: () => () => null }));
 
 import { CompareClient } from "@/components/compare/compare-client";
 import { CoinSelector } from "@/components/coin-selector";
+import { FlowComparisonChart } from "@/components/flow-comparison-chart";
 
 describe("CompareClient and coin selector", () => {
+  it("discloses each hourly series scope", () => {
+    render(<FlowComparisonChart series={[{ id: "usdt", label: "USDT", color: "red", data: [{ ts: 1, netFlowUsd: 100 }],
+      unavailableHours: 0, unknownCoverageHours: 0, hourlyScopeLabel: "Tron-only" }]} hours={24} onHoursChange={vi.fn()} />);
+    expect(screen.getByText("Hourly scope: USDT: Tron-only.")).toBeTruthy();
+  });
   it.each(["ArrowDown", "ArrowUp"])("keeps active references valid for empty and replaced results (%s)", (key) => {
     const props = { coins: compareOptions, selected: null, onSelect: vi.fn(), onRemove: vi.fn() };
     const { rerender } = render(<CoinSelector {...props} coins={[]} />);
@@ -98,7 +104,7 @@ describe("CompareClient and coin selector", () => {
     try {
       useCompareDataModelMock.mockReturnValue(model(nowSec - 3_660));
       const { unmount } = render(<CompareClient />);
-      expect(screen.getByText("Updated 61 min ago · Configured issuance chains")).toBeTruthy();
+      expect(screen.getByText("Updated 61 min ago · Admitted totals: Configured issuance chains")).toBeTruthy();
       unmount();
 
       // A reader clock behind the producer has no computable age: no fresh claim.

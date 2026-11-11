@@ -502,6 +502,44 @@ The response-ready schema marker is `RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins
 
 ## Coverage Decisions
 
+### RWAUSDi price and circulation review
+
+**Reviewed 2026-11-10; review again by 2026-12-10.** Retain the observed provider price and `navToken: false`: $1 is the reviewed current denomination benchmark, not a permanent-par or redemption guarantee. Retain DefiLlama's already-USD list supply unchanged, with no manual on-chain raise or holder subtraction. The catalog's `mechanismArchetypeReview` owns this dated decision; credit-fund/investment classification is unchanged.
+
+| Question | Primary evidence | Decision / limitation |
+| --- | --- | --- |
+| Holder claim and accrual | [rwaUSDi product](https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets), [liquidity risk](https://docs.multipli.fi/risks/liquidity-and-redemption-risk): private credit, periodic pricing/NAV and scheduled exits | No rwaUSDi-specific permanent-par promise, price-accrual, rebasing or distribution mechanism established. Remove unsupported 1:1 redemption wording. Public rwaUSD/xToken mechanics concern different products. |
+| Terms | [Protocol terms](https://docs.multipli.fi/legal/protocol-terms-of-use), sections 7.1/7.4 | Disclaim value/redemption guarantees but name rwaUSD Units; context only, not exact rwaUSDi offering terms. |
+| NAV identity/history | [Issuer feed link](https://docs.multipli.fi/rwausd/chainlink-data-feed), [Chainlink feed](https://data.chain.link/feeds/monad/monad/rwausdi-nav): proxy `0xf72885b0c01fbc1e4db78187507576298ef7f6b9`, aggregator `0x45309f5786d09241ee4649e0753062415cfe16cc`, 18 decimals, daily heartbeat | At Monad block **121069410**, hash `0x8cf1ebb50fd3ae8c2b4f7854e19bf872f457e019a49609a1b210af12c3260087`, all 125 readable aggregator rounds were `1e18`, covering July 9–November 10. Latest update 2026-11-10 14:49:17 UTC. This is finite observed history, never proof of permanent par; no always-$1 NAV override. |
+| Current provider | [DefiLlama list](https://stablecoins.llama.fi/stablecoins?includePrices=true), [native detail 340](https://stablecoins.llama.fi/stablecoin/340), read November 10 | List: **$487,319,899.0858272**, price **$0.9997487274**, seven chains. Detail at 2026-11-10 00:00 UTC: **487,442,380 native units**. Both already include X Layer and Robinhood; preserve list USD units without multiplying by price. |
+| Narrower AFI perimeter | [Issuance feed](https://api.afiprotocol.xyz/por/multipli/rwaUSDi/issuance-parameters) | Five contracts, **479,782,100** units, `dollar_value: 1`. X Layer **3,720,140** plus Robinhood **3,940,140** equals the **7,660,280** difference. AFI does not explain these omissions; this is not a current DefiLlama omission. |
+| Deployment identity | Existing reviewed catalog/bridge identities; public pinned `owner()` reads below | All seven owners match Safe `0xf25c404c101d40d88b5dcd64b82583dbc918dd25`, supporting common issuer control rather than proof of public circulation. Ethereum/Base/Monad/Arbitrum/Pharos implementation: `0xec9c824543dd3d635c1d71029f385a6eba511dc0`; X Layer: `0x43a045f016848117c10a8d89cf99432d8112432c`; Robinhood: `0x9eb058189d7352e3e0986e3e21f6c998fbc41a22`. The current [issuer address page](https://docs.multipli.fi/technical-architecture/rwausd-contract-addresses) covers rwaUSD, so cannot independently verify rwaUSDi's whole perimeter. |
+| Disputed holders | Robinhood token's complete Transfer census through **110982973**: 31 logs, eleven nonzero wallets, balances reconcile **3,940,140**; six unlabelled EOAs hold **3,940,000**. The Safe holds zero on both disputed chains. | No reliable labels distinguish users from issuer inventory. X Layer limits public log queries to 100 blocks; explorer access failed, so its full holder census remains unavailable. Unknown circulation status cannot authorize an ADR-8 adjustment. |
+| Comparable modeling | USCC/USTB explicitly accrue per-share NAV and set `navToken`; BUIDL uses $1 NAV with distributions and no such flag | NAV-valued backing alone does not establish token-price accrual. Do not suppress depeg metrics using unproven mechanics. |
+
+Six-decimal `totalSupply()` observations around 2026-11-10 15:24 UTC sum to **487,442,380**. Pins are per-chain observations, not one atomic cross-chain state; header-hash rechecks matched on six chains, while Base's recheck failed and is not claimed verified.
+
+| Chain / public RPC | Token | Block | Native units |
+| --- | --- | ---: | ---: |
+| [Ethereum](https://ethereum-rpc.publicnode.com) | `0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4` | 26385390 | 151,666,376.486337 |
+| [Base](https://mainnet.base.org) | `0xd74fb32112b1ef5b4c428fead8da8d85a0019009` | 55669607 | 147,217,300.815046 |
+| [Monad](https://rpc.monad.xyz) | `0x650b616b46ff94000eb115926ab8393b90788d76` | 121069653 | 100,342,413.723855 |
+| [Arbitrum](https://arb1.arbitrum.io/rpc) | `0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4` | 523016492 | 77,345,868.974762 |
+| [X Layer](https://rpc.xlayer.tech) | `0x3b274e3fe48e34f032920f766f750bdeafd80068` | 75555208 | 3,720,140 |
+| [Robinhood](https://rpc.mainnet.chain.robinhood.com) | `0x9000123cb195804f35cee9553e2596978227910f` | 110982973 | 3,940,140 |
+| [Pharos](https://rpc.pharos.xyz) | `0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4` | 22665760 | 3,210,140 |
+
+The six largest Robinhood holders at block **110982973** had no deployed code and no established public identity; EOA status does not distinguish customers from issuer-controlled accounts. Their observed balances were:
+
+| Address | Native units |
+| --- | ---: |
+| `0xb24f7575f16798b6289ebed033061ea554981b2e` | 1,000,000 |
+| `0x2efebeb937d23e3e9bfaae5abf32c866abd5720b` | 750,000 |
+| `0x7f80976babe3f38fa26b07a6cadb67a401d5dc66` | 740,000 |
+| `0x6b744952c0ade0f8b2ea6a786506801a6d03df32` | 720,000 |
+| `0xba562366b26ffaf4c06f163004a2cb75aa5f8f0c` | 620,000 |
+| `0xf0e0c4a36aa57f1dfe17a97e5efe0ed30def00b1` | 110,000 |
+
 `wm-m0` retains CoinGecko supply: verified deployment candidates on Mantra, 0G, Fluent, Moca, Rise and Optimism do not establish a complete native roster while Nexus state reads remain unavailable (official RPC DNS fails; Thirdweb returns `-32603`). Legacy Plume's observed **0.000001 wM** remains in the required perimeter; Portal hub escrow holds underlying M, not duplicate wM. No new contracts, aggregate preference or inventory perimeter is admitted. `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/supply-integrity.ts` owns the dated `ops` review of bounded `coingecko-fallback` restores; fresh cap supply leaves it dormant.
 
 Verified redemptions and corrected provider circulating perimeters can use dated `REVIEWED_SUPPLY_VALUE_REBASELINES` in `worker/src/lib/supply-integrity.ts`. Reviews last at most fourteen days and accept only the existing 2% band around the evidenced level; they clear that asset's old drift comparison without changing published supply, history or ordinary drift thresholds. The registry owns review dates, expiry and source evidence.

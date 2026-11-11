@@ -432,6 +432,9 @@ describe("coverage helpers", () => {
     expect(flowCoverageFeature.resolve("bootstrapping").kind).toBe("bootstrapping");
     expect(flowCoverageFeature.resolve("bootstrapping").spokenLabel).toBe("Bootstrapping");
     expect(flowCoverageFeature.resolve("unknown").label).toBe("Unknown");
+    expect(flowCoverageFeature.resolve("lagging")).toMatchObject({ kind: "tracked", label: "Tracked", available: true });
+    expect(flowCoverageFeature.statusKinds).not.toContain("lagging");
+    expect(JSON.stringify(flowCoverageFeature.legendItems)).not.toMatch(/Lagging/);
     expect(flowCoverageFeature.resolve(null).available).toBe(false);
   });
 

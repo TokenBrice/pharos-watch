@@ -93,6 +93,7 @@ export interface AggregateQueryParams {
 
 export interface AggregateData {
   configs: MintBurnContractConfig[];
+  hourlyConfigs: MintBurnContractConfig[];
   publication: Awaited<ReturnType<typeof readMintBurnWindowContext>>["publication"];
   publicationPolicy: string;
   partialCoinIds: Set<string>;
@@ -177,12 +178,13 @@ export async function fetchAggregateData(
   db: D1Database,
   requestedParams: AggregateQueryParams,
 ): Promise<AggregateData> {
-  const { watermark, legacy, configs, publication, policy, partialCoinIds, partialChainIds } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
+  const { watermark, legacy, configs, hourlyConfigs, publication, policy, partialCoinIds, partialChainIds } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
   const params = buildAggregateQueryParams(
     watermark.timestamp ?? requestedParams.windowEnd,
     (requestedParams.windowEnd - requestedParams.windowStart) / 3600,
   );
   const trackedPairs = getMintBurnTrackedPairs(configs);
+  const hourlyPairs = getMintBurnTrackedPairs(hourlyConfigs);
   const trackedPairsJson = JSON.stringify([...trackedPairs].map((pair) => pair.split("|")));
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
   const eventResultIndex = 5;
@@ -227,7 +229,7 @@ export async function fetchAggregateData(
              AND hour_ts >= ? AND hour_ts < ?
             ORDER BY hour_ts ASC`,
         )
-        .bind(trackedPairsJson, hourlyScanStart, params.windowEnd),
+        .bind(JSON.stringify([...hourlyPairs].map((pair) => pair.split("|"))), hourlyScanStart, params.windowEnd),
       prepareNetWindow("net-7d", params.window7d),
       prepareNetWindow("net-30d", params.window30d),
       prepareNetWindow("net-90d", params.window90d),
@@ -269,7 +271,7 @@ export async function fetchAggregateData(
            WHERE row_num = 1`,
         )
         .bind(trackedPairsJson, params.window24h, params.windowEnd),
-      prepareMintBurnScanCoverage(db, configs, params.window90d, params.windowEnd),
+      prepareMintBurnScanCoverage(db, hourlyConfigs, params.window90d, params.windowEnd),
     ]),
     Promise.all([
       readMintBurnSyncStateBatch(db, configs),
@@ -279,9 +281,9 @@ export async function fetchAggregateData(
   ]);
   const scanSegments = decodeMintBurnScanCoverage(batchResults[6] as D1Result<MintBurnScanSegment>);
 
-  const scannedHourlyRows = filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], trackedPairs);
+  const scannedHourlyRows = filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], hourlyPairs);
   const hourlyRows = filterRowsByWindow(scannedHourlyRows, params.windowStart, params.windowEnd);
-  const hourly24hRows = filterRowsByWindow(scannedHourlyRows, params.window24h, params.windowEnd);
+  const hourly24hRows = filterRowsByWindow(filterRowsToTrackedPairs(scannedHourlyRows, trackedPairs), params.window24h, params.windowEnd);
   const baselineRows = filterRowsToTrackedPairs((batchResults[4].results ?? []) as DailyBaselineRow[], trackedPairs);
   const largestEventRows = filterRowsToTrackedPairs(
     (batchResults[eventResultIndex]?.results ?? []) as EventRow[],
@@ -312,7 +314,7 @@ export async function fetchAggregateData(
   }
 
   return {
-    configs, publication, publicationPolicy: policy, partialCoinIds, partialChainIds,
+    configs, hourlyConfigs, publication, publicationPolicy: policy, partialCoinIds, partialChainIds,
     hourlyRows,
     hourly24hRows,
     net7dMap: buildGroupedNetFlowMap((batchResults[1].results ?? []) as GroupedNetFlowRow[], trackedPairs),

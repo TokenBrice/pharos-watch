@@ -70,6 +70,7 @@ function buildFlowData(syncWarning: string | null, freshnessStatus: "degraded" |
       chainIds: ["ethereum", "arbitrum"],
       label: "Configured issuance chains",
     },
+    hourlyScope: { chainIds: ["tron"], label: "Recovered hourly chains" },
     sync: {
       lastSuccessfulSyncAt: Math.floor(Date.now() / 1000) - 3_000,
       freshnessStatus,
@@ -120,6 +121,8 @@ describe("FlowsPage", () => {
     const html = renderToStaticMarkup(<FlowsPage />);
 
     expect(html).toContain("-42|worsening|burning");
+    expect(html).toContain("Hourly scope: Recovered hourly chains");
+    expect(html).toContain("Hourly volume scope: Recovered hourly chains");
   });
 
   it("keeps a delayed read off the hero and body when no sync-specific warning exists", () => {

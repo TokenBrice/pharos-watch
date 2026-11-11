@@ -6,10 +6,12 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.44`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.46`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
+
+DEWS v6.45 admits independently proven isolated canonical-leg outflows only when they raise stress; v6.46 caps a lone Mento Broker observation at WATCH unless independent qualifying evidence releases the cap. See [DEWS](./dews.md) for both evidence rules.
 
 Pending release obligations are tracked by [DEWS](./dews.md#methodology-versioning).
 

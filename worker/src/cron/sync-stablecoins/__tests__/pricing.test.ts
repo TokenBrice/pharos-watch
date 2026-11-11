@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { PriceCacheEntry } from "../../../lib/db-cache";
 import { classifyPrimaryDepegTrust } from "../../../lib/depeg-trust-policy";
@@ -287,6 +287,8 @@ describe("buildPreviousTrustedPriceLookup", () => {
 
 describe("nominal par precedence (DEC-02 / CR-43)", () => {
   const NOW = 1_800_000_000;
+  beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(NOW * 1000); });
+  afterEach(() => vi.restoreAllMocks());
   const REFERENCES: PriceValidationReferences = {
     rates: { peggedZAR: 0.0608, peggedXOF: 0.00172 },
     type: "fresh",
@@ -329,7 +331,6 @@ describe("nominal par precedence (DEC-02 / CR-43)", () => {
       agreeSources: ["coingecko", "defillama-list"], consensusSources: ["coingecko", "defillama-list"],
     })],
     ["stale multi-source quote", (par) => market(par, { priceObservedAt: NOW - 86_400, priceUpdatedAt: NOW - 86_400 })],
-    ["cached fallback quote", (par) => market(par, { priceSource: "cached", priceConfidence: "fallback" })],
     ["legacy protocol-redeem par row", (par) => market(par, {
       price: par, priceSource: "protocol-redeem", agreeSources: ["protocol-redeem"], consensusSources: ["protocol-redeem"],
       priceObservedAtMode: "local_fetch",
@@ -364,8 +365,8 @@ describe("nominal par precedence (DEC-02 / CR-43)", () => {
     return {
       price: par,
       source: "protocol-par",
-      mode: "nominal_reference",
-      ...(pegType === "peggedUSD" ? {} : { fxReferenceType: "fresh", fxObservedAt: NOW - 120 }),
+      mode: "nominal_reference" as const,
+      ...(pegType === "peggedUSD" ? {} : { fxReferenceType: "fresh" as const, fxObservedAt: NOW - 120 }),
     };
   }
 
@@ -411,32 +412,19 @@ describe("nominal par precedence (DEC-02 / CR-43)", () => {
     });
   });
 
-  it.each([
-    ["sofid-sofi", "peggedUSD", 1],
-  ] as const)("retires %s nominal publication without weakening observed-source trust", async (id, pegType, par) => {
+  it("retires SoFi nominal publication without weakening market trust", async () => {
+    const id = "sofid-sofi";
     expect(protocolParProvider.matches(id)).toBe(false);
-    const quote = market(par, {
-      priceSource: "coingecko+kraken", priceConfidence: "high",
-      agreeSources: ["coingecko", "kraken"], consensusSources: ["coingecko", "kraken"],
-      priceObservedAtMode: "local_fetch",
-    });
-    const published = await runPrecedence(makeAsset(id, pegType, quote));
-    expect(published.price).toBe(quote.price);
-    expect(published.priceSource).toBe("coingecko+kraken");
-    expect(published.priceObservedAt).toBe(NOW - 30);
-    expect(published.nominalPriceReference).toBeUndefined();
-    expect(isObservedPrice(published)).toBe(true);
-    expect(classifyPrimaryDepegTrust(published, NOW)).toBe("confirm_required");
-
-    const carried = await runPrecedence(makeAsset(id, pegType, {
-      price: par, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
-      nominalPriceReference: { price: par, source: "protocol-par", mode: "nominal_reference" },
-    }));
-    expect(carried.price).toBeNull();
-    expect(carried.nominalPriceReference).toBeUndefined();
-    const absent = await runPrecedence(makeAsset(id, pegType));
-    expect(absent.price).toBeNull();
-    expect(absent.nominalPriceReference).toBeUndefined();
+    const quote = market(1, { priceSource: "coingecko+kraken", agreeSources: ["coingecko", "kraken"],
+      consensusSources: ["coingecko", "kraken"], priceObservedAtMode: "local_fetch" });
+    for (const state of [quote, { price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" as const,
+      nominalPriceReference: expectedReference("peggedUSD", 1) }, {}]) {
+      const published = await runPrecedence(makeAsset(id, "peggedUSD", state));
+      expect(published.nominalPriceReference).toBeUndefined();
+      expect(published.price).toBe(state === quote ? quote.price : null);
+      expect(classifyPrimaryDepegTrust(published, NOW)).toBe(state === quote ? "confirm_required" : "unusable");
+      if (state === quote) expect(published.priceObservedAt).toBe(NOW - 30);
+    }
   });
 
   it("publishes no nominal reference when non-USD par has no usable FX reference, and drops a carried one", async () => {

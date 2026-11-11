@@ -11,6 +11,8 @@ import {
   unpricedChild,
 } from "./authoritative-price-sources.test-support";
 
+import { getProtocolParPriceOverride } from "../authoritative-price-sources/protocol-par";
+
 const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
 vi.mock("../historical-market-prices", () => ({
@@ -276,79 +278,30 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("keeps nominal overrides only for assets without repaired observed sources", async () => {
-    const overrides = await fetchLiveOverrides(
-      [
-        asset("sofid-sofi", { circulating: { peggedUSD: 100_000_000 } }),
-        asset("usbd-bima", { circulating: { peggedUSD: 7_500_000 } }),
-        asset("usdq-quill", { circulating: { peggedUSD: 130_000 } }),
-        asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
-        asset("xofm-mento", { circulating: { peggedXOF: 32_000 } }),
-      ],
-      undefined,
-      {
-        rates: { peggedZAR: 0.0608, peggedXOF: 0.00172 },
-        type: "fresh",
-        updatedAt: 1_778_000_000,
+  it("builds nominal fallbacks independently of observed-route dispatch", () => {
+    const overrides = new Map(["sofid-sofi", "usbd-bima", "usdq-quill", "zarm-mento", "xofm-mento"].map((id) =>
+      [id, getProtocolParPriceOverride(id, {
+        rates: { peggedZAR: 0.0608, peggedXOF: 0.00172 }, type: "fresh", updatedAt: 1_778_000_000,
         updatedAtByPeg: { peggedZAR: 1_778_000_003, peggedXOF: 1_778_000_004 },
         typeByPeg: { peggedZAR: "fresh", peggedXOF: "fresh" },
-      },
-    );
+      })]));
 
     // SOFID's repaired market route must not fall back to nominal publication.
     const nominal = { source: "protocol-par", confidence: null, observedAt: null, observedAtMode: "nominal_reference" };
     const fx = (fxObservedAt: number) => ({ nominalFx: { fxReferenceType: "fresh", fxObservedAt } });
     expect(overrides.get("usbd-bima")).toEqual({ price: 1, ...nominal });
-    expect(overrides.has("sofid-sofi")).toBe(false);
+    expect(overrides.get("sofid-sofi")).toBeNull();
     expect(overrides.get("usdq-quill")).toEqual({ price: 1, ...nominal });
     expect(overrides.get("zarm-mento")).toEqual({ price: 0.0608, ...nominal, ...fx(1_778_000_003) });
     expect(overrides.get("xofm-mento")).toEqual({ price: 0.00172, ...nominal, ...fx(1_778_000_004) });
   });
 
-  it("skips ZAR protocol-par overrides when the FX reference is missing or stale", async () => {
-    const stale = await fetchLiveOverrides(
-      [
-        asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
-      ],
-      undefined,
-      {
-        rates: { peggedZAR: 0.0608 },
-        type: "stale",
-        updatedAt: 1_778_000_000,
-        updatedAtByPeg: { peggedZAR: 1_778_000_000 },
-        typeByPeg: { peggedZAR: "stale" },
-      },
-    );
-    const missing = await fetchLiveOverrides([
-      asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
-    ]);
-
-    expect(stale.has("zarm-mento")).toBe(false);
-    expect(missing.has("zarm-mento")).toBe(false);
-  });
-
-  it("publishes static-FX ZAR par as a nominal reference without an observation clock", async () => {
-    const overrides = await fetchLiveOverrides(
-      [
-        asset("zarm-mento", { circulating: { peggedZAR: 8_600 } }),
-      ],
-      undefined,
-      {
-        rates: { peggedZAR: 0.06 },
-        type: "static",
-        updatedAt: null,
-        typeByPeg: { peggedZAR: "static" },
-      },
-    );
-
-    expect(overrides.get("zarm-mento")).toEqual({
-      price: 0.06,
-      source: "protocol-par",
-      confidence: null,
-      observedAt: null,
-      observedAtMode: "nominal_reference",
-      nominalFx: { fxReferenceType: "static", fxObservedAt: null },
-    });
+  it("keeps static ZAR nominal and withholds missing/stale FX", () => {
+    for (const type of ["none", "stale", "static"] as const) {
+      const quote = getProtocolParPriceOverride("zarm-mento", { rates: { peggedZAR: 0.06 }, type, updatedAt: null });
+      expect(quote).toEqual(type === "static" ? { price: 0.06, source: "protocol-par", confidence: null,
+        observedAt: null, observedAtMode: "nominal_reference", nominalFx: { fxReferenceType: "static", fxObservedAt: null } } : null);
+    }
   });
 
   it.each([

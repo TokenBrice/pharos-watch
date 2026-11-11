@@ -12,6 +12,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 import { decodeJsonString } from "../../cache-json";
+import { runWithOverloadRetry } from "../../d1-overload-retry";
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../structured-log";
@@ -23,11 +24,18 @@ import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
 } from "../../blacklist-contracts";
-import { getDexAggregateObservedAt, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
+import { getDexAggregateObservedAt, getDexPriceSourceEntries, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { validatePricingSourceFreshness } from "../../pricing-source-freshness";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../constants";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
+import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
+import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, mintBurnScanFingerprint,
+  prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../mint-burn-pipeline/scan-coverage";
 import { readMintBurnWindowContext } from "../../mint-burn-flows-service";
 import { hasMintBurnClassificationReview } from "../../mint-burn-classification";
 import {
@@ -313,20 +321,36 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
       .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
       .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number; price_sources_json: string | null }>();
     for (const row of dexPriceRows.results ?? []) {
-      const decoded = decodeJsonString<number, PersistedJsonDecodeReason>(row.price_sources_json, {
+      const decoded = decodeJsonString<{ observedAt: number; independentPrices: number[] }, PersistedJsonDecodeReason>(row.price_sources_json, {
         updatedAt: row.updated_at, missingReason: "missing", parseErrorReason: "json-parse-failed",
         normalize: (payload) => {
           const clock = getDexAggregateObservedAt(payload, ctx.nowSec);
           return clock.aggregateClockReason != null
             ? { ok: false, reason: clock.aggregateClockReason }
-            : { ok: true, payload: clock.aggregateObservedAt! };
+            : { ok: true, payload: { observedAt: clock.aggregateObservedAt!, independentPrices:
+              (getDexPriceSourceEntries(payload) ?? []).flatMap((value) => {
+                if (!value || typeof value !== "object") return [];
+                const source = value as Record<string, unknown>;
+                if (typeof source.protocol !== "string") return [];
+                const registry = getPricingSourceRegistryEntry(`${source.protocol}-dex`);
+                if (!registry || registry.depegSourceFamily === getPricingSourceRegistryEntry("mento-broker")?.depegSourceFamily ||
+                  typeof source.price !== "number" || !Number.isFinite(source.price) || source.price <= 0 ||
+                  typeof source.tvl !== "number" || source.tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD || !Number.isFinite(source.tvl) ||
+                  typeof source.observedAt !== "number" || source.observedAt > ctx.nowSec || !validatePricingSourceFreshness({
+                    source: registry.key, observedAt: source.observedAt, nowSec: ctx.nowSec,
+                    maxAgeSec: Math.min(DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, registry.maxTrustedAgeSec ?? DEX_PROTOCOL_SOURCE_FRESHNESS_SEC),
+                    maxFutureSkewSec: 0,
+                  }).accepted) return [];
+                return [source.price];
+              }),
+            } };
         },
       });
       if (!decoded.ok) ctx.registerMalformedPersistedInput({
         source: "dex_prices", context: "dex_prices.price_sources_json", stablecoinId: row.stablecoin_id,
         updatedAt: row.updated_at, reason: decoded.reason, degradesRun: false,
       });
-      const aggregateObservedAt = decoded.ok ? decoded.payload : null;
+      const aggregateObservedAt = decoded.ok ? decoded.payload.observedAt : null;
       const ageSec = getRowAgeSec(aggregateObservedAt, ctx.nowSec);
       const publicationAgeSec = getRowAgeSec(row.updated_at, ctx.nowSec);
       if (ageSec != null) dexPriceAgeSecById.set(row.stablecoin_id, ageSec);
@@ -340,6 +364,7 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
         dexPriceUsd: row.dex_price_usd,
         sourceTotalTvl: row.source_total_tvl,
         updatedAt: aggregateObservedAt!,
+        ...(decoded.ok && decoded.payload.independentPrices.length > 0 ? { independentPrices: decoded.payload.independentPrices } : {}),
       });
     }
     succeeded = true;
@@ -576,12 +601,25 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       ? publication.admittedPairs ?? []
       : publication?.legs.filter((leg) => leg.status === "admitted")
         .map((leg) => [leg.stablecoinId, leg.chainId] as const) ?? [];
-    const admittedPairs = new Set(publishedPairs.filter(([id, chain]) => isCanonicalMintBurnPair(id, chain))
+    const isolatedLegs = publication?.legs.filter((leg) => leg.status === "pending-admission"
+      && leg.reason === "reactivation-pending" && MINT_BURN_CONFIGS.some((config) => config.enabled !== false
+        && mintBurnConfigKey(config) === leg.configKey && mintBurnScanFingerprint(config) === leg.configFingerprint)) ?? [];
+    const isolatedCoinIds = new Set(isolatedLegs.map((leg) => leg.stablecoinId));
+    const canonicalConfigs = MINT_BURN_CONFIGS.filter((config) => config.enabled !== false
+      && isCanonicalMintBurnPair(config.stablecoinId, config.chain.chainId)
+      && (publishedPairs.some(([id, chain]) => id === config.stablecoinId && chain === config.chain.chainId)
+        || isolatedLegs.some((leg) => leg.stablecoinId === config.stablecoinId && leg.chainId === config.chain.chainId)));
+    const isolatedConfigs = canonicalConfigs.filter((config) => isolatedCoinIds.has(config.stablecoinId));
+    const isolatedPairs = isolatedConfigs
+      .filter((config) => !publication?.legs.some((leg) => leg.stablecoinId === config.stablecoinId
+        && leg.chainId === config.chain.chainId && leg.status !== "admitted" && leg.reason !== "reactivation-pending"))
+      .map((config) => [config.stablecoinId, config.chain.chainId] as const);
+    const canonicalPairs = new Set([...publishedPairs, ...isolatedPairs].filter(([id, chain]) => isCanonicalMintBurnPair(id, chain))
       .map(([id, chain]) => `${id}|${chain}`));
-    const admittedCoinIds = new Set([...admittedPairs].map((pair) => pair.split("|")[0]));
-    const scopedPairsJson = JSON.stringify([...admittedPairs].map((pair) => pair.split("|")));
+    const scopedCoinIds = new Set([...canonicalPairs].map((pair) => pair.split("|")[0]));
+    const scopedPairsJson = JSON.stringify([...canonicalPairs].map((pair) => pair.split("|")));
     const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window != null
-      ? published.gauge.coins.filter((coin) => admittedCoinIds.has(coin.id))
+      ? published.gauge.coins.filter((coin) => scopedCoinIds.has(coin.id))
         .map((coin) => [coin.id, coin.scanCoverage] as const) : []);
     type FlowRow = MintBurnValuationTallyRow & MintBurnClassificationTallyRow & {
       stablecoin_id: string;
@@ -590,7 +628,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       total_mint: number;
       latest_hour_ts: number | null;
     };
-    const snapshot = await ctx.db.batch([
+    const snapshot = await runWithOverloadRetry(() => ctx.db.batch([
       ctx.db
       .prepare(
         `SELECT /* pharos:dews:mint-burn-24h */
@@ -624,11 +662,15 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       ctx.db.prepare(`SELECT stablecoin_id, chain_id FROM mint_burn_dirty_hours
         WHERE hour_ts >= ? AND hour_ts < ? GROUP BY stablecoin_id, chain_id`)
         .bind(end - 30 * DAY_SECONDS, end),
-    ]);
+      ...(isolatedCoinIds.size > 0
+        ? [prepareMintBurnScanCoverage(ctx.db, isolatedConfigs, end - 30 * DAY_SECONDS, end)] : []),
+    ]), 3, undefined, { waitOutResourceWindow: true });
+    const isolatedProof = isolatedCoinIds.size > 0
+      ? decodeMintBurnScanCoverage(snapshot[3] as D1Result<MintBurnScanSegment>) : new Map<string, MintBurnScanSegment[]>();
     const mb24h = snapshot[0] as D1Result<FlowRow>;
     const mb30d = snapshot[1] as D1Result<FlowRow>;
     const dirtyIds = new Set((snapshot[2].results as Array<{ stablecoin_id: string; chain_id: string }>)
-      .filter((row) => admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)).map((row) => row.stablecoin_id));
+      .filter((row) => canonicalPairs.has(`${row.stablecoin_id}|${row.chain_id}`)).map((row) => row.stablecoin_id));
     mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
 
     const mb24hMap = new Map<string, {
@@ -639,7 +681,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       classification: MintBurnClassificationTally;
     }>();
     for (const row of mb24h.results) {
-      if (!admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
+      if (!canonicalPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb24hMap.get(row.stablecoin_id)
         ?? { total_burn: 0, total_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
       aggregate.total_burn += row.total_burn;
@@ -662,7 +704,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       classification: MintBurnClassificationTally;
     }>();
     for (const row of mb30d.results) {
-      if (!admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
+      if (!canonicalPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb30dMap.get(row.stablecoin_id)
         ?? { avg_burn: 0, avg_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally(), classification: emptyMintBurnClassificationTally() };
       // A proven 30-day scan includes quiet days, not only event-bearing days.
@@ -682,9 +724,14 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
 
     for (const stablecoinId of mintBurnIds) {
       const scanCoverage = scanCoverageById.get(stablecoinId);
+      const isolated = isolatedCoinIds.has(stablecoinId);
+      const scanComplete = isolated
+        ? isolatedPairs.some(([id]) => id === stablecoinId)
+          && mintBurnScanCoverageAdmits(isolatedConfigs.filter((config) => config.stablecoinId === stablecoinId),
+            isolatedProof, end - 30 * DAY_SECONDS, end)
+        : scanCoverage?.window24h.complete === true && scanCoverage.window30d.complete === true;
       // Missing history is an unavailable leg, not a cron execution failure or a calm zero.
-      if (scanCoverage?.window24h.complete !== true || scanCoverage.window30d.complete !== true
-        || dirtyIds.has(stablecoinId)) continue;
+      if (!scanComplete || dirtyIds.has(stablecoinId)) continue;
       const latestWindow = mb24hMap.get(stablecoinId);
       const baseline = mb30dMap.get(stablecoinId);
       if (summarizeMintBurnClassification(latestWindow?.classification ?? emptyMintBurnClassificationTally()).completeness !== "complete"
@@ -697,6 +744,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       }
       // Only fully proven windows admit quiet zero; gross values remain observed subtotals.
       mintBurnMap.set(stablecoinId, {
+        ...(isolated ? { isolated: true } : {}),
         burn24h: latestWindow?.total_burn ?? 0,
         mint24h: latestWindow?.total_mint ?? 0,
         burnBaseline: baseline?.avg_burn ?? 0,

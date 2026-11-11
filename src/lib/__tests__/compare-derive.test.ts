@@ -389,6 +389,7 @@ describe("deriveFlowSeries", () => {
       mintVolumeUsd: 100,
       burnVolumeUsd: 50,
       netFlowUsd: 50,
+      hourlyScope: { chainIds: ["tron"], label: "Tron-only" },
       mintCount: 1,
       burnCount: 1,
       hourly: [
@@ -404,6 +405,7 @@ describe("deriveFlowSeries", () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0].label).toBe("USDC");
+    expect(result[0].hourlyScopeLabel).toBe("Tron-only");
     expect(result[0].data[0].ts).toBe(1700000000 * 1000);
     expect(result[0].data[0].netFlowUsd).toBe(50_000);
     expect(result[0].data[1].netFlowUsd).toBe(-20_000);

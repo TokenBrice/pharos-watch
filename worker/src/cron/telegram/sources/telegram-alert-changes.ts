@@ -9,6 +9,8 @@ import {
 } from "../../../telegram/common/alerts-formatting";
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { DEWS_THREAT_BANDS, dewsBandRanges } from "@shared/lib/dews-config";
+import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
+import { parseJsonObject } from "../../../lib/json-parse";
 import {
   extractTopSignals,
   type DewsCandidateSnapshot,
@@ -84,7 +86,10 @@ export function planDewsAlerts(
   for (const row of rows) {
     const id = row.stablecoin_id;
     const observedBand = previousObserved[id];
-    const band = applyDewsExitHysteresis(row.score, row.band, observedBand);
+    // A producer evidence cap is binding; hysteresis must not restore an alert
+    // band and complete a pending escalation after its evidence disappeared.
+    const evidenceCap = unwrapStressSignalsEnvelope(parseJsonObject(row.signals_json))?.insufficientEvidenceReason;
+    const band = evidenceCap ? row.band : applyDewsExitHysteresis(row.score, row.band, observedBand);
     plan.nextObserved[id] = band;
     const candidate = previousCandidates[id];
 

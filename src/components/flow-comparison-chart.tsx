@@ -87,6 +87,9 @@ export function FlowComparisonChart({
             tooltipVariant="pharos"
           />
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Hourly scope: {series.map((s) => `${s.label}: ${s.hourlyScopeLabel ?? "Configured issuance chains"}`).join("; ")}.
+        </p>
         {unavailableSeries.length > 0 && (
           <p className="mt-2 text-xs text-muted-foreground">
             Missing net: {unavailableSeries.map((s) => `${s.label} ${s.unavailableHours}h`).join(", ")} omitted

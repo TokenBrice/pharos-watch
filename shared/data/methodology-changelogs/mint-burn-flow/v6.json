@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.44",
+    "title": "Hourly coverage scoped to each constituent's evidence",
+    "date": "2026-11-10",
+    "effectiveAt": 1794372952,
+    "summary": "An isolated established leg withholds only the chart hours it cannot prove; proven historical hours include its actual rows rather than an admitted-leg subtotal.",
+    "impact": [
+      "Aggregate and per-coin hourly series prove each closed hour over admitted legs plus established enabled isolated legs belonging to coins with surviving admission. Matching hourly rows and scan proof share one read snapshot. Pending additions, explicit disables and fully isolated coins remain outside aggregate scope.",
+      "Every constituent must prove that hour under its current configuration, including shared-bucket and dirty-hour gates. Complete classification and the existing valuation rules still gate the signed net. A missing or unproven leg leaves that hour null; a proven quiet hour is zero. Missing evidence in another hour no longer suppresses a proven historical net.",
+      "Coin totals remain explicitly partial admitted-leg subtotals. Full-coin direction, pressure, gauge weights and FTQ retain their existing complete-window gates; chain-level 24-hour incompleteness stays scoped to the affected chains. Cumulative, daily and rolling chart statistics retain their gap guards.",
+      "Provisional effectiveAt: 2026-11-11 04:55:52 UTC (1794372952), one hour after the latest existing activation to preserve chronology; pending re-dating to the real activation."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.43",
     "title": "Complete-hour backfill guards and explicit chart gaps",
     "date": "2026-11-10",

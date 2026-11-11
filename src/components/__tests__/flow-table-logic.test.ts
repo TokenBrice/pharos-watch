@@ -32,11 +32,9 @@ describe("getCoverageBadge", () => {
     expect(badge!.label).toBe("Partial history");
   });
 
-  it("returns lagging badge", () => {
+  it("keeps lagging coverage operator-only", () => {
     const coin = makeFlow({ coverage: { status: "lagging" } as MintBurnCoinFlow["coverage"] });
-    const badge = getCoverageBadge(coin);
-    expect(badge).not.toBeNull();
-    expect(badge!.label).toBe("Lagging");
+    expect(getCoverageBadge(coin)).toBeNull();
   });
 
   it("returns bootstrapping badge", () => {

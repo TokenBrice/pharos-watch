@@ -216,7 +216,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
   flows: {
     full: "indigo",
     "partial-history": "skyMuted",
-    lagging: "amberMuted",
+    tracked: "skyMuted",
     bootstrapping: "violetMuted",
     unknown: "amberDim",
     "data-unavailable": "gap",

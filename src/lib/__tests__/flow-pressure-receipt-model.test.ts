@@ -25,7 +25,7 @@ describe("buildFlowPressureReceiptModel", () => {
         mintVolume24hUsd: 90_000_000,
         burnVolume24hUsd: 15_000_000,
         netFlow7dUsd: 120_000_000,
-        coverage: makeCoverage(),
+        coverage: makeCoverage({ status: "lagging" }),
       }),
       makeCoin({
         symbol: "DAI",
@@ -65,12 +65,11 @@ describe("buildFlowPressureReceiptModel", () => {
       scopeLabel: "Configured issuance chains",
       topMint: { symbol: "USDC", valueUsd: 120_000_000 },
       topBurn: { symbol: "DAI", valueUsd: -35_000_000 },
-      coverageSummary: "1 lagging coin",
+      coverageSummary: "2 partial coins",
     });
     expect(model.coverageRows).toEqual([
       { status: "full", count: 1 },
-      { status: "partial-history", count: 1 },
-      { status: "lagging", count: 1 },
+      { status: "partial-history", count: 2 },
     ]);
     expect(model.rows.map((row) => row.label)).toEqual([
       "Printed 7d",

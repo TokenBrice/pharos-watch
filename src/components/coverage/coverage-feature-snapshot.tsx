@@ -42,7 +42,7 @@ const BAR_LABELS: Partial<Record<string, string>> = {
   uncovered: "not covered",
   full: "full",
   "partial-history": "partial",
-  lagging: "lag",
+  tracked: "tracked",
   bootstrapping: "boot",
   unknown: "unknown",
   yes: "yes",

@@ -7,16 +7,17 @@
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
-    "rwa": true
+    "rwa": true,
+    "navToken": false
   },
   "collateral": "Institutional, permissioned private-pool exposure with periodic pricing and scheduled, non-instant redemption. The current AFI category feed reports lithium mining, gold commodity, real estate, and copper mining exposures without identifying position-level legal instruments or named obligors.",
-  "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
+  "pegMechanism": "Periodic valuation of the underlying private-credit basket; KYB-gated institutional participation with scheduled redemptions. Public evidence does not establish guaranteed par redemption or whether rwaUSDi returns accrue in price, rebasing, or distributions.",
   "mechanismArchetype": "rwa-credit-fund",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
-    "rationale": "Multipli defines rwaUSDi as a permissioned institutional-credit layer allocating to private credit, structured finance, project finance, asset-backed lending, and market-neutral funds, with periodic pricing and scheduled rather than instant redemption. That NAV-bearing credit-pool claim maps to rwa-credit-fund rather than a fixed-par fiat reserve or borrower CDP.",
+    "reviewedAt": "2026-11-10",
+    "reviewer": "Primary-source price and supply review",
+    "rationale": "Multipli identifies rwaUSDi as a permissioned private-credit class with periodic pricing and scheduled exits, retaining rwa-credit-fund and stable-value-investment treatment. Keep navToken=false and the observed provider quote: no rwaUSDi-specific price-accrual, rebase or distribution mechanism is established. The $1 peg reference is a reviewed current denomination benchmark, not guaranteed redemption or permanent par. At Monad block 121069410, issuer-linked Chainlink proxy 0xf72885b0c01fbc1e4db78187507576298ef7f6b9 / aggregator 0x45309f5786d09241ee4649e0753062415cfe16cc had 125 readable rounds, all 1e18 (18 decimals), July 9-November 10 2026; this proves only that observed history. On November 10 DefiLlama 340 already reports all seven deployments and 487442380 native units, matching pinned token stocks; AFI still reports five and 479782100. X Layer 3720140 plus Robinhood 3940140 explains the AFI difference, but anonymous holders do not establish treasury exclusions or public circulation. Preserve the already-USD DefiLlama list supply unchanged under ADR-8; no manual on-chain raise or subtraction, and no constant-NAV price override. Re-review price mechanics and the AFI perimeter by 2026-12-10; full addresses, block pins and limitations are in docs/supply-snapshot.md#rwausdi-price-and-circulation-review.",
     "sources": [
       {
         "label": "Multipli rwaUSDi institutional-credit documentation",
@@ -25,6 +26,26 @@
       {
         "label": "Multipli liquidity-class design",
         "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design"
+      },
+      {
+        "label": "rwaUSDi periodic NAV and scheduled-redemption risk, reviewed 2026-11-10",
+        "url": "https://docs.multipli.fi/risks/liquidity-and-redemption-risk"
+      },
+      {
+        "label": "Issuer-linked Chainlink rwaUSDi NAV feed, 125 rounds reviewed at Monad 121069410 on 2026-11-10",
+        "url": "https://docs.multipli.fi/rwausd/chainlink-data-feed"
+      },
+      {
+        "label": "rwaUSDi NAV proxy on Monad",
+        "url": "https://monadscan.com/address/0xf72885b0c01fbc1e4db78187507576298ef7f6b9"
+      },
+      {
+        "label": "DefiLlama 340 current seven-deployment supply, reviewed 2026-11-10",
+        "url": "https://stablecoins.llama.fi/stablecoin/340"
+      },
+      {
+        "label": "AFI five-deployment issuance perimeter, reviewed 2026-11-10",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/issuance-parameters"
       }
     ]
   },
