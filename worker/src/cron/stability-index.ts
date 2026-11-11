@@ -1,4 +1,4 @@
-import { includePsiEventDeviation } from "../lib/psi-event-aggregation";
+import { includePsiEventDeviation } from "../lib/psi-recompute";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";

@@ -80,6 +80,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/redemption-backstop-configs/queue-redeem-nest-nav.ts",
   "shared/lib/redemption-backstop-configs/queue-redeem.ts",
   "shared/lib/redemption-backstop-configs/review-dates.ts",
+  "shared/lib/redemption-backstop-configs/settlement-order.ts",
   "shared/lib/redemption-backstop-configs/settlement.ts",
   "shared/lib/redemption-backstop-configs/shared.ts",
   "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",

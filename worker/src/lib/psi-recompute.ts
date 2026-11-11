@@ -1,4 +1,3 @@
-import { includePsiEventDeviation } from "./psi-event-aggregation";
 import {
   buildPsiHistoricalSupplySnapshotMap,
   getPsiHistoricalUniverseForDay,
@@ -13,6 +12,15 @@ import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-
 import { getDepegThresholdBpsForPegCurrency } from "./constants";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
+
+export function includePsiEventDeviation(
+  aggregate: { worstBps: number; earliestStart: number },
+  bps: number,
+  startedAt: number,
+): void {
+  if (Math.abs(bps) > Math.abs(aggregate.worstBps)) aggregate.worstBps = bps;
+  if (startedAt < aggregate.earliestStart) aggregate.earliestStart = startedAt;
+}
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
 const HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC = 6 * 3600;
