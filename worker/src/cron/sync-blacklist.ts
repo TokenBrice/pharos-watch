@@ -135,6 +135,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
   let producerSnapshotError: string | null = null;
+  let producerSnapshotErrorOperation: string | null = null;
   let producerSnapshotReason: "superseded" | null = null;
   // Null until a stage returns: a throw or an admission skip is not observed zero work.
   let amountBackfill: BlacklistAmountBackfillResult | null = null;
@@ -292,6 +293,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   ) {
     producerSnapshotSkipped = true;
   } else {
+    let operation = "materializeBlacklistGapMetrics";
     try {
       const snapshotNow = Math.floor(Date.now() / 1000);
       if (oldestSuccessAt != null) {
@@ -307,11 +309,13 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           chainName: state.config.chain.chainName,
           lastSucceededAt: state.lastSucceededAt,
         }));
+      operation = "materializeBlacklistSummarySnapshot";
       const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt, behindConfigs, summaryFence);
       producerSummarySnapshot = summarySnapshot.written;
       producerSnapshotReason = summarySnapshot.reason ?? null;
     } catch (err) {
-      producerSnapshotError = err instanceof Error ? err.name : "UnknownError";
+      producerSnapshotError = toErrorMessage(err);
+      producerSnapshotErrorOperation = operation;
       await reportCronProgress(
         onProgress,
         {
@@ -321,7 +325,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           message: "Failed to materialize blacklist producer snapshots",
           metadata: {
             producerSnapshotError,
-            errorMessage: toErrorMessage(err),
+            producerSnapshotErrorOperation,
+            errorMessage: producerSnapshotError,
           },
         },
         budget,
@@ -465,6 +470,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         producerSummarySnapshot,
         producerSnapshotSkipped,
         producerSnapshotError,
+        producerSnapshotErrorOperation,
         producerSnapshotReason,
         producerSnapshotWindowMs: BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS,
         producerSnapshotWindowUnavailable,
