@@ -18,7 +18,6 @@ import {
   writeStatusProbeRun,
 } from "../status-reliability";
 import {
-  STATUS_DEGRADED_TO_STALE_THRESHOLD,
   type StatusPersistenceIssue,
 } from "../status-reliability-shared";
 import { decideNextStatus } from "../status-reliability-decision";
@@ -271,9 +270,10 @@ describe("status-reliability", () => {
     const { db, store } = makeStatefulDb();
 
     await reconcileStatusState(db, 100, "healthy", 0.95, []);
+    expect((await reconcileStatusState(db, 130, "stale", 0.95, [])).effectiveStatus).toBe("healthy");
     const stale = await reconcileStatusState(db, 160, "stale", 0.95, []);
     expect(stale.effectiveStatus).toBe("stale");
-    expect(stale.transition?.reason).toBe("raw-stale-immediate-escalation");
+    expect(stale.transition?.reason).toBe("raw-stale-consecutive-threshold");
 
     const hold = await reconcileStatusState(db, 200, "degraded", 0.95, []);
     expect(hold.effectiveStatus).toBe("stale");
@@ -840,11 +840,14 @@ describe("status-reliability", () => {
     expect(divergent.details).toBe("status=stale, probe=healthy, probeAge=100s");
   });
 
-  it("degraded → stale transition respects STATUS_DEGRADED_TO_STALE_THRESHOLD", () => {
-    const counterBelow = { healthy: 0, degraded: 0, stale: STATUS_DEGRADED_TO_STALE_THRESHOLD - 1 };
-    const counterAt = { healthy: 0, degraded: 0, stale: STATUS_DEGRADED_TO_STALE_THRESHOLD };
-    expect(decideNextStatus("degraded", "stale", counterBelow, 500, STATUS_HYSTERESIS).changed).toBe(false);
-    expect(decideNextStatus("degraded", "stale", counterAt, 500, STATUS_HYSTERESIS).changed).toBe(true);
+  it("needs escalateToStale stale readings from any state and counts mixed non-healthy ones toward degraded", () => {
+    const below = { healthy: 0, degraded: 0, stale: STATUS_HYSTERESIS.escalateToStale - 1 };
+    const at = { ...below, stale: STATUS_HYSTERESIS.escalateToStale };
+    for (const current of ["healthy", "degraded"] as const) {
+      expect(decideNextStatus(current, "stale", below, 500, STATUS_HYSTERESIS).changed).toBe(false);
+      expect(decideNextStatus(current, "stale", at, 500, STATUS_HYSTERESIS).next).toBe("stale");
+    }
+    expect(decideNextStatus("healthy", "stale", { ...below, nonHealthy: 2 }, 500, STATUS_HYSTERESIS).next).toBe("degraded");
   });
 });
 

@@ -179,6 +179,8 @@ export async function reconcileStatusState(
     healthy: rawStatus === "healthy" ? current.consecutive_healthy + 1 : 0,
     degraded: rawStatus === "degraded" ? current.consecutive_degraded + 1 : 0,
     stale: rawStatus === "stale" ? current.consecutive_stale + 1 : 0,
+    // At least 2 exactly when the previous reading was non-healthy too.
+    nonHealthy: rawStatus === "healthy" ? 0 : current.consecutive_degraded + current.consecutive_stale + 1,
   };
   const dwellSec = Math.max(0, now - current.last_changed_at);
   const decision = decideNextStatus(current.current_status, rawStatus, counters, dwellSec, STATUS_HYSTERESIS);

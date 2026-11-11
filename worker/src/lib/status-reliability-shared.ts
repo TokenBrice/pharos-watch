@@ -15,7 +15,9 @@ export const STATUS_SCOPE = "global" as const;
 
 export const STATUS_HYSTERESIS = {
   escalateToDegraded: 2,
-  escalateToStale: 1,
+  // One stale reading is one sample: three single failed D1 reads turned a
+  // healthy state stale at once on 2026-11-05/10. Stale needs two, from any state.
+  escalateToStale: 2,
   recoverToDegraded: 2,
   recoverToHealthy: 3,
   minDwellSec: 120,
@@ -23,15 +25,6 @@ export const STATUS_HYSTERESIS = {
 } as const;
 
 export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
-
-/**
- * Consecutive-stale readings required to transition degraded → stale.
- * Intentionally stricter than `STATUS_HYSTERESIS.escalateToStale` (the
- * healthy → stale path). Rationale: once the system has already acknowledged
- * degradation, we want two consecutive stale samples before escalating,
- * preventing flap-through from a single noisy probe.
- */
-export const STATUS_DEGRADED_TO_STALE_THRESHOLD = 2 as const;
 
 /**
  * Isolate-scoped dedup set: suppresses repeat `code:operation` error logs within

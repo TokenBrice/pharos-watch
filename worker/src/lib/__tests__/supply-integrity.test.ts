@@ -378,6 +378,10 @@ describe("supply integrity", () => {
       expect.arrayContaining(["supply_value_drift", "supply_snapshot_overdue"]),
     );
     expect(assessSupplyIntegrityQuality(null).causes[0].code).toBe("supply_integrity_unknown");
+    Object.assign(base.snapshot, { due: false });
+    base.value.expectedActiveCount = 400;
+    expect(assessSupplyIntegrityQuality(base).status).toBe("healthy");
+    expect(codes(base)).toContain("supply_value_drift");
   });
 
   it("keeps known carry evidence when the value comparison is unknown", () => {

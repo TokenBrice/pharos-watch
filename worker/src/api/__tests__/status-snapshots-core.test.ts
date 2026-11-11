@@ -888,7 +888,7 @@ describe("handleStatus", () => {
       scope: "global",
       thresholds: {
         escalateToDegraded: 2,
-        escalateToStale: 1,
+        escalateToStale: 2,
         recoverToDegraded: 2,
         recoverToHealthy: 3,
       },

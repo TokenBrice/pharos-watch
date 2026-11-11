@@ -1,7 +1,4 @@
 import type { StatusHealthValue } from "@shared/types/status/core";
-import {
-  STATUS_DEGRADED_TO_STALE_THRESHOLD,
-} from "./status-reliability-shared";
 
 interface StatusHysteresisPolicy {
   escalateToDegraded: number;
@@ -15,18 +12,19 @@ interface StatusHysteresisPolicy {
 export function decideNextStatus(
   current: StatusHealthValue,
   raw: StatusHealthValue,
-  counters: { healthy: number; degraded: number; stale: number },
+  /** `nonHealthy`: consecutive degraded-or-stale readings; defaults to the degraded streak. */
+  counters: { healthy: number; degraded: number; stale: number; nonHealthy?: number },
   dwellSec: number,
   policy: StatusHysteresisPolicy,
 ): { next: StatusHealthValue; changed: boolean; reason: string } {
-  if (current === "healthy" && raw === "stale" && counters.stale >= policy.escalateToStale) {
-    return { next: "stale", changed: true, reason: "raw-stale-immediate-escalation" };
-  }
-  if (current === "healthy" && raw === "degraded" && counters.degraded >= policy.escalateToDegraded) {
-    return { next: "degraded", changed: true, reason: "raw-degraded-consecutive-threshold" };
-  }
-  if (current === "degraded" && raw === "stale" && counters.stale >= STATUS_DEGRADED_TO_STALE_THRESHOLD) {
+  if (current !== "stale" && raw === "stale" && counters.stale >= policy.escalateToStale) {
     return { next: "stale", changed: true, reason: "raw-stale-consecutive-threshold" };
+  }
+  // A stale reading still counts toward degraded, so alternating stale and
+  // degraded readings cannot hold a healthy state indefinitely.
+  if (current === "healthy" && raw !== "healthy"
+    && (counters.nonHealthy ?? counters.degraded) >= policy.escalateToDegraded) {
+    return { next: "degraded", changed: true, reason: "raw-degraded-consecutive-threshold" };
   }
   if (
     current === "degraded" &&

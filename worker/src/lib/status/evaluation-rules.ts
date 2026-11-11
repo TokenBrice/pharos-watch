@@ -766,7 +766,10 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
         named.message,
         { metric: "availabilityImpactingCronErrors", value: input.availabilityImpactingCronErrors, threshold: 1, subjects: named.subjects },
       );
-      return ruleResult(stale ? "stale" : "degraded", [cause]);
+      // One job failing repeatedly is an action item (critical cause), not a
+      // stale system: eight such single-job episodes were 85% of the operator
+      // red time in 2026-10/11. Two such jobs still turn the status stale.
+      return ruleResult(input.availabilityImpactingConsecutiveCronErrors >= 2 ? "stale" : "degraded", [cause]);
   },
   evaluateWatchCronErrors,
   (input) => {
