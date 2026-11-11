@@ -1,3 +1,5 @@
+import { V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
+
 const PILLARS: ReadonlyArray<{
   key: "backing" | "exit" | "control";
   label: string;
@@ -10,7 +12,7 @@ const PILLARS: ReadonlyArray<{
   {
     key: "backing",
     label: "Backing",
-    weight: 40,
+    weight: V9_PILLAR_WEIGHTS.backing * 100,
     question: "Is there real value behind the token?",
     description: "Tests the quality, transparency, and structure of reserves or collateral.",
     signals: "Assets · Custody · Mechanism",
@@ -19,7 +21,7 @@ const PILLARS: ReadonlyArray<{
   {
     key: "exit",
     label: "Exit",
-    weight: 35,
+    weight: V9_PILLAR_WEIGHTS.exit * 100,
     question: "Can I get my value out?",
     description: "Tests real redemption and market routes at meaningful size, not theoretical liquidity.",
     signals: "Redemption · Depth · Route diversity",
@@ -28,7 +30,7 @@ const PILLARS: ReadonlyArray<{
   {
     key: "control",
     label: "Control",
-    weight: 25,
+    weight: V9_PILLAR_WEIGHTS.control * 100,
     question: "Who can change or break the system?",
     description: "Tests minting, oracle, bridge, and intervention powers that can harm holders.",
     signals: "Minting · Oracles · Bridges",
@@ -55,7 +57,7 @@ export function SafetyPillarExplainer() {
       <div
         className="flex h-1.5 w-full gap-1 bg-background"
         role="img"
-        aria-label="Safety Score pillar weights: Backing 40%, Exit 35%, Control 25%"
+        aria-label={`Safety Score pillar weights: ${PILLARS.map((pillar) => `${pillar.label} ${pillar.weight}%`).join(", ")}`}
       >
         {PILLARS.map((pillar) => (
           <span

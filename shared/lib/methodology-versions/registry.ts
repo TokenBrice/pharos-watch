@@ -59,6 +59,7 @@ import {
   type MethodologyVersionConfig,
 } from "./base";
 import type { MethodologyChangelogEntry } from "../../types/editorial-content";
+import type { PublicMethodologyLane } from "./metadata.mts";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
@@ -98,18 +99,7 @@ import {
   getDepegResolverMethodologyVersionAt,
 } from "./depeg-resolver";
 
-export type MethodologyChangelogRegistryKey =
-  | "safety-score"
-  | "depeg-dews"
-  | "depeg-resolver"
-  | "liquidity-score"
-  | "stability-index"
-  | "chain-health"
-  | "yield"
-  | "blacklist-tracker"
-  | "mint-burn-flow"
-  | "pricing-pipeline"
-  | "redemption-backstop";
+export type MethodologyChangelogRegistryKey = PublicMethodologyLane["key"];
 
 export type MethodologyChangelogMarkdownKey =
   | "scoring"

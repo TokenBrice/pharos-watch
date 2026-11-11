@@ -14,27 +14,35 @@ import { ChainHealthMethodologySection } from "./monitoring/chain-health-section
 import { DepegResolverMethodologySection } from "./monitoring/depeg-resolver-section";
 import { PegScoreDewsMethodologySection } from "./monitoring/pegscore-dews-section";
 import { YieldIntelligenceMethodologySection } from "./monitoring/yield-intelligence-section";
+import { METHODOLOGY_SECTION_ROSTER } from "@/lib/methodology-content";
+
+const SECTION_COMPONENTS = {
+  lifecycle: LifecyclePhasesMethodologySection,
+  pricing: PricingPipelineMethodologySection,
+  stability: StabilityIndexMethodologySection,
+  safety: SafetyScoresMethodologySection,
+  exposure: DependencyExposureMethodologySection,
+  "mint-authority": MintAuthorityScoreMethodologySection,
+  infrastructure: InfrastructureMethodologySection,
+  liquidity: LiquidityMethodologySection,
+  redemption: RedemptionBackstopMethodologySection,
+  "mint-burn": MintBurnFlowMethodologySection,
+  yield: YieldIntelligenceMethodologySection,
+  "peg-dews": PegScoreDewsMethodologySection,
+  resolver: DepegResolverMethodologySection,
+  blacklist: BlacklistTrackerMethodologySection,
+  "chain-health": ChainHealthMethodologySection,
+  definitions: DefinitionsSection,
+} satisfies Record<(typeof METHODOLOGY_SECTION_ROSTER)[number]["key"], () => React.ReactNode>;
 
 /** Render order is the published reading order of `/methodology/`. */
 export function MethodologySections() {
   return (
     <>
-      <LifecyclePhasesMethodologySection />
-      <PricingPipelineMethodologySection />
-      <StabilityIndexMethodologySection />
-      <SafetyScoresMethodologySection />
-      <DependencyExposureMethodologySection />
-      <MintAuthorityScoreMethodologySection />
-      <InfrastructureMethodologySection />
-      <LiquidityMethodologySection />
-      <RedemptionBackstopMethodologySection />
-      <MintBurnFlowMethodologySection />
-      <YieldIntelligenceMethodologySection />
-      <PegScoreDewsMethodologySection />
-      <DepegResolverMethodologySection />
-      <BlacklistTrackerMethodologySection />
-      <ChainHealthMethodologySection />
-      <DefinitionsSection />
+      {METHODOLOGY_SECTION_ROSTER.map(({ key }) => {
+        const Section = SECTION_COMPONENTS[key];
+        return <Section key={key} />;
+      })}
     </>
   );
 }

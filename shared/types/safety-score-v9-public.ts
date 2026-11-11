@@ -36,6 +36,8 @@ import {
   V9WitnessTextIdentityArraySchema,
 } from "./safety-score-v9-public-witness-texts";
 
+export const V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD = 0.5;
+
 export const SafetyScoreV9DependencyProvenanceSchema = z.object({
   source: V9EffectiveDependenciesV3Schema.shape.source,
   evidenceAsOf: z.string().min(1).nullable(),
@@ -285,7 +287,7 @@ const SafetyScoreV9CardShape = {
   gradeHold: SafetyScoreV9GradeHoldSchema.optional(),
   /** Display-only; older archived publications omit both fields. */
   provisional: z.literal(true).optional(),
-  unknownPricedWeightShare: z.number().finite().gt(0.5).max(1).optional(),
+  unknownPricedWeightShare: z.number().finite().gt(V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD).max(1).optional(),
   localAuthorityExposure: V9LocalAuthorityExposureSchema.optional(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9PartialEvidenceSchema.nullable(),
@@ -443,7 +445,7 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
     if (card.provisional !== undefined || card.unknownPricedWeightShare !== undefined) {
       const share = computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation);
       if (card.ratingStatus !== "rated" || card.provisional !== true ||
-          card.unknownPricedWeightShare === undefined || share <= 0.5 ||
+          card.unknownPricedWeightShare === undefined || share <= V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD ||
           !numbersAgree(card.unknownPricedWeightShare, share)) {
         issue(ctx, ["provisional"], "Provisional labels require more than half the scoring weight to be priced as unknown, with its reconciled share");
       }

@@ -26,5 +26,3 @@ if (latestMintAuthorityChangelogVersion !== MINT_AUTHORITY_METHODOLOGY_VERSION) 
       `but latest changelog entry is "${latestMintAuthorityChangelogVersion ?? "(empty changelog)"}".`,
   );
 }
-
-export { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "./constants";

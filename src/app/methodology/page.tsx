@@ -16,8 +16,10 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
+import { V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD } from "@shared/types/safety-score-v9-public";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } from "./methodology-shared";
+import { METHODOLOGY_READING_STEPS, READER_GUIDE_COPY } from "./methodology-shared";
+import { METHODOLOGY_SECTIONS } from "@/lib/methodology-content";
 import { DEFINITIONS } from "@/lib/definitions";
 
 const { gradeThresholds, pillarWeights } = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
@@ -40,7 +42,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "How does Pharos grade stablecoins?",
     answer:
-      "Safety Score V10 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit stresses 5% of usable supply within $1M–$25M. Route materiality separately uses 5% of supply within $100K–$25M: capacity below both 1% of that amount and $100K gets no route credit. A material route with valued completion below 1% of the actual stress request is capped at 50 before confidence. Bounded aggregation limits how far strong pillars lift a weak path; peg behavior, caps, dependencies and wrappers can constrain the result. At least two usable pillars permit rating, pricing an unavailable third as uncertainty; fewer are a technical Pipeline gap, while genuine required-parent unavailability can yield NR. Grades range from A+ (87+) to F (0–39). A Provisional label marks more than 50% unknown-priced scoring weight without changing the score.",
+      `Safety Score V10 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit stresses 5% of usable supply within $1M–$25M. Route materiality separately uses 5% of supply within $100K–$25M: capacity below both 1% of that amount and $100K gets no route credit. A material route with valued completion below 1% of the actual stress request is capped at 50 before confidence. Bounded aggregation limits how far strong pillars lift a weak path; peg behavior, caps, dependencies and wrappers can constrain the result. At least two usable pillars permit rating, pricing an unavailable third as uncertainty; fewer are a technical Pipeline gap, while genuine required-parent unavailability can yield NR. Grades range from A+ (87+) to F (0–39). A Provisional label marks more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% unknown-priced scoring weight without changing the score.`,
   },
   {
     question: "How is the Pharos peg score calculated?",

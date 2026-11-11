@@ -5,6 +5,7 @@ import { createV9PublicCardShardViewFactory } from "./public-card-shard";
 import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   SafetyScoreV9CurrentCardSchema,
+  V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD,
   type SafetyScoreV9EvidenceFreshness,
   type SafetyScoreV9NrReason,
   type SafetyScoreV9PublicReason,
@@ -1281,7 +1282,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
       : { backingFromLiveReserves: input.backingFromLiveReserves }),
     score: input.trace.finalScore,
     grade: input.trace.finalGrade,
-    ...(unknownPricedWeightShare > 0.5 ? { provisional: true as const, unknownPricedWeightShare } : {}),
+    ...(unknownPricedWeightShare > V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD ? { provisional: true as const, unknownPricedWeightShare } : {}),
     ...(localAuthorityExposure === undefined ? {} : { localAuthorityExposure }),
     ratingStatus: input.trace.ratingStatus,
     partialEvidence: projectPartialEvidence(input),

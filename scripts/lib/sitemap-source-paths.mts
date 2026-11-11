@@ -1,4 +1,5 @@
 import type { MethodologyChangelogRegistryKey } from "../../shared/lib/methodology-versions/registry";
+import { METHODOLOGY_LANES, type PublicMethodologyLane } from "../../shared/lib/methodology-versions/metadata.mts";
 
 const SOURCE_ROOTS = {
   app: { path: "src/app", recursive: true },
@@ -34,19 +35,12 @@ export const METHODOLOGY_CHANGELOG_SHARED_SOURCES = [
   // This route owns the shared display config as well as dynamic route metadata.
   `${SOURCE_ROOTS.app.path}/methodology/[slug]/page.tsx`,
 ];
-export const METHODOLOGY_CHANGELOG_ENTRY_SOURCES: Record<MethodologyChangelogRegistryKey, string> = {
-  "safety-score": `${SOURCE_ROOTS.methodology.path}/safety-score`,
-  "depeg-dews": `${SOURCE_ROOTS.methodology.path}/depeg-dews`,
-  "depeg-resolver": `${SOURCE_ROOTS.methodology.path}/depeg-resolver`,
-  "liquidity-score": `${SOURCE_ROOTS.methodology.path}/liquidity-score`,
-  "stability-index": `${SOURCE_ROOTS.methodology.path}/stability-index`,
-  "chain-health": `${SOURCE_ROOTS.methodology.path}/chain-health`,
-  yield: `${SOURCE_ROOTS.methodology.path}/yield-methodology`,
-  "blacklist-tracker": `${SOURCE_ROOTS.methodology.path}/blacklist-tracker`,
-  "mint-burn-flow": `${SOURCE_ROOTS.methodology.path}/mint-burn-flow`,
-  "pricing-pipeline": `${SOURCE_ROOTS.methodology.path}/pricing-pipeline`,
-  "redemption-backstop": `${SOURCE_ROOTS.methodology.path}/redemption-backstop`,
-};
+export const METHODOLOGY_CHANGELOG_ENTRY_SOURCES = Object.fromEntries(
+  METHODOLOGY_LANES
+    .filter((lane): lane is PublicMethodologyLane => lane.sitemapOrder !== null)
+    .sort((a, b) => a.sitemapOrder - b.sitemapOrder)
+    .map((lane) => [lane.key, lane.changelogDirectory]),
+) as Record<MethodologyChangelogRegistryKey, string>;
 export const SCORING_CHANGELOG_CONTENT_SOURCES = [
   `${SOURCE_ROOTS.app.path}/methodology/changelog-content/scoring`,
 ];
