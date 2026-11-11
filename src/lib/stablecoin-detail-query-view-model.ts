@@ -465,11 +465,10 @@ export type DetailGradeRead = "settled" | "pending" | "failed";
  */
 export function resolveDetailGradeRead(
   reportCard: unknown,
-  staleQueries: readonly StablecoinDetailStaleQuery[],
+  query: Pick<DetailQueryResource<{ cards: readonly unknown[] }>, "data" | "enabled" | "error" | "isLoading">,
 ): DetailGradeRead {
   if (reportCard) return "settled";
-  const query = staleQueries.find((entry) => entry.preset === "reportCards");
-  if (!query || query.hasData) return "settled";
+  if (query.enabled === false || query.data?.cards.length) return "settled";
   if (query.error) return "failed";
   return query.isLoading ? "pending" : "settled";
 }

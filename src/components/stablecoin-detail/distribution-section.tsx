@@ -19,8 +19,8 @@ import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { StaleDataBanner } from "@/components/stale-data-banner";
+import { DataHealthBanner } from "@/components/data-health-banner";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
@@ -270,7 +270,8 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     isLoading,
     hasData: !!listData,
   };
-  const health = deriveDataHealth(healthInput, query.dataUpdatedAt);
+  const nowMs = useFreshnessBoundary([healthInput]);
+  const health = deriveDataHealth(healthInput, nowMs ?? query.dataUpdatedAt);
 
   const { data, total, categoryCount, unattributed, unavailable } = useMemo(() => {
     const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
@@ -335,7 +336,8 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         <FreshnessIndicator
           compact
           updatedAtMs={health.dataUpdatedAt}
-          staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.stablecoins * 1000}
+          staleAfterMs={health.staleTime}
+          health={health}
           labelPrefix="Updated"
         />
       }
@@ -343,7 +345,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       ariaLabel={`Circulating supply distribution across ${categoryCount} ${categoryCount === 1 ? "chain" : "chains"}${unattributed > 0 ? `, plus ${formatCurrency(unattributed)} Unattributed supply` : ""}`}
       data={data}
       total={total}
-      notice={<StaleDataBanner queries={[healthInput]} />}
+      notice={<DataHealthBanner entries={[health]} />}
     />
   );
 }
@@ -360,7 +362,8 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     isLoading,
     hasData: !!liquidityMap,
   };
-  const health = deriveDataHealth(healthInput, query.dataUpdatedAt);
+  const nowMs = useFreshnessBoundary([healthInput]);
+  const health = deriveDataHealth(healthInput, nowMs ?? query.dataUpdatedAt);
 
   const liq = liquidityMap?.[stablecoinId];
   const isEmpty = !isLoading && !hasMeaningfulDexData(liq);
@@ -408,7 +411,8 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         <FreshnessIndicator
           compact
           updatedAtMs={health.dataUpdatedAt}
-          staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.dexLiquidity * 1000}
+          staleAfterMs={health.staleTime}
+          health={health}
           labelPrefix="Updated"
         />
       }
@@ -416,7 +420,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       ariaLabel={`DEX liquidity TVL distribution across ${categoryCount} ${categoryCount === 1 ? "protocol" : "protocols"}`}
       data={data}
       total={total}
-      notice={<StaleDataBanner queries={[healthInput]} />}
+      notice={<DataHealthBanner entries={[health]} />}
     />
   );
 }

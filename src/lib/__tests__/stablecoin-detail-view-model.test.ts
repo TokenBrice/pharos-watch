@@ -15,7 +15,6 @@ import {
   makeReadyDetailParams,
 } from "./fixtures/stablecoin-detail-view-model";
 import { buildDetailMarketSnapshot, buildDetailPegPriceSnapshot, buildDetailStaleQueries, buildDetailFeatureSnapshot, resolveDetailGradeRead } from "../stablecoin-detail-query-view-model";
-import type { StablecoinDetailStaleQuery } from "../stablecoin-detail-view-model-types";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { deriveDataHealth, isPublicWarning } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
@@ -1165,25 +1164,21 @@ describe("detail feature-status ladders", () => {
   });
 });
 
-function gradeReadReportCards(overrides: Partial<StablecoinDetailStaleQuery>): StablecoinDetailStaleQuery[] {
-  return [{ preset: "reportCards", dataUpdatedAt: 0, error: null, hasData: false, meta: null, ...overrides }];
-}
-
 describe("resolveDetailGradeRead", () => {
   it("is settled whenever a card is present", () => {
-    expect(resolveDetailGradeRead({ grade: "A" }, gradeReadReportCards({ isLoading: true }))).toBe("settled");
+    expect(resolveDetailGradeRead({ grade: "A" }, { error: null, isLoading: true })).toBe("settled");
   });
 
   it("is pending while the first report-card fetch is in flight", () => {
-    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ isLoading: true }))).toBe("pending");
+    expect(resolveDetailGradeRead(undefined, { error: null, isLoading: true })).toBe("pending");
   });
 
   it("is failed when the read errored without data", () => {
-    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ error: new Error("x"), isLoading: true }))).toBe("failed");
+    expect(resolveDetailGradeRead(undefined, { error: new Error("x"), isLoading: true })).toBe("failed");
   });
 
   it("is settled when the response arrived without this coin (a real not-scored finding)", () => {
-    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ hasData: true }))).toBe("settled");
-    expect(resolveDetailGradeRead(undefined, gradeReadReportCards({ isLoading: false }))).toBe("settled");
+    expect(resolveDetailGradeRead(undefined, { data: { cards: [{}] }, error: null })).toBe("settled");
+    expect(resolveDetailGradeRead(undefined, { error: null, isLoading: false })).toBe("settled");
   });
 });

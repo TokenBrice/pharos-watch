@@ -39,7 +39,6 @@ import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-vi
 import { buildStaticCompareHref } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
-import { resolveDetailGradeRead } from "@/lib/stablecoin-detail-query-view-model";
 import { cn } from "@/lib/utils";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
@@ -102,10 +101,6 @@ interface DetailContentProps {
   viewModel: ReadyDetailViewModel;
 }
 
-function resolveGradeRead(viewModel: ReadyDetailViewModel) {
-  return resolveDetailGradeRead(viewModel.reportCard, viewModel.staleQueries);
-}
-
 /** The producer generation, never the browser's request receipt; unknown hides the stamp. */
 function detailSnapshotGenerationMs(queries: ReadyDetailViewModel["staleQueries"]): number {
   const updatedAt = queries.find((query) => query.label === "Detail snapshot")?.meta?.updatedAt;
@@ -139,7 +134,7 @@ function DetailIdentity({
         heading={heading}
         model={heroModel}
         onOpenFeedback={onOpenFeedback}
-        gradeRead={resolveGradeRead(viewModel)}
+        gradeRead={viewModel.gradeRead}
         updatedAtMs={detailSnapshotGenerationMs(viewModel.staleQueries)}
       />
       <MobileStickySummary
@@ -335,7 +330,7 @@ function DetailSummaryRail({
           items={heroModel.signalRailItems}
           navToken={viewModel.isNavToken}
           frozen={viewModel.coin.status === "frozen"}
-          gradeRead={resolveGradeRead(viewModel)}
+          gradeRead={viewModel.gradeRead}
         />
         {sharedModules.backingMetrics || (viewModel.coin.liveReservesConfig && reservesPending) ? (
           <div className="min-h-64" data-rail-slot="collateralization">
@@ -346,7 +341,7 @@ function DetailSummaryRail({
             )}
           </div>
         ) : null}
-        {sharedModules.accessRows.length > 0 || resolveGradeRead(viewModel) === "pending" ? (
+        {sharedModules.accessRows.length > 0 || viewModel.gradeRead === "pending" ? (
           <div className="min-h-48" data-rail-slot="access">
             {sharedModules.accessRows.length > 0 ? (
               <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />

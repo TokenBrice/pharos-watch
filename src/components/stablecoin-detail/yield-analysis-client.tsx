@@ -401,14 +401,19 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   const rankingsQuery = useYieldRankings();
   const historyQuery = useYieldHistory(id, { days: 90, mode: "best" });
   const { getParam, replaceParams } = useUrlFilters();
-  const [coinDetail, setCoinDetail] = useState<StablecoinClientDetailMeta | null>(null);
+  const [enrichment, setEnrichment] = useState<{
+    status: "pending" | "loaded" | "unavailable";
+    detail: StablecoinClientDetailMeta | null;
+  }>({ status: "pending", detail: null });
+  const coinDetail = enrichment.detail;
 
   useEffect(() => {
     let cancelled = false;
     void loadClientStablecoinDetail(id).then((detail) => {
-      if (!cancelled) setCoinDetail(detail);
+      if (!cancelled) setEnrichment({ status: "loaded", detail });
     }).catch(() => {
-      // Optional enrichment failure leaves the generic fallback and workbench available.
+      // Retain any earlier enrichment, just as a pending import does across navigation.
+      if (!cancelled) setEnrichment((previous) => ({ ...previous, status: "unavailable" }));
     });
     return () => {
       cancelled = true;

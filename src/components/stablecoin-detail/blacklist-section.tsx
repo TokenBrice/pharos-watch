@@ -12,8 +12,8 @@ import type { BlacklistStablecoin } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { StaleDataBanner } from "@/components/stale-data-banner";
+import { DataHealthBanner } from "@/components/data-health-banner";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
@@ -35,7 +35,8 @@ function useBlacklistVisibility(symbol: BlacklistStablecoin) {
     isLoading,
     hasData: !!summary,
   };
-  const health = deriveDataHealth(healthInput, query.dataUpdatedAt);
+  const nowMs = useFreshnessBoundary([healthInput]);
+  const health = deriveDataHealth(healthInput, nowMs ?? query.dataUpdatedAt);
 
   if (!isSupported) return { visible: false } as const;
   if (!isLoading && !query.error && summary && (summary.stats.perCoinTotalEvents[symbol] ?? 0) === 0) {
@@ -48,8 +49,7 @@ function useBlacklistVisibility(symbol: BlacklistStablecoin) {
     isLoading,
     state: query.error ? (summary ? "stale-with-data" : "unavailable") : "ready",
     error: query.error,
-    dataUpdatedAt: health.dataUpdatedAt,
-    healthInput,
+    health,
     refetch: query.refetch,
   } as const;
 }
@@ -66,15 +66,16 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
         bodyClassName="space-y-4"
         headerRight={<FreshnessIndicator
             compact
-            updatedAtMs={state.dataUpdatedAt}
-            staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 1000}
+            updatedAtMs={state.health.dataUpdatedAt}
+            staleAfterMs={state.health.staleTime}
+            health={state.health}
             labelPrefix="Updated"
           />}
       >
           <p className="mt-1 text-sm text-muted-foreground">
             Addresses the issuer has frozen, released, or destroyed on this asset.
           </p>
-          {state.state === "ready" || state.state === "stale-with-data" ? <StaleDataBanner queries={[state.healthInput]} /> : null}
+          {(state.state === "ready" || state.state === "stale-with-data") && (summary || !isLoading) ? <DataHealthBanner entries={[state.health]} /> : null}
           {state.state === "unavailable" ? (
             <QueryStateNotice
               state="unavailable"

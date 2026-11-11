@@ -31,6 +31,7 @@ import {
 } from "@shared/lib/ai-summary-claims";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
+import { buildFreezeControlDescriptor, describeFreezeControl } from "@/lib/stablecoin-detail-blacklistability-client";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { buildStaticCompareHref } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
@@ -226,28 +227,11 @@ function describeReserveEvidence(coin: StablecoinMeta): string {
   return "no linked reserve proof in the static profile";
 }
 
-function describeFreezeControl(coin: StablecoinMeta): string {
-  const status = getResolvedBlacklistStatus(coin.id);
-
-  switch (status) {
-    case true:
-      return "issuer or admin freeze controls are recorded";
-    case "possible":
-      return "admin controls such as a global pause or an upgradeable contract are recorded, but the review found no active power to freeze or seize a specific holder's balance on material deployments";
-    case "inherited":
-      return "freeze exposure is inherited through upstream collateral, custody, or wrapper dependencies";
-    case false:
-      return "no direct freeze-control path sets the verdict under the reviewed deployment-materiality scope";
-    default:
-      return "freeze-control coverage is not conclusive from static metadata alone";
-  }
-}
-
 function buildSafetyAnswer(coin: StablecoinMeta, release?: SnapshotReleasePin): string {
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const reserveEvidence = describeReserveEvidence(coin);
-  const freezeControl = describeFreezeControl(coin);
+  const freezeControl = describeFreezeControl(buildFreezeControlDescriptor(coin, getResolvedBlacklistStatus(coin.id))).sentence;
 
   if (coin.status === "frozen") {
     return `${coin.name} is a frozen Pharos archive, not a current safety endorsement. The archived static profile records a ${governanceLabel} governance model, ${backingLabel} backing, ${reserveEvidence}, and notes that ${freezeControl}.`;
@@ -281,22 +265,6 @@ function buildSafetyAnswer(coin: StablecoinMeta, release?: SnapshotReleasePin): 
 
 function formatIsoDayLabel(isoDate: string): string {
   return formatUtcDayLabel(new Date(`${isoDate}T00:00:00Z`));
-}
-
-/** Build-time freeze-control fact, in plain English; null when coverage is inconclusive. */
-function describeFreezeFact(coin: StablecoinMeta): string | null {
-  switch (getResolvedBlacklistStatus(coin.id)) {
-    case true:
-      return "the issuer or an admin can freeze individual holders' balances";
-    case "possible":
-      return "admin controls such as a pause or an upgradeable contract exist, though no power to freeze a specific holder was found";
-    case "inherited":
-      return "freeze exposure is inherited through upstream collateral, custody or wrappers";
-    case false:
-      return "no direct power to freeze holders was found on its material deployments";
-    default:
-      return null;
-  }
 }
 
 const REDEMPTION_ELIGIBILITY_SUBJECTS: Record<RedemptionHolderEligibility, string | null> = {
@@ -333,7 +301,7 @@ function describeRedemptionFact(config: RedemptionBackstopConfig): string | null
 function buildCoinSpecificRiskSentence(coin: StablecoinMeta): string {
   const redemptionConfig = getCurrentRedemptionConfig(coin.id);
   const facts = [
-    describeFreezeFact(coin),
+    describeFreezeControl(buildFreezeControlDescriptor(coin, getResolvedBlacklistStatus(coin.id))).compact,
     redemptionConfig ? describeRedemptionFact(redemptionConfig) : null,
   ].filter((fact): fact is string => fact !== null);
   if (facts.length === 0) {
@@ -523,7 +491,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: Snapshot
   const redemptionAnswer = buildRedemptionAnswer(coin);
 
   const freezeAnswer = [
-    `Based on tracked contract metadata and blacklist coverage, ${describeFreezeControl(coin)}.`,
+    `Based on tracked contract metadata and blacklist coverage, ${describeFreezeControl(buildFreezeControlDescriptor(coin, getResolvedBlacklistStatus(coin.id))).sentence}.`,
     coin.status === "frozen"
       ? `${coin.symbol} is a frozen Pharos archive; the recorded history below is read-only.`
       : isActiveStablecoinMeta(coin)
