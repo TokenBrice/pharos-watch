@@ -183,6 +183,20 @@ describe("Safety Score methodology head entry", () => {
 });
 
 describe("methodology registry", () => {
+  it("resolves shared production activations without publishing an intermediate version", () => {
+    for (const [key, cut, before, after] of [
+      ["mint-burn-flow", 1794298200, "6.37", "6.43"],
+      ["safety-score", 1794354360, "10.43", "10.44"],
+      ["pricing-pipeline", 1794357060, "6.75", "6.76"],
+      ["mint-burn-flow", 1794357060, "6.43", "6.44"],
+      ["depeg-dews", 1794357060, "6.44", "6.46"],
+    ] as const) {
+      expect(getMethodologyVersionAt(key, cut - 1)).toBe(before);
+      expect(getMethodologyVersionAt(key, cut)).toBe(after);
+      expect(getMethodologyVersionAt(key, cut + 1)).toBe(after);
+    }
+  });
+
   it("resolves every registered current version through the keyed API", () => {
     for (const methodology of METHODOLOGY_CHANGELOG_REGISTRY) {
       expect(getMethodologyVersionAt(methodology.key, Number.POSITIVE_INFINITY)).toBe(

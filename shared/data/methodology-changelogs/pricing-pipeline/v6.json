@@ -2,13 +2,13 @@
   {
     "version": "6.76",
     "title": "Guarded Mento Broker quotes precede XOFm and ZARm nominal references",
-    "date": "2026-11-10",
-    "effectiveAt": 1794355200,
+    "date": "2026-11-11",
+    "effectiveAt": 1794357060,
     "summary": "Verified XOFm and ZARm Broker sells use the existing Mento guarded-price path before their reviewed nominal FX references.",
     "impact": [
       "The live first-match registry selects Mento Broker ahead of protocol-par. Reviewed XOFm and ZARm routes reuse the existing same-block identity, implementation, permission, spread, depth, oracle, trading-limit, canonical-block and fresh USDm gates; independent native XOF/ZAR FX must also be fresh. Their nominal references remain separately available when Broker is skipped, unavailable, stale or rejected by publication validation.",
       "Admitted quotes retain mento-broker fallback confidence, the oldest contributing observation and the strict five-minute source budget. The critical FX loader retains mode, cadence, source dates and its age budget; override application and final settlement use their current assessment clocks, preserving sync start only for publication metadata. They leave nominal-reference coverage/status cohorts and may enter depeg confirmation under existing weak-source safeguards, without gaining replay or standalone depeg authority. Other nominal routes keep DEC-02 precedence; no trigger, connection peak or priority-0 network work is added.",
-      "RWAUSDi retains its observed provider price and current $1 denomination benchmark after a dated review: no public price-accrual mechanism or permanent-par redemption guarantee is established. DefiLlama already reports seven deployments and 487,442,380 native units, while AFI still lists five and 479,782,100. No on-chain circulation override or NAV-par price replacement is introduced. Provisional activation is 2026-11-11 00:00 UTC (1794355200), following the next-UTC-midnight convention; re-date effectiveAt after activation. Production acceptance remains pending a new affected publication."
+      "RWAUSDi retains its observed provider price and current $1 denomination benchmark after a dated review: no public price-accrual mechanism or permanent-par redemption guarantee is established. DefiLlama already reports seven deployments and 487,442,380 native units, while AFI still lists five and 479,782,100. No on-chain circulation override or NAV-par price replacement is introduced. Activation is 2026-11-11 00:31 UTC (1794357060), rounded up to the next whole minute from the public Worker activation. Production acceptance remains pending a new affected publication."
     ],
     "commits": [],
     "reconstructed": false
