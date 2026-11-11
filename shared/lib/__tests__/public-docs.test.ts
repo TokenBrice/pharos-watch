@@ -39,6 +39,18 @@ describe("PUBLIC_DOCS registry", () => {
     }
   });
 
+  it("removes HTML comments, which an inline position would print as text", () => {
+    const rendered = preparePublicDocMarkdown(
+      "| Threshold | <!-- GENERATED-START: depeg-threshold-usd -->100 (1%)<!-- GENERATED-END: depeg-threshold-usd --> |\n\n"
+      + "Write `<!-- GENERATED-START: id -->` around a managed clause.\n",
+    );
+    expect(rendered).toContain("| Threshold | 100 (1%) |");
+    expect(rendered).toContain("`<!-- GENERATED-START: id -->`");
+    for (const { body } of DOC_SOURCES) {
+      expect(withoutProtectedSegments(preparePublicDocMarkdown(body))).not.toMatch(/<!--/);
+    }
+  });
+
   it("never rewrites link destinations, code spans, or fenced blocks", () => {
     for (const { body } of DOC_SOURCES) {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });

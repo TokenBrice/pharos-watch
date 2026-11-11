@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
 import { slugifyId } from "@shared/lib/format";
+import { stripMarkdownComments } from "@shared/lib/public-docs";
 
 export interface MarkdownParagraphBlock {
   type: "paragraph";
@@ -375,7 +376,7 @@ function parseApiReferenceDocument(markdown: string): ApiReferenceDocument {
 }
 
 export const loadApiReferenceDocument = cache(async (): Promise<ApiReferenceDocument> => {
-  const markdown = await fs.readFile(API_REFERENCE_PATH, "utf8");
+  const markdown = stripMarkdownComments(await fs.readFile(API_REFERENCE_PATH, "utf8"));
   return parseApiReferenceDocument(markdown);
 });
 
