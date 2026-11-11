@@ -141,6 +141,19 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     evidenceUrls: ["https://etherscan.io/token/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b#balances"],
     reason: "Follow-on to the reviewed Ethereum collapse release: block 26365071 shows 1,001,981.18 GBPA total supply with 1,001,879.18 in the detail feed's unreleased inventory, leaving 102 circulating. The released aggregate publishes $1.191M; the earlier daily row counted that inventory, so its comparison is obsolete.",
   },
+  {
+    stablecoinId: "witry-brix",
+    baselineUsd: 1_543_091.36,
+    reviewedAt: Date.parse("2026-11-11T23:21:24Z") / 1000,
+    expiresAt: Date.parse("2026-11-18T23:21:24Z") / 1000,
+    evidenceUrls: [
+      "https://eth.blockscout.com/api/v2/transactions/0x3f2104ecb4c87c35ea58d4ec2825673938dc734c807db18c21e24812506a2e91",
+      "https://eth.blockscout.com/api/v2/transactions/0xdaaf4772f669c7f0d1d2c1f717c055dcee0d91e65e85a87f9159c84f65f8e3d3",
+      "https://eth.blockscout.com/api/v2/tokens/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+      "https://api.coingecko.com/api/v3/coins/wrapped-itry/market_chart?vs_currency=usd&days=14&interval=daily",
+    ],
+    reason: "Re-read 2026-11-11 23:16-23:21 UTC: successful ERC-4626 redemptions at block 26386490 (2026-11-10T19:05:11Z) burned 49,142,568.684564 wiTRY and block 26393072 (2026-11-11T17:06:59Z) burned 26,222,383.020347 wiTRY. Ethereum totalSupply is 63,440,233.768206 wiTRY; CoinGecko market cap moved from $3,365,372.58 on November 10 to $1,543,039.31 now. Blockscout values the same stock at $1,543,321.87. Both are within 2% of the $1,543,091.36 production baseline recorded in supply-drift-ripio-brix.md for the 2026-11-11T22:15:39Z generation. The MegaETH OFT leg represents the same locked float and is not added. This review retires the obsolete pre-redemption comparison only; published supply, history and clocks are unchanged. Owner: ops.",
+  },
 ];
 
 export interface ReviewedSupplyCarry {
@@ -163,10 +176,11 @@ export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
   })),
   {
     stablecoinId: "said-gaib",
-    reviewedAt: Date.UTC(2026, 10, 4, 16) / 1000,
-    expiresAt: Date.UTC(2026, 10, 11, 16) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 11, 23, 19, 58) / 1000,
+    expiresAt: Date.UTC(2026, 10, 25, 23, 19, 58) / 1000,
+    owner: "ops",
     reason: "nav-parent-price-gap",
-    evidence: "NAV parent aid-gaib has no admissible price; STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-coverage.ts reviews that gap until 2026-11-14T12:37Z. No par valuation or fresh supply is admitted by this acknowledgement.",
+    evidence: "Re-reviewed 2026-11-11 23:19:58 UTC: the successful 23:17:26 UTC CoinGecko batch GET (https://api.coingecko.com/api/v3/simple/price?ids=rupiah-token,decentralized-euro,parallel-usdp,xusd-babelfish,gaib-aid,gaib-said,wrapped-itry&vs_currencies=usd&include_24hr_vol=true&include_market_cap=true&include_last_updated_at=true) reports gaib-said $0.64483 dated 2026-07-05T21:35:30Z and AID $1.004 dated 2026-11-11T08:26:53Z; later single-asset retries were rate-limited. AID tickers are empty (https://api.coingecko.com/api/v3/coins/gaib-aid/tickers), and its observed Curve pool has only $1,474.55 with zero volume (https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x18f52b3fb465118731d9e0d276d4eb3599d57596/pools). No fresh trusted AID parent supports ERC-4626 NAV supply valuation. The prior carried on-chain valuation and supplyObservedAt 2026-11-11T08:46:08Z are recorded in price-acked-gaps-b.md as read 2026-11-11 22:45Z, not re-read from production here. STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-reviews.ts supports aid-gaib's gap through 2026-11-25T23:19:58Z. This review classifies only: no price, supply, original clock, quarantine or carry ceiling changes.",
   },
   {
     stablecoinId: "wm-m0",
