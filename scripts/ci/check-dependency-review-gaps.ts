@@ -25,7 +25,7 @@
 import {
   buildDependencyCoverageAudit,
   evaluateDependencyCoverageStructure,
-} from "../maintenance/generate-dependency-coverage-audit";
+} from "../lib/dependency-coverage-audit";
 
 const audit = buildDependencyCoverageAudit({ generatedAt: new Date().toISOString() });
 const failures = evaluateDependencyCoverageStructure(audit, { requireAdapterMappingCoverage: true });

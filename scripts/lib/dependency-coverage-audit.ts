@@ -1,0 +1,1850 @@
+import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { z } from "zod";
+import {
+  buildDependencyGraphEdges,
+  diagnoseDependencyGraph,
+  filterDependencyGraphEdgesToLive,
+  type DependencyGraphDiagnostics,
+  type DependencyGraphEdge,
+} from "@shared/lib/dependency-graph";
+import {
+  deriveEffectiveDependencySet,
+  type DependencyDerivationBaseSource,
+  type DependencyDerivationSource,
+  type DependencyFallbackReason,
+} from "@shared/lib/dependency-derivation";
+import { getL2BeatInfrastructureContext } from "@shared/lib/chains/l2beat-audit";
+import { buildReserveSymbolMatcher } from "@shared/lib/reserve-symbol-matchers";
+import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import type {
+  DependencyType,
+  DependencyWeight,
+  ReserveNonLinkDisposition,
+  ReserveNonLinkReview,
+  ReserveSlice,
+  StablecoinMeta,
+} from "@shared/types";
+import {
+  ReportCardsV9CurrentResponseSchema,
+  type ReportCardsV9Response,
+} from "@shared/types/report-cards-v9-current";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
+import {
+  buildMarketCapMapFromStablecoins,
+  formatUsd,
+  isRecord,
+  sortByMarketCapOrRank,
+} from "./coverage-audit-cli";
+import { renderMarkdownRows, type MarkdownAlignment } from "./markdown-report";
+import {
+  DEPENDENCY_ADAPTER_MAPPING_REVIEWS,
+  DEPENDENCY_TARGET_DISPOSITIONS,
+  type DependencyAdapterMappingReview,
+  type DependencyTargetDisposition,
+  type DependencyTargetLifecycle,
+} from "@shared/data/coverage-dispositions/dependency-target-dispositions";
+
+const MISSING_CANDIDATE_LIMIT = 50;
+const RESERVE_SLICE_LIMIT = 50;
+const MANUAL_DEPENDENCY_LIMIT = 50;
+const L2BEAT_CONTEXT_LIMIT = 75;
+const FINDING_LIMIT = 75;
+const MATERIAL_RESERVE_PCT = 1;
+const WEIGHT_EPSILON = 1e-9;
+const GENERIC_STABLECOIN_SYMBOLS = new Set(["CASH", "MONEY", "CDP"]);
+const UNRESOLVED_NON_LINK_DISPOSITIONS = new Set<ReserveNonLinkDisposition>([
+  "basket-needs-split",
+  "insufficient-evidence",
+]);
+
+export interface DependencyGraphCoverageSummary {
+  edgeCount: number;
+  activeEdgeCount: number;
+  participantCount: number;
+  dependentCount: number;
+  upstreamOnlyCount: number;
+  participantIds: string[];
+  dependentIds: string[];
+  upstreamOnlyIds: string[];
+}
+
+export interface ManualOnlyDependencyRow {
+  coinId: string;
+  symbol: string;
+  dependencyId: string;
+  dependencyType: DependencyType;
+  weight: number;
+  reviewStatus: "reviewed" | "missing-review" | "missing-relationship" | "missing-explicit-type";
+}
+
+export interface ReserveSliceCoverageRow {
+  coinId: string;
+  symbol: string;
+  reserveIndex: number;
+  reserveName: string;
+  pct: number;
+  risk: string;
+  depType: DependencyType | null;
+  marketCapUsd: number | null;
+  rank: number;
+}
+
+export interface MaterialUnlinkedReserveRow extends ReserveSliceCoverageRow {
+  matchedSymbols: string[];
+  candidateCoinIds: string[];
+  reviewStatus: "reviewed" | "unresolved" | "unreviewed";
+  disposition: ReserveNonLinkDisposition | null;
+  dispositionRationale: string | null;
+}
+
+export interface ActiveReserveSymbolLeadRow extends ReserveSliceCoverageRow {
+  candidateCoinId: string;
+  candidateSymbol: string;
+  reviewStatus: "reviewed" | "unresolved" | "unreviewed";
+  disposition: ReserveNonLinkDisposition | null;
+  reason: "unique-symbol-target-unlinked" | "active-target-marked-untracked";
+}
+
+export interface ReserveDispositionRow {
+  coinId: string;
+  symbol: string;
+  reserveIndex: number;
+  reserveName: string;
+  currentReserveName: string | null;
+  disposition: ReserveNonLinkDisposition;
+  reviewStatus: "reviewed" | "unresolved" | "stale";
+  rationale: string;
+  candidateCoinIds: string[];
+  reviewedAt: string;
+  reviewer: string;
+}
+
+export interface ManualDependencyReviewGapRow {
+  coinId: string;
+  symbol: string;
+  dependencyId: string;
+  dependencyType: DependencyType;
+  reason: "missing-review" | "missing-relationship" | "missing-explicit-type" | "stale-relationship";
+}
+
+export interface RawAuthoredDuplicateRow {
+  coinId: string;
+  symbol: string;
+  dependencyId: string;
+  dependencyType: DependencyType;
+  source: "dependencies" | "reserves";
+  indices: number[];
+  totalWeight: number;
+  classification: "duplicates" | "split positions";
+}
+
+export interface OverweightDependencySetRow {
+  coinId: string;
+  symbol: string;
+  source: "static" | "report-card";
+  totalWeight: number;
+  dependencies: DependencyWeight[];
+}
+
+export type TargetScoreability =
+  | "scoreable"
+  | "active-nr"
+  | "pipeline-gap"
+  | "unavailable-input"
+  | "pre-launch"
+  | "quarantined"
+  | "delisted"
+  | "frozen"
+  | "unknown-target"
+  | "not-evaluated";
+
+export interface DependencyEdgeCoverageRow extends DependencyGraphEdge {
+  graphSource: "static" | "report-card";
+  reportKind: "serial" | "basket" | null;
+  reportMateriality: "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown" | null;
+  reportedWeight: number | null;
+  dependencySource: DependencyDerivationSource | null;
+  upstreamSymbol: string | null;
+  dependentSymbol: string | null;
+  targetLifecycle: DependencyTargetLifecycle | "unknown";
+  targetScoreability: TargetScoreability;
+  targetDisposition: DependencyTargetDisposition | null;
+}
+
+export interface DependencySetProvenanceRow {
+  coinId: string;
+  symbol: string;
+  source: DependencyDerivationSource | "mixed" | null;
+  baseSource: DependencyDerivationBaseSource | null;
+  fallbackReason: DependencyFallbackReason | null;
+  dependencyFromLive: boolean | null;
+  publishedSources: DependencyDerivationSource[];
+  unknownSourceCount: number;
+  backingFromLiveReserves: boolean | null;
+  availableWeight: number | null;
+  unavailableWeight: number | null;
+  mappedLiveReserveShare: number | null;
+  unmappedLiveReserveShare: number | null;
+}
+
+export interface TargetDispositionValidationIssue {
+  targetId: string;
+  reason:
+    | "duplicate-disposition"
+    | "unknown-target"
+    | "lifecycle-mismatch"
+    | "invalid-provenance"
+    | "no-current-edge"
+    | "target-now-scoreable";
+  detail: string;
+}
+
+export interface AdapterMappingReviewGapRow {
+  coinId: string | null;
+  adapter: string;
+  reason: "missing-review" | "duplicate-review" | "stale-review" | "invalid-provenance";
+  detail: string;
+}
+
+interface AdapterMappingRequirement {
+  coinId: string;
+  adapter: string;
+}
+
+export type AdapterMappingReviewCoverageStatus =
+  | "evaluated-clean"
+  | "evaluated-with-gaps"
+  | "not-evaluated";
+
+export interface MissingDependencyCandidateRow {
+  coinId: string;
+  symbol: string;
+  name: string;
+  marketCapUsd: number | null;
+  rank: number;
+}
+
+export interface L2BeatDeploymentContextRow {
+  coinId: string;
+  symbol: string;
+  chainId: string;
+  routeKind: "canonical-contract" | "traded-contract";
+  projectId: string;
+  l2beatName: string;
+  layer: "layer2" | "layer3";
+  category: string;
+  hostChain: string;
+  hostChainId: string | null;
+  stage: string;
+  isUnderReview: boolean;
+  chainEnvironmentScore: number;
+}
+
+const publicationShape = ReportCardsV9CurrentResponseSchema.shape;
+export const DependencyPublicationProvenanceSchema = z.object({
+  safetyScoreIdentity: publicationShape.safetyScoreIdentity,
+  asOfSec: publicationShape.asOfSec,
+  updatedAt: publicationShape.updatedAt,
+  source: publicationShape.source,
+  publicationHealth: publicationShape.publicationHealth,
+}).strict().refine((publication) => publication.updatedAt >= publication.asOfSec, {
+  path: ["updatedAt"], message: "Publication updatedAt must not precede asOfSec",
+});
+export type DependencyPublicationProvenance = z.output<typeof DependencyPublicationProvenanceSchema>;
+export const DependencyCoverageProvenanceSchema = z.object({
+  publication: DependencyPublicationProvenanceSchema.nullable(),
+  checkoutRevision: z.string().regex(/^[a-f0-9]{40}$/).nullable(),
+}).strict();
+export type DependencyCoverageProvenance = z.output<typeof DependencyCoverageProvenanceSchema>;
+
+/** No Git metadata means unknown revision, never a fabricated publication identity. */
+export function readDependencyCheckoutRevision(cwd = process.cwd()): string | null {
+  try {
+    const revision = execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return /^[a-f0-9]{40}$/.test(revision) ? revision : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface DependencyCoverageAudit {
+  generatedAt: string;
+  mode: "static" | "input" | "api" | "prod";
+  provenance: DependencyCoverageProvenance;
+  summary: {
+    publicationComparisonStatus: "not-evaluated" | "matched" | "checkout-production-skew";
+    checkoutMethodologyVersion: string;
+    publicationMethodologyVersion: string | null;
+    activeCount: number;
+    staticEdgeCount: number;
+    staticActiveEdgeCount: number;
+    staticParticipantCount: number;
+    staticDependentCount: number;
+    staticUpstreamOnlyCount: number;
+    reportCardEdgeCount: number | null;
+    reportCardActiveEdgeCount: number | null;
+    reportCardParticipantCount: number | null;
+    reportCardDependentCount: number | null;
+    reportCardUpstreamOnlyCount: number | null;
+    manualOnlyDependencyCount: number;
+    reserveSlicesMissingCoinId: number;
+    depTypeWithoutCoinIdWarnings: number;
+    coinIdWithoutDepTypeCount: number;
+    publishedCoinIdWithoutDepTypeCount: number | null;
+    publishedKindMismatchCount: number | null;
+    mixedSourceGuardCount: number;
+    staticSelfEdgeCount: number;
+    staticDuplicateEdgeCount: number;
+    staticStronglyConnectedComponentCount: number;
+    reportCardSelfEdgeCount: number | null;
+    reportCardDuplicateEdgeCount: number | null;
+    reportCardStronglyConnectedComponentCount: number | null;
+    rawAuthoredDuplicateCount: number;
+    overweightEffectiveSetCount: number;
+    invalidSerialDependencyWeightCount: number;
+    unknownTargetEdgeCount: number;
+    unavailableTargetEdgeCount: number;
+    unavailableTargetDispositionGapCount: number;
+    targetDispositionValidationIssueCount: number;
+    adapterMappingReviewGapCount: number;
+    adapterMappingReviewCoverageEvaluated: boolean;
+    adapterMappingReviewCoverageStatus: AdapterMappingReviewCoverageStatus;
+    dependencyProvenanceCount: number;
+    dependencyAvailableWeight: number | null;
+    dependencyUnavailableWeight: number | null;
+    liveMappedReserveShare: number | null;
+    liveUnmappedReserveShare: number | null;
+    materialUnlinkedReserveSliceCount: number;
+    activeUnlinkedReserveSymbolLeadCount: number;
+    subMaterialActiveUnlinkedReserveSymbolLeadCount: number;
+    reviewedReserveDispositionCount: number;
+    unresolvedReserveDispositionCount: number;
+    unresolvedMaterialReserveSliceCount: number;
+    staleReserveDispositionCount: number;
+    manualDependencyReviewGapCount: number;
+    missingCandidateCount: number;
+    l2beatDeploymentContextCount: number;
+    l2beatLayer3DeploymentContextCount: number;
+    l2beatUnderReviewDeploymentContextCount: number;
+    missingCandidateRankSource: "stablecoin-api-market-cap" | "local-canonical-order";
+    missingCandidateGraphSource: "static" | "report-card";
+  };
+  staticGraph: DependencyGraphCoverageSummary;
+  staticGraphDiagnostics: DependencyGraphDiagnostics;
+  reportCardGraph: DependencyGraphCoverageSummary | null;
+  reportCardGraphDiagnostics: DependencyGraphDiagnostics | null;
+  dependencyEdges: DependencyEdgeCoverageRow[];
+  dependencyProvenance: DependencySetProvenanceRow[];
+  rawAuthoredDuplicates: RawAuthoredDuplicateRow[];
+  overweightEffectiveSets: OverweightDependencySetRow[];
+  manualOnlyDependencies: ManualOnlyDependencyRow[];
+  manualDependencyReviewGaps: ManualDependencyReviewGapRow[];
+  reserveSlicesMissingCoinId: ReserveSliceCoverageRow[];
+  depTypeWithoutCoinIdWarnings: ReserveSliceCoverageRow[];
+  materialUnlinkedReserveSlices: MaterialUnlinkedReserveRow[];
+  activeUnlinkedReserveSymbolLeads: ActiveReserveSymbolLeadRow[];
+  subMaterialActiveUnlinkedReserveSymbolLeads: ActiveReserveSymbolLeadRow[];
+  reserveDispositions: ReserveDispositionRow[];
+  targetDispositionValidationIssues: TargetDispositionValidationIssue[];
+  adapterMappingReviews: DependencyAdapterMappingReview[];
+  adapterMappingReviewGaps: AdapterMappingReviewGapRow[];
+  highestMarketCapMissingCandidates: MissingDependencyCandidateRow[];
+  l2beatDeploymentContext: L2BeatDeploymentContextRow[];
+  warnings: string[];
+}
+
+export interface DependencyCoverageAuditInput {
+  activeCoins?: readonly StablecoinMeta[];
+  trackedCoins?: readonly StablecoinMeta[];
+  /** Authored bindings before suspension stripping; never consumed as live evidence. */
+  sourceCoins?: readonly StablecoinMeta[];
+  targetDispositions?: readonly DependencyTargetDisposition[];
+  adapterMappingReviews?: readonly DependencyAdapterMappingReview[];
+  reportCards?: unknown;
+  stablecoins?: unknown;
+  generatedAt?: string;
+  checkoutRevision?: string | null;
+  mode?: DependencyCoverageAudit["mode"];
+}
+
+type ReportCardEdgeKind = "serial" | "basket";
+type ReportCardEdgeMateriality = "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown";
+type ReportCard = ReportCardsV9Response["cards"][number];
+
+interface ParsedReportCardEdge extends DependencyGraphEdge {
+  reportKind: ReportCardEdgeKind;
+  reportMateriality: ReportCardEdgeMateriality;
+  reportedWeight: number | null;
+  dependencySource: DependencyDerivationSource | null;
+}
+
+interface ParsedReportCardInput {
+  cardsById: Map<string, ReportCard>;
+  edges: ParsedReportCardEdge[];
+  methodologyVersion: string;
+  publication: DependencyPublicationProvenance;
+}
+
+function malformedReportCard(path: string, expectation: string): never {
+  throw new Error(`Report-card input is malformed at ${path}: ${expectation}.`);
+}
+
+function dependencyKey(dependency: Pick<DependencyWeight, "id" | "type">): string {
+  return `${dependency.id}::${dependency.type ?? "collateral"}`;
+}
+
+function reportCardsEnvelope(payload: unknown): unknown {
+  if (!isRecord(payload)) return payload;
+  return payload.payload ?? payload;
+}
+
+function parseReportCardInput(payload: unknown): ParsedReportCardInput {
+  const parsed = ReportCardsV9ReaderResponseSchema.safeParse(reportCardsEnvelope(payload));
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    malformedReportCard(issue?.path.join(".") || "root", issue?.message ?? "expected the current V9 report contract");
+  }
+  if (parsed.data.cards.length === 0) {
+    malformedReportCard("cards", "expected at least one card");
+  }
+
+  return {
+    methodologyVersion: parsed.data.safetyScoreIdentity.methodologyVersion,
+    publication: {
+      safetyScoreIdentity: parsed.data.safetyScoreIdentity,
+      asOfSec: parsed.data.asOfSec,
+      updatedAt: parsed.data.updatedAt,
+      source: parsed.data.source,
+      publicationHealth: parsed.data.publicationHealth,
+    },
+    cardsById: new Map(parsed.data.cards.map((card) => [card.id, card])),
+    edges: parsed.data.dependencyGraph.edges.map((edge) => ({
+      from: edge.from,
+      to: edge.to,
+      weight: edge.weight ?? 1,
+      type: edge.kind === "serial" ? "wrapper" : "collateral",
+      reportKind: edge.kind,
+      reportMateriality: edge.materiality,
+      reportedWeight: edge.weight,
+      dependencySource: edge.provenance?.source ?? null,
+    })),
+  };
+}
+
+function lifecycleForMeta(meta: StablecoinMeta | undefined): DependencyTargetLifecycle | "unknown" {
+  if (!meta) return "unknown";
+  if (meta.status === "pre-launch") return "pre-launch";
+  if (meta.status === "quarantined") return "quarantined";
+  if (meta.status === "delisted") return "delisted";
+  if (meta.status === "frozen") return "frozen";
+  return "active";
+}
+
+function findRawAuthoredSelfEdges(activeCoins: readonly StablecoinMeta[]): DependencyGraphEdge[] {
+  const rows: DependencyGraphEdge[] = [];
+  for (const coin of activeCoins) {
+    for (const dependency of coin.dependencies ?? []) {
+      if (dependency.id !== coin.id) continue;
+      rows.push({
+        from: coin.id,
+        to: coin.id,
+        weight: dependency.weight,
+        type: dependency.type ?? "collateral",
+      });
+    }
+    for (const reserve of coin.reserves ?? []) {
+      if (reserve.coinId !== coin.id) continue;
+      rows.push({
+        from: coin.id,
+        to: coin.id,
+        weight: reserve.pct / 100,
+        type: reserve.depType ?? "collateral",
+      });
+    }
+    if (coin.variantOf === coin.id) {
+      rows.push({ from: coin.id, to: coin.id, weight: 1, type: "wrapper" });
+    }
+  }
+  return rows;
+}
+
+function diagnoseStaticGraph(
+  edges: readonly DependencyGraphEdge[],
+  activeCoins: readonly StablecoinMeta[],
+): DependencyGraphDiagnostics {
+  const diagnostics = diagnoseDependencyGraph(edges);
+  const selfEdges = [...diagnostics.selfEdges];
+  const seen = new Set(selfEdges.map((edge) => `${edge.from}::${edge.type}::${edge.weight}`));
+  for (const edge of findRawAuthoredSelfEdges(activeCoins)) {
+    const key = `${edge.from}::${edge.type}::${edge.weight}`;
+    if (!seen.has(key)) selfEdges.push(edge);
+    seen.add(key);
+  }
+  return {
+    ...diagnostics,
+    selfEdges: selfEdges.sort((left, right) => (
+      left.from.localeCompare(right.from) || left.type.localeCompare(right.type) || left.weight - right.weight
+    )),
+  };
+}
+
+function findRawAuthoredDuplicates(activeCoins: readonly StablecoinMeta[]): RawAuthoredDuplicateRow[] {
+  const rows: RawAuthoredDuplicateRow[] = [];
+  for (const coin of activeCoins) {
+    const groups: Array<{
+      source: RawAuthoredDuplicateRow["source"];
+      entries: Array<{ dependencyId: string; dependencyType: DependencyType; index: number; weight: number }>;
+    }> = [
+      {
+        source: "dependencies",
+        entries: (coin.dependencies ?? []).map((dependency, index) => ({
+          dependencyId: dependency.id,
+          dependencyType: dependency.type ?? "collateral",
+          index,
+          weight: dependency.weight,
+        })),
+      },
+      {
+        source: "reserves",
+        entries: (coin.reserves ?? []).flatMap((reserve, index) => reserve.coinId
+          ? [{
+              dependencyId: reserve.coinId,
+              dependencyType: reserve.depType ?? "collateral" as DependencyType,
+              index,
+              weight: reserve.pct / 100,
+            }]
+          : []),
+      },
+    ];
+
+    for (const group of groups) {
+      const byKey = new Map<string, typeof group.entries>();
+      for (const entry of group.entries) {
+        const key = `${entry.dependencyId}::${entry.dependencyType}`;
+        byKey.set(key, [...(byKey.get(key) ?? []), entry]);
+      }
+      for (const entries of byKey.values()) {
+        if (entries.length < 2) continue;
+        rows.push({
+          coinId: coin.id,
+          symbol: coin.symbol,
+          dependencyId: entries[0].dependencyId,
+          dependencyType: entries[0].dependencyType,
+          source: group.source,
+          classification: group.source === "reserves"
+            && entries[0].dependencyType === "collateral"
+            && new Set(entries.map((entry) => coin.reserves![entry.index]!.name)).size === entries.length
+            ? "split positions"
+            : "duplicates",
+          indices: entries.map((entry) => entry.index),
+          totalWeight: entries.reduce((sum, entry) => sum + entry.weight, 0),
+        });
+      }
+    }
+  }
+  return rows.sort((left, right) => (
+    left.coinId.localeCompare(right.coinId)
+    || left.source.localeCompare(right.source)
+    || left.dependencyId.localeCompare(right.dependencyId)
+    || left.dependencyType.localeCompare(right.dependencyType)
+  ));
+}
+
+function findOverweightEffectiveSets(
+  activeCoins: readonly StablecoinMeta[],
+  _cardsById: ReadonlyMap<string, ReportCard>,
+  _hasReportCards: boolean,
+): OverweightDependencySetRow[] {
+  const rows: OverweightDependencySetRow[] = [];
+  for (const coin of activeCoins) {
+    const dependencies = deriveEffectiveDependencySet(coin).dependencies;
+    const totalWeight = dependencies.reduce((sum, dependency) => (
+      sum + ((dependency.type ?? "collateral") === "collateral" ? dependency.weight : 0)
+    ), 0);
+    if (totalWeight <= 1.000001) continue;
+    rows.push({
+      coinId: coin.id,
+      symbol: coin.symbol,
+      source: "static",
+      totalWeight,
+      dependencies,
+    });
+  }
+  return rows.sort((left, right) => right.totalWeight - left.totalWeight || left.coinId.localeCompare(right.coinId));
+}
+
+function findManualDependencyReviewRows(activeCoins: readonly StablecoinMeta[]): {
+  manualOnlyDependencies: ManualOnlyDependencyRow[];
+  gaps: ManualDependencyReviewGapRow[];
+} {
+  const manualOnlyDependencies: ManualOnlyDependencyRow[] = [];
+  const gaps: ManualDependencyReviewGapRow[] = [];
+  for (const coin of activeCoins) {
+    const reserveDependencyKeys = new Set(
+      (coin.reserves ?? [])
+        .filter((reserve): reserve is ReserveSlice & { coinId: string } => Boolean(reserve.coinId))
+        .map((reserve) => dependencyKey({ id: reserve.coinId, type: reserve.depType })),
+    );
+    const reviewedKeys = new Set((coin.dependencyReview?.relationships ?? []).map(dependencyKey));
+    const manualKeys = new Set<string>();
+    for (const dependency of coin.dependencies ?? []) {
+      const key = dependencyKey(dependency);
+      if (reserveDependencyKeys.has(key)) continue;
+      manualKeys.add(key);
+      const reviewStatus: ManualOnlyDependencyRow["reviewStatus"] = dependency.type == null
+        ? "missing-explicit-type"
+        : coin.dependencyReview == null
+          ? "missing-review"
+          : reviewedKeys.has(key)
+            ? "reviewed"
+            : "missing-relationship";
+      manualOnlyDependencies.push({
+        coinId: coin.id,
+        symbol: coin.symbol,
+        dependencyId: dependency.id,
+        dependencyType: dependency.type ?? "collateral",
+        weight: dependency.weight,
+        reviewStatus,
+      });
+      if (reviewStatus !== "reviewed") {
+        gaps.push({
+          coinId: coin.id,
+          symbol: coin.symbol,
+          dependencyId: dependency.id,
+          dependencyType: dependency.type ?? "collateral",
+          reason: reviewStatus,
+        });
+      }
+    }
+    // `reviewableDependencies` in `shared/lib/stablecoins/schema.ts` counts the
+    // `variantOf` wrapper edge alongside the manual `dependencies[]` entries, so
+    // a variant that ratifies its parent edge in `dependencyReview` is exactly
+    // what the schema sanctions — sUSDai's serial claim on USDai, for instance.
+    // Without this key the audit reported it as a stale relationship, which is
+    // the `manualDependencyReviewGaps: 1` the wave-1 ratchet accepted.
+    //
+    // Deliberately one-directional: the schema only REQUIRES a review when a
+    // coin has manual-only dependencies, so an unreviewed `variantOf` edge is
+    // not a gap and must not be enumerated as one.
+    const variantWrapperKey = coin.variantOf
+      ? dependencyKey({ id: coin.variantOf, type: "wrapper" })
+      : null;
+    for (const relationship of coin.dependencyReview?.relationships ?? []) {
+      const key = dependencyKey(relationship);
+      if (manualKeys.has(key) || reserveDependencyKeys.has(key) || key === variantWrapperKey) continue;
+      gaps.push({
+        coinId: coin.id,
+        symbol: coin.symbol,
+        dependencyId: relationship.id,
+        dependencyType: relationship.type,
+        reason: "stale-relationship",
+      });
+    }
+  }
+  const compare = (left: { coinId: string; dependencyId: string; dependencyType: string }, right: typeof left) => (
+    left.coinId.localeCompare(right.coinId)
+    || left.dependencyId.localeCompare(right.dependencyId)
+    || left.dependencyType.localeCompare(right.dependencyType)
+  );
+  return {
+    manualOnlyDependencies: manualOnlyDependencies.sort(compare),
+    gaps: gaps.sort(compare),
+  };
+}
+
+function summarizeDependencyGraph(
+  edges: readonly DependencyGraphEdge[],
+  activeIds: ReadonlySet<string>,
+): DependencyGraphCoverageSummary {
+  const activeEdges = filterDependencyGraphEdgesToLive(edges, activeIds);
+  const sourceIds = new Set<string>();
+  const dependentIds = new Set<string>();
+
+  for (const edge of activeEdges) {
+    sourceIds.add(edge.from);
+    dependentIds.add(edge.to);
+  }
+
+  const participantIds = [...new Set([...sourceIds, ...dependentIds])].sort();
+  const dependentIdList = [...dependentIds].sort();
+  const upstreamOnlyIds = [...sourceIds].filter((id) => !dependentIds.has(id)).sort();
+
+  return {
+    edgeCount: edges.length,
+    activeEdgeCount: activeEdges.length,
+    participantCount: participantIds.length,
+    dependentCount: dependentIdList.length,
+    upstreamOnlyCount: upstreamOnlyIds.length,
+    participantIds,
+    dependentIds: dependentIdList,
+    upstreamOnlyIds,
+  };
+}
+
+function marketCapForId(marketCapById: ReadonlyMap<string, number> | null, id: string): number | null {
+  return marketCapById?.get(id) ?? null;
+}
+
+interface StablecoinSymbolMatcher {
+  coinId: string;
+  symbol: string;
+  matches: (text: string) => boolean;
+}
+
+function buildStablecoinSymbolMatchers(trackedCoins: readonly StablecoinMeta[]): StablecoinSymbolMatcher[] {
+  return trackedCoins
+    .filter((coin) => coin.symbol.length >= 3 && !GENERIC_STABLECOIN_SYMBOLS.has(coin.symbol.toUpperCase()))
+    .map((coin) => ({ coinId: coin.id, symbol: coin.symbol, matches: buildReserveSymbolMatcher(coin.symbol) }))
+    .sort((left, right) => right.symbol.length - left.symbol.length || left.coinId.localeCompare(right.coinId));
+}
+
+function findReserveReviewRows(input: {
+  activeCoins: readonly StablecoinMeta[];
+  trackedCoins: readonly StablecoinMeta[];
+  marketCapById: ReadonlyMap<string, number> | null;
+  currentEdges: readonly DependencyGraphEdge[];
+}): {
+  materialSlices: MaterialUnlinkedReserveRow[];
+  activeSymbolLeads: ActiveReserveSymbolLeadRow[];
+  subMaterialActiveSymbolLeads: ActiveReserveSymbolLeadRow[];
+  dispositions: ReserveDispositionRow[];
+} {
+  const matchers = buildStablecoinSymbolMatchers(input.trackedCoins);
+  const activeMatchers = buildStablecoinSymbolMatchers(input.activeCoins);
+  const trackedIds = new Set(input.trackedCoins.map((coin) => coin.id));
+  const currentEdgeKeys = new Set(input.currentEdges.map((edge) => `${edge.from}->${edge.to}`));
+  const dispositions: ReserveDispositionRow[] = [];
+  const dispositionBySlice = new Map<string, ReserveNonLinkReview>();
+
+  for (const coin of input.activeCoins) {
+    const reviewedIndices = new Set<number>();
+    for (const disposition of coin.reserveReview?.nonLinkDispositions ?? []) {
+      const reserve = coin.reserves?.[disposition.reserveIndex];
+      const duplicate = reviewedIndices.has(disposition.reserveIndex);
+      reviewedIndices.add(disposition.reserveIndex);
+      const stale = duplicate
+        || reserve == null
+        || reserve.name !== disposition.reserveName
+        || reserve.coinId != null
+        || (disposition.candidateCoinIds ?? []).some((candidateId) => !trackedIds.has(candidateId));
+      const reviewStatus: ReserveDispositionRow["reviewStatus"] = stale
+        ? "stale"
+        : UNRESOLVED_NON_LINK_DISPOSITIONS.has(disposition.disposition)
+          ? "unresolved"
+          : "reviewed";
+      dispositions.push({
+        coinId: coin.id,
+        symbol: coin.symbol,
+        reserveIndex: disposition.reserveIndex,
+        reserveName: disposition.reserveName,
+        currentReserveName: reserve?.name ?? null,
+        disposition: disposition.disposition,
+        reviewStatus,
+        rationale: disposition.rationale,
+        candidateCoinIds: disposition.candidateCoinIds ?? [],
+        reviewedAt: coin.reserveReview!.reviewedAt,
+        reviewer: coin.reserveReview!.reviewer,
+      });
+      if (!stale) dispositionBySlice.set(`${coin.id}::${disposition.reserveIndex}`, disposition);
+    }
+  }
+
+  const materialSlices: MaterialUnlinkedReserveRow[] = [];
+  const activeSymbolLeads: ActiveReserveSymbolLeadRow[] = [];
+  const subMaterialActiveSymbolLeads: ActiveReserveSymbolLeadRow[] = [];
+  input.activeCoins.forEach((coin, coinIndex) => {
+    (coin.reserves ?? []).forEach((reserve, reserveIndex) => {
+      if (reserve.coinId || reserve.pct <= 0) return;
+      const matched = matchers.filter((matcher) => matcher.matches(reserve.name));
+      const disposition = dispositionBySlice.get(`${coin.id}::${reserveIndex}`);
+      const reviewStatus: MaterialUnlinkedReserveRow["reviewStatus"] = disposition == null
+        ? "unreviewed"
+        : UNRESOLVED_NON_LINK_DISPOSITIONS.has(disposition.disposition)
+          ? "unresolved"
+          : "reviewed";
+      const baseRow: ReserveSliceCoverageRow = {
+        coinId: coin.id,
+        symbol: coin.symbol,
+        reserveIndex,
+        reserveName: reserve.name,
+        pct: reserve.pct,
+        risk: reserve.risk,
+        depType: reserve.depType ?? null,
+        marketCapUsd: marketCapForId(input.marketCapById, coin.id),
+        rank: coinIndex + 1,
+      };
+      if (reserve.pct + WEIGHT_EPSILON >= MATERIAL_RESERVE_PCT) {
+        const basketSignal = /\b(?:stablecoins?|stables)\b/i.test(reserve.name);
+        if (matched.length > 0 || basketSignal || reserve.depType != null) {
+          materialSlices.push({
+            ...baseRow,
+            matchedSymbols: [...new Set(matched.map((matcher) => matcher.symbol))].sort(),
+            candidateCoinIds: [...new Set(matched.map((matcher) => matcher.coinId))].sort(),
+            reviewStatus,
+            disposition: disposition?.disposition ?? null,
+            dispositionRationale: disposition?.rationale ?? null,
+          });
+        }
+      }
+
+      const activeMatches = activeMatchers.filter((matcher) => (
+        matcher.coinId !== coin.id
+        && matcher.symbol.toUpperCase() !== coin.symbol.toUpperCase()
+        && matcher.matches(reserve.name)
+      ));
+      const activeCandidateIds = [...new Set(activeMatches.map((matcher) => matcher.coinId))];
+      if (activeCandidateIds.length !== 1) return;
+      const candidateCoinId = activeCandidateIds[0]!;
+      const markedUntracked = disposition?.disposition === "untracked-exogenous-asset";
+      if (disposition != null && reviewStatus === "reviewed" && !markedUntracked) return;
+      if (!markedUntracked && currentEdgeKeys.has(`${candidateCoinId}->${coin.id}`)) return;
+      const candidateSymbol = activeMatches.find((matcher) => matcher.coinId === candidateCoinId)!.symbol;
+      const symbolLead: ActiveReserveSymbolLeadRow = {
+        ...baseRow,
+        candidateCoinId,
+        candidateSymbol,
+        reviewStatus,
+        disposition: disposition?.disposition ?? null,
+        reason: markedUntracked ? "active-target-marked-untracked" : "unique-symbol-target-unlinked",
+      };
+      (reserve.pct + WEIGHT_EPSILON < MATERIAL_RESERVE_PCT
+        ? subMaterialActiveSymbolLeads
+        : activeSymbolLeads).push(symbolLead);
+    });
+  });
+
+  const sortReserveCandidates = <T extends ReserveSliceCoverageRow>(left: T, right: T): number => {
+    if (left.marketCapUsd != null || right.marketCapUsd != null) {
+      const marketCapOrder = (right.marketCapUsd ?? -1) - (left.marketCapUsd ?? -1);
+      if (marketCapOrder !== 0) return marketCapOrder;
+    } else if (left.rank !== right.rank) {
+      return left.rank - right.rank;
+    }
+    return (
+      Number(right.depType != null) - Number(left.depType != null)
+      || right.pct - left.pct
+      || left.coinId.localeCompare(right.coinId)
+      || left.reserveIndex - right.reserveIndex
+    );
+  };
+  materialSlices.sort(sortReserveCandidates);
+  activeSymbolLeads.sort(sortReserveCandidates);
+  subMaterialActiveSymbolLeads.sort(sortReserveCandidates);
+  return {
+    materialSlices,
+    activeSymbolLeads,
+    subMaterialActiveSymbolLeads,
+    dispositions: dispositions.sort((left, right) => (
+      left.coinId.localeCompare(right.coinId) || left.reserveIndex - right.reserveIndex
+    )),
+  };
+}
+
+function extractDependencyProvenance(
+  activeCoins: readonly StablecoinMeta[],
+  cardsById: ReadonlyMap<string, ReportCard>,
+  hasReportCards: boolean,
+  edges: readonly ParsedReportCardEdge[],
+): DependencySetProvenanceRow[] {
+  return activeCoins.map((coin) => {
+    if (!hasReportCards) {
+      const dependencySet = deriveEffectiveDependencySet(coin);
+      return {
+        coinId: coin.id,
+        symbol: coin.symbol,
+        source: dependencySet.source,
+        baseSource: dependencySet.baseSource,
+        fallbackReason: dependencySet.fallbackReason,
+        dependencyFromLive: dependencySet.dependencyFromLive,
+        publishedSources: [],
+        unknownSourceCount: 0,
+        backingFromLiveReserves: null,
+        availableWeight: null,
+        unavailableWeight: null,
+        mappedLiveReserveShare: null,
+        unmappedLiveReserveShare: null,
+      };
+    }
+    const publishedEdges = edges.filter((edge) => edge.to === coin.id);
+    const publishedSources = [...new Set(publishedEdges.flatMap(
+      (edge) => edge.dependencySource == null ? [] : [edge.dependencySource],
+    ))].sort();
+    const unknownSourceCount = publishedEdges.filter((edge) => edge.dependencySource == null).length;
+    const complete = publishedEdges.length > 0 && unknownSourceCount === 0;
+    return {
+      coinId: coin.id,
+      symbol: coin.symbol,
+      source: !complete ? null : publishedSources.length === 1 ? publishedSources[0]! : "mixed",
+      // Edge origins cannot recover unpublished set-level reserve/fallback facts.
+      baseSource: null,
+      fallbackReason: null,
+      dependencyFromLive: publishedSources.includes("live-reserve") ? true : complete ? false : null,
+      publishedSources,
+      unknownSourceCount,
+      backingFromLiveReserves: cardsById.get(coin.id)?.backingFromLiveReserves ?? null,
+      availableWeight: null,
+      unavailableWeight: null,
+      mappedLiveReserveShare: null,
+      unmappedLiveReserveShare: null,
+    };
+  });
+}
+
+function classifyTargetScoreability(input: {
+  availability: ReportCard["ratingStatus"] | undefined;
+  consumedScore: number | null | undefined;
+  limitedEvidenceCauses?: readonly string[];
+  lifecycle: DependencyTargetLifecycle | "unknown";
+  materiality?: ReportCardEdgeMateriality | null;
+  hasReportCards: boolean;
+}): TargetScoreability {
+  if (input.lifecycle === "unknown") return "unknown-target";
+  if (input.lifecycle === "pre-launch") return "pre-launch";
+  if (input.lifecycle === "quarantined") return "quarantined";
+  if (input.lifecycle === "delisted") return "delisted";
+  if (input.lifecycle === "frozen") return "frozen";
+  if (!input.hasReportCards) return "not-evaluated";
+  if (input.availability === "pipeline-gap") return "pipeline-gap";
+  if (input.availability === "not-rated") return "active-nr";
+  if (input.materiality === "serial-blocked" || input.materiality === "basket-bounded-unknown") return "active-nr";
+  if (input.availability !== "rated" || input.consumedScore === undefined) return "not-evaluated";
+  if (input.consumedScore === null) return input.limitedEvidenceCauses?.length ? "active-nr" : "unavailable-input";
+  return "scoreable";
+}
+
+function buildDependencyEdgeRows(input: {
+  edges: readonly DependencyGraphEdge[];
+  graphSource: DependencyEdgeCoverageRow["graphSource"];
+  trackedCoins: readonly StablecoinMeta[];
+  cardsById: ReadonlyMap<string, ReportCard>;
+  hasReportCards: boolean;
+  targetDispositions: readonly DependencyTargetDisposition[];
+}): DependencyEdgeCoverageRow[] {
+  const trackedById = new Map(input.trackedCoins.map((coin) => [coin.id, coin]));
+  const dispositionByTarget = new Map(input.targetDispositions.map((entry) => [entry.targetId, entry]));
+  return input.edges.map((edge) => {
+    const upstream = trackedById.get(edge.from);
+    const dependent = trackedById.get(edge.to);
+    const lifecycle = lifecycleForMeta(upstream);
+    const reportKind = "reportKind" in edge ? edge.reportKind as ReportCardEdgeKind | null : null;
+    const reportMateriality = "reportMateriality" in edge
+      ? edge.reportMateriality as ReportCardEdgeMateriality | null : null;
+    const parent = reportKind == null ? undefined
+      : input.cardsById.get(edge.to)?.dependencies[reportKind].find(
+          (dependency) => dependency.upstreamAssetId === edge.from,
+        );
+    return {
+      ...edge,
+      graphSource: input.graphSource,
+      reportKind,
+      reportMateriality,
+      reportedWeight: "reportedWeight" in edge ? edge.reportedWeight as number | null : edge.weight,
+      upstreamSymbol: upstream?.symbol ?? null,
+      dependentSymbol: dependent?.symbol ?? null,
+      targetLifecycle: lifecycle,
+      dependencySource: "dependencySource" in edge ? edge.dependencySource as DependencyDerivationSource | null : null,
+      targetScoreability: classifyTargetScoreability({
+        availability: parent?.ratingStatus,
+        consumedScore: parent?.score,
+        limitedEvidenceCauses: parent?.limitedEvidenceCauses,
+        lifecycle,
+        materiality: reportMateriality,
+        hasReportCards: input.hasReportCards,
+      }),
+      targetDisposition: dispositionByTarget.get(edge.from) ?? null,
+    };
+  }).sort((left, right) => (
+    left.to.localeCompare(right.to)
+    || left.from.localeCompare(right.from)
+    || left.type.localeCompare(right.type)
+    || left.weight - right.weight
+  ));
+}
+
+function validateTargetDispositions(input: {
+  trackedCoins: readonly StablecoinMeta[];
+  targetScoreabilities: ReadonlyMap<string, readonly TargetScoreability[]>;
+  dispositions: readonly DependencyTargetDisposition[];
+  hasReportCards: boolean;
+}): TargetDispositionValidationIssue[] {
+  const issues: TargetDispositionValidationIssue[] = [];
+  const trackedById = new Map(input.trackedCoins.map((coin) => [coin.id, coin]));
+  const seen = new Set<string>();
+  for (const disposition of input.dispositions) {
+    if (seen.has(disposition.targetId)) {
+      issues.push({
+        targetId: disposition.targetId,
+        reason: "duplicate-disposition",
+        detail: "Unavailable target has more than one disposition.",
+      });
+    }
+    seen.add(disposition.targetId);
+    const target = trackedById.get(disposition.targetId);
+    if (!target) {
+      issues.push({
+        targetId: disposition.targetId,
+        reason: "unknown-target",
+        detail: "Disposition target is not a canonical tracked stablecoin.",
+      });
+      continue;
+    }
+    const lifecycle = lifecycleForMeta(target);
+    if (lifecycle !== disposition.expectedLifecycle) {
+      issues.push({
+        targetId: disposition.targetId,
+        reason: "lifecycle-mismatch",
+        detail: `Expected ${disposition.expectedLifecycle}, found ${lifecycle}.`,
+      });
+    }
+    if (
+      !disposition.reviewer.trim()
+      || !/^\d{4}-\d{2}-\d{2}$/.test(disposition.reviewedAt)
+      || disposition.sources.length === 0
+      || disposition.sources.some((source) => !source.label.trim() || !/^https:\/\//.test(source.url))
+      || !disposition.rationale.trim()
+    ) {
+      issues.push({
+        targetId: disposition.targetId,
+        reason: "invalid-provenance",
+        detail: "Disposition requires reviewer, ISO review date, rationale, and at least one HTTPS source.",
+      });
+    }
+    const scoreabilities = input.targetScoreabilities.get(disposition.targetId) ?? [];
+    if (scoreabilities.length === 0) {
+      issues.push({
+        targetId: disposition.targetId,
+        reason: "no-current-edge",
+        detail: "Disposition target is no longer referenced by the audited dependency graph.",
+      });
+    }
+    if (
+      input.hasReportCards
+      && scoreabilities.length > 0 && scoreabilities.every((scoreability) => scoreability === "scoreable")
+    ) {
+      issues.push({
+        targetId: disposition.targetId,
+        reason: "target-now-scoreable",
+        detail: "Every referencing dependency lane is now scoreable; remove the unavailable-target disposition.",
+      });
+    }
+  }
+  return issues.sort((left, right) => left.targetId.localeCompare(right.targetId) || left.reason.localeCompare(right.reason));
+}
+
+function validateAdapterMappingReviews(input: {
+  activeCoins: readonly StablecoinMeta[];
+  sourceCoins: readonly StablecoinMeta[];
+  reviews: readonly DependencyAdapterMappingReview[];
+  requiredMappings: readonly AdapterMappingRequirement[] | null;
+}): {
+  gaps: AdapterMappingReviewGapRow[];
+  coverageEvaluated: boolean;
+} {
+  const gaps: AdapterMappingReviewGapRow[] = [];
+  const activeAdapters = new Set<string>(
+    input.activeCoins.flatMap((coin) => coin.liveReservesConfig && !coin.liveReservesConfig.suspended ? [coin.liveReservesConfig.adapter] : []),
+  );
+  const bindingStateByAdapter = new Map<string, { count: number; hasUnsuspendedBinding: boolean }>();
+  for (const coin of input.sourceCoins) {
+    const config = coin.liveReservesConfig;
+    if (!config) continue;
+    const state = bindingStateByAdapter.get(config.adapter) ?? { count: 0, hasUnsuspendedBinding: false };
+    state.count++;
+    state.hasUnsuspendedBinding ||= config.suspended == null;
+    bindingStateByAdapter.set(config.adapter, state);
+  }
+  const reviewByAdapter = new Map<string, DependencyAdapterMappingReview>();
+  for (const review of input.reviews) {
+    if (reviewByAdapter.has(review.adapter)) {
+      gaps.push({
+        coinId: null,
+        adapter: review.adapter,
+        reason: "duplicate-review",
+        detail: "Adapter mapping registry contains a duplicate review.",
+      });
+    }
+    reviewByAdapter.set(review.adapter, review);
+    const retention = review.retainedBinding;
+    const bindings = bindingStateByAdapter.get(review.adapter);
+    const validRetention = retention != null
+      && (retention.status === "suspended" || retention.status === "staged")
+      && typeof retention.reason === "string" && retention.reason.trim().length > 0
+      && bindings != null && bindings.count > 0 && !bindings.hasUnsuspendedBinding;
+    if (!activeAdapters.has(review.adapter) && !validRetention) {
+      gaps.push({
+        coinId: null,
+        adapter: review.adapter,
+        reason: "stale-review",
+        detail: "Reviewed adapter is not configured by any active stablecoin.",
+      });
+    }
+    if (
+      !review.reviewer.trim()
+      || !/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)
+      || review.sourceFiles.length === 0
+      || review.sourceFiles.some((sourceFile) => (
+        !sourceFile.startsWith("worker/src/cron/reserve-adapters/") || !existsSync(sourceFile)
+      ))
+      || !review.rationale.trim()
+      || (retention != null && !validRetention)
+    ) {
+      gaps.push({
+        coinId: null,
+        adapter: review.adapter,
+        reason: "invalid-provenance",
+        detail: "Adapter review requires reviewer, ISO review date, rationale, reserve-adapter source files, and valid all-suspended binding provenance for any retention marker.",
+      });
+    }
+  }
+
+  if (input.requiredMappings === null) return { gaps, coverageEvaluated: false };
+  for (const requirement of input.requiredMappings) {
+    if (requirement.adapter !== "unknown" && reviewByAdapter.has(requirement.adapter)) continue;
+    gaps.push({
+      coinId: requirement.coinId,
+      adapter: requirement.adapter,
+      reason: "missing-review",
+      detail: requirement.adapter !== "unknown"
+        ? "Mapped live dependency set has no reviewed adapter-mapping rule."
+        : "Mapped live dependency set has no configured adapter identity.",
+    });
+  }
+  return {
+    gaps: gaps.sort((left, right) => (
+      left.adapter.localeCompare(right.adapter) || (left.coinId ?? "").localeCompare(right.coinId ?? "")
+    )),
+    coverageEvaluated: true,
+  };
+}
+
+function findReserveSlicesMissingCoinId(
+  activeCoins: readonly StablecoinMeta[],
+  marketCapById: ReadonlyMap<string, number> | null,
+): ReserveSliceCoverageRow[] {
+  const rows: ReserveSliceCoverageRow[] = [];
+
+  activeCoins.forEach((coin, coinIndex) => {
+    (coin.reserves ?? []).forEach((reserve, reserveIndex) => {
+      if (reserve.coinId || reserve.pct <= 0) return;
+      rows.push({
+        coinId: coin.id,
+        symbol: coin.symbol,
+        reserveIndex,
+        reserveName: reserve.name,
+        pct: reserve.pct,
+        risk: reserve.risk,
+        depType: reserve.depType ?? null,
+        marketCapUsd: marketCapForId(marketCapById, coin.id),
+        rank: coinIndex + 1,
+      });
+    });
+  });
+
+  return sortByMarketCapOrRank(rows);
+}
+
+function findMissingCandidates(input: {
+  activeCoins: readonly StablecoinMeta[];
+  graph: DependencyGraphCoverageSummary;
+  marketCapById: ReadonlyMap<string, number> | null;
+}): MissingDependencyCandidateRow[] {
+  const participantIds = new Set(input.graph.participantIds);
+  const rows = input.activeCoins.flatMap((coin, index): MissingDependencyCandidateRow[] => (
+    participantIds.has(coin.id)
+      ? []
+      : [{
+          coinId: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          marketCapUsd: marketCapForId(input.marketCapById, coin.id),
+          rank: index + 1,
+        }]
+  ));
+
+  return sortByMarketCapOrRank(rows);
+}
+
+function findL2BeatDeploymentContextRows(activeCoins: readonly StablecoinMeta[]): L2BeatDeploymentContextRow[] {
+  const rows: L2BeatDeploymentContextRow[] = [];
+  const seen = new Set<string>();
+
+  for (const coin of activeCoins) {
+    const deployments = [
+      ...(coin.contracts ?? []).map((contract) => ({ ...contract, routeKind: "canonical-contract" as const })),
+      ...(coin.tradedContracts ?? []).map((contract) => ({ ...contract, routeKind: "traded-contract" as const })),
+    ];
+
+    for (const deployment of deployments) {
+      const context = getL2BeatInfrastructureContext(deployment.chain);
+      if (!context) continue;
+      const key = `${coin.id}::${deployment.chain}::${deployment.routeKind}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      rows.push({
+        coinId: coin.id,
+        symbol: coin.symbol,
+        chainId: deployment.chain,
+        routeKind: deployment.routeKind,
+        projectId: context.projectId,
+        l2beatName: context.name,
+        layer: context.layer,
+        category: context.category,
+        hostChain: context.hostChain,
+        hostChainId: context.hostChainId,
+        stage: context.stage,
+        isUnderReview: context.isUnderReview,
+        chainEnvironmentScore: context.chainEnvironmentScore,
+      });
+    }
+  }
+
+  return rows.sort((left, right) => (
+    left.chainEnvironmentScore - right.chainEnvironmentScore ||
+    left.coinId.localeCompare(right.coinId) ||
+    left.chainId.localeCompare(right.chainId) ||
+    left.routeKind.localeCompare(right.routeKind)
+  ));
+}
+
+export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput = {}): DependencyCoverageAudit {
+  const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
+  const trackedCoins = input.trackedCoins ?? (input.activeCoins ? activeCoins : TRACKED_STABLECOINS);
+  const sourceCoins = input.sourceCoins ?? (input.activeCoins ? trackedCoins : TRACKED_SOURCE_COINS);
+  const targetDispositions = input.targetDispositions
+    ?? (input.activeCoins ? [] : DEPENDENCY_TARGET_DISPOSITIONS);
+  const adapterMappingReviews = input.adapterMappingReviews
+    ?? (input.activeCoins ? [] : DEPENDENCY_ADAPTER_MAPPING_REVIEWS);
+  const activeIds = new Set(activeCoins.map((coin) => coin.id));
+  const marketCapById = buildMarketCapMapFromStablecoins(input.stablecoins);
+  const parsedReportCards = input.reportCards === undefined ? null : parseReportCardInput(input.reportCards);
+  const hasReportCards = parsedReportCards !== null;
+  const cardsById = parsedReportCards?.cardsById ?? new Map<string, ReportCard>();
+  const warnings: string[] = [];
+  const publicationComparisonStatus = parsedReportCards == null
+    ? "not-evaluated" as const
+    : parsedReportCards.methodologyVersion === SAFETY_SCORE_METHODOLOGY_VERSION
+      ? "matched" as const
+      : "checkout-production-skew" as const;
+  if (publicationComparisonStatus === "checkout-production-skew") {
+    warnings.push(`checkout-production-skew: publication methodology ${parsedReportCards!.methodologyVersion} differs from checkout ${SAFETY_SCORE_METHODOLOGY_VERSION}; weekly cross-checkout counters are advisory until publication catches up.`);
+  }
+  if (input.stablecoins !== undefined && marketCapById?.size === 0) {
+    warnings.push("Stablecoin payload did not contain any pegged asset rows.");
+  }
+
+  const staticEdges = buildDependencyGraphEdges(activeCoins);
+  const staticGraph = summarizeDependencyGraph(staticEdges, activeIds);
+  const staticGraphDiagnostics = diagnoseStaticGraph(staticEdges, activeCoins);
+
+  let reportCardGraph: DependencyGraphCoverageSummary | null = null;
+  let reportCardEdges: DependencyGraphEdge[] | null = null;
+  let reportCardGraphDiagnostics: DependencyGraphDiagnostics | null = null;
+  if (parsedReportCards) {
+    reportCardEdges = parsedReportCards.edges;
+    reportCardGraph = summarizeDependencyGraph(reportCardEdges, activeIds);
+    reportCardGraphDiagnostics = diagnoseDependencyGraph(reportCardEdges);
+  }
+
+  const graphForMissingCandidates = reportCardGraph ?? staticGraph;
+  const selectedEdges = reportCardEdges ?? staticEdges;
+  const dependencyEdges = buildDependencyEdgeRows({
+    edges: selectedEdges,
+    graphSource: reportCardEdges ? "report-card" : "static",
+    trackedCoins,
+    cardsById,
+    hasReportCards,
+    targetDispositions,
+  });
+  const missingCandidates = findMissingCandidates({
+    activeCoins,
+    graph: graphForMissingCandidates,
+    marketCapById,
+  });
+  const reserveMissing = findReserveSlicesMissingCoinId(activeCoins, marketCapById);
+  const depTypeWithoutCoinIdWarnings = reserveMissing.filter((row) => row.depType != null);
+  const coinIdWithoutDepTypeCount = activeCoins.reduce((count, coin) => (
+    count + (coin.reserves ?? []).filter((slice) => slice.coinId && slice.depType == null).length
+  ), 0);
+  const publishedCoinIdWithoutDepTypeCount = parsedReportCards == null ? null
+    : [...parsedReportCards.cardsById.values()].reduce((count, card) => (
+        count + (card.dependencyCoverage ?? []).filter((row) => row.reason === "coinId-without-depType").length
+      ), 0);
+  const publishedKindMismatchCount = parsedReportCards == null ? null : activeCoins.reduce((count, coin) => (
+    count + deriveEffectiveDependencySet(coin).dependencies.filter((dependency) => {
+      const expectedKind = (dependency.type ?? "collateral") === "collateral" ? "basket" : "serial";
+      if (parsedReportCards.edges.some((edge) => (
+        edge.to === coin.id && edge.from === dependency.id && edge.reportKind === expectedKind
+      ))) return false;
+      return parsedReportCards.edges.some((edge) => (
+        edge.to === coin.id && edge.from === dependency.id && edge.reportKind !== expectedKind
+      ));
+    }).length
+  ), 0);
+  const mixedSourceGuardCount = activeCoins.reduce((count, coin) => (
+    count + deriveEffectiveDependencySet(coin).rejectionReasons.filter(
+      (issue) => issue.reason === "manual-collateral-not-in-reserves",
+    ).length
+  ), 0);
+  const manualReview = findManualDependencyReviewRows(activeCoins);
+  const reserveReview = findReserveReviewRows({
+    activeCoins,
+    trackedCoins,
+    marketCapById,
+    currentEdges: selectedEdges,
+  });
+  const rawAuthoredDuplicates = findRawAuthoredDuplicates(activeCoins);
+  const overweightEffectiveSets = findOverweightEffectiveSets(activeCoins, cardsById, hasReportCards);
+  const invalidSerialDependencyWeightCount = activeCoins.reduce((count, coin) => (
+    count + deriveEffectiveDependencySet(coin).dependencies.filter((dependency) => (
+      (dependency.type ?? "collateral") !== "collateral" && dependency.weight !== 1
+    )).length
+  ), 0);
+  const dependencyProvenance = extractDependencyProvenance(activeCoins, cardsById, hasReportCards, parsedReportCards?.edges ?? []);
+  const activeById = new Map(activeCoins.map((coin) => [coin.id, coin]));
+  const requiredAdapterMappings: AdapterMappingRequirement[] = dependencyProvenance.flatMap((row) => {
+    const coin = activeById.get(row.coinId);
+    const requiresMappingReview = hasReportCards
+      ? parsedReportCards!.edges.some((edge) => (
+          edge.to === row.coinId && edge.dependencySource === "live-reserve"
+        ))
+      : coin?.liveReservesConfig != null && row.baseSource !== "none";
+    if (!requiresMappingReview) return [];
+    return [{
+      coinId: row.coinId,
+      adapter: coin?.liveReservesConfig?.adapter ?? "unknown",
+    }];
+  });
+  const targetScoreabilities = new Map<string, TargetScoreability[]>();
+  for (const edge of dependencyEdges) {
+    const scores = targetScoreabilities.get(edge.from) ?? [];
+    scores.push(edge.targetScoreability);
+    targetScoreabilities.set(edge.from, scores);
+  }
+  const trackedById = new Map(trackedCoins.map((coin) => [coin.id, coin]));
+  for (const card of cardsById.values()) {
+    // Withheld outside-active-set claims retain a reference without publishing a graph edge.
+    for (const row of card.dependencyCoverage ?? []) {
+      if (!row.identityVerified || !row.upstreamAssetId || row.reason !== `outside-active-set:${row.upstreamAssetId}`) continue;
+      const lifecycle = lifecycleForMeta(trackedById.get(row.upstreamAssetId));
+      if (lifecycle === "active" || lifecycle === "unknown") continue;
+      const scores = targetScoreabilities.get(row.upstreamAssetId) ?? [];
+      scores.push(classifyTargetScoreability({
+        availability: undefined,
+        consumedScore: undefined,
+        lifecycle,
+        hasReportCards,
+      }));
+      targetScoreabilities.set(row.upstreamAssetId, scores);
+    }
+    for (const role of card.dependencies.roles ?? []) {
+      const scores = targetScoreabilities.get(role.upstreamAssetId) ?? [];
+      scores.push(classifyTargetScoreability({
+        availability: role.ratingStatus,
+        consumedScore: role.score,
+        limitedEvidenceCauses: role.limitedEvidenceCauses,
+        materiality: role.cycleBlocked ? "serial-blocked" : null,
+        lifecycle: lifecycleForMeta(trackedById.get(role.upstreamAssetId)),
+        hasReportCards,
+      }));
+      targetScoreabilities.set(role.upstreamAssetId, scores);
+    }
+  }
+  const targetDispositionValidationIssues = validateTargetDispositions({
+    trackedCoins,
+    targetScoreabilities,
+    dispositions: targetDispositions,
+    hasReportCards,
+  });
+  const adapterMappingReviewValidation = validateAdapterMappingReviews({
+    activeCoins,
+    sourceCoins,
+    reviews: adapterMappingReviews,
+    requiredMappings: requiredAdapterMappings,
+  });
+  const adapterMappingReviewGaps = adapterMappingReviewValidation.gaps;
+  const adapterMappingReviewCoverageStatus: AdapterMappingReviewCoverageStatus =
+    !adapterMappingReviewValidation.coverageEvaluated
+      ? "not-evaluated"
+      : adapterMappingReviewGaps.length > 0
+        ? "evaluated-with-gaps"
+        : "evaluated-clean";
+  const l2beatDeploymentContext = findL2BeatDeploymentContextRows(activeCoins);
+  const unavailableTargetEdges = dependencyEdges.filter((edge) => (
+    edge.targetScoreability !== "scoreable" && edge.targetScoreability !== "not-evaluated"
+  ));
+  const unavailableTargetDispositionGaps = new Set(
+    unavailableTargetEdges.filter((edge) => edge.targetDisposition == null).map((edge) => edge.from),
+  );
+  const availableWeights = dependencyProvenance.flatMap((row) => row.availableWeight == null ? [] : [row.availableWeight]);
+  const unavailableWeights = dependencyProvenance.flatMap((row) => row.unavailableWeight == null ? [] : [row.unavailableWeight]);
+  const liveShares = dependencyProvenance.filter((row) => (
+    row.mappedLiveReserveShare != null && row.unmappedLiveReserveShare != null
+  ));
+
+  return {
+    generatedAt: input.generatedAt ?? new Date().toISOString(),
+    mode: input.mode ?? "static",
+    provenance: DependencyCoverageProvenanceSchema.parse({
+      publication: parsedReportCards?.publication ?? null,
+      checkoutRevision: input.checkoutRevision ?? null,
+    }),
+    summary: {
+      publicationComparisonStatus,
+      checkoutMethodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publicationMethodologyVersion: parsedReportCards?.methodologyVersion ?? null,
+      activeCount: activeCoins.length,
+      staticEdgeCount: staticGraph.edgeCount,
+      staticActiveEdgeCount: staticGraph.activeEdgeCount,
+      staticParticipantCount: staticGraph.participantCount,
+      staticDependentCount: staticGraph.dependentCount,
+      staticUpstreamOnlyCount: staticGraph.upstreamOnlyCount,
+      reportCardEdgeCount: reportCardGraph?.edgeCount ?? null,
+      reportCardActiveEdgeCount: reportCardGraph?.activeEdgeCount ?? null,
+      reportCardParticipantCount: reportCardGraph?.participantCount ?? null,
+      reportCardDependentCount: reportCardGraph?.dependentCount ?? null,
+      reportCardUpstreamOnlyCount: reportCardGraph?.upstreamOnlyCount ?? null,
+      manualOnlyDependencyCount: manualReview.manualOnlyDependencies.length,
+      reserveSlicesMissingCoinId: reserveMissing.length,
+      depTypeWithoutCoinIdWarnings: depTypeWithoutCoinIdWarnings.length,
+      coinIdWithoutDepTypeCount,
+      publishedCoinIdWithoutDepTypeCount,
+      publishedKindMismatchCount,
+      mixedSourceGuardCount,
+      staticSelfEdgeCount: staticGraphDiagnostics.selfEdges.length,
+      staticDuplicateEdgeCount: staticGraphDiagnostics.duplicateEdges.length,
+      staticStronglyConnectedComponentCount: staticGraphDiagnostics.stronglyConnectedComponents.length,
+      reportCardSelfEdgeCount: reportCardGraphDiagnostics?.selfEdges.length ?? null,
+      reportCardDuplicateEdgeCount: reportCardGraphDiagnostics?.duplicateEdges.length ?? null,
+      reportCardStronglyConnectedComponentCount:
+        reportCardGraphDiagnostics?.stronglyConnectedComponents.length ?? null,
+      rawAuthoredDuplicateCount: rawAuthoredDuplicates.filter((row) => row.classification === "duplicates").length,
+      overweightEffectiveSetCount: overweightEffectiveSets.length,
+      invalidSerialDependencyWeightCount,
+      unknownTargetEdgeCount: dependencyEdges.filter((edge) => edge.targetLifecycle === "unknown").length,
+      unavailableTargetEdgeCount: unavailableTargetEdges.length,
+      unavailableTargetDispositionGapCount: unavailableTargetDispositionGaps.size,
+      targetDispositionValidationIssueCount: targetDispositionValidationIssues.length,
+      adapterMappingReviewGapCount: adapterMappingReviewGaps.length,
+      adapterMappingReviewCoverageEvaluated: adapterMappingReviewValidation.coverageEvaluated,
+      adapterMappingReviewCoverageStatus,
+      dependencyProvenanceCount: dependencyProvenance.length,
+      dependencyAvailableWeight: availableWeights.length > 0
+        ? availableWeights.reduce((sum, weight) => sum + weight, 0)
+        : null,
+      dependencyUnavailableWeight: unavailableWeights.length > 0
+        ? unavailableWeights.reduce((sum, weight) => sum + weight, 0)
+        : null,
+      liveMappedReserveShare: liveShares.length > 0
+        ? liveShares.reduce((sum, row) => sum + row.mappedLiveReserveShare!, 0) / liveShares.length
+        : null,
+      liveUnmappedReserveShare: liveShares.length > 0
+        ? liveShares.reduce((sum, row) => sum + row.unmappedLiveReserveShare!, 0) / liveShares.length
+        : null,
+      materialUnlinkedReserveSliceCount: reserveReview.materialSlices.length,
+      activeUnlinkedReserveSymbolLeadCount: reserveReview.activeSymbolLeads.length,
+      subMaterialActiveUnlinkedReserveSymbolLeadCount:
+        reserveReview.subMaterialActiveSymbolLeads.length,
+      reviewedReserveDispositionCount:
+        reserveReview.dispositions.filter((row) => row.reviewStatus === "reviewed").length,
+      unresolvedReserveDispositionCount:
+        reserveReview.dispositions.filter((row) => row.reviewStatus === "unresolved").length,
+      unresolvedMaterialReserveSliceCount:
+        reserveReview.materialSlices.filter((row) => row.reviewStatus !== "reviewed").length,
+      staleReserveDispositionCount:
+        reserveReview.dispositions.filter((row) => row.reviewStatus === "stale").length,
+      manualDependencyReviewGapCount: manualReview.gaps.length,
+      missingCandidateCount: missingCandidates.length,
+      l2beatDeploymentContextCount: l2beatDeploymentContext.length,
+      l2beatLayer3DeploymentContextCount: l2beatDeploymentContext.filter((row) => row.layer === "layer3").length,
+      l2beatUnderReviewDeploymentContextCount: l2beatDeploymentContext.filter((row) => row.isUnderReview).length,
+      missingCandidateRankSource: marketCapById ? "stablecoin-api-market-cap" : "local-canonical-order",
+      missingCandidateGraphSource: reportCardGraph ? "report-card" : "static",
+    },
+    staticGraph,
+    staticGraphDiagnostics,
+    reportCardGraph,
+    reportCardGraphDiagnostics,
+    dependencyEdges,
+    dependencyProvenance,
+    rawAuthoredDuplicates,
+    overweightEffectiveSets,
+    manualOnlyDependencies: manualReview.manualOnlyDependencies,
+    manualDependencyReviewGaps: manualReview.gaps,
+    reserveSlicesMissingCoinId: reserveMissing,
+    depTypeWithoutCoinIdWarnings,
+    materialUnlinkedReserveSlices: reserveReview.materialSlices,
+    activeUnlinkedReserveSymbolLeads: reserveReview.activeSymbolLeads,
+    subMaterialActiveUnlinkedReserveSymbolLeads: reserveReview.subMaterialActiveSymbolLeads,
+    reserveDispositions: reserveReview.dispositions,
+    targetDispositionValidationIssues,
+    adapterMappingReviews: [...adapterMappingReviews],
+    adapterMappingReviewGaps,
+    highestMarketCapMissingCandidates: missingCandidates,
+    l2beatDeploymentContext,
+    warnings,
+  };
+}
+
+function renderBoundedTable<T>(
+  headings: readonly string[],
+  rows: readonly T[],
+  cells: (row: T) => readonly unknown[],
+  limit: number,
+  showOverflowNote = false,
+  alignments: readonly MarkdownAlignment[] = [],
+): string[] {
+  return renderMarkdownRows({
+    headings,
+    rows,
+    cells,
+    alignments,
+    empty: "_None._",
+    limit,
+    overflow: showOverflowNote ? (hidden) => `_Plus ${hidden} more rows._` : undefined,
+  });
+}
+
+function renderMissingCandidates(rows: readonly MissingDependencyCandidateRow[]): string[] {
+  return renderBoundedTable(["coin", "mcap", "local rank"], rows, (row) => [`${row.symbol} (${row.coinId})`, formatUsd(row.marketCapUsd), row.rank], MISSING_CANDIDATE_LIMIT, true, ["left", "right", "right"]);
+}
+
+function renderReserveRows(rows: readonly ReserveSliceCoverageRow[], limit: number): string[] {
+  return renderBoundedTable(["coin", "mcap", "reserve index", "reserve slice", "pct", "risk", "depType"], rows, (row) => [`${row.symbol} (${row.coinId})`, formatUsd(row.marketCapUsd), row.reserveIndex, row.reserveName, row.pct, row.risk, row.depType], limit, true, ["left", "right", "right", "left", "right", "left", "left"]);
+}
+
+function renderManualDependencyRows(rows: readonly ManualOnlyDependencyRow[]): string[] {
+  return renderBoundedTable(["coin", "dependency", "type", "weight", "review"], rows, (row) => [`${row.symbol} (${row.coinId})`, row.dependencyId, row.dependencyType, row.weight, row.reviewStatus], MANUAL_DEPENDENCY_LIMIT, true, ["left", "left", "left", "right", "left"]);
+}
+
+function renderGraphDiagnostics(
+  label: string,
+  diagnostics: DependencyGraphDiagnostics | null,
+): string[] {
+  if (!diagnostics) return [`_${label} graph not supplied._`];
+  const duplicateKeys = diagnostics.duplicateEdges.map((row) => `${row.key} (${row.count})`);
+  return [
+    `- ${label} self-edges: ${diagnostics.selfEdges.length}`,
+    `- ${label} duplicate edge groups: ${diagnostics.duplicateEdges.length}`,
+    `- ${label} multi-node SCCs: ${diagnostics.stronglyConnectedComponents.length}`,
+    ...(diagnostics.selfEdges.length > 0
+      ? [`- Self-edge details: ${diagnostics.selfEdges.map((edge) => `${edge.from}:${edge.type}`).join(", ")}`]
+      : []),
+    ...(duplicateKeys.length > 0 ? [`- Duplicate details: ${duplicateKeys.join(", ")}`] : []),
+    ...(diagnostics.stronglyConnectedComponents.length > 0
+      ? [`- SCC details: ${diagnostics.stronglyConnectedComponents.map((row) => row.join(" <-> ")).join(", ")}`]
+      : []),
+  ];
+}
+
+function renderDependencyEdges(rows: readonly DependencyEdgeCoverageRow[]): string[] {
+  return renderBoundedTable(
+    ["dependent", "upstream", "type/kind", "materiality", "weight", "lifecycle", "scoreability", "unavailable disposition"],
+    rows,
+    (row) => [`${row.dependentSymbol ?? "?"} (${row.to})`, `${row.upstreamSymbol ?? "?"} (${row.from})`, row.reportKind ?? row.type, row.reportMateriality, row.reportedWeight, row.targetLifecycle, row.targetScoreability, row.targetDisposition?.action ?? null],
+    FINDING_LIMIT,
+    true,
+    ["left", "left", "left", "left", "right", "left", "left", "left"],
+  );
+}
+
+function renderDependencyProvenance(rows: readonly DependencySetProvenanceRow[]): string[] {
+  const relevant = rows.filter((row) => (
+    row.source !== "none" || row.fallbackReason != null || row.availableWeight != null || row.unavailableWeight != null
+  ));
+  return renderBoundedTable(
+    ["coin", "source", "published origins", "unknown origins", "live backing", "base", "fallback", "available", "unavailable", "live mapped", "live unmapped"],
+    relevant,
+    (row) => [`${row.symbol} (${row.coinId})`, row.source, row.publishedSources.join(", ") || null, row.unknownSourceCount,
+      row.backingFromLiveReserves, row.baseSource, row.fallbackReason, row.availableWeight, row.unavailableWeight,
+      row.mappedLiveReserveShare, row.unmappedLiveReserveShare],
+    FINDING_LIMIT,
+    true,
+    ["left", "left", "left", "right", "left", "left", "left", "right", "right", "right", "right"],
+  );
+}
+
+function renderMaterialReserveRows(rows: readonly MaterialUnlinkedReserveRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "mcap", "index", "slice", "pct", "matches", "review", "disposition"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, formatUsd(row.marketCapUsd), row.reserveIndex, row.reserveName, row.pct, row.matchedSymbols.join(", ") || "stablecoin basket/depType", row.reviewStatus, row.disposition],
+    FINDING_LIMIT,
+    true,
+    ["left", "right", "right", "left", "right", "left", "left", "left"],
+  );
+}
+
+function renderActiveReserveSymbolLeadRows(rows: readonly ActiveReserveSymbolLeadRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "mcap", "index", "slice", "pct", "active target", "reason", "review", "disposition"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, formatUsd(row.marketCapUsd), row.reserveIndex, row.reserveName, row.pct, `${row.candidateSymbol} (${row.candidateCoinId})`, row.reason, row.reviewStatus, row.disposition],
+    FINDING_LIMIT,
+    true,
+    ["left", "right", "right", "left", "right", "left", "left", "left", "left"],
+  );
+}
+
+function renderFindingRows(
+  rows: ReadonlyArray<{ coinId?: string | null; targetId?: string; adapter?: string; reason: string; detail?: string }>,
+): string[] {
+  return renderBoundedTable(["subject", "reason", "detail"], rows, (row) => [row.coinId ?? row.targetId ?? row.adapter ?? "registry", row.reason, row.detail ?? ""], FINDING_LIMIT, true);
+}
+
+function renderRawDuplicateRows(rows: readonly RawAuthoredDuplicateRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "source", "classification", "upstream", "type", "indices", "total weight"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, row.source, row.classification, row.dependencyId, row.dependencyType, row.indices.join(", "), row.totalWeight],
+    FINDING_LIMIT,
+    false,
+    ["left", "left", "left", "left", "left", "left", "right"],
+  );
+}
+
+function renderOverweightRows(rows: readonly OverweightDependencySetRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "source", "total weight", "dependencies"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, row.source, row.totalWeight, row.dependencies.map((dependency) => `${dependency.id}:${dependency.type ?? "collateral"}=${dependency.weight}`).join(", ")],
+    FINDING_LIMIT,
+    false,
+    ["left", "left", "right", "left"],
+  );
+}
+
+function renderReserveDispositionRows(rows: readonly ReserveDispositionRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "index", "reviewed slice", "current slice", "disposition", "status", "reviewed"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, row.reserveIndex, row.reserveName, row.currentReserveName, row.disposition, row.reviewStatus, `${row.reviewer}, ${row.reviewedAt}`],
+    FINDING_LIMIT,
+    false,
+    ["left", "right", "left", "left", "left", "left", "left"],
+  );
+}
+
+function renderManualReviewGapRows(rows: readonly ManualDependencyReviewGapRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "dependency", "type", "reason"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, row.dependencyId, row.dependencyType, row.reason],
+    FINDING_LIMIT,
+  );
+}
+
+function renderL2BeatDeploymentContextRows(rows: readonly L2BeatDeploymentContextRow[]): string[] {
+  return renderBoundedTable(
+    ["coin", "chain", "route", "L2BEAT project", "layer", "category", "host", "stage", "env score"],
+    rows,
+    (row) => [`${row.symbol} (${row.coinId})`, row.chainId, row.routeKind, `${row.l2beatName} (${row.projectId})`, row.layer, row.category, row.hostChain, row.stage, row.chainEnvironmentScore],
+    L2BEAT_CONTEXT_LIMIT,
+    true,
+    ["left", "left", "left", "left", "left", "left", "left", "left", "right"],
+  );
+}
+
+export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageAudit): string {
+  const lines = [
+    "# Dependency Coverage Audit",
+    "",
+    `Generated: ${audit.generatedAt}`,
+    `Mode: ${audit.mode}`,
+    `Audit checkout revision: ${audit.provenance.checkoutRevision ?? "unknown"}`,
+    audit.provenance.publication
+      ? `Publication provenance: \`${JSON.stringify(audit.provenance.publication)}\``
+      : "Publication provenance: unknown / not supplied",
+    "",
+    "## Summary",
+    "",
+    `- Active stablecoins: ${audit.summary.activeCount}`,
+    `- Publication comparison: ${audit.summary.publicationComparisonStatus} (checkout ${audit.summary.checkoutMethodologyVersion}; publication ${audit.summary.publicationMethodologyVersion ?? "not supplied"})`,
+    `- Static dependency edges: ${audit.summary.staticEdgeCount}`,
+    `- Static active-to-active dependency edges: ${audit.summary.staticActiveEdgeCount}`,
+    `- Static graph participants: ${audit.summary.staticParticipantCount}`,
+    `- Static graph dependents: ${audit.summary.staticDependentCount}`,
+    `- Static graph upstream-only participants: ${audit.summary.staticUpstreamOnlyCount}`,
+    `- Report-card dependency edges: ${audit.summary.reportCardEdgeCount ?? "not supplied"}`,
+    `- Report-card graph participants: ${audit.summary.reportCardParticipantCount ?? "not supplied"}`,
+    `- Manual-only dependency entries: ${audit.summary.manualOnlyDependencyCount}`,
+    `- Reserve slices missing coinId: ${audit.summary.reserveSlicesMissingCoinId}`,
+    `- depType without coinId warnings: ${audit.summary.depTypeWithoutCoinIdWarnings}`,
+    `- coinId without depType (zero tolerance): ${audit.summary.coinIdWithoutDepTypeCount}`,
+    `- Published runtime coinId without depType: ${audit.summary.publishedCoinIdWithoutDepTypeCount ?? "not supplied"}`,
+    `- Published kind mismatches: ${audit.summary.publishedKindMismatchCount ?? "not supplied"}`,
+    `- Mixed-source authoring guard findings: ${audit.summary.mixedSourceGuardCount}`,
+    `- Static self / duplicate / SCC findings: ${audit.summary.staticSelfEdgeCount} / ${audit.summary.staticDuplicateEdgeCount} / ${audit.summary.staticStronglyConnectedComponentCount}`,
+    `- Report-card self / duplicate / SCC findings: ${audit.summary.reportCardSelfEdgeCount ?? "not supplied"} / ${audit.summary.reportCardDuplicateEdgeCount ?? "not supplied"} / ${audit.summary.reportCardStronglyConnectedComponentCount ?? "not supplied"}`,
+    `- Raw authored duplicate groups: ${audit.summary.rawAuthoredDuplicateCount}`,
+    `- Overweight effective dependency sets: ${audit.summary.overweightEffectiveSetCount}`,
+    `- Invalid serial dependency weights (must equal 1): ${audit.summary.invalidSerialDependencyWeightCount}`,
+    `- Unknown target edges: ${audit.summary.unknownTargetEdgeCount}`,
+    `- Unavailable target edges: ${audit.summary.unavailableTargetEdgeCount}`,
+    `- Unavailable target disposition gaps: ${audit.summary.unavailableTargetDispositionGapCount}`,
+    `- Target disposition validation issues: ${audit.summary.targetDispositionValidationIssueCount}`,
+    `- Adapter mapping review coverage: ${audit.summary.adapterMappingReviewCoverageStatus}`,
+    `- Adapter mapping review gaps: ${audit.summary.adapterMappingReviewGapCount}`,
+    `- Dependency available / unavailable weight: ${audit.summary.dependencyAvailableWeight ?? "not supplied"} / ${audit.summary.dependencyUnavailableWeight ?? "not supplied"}`,
+    `- Average live mapped / unmapped reserve share: ${audit.summary.liveMappedReserveShare ?? "not supplied"} / ${audit.summary.liveUnmappedReserveShare ?? "not supplied"}`,
+    `- Material stablecoin-looking unlinked slices: ${audit.summary.materialUnlinkedReserveSliceCount}`,
+    `- Active-target reserve symbol leads: ${audit.summary.activeUnlinkedReserveSymbolLeadCount}`,
+    `- Sub-1% active-target reserve symbol leads: ${audit.summary.subMaterialActiveUnlinkedReserveSymbolLeadCount}`,
+    `- Reviewed / unresolved / stale reserve dispositions: ${audit.summary.reviewedReserveDispositionCount} / ${audit.summary.unresolvedReserveDispositionCount} / ${audit.summary.staleReserveDispositionCount}`,
+    `- Unresolved material reserve slices: ${audit.summary.unresolvedMaterialReserveSliceCount}`,
+    `- Manual dependency review gaps: ${audit.summary.manualDependencyReviewGapCount}`,
+    `- Missing graph-participant candidates: ${audit.summary.missingCandidateCount}`,
+    `- L2BEAT deployment context rows: ${audit.summary.l2beatDeploymentContextCount}`,
+    `- L2BEAT layer 3 context rows: ${audit.summary.l2beatLayer3DeploymentContextCount}`,
+    `- L2BEAT under-review context rows: ${audit.summary.l2beatUnderReviewDeploymentContextCount}`,
+    `- Missing candidate graph source: ${audit.summary.missingCandidateGraphSource}`,
+    `- Missing candidate rank source: ${audit.summary.missingCandidateRankSource}`,
+    "",
+    "## Graph Diagnostics",
+    "",
+    ...renderGraphDiagnostics("Static", audit.staticGraphDiagnostics),
+    ...renderGraphDiagnostics("Report-card", audit.reportCardGraphDiagnostics),
+    "",
+    "## Raw Authored Duplicate / Split Position Groups",
+    "",
+    ...renderRawDuplicateRows(audit.rawAuthoredDuplicates),
+    "",
+    "## Overweight Effective Dependency Sets",
+    "",
+    ...renderOverweightRows(audit.overweightEffectiveSets),
+    "",
+    "## Dependency Edges And Target Status",
+    "",
+    ...renderDependencyEdges(audit.dependencyEdges),
+    "",
+    "## Dependency Provenance",
+    "",
+    ...renderDependencyProvenance(audit.dependencyProvenance),
+    "",
+    "## Material Stablecoin-Looking Unlinked Reserves",
+    "",
+    ...renderMaterialReserveRows(audit.materialUnlinkedReserveSlices),
+    "",
+    "## Active-Target Reserve Symbol Leads",
+    "",
+    ...renderActiveReserveSymbolLeadRows(audit.activeUnlinkedReserveSymbolLeads),
+    "",
+    "## Sub-1% Active-Target Reserve Symbol Leads",
+    "",
+    ...renderActiveReserveSymbolLeadRows(audit.subMaterialActiveUnlinkedReserveSymbolLeads),
+    "",
+    "## Reserve Non-Link Dispositions",
+    "",
+    ...renderReserveDispositionRows(audit.reserveDispositions),
+    "",
+    "## Manual Dependency Review Gaps",
+    "",
+    ...renderManualReviewGapRows(audit.manualDependencyReviewGaps),
+    "",
+    "## Target Disposition Validation",
+    "",
+    ...renderFindingRows(audit.targetDispositionValidationIssues),
+    "",
+    "## Adapter Mapping Review Gaps",
+    "",
+    ...renderFindingRows(audit.adapterMappingReviewGaps),
+    "",
+    "## Highest-Market-Cap Missing Candidates",
+    "",
+    ...renderMissingCandidates(audit.highestMarketCapMissingCandidates),
+    "",
+    "## depType Without coinId Warnings",
+    "",
+    ...renderReserveRows(audit.depTypeWithoutCoinIdWarnings, RESERVE_SLICE_LIMIT),
+    "",
+    "## Manual-Only Dependencies",
+    "",
+    ...renderManualDependencyRows(audit.manualOnlyDependencies),
+    "",
+    "## L2BEAT Deployment Context",
+    "",
+    ...renderL2BeatDeploymentContextRows(audit.l2beatDeploymentContext),
+    "",
+    "## Reserve Slices Missing coinId",
+    "",
+    ...renderReserveRows(audit.reserveSlicesMissingCoinId, RESERVE_SLICE_LIMIT),
+    "",
+    "## Warnings",
+    "",
+    ...(audit.warnings.length > 0 ? audit.warnings.map((warning) => `- ${warning}`) : ["_None._"]),
+    "",
+  ];
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+/**
+ * Zero-tolerance dependency-graph invariants plus the structurally knowable
+ * review, disposition, and registry-integrity counters that must stay at zero.
+ * This is the gate half of the audit (`npm run check:dependency-review-gaps`,
+ * wired into `check:structural`); the backlog counters it deliberately ignores
+ * (`reserveSlicesMissingCoinId`, `unresolvedMaterialReserveSlices`) stay
+ * visible in the manual report.
+ */
+export function evaluateDependencyCoverageStructure(
+  audit: DependencyCoverageAudit,
+  options: { requireAdapterMappingCoverage?: boolean; publishedOnly?: boolean } = {},
+): string[] {
+  const failures: string[] = [];
+  const publicationSkew = options.publishedOnly
+    && audit.summary.publicationComparisonStatus === "checkout-production-skew";
+  if (
+    options.requireAdapterMappingCoverage && !publicationSkew
+    && !audit.summary.adapterMappingReviewCoverageEvaluated
+  ) {
+    failures.push("adapter mapping review coverage was not evaluated");
+  }
+  const publishedCounters: Array<[string, number]> = [
+    ["report-card self-edge", audit.summary.reportCardSelfEdgeCount ?? 0],
+    ["report-card duplicate-edge group", audit.summary.reportCardDuplicateEdgeCount ?? 0],
+    ["report-card strongly connected component", audit.summary.reportCardStronglyConnectedComponentCount ?? 0],
+    ["target disposition validation issue", publicationSkew
+      ? audit.targetDispositionValidationIssues.filter((issue) => (
+          issue.reason === "duplicate-disposition" || issue.reason === "invalid-provenance"
+        )).length
+      : audit.summary.targetDispositionValidationIssueCount],
+    ["adapter mapping review gap", publicationSkew
+      ? audit.adapterMappingReviewGaps.filter((gap) => (
+          gap.reason === "duplicate-review" || gap.reason === "invalid-provenance"
+        )).length
+      : audit.summary.adapterMappingReviewGapCount],
+    ["published kind mismatch", publicationSkew ? 0 : audit.summary.publishedKindMismatchCount ?? 0],
+    ["coinId without depType", audit.summary.coinIdWithoutDepTypeCount],
+    ["published runtime coinId without depType", publicationSkew ? 0 : audit.summary.publishedCoinIdWithoutDepTypeCount ?? 0],
+  ];
+  if (options.publishedOnly && audit.reportCardGraph == null) {
+    failures.push("published dependency graph was not supplied");
+  }
+  const zeroTolerance: Array<[string, number]> = options.publishedOnly ? publishedCounters : [
+    ["static self-edge", audit.summary.staticSelfEdgeCount],
+    ["static duplicate-edge group", audit.summary.staticDuplicateEdgeCount],
+    ["static strongly connected component", audit.summary.staticStronglyConnectedComponentCount],
+    ["report-card self-edge", audit.summary.reportCardSelfEdgeCount ?? 0],
+    ["report-card duplicate-edge group", audit.summary.reportCardDuplicateEdgeCount ?? 0],
+    ["report-card strongly connected component", audit.summary.reportCardStronglyConnectedComponentCount ?? 0],
+    ["overweight effective dependency set", audit.summary.overweightEffectiveSetCount],
+    ["invalid serial dependency weight", audit.summary.invalidSerialDependencyWeightCount],
+    ["unknown dependency target edge", audit.summary.unknownTargetEdgeCount],
+    ["depType without coinId", audit.summary.depTypeWithoutCoinIdWarnings],
+    ["coinId without depType", audit.summary.coinIdWithoutDepTypeCount],
+    ["published runtime coinId without depType", audit.summary.publishedCoinIdWithoutDepTypeCount ?? 0],
+    ["manual dependency review gap", audit.summary.manualDependencyReviewGapCount],
+    ["stale reserve disposition", audit.summary.staleReserveDispositionCount],
+    ["unavailable target disposition gap", audit.summary.unavailableTargetDispositionGapCount],
+    ["target disposition validation issue", audit.summary.targetDispositionValidationIssueCount],
+    ["adapter mapping review gap", audit.summary.adapterMappingReviewGapCount],
+    ["published kind mismatch", audit.summary.publishedKindMismatchCount ?? 0],
+    ["mixed-source authoring guard", audit.summary.mixedSourceGuardCount],
+  ];
+  for (const [label, count] of zeroTolerance) {
+    if (count > 0) failures.push(`${label} invariant failed with ${count} finding${count === 1 ? "" : "s"}`);
+  }
+  return failures;
+}

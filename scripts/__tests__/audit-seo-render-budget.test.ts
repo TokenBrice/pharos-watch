@@ -6,22 +6,24 @@ import {
   blockAnalyticsCollection,
   capturePageSnapshots,
   captureRawSnapshot,
-  classifyRouteSurface,
   collectAuditRows,
-  collectDirectoryHrefs,
-  collectSnapshotFacts,
   createApiFailureReplayHandler,
-  diffInternalHrefs,
-  evaluateSentinels,
   failedRouteRow,
   formatTable,
-  getRouteExpectations,
   installFailureListeners,
-  isReplayEligibleRoute,
   parseSeoRenderBudgetArgs,
+} from "../maintenance/audit-seo-render-budget.mjs";
+import {
+  classifyRouteSurface,
+  collectDirectoryHrefs,
+  collectSnapshotFacts,
+  diffInternalHrefs,
+  evaluateSentinels,
+  getRouteExpectations,
+  isReplayEligibleRoute,
   selectReplayRoutes,
   UNENROLLED_SENTINEL_EXPECTATIONS,
-} from "../maintenance/audit-seo-render-budget.mjs";
+} from "../lib/seo-render-facts.mjs";
 
 const PROFILE_URL = "https://pharos.watch/stablecoin/usdt-tether/";
 

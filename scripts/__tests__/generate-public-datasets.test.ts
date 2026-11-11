@@ -7,6 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
+import {
+  buildTopicSpecs, buildTopicArtifacts,
+  projectScoresLatest, projectDepegHistory,
+  validateDepegHistoryCoverage, validateScoresLatestDisplayProjection,
+} from "../lib/public-dataset-projections";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { V9OpenEvidence } from "@shared/types/safety-score-v9-public";
@@ -23,7 +28,7 @@ beforeEach(() => {
   ));
 });
 
-const { buildPublicDatasetCurrentModule, buildPublicDatasetRedirectBlock, buildTopicSpecs, buildTopicArtifacts, checkTopic, checkAllTopics, projectScoresLatest, projectDepegHistory, validateDepegHistorySourceShard, validateDepegHistoryCoverage, validateScoresLatestDisplayProjection, validateTopicRowFloor } = testExports;
+const { buildPublicDatasetCurrentModule, buildPublicDatasetRedirectBlock, checkTopic, checkAllTopics, validateDepegHistorySourceShard, validateTopicRowFloor } = testExports;
 const DATE = "2026-05-16";
 const AS_OF = "2026-05-16T10:00:00.000Z";
 const SNAPSHOT_URL = "https://api.example.test/api/snapshots/2026-05-16.json";
