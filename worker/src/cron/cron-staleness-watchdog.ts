@@ -334,18 +334,20 @@ function isStale(observation: CronStalenessObservation): boolean {
   return isAgeStale(observation.ageSeconds, observation.thresholdSec);
 }
 
-function buildDependencyRecoveryChecks(observations: readonly CronStalenessObservation[]): Array<{
+interface DependencyRecoveryCheck {
   root: string;
   dependent: string;
   state: "both-stale" | "root-recovered-dependent-stale" | "healthy" | "unknown";
   rootAgeSeconds: number | null;
   dependentAgeSeconds: number | null;
-}> {
+}
+
+function buildDependencyRecoveryChecks(observations: readonly CronStalenessObservation[]): DependencyRecoveryCheck[] {
   const byCacheKey = new Map(
     observations.flatMap((observation) => observation.cacheKey == null ? [] : [[observation.cacheKey, observation] as const]),
   );
   return CRON_JOB_DEFINITIONS.flatMap((definition) =>
-    (definition.operatorRecoveryDependencies ?? []).flatMap(({ rootCacheKey, dependentCacheKey }) => {
+    (definition.operatorRecoveryDependencies ?? []).flatMap(({ rootCacheKey, dependentCacheKey }): DependencyRecoveryCheck[] => {
       const dexLiquidity = byCacheKey.get(rootCacheKey);
       const dews = byCacheKey.get(dependentCacheKey);
       if (!dexLiquidity || !dews) {
