@@ -1,10 +1,31 @@
 import {
   BluechipRatingSchema,
+  BluechipRatingsMapSchema,
   type BluechipRatingsMap,
 } from "@shared/types/market";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { assessBluechipRating } from "@shared/lib/bluechip-freshness";
 import { validatePayloadWithSchema } from "./api-schema";
 import { decodeCachedJson } from "./cache-json";
-import { recordJsonParseFailure } from "./api-cache-read";
+import { createCacheHandler, recordJsonParseFailure } from "./api-cache-read";
+
+export const handleBluechipRatings = createCacheHandler(
+  "bluechip-ratings",
+  "bluechip-ratings",
+  CACHE_PROFILES.slow,
+  API_FRESHNESS_MAX_AGE_SEC.bluechip,
+  {
+    schema: BluechipRatingsMapSchema,
+    malformedMessage: "Cached bluechip-ratings payload is malformed",
+    transform: (payload) => {
+      const now = Math.floor(Date.now() / 1000);
+      return Object.fromEntries(Object.entries(payload as BluechipRatingsMap).map(
+        ([id, rating]) => [id, assessBluechipRating(rating, now)],
+      ));
+    },
+  },
+);
 
 type BluechipCacheFailureReason = "missing-cache" | "json-parse-failed" | "invalid-payload";
 

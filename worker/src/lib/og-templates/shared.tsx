@@ -64,6 +64,7 @@ export function MetricLabel({
  * The on-light Pharos mark — the same art as public/pharos-mark-on-light.svg,
  * inlined because satori cannot fetch a same-origin asset.
  */
+// BEGIN GENERATED: pharos-mark
 export function PharosMark({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 400 400" fill="none">
@@ -80,6 +81,7 @@ export function PharosMark({ size }: { size: number }) {
     </svg>
   );
 }
+// END GENERATED: pharos-mark
 
 export function CardFrame({
   title,

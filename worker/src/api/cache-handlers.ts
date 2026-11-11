@@ -1,10 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { assessBluechipRating } from "@shared/lib/bluechip-freshness";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import {
-  BluechipRatingsMapSchema,
   STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
-  type BluechipRatingsMap,
   StablecoinListResponseSchema,
 } from "@shared/types/market";
 import { createCacheHandler } from "../lib/api-cache-read";
@@ -45,23 +42,6 @@ export const handleStablecoinCharts = createCacheHandler(
         ...point,
         aggregateUniverse: point.aggregateUniverse ?? STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
       }));
-    },
-  },
-);
-
-export const handleBluechipRatings = createCacheHandler(
-  "bluechip-ratings",
-  "bluechip-ratings",
-  CACHE_PROFILES.slow,
-  API_FRESHNESS_MAX_AGE_SEC.bluechip,
-  {
-    schema: BluechipRatingsMapSchema,
-    malformedMessage: "Cached bluechip-ratings payload is malformed",
-    transform: (payload) => {
-      const now = Math.floor(Date.now() / 1000);
-      return Object.fromEntries(Object.entries(payload as BluechipRatingsMap).map(
-        ([id, rating]) => [id, assessBluechipRating(rating, now)],
-      ));
     },
   },
 );
