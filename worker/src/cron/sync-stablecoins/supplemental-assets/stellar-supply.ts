@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NAV_SUPPLY_LEDGER_FRESHNESS } from "@shared/lib/onchain-supply-probe";
 import { STELLAR_HORIZON_API } from "../../../lib/constants";
-import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../../reserve-adapters/request";
+import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../../../lib/json-request";
 
 const STELLAR_RPC = "https://soroban-rpc.mainnet.stellar.gateway.fm";
 const BOUNDED_READ = { maxRetries: 0, maxResponseBytes: 64 * 1024 };

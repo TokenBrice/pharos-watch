@@ -1,3 +1,4 @@
+import { SELECTOR_SNAPSHOT_DAILY_QUOTA } from "@shared/lib/pages-storage";
 import { isSlidingWindowRateLimited } from "../lib/sliding-window-rate-limit";
 import type { D1Database, KVNamespace } from "@shared/types/cloudflare-runtime";
 import {
@@ -96,18 +97,7 @@ async function consumeDailyPostQuota(
 
   try {
     const result = await env.DB.prepare(
-      `INSERT INTO selector_snapshot_daily_quota (
-         quota_date,
-         ip_hash,
-         count,
-         first_seen_at,
-         last_seen_at
-       )
-       VALUES (?, ?, 1, ?, ?)
-       ON CONFLICT(quota_date, ip_hash) DO UPDATE SET
-         count = count + 1,
-         last_seen_at = excluded.last_seen_at
-       WHERE selector_snapshot_daily_quota.count < ?`,
+      SELECTOR_SNAPSHOT_DAILY_QUOTA.consumeSql,
     )
       .bind(bucketDate, ipHash, nowSec, nowSec, POST_DAILY_QUOTA_MAX_PER_IP)
       .run();
@@ -139,9 +129,7 @@ async function refundDailyPostQuota(
   if (!ipHash || !env.DB) return;
   try {
     await env.DB.prepare(
-      `UPDATE selector_snapshot_daily_quota
-       SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END
-       WHERE quota_date = ? AND ip_hash = ?`,
+      SELECTOR_SNAPSHOT_DAILY_QUOTA.refundSql,
     )
       .bind(bucketDate, ipHash)
       .run();

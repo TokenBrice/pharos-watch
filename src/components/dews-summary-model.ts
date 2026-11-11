@@ -6,7 +6,7 @@ import {
   deterministicRadiusOffset,
   distributeAngles,
 } from "@/lib/dews-radar-utils";
-import type { ThreatBand } from "@shared/lib/classification";
+import { DEWS_THREAT_BANDS, type ThreatBand } from "@shared/lib/classification/risk";
 
 
 export const CX = 280;
@@ -18,8 +18,8 @@ export const VB_H = 500;
 export type ElevatedBand = Exclude<ThreatBand, "CALM">;
 export type BandCounts = Record<ThreatBand, number>;
 
-export const RING_BANDS: ElevatedBand[] = ["WATCH", "ALERT", "WARNING", "DANGER"];
-export const LEGEND_BANDS: ThreatBand[] = ["DANGER", "WARNING", "ALERT", "WATCH", "CALM"];
+export const RING_BANDS: ElevatedBand[] = DEWS_THREAT_BANDS.map(({ band }) => band).filter((band) => band !== "CALM");
+export const LEGEND_BANDS: ThreatBand[] = DEWS_THREAT_BANDS.map(({ band }) => band).reverse();
 export const RING_RADII: Record<ElevatedBand, number> = {
   DANGER: 45,
   WARNING: 95,

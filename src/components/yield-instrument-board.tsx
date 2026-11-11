@@ -15,20 +15,20 @@ import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldZoneChip } from "@/components/yield-zone-chip";
 import {
   ApyRangeBar,
-  YieldExpandedDetails,
   YieldPysValue,
   YieldSafetyBadge,
-  isOpportunityDerivedYieldRow,
   YieldSignalsIndicator,
   YieldSourceDetails,
-  deriveYieldRowDisplay,
-} from "@/components/yield-leaderboard-row-parts";
+} from "@/components/yield-row-metrics";
+import { YieldExpandedDetails } from "@/components/yield-leaderboard-row-parts";
+import { deriveYieldRowDisplay, isOpportunityDerivedYieldRow } from "@/lib/yield-row-display";
 import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { cn } from "@/lib/utils";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { trackEvent } from "@/lib/analytics";
-import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
+import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -250,10 +250,7 @@ function YieldInstrumentRowBase({
     () =>
       deriveYieldRowDisplay(
         row,
-        scalingFactor,
-        // Version-gated: pre-8.43 payloads were scored without the re-base.
-        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate, benchmarks?.USD),
-        sourceClock,
+        buildYieldPresentationContext({ methodologyVersion, riskFreeRate, benchmarks, scalingFactor, sourceClock }),
       ),
     [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks, sourceClock],
   );

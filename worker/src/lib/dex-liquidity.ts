@@ -83,6 +83,20 @@ export function dexLiquidityPublishedRowFilter(tableAlias?: string): string {
 export const DEX_LIQUIDITY_PUBLISHED_ROW_FILTER =
   dexLiquidityPublishedRowFilter();
 
+export const DEX_LIQUIDITY_SERVED_GENERATION_SQL = `(
+              SELECT publication_generation_id FROM dex_liquidity
+              WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER})`;
+
+export async function readDexLiquidityFreshnessAge(db: D1Database, now: number): Promise<number | null> {
+  const row = await db.prepare(`SELECT (? - MAX(updated_at)) as age
+    FROM dex_liquidity
+    WHERE liquidity_score > 0
+      AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`)
+    .bind(now)
+    .first<{ age: number | null }>();
+  return row?.age ?? null;
+}
+
 export type DexLiquidityDbMap = Record<string, DexLiquiditySnapshot>;
 
 export type DexLiquidityRowQuarantineReason =

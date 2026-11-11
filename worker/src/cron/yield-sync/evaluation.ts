@@ -59,7 +59,7 @@ import type {
 } from "./types";
 import {
   PYS_SCALING_FACTOR,
-} from "../../lib/constants";
+} from "../../lib/yield-config/policy";
 import {
   isRealSourceSwitch,
 } from "../../lib/yield-history-ownership-handoffs";

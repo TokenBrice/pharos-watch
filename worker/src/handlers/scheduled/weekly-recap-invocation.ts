@@ -7,7 +7,7 @@ import {
   missingTwitterCredentialNames,
 } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
-import { WEEKLY_RECAP_LLM_CONFIG } from "../../lib/constants";
+import { WEEKLY_RECAP_LLM_CONFIG } from "../../cron/digest/llm-config";
 import { resolveDigestLlmConfig } from "../../cron/digest/llm-request";
 
 /**

@@ -6,7 +6,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { errorResponse, jsonResponse, methodNotAllowedResponse } from "../lib/api-response";
 import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/backtest-anchors";
-import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
+import { BACKTEST_LOOKBACK_DAYS } from "../lib/backtest-anchors";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
 import { assembleDewsScoringInput } from "../lib/dews/input-assembly";

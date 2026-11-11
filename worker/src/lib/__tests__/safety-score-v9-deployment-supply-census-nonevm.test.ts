@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { SafetyScoreV9SolanaRpcFetcher } from "../safety-score-v9/supply-observation-primitives";
-import type { MoveFungibleAssetSupplyObservation } from "../../cron/reserve-adapters/token-supply";
+import type { MoveFungibleAssetSupplyObservation } from "../chain-observation";
 import {
   deploymentSupplyCensusChainReadKind,
   deploymentSupplyCensusPinAgeIssue,

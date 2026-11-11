@@ -326,6 +326,9 @@ vi.mock("../lib/db-cache", () => ({
   setCacheIfAbsent: cronMocks.setCacheIfAbsent,
   setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
   shouldSkipFreshCache: vi.fn(async () => false),
+}));
+
+vi.mock("../lib/price-cache", () => ({
   getPriceCache: vi.fn(async () => new Map()),
   savePriceCache: vi.fn(async () => undefined),
 }));

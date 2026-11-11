@@ -1,3 +1,9 @@
+import type { ChainObservationContext } from "../../lib/chain-observation-context";
+import {
+  ADAPTER_USER_AGENT, buildRequestHeaders, fetchBodyOptions, prepareJsonGet, prepareJsonPost,
+  type JsonRetryOptions, type JsonRequestExecutor,
+} from "../../lib/json-request";
+export { ADAPTER_USER_AGENT } from "../../lib/json-request";
 import {
   fetchBinaryWithRetry as fetchBinaryBodyWithRetry,
   fetchTextWithRetry as fetchTextBodyWithRetry,
@@ -15,7 +21,6 @@ import { RESERVE_ADAPTER_MAX_PARALLEL_IO, runAdapterIo } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 
-export const ADAPTER_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 export const HTML_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
 export const NEUTRAL_ADAPTER_HEADERS = {
   "User-Agent": USER_AGENT,
@@ -89,15 +94,6 @@ export async function fetchWithBrowserFallback<T>(
   }
 }
 
-interface JsonRetryOptions {
-  headers?: HeadersInit;
-  maxResponseBytes?: number;
-  maxRetries?: number;
-  /** Observes every actual response, including retries; bypasses caching/coalescing. */
-  onResponse?: (response: Response) => void;
-  redirect?: RequestInit["redirect"];
-}
-
 interface TextRetryOptions {
   headers?: HeadersInit;
   maxResponseBytes?: number;
@@ -114,19 +110,6 @@ interface AdapterFetchResponse<T> {
   body: T;
   finalUrl: string;
   headers: Headers;
-}
-
-function buildJsonParseError(url: string, res: Response, error: unknown): Error {
-  const contentType = res.headers.get("content-type") ?? "unknown";
-  // This message is persisted as the public reserve `sync.lastError`, so it may
-  // name transport identity (status, content type, redacted URL) but never
-  // upstream body text. V8's JSON.parse message quotes the body, so only the
-  // error class is kept.
-  const reason = error instanceof Error && /^[A-Za-z]+$/.test(error.name) ? error.name : "Error";
-  const finalUrl = res.url && res.url !== url ? `; final URL ${redactProviderUrls(res.url)}` : "";
-  return new Error(
-    `JSON parse failed for ${redactProviderUrls(url)} (HTTP ${res.status}, ${contentType}${finalUrl}): ${reason}`,
-  );
 }
 
 function getRequestCache(ctx?: AdapterContext): Map<string, Promise<unknown>> | null {
@@ -212,10 +195,6 @@ function evictRequestCacheLru(
   }
 }
 
-function isHeadersInstance(headers: HeadersInit): headers is Headers {
-  return typeof Headers !== "undefined" && headers instanceof Headers;
-}
-
 function serializeHeadersForCache(headers: Headers): string {
   return JSON.stringify(Array.from(headers.entries()).sort(([left], [right]) =>
     left < right ? -1 : left > right ? 1 : 0));
@@ -224,33 +203,6 @@ function serializeHeadersForCache(headers: Headers): string {
 function serializeRetryOptionsForCache(options?: { maxRetries?: number; maxResponseBytes?: number }): string {
   if (options?.maxRetries == null && options?.maxResponseBytes == null) return "";
   return `:${options?.maxRetries ?? 2}:${options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES}`;
-}
-
-function fetchBodyOptions(
-  timeoutMs: number,
-  maxResponseBytes?: number,
-  validateResponse?: (response: Response) => void,
-) {
-  return {
-    timeoutMs,
-    returnFinalResponse: true as const,
-    throwOnFinalNetworkError: true as const,
-    ...(maxResponseBytes == null ? {} : { maxResponseBytes }),
-    ...(validateResponse == null ? {} : { validateResponse }),
-  };
-}
-
-function buildRequestHeaders(
-  defaults: Record<string, string>,
-  overrides?: HeadersInit,
-): Headers {
-  const merged = new Headers(defaults);
-  if (overrides) {
-    for (const [name, value] of isHeadersInstance(overrides) ? overrides : new Headers(overrides)) {
-      merged.set(name, value);
-    }
-  }
-  return merged;
 }
 
 export function getCachedRequest<T>(
@@ -301,35 +253,12 @@ export async function fetchJsonWithRetry<T>(
   ctx?: AdapterContext,
   options?: JsonRetryOptions,
 ): Promise<T> {
-  const maxRetries = options?.maxRetries ?? 2;
-  const headers = buildRequestHeaders(
-    { Accept: "application/json", "User-Agent": ADAPTER_USER_AGENT }, options?.headers,
-  );
-  const redirect = options?.redirect ?? "follow";
+  const request = prepareJsonGet(url, signal, timeoutMs, options);
+  const { headers, redirect } = request;
   const factory = async (): Promise<CachedRequestValue<T>> => runAdapterIo(ctx, `json-get:${redactProviderUrls(url)}`, async () => {
     const observation = createRequestBodyObserver(ctx, options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES);
-    const result = await fetchTextBodyWithRetry(
-      url,
-      {
-        signal,
-        redirect,
-        headers,
-      },
-      maxRetries,
-      { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse, onBodyRead: observation.onBodyRead },
-    );
-    if (!result) {
-      throw new Error(`Fetch failed for ${redactProviderUrls(url)}`);
-    }
-    if (!result.response.ok) {
-      throw new Error(`HTTP ${result.response.status} for ${redactProviderUrls(url)}`);
-    }
-    const raw = result.body;
-    try {
-      return { value: JSON.parse(raw) as T, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
-    } catch (error) {
-      throw buildJsonParseError(url, result.response, error);
-    }
+    const value = await request.execute<T>(observation.onBodyRead);
+    return { value, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
   });
   if (options?.onResponse) {
     if (ctx?.requestCache) getRequestCacheState(ctx.requestCache).cacheBypassed = true;
@@ -350,37 +279,12 @@ export async function fetchJsonPostWithRetry<T>(
   ctx?: AdapterContext,
   options?: JsonRetryOptions,
 ): Promise<T> {
-  const serializedBody = JSON.stringify(body);
-  const maxRetries = options?.maxRetries ?? 2;
-  const headers = buildRequestHeaders(
-    { "Content-Type": "application/json", "User-Agent": ADAPTER_USER_AGENT }, options?.headers,
-  );
-  const redirect = options?.redirect ?? "follow";
+  const request = prepareJsonPost(url, body, signal, timeoutMs, options);
+  const { headers, redirect, serializedBody } = request;
   const factory = async (): Promise<CachedRequestValue<T>> => runAdapterIo(ctx, `json-post:${redactProviderUrls(url)}`, async () => {
     const observation = createRequestBodyObserver(ctx, options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES);
-    const result = await fetchTextBodyWithRetry(
-      url,
-      {
-        redirect,
-        method: "POST",
-        headers,
-        body: serializedBody,
-        signal,
-      },
-      maxRetries,
-      { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse, onBodyRead: observation.onBodyRead },
-    );
-    if (!result) {
-      throw new Error(`POST fetch failed for ${redactProviderUrls(url)}`);
-    }
-    if (!result.response.ok) {
-      throw new Error(`HTTP ${result.response.status} for POST ${redactProviderUrls(url)}`);
-    }
-    try {
-      return { value: JSON.parse(result.body) as T, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
-    } catch (error) {
-      throw buildJsonParseError(url, result.response, error);
-    }
+    const value = await request.execute<T>(observation.onBodyRead);
+    return { value, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
   });
   if (options?.onResponse) {
     if (ctx?.requestCache) getRequestCacheState(ctx.requestCache).cacheBypassed = true;
@@ -595,4 +499,19 @@ export async function fetchPrimaryHtmlInput(
 ): Promise<string> {
   const input = requireHtmlInput(config.inputs.primary, adapterName);
   return fetchTextWithRetry(input.url, signal, timeoutMs, ctx, options);
+}
+
+export function createAdapterJsonRequestExecutor(ctx?: AdapterContext): JsonRequestExecutor {
+  return {
+    get: <T>(url: string, signal: AbortSignal, timeoutMs: number, options?: JsonRetryOptions) => fetchJsonWithRetry<T>(url, signal, timeoutMs, ctx, options),
+    post: <T>(url: string, body: unknown, signal: AbortSignal, timeoutMs: number, options?: JsonRetryOptions) => fetchJsonPostWithRetry<T>(url, body, signal, timeoutMs, ctx, options),
+  };
+}
+
+export function createAdapterChainObservationContext(ctx?: AdapterContext): ChainObservationContext {
+  return {
+    chainRpcs: ctx?.chainRpcs,
+    dwellirNative: ctx?.dwellirNative,
+    jsonRequestExecutor: createAdapterJsonRequestExecutor(ctx),
+  };
 }

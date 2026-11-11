@@ -6,7 +6,8 @@ import { prepareTelegramDigestAppendices } from "../../telegram/digest/digest-ap
 import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
 import { postDigestTweet } from "../../lib/twitter";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../digest/llm-config";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { generateDailyDigest, resumeDailyDigestDelivery } from "../daily-digest";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { createHash } from "node:crypto";

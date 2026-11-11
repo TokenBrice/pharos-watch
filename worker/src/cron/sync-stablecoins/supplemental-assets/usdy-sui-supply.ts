@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { NAV_SUPPLY_LEDGER_FRESHNESS, USDY_SUI_COIN_TYPE } from "@shared/lib/onchain-supply-probe";
-import { fetchJsonPostWithRetry } from "../../reserve-adapters/request";
+import { fetchJsonPostWithRetry } from "../../../lib/json-request";
 
 const ResponseSchema = z.object({ data: z.object({
   checkpoint: z.object({ timestamp: z.string().datetime() }),

@@ -1,4 +1,5 @@
-import { ECB_ESTR_3M_CSV_URL, USER_AGENT } from "../../lib/constants";
+import { ECB_ESTR_3M_CSV_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,

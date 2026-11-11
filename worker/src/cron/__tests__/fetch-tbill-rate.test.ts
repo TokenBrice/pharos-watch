@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import bcbFixtures from "./fixtures/bcb-selic.json";
-import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
+import { RISK_FREE_RATE_FALLBACK } from "../../lib/yield-config/policy";
 import { mockCircuitOutcomeRecord, mockFetchRetry } from "../../test-helpers/cron";
 import {
   BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET,

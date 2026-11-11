@@ -1,5 +1,6 @@
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
-import { batchExecute, normalizeBlacklistSyncStateKey } from "../../lib/db";
+import { batchExecute } from "../../lib/db";
+import { normalizeBlacklistSyncStateKey } from "../../lib/blacklist-cache-keys";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { throwIfAborted } from "../../lib/abort";
 

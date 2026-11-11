@@ -1,10 +1,9 @@
+import { SAFETY_MAP_LATEST_KEY, safetyMapArchiveKey } from "@shared/lib/safety-map-artifacts";
 import {
   SAFETY_MAP_ARCHIVE_CACHE_CONTROL,
   SAFETY_MAP_ARCHIVE_DATE_PATTERN,
   SAFETY_MAP_IMAGE_HEADERS,
-  SAFETY_MAP_KEY_PREFIX,
   SAFETY_MAP_LATEST_CACHE_CONTROL,
-  SAFETY_MAP_LATEST_KEY,
   getSafetyMapReadMethod,
   readSafetyMapKv,
   safetyMapTextError,
@@ -54,7 +53,7 @@ function resolveKey(request: Request): { key: string; cacheControl: string } | R
   if (!SAFETY_MAP_ARCHIVE_DATE_PATTERN.test(date)) {
     return safetyMapTextError(400, "Invalid date; expected YYYY-MM-DD");
   }
-  return { key: `${SAFETY_MAP_KEY_PREFIX}${date}.png`, cacheControl: SAFETY_MAP_ARCHIVE_CACHE_CONTROL };
+  return { key: safetyMapArchiveKey(date), cacheControl: SAFETY_MAP_ARCHIVE_CACHE_CONTROL };
 }
 
 export const onRequest = async ({ request, env }: SafetyMapContext): Promise<Response> => {

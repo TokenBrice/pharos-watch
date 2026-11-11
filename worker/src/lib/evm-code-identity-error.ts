@@ -1,4 +1,18 @@
-import type { EvmCodeIdentityCheckResult } from "../cron/reserve-adapters/evm-observation-plan";
+type EvmCodeIdentityRejectionCode =
+  | "code-unavailable"
+  | "code-drift"
+  | "implementation-unavailable"
+  | "implementation-drift";
+
+export type EvmCodeIdentityCheckResult =
+  | { status: "accepted" }
+  | {
+      status: "rejected";
+      rejectionCode: EvmCodeIdentityRejectionCode;
+      address: string;
+      kind: "contract" | "implementation" | "storage";
+    };
+
 
 /** Carries only authored rejection classes, never provider response text. */
 export class EvmCodeIdentityError extends Error {

@@ -4,7 +4,8 @@ import { median } from "@shared/lib/stats";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { abortError, throwIfAborted } from "../../lib/abort";
-import { CIRCUIT_SOURCE, DEXSCREENER_MIN_LIQUIDITY_USD } from "../../lib/constants";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../../lib/dex-cron-constants";
 import {
   isProviderCircuitAllowed,
   recoverProviderOnNoCandidates,

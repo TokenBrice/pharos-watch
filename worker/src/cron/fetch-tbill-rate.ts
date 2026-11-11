@@ -7,7 +7,7 @@ import {
 } from "./yield-sync/benchmark-monitor";
 import { prepareCacheUpsert, type CacheEntryWrite } from "../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { FRED_EFFR_CSV_URL, FRED_TBILL_CSV_URL } from "../lib/constants";
+import { FRED_EFFR_CSV_URL, FRED_TBILL_CSV_URL } from "./tbill-sources/shared";
 import { logCronEvent, recordCronFailure, type CronResult } from "../lib/cron-logger";
 import {
   buildRiskFreeRateCachePayload,

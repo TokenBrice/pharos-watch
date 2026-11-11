@@ -12,7 +12,7 @@ import { z } from "zod";
 import {
   getDepegRecoveryThresholdBps,
   getDepegThresholdBps,
-} from "./constants";
+} from "./depeg-threshold-policy";
 import {
   collectDexProtocolCorroborations,
   isExtremeMovePending,

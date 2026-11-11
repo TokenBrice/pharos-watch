@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
+import { YieldSourceIdentity } from "@/components/yield-row-metrics";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { formatYieldApyDelta, YIELD_SOURCE_FACT_LABELS } from "@/lib/yield-presentation";
 import { StablecoinLogo } from "@/components/stablecoin-logo";

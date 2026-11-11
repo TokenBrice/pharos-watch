@@ -18,14 +18,14 @@ import { overlayCanonicalDetail } from "../../../api/stablecoin-detail/price";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as Onchain from "../../reserve-adapters/onchain";
-import type * as TokenSupply from "../../reserve-adapters/token-supply";
+import type * as TokenSupply from "../../../lib/chain-observation";
 import type * as DbCache from "../../../lib/db-cache";
 import type * as NativeAggregate from "../supplemental-assets/onchain-supply";
 
 const mocks = vi.hoisted(() => ({ chart: vi.fn(), onchain: vi.fn(), solana: vi.fn(), nativeAggregate: vi.fn(), getCache: vi.fn(), setCache: vi.fn() }));
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({ ...(await importOriginal<typeof FetchRetry>()), fetchTextWithRetry: mocks.chart }));
 vi.mock("../../reserve-adapters/onchain", async (importOriginal) => ({ ...(await importOriginal<typeof Onchain>()), fetchErc20TotalSupply: mocks.onchain }));
-vi.mock("../../reserve-adapters/token-supply", async (importOriginal) => ({ ...(await importOriginal<typeof TokenSupply>()), fetchSolanaTokenSupply: mocks.solana }));
+vi.mock("../../../lib/chain-observation", async (importOriginal) => ({ ...(await importOriginal<typeof TokenSupply>()), fetchSolanaTokenSupply: mocks.solana }));
 vi.mock("../../../lib/db-cache", async (importOriginal) => ({ ...(await importOriginal<typeof DbCache>()), getCache: mocks.getCache, setCacheIfNewer: mocks.setCache }));
 vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
   ...(await importOriginal<typeof NativeAggregate>()), fetchCuratedAggregateOnChainMcap: mocks.nativeAggregate,

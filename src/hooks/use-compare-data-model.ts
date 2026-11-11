@@ -35,8 +35,8 @@ import {
 import type { ComparisonMeta } from "@/lib/compare-derive";
 import type { StablecoinData } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import type { CompareRadarCohort } from "@/components/radar-chart-v9";
-import type { StaleQuery } from "@/components/stale-data-banner";
+import type { CompareRadarCohort } from "@/lib/compare-data-model-types";
+import type { StaleQuery } from "@/lib/stale-query";
 
 interface UseCompareDataModelOptions {
   selectedIds: string[];

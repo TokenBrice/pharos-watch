@@ -9,7 +9,7 @@ import {
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
-import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/constants";
+import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-threshold-policy";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 

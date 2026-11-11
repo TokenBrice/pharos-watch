@@ -10,8 +10,9 @@ vi.mock("../noble-supply", () => ({ fetchNobleSupply: readers.noble }));
 vi.mock("../usdy-sui-supply", () => ({ fetchUsdySuiSupply: readers.sui }));
 vi.mock("../usdy-aptos-supply", () => ({ fetchUsdyAptosSupply: readers.aptos }));
 vi.mock("../../../reserve-adapters/helpers", () => ({
-  fetchErc20TotalSupply: readers.evm, fetchSolanaTokenSupply: readers.solana, fetchStarknetTotalSupply: readers.starknet,
+  fetchErc20TotalSupply: readers.evm, fetchStarknetTotalSupply: readers.starknet,
 }));
+vi.mock("../../../../lib/chain-observation", () => ({ fetchSolanaTokenSupply: readers.solana }));
 beforeEach(() => {
   vi.clearAllMocks();
   for (const [family, reader] of Object.entries(readers)) reader.mockResolvedValue(family === "noble" ? 10n ** 18n : 10n ** 6n);

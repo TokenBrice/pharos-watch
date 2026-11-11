@@ -24,11 +24,14 @@ vi.mock("../stellar-supply", () => ({ fetchStellarSupply: fetchStellarSupplyMock
 vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchErc20TotalSupply: (...args: unknown[]) => fetchErc20TotalSupplyMock(...args),
   fetchOnchainUint256: (...args: unknown[]) => fetchOnchainUint256Mock(...args),
-  fetchSolanaTokenSupply: (...args: unknown[]) => fetchSolanaTokenSupplyMock(...args),
   fetchStarknetTotalSupply: (...args: unknown[]) => fetchStarknetTotalSupplyMock(...args),
   fetchIcrcLedgerTotalSupply: (...args: unknown[]) => fetchIcrcLedgerTotalSupplyMock(...args),
-  fetchMoveFungibleAssetSupply: (...args: unknown[]) => fetchMoveFungibleAssetSupplyMock(...args),
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
+}));
+
+vi.mock("../../../../lib/chain-observation", () => ({
+  fetchSolanaTokenSupply: (...args: unknown[]) => fetchSolanaTokenSupplyMock(...args),
+  fetchMoveFungibleAssetSupply: (...args: unknown[]) => fetchMoveFungibleAssetSupplyMock(...args),
 }));
 
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, prefersOnChainSupplyMcap } from "../onchain-supply";

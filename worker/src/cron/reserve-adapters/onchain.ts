@@ -1,3 +1,4 @@
+import { createAdapterJsonRequestExecutor } from "./request";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import {
   fetchEtherscanUint256AtBlock,
@@ -500,7 +501,7 @@ export async function fetchTronErc20TotalSupply(
     try {
       const json = provider === "dwellir"
         ? await ctx!.dwellirNative!.readJson<TronTriggerConstantContractResponse>(
-          "tron", "/wallet/triggerconstantcontract", signal, ctx, request,
+          "tron", "/wallet/triggerconstantcontract", signal, createAdapterJsonRequestExecutor(ctx), request,
         )
         : await fetchJsonPostWithRetry<TronTriggerConstantContractResponse>(
           "https://api.trongrid.io/wallet/triggerconstantcontract",

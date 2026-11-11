@@ -1,6 +1,8 @@
 import {
   CBRT_EVDS_FE_URL,
   CBRT_TLREF_SERIES_CODE,
+} from "./shared";
+import {
   USER_AGENT,
 } from "../../lib/constants";
 import {

@@ -1,3 +1,4 @@
+import { SELECTOR_SNAPSHOT_DAILY_QUOTA, SITE_DATA_REQUEST_SAMPLES } from "./pages-storage";
 import { CRON_EVENT_CACHE_PREFIX, BUDGET_SURFACE_CACHE_PREFIX, D1_CAPACITY_CACHE_KEY, D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY } from "./operational-cache-keys";
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "./request-attribution";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "./safety-score-capture-archive";
@@ -80,7 +81,7 @@ export function cronHistoryRetentionPolicies(
     recoveryCheckpoints: policy("worker_scheduled_checkpoints", "updated_at", 14 * DAY, {
       predicate: "state IN ('completed', 'failed', 'platform_abandoned')", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
     }),
-    selectorSnapshotDailyQuota: policy("selector_snapshot_daily_quota", "quota_date", 2 * DAY, { clockFormat: "utc-date" }),
+    selectorSnapshotDailyQuota: policy(SELECTOR_SNAPSHOT_DAILY_QUOTA.table, SELECTOR_SNAPSHOT_DAILY_QUOTA.timestampColumn, 2 * DAY, { clockFormat: "utc-date" }),
     blockTimestampCache: policy("block_timestamp_cache", "updated_at", 14 * DAY),
     mintBurnSupplyReconciliation: policy("mint_burn_supply_reconciliation", "day_ts", MINT_BURN_RECONCILIATION_POLICY.retentionSec, {
       batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
@@ -108,7 +109,7 @@ export function cronHistoryRetentionPolicies(
     apiRequestSourceSamples: policy("api_request_source_samples", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, {
       batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
     }),
-    siteDataRequestSamples: policy("site_data_request_samples", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, {
+    siteDataRequestSamples: policy(SITE_DATA_REQUEST_SAMPLES.table, SITE_DATA_REQUEST_SAMPLES.timestampColumn, REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, {
       batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
     }),
   };

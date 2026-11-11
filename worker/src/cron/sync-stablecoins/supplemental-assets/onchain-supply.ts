@@ -45,12 +45,11 @@ import {
 import {
   fetchErc20TotalSupply,
   fetchIcrcLedgerTotalSupply,
-  fetchMoveFungibleAssetSupply,
   fetchOnchainUint256,
-  fetchSolanaTokenSupply,
   fetchStarknetTotalSupply,
   probeTrackedTokenSupply,
 } from "../../reserve-adapters/helpers";
+import { fetchMoveFungibleAssetSupply, fetchSolanaTokenSupply } from "../../../lib/chain-observation";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { isSupplyObservationWithinRestoreCeiling, rescaleChainPartition } from "../shared";

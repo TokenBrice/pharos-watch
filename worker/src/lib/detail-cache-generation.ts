@@ -2,6 +2,13 @@ import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { logWorkerEvent } from "./structured-log";
 
+/**
+ * Cache-table key prefix for per-coin detail cache write-failure markers.
+ * Written by the detail handler on skipped/failed writes; scanned by the
+ * cron staleness watchdog, which alerts on fresh markers.
+ */
+export const DETAIL_WRITE_FAILURE_KEY_PREFIX = "detail-write-failure:";
+
 export interface DetailCacheGenerationClaim {
   stablecoinId: string;
   generation: number;

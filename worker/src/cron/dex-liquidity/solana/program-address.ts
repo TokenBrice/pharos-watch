@@ -1,4 +1,4 @@
-import { solanaPublicKey } from "../../reserve-adapters/solana";
+import { solanaPublicKey } from "../../../lib/solana-observation";
 
 export function publicKeyBytes(address: string): Uint8Array {
   const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";

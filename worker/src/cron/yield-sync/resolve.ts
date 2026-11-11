@@ -50,7 +50,7 @@ import {
   MIN_LENDING_POOL_TVL_USD,
   MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   MIN_SAFETY_SCORE_FOR_YIELD,
-} from "../../lib/constants";
+} from "../../lib/yield-config/policy";
 import {
   findBestLendingPool,
   isBlockedYieldOpportunitySource,

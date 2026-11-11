@@ -1,7 +1,7 @@
 import {
   ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
   FRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
-} from "../../lib/constants";
+} from "./shared";
 import {
   fetchAndParseBenchmark,
   type BenchmarkResponseDiagnostic,

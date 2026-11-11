@@ -4,7 +4,8 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { programAddress, publicKeyBytes } from "../dex-liquidity/solana/program-address";
 import { buildCoverageShortfallWarnings, notApplicableFreshnessMetadata, reserveInfoWarning } from "./helpers";
-import { fetchSolanaAccountsWithPrograms, readSolanaMint, scaledSolanaRawAmount, solanaPublicKey, SOLANA_TOKEN_2022_PROGRAM } from "./solana";
+import { fetchSolanaAccountsWithPrograms } from "./solana";
+import { readSolanaMint, scaledSolanaRawAmount, solanaPublicKey, SOLANA_TOKEN_2022_PROGRAM } from "../../lib/solana-observation";
 import type { AdapterContext, AdapterResult } from "./types";
 
 const LOADER = "BPFLoaderUpgradeab1e11111111111111111111111";

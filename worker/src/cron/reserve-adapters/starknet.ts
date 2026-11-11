@@ -1,3 +1,4 @@
+import { createAdapterJsonRequestExecutor } from "./request";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { throwIfAborted } from "../../lib/abort";
 import type { AdapterContext } from "./types";
@@ -76,7 +77,7 @@ export async function fetchStarknetTotalSupply(options: {
         };
       const body = rpcUrl === dwellirUrl && options.ctx?.dwellirNative
         ? await options.ctx!.dwellirNative!.readJson<StarknetCallResponse>(
-          "starknet", "", options.signal, options.ctx, request, options.timeoutMs,
+          "starknet", "", options.signal, createAdapterJsonRequestExecutor(options.ctx), request, options.timeoutMs,
         )
         : await fetchJsonPostWithRetry<StarknetCallResponse>(
           rpcUrl, request, options.signal, options.timeoutMs ?? 10_000, options.ctx,

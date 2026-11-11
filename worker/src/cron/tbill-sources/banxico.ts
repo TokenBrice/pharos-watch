@@ -1,4 +1,5 @@
-import { BANXICO_CETES_28D_URL, USER_AGENT } from "../../lib/constants";
+import { BANXICO_CETES_28D_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,

@@ -10,7 +10,7 @@ import type {
 } from "./types";
 import type { DexVolumeAvailabilityRecord } from "@shared/types/market";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
 import { clamp } from "@shared/lib/math";
 import { median, weightedMedian } from "@shared/lib/stats";
 import {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { NAV_SUPPLY_LEDGER_FRESHNESS } from "@shared/lib/onchain-supply-probe";
-import { fetchJsonWithRetry } from "../../reserve-adapters/request";
+import { fetchJsonWithRetry } from "../../../lib/json-request";
 
 const BOUNDED_READ = { maxRetries: 0, maxResponseBytes: 16 * 1024 };
 const StatusSchema = z.object({ height: z.string().regex(/^[1-9]\d{0,19}$/), timestamp: z.string().datetime() });

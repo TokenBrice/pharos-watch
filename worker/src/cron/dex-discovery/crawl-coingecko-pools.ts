@@ -7,7 +7,8 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
-import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
 import {
   cgPoolVolume24hReading,
   CG_ONCHAIN_MIN_RESERVE_USD,

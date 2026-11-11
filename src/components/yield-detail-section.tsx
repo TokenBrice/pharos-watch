@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
-import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
+import { YieldSourceIdentity } from "@/components/yield-row-metrics";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { resolveYieldScoreQualification } from "@/lib/yield-constants";
 import { YIELD_SOURCE_CONFIDENCE_STYLES } from "@/lib/yield-source-risk";

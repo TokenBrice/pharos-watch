@@ -44,9 +44,12 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
   },
   fetchErc20TotalSupply: (input: { chain: string }, _contract: string, signal: AbortSignal,
     context?: { chainRpcs: Map<string, ChainRpcConfig> }) => mocks.read(input.chain, undefined, signal, context),
-  fetchSolanaTokenSupply: (_contract: string, signal: AbortSignal) => mocks.read("solana", undefined, signal),
   fetchOnchainUint256: (...args: unknown[]) => mocks.escrow(...args),
-  fetchIcrcLedgerTotalSupply: vi.fn(), fetchMoveFungibleAssetSupply: vi.fn(), fetchStarknetTotalSupply: vi.fn(),
+  fetchIcrcLedgerTotalSupply: vi.fn(), fetchStarknetTotalSupply: vi.fn(),
+}));
+vi.mock("../../../../lib/chain-observation", () => ({
+  fetchSolanaTokenSupply: (_contract: string, signal: AbortSignal) => mocks.read("solana", undefined, signal),
+  fetchMoveFungibleAssetSupply: vi.fn(),
 }));
 vi.mock("../../../../lib/evm-rpc", async (importOriginal) => ({
   ...(await importOriginal<typeof EvmRpc>()),

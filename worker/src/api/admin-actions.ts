@@ -15,7 +15,7 @@ import {
   readDigestLlmProfiles,
 } from "../lib/digest-llm-profile";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
-import { normalizeBlacklistSyncStateKey } from "../lib/db";
+import { normalizeBlacklistSyncStateKey } from "../lib/blacklist-cache-keys";
 
 /**
  * Cache key used by `digest-trigger-poll` to decide whether to run the digest

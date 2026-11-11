@@ -3,6 +3,7 @@
  * Keeping these separate makes them independently testable.
  */
 
+import type { CompareRadarCohort } from "@/lib/compare-data-model-types";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
   BluechipRating,
@@ -32,7 +33,6 @@ import {
   resolvePressureUnavailableNote,
 } from "@shared/lib/mint-burn-coin-helpers";
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
-import type { CompareRadarCohort } from "@/components/radar-chart-v9";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
 

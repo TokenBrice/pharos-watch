@@ -1,5 +1,5 @@
 import { SolanaDexBankCaptureSchema, type SolanaDexBankCapture, type SolanaDexBankCaptureSink } from "@shared/types/solana-dex-bank";
-import type { SolanaAccount } from "../../reserve-adapters/solana";
+import type { SolanaAccount } from "../../../lib/solana-observation";
 
 /** Bounded final-bank bytes for native diagnostic authority and offline proof packets. */
 export async function captureSolanaDexBank(input: {

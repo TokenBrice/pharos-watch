@@ -1,3 +1,4 @@
+import { SITE_DATA_REQUEST_SAMPLES } from "@shared/lib/pages-storage";
 import { REQUEST_SOURCE_MEASUREMENT_VERSION } from "@pharos/contracts/request-source";
 import { jsonResponse } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";
@@ -13,6 +14,7 @@ import { runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 // stores contain disjoint writer contributions, including during same-minute rollout.
 // D1 allows at most five SELECT terms per compound. Expand the seven output
 // dimensions through VALUES, not a second compound SELECT with seven UNION arms.
+// SAFETY: The interpolated Pages projection is static SQL from its shared storage owner.
 const SOURCE_EVENTS_SQL = `WITH raw_events AS (
   SELECT bucket_start, route_key, route_path, lane, consumer_class, '' AS delivery_path,
     '' AS authentication_class, 1 AS inverse_rate, 1 AS legacy, request_count AS observed_count
@@ -25,8 +27,7 @@ const SOURCE_EVENTS_SQL = `WITH raw_events AS (
   SELECT bucket_start, route_key, route_path, 'pages', 'site', delivery_path, '', 1, 1, request_count
   FROM site_data_request_stats WHERE bucket_start >= ?1 AND bucket_start < ?2
   UNION ALL
-  SELECT bucket_start, route_key, route_path, 'pages', 'site', delivery_path, '', sample_inverse_rate, 0, sample_count
-  FROM site_data_request_samples WHERE bucket_start >= ?1 AND bucket_start < ?2
+  ${SITE_DATA_REQUEST_SAMPLES.sourceEventsSql}
 ), events AS (
   SELECT CAST(bucket_start / ?3 AS INTEGER) * ?3 AS bucket_start,
     route_key, route_path, lane, consumer_class, delivery_path, authentication_class,

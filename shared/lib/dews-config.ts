@@ -1,3 +1,7 @@
+import { DEWS_THREAT_BANDS } from "./classification/risk";
+
+export { DEWS_THREAT_BANDS };
+
 export const DEWS_SIGNAL_WEIGHTS = {
   supply: 0.25,
   pool: 0.2,
@@ -37,14 +41,6 @@ export const DEWS_SIGNAL_DESCRIPTIONS: Record<DewsSignalKey, string> = {
   flow: "redemption surge vs minting from on-chain Transfer event data; requires at least 7 baseline days and a fresh 24-hour mint/burn row, with fresh zero-volume rows contributing zero flow stress",
   yield: "warning-signal and structured source-risk accumulation from yield spikes, divergence, TVL outflows, negative trends, reward-heavy regimes, thin/stale sources, source switches, and source-risk rank drivers",
 };
-
-export const DEWS_THREAT_BANDS = [
-  { upper: 15, band: "CALM" },
-  { upper: 35, band: "WATCH" },
-  { upper: 55, band: "ALERT" },
-  { upper: 75, band: "WARNING" },
-  { upper: 100, band: "DANGER" },
-] as const;
 
 /** Evidence-quality gate shared by scoring and the public methodology. */
 export const WATCH_MAX_SCORE = DEWS_THREAT_BANDS[1].upper;

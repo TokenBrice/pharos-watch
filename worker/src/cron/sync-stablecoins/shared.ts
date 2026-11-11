@@ -13,7 +13,8 @@ import {
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
   SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
 } from "@shared/lib/supply";
-import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
+import { setCacheIfNewer, getCache } from "../../lib/db-cache";
+import { getPriceCache, type PriceCacheEntry } from "../../lib/price-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
 import { isCommodityPeg } from "@shared/lib/filter-tags";

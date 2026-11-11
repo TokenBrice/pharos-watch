@@ -2,7 +2,8 @@ import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchSolanaAccounts, solanaPublicKey, type SolanaAccount } from "./solana";
+import { fetchSolanaAccounts } from "./solana";
+import { solanaPublicKey, type SolanaAccount } from "../../lib/solana-observation";
 import { fetchDefiLlamaPrices, notApplicableFreshnessMetadata, reserveDegradedWarning, slicesFromValues } from "./helpers";
 
 const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";

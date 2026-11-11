@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { DatabaseSync } from "node:sqlite";
-import type * as SolanaModule from "../../reserve-adapters/solana";
+import type * as SolanaModule from "../../../lib/chain-observation";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getDexExecutionCapabilityRegistration, isDexExecutionProfileAdmittedForScoring } from "@shared/lib/p4-exit-route-capability-policy";
 import fixture from "./fixtures/whirlpool-slot-449058549.json";
@@ -10,7 +10,7 @@ import pinned from "./fixtures/solana-clmm-wave4-pinned.json";
 import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes } from "../solana/whirlpool-shadow";
 import { buildRegisteredDexExecutionTarget } from "../execution-target-registry";
 import { makeDexExecutionTargetFactoryInput } from "../../../test-helpers/__shared/dex-execution-target";
-import { fetchSolanaAccountBatch, type SolanaAccount } from "../../reserve-adapters/solana";
+import { fetchSolanaAccountBatch, type SolanaAccount } from "../../../lib/chain-observation";
 import { decodeWhirlpool } from "../solana/whirlpool-quote";
 import * as WhirlpoolQuote from "../solana/whirlpool-quote";
 import type { SolanaDexBankCapture } from "@shared/types/solana-dex-bank";
@@ -18,7 +18,7 @@ import { loadCurrentNativeDexGeneration } from "../../measured-execution/native-
 import { loadNativeDexExecutionDiagnostic } from "../../measured-execution/join";
 
 vi.mock("../orchestrator-phases/lookups", () => ({ loadTrackedStablecoinMaps: vi.fn(async () => ({ stablecoinPriceById: new Map([["usx-solstice", 1], ["jupusd-jupiter", 1], ["usdc-circle", 1]]) })) }));
-vi.mock("../../reserve-adapters/solana", async (original) => ({ ...await original<typeof SolanaModule>(), fetchSolanaAccountBatch: vi.fn() }));
+vi.mock("../../../lib/chain-observation", async (original) => ({ ...await original<typeof SolanaModule>(), fetchSolanaAccountBatch: vi.fn() }));
 const fixtures = createLatestSchemaFixtureTracker();
 const batch = vi.mocked(fetchSolanaAccountBatch);
 const poolId = `solana:${fixture.poolAddress}`;

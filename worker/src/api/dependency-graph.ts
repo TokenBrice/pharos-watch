@@ -1,5 +1,6 @@
 import { DEPENDENCY_GRAPH_RESPONSE_SCHEMA_VERSION, projectDependencyGraph } from "@shared/types/dependency-graph";
-import { errorResponse, jsonSafetyScoreSnapshotResponse } from "../lib/api-response";
+import { errorResponse } from "../lib/api-response";
+import { jsonSafetyScoreSnapshotResponse } from "../lib/safety-score-v9/http-response";
 import { loadActiveSafetyScoreCohort } from "../lib/safety-score-active-source";
 
 /** Free graph projection of the accepted V9 publication, including held snapshots. */

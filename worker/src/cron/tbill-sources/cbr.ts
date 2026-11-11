@@ -1,4 +1,5 @@
-import { CBR_DAILY_INFO_SOAP_URL, USER_AGENT } from "../../lib/constants";
+import { CBR_DAILY_INFO_SOAP_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import {
   addDays,
   fetchAndParseBenchmark,

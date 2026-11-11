@@ -1,4 +1,5 @@
-import { BOC_CORRA_URL, USER_AGENT } from "../../lib/constants";
+import { BOC_CORRA_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import { fetchAndParseBenchmark, isValidBenchmarkRate, parseRate } from "./shared";
 
 /**

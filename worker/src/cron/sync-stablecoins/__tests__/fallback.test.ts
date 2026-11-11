@@ -16,7 +16,7 @@ import { NAV_PARENT_ONLY_GECKO_IDS } from "../supplemental-assets";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PreviousStablecoinsLoadResult } from "../shared";
 import { normalizeStablecoinsPayload } from "../shared";
-import { MIN_VALID_ASSET_COUNT } from "../../../lib/constants";
+import { MIN_VALID_ASSET_COUNT } from "../../../lib/stablecoin-intake-policy";
 import * as structuredLog from "../../../lib/structured-log";
 import * as onchainSupply from "../supplemental-assets/onchain-supply";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";

@@ -27,7 +27,7 @@ import {
 import { getDexAggregateObservedAt, getDexPriceSourceEntries, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { validatePricingSourceFreshness } from "../../pricing-source-freshness";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../dex-cron-constants";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";

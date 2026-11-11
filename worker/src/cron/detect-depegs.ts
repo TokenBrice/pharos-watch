@@ -8,7 +8,7 @@ import { throwIfAborted } from "../lib/abort";
 import type { NativePegQuoteSession } from "../lib/native-peg-quotes";
 import { decideDepegAsset, emitDepegDiagnostics } from "./depeg-detection/decision-engine";
 import { hydrateDepegDetection } from "./depeg-detection/hydration";
-import { MAX_OPEN_DEPEG_EVENTS } from "../lib/constants";
+import { MAX_OPEN_DEPEG_EVENTS } from "../lib/depeg-threshold-policy";
 import { persistDepegCommands } from "./depeg-detection/persistence";
 import { logOpenDepegEventLimitReached } from "../lib/depeg-helpers";
 import {

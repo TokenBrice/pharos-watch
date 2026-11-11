@@ -7,6 +7,8 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { executeAtomicBatch } from "./db";
 
 export const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
+export const DEWS_SERVED_GENERATION_SQL = `(
+              SELECT 'dews:' || updated_at FROM cache WHERE key = 'dews:published-generation')`;
 const DEWS_PUBLICATION_POINTER_SOURCE = "compute-dews";
 const DEWS_PUBLICATION_POINTER_STATUS = "published";
 const DEWS_PUBLICATION_POINTER_COVERAGE_VERSION = 2;
@@ -200,6 +202,19 @@ export async function readDewsPublishedGenerationResult(
   } catch (error) {
     return { status: "read-failed", error: toErrorMessage(error) };
   }
+}
+
+export async function readDewsFreshnessAge(db: D1Database, now: number, readClock: number): Promise<number> {
+  const published = await readDewsPublishedGenerationResult(db, readClock);
+  if (published.status !== "ok") {
+    const detail = published.status === "read-failed"
+      ? published.error
+      : published.status === "invalid-pointer"
+        ? published.reason
+        : "publication pointer is missing";
+    throw new Error(`DEWS published generation unavailable (${published.status}): ${detail}`);
+  }
+  return now - published.computedAt;
 }
 
 /**

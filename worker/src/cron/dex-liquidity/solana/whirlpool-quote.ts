@@ -1,6 +1,6 @@
 import { ceilDiv, q64TokenDelta as delta, tickSqrtPrice } from "../amm-math";
-import { fetchSolanaAccountBatch, solanaPublicKey, type SolanaAccount } from "../../reserve-adapters/solana";
-import type { AdapterContext } from "../../reserve-adapters/types";
+import { fetchSolanaAccountBatch, solanaPublicKey, type SolanaAccount } from "../../../lib/chain-observation";
+import type { ChainObservationOptions as AdapterContext } from "../../../lib/chain-observation-context";
 import { programAddress, publicKeyBytes } from "./program-address";
 import type { SolanaDexBankCaptureSink } from "@shared/types/solana-dex-bank";
 import { captureSolanaDexBank } from "./bank-capture";

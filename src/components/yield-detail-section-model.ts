@@ -5,12 +5,11 @@ import { useYieldRankingsCoin } from "@/hooks/api-hooks";
 import type { ApiMeta } from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
-  resolveYieldDisplayRebaseReferenceRate,
   getYieldBenchmarkGapReferenceText,
   resolveYieldRowBenchmark,
 } from "@/lib/yield-benchmark";
 import { getYieldDataSourceMeta } from "@/lib/yield-data-source";
-import { computePysBreakdown } from "@/lib/yield-constants";
+import { buildYieldPresentationContext, buildYieldPysBreakdown } from "@/lib/yield-presentation-context";
 import {
   buildYieldSourceExplorerModel,
   getYieldRankingSourceClockInputs,
@@ -22,7 +21,6 @@ import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-so
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES, getPysColor } from "@shared/lib/classification";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
@@ -121,29 +119,16 @@ export function buildYieldDetailModel(
   }
   const investmentWarnings = selectInvestmentWarningSignals(ranking.warningSignals);
 
-  const pysBreakdown = {
-    ...computePysBreakdown(
-      ranking.apy30d,
-      ranking.safetyScore,
-      ranking.yieldStability,
-      ranking.benchmarkRate,
-      ranking.sourceRisk?.sourceRiskPenalty ?? null,
-      // v8.43-gated: a payload scored before the re-base release (still
-      // servable during a deploy window) was published without one, so the
-      // display must not synthesize a re-base line the badge never used.
-      resolveYieldDisplayRebaseReferenceRate(
-        rankingResponse.methodology?.version,
-        rankingResponse.riskFreeRate,
-        rankingResponse.benchmarks?.USD,
-      ),
-      // Same resolution the scoring/read paths use: USD-benchmarked rows
-      // (including USD_EFFR) take no v8.43 re-base.
-      ranking.benchmarkCurrency ??
-        (ranking.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[ranking.benchmarkKey] : null) ??
-        null,
-    ),
-    scalingFactor: rankingResponse.scalingFactor,
-  };
+  const pysBreakdown = buildYieldPysBreakdown(
+    ranking,
+    buildYieldPresentationContext({
+      methodologyVersion: rankingResponse.methodology?.version,
+      riskFreeRate: rankingResponse.riskFreeRate,
+      benchmarks: rankingResponse.benchmarks,
+      scalingFactor: rankingResponse.scalingFactor,
+      sourceClock,
+    }),
+  );
   const resolvedBenchmark = resolveYieldRowBenchmark(ranking, rankingResponse.benchmarks, rankingResponse.riskFreeRate);
   const sourceExplorer = buildYieldSourceExplorerModel(ranking, sourceClock);
   const availableSourceKeys = new Set(sourceExplorer.historySources.map((source) => source.sourceKey));

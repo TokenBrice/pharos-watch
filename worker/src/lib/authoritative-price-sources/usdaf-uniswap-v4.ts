@@ -1,5 +1,6 @@
 import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector } from "viem/utils";
-import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../constants";
+import { CIRCUIT_SOURCE } from "../constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../dex-cron-constants";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";

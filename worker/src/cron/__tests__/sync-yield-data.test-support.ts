@@ -105,6 +105,13 @@ vi.mock("../../lib/db", async (importOriginal) => {
   return {
     ...orig,
     batchExecute: vi.fn(async () => {}),
+  };
+});
+
+vi.mock("../../lib/supply-history-db", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../../lib/supply-history-db")>();
+  return {
+    ...orig,
     getFirstSeenDates: vi.fn(async () => new Map()),
   };
 });
@@ -185,6 +192,9 @@ vi.mock("../../lib/constants", () => ({
     DL_COINS: "defillama-coins",
     CG_PRICES: "coingecko-prices",
   },
+}));
+
+vi.mock("../../lib/yield-config/policy", () => ({
   RISK_FREE_RATE_FALLBACK: 4.5,
   PYS_SCALING_FACTOR: 1.0,
   DEFAULT_SAFETY_SCORE: 50,

@@ -4,7 +4,7 @@ import {
   isTronJsonRpcRead, tronRpcQuantity, tronRpcResponseByteLimit, TRON_RPC_MAX_BLOCK_SPAN,
   TRON_SOLID_HEAD_MAX_AGE_MS, TRON_SOLID_HEAD_MAX_FUTURE_MS,
 } from "@shared/lib/tron-jsonrpc";
-import { fetchJsonPostWithRetry } from "../cron/reserve-adapters/request";
+import { jsonRequestExecutor } from "./json-request";
 import type { DwellirNativeCapability } from "./dwellir-native";
 import type { RateLimitedFetch, SubrequestBudget } from "./evm-logs";
 import { isResponseBodyTooLargeError } from "./response-body";
@@ -111,8 +111,7 @@ export class TronJsonRpcReader {
           attempted = true;
           const result = provider === "dwellir"
             ? await options.dwellirNative!.readJson<unknown>("tron", path, options.signal, undefined, body, timeoutMs)
-            : await fetchJsonPostWithRetry<unknown>(`https://api.trongrid.io${path}`, body, options.signal, timeoutMs,
-              undefined, {
+            : await jsonRequestExecutor.post<unknown>(`https://api.trongrid.io${path}`, body, options.signal, timeoutMs, {
                 headers: options.trongridApiKey ? { "TRON-PRO-API-KEY": options.trongridApiKey } : {},
                 redirect: "manual", maxRetries: 0,
                 maxResponseBytes: tronRpcResponseByteLimit(path, body),

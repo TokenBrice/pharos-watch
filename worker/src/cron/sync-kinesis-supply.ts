@@ -5,13 +5,15 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import {
   USER_AGENT,
   CIRCUIT_SOURCE,
-  KINESIS_KAU_HORIZON,
-  KINESIS_KAG_HORIZON,
 } from "../lib/constants";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
+
+const KINESIS_KAU_HORIZON = "https://kau-mainnet.kinesisgroup.io";
+const KINESIS_KAG_HORIZON = "https://kag-mainnet.kinesisgroup.io";
+
 
 interface KinesisChainConfig {
   stablecoinId: string;

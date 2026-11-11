@@ -574,6 +574,21 @@ export async function loadFxRateState(db: D1Database): Promise<FxRateState | nul
   return hydrateFxRateState(rows.get(FX_RATES_KEY) ?? null, rows.get(FX_RATES_META_KEY) ?? null);
 }
 
+export function hydrateFxRateStateFromCacheRows(
+  cacheRowsByKey: ReadonlyMap<string, { value?: string | null; updated_at: number }>,
+): FxRateState | null {
+  return hydrateFxRateState(
+    (() => {
+      const row = cacheRowsByKey.get(FX_RATES_KEY);
+      return row?.value != null ? { value: row.value, updatedAt: row.updated_at } : null;
+    })(),
+    (() => {
+      const row = cacheRowsByKey.get(FX_RATES_META_KEY);
+      return row?.value != null ? { value: row.value, updatedAt: row.updated_at } : null;
+    })(),
+  );
+}
+
 export function hydrateFxRateState(
   ratesCache: CacheRow | null,
   metaCache: CacheRow | null,

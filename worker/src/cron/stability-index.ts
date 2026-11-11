@@ -8,7 +8,7 @@ import { round1 } from "@shared/lib/math";
 import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { getPriceCache } from "../lib/db-cache";
+import { getPriceCache } from "../lib/price-cache";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";

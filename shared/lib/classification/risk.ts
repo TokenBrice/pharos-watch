@@ -1,43 +1,45 @@
-export type ThreatBand = "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
+export const DEWS_THREAT_BANDS = [
+  { upper: 15, band: "CALM" },
+  { upper: 35, band: "WATCH" },
+  { upper: 55, band: "ALERT" },
+  { upper: 75, band: "WARNING" },
+  { upper: 100, band: "DANGER" },
+] as const;
+
+export type ThreatBand = (typeof DEWS_THREAT_BANDS)[number]["band"];
 
 const THREAT_BAND_DESCRIPTORS = {
   CALM: {
-    order: 0,
     label: "Calm",
     cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
     textCls: "text-green-700 dark:text-green-400",
     hex: "#22c55e",
   },
   WATCH: {
-    order: 1,
     label: "Watch",
     cls: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
     textCls: "text-teal-700 dark:text-teal-400",
     hex: "#14b8a6",
   },
   ALERT: {
-    order: 2,
     label: "Alert",
     cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
     textCls: "text-yellow-700 dark:text-yellow-400",
     hex: "#eab308",
   },
   WARNING: {
-    order: 3,
     label: "Warning",
     cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
     textCls: "text-orange-700 dark:text-orange-400",
     hex: "#f97316",
   },
   DANGER: {
-    order: 4,
     label: "Danger",
     cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
     textCls: "text-red-700 dark:text-red-400",
     hex: "#ef4444",
   },
 } as const satisfies Record<ThreatBand, {
-  order: number;
   label: string;
   cls: string;
   textCls: string;
@@ -46,12 +48,13 @@ const THREAT_BAND_DESCRIPTORS = {
 
 function projectThreatBands<Value>(project: (descriptor: (typeof THREAT_BAND_DESCRIPTORS)[ThreatBand]) => Value) {
   return Object.fromEntries(
-    (Object.entries(THREAT_BAND_DESCRIPTORS) as [ThreatBand, (typeof THREAT_BAND_DESCRIPTORS)[ThreatBand]][])
-      .map(([band, descriptor]) => [band, project(descriptor)]),
+    DEWS_THREAT_BANDS.map(({ band }) => [band, project(THREAT_BAND_DESCRIPTORS[band])]),
   ) as Record<ThreatBand, Value>;
 }
 
-export const THREAT_BAND_ORDER = projectThreatBands((descriptor) => descriptor.order);
+export const THREAT_BAND_ORDER = Object.fromEntries(
+  DEWS_THREAT_BANDS.map(({ band }, index) => [band, index]),
+) as Record<ThreatBand, number>;
 
 const DEWS_ALERT_BANDS = ["ALERT", "WARNING", "DANGER"] as const satisfies readonly ThreatBand[];
 

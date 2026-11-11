@@ -11,7 +11,7 @@ import {
   stagedPoolConfidence,
   stagedPoolMaturityDays,
 } from "../dex-discovery/types";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
 import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-api-pool-shaping";
 import { QUALITY_MULTIPLIERS, STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
 import { coerceFiniteNumber } from "@shared/lib/type-guards";

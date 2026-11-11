@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/constants";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/curve-onchain";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
 import { fetchHiveNativeHbdPrice } from "../../lib/hive-market-price";

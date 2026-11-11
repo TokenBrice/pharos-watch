@@ -28,7 +28,7 @@ import { handleReportCardsV9 } from "../report-cards-v9";
 import { getRouteMatch } from "../../routes/registry";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";
 import * as publicationCodec from "../../lib/safety-score-v9/publication-codec";
-import { safetyScoreSnapshotHeaders, withRepresentationEtag } from "../../lib/api-response";
+import { safetyScoreSnapshotHeaders, withSafetyScoreRepresentationEtag as withRepresentationEtag } from "../../lib/safety-score-v9/http-response";
 import { isFreshnessWarningHeader } from "@shared/lib/warning-headers";
 import { sha256HexFromUtf8Chunks } from "../../lib/hash";
 
@@ -386,6 +386,58 @@ describe("materialized V9 response", () => {
         attemptedAtSec: updatedAt,
       },
     }, publication.safetyScoreIdentity.publicationGenerationId);
+
+    const pinnedHeaders = {
+      "current": {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=300, max-age=60",
+        "X-Safety-Score-Status": "current",
+        "X-Safety-Score-Generation": "generation-1",
+        "X-Safety-Score-Freshness-Budget": "7200",
+        "X-Data-Age": "5",
+        "X-Data-Updated-At": "1799999995",
+        "Date": "Fri, 15 Jan 2027 08:00:00 GMT"
+      },
+      "held": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Safety-Score-Status": "held",
+        "X-Safety-Score-Generation": "generation-1",
+        "X-Safety-Score-Freshness-Budget": "7200",
+        "X-Data-Age": "5",
+        "X-Data-Updated-At": "1799999995"
+      },
+      "stale": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Safety-Score-Status": "stale",
+        "X-Safety-Score-Generation": "generation-1",
+        "X-Safety-Score-Freshness-Budget": "7200",
+        "X-Data-Age": "7201",
+        "X-Data-Updated-At": "1799992799",
+        "Warning": "110 - \"Response is stale (7201s old, fresh budget 7200s)\"",
+        "X-Data-Freshness": "stale",
+        "X-Data-Freshness-Reason": "safety-score-publication-age"
+      },
+      "future": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Safety-Score-Status": "stale",
+        "X-Safety-Score-Generation": "generation-1",
+        "X-Safety-Score-Freshness-Budget": "7200",
+        "X-Data-Age": "0",
+        "X-Data-Updated-At": "1800000120",
+        "Warning": "110 - \"Safety Score publication is future-dated (consumer budget 7200s)\"",
+        "X-Data-Freshness": "stale",
+        "X-Data-Freshness-Reason": "future-timestamp"
+      }
+    } as const;
+    for (const kind of ["current", "held", "stale", "future"] as const) {
+      expect(safetyScoreSnapshotHeaders({
+        updatedAt: kind === "future" ? nowSec + 120 : kind === "stale" ? nowSec - 7201 : nowSec - 5,
+        publicationHealth: { ...publication.publicationHealth, status: kind === "held" ? "held" : "current" },
+      }, "generation-1")).toEqual(pinnedHeaders[kind]);
+    }
 
     expect(headers["X-Safety-Score-Status"]).toBe("stale");
     expect(headers["X-Data-Freshness"]).toBe("stale");

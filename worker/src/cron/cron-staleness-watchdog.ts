@@ -9,10 +9,10 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "@shared/lib/telegram-delivery-policy";
 import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
+import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/detail-cache-generation";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS, runChunkedInFilter } from "../lib/db";
-import { buildCacheStatuses } from "../lib/api-freshness";
+import { buildCacheStatuses } from "../lib/status/cache-freshness";
 import { getCache, setCache } from "../lib/db-cache";
 import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
 import {

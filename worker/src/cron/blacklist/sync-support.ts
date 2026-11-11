@@ -1,6 +1,6 @@
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
-import { normalizeBlacklistSyncStateKey } from "../../lib/db";
+import { normalizeBlacklistSyncStateKey } from "../../lib/blacklist-cache-keys";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { inferBlacklistCursorKind, type BlacklistConfigState } from "./state";
 

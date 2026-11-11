@@ -1,7 +1,8 @@
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { setCache } from "../../lib/db-cache";
-import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE } from "../../lib/constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { isYieldRelevantDlPool } from "../yield-sync/cache";

@@ -1,3 +1,4 @@
+import { createAdapterJsonRequestExecutor } from "../request";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
@@ -167,8 +168,8 @@ describe("native Dwellir supported-operation preference", () => {
 
   it("rejects TRON events and unrelated Starknet methods before fetching", async () => {
     const fetcher = mockFetch([], { requireMatch: true });
-    await expect(native.readJson("tron", "/v1/contracts/test/events", SIGNAL, ctx)).rejects.toThrow();
-    await expect(native.readJson("starknet", "", SIGNAL, ctx, { method: "starknet_getEvents" })).rejects.toThrow();
+    await expect(native.readJson("tron", "/v1/contracts/test/events", SIGNAL, createAdapterJsonRequestExecutor(ctx))).rejects.toThrow();
+    await expect(native.readJson("starknet", "", SIGNAL, createAdapterJsonRequestExecutor(ctx), { method: "starknet_getEvents" })).rejects.toThrow();
     expect(fetcher).not.toHaveBeenCalled();
     expect(budget.recordDwellirCredits).not.toHaveBeenCalled();
   });
@@ -178,8 +179,8 @@ describe("native Dwellir supported-operation preference", () => {
     const fetcher = mockFetch([{ match: base, outcomes: [
       { body: "unavailable", status: 503 }, { body: KEY, status: 200 },
     ] }], { requireMatch: true });
-    await expect(native.readJson("starknet", "", SIGNAL, ctx, { method: "starknet_call" })).rejects.toThrow();
-    const error = await native.readJson("starknet", "", SIGNAL, ctx, { method: "starknet_call" }).catch(error => error);
+    await expect(native.readJson("starknet", "", SIGNAL, createAdapterJsonRequestExecutor(ctx), { method: "starknet_call" })).rejects.toThrow();
+    const error = await native.readJson("starknet", "", SIGNAL, createAdapterJsonRequestExecutor(ctx), { method: "starknet_call" }).catch(error => error);
     expect(String(error)).not.toContain(KEY);
     expect(fetcher.getHistory().every(request => request.url === `${base}/` && request.headers["x-api-key"] === KEY)).toBe(true);
     expect(budget.recordDwellirCredits).toHaveBeenCalledTimes(2);
@@ -196,7 +197,7 @@ describe("native credential redirect scoping", () => {
     vi.stubGlobal("fetch", fetcher);
     const path = endpoint.protocol === "tron-http" ? endpoint.allowedPath : "";
     const body = endpoint.protocol === "aptos-rest" ? undefined : { method: "starknet_call" };
-    expect(await native.readJson(endpoint.network, path, SIGNAL, ctx, body))
+    expect(await native.readJson(endpoint.network, path, SIGNAL, createAdapterJsonRequestExecutor(ctx), body))
       .toEqual({ result: ["0x1", "0x0"] });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
@@ -214,7 +215,7 @@ describe("native credential redirect scoping", () => {
     vi.stubGlobal("fetch", fetcher);
     const path = endpoint.protocol === "tron-http" ? endpoint.allowedPath : "";
     const body = endpoint.protocol === "aptos-rest" ? undefined : { method: "starknet_call" };
-    await expect(native.readJson(endpoint.network, path, SIGNAL, ctx, body)).rejects.toThrow(`HTTP ${status}`);
+    await expect(native.readJson(endpoint.network, path, SIGNAL, createAdapterJsonRequestExecutor(ctx), body)).rejects.toThrow(`HTTP ${status}`);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0]?.[0]).toBe(`${endpoint.baseUrl}${path}`);
     expect(fetcher.mock.calls[0]?.[1]?.redirect).toBe("manual");

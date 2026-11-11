@@ -12,7 +12,7 @@ import type {
 } from "@shared/types/yield";
 import {
   RISK_FREE_RATE_FALLBACK,
-} from "../../lib/constants";
+} from "../../lib/yield-config/policy";
 
 // Canonical definition lives in shared/lib/status-thresholds.ts.
 export { YIELD_BENCHMARK_SCORE_TTL_SEC };

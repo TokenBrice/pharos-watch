@@ -1,4 +1,5 @@
-import { jsonResponse, safetyScoreSnapshotHeaders, withRepresentationEtag } from "../lib/api-response";
+import { jsonResponse } from "../lib/api-response";
+import { safetyScoreSnapshotHeaders, withSafetyScoreRepresentationEtag as withRepresentationEtag } from "../lib/safety-score-v9/http-response";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import { loadV9PublicMaterializedResponse, V9PublicMaterializationUnavailableError } from "../lib/report-cards-v9-materialization";
 import { legacyV9FreshnessBody } from "./report-cards-v9-freshness";

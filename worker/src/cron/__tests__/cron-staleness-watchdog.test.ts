@@ -19,8 +19,8 @@ vi.mock("../../lib/safety-score-v9/publication-health", async (importOriginal) =
   loadSafetyScoreV9PublicationHealth: loadPublicationHealthMock,
 }));
 
-vi.mock("../../lib/api-freshness", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/api-freshness")>()),
+vi.mock("../../lib/status/cache-freshness", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/status/cache-freshness")>()),
   buildCacheStatuses: buildCacheStatusesMock,
 }));
 

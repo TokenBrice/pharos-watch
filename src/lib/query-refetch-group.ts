@@ -1,5 +1,5 @@
 import { isCancelledError } from "@tanstack/react-query";
-import type { StaleQuery } from "@/components/stale-data-banner";
+import type { StaleQuery } from "@/lib/stale-query";
 
 export type QueryRefetchFn = () => Promise<unknown>;
 
