@@ -45,6 +45,40 @@ const NON_WORKER_SOURCE_GLOBS = [
   "functions/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
 ];
 
+const DESIGN_TEST_IGNORES = ["**/__tests__/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"];
+const EDITORIAL_DESIGN_MODES = [
+  { both: ["src/app/cemetery/**", "src/components/cemetery/**"] },
+  {
+    both: ["src/app/digest/**"],
+    textRadius: ["src/components/digest-*.tsx", "src/components/daily-digest.tsx"],
+    palette: ["src/components/digest-*", "src/components/daily-digest*"],
+  },
+  { both: ["src/components/home-alt-mini-cards/daily-digest-card.tsx"] },
+  {
+    textRadius: ["src/components/editorial-masthead.tsx", "src/components/editorial-colophon.tsx"],
+    palette: ["src/components/editorial-*"],
+  },
+  {
+    both: ["src/app/timeline/**", "src/components/tape/**"],
+    textRadius: ["src/components/homepage-tape.tsx", "src/components/tape-for-coin-teaser.tsx"],
+    palette: ["src/components/homepage-tape*", "src/lib/tape-class-style.ts"],
+  },
+  {
+    textRadius: ["src/app/depeg/[[]event[]]/**"],
+    palette: ["src/app/depeg/[[]event]/**"],
+  },
+  { both: ["src/app/blog/**"] },
+  { textRadius: ["src/components/ai-summary*.tsx"], palette: ["src/components/ai-summary*"] },
+  { both: ["src/components/page-error-editorial.tsx", "src/app/not-found.tsx"] },
+  // Own palettes: the Telegram mini-app sets its own color-scheme and the
+  // tape wire stream is editorial art.
+  { palette: ["src/app/pharoswatchbot/**", "src/app/**/error.tsx", "src/app/global-error.tsx"] },
+];
+const editorialDesignIgnores = (capability) => [
+  ...DESIGN_TEST_IGNORES,
+  ...EDITORIAL_DESIGN_MODES.flatMap((mode) => [...(mode.both ?? []), ...(mode[capability] ?? [])]),
+];
+
 // ADR-2, frontend→worker half: nothing under src/, shared/, scripts/ or
 // functions/ may reach into worker/src/.
 const frontendToWorkerRestrictedImportPatterns = [
@@ -748,28 +782,7 @@ const eslintConfig = defineConfig([
     // call sites; src/lib class-string constants are covered too.
     files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
     // Editorial carve-outs keep their bespoke type registers (SWEEP.md §4).
-    ignores: [
-      "**/__tests__/**",
-      "**/*.test.{ts,tsx}",
-      "**/*.spec.{ts,tsx}",
-      "src/app/cemetery/**",
-      "src/components/cemetery/**",
-      "src/app/digest/**",
-      "src/components/digest-*.tsx",
-      "src/components/daily-digest.tsx",
-      "src/components/home-alt-mini-cards/daily-digest-card.tsx",
-      "src/components/editorial-masthead.tsx",
-      "src/components/editorial-colophon.tsx",
-      "src/app/timeline/**",
-      "src/components/tape/**",
-      "src/components/homepage-tape.tsx",
-      "src/components/tape-for-coin-teaser.tsx",
-      "src/app/depeg/[[]event[]]/**",
-      "src/app/blog/**",
-      "src/components/ai-summary*.tsx",
-      "src/components/page-error-editorial.tsx",
-      "src/app/not-found.tsx",
-    ],
+    ignores: editorialDesignIgnores("textRadius"),
     plugins: { pharos: pharosBoundaryPlugin },
     rules: {
       "pharos/no-arbitrary-text-px": "error",
@@ -799,32 +812,7 @@ const eslintConfig = defineConfig([
     // Classification scales live in shared/lib/classification (not linted
     // here); src/lib class-string constants are covered too.
     files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
-    ignores: [
-      "**/__tests__/**",
-      // Own palettes: the Telegram mini-app sets its own color-scheme and the
-      // tape wire stream is editorial art.
-      "src/app/pharoswatchbot/**",
-      "src/lib/tape-class-style.ts",
-      "src/components/home-alt-mini-cards/daily-digest-card.tsx",
-      "**/*.test.{ts,tsx}",
-      "**/*.spec.{ts,tsx}",
-      "src/app/cemetery/**",
-      "src/components/cemetery/**",
-      "src/app/digest/**",
-      "src/components/digest-*",
-      "src/components/daily-digest*",
-      "src/components/editorial-*",
-      "src/app/timeline/**",
-      "src/components/tape/**",
-      "src/components/homepage-tape*",
-      "src/app/blog/**",
-      "src/app/depeg/[[]event]/**",
-      "src/components/ai-summary*",
-      "src/app/**/error.tsx",
-      "src/app/global-error.tsx",
-      "src/app/not-found.tsx",
-      "src/components/page-error-editorial.tsx",
-    ],
+    ignores: editorialDesignIgnores("palette"),
     plugins: { pharos: pharosBoundaryPlugin },
     rules: {
       "pharos/no-raw-palette-colour": "error",
