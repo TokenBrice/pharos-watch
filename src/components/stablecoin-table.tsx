@@ -172,17 +172,9 @@ export function StablecoinTable({
   // Cursor scroll-into-view is handled inside the hook via the virtualizer; row
   // highlighting is rendered through `data-cursor` props on the virtual row.
   const watchlist = useWatchlist();
-  // Only hand the virtualizer to the cursor when it exposes `scrollToIndex`
-  // (the hook calls it to keep the cursor visible). Guards against virtualizer
-  // stand-ins that omit it. The element-type generic mismatch (HTMLDivElement
-  // vs HTMLElement) is benign, so we widen to the hook's type.
-  const cursorVirtualizer =
-    typeof rows.virtualizer.scrollToIndex === "function"
-      ? (rows.virtualizer as unknown as Virtualizer<HTMLElement, Element>)
-      : null;
   const { activateCursorAtIndex, activeCursorIndex } = useRowCursor<StablecoinData>({
     rows: rows.displayedRows,
-    virtualizer: cursorVirtualizer,
+    virtualizer: rows.virtualizer as unknown as Virtualizer<HTMLElement, Element>,
     getRowId: (coin) => coin.id,
     onOpen: (coin) => router.push(buildStablecoinUrl(coin.id)),
     onToggleStar: (coin) => watchlist.toggle(coin.id),

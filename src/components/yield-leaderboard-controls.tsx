@@ -2,11 +2,8 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { AlertTriangle, ChevronDown, Search, Star, X } from "lucide-react";
-import {
-  getActiveFilterSummaries,
-  type YieldPresetKey,
-  type YieldViewModel,
-} from "@/lib/yield-view-model";
+import type { YieldPresetKey, YieldViewModel } from "@/lib/yield-view-model";
+import { getYieldActiveFilterSummaries } from "@/lib/yield-view-model-presentation";
 import { cn } from "@/lib/utils";
 
 interface YieldLeaderboardControlsProps {
@@ -157,7 +154,7 @@ export function YieldLeaderboardControls({
   // chip too would put two identical controls in the same views row.
   const visiblePresets = presets.filter((preset) => preset.key !== "watchlist-warnings");
 
-  const activeFilterSummaries = getActiveFilterSummaries(viewModel);
+  const activeFilterSummaries = getYieldActiveFilterSummaries(viewModel);
   const activeFilterCount = activeFilterSummaries.length;
   const filtersToggleLabel =
     activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters";

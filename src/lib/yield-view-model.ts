@@ -12,11 +12,9 @@ import {
   buildYieldPresets,
   buildYieldRiskBudget,
   buildYieldStats,
-  getYieldActiveFilterSummaries,
 } from "@/lib/yield-view-model-presentation";
 import type {
   BuildYieldViewModelOptions,
-  YieldActiveFilterSummary,
   YieldRowFacet,
   YieldViewModel,
   YieldViewModelOptions,
@@ -26,7 +24,7 @@ import type {
 import { normalizeFilters } from "@/lib/yield-view-url";
 import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 
-export type { BuildYieldViewModelOptions, YieldActiveFilterSummary, YieldCohortPercentile, YieldPresetKey, YieldRiskBudgetKey, YieldRiskBudgetStop, YieldViewModel, YieldViewModelRow, YieldViewModelUrlParams } from "@/lib/yield-view-model-types";
+export type { BuildYieldViewModelOptions, YieldCohortPercentile, YieldPresetKey, YieldRiskBudgetKey, YieldRiskBudgetStop, YieldViewModel, YieldViewModelRow, YieldViewModelUrlParams } from "@/lib/yield-view-model-types";
 
 export { YIELD_LANDING_RISK_BUDGET, YIELD_PRESET_SPECS, YIELD_RISK_BUDGET_MIN_SAFETY, YIELD_RISK_BUDGET_SPECS } from "@/lib/yield-view-config";
 export { YIELD_FILTER_AXIS_REGISTRY } from "@/lib/yield-view-model-filter-axes";
@@ -88,8 +86,4 @@ export function buildYieldViewModel(
     matchingPreset,
     riskBudget: buildYieldRiskBudget(rowFacets, filters),
   };
-}
-
-export function getActiveFilterSummaries(viewModel: YieldViewModel): YieldActiveFilterSummary[] {
-  return getYieldActiveFilterSummaries(viewModel);
 }

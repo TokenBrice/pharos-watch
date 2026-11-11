@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerTable } from "@/components/screener/screener-table";
@@ -9,6 +10,13 @@ import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
+
+function render(ui: React.ReactNode) {
+  const client = new QueryClient();
+  return rtlRender(ui, {
+    wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+  });
+}
 
 const row: ScreenerRow = {
   id: "usdt-tether",

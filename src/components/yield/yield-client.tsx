@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { YieldApiWarnings, YieldDataHealth } from "@/components/yield/yield-data-health";
 import {
   buildYieldViewModel,
-  getActiveFilterSummaries,
   prepareYieldUniverse,
   RISK_BUDGET_FILTER_KEYS,
   riskBudgetUrlValue,
@@ -41,6 +40,7 @@ import {
   type YieldViewModel,
   type YieldViewModelRow,
 } from "@/lib/yield-view-model";
+import { getYieldActiveFilterSummaries } from "@/lib/yield-view-model-presentation";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_ZONE_LABELS } from "@shared/lib/classification";
@@ -313,7 +313,7 @@ export function YieldClient() {
   const comparisonRows = useMemo(() => selectVisibleYieldRows(yieldUniverse, { risk: riskBudgetUrlValue("all") }), [yieldUniverse]);
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
-  const activeFilterSummaries = useMemo(() => getActiveFilterSummaries(viewModel), [viewModel]);
+  const activeFilterSummaries = useMemo(() => getYieldActiveFilterSummaries(viewModel), [viewModel]);
   const lastZeroResultSignature = useRef<string | null>(null);
   const exposedWarningCodes = useRef(new Set<string>());
 

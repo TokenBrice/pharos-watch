@@ -28,7 +28,6 @@ export interface OgStaticCard {
   file: string;
   svg: string;
   signature?: Record<string, unknown>;
-  signatureSvg?: string;
 }
 
 export interface OgStaticRunnerOptions {
@@ -41,11 +40,8 @@ export interface OgStaticRunnerOptions {
   roster: readonly OgStaticCard[];
   signaturePath: string;
   stagingDir: string;
-  sourceDir?: string;
   manifestFields?: Record<string, unknown>;
   background?: string;
-  includePngHashes?: boolean;
-  settleMs?: number;
 }
 
 export interface OgStaticCliOptions extends Omit<OgStaticRunnerOptions, "check" | "fonts"> {
@@ -65,27 +61,23 @@ function buildManifest({
   fonts,
   roster,
   publicDir,
-  includePngHashes,
 }: {
   generatedBy: string;
   manifestFields?: Record<string, unknown>;
   fonts: readonly OgStaticFont[];
   roster: readonly OgStaticCard[];
   publicDir: string;
-  includePngHashes: boolean;
 }): string {
   const cards: OgStaticManifestCard[] = roster.map((card) => {
     const signature: OgStaticManifestCard = {
       file: card.file,
       ...(card.signature ?? {}),
-      svgSha256: contentSha256(card.signatureSvg ?? card.svg),
+      svgSha256: contentSha256(card.svg),
     };
-    if (includePngHashes) {
-      const publicPath = resolve(publicDir, card.file);
-      signature.pngSha256 = existsSync(publicPath)
-        ? contentSha256(readFileSync(publicPath))
-        : null;
-    }
+    const publicPath = resolve(publicDir, card.file);
+    signature.pngSha256 = existsSync(publicPath)
+      ? contentSha256(readFileSync(publicPath))
+      : null;
     return signature;
   });
 
@@ -112,14 +104,11 @@ export async function runOgStaticBuild(
     family,
     fonts,
     generatedBy,
-    includePngHashes = true,
     manifestFields,
     publicDir,
     refreshCommand,
     roster,
-    settleMs = 0,
     signaturePath,
-    sourceDir,
     stagingDir,
   } = options;
   mkdirSync(publicDir, { recursive: true });
@@ -132,7 +121,6 @@ export async function runOgStaticBuild(
     fonts,
     roster,
     publicDir,
-    includePngHashes,
   });
 
   // The checked-in manifest is evidence to compare, not proof that the PNG
@@ -164,7 +152,6 @@ export async function runOgStaticBuild(
         try {
           await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
           await page.evaluate(() => document.fonts.ready);
-          if (settleMs > 0) await page.waitForTimeout(settleMs);
           await page.screenshot({
             path: stagedPath,
             omitBackground: false,
@@ -183,13 +170,6 @@ export async function runOgStaticBuild(
     });
     staleFiles.push(...artifactResult.staleFiles);
 
-    if (sourceDir && !check) {
-      mkdirSync(sourceDir, { recursive: true });
-      for (const card of roster) {
-        writeFileIfChanged(resolve(sourceDir, card.file.replace(/\.png$/, ".svg")), card.svg);
-      }
-    }
-
     if (check) {
       if (existingManifest !== expectedManifest) staleFiles.push(signaturePath);
     } else {
@@ -199,7 +179,6 @@ export async function runOgStaticBuild(
         fonts,
         roster,
         publicDir,
-        includePngHashes,
       }));
     }
 

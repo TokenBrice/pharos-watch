@@ -1,9 +1,8 @@
 "use client";
 
-import { useContext, useMemo } from "react";
+import { useMemo } from "react";
 import {
   hashKey,
-  QueryClientContext,
   useIsFetching,
   type QueryKey,
 } from "@tanstack/react-query";
@@ -94,8 +93,7 @@ export interface DataTableShellProps<K extends string> {
 /**
  * Renders the SWR `RefreshingBar` driven by `useIsFetching` over the given
  * query keys. Split into its own component so the `useIsFetching` hook only
- * mounts when a QueryClient is in context — table unit tests that render the
- * shell without a provider simply skip the bar instead of throwing.
+ * mounts when query keys are supplied.
  */
 function TableRefreshingBar({
   queryKeys,
@@ -117,10 +115,8 @@ function TableRefreshingBar({
 }
 
 /**
- * Provider-safe SWR bar for any power-user table. Reads the QueryClient from
- * context (returns null when absent, e.g. in unit tests) before mounting the
- * `useIsFetching` subscription. Exported so tables with bespoke shells
- * (e.g. the virtualized home table) can reuse the same guarded behavior.
+ * SWR bar for any power-user table. Exported so tables with bespoke shells
+ * (e.g. the virtualized home table) can reuse the same query subscription.
  */
 export function TableBackgroundRefreshingBar({
   queryKeys,
@@ -131,8 +127,7 @@ export function TableBackgroundRefreshingBar({
   isPending: boolean;
   className?: string;
 }) {
-  const hasClient = useContext(QueryClientContext) != null;
-  if (!hasClient || !queryKeys || queryKeys.length === 0) return null;
+  if (!queryKeys || queryKeys.length === 0) return null;
   return (
     <TableRefreshingBar
       queryKeys={queryKeys}
