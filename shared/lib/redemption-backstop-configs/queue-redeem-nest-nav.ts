@@ -30,22 +30,25 @@ const nestNavVaultBase: RedemptionBackstopConfig = {
   ],
 };
 
-const NEST_NAV_VAULTS = [
-  { id: "ntbill-nest", ticker: "nTBILL", outputAssets: ["usdc-circle", "pusd-plume"] },
-  { id: "nbasis-nest", ticker: "nBASIS", outputAssets: ["usdc-circle", "pusd-plume"] },
-  { id: "nopal-nest", ticker: "nOPAL", outputAssets: ["usdc-circle", "pusd-plume", "usdt-tether"] },
-  { id: "nwisdom-nest", ticker: "nWISDOM", outputAssets: ["usdc-circle", "pusd-plume"] },
-];
-
-/** Vaults whose documented Plume USDC and pUSD NestVault paths both returned
+/** Zero-queued vaults' documented Plume USDC and pUSD NestVault paths both returned
  *  fees(2) = (flat 0, rate 0) at Plume block 97180152 (2026-10-03T23:12:23Z).
  *  The zero covers only the direct queued-redemption fee on those paths. */
-const NEST_ZERO_QUEUED_FEE_VAULTS: Partial<Record<string, true>> = { "ntbill-nest": true, "nwisdom-nest": true };
+const NEST_NAV_VAULTS: readonly {
+  id: string;
+  ticker: string;
+  outputAssets: string[];
+  feeKind: "zero-queued" | "formula" | "undisclosed";
+}[] = [
+  { id: "ntbill-nest", ticker: "nTBILL", outputAssets: ["usdc-circle", "pusd-plume"], feeKind: "zero-queued" },
+  { id: "nbasis-nest", ticker: "nBASIS", outputAssets: ["usdc-circle", "pusd-plume"], feeKind: "undisclosed" },
+  { id: "nopal-nest", ticker: "nOPAL", outputAssets: ["usdc-circle", "pusd-plume", "usdt-tether"], feeKind: "formula" },
+  { id: "nwisdom-nest", ticker: "nWISDOM", outputAssets: ["usdc-circle", "pusd-plume"], feeKind: "zero-queued" },
+];
 
 export const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = defineConfigFamily(
   NEST_NAV_VAULTS,
-  ({ id, ticker, outputAssets }) => {
-    const zeroQueuedFee = NEST_ZERO_QUEUED_FEE_VAULTS[id] === true;
+  ({ ticker, outputAssets, feeKind }) => {
+    const zeroQueuedFee = feeKind === "zero-queued";
     return {
       ...nestNavVaultBase,
       outputAssets,
@@ -54,7 +57,7 @@ export const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = 
           0,
           `${ticker} NestVault fees(2) returned flat 0 and rate 0 on the documented Plume USDC and pUSD paths at Plume block 97180152 (2026-10-03); this zero covers only the direct queued-redemption fee, not transaction gas, optional bridge legs, or other chains`,
         )
-      : id === "nopal-nest"
+      : feeKind === "formula"
         ? documentedVariableFee(
             "nOPAL queued redemption applies a configurable percentage plus flat fee. The exact Plume USDC read-only quote for 100000000000 raw shares on 2026-10-09 returned ratePpm 150, flatAmount 0 and feeAmount 16557225 raw USDC. This route-specific observation is not an asset-wide fixed fee, a same-notional all-in cost, or a guarantee for other chains or outputs.",
             "formula",
@@ -71,7 +74,7 @@ export const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = 
             ["fees"],
           ),
         ] : []),
-        ...(id === "nopal-nest" ? [
+        ...(feeKind === "formula" ? [
           sourceRef(
             "Nest nOPAL read-only redemption quote (reviewed 2026-10-09)",
             "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",

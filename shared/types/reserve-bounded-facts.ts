@@ -4,10 +4,9 @@ import { StrictIsoDateSchema, Sha256Schema, FractionSchema, UnixSecondsSchema } 
 import { V9FactStatusV2Schema } from "./safety-score-v9-fact-primitives";
 import { RedemptionBusinessDayTermsSchema } from "./redemption";
 
-const vocabulary = rawPolicy.semantic.backing.reserve.boundedFacts;
-export const ReserveBoundedFactKindSchema = z.enum(vocabulary.factKinds as ["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound", "business-calendar-liquidity"]);
-export const ReserveBoundedScopeKindSchema = z.enum(vocabulary.scopeKinds as ["reserve-envelope", "exposure", "sub-instrument"]);
-export const ReserveBoundedTermUnitSchema = z.enum(vocabulary.termUnits as ["days", "calendar-months"]);
+export const ReserveBoundedFactKindSchema = z.enum(["contractual-maturity-maximum", "observed-portfolio-maturity", "eligibility-envelope", "currently-liquid-fraction", "maturity-applicability", "stressed-realization-bound", "business-calendar-liquidity"]);
+export const ReserveBoundedScopeKindSchema = z.enum(["reserve-envelope", "exposure", "sub-instrument"]);
+export const ReserveBoundedTermUnitSchema = z.enum(["days", "calendar-months"]);
 const text = z.string().trim().min(1);
 const fraction = FractionSchema;
 const seconds = UnixSecondsSchema;
@@ -26,7 +25,7 @@ const base = {
   publisher: text, sourceUrls: z.array(z.string().url()).min(1), assertion: text, contentDigest: Sha256Schema,
   provenance,
 };
-const assetClass = z.enum(Object.keys(rawPolicy.semantic.backing.reserve.assetClassQuality) as ["cash", "bank-deposit", "treasury-bill", "government-security", "repo", "money-market-fund", "stablecoin", "cryptoasset", "hedged-crypto", "private-credit", "public-credit", "tokenized-security", "fund-share", "protocol-position", "commodity-allocated", "other"]);
+const assetClass = z.enum(Object.keys(rawPolicy.semantic.backing.reserve.assetClassQuality) as Array<keyof typeof rawPolicy.semantic.backing.reserve.assetClassQuality>);
 const grossCoverage = { coveredGrossValue: z.number().finite().nonnegative().nullable(), totalGrossValue: z.number().finite().positive().nullable(), coverageAsOfSec: seconds };
 /** Shape-preserving wire contract; runtime refinements and ordering follow below. */
 export const ReserveBoundedFactOutputSchema = z.discriminatedUnion("kind", [

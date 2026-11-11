@@ -134,20 +134,6 @@ const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
   ],
 } satisfies Partial<Record<string, RedemptionDocs>>;
 
-function addDocumentedBoundSourceRefs(entries: RedemptionBackstopRegistryEntry[]): RedemptionBackstopRegistryEntry[] {
-  return entries.map((entry) => {
-    const docs = DOCUMENTED_BOUND_SOURCE_REFS[entry.id];
-    if (!docs) return entry;
-    return {
-      ...entry,
-      config: {
-        ...entry.config,
-        docs,
-      },
-    };
-  });
-}
-
 const nonUsdDocumentedBoundBase = {
   ...issuerBase,
   ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
@@ -248,15 +234,20 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     },
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
-  ...addDocumentedBoundSourceRefs(
-    defineBatch(
-      ["zarp-zarp", "cetes-etherfuse"],
-      {
+  ...defineRecordEntries(
+    {
+      "zarp-zarp": {
         ...issuerBase,
         ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["zarp-zarp"],
       },
-      { sourceFilePath: SOURCE_FILE_PATH },
-    ),
+      "cetes-etherfuse": {
+        ...issuerBase,
+        ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["cetes-etherfuse"],
+      },
+    },
+    { sourceFilePath: SOURCE_FILE_PATH },
   ),
   ...defineRecordEntries(
     {
