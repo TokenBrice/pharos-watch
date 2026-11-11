@@ -5,8 +5,8 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 
 import { guardPublishedYieldCoverage, summarizeYieldPublicationQualityMix } from "../health-policy";
 import { pruneYieldTables } from "../history";
-import { repairPublishedYieldGenerationFromCache } from "../publication";
-import type { PreviousYieldPublicationSnapshot } from "../publication";
+import { repairPublishedYieldGenerationFromCache } from "../publication-generation";
+import type { PreviousYieldPublicationSnapshot } from "../publication-admission";
 
 const GENERATION_START_SEC = 1_800_000_000;
 

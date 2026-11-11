@@ -41,7 +41,8 @@ vi.mock("../state", async (importOriginal) => {
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_POOL_MAP } from "../../../lib/yield-config/yield-config-pools";
-import { appendLinkedVariantParentYieldSources, resolveTrackedYieldSources } from "../resolve";
+import { appendLinkedVariantParentYieldSources } from "../resolve-linked-variants";
+import { resolveTrackedYieldSources } from "../resolve-observations";
 import { evaluateYieldSourcesCooperative } from "../evaluation";
 import { getPriceDerivedApy } from "../state";
 import type { DlPool, ResolvedYieldEntry } from "../types";

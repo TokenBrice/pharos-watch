@@ -1,5 +1,10 @@
 import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import { YIELD_SOURCE_DEPTH_BANDS } from "@shared/lib/selector/yield-source";
+import {
+  hasLimitedYieldObservationHistory,
+  isRewardHeavyYieldSource,
+  isThinYieldSourceDepth,
+} from "@shared/lib/yield-scoring";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { YIELD_SOURCE_CONFIDENCE_TIER_VALUES } from "@shared/types/yield-vocabulary";
 import type {
@@ -251,7 +256,7 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
-  if (rewardShare !== null && rewardShare > 0.5) {
+  if (isRewardHeavyYieldSource(rewardShare)) {
     drivers.push({
       key: "reward-heavy",
       label: "reward-heavy",
@@ -267,7 +272,7 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
-  if (sourceDepthRatio !== null && sourceDepthRatio < 0.001) {
+  if (isThinYieldSourceDepth(sourceDepthRatio)) {
     drivers.push({
       key: "thin-source-depth",
       label: "thin source depth",
@@ -291,7 +296,7 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
-  if (observationCount30d !== null && observationCount30d > 0 && observationCount30d < 7) {
+  if (hasLimitedYieldObservationHistory(observationCount30d)) {
     drivers.push({
       key: "limited-history",
       label: "limited history",

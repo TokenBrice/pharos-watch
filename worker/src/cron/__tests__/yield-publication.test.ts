@@ -17,14 +17,17 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
 import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
-import { buildYieldRankingsPayloadFromEvaluatedSources, buildYieldSourceProvenance, loadPreviousYieldPublicationSnapshot } from "../yield-sync/publication";
-import { cleanupFalseLinkedVariantSourceSwitches, materializeYieldHistoryDaily, pruneYieldTables } from "../yield-sync/history";
+import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication-rankings";
+import { buildYieldSourceProvenance } from "../yield-sync/publication-decisions";
+import { loadPreviousYieldPublicationSnapshot } from "../yield-sync/publication-admission";
+import { cleanupFalseLinkedVariantSourceSwitches } from "../yield-sync/history-repair";
+import { materializeYieldHistoryDaily, pruneYieldTables } from "../yield-sync/history";
 import { classifyYieldSourceFreshness } from "../../lib/yield-ranking-helpers";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/publication";
-import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
+import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication-admission";
 import { publishYieldCoordinatorResults } from "../yield-sync/publication";
-import { publishYieldRowsAtomically } from "../yield-sync/publication";
+import { publishYieldRowsAtomically } from "../yield-sync/publication-storage";
 import {
   FIXED_NOW,
   buildPayloadWithObservedAt,
@@ -40,7 +43,7 @@ import { handleBackfillYieldHistory } from "../../../scripts/backfills/backfill-
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
-import { loadTier1PrevRateRows } from "../yield-sync/resolve";
+import { loadTier1PrevRateRows } from "../yield-sync/resolve-observations";
 import { computeApyFromRate } from "../yield-helpers";
 
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.

@@ -34,7 +34,7 @@ vi.mock("../yield-sync/state", async (importOriginal) => {
 
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
-import { resolveTrackedYieldSources } from "../yield-sync/resolve";
+import { resolveTrackedYieldSources } from "../yield-sync/resolve-observations";
 import { baseEvaluationInput } from "./yield-evaluation.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type { DlPool } from "../yield-sync/types";

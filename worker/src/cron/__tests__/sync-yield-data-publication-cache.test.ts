@@ -20,7 +20,7 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { syncYieldData } from "../sync-yield-data";
 import * as yieldHelpersModule from "../yield-helpers";
-import * as publicationModule from "../yield-sync/publication";
+import * as publicationModule from "../yield-sync/publication-generation";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
