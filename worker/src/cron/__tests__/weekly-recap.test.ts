@@ -60,7 +60,7 @@ import {
 } from "../../telegram/outbox/digest-outbox";
 import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transport";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../digest/llm-config";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
 import {
   digestSafetyContextFromPersistedInput,

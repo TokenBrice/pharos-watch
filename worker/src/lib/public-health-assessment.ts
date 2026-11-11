@@ -27,7 +27,7 @@ import type {
   HealthResponse,
   StablecoinPublicationHealth,
 } from "@shared/types/status";
-import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-freshness";
+import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./status/cache-freshness";
 import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC, assessFreshnessTimestamp } from "./api-freshness-age";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,

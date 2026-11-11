@@ -16,7 +16,7 @@ import { getProtocolParPriceOverride, protocolParProvider } from "../../lib/auth
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { NominalPriceReference } from "@shared/types/core";
-import type { PriceCacheEntry } from "../../lib/db-cache";
+import type { PriceCacheEntry } from "../../lib/price-cache";
 import type { DlListQuote } from "../../lib/primary-price-collector";
 import {
   type TrustedPriceReference,

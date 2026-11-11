@@ -10,7 +10,8 @@ vi.mock("../../../lib/dexscreener", async (importOriginal) => {
   };
 });
 
-import { CIRCUIT_SOURCE, DEXSCREENER_MIN_LIQUIDITY_USD } from "../../../lib/constants";
+import { CIRCUIT_SOURCE } from "../../../lib/constants";
+import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../../../lib/dex-cron-constants";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { runDexScreenerPass } from "../enrich-prices-dexscreener-pass";

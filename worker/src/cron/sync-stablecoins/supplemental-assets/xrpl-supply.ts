@@ -4,7 +4,7 @@ import { XrplIssuedCurrencyAmountSchema } from "@shared/types/deployment-amounts
 import { NAV_SUPPLY_LEDGER_FRESHNESS } from "@shared/lib/onchain-supply-probe";
 import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { throwIfAborted } from "../../../lib/abort";
-import { fetchJsonPostWithRetry } from "../../reserve-adapters/request";
+import { fetchJsonPostWithRetry } from "../../../lib/json-request";
 
 const BOUNDED_READ = { maxRetries: 0, maxResponseBytes: 64 * 1024 };
 const RIPPLE_EPOCH_SEC = 946684800;

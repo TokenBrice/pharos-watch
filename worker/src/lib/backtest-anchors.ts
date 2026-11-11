@@ -1,3 +1,7 @@
+
+
+/** Days of stress_signal_history examined before each backtest anchor's onset. */
+export const BACKTEST_LOOKBACK_DAYS = 14;
 export interface BacktestAnchor {
   /** Stablecoin ID (matches depeg_events.stablecoin_id). */
   stablecoinId: string;

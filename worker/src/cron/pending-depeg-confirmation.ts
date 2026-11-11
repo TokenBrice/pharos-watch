@@ -7,7 +7,7 @@ import type { PegAssetBase } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
 import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
-import { getDepegThresholdBps } from "../lib/constants";
+import { getDepegThresholdBps } from "../lib/depeg-threshold-policy";
 import {
   dexPoolIndependentGroupKey,
   isNativeOriginPending,

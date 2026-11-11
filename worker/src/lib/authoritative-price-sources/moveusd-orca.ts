@@ -1,8 +1,8 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { decodeWhirlpool, ORCA_WHIRLPOOL_PROGRAM_ID } from "../../cron/dex-liquidity/solana/whirlpool-quote";
-import { fetchSolanaAccounts, solanaPublicKey, SOLANA_TOKEN_PROGRAM } from "../../cron/reserve-adapters/solana";
+import { fetchSolanaAccounts, solanaPublicKey, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
-import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../constants";
+import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../dex-cron-constants";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import { resolveTrustedOverrideParent, USDC_CIRCLE_ID, type LivePriceContext, type PriceSourceProvider } from "./helpers";

@@ -13,7 +13,8 @@ import {
   isSevereFixedPegDownside,
   validatePriceCandidate,
 } from "../../lib/price-validation";
-import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote, getDepegThresholdBps } from "../../lib/constants";
+import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote } from "../../lib/price-depeg-voting-policy";
+import { getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import { midDivergenceBps } from "../../lib/price-divergence";

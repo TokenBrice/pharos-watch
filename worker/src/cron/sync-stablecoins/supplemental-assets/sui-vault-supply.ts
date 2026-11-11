@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { EEARN_SUI_COIN_TYPE } from "@shared/lib/onchain-supply-probe";
-import { fetchJsonPostWithRetry } from "../../reserve-adapters/request";
+import { fetchJsonPostWithRetry } from "../../../lib/json-request";
 
 const VAULT = "0x0779d2a4e1a6d3412982404cfe5567aac8cea229f17622c7b72d198b22a22e37";
 const VAULT_TYPE = `0xc83d5406fd355f34d3ce87b35ab2c0b099af9d309ba96c17e40309502a49976f::vault::Vault<0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC,${EEARN_SUI_COIN_TYPE}>`;

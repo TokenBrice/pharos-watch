@@ -1,4 +1,5 @@
-import { TREASURY_YIELD_XML_URL, USER_AGENT } from "../../lib/constants";
+import { TREASURY_YIELD_XML_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import { fetchAndParseBenchmark, isValidBenchmarkRate } from "./shared";
 
 /** Parse the latest 3-month yield from Treasury.gov yield curve XML. */

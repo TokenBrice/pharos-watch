@@ -55,7 +55,7 @@ import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { notDisputedAuditVerdictSql } from "../lib/depeg-audit";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
-import { getDepegThresholdBps } from "../lib/constants";
+import { getDepegThresholdBps } from "../lib/depeg-threshold-policy";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import {
   getNativeEventPriceObservation, isNativePegEvent,

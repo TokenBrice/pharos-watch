@@ -27,7 +27,7 @@ import {
   WATCH_MAX_SCORE,
   type DewsSignalKey,
 } from "@shared/lib/dews-config";
-import { CONTAGION_AMPLIFIER_CAP } from "./constants";
+import { CONTAGION_AMPLIFIER_CAP } from "./dews-contagion-policy";
 import { getThreatBand, piecewiseLinear } from "./dews/compatibility";
 import { classifyEvidenceKinds, hasLoneMentoBrokerPrice } from "./dews/evidence-policy";
 import {

@@ -1,4 +1,5 @@
-import { BCB_SELIC_URL, BCB_SELIC_ANNUALIZED_URL, USER_AGENT } from "../../lib/constants";
+import { BCB_SELIC_URL, BCB_SELIC_ANNUALIZED_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,

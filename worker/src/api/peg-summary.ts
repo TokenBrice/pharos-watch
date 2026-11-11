@@ -13,7 +13,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
-import { getDepegThresholdBpsForPegCurrency } from "../lib/constants";
+import { getDepegThresholdBpsForPegCurrency } from "../lib/depeg-threshold-policy";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-cache";

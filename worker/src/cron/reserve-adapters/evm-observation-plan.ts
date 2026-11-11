@@ -1,3 +1,4 @@
+import type { EvmCodeIdentityCheckResult } from "../../lib/evm-code-identity-error";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { Abi } from "abitype";
@@ -249,21 +250,6 @@ export interface EvmCodeIdentity {
   implementationAddress?: string;
   implementationCodeHash?: string;
 }
-
-export type EvmCodeIdentityRejectionCode =
-  | "code-unavailable"
-  | "code-drift"
-  | "implementation-unavailable"
-  | "implementation-drift";
-
-export type EvmCodeIdentityCheckResult =
-  | { status: "accepted" }
-  | {
-      status: "rejected";
-      rejectionCode: EvmCodeIdentityRejectionCode;
-      address: string;
-      kind: "contract" | "implementation" | "storage";
-    };
 
 type EvmCodeIdentityKind = "contract" | "implementation";
 

@@ -10,12 +10,14 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelUnsuccessfulResponseBodyQuietly, readResponseTextBoundedWithSignal } from "../../lib/response-body";
 import {
   ANTHROPIC_TIMEOUT_MS,
-  CIRCUIT_SOURCE,
   DIGEST_EFFORT_LEVELS,
   DIGEST_HEAVY_MAX_EDITION_OUTPUT_TOKENS,
   DIGEST_MAX_EDITION_OUTPUT_TOKENS,
   DIGEST_MAX_TOKENS,
   type DigestLlmConfig,
+} from "./llm-config";
+import {
+  CIRCUIT_SOURCE,
 } from "../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {

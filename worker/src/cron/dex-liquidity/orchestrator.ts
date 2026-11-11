@@ -39,7 +39,8 @@ import {
 import { buildDexLiquidityPublicationGenerationId, persistScores, writeHistoricalSnapshots } from "./persistence";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
-import { CIRCUIT_SOURCE, POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
   buildAuthoritativeStagedPoolConfirmationIndex,

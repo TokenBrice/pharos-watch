@@ -5,6 +5,17 @@ const COHORT_LEASE_KEY = `${COHORT_CACHE_KEY}:lease`;
 
 type YieldCoinCache = { value: string; updatedAt: number };
 
+export const YIELD_SERVED_GENERATION_SQL = `(
+              SELECT CASE WHEN json_valid(value) THEN json_extract(value, '$.publication.generationId') END
+              FROM cache WHERE key = 'yield-rankings')`;
+
+export async function readYieldFreshnessAge(db: D1Database, now: number): Promise<number | null> {
+  const row = await db.prepare("SELECT (? - MAX(updated_at)) as age FROM yield_data WHERE is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')")
+    .bind(now)
+    .first<{ age: number | null }>();
+  return row?.age ?? null;
+}
+
 /** Read the published envelope and one complete row without transferring the cohort. */
 export function readYieldRankingsCoinCache(db: D1Database, stablecoinId: string): Promise<YieldCoinCache | null> {
   return db.prepare(`SELECT CASE WHEN json_valid(c.value) THEN CASE WHEN json_type(c.value) = 'object' AND json_type(c.value, '$.rankings') = 'array' THEN json_set(c.value, '$.rankings', json((

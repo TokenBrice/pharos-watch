@@ -232,7 +232,7 @@ Scheduler measurement semantics and bounded cache pruning follow the [maintenanc
 
 ## Shared Database Helpers
 
-**Files:** `worker/src/lib/db.ts` owns generic D1 helpers; `worker/src/lib/db-cache.ts` owns `getCache`, `setCache`, `setCacheIfAbsent`, `setCacheIfNewer`, `getPriceCache` and `savePriceCache`.
+**Files:** `worker/src/lib/db.ts` owns generic D1 helpers; `worker/src/lib/db-cache.ts` owns `getCache`, `setCache`, `setCacheIfAbsent` and `setCacheIfNewer`; `worker/src/lib/price-cache.ts` owns `getPriceCache` and `savePriceCache`.
 
 [Inspection](#remote-d1-inspection).
 

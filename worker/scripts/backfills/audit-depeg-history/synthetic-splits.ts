@@ -1,4 +1,4 @@
-import { getDepegThresholdBps } from "../../../src/lib/constants";
+import { getDepegThresholdBps } from "../../../src/lib/depeg-threshold-policy";
 import type { DepegRow } from "../../../src/lib/depeg-helpers";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type { PsiDepegEventRow } from "../../../src/lib/psi-recompute";

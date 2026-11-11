@@ -1,4 +1,5 @@
-import { BOJ_CALL_RATE_JSON_BASE_URL, USER_AGENT } from "../../lib/constants";
+import { BOJ_CALL_RATE_JSON_BASE_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import {
   addDays,
   fetchAndParseBenchmark,

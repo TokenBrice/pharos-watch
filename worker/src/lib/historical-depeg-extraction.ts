@@ -14,7 +14,7 @@ import {
   type PriceReasonablenessOptions,
   validatePriceCandidateAgainstReference,
 } from "./price-validation";
-import { getDepegThresholdBps } from "./constants";
+import { getDepegThresholdBps } from "./depeg-threshold-policy";
 import type { PricePoint } from "./historical-market-prices";
 
 export const BACKFILL_MIN_CONFIRM_POINTS = 2;

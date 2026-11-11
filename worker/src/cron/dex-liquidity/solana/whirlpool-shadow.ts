@@ -5,8 +5,8 @@ import type { SolanaDexShadowTarget, SolanaDexBankCaptureSink, SolanaDexBankCapt
 import { parseUnits } from "viem/utils";
 import { runWithOverloadRetry } from "../../../lib/d1-overload-retry";
 import { throwIfAborted } from "../../../lib/abort";
-import type { AdapterContext } from "../../reserve-adapters/types";
-import { fetchSolanaAccountBatch } from "../../reserve-adapters/solana";
+import type { ChainObservationOptions as AdapterContext } from "../../../lib/chain-observation-context";
+import { fetchSolanaAccountBatch } from "../../../lib/chain-observation";
 import { buildNativeDexExecutionTarget } from "../../measured-execution/inventory";
 import { buildNativeDexGenerationId, captureNativeDexPublisherFence, publishNativeDexGeneration, pruneNativeDexGenerations } from "../../measured-execution/native-generation-store";
 import { loadTrackedStablecoinMaps } from "../orchestrator-phases/lookups";
@@ -39,7 +39,7 @@ interface SolanaShadowSummary {
   skippedIneligible: Record<string, number>;
   failures: string[];
 }
-interface CollectorInput { db: D1Database; signal?: AbortSignal; ctx?: AdapterContext; onBankCapture?: SolanaDexBankCaptureSink; publisherInvocationId?: string; publisherAttemptNo?: number }
+interface CollectorInput { db: D1Database; signal?: AbortSignal; ctx?: AdapterContext & { db?: D1Database }; onBankCapture?: SolanaDexBankCaptureSink; publisherInvocationId?: string; publisherAttemptNo?: number }
 
 export async function collectWhirlpoolShadowQuotes(input: CollectorInput): Promise<SolanaShadowSummary> {
   return collectSolanaShadowQuotes(input, "orca");

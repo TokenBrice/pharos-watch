@@ -15,7 +15,7 @@ import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { fetchErc20TotalSupply } from "../reserve-adapters/onchain";
-import { fetchSolanaTokenSupply } from "../reserve-adapters/token-supply";
+import { fetchSolanaTokenSupply } from "../../lib/chain-observation";
 import { getPegReferencePriceUsd } from "./supply-gap-reconciliation";
 import { supplyObservationClock } from "./shared";
 import type { PeggedAsset } from "./enrich-prices-shared";

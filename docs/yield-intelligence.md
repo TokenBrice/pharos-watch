@@ -368,7 +368,7 @@ Coordinator evaluation computes ordering components before selection, then recom
 | `riskPenalty`                  | 0.5–5.05                 | Raw safety penalty before the power curve is applied                                                                                                                |
 | `riskPenalty^1.75`             | ~0.30–17.01              | Effective divisor used by PYS after the steeper safety curve is applied                                                                                             |
 | `apyVarianceScore`             | 0–1 or null              | `1 - yieldStability`, using the published two-decimal stability derived from trailing coefficient of variation. Null for fewer than two samples, near-zero mean, or non-finite CV; unavailable variance withholds PYS |
-| `scalingFactor`                | 8                        | Global constant (`PYS_SCALING_FACTOR` in `constants.ts`) tuned after the steeper safety curve                                                                       |
+| `scalingFactor`                | 8                        | Global constant (`PYS_SCALING_FACTOR` in `worker/src/lib/yield-config/policy.ts`) tuned after the steeper safety curve                                                                       |
 
 Published PYS is null whenever `pysNullReason` exists. Normal evaluation uses the precedence below; safety-degraded API reads preserve an existing non-safety null reason rather than replacing it with `safety-unrated`. An otherwise eligible NR source can remain published and selected. Numeric 0 is reserved for a valid score that rounds to zero, with a null reason.
 
@@ -466,7 +466,7 @@ Future fetch or observation timestamps outside the five-minute clock-skew allowa
 Detailed and summary benchmark metadata expose canonical `maxFetchAgeSec` and per-key `maxRecordAgeSec`; currency-selection policy (`fallback-usd`) alone never degrades feed health.
 NY Fed EFFR observations must pass the shared `USD_EFFR` record-age/future-skew bounds before primary success; stale/future records proceed to FRED `DFF`, then retained evidence without renewing the original market clock.
 BRL attempts are sequential under one `TREASURY_RATES:BRL` circuit. Unavailable, invalid, stale or future SGS11 evidence proceeds to SGS1178; both must pass the shared five-day publisher-date/five-minute skew gate before publication. Sources are `bcb-selic` and `bcb-selic-1178`; admitted SGS1178 is current market evidence, not a proxy or retained fallback. Both unavailable preserves original market provenance with `bcb-selic-failed-retained`. Same-host failover is not provider diversity; CDI, Copom targets, expectations and Tesouro yields are not substitutes.
-Exact feed URLs are owned by the [benchmark constants](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/lib/constants.ts); provider selection and parsing belong to [`fetch-tbill-rate`](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/cron/fetch-tbill-rate.ts).
+Exact feed URLs are owned by the [benchmark constants](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/cron/tbill-sources/shared.ts); provider selection and parsing belong to [`fetch-tbill-rate`](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/cron/fetch-tbill-rate.ts).
 
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.

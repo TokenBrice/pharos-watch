@@ -25,7 +25,7 @@ import {
 import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
-import { type CacheFreshnessDiagnostic } from "./api-freshness";
+import { type CacheFreshnessDiagnostic } from "./status/cache-freshness";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 
 export interface RawStatusComputation {

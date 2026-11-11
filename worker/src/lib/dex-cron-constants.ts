@@ -1,3 +1,23 @@
+import { CRON_INTERVALS, DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-jobs";
+
+
+/** Minimum per-pool liquidity required for a DEX price observation to be stored. */
+export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;
+
+/**
+ * UI-facing peg-summary DEX price check freshness window.
+ * `dex_prices.updated_at` is stamped with the hourly DEX source-stage clock,
+ * so allow two producer intervals plus the stage lead before hiding the DEX
+ * cross-check column data.
+ */
+export const DEX_PRICE_CHECK_FRESHNESS_SEC =
+  CRON_INTERVALS["sync-dex-liquidity"] * 2 + DEX_LIQUIDITY_STAGE_LEAD_SEC;
+
+/** Minimum aggregate DEX source TVL required before showing a UI-facing DEX price check. */
+export const DEX_PRICE_CHECK_UI_MIN_TVL_USD = 250_000;
+
+/** DexScreener minimum liquidity threshold in USD for pool validation */
+export const DEXSCREENER_MIN_LIQUIDITY_USD = 50_000;
 /**
  * DEX Core Constants — Reusable across any DEX operation
  *

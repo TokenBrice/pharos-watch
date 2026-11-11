@@ -35,3 +35,10 @@ export function getBlacklistDerivedCacheKeys(recentWindowSec = BLACKLIST_RECENT_
     ]),
   ];
 }
+
+export function normalizeBlacklistSyncStateKey(configKey: string): string {
+  if (configKey.startsWith("tron-")) return configKey;
+  const separator = configKey.indexOf("-");
+  if (separator === -1) return configKey;
+  return `${configKey.slice(0, separator)}-${configKey.slice(separator + 1).toLowerCase()}`;
+}

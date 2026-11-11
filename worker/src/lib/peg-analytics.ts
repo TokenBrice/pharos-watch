@@ -22,7 +22,7 @@ import {
   loadActiveIncidentProjections,
   rowToPublicDepegEvent,
 } from "./depeg-event-projection";
-import { getFirstSeenDates } from "./db";
+import { getFirstSeenDates } from "./supply-history-db";
 import { deriveCurrentPegObservationMap } from "./current-peg-observations";
 
 export interface DerivePegAnalyticsOptions {

@@ -1,3 +1,4 @@
+import { safetyScoreResponsePolicy } from "../../lib/safety-score-v9/http-response";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_HOSTNAME, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { resolveRoute, route } from "../../router";
@@ -100,7 +101,7 @@ export async function handleHttpRequestImpl(
         apiKeyTrafficClass: fastGate.apiKey?.trafficClass ?? null,
         requestLane: fastGate.requestLane,
       })();
-      return addCorsHeaders(fastRateLimitResponse ?? conditionalGetResponse(routedRequest, cached), origin);
+      return addCorsHeaders(fastRateLimitResponse ?? conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached)), origin);
     }
   }
 
@@ -128,7 +129,7 @@ export async function handleHttpRequestImpl(
   }
   if (cached) {
     recordRequestSource();
-    return addCorsHeaders(conditionalGetResponse(routedRequest, cached), origin);
+    return addCorsHeaders(conditionalGetResponse(routedRequest, cached, safetyScoreResponsePolicy(cached)), origin);
   }
 
   const resolvedRoute = resolveRoute(url, routedRequest.method);
@@ -154,7 +155,7 @@ export async function handleHttpRequestImpl(
 
   recordTelegramIngressHandlerResponse(routedRequest, url, response);
   recordRequestSource();
-  const cacheResponse = scopeResponseEtag(response, edgeCache.cacheKey.url, !edgeCache.skipCache);
+  const cacheResponse = scopeResponseEtag(response, edgeCache.cacheKey.url, !edgeCache.skipCache, safetyScoreResponsePolicy(response));
   writeEdgeCache(edgeCache, cacheResponse, ctx);
-  return addCorsHeaders(conditionalGetResponse(routedRequest, cacheResponse), origin);
+  return addCorsHeaders(conditionalGetResponse(routedRequest, cacheResponse, safetyScoreResponsePolicy(cacheResponse)), origin);
 }

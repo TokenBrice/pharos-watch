@@ -3,7 +3,7 @@ import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
 import { throwIfAborted } from "../../lib/abort";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { PagedTokenPoolsResult } from "../../lib/paged-token-pools";

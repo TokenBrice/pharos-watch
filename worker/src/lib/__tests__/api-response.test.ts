@@ -1,3 +1,4 @@
+import { safetyScoreResponsePolicy } from "../safety-score-v9/http-response";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   errorResponse,
@@ -30,12 +31,13 @@ describe("conditional GET representations", () => {
         "X-Data-Freshness-Budget": "120",
         "X-Data-Assessed-At": String(now - 5),
       },
-    }), { version: 1, generation, overlay, attemptedAt }), "/api/report-cards/v9", false);
+    }), { version: 1, generation, overlay, attemptedAt }), "/api/report-cards/v9", false, { cacheable: overlay !== "held", identity: overlay });
   }
 
   it("returns empty 304 for unchanged generations with weak/list matching and preserves CORS and clocks", async () => {
     const first = representation();
     const etag = first.headers.get("ETag")!;
+    expect(etag).toBe('W/"bc7c42b1df019c3d83b23e9cdd0f5f88c17a2bf8da75a4f1144c6c5eb989465f"');
     const response = addCorsHeaders(conditionalGetResponse(new Request("https://site-api.pharos.watch/api/report-cards/v9", {
       headers: { "If-None-Match": `"another", ${etag.replace(/^W\//, "")}` },
     }), first), "https://pharos.watch");
@@ -72,7 +74,7 @@ describe("conditional GET representations", () => {
     held.headers.set("Last-Modified", new Date(now * 1000).toUTCString());
     const response = conditionalGetResponse(new Request("https://site-api.pharos.watch/api/report-cards/v9", {
       headers: { "If-None-Match": etag },
-    }), held);
+    }), held, safetyScoreResponsePolicy(held));
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(response.headers.get("ETag")).toBeNull();

@@ -20,7 +20,8 @@ import { redactProviderUrls } from "../../lib/safe-error-message";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import { fetchErc20TotalSupply, fetchOnchainUint256, fetchTronErc20TotalSupply } from "./onchain";
-import { APTOS_PUBLIC_REST_URL, fetchMoveFungibleAssetSupply, fetchSolanaMintSupply } from "./token-supply";
+import { APTOS_PUBLIC_REST_URL } from "@shared/lib/chain-rpc-registry";
+import { fetchMoveFungibleAssetSupply, fetchSolanaMintSupply } from "./token-supply";
 import type { AdapterContext } from "./types";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 

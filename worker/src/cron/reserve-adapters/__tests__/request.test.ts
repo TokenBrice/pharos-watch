@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import { createAdapterIoLimiter } from "../concurrency";
+import { getChainObservationRequests } from "../../../lib/chain-observation-context";
 import { createReserveAdapterRunner } from "../../reserve-adapter-runner";
 import { createAdapterLatencyCollector } from "../../sync-live-reserves-core";
 import { CONFIGURED_COINS, classifyFailure } from "../../sync-live-reserves-shared";
@@ -9,6 +10,7 @@ import {
   ADAPTER_USER_AGENT,
   buildBrowserHeaders,
   createRequestBodyObserver,
+  createAdapterChainObservationContext,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
   fetchBinaryResponseWithRetry,
@@ -467,6 +469,29 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
     expect(await Promise.all([request(ctx), request(ctx, options)])).toEqual([{ ok: true }, { ok: true }]);
     await request(ctx, { headers: new Headers(options.headers) });
     expect(network.fetchSpy).toHaveBeenCalledOnce();
+
+    for (const cached of [false, true]) {
+      const network = installAdapterNetwork({ json: { [url]: { ok: true } } });
+      const ioLimiter = createAdapterIoLimiter();
+      const run = vi.spyOn(ioLimiter, "run");
+      const onRequestCache = vi.fn<(event: { hit: boolean }) => void>();
+      const ctx = {
+        ioLimiter, onRequestCache, abortSignal: new AbortController().signal,
+        ...(cached ? { requestCache: new Map<string, Promise<unknown>>() } : {}),
+      };
+      const executor = getChainObservationRequests(createAdapterChainObservationContext(ctx));
+      const signal = new AbortController().signal;
+      await expect(method === "GET"
+        ? executor.get(url, signal, 1_000)
+        : executor.post(url, { coin: "usdc" }, signal, 1_000)).resolves.toEqual({ ok: true });
+      await expect(request(ctx)).resolves.toEqual({ ok: true });
+      expect(network.fetchSpy).toHaveBeenCalledTimes(cached ? 1 : 2);
+      expect(run).toHaveBeenCalledTimes(cached ? 1 : 2);
+      expect(run.mock.calls[0]?.[2]?.signal).toBe(ctx.abortSignal);
+      expect(getRequestResourceSnapshot(ctx, "neutral-reader").intakeBytes)
+        .toBe(new TextEncoder().encode(JSON.stringify({ ok: true })).byteLength * (cached ? 1 : 2));
+      expect(onRequestCache.mock.calls.map(([event]) => event.hit)).toEqual(cached ? [false, true] : []);
+    }
   });
 
   it("never shares different authorization credentials", async () => {

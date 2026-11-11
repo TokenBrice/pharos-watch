@@ -3,7 +3,7 @@ import { EEARN_SUI_COIN_TYPE } from "@shared/lib/onchain-supply-probe";
 import { fetchEearnSuiSupply } from "../sui-vault-supply";
 
 const post = vi.hoisted(() => vi.fn());
-vi.mock("../../../reserve-adapters/request", () => ({ fetchJsonPostWithRetry: post }));
+vi.mock("../../../../lib/json-request", () => ({ fetchJsonPostWithRetry: post }));
 const fixture = {
   "data": {
     "checkpoint": {

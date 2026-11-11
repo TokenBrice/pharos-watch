@@ -9,7 +9,7 @@ import {
   SIX_SARON_COMPOUND_RATES_REFERER_URL,
   BENCHMARK_FETCH_TIMEOUT_MS,
   BENCHMARK_FETCH_MAX_RETRIES,
-} from "../../lib/constants";
+} from "./shared";
 import { isValidBenchmarkRate, parseEuropeanDate, parseRate } from "./shared";
 
 function parseSixOauthToken(json: string): string | null {

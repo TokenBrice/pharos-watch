@@ -12,7 +12,7 @@ import { loadSchedulerLiveness, schedulerLivenessImpactStatus, schedulerLiveness
 import { getPublicMintBurnStatus, getPublicSafetyScoreStatus, maxPublicStatus } from "@shared/lib/public-health";
 import { holdPublicStatusAtReadTime, projectPublicStatus } from "@shared/lib/public-status-components";
 import { getCacheFreshnessStatus } from "@shared/lib/cache-health";
-import { buildCacheStatuses } from "../lib/api-freshness";
+import { buildCacheStatuses } from "../lib/status/cache-freshness";
 import { listFreshnessSentinelBackedCacheKeys } from "../lib/freshness-sentinels";
 import { logWorkerEvent } from "../lib/structured-log";
 

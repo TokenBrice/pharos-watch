@@ -5,10 +5,11 @@ import { StablecoinDataSchema, type StablecoinData } from "@shared/types/market"
 import { CurrentPegSchema } from "@shared/types/current-peg";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices, type CurrentPegDexRow } from "../../lib/current-peg-observations";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
+import { MIN_VALID_ASSET_COUNT } from "../../lib/stablecoin-intake-policy";
 import { writeResponseReadyCache } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
-import { savePriceCache, setCacheIfNewer, type PriceCacheWriteEntry } from "../../lib/db-cache";
+import { setCacheIfNewer } from "../../lib/db-cache";
+import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/price-cache";
 import type { PeggedAsset } from "./enrich-prices";
 import { returnIfAborted } from "./runtime";
 import {

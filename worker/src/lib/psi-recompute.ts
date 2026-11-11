@@ -9,7 +9,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { getDepegThresholdBpsForPegCurrency } from "./constants";
+import { getDepegThresholdBpsForPegCurrency } from "./depeg-threshold-policy";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 

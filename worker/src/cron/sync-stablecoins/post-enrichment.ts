@@ -22,7 +22,7 @@ import {
   type AuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeLivePriceOverrides,
 } from "../../lib/authoritative-price-sources";
-import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/db-cache";
+import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/price-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import type {

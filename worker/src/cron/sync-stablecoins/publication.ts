@@ -3,7 +3,7 @@ import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtim
 import { recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
-import type { PriceCacheWriteEntry } from "../../lib/db-cache";
+import type { PriceCacheWriteEntry } from "../../lib/price-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";

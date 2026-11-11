@@ -9,7 +9,7 @@ import {
 } from "../sync-stablecoins/enrich-prices";
 import { fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices-primary";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
-import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/constants";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/dex-cron-constants";
 
 
 describe("fetchPrimaryPrices", () => {

@@ -19,7 +19,7 @@ import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-s
 import { observeL2MessengerPending } from "./l2-messenger-pending-observer";
 import { observeLayerZeroOftPending } from "./layerzero-oft-pending-observer";
 import { observeEconomicCosmosBank, pinEconomicCosmosBank, type CosmosBankPin } from "./cosmos-bank-observer";
-import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
+import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../chain-observation";
 import { observeCcipPending } from "./ccip-pending-observer";
 import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseTextWithinLimitWithSignal, type BodyReadObserver } from "../response-body";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";

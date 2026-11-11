@@ -1,4 +1,4 @@
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { parseJson } from "./json-parse";
 
 export interface CachedJsonRow {
   value: string;
@@ -77,15 +77,13 @@ export function decodeJsonString<T, R extends string>(
     };
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    const message = toErrorMessage(error);
-    options.onParseFailure?.({
+  const parsed = parseJson(value, {
+    onFailure: ({ message }) => options.onParseFailure?.({
       reason: options.parseErrorReason,
       message,
-    });
+    }),
+  });
+  if (!parsed.ok) {
     return {
       ok: false,
       reason: options.parseErrorReason,
@@ -94,7 +92,7 @@ export function decodeJsonString<T, R extends string>(
     };
   }
 
-  return finalizeJsonDecode(updatedAt, options.normalize(parsed));
+  return finalizeJsonDecode(updatedAt, options.normalize(parsed.value));
 }
 
 interface DecodeCachedJsonOptions<T, R extends string> {

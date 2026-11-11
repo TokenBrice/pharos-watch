@@ -83,7 +83,7 @@ import {
 } from "../../lib/yield-rank-attribution";
 import {
   PYS_SCALING_FACTOR,
-} from "../../lib/constants";
+} from "../../lib/yield-config/policy";
 import {
   resolveYieldSourceUrl,
 } from "../../lib/yield-source-links";

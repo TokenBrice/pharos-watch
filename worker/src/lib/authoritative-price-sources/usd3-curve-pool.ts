@@ -1,6 +1,6 @@
 import { CIRCUIT_SOURCE } from "../constants";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import type { PriceCacheEntry } from "../db-cache";
+import type { PriceCacheEntry } from "../price-cache";
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch } from "../evm-rpc";
 import { hasPublishableCurrentPrice } from "../price-publication-state";

@@ -25,6 +25,10 @@ vi.mock("../../lib/api-freshness", async (importOriginal) => {
   loads.freshness();
   return importOriginal();
 });
+vi.mock("../../lib/status/cache-freshness", async (importOriginal) => {
+  loads.freshness();
+  return importOriginal();
+});
 vi.mock("../../lib/canary-checks", async (importOriginal) => {
   loads.canary();
   return importOriginal();

@@ -19,7 +19,7 @@ import {
 } from "@shared/lib/type-guards";
 import {
   RISK_FREE_RATE_FALLBACK,
-} from "../../lib/constants";
+} from "../../lib/yield-config/policy";
 import {
   buildHardcodedUsdBenchmark,
   getYieldBenchmarkStaticMeta,

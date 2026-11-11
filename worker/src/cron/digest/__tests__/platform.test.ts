@@ -30,7 +30,8 @@ vi.mock("../../../lib/fetch-retry", () => ({
 
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { CIRCUIT_SOURCE, DIGEST_MAX_EDITION_OUTPUT_TOKENS, WEEKLY_RECAP_LLM_CONFIG } from "../../../lib/constants";
+import { CIRCUIT_SOURCE } from "../../../lib/constants";
+import { DIGEST_MAX_EDITION_OUTPUT_TOKENS, WEEKLY_RECAP_LLM_CONFIG } from "../llm-config";
 
 afterEach(() => {
   vi.useRealTimers();

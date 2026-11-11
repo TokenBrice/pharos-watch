@@ -4,7 +4,7 @@ import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
 import { programAddress, publicKeyBytes } from "../../dex-liquidity/solana/program-address";
 import { decodeM0SolanaGlobal, fetchM0SolanaWrapperReserves } from "../m0-solana-wrapper";
-import { readSolanaMint, scaledSolanaRawAmount, SOLANA_TOKEN_2022_PROGRAM } from "../solana";
+import { readSolanaMint, scaledSolanaRawAmount, SOLANA_TOKEN_2022_PROGRAM } from "../../../lib/solana-observation";
 import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
 import currentCapture from "./fixtures/m0-solana-local-2026-10-21.json";

@@ -42,7 +42,7 @@ import {
   readDigestTelegramOutboxState,
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
-import { WEEKLY_RECAP_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
+import { WEEKLY_RECAP_LLM_CONFIG, type DigestLlmConfig } from "./digest/llm-config";
 import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
 import { resolveDigestLlmProfile } from "../lib/digest-llm-profile";
 import { readTwitterDigestDeliveryStatus } from "../lib/twitter-digest-ledger";

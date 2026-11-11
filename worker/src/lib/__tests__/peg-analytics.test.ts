@@ -91,8 +91,8 @@ vi.mock("@shared/lib/methodology-versions/registry", () => ({
   getMethodologyVersionAt: vi.fn(() => "test-methodology"),
 }));
 
-vi.mock("../db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../db")>();
+vi.mock("../supply-history-db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../supply-history-db")>();
   return {
     ...actual,
     getFirstSeenDates: vi.fn(async () => new Map<string, number>()),
@@ -101,7 +101,7 @@ vi.mock("../db", async (importOriginal) => {
 
 import { derivePegAnalyticsSnapshot } from "../peg-analytics";
 import { coinTrackingStart, computePegScore } from "@shared/lib/peg-score";
-import { getFirstSeenDates } from "../db";
+import { getFirstSeenDates } from "../supply-history-db";
 
 describe("derivePegAnalyticsSnapshot", () => {
   it("publishes the uncapped observation boundary separately from scoring coverage", async () => {

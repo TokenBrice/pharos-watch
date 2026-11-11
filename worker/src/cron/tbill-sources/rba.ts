@@ -1,4 +1,5 @@
-import { RBA_F1_MONEY_MARKET_CSV_URL, USER_AGENT } from "../../lib/constants";
+import { RBA_F1_MONEY_MARKET_CSV_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,

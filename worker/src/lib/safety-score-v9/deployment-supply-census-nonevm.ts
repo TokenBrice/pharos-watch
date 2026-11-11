@@ -9,7 +9,7 @@ import { registryRpcUrls, type ChainRpcConfig } from "../chain-registry";
 import type { DwellirNativeCapability } from "../dwellir-native";
 import { getPublicRpcUrl } from "../public-rpc-registry";
 import { fetchSafetyScoreV9SolanaRpc } from "./supply-observation-primitives";
-import { fetchMoveFungibleAssetSupply, type MoveFungibleAssetSupplyObservation } from "../../cron/reserve-adapters/token-supply";
+import { fetchMoveFungibleAssetSupply, type MoveFungibleAssetSupplyObservation } from "../chain-observation";
 import type {
   DeploymentSupplyCensusChainRead,
   DeploymentSupplyCensusMeasuredRow,

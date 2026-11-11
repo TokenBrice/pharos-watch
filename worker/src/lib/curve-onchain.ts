@@ -15,9 +15,13 @@ import { logWorkerEventArgs } from "./structured-log";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "./evm-rpc";
 import type { ChainRpcConfig } from "./chain-registry";
 import type { FetcherOutcome } from "./fetcher-result";
-import { CURVE_ORACLE_MAX_STALENESS_SEC } from "./constants";
+
 import { encodeUint256 } from "./evm-selectors";
 import type { CurvePoolConfig, CurveRouteType } from "@shared/lib/curve-pool-configs";
+
+/** Maximum accepted block-timestamp staleness for the Curve PriceAggregator EMA oracle (seconds). */
+export const CURVE_ORACLE_MAX_STALENESS_SEC = 300;
+
 
 // get_dy(int128,int128,uint256) selector
 const GET_DY_SELECTOR = "0x5e0d443f";

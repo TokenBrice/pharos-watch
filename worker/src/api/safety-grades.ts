@@ -1,8 +1,6 @@
 import type { SafetyGradesResponse } from "@shared/types/report-cards-v9";
-import {
-  jsonResponse,
-  jsonSafetyScoreSnapshotResponse,
-} from "../lib/api-response";
+import { jsonResponse } from "../lib/api-response";
+import { jsonSafetyScoreSnapshotResponse } from "../lib/safety-score-v9/http-response";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 
 /**

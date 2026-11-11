@@ -5,7 +5,8 @@ import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-clos
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { divergingProtocolGroupsOutvote, getDepegRecoveryThresholdBps, getDepegThresholdBps, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/constants";
+import { divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/price-depeg-voting-policy";
+import { getDepegRecoveryThresholdBps, getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
 import {
   buildPendingReason,
   countDexProtocolCorroborations,

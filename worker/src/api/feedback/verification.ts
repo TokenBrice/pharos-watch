@@ -8,7 +8,7 @@ import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { VerificationResult } from "./types";
-import { getDepegThresholdBps } from "../../lib/constants";
+import { getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
 
 export async function verifyDataCorrection(
   db: D1Database,

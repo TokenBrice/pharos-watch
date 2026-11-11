@@ -907,7 +907,7 @@ Synthetic chronology uses the original evidence clock, not sweep wall time. A st
 
 ### Price Cache
 
-`getPriceCache()`/`savePriceCache()` in `worker/src/lib/db-cache.ts` own `price_cache` access; [pricing](../pricing-pipeline.md) owns admission and clocks. Cache read success alone never establishes current-price provenance.
+`getPriceCache()`/`savePriceCache()` in `worker/src/lib/price-cache.ts` own `price_cache` access; [pricing](../pricing-pipeline.md) owns admission and clocks. Cache read success alone never establishes current-price provenance.
 ## Health & Status Endpoints
 
 The [API reference](../api-reference.md#get-apihealth) owns response contracts; [status dashboard](../status-dashboard.md#cron-health-model) owns operator health interpretation. `shared/lib/status-thresholds.ts` owns cache age-ratio baselines/overrides and scheduler thresholds, not a copied table here.
@@ -947,7 +947,7 @@ The admin timeline distinguishes unavailable history from a complete window: rea
 
 ## Key Constants
 
-[`worker/src/lib/constants.ts`](../../worker/src/lib/constants.ts) owns current values; do not maintain a copied constant/value table here.
+[`worker/src/lib/constants.ts`](../../worker/src/lib/constants.ts) owns runtime and transport values; product policies live with their domain owners, including [pool voting](../../worker/src/lib/price-depeg-voting-policy.ts), [yield](../../worker/src/lib/yield-config/policy.ts), and [digest generation](../../worker/src/cron/digest/llm-config.ts). Do not maintain a copied constant/value table here.
 
 The account-state manifest owns the intentionally disabled broad `api-rate-limit-ip` WAF rule. Broad floods can reach Worker ingress; route-specific native gates and per-key controls do not substitute for edge-wide volumetric protection.
 

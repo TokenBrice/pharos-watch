@@ -7,7 +7,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildChainRpcs, logScanRpcEndpoints } from "../chain-registry";
 import { observeSafetyScoreV9TransferMaterialityGeneration, TRANSFER_MATERIALITY_CAPTURE_BUDGET, transferMaterialityObserverResolvesRpc } from "../safety-score-v9/transfer-materiality-observer";
 import { exactInputBoundTransferMaterialityPacket, SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, type SafetyScoreV9TransferMaterialityGeneration } from "../safety-score-v9/transfer-materiality";
-import type { fetchMoveFungibleAssetSupply, MoveFungibleAssetSupplyObservation } from "../../cron/reserve-adapters/token-supply";
+import type { fetchMoveFungibleAssetSupply, MoveFungibleAssetSupplyObservation } from "../chain-observation";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";

@@ -2,9 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
-  getCache, getPriceCache, prepareCacheUpsert, readCacheWithPolicy, savePriceCache,
-  setCacheIfAbsent, setCacheIfNewer, setCachesAt, shouldSkipFreshCache, type CachePolicy,
+  getCache,
+  prepareCacheUpsert,
+  readCacheWithPolicy,
+  setCacheIfAbsent,
+  setCacheIfNewer,
+  setCachesAt,
+  shouldSkipFreshCache,
+  type CachePolicy,
 } from "../db-cache";
+import { getPriceCache, savePriceCache } from "../price-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

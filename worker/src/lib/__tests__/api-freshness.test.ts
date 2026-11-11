@@ -4,9 +4,9 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { freshnessDb } from "./api-freshness.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 import { CLOCK_INPUT_STATES, CLOCK_NOW_SEC } from "@shared/test-utils/boundary-contract-vectors.test-support";
+import { buildCacheStatuses } from "../status/cache-freshness";
 import {
   buildFreshnessMeta,
-  buildCacheStatuses,
   getLatestSuccessfulCronTimestampResult,
 } from "../api-freshness";
 import { addFreshnessHeaders } from "../api-freshness-headers";

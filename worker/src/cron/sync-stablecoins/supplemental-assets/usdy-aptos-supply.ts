@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { APTOS_PUBLIC_REST_URL } from "@shared/lib/chain-rpc-registry";
 import { NAV_SUPPLY_LEDGER_FRESHNESS } from "@shared/lib/onchain-supply-probe";
-import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../../reserve-adapters/request";
+import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../../../lib/json-request";
 
 const BOUNDED_READ = { maxRetries: 0, maxResponseBytes: 64 * 1024 };
 const IntegerSchema = z.string().regex(/^(0|[1-9]\d{0,38})$/);

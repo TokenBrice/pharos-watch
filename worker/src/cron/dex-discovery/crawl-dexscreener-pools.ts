@@ -4,7 +4,8 @@ import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared
 import { throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { DS_CHAIN_MAP } from "../../lib/chain-registry";
-import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
 import { dsRateLimit, fetchDsTokenPairsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-normalization";

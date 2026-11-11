@@ -3,7 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { loadBlacklistConfigStates } from "../sync-support";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
-import { normalizeBlacklistSyncStateKey } from "../../../lib/db";
+import { normalizeBlacklistSyncStateKey } from "../../../lib/blacklist-cache-keys";
 vi.mock("../../../lib/blacklist-contracts", () => ({
   CONTRACT_CONFIGS: [
     {

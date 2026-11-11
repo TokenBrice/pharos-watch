@@ -12,7 +12,7 @@ import { decodeEvmUint256 } from "./supply-observation-primitives";
 import { SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS, createSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityObservation } from "./transfer-materiality";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { observeEconomicSolanaMint } from "./economic-supply-observer";
-import { fetchMoveFungibleAssetSupply } from "../../cron/reserve-adapters/token-supply";
+import { fetchMoveFungibleAssetSupply } from "../chain-observation";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { hasCompleteEligibleProviderSupply, REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 import { ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";

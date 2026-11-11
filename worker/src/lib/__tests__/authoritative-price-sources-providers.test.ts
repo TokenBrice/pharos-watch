@@ -19,7 +19,7 @@ import { usd3CurvePoolProvider, type Usd3PriceContext } from "../authoritative-p
 import { createAuthoritativeLivePriceOverrideStats as overrideStats } from "../authoritative-price-sources";
 import { buildPriceValidationContext } from "../price-validation";
 import { validatePublishedAssetPrice } from "../price-publish-policy";
-import { getPriceCache } from "../db-cache";
+import { getPriceCache } from "../price-cache";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 import { CACHED_VAULT_RATE_MAX_AGE_SEC } from "../authoritative-price-sources/helpers";
@@ -30,12 +30,12 @@ import { createProtocolRedeemProvider } from "../authoritative-price-sources/pro
 import { encodeUint256 } from "../evm-selectors";
 import * as extraction from "../historical-depeg-extraction";
 import { moveusdOrcaProvider } from "../authoritative-price-sources/moveusd-orca";
-import { fetchSolanaAccounts, SOLANA_TOKEN_PROGRAM } from "../../cron/reserve-adapters/solana";
+import { fetchSolanaAccounts, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
 import { publicKeyBytes } from "../../cron/dex-liquidity/solana/program-address";
 import { ORCA_WHIRLPOOL_PROGRAM_ID } from "../../cron/dex-liquidity/solana/whirlpool-quote";
 
-vi.mock("../../cron/reserve-adapters/solana", async (original) => ({
-  ...await original<typeof import("../../cron/reserve-adapters/solana")>(), fetchSolanaAccounts: vi.fn(),
+vi.mock("../chain-observation", async (original) => ({
+  ...await original<typeof import("../chain-observation")>(), fetchSolanaAccounts: vi.fn(),
 }));
 
 describe("MOVEUSD reviewed Orca mark", () => {

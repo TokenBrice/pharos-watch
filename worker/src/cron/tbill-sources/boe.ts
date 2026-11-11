@@ -1,4 +1,5 @@
-import { BOE_SONIA_CSV_BASE_URL, USER_AGENT } from "../../lib/constants";
+import { BOE_SONIA_CSV_BASE_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import { DAY_MS } from "@shared/lib/time-constants";
 import {
   addDays,

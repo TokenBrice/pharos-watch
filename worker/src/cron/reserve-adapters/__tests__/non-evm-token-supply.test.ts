@@ -1,14 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const requestMocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../request", () => ({
-  fetchJsonPostWithRetry: vi.fn(),
-  fetchJsonWithRetry: vi.fn(),
+  fetchJsonPostWithRetry: requestMocks.post,
+  fetchJsonWithRetry: requestMocks.get,
+}));
+vi.mock("../../../lib/json-request", () => ({
+  jsonRequestExecutor: {
+    get: (url: string, signal: AbortSignal, timeoutMs: number, options?: unknown) => requestMocks.get(url, signal, timeoutMs, undefined, options),
+    post: (url: string, body: unknown, signal: AbortSignal, timeoutMs: number, options?: unknown) => requestMocks.post(url, body, signal, timeoutMs, undefined, options),
+  },
 }));
 
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../request";
 import { fetchStarknetTotalSupply } from "../starknet";
 import { fetchIcrcLedgerTotalSupply } from "../icp";
-import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../token-supply";
+import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../../lib/chain-observation";
 
 const STARKNET_CONTRACT = "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc";
 const ICP_CANISTER = "6c7su-kiaaa-aaaar-qaira-cai";

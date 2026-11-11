@@ -1,3 +1,4 @@
+import { createAdapterJsonRequestExecutor } from "./request";
 import type { ReserveRisk, ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -456,7 +457,7 @@ async function readTronWord(
     try {
       const json = provider === "dwellir"
         ? await ctx!.dwellirNative!.readJson<TronConstantContractResponse>(
-          "tron", "/wallet/triggerconstantcontract", signal, ctx, request,
+          "tron", "/wallet/triggerconstantcontract", signal, createAdapterJsonRequestExecutor(ctx), request,
         )
         : await fetchJsonPostWithRetry<TronConstantContractResponse>(
           TRON_CONSTANT_CONTRACT_URL, request, signal, 10_000, ctx, { headers },

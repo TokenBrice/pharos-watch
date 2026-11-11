@@ -1,4 +1,5 @@
-import { NYFED_EFFR_JSON_URL, USER_AGENT } from "../../lib/constants";
+import { NYFED_EFFR_JSON_URL } from "./shared";
+import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
   isValidBenchmarkRateForKey,

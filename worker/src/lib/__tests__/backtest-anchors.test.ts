@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS, DEWS_HISTORY_START_SEC } from "../backtest-anchors";
-import { BACKTEST_LOOKBACK_DAYS } from "../constants";
+import { BACKTEST_LOOKBACK_DAYS } from "../backtest-anchors";
 
 function firstRequiredMidnight(windowStart: number): number {
   return Math.ceil(windowStart / DAY_SECONDS) * DAY_SECONDS;

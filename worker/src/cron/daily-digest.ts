@@ -47,7 +47,7 @@ import {
   reportDigestRefusal,
 } from "./digest/platform";
 import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request";
-import { DAILY_DIGEST_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
+import { DAILY_DIGEST_LLM_CONFIG, type DigestLlmConfig } from "./digest/llm-config";
 import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
 import { resolveDigestLlmProfile } from "../lib/digest-llm-profile";
 import { readTwitterDigestDeliveryStatus } from "../lib/twitter-digest-ledger";

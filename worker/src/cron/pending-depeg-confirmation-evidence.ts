@@ -1,6 +1,7 @@
 import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
 import { BINANCE_MARKETS } from "@shared/lib/pricing-provider-config";
-import { CIRCUIT_SOURCE, divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD, USER_AGENT } from "../lib/constants";
+import { CIRCUIT_SOURCE, USER_AGENT } from "../lib/constants";
+import { divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD } from "../lib/price-depeg-voting-policy";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../lib/coingecko";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import {

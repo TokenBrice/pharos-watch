@@ -1,8 +1,7 @@
 import { DWELLIR_NATIVE_ENDPOINTS, type DwellirNativeNetwork } from "@shared/lib/dwellir-native-endpoints";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isTronJsonRpcRead, tronRpcResponseByteLimit } from "@shared/lib/tron-jsonrpc";
-import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../cron/reserve-adapters/request";
-import type { AdapterContext } from "../cron/reserve-adapters/types";
+import { jsonRequestExecutor, type JsonRequestExecutor } from "./json-request";
 import { recordDwellirCredits } from "./rpc-provider-budget";
 import { isResponseBodyTooLargeError } from "./response-body";
 
@@ -13,7 +12,7 @@ export interface DwellirNativeCapability {
     network: DwellirNativeNetwork,
     path: string,
     signal: AbortSignal,
-    ctx?: AdapterContext,
+    ctx?: JsonRequestExecutor,
     body?: unknown,
     timeoutMs?: number,
   ): Promise<T>;
@@ -28,7 +27,7 @@ export function createDwellirNativeCapability(
   return {
     isNetworkEnabled: (network) => !disabledNetworks?.has(network),
     async readJson<T>(network: DwellirNativeNetwork, path: string, signal: AbortSignal,
-      ctx?: AdapterContext, body?: unknown, timeoutMs = 10_000): Promise<T> {
+      ctx?: JsonRequestExecutor, body?: unknown, timeoutMs = 10_000): Promise<T> {
       if (disabledNetworks?.has(network)) throw new Error(`Dwellir native routing disabled for ${network}`);
       const endpoint = DWELLIR_NATIVE_ENDPOINTS.find((entry) => entry.network === network)!;
       const isMoveRead = endpoint.protocol === "aptos-rest" && body === undefined && (
@@ -58,8 +57,8 @@ export function createDwellirNativeCapability(
       };
       try {
         const result = body === undefined
-          ? await fetchJsonWithRetry<T>(url, signal, timeoutMs, ctx, options)
-          : await fetchJsonPostWithRetry<T>(url, body, signal, timeoutMs, ctx, options);
+          ? await (ctx ?? jsonRequestExecutor).get<T>(url, signal, timeoutMs, options)
+          : await (ctx ?? jsonRequestExecutor).post<T>(url, body, signal, timeoutMs, options);
         // Keep the reader's RPC-error parser, but redact any credential echoed
         // by the provider before that parser constructs a diagnostic.
         if ((network === "starknet" || network === "tron") && result !== null && typeof result === "object" && "error" in result) {

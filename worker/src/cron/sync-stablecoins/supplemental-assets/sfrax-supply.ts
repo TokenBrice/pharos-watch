@@ -15,7 +15,7 @@ import {
   type EvmBlockHeader, type EvmRpcOptions,
 } from "../../../lib/evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeBalanceOfCallData } from "../../../lib/evm-selectors";
-import { fetchSolanaAccounts, readSolanaMint, solanaPublicKey, SOLANA_TOKEN_PROGRAM } from "../../reserve-adapters/solana";
+import { fetchSolanaAccounts, readSolanaMint, solanaPublicKey, SOLANA_TOKEN_PROGRAM } from "../../../lib/chain-observation";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { rethrowIfAborted, throwIfAborted } from "../../../lib/abort";
 import { logWorkerEvent } from "../../../lib/structured-log";

@@ -7,7 +7,7 @@ import { throwIfAborted } from "../../lib/abort";
 import {
   type DigestEffort,
   type DigestLlmConfig,
-} from "../../lib/constants";
+} from "./llm-config";
 import {
   recordCronFailure,
   type CronProgressReporter,
