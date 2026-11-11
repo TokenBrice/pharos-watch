@@ -93,7 +93,7 @@ async function writeBundle(root: string, date = DATE) {
 }
 
 function runGenerator(root: string, args: string[] = [], env: Partial<NodeJS.ProcessEnv> = {}) {
-  return execFileAsync(process.execPath, ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts", ...args], {
+  return execFileAsync(process.execPath, ["--import", "data:text/javascript,globalThis.fetch=async()=>{throw new TypeError('offline fixture')}", "--import", "tsx", "scripts/maintenance/generate-public-datasets.ts", ...args], {
     cwd: root, timeout: 15_000,
     env: { ...process.env, API_BASE_URL: "", SMOKE_API_BASE: "", PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_DATE: DATE, PUBLIC_DATASETS_REQUIRE_API: "", PUBLIC_DATASETS_ALLOW_STUB: "", PUBLIC_DATASETS_ALLOW_EXISTING_ON_FETCH_FAILURE: "",
