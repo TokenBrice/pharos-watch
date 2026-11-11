@@ -1710,8 +1710,8 @@ describe("syncLiveReserves", () => {
     const hiveCalls = adapterFetch.mock.calls.filter(([coin]) => coin.id === "hbd-hive");
     expect(hiveCalls).toHaveLength(1);
     expect(hiveCalls[0]![1].inputs).toMatchObject({
-      primary: { url: "https://api.hive.blog" },
-      fallbacks: [{ url: "https://api.openhive.network" }],
+      primary: { url: "https://api.openhive.network" },
+      fallbacks: [{ url: "https://api.deathwing.me" }],
     });
     expect(db.getHistory().some((entry) => (
       entry.sql.includes("INSERT INTO reserve_composition") && entry.binds[0] === "hbd-hive"

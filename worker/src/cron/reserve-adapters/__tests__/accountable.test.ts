@@ -620,6 +620,7 @@ describe("adaptAccountableDashboard", () => {
           "Rest_of_Assets": { value: 10 },
           "[Aave]_Gho_Savings": { value: 10 },
           "[Paxos]_USDG": { value: 10 },
+          "[Sky]_sUSDS": { value: 10 },
         },
       },
     });
@@ -627,18 +628,25 @@ describe("adaptAccountableDashboard", () => {
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       bucket: "exposure_split",
-      breakdownCount: 17,
-      mappedBucketCount: 17,
+      breakdownCount: 18,
+      mappedBucketCount: 18,
     });
     expect(result.metadata?.unknownBucketCount).toBeUndefined();
     expect(result.metadata?.unknownExposurePct).toBeUndefined();
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Ethena USDe loop", pct: expect.closeTo(100 / 17, 8), risk: "high", coinId: "usde-ethena", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Ethena USDe", pct: expect.closeTo(100 / 17, 8), risk: "high", coinId: "usde-ethena", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Aave GHO", pct: expect.closeTo(100 / 17, 8), risk: "medium", coinId: "gho-aave", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "MegaETH USDm", pct: expect.closeTo(100 / 17, 8), risk: "low", coinId: "usdm-mega", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Maple syrupUSDT", pct: expect.closeTo(100 / 17, 8), risk: "medium", coinId: "syrupusdt-maple", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Sky PT sUSDS loop", pct: expect.closeTo(100 / 17, 8), risk: "high", coinId: "susds-sky", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Paxos USDG", pct: expect.closeTo(100 / 17, 8), risk: "low", coinId: "usdg-paxos", depType: "collateral" }));
+    for (const [name, risk, coinId] of [
+      ["Ethena USDe loop", "high", "usde-ethena"],
+      ["Ethena USDe", "high", "usde-ethena"],
+      ["Aave GHO", "medium", "gho-aave"],
+      ["MegaETH USDm", "low", "usdm-mega"],
+      ["Maple syrupUSDT", "medium", "syrupusdt-maple"],
+      ["Sky PT sUSDS loop", "high", "susds-sky"],
+      ["Paxos USDG", "low", "usdg-paxos"],
+    ]) {
+      expect(result.slices).toContainEqual(expect.objectContaining({
+        name, risk, coinId, pct: expect.closeTo(100 / 18, 8), depType: "collateral",
+      }));
+    }
+    expect(result.slices).toContainEqual({ name: "[Sky]_sUSDS", risk: "high", pct: 100 / 18 });
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 4, 12) / 1000,

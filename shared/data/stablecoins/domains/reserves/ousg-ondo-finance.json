@@ -107,11 +107,11 @@
     },
     {
       "sourceKey": "ondo-ousg:position:04bcda43-af66-497e-8064-efe82ca3cb71",
-      "name": "Silicon Valley Bank - Bank Deposits",
+      "name": "First Citizens Bank - Bank Deposits",
       "pct": 0.0259,
       "risk": "medium",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Silicon Valley Bank",
+      "issuerOrObligor": "First Citizens Bank",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -135,7 +135,7 @@
         "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
       }
     ],
-    "rationale": "The issuer portfolio as of 2026-10-09T20:00:00.000Z contains seven USD positions totaling $319024551.09: State Street Galaxy Onchain Liquidity Sweep Fund $151427776.46 (47.4659%); BlackRock USD Institutional Digital Liquidity Fund $101914898.36 (31.9458%); Franklin OnChain U.S. Government Money Fund $38843784.05 (12.1758%); Fidelity Treasury Digital Fund $23566488.15 (7.3870%); Coinbase - Cash Equivalents $3113303.00 (0.9759%); Other Assets $75640.95 (0.0237%); Silicon Valley Bank - Bank Deposits $82660.12 (0.0259%). The raw issuer page was accessed at 2026-10-11T08:51:05Z; its unique embedded portfolio preserves all seven reviewed source IDs and the source scope excluding non-tokenized book-entry OUSG interests. Exact cent amounts reconcile to the disclosed denominator. Under D01, independent integer-cent division and rounding to four decimal places gives 100.0000%, without a residual adjustment or renormalization. This updates measured composition only; existing liquidity and maturity C classifications, dependency identities, custody review and unknown Other Assets counterparties remain unchanged. Issuer portfolio data provides no independent financial assurance or account-specific realization bound.",
+    "rationale": "The issuer portfolio as of 2026-10-09T20:00:00.000Z contains seven USD positions totaling $319024551.09: State Street Galaxy Onchain Liquidity Sweep Fund $151427776.46 (47.4659%); BlackRock USD Institutional Digital Liquidity Fund $101914898.36 (31.9458%); Franklin OnChain U.S. Government Money Fund $38843784.05 (12.1758%); Fidelity Treasury Digital Fund $23566488.15 (7.3870%); Coinbase - Cash Equivalents $3113303.00 (0.9759%); Other Assets $75640.95 (0.0237%); Silicon Valley Bank - Bank Deposits $82660.12 (0.0259%). The raw issuer page was accessed at 2026-10-11T08:51:05Z; its unique embedded portfolio preserves all seven reviewed source IDs and the source scope excluding non-tokenized book-entry OUSG interests. Exact cent amounts reconcile to the disclosed denominator. Under D01, independent integer-cent division and rounding to four decimal places gives 100.0000%, without a residual adjustment or renormalization. This updates measured composition only; existing liquidity and maturity C classifications, dependency identities, custody review and unknown Other Assets counterparties remain unchanged. Issuer portfolio data provides no independent financial assurance or account-specific realization bound. The orchestrator's raw issuer capture at 2026-11-11T23:14Z confirms that document 04bcda43-af66-497e-8064-efe82ca3cb71 was relabelled First Citizens Bank - Bank Deposits, still USD, with no change to its identity or classification. Only the current label and obligor wording are updated here; percentages and compositionAsOf retain the 2026-10-09 observation.",
     "compositionBasis": "Issuer-published complete seven-position OUSG portfolio, source time 2026-10-09T20:00:00.000Z; exact USD cent amounts divided by disclosed USD total $319024551.09 and independently rounded to four decimal places under D01",
     "compositionAsOf": "2026-10-09",
     "scope": "full-composition",
@@ -165,7 +165,7 @@
       },
       {
         "reserveIndex": 6,
-        "reserveName": "Silicon Valley Bank - Bank Deposits",
+        "reserveName": "First Citizens Bank - Bank Deposits",
         "pct": 0.0259,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Direct bank deposit, not a tracked stablecoin."
@@ -180,7 +180,7 @@
         "jurisdiction": "United States"
       },
       {
-        "name": "Underlying fund custodians, Coinbase, and Silicon Valley Bank",
+        "name": "Underlying fund custodians, Coinbase, and First Citizens Bank (Silicon Valley Bank division)",
         "role": "custodian",
         "jurisdiction": "United States"
       }

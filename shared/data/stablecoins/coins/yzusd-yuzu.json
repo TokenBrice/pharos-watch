@@ -169,7 +169,8 @@
         "[AAVE]_USDT": "medium",
         "[Aave]_AUSD": "medium",
         "[Global_Dollar]_USDG": "low",
-        "[Sky]_sUSDS_Loop": "high"
+        "[Sky]_sUSDS_Loop": "high",
+        "[Sky]_sUSDS": "high"
       },
       "coinIdMap": {
         "[Fluid]_fUSDT0": "usdt-tether",

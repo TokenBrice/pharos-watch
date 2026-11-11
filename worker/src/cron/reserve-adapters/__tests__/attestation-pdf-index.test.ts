@@ -61,21 +61,20 @@ describe("adaptAttestationPdfIndex", () => {
     })).toThrow();
   });
 
-  it("uses the reviewed balance date and rejects publication dates from a newer unreviewed report", () => {
-    const url = "https://issuer.example/reports/2026-08-12-report.pdf";
+  it.each(["2026-09-12-report.pdf", "USDU Examination Report - SEP 26 SIGNED.pdf"])("withholds freshness for unreviewed %s", (filename) => {
+    const url = "https://issuer.example/reports/reviewed-report.pdf";
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", {
       ...CONFIGURED_PARAMS,
-      reviewedReport: { url, balanceDate: "2026-08-01" },
+      linkMatch: "report", reviewedReport: { url, balanceDate: "2026-08-01" },
     });
     const result = adaptAttestationPdfIndex(`<a href="${url}">August report</a>`, params);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Date.UTC(2026, 7, 1) / 1000,
-      reportDate: "2026-08-12",
       reportBalanceDate: "2026-08-01",
       freshnessMode: "verified",
     });
     const newer = adaptAttestationPdfIndex(
-      `<a href="${url}">August report</a><a href="https://issuer.example/reports/2026-09-12-report.pdf">September report</a>`,
+      `<a href="https://issuer.example/reports/${filename}">Report</a><a href="${url}">Report</a>`,
       params,
     );
     expect(newer.metadata?.sourceTimestamp).toBeUndefined();
@@ -305,8 +304,6 @@ describe("adaptAttestationPdfIndex", () => {
     });
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).not.toHaveProperty("redemption");
-    // Quarterly Ripio reports inherit the lagged-quarterly cap: 100 days after
-    // the reviewed balance date is a healthy cycle, 151 days is not.
     expect(config.scoring?.maxSourceAgeSec).toBeUndefined();
     const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, {
       now: balanceDateMs / 1000 + 100 * 86_400,
@@ -323,18 +320,17 @@ describe("adaptAttestationPdfIndex", () => {
     const config = usdu.liveReservesConfig as LiveReservesConfig;
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
     const report = params.reviewedReport!;
-    const result = adaptAttestationPdfIndex(`<a href="${report.url}">USDU Examination Attestation report August 2026</a>`, params);
+    const result = adaptAttestationPdfIndex(`<a href="/August-2026-USDU-Examination-Report.pdf">Report</a><a href="${report.url}">USDU Examination report</a>`, params);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Date.parse(`${report.balanceDate}T00:00:00Z`) / 1000,
       reportBalanceDate: report.balanceDate, reportPdfUrl: report.url,
     });
     expect(result.metadata).not.toHaveProperty("redemption");
-    // USDU is monthly and tightens the adapter cap to 70 days per coin.
     const maxSourceAgeSec = config.scoring?.maxSourceAgeSec;
     expect(maxSourceAgeSec).toBe(70 * 86_400);
-    const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 8) / 1000, maxSourceAgeSec });
+    const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 10, 20) / 1000, maxSourceAgeSec });
     expect(inCycle.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
-    const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 10, 10) / 1000, maxSourceAgeSec });
+    const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 11, 10) / 1000, maxSourceAgeSec });
     expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
   });

@@ -90,6 +90,8 @@ interface FarmRiskConfig {
 }
 
 const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
+  "fasanara-mfone":          { risk: "high", ...cefiPositionMeta() },
+  "jet-stream":              { risk: "high" },
   "fasanara-rwa-farm":       { risk: "high", ...cefiPositionMeta() },
   "fasanara-gdaf":           { risk: "high", ...cefiPositionMeta(), coinId: "mglobal-midas-fasanara", depType: "collateral" },
   "falconx-farm":            { risk: "high", ...cefiPositionMeta() },

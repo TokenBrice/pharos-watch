@@ -59,7 +59,7 @@ interface ReportDateCandidate extends ParsedReportDateCandidate {
 interface PdfLinkCandidate {
   href: string;
   text: string;
-  date: ReportDateCandidate;
+  date: ReportDateCandidate | null;
 }
 
 function decodeUrlish(value: string): string {
@@ -256,24 +256,36 @@ function parseBestReportDate(value: string, source: ReportDateSource): ReportDat
   return parseAllDates(normalized, source, DAY_DATE_PARSERS) ?? parseAllDates(normalized, source, MONTH_DATE_PARSERS);
 }
 
-function collectPdfLinkCandidates(html: string): PdfLinkCandidate[] {
+function collectPdfLinkCandidates(html: string, linkMatch?: RegExp): PdfLinkCandidate[] {
   const candidates: PdfLinkCandidate[] = [];
   for (const anchor of collectPdfAnchors(html)) {
     const href = decodeHtmlEntities(anchor.href.trim());
     if (!href || !isPdfHref(href)) continue;
     if (!isAttestationReportLink(href, anchor.text)) continue;
+    if (linkMatch && !linkMatch.test(`${href} ${anchor.text}`)) continue;
     const date = parseBestReportDate(href, "href") ?? parseBestReportDate(anchor.text, "text");
-    if (date) candidates.push({ href, text: anchor.text, date });
+    // "SEP 26" can mean a day or a year: retain name-matched undated reports;
+    // only an exact reviewed URL may supply their authoritative balance date.
+    if (date || linkMatch) candidates.push({ href, text: anchor.text, date });
   }
   return candidates;
 }
 
-function findLatestPdfLink(html: string, linkMatch?: RegExp): PdfLinkCandidate | null {
+function findLatestPdfLink(
+  html: string,
+  linkMatch: RegExp | undefined,
+  reviewedReport: AttestationPdfIndexParams["reviewedReport"],
+  indexUrl: string | undefined,
+): PdfLinkCandidate | null {
   let latest: PdfLinkCandidate | null = null;
-  for (const candidate of collectPdfLinkCandidates(html)) {
-    if (linkMatch && !linkMatch.test(`${candidate.href} ${candidate.text}`)) continue;
-    if (!latest || candidate.date.sourceTimestamp > latest.date.sourceTimestamp) {
+  let latestTimestamp = -Infinity;
+  for (const candidate of collectPdfLinkCandidates(html, linkMatch)) {
+    const reviewedMatch = reviewedReport != null && reviewedReport.url === reportHrefMetadata(candidate.href, indexUrl).reportPdfUrl;
+    const timestamp = candidate.date?.sourceTimestamp ?? (reviewedMatch
+      ? Date.parse(`${reviewedReport!.balanceDate}T00:00:00Z`) / 1000 : Infinity);
+    if (!latest || timestamp > latestTimestamp) {
       latest = candidate;
+      latestTimestamp = timestamp;
     }
   }
   return latest;
@@ -307,7 +319,7 @@ export function adaptAttestationPdfIndex(
   // eslint-disable-next-line security/detect-non-literal-regexp -- reviewed static currency token from adapter config; the params schema already rejects non-compiling sources.
   const linkMatch = params.linkMatch ? new RegExp(params.linkMatch) : undefined;
   const diag = { rawSumDeviation };
-  const latest = findLatestPdfLink(html, linkMatch);
+  const latest = findLatestPdfLink(html, linkMatch, params.reviewedReport, options.indexUrl);
   if (!latest) {
     if (linkMatch) {
       return {
@@ -338,7 +350,7 @@ export function adaptAttestationPdfIndex(
   const reviewedMatch = reviewedReport != null && reviewedReport.url === hrefMetadata.reportPdfUrl;
   const sourceTimestamp = reviewedReport
     ? (reviewedMatch ? Date.parse(`${reviewedReport.balanceDate}T00:00:00Z`) / 1000 : undefined)
-    : latest.date.sourceTimestamp;
+    : latest.date?.sourceTimestamp;
 
   return {
     slices,
@@ -354,11 +366,13 @@ export function adaptAttestationPdfIndex(
         ? verifiedFreshnessMetadata(sourceTimestamp)
         : unverifiedFreshnessMetadata(ADAPTER_NAME, "Newest report does not match the reviewed balance-date evidence")),
       ...(reviewedMatch ? { reportBalanceDate: reviewedReport!.balanceDate } : {}),
-      reportDate: latest.date.reportDate,
-      reportDateLabel: latest.date.reportDateLabel,
-      reportDatePrecision: latest.date.reportDatePrecision,
-      ...(latest.date.reportPeriod ? { reportPeriod: latest.date.reportPeriod } : {}),
-      reportDateSource: latest.date.dateSource,
+      ...(latest.date ? {
+        reportDate: latest.date.reportDate,
+        reportDateLabel: latest.date.reportDateLabel,
+        reportDatePrecision: latest.date.reportDatePrecision,
+        ...(latest.date.reportPeriod ? { reportPeriod: latest.date.reportPeriod } : {}),
+        reportDateSource: latest.date.dateSource,
+      } : {}),
       ...(latest.text ? { reportLinkText: latest.text } : {}),
       ...hrefMetadata,
       compositionMode: COMPOSITION_MODE,

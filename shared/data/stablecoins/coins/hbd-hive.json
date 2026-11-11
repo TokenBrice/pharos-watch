@@ -85,12 +85,12 @@
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://api.hive.blog"
+        "url": "https://api.openhive.network"
       },
       "fallbacks": [
         {
           "kind": "http-json",
-          "url": "https://api.openhive.network"
+          "url": "https://api.deathwing.me"
         }
       ]
     },
