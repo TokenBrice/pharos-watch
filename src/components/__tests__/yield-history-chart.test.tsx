@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { YieldHistoryPoint } from "@shared/types";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, useYieldHistoryChartModel } from "@/components/yield-history-chart-model";
+import { useYieldHistoryChartQueries } from "@/components/yield-history-chart-queries";
 import { SourceStrip, WarningDot, YieldHistoryTooltip } from "@/components/yield-history-chart-ui";
 
 const { useYieldHistoryMock } = vi.hoisted(() => ({
@@ -293,6 +294,24 @@ function point(date: number, apy: number, overrides: Partial<YieldHistoryPoint> 
 const chartProps = { stablecoinId: "fixture", benchmarkRate: 5, medianApy: 5 };
 
 describe("yield history transformations", () => {
+  it.each([undefined, [], ["a"], ["a", "b"], ["a", "b", "c", "d", "e", "f", "g", "h", "i"]].map((sourceKeys) => ({ sourceKeys })))(
+    "preserves mounted query slots and disabled requests for $sourceKeys", ({ sourceKeys }) => {
+      useYieldHistoryMock.mockClear();
+      const { result } = renderHook(() => useYieldHistoryChartQueries("fixture", 30, "best", sourceKeys));
+      const primary = sourceKeys?.[0] ?? "best";
+      const additional = sourceKeys?.slice(1) ?? [];
+      expect(useYieldHistoryMock.mock.calls).toEqual([
+        ["fixture", { days: 30, mode: primary === "best" ? "best" : "source", sourceKey: primary === "best" ? null : primary }],
+        ...Array.from({ length: 7 }, (_, index) => ["fixture", {
+          days: 30, mode: "source", sourceKey: additional[index] ?? null, enabled: additional.length > index,
+        }]),
+      ]);
+      expect(result.current.overlaySources.map((source) => source.sourceKey)).toEqual(additional.slice(0, 7));
+      expect(result.current.overlaySources.every((source) => source.color != null)).toBe(true);
+      expect(result.current.omittedOverlayKeys).toEqual(sourceKeys?.slice(8) ?? []);
+    },
+  );
+
   beforeEach(() => {
     useYieldHistoryMock.mockImplementation((_id: string, options: { sourceKey: string | null; enabled?: boolean }) => ({
       data: { history: options.enabled === false ? [] : historyBySource.get(options.sourceKey ?? "best") ?? [] },
@@ -325,7 +344,7 @@ describe("yield history transformations", () => {
       apy_overlay_5: 11,
       apy_overlay_6: 12,
     });
-    expect(result.current.overlaySeriesKeys).toEqual([
+    expect(result.current.overlayLabels.map((source) => source.dataKey)).toEqual([
       "apy_overlay_0",
       "apy_overlay_1",
       "apy_overlay_2",
@@ -334,7 +353,7 @@ describe("yield history transformations", () => {
       "apy_overlay_5",
       "apy_overlay_6",
     ]);
-    // The 9th source sits beyond MAX_OVERLAY_SOURCES and is reported, not silently dropped.
+    // The 9th source sits beyond the mounted query capacity and is reported, not silently dropped.
     expect(result.current.omittedOverlayKeys).toEqual(["i"]);
     historyBySource.set("best", [point(BASE, 3)]);
     rerender({ availableSources: sources.filter((source) => source.sourceKey !== "b"), externalSourceKeys: undefined });

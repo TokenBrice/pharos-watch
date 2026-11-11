@@ -9,6 +9,7 @@
 import type { ReactElement } from "react";
 import { buildCemeteryPlotMap } from "@/lib/cemetery-plot-map";
 import { toPlotMapInput, type PlotLogoAtlas } from "@/lib/cemetery-plot-map-input";
+import { CEMETERY_HERO_COPY, formatCemeteryPlaque } from "@/lib/cemetery-presentation";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import type { CemeteryStats } from "@/lib/cemetery-stats";
 import { digestDisplay } from "@/lib/fonts/digest";
@@ -44,7 +45,7 @@ export function CemeteryHero({ rows, stats, asOf, atlas, portraitAspectRatio }: 
         <div className={styles.head}>
           <header className={styles.routeHead} data-plot-head>
             <h1 id="cemetery-title" className={`${styles.title} ${digestDisplay.className}`}>
-              Stablecoin Cemetery
+              {CEMETERY_HERO_COPY.title}
             </h1>
             <p className={styles.lead}>Failed or discontinued stablecoins, by cause of death and year.</p>
             <p className={styles.links}>
@@ -52,16 +53,16 @@ export function CemeteryHero({ rows, stats, asOf, atlas, portraitAspectRatio }: 
             </p>
           </header>
           <div className={styles.figure} data-plot-figure>
-            <p className={styles.beamLabel}>Recorded deaths</p>
+            <p className={styles.beamLabel}>{CEMETERY_HERO_COPY.recordedDeaths}</p>
             <p className={`${styles.figureValue} ${BEAM_VALUE_CLASS}`} data-plot-figure-value>
               {stats.total}
             </p>
             <div>
               <p className={styles.beamSub}>{stats.heroSubline}</p>
-              <p className={styles.beamPlaque}>{`${stats.total} interred · first recorded death ${stats.firstYear}`}</p>
+              <p className={styles.beamPlaque}>{formatCemeteryPlaque(stats.total, stats.firstYear)}</p>
               {latest ? (
                 <p className={styles.beamRest}>
-                  Latest recorded death · <b>{latest.name}</b> ·{" "}
+                  {CEMETERY_HERO_COPY.latestDeathPrefix}<b>{latest.name}</b> ·{" "}
                   <span className={styles.mono}>{formatRegisterDeathDate(latest.deathDate)}</span>
                 </p>
               ) : null}

@@ -53,6 +53,7 @@ import {
   type PlotWeather,
 } from "@/lib/cemetery-plot-geometry";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
+import { formatCemeteryPlaque } from "@/lib/cemetery-presentation";
 
 /** Structural input: satisfied by `CemeteryEntry`. */
 export interface CemeteryPlotMapInput {
@@ -906,7 +907,7 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
     areaShare,
     emptyRuns,
     header: {
-      plaque: `${total} interred · first recorded death ${firstYear}`,
+      plaque: formatCemeteryPlaque(total, firstYear),
       rest: {
         id: newest.id,
         name: newest.name,

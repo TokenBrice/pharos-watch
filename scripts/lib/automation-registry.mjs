@@ -787,6 +787,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "src/lib/cemetery-plot-geometry.ts",
       "src/lib/cemetery-plot-map-input.ts",
       "src/lib/cemetery-plot-map.ts",
+      "src/lib/cemetery-presentation.ts",
       "src/lib/cemetery-register.ts",
       "src/lib/cemetery-stats.ts",
       "src/styles/tokens/*.css",

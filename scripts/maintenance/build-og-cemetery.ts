@@ -37,6 +37,7 @@ import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { sha256Hex, sha256HexFromBytes } from "@shared/lib/sha256";
 import { formatRegisterDeathDate } from "@/components/cemetery/cemetery-register-model";
 import { buildCemeteryPlotMap } from "@/lib/cemetery-plot-map";
+import { CEMETERY_HERO_COPY, formatCemeteryPlaque } from "@/lib/cemetery-presentation";
 import { toPlotLogoAtlas, toPlotMapInput, type PlotLogoAtlasManifest } from "@/lib/cemetery-plot-map-input";
 import { buildCemeteryRegisterRows } from "@/lib/cemetery-register";
 import { buildCemeteryStats } from "@/lib/cemetery-stats";
@@ -162,20 +163,20 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
     h(
       "header",
       { className: "routeHead og-head" },
-      h("h1", { className: "title og-title" }, "Stablecoin Cemetery"),
+      h("h1", { className: "title og-title" }, CEMETERY_HERO_COPY.title),
       h("p", { className: "lead og-lead" }, stats.heroSubline),
     ),
     h(
       "div",
       { className: "figure" },
-      h("p", { className: "beamLabel" }, "Recorded deaths"),
+      h("p", { className: "beamLabel" }, CEMETERY_HERO_COPY.recordedDeaths),
       h("p", { className: "figureValue og-value" }, String(stats.total)),
       h(
         "div",
         null,
-        h("p", { className: "beamPlaque" }, `${stats.total} interred · first recorded death ${stats.firstYear}`),
+        h("p", { className: "beamPlaque" }, formatCemeteryPlaque(stats.total, stats.firstYear)),
         latest
-          ? h("p", { className: "beamRest" }, "Latest recorded death · ", h("b", null, latest.name), " · ", h("span", { className: "mono" }, formatRegisterDeathDate(latest.deathDate)))
+          ? h("p", { className: "beamRest" }, CEMETERY_HERO_COPY.latestDeathPrefix, h("b", null, latest.name), " · ", h("span", { className: "mono" }, formatRegisterDeathDate(latest.deathDate)))
           : null,
       ),
     ),
@@ -215,7 +216,7 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
     `.og-value{font-family:var(--font-geist-mono);font-variant-numeric:tabular-nums slashed-zero;font-size:2.45rem;font-weight:600;line-height:1;letter-spacing:-0.025em;color:var(--frost-blue);}`,
   ].join("\n");
 
-  const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"/><title>Stablecoin Cemetery</title><style>\n${css}\n</style></head><body>${body}</body></html>\n`;
+  const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"/><title>${CEMETERY_HERO_COPY.title}</title><style>\n${css}\n</style></head><body>${body}</body></html>\n`;
   return {
     html,
     summary: {
