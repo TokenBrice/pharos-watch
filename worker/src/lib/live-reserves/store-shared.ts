@@ -235,9 +235,5 @@ export function selectScoringDegradedWarnings(
 }
 
 export function createReserveSyncAttemptId(stablecoinId: string): string {
-  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (cryptoObj?.randomUUID) {
-    return `${stablecoinId}:${cryptoObj.randomUUID()}`;
-  }
-  return `${stablecoinId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+  return `${stablecoinId}:${crypto.randomUUID()}`;
 }
