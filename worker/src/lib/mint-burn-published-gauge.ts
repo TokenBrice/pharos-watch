@@ -1,7 +1,7 @@
 // Reader for the published Bank Run Gauge.
 //
 // The gauge has exactly one producer: `refreshAggregateMintBurnFlowCache`
-// (`worker/src/api/mint-burn-flows.ts`), which computes it over the
+// (`worker/src/lib/mint-burn-pipeline/flow-aggregate.ts`), which computes it over the
 // admitted, enabled tracked-pair universe with tracked-chain mcap
 // weighting and publishes it under `aggregateFlowCacheKey(24)`. Every other
 // surface — the daily digest included — reads that publication through this

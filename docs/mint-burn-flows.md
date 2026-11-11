@@ -421,7 +421,7 @@ gauge_score = Σ(intensity_i * mcap_i) / Σ(mcap_i)
 
 **Mcap weighting — tracked-chain scope.** Each published coin's preferred weight sums circulating supply across its admitted tracked chains, not just its DEWS canonical chain. Pending and disabled chains are excluded. When an admitted coin has no tracked-chain supply entry, the fallback policy below uses observed global circulating supply.
 
-**Aggregate read path.** `fetchAggregateData()` (`worker/src/api/mint-burn-flows/aggregate.ts`) uses row-value tracked-pair membership over `json_each(?)`, pinned to `idx_mbh_chain_coin_hour` for hourly windows and `idx_mbe_coin_chain_ts` for largest events. Keep this index-driven pattern: a correlated `EXISTS` re-scans the pair array for each index row.
+**Aggregate read path.** `fetchAggregateData()` (`worker/src/lib/mint-burn-pipeline/flow-aggregate.ts`) uses row-value tracked-pair membership over `json_each(?)`, pinned to `idx_mbh_chain_coin_hour` for hourly windows and `idx_mbe_coin_chain_ts` for largest events. Keep this index-driven pattern: a correlated `EXISTS` re-scans the pair array for each index row.
 
 Implementation (`worker/src/lib/mint-burn-mcap-weighting.ts`):
 

@@ -4,7 +4,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
-import { ACTIVE_MINT_BURN_CONFIGS } from "../../api/mint-burn-flows/aggregate";
+import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-pipeline/flow-aggregate";
 import { handleMintBurnFlows } from "../../api/mint-burn-flows";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { mintBurnConfigKey } from "../mint-burn-contract-identity";

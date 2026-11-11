@@ -8,7 +8,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { computeGaugeScore } from "../../lib/mint-burn-scoring";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
-import { buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
+import { buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { collectAffectedHours, insertMintBurnRows, recalcAffectedHours, updateEventClassifications } from "../../lib/mint-burn-pipeline/persistence";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";

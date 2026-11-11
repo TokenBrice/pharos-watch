@@ -7,7 +7,7 @@ import { handleMintBurnEvents } from "../mint-burn-events";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
-import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-flows/aggregate";
+import { ACTIVE_MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 

@@ -315,7 +315,7 @@ vi.mock("../cron/mint-burn-growth-watchdog", () => ({
 }));
 vi.mock("../cron/cron-duration-watchdog", () => ({ runCronDurationWatchdog: cronMocks.runCronDurationWatchdog }));
 vi.mock("../cron/yield-coverage-audit", () => ({ runYieldCoverageAudit: cronMocks.runYieldCoverageAudit }));
-vi.mock("../api/mint-burn-flows", () => ({
+vi.mock("../lib/mint-burn-pipeline/flow-aggregate", () => ({
   refreshAggregateMintBurnFlowCache: cronMocks.refreshAggregateMintBurnFlowCache,
 }));
 

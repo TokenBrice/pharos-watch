@@ -1,3 +1,30 @@
+import { logWorkerEventArgs, logWorkerEvent } from "../structured-log";
+import { getCache } from "../db-cache";
+import { compactMintBurnPublication } from "../mint-burn-publication";
+import { errorResponse } from "../api-response";
+import { computeGaugeScore, getGaugeBand } from "../mint-burn-scoring";
+import { loadStablecoinsCache } from "../stablecoins-cache";
+import type { StablecoinData } from "@shared/types/market";
+import { MINT_BURN_FTQ_DEPENDENCY_KEY, MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
+import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
+import { sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";
+import { buildFlightToQualityClassificationFromV9Snapshot } from "../flight-to-quality-classification";
+import { isRecord } from "@shared/lib/type-guards";
+import { formatElapsedSeconds } from "@shared/lib/format";
+import type { ApiDependencyMeta } from "@pharos/contracts/api-meta";
+import { tryParseJson } from "../json-parse";
+import { loadActiveSafetyScoreIndex } from "../safety-score-index";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
+import {
+  aggregateFlowCacheKey,
+  aggregateHourlyRowsByChain,
+  buildHourlyFlowSeries,
+  cachedFlowFallbackResponse,
+  finalizeMintBurnFlowResponse,
+  mintBurnWindowCoverage,
+  resolveFlowUpdatedAt,
+} from "../mint-burn-flows-service";
+
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getPressureShiftState } from "@shared/lib/mint-burn-signals";
@@ -11,21 +38,21 @@ import {
 } from "@shared/lib/mint-burn-valuation";
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification,
   type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
-import { hasMintBurnClassificationReview } from "../../lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../mint-burn-classification";
 import type { MintBurnClassification, MintBurnCoinFlow, MintBurnValuation, MintBurnWatermark } from "@shared/types/mint-burn";
-import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, mintBurnWindowAdmits, type MintBurnLegacySpan, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../../lib/api-freshness";
-import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
+import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, mintBurnWindowAdmits, type MintBurnLegacySpan, type MintBurnScanSegment } from "./scan-coverage";
+import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../api-freshness";
+import type { FlightToQualityClassification } from "../flight-to-quality-classification";
 import {
   buildMintBurnSyncHealth,
-} from "../../lib/mint-burn-health-config";
+} from "../mint-burn-health-config";
 import {
   buildMintBurnScope,
   getMintBurnTrackedPairs,
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
-} from "../../lib/mint-burn-contracts";
-import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
+} from "../mint-burn-contracts";
+import { readMintBurnSyncStateBatch } from "./sync-state";
 import {
   buildFlightToQualityCohorts,
   computeFlowIntensity,
@@ -34,7 +61,7 @@ import {
   getFlightToQualityUnavailableReason,
   type FlightToQualityResult,
   type ValuedNetFlow24h,
-} from "../../lib/mint-burn-scoring";
+} from "../mint-burn-scoring";
 import type { MintBurnFtqUnavailableReason } from "@shared/types/mint-burn";
 import {
   MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL,
@@ -44,7 +71,7 @@ import {
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
   type MintBurnValuationTallyRow,
   readMintBurnValuationTallyRow,
-} from "../../lib/mint-burn-hourly-valuation";
+} from "../mint-burn-hourly-valuation";
 import {
   aggregateHourlyRowsByStablecoin,
   BASELINE_WINDOW_DAYS,
@@ -65,7 +92,7 @@ import {
   selectLargestEvents,
   readMintBurnWindowContext,
   withExtendedLaneHeads,
-} from "../../lib/mint-burn-flows-service";
+} from "../mint-burn-flows-service";
 
 /** Candidate roster only; readMintBurnWindowContext owns the admitted, enabled publication scope. */
 export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
@@ -550,3 +577,277 @@ export function buildCoinSummaries(
 export function buildAggregateScope(configs: MintBurnContractConfig[]) {
   return buildMintBurnScope(configs);
 }
+
+export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: number): Promise<Response> {
+  const cacheKey = aggregateFlowCacheKey(hours);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const syncStartSec = nowSec;
+  const params = buildAggregateQueryParams(nowSec, hours);
+
+  const ftqSource = await loadAggregateFtqSource(db);
+  const gradeClassification = ftqSource.classification;
+
+  // Load stablecoins cache for mcap lookup. Only observed weights enter the map;
+  // an absent id is an unavailable weight, counted by buildCoinSummaries.
+  const mcapById = new Map<string, number>();
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
+  if (stablecoinsCacheResult.kind !== "ok") {
+    const cached = await getCache(db, cacheKey);
+    if (cached) {
+      logWorkerEventArgs("api", "error",
+        `[mint-burn-flows] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason}), serving fallback cache (${cacheKey})`,
+      );
+      return reconcileCachedAggregateSafetyResponse(db, cached);
+    }
+    return errorResponse(503, "Stablecoins data not yet available");
+  }
+  const data = await fetchAggregateData(db, params);
+  const trackedIds = new Set(data.configs.map((config) => config.stablecoinId));
+  for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
+    if (trackedIds.has(asset.id)) {
+      const mcap = sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating, data.configs);
+      if (mcap !== null) mcapById.set(asset.id, mcap);
+    }
+  }
+
+  const {
+    coins,
+    gaugeInputs,
+    flightToQuality,
+    flightToQualityReason,
+    flightToQualityExcludedIds,
+    trackedMcapUsd,
+    mcapUnavailableCoins,
+    partialValuationInputs,
+    partialValuationMcapUsd,
+    scoredMcapUsd,
+  } = buildCoinSummaries(
+    data,
+    mcapById,
+    gradeClassification,
+  );
+
+  const gaugeScanCoverage = {
+    ...mintBurnScanWindow(coins.length > 0 && coins.every((coin) => coin.coverage.has24hWindow)),
+    ...(coins.some((coin) => coin.coverage.windows?.window24h.provenance === "legacy-pre-cutover")
+      ? { provenance: "legacy-pre-cutover" as const } : {}),
+    admittedCoins: coins.filter((coin) => coin.coverage.has24hWindow).length,
+    excludedCoins: coins.filter((coin) => !coin.coverage.has24hWindow).length,
+    excludedMcapUsd: coins.some((coin) => !coin.coverage.has24hWindow && coin.gaugeWeightUsd == null)
+      ? null : coins.reduce((sum, coin) => sum + (!coin.coverage.has24hWindow ? coin.gaugeWeightUsd ?? 0 : 0), 0),
+  };
+  // Pre-T1 semantics: only admitted, scored, observed-weight members contribute.
+  // There was no roster-weight quorum; incomplete membership remains explicit above.
+  const gaugeScore = computeGaugeScore(gaugeInputs);
+  const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
+  const hourly = buildHourlyFlowSeries(data.hourlyRows, (ts) =>
+    mintBurnWindowCoverage(data.hourlyConfigs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark),
+    { start: data.windowEnd - hours * 3600, end: data.windowEnd },
+    new Set(data.hourlyConfigs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
+      .map((config) => mintBurnPairKey(config.stablecoinId, config.chain.chainId))));
+  const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
+  // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
+  // consumers of the published payload (daily digest) never re-derive a chain
+  // breakdown from a different universe. A partial chain net is unavailable and
+  // sorts after every published net.
+  const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
+    .map(([chainId, aggregate]) => {
+      const valuation = summarizeMintBurnValuation(aggregate.valuation).completeness;
+      const classification = summarizeMintBurnClassification(aggregate.classification);
+      const scanCoverage = data.partialChainIds.has(chainId) ? mintBurnScanWindow(false) : mintBurnWindowCoverage(
+        data.configs.filter((config) => config.chain.chainId === chainId),
+        data.scanSegments, data.legacy, data.windowEnd - 24 * 3600, data.windowEnd, data.watermark,
+      );
+      return { chainId, netFlow24hUsd: !scanCoverage.complete || valuation === "partial" || classification.completeness !== "complete" ? null : aggregate.netFlow, valuation, classification, scanCoverage };
+    })
+    .sort((a, b) => {
+      if (a.netFlow24hUsd === null || b.netFlow24hUsd === null) {
+        return Number(a.netFlow24hUsd === null) - Number(b.netFlow24hUsd === null);
+      }
+      return Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd);
+    });
+
+  const body = {
+    gauge: {
+      score: gaugeScore,
+      band: gaugeBand,
+      intensitySemantics: "signed-v2",
+      scoreScope: "admitted-coins",
+      flightToQuality: flightToQuality?.active ?? null,
+      flightIntensity: flightToQuality?.intensity ?? null,
+      flightToQualityReason,
+      flightToQualityExcludedIds,
+      scanCoverage: gaugeScanCoverage,
+      classificationSource: gradeClassification ? "safety-score-v9-publication" : "unavailable",
+      safetyScoreIdentity: gradeClassification?.safetyScoreIdentity ?? null,
+      trackedCoins: coins.length,
+      trackedMcapUsd,
+      mcapUnavailableCoins,
+      partialValuationInputs,
+      partialValuationMcapUsd,
+      scoredMcapUsd,
+    },
+    coins,
+    chains,
+    hourly,
+    updatedAt,
+    windowHours: hours,
+    window: { ...mintBurnHourlyWindow(data.windowEnd, hours), watermark: data.watermark },
+    scope: buildAggregateScope(data.configs),
+    hourlyScope: buildAggregateScope(data.hourlyConfigs),
+    publication: compactMintBurnPublication(data.publication),
+    sync: {
+      ...data.sync,
+      warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
+      classificationWarning: null,
+    },
+  };
+
+  return finalizeMintBurnFlowResponse(
+    db, cacheKey, syncStartSec, applyAggregateFtqState(body, ftqSource), data.freshnessLookup, data.publicationPolicy,
+  );
+}
+
+interface AggregateFtqSource {
+  classification: FlightToQualityClassification | null;
+  dependency: ApiDependencyMeta;
+}
+
+/** The compact accepted index is re-admitted on every read, including unavailable caches. */
+async function loadAggregateFtqSource(db: D1Database): Promise<AggregateFtqSource> {
+  let classification: FlightToQualityClassification | null = null;
+  let reason: string | null = null;
+  let updatedAt: number | null = null;
+  let generationId: string | null = null;
+  try {
+    const active = await loadActiveSafetyScoreIndex(db);
+    if (active.kind === "error") {
+      reason = active.reason;
+    } else {
+      updatedAt = Number.isFinite(active.snapshot.updatedAt) && active.snapshot.updatedAt > 0
+        ? active.snapshot.updatedAt : null;
+      generationId = active.snapshot.safetyScoreIdentity.publicationGenerationId;
+      const current = buildFlightToQualityClassificationFromV9Snapshot(active.snapshot);
+      if (active.kind === "held") reason = "publication-held";
+      else if (current.kind === "ok") classification = current.classification;
+      else reason = current.reason;
+    }
+  } catch (error) {
+    logWorkerEvent({
+      scope: "api",
+      level: "warn",
+      event: "ftq_classification_load_failed",
+      route: "mint-burn-flows",
+      message: "Failed to load Safety Score FTQ classification",
+      error,
+    });
+    reason = "cache-read-failed";
+  }
+  return {
+    classification,
+    dependency: {
+      updatedAt,
+      ageSeconds: updatedAt == null ? null : Math.floor(Date.now() / 1000) - updatedAt,
+      generationId,
+      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      status: classification ? "fresh" : reason === "source-stale" ? "stale" : "unavailable",
+      reason,
+    },
+  };
+}
+
+function ftqClassificationWarning(reason: string | null): string | null {
+  if (reason == null) return null;
+  const budget = formatElapsedSeconds(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC);
+  const cause = reason === "source-stale"
+    ? `the Safety Score source is outside its ${budget} freshness budget`
+    : reason === "publication-held"
+      ? `the Safety Score publication is held; its freshness budget is ${budget}`
+      : reason === "cached-flow-contract-invalid"
+        ? "the cached coin flow inputs are invalid"
+        : `the Safety Score source could not be admitted; its freshness budget is ${budget}`;
+  return `Flight-to-quality classification is unavailable because ${cause} (${reason}).`;
+}
+
+/** One availability/warning projection for materialized, cached and fallback responses. */
+function applyAggregateFtqState(
+  payload: Record<string, unknown>,
+  source: AggregateFtqSource,
+  reason: string | null = source.dependency.reason ?? null,
+): Record<string, unknown> {
+  const gauge = isRecord(payload.gauge) ? payload.gauge : {};
+  const unavailable = reason != null;
+  const warning = ftqClassificationWarning(reason);
+  const meta = isRecord(payload._meta) ? payload._meta : {};
+  return {
+    ...payload,
+    gauge: {
+      ...gauge,
+      ...(unavailable ? {
+        flightToQuality: null, flightIntensity: null,
+        flightToQualityReason: null, flightToQualityExcludedIds: [],
+      } : {}),
+      classificationSource: unavailable ? "unavailable" : "safety-score-v9-publication",
+      classificationReason: reason,
+      safetyScoreIdentity: unavailable ? null : source.classification?.safetyScoreIdentity ?? null,
+    },
+    ...(isRecord(payload.sync) ? { sync: { ...payload.sync, classificationWarning: warning } } : {}),
+    _meta: {
+      ...meta,
+      warning,
+      dependencies: {
+        ...(isRecord(meta.dependencies) ? meta.dependencies : {}),
+        [MINT_BURN_FTQ_DEPENDENCY_KEY]: source.dependency,
+      },
+    },
+  };
+}
+
+/**
+ * Reclassifying stored coin nets never renews the flow generation. In particular,
+ * an unavailable cached classification must recover without waiting for a flow write.
+ */
+export async function reconcileCachedAggregateSafetyResponse(
+  db: D1Database,
+  cached: { value: string; updatedAt: number },
+): Promise<Response> {
+  const payload = tryParseJson(cached.value, { onFailure: () => undefined });
+  if (!isRecord(payload) || !isRecord(payload.gauge)) return cachedFlowFallbackResponse(cached);
+  const source = await loadAggregateFtqSource(db);
+  let reason = source.dependency.reason ?? null;
+  if (source.classification) {
+    const coins = MintBurnFlowsResponseSchema.shape.coins.safeParse(payload.coins);
+    if (!coins.success) {
+      reason = "cached-flow-contract-invalid";
+    } else {
+      const flowsById = new Map<string, ValuedNetFlow24h>();
+      for (const coin of coins.data) {
+        flowsById.set(coin.stablecoinId, {
+          knownNetUsd: coin.netFlow24hUsd,
+          valuation: resolveMintBurnValuation(coin.valuation?.window24h),
+          window24hComplete: coin.coverage?.windows?.window24h.complete ?? null,
+          classification: coin.classification?.window24h,
+        });
+      }
+      // A malformed cached publication proves no admission scope: no coin is
+      // excluded and any unpublished classified coin keeps withholding the verdict.
+      const publication = MintBurnFlowsResponseSchema.shape.publication.safeParse(payload.publication);
+      const cohorts = buildFlightToQualityCohorts(
+        source.classification, flowsById, publication.success ? publication.data : null,
+      );
+      const ftq = detectFlightToQualityFromValuedNets(cohorts);
+      payload.gauge = {
+        ...payload.gauge,
+        flightToQuality: ftq?.active ?? null,
+        flightIntensity: ftq?.intensity ?? null,
+        flightToQualityReason: ftq ? null : getFlightToQualityUnavailableReason(cohorts),
+        flightToQualityExcludedIds: cohorts.excludedIds,
+      };
+    }
+  }
+  return cachedFlowFallbackResponse({
+    ...cached,
+    value: JSON.stringify(applyAggregateFtqState(payload, source, reason)),
+  });
+}
+

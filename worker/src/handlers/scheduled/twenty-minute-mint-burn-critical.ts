@@ -1,4 +1,4 @@
-import { refreshAggregateMintBurnFlowCache } from "../../api/mint-burn-flows";
+import { refreshAggregateMintBurnFlowCache } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { MINT_BURN_AGGREGATE_PUBLISH_WINDOWS } from "../../lib/mint-burn-flows-service";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { runMintBurnSlot, type MintBurnSidecarOutcome } from "./mint-burn-slot";

@@ -13,13 +13,13 @@ import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-b
 import { loadMintBurnPriceContextBatch } from "../../lib/mint-burn-pipeline/context";
 import type { MintBurnAffectedHour, MintBurnLane, SyncMintBurnStatus } from "../../lib/mint-burn-pipeline/types";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
-import { ensureMintBurnSyncStateRows, readMintBurnSyncStateBatch, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { ensureMintBurnSyncStateRows, readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/d1-primitives";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./chain-context";
-import { recalcMintBurnAffectedHours } from "./recalc";
+import { publishMintBurnScan } from "./recalc";
 import { pruneMintBurnRetention } from "./retention";
 import { runMintBurnSupplyReconciliation } from "../../lib/mint-burn-supply-reconciliation";
 import { completeMintBurnRun } from "./run-completion";
@@ -37,7 +37,6 @@ import {
 } from "./run-state";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
@@ -45,7 +44,7 @@ import { getCircuitRecordForAdmission } from "../../lib/circuit-breaker";
 import {
   idleMintBurnRepairD1, loadMintBurnCoverageGaps, repairMintBurnCoverage,
 } from "./repair-coverage";
-import { commitMintBurnSupplyProofRepair, loadMintBurnSupplyProofRepairRanges } from "./repair-supply-proofs";
+import { loadMintBurnSupplyProofRepairRanges } from "./repair-supply-proofs";
 import { mintBurnConservationFingerprint, requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-conservation";
 import { invalidateChangedMintBurnSupplyProofConfigs } from "../../lib/mint-burn-supply-proofs";
 import { isD1ResourceWindowError } from "../../lib/d1-overload-retry";
@@ -86,11 +85,6 @@ function resolveMintBurnJobName(lane: MintBurnLane, explicitJobName?: string): s
 
 /** One invocation owns scan state, hourly materialization, cursor commits and completion. */
 export class MintBurnRun {
-  private lastBlocksAfterRun!: Map<string, number>;
-  private affectedHours!: Map<string, MintBurnAffectedHour>;
-  private pendingCursorUpdates!: Map<string, number>;
-  private pendingScanCoverage!: Map<string, MintBurnScanCoverage>;
-
   constructor(
     private readonly db: D1Database,
     private readonly alchemyApiKey: string | null,
@@ -270,7 +264,7 @@ export class MintBurnRun {
 
     await ensureMintBurnSyncStateRows(db, configs);
     const lastBlocks = await readMintBurnSyncStateBatch(db, configs);
-    const lastBlocksAfterRun = this.lastBlocksAfterRun = new Map(lastBlocks);
+    const lastBlocksAfterRun = new Map(lastBlocks);
 
     const tronCircuit = configs.some((config) => config.chain.chainId === "tron")
       ? await getCircuitRecordForAdmission(db, CIRCUIT_SOURCE.TRONGRID)
@@ -331,9 +325,9 @@ export class MintBurnRun {
 
     const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical"
       && !pendingAdmissionKeys.has(configKey(config))).length;
-    const affectedHours = this.affectedHours = new Map<string, MintBurnAffectedHour>();
-    const pendingCursorUpdates = this.pendingCursorUpdates = new Map<string, number>();
-    const pendingScanCoverage = this.pendingScanCoverage = new Map<string, MintBurnScanCoverage>();
+    const affectedHours = new Map<string, MintBurnAffectedHour>();
+    const pendingCursorUpdates = new Map<string, number>();
+    const pendingScanCoverage = new Map<string, MintBurnScanCoverage>();
 
     const { phaseResult, recalcFailed, recalcError, pendingMaterializationFailures } = await this.scanAndMaterialize({
       db,
@@ -503,7 +497,7 @@ export class MintBurnRun {
     };
   }
 
-  private async scanAndMaterialize(input: Parameters<typeof runMintBurnConfigPhase>[0]): Promise<{
+  private async scanAndMaterialize(input: Parameters<typeof runMintBurnConfigPhase>[0] & { pendingScanCoverage: Map<string, MintBurnScanCoverage> }): Promise<{
     phaseResult: MintBurnRunConfigPhaseResult;
     recalcFailed: boolean;
     recalcError: string | null;
@@ -512,7 +506,7 @@ export class MintBurnRun {
     let phaseResult!: MintBurnRunConfigPhaseResult;
     let recalcFailed = false;
     let recalcError: string | null = null;
-    const pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }> = [];
+    let pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }> = [];
     const repairProofs: MintBurnScanCoverage[] = [];
     const supplyRepairRanges = new Map<string, { config: MintBurnContractConfig; toBlock: number }>();
     const deadlineMs = input.deadlineMs ?? Date.now() + 9 * 60_000;
@@ -552,110 +546,9 @@ export class MintBurnRun {
         phaseResult.rowsDropped += repair.rowsDropped;
       }
     } finally {
-      const pendingBuckets = new Map<string, Set<string>>();
-      const admittedBuckets = new Set(input.configs
-        .filter((config) => !input.pendingAdmissionKeys?.has(configKey(config)))
-        .map((config) => `${config.stablecoinId}:${config.chain.chainId}`));
-      for (const config of input.configs) {
-        const key = configKey(config);
-        if (!input.pendingAdmissionKeys?.has(key)) continue;
-        const bucket = `${config.stablecoinId}:${config.chain.chainId}`;
-        // Legacy siblings share one hourly row. Mixed scope must keep that row
-        // behind the admitted fence until storage can attribute each contract.
-        if (admittedBuckets.has(bucket)) continue;
-        const keys = pendingBuckets.get(bucket) ?? new Set<string>();
-        keys.add(key);
-        pendingBuckets.set(bucket, keys);
-      }
-      const admittedHours = new Map<string, MintBurnAffectedHour>();
-      const pendingHours = new Map<string, Map<string, MintBurnAffectedHour>>();
-      for (const [key, hour] of this.affectedHours) {
-        const bucket = `${hour.stablecoinId}:${hour.chainId}`;
-        if (!pendingBuckets.has(bucket)) {
-          admittedHours.set(key, hour);
-          continue;
-        }
-        const hours = pendingHours.get(bucket) ?? new Map<string, MintBurnAffectedHour>();
-        hours.set(key, hour);
-        pendingHours.set(bucket, hours);
-      }
-      const commitProofs = async (includesKey: (key: string) => boolean) => {
-        for (const [key, nextLastBlock] of this.pendingCursorUpdates) {
-          if (!includesKey(key)) continue;
-          throwIfAborted(input.signal);
-          const proof = this.pendingScanCoverage.get(key);
-          if (proof?.toBlock !== nextLastBlock) continue;
-          await upsertMintBurnSyncState(this.db, key, nextLastBlock, "monotonic-max", proof);
-          this.lastBlocksAfterRun.set(key, nextLastBlock);
-        }
-        for (const proof of repairProofs) {
-          if (!includesKey(proof.configKey)) continue;
-          throwIfAborted(input.signal);
-          for (let attempt = 0; ; attempt++) {
-            try {
-              const supplyRange = supplyRepairRanges.get(`${proof.configKey}:${proof.fromBlock}`);
-              if (supplyRange && proof.toBlock <= supplyRange.toBlock) {
-                await commitMintBurnSupplyProofRepair(this.db, supplyRange.config, proof);
-              } else {
-                await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
-                this.lastBlocksAfterRun.set(proof.configKey,
-                  Math.max(this.lastBlocksAfterRun.get(proof.configKey) ?? 0, proof.toBlock));
-              }
-              break;
-            } catch (error) {
-              rethrowIfAborted(error, input.signal);
-              if (!isD1ResourceWindowError(error)) throw error;
-              if (attempt === 0 && await idleMintBurnRepairD1(deadlineMs, input.signal)) continue;
-              // Materialized rows remain durable. Hold only their uncommitted
-              // proof/cursor; the next run can safely replay them.
-              for (const repair of phaseResult?.coverageRepairs ?? []) {
-                if (includesKey(repair.key) && repair.repairReason === "proof-staged") {
-                  repair.errors++;
-                  repair.repairReason = "repair-runtime-exhausted";
-                }
-              }
-              return;
-            }
-          }
-          const repair = phaseResult?.coverageRepairs?.find((summary) =>
-            summary.key === proof.configKey && summary.scanFrom === proof.fromBlock);
-          if (repair) repair.repairReason = "proof-committed";
-        }
-      };
-      const holdRepairProofs = (includesKey: (key: string) => boolean) => {
-        for (const repair of phaseResult?.coverageRepairs ?? []) {
-          if (includesKey(repair.key) && repair.repairReason === "proof-staged") repair.repairReason = "materialization-failed";
-        }
-      };
-      const isolatedPendingKeys = new Set([...pendingBuckets.values()].flatMap((keys) => [...keys]));
-      const isAdmitted = (key: string) => !isolatedPendingKeys.has(key);
-      const recalcResult = await recalcMintBurnAffectedHours(this.db, admittedHours, input.signal);
-      recalcFailed = recalcResult.failed;
-      recalcError = recalcResult.error;
-      if (recalcFailed) holdRepairProofs(isAdmitted);
-      else await commitProofs(isAdmitted);
-
-      // Admitted commits are durable before any pending bucket can fail. A held
-      // pending cursor replays its raw rows and existing materialization debt.
-      for (const [bucket, keys] of pendingBuckets) {
-        const includesKey = (key: string) => keys.has(key);
-        const result = await recalcMintBurnAffectedHours(this.db, pendingHours.get(bucket) ?? new Map(), input.signal);
-        if (result.failed) {
-          holdRepairProofs(includesKey);
-          for (const key of keys) pendingMaterializationFailures.push({
-            key, reason: "pending-hourly-recalc-failed", error: result.error?.slice(0, 200) ?? null,
-          });
-          continue;
-        }
-        try {
-          await commitProofs(includesKey);
-        } catch (error) {
-          rethrowIfAborted(error, input.signal);
-          for (const key of keys) pendingMaterializationFailures.push({
-            key, reason: "pending-cursor-commit-failed", error: toErrorMessage(error).slice(0, 200),
-          });
-        }
-      }
+      ({ recalcFailed, recalcError, pendingMaterializationFailures } = await publishMintBurnScan(this.db, input, {
+        repairProofs, supplyRepairRanges, coverageRepairs: phaseResult?.coverageRepairs, deadlineMs,
+      }));
     }
     return { phaseResult, recalcFailed, recalcError, pendingMaterializationFailures };
   }

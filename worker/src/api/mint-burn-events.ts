@@ -11,7 +11,7 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { getMintBurnConfigsForStablecoin, type MintBurnTier } from "../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { mintBurnConfigKey } from "../lib/mint-burn-contract-identity";
-import { ACTIVE_MINT_BURN_CONFIGS } from "./mint-burn-flows/aggregate";
+import { ACTIVE_MINT_BURN_CONFIGS } from "../lib/mint-burn-pipeline/flow-aggregate";
 import { buildInClause } from "../lib/db";
 import { mintBurnSupplyProofAcceptedSql } from "../lib/mint-burn-supply-proofs";
 

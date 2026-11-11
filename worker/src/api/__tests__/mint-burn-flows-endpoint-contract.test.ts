@@ -15,7 +15,7 @@ import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "..
 import { detectFlightToQualityFromValuedNets } from "../../lib/mint-burn-scoring";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
-import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-flows/aggregate";
+import { ACTIVE_MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { handleMintBurnEvents } from "../mint-burn-events";
 import type { MockD1Database } from "@shared/test-utils/mock-d1";
 
