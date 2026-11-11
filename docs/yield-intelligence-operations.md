@@ -255,7 +255,7 @@ The `/yield/` coin index groups the complete active yield-bearing compact regist
 | Benchmark registry | `worker/src/cron/tbill-sources/providers.ts` |
 | Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts`, `worker/src/lib/yield-ranking-helpers.ts` |
 | Rankings and history APIs | `worker/src/api/cache-handlers.ts`, `worker/src/api/yield-history.ts` |
-| Shared wire types | `shared/types/index.ts` |
+| Shared wire types | `shared/types/yield.ts`, `shared/types/yield-summary.ts` |
 | Frontend queries and formatting | `src/hooks/api-hooks.ts`, `src/lib/yield-constants.ts` |
 | Yield workbench and per-coin analysis | `src/app/yield/`, `src/app/stablecoin/[id]/yield/` |
 

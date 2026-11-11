@@ -529,10 +529,10 @@ When a schema is provided, frontend API helpers now validate in `strict` mode by
 
 When adding a new API endpoint:
 
-1. If the response has nested arrays or objects accessed via `.find()` / `.map()`, define its schema in the owning `shared/types/` module (for example `shared/types/peg.ts`); `shared/types/index.ts` is the re-export barrel, not the schema implementation home.
+1. If the response has nested arrays or objects accessed via `.find()` / `.map()`, define its schema in the owning `shared/types/` module (for example `shared/types/peg.ts`) and import it from that module; `shared/types` has no re-export barrel.
 2. Attach the response schema to the descriptor consumed by `useRegisteredApiQuery`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 
 **Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`), prefer the shared hand-written interfaces and keep any unavoidable schema wiring/casts localized in the consolidated hook module (`src/hooks/api-hooks.ts`).
 
-**Worker CI note:** Schema modules re-exported by `shared/types/index.ts` use `zod`; Worker typing resolves shared modules via `@shared/*` in selected PR static checks and nightly validation. Root `npm ci` installs workspace dependencies so shared imports resolve from root `node_modules/`. A new package imported by shared code needs no duplicate `worker/package.json` entry unless a Worker-local runtime/deploy path genuinely requires it.
+**Worker CI note:** Schema modules under `shared/types/` use `zod`; Worker typing resolves shared modules via `@shared/*` in selected PR static checks and nightly validation. Root `npm ci` installs workspace dependencies so shared imports resolve from root `node_modules/`. A new package imported by shared code needs no duplicate `worker/package.json` entry unless a Worker-local runtime/deploy path genuinely requires it.
