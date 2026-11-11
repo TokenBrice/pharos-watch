@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS, type V9QualityPillar } from "./safety-score-v9-quality-pillars";
 import { z } from "zod";
 import { issue } from "./safety-schema-primitives";
 import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
@@ -612,7 +613,7 @@ export function computeV9UnknownPricedWeightShare(
   breakdowns: UnknownPricedBreakdowns | null,
   aggregation: {
     effectiveScoringWeights: { backing: number; exit: number; control: number };
-    pricedUnknownPillars?: readonly { pillar: "backing" | "exit" | "control" }[];
+    pricedUnknownPillars?: readonly { pillar: V9QualityPillar }[];
   } | null,
 ): number {
   if (breakdowns === null || aggregation === null) return 0;
@@ -622,7 +623,7 @@ export function computeV9UnknownPricedWeightShare(
   const unknownWeight = (component: UnknownPricedComponent): number =>
     isUnknown(component) ? resolveV9EffectiveScoringWeight(component) : 0;
   let share = 0;
-  for (const pillar of ["backing", "exit", "control"] as const) {
+  for (const pillar of V9_QUALITY_PILLARS) {
     const weight = aggregation.effectiveScoringWeights[pillar];
     if (aggregation.pricedUnknownPillars?.some((item) => item.pillar === pillar)) {
       share += weight;

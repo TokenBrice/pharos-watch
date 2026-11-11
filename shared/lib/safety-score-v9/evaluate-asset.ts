@@ -35,8 +35,7 @@ import {
 import {
   evaluateV9Exit,
   isV9NegligibleDexDiagnostic,
-  projectV9ExitEvaluationRoute,
-  resolveV9ExitSupplySizing,
+  projectV9ExitAssetFacts,
   type V9ExitEvaluationResult,
   type V9ExitRouteTrace,
 } from "./exit";
@@ -1809,24 +1808,9 @@ export function evaluateV9Asset({
   // status derived beside them) serves both the exit evaluation and the
   // retained stress state; evaluateV9Exit copies before sorting, so the shared
   // array is never mutated downstream.
-  const exitSupplySizing = resolveV9ExitSupplySizing(asset);
-  const exitCirculatingUsd = exitSupplySizing.circulatingUsd;
-  const exitPortfolioStatus =
-    asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
-      ? "reviewed-complete"
-      : "incomplete";
-  const projectedExitRoutes = asset.exitRoutes.map(projectV9ExitEvaluationRoute);
+  const exitInput = projectV9ExitAssetFacts(asset);
   const exit = evaluateV9Exit(
-    {
-      assetId: asset.assetId,
-      clockSec: identity.asOfSec,
-      ...exitSupplySizing,
-      portfolioStatus: exitPortfolioStatus,
-      portfolioFactStatus: asset.exitStatus,
-      verifiedNoPoolsSupplyShare: asset.exitCoverage?.verifiedNoPoolsSupplyShare,
-      gaps: asset.gaps,
-      routes: projectedExitRoutes,
-    },
+    { assetId: asset.assetId, clockSec: identity.asOfSec, ...exitInput },
     envelope,
   );
   const basePillars = {
@@ -1938,8 +1922,8 @@ export function evaluateV9Asset({
     unavailabilityRootsById,
   );
   const stressState = buildV9RetainedStressState({
-    circulatingUsd: exitCirculatingUsd,
-    portfolioStatus: exitPortfolioStatus,
+    circulatingUsd: exitInput.circulatingUsd,
+    portfolioStatus: exitInput.portfolioStatus,
   });
   return {
     evaluatedAsset: {

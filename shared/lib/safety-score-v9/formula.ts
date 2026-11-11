@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS } from "../../types/safety-score-v9-quality-pillars";
 import {
   V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT,
   V9ScoringInputSchema,
@@ -50,7 +51,6 @@ export function parseV9ScoringInput(rawInput: unknown): V9ScoringInput {
 
 export type { V9AggregationStrategy } from "./aggregation";
 
-const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
 
 export interface V9StructuralCap {
   kind: string;

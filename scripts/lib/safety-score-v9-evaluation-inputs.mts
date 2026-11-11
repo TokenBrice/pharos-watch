@@ -230,6 +230,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/safety-score-v9-public-witness-texts.ts",
   "shared/types/safety-score-v9-public.ts",
   "shared/types/safety-score-v9-publication-response.ts",
+  "shared/types/safety-score-v9-quality-pillars.ts",
   "shared/types/safety-score-v9-research-evidence.ts",
   "shared/types/safety-score-v9-reserve-scope.ts",
   "shared/types/safety-score-v9-supply-attribution.ts",

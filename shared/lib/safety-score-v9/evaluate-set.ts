@@ -1,3 +1,4 @@
+import type { V9QualityPillar } from "../../types/safety-score-v9-quality-pillars";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score-v9/evaluation-build-manifest-v1";
 import {
   resolveChainMaturityAdmissionsAt,
@@ -117,7 +118,7 @@ function evaluationFieldPath(error: unknown): string | null {
     "",
   );
 }
-function upstreamPillarCause(result: V9EvaluatedAsset, pillar: "backing" | "exit" | "control") {
+function upstreamPillarCause(result: V9EvaluatedAsset, pillar: V9QualityPillar) {
   const input = result.scoreInput.pillars[pillar];
   if (input.aggregationDisposition === "excluded-a-b") return input.excludedCauses?.[0] ?? "U";
   return input.limitedEvidenceCauses.find((cause) => cause === "C" || cause === "U")

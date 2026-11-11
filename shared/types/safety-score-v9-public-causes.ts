@@ -1,4 +1,5 @@
-import type { V9PublicCauseGapTable, V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
+import { V9_QUALITY_PILLARS } from "./safety-score-v9-quality-pillars";
+import { readV9PublicCausePathReference, type V9PublicCauseGapTable, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
 import { z } from "zod";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
 import { V9_PUBLIC_EVIDENCE_FACT_COLUMNS as FACT, resolveEvidenceFactPath, type V9EvidenceFactContext } from "./safety-score-v9-public-evidence-facts";
@@ -37,7 +38,7 @@ export const V9ConfidenceDimensionsSchema = z.object({
 }).strict();
 export const V9PartialEvidenceSchema = z.object({
   reasonCode: z.literal("partial-evidence-pipeline-gap"),
-  excludedPillars: canonicalTextArray().pipe(z.array(z.enum(["backing", "exit", "control"]))),
+  excludedPillars: canonicalTextArray().pipe(z.array(z.enum(V9_QUALITY_PILLARS))),
   excludedComponentKeys: canonicalTextArray(), causeGapRefs: causeGapRefs(),
   causes: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["A", "B"]))),
 }).strict();
@@ -79,8 +80,8 @@ export function refineV9PublicGapReferences(card: V9PublicCauseGapTable, ctx: Pi
           let path: string;
           try { path = resolveEvidenceFactPath(node as Pick<V9EvidenceFactContext, "factPathPrefixes">, row as V9PublicEvidenceFactWire); }
           catch { ctx.addIssue({ code: "custom", message: "Fact paths must resolve through their declared prefix table" }); continue; }
-          const suffix = /:cause:(\d+)$/u.exec(path);
-          if (suffix) mark(Number(suffix[1]));
+          const suffix = readV9PublicCausePathReference(path);
+          if (suffix) mark(suffix.ref);
           else if (path.includes(":cause:")) ctx.addIssue({ code: "custom", message: "Causal fact paths must use a numeric reference" });
         }
         continue;
@@ -88,9 +89,9 @@ export function refineV9PublicGapReferences(card: V9PublicCauseGapTable, ctx: Pi
       if (key === "causeGapRefs" && Array.isArray(value)) { for (const ref of value) mark(ref); }
       else if (key === "sourceGapRef" && value !== null) mark(value);
       else if ((key === "path" || key === "exactFactPath" || key === "field") && typeof value === "string" && value.includes(":cause:")) {
-        const match = /:cause:(\d+)$/u.exec(value);
+        const match = readV9PublicCausePathReference(value);
         if (!match) ctx.addIssue({ code: "custom", message: "Causal paths must use a numeric gap reference" });
-        else mark(Number(match[1]));
+        else mark(match.ref);
       } else if (key === "causeGapIds" || key === "sourceGapId") {
         ctx.addIssue({ code: "custom", message: "Public causes use references, never repeated gap IDs" });
       } else visit(value);

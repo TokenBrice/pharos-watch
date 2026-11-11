@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS } from "./safety-score-v9-quality-pillars";
 import { z } from "zod";
 import { ReportCardGradeSchema, type ReportCardGrade } from "./report-card-grade";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
@@ -24,12 +25,12 @@ import {
   RedemptionSettlementModelSchema,
 } from "./redemption";
 import { V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-causes";
-import { V9AccessTransferSchema, V9AccessFreezeExposureSchema, V9AccessPrimaryExitSchema, V9AccessGovernanceSchema } from "./safety-score-v9-vocabulary";
+import { V9EvidenceLevelSchema, V9AccessTransferSchema, V9AccessFreezeExposureSchema, V9AccessPrimaryExitSchema, V9AccessGovernanceSchema } from "./safety-score-v9-vocabulary";
 
-export const V9QualityPillarSchema = z.enum(["backing", "exit", "control"]);
+export const V9QualityPillarSchema = z.enum(V9_QUALITY_PILLARS);
 export type V9QualityPillar = z.infer<typeof V9QualityPillarSchema>;
 
-export const V9EvidenceLevelSchema = z.enum(["strong", "adequate", "limited", "insufficient"]);
+export { V9EvidenceLevelSchema } from "./safety-score-v9-vocabulary";
 export type V9EvidenceLevel = z.infer<typeof V9EvidenceLevelSchema>;
 
 export const V9GradeSchema = ReportCardGradeSchema;

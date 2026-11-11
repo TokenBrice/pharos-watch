@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS, type V9QualityPillar } from "./safety-score-v9-quality-pillars";
 import { V9WitnessTextIdentityArraySchema } from "./safety-score-v9-public-witness-texts";
 import { z } from "zod";
 import {
@@ -127,7 +128,7 @@ export function explainSafetyScoreV9PillarFreshness(
   context: { asOfSec: number; sourceGenerations: Readonly<Record<string, string>>;
     pillarFreshness?: SafetyScoreV9PillarFreshness },
   cardIndex: number,
-  pillar: "backing" | "exit" | "control",
+  pillar: V9QualityPillar,
 ): SafetyScoreV9FreshnessAssessment {
   const base = { assessedAtSec: context.asOfSec, observedAtSec: null,
     sourceGenerationId: null, maxAgeSec: null };
@@ -150,7 +151,7 @@ export function explainSafetyScoreV9PillarFreshness(
 export function refineSafetyScoreV9PillarFreshness(
   response: { asOfSec: number; sourceGenerations: Readonly<Record<string, string>>;
     pillarFreshness?: SafetyScoreV9PillarFreshness;
-    cards: readonly { pillars: Record<"backing" | "exit" | "control", { freshness: SafetyScoreV9EvidenceFreshness }>;
+    cards: readonly { pillars: Record<V9QualityPillar, { freshness: SafetyScoreV9EvidenceFreshness }>;
       evidence: { freshness: SafetyScoreV9EvidenceFreshness } }[] },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
@@ -163,7 +164,7 @@ export function refineSafetyScoreV9PillarFreshness(
     issue(ctx, ["pillarFreshness"], "Observed DEX clocks require their source generation");
   }
   response.cards.forEach((card, index) => {
-    const verdicts = (["backing", "exit", "control"] as const).map(pillar => {
+    const verdicts = V9_QUALITY_PILLARS.map(pillar => {
       const verdict = explainSafetyScoreV9PillarFreshness(response, index, pillar).verdict;
       if (card.pillars[pillar].freshness !== verdict) {
         issue(ctx, ["cards", index, "pillars", pillar, "freshness"], "Pillar freshness must reproduce its source operands");

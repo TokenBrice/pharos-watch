@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS } from "./safety-score-v9-quality-pillars";
 import { z } from "zod";
 import { issue } from "./safety-schema-primitives";
 import { scoreToGrade } from "./safety-score-v9-grade";
@@ -325,7 +326,7 @@ function refineCardBase(
   if (card.localAuthorityExposure !== undefined && card.ratingStatus !== "rated") {
     ctx.addIssue({ code: "custom", path: ["localAuthorityExposure"], message: "Local authority exposure is only shown on rated cards" });
   }
-  const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") !== "included").sort();
+  const excludedPillars = V9_QUALITY_PILLARS.filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") !== "included").sort();
   if (JSON.stringify(excludedPillars) !== JSON.stringify(card.partialEvidence?.excludedPillars ?? [])) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Partial evidence must reconcile excluded pillars" });
   }
@@ -459,7 +460,7 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
       issue(ctx, ["breakdowns"], "V9 component breakdowns are required exactly when a card is rateable");
     }
     if (card.breakdowns !== null) {
-      for (const pillar of ["backing", "exit", "control"] as const) {
+      for (const pillar of V9_QUALITY_PILLARS) {
         if ((card.breakdowns[pillar].aggregationDisposition ?? "included") !== (card.pillars[pillar].aggregationDisposition ?? "included") ||
             !numbersAgree(card.breakdowns[pillar].aggregationWeight,
               (card.pillars[pillar].aggregationDisposition ?? "included") === "included"

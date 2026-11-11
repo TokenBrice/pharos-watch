@@ -1,6 +1,6 @@
 import type { SafetyScoreV9CardValidationInput } from "./safety-score-v9-public";
 import { attributedScoredParent } from "./safety-score-v9-public-internal";
-import { resolveCauseGapId, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
+import { resolveCauseGapId, readV9PublicCausePathReference, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "./safety-score-v9-public-witness-texts";
 
 type AttributionCard = Omit<SafetyScoreV9CardValidationInput, "breakdowns">;
@@ -109,10 +109,10 @@ export function findSafetyScoreV9ParentAttributionIssues(
 }
 
 function sameCausePath(response: V9PublicCauseGapContext, a: AttributionCard, pathA: string, b: AttributionCard, pathB: string): boolean {
-  const suffixA = /:cause:(\d+)$/u.exec(pathA), suffixB = /:cause:(\d+)$/u.exec(pathB);
+  const suffixA = readV9PublicCausePathReference(pathA), suffixB = readV9PublicCausePathReference(pathB);
   if (!suffixA || !suffixB) return pathA === pathB;
-  return pathA.slice(0, suffixA.index) === pathB.slice(0, suffixB.index) &&
-    sameCauseGapRef(response, a, Number(suffixA[1]), b, Number(suffixB[1]));
+  return suffixA.basePath === suffixB.basePath &&
+    sameCauseGapRef(response, a, suffixA.ref, b, suffixB.ref);
 }
 function sameCauseGapRefs(response: V9PublicCauseGapContext, a: AttributionCard, refsA: readonly number[], b: AttributionCard, refsB: readonly number[]): boolean {
   if (refsA.length !== refsB.length) return false;

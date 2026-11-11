@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS as PILLARS } from "../../types/safety-score-v9-quality-pillars";
 import type { V9QualityPillar } from "../../types/safety-score-v9";
 
 export type V9AggregationPillars = Readonly<Record<V9QualityPillar, number | null>>;
@@ -30,7 +31,6 @@ export type V9AggregationStrategy = (
   includedPillars?: readonly V9QualityPillar[],
 ) => V9WeakestPathAggregationTrace | null;
 
-const PILLARS: readonly V9QualityPillar[] = ["backing", "exit", "control"];
 const WEIGHT_TOLERANCE = 0.000001;
 
 /** Availability is evidence-based; every priced pillar retains its original weight. */
@@ -66,7 +66,7 @@ export function aggregateV9SmoothBoundedHeadroom(
   }
   const effectiveScoringWeights = { backing: 0, exit: 0, control: 0 };
   let weightedQuality = 0;
-  let weakestPillar = PILLARS[0]!;
+  let weakestPillar: V9QualityPillar = PILLARS[0]!;
   for (const pillar of PILLARS) {
     const weight = weights[pillar];
     effectiveScoringWeights[pillar] = weight;

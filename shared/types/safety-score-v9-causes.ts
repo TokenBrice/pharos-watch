@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS } from "./safety-score-v9-quality-pillars";
 import { z } from "zod";
 import { CanonicalKeySchema, CanonicalTextSchema, ScoreSchema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
@@ -9,7 +10,7 @@ const V9EvidenceProducerStateSchema = z.enum([
   "producer-failed", "integration-missing", "config-mismatch", "stale-producer", "unsupported-reader",
 ]);
 export const V9EvidenceCauseScopeSchema = z.object({
-  pillar: z.enum(["backing", "exit", "control"]),
+  pillar: z.enum(V9_QUALITY_PILLARS),
   componentKey: CanonicalTextSchema,
   factorKey: CanonicalTextSchema.nullable(),
   routeKey: CanonicalTextSchema.nullable(),
@@ -349,7 +350,7 @@ export const V9RatingStatusSchema = z.enum(["rated", "not-rated", "pipeline-gap"
 export type V9RatingStatus = z.infer<typeof V9RatingStatusSchema>;
 const V9PartialEvidenceSchema = z.object({
   reasonCode: z.literal("partial-evidence-pipeline-gap"),
-  excludedPillars: canonicalTextArray().pipe(z.array(z.enum(["backing", "exit", "control"]))),
+  excludedPillars: canonicalTextArray().pipe(z.array(z.enum(V9_QUALITY_PILLARS))),
   excludedComponentKeys: canonicalTextArray(), causeGapIds: canonicalTextArray(),
   causes: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["A", "B"]))),
 }).strict();

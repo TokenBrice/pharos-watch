@@ -5,8 +5,8 @@
  * attribution paths draw on overlapping producer keys, so a per-module map
  * would let the same key drift to different copy on the same page.
  */
-import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
-import type { V9EvidenceLevel } from "@shared/types/safety-score-v9";
+import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fact-primitives";
+import type { V9EvidenceLevel } from "@shared/types/safety-score-v9-vocabulary";
 
 /**
  * Who owns an unresolved or adverse fact. Pharos's own gaps are named as ours

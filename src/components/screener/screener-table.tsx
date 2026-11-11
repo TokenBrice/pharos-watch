@@ -39,7 +39,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-
 import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { QueryKey } from "@tanstack/react-query";
-import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public";
+import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // M1: keys feeding the screener table's visible data (supply, peg, DEWS,

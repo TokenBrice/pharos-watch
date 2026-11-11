@@ -2,7 +2,7 @@ import type {
   ReportCardsV9CurrentResponse,
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
-import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   V9_OPEN_EVIDENCE_MIXED_OWNER,
   V9OpenEvidenceSchema,
