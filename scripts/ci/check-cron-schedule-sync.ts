@@ -14,6 +14,7 @@ import {
 } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { parseAssignments } from "../lib/wrangler-toml.mjs";
+import { syncWranglerCronTriggers } from "../maintenance/generate-wrangler-cron-triggers";
 import type {
   CronGrowthTopologyPolicyForCheck,
   CronJobDefinitionForCheck,
@@ -44,9 +45,7 @@ export interface CronScheduleSyncReport {
   missingPlanKeys: string[];
   missingRuntimeJobs: string[];
   missingSlotPlanSchedules: string[];
-  onlyInSharedSchedules: string[];
   onlyInSlotPlanSchedules: string[];
-  onlyInWranglerSchedules: string[];
   scheduleKeyByExpression: Map<string, string>;
   slotPlanKeyByExpression: Map<string, string>;
   slotPlanTriggerCount: number;
@@ -165,8 +164,6 @@ export function evaluateCronScheduleSync(input: {
       return key != null && scheduledSlotPlans[key]?.worker !== role;
     }).map((expression) => `${role}:${expression}`),
   );
-  const onlyInWranglerSchedules = [...wranglerCrons].filter((schedule) => !sharedCrons.has(schedule));
-  const onlyInSharedSchedules = [...sharedCrons].filter((schedule) => !wranglerCrons.has(schedule));
   const onlyInSlotPlanSchedules = [...slotPlanCrons].filter((schedule) => !sharedCrons.has(schedule));
   const missingSlotPlanSchedules = [...sharedCrons].filter((schedule) => !slotPlanCrons.has(schedule));
 
@@ -193,8 +190,6 @@ export function evaluateCronScheduleSync(input: {
     duplicateWranglerSchedules.length ||
     misownedWranglerSchedules.length ||
     duplicateSlotPlanSchedules.length ||
-    onlyInWranglerSchedules.length ||
-    onlyInSharedSchedules.length ||
     onlyInSlotPlanSchedules.length ||
     missingSlotPlanSchedules.length ||
     missingPlanKeys.length ||
@@ -219,9 +214,7 @@ export function evaluateCronScheduleSync(input: {
     missingPlanKeys,
     missingRuntimeJobs,
     missingSlotPlanSchedules,
-    onlyInSharedSchedules,
     onlyInSlotPlanSchedules,
-    onlyInWranglerSchedules,
     scheduleKeyByExpression,
     slotPlanKeyByExpression,
     slotPlanTriggerCount: slotPlanCrons.size,
@@ -263,22 +256,6 @@ export function printCronScheduleSyncReport(report: CronScheduleSyncReport): voi
         formatSchedule(schedule, report.slotPlanKeyByExpression),
       ).join("\n"),
     );
-  }
-
-  if (report.onlyInWranglerSchedules.length || report.onlyInSharedSchedules.length) {
-    console.error(`\nConfigured trigger drift (${SOURCE_OWNER.wrangler} <-> ${SOURCE_OWNER.schedules}):`);
-    if (report.onlyInWranglerSchedules.length) {
-      console.error(`Extra in ${SOURCE_OWNER.wrangler}; no owner in ${SOURCE_OWNER.schedules}:`);
-      console.error(formatList(report.onlyInWranglerSchedules).join("\n"));
-    }
-    if (report.onlyInSharedSchedules.length) {
-      console.error(`Missing from ${SOURCE_OWNER.wrangler}; owned by ${SOURCE_OWNER.schedules}:`);
-      console.error(
-        formatList(report.onlyInSharedSchedules, (schedule) =>
-          formatSchedule(schedule, report.scheduleKeyByExpression),
-        ).join("\n"),
-      );
-    }
   }
 
   if (
@@ -351,6 +328,7 @@ function isMainModule(): boolean {
 
 if (isMainModule()) {
   try {
+    syncWranglerCronTriggers(ROOT, true);
     const wranglerToml = readFileSync(join(ROOT, "worker/wrangler.toml"), "utf-8");
     const heavyToml = readFileSync(join(ROOT, "worker/wrangler.heavy.toml"), "utf-8");
     const report = evaluateCronScheduleSync({

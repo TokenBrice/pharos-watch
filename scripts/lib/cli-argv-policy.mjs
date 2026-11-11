@@ -67,6 +67,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-missing-data-registry.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts"),
+    strict("scripts/maintenance/generate-wrangler-cron-triggers.ts"),
     strict("scripts/maintenance/ledger-append.ts"),
     strict("scripts/maintenance/measure-cdp-shock-coverage.ts"),
     strict("scripts/maintenance/measure-protocol-api-mechanism-metrics.ts"),
