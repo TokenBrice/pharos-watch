@@ -130,7 +130,6 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       admittedConservationFailures > 0
       || readbackDeadline
       || repairFailure
-      || capacityOnlyRepairDebt
       || materializationFailure
       || admittedFinalityUnavailableChains.length > 0
       || coverageCycleStalled
@@ -181,7 +180,6 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   } catch (backlogError) {
     throwIfAborted(input.signal);
     nullPriceBacklogError = toErrorMessage(backlogError);
-    if (status === "ok") status = "degraded";
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -334,7 +332,12 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       scanAttemptRanges: summary.scanAttemptRanges,
     }));
 
+  const qualityReasons = [
+    ...(capacityOnlyRepairDebt ? ["mint-burn-capacity-only-repair-debt"] : []),
+    ...(nullPriceBacklogError != null ? ["mint-burn-null-price-backlog-unavailable"] : []),
+  ];
   const metadata = withBudgetMetadata(input.budget, {
+    ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
     scanCoverageUnproven,
     admittedScanCoverageUnproven,
     outputPublishedAt: status !== "error" && !materializationFailure && admittedBreakdown.some((summary) =>
@@ -349,7 +352,6 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
         : coverageCycleStuck ? "mint-burn-config-stuck"
         : runStatePersistenceFailed || input.attemptCoverage.persistenceFailed || input.runDrilldown.persistenceFailed
           ? "mint-burn-state-persistence-failed"
-          : nullPriceBacklogError != null ? "mint-burn-null-price-backlog-unavailable"
           : "mint-burn-source-coverage-degraded",
     } : {}),
     lane: input.lane,
