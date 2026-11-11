@@ -598,7 +598,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     outputPaths: ["public/_redirects", "public/datasets/**", "src/lib/datasets/public-dataset-current.ts"],
     phase: 2,
     script: "scripts/maintenance/generate-public-datasets.ts",
-    sourcePaths: ["data/depeg-events/**", "scripts/lib/depeg-ledger-capture.ts", "scripts/lib/public-dataset-artifacts.ts", "shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
+    sourcePaths: ["data/depeg-events/**", "scripts/lib/depeg-ledger-capture.ts", "scripts/lib/public-dataset-artifacts.ts", "scripts/lib/retired-public-routes.mjs", "shared/lib/api-endpoints/datasets.ts", "shared/lib/stablecoins/registry.ts"],
   }),
   generatedArtifact({
     id: "llms-txt",
