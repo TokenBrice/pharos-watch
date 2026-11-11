@@ -32,7 +32,6 @@ import {
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import type { FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor } from "@/lib/api-query-contract";
 import { apiFetchWithMeta, type ApiMeta } from "@/lib/api";
-import { reconcileStablecoinLiveSummary } from "@/lib/stablecoin-live-summary-query";
 
 export type { StabilityContributor };
 
@@ -121,8 +120,9 @@ export function createRegisteredApiPollingQueryOptions<T>(
       ...overrides,
       schema: descriptor.schema,
     });
-    if (descriptor.queryKey[0] === "stablecoin-live-summary") {
-      options.structuralSharing = (previous, incoming) => reconcileStablecoinLiveSummary(
+    if (descriptor.reconcileMeta) {
+      const reconcile = descriptor.reconcileMeta;
+      options.structuralSharing = (previous, incoming) => reconcile(
         previous as QueryWithMetaEnvelope<T> | undefined,
         incoming as QueryWithMetaEnvelope<T>,
       );

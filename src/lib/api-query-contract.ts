@@ -1,3 +1,4 @@
+import type { ApiMetaEnvelope as ApiMeta } from "@pharos/contracts/api-meta";
 import type { SchemaLikeSource } from "@shared/lib/schema-like";
 
 export interface FrontendApiQueryBaseDescriptor {
@@ -19,6 +20,10 @@ export interface FrontendApiQueryDescriptor<
 > extends FrontendApiQueryBaseDescriptor {
   responseMode: TMode;
   schema?: SchemaLikeSource<T>;
+  reconcileMeta?: (
+    previous: { data: T; meta: ApiMeta | null } | undefined,
+    incoming: { data: T; meta: ApiMeta | null },
+  ) => { data: T; meta: ApiMeta | null };
 }
 
 export interface FrontendStaticApiQueryDescriptor<T> extends FrontendStaticApiQueryBaseDescriptor {

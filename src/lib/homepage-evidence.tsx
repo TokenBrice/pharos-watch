@@ -2,17 +2,11 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { HomepageSnapshot, HomepageLaneMeta } from "@shared/types/homepage";
-import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
+import type { HomepageSnapshot } from "@shared/types/homepage";
+import { isRetainableHomepageLane } from "@/lib/retained-evidence-policy";
 
 const RetainedHomepageContext = createContext<HomepageSnapshot | null>(null);
 export type HomepageEvidenceLane = keyof HomepageSnapshot;
-
-export function isRetainableHomepageLane(meta: HomepageLaneMeta, nowMs: number): boolean {
-  return meta.updatedAt !== null && meta.updatedAt > 0
-    && nowMs >= meta.updatedAt * 1000
-    && nowMs - meta.updatedAt * 1000 <= HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS;
-}
 
 /** Display-only evidence: never an initialData/setQueryData cache shortcut. */
 export function reconcileHomepageEvidence(

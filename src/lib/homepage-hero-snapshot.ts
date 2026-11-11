@@ -1,10 +1,11 @@
+import { RETAINED_EVIDENCE_MAX_AGE_MS } from "@/lib/retained-evidence-policy";
 import type { HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
 import { deriveDataHealth, type DataHealthInfo } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 // A checked-in build snapshot is only a short outage bridge, never an
 // indefinitely current headline.
-export const HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS = 72 * 60 * 60 * 1000;
+export const HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS = RETAINED_EVIDENCE_MAX_AGE_MS;
 
 export type HomepageHeroSelection =
   | {

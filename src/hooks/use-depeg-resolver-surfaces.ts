@@ -7,11 +7,8 @@ import { isDepegResolverEnabled, isDepegResolverReviewerEnabled } from "@/lib/fe
  * Pairs the two DDR queries with their feature gates. Callers read the query
  * objects directly — the hook deliberately does not re-flatten them into a
  * per-field bag.
- *
- * The reviewer query is admitted separately from its feature flag so a folded
- * audit ledger need not fetch. Existing eager consumers retain that default.
  */
-export function useDepegResolverSurfaces({ reviewEnabled = true }: { reviewEnabled?: boolean } = {}) {
+export function useDepegResolverSurfaces() {
   const resolverEnabled = isDepegResolverEnabled();
   const resolverReviewerEnabled = resolverEnabled && isDepegResolverReviewerEnabled();
 
@@ -19,6 +16,6 @@ export function useDepegResolverSurfaces({ reviewEnabled = true }: { reviewEnabl
     resolverEnabled,
     resolverReviewerEnabled,
     resolver: useDepegResolver({ enabled: resolverEnabled }),
-    resolverReview: useDepegResolverReview({ enabled: resolverReviewerEnabled && reviewEnabled }),
+    resolverReview: useDepegResolverReview({ enabled: resolverReviewerEnabled }),
   };
 }

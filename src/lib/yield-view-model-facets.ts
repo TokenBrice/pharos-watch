@@ -40,7 +40,7 @@ import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { gradeRange } from "@shared/lib/report-card-core";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegCurrency, YieldBenchmarkKey, YieldType } from "@shared/types";
-import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
+import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 import { getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 

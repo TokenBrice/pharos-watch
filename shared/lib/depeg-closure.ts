@@ -37,6 +37,10 @@ export interface DepegClosureInput {
   recoveryPrice: number | null;
 }
 
+export function isDepegRecovery(closure: DepegClosureClassification | null): boolean {
+  return closure === "recovered" || closure === "legacy_recovered";
+}
+
 export function classifyDepegClosure(input: DepegClosureInput): DepegClosureClassification {
   if (input.endedAt == null) return "open";
   if (input.closeReason != null && DEPEG_RECOVERY_CLOSE_REASONS.includes(input.closeReason)) return "recovered";

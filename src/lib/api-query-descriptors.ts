@@ -1,3 +1,4 @@
+import { reconcileStablecoinLiveSummary } from "@/lib/stablecoin-live-summary-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import type { SupplyHistoryWindow } from "@shared/lib/api-query-history";
@@ -133,6 +134,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     ),
     (stablecoinId: string) => ({
       queryKey: ["stablecoin-live-summary", stablecoinId] as const,
+      reconcileMeta: reconcileStablecoinLiveSummary<StablecoinLiveSummary>,
       path: API_PATHS.stablecoinLiveSummary(stablecoinId),
       producerIntervalMs: PER_COIN_CACHE_TTL_SECONDS * 1000,
     }),

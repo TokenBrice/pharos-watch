@@ -3,7 +3,7 @@ import { formatTrackingSpanSeconds } from "@shared/lib/format";
 import { computePegScore } from "@shared/lib/peg-score";
 import { DAY_SECONDS } from "@/lib/constants";
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
-import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
+import { classifyDepegClosure, isDepegRecovery, type DepegClosureClassification } from "@shared/lib/depeg-closure";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 
 interface PegStabilityMetrics {
@@ -68,7 +68,7 @@ export function computePegStability(
     }
   }
   const latestClosure = latestClosed ? classifyDepegClosure(latestClosed) : null;
-  const recovered = latestClosure === "recovered" || latestClosure === "legacy_recovered";
+  const recovered = isDepegRecovery(latestClosure);
   const currentStreakDays = !depeggedNow && recovered && latestClosed
     ? Math.floor((nowSec - latestClosed.endedAt!) / DAY_SECONDS)
     : null;

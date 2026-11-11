@@ -106,7 +106,7 @@ afterEach(() => {
 });
 
 describe("useDepegResolverSurfaces", () => {
-  it("does not fetch the reviewer until the disclosure opens", async () => {
+  it("fetches both surfaces eagerly when their feature flags are enabled", async () => {
     flags.resolverEnabled.mockReturnValue(true);
     flags.reviewerEnabled.mockReturnValue(true);
     const queryClient = new QueryClient();
@@ -117,15 +117,12 @@ describe("useDepegResolverSurfaces", () => {
       { match: (request: Request) => new URL(request.url).pathname === RESOLVER_PATH, respond: () => ({ body: RESOLVER_PAYLOAD }) },
       { match: (request: Request) => new URL(request.url).pathname === REVIEW_PATH, respond: () => ({ body: REVIEW_PAYLOAD }) },
     ], { requireMatch: true });
-    const { result, rerender } = renderHook(
-      ({ reviewEnabled }) => useDepegResolverSurfaces({ reviewEnabled }),
-      { wrapper, initialProps: { reviewEnabled: false } },
-    );
+    const { result } = renderHook(() => useDepegResolverSurfaces(), { wrapper });
+    expect(result.current.resolverEnabled).toBe(true);
+    expect(result.current.resolverReviewerEnabled).toBe(true);
     await waitFor(() => expect(result.current.resolver.data).toEqual(RESOLVER_PAYLOAD));
-    expect(result.current.resolverReview.fetchStatus).toBe("idle");
-    expect(requestsTo(fetchSpy, REVIEW_PATH)).toBe(0);
-    rerender({ reviewEnabled: true });
     await waitFor(() => expect(result.current.resolverReview.data).toEqual(REVIEW_PAYLOAD));
+    expect(requestsTo(fetchSpy, RESOLVER_PATH)).toBe(1);
     expect(requestsTo(fetchSpy, REVIEW_PATH)).toBe(1);
   });
 

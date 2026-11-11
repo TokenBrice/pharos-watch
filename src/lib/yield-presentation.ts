@@ -13,7 +13,7 @@ import { computePYS } from "@shared/lib/yield-scoring";
 import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-presentation";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import type { CsvColumn } from "@/lib/exports/csv";
-import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import type { YieldExportRow } from "@/lib/yield-row-types";
 import { formatYieldRatioPercent, resolveYieldScoreQualification } from "@/lib/yield-constants";
 
 const YIELD_CSV_COLUMNS = {
@@ -48,9 +48,9 @@ const YIELD_CSV_COLUMNS = {
   warnings: { header: "Warnings", accessor: (row) => row.warningSignals.join(" | ") },
   url: { header: "Provider URL", accessor: (row) => row.yieldSourceUrl ?? "" },
   depth: { header: "Depth", accessor: (row) => row.sourceDepthLens },
-} satisfies Record<string, CsvColumn<YieldViewModelRow>>;
+} satisfies Record<string, CsvColumn<YieldExportRow>>;
 
-export const YIELD_LEADERBOARD_CSV_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
+export const YIELD_LEADERBOARD_CSV_COLUMNS: CsvColumn<YieldExportRow>[] = [
   YIELD_CSV_COLUMNS.id, YIELD_CSV_COLUMNS.symbol, YIELD_CSV_COLUMNS.name, YIELD_CSV_COLUMNS.apy30d,
   YIELD_CSV_COLUMNS.pys, YIELD_CSV_COLUMNS.qualification, YIELD_CSV_COLUMNS.nullReason,
   YIELD_CSV_COLUMNS.safetyGrade, YIELD_CSV_COLUMNS.safetyScore, YIELD_CSV_COLUMNS.safetyProvenance,
@@ -60,7 +60,7 @@ export const YIELD_LEADERBOARD_CSV_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
   YIELD_CSV_COLUMNS.stability, YIELD_CSV_COLUMNS.warnings, YIELD_CSV_COLUMNS.url,
 ];
 
-export const YIELD_COMPARE_CSV_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
+export const YIELD_COMPARE_CSV_COLUMNS: CsvColumn<YieldExportRow>[] = [
   YIELD_CSV_COLUMNS.id, YIELD_CSV_COLUMNS.symbol, YIELD_CSV_COLUMNS.name, YIELD_CSV_COLUMNS.apy30d,
   YIELD_CSV_COLUMNS.pys, YIELD_CSV_COLUMNS.qualification, YIELD_CSV_COLUMNS.nullReason,
   YIELD_CSV_COLUMNS.safetyGrade, YIELD_CSV_COLUMNS.safetyScore, YIELD_CSV_COLUMNS.safetyProvenance,
