@@ -8,7 +8,10 @@
  */
 
 import { EVIDENCE_STRESS_THRESHOLD, type DewsSignalKey } from "@shared/lib/dews-config";
-import type { DEWSEvidenceKind, SignalResult } from "./types";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import { computeDivergSignal } from "./signal-families";
+import type { DEWSInput, DEWSEvidenceKind, SignalResult } from "./types";
 
 /**
  * Known sub-bps rounding window on non-USD pegs (accepted, not a defect).
@@ -32,13 +35,32 @@ function hasStressEvidence(signal: SignalResult): boolean {
   return signal.available && signal.value >= EVIDENCE_STRESS_THRESHOLD;
 }
 
+export function hasLoneMentoBrokerPrice(input?: DEWSInput): boolean {
+  const sources = normalizePricingSourceKeys([input?.priceSource, ...(input?.agreeSources ?? [])]);
+  const brokerFamily = getPricingSourceRegistryEntry("mento-broker")?.depegSourceFamily;
+  return sources.includes("mento-broker") && !sources.some((key) => {
+    const source = getPricingSourceRegistryEntry(key);
+    return source?.depegSourceFamily && source.depegSourceFamily !== brokerFamily &&
+      !source.isProtocolOverride && source.trustTier !== "cached_replay" && source.trustTier !== "fallback_search" &&
+      source.trustTier !== "nominal_reference";
+  });
+}
+
 export function classifyEvidenceKinds(
   signals: Record<DewsSignalKey, SignalResult>,
   psiAmplifier: number,
+  input?: DEWSInput,
 ): DEWSEvidenceKind[] {
   const kinds = new Set<DEWSEvidenceKind>();
 
-  if (hasStressEvidence(signals.diverg)) {
+  // Keep the raw divergence; only an independently stressed DEX leg may supply
+  // escalation evidence when Broker spread is the sole primary observation.
+  const marketEvidence = hasLoneMentoBrokerPrice(input) && input
+    ? hasStressEvidence(signals.diverg) && (input.independentDexPrices ?? []).some((price) => hasStressEvidence(computeDivergSignal({
+        ...input, price: null, dexPriceUsd: price, prevDivergValue: undefined, prevDivergAvailable: false,
+      })))
+    : hasStressEvidence(signals.diverg);
+  if (marketEvidence) {
     kinds.add("market-price");
   }
 

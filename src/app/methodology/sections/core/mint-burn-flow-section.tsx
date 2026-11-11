@@ -100,6 +100,14 @@ export function MintBurnFlowMethodologySection() {
                 requires complete raw hours before it can replace aggregates.
               </p>
               <p>
+                Hourly incompleteness applies to each constituent&apos;s evidence for that hour. Historical
+                hours include established enabled isolated legs of coins with surviving admission, reading
+                their matching rows and scan proof together. Every leg must prove that hour and its
+                classification; another hour&apos;s gap cannot suppress it. Current coin totals retain their
+                partial admitted-leg scope, and full-coin direction, pressure, gauge and FTQ keep their
+                complete-window gates.
+              </p>
+              <p>
                 Pharos tracks on-chain mint and burn events for major stablecoins via JSON-RPC (Transfer mints/burns
                 plus USDT Issue/Redeem). EVM reads use admitted Dwellir with Alchemy fallback; Tron uses admitted Dwellir
                 with TronGrid JSON-RPC fallback. These raw events are aggregated into hourly buckets and exposed as two separate

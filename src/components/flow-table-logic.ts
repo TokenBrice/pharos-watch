@@ -28,18 +28,13 @@ export const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = Object.f
 
 export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; className: string } | null {
   const status = coin.coverage?.status;
-  if (!status || status === "full") return null;
+  if (!status || status === "full" || status === "lagging") return null;
 
   switch (status) {
     case "partial-history":
       return {
         label: "Partial history",
         className: FLOW_COVERAGE_BADGE_CLASSES["partial-history"],
-      };
-    case "lagging":
-      return {
-        label: "Lagging",
-        className: FLOW_COVERAGE_BADGE_CLASSES.lagging,
       };
     case "bootstrapping":
       return {

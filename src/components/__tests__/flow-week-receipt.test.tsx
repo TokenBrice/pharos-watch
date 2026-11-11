@@ -16,6 +16,7 @@ describe("FlowWeekReceipt", () => {
           { hourTs: 1, mintVolumeUsd: 10_000_000, burnVolumeUsd: 3_000_000, netFlowUsd: 7_000_000, valuation: "complete" },
         ]}
         scopeLabel="Configured issuance chains"
+        hourlyScopeLabel="Tron"
       />,
     );
 
@@ -31,6 +32,7 @@ describe("FlowWeekReceipt", () => {
     expect(screen.getByText("USDT -$5.00M")).toBeTruthy();
     expect(screen.getByText("Coverage metadata unavailable")).toBeTruthy();
     expect(screen.getByText(/not market-wide supply creation or redemption/)).toBeTruthy();
+    expect(container.textContent).toContain("Hourly volume scope: Tron. Net and leaders: Configured issuance chains.");
   });
 
   it("prints Unavailable, not None, for absent leaders when no 7d net is displayable", () => {

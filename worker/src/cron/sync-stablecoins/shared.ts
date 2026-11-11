@@ -995,6 +995,10 @@ export async function loadFreshFxRates(
       updatedAt: globalUpdatedAt,
       updatedAtByPeg,
       typeByPeg,
+      sourceModeByPeg: fxState.sourceModeByPeg,
+      sourceCadenceByPeg: fxState.sourceCadenceByPeg,
+      sourceDateByPeg: fxState.sourceDateByPeg,
+      maxAgeSec: FX_REFERENCE_MAX_AGE_SEC,
     },
   };
 }

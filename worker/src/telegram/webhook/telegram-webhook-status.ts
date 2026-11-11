@@ -182,12 +182,13 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
 
   let flow: StatusForCoin["flow"] = null;
   if (flowCache) {
-    const parsed = safeJsonParse<{ netFlowUsd?: unknown; updatedAt?: unknown } | null>(
+    const parsed = safeJsonParse<{ netFlowUsd?: unknown; updatedAt?: unknown; scanCoverage?: { complete?: unknown } } | null>(
       flowCache.value,
       null,
       "telegram-status-flow",
     );
-    if (parsed && typeof parsed.netFlowUsd === "number" && Number.isFinite(parsed.netFlowUsd)) {
+    if (parsed && typeof parsed.netFlowUsd === "number" && Number.isFinite(parsed.netFlowUsd)
+      && parsed.scanCoverage?.complete !== false) {
       const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : flowCache.updatedAt;
       flow = {
         netFlowUsd: parsed.netFlowUsd,

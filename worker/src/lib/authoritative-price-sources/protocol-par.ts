@@ -81,6 +81,22 @@ function getProtocolParPrice(
   };
 }
 
+export function getProtocolParPriceOverride(
+  id: string,
+  references: PriceValidationReferences | undefined,
+): CurrentPriceOverride | null {
+  const config = PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(id);
+  const par = config ? getProtocolParPrice(config, references) : null;
+  return par ? {
+    price: par.price,
+    source: PROTOCOL_PAR_SOURCE,
+    confidence: null,
+    observedAt: null,
+    observedAtMode: "nominal_reference",
+    ...(par.nominalFx ? { nominalFx: par.nominalFx } : {}),
+  } : null;
+}
+
 export const protocolParProvider: PriceSourceProvider = {
   source: PROTOCOL_PAR_SOURCE,
   livePriority: 0,
@@ -91,20 +107,7 @@ export const protocolParProvider: PriceSourceProvider = {
     asset: PeggedAsset,
     context: LivePriceContext,
   ): Promise<CurrentPriceOverride | null> {
-    const config = PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(asset.id);
-    if (!config) return null;
-
-    const par = getProtocolParPrice(config, context.validationReferences);
-    if (!par) return null;
-
-    return {
-      price: par.price,
-      source: PROTOCOL_PAR_SOURCE,
-      confidence: null,
-      observedAt: null,
-      observedAtMode: "nominal_reference",
-      ...(par.nominalFx ? { nominalFx: par.nominalFx } : {}),
-    };
+    return getProtocolParPriceOverride(asset.id, context.validationReferences);
   },
   // Nominal par has no observed history. Matching every route with an empty
   // series makes depeg replay preserve existing rows instead of synthesizing

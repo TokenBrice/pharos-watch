@@ -345,6 +345,8 @@ export const MintBurnFlowsResponseSchema = z.object({
   /** Exact [start,end) UTC boundaries; absent on pre-cutover historical payloads. */
   window: MintBurnHourlyWindowSchema.optional(),
   scope: MintBurnScopeSchema.optional(),
+  /** Constituents of hourly values, including independently proved isolated legs. */
+  hourlyScope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
   _meta: ApiMetaEnvelopeSchema.optional(),
 });
@@ -382,6 +384,7 @@ export const MintBurnPerCoinResponseSchema = z.object({
   windowHours: z.number().int().positive().optional(),
   window: MintBurnHourlyWindowSchema.optional(),
   scope: MintBurnScopeSchema.optional(),
+  hourlyScope: MintBurnScopeSchema.optional(),
   sync: MintBurnSyncSchema.optional(),
   _meta: ApiMetaEnvelopeSchema.optional(),
 });

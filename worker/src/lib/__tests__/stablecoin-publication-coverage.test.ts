@@ -1,3 +1,4 @@
+import { protocolParProvider } from "../authoritative-price-sources/protocol-par";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS as COINS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -626,7 +627,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   it("keeps the reviewed calendar identities and lanes exact and never classifies priced assets as gaps", () => {
     const calendar = MARKET_CALENDARS[0];
     const configuredRoutes = COINS.flatMap((asset) => [mentoBrokerProvider, mentoFpmmProvider]
-      .filter((provider) => provider.matches(asset.id))
+      .filter((provider) => provider.matches(asset.id) && !protocolParProvider.matches(asset.id))
       .map((provider) => ({ stablecoinId: asset.id, lane: provider.source })));
     const sorted = <T extends { stablecoinId: string }>(assets: readonly T[]) =>
       [...assets].sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));

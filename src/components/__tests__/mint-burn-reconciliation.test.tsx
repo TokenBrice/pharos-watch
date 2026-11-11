@@ -55,13 +55,15 @@ describe("MintBurnReconciliationCard", () => {
     expect(screen.queryByText("Classified flow net 24h")).toBeNull();
   });
 
-  it("shows exact token precision for a verified latest scan without presenting a 24h audit", () => {
+  it("shows operator lag separately from a verified latest scan with exact token precision", () => {
     const summary = makeSummary();
     summary.conservationVersion = 1;
     summary.rows[0]!.status = "ok";
     summary.rows[0]!.conservation = [record()];
+    summary.rows[0]!.coverageStatus = "lagging";
     render(<MintBurnReconciliationCard summary={summary} />);
     expect(group().getByText("Verified")).toBeTruthy();
+    expect(group().getByText("Lagging").getAttribute("title")).toContain("lane cadence");
     expect(group().getByText("Audit coverage: All supported contracts verified")).toBeTruthy();
     expect(group().getAllByText("1.234567890123456789")).toHaveLength(2);
     expect(group().getByText("Supply checkpoints 100–200")).toBeTruthy();

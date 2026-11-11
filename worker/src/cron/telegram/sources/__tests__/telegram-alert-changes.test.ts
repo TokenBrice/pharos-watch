@@ -306,10 +306,10 @@ describe("telegram alert change builders", () => {
       expect(second.nextCandidates).toEqual({});
     });
 
-    it("drops a one-computation spike (eMXN 23 to 59 to 23)", () => {
+    it.each([23, 35])("drops spikes and honors evidence caps (%s)", (score) => {
       const spike = plan([row("WARNING", 59, T0)], {}, { alpha: "WATCH" });
       expect(spike.changes).toEqual([]);
-      const back = plan([row("WATCH", 23, T0 + 1800)], spike.nextAlertable, spike.nextObserved, spike.nextCandidates);
+      const back = plan([{ ...row("WATCH", score, T0 + 1800), signals_json: score === 35 ? JSON.stringify({ signals: {}, insufficientEvidenceReason: "data_quality_only" }) : null }], spike.nextAlertable, spike.nextObserved, spike.nextCandidates);
       expect(back.changes).toEqual([]);
       expect(back.nextCandidates.alpha).toEqual({ quietSinceSec: T0 });
     });

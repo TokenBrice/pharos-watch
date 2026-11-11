@@ -295,7 +295,7 @@ function DewsTechnicalDetails() {
           at least {EVIDENCE_STRESS_THRESHOLD}. An available Blacklist Activity sub-signal at least{" "}
           {SEVERE_ISSUER_CONTROL_THRESHOLD} also bypasses the cap as severe issuer-control evidence. Mere source
           availability does not qualify. With either bypass the preliminary score is final; without either,
-          finalScore = min(preliminaryScore, {WATCH_MAX_SCORE}). The final score sets the band.
+          finalScore = min(preliminaryScore, {WATCH_MAX_SCORE}). The final score sets the band. A lone Mento Broker leg cannot supply market-price escalation evidence; independent observed confirmation is required. Its raw price and divergence remain unchanged.
         </p>
       </div>
 

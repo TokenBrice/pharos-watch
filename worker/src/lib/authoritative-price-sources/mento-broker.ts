@@ -5,6 +5,9 @@ import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmBlockHeader } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
+import { buildPriceValidationContext, getFreshReferencePriceForContext } from "../price-validation";
+import { protocolParProvider } from "./protocol-par";
+import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { resolveTrustedOverrideParent, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 
@@ -19,6 +22,8 @@ const ROUTES: Record<string, { token: string; exchange: string; feed: string; de
   "audm-mento": { token: "0x7175504c455076f15c04a2f90a8e352281f492f9", exchange: "0xd580d237231109e6a96d67d82450611c610a805a26660c90281bdc0cd04a95c7", feed: "0x646bd504c3864ea5b8a6b6d25743721f61864a07", depth: 1_000n * UNIT },
   "cadm-mento": { token: "0xff4ab19391af240c311c54200a492233052b6325", exchange: "0x517ccc3bcab9f35e2e24143a0c1809068efc649f740846cfb6a1c5703735c1ee", feed: "0x20869cf54ead821c45dfb2ab0c23d2e10fbb65a4", depth: 1_000n * UNIT },
   "copm-mento": { token: "0x8a567e2ae79ca692bd748ab832081c45de4041ea", exchange: "0x1c9378bd0973ff313a599d3effc654ba759f8ccca655ab6d6ce5bd39a212943b", feed: "0x0196d1f4fda21fa442e53eaf18bf31282f6139f1", depth: 1_000_000n * UNIT },
+  "xofm-mento": { token: "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08", exchange: "0xc9664df358594c5eaf2f410ab371e2deb8b532ca26162d2bc36d99b8d174567b", feed: "0x43620310c2feadbfecfd71b5a93e6e28946d64a5", depth: 1_000_000n * UNIT },
+  "zarm-mento": { token: "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6", exchange: "0x4206e101b13bf29e40b2bfed4cf167271c41677720f2ee786ac1bf5efac101cb", feed: "0x17ef04af0c52465694a841552fc2415169b1114c", depth: 1_000n * UNIT },
 };
 const CONFIG = parseAbiParameters("uint32,uint32,int48,int48,int48,uint8");
 /** Celo USDm row this route multiplies its sell quote by. */
@@ -32,6 +37,9 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
   const reject = (reason: string): null => { context.lastRejectionReason = `mento-broker:${reason}`; return null; };
   const route = Object.prototype.hasOwnProperty.call(ROUTES, id) ? ROUTES[id] : undefined;
   if (!route) return reject("unsupported-asset");
+  if (protocolParProvider.matches(id) && getFreshReferencePriceForContext(
+    buildPriceValidationContext({ stablecoinId: id }), context.validationReferences, Math.floor(Date.now() / 1000),
+  ) == null) return reject("fx-unavailable");
   const parent = resolveTrustedOverrideParent(context, MENTO_BROKER_PARENT_ID, () => "Mento Broker: trusted USDm unavailable", { allowFreshReplaySafeSingleSourceParent: true });
   if (!parent) return reject("parent-unavailable");
   const parentAge = Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt;
@@ -130,8 +138,11 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
 export const mentoBrokerProvider: PriceSourceProvider = {
   source: "mento-broker", liveMissingOnly: true, liveCircuitSource: CIRCUIT_SOURCE.MENTO_BROKER,
   livePriority: 1, liveTimeoutMs: 6_000, matches: (id) => Object.prototype.hasOwnProperty.call(ROUTES, id),
+  matchesHistoricalPrices: () => false,
   liveParentByAssetId: Object.fromEntries(Object.keys(ROUTES).map((id) => [id, MENTO_BROKER_PARENT_ID])),
   async fetchLivePrice(asset: PeggedAsset, context: LivePriceContext, signal?: AbortSignal) {
-    return hasPublishableCurrentPrice(asset) ? null : fetchMentoBrokerPrice(asset.id, context, signal);
+    if (hasPublishableCurrentPrice(asset) && (!protocolParProvider.matches(asset.id) ||
+      classifyPrimaryDepegTrust(asset, Math.floor(Date.now() / 1000)) === "authoritative")) return null;
+    return fetchMentoBrokerPrice(asset.id, context, signal);
   },
 };

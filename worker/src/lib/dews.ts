@@ -29,7 +29,7 @@ import {
 } from "@shared/lib/dews-config";
 import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 import { getThreatBand, piecewiseLinear } from "./dews/compatibility";
-import { classifyEvidenceKinds } from "./dews/evidence-policy";
+import { classifyEvidenceKinds, hasLoneMentoBrokerPrice } from "./dews/evidence-policy";
 import {
   computeBlacklistSignal,
   computeDivergSignal,
@@ -123,9 +123,20 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   const weightedContributions: DewsTopContributor[] = [];
 
   for (const [key, signal] of Object.entries(signals) as Array<[DewsSignalKey, SignalResult]>) {
-    if (signal.available) {
+    if (signal.available && !(key === "flow" && input.flowIsolated)) {
       totalWeight += DEWS_SIGNAL_WEIGHTS[key];
       weightedSum += DEWS_SIGNAL_WEIGHTS[key] * signal.value;
+    }
+  }
+
+  // Partial-coin evidence must not dilute stress or establish sufficient coverage.
+  if (input.flowIsolated && signals.flow.available) {
+    if (totalWeight >= MIN_AVAILABLE_WEIGHT && signals.flow.value > weightedSum / totalWeight) {
+      totalWeight += DEWS_SIGNAL_WEIGHTS.flow;
+      weightedSum += DEWS_SIGNAL_WEIGHTS.flow * signals.flow.value;
+    } else {
+      signals.flow = { ...signals.flow, value: 0, available: false,
+        unavailableReason: "mint-burn-isolated-no-stress-increase" };
     }
   }
 
@@ -155,7 +166,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     });
   }
 
-  const evidenceKinds = classifyEvidenceKinds(signals, psiAmplifier);
+  const evidenceKinds = classifyEvidenceKinds(signals, psiAmplifier, input);
   const hasMarketOrLiquidityEvidence =
     evidenceKinds.includes("market-price") || evidenceKinds.includes("dex-liquidity");
   const hasSevereIssuerControlEvidence =
@@ -166,8 +177,11 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   const preliminaryScore = Math.round(clamp(amplifiedScore, 0, 100));
   let score = preliminaryScore;
   let insufficientEvidenceReason: DewsInsufficientEvidenceReason | null = null;
-  if (preliminaryScore > WATCH_MAX_SCORE && !hasMarketOrLiquidityEvidence && !hasSevereIssuerControlEvidence) {
-    score = WATCH_MAX_SCORE;
+  if (!hasMarketOrLiquidityEvidence && !hasSevereIssuerControlEvidence &&
+    (preliminaryScore > WATCH_MAX_SCORE || hasLoneMentoBrokerPrice(input))) {
+    // Persist the Broker evidence limit even below WATCH so alert hysteresis
+    // cannot restore an earlier alertable band from this unconfirmed leg.
+    score = Math.min(preliminaryScore, WATCH_MAX_SCORE);
     const nonSystemicEvidenceKinds = evidenceKinds.filter((kind) => kind !== "systemic");
     insufficientEvidenceReason =
       dataQualityScore >= 50 && nonSystemicEvidenceKinds.length === 0

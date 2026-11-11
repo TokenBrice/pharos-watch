@@ -470,7 +470,7 @@ export function CompareClient() {
                 </h3>
                 {flowUpdatedMinutes != null && (
                   <span className="text-xs text-muted-foreground">
-                    Updated {flowUpdatedMinutes} min ago · {flowScopeLabel}
+                    Updated {flowUpdatedMinutes} min ago · Admitted totals: {flowScopeLabel}
                   </span>
                 )}
               </div>

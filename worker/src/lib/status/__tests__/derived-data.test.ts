@@ -43,7 +43,7 @@ function conservationFixture(config = byId("usds-sky")[0]) {
 }
 
 async function reconcile(options: {
-  id?: string; records?: unknown[]; coverage?: string; scanAgeSec?: number; admittedTron?: boolean; disabledKeys?: string[]; paused?: boolean;
+  id?: string; records?: unknown[]; coverage?: string; scanAgeSec?: number; admitted?: boolean; disabledKeys?: string[]; paused?: boolean;
 } = {}) {
   const id = options.id ?? "usds-sky";
   const configs = byId(id);
@@ -52,26 +52,26 @@ async function reconcile(options: {
     configs.map((config, index) => [conservationModule.mintBurnConservationCacheKey(config), records[index]]),
   ));
   const db = mockD1([
-    { match: "FROM mint_burn_admission", rows: options.admittedTron ? MINT_BURN_CONFIGS
-      .filter((config) => config.chain.chainId === "tron").map((config) => ({
-        config_key: mintBurnConfigKey(config), config_fingerprint: mintBurnScanFingerprint(config),
-        admitted_at: NOW - 1, baseline_from: NOW - 90 * 86400, baseline_to: NOW - 1,
-      })) : [] },
+    { match: "FROM mint_burn_admission", rows: options.admitted ? configs.map((config) => ({
+      config_key: mintBurnConfigKey(config), config_fingerprint: mintBurnScanFingerprint(config),
+      admitted_at: NOW - 1, baseline_from: NOW - 90 * 86400, baseline_to: NOW - 1,
+    })) : [] },
     { match: "FROM mint_burn_publication_policy", rows: [{
       disabled_keys: JSON.stringify(options.disabledKeys ?? []), paused_keys: JSON.stringify(options.paused ? configs.map(mintBurnConfigKey) : []),
     }] },
     { match: "pharos:mint-burn-scan-coverage:read", rows: makeMintBurnScanSegments(NOW, 90,
-      MINT_BURN_CONFIGS.filter((config) => isGrandfatheredMintBurnConfig(config) || (options.admittedTron && config.chain.chainId === "tron")))
+      MINT_BURN_CONFIGS.filter((config) => isGrandfatheredMintBurnConfig(config) || (options.admitted && config.stablecoinId === id)))
       .filter((row) => !options.paused || !configs.some((config) => mintBurnConfigKey(config) === row.config_key)) },
     { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "FROM mint_burn_sync_state", rows: options.coverage === "missing-cursor" ? [] : MINT_BURN_CONFIGS.map((config) => ({
-      config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: LAST_BLOCK_BY_COVERAGE[options.coverage ?? ""] ?? 99_999_999,
+      config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: options.coverage === "lagging-tron" && config.chain.chainId === "tron"
+        ? 90_000_000 : LAST_BLOCK_BY_COVERAGE[options.coverage ?? ""] ?? 99_999_999,
     })) },
     ...["sync-mint-burn", "sync-mint-burn-extended"].map((job) => ({
       match: "FROM cron_runs", matchBinds: [job], rows: [{
         started_at: NOW - (options.scanAgeSec ?? (options.coverage === "stale" ? 86400 : 0)),
         status: options.coverage === "error" ? "error" : "ok",
-        metadata: JSON.stringify({ chainHeads: { ethereum: 100_000_000 } }),
+        metadata: JSON.stringify({ chainHeads: { ethereum: 100_000_000, tron: 100_000_000 } }),
       }],
     })),
   ]);
@@ -79,9 +79,9 @@ async function reconcile(options: {
   expect(db.getHistory().some((entry) => entry.sql.includes("mint-burn-24h") || entry.sql.includes("key = ?"))).toBe(false);
   expect(result.conservationVersion).toBe(1);
   if (!options.disabledKeys) {
-    const admittedTron = (config: (typeof MINT_BURN_CONFIGS)[number]) => !!options.admittedTron && config.chain.chainId === "tron";
+    const admitted = (config: (typeof MINT_BURN_CONFIGS)[number]) => !!options.admitted && config.stablecoinId === id;
     expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)
-      && (isGrandfatheredMintBurnConfig(config) || admittedTron(config))).map((config) => config.stablecoinId)).size);
+      && (isGrandfatheredMintBurnConfig(config) || admitted(config))).map((config) => config.stablecoinId)).size);
   }
   return { ...result, rows: result.rows.filter((row) => row.stablecoinId === id),
     readConfigs: vi.mocked(conservationModule.readMintBurnConservationRecords).mock.lastCall![1] };
@@ -258,8 +258,8 @@ describe("getMintBurnReconciliation verified conservation", () => {
     expect((await reconcile({ id: "buidl-blackrock", records })).rows[0].status).toBe(expected);
   });
 
-  it("rejects positive evidence for a currently unsupported rebasing config", async () => {
-    expect((await reconcile({ id: "m-m0" })).rows[0].status).toBe("insufficient-source");
+  it.each(["m-m0", "swanusd-swan"])("keeps unsupported %s unverified with operator lag visible", async (id) => {
+    expect((await reconcile({ id, coverage: "lagging", admitted: true })).rows[0]).toMatchObject({ status: "insufficient-source", coverageStatus: "lagging" });
   });
 
   it("excludes pending Tron from USDT reconciliation and coverage", async () => {
@@ -275,9 +275,9 @@ describe("getMintBurnReconciliation verified conservation", () => {
     expect(result.readConfigs.some((config) => config.stablecoinId === id)).toBe(false);
   });
 
-  it("keeps admitted unsupported Tron visible with its reason without degrading USDT", async () => {
-    const result = await reconcile({ id: "usdt-tether", admittedTron: true });
-    expect(result.rows[0]).toMatchObject({ status: "ok", coverageStatus: "full" });
+  it.each([["full", "full"], ["lagging-tron", "lagging"]])("keeps unsupported Tron %s without degrading USDT", async (coverage, coverageStatus) => {
+    const result = await reconcile({ id: "usdt-tether", admitted: true, coverage });
+    expect(result.rows[0]).toMatchObject({ status: "ok", coverageStatus });
     expect(result.rows[0].conservationIssue).toBeUndefined();
     const tron = result.rows[0].conservation?.find((record) => record.chainId === "tron");
     expect(tron).toMatchObject({
@@ -296,7 +296,7 @@ describe("getMintBurnReconciliation verified conservation", () => {
       const configs = byId("usdt-tether");
       const records = configs.map((config) => ({ ...conservationFixture(config),
         ...(config.chain.chainId === "tron" ? { address } : {}) }));
-      const result = await reconcile({ id: "usdt-tether", records, admittedTron: true });
+      const result = await reconcile({ id: "usdt-tether", records, admitted: true });
       expect(result.rows[0].conservation?.find((record) => record.chainId === "tron")).toMatchObject({
         status: "unavailable", reason: "Conservation evidence does not match the current contract configuration or clock.",
       });

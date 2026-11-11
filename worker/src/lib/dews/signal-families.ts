@@ -519,6 +519,10 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
   ]);
 
   const net24h = input.mintVolume24hUsd - input.burnVolume24hUsd;
+  if (input.flowIsolated && net24h >= 0) {
+    return { value: 0, available: false, baselineDays, flowScope: "isolated-canonical-leg",
+      unavailableReason: "mint-burn-isolated-no-outflow" };
+  }
   const value = clamp(0.6 * surgeScore + 0.4 * ratioScore, 0, 100);
 
   return {
@@ -526,7 +530,8 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
     available: true,
     burnSurge: Math.round(burnSurge * 100) / 100,
     burnToMintRatio: Math.round(ratio * 100) / 100,
-    net24hUsd: net24h,
+    ...(input.flowIsolated ? { flowScope: "isolated-canonical-leg" as const, isolatedNet24hUsd: net24h }
+      : { net24hUsd: net24h }),
     baselineDays,
   };
 }
