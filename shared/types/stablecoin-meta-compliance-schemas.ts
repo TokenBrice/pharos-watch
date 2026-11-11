@@ -189,9 +189,5 @@ export const GeniusProfileSchema = z
   });
 
 export type BlacklistabilityReview = z.output<typeof BlacklistabilityReviewSchema>;
-export type Jurisdiction = z.output<typeof JurisdictionSchema>;
 export type MicaProfile = z.output<typeof MicaProfileSchema>;
-export type GeniusApplicabilityBasis = z.output<typeof GeniusApplicabilityBasisSchema>;
-export type GeniusForeignExceptionEvidence = z.output<typeof GeniusForeignExceptionEvidenceSchema>;
-export type GeniusNegativeEvidenceReview = z.output<typeof GeniusNegativeEvidenceReviewSchema>;
 export type GeniusProfile = z.output<typeof GeniusProfileSchema>;

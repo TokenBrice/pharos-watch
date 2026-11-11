@@ -26,7 +26,6 @@ export const STABLECOIN_PRICE_BASIS_VALUES = [
   "oracle-corroborated",
   "contractual-par",
 ] as const;
-export type StablecoinPriceBasis = (typeof STABLECOIN_PRICE_BASIS_VALUES)[number];
 
 export const STABLECOIN_EXIT_MECHANISM_VALUES = [
   "secondary-market",
@@ -34,7 +33,6 @@ export const STABLECOIN_EXIT_MECHANISM_VALUES = [
   "maturity-only",
   "discretionary",
 ] as const;
-export type StablecoinExitMechanism = (typeof STABLECOIN_EXIT_MECHANISM_VALUES)[number];
 
 export type ListingClass =
   | "core-stablecoin"
@@ -68,5 +66,4 @@ export const VARIANT_KIND_VALUES = [
 export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
 
 export const WRAPPER_OPERATOR_VALUES = ["parent-protocol", "third-party"] as const;
-export type WrapperOperator = (typeof WRAPPER_OPERATOR_VALUES)[number];
 export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);

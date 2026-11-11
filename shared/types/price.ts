@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
-export type DetailProvider = (typeof DETAIL_PROVIDER_VALUES)[number];
 export const DetailProviderSchema = z.enum(DETAIL_PROVIDER_VALUES);
 
 const PRICE_CONFIDENCE_VALUES = ["high", "single-source", "low", "fallback"] as const;
@@ -20,7 +19,7 @@ export const PriceObservedAtModeSchema = z.preprocess(
   z.enum(PRICE_OBSERVED_AT_MODE_VALUES),
 );
 /** FX reference admission vocabulary shared with worker price validation (`PriceReferenceType`). */
-export const PRICE_REFERENCE_TYPE_VALUES = ["fresh", "stale", "static", "none"] as const;
+const PRICE_REFERENCE_TYPE_VALUES = ["fresh", "stale", "static", "none"] as const;
 export type PriceReferenceType = (typeof PRICE_REFERENCE_TYPE_VALUES)[number];
 export const NominalPriceReferenceSchema = z.object({
   price: z.number().finite().positive(),

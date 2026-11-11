@@ -7,7 +7,6 @@ export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
 export const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
 
 const RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES = ["yes", "upstream", "possible", "no", "unknown"] as const;
-export type ReserveBlacklistabilityExposure = (typeof RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES)[number];
 const ReserveBlacklistabilityExposureSchema = z.enum(RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES);
 
 const RESERVE_ASSET_CLASS_VALUES = [
@@ -132,7 +131,7 @@ export type ReserveSlice = z.infer<typeof ReserveSliceSchema>;
 
 // Authored evidence must classify every linked identity. Runtime snapshots
 // remain readable so derivation can quarantine an untyped link row by row.
-export const AuthoredReserveSliceSchema = ReserveSliceSchema.superRefine((slice, ctx) => {
+const AuthoredReserveSliceSchema = ReserveSliceSchema.superRefine((slice, ctx) => {
   if (slice.coinId && !slice.depType) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

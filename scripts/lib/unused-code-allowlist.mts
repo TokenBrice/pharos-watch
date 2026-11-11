@@ -31,16 +31,17 @@
 export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {
   "shared/lib/pharosville-api-contract.ts":
     "External consumer contract: the standalone PharosVille app (docs/architecture.md) validates against these schemas, so no local production importer is expected; local references are tests and deploy path-filter metadata.",
+  "shared/types/pharosville.ts":
+    "Payload schema and version of the external PharosVille API contract. Its only local importer is shared/lib/pharosville-api-contract.ts, which the standalone app consumes (entry above), so no production import edge exists.",
   "worker/src/lib/og-harfbuzz.ts":
     "Wrangler's [alias] table maps the external `harfbuzzjs` specifier to this module; its only importer is satori inside node_modules, so no local static import edge exists.",
 };
 
 /** Exports whose only consumers are invisible to the static scan. */
-export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
-  "shared/types/pharosville.ts::PHAROSVILLE_API_CONTRACT_VERSION":
-    "External API contract version for the standalone TokenBrice/pharosville app (docs/architecture.md#standalone-pharosville); its separate-repository consumers are outside this scan's local import graph.",
-};
+export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {};
 export const DEBT_MODULES: Record<string, string> = {
+  "shared/types/safety-score-v9-operational-resilience-overlays.ts":
+    "Schema of the retired operational-resilience overlay file. Nothing in production reads it; its only importer is shared/types/__tests__/safety-score-v9-overlays.test.ts with a one-row historical fixture. The types barrel hid this until it was removed on 2026-11-11. Delete it with its fixture and test, or give it a reader: owner decision.",
 };
 
 /** Unreferenced exports kept on purpose; deletion is a separate pass. */

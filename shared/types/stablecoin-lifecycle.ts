@@ -31,4 +31,3 @@ export const MARKET_AVAILABILITY_VALUES = [
   "non-traded-utility",
   "legacy-or-wind-down",
 ] as const;
-export type MarketAvailability = (typeof MARKET_AVAILABILITY_VALUES)[number];
