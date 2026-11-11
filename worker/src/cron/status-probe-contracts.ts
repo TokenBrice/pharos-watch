@@ -2,6 +2,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isFreshnessWarningHeader } from "@shared/lib/warning-headers";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { isRecord } from "@shared/lib/type-guards";
+import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 
 /**
  * Payload contracts for probe paths whose HTTP status alone cannot prove the
@@ -45,6 +46,23 @@ export function evaluateStatusProbePayload(
   headers: Headers,
   payload: unknown,
 ): StatusProbePayloadVerdict {
+  if (path.startsWith(STABLECOIN_RESERVES_PREFIX)) {
+    const parsed = StablecoinReservesResponseSchema.safeParse(payload);
+    if (!parsed.success) return { ok: false, error: "invalid-reserve-payload" };
+    const reserve = parsed.data;
+    if (reserve.stablecoinId !== path.slice(STABLECOIN_RESERVES_PREFIX.length)) {
+      return { ok: false, error: "reserve-identity-mismatch" };
+    }
+    const live = reserve.mode === "live" || reserve.mode === "live-stale";
+    if ((reserve.reserves.length === 0) !== (reserve.mode === "unavailable")
+      || reserve.estimated !== (reserve.mode === "template-fallback")
+      || (live ? reserve.liveAt == null || reserve.sync?.stale !== (reserve.mode === "live-stale")
+        : reserve.liveAt != null)) {
+      return { ok: false, error: "reserve-mode-inconsistent" };
+    }
+    // Asset freshness and scoring admission are findings, not endpoint failures.
+    return { ok: true };
+  }
   // The producer's own freshness verdict outranks any structural reading.
   const warningHeader = headers.get("Warning");
   if (warningHeader && isFreshnessWarningHeader(warningHeader)) {
@@ -82,17 +100,5 @@ export function evaluateStatusProbePayload(
     return { ok: true };
   }
 
-  const mode = payload.mode;
-  if (mode !== "live") {
-    return { ok: false, error: `reserve-mode-${typeof mode === "string" ? mode : "unknown"}` };
-  }
-  const sync = payload.sync;
-  const syncStatus = isRecord(sync) && typeof sync.status === "string" ? sync.status : null;
-  if (syncStatus === "degraded" || syncStatus === "error") {
-    return { ok: false, error: `reserve-sync-${syncStatus}` };
-  }
-  if (!Array.isArray(payload.reserves) || payload.reserves.length === 0) {
-    return { ok: false, error: "reserve-slices-empty" };
-  }
   return { ok: true };
 }
