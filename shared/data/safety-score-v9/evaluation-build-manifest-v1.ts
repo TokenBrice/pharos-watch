@@ -146,7 +146,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "fecf596c6f89b204a3407c0894ea30222d45915a6138566b639a7ef7390faada"
+      "sha256": "266bca7801d9e70750d78b8b741698d42dfb8629c0e3f063f2cbf17b57389938"
     },
     {
       "path": "shared/lib/curve-composite-identities.ts",
@@ -166,7 +166,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/depeg-closure.ts",
-      "sha256": "c2f9946b8563cd437b9af6415570f2eb5a3770329b3488055df620ac413a9bea"
+      "sha256": "7df7d1bcb35a15991e1c58e6eb0460d3856b46a6b2d4ccfe901d586416baaf81"
     },
     {
       "path": "shared/lib/depeg-config.ts",
@@ -1375,7 +1375,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-09-block-26377132-shock-coverage.json.gz"
     }
   ],
-  "digest": "f71c0f362352f4b3bf527a995a0eb6e7de8ed344b46f26ecfcb9e91066ad8446"
+  "digest": "6988863d76648be08f55d06db16dec14570f746a55cf7e9a8a246defb2c79e60"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

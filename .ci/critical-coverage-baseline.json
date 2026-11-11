@@ -270,8 +270,10 @@
     "worker/src/lib/safety-score-v9/publication-chunks.ts": 97.4,
     "worker/src/lib/safety-score-v9/publication-codec.ts": 95.3,
     "worker/src/lib/safety-score-v9/publication-dictionary.ts": 100,
+    "worker/src/lib/safety-score-v9/publication-failure.ts": 100,
     "worker/src/lib/safety-score-v9/publication-health.ts": 100,
     "worker/src/lib/safety-score-v9/publication-journal.ts": 93.3,
+    "worker/src/lib/safety-score-v9/publication-materialization.ts": 95.7,
     "worker/src/lib/safety-score-v9/publication-replay-capture.ts": 100,
     "worker/src/lib/safety-score-v9/publication-runner.ts": 95.5,
     "worker/src/lib/safety-score-v9/publication-store.ts": 89.3,
@@ -296,6 +298,7 @@
     "worker/src/lib/safety-scores.ts": 100,
     "worker/src/lib/stablecoin-publication-coverage.ts": 98.4,
     "worker/src/lib/stablecoin-publication-health.ts": 100,
+    "worker/src/lib/stablecoin-publication-reviews.ts": 100,
     "worker/src/lib/stress-signals-current-rows.ts": 100
   }
 }
