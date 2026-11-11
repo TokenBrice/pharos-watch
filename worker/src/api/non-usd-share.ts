@@ -5,6 +5,7 @@ import type { NonUsdSharePoint } from "@shared/types/market";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { jsonResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";
+import { NON_USD_SHARE_MIN_DAYS } from "@shared/lib/api-endpoints/queries";
 import {
   NON_USD_SHARE_MAX_DAYS,
   computeNonUsdShareHistory,
@@ -15,7 +16,7 @@ import type { ComputedNonUsdShareHistory } from "../lib/non-usd-share-history";
 
 export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Response> => {
   const params = parseQueryParams(url.searchParams, {
-    days: { type: "int", default: NON_USD_SHARE_MAX_DAYS, min: 30, max: NON_USD_SHARE_MAX_DAYS, rangePolicy: "reject" },
+    days: { type: "int", default: NON_USD_SHARE_MAX_DAYS, min: NON_USD_SHARE_MIN_DAYS, max: NON_USD_SHARE_MAX_DAYS, rangePolicy: "reject" },
   });
   if (params instanceof Response) return params;
   const publication = await readNonUsdShareHistory(db);

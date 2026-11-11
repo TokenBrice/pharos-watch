@@ -7,6 +7,43 @@ const SAFETY_HISTORY_PATH_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore.
 
 type QueryParamValue = string | number | boolean | null | undefined;
 
+/** Strict YYYY-MM-DD shape; calendar and canonical-ID admission remain handler-owned. */
+export const SNAPSHOT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function defineDynamicPath<Parameter extends string>(
+  template: string,
+  parameters: Record<Parameter, { pattern: string; encode: boolean }>,
+) {
+  return {
+    template,
+    // eslint-disable-next-line security/detect-non-literal-regexp -- Only static endpoint templates and parameter patterns reach this private helper.
+    pattern: new RegExp(`^${template.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(
+      /:([A-Za-z][A-Za-z0-9]*)/g,
+      (_match, name: Parameter) => `(${parameters[name].pattern})`,
+    )}$`),
+    build: (values: Record<Parameter, string | number>) => template.replace(
+      /:([A-Za-z][A-Za-z0-9]*)/g,
+      (_match, name: Parameter) => parameters[name].encode ? encodeURIComponent(values[name]) : String(values[name]),
+    ),
+  };
+}
+
+const STABLECOIN_PATH_ID = { pattern: "[^/]+", encode: true };
+const SNAPSHOT_PATH_DATE = { pattern: SNAPSHOT_DATE_PATTERN.source.slice(1, -1), encode: false };
+const API_KEY_PATH_ID = { pattern: "\\d+", encode: false };
+
+export const DYNAMIC_API_PATHS = {
+  stablecoinDetail: defineDynamicPath("/api/stablecoin/:id", { id: STABLECOIN_PATH_ID }),
+  stablecoinLiveSummary: defineDynamicPath("/api/stablecoin-live-summary/:id", { id: STABLECOIN_PATH_ID }),
+  stablecoinSummary: defineDynamicPath("/api/stablecoin-summary/:id", { id: STABLECOIN_PATH_ID }),
+  stablecoinReserves: defineDynamicPath("/api/stablecoin-reserves/:id", { id: STABLECOIN_PATH_ID }),
+  snapshotDay: defineDynamicPath("/api/snapshots/:date.json", { date: SNAPSHOT_PATH_DATE }),
+  snapshotCoin: defineDynamicPath("/api/snapshot/:date/stablecoin/:id", { date: SNAPSHOT_PATH_DATE, id: STABLECOIN_PATH_ID }),
+  apiKeyUpdate: defineDynamicPath("/api/api-keys/:id/update", { id: API_KEY_PATH_ID }),
+  apiKeyDeactivate: defineDynamicPath("/api/api-keys/:id/deactivate", { id: API_KEY_PATH_ID }),
+  apiKeyRotate: defineDynamicPath("/api/api-keys/:id/rotate", { id: API_KEY_PATH_ID }),
+} as const;
+
 export function buildQueryPath(path: string, params?: Record<string, QueryParamValue>): string {
   if (!params) return path;
   const searchParams = new URLSearchParams();
@@ -24,12 +61,12 @@ export const API_PATHS = {
   homepageHistory: () => "/api/homepage-history",
   reportCardsV9Table: () => "/api/report-cards/v9-table",
   reportCardsV9Detail: (stablecoinId?: string) => buildQueryPath("/api/report-cards/v9-detail", { stablecoin: stablecoinId }),
-  stablecoinDetail: (stablecoinId: string) => `/api/stablecoin/${encodeURIComponent(stablecoinId)}`,
-  stablecoinLiveSummary: (stablecoinId: string) => `/api/stablecoin-live-summary/${encodeURIComponent(stablecoinId)}`,
+  stablecoinDetail: (stablecoinId: string) => DYNAMIC_API_PATHS.stablecoinDetail.build({ id: stablecoinId }),
+  stablecoinLiveSummary: (stablecoinId: string) => DYNAMIC_API_PATHS.stablecoinLiveSummary.build({ id: stablecoinId }),
   stablecoinDetailSnapshotInputs: (ids: readonly string[]) =>
     buildQueryPath("/api/stablecoin-detail-snapshot-inputs", { ids: ids.join(",") }),
-  stablecoinSummary: (stablecoinId: string) => `/api/stablecoin-summary/${encodeURIComponent(stablecoinId)}`,
-  stablecoinReserves: (stablecoinId: string) => `/api/stablecoin-reserves/${encodeURIComponent(stablecoinId)}`,
+  stablecoinSummary: (stablecoinId: string) => DYNAMIC_API_PATHS.stablecoinSummary.build({ id: stablecoinId }),
+  stablecoinReserves: (stablecoinId: string) => DYNAMIC_API_PATHS.stablecoinReserves.build({ id: stablecoinId }),
   stablecoinCharts: () => "/api/stablecoin-charts",
   pegSummary: () => "/api/peg-summary",
   health: () => "/api/health",
@@ -80,9 +117,9 @@ export const API_PATHS = {
   digestSnapshotBase: () => "/api/digest-snapshot",
   digestSnapshot: (date: string) => buildQueryPath("/api/digest-snapshot", { date }),
   snapshotsIndex: () => "/api/snapshots/index",
-  snapshotDay: (date: string) => `/api/snapshots/${date}.json`,
+  snapshotDay: (date: string) => DYNAMIC_API_PATHS.snapshotDay.build({ date }),
   snapshotCoin: (date: string, stablecoinId: string) =>
-    `/api/snapshot/${date}/stablecoin/${encodeURIComponent(stablecoinId)}`,
+    DYNAMIC_API_PATHS.snapshotCoin.build({ date, id: stablecoinId }),
   yieldRankings: () => "/api/yield-rankings",
   yieldRankingsSummary: () => buildQueryPath("/api/yield-rankings", { projection: "summary" }),
   yieldRankingsCoin: (stablecoinId?: string) => buildQueryPath("/api/yield-rankings-coin", { stablecoin: stablecoinId }),
@@ -162,9 +199,9 @@ export const API_PATHS = {
   apiKeys: () => "/api/api-keys",
   credentialLifecycleSummary: () => "/api/api-keys/lifecycle-summary",
   apiKeyAuditLog: () => "/api/api-keys/audit-log",
-  apiKeyUpdate: (id: number) => `/api/api-keys/${id}/update`,
-  apiKeyDeactivate: (id: number) => `/api/api-keys/${id}/deactivate`,
-  apiKeyRotate: (id: number) => `/api/api-keys/${id}/rotate`,
+  apiKeyUpdate: (id: number) => DYNAMIC_API_PATHS.apiKeyUpdate.build({ id }),
+  apiKeyDeactivate: (id: number) => DYNAMIC_API_PATHS.apiKeyDeactivate.build({ id }),
+  apiKeyRotate: (id: number) => DYNAMIC_API_PATHS.apiKeyRotate.build({ id }),
   triggerDigest: () => "/api/trigger-digest",
   triggerYieldCoverageAudit: () => "/api/trigger-yield-coverage-audit",
   adminActionLog: () => "/api/admin-action-log",

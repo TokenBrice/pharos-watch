@@ -1,4 +1,4 @@
-import { getEndpointDefinitionByKey, type EndpointKey } from "@shared/lib/api-endpoints/definitions";
+import { getEndpointDefinitionByKey, isAnonymousThrottlePath, type EndpointKey } from "@shared/lib/api-endpoints/definitions";
 import type {
   PostmanFolderName,
   PostmanRequestConfig,
@@ -29,7 +29,7 @@ export const OPENAPI_JSON_VALUE_ENDPOINT_KEYS = new Set<EndpointKey>([
 ]);
 
 export type PublicArtifactInput<Key extends EndpointKey> =
-  Omit<PublicApiArtifactEndpoint, "path" | "security" | "postman" | "operationId"> & {
+  Omit<PublicApiArtifactEndpoint, "path" | "security" | "postman" | "operationId" | "anonymousThrottle"> & {
     key: Key;
     postman?: PostmanRequestInput | readonly PostmanRequestInput[];
   };
@@ -58,7 +58,7 @@ type MaterializedPostman<T> = T extends { readonly postman: readonly PostmanRequ
 type DefinedPublicArtifact<T> = T extends PublicArtifactInput<EndpointKey>
   ? Omit<T, "postman"> & {
       postman: MaterializedPostman<T>;
-    } & Pick<PublicApiArtifactEndpoint, "path" | "security" | "operationId">
+    } & Pick<PublicApiArtifactEndpoint, "path" | "security" | "operationId" | "anonymousThrottle">
   : never;
 
 export function definePublicArtifact<const T extends PublicArtifactInput<EndpointKey>>(
@@ -100,5 +100,6 @@ export function definePublicArtifact<const T extends PublicArtifactInput<Endpoin
       .replace(/[{}]/g, "")
       .replace(/[^a-zA-Z0-9]+(.)/g, (_, char: string) => char.toUpperCase()),
     ...(definition.publicApiAccess === "exempt" ? { security: "none" } : {}),
+    ...(isAnonymousThrottlePath(definition.path, "public-api") ? { anonymousThrottle: true } : {}),
   } as unknown as DefinedPublicArtifact<T>;
 }

@@ -1,4 +1,5 @@
 import { API_PATHS, getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
+import { isAnonymousThrottlePath } from "@shared/lib/api-endpoints/definitions";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import {
@@ -170,8 +171,7 @@ export async function evaluateAccessGate(
     // Pages is a public caller of this otherwise credentialed lane. Limit its
     // uncached scenarios and the live public-health assessment behind the
     // status history, using the Pages-forwarded source bucket.
-    response: url.pathname === API_PATHS.dependencyScenarios()
-      || url.pathname === API_PATHS.publicStatusHistory()
+    response: isAnonymousThrottlePath(url.pathname, "site-api")
       ? await limitAnonymousPublicationRead(request, env, { siteProxy: true }) : null,
   });
 
@@ -214,8 +214,7 @@ export async function evaluateAccessGate(
     return gateResult("public-api", notFoundResponse());
   }
 
-  if (url.pathname === API_PATHS.safetyGrades() || url.pathname === API_PATHS.dependencyGraph()
-    || url.pathname === API_PATHS.dependencyScenarios()) {
+  if (isAnonymousThrottlePath(url.pathname, "public-api")) {
     const limited = await limitAnonymousPublicationRead(request, env);
     if (limited) return gateResult("public-api", limited);
   }
