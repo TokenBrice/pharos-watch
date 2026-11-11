@@ -40,7 +40,7 @@ import {
   parseNativeV9InputCacheArtifact,
   type NativeSafetyScoreV9Input,
 } from "../safety-score-v9/native-input";
-import { buildNativeSafetyScoreV9Capture, captureLenderCollateralBacking } from "../safety-score-v9/capture";
+import { captureLenderCollateralBacking } from "../safety-score-v9/capture";
 import * as acceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 import * as lenderRegistry from "@shared/lib/safety-score-v9/lender-book-registry";
@@ -61,7 +61,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } from "../../cron/compute-safety-score-v9";
-import { createV9CaptureDexSnapshot } from "./safety-score-v9-capture.test-support";
+import { createV9CaptureDexSnapshot, buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";
 
 // The shared setup evaluates both capture lanes. Preserve the coverage budget
 // for two full-registry compile/evaluate passes without repeating the native pass;

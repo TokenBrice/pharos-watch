@@ -84,7 +84,7 @@ const {
   prepareSafetyScoreV9Input,
   V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS,
 } = await import("../prepare-safety-score-v9-input");
-const { buildNativeSafetyScoreV9Capture } = await import("../../lib/safety-score-v9/capture");
+const { buildNativeSafetyScoreV9Capture } = await import("../../lib/__tests__/safety-score-v9-capture.test-support");
 const { NativeSafetyScoreV9InputSchema } = await import("../../lib/safety-score-v9/native-input");
 
 type ProgressRow = {
@@ -400,6 +400,8 @@ describe("prepareSafetyScoreV9Input", () => {
     await expect(
       prepareSafetyScoreV9Input(makeDb(), undefined, "dex-liquidity-1"),
     ).rejects.toThrow(/captured DEX generation .* expected dex-liquidity-1/);
+    expect(mockPublishPegAnalytics).toHaveBeenCalledTimes(1);
+    expect(mockPublishPegAnalytics.mock.invocationCallOrder[0]).toBeLessThan(mockLoadExactDexGeneration.mock.invocationCallOrder[0]!);
     expect(mockCommitCaptureControl).not.toHaveBeenCalled();
   });
 

@@ -17,7 +17,7 @@ vi.mock("../report-cards-snapshot", async (original) => ({
   ...(await original<typeof SnapshotModule>()),
   loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex-liquidity-1790000000", updatedAt: 1790000000 })),
 }));
-import { buildNativeSafetyScoreV9Capture } from "../safety-score-v9/capture";
+import { buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";
 
 const CLOCK_SEC = 1790000000;
 const ASSET_ID = "usdt-tether";

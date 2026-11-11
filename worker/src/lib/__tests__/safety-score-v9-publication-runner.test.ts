@@ -22,6 +22,7 @@ import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs } from "../safety-score-v9/publication-runner";
 import { retryPendingSafetyScoreV9PublicMaterialization, recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-materialization";
+import { safeFailure, SafetyScoreV9AcceptedBaselineProjectionError } from "../safety-score-v9/publication-failure";
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
 import * as publicationCodec from "../safety-score-v9/publication-codec";
 import * as evaluateSet from "@shared/lib/safety-score-v9/evaluate-set";
@@ -400,6 +401,11 @@ describe("Safety Score V9 publication runner", () => {
   ] as const)("records a named pre-compile failure for %s", async (reason, suffix) => {
     mocks.loadBaseline.mockResolvedValue({ kind: "unavailable", reason });
     const code = `safety-score-v9-accepted-baseline-projection-${suffix}`;
+    const error = new SafetyScoreV9AcceptedBaselineProjectionError(reason);
+    expect(error.code).toBe(code);
+    expect(safeFailure(error, "publication-gate")).toEqual({
+      code, message: `Accepted Safety Score v9 baseline projection unavailable: ${reason}`,
+    });
     const result = await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput });
     expect(result).toMatchObject({ status: "failed", stage: "publication-gate", code });
     expect(mocks.build).not.toHaveBeenCalled();
@@ -925,6 +931,10 @@ describe("Safety Score V9 publication runner", () => {
   });
 
   it("records a failed attempt when compilation fails", async () => {
+    expect(safeFailure(new Error("  compiler fixture failure  "), "compile")).toEqual({
+      code: "safety-score-v9-publication-compile-Error",
+      message: "compiler fixture failure",
+    });
     mocks.build.mockImplementation(() => {
       throw new Error("compiler fixture failure");
     });

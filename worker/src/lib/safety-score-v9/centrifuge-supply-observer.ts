@@ -144,7 +144,6 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
     registryFingerprint: input.registryFingerprint,
     scoringClockSec: input.scoringClockSec,
     signal: input.signal,
-    alignToSolana: true,
     identityRuntime: (routeId) => {
       const identity = expectedCentrifugeDeploymentIdentity(input.assetId, routeId);
       return identity === null ? null : identity?.runtime;

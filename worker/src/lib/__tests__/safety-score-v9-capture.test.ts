@@ -18,7 +18,8 @@ vi.mock("../collateral-drift", () => ({ summarizeCollateralDriftFromLiveReserveM
 vi.mock("../report-cards-snapshot", async (original) => ({
   ...(await original<typeof SnapshotModule>()), loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex-liquidity-1790000000", updatedAt: 1790000000 })),
 }));
-import { buildNativeSafetyScoreV9Capture, inheritPureWrapperPegObservations } from "../safety-score-v9/capture";
+import { buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";
+import { inheritPureWrapperPegObservations } from "../safety-score-v9/capture";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 const RUN = 1790000000;
 
