@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { readdirSync, readFileSync, renameSync } from "node:fs";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { resolve } from "node:path";
 import {
   STABLECOIN_SOURCE_DOMAIN_FIELDS,
@@ -20,6 +20,10 @@ import {
 } from "./stablecoin-catalog.test-support";
 
 const { cleanup, makeRoot: makeTempRoot, writeJson } = createTempRepoTracker("stablecoin-catalog");
+vi.mock("node:fs", async (original) => {
+  const fs = await original<typeof import("node:fs")>();
+  return { ...fs, renameSync: vi.fn(fs.renameSync) };
+});
 
 function makeEntry(id: string, file: string): StablecoinSourceEntry {
   return {
@@ -29,7 +33,7 @@ function makeEntry(id: string, file: string): StablecoinSourceEntry {
   };
 }
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.mocked(renameSync).mockReset(); });
 
 describe("stablecoin catalog source helpers", () => {
   it("detects duplicate IDs across per-coin source files", () => {
@@ -270,17 +274,22 @@ describe("stablecoin catalog source helpers", () => {
 
   it("publishes the aggregate atomically with no temporary left and byte-stable check mode", () => {
     const rootDir = makeTempRoot();
-    writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", makeCoin("per-coin-usd"));
-    writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
+    const data = "shared/data/stablecoins";
+    writeJson(rootDir, `${data}/coins/per-coin-usd.json`, makeCoin("per-coin-usd"));
+    writeJson(rootDir, `${data}/coins.generated.json`, []);
+    const generated = resolve(rootDir, data, "coins.generated.json");
+    const old = readFileSync(generated, "utf8");
+    vi.mocked(renameSync).mockImplementationOnce(() => { throw new Error("rename failed"); });
+    expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow("rename failed");
+    expect(readFileSync(generated, "utf8")).toBe(old);
+    expect(readdirSync(resolve(rootDir, data)).sort()).toEqual(["coins", "coins.generated.json"]);
 
     syncGeneratedPerCoinAsset({ rootDir });
-    const generated = resolve(rootDir, "shared/data/stablecoins/coins.generated.json");
     const bytes = readFileSync(generated, "utf8");
-    expect(readdirSync(resolve(rootDir, "shared/data/stablecoins")).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+    expect(readdirSync(resolve(rootDir, data)).sort()).toEqual(["coins", "coins.generated.json"]);
     expect(syncGeneratedPerCoinAsset({ rootDir }).changed).toBe(false);
     expect(syncGeneratedPerCoinAsset({ check: true, rootDir }).changed).toBe(false);
     expect(readFileSync(generated, "utf8")).toBe(bytes);
-    expect(readFileSync(resolve("scripts/lib/stablecoin-catalog-sources.ts"), "utf8")).not.toMatch(/writeFileSync/);
   });
 
   it("validates the newly generated aggregate before writing it", () => {

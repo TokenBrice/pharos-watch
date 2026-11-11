@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeReportCardsV9Card, makeReportCardsV9Response } from "@shared/test-utils/report-cards-v9";
+import { makeReportCardsV9ArchivedResponse, makeReportCardsV9Card, makeReportCardsV9Response } from "@shared/test-utils/report-cards-v9";
 import { PharosVilleApiPayloadsSchema } from "../pharosville";
 
 const methodology = {
@@ -33,10 +33,8 @@ const payload = {
 
 const nextPayload = {
   ...payload,
-  reportCards: makeReportCardsV9Response({
-    safetyScoreIdentity: payload.reportCards.safetyScoreIdentity,
-    defaultUpdatedAt: 1, asOfSec: 1,
-    source: payload.reportCards.source,
+  reportCards: makeReportCardsV9ArchivedResponse({
+    ...payload.reportCards, defaultUpdatedAt: 1, asOfSec: 1,
   }, makeReportCardsV9Card, { cards: [] }),
 };
 
@@ -47,7 +45,7 @@ describe("PharosVille shared payload contract", () => {
 
   it("accepts both report8 and report9 report-card payloads", () => {
     expect(PharosVilleApiPayloadsSchema.parse(nextPayload)).toEqual(nextPayload);
-    expect(nextPayload.reportCards.schemaVersion).toBe(9);
+    expect(nextPayload.reportCards.schemaVersion).toBe(8);
   });
 
   it("rejects a retired report-card schemaVersion", () => {

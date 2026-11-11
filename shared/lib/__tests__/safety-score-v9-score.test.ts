@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import { aggregateV9SmoothBoundedHeadroom } from "../safety-score-v9/aggregation";
-import { unknownQuality } from "../safety-score-v9/policy";
 import type {
   V9AdverseAttribution,
   V9BoundedUncertaintyAttribution,
@@ -621,9 +619,9 @@ describe("source-bound realized holder loss", () => {
     }, V9_CANDIDATE_POLICY_V1);
   }
   describe.each([
-    { lossPct: 1, initialLimit: 49 },
-    { lossPct: 25, initialLimit: 39 },
-  ])("$lossPct% realized loss", ({ lossPct, initialLimit }) => {
+    { lossPct: 1, initialLimit: 49, caps: [49, 53, 74, 99, 100], scores: [49, 53, 74, 95, 95] },
+    { lossPct: 25, initialLimit: 39, caps: [39, 44, 69, 99, 100], scores: [39, 44, 69, 95, 95] },
+  ])("$lossPct% realized loss", ({ lossPct, initialLimit, caps, scores }) => {
     it.each([0, 1, 364, 365])("holds the first-year ceiling at day %s", (day) => {
       const trace = lossScore(day, [{ ...event, realizedHolderLossPct: lossPct }]);
       expect(trace.finalScore).toBe(initialLimit);
@@ -633,11 +631,10 @@ describe("source-bound realized holder loss", () => {
         message: expect.stringContaining(event.primarySources[0].url),
       }));
     });
-    it.each([365.1, 400, 547.5, 729, 730])("relaxes continuously before integer flooring at day %s", (day) => {
-      const expected = Math.floor(Math.min(100, initialLimit + (100 - initialLimit) * Math.max(0, day - 365) / 365));
+    it.each([365.1, 400, 547.5, 729, 730].map((day, i) => [day, caps[i], scores[i]]))("relaxes continuously before integer flooring at day %s", (day, cap, score) => {
       const trace = lossScore(day, [{ ...event, realizedHolderLossPct: lossPct }]);
-      expect(trace.finalScore).toBe(Math.min(95, expected));
-      expect(trace.caps.find((cap) => cap.source === "realized-holder-loss")?.limit).toBe(expected);
+      expect(trace.finalScore).toBe(score);
+      expect(trace.caps.find((cap) => cap.source === "realized-holder-loss")?.limit).toBe(cap);
       if (day === 730) expect(trace.bindingCap).toBeNull();
     });
   });
@@ -739,12 +736,7 @@ describe("genuinely unavailable pillars", () => {
         expect(trace.finalScore).toBeNull();
       } else {
         expect(trace.ratingStatus).toBe("rated");
-        const priced = Object.fromEntries(pillars.map((key) => [
-          key, included.includes(key) ? 90 : unknownQuality(key, "U"),
-        ])) as Record<typeof pillars[number], number>;
-        expect(trace.finalScore).toBe(Math.round(aggregateV9SmoothBoundedHeadroom(
-          priced, V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pillarWeights, 20, included,
-        )!.score));
+        expect(trace.finalScore).toBe([null, null, null, 76, null, 67, 67, 90][mask]);
         expect(trace.diagnosticPillarScores).toEqual(Object.fromEntries(pillars.map((key) => [
           key, included.includes(key) ? 90 : null,
         ])));

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { SCHEDULED_SLOT_DISPATCH_OFFSET_SEC } from "@shared/lib/scheduled-runner-registry";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { parseCronDeliveryArgs, readCronDelivery, readSlotDeliveryLag, resolveAnalyticsToken } from "../cron-delivery.mjs";
 
 const row = { datetime: "2026-10-06T20:01:00Z", scheduledDatetime: "2026-10-06T20:01:00Z", cron: "1,6 * * * *", status: "success", cpuTimeUs: 1000 };
@@ -56,12 +57,18 @@ describe("cron-delivery D1 slot lag", () => {
   });
   const dispatchOffsets = SCHEDULED_SLOT_DISPATCH_OFFSET_SEC;
   it("reads a bounded read-only window and counts starts later than five minutes", () => {
-    const query = vi.fn((_sql: string) => [slot(1_000, 300), slot(2_000, 301), slot(3_000, 2_340)]);
+    using sqlite = createLatestSchemaSqlite().sqlite;
+    const starts = [3599, 3600, 3601, 4000, 7200, 7201];
+    for (const start of starts) sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, started_at, state, execution_owner, updated_at)
+      VALUES('hourlyYieldSync', ?, ?, 'finished', 'fixture', ?)`).run(start - (start === 7200 ? 2340 : start === 4000 ? 301 : 300), start, start);
+    const before = sqlite.serialize();
+    sqlite.exec("PRAGMA query_only=ON");
+    const query = (sql: string) => sqlite.prepare(sql).all();
     const result = readSlotDeliveryLag({ minutes: 60, now: new Date(7_200_000), dispatchOffsets, query });
-    const sql = String(query.mock.calls[0][0]);
-    expect(sql).toMatch(/^SELECT /);
-    expect(sql).toContain("WHERE started_at > 3600 AND started_at <= 7200");
-    expect(result).toMatchObject({ lateSlots: 2, maxLagSec: 2_340, from: "1970-01-01T01:00:00.000Z" });
+    expect(result.rows.map((row) => row.started_at)).toEqual([3601, 4000, 7200]);
+    expect(result).toMatchObject({ lateSlots: 2, maxLagSec: 2340, from: "1970-01-01T01:00:00.000Z" });
+    expect(sqlite.serialize()).toEqual(before);
   });
   it("keeps an empty window distinct and rejects malformed or truncated evidence", () => {
     expect(readSlotDeliveryLag({ dispatchOffsets, query: () => [] })).toMatchObject({ rows: [], lateSlots: 0, maxLagSec: null });

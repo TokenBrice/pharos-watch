@@ -7,7 +7,6 @@ import {
   type YieldRowSafetyInput,
 } from "../yield-opportunity-risk";
 import type { YieldSourceRisk } from "../../types/yield";
-import { computeRoycoDawnTrancheSafetyScore } from "../royco-tranche-safety";
 
 function completeInput(overrides: Partial<YieldOpportunityRiskInput> = {}): YieldOpportunityRiskInput {
   return {
@@ -214,7 +213,7 @@ describe("resolveYieldRowSafety — canonical ladder (yield v8.33)", () => {
     expect(result.sourceRisk?.trancheSafetyScore).toBe(result.opportunityRisk?.opportunitySafetyScore);
   });
 
-  it.each(["normal", "protected", "critical"] as const)("preserves bespoke Royco penalties with complete %s evidence", (marketStatus) => {
+  it.each([["normal", 40], ["protected", 25], ["critical", 5]] as const)("preserves bespoke Royco penalties with complete %s evidence", (marketStatus, score) => {
     const result = resolveYieldRowSafety(
       ladderInput({
         yieldType: "structured-tranche",
@@ -228,11 +227,7 @@ describe("resolveYieldRowSafety — canonical ladder (yield v8.33)", () => {
       }),
     );
     expect(result.safetyProvenance).toBe("opportunity-safety");
-    expect(result.safetyScore).toBe(computeRoycoDawnTrancheSafetyScore({
-      underlyingSafetyScore: 80,
-      sourceRisk: result.sourceRisk!,
-      venueRiskWeighted: 3,
-    })?.score);
+    expect(result.safetyScore).toBe(score);
     expect(result.safetyScore).toBeLessThan(80);
     expect(result.sourceRisk?.trancheSafetyScore).toBe(result.safetyScore);
     expect(result.opportunityRisk?.opportunitySafetyScore).toBe(result.safetyScore);

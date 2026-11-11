@@ -69,9 +69,9 @@ describe("getProofOfReservesStyle", () => {
     ["real-time", "Real-Time PoR"],
     ["self-reported", "Self-Reported PoR"],
   ] as const)("keeps the existing %s label for non-independent engagements", (type, label) => {
-    const style = getProofOfReservesStyle(proof({ type, latestReport: { ...REPORT, assuranceMethod: "audit" } }));
-    expect(style).toBe(POR_BADGE_STYLES[type]);
-    expect(style?.label).toBe(label);
+    const por = getProofOfReservesStyle(proof({ type, latestReport: { ...REPORT, assuranceMethod: "audit" } }));
+    expect(por).toEqual(POR_BADGE_STYLES[type]);
+    expect(por?.label).toBe(label);
   });
 
   it("pins the raw storage-type fallback away from audit wording", () => {

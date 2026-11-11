@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 function withCleanup<T>(run: () => T, cleanup: () => void): T {
@@ -40,7 +40,7 @@ export function withTempRepo<T>(
   files: Record<string, string>,
   run: (dir: string) => T,
 ): T {
-  const dir = mkdtempSync(join(tmpdir(), `${prefix}-`));
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), `${prefix}-`)));
   return withCleanup(() => {
     for (const [relativePath, content] of Object.entries(files)) {
       const filePath = join(dir, relativePath);
