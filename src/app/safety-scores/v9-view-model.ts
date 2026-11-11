@@ -3,7 +3,7 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import type { SafetyGradeSupplyMix } from "@/components/safety-grade-distribution-bar";
+import type { SafetyGradeSupplyMix } from "@/components/safety-scores/safety-grade-distribution-bar";
 import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";

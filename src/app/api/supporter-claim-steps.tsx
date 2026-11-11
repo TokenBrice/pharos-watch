@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { DonorKeyClaim } from "@/components/donor-key-claim";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { DonorKeyClaim } from "@/components/api-access/donor-key-claim";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import type { DonorKeyQualifyingCoin } from "@/lib/donor-key-qualifying-coins";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { formatProseList } from "@shared/lib/format";

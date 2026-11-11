@@ -377,9 +377,9 @@ describe("Telegram public surface", () => {
 
     // A reviewed importer reaches only the listed warnings.
     writeText(root, "src/components/section-error-boundary.tsx", "export const Boundary = 1;");
-    writeText(root, "src/components/home-section-error-boundary.tsx", 'export { Boundary } from "./section-error-boundary";');
+    writeText(root, "src/components/homepage/home-section-error-boundary.tsx", 'export { Boundary } from "../section-error-boundary";');
     writeText(root, "src/app/page.tsx",
-      'export { value } from "../components/chain-0";\nexport { Boundary } from "../components/home-section-error-boundary";');
+      'export { value } from "../components/chain-0";\nexport { Boundary } from "../components/homepage/home-section-error-boundary";');
     expect(checkArchitectureBoundaries(root, ["homepage-warning-free"])).toEqual([]);
   });
 });

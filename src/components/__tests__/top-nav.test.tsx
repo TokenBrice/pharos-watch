@@ -28,7 +28,7 @@ vi.mock("@/lib/command-palette", () => ({
   openCommandPalette: vi.fn(),
 }));
 
-vi.mock("@/components/regime-bar", () => ({
+vi.mock("@/components/psi-beacon/regime-bar", () => ({
   RegimeBarToggle: () => null,
 }));
 

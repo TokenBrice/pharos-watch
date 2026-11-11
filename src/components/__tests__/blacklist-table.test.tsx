@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BlacklistTable } from "@/components/blacklist-table";
+import { BlacklistTable } from "@/components/freezewatch/blacklist-table";
 import { BlacklistDetailEventFeed } from "@/components/stablecoin-detail/blacklist-detail-event-feed";
 import type { BlacklistEvent } from "@shared/types/blacklist";
 import type * as DownloadModule from "@/lib/exports/download";

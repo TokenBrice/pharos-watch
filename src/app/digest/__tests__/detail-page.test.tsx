@@ -7,12 +7,12 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/components/breadcrumb-json-ld", () => ({ BreadcrumbJsonLd: () => null }));
-vi.mock("@/components/digest-snapshot", () => ({ DigestSnapshot: () => null }));
+vi.mock("@/components/digest/digest-snapshot", () => ({ DigestSnapshot: () => null }));
 const colophonProps = vi.hoisted(() => [] as Array<{
   methodologyVersion?: string;
   citation?: { title: string; canonicalUrl: string; accessedDate?: string };
 }>);
-vi.mock("@/components/editorial-colophon", () => ({
+vi.mock("@/components/digest/editorial-colophon", () => ({
   EditorialColophon: (props: { methodologyVersion?: string; citation?: { title: string; canonicalUrl: string; accessedDate?: string } }) => {
     colophonProps.push(props);
     return null;
@@ -20,7 +20,7 @@ vi.mock("@/components/editorial-colophon", () => ({
 }));
 vi.mock("@/components/preferred-source-prompt", () => ({ PreferredSourcePrompt: () => null }));
 vi.mock("@/components/json-ld-script", () => ({ JsonLdScript: () => null }));
-vi.mock("@/components/editorial-masthead", () => ({
+vi.mock("@/components/digest/editorial-masthead", () => ({
   EditorialMasthead: ({ editor }: { editor?: string }) => <p>{editor}</p>,
 }));
 vi.mock("@/lib/digest", () => ({

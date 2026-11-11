@@ -12,7 +12,7 @@ import { JsonLdScript } from "@/components/json-ld-script";
 import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { RowSparkline } from "@/components/row-sparkline";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { DeviationIcon } from "@/components/severity-icon";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { safeJsonLd } from "@/lib/json-ld";

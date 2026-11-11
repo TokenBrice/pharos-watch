@@ -1,8 +1,8 @@
 "use client";
 
-import { FlowEventFeed } from "@/components/flow-event-feed";
+import { FlowEventFeed } from "@/components/mint-burn/flow-event-feed";
 import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
-import { FlowSummaryCard } from "@/components/flow-summary-card";
+import { FlowSummaryCard } from "@/components/mint-burn/flow-summary-card";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface FlowsSectionProps {

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { UpcomingLaunchPhase } from "@shared/types/stablecoin-lifecycle";
-import type { UpcomingCoin } from "../upcoming-client";
+import type { UpcomingCoin } from "../upcoming/upcoming-client";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -16,7 +16,7 @@ vi.mock("next/image", () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
-const { UpcomingClient } = await import("../upcoming-client");
+const { UpcomingClient } = await import("../upcoming/upcoming-client");
 
 // Upcoming rows never carry the `launched` phase; the shared factory accepts any LaunchPhase.
 function makeUpcomingCoin({ launchPhase, ...overrides }: Omit<Partial<StablecoinMeta>, "launchPhase"> & { launchPhase?: UpcomingLaunchPhase }): UpcomingCoin {

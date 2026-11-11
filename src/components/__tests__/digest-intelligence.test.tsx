@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { DigestIntelligencePanel } from "@/components/digest-intelligence";
+import { DigestIntelligencePanel } from "@/components/digest/digest-intelligence";
 
 describe("DigestIntelligencePanel", () => {
   it("prints bps figures with a separator and space, and sentence-case statuses", () => {

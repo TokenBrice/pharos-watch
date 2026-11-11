@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { VenueRiskBreakdown } from "@/components/venue-risk-breakdown";
+import { VenueRiskBreakdown } from "@/components/liquidity/venue-risk-breakdown";
 
 
 describe("VenueRiskBreakdown", () => {

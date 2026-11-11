@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import security from "eslint-plugin-security";
+import { HOMEPAGE_COPY_GLOBS, HOMEPAGE_COPY_IGNORES } from "./scripts/lib/homepage-copy-policy.mjs";
 
 const layoutScriptRestrictedSyntax = [
   {
@@ -50,25 +51,25 @@ const EDITORIAL_DESIGN_MODES = [
   { both: ["src/app/cemetery/**", "src/components/cemetery/**"] },
   {
     both: ["src/app/digest/**"],
-    textRadius: ["src/components/digest-*.tsx", "src/components/daily-digest.tsx"],
-    palette: ["src/components/digest-*", "src/components/daily-digest*"],
+    textRadius: ["src/components/digest/digest-*.tsx", "src/components/digest/daily-digest.tsx"],
+    palette: ["src/components/digest/digest-*", "src/components/digest/daily-digest*"],
   },
   { both: ["src/components/home-alt-mini-cards/daily-digest-card.tsx"] },
   {
-    textRadius: ["src/components/editorial-masthead.tsx", "src/components/editorial-colophon.tsx"],
-    palette: ["src/components/editorial-*"],
+    textRadius: ["src/components/digest/editorial-masthead.tsx", "src/components/digest/editorial-colophon.tsx"],
+    palette: ["src/components/digest/editorial-*"],
   },
   {
-    both: ["src/app/timeline/**", "src/components/tape/**"],
-    textRadius: ["src/components/homepage-tape.tsx", "src/components/tape-for-coin-teaser.tsx"],
-    palette: ["src/components/homepage-tape*", "src/lib/tape-class-style.ts"],
+    both: ["src/app/timeline/**", "src/components/tape/**/!(tape-for-coin-teaser.tsx)"],
+    textRadius: ["src/components/homepage/homepage-tape.tsx", "src/components/tape/tape-for-coin-teaser.tsx"],
+    palette: ["src/components/homepage/homepage-tape*", "src/lib/tape-class-style.ts"],
   },
   {
     textRadius: ["src/app/depeg/[[]event[]]/**"],
     palette: ["src/app/depeg/[[]event]/**"],
   },
   { both: ["src/app/blog/**"] },
-  { textRadius: ["src/components/ai-summary*.tsx"], palette: ["src/components/ai-summary*"] },
+  { textRadius: ["src/components/ai-summary/ai-summary*.tsx"], palette: ["src/components/ai-summary/ai-summary*"] },
   { both: ["src/components/page-error-editorial.tsx", "src/app/not-found.tsx"] },
   // Own palettes: the Telegram mini-app sets its own color-scheme and the
   // tape wire stream is editorial art.
@@ -735,14 +736,8 @@ const eslintConfig = defineConfig([
     // data renders as-is, no data is a neutral placeholder, and ops state lives
     // in admin/alerts. Re-applies the ADR-2 patterns because flat config
     // replaces this rule's options for overlapping files.
-    files: [
-      "src/app/page.tsx",
-      "src/components/home-*.{ts,tsx}",
-      "src/components/homepage-*.{ts,tsx}",
-      "src/components/home-alt-mini-cards/**/*.{ts,tsx}",
-      "src/components/home-alt-callouts/**/*.{ts,tsx}",
-    ],
-    ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
+    files: HOMEPAGE_COPY_GLOBS,
+    ignores: HOMEPAGE_COPY_IGNORES,
     rules: {
       "no-restricted-imports": [
         "error",

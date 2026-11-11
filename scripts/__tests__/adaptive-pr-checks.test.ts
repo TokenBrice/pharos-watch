@@ -37,12 +37,12 @@ describe("adaptive PR checks", () => {
   it("selects the homepage health-copy guard only for authored homepage surfaces", () => {
     for (const file of [
       "src/app/page.tsx",
-      "src/components/home-alt-hero.tsx",
+      "src/components/homepage/home-alt-hero.tsx",
       "src/components/home-alt-mini-cards/peg-health-card.tsx",
     ]) expect(staticNames([file]), file).toContain("check:homepage-health-copy");
     for (const file of [
-      "src/components/stablecoin-table.tsx",
-      "src/components/home-section-error-boundary.tsx",
+      "src/components/stablecoin-directory/stablecoin-table.tsx",
+      "src/components/homepage/home-section-error-boundary.tsx",
     ]) expect(staticNames([file]), file).not.toContain("check:homepage-health-copy");
   });
 

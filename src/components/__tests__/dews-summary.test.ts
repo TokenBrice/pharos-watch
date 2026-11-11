@@ -4,7 +4,7 @@ import {
   computeBandCounts,
   mcapDotRadius,
   resolveRadarClick,
-} from "@/components/dews-summary-model";
+} from "@/components/dews/dews-summary-model";
 
 describe("computeBandCounts", () => {
   it("counts each known threat band and ignores unknown values", () => {

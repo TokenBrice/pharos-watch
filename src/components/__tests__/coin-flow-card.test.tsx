@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CoinFlowCard } from "@/components/coin-flow-card";
+import { CoinFlowCard } from "@/components/mint-burn/coin-flow-card";
 import { buildFlowSummaryNarrative } from "@/lib/flow-signal-ui";
 
 const mintingProps = {

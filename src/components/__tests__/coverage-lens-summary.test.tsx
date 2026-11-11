@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { CoverageLensSummary } from "@/components/coverage-lens-summary";
+import { CoverageLensSummary } from "@/components/coverage/coverage-lens-summary";
 import { buildCoverageRow } from "@/lib/coverage";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import { cleanupFrontendTest } from "@/test-utils/frontend";

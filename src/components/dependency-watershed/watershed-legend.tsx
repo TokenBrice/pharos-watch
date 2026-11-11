@@ -1,5 +1,5 @@
 import { formatCurrency } from "@shared/lib/format";
-import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph-model";
+import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph/contagion-graph-model";
 import type { WatershedReadyModel } from "./watershed-stage";
 
 export function WatershedLegend({ model, labelOf }: { model: WatershedReadyModel; labelOf: (id: string) => string }) {

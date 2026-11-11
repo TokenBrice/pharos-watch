@@ -3,7 +3,7 @@ import {
   buildYieldDetailModel,
   type YieldDetailModelMode,
   type YieldDetailRegistryStatus,
-} from "@/components/yield-detail-section-model";
+} from "@/components/yield/yield-detail-section-model";
 import { deriveYieldRowDisplay } from "@/lib/yield-row-display";
 import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
 import type { StablecoinStatus } from "@shared/types/stablecoin-taxonomy";

@@ -25,7 +25,7 @@ vi.mock("next/dynamic", () => ({ default: () => () => null }));
 
 import { CompareClient } from "@/components/compare/compare-client";
 import { CoinSelector } from "@/components/coin-selector";
-import { FlowComparisonChart } from "@/components/flow-comparison-chart";
+import { FlowComparisonChart } from "@/components/compare/flow-comparison-chart";
 
 describe("CompareClient and coin selector", () => {
   it("discloses each hourly series scope", () => {

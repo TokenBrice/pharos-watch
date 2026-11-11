@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
-import { DigestSnapshot } from "@/components/digest-snapshot";
-import { EditorialColophon } from "@/components/editorial-colophon";
+import { DigestSnapshot } from "@/components/digest/digest-snapshot";
+import { EditorialColophon } from "@/components/digest/editorial-colophon";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
-import { EditorialMasthead } from "@/components/editorial-masthead";
+import { EditorialMasthead } from "@/components/digest/editorial-masthead";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel, parseDigestParagraph } from "@/lib/digest";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";

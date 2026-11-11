@@ -6,8 +6,8 @@ import { contrast, tokenColors, inspectComponentStyles as inspect, inspectCompon
 
 // Georgia avoids error font preloads.
 const SERIF_ALLOWED = new Set([
-  "ai-summary", "ai-summary-prose", "cemetery/cemetery-register-autopsy", "cemetery/cemetery-hero",
-  "cemetery/plot-map-record-card", "page-error-editorial", "daily-digest", "home-alt-mini-cards/daily-digest-card",
+  "ai-summary/ai-summary", "ai-summary/ai-summary-prose", "cemetery/cemetery-register-autopsy", "cemetery/cemetery-hero",
+  "cemetery/plot-map-record-card", "page-error-editorial", "digest/daily-digest", "home-alt-mini-cards/daily-digest-card",
 ].map((name) => `src/components/${name}.tsx`));
 const read = (path: string) => readFileSync(path, "utf8");
 const CSS = read("src/app/globals.css");
@@ -35,7 +35,7 @@ describe("design invariants", () => {
       expect(rule, selector.source).not.toBeNull();
       return rule!;
     });
-    const controls = [...read("src/components/digest-archive-client.tsx").matchAll(/className="([^"]*focus-visible:ring-2[^"]*)"/g)];
+    const controls = [...read("src/components/digest/digest-archive-client.tsx").matchAll(/className="([^"]*focus-visible:ring-2[^"]*)"/g)];
     expect(controls.length).toBeGreaterThan(0);
     rings.push(...controls);
     for (const [, classes] of rings) {
@@ -70,12 +70,12 @@ describe("design invariants", () => {
 
   it.each(["tr", "TableRow", "InteractiveTableRow"])("native %s roles", (tag) => {
     for (const attr of ['role="link"', 'role={"button"}', "role={role}", "tabIndex={0}", "onKeyDown={open}"]) {
-      for (const path of ["src/components/liquidity-table.tsx", "src/app/other/page.tsx", "src/components/stablecoin-table-row.tsx"]) {
+      for (const path of ["src/components/liquidity/liquidity-table.tsx", "src/app/other/page.tsx", "src/components/stablecoin-directory/stablecoin-table-row.tsx"]) {
         expect(inspect(path, `<${tag} ${attr} />`)).toEqual(["interactive-row"]);
       }
     }
-    expect(inspect("src/components/liquidity-table.tsx", `<${tag} role={"row"} /><a role="link" />`)).toEqual([]);
-    expect(inspect("src/components/stablecoin-table-row.tsx", `<${tag} tabIndex={isCursor ? 0 : undefined} />`))
+    expect(inspect("src/components/liquidity/liquidity-table.tsx", `<${tag} role={"row"} /><a role="link" />`)).toEqual([]);
+    expect(inspect("src/components/stablecoin-directory/stablecoin-table-row.tsx", `<${tag} tabIndex={isCursor ? 0 : undefined} />`))
       .toEqual(tag === "TableRow" ? [] : ["interactive-row"]);
   });
 
@@ -85,7 +85,7 @@ describe("design invariants", () => {
         expect(inspect("src/app/x.tsx", `const props={${props}}; <TableRow {...${spread}} />`)).toEqual(["interactive-row"]);
       }
     }
-    const path = "src/components/stablecoin-table-row.tsx";
+    const path = "src/components/stablecoin-directory/stablecoin-table-row.tsx";
     expect(inspect(path, '<TableRow tabIndex={ (isCursor) ? (0) : (undefined) } />')).toEqual([]);
     expect(inspect(path, '<TableRow tabIndex={isCursor ? undefined : 0} />')).toEqual(["interactive-row"]);
     expect(inspect(path, 'const p={onKeyDown: open}; const props={...p}; <TableRow {...props} />')).toEqual(["interactive-row"]);

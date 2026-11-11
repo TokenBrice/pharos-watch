@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { clearPendingApiKey, retainPendingApiKey } from "@/components/pending-api-key-recovery";
+import { clearPendingApiKey, retainPendingApiKey } from "@/components/api-access/pending-api-key-recovery";
 
 /** Guard one-time secrets without writing them to browser storage. */
 export function useUnsavedTokenGuard(token: string | null, secured: boolean, issuing = false) {

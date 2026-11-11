@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HomeAltMiniCardGrid } from "@/components/home-alt-mini-card-grid";
+import { HomeAltMiniCardGrid } from "@/components/homepage/home-alt-mini-card-grid";
 
 vi.mock("@/components/home-alt-mini-cards/active-depegs-card", () => ({ ActiveDepegsCard: () => null }));
 vi.mock("@/components/home-alt-mini-cards/mint-burn-card", () => ({ MintBurnCard: () => null }));

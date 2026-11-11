@@ -16,7 +16,7 @@ export const FeedbackModal = dynamic(
 );
 
 export const McapChart = dynamic(
-  () => import("@/components/mcap-chart").then((mod) => mod.McapChart),
+  () => import("@/components/chart-primitives/mcap-chart").then((mod) => mod.McapChart),
   { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
 );
 export const MarketDataSection = dynamic(
@@ -24,7 +24,7 @@ export const MarketDataSection = dynamic(
   { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
 );
 export const DEWSDetail = dynamic(
-  () => import("@/components/dews-detail").then((mod) => mod.DEWSDetail),
+  () => import("@/components/dews/dews-detail").then((mod) => mod.DEWSDetail),
   { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
 );
 export const StablecoinSafetyScoreV9Card = dynamic(
@@ -71,11 +71,11 @@ export const PegStabilityCard = dynamic(
   { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
 );
 export const YieldDetailSection = dynamic(
-  () => import("@/components/yield-detail-section"),
+  () => import("@/components/yield/yield-detail-section"),
   { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
 );
 export const DexLiquidityCard = dynamic(
-  () => import("@/components/dex-liquidity-card").then((mod) => mod.DexLiquidityCard),
+  () => import("@/components/liquidity/dex-liquidity-card").then((mod) => mod.DexLiquidityCard),
   { loading: () => <Skeleton className="h-[360px] w-full rounded-xl" /> },
 );
 export const DistributionSection = dynamic(

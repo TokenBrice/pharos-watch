@@ -8,7 +8,7 @@ import { ContagionGraphControls } from "@/components/contagion-graph/contagion-g
 import type { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { graphNodeLabel } from "@/components/contagion-graph-model";
+import { graphNodeLabel } from "@/components/contagion-graph/contagion-graph-model";
 import { trackEvent } from "@/lib/analytics";
 
 interface ContagionGraphShellProps {

@@ -8,9 +8,9 @@ import {
   buildEdgeTooltipElement,
   buildNodeTooltipElement,
   buildTooltipAnnouncement,
-} from "@/components/contagion-graph-tooltips";
+} from "@/components/contagion-graph/contagion-graph-tooltips";
 import { HEIGHT, PAD, WIDTH } from "@/lib/contagion-layout";
-import { graphNodeLabel } from "@/components/contagion-graph-model";
+import { graphNodeLabel } from "@/components/contagion-graph/contagion-graph-model";
 import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
 import { FAILURE_DOMAIN_KIND_LABELS } from "@shared/lib/classification";
 

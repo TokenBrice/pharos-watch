@@ -3,7 +3,7 @@
 import type { ComponentProps } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { BlacklistFilters } from "@/components/blacklist-filters";
+import { BlacklistFilters } from "@/components/freezewatch/blacklist-filters";
 
 const props = {
   chains: [],

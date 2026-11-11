@@ -149,7 +149,7 @@ function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, meth
 
 // Advisory measured ceilings: lower manually when reading shrinks, never regenerate or remove obligations to fit.
 const ROUTE_FIXTURES = [
-  ["src/components/stablecoin-table.tsx", 21_706, 21_706],
+  ["src/components/stablecoin-directory/stablecoin-table.tsx", 21_706, 21_706],
   ["src/app/yield/page.tsx", 50_065, 50_065],
   ["worker/src/cron/dex-liquidity/orchestrator.ts", 42_303, 42_303],
   ["worker/src/api/yield-history.ts", 72_336, 72_336],
@@ -443,7 +443,7 @@ describe("reading selectors and context modes", () => {
   });
 
   it("uses contract reading for implementation inputs on two surfaces but not tests or doc companions", () => {
-    const implementation = "src/components/stablecoin-table.tsx";
+    const implementation = "src/components/stablecoin-directory/stablecoin-table.tsx";
     expect(classifyChangedFiles([implementation]).contextMode.effective).toBe("local");
     const contract = classifyChangedFiles([implementation, "worker/src/lib/db.ts"]);
     expect(contract.contextMode.effective).toBe("contract");
@@ -466,7 +466,7 @@ describe("reading selectors and context modes", () => {
 
   it.each(["local", "invalid", "AUTO", ""])("rejects invalid --context=%s", async (context) => {
     const result = await runContractCli(
-      [`--context=${context}`, "--file", "src/components/stablecoin-table.tsx", "--json"],
+      [`--context=${context}`, "--file", "src/components/stablecoin-directory/stablecoin-table.tsx", "--json"],
     );
     expect(result.status).toBe(2);
     expect(result.stderr).toContain(context === "" ? "--context requires a non-empty value" : "Invalid --context");
@@ -476,7 +476,7 @@ describe("reading selectors and context modes", () => {
   it.each(["auto", "contract"] as const)("fails unmapped CLI routing without a runnable plan in %s mode", async (context) => {
     const result = await runContractCli([
       `--context=${context}`, "--new-file",
-      "--file", "unmapped.fixture", "--file", "src/components/stablecoin-table.tsx", "--json",
+      "--file", "unmapped.fixture", "--file", "src/components/stablecoin-directory/stablecoin-table.tsx", "--json",
     ]);
     expect(result.status).toBe(1);
     const output = JSON.parse(result.stdout);
@@ -486,7 +486,7 @@ describe("reading selectors and context modes", () => {
   });
 
   it.each([
-    "src/components/stablecoin-table.tsx", "src/app/yield/page.tsx",
+    "src/components/stablecoin-directory/stablecoin-table.tsx", "src/app/yield/page.tsx",
     "worker/src/cron/dex-liquidity/orchestrator.ts", "worker/src/api/yield-history.ts",
     "shared/lib/safety-score-v9/evaluate-asset.ts", "shared/lib/classification.ts",
     "functions/safety-scores/map.json.ts", "shared/data/stablecoins/coins/usdt-tether.json",
@@ -821,7 +821,7 @@ describe("route context budget warnings and fixture ratchets", () => {
       sum + buildRouteContext(classifyChangedFiles([file], "contract"), { documents: routeDocuments }).total.bytes, 0));
     // Even two paths in the same family use the batch guard, not a sum of caps.
     expect(buildRouteContext(classifyChangedFiles([
-      "src/components/stablecoin-table.tsx", "src/app/yield/page.tsx",
+      "src/components/stablecoin-directory/stablecoin-table.tsx", "src/app/yield/page.tsx",
     ]), { documents: routeDocuments }).class).toBe("multi-domain-batch");
   });
 

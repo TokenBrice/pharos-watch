@@ -7,11 +7,11 @@ vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
 }));
 
-vi.mock("@/components/digest-archive-client", () => ({
+vi.mock("@/components/digest/digest-archive-client", () => ({
   DigestArchiveClient: () => <section data-testid="digest-archive-client" />,
 }));
 
-vi.mock("@/components/digest-nameplate-live", () => ({
+vi.mock("@/components/digest/digest-nameplate-live", () => ({
   DigestNameplateLive: () => null,
 }));
 

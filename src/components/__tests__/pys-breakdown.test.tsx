@@ -2,8 +2,8 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { PysBreakdown, type PysBreakdownProps } from "@/components/pys-breakdown";
-import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
+import { PysBreakdown, type PysBreakdownProps } from "@/components/yield/pys-breakdown";
+import { YieldWhyPysStrip } from "@/components/yield/yield-why-pys-strip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,

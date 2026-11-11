@@ -1,12 +1,12 @@
 "use client";
 
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import type { ResolvedLink } from "@/components/contagion-graph-graph";
+import type { ResolvedLink } from "@/components/contagion-graph/contagion-graph-graph";
 import type { GraphNode } from "@/lib/contagion-layout";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
-import { graphNodeLabel } from "@/components/contagion-graph-model";
+import { graphNodeLabel } from "@/components/contagion-graph/contagion-graph-model";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 interface ContagionGraphInsightsProps {

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { ApiReferenceMobileNav } from "@/components/api-reference-mobile-nav";
-import { ApiReferenceLayout } from "@/components/api-reference-layout";
-import type { SidebarSection } from "@/components/api-reference-sidebar";
+import { ApiReferenceMobileNav } from "@/components/api-reference/api-reference-mobile-nav";
+import { ApiReferenceLayout } from "@/components/api-reference/api-reference-layout";
+import type { SidebarSection } from "@/components/api-reference/api-reference-sidebar";
 
 
 const MOCK_SECTIONS: SidebarSection[] = [

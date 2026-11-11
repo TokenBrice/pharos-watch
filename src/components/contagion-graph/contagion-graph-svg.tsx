@@ -4,8 +4,8 @@ import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactN
 import { memo, useId, useRef, useState } from "react";
 import { footprintViewBox, upstreamArrowPoint } from "./contagion-graph-exposure";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import { gradeColor, graphNodeLabel, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
-import type { FocusMode, ResolvedLink } from "@/components/contagion-graph-graph";
+import { gradeColor, graphNodeLabel, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph/contagion-graph-model";
+import type { FocusMode, ResolvedLink } from "@/components/contagion-graph/contagion-graph-graph";
 import {
   GRAPH_DIM_EDGE_OPACITY,
   GRAPH_DIM_NODE_OPACITY,

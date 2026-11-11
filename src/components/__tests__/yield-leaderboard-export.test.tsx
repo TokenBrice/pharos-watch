@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { YieldLeaderboard } from "@/components/yield-leaderboard";
+import { YieldLeaderboard } from "@/components/yield/yield-leaderboard";
 import {
   makeYieldViewModelRow,
   YIELD_TEST_PROVENANCE,
@@ -48,10 +48,10 @@ vi.mock("@/hooks/use-sorted-paginated-table", () => ({
     onNextPage: vi.fn(),
   }),
 }));
-vi.mock("@/components/yield-instrument-board", () => ({ YieldInstrumentBoard: () => null }));
-vi.mock("@/components/yield-source-sheet", () => ({ YieldSourceSheet: () => null }));
-vi.mock("@/components/yield-compare-tray", () => ({ YieldCompareTray: () => null }));
-vi.mock("@/components/yield-compare-drawer", () => ({ YieldCompareDrawer: () => null }));
+vi.mock("@/components/yield/yield-instrument-board", () => ({ YieldInstrumentBoard: () => null }));
+vi.mock("@/components/yield/yield-source-sheet", () => ({ YieldSourceSheet: () => null }));
+vi.mock("@/components/yield/yield-compare-tray", () => ({ YieldCompareTray: () => null }));
+vi.mock("@/components/yield/yield-compare-drawer", () => ({ YieldCompareDrawer: () => null }));
 vi.mock("@/components/table-pagination", () => ({ TablePagination: () => null }));
 
 afterEach(() => {

@@ -1,0 +1,57 @@
+import type { BackingType } from "@shared/types/core";
+import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
+import { StablecoinFilteredTable } from "@/components/stablecoin-directory/stablecoin-filtered-table";
+import { StablecoinTaxonomyShell } from "@/components/taxonomy/stablecoin-taxonomy-shell";
+import { TaxonomyHeaderActions } from "@/components/taxonomy/taxonomy-header-actions";
+import type { InfrastructureTaxonomyValue, StablecoinTaxonomyPage as StablecoinTaxonomyPageConfig } from "@/lib/stablecoin-taxonomy";
+import { ALL_STABLECOIN_TAXONOMY_PAGES, getTopCohortCoinIds } from "@/lib/stablecoin-taxonomy";
+
+interface StablecoinTaxonomyPageProps {
+  page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType | InfrastructureTaxonomyValue>;
+}
+
+export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
+  const relatedPages = ALL_STABLECOIN_TAXONOMY_PAGES.filter((candidate) => candidate.href !== page.href).slice(0, 6);
+  const parentName =
+    page.kind === "backing"
+      ? "Backing"
+      : page.kind === "governance"
+        ? "Governance"
+        : "Infrastructure";
+  const bucketNoun =
+    page.kind === "backing"
+      ? "backing model"
+      : page.kind === "governance"
+        ? "governance model"
+        : "infrastructure profile";
+
+  return (
+    <StablecoinTaxonomyShell
+      title={page.title}
+      href={page.href}
+      breadcrumbItems={[
+        { name: "Home", url: "/" },
+        { name: "Stablecoins", url: "/stablecoins/" },
+        { name: parentName, url: `/stablecoins/${page.kind}/` },
+        { name: page.title, url: page.href },
+      ]}
+      description={page.description}
+      aboutParagraphs={[page.intro]}
+      shortLabel={page.shortLabel}
+      coins={page.coins}
+      directoryDescription={`Browse the current ${page.coins.length} tracked stablecoin${page.coins.length !== 1 ? "s" : ""} in this taxonomy by profile.`}
+      definedTermCode={String(page.filterTag)}
+      definedTermSetHref={`/stablecoins/${page.kind}/`}
+      relatedPages={relatedPages}
+      headerActions={
+        <TaxonomyHeaderActions
+          shortLabel={page.shortLabel}
+          topCoinIds={getTopCohortCoinIds(page.coins)}
+          bucketNoun={bucketNoun}
+        />
+      }
+    >
+      <StablecoinFilteredTable activeFilters={[page.filterTag]} />
+    </StablecoinTaxonomyShell>
+  );
+}

@@ -4,7 +4,7 @@ import {
   buildVerbPreview,
   executeParsedVerb,
   type CommandPaletteVerbPreview,
-} from "@/components/command-palette-actions";
+} from "@/components/command-palette/command-palette-actions";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
 
 interface UseCommandPaletteVerbActionsOptions {

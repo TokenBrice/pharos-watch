@@ -25,9 +25,9 @@ vi.mock("@/components/feature-page-shell", () => ({
     <>{headerSupplement}{children}</>
   ),
 }));
-vi.mock("@/components/flow-chart", () => ({ FlowChart: () => null }));
-vi.mock("@/components/flow-table", () => ({ FlowTable: flowTableMock }));
-vi.mock("@/components/flow-gauge-hero", () => ({ FlowGaugeHero: flowGaugeHeroMock }));
+vi.mock("@/components/mint-burn/flow-chart", () => ({ FlowChart: () => null }));
+vi.mock("@/components/mint-burn/flow-table", () => ({ FlowTable: flowTableMock }));
+vi.mock("@/components/mint-burn/flow-gauge-hero", () => ({ FlowGaugeHero: flowGaugeHeroMock }));
 vi.mock("@/components/faq-section", () => ({ FaqSection: () => null }));
 vi.mock("@/components/control-pill-toggle", () => ({
   ControlPillToggle: ({ onChange }: { onChange: (hours: number) => void }) => (

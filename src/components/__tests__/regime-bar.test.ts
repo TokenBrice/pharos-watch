@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { buildBandStripCells, RegimeBar, RegimeBarToggle } from "@/components/regime-bar";
+import { buildBandStripCells, RegimeBar, RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
 import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX } from "@shared/lib/classification";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 

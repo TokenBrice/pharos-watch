@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
   DepegResolverReviewerModule,
-} from "@/components/depeg-resolver-reviewer-module";
+} from "@/components/depeg/depeg-resolver-reviewer-module";
 import {
   coverageRow,
   makePredictionPolicySegment,

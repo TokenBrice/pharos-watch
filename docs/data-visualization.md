@@ -24,7 +24,7 @@ The Cemetery plot map is the reference split for a metaphor scene. `buildCemeter
 
 The dependency Watershed is the second reference split. `buildWatershedModel` in `src/lib/dependency-watershed/model.ts` (with `ranks.ts`, `order.ts` and `geometry.ts`) is the pure, deterministic view model. The renderers live in `src/components/dependency-watershed/`, and its "Table view" disclosure is the equivalent data surface.
 
-Existing exceptions are documented rather than treated as the standard: `HomeAltHeroChart` still computes sampling, scales, and SVG geometry in the component (`src/components/home-alt-hero-chart.tsx`), and `BlacklistChart` still derives peak quarters and chart series in-component (`src/components/blacklist-chart.tsx`).
+Existing exceptions are documented rather than treated as the standard: `HomeAltHeroChart` still computes sampling, scales, and SVG geometry in the component (`src/components/homepage/home-alt-hero-chart.tsx`), and `BlacklistChart` still derives peak quarters and chart series in-component (`src/components/freezewatch/blacklist-chart.tsx`).
 
 Selection shared with sibling panels belongs in the route client, not hidden inside the scene.
 
@@ -80,7 +80,7 @@ Choose the SVG role from its behavior:
 
 Interactive marks need a semantic role or native interactive element, an accessible name containing the entity and relevant value, visible focus, and keyboard activation equivalent to pointer activation. Selection controls expose their state.
 
-Every data-reading visualization requires an equivalent accessible data surface. This may be an adjacent table, an always-present summary, a detail panel, a screen-reader-only structure, or a small-screen list. It does not have to be a duplicated fallback list, but it must expose the same decision-relevant facts when the graphic cannot be perceived or operated. Decorative-summary visualizations may be exceptions when they are not intended to be a complete data-reading surface. The homepage hero cohort chart (`HomeAltHeroChart`) is the current decorative-summary exception: it exposes an SVG role/name and a pointer tooltip (`src/components/home-alt-hero-chart.tsx`), but no equivalent accessible data surface; do not use this exception as a model for data-reading charts.
+Every data-reading visualization requires an equivalent accessible data surface. This may be an adjacent table, an always-present summary, a detail panel, a screen-reader-only structure, or a small-screen list. It does not have to be a duplicated fallback list, but it must expose the same decision-relevant facts when the graphic cannot be perceived or operated. Decorative-summary visualizations may be exceptions when they are not intended to be a complete data-reading surface. The homepage hero cohort chart (`HomeAltHeroChart`) is the current decorative-summary exception: it exposes an SVG role/name and a pointer tooltip (`src/components/homepage/home-alt-hero-chart.tsx`), but no equivalent accessible data surface; do not use this exception as a model for data-reading charts.
 
 The Cemetery's Autopsy Register is the plot map's equivalent surface: every grave's cause, death date, peak market cap, peg, record type, epitaph and obituary are server-rendered in the register, which the plan's "Skip the cemetery map" link reaches directly and whose rows each grave's `#<id>` link resolves to.
 

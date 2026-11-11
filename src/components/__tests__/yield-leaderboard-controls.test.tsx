@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
+import { YieldLeaderboardControls } from "@/components/yield/yield-leaderboard-controls";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { buildYieldViewModel, prepareYieldUniverse } from "@/lib/yield-view-model";
 

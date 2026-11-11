@@ -46,7 +46,7 @@ vi.mock("@/lib/contagion-layout", async () => {
   };
 });
 
-const { ContagionGraph } = await import("@/components/contagion-graph-root");
+const { ContagionGraph } = await import("@/components/contagion-graph/contagion-graph-root");
 
 const CARDS: ContagionGraphCard[] = [
   { id: "usde-ethena", symbol: "USDe", grade: "A" },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLiquidityExitRouteModel } from "@/components/exit-route-model";
+import { buildLiquidityExitRouteModel } from "@/components/liquidity/exit-route-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { DEX_GLOBAL_KEY } from "@shared/types/dex-liquidity";
 

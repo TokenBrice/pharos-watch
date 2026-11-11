@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
-import { YieldSourceSheet } from "@/components/yield-source-sheet";
+import { YieldSourceSheet } from "@/components/yield/yield-source-sheet";
 import type { YieldRanking } from "@shared/types/yield";
 
 export function renderYieldSourceSheet(

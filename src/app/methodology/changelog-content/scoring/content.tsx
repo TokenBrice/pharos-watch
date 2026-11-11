@@ -1,6 +1,6 @@
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
-import { scoringAnchorId, StructuredChangelogDetail, VersionCard } from "@/components/methodology-changelog-detail";
+import { scoringAnchorId, StructuredChangelogDetail, VersionCard } from "@/components/methodology-history/methodology-changelog-detail";
 import { ScoringChangelogSummaryTables } from "./content-summary";
 
 export { scoringAnchorId };

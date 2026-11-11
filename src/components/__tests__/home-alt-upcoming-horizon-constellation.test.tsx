@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
+import { HomeAltUpcomingHorizonConstellation } from "@/components/homepage/home-alt-upcoming-horizon-constellation";
 import type * as HorizonConstellationLayoutModule from "@/lib/horizon-constellation-layout";
 
 const horizonFixture = vi.hoisted(() =>

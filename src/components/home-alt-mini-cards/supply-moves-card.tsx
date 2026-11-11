@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
-import { getSupplyChangePercent } from "@/components/stablecoin-table-logic";
+import { getSupplyChangePercent } from "@/components/stablecoin-directory/stablecoin-table-logic";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLogoSrc, logosById } from "@/lib/logos";

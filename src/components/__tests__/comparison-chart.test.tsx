@@ -31,7 +31,7 @@ vi.mock("@/components/chart-primitives/multi-series-line-chart", () => ({
   },
 }));
 
-import { ComparisonChart } from "@/components/comparison-chart";
+import { ComparisonChart } from "@/components/compare/comparison-chart";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 
 const SERIES = [

@@ -1,11 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { StablecoinTableRowCells } from "@/components/stablecoin-table-row-cells";
+import { StablecoinTableRowCells } from "@/components/stablecoin-directory/stablecoin-table-row-cells";
 import { RowSparkline } from "@/components/row-sparkline";
 import type * as RowSparklineModule from "@/components/row-sparkline";
-import { buildStablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
-import type { StablecoinTableRowCellProps } from "@/components/stablecoin-table-row-types";
+import { buildStablecoinTableRowModel } from "@/components/stablecoin-directory/stablecoin-table-row-model";
+import type { StablecoinTableRowCellProps } from "@/components/stablecoin-directory/stablecoin-table-row-types";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";

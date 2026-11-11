@@ -33,10 +33,10 @@ vi.mock("next/link", async () => {
   };
 });
 
-const { HomeBlogBanner } = await import("../home-blog-banner");
-const { HorizonConstellation } = await import("../horizon-constellation");
-const { UpcomingClient } = await import("../upcoming-client");
-const { UpcomingLaunchedSection, UpcomingStaticSections } = await import("../upcoming-static-sections");
+const { HomeBlogBanner } = await import("../homepage/home-blog-banner");
+const { HorizonConstellation } = await import("../upcoming/horizon-constellation");
+const { UpcomingClient } = await import("../upcoming/upcoming-client");
+const { UpcomingLaunchedSection, UpcomingStaticSections } = await import("../upcoming/upcoming-static-sections");
 
 afterEach(cleanup);
 

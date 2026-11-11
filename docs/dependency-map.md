@@ -52,7 +52,7 @@ This distinction matters because a live adapter can legitimately supersede stale
 
 V9 dependency edges are serial or basket. Their four-value `materiality` distinguishes serial blockage (`serial-blocked`) and bounded basket uncertainty (`basket-bounded-unknown`) from ordinary serial/basket relationships; it is not a null-score test.
 
-**The map draws two relationships, not four.** `contagionEdgeRelationship()` uses `edge.kind`: basket exposure inherits backing risk in proportion to its share; serial exposure is a full pass-through claim that inherits upstream risk in full. `DEPENDENCY_TYPE_PRESENTATION` in `src/components/contagion-graph-model.ts` owns the reader-facing labels, stroke styles and descriptions.
+**The map draws two relationships, not four.** `contagionEdgeRelationship()` uses `edge.kind`: basket exposure inherits backing risk in proportion to its share; serial exposure is a full pass-through claim that inherits upstream risk in full. `DEPENDENCY_TYPE_PRESENTATION` in `src/components/contagion-graph/contagion-graph-model.ts` owns the reader-facing labels, stroke styles and descriptions.
 
 Blockage and bounded uncertainty stay out of the relationship legend. `v9DependencyEdgeScoreKnown()` reads materiality, not `upstreamScore`; its false state adds unavailable/not-rateable copy to tooltips, inspection options and live announcements. A bounded basket can still publish a numeric inherited score, while a serial pipeline gap can have null `upstreamScore` without `serial-blocked`. Known collateral shares remain visible in either case; `upstreamScore` is not the upstream asset's headline Safety Score.
 

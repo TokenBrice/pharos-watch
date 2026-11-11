@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
-import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
+import { YieldCompareDrawer } from "@/components/yield/yield-compare-drawer";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { copyText } from "@/lib/clipboard";

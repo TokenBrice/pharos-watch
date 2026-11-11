@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ChangelogTimeline } from "@/components/changelog-timeline";
+import { ChangelogTimeline } from "@/components/methodology-history/changelog-timeline";
 import { changelogs } from "@/data/changelogs";
 import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "@/lib/changelog-history";
 

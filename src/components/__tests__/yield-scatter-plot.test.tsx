@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cloneElement, createElement, isValidElement, type ReactElement } from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type * as Recharts from "recharts";
-import { YieldScatterPlot } from "@/components/yield-scatter-plot";
+import { YieldScatterPlot } from "@/components/yield/yield-scatter-plot";
 import { prepareYieldUniverse, selectVisibleYieldRows } from "@/lib/yield-view-model";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";

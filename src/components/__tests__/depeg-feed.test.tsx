@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
-import { DepegFeed } from "@/components/depeg-feed";
+import { DepegFeed } from "@/components/depeg/depeg-feed";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 import { makeEvent } from "./depeg.test-support";
 

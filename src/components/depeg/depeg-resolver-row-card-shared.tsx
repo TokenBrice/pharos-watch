@@ -1,0 +1,158 @@
+"use client";
+
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import { formatBps, formatElapsedSeconds } from "@shared/lib/format";
+import type { DdrV2ResponseRow } from "@shared/types/depeg-resolver";
+import {
+  compactLockTiming,
+  DDR_EVENT_STATE_LABELS,
+  formatCoarseDurationSec,
+  formatDdrReason,
+  formatDurationSec,
+  formatUtcTimestamp,
+  getDuration,
+  getDisplayedLivePeakDeviationBps,
+  getLockMetadata,
+  isCumulativeIncidence,
+  isDdrInfrastructureReason,
+} from "@/components/depeg/depeg-resolver-row-card-model";
+
+export function StageLabel({ children }: { children: ReactNode }) {
+  return <p className="pharos-label">{children}</p>;
+}
+
+function MetadataPill({ label, value }: { label: string; value: ReactNode }) {
+  if (value == null || value === "") return null;
+  return (
+    <span className="pharos-meta inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/60 px-2 py-0.5">
+      <span>{label}</span>
+      <span className="pharos-numeric text-foreground">{value}</span>
+    </span>
+  );
+}
+
+function formatLockTrigger(value: string | null | undefined, lockedAt: number | null): string | null {
+  switch (value) {
+    case "forecast_readiness":
+      return "readiness";
+    case "readiness_backstop":
+      return "72h backstop";
+    case "scheduled_24h":
+      return lockedAt != null ? "legacy 24h" : null;
+    default:
+      return null;
+  }
+}
+
+function formatReadinessScore(score: number | null, threshold: number | null): string | null {
+  if (score == null || !Number.isFinite(score)) return null;
+  const scoreText = `${Math.round(score * 100)}%`;
+  if (threshold == null || !Number.isFinite(threshold)) return scoreText;
+  return `${scoreText}/${Math.round(threshold * 100)}%`;
+}
+
+export function CoinLockup({
+  row,
+  logos,
+  logoSize = 26,
+}: {
+  row: Pick<DdrV2ResponseRow, "stablecoinId" | "symbol" | "name">;
+  logos?: Record<string, string>;
+  logoSize?: number;
+}) {
+  return (
+    <Link
+      href={buildStablecoinUrl(row.stablecoinId)}
+      className="pharos-focus-ring group/lockup flex min-w-0 items-center gap-2.5 rounded-sm"
+    >
+      <StablecoinLogo src={logos?.[row.stablecoinId]} name={row.symbol} size={logoSize} />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-foreground group-hover/lockup:underline">
+          {row.symbol}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">{row.name}</span>
+      </span>
+    </Link>
+  );
+}
+
+export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
+  const { live } = row;
+  const ageSec = live.ageSec;
+  const peakDeviationBps = getDisplayedLivePeakDeviationBps(row);
+  const currentDeviationBps = live.currentDeviationBps;
+  const status = live.eventState;
+
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <span className="pharos-label">
+        Live incident
+      </span>
+      <span>
+        Age <span className="pharos-numeric text-foreground">{ageSec == null ? "—" : formatElapsedSeconds(ageSec)}</span>
+      </span>
+      <span>
+        Peak <span className="pharos-numeric text-foreground">{peakDeviationBps == null ? "—" : formatBps(peakDeviationBps)}</span>
+      </span>
+      {currentDeviationBps != null ? (
+        <span>
+          Now <span className="pharos-numeric text-foreground">{formatBps(currentDeviationBps)}</span>
+        </span>
+      ) : null}
+      {status ? <span className="text-foreground/70">{DDR_EVENT_STATE_LABELS[status]}</span> : null}
+      {live.degradedReason && !isDdrInfrastructureReason(live.degradedReason) ? (
+        <span className="w-full text-muted-foreground" title={live.degradedReason}>
+          Live overlay: {formatDdrReason(live.degradedReason)}.
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+export function LockMetadataStrip({
+  row,
+  showAnchoredDuration = false,
+}: {
+  row: DdrV2ResponseRow;
+  showAnchoredDuration?: boolean;
+}) {
+  const metadata = getLockMetadata(row);
+  const duration = getDuration(row);
+  const lockedAt = formatUtcTimestamp(metadata.lockedAt);
+  const eligibleAt = formatUtcTimestamp(metadata.eligibleAt);
+  const predictedAt = formatUtcTimestamp(metadata.predictedAt);
+  const trigger = formatLockTrigger(metadata.lockTrigger, metadata.lockedAt);
+  const readiness = formatReadinessScore(metadata.readinessScore, metadata.readinessThreshold);
+  const backstop =
+    metadata.backstopAt != null
+      ? `${formatDurationSec(metadata.backstopDelaySec ?? 72 * 3600)} · ${formatUtcTimestamp(metadata.backstopAt)}`
+      : null;
+  // DDRv5 quantiles are secondary to the horizon odds, so they stay coarse here too.
+  const formatAnchored = isCumulativeIncidence(duration) ? formatCoarseDurationSec : formatDurationSec;
+  const anchoredDuration =
+    showAnchoredDuration && duration.medianSec != null && !duration.suppressed
+      ? `~${formatAnchored(duration.medianSec)}${
+          duration.iqrSec ? ` (${formatAnchored(duration.iqrSec[0])}-${formatAnchored(duration.iqrSec[1])})` : ""
+        }`
+      : null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <MetadataPill label="eligible" value={eligibleAt} />
+      <MetadataPill label="locked" value={lockedAt} />
+      <MetadataPill
+        label="predicted at"
+        value={metadata.predictedAgeSec != null ? formatElapsedSeconds(metadata.predictedAgeSec) : null}
+      />
+      <MetadataPill label="trigger" value={trigger} />
+      <MetadataPill label="readiness" value={readiness} />
+      <MetadataPill label="backstop" value={backstop} />
+      <MetadataPill label="lock timing" value={compactLockTiming(metadata.lockTiming)} />
+      <MetadataPill label="anchored duration" value={anchoredDuration} />
+      <MetadataPill label="manifest" value={predictedAt && !lockedAt ? predictedAt : null} />
+    </div>
+  );
+}

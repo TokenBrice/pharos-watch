@@ -18,7 +18,7 @@ vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
 }));
 
-import { DigestNameplateLive } from "@/components/digest-nameplate-live";
+import { DigestNameplateLive } from "@/components/digest/digest-nameplate-live";
 
 const seedEdition: DigestContentEntry = {
   date: "2026-08-31",

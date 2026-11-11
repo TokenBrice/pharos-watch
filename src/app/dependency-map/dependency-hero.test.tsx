@@ -7,7 +7,7 @@ import { useDependencyExposureWorkspace } from "./dependency-exposure-workspace"
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 
-vi.mock("@/components/contagion-graph-root", () => ({ ContagionGraph: ({ modeControls }: { modeControls?: ReactNode }) => <div>{modeControls}</div> }));
+vi.mock("@/components/contagion-graph/contagion-graph-root", () => ({ ContagionGraph: ({ modeControls }: { modeControls?: ReactNode }) => <div>{modeControls}</div> }));
 const cards = [{ id: "parent", name: "Parent", symbol: "P", grade: "A" as const }, { id: "child", name: "Child", symbol: "C", grade: "A" as const }, { id: "other", name: "Other", symbol: "O", grade: "A" as const }];
 const edges: ReportCardsV9DependencyEdge[] = [{ from: "parent", to: "child", kind: "basket", materiality: "basket-weighted", weight: 0.4, upstreamScore: 80 }];
 function Harness({ publishedEdges, supply, otherSupply = null, defunctOther = false }: { publishedEdges: ReportCardsV9DependencyEdge[]; supply: number | null; otherSupply?: number | null; defunctOther?: boolean }) {

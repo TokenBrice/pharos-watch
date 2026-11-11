@@ -2,8 +2,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { LiquidityHero } from "@/components/liquidity-hero";
-import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
+import { LiquidityHero } from "@/components/liquidity/liquidity-hero";
+import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { formatCurrency } from "@shared/lib/format";

@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { CommandPalette } from "@/components/command-palette-root";
+import { CommandPalette } from "@/components/command-palette/command-palette-root";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { STABLECOINS_QUERY_KEY } from "@shared/lib/query-keys";
 import type { StablecoinListResponse } from "@shared/types/supply";

@@ -4,10 +4,10 @@ import {
   getPressureState,
   getCoverageBadge,
   compareFlowRows,
-} from "@/components/flow-table-logic";
+} from "@/components/mint-burn/flow-table-logic";
 import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
-import type { FlowTableSortKey } from "@/components/flow-table-logic";
+import type { FlowTableSortKey } from "@/components/mint-burn/flow-table-logic";
 import { makeInactiveMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 function makeFlow(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {

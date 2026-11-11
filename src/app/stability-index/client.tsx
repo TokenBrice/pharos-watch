@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { ScoreChart } from "@/components/psi-history-chart";
+import { ScoreChart } from "@/components/psi-beacon/psi-history-chart";
 import { LazySection } from "@/components/lazy-section";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useStabilityIndexDetail, useStabilityIndexFullHistory } from "@/hooks/api-hooks";

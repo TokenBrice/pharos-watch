@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildStablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
+import { buildStablecoinTableRowModel } from "@/components/stablecoin-directory/stablecoin-table-row-model";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { deviationColorClass } from "@/lib/severity-colors";

@@ -2,7 +2,7 @@
 
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HomeAltHero } from "@/components/home-alt-hero";
+import { HomeAltHero } from "@/components/homepage/home-alt-hero";
 import { buildLiveHomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
@@ -20,8 +20,8 @@ vi.mock("@/hooks/api-hooks", () => ({
     } } : undefined };
   },
 }));
-vi.mock("@/components/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
-vi.mock("@/components/home-market-state-line", () => ({ HomeMarketStateLine: () => null }));
+vi.mock("@/components/homepage/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
+vi.mock("@/components/homepage/home-market-state-line", () => ({ HomeMarketStateLine: () => null }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: vi.fn() }));
 

@@ -3,8 +3,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DexLiquidityCard } from "@/components/dex-liquidity-card";
-import { PoolSourceLabel, TvlTrendChart } from "@/components/dex-liquidity-card-parts";
+import { DexLiquidityCard } from "@/components/liquidity/dex-liquidity-card";
+import { PoolSourceLabel, TvlTrendChart } from "@/components/liquidity/dex-liquidity-card-parts";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types/dex-liquidity";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";

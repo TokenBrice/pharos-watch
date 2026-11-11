@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { hashKey } from "@tanstack/react-query";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { SCREENER_REFRESH_QUERY_KEYS } from "@/components/screener/screener-table";
-import { STABLECOIN_TABLE_REFRESH_QUERY_KEYS } from "@/components/stablecoin-table-columns";
+import { STABLECOIN_TABLE_REFRESH_QUERY_KEYS } from "@/components/stablecoin-directory/stablecoin-table-columns";
 
 // The refreshing bar matches queryHash exactly, so a hand-spelled prefix such
 // as ["report-cards"] can never match ["report-cards", "v9", "table", 1].

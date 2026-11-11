@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { StablecoinFilteredTable } from "@/components/stablecoin-filtered-table";
+import { StablecoinFilteredTable } from "@/components/stablecoin-directory/stablecoin-filtered-table";
 import { pegCurrencyToFilterTag } from "@shared/lib/filter-tags";
 import type { PegCurrency } from "@shared/types/core";
 

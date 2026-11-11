@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   DEPENDENCY_TYPE_PRESENTATION,
-} from "@/components/contagion-graph-model";
+} from "@/components/contagion-graph/contagion-graph-model";
 import {
   computeRippleState,
   resolveGraphLinks,
   type ResolvedLink,
-} from "@/components/contagion-graph-graph";
+} from "@/components/contagion-graph/contagion-graph-graph";
 import type { GraphLink } from "@/lib/contagion-layout";
 
 describe("contagion graph dependency type presentation", () => {

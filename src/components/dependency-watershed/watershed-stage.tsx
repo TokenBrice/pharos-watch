@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { formatCurrency } from "@shared/lib/format";
-import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph-model";
+import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph/contagion-graph-model";
 import { ChartTooltipSurface } from "@/components/pharos-chart-tooltip";
 import type { WatershedDelta, WatershedModel, WatershedNode, WatershedRibbon } from "@/lib/dependency-watershed/model";
 import styles from "./watershed.module.css";

@@ -64,13 +64,13 @@ vi.mock("@/components/coin-cross-tracker-hatnote", () => ({
   CoinCrossTrackerHatnote: () => <div data-testid="coin-cross-tracker-hatnote" />,
 }));
 
-vi.mock("@/components/blacklist-table", () => ({
+vi.mock("@/components/freezewatch/blacklist-table", () => ({
   BlacklistTable: ({ isLoading }: { isLoading: boolean }) => (
     <div data-testid="blacklist-table" data-loading={String(isLoading)} />
   ),
 }));
 
-vi.mock("@/components/stablecoin-table", () => ({
+vi.mock("@/components/stablecoin-directory/stablecoin-table", () => ({
   StablecoinTable: (props: { isLoading: boolean }) => {
     mocks.stablecoinTable(props);
     return <div data-testid="stablecoin-table" data-loading={String(props.isLoading)} />;

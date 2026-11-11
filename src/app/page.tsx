@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { HomeAltClient } from "@/components/home-alt-client";
-import { HomeBlogBanner } from "@/components/home-blog-banner";
-import { HomeAltHero } from "@/components/home-alt-hero";
-import { HomeApiStrip } from "@/components/home-api-strip";
-import { HomeMediaStrip } from "@/components/home-media-strip";
+import { HomeAltClient } from "@/components/homepage/home-alt-client";
+import { HomeBlogBanner } from "@/components/homepage/home-blog-banner";
+import { HomeAltHero } from "@/components/homepage/home-alt-hero";
+import { HomeApiStrip } from "@/components/homepage/home-api-strip";
+import { HomeMediaStrip } from "@/components/homepage/home-media-strip";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
 import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";

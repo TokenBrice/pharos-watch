@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { YieldMobileCard } from "@/components/yield-leaderboard";
+import { YieldMobileCard } from "@/components/yield/yield-leaderboard";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import type { YieldRankingProvenance } from "@shared/types/yield";

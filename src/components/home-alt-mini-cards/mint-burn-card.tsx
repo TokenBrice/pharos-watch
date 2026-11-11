@@ -12,7 +12,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { inferHas24hActivity, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
 import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
-import { FlowSignedNetValue } from "@/components/flow-valuation-value";
+import { FlowSignedNetValue } from "@/components/mint-burn/flow-valuation-value";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 interface Mover {

@@ -12,7 +12,7 @@ vi.mock("next/link", () => ({
 
 afterEach(cleanup);
 
-const { AiSummary } = await import("../ai-summary");
+const { AiSummary } = await import("../ai-summary/ai-summary");
 
 describe("AiSummary", () => {
   it.each(["mouseEnter", "focus"] as const)("prefetches the AI policy only after %s intent", (intent) => {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { FlowRunLine } from "@/components/flow-run-line";
+import { FlowRunLine } from "@/components/mint-burn/flow-run-line";
 import { buildRunLineModel } from "@/lib/flow-run-line-model";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";

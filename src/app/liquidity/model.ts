@@ -2,8 +2,8 @@ import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/sta
 import type { DexLiquidityData, DexLiquidityMap } from "@shared/types/dex-liquidity";
 import type { PegCurrency } from "@shared/types/core";
 import { DEX_GLOBAL_KEY } from "@shared/types/dex-liquidity";
-import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
-import type { LiquidityRow } from "@/components/liquidity-table";
+import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
+import type { LiquidityRow } from "@/components/liquidity/liquidity-table";
 import { parseDataHealthWarnings } from "@/lib/data-health";
 
 export const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [

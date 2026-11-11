@@ -4,7 +4,7 @@ import {
   buildPopularStablecoinDescriptors,
   groupCommandPaletteResults,
   rankCommandPaletteResults,
-} from "@/components/command-palette-model";
+} from "@/components/command-palette/command-palette-model";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import depegEventSearchData from "@/generated/depeg-event-search-data.json";
 

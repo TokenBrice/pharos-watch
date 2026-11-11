@@ -38,7 +38,7 @@ function DependencyGraphPlaceholder() {
   );
 }
 
-const ContagionGraph = dynamic(() => import("@/components/contagion-graph-root").then((mod) => mod.ContagionGraph), {
+const ContagionGraph = dynamic(() => import("@/components/contagion-graph/contagion-graph-root").then((mod) => mod.ContagionGraph), {
   ssr: false,
   loading: DependencyGraphPlaceholder,
 });

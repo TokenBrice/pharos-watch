@@ -7,7 +7,7 @@ import { ApiOfferCards } from "./api-offer-cards";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 
 // The claim transaction and wallet lookup are independent of this static grade copy.
-vi.mock("@/components/donor-key-claim", () => ({ DonorKeyClaim: () => null }));
+vi.mock("@/components/api-access/donor-key-claim", () => ({ DonorKeyClaim: () => null }));
 vi.mock("./donor-wallet-check", () => ({ DonorWalletCheck: () => null }));
 
 const unavailable: DonorKeyQualifyingCoin = { label: "USDC", stablecoinId: "usdc-circle", grade: null, score: null, status: "unavailable" };

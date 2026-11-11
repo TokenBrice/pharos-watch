@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Share2, X, Download, type LucideIcon } from "lucide-react";
 import { CoinSelector } from "@/components/coin-selector";
-import { CompareEmptyState } from "@/components/compare-empty-state";
+import { CompareEmptyState } from "@/components/compare/compare-empty-state";
 import type { useCompareSelection } from "@/hooks/use-compare-selection";
 import type { useCompareShareActions } from "@/hooks/use-compare-share-actions";
 import { COMPARISON_PRESETS, MAX_COMPARE_COINS, getPresetCoins } from "@/lib/compare-config";

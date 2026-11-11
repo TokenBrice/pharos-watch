@@ -4,8 +4,8 @@ import { createElement, type ComponentType, type ReactElement, type ReactNode } 
 import { renderToStaticMarkup } from "react-dom/server";
 import { render, screen, within } from "@testing-library/react";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { FlowChart } from "@/components/flow-chart";
-import { buildFlowChartModel } from "@/components/flow-chart-model";
+import { FlowChart } from "@/components/mint-burn/flow-chart";
+import { buildFlowChartModel } from "@/components/mint-burn/flow-chart-model";
 
 const originalTz = process.env.TZ;
 process.env.TZ = "America/Los_Angeles";

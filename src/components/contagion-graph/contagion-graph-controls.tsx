@@ -1,8 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
-import { DEPENDENCY_TYPE_FILTERS, graphNodeLabel } from "@/components/contagion-graph-model";
+import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph/contagion-graph-graph";
+import { DEPENDENCY_TYPE_FILTERS, graphNodeLabel } from "@/components/contagion-graph/contagion-graph-model";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { ALL_NODE_LIMIT, NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";

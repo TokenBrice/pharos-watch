@@ -10,8 +10,8 @@ import { copyText } from "@/lib/clipboard";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { encodePortfolioHoldings, mergeCoinsParam } from "@/lib/portfolio-codec";
-import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
-import type { PortfolioPreset } from "@/components/portfolio-empty-state";
+import { PortfolioEmptyState } from "@/components/portfolio/portfolio-empty-state";
+import type { PortfolioPreset } from "@/components/portfolio/portfolio-empty-state";
 import {
   PortfolioHeroStrip,
   PortfolioHoldingsEditor,
@@ -21,7 +21,7 @@ import { buildHeldCardIds } from "./model";
 import { PORTFOLIO_PRESETS } from "./presets";
 import { buildV9PortfolioProjection } from "@/lib/safety-score-v9-consumers";
 import { Card, CardContent } from "@/components/ui/card";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ECONOMIC_CONTROL_LABEL } from "@shared/lib/classification";

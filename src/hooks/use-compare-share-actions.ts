@@ -12,7 +12,7 @@ import { formatNativePrice } from "@shared/lib/peg-format";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
-import { getSupplyChangePercent } from "@/components/stablecoin-table-logic";
+import { getSupplyChangePercent } from "@/components/stablecoin-directory/stablecoin-table-logic";
 import type { StablecoinData } from "@shared/types/supply";
 import type { ComparisonMeta } from "@/lib/compare-derive";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";

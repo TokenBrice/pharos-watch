@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { FlowWeekReceipt } from "@/components/flow-week-receipt";
+import { FlowWeekReceipt } from "@/components/mint-burn/flow-week-receipt";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 describe("FlowWeekReceipt", () => {

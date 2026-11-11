@@ -12,8 +12,8 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { LazySection } from "@/components/lazy-section";
-import { McapChart } from "@/components/mcap-chart";
-import { PegDeviationChart } from "@/components/peg-deviation-chart";
+import { McapChart } from "@/components/chart-primitives/mcap-chart";
+import { PegDeviationChart } from "@/components/chart-primitives/peg-deviation-chart";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";

@@ -18,7 +18,7 @@ vi.mock("@/hooks/use-events", () => ({
   useLatestEvents: (options: unknown) => useLatestEventsMock(options),
 }));
 
-import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
+import { TapeForCoinTeaser } from "@/components/tape/tape-for-coin-teaser";
 
 const NOW = Date.UTC(2026, 9, 26, 18, 0);
 

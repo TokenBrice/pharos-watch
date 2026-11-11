@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { McapChart } from "@/components/mcap-chart";
+import { McapChart } from "@/components/chart-primitives/mcap-chart";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 
 type HistoryState = {

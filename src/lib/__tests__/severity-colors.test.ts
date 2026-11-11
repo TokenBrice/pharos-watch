@@ -9,7 +9,7 @@ import {
   pegScoreColor,
 } from "../severity-colors";
 import { getDexDurabilityStyle, getPegScoreTier, QUALITY_TIER_3_CLASSES, resolveScoreTier4, SCORE_TIER_4_CLASSES } from "@shared/lib/classification";
-import { metricTone } from "@/components/depeg-board-model";
+import { metricTone } from "@/components/depeg/depeg-board-model";
 import * as featureFlags from "@/lib/feature-flags";
 
 describe("severity-colors", () => {

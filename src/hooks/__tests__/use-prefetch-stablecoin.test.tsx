@@ -13,8 +13,8 @@ import { useSupplyHistory } from "../use-stablecoins";
 import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 
 vi.mock("@/components/lazy-section", () => ({ LazySection: ({ children }: { children: ReactNode }) => <>{children}</> }));
-vi.mock("@/components/mcap-chart", () => ({ McapChart: () => <div /> }));
-vi.mock("@/components/peg-deviation-chart", () => ({ PegDeviationChart: () => <div /> }));
+vi.mock("@/components/chart-primitives/mcap-chart", () => ({ McapChart: () => <div /> }));
+vi.mock("@/components/chart-primitives/peg-deviation-chart", () => ({ PegDeviationChart: () => <div /> }));
 class ResizeObserverStub { observe() {} disconnect() {} }
 
 function CachedMarketData() {

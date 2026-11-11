@@ -3,8 +3,8 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Link from "next/link";
-import { DonorKeyClaim } from "@/components/donor-key-claim";
-import { clearPendingApiKey, PendingApiKeyRecovery, retainPendingApiKey } from "@/components/pending-api-key-recovery";
+import { DonorKeyClaim } from "@/components/api-access/donor-key-claim";
+import { clearPendingApiKey, PendingApiKeyRecovery, retainPendingApiKey } from "@/components/api-access/pending-api-key-recovery";
 import { DonorKeyClaimError, claimDonorKey } from "@/lib/donor-key-claim-client";
 
 vi.mock("@/lib/donor-key-claim-client", async (importOriginal) => ({

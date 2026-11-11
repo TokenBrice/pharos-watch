@@ -3,7 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
-import { SafetyGradeDistributionBar, type SafetyGradeSupplyMix } from "../safety-grade-distribution-bar";
+import { SafetyGradeDistributionBar, type SafetyGradeSupplyMix } from "../safety-scores/safety-grade-distribution-bar";
 
 const COUNTS = { A: 1, B: 2, C: 0, D: 0, F: 0, NR: 1 };
 

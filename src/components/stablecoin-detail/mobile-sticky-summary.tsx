@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-metrics";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
 import { useIsMobile } from "@/hooks/use-is-mobile";

@@ -16,8 +16,8 @@ vi.mock("@/lib/datasets/public-dataset-current", () => ({
 vi.mock("@/hooks/api-hooks", () => ({
   useHomepageSnapshot: () => ({ data: undefined, dataUpdatedAt: 0, error: null, refetch: vi.fn() }),
 }));
-vi.mock("@/components/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
-vi.mock("@/components/home-market-state-line", () => ({ HomeMarketStateLine: () => null }));
+vi.mock("@/components/homepage/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
+vi.mock("@/components/homepage/home-market-state-line", () => ({ HomeMarketStateLine: () => null }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: vi.fn() }));
 
@@ -29,7 +29,7 @@ describe("HomeAltHero static fallback from a pre-provenance dataset (K-031, ADR-
   it("treats unrecorded chain coverage as legacy and renders the plain headline", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline build")));
     const { getHomepageHeroSnapshot } = await import("@/lib/homepage-static-snapshot");
-    const { HomeAltHero } = await import("@/components/home-alt-hero");
+    const { HomeAltHero } = await import("@/components/homepage/home-alt-hero");
     const snapshot = await getHomepageHeroSnapshot();
     expect(snapshot).toMatchObject({
       supplyObservedCount: CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size,

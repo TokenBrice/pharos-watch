@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
+import { YieldRiskBudgetSlider } from "@/components/yield/yield-risk-budget-slider";
 import type { YieldRiskBudgetStop } from "@/lib/yield-view-model";
 
 

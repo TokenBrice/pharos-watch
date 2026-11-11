@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ComparisonTable } from "@/components/comparison-table";
+import { ComparisonTable } from "@/components/compare/comparison-table";
 import type { StablecoinData } from "@shared/types/supply";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";

@@ -21,11 +21,11 @@ import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { RowSparkline } from "@/components/row-sparkline";
-import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
+import { SafetyScoreTopDriver } from "@/components/safety-scores/safety-score-top-driver";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import {

@@ -17,7 +17,7 @@ import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-mod
 import { formatClaimSubtotal } from "@/lib/dependency-watershed/known";
 
 const ContagionGraph = dynamic(
-  () => import("@/components/contagion-graph-root").then((module) => module.ContagionGraph),
+  () => import("@/components/contagion-graph/contagion-graph-root").then((module) => module.ContagionGraph),
   { ssr: false, loading: () => <div className="min-h-[600px]" role="status">Loading network layout…</div> },
 );
 

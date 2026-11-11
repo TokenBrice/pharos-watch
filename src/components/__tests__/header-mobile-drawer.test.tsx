@@ -25,7 +25,7 @@ vi.mock("@/components/pharos-logo", () => ({
   PharosLogo: () => <span aria-hidden="true">Logo</span>,
 }));
 
-vi.mock("@/components/regime-bar", () => ({
+vi.mock("@/components/psi-beacon/regime-bar", () => ({
   RegimeBarToggle: () => null,
 }));
 

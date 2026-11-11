@@ -1,7 +1,7 @@
 "use client";
 
 import { OpsStatusChip } from "@/components/ops-status-chip";
-import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
+import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
 import type { ApiMeta } from "@/lib/api";
 import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "@/hooks/api-hooks";
 import { CRON_SAFETY_GRADE_HISTORY } from "@/lib/cron-intervals";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";

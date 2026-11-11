@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/hooks/api-hooks", () => ({ useReportCardsV9Table: mocks.useReportCardsV9 }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: mocks.useStablecoins }));
 vi.mock("next/link", async () => createNextLinkMock());
-vi.mock("@/components/report-card-mini-v9", () => ({
+vi.mock("@/components/safety-scores/report-card-mini-v9", () => ({
   ReportCardMiniV9: ({ card }: { card: { id: string } }) => <div data-testid="v9-card">{card.id}</div>,
 }));
 vi.mock("@/components/query-freshness-notices", () => ({
@@ -101,7 +101,7 @@ function makePreview(overrides: Partial<SafetyScoresPreview> = {}): SafetyScores
 
 async function render(ui: Parameters<typeof renderSync>[0]) {
   let result!: ReturnType<typeof renderSync>;
-  await act(async () => { result = renderSync(ui); await import("@/components/report-card-mini-v9"); });
+  await act(async () => { result = renderSync(ui); await import("@/components/safety-scores/report-card-mini-v9"); });
   return result;
 }
 

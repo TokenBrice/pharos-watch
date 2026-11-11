@@ -2,10 +2,10 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { DepegResolverModule } from "@/components/depeg-resolver-module";
-import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
-import { compareResolverUrgency, summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
-import { getDisplayedLivePeakDeviationBps } from "@/components/depeg-resolver-row-card-model";
+import { DepegResolverModule } from "@/components/depeg/depeg-resolver-module";
+import { StablecoinDepegResolverRows } from "@/components/depeg/depeg-resolver-row-card-parts";
+import { compareResolverUrgency, summarizeResolverBook } from "@/components/depeg/depeg-resolver-book-summary";
+import { getDisplayedLivePeakDeviationBps } from "@/components/depeg/depeg-resolver-row-card-model";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrV2ResponseRowSchema,

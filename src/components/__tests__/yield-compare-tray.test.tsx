@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { YieldCompareTray } from "@/components/yield-compare-tray";
+import { YieldCompareTray } from "@/components/yield/yield-compare-tray";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 vi.mock("@/components/stablecoin-logo", () => ({

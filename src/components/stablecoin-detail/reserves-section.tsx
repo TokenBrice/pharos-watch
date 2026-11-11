@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
-import { formatReserveRiskTier, ReserveRiskSwatch } from "@/components/reserve-risk-swatch";
-import { ReserveTreemap } from "@/components/reserve-treemap";
+import { formatReserveRiskTier, ReserveRiskSwatch } from "@/components/reserves/reserve-risk-swatch";
+import { ReserveTreemap } from "@/components/reserves/reserve-treemap";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

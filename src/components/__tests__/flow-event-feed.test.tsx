@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { FlowEventFeed } from "@/components/flow-event-feed";
+import { FlowEventFeed } from "@/components/mint-burn/flow-event-feed";
 import type { MintBurnEvent } from "@shared/types/mint-burn";
 
 const { useMintBurnEventsMock } = vi.hoisted(() => ({

@@ -12,7 +12,7 @@ import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-curre
 import { ApiReferencePanel } from "./api-reference-panel";
 
 // Scrollspy behavior is independent of the server-rendered auth guidance.
-vi.mock("@/components/api-reference-layout", () => ({
+vi.mock("@/components/api-reference/api-reference-layout", () => ({
   ApiReferenceLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 

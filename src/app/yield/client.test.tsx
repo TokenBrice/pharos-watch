@@ -61,14 +61,14 @@ vi.mock("@/hooks/use-watchlist", () => ({
   useWatchlist: () => ({ idSet: new Set<string>() }),
 }));
 
-vi.mock("@/components/yield-scatter-plot", () => ({
+vi.mock("@/components/yield/yield-scatter-plot", () => ({
   YieldScatterPlot: (props: unknown) => {
     scatterPropsMock(props);
     return <div data-testid="yield-scatter-plot" />;
   },
 }));
 
-vi.mock("@/components/yield-leaderboard", () => ({
+vi.mock("@/components/yield/yield-leaderboard", () => ({
   YieldLeaderboard: (props: unknown) => {
     leaderboardPropsMock(props);
     return <div data-testid="yield-leaderboard" />;

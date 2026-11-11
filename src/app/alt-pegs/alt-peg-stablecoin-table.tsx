@@ -19,10 +19,10 @@ import type {
   StablecoinData,
 } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
-import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-table-logic";
+import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-directory/stablecoin-table-logic";
 
 const StablecoinTable = dynamic(
-  () => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable),
+  () => import("@/components/stablecoin-directory/stablecoin-table").then((mod) => mod.StablecoinTable),
   { loading: () => <Skeleton className="h-[720px] w-full rounded-xl" /> },
 );
 

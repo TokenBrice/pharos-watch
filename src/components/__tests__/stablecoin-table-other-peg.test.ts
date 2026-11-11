@@ -16,7 +16,7 @@ vi.mock("@shared/lib/stablecoins/client-registry", () => {
   };
 });
 
-import { buildTrackedIdSet } from "@/components/stablecoin-table-logic";
+import { buildTrackedIdSet } from "@/components/stablecoin-directory/stablecoin-table-logic";
 
 describe("other-peg table filter", () => {
   it("matches only the OTHER peg cohort, not every non-USD/EUR/GOLD peg", () => {

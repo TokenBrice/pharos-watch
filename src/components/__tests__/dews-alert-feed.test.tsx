@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { DEWSAlertFeed } from "@/components/dews-alert-feed";
+import { DEWSAlertFeed } from "@/components/dews/dews-alert-feed";
 import type { StressSignalEntry } from "@shared/types/stress";
 import { makeDews } from "./depeg.test-support";
 

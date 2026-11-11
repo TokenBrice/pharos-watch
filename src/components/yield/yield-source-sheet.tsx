@@ -1,0 +1,447 @@
+"use client";
+
+import { useRef, useState } from "react";
+import Link from "next/link";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
+import { YieldHistoryChart } from "@/components/yield/yield-history-chart";
+import { YieldSourceIdentity } from "@/components/yield/yield-row-metrics";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { formatYieldApyDelta, YIELD_SOURCE_FACT_LABELS } from "@/lib/yield-presentation";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { Badge } from "@/components/ui/badge";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
+import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
+import {
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_CONFIDENCE_STYLES,
+  formatYieldSourceRiskCompact,
+  getYieldSourceDepthDisplay,
+} from "@/lib/yield-source-risk";
+import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
+import { YieldSourceRiskBar } from "@/components/yield/yield-source-risk-bar";
+import { YieldSourceRiskCard } from "@/components/yield/yield-source-risk-card";
+import { YieldFreshnessLabel } from "@/components/yield/yield-freshness-label";
+import { YieldDecisionLedgerCard } from "@/components/yield/yield-decision-ledger-card";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
+import { trackEvent } from "@/lib/analytics";
+import {
+  formatEvidenceCompleteness,
+  YIELD_CALCULATION_MODE_LABELS,
+  YIELD_EVIDENCE_CLASS_LABELS,
+  YIELD_OPPORTUNITY_CLASS_LABELS,
+  YIELD_OPPORTUNITY_EVIDENCE_LABELS,
+  YIELD_SCORE_QUALIFICATION_LABELS,
+} from "@/lib/yield-presentation";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
+import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types/yield";
+import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+
+interface YieldSourceSheetProps {
+  ranking: YieldRanking | null;
+  logo: string | undefined;
+  riskFreeRate: number;
+  medianApy: number | null;
+  benchmarks?: YieldBenchmarkRegistry | null;
+  sourceClock?: YieldSourceDisplayClock | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  loading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
+}
+
+interface YieldSourceSheetBodyProps {
+  ranking: YieldRanking;
+  logo: string | undefined;
+  riskFreeRate: number;
+  medianApy: number | null;
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Parent-owned source clock: the leaderboard schedules this ranking's source crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
+  onOpenChange: (open: boolean) => void;
+  error?: unknown;
+  onRetry?: () => void;
+}
+
+function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmarks, sourceClock, onOpenChange, error, onRetry }: YieldSourceSheetBodyProps) {
+  const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null);
+  const [showAllSheetSources, setShowAllSheetSources] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const compare = useYieldCompareSelection();
+  const alreadyInCompare = compare.has(ranking.id);
+  const canAddToCompare = compare.canAdd;
+
+  const sourceExplorer = buildYieldSourceExplorerModel(ranking, sourceClock);
+  const totalSources = sourceExplorer.allSources.length;
+  const { selectedSource } = sourceExplorer;
+  const activeSource =
+    sourceExplorer.allSources.find((source) => source.sourceKey === selectedSourceKey) ?? selectedSource;
+  const effectiveSourceKey = activeSource.sourceKey;
+  const confidenceTier = ranking.provenance?.confidenceTier ?? null;
+  const confidenceStyle = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] ?? null) : null;
+  const resolvedBenchmark = resolveYieldRowBenchmark(ranking, benchmarks, riskFreeRate);
+  const confidenceLabel = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null) : null;
+  const calculationMode = ranking.provenance?.calculationMode ?? null;
+  const evidenceClass = ranking.provenance?.evidenceClass ?? null;
+  const evidenceCompleteness = ranking.provenance?.evidenceCompleteness ?? null;
+  const scoreQualification = ranking.provenance?.scoreQualification ?? null;
+  const opportunityRisk = ranking.sourceRisk?.opportunityRisk ?? null;
+  const freshness = selectedSource.freshness;
+  const selectedDepthDisplay = getYieldSourceDepthDisplay({
+    depthLens: selectedSource.depthLens,
+    yieldType: selectedSource.yieldType,
+    sourceRole: selectedSource.sourceRole,
+    sourceTvlUsd: selectedSource.sourceTvlUsd,
+  });
+  const deepDive = getYieldWorkbenchLink(ranking.id, activeSource.isChosen ? null : effectiveSourceKey);
+
+  const handleSourceClick = (sourceKey: string) => {
+    setSelectedSourceKey(sourceKey);
+    chartRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  return (
+    <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
+      <TooltipProvider>
+        <SheetHeader>
+          <div className="flex items-center gap-3">
+            <StablecoinLogo src={logo} name={ranking.name} size={32} />
+            <div>
+              <SheetTitle>{ranking.name}</SheetTitle>
+              <SheetDescription>
+                {totalSources} yield source observation{totalSources !== 1 ? "s" : ""}
+              </SheetDescription>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <div className="space-y-4 px-4">
+          <QueryErrorNotice error={error} hasData onRetry={onRetry} />
+          <div className={cn("rounded-xl border px-3 py-2.5", SEVERITY_TONE_CLASS.ok.banner)}>
+            <p className="pharos-label">
+              Chosen yield source
+            </p>
+            {totalSources > 1 ? (
+              <button
+                type="button"
+                onClick={() => handleSourceClick(selectedSource.sourceKey)}
+                aria-pressed={effectiveSourceKey === selectedSource.sourceKey}
+                className="pharos-focus-ring mt-2 rounded-md border border-border/60 px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Show chosen source history
+              </button>
+            ) : null}
+            <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <YieldSourceIdentity
+                  displayLabel={sourceExplorer.selectedSource.displayLabel}
+                  url={sourceExplorer.selectedSource.url}
+                  confidenceStyle={confidenceStyle}
+                  confidenceLabel={confidenceLabel}
+                  sourceChanged={sourceExplorer.sourceSwitch.changed}
+                  onClick={() => trackEvent("yield_row_action", {
+                    action: "provider_opened",
+                    coin_id: ranking.id,
+                    warning_count: ranking.warningSignals.length,
+                  })}
+                />
+                <Badge variant="outline" className={cn("text-xs", YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "")}>
+                  {YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType}
+                </Badge>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span className="font-mono text-lg tabular-nums text-foreground">{formatPercent(ranking.apy30d)}</span>
+                <YieldSourceRiskBar score={ranking.sourceRisk?.sourceRiskScore ?? null} tooltip />
+              </div>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              {selectedSource.sourceTvlUsd !== null && <span>TVL {formatCurrency(selectedSource.sourceTvlUsd)}</span>}
+              <span
+                className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-3xs"
+                title={selectedDepthDisplay.description}
+              >
+                {selectedDepthDisplay.phrase}
+              </span>
+              {freshness && (
+                <YieldFreshnessLabel freshness={freshness} mode="plain-title" />
+              )}
+            </div>
+            {calculationMode && evidenceClass && scoreQualification ? (
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-3xs text-muted-foreground">
+                <span
+                  className={cn(
+                    "rounded-full border px-1.5 py-0.5 font-medium",
+                    scoreQualification === "rated" && SEVERITY_TONE_CLASS.ok.pill,
+                    scoreQualification === "estimated" && SEVERITY_TONE_CLASS.watch.pill,
+                    scoreQualification === "partial" && SEVERITY_TONE_CLASS.sky.pill,
+                    scoreQualification === "NR" && SEVERITY_TONE_CLASS.alert.pill,
+                  )}
+                  title="Whether the displayed score has complete, estimated, partial, or insufficient critical evidence"
+                >
+                  {YIELD_SCORE_QUALIFICATION_LABELS[scoreQualification]}
+                </span>
+                <span title="The evidence origin used to establish this yield observation">
+                  {YIELD_EVIDENCE_CLASS_LABELS[evidenceClass]}
+                </span>
+                <span title="The calculation used to turn source evidence into APY">
+                  {YIELD_CALCULATION_MODE_LABELS[calculationMode]}
+                </span>
+                {evidenceCompleteness != null ? (
+                  <span title="Share of required evidence fields measured for this observation">
+                    {formatEvidenceCompleteness(evidenceCompleteness)}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {opportunityRisk ? (
+              <p
+                className="mt-1.5 text-3xs text-muted-foreground"
+                title="External opportunities are scored at the market level; the underlying stablecoin's report card is one input, not the score"
+              >
+                {opportunityRisk.opportunitySafetyScore != null
+                  ? `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity — safety ${opportunityRisk.opportunitySafetyScore} after a ${opportunityRisk.opportunitySafetyPenalty ?? 0}-point market adjustment to the underlying's ${opportunityRisk.underlyingSafetyScore}`
+                  : `${YIELD_OPPORTUNITY_CLASS_LABELS[opportunityRisk.opportunityClass]} opportunity — not rated: missing ${opportunityRisk.missingCriticalEvidence.map((code) => YIELD_OPPORTUNITY_EVIDENCE_LABELS[code]).join(", ")}`}
+              </p>
+            ) : null}
+            <YieldDecisionLedgerCard ledger={ranking.decisionLedger} variant="inline" className="mt-2" />
+            <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <dt>Current source key:</dt>
+                <dd className="font-mono text-2xs text-foreground">{selectedSource.sourceKey}</dd>
+              </div>
+              {sourceExplorer.sourceSwitch.previousSourceKey ? (
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <dt>Previous source:</dt>
+                  <dd>
+                    <span className="text-foreground">
+                      {sourceExplorer.sourceSwitch.previousSourceDisplayLabel ??
+                        sourceExplorer.sourceSwitch.previousSourceKey}
+                    </span>
+                    <span className="ml-2 font-mono text-2xs text-muted-foreground">
+                      {sourceExplorer.sourceSwitch.previousSourceKey}
+                    </span>
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+
+          <YieldSourceRiskCard
+            sourceLabel={activeSource.displayLabel}
+            sourceRisk={activeSource.sourceRisk}
+            sourceTvlUsd={activeSource.sourceTvlUsd}
+            sourceDepthLens={activeSource.depthLens}
+            yieldType={activeSource.yieldType}
+            sourceRole={activeSource.sourceRole}
+            sourceRiskDrivers={activeSource.sourceRiskDrivers}
+            sourceChanged={activeSource.isChosen ? sourceExplorer.sourceSwitch.changed : false}
+            confidenceTier={activeSource.confidenceTier}
+            freshness={activeSource.freshness}
+            sourceFreshness={activeSource.isChosen ? ranking.provenance?.sourceFreshness : undefined}
+            warningSignals={activeSource.isChosen ? ranking.warningSignals : undefined}
+          />
+
+          {sourceExplorer.retainedAlternates.length > 0 && (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+              <p className="pharos-label">
+                Retained alternates
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {[...sourceExplorer.retainedAlternates]
+                  .sort((a, b) => b.apy30d - a.apy30d)
+                  .slice(0, showAllSheetSources ? undefined : 6)
+                  .map((source) => {
+                    const isSelected = effectiveSourceKey === source.sourceKey;
+                    const delta = source.apy30d - ranking.apy30d;
+                    const confidence = source.confidenceTier
+                      ? (YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null)
+                      : null;
+                    const depthDisplay = getYieldSourceDepthDisplay({
+                      depthLens: source.depthLens,
+                      yieldType: source.yieldType,
+                      sourceRole: source.sourceRole,
+                      sourceTvlUsd: source.sourceTvlUsd,
+                    });
+
+                    return (
+                      <button
+                        key={source.sourceKey}
+                        type="button"
+                        onClick={() => handleSourceClick(source.sourceKey)}
+                        className={cn(
+                          "pharos-focus-ring flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2 text-left transition-colors hover:bg-muted/30",
+                          isSelected && "ring-1 ring-primary/40",
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-sm text-foreground">{source.displayLabel}</span>
+                            <Badge
+                              variant="outline"
+                              className={cn("shrink-0 text-3xs", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
+                            >
+                              {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
+                            </Badge>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-3xs text-muted-foreground">
+                            {confidence ? <span>{confidence}</span> : null}
+                            <span title={depthDisplay.description}>
+                              {depthDisplay.phrase}
+                            </span>
+                            <span className="font-mono tabular-nums">
+                              Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
+                            </span>
+                            {source.rejectionHint ? (
+                              <span title={source.rejectionHint.description}>Reason {source.rejectionHint.label}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 text-xs">
+                          <span className="font-mono tabular-nums text-foreground">{formatPercent(source.apy30d)}</span>
+                          <span
+                            className={cn(
+                              "font-mono tabular-nums text-3xs",
+                              delta >= 0 ? "text-state-positive-solid" : "text-muted-foreground",
+                            )}
+                          >
+                            {formatYieldApyDelta(delta)}
+                          </span>
+                          {source.sourceTvlUsd !== null && (
+                            <span className="text-muted-foreground">{formatCurrency(source.sourceTvlUsd)}</span>
+                          )}
+                          {source.rejectionHint && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-3xs text-muted-foreground">
+                                  {source.rejectionHint.label}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-2xs">
+                                Likely reason {source.rejectionHint.code}: {source.rejectionHint.description}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+              {!showAllSheetSources && sourceExplorer.retainedAlternates.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSheetSources(true)}
+                  className="mt-2 w-full rounded-md border border-border/60 bg-background/55 py-1.5 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
+                >
+                  Show {sourceExplorer.retainedAlternates.length - 6} more
+                </button>
+              )}
+            </div>
+          )}
+
+          <div ref={chartRef} className="space-y-1.5">
+            <p className="text-xs text-muted-foreground">
+              Showing{" "}
+              <span className="font-medium text-foreground">
+                {activeSource.displayLabel}
+              </span>
+            </p>
+            <YieldHistoryChart
+              stablecoinId={ranking.id}
+              benchmarkRate={resolvedBenchmark.rate}
+              benchmarkLabel={resolvedBenchmark.label}
+              benchmarkIsFallback={resolvedBenchmark.isFallback}
+              medianApy={medianApy}
+              compact
+              availableSources={sourceExplorer.historySources}
+              hideSourceSelector
+              externalSourceKey={effectiveSourceKey}
+            />
+          </div>
+        </div>
+
+        <SheetFooter>
+          {!alreadyInCompare && canAddToCompare ? (
+            <button
+              type="button"
+              onClick={() => {
+                compare.toggle(ranking.id);
+                onOpenChange(false);
+              }}
+              className="pharos-focus-ring text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              + Compare with current view
+            </button>
+          ) : null}
+          <Link
+            href={deepDive.href}
+            className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => {
+              trackEvent("yield_row_action", {
+                action: "deep_dive_opened",
+                coin_id: ranking.id,
+                warning_count: ranking.warningSignals.length,
+              });
+              onOpenChange(false);
+            }}
+          >
+            {deepDive.isWorkbench ? "Deep dive yield" : deepDive.label} &rarr;
+          </Link>
+          <Link
+            href={buildStablecoinUrl(ranking.id)}
+            className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => onOpenChange(false)}
+          >
+            View full dossier &rarr;
+          </Link>
+        </SheetFooter>
+      </TooltipProvider>
+    </SheetContent>
+  );
+}
+
+export function YieldSourceSheet({
+  ranking,
+  logo,
+  riskFreeRate,
+  medianApy,
+  benchmarks = null,
+  sourceClock = null,
+  open,
+  onOpenChange,
+  loading = false,
+  error,
+  onRetry,
+}: YieldSourceSheetProps) {
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {ranking ? <YieldSourceSheetBody
+        key={`${ranking.id}:${open ? "open" : "closed"}`}
+        ranking={ranking}
+        logo={logo}
+        riskFreeRate={riskFreeRate}
+        medianApy={medianApy}
+        benchmarks={benchmarks}
+        sourceClock={sourceClock}
+        onOpenChange={onOpenChange}
+        error={error}
+        onRetry={onRetry}
+      /> : (
+        <SheetContent side="right" className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{YIELD_SOURCE_FACT_LABELS.sheetTitle}</SheetTitle>
+            <SheetDescription>{error ? YIELD_SOURCE_FACT_LABELS.loadError : loading ? YIELD_SOURCE_FACT_LABELS.loading : YIELD_SOURCE_FACT_LABELS.unavailable}</SheetDescription>
+          </SheetHeader>
+          <div className="px-4">
+            <QueryErrorNotice error={error} hasData={false} onRetry={onRetry} />
+          </div>
+        </SheetContent>
+      )}
+    </Sheet>
+  );
+}

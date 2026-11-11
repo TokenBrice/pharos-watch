@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
+import { HomeAltRankingsSection } from "@/components/homepage/home-alt-rankings-section";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import { MintBurnCard } from "@/components/home-alt-mini-cards/mint-burn-card";
 import { PegHealthCard } from "@/components/home-alt-mini-cards/peg-health-card";
@@ -80,14 +80,14 @@ vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/stablecoin-static-data")>()),
   ACTIVE_STABLECOIN_ID_SET: new Set(["usdc-circle"]),
 }));
-vi.mock("@/components/homepage-client-view-model", () => ({
+vi.mock("@/components/homepage/homepage-client-view-model", () => ({
   buildHomepageCriticalViewModel: ({ stablecoinsData }: { stablecoinsData?: { peggedAssets?: unknown[] } }) => ({
     filteredRowCount: stablecoinsData ? stablecoinsData.peggedAssets?.length ?? 0 : 0,
     pegScores: new Map(),
   }),
   buildHomepageOptionalViewModel: () => ({ reportCardMap: {} }),
 }));
-vi.mock("@/components/peg-distribution-grid", () => ({ PegBrowseStrip: () => <div /> }));
+vi.mock("@/components/chart-primitives/peg-distribution-grid", () => ({ PegBrowseStrip: () => <div /> }));
 
 const retry = vi.fn();
 const UPDATED_AT = 1_700_000_000_000;

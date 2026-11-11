@@ -435,7 +435,7 @@ Trigger history keeps hit, missed, expired, pending and unavailable separate. Di
 
 ### Detail pages
 
-`src/app/digest/[date]/page.tsx` statically generates `data/digests.json` entries; `src/components/digest-snapshot.tsx` reads the matching snapshot. Daily and `YYYY-MM-DD-weekly` slugs select independent row types, so same-day editions cannot shadow one another.
+`src/app/digest/[date]/page.tsx` statically generates `data/digests.json` entries; `src/components/digest/digest-snapshot.tsx` reads the matching snapshot. Daily and `YYYY-MM-DD-weekly` slugs select independent row types, so same-day editions cannot shadow one another.
 
 Render every published editorial paragraph and only captured, admitted intelligence/context. The stored map uses immutable `imageUrl`/`manifest.date`, never latest, with a validated deterministic tally; missing/failed posters or unusable snapshot context show unavailable states, not invented figures or silent disappearance.
 
