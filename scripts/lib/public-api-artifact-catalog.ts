@@ -1,4 +1,5 @@
 import { type EndpointKey } from "@shared/lib/api-endpoints/definitions";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { PEG_COVERAGE_COMPOSITE_MIN } from "@shared/lib/chains/health";
 import { definePublicArtifact, type PublicArtifactInput } from "./public-api-artifact-catalog-builders";
@@ -155,15 +156,23 @@ export const DAYS_PARAM = {
 export const DEX_LIQUIDITY_HISTORY_DAYS_PARAM = {
   name: "days",
   in: "query",
-  schema: { type: "integer", minimum: 1, maximum: 365 },
-  description: "Historical lookback window in days. Defaults to 90.",
+  schema: {
+    type: "integer",
+    minimum: STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.minDays,
+    maximum: STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.maxDays,
+  },
+  description: `Historical lookback window in days. Defaults to ${STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.defaultDays}.`,
 } as const satisfies PublicApiArtifactParameter;
 
 export const SUPPLY_HISTORY_DAYS_PARAM = {
   name: "days",
   in: "query",
-  schema: { type: "integer", minimum: 1, maximum: 5000 },
-  description: "Historical lookback window in days. Defaults to 365 when range is absent. Mutually exclusive with range=all.",
+  schema: {
+    type: "integer",
+    minimum: STABLECOIN_HISTORY_QUERY_CONTRACTS.supply.minDays,
+    maximum: STABLECOIN_HISTORY_QUERY_CONTRACTS.supply.maxDays,
+  },
+  description: `Historical lookback window in days. Defaults to ${STABLECOIN_HISTORY_QUERY_CONTRACTS.supply.defaultDays} when range is absent. Mutually exclusive with range=all.`,
 } as const satisfies PublicApiArtifactParameter;
 
 export const SUPPLY_HISTORY_RANGE_PARAM = {
@@ -183,8 +192,23 @@ export const NON_USD_SHARE_DAYS_PARAM = {
 export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {
   name: "days",
   in: "query",
-  schema: { type: "integer", minimum: 1, maximum: 3650 },
-  description: "Historical lookback window in days. Defaults to 365.",
+  schema: {
+    type: "integer",
+    minimum: STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore.minDays,
+    maximum: STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore.maxDays,
+  },
+  description: `Historical lookback window in days. Defaults to ${STABLECOIN_HISTORY_QUERY_CONTRACTS.safetyScore.defaultDays}.`,
+} as const satisfies PublicApiArtifactParameter;
+
+const YIELD_HISTORY_DAYS_PARAM = {
+  name: "days",
+  in: "query",
+  schema: {
+    type: "integer",
+    minimum: STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.minDays,
+    maximum: STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.maxDays,
+  },
+  description: `Historical lookback window in days. Defaults to ${STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.defaultDays}.`,
 } as const satisfies PublicApiArtifactParameter;
 
 export const YIELD_HISTORY_MODE_PARAM = {
@@ -772,7 +796,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     responseSchema: "YieldHistoryResponse",
     parameters: [
       REQUIRED_STABLECOIN_QUERY_PARAM,
-      DEX_LIQUIDITY_HISTORY_DAYS_PARAM,
+      YIELD_HISTORY_DAYS_PARAM,
       YIELD_HISTORY_MODE_PARAM,
       {
         name: "sourceKey",
@@ -786,7 +810,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         folder: "Historical data",
         order: 2,
         name: "Yield history - best source",
-        description: "Historical best-source yield observations for a required stablecoin. `days` accepts 1-365; `mode=best` returns rows selected as best source at publication time.",
+        description: `Historical best-source yield observations for a required stablecoin. \`days\` accepts ${STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.minDays}-${STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.maxDays}; \`mode=best\` returns rows selected as best source at publication time.`,
         query: { stablecoin: "{{stablecoinId}}", days: "{{days}}", mode: "best" },
       },
       {
@@ -828,7 +852,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "supply-history",
     referenceOrder: 18,
     summary: "Supply history",
-    description: "Historical supply series for a stablecoin. Bounded days defaults to 365; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved. Each row carries nullable supplyProvenance (v6.59): null means chain coverage was not recorded, never complete.",
+    description: `Historical supply series for a stablecoin. Bounded days defaults to ${STABLECOIN_HISTORY_QUERY_CONTRACTS.supply.defaultDays}; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved. Each row carries nullable supplyProvenance (v6.59): null means chain coverage was not recorded, never complete.`,
     tags: ["History"],
     responseSchema: "SupplyHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM, SUPPLY_HISTORY_RANGE_PARAM],
