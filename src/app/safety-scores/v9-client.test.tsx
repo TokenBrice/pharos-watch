@@ -105,6 +105,9 @@ async function render(ui: Parameters<typeof renderSync>[0]) {
   return result;
 }
 
+/** The fixture expired on 2026-10-30: hold the viewer clock inside its lifetime, or the post-mount clock tick races the assertion. */
+const holdPreviewClock = () => vi.useFakeTimers({ toFake: ["Date"], now: (PREVIEW_PUBLISHED_AT_SEC + 600) * 1000 });
+
 function expectPreviewFacts() {
   expect(screen.getAllByText("Grades as of 2026-10-27")).toHaveLength(1);
   expect(screen.getByText("Top 2 of 2 rated active stablecoins by Safety Score")).toBeTruthy();
@@ -321,6 +324,7 @@ describe("ReportCardsV9Client", () => {
   });
 
   it("server-renders and hydrates the dated preview while the native query is pending", async () => {
+    holdPreviewClock();
     mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: true });
     mocks.useStablecoins.mockReturnValue(query(undefined));
     const preview = makePreview();
@@ -335,6 +339,7 @@ describe("ReportCardsV9Client", () => {
   });
 
   it("retains the preview and its links through an initial API failure", async () => {
+    holdPreviewClock();
     mocks.useReportCardsV9.mockReturnValue({
       ...query(undefined),
       isLoading: false,
@@ -389,6 +394,7 @@ describe("ReportCardsV9Client", () => {
   });
 
   it("keeps the dated preview when the live publication is older, and lets a changed methodology win", async () => {
+    holdPreviewClock();
     mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
       updatedAt: PREVIEW_PUBLISHED_AT_SEC - 600,
       cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
