@@ -15,10 +15,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGO_OUTPUT_DIR = path.join(__dirname, "..", "..", "data");
 const LOGO_OUTPUT_PATH = path.join(LOGO_OUTPUT_DIR, "logos.json");
 
-const EXTRA_GECKO_IDS: Record<string, string> = {
-  "tether-gold": "xaut-tether",
-  "pax-gold": "paxg-paxos",
-};
+// Default coverage is DefiLlama-listed canonical identities; these reviewed
+// identities retain independent logo coverage, in the existing request order.
+const INDEPENDENT_LOGO_COVERAGE = ["xaut-tether", "paxg-paxos"] as const;
 
 interface StablecoinLogoSeed {
   gecko_id?: string;
@@ -49,8 +48,9 @@ async function fetchLogos(): Promise<void> {
       geckoToCanonicalId[coin.geckoId] = coin.id;
     }
   }
-  for (const [geckoId, canonicalId] of Object.entries(EXTRA_GECKO_IDS)) {
-    geckoToCanonicalId[geckoId] = canonicalId;
+  for (const canonicalId of INDEPENDENT_LOGO_COVERAGE) {
+    const coin = stablecoins.find((entry) => entry.id === canonicalId);
+    if (coin?.geckoId) geckoToCanonicalId[coin.geckoId] = coin.id;
   }
 
   const geckoIds = Object.keys(geckoToCanonicalId);

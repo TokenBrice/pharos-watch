@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS, CHAIN_CONTRACT_TABLE_PILOTS } from "../../src/lib/presentation-pilots.mjs";
 import { register as registerCommonJs } from "tsx/cjs/api";
 import { register as registerEsm } from "tsx/esm/api";
 import { availableParallelism } from "node:os";
@@ -975,14 +976,6 @@ const UNRESOLVED_GRADE_CLAIM_PATTERN = /\bN\/A (?:overall grade|report card)\b/;
 const LOADING_DOSSIER_TEXT = "Loading research dossier";
 // The server-rendered static profile (StablecoinDetailSeoContent), outside the dossier's Suspense boundary.
 const STATIC_PROFILE_MARKER = 'id="stablecoin-static-profile-title"';
-// C1 pilot: profiles whose retained-ledger History preview must be in the export.
-const HISTORY_PREVIEW_PILOT_IDS = new Set([
-  "usdt-tether",
-  "usdc-circle",
-  "tusd-trueusd",
-  "dai-makerdao",
-  "fdusd-first-digital",
-]);
 const HISTORY_PREVIEW_CAPTION_PATTERN = /Latest [\d,]+ of [\d,]+ archived incidents · as of \d{4}-\d{2}-\d{2} UTC\. Recorded history; coverage may be incomplete\./;
 const STABLECOIN_CATALOG_PATH = path.resolve("shared/data/stablecoins/coins.generated.json");
 let navTokenProfileIdsCache;
@@ -1123,7 +1116,7 @@ function validateStablecoinProfileHistoryPreview(route, html, errors) {
   if (!hasHistoryShell) return;
   const previewCount = (stripped.match(/data-testid="depeg-history-preview"/g) ?? []).length;
   const anchorCount = (stripped.match(/id=["']depeg-history["']/g) ?? []).length;
-  const isPilot = HISTORY_PREVIEW_PILOT_IDS.has(profileId);
+  const isPilot = STABLECOIN_DETAIL_HISTORY_PILOT_IDS.has(profileId);
   const isNav = getNavTokenProfileIds().has(profileId);
 
   if (isNav) {
@@ -1174,11 +1167,6 @@ function validateStablecoinProfileRender(pageRecords, errors) {
 // the registry-iterating Vitest suites; this guard proves the built HTML keeps
 // their text and destinations wired, without a second hand-authored inventory.
 const CONTRACT_FOLD_PROFILE_ROUTES = ["/stablecoin/usdt-tether/", "/stablecoin/usdc-circle/"];
-const CHAIN_CONTRACT_TABLE_PILOTS = [
-  { chain: "solana", chainName: "Solana" },
-  { chain: "base", chainName: "Base" },
-  { chain: "tron", chainName: "Tron" },
-];
 const CHAIN_CONTRACT_TABLE_ROW_LIMIT = 20;
 const COIN_DATA_DIR = path.resolve("shared/data/stablecoins/coins");
 /** C6 hub rows deep-link to the profile's Contracts module, never a per-row id. */

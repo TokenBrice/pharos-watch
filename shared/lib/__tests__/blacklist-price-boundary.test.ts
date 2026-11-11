@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeBlacklistAmountUsdAtEvent,
   getBlacklistPriceAssetId,
+  getBlacklistNativeFractionDigits,
   isBlacklistStablecoin,
   isGoldBlacklistStablecoin,
 } from "../blacklist";
@@ -41,8 +42,12 @@ describe("blacklist amount valuation", () => {
   });
 
   it("keeps the gold-only classification narrow", () => {
-    expect(isGoldBlacklistStablecoin("PAXG")).toBe(true);
-    expect(isGoldBlacklistStablecoin("A7A5")).toBe(false);
+    for (const symbol of BLACKLIST_STABLECOINS) {
+      const gold = ["PAXG", "XAUT", "XAUM"].includes(symbol);
+      expect(isGoldBlacklistStablecoin(symbol), symbol).toBe(gold);
+      expect(getBlacklistNativeFractionDigits(symbol), symbol).toBe(gold ? 4 : 2);
+    }
+    expect(isGoldBlacklistStablecoin("NOT-A-COIN")).toBe(false);
   });
 
   it("recognizes tracked blacklist stablecoins and rejects others", () => {

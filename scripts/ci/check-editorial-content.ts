@@ -2,13 +2,12 @@ import { mechanismExplainerIssues } from "../../src/lib/mechanism-explainers/edi
 import { existsSync, globSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
-import { createMethodologyVersion } from "@shared/lib/methodology-versions/base";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
 import { MINT_AUTHORITY_METHODOLOGY_PATH, MINT_AUTHORITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { EDITORIAL_POLICY, scanEditorialText } from "@shared/lib/editorial-style";
 import { PUBLIC_ROUTE_PATHS } from "../../src/lib/public-route-inventory";
 import { CaseStudyContentSchema, DependencyExposureContentSchema, DependencyMapContentSchema, MethodologyContentSchema, WeeklyContentSchema } from "@shared/types/editorial-content";
-import { editorialReferenceIssues } from "../lib/editorial-content";
+import { editorialReferenceIssues, validateMethodologyVersion } from "../lib/editorial-content";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { collectSourceFiles } from "../lib/source-files.mts";
 
@@ -171,15 +170,15 @@ export function checkEditorialContent(repoRoot = process.cwd()): string[] {
     if (!parsed.success) issues.push(...parsed.error.issues.map((issue) => `${path}:${issue.path.join(".")}: ${issue.message}`));
     else issues.push(...editorialReferenceIssues(parsed.data, references).map((issue) => `${path}:${issue}`));
   }
-  // Keep the same version factory as runtime consumers; JSON is not an ADR-3 bypass.
+  // Validate ADR-3 declarations here even when generation/checks run in production mode.
   for (const lane of METHODOLOGY_CHANGELOG_REGISTRY) {
-    try { createMethodologyVersion({ currentVersion: lane.currentLabel.slice(1), changelogPath: lane.publicPath, changelog: lane.entries }); }
+    try { validateMethodologyVersion({ currentVersion: lane.currentLabel.slice(1), changelogPath: lane.publicPath, changelog: lane.entries }); }
     catch (error) { issues.push(`${lane.publicPath}: ${String(error)}`); }
   }
   issues.push(...mechanismExplainerIssues(repoRoot));
   const mint = validData.get("shared/data/methodology-changelogs/mint-authority/v1.json");
   if (mint) {
-    try { createMethodologyVersion({ currentVersion: MINT_AUTHORITY_METHODOLOGY_VERSION, changelogPath: MINT_AUTHORITY_METHODOLOGY_PATH, changelog: MethodologyContentSchema.parse(mint) }); }
+    try { validateMethodologyVersion({ currentVersion: MINT_AUTHORITY_METHODOLOGY_VERSION, changelogPath: MINT_AUTHORITY_METHODOLOGY_PATH, changelog: MethodologyContentSchema.parse(mint) }); }
     catch (error) { issues.push(`mint-authority: ${String(error)}`); }
   }
   try {

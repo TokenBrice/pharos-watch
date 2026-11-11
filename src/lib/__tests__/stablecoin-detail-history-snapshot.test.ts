@@ -10,7 +10,7 @@ import {
   readAdmittedDepegLedger,
   isEligibleForStablecoinDetailHistory,
 } from "../stablecoin-detail-history-snapshot";
-import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "../stablecoin-detail-history-rollout";
+import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "../presentation-pilots.mjs";
 import {
   depegLedgerCaptureId,
   DEPEG_LEDGER_CAPTURE_RELATIVE_PATH,

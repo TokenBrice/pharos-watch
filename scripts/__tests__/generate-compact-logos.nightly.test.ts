@@ -233,15 +233,24 @@ it("refreshes logos only from an existing valid seed or an absent file", async (
       readFileSync: () => { if (seed instanceof Error) throw seed; return seed; },
     };
     const request = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ peggedAssets: [{ gecko_id: "fixture-gecko" }] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => [{ id: "fixture-gecko", image: "https://example.test/large/coin.png" }] });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ peggedAssets: [{ gecko_id: "fixture-gecko" }, { gecko_id: "canonical-paxg" }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => [
+        { id: "fixture-gecko", image: "https://example.test/large/coin.png" },
+        { id: "canonical-paxg", image: "https://example.test/large/paxg.png" },
+        { id: "canonical-xaut", image: "https://example.test/large/xaut.png" },
+      ] });
     const result = runInNewContext(script, {
       exports: {}, console: { log: () => {}, error: () => {} }, fetch: request,
       require: (name: string) => {
         if (name === "node:fs") return io;
         if (name === "node:path") return path;
         if (name === "node:url") return { fileURLToPath: () => "/fixture/scripts/maintenance/fetch-logos.ts" };
-        if (name === "@shared/data/stablecoins/coins.generated.json") return [{ id: "fixture", geckoId: "fixture-gecko" }];
+        if (name === "@shared/data/stablecoins/coins.generated.json") return [
+          { id: "fixture", geckoId: "fixture-gecko" },
+          { id: "xaut-tether", geckoId: "canonical-xaut" },
+          { id: "paxg-paxos", geckoId: "canonical-paxg" },
+          { id: "unlisted", geckoId: "unlisted-gecko" },
+        ];
         throw new Error(`Unexpected import ${name}`);
       },
     }) as Promise<void>;
@@ -250,8 +259,18 @@ it("refreshes logos only from an existing valid seed or an absent file", async (
       expect(write).not.toHaveBeenCalled();
     } else {
       await result;
-      const expected = { fixture: "https://example.test/small/coin.png", ...(seed === missing ? {} : { manual: "/logos/manual.svg" }) };
+      const expected = {
+        fixture: "https://example.test/small/coin.png",
+        "paxg-paxos": "https://example.test/small/paxg.png",
+        "xaut-tether": "https://example.test/small/xaut.png",
+        ...(seed === missing ? {} : { manual: "/logos/manual.svg" }),
+      };
       expect(write).toHaveBeenCalledWith("/fixture/data/logos.json", JSON.stringify(expected, null, 2));
     }
+    // The listed cohort keeps registry order; independent coverage uses the
+    // canonical CoinGecko identity and never reorders an already-listed asset.
+    expect(request.mock.calls[1]?.[0]).toBe(
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=fixture-gecko,canonical-paxg,canonical-xaut&per_page=250&page=1&sparkline=false",
+    );
   }
 });

@@ -15,11 +15,6 @@ interface VersionWindow {
   effectiveAt: number;
 }
 
-function shouldRunDevelopmentAssertions(): boolean {
-  const runtimeProcess = typeof process !== "undefined" ? process : undefined;
-  return runtimeProcess != null && runtimeProcess.env?.NODE_ENV !== "production";
-}
-
 export interface MethodologyVersionConfig {
   currentVersion: string;
   changelogPath: string;
@@ -94,20 +89,6 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
     }
   }
 
-  // Drift guard: the hand-maintained currentVersion must match the latest
-  // changelog entry. Without this, adding a changelog entry but forgetting to
-  // bump currentVersion silently mismatches the displayed label vs. what
-  // getVersionAt() returns as latest. Dev/test only — never throws in prod.
-  if (shouldRunDevelopmentAssertions()) {
-    const latest = sortedChangelog[0]?.version;
-    if (latest && latest !== currentVersion) {
-      throw new Error(
-        `Methodology version drift for ${changelogPath}: currentVersion="${currentVersion}" ` +
-          `but latest changelog entry is "${latest}". Update currentVersion to match.`,
-      );
-    }
-  }
-
   const windows: VersionWindow[] = sortedChangelog
     .map((entry) => ({ version: entry.version, effectiveAt: entry.effectiveAt }))
     .sort((a, b) => {
@@ -115,31 +96,6 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
       if (timeDiff !== 0) return timeDiff;
       return compareMethodologyVersions(a.version, b.version);
     });
-
-  // A later activation may keep the same version (multiple editorial entries),
-  // but it must never resolve to an older version. Without this invariant,
-  // future-dated or misordered entries can silently roll runtime consumers back.
-  if (shouldRunDevelopmentAssertions()) {
-    let highestActivatedVersion = windows[0]?.version;
-    for (const window of windows.slice(1)) {
-      if (
-        highestActivatedVersion &&
-        compareMethodologyVersions(window.version, highestActivatedVersion) < 0
-      ) {
-        throw new Error(
-          `Methodology activation chronology drift for ${changelogPath}: ` +
-            `v${window.version} at ${window.effectiveAt} follows newer v${highestActivatedVersion}. ` +
-            "Fix effectiveAt so activated versions never regress.",
-        );
-      }
-      if (
-        !highestActivatedVersion ||
-        compareMethodologyVersions(window.version, highestActivatedVersion) > 0
-      ) {
-        highestActivatedVersion = window.version;
-      }
-    }
-  }
 
   function getVersionAt(unixSeconds: number): string {
     if (!Number.isFinite(unixSeconds)) return currentVersion;

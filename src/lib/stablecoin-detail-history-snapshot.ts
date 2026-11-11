@@ -4,7 +4,7 @@ import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
-import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "@/lib/stablecoin-detail-history-rollout";
+import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "@/lib/presentation-pilots.mjs";
 import {
   readDepegLedgerCapture,
   type DepegLedgerCapture,

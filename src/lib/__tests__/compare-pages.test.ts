@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { COMPARISON_EVIDENCE_PILOT_SLUGS } from "@/lib/presentation-pilots.mjs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import {
@@ -42,7 +43,6 @@ mockGetCurrentRedemptionConfig.mockImplementation(
 );
 
 const {
-  COMPARISON_EVIDENCE_PILOT_SLUGS,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
   buildComparisonAtAGlanceRows,

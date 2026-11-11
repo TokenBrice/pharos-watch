@@ -1,5 +1,5 @@
 import { formatCurrency } from "@shared/lib/format";
-import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
+import { getBlacklistNativeFractionDigits } from "@shared/lib/blacklist";
 import type { BlacklistEvent } from "@shared/types";
 
 const AMOUNT_SOURCE_LABELS: Record<string, string> = {
@@ -18,14 +18,10 @@ const AMOUNT_STATUS_LABELS: Record<string, string> = {
   permanently_unavailable: "unavailable",
 };
 
-function getBlacklistNativeFractionDigits(event: BlacklistEvent): 2 | 4 {
-  return isGoldBlacklistStablecoin(event.stablecoin) ? 4 : 2;
-}
-
 function formatBlacklistNativeAmount(event: BlacklistEvent): string {
   const amountNative = event.amountNative;
   if (amountNative == null) return "";
-  const fractionDigits = getBlacklistNativeFractionDigits(event);
+  const fractionDigits = getBlacklistNativeFractionDigits(event.stablecoin);
   if (amountNative !== 0 && Math.abs(amountNative) < 10 ** -fractionDigits) {
     return amountNative.toLocaleString(undefined, { maximumSignificantDigits: 3 });
   }

@@ -1,3 +1,46 @@
+import {
+  compareMethodologyVersions,
+  createMethodologyVersion,
+  type MethodologyVersionConfig,
+} from "@shared/lib/methodology-versions/base";
+
+/** Validate declarations during generation/checks, independent of the runtime mode. */
+export function validateMethodologyVersion(config: MethodologyVersionConfig): void {
+  const { currentVersion, changelogPath } = config;
+  const { changelog } = createMethodologyVersion(config);
+  const latest = changelog[0]?.version;
+  if (latest && latest !== currentVersion) {
+    throw new Error(
+      `Methodology version drift for ${changelogPath}: currentVersion="${currentVersion}" ` +
+        `but latest changelog entry is "${latest}". Update currentVersion to match.`,
+    );
+  }
+
+  const windows = [...changelog].sort((a, b) => {
+    const timeDiff = a.effectiveAt - b.effectiveAt;
+    return timeDiff !== 0 ? timeDiff : compareMethodologyVersions(a.version, b.version);
+  });
+  let highestActivatedVersion = windows[0]?.version;
+  for (const window of windows.slice(1)) {
+    if (
+      highestActivatedVersion &&
+      compareMethodologyVersions(window.version, highestActivatedVersion) < 0
+    ) {
+      throw new Error(
+        `Methodology activation chronology drift for ${changelogPath}: ` +
+          `v${window.version} at ${window.effectiveAt} follows newer v${highestActivatedVersion}. ` +
+          "Fix effectiveAt so activated versions never regress.",
+      );
+    }
+    if (
+      !highestActivatedVersion ||
+      compareMethodologyVersions(window.version, highestActivatedVersion) > 0
+    ) {
+      highestActivatedVersion = window.version;
+    }
+  }
+}
+
 export interface EditorialReferences {
   routes: ReadonlySet<string>;
   coinIds: ReadonlySet<string>;

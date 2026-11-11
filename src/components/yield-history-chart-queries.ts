@@ -1,25 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import { useYieldHistory } from "@/hooks/api-hooks";
+import { useCallback, useMemo } from "react";
+import { useQueries, type UseQueryResult } from "@tanstack/react-query";
+import { asMetaQueryOptions, createRegisteredApiPollingQueryOptions, useYieldHistory } from "@/hooks/api-hooks";
+import { unwrapApiQueryWithMetaResult } from "@/hooks/use-api-query";
+import type { ApiMeta } from "@/lib/api";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { toTimestampMs } from "@/lib/time";
+import type { YieldHistoryResponse } from "@shared/types";
 
-function useYieldHistoryOverlaySource(stablecoinId: string, days: number, sourceKeys: string[], index: number) {
-  const sourceKey = sourceKeys[index] ?? null;
-  const query = useYieldHistory(stablecoinId, {
-    days, mode: "source", sourceKey, enabled: sourceKeys.length > index,
-  });
-  const series = useMemo(() => {
-    const values = new Map<number, number>();
-    for (const point of query.data?.history ?? []) {
-      const date = toTimestampMs(point.date);
-      if (Number.isFinite(date)) values.set(date, point.apy);
-    }
-    return values;
-  }, [query.data]);
-  return { sourceKey, query, series, dataKey: `apy_overlay_${index}`, color: CHART_PALETTE[index + 3] };
-}
+const OVERLAY_CAPACITY = 7;
 
 export function useYieldHistoryChartQueries(
   stablecoinId: string,
@@ -28,7 +19,7 @@ export function useYieldHistoryChartQueries(
   externalSourceKeys?: string[],
 ) {
   const primarySourceKey = externalSourceKeys?.[0] ?? selectedSourceKey;
-  const additionalOverlayKeys = externalSourceKeys?.slice(1) ?? [];
+  const additionalOverlayKeys = useMemo(() => externalSourceKeys?.slice(1) ?? [], [externalSourceKeys]);
 
   const historyQuery = useYieldHistory(stablecoinId, {
     days,
@@ -37,16 +28,33 @@ export function useYieldHistoryChartQueries(
   });
 
   // Keep every query slot mounted, including disabled slots; their count owns capacity.
-  const overlaySlots = [
-    useYieldHistoryOverlaySource(stablecoinId, days, additionalOverlayKeys, 0),
-    useYieldHistoryOverlaySource(stablecoinId, days, additionalOverlayKeys, 1),
-    useYieldHistoryOverlaySource(stablecoinId, days, additionalOverlayKeys, 2),
-    useYieldHistoryOverlaySource(stablecoinId, days, additionalOverlayKeys, 3),
-    useYieldHistoryOverlaySource(stablecoinId, days, additionalOverlayKeys, 4),
-    useYieldHistoryOverlaySource(stablecoinId, days, additionalOverlayKeys, 5),
-    useYieldHistoryOverlaySource(stablecoinId, days, additionalOverlayKeys, 6),
-  ];
-  const overlaySources = overlaySlots.slice(0, additionalOverlayKeys.length);
+  const overlaySlots = useQueries({
+    queries: Array.from({ length: OVERLAY_CAPACITY }, (_, index) => asMetaQueryOptions(
+      createRegisteredApiPollingQueryOptions(
+        FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory(stablecoinId, days, "source", additionalOverlayKeys[index] ?? null),
+        { enabled: additionalOverlayKeys.length > index },
+      ),
+    )),
+    combine: useCallback((queries: UseQueryResult<{ data: YieldHistoryResponse; meta: ApiMeta | null }>[]) => queries.map((result, index) => {
+      const query = unwrapApiQueryWithMetaResult(result);
+      const series = new Map<number, number>();
+      for (const point of query.data?.history ?? []) {
+        const date = toTimestampMs(point.date);
+        if (Number.isFinite(date)) series.set(date, point.apy);
+      }
+      return {
+        sourceKey: additionalOverlayKeys[index] ?? null,
+        query,
+        series,
+        dataKey: `apy_overlay_${index}`,
+        color: CHART_PALETTE[index + 3],
+      };
+    }), [additionalOverlayKeys]),
+  });
+  const overlaySources = useMemo(
+    () => overlaySlots.slice(0, additionalOverlayKeys.length),
+    [overlaySlots, additionalOverlayKeys.length],
+  );
   const overlayQueries = overlaySources.map((source) => source.query);
   const omittedOverlayKeys = externalSourceKeys?.slice(overlaySlots.length + 1) ?? [];
 
