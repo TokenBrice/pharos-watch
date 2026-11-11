@@ -52,7 +52,7 @@ import { formatRegisterDeathDate } from "./cemetery-register-model";
 import { useCemeterySelection, type CemeterySelectionSource } from "./cemetery-selection-context";
 import { PlotMapPortraitSlot } from "./plot-map-portrait-slot";
 import { PlotMapRecordCard } from "./plot-map-record-card";
-import { PlotMapScene, desktopLayoutStyle, type PlotDesktopLayout, type PlotDim, type PlotSceneState, type PlotMapSceneHandle } from "./plot-map-scene";
+import { PlotMapScene, createPlotMapSceneHandle, desktopLayoutStyle, type PlotDesktopLayout, type PlotDim, type PlotSceneState, type PlotMapSceneHandle } from "./plot-map-scene";
 import { PLOT_FLOWER_MAX, plotCauseClass } from "./plot-map-shapes";
 import { usePlotLayout } from "./use-plot-layout";
 import styles from "./plot-map.module.css";
@@ -159,6 +159,16 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
 
   const rootRef = useRef<HTMLElement>(null);
   const sceneRef = useRef<PlotMapSceneHandle>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const gravesRef = useRef(new Map<string, Pick<SVGElement, "focus">>());
+  const registerSceneStage = useCallback((stage: HTMLDivElement | null) => {
+    stageRef.current = stage;
+    sceneRef.current = stage ? createPlotMapSceneHandle(() => stageRef.current, gravesRef.current) : null;
+  }, []);
+  const registerSceneGrave = useCallback((id: string, element: Pick<SVGElement, "focus"> | null) => {
+    if (element) gravesRef.current.set(id, element);
+    else gravesRef.current.delete(id);
+  }, []);
   const tagRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLDivElement>(null);
   const connectorRef = useRef<HTMLSpanElement>(null);
@@ -752,7 +762,8 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
         Skip the cemetery map
       </a>
       <PlotMapScene
-        controllerRef={sceneRef}
+        stageRef={registerSceneStage}
+        registerGrave={registerSceneGrave}
         map={map}
         layout={layout}
         atlas={atlas}
