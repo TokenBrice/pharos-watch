@@ -1,4 +1,4 @@
-import { mintBurnSupplyProofAcceptedSql } from "../mint-burn-supply-proofs";
+import { mintBurnSupplyProofAcceptedSql } from "./mint-burn-supply-proofs";
 
 /**
  * Event aggregates for one hourly bucket, shared by every materializer (sync

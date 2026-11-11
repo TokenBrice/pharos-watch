@@ -19,8 +19,8 @@ vi.mock("../lib/db-cache", async (importOriginal) => {
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { handleTriggerDigest } from "../api/admin-actions";
-import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../lib/digest-style-gate";
-import { DIGEST_LLM_PROFILE_CACHE_KEYS } from "../lib/digest-llm-profile";
+import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../lib/digest/digest-style-gate";
+import { DIGEST_LLM_PROFILE_CACHE_KEYS } from "../lib/digest/digest-llm-profile";
 
 function makeRequest(body?: string): Request {
   return new Request("https://ops-api.pharos.watch/api/trigger-digest", {

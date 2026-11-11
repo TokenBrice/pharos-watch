@@ -1,6 +1,6 @@
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import { buildSupplySnapshotCoverageExpectation } from "../../lib/supply-snapshot-completion";
-import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
+import { buildSupplySnapshotCoverageExpectation } from "../../lib/market-supply/supply-snapshot-completion";
+import type { StablecoinPublicationWaiver } from "../../lib/market-supply/stablecoin-publication-coverage";
 
 export type { MockD1Database, MockTableConfig };
 

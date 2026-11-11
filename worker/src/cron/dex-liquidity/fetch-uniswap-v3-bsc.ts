@@ -1,7 +1,7 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { DIRECT_API_MAX_POOL_TVL_USD, DIRECT_API_POOL_MIN_TVL_USD, makeDexApiFetchResult, type DexApiFetchResult } from "../../lib/dex-api-common";
+import { DIRECT_API_MAX_POOL_TVL_USD, DIRECT_API_POOL_MIN_TVL_USD, makeDexApiFetchResult, type DexApiFetchResult } from "../../lib/dex-liquidity/dex-api-common";
 import { loadStagedPoolRecoveryRows } from "./staged-pool-recovery";
 import { captureQuoterV2Pools } from "./quoter-v2-pool-capture";
 

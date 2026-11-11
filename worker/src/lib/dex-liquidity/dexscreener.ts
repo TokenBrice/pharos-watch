@@ -1,0 +1,345 @@
+/**
+ * DexScreener token pools API wrapper.
+ * Used as a universal fallback for pool discovery on chains not covered
+ * by the main CG/GT/Curve/UniV3 pipeline.
+ */
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { fetchWithRetry } from "../fetch-retry";
+import { DS_CHAIN_MAP } from "@shared/lib/chains";
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
+import { RATE_LIMITS } from "../rate-limit";
+import { sleepWithSignal } from "../abort";
+import { USER_AGENT } from "../constants";
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { readResponseTextBoundedWithSignal, readResponseTextWithinLimitWithSignal } from "../response-body";
+
+
+const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
+const DS_TOKEN_PAIRS_API = "https://api.dexscreener.com/token-pairs/v1";
+/**
+ * Hard per-response byte cap for token-pair payloads. A token's pair list is a
+ * few kilobytes to low hundreds of kilobytes across every chain it trades on,
+ * so this leaves an order of magnitude of headroom while keeping a mis-served
+ * response from being buffered and parsed inside the isolate. The reader
+ * rejects a declared over-cap `Content-Length` before reading and streams with
+ * an abort at the cap otherwise.
+ */
+const DEXSCREENER_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+/**
+ * Prefix of an otherwise-parseable response searched for the WAF refusal
+ * marker. Cloudflare pages carry it near the start, so the check stays a
+ * bounded scan of an already-buffered body rather than a second full pass.
+ */
+const DEXSCREENER_REFUSAL_MARKER_SCAN_CHARS = 4_096;
+const DEXSCREENER_API_HEADERS = {
+  Accept: "application/json",
+  "User-Agent": USER_AGENT,
+};
+
+/** Response shape from GET /tokens/v1/{chainId}/{address} */
+export interface DsPair {
+  chainId: string;
+  dexId: string;
+  pairAddress: string;
+  labels?: string[];
+  baseToken: { address: string; name: string; symbol: string };
+  quoteToken: { address: string; name: string; symbol: string };
+  priceUsd: string | null;
+  priceNative?: string | null;
+  volume: { h24: number; h6: number; h1: number; m5: number } | null;
+  liquidity: { usd: number; base: number; quote: number } | null;
+  pairCreatedAt: number | null;
+}
+
+export interface DsTrackedTokenPrice {
+  side: "base" | "quote" | null;
+  priceUsd: number | null;
+}
+
+export interface DsFetchPoolsResult {
+  ok: boolean;
+  pairs: DsPair[];
+  degraded?: boolean;
+  status?: number;
+  contentType?: string;
+  error?: string;
+  hardRefusal?: boolean;
+  /** Raw rows rejected by the shared schema/identity check before chain filtering. */
+  rejectedPairCount?: number;
+}
+
+function isNonBlankString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+/**
+ * Required identities must be nonblank so a malformed row counts as a schema
+ * rejection instead of silently dropping out downstream. Values are not
+ * rewritten: native (case-sensitive) identities pass through unchanged.
+ */
+function isDsPair(value: unknown): value is DsPair {
+  if (!value || typeof value !== "object") return false;
+  const pair = value as Partial<DsPair>;
+  return isNonBlankString(pair.chainId)
+    && isNonBlankString(pair.dexId)
+    && isNonBlankString(pair.pairAddress)
+    && !!pair.baseToken
+    && isNonBlankString(pair.baseToken.address)
+    && typeof pair.baseToken.symbol === "string"
+    && !!pair.quoteToken
+    && isNonBlankString(pair.quoteToken.address)
+    && typeof pair.quoteToken.symbol === "string";
+}
+
+function parseDexScreenerTokenPoolsResponse(data: unknown): DsPair[] | null {
+  if (Array.isArray(data)) {
+    return data.filter(isDsPair);
+  }
+  if (
+    data != null &&
+    typeof data === "object" &&
+    Array.isArray((data as { pairs?: unknown }).pairs)
+  ) {
+    return (data as { pairs: unknown[] }).pairs.filter(isDsPair);
+  }
+  return null;
+}
+
+function summarizeBody(raw: string, limit = 160): string {
+  return raw.replace(/\s+/g, " ").trim().slice(0, limit);
+}
+
+function isHardRefusal(status: number, bodySnippet: string): boolean {
+  return status === 429 || /\berror code:\s*1015\b/i.test(bodySnippet);
+}
+
+async function readBodyText(res: Response, timeoutMs: number, signal?: AbortSignal): Promise<string> {
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new DOMException(`response body timed out after ${timeoutMs}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return await readResponseTextWithinLimitWithSignal(res, DEXSCREENER_MAX_RESPONSE_BYTES, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
+
+async function readBodySnippet(
+  res: Response,
+  maxBytes = 1024,
+  timeoutMs = 10_000,
+  signal?: AbortSignal,
+): Promise<string> {
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new DOMException(`response body timed out after ${timeoutMs}ms`, "TimeoutError"),
+    parentSignal: signal,
+  });
+  try {
+    return await readResponseTextBoundedWithSignal(res, maxBytes, timeout.signal);
+  } finally {
+    timeout.dispose();
+  }
+}
+
+async function describeNonOkResponse(
+  url: string,
+  res: Response,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<DsFetchPoolsResult> {
+  const contentType = res.headers.get("content-type") ?? "unknown";
+  let snippet = "";
+  try {
+    snippet = summarizeBody(await readBodySnippet(res, 1024, timeoutMs, signal));
+  } catch {
+    snippet = "";
+  }
+  return {
+    ok: false,
+    pairs: [],
+    status: res.status,
+    contentType,
+    error: `HTTP ${res.status} for ${url}${snippet ? `; body starts with: ${snippet}` : ""}`,
+    hardRefusal: isHardRefusal(res.status, snippet),
+  };
+}
+
+export function getDsPriceForSide(pair: DsPair, side: DsTrackedTokenPrice["side"]): DsTrackedTokenPrice {
+  const basePriceUsd = Number.parseFloat(pair.priceUsd ?? "");
+  if (side === null) return { side, priceUsd: null };
+  if (side === "base") {
+    return { side, priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 ? basePriceUsd : null };
+  }
+  const priceNative = Number.parseFloat(pair.priceNative ?? "");
+  return {
+    side,
+    priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 && Number.isFinite(priceNative) && priceNative > 0
+      ? basePriceUsd / priceNative
+      : null,
+  };
+}
+
+export function getDsTrackedTokenSide(
+  pair: DsPair,
+  trackedAddress: string,
+  chain: string,
+): DsTrackedTokenPrice["side"] {
+  if (!DS_CHAIN_MAP[chain] || pair.chainId !== DS_CHAIN_MAP[chain]) return null;
+  const tracked = canonicalExitRouteScopedId(chain, trackedAddress);
+  if (!tracked) return null;
+  if (tracked === canonicalExitRouteScopedId(chain, pair.baseToken.address)) return "base";
+  if (tracked === canonicalExitRouteScopedId(chain, pair.quoteToken.address)) return "quote";
+  return null;
+}
+
+export function getDsTrackedTokenSymbol(pair: DsPair, trackedAddress: string, chain: string): string | null {
+  const side = getDsTrackedTokenSide(pair, trackedAddress, chain);
+  return side === null ? null : pair[side === "base" ? "baseToken" : "quoteToken"].symbol;
+}
+
+/**
+ * Resolve the tracked token side and, when possible, its USD price.
+ *
+ * DexScreener `priceUsd` is the base token's USD price. When the tracked token
+ * is the quote token, derive its USD price from `priceNative` (base denominated
+ * in quote units): quoteUsd = baseUsd / priceNative.
+ */
+export function getDsTrackedTokenPriceUsd(
+  pair: DsPair,
+  trackedAddress: string,
+  chain: string,
+): DsTrackedTokenPrice {
+  return getDsPriceForSide(pair, getDsTrackedTokenSide(pair, trackedAddress, chain));
+}
+
+async function fetchDsPoolsWithStatus(
+  apiBase: string,
+  chain: string,
+  tokenAddress: string,
+  signal?: AbortSignal,
+  timeoutMs = 10_000,
+  maxRetries = 2,
+): Promise<DsFetchPoolsResult> {
+  const dsChain = DS_CHAIN_MAP[chain];
+  if (!dsChain) return { ok: false, pairs: [] };
+
+  const url = `${apiBase}/${dsChain}/${tokenAddress}`;
+  // Per-request timeout is handled by fetchWithRetry; adding a second outer
+  // timeout here caused retries to be silently killed (the outer fired during
+  // retry waits, producing an AbortError that callers swallowed as a failure).
+  const res = await fetchWithRetry(url, {
+    headers: DEXSCREENER_API_HEADERS,
+    signal,
+  }, maxRetries, { timeoutMs, returnFinalResponse: true });
+  if (!res) return { ok: false, pairs: [], error: `Fetch failed for ${url}` };
+  if (!res.ok) return await describeNonOkResponse(url, res, timeoutMs, signal);
+
+  const contentType = res.headers.get("content-type") ?? "unknown";
+  const status = res.status;
+
+  try {
+    const rawBody = await readBodyText(res, timeoutMs, signal);
+    // Cloudflare can serve its rate-limit page (WAF code 1015) under a 2xx
+    // status. Classify it from the body exactly like the non-2xx path instead of
+    // reporting a payload schema change, so the run stops spending paced
+    // requests on a provider that has already refused it.
+    if (isHardRefusal(status, rawBody.slice(0, DEXSCREENER_REFUSAL_MARKER_SCAN_CHARS))) {
+      return {
+        ok: false,
+        pairs: [],
+        status,
+        contentType,
+        error: `DexScreener hard refusal in a ${status} body for ${url}`,
+        hardRefusal: true,
+      };
+    }
+    const data = JSON.parse(rawBody) as unknown;
+    const parsedPairs = parseDexScreenerTokenPoolsResponse(data);
+    if (parsedPairs == null) {
+      return {
+        ok: false,
+        pairs: [],
+        status,
+        contentType,
+        error: "DexScreener payload schema changed: expected array or object.pairs[]",
+      };
+    }
+
+    const rawCount = Array.isArray(data)
+      ? data.length
+      : Array.isArray((data as { pairs?: unknown }).pairs)
+        ? (data as { pairs: unknown[] }).pairs.length
+        : 0;
+    if (rawCount > 0 && parsedPairs.length === 0) {
+      return {
+        ok: false,
+        pairs: [],
+        status,
+        contentType,
+        error: "DexScreener payload contained no valid pair rows",
+        rejectedPairCount: rawCount,
+      };
+    }
+    // A partially rejected census is incomplete even when valid rows survive:
+    // the rejected rows may be the requested chain's real pools.
+    const rejectedPairCount = rawCount - parsedPairs.length;
+    const pairs = parsedPairs.filter((pair) => pair.chainId === dsChain);
+    if (rejectedPairCount > 0 || pairs.length !== parsedPairs.length) {
+      return {
+        ok: pairs.length > 0,
+        degraded: true,
+        pairs,
+        status,
+        contentType,
+        error: rejectedPairCount > 0
+          ? "dexscreener-schema-degraded"
+          : `DexScreener payload contained pair rows outside requested chain ${dsChain}`,
+        ...(rejectedPairCount > 0 ? { rejectedPairCount } : {}),
+      };
+    }
+    return { ok: true, pairs: parsedPairs };
+  } catch (error) {
+    return {
+      ok: false,
+      pairs: [],
+      status,
+      contentType,
+      error: `DexScreener JSON parse failed: ${toErrorMessage(error)}`,
+    };
+  }
+}
+
+/**
+ * Fetch token lookup rows from DexScreener's batched token endpoint.
+ * Pricing uses this path because one request may include multiple addresses.
+ */
+export function fetchDsTokenPoolsWithStatus(
+  chain: string,
+  tokenAddress: string,
+  signal?: AbortSignal,
+  timeoutMs = 10_000,
+  maxRetries = 2,
+): Promise<DsFetchPoolsResult> {
+  return fetchDsPoolsWithStatus(DS_TOKEN_API, chain, tokenAddress, signal, timeoutMs, maxRetries);
+}
+
+/**
+ * Fetch every advertised pool for one token from DexScreener's discovery endpoint.
+ */
+export function fetchDsTokenPairsWithStatus(
+  chain: string,
+  tokenAddress: string,
+  signal?: AbortSignal,
+  timeoutMs = 10_000,
+  maxRetries = 2,
+): Promise<DsFetchPoolsResult> {
+  return fetchDsPoolsWithStatus(DS_TOKEN_PAIRS_API, chain, tokenAddress, signal, timeoutMs, maxRetries);
+}
+
+/** Rate-limit sleep between DexScreener calls */
+export function dsRateLimit(signal?: AbortSignal): Promise<void> {
+  return sleepWithSignal(RATE_LIMITS.DEXSCREENER_MS, signal);
+}

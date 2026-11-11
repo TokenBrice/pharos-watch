@@ -25,7 +25,7 @@ import {
   YIELD_ADAPTER_LIFECYCLE,
 } from "../../lib/yield-config/yield-config-rate-sources";
 import { isPriceDerivedYieldEligible } from "../../lib/yield-config/yield-config-registry";
-import { buildOnChainSourceKey } from "../../lib/yield-utils";
+import { buildOnChainSourceKey } from "../../lib/yield/yield-utils";
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const autoLendingPoolsById: Readonly<Partial<Record<string, string>>> = AUTO_LENDING_POOL_MAP;

@@ -1,6 +1,6 @@
 import { rethrowIfAborted } from "../abort";
 import { batchExecute } from "../db";
-import { invalidateBlacklistDerivedCaches, type BlacklistSummaryFence } from "../blacklist-cache-invalidation";
+import { invalidateBlacklistDerivedCaches, type BlacklistSummaryFence } from "./blacklist-cache-invalidation";
 import { logWorkerEventArgs } from "../structured-log";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { fetchTronBlockTransactionPositions, type TronReplayProviderContext } from "./tron-replay-provider";

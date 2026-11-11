@@ -1,4 +1,4 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import {
   buildReserveDisplayBadge,
   getReserveDisplayBadgeKindForAdapter,
@@ -16,7 +16,7 @@ import type {
   ReserveSyncStatus,
 } from "@shared/types/live-reserves";
 import { getReserveCompositionRow, getReserveSyncState } from "./store-read";
-import { matchReserveFeedReview } from "../reserve-feed-reviews";
+import { matchReserveFeedReview } from "./reserve-feed-reviews";
 import { parseReserveCompositionRow } from "./store-row-decoding";
 import {
   hasFatalReserveWarnings,

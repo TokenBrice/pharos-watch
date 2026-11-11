@@ -4,7 +4,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { backfillAmounts } from "../../../lib/blacklist/amount-recovery";
 import { recoverEvmBracketAmount } from "../../../lib/blacklist/evm-amount-recovery";
 import { MAX_LEGACY_EVM_REVIEW_ATTEMPTS } from "../../../lib/blacklist/amount-repair-queue";
-import { getBlacklistConfigsForSymbolAndChain } from "../../../lib/blacklist-contracts";
+import { getBlacklistConfigsForSymbolAndChain } from "../../../lib/blacklist/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import type { BlacklistAmountStatus } from "@shared/types/blacklist";

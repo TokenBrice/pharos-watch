@@ -19,8 +19,8 @@
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
-import { buildTapeEventId } from "../tape-event-helpers";
-import type { TapeEventInsert } from "../tape-event-types";
+import { buildTapeEventId } from "./tape-event-helpers";
+import type { TapeEventInsert } from "./tape-event-types";
 import {
   finalizeProjectorBatch,
   resolveProjectorOptions,

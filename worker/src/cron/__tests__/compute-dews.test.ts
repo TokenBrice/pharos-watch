@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { batchExecute } from "../../lib/db";
 import { dewsCache, dewsCoin, makeDb, publishShapedRankingsPayload } from "./compute-dews.test-support";
-import * as publishedMintBurn from "../../lib/mint-burn-published-gauge";
+import * as publishedMintBurn from "../../lib/mint-burn-pipeline/mint-burn-published-gauge";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => {
   const actual = await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>(

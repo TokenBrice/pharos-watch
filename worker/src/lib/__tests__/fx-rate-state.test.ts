@@ -4,7 +4,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 import { setCacheIfNewer } from "../db-cache";
-import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
+import { EXPECTED_FX_PEG_KEYS } from "../pricing/fx-config";
 import {
   buildFxCacheStatus,
   getFxReferenceTypeFromState,
@@ -14,7 +14,7 @@ import {
   persistFxRateState,
   type FxRateState,
   type FxRatesMeta,
-} from "../fx-rate-state";
+} from "../pricing/fx-rate-state";
 
 function buildState(meta: Record<string, unknown>, rates: Record<string, number>) {
   const nowSec = Math.floor(Date.now() / 1000);

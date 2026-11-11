@@ -1,7 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { normalizeChainId } from "@shared/types/chain-identity";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
+import { normalizeDexSymbol } from "../../lib/dex-liquidity/dex-cron-constants";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import type { YieldVariant } from "../../lib/yield-config/yield-config-registry";
 

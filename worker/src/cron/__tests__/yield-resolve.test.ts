@@ -10,7 +10,7 @@ import {
 } from "./sync-yield-data.test-support";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { syncYieldData } from "../sync-yield-data";
+import { syncYieldData } from "../yield-sync/sync-yield-data";
 import { getCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import * as yieldRateSources from "../../lib/yield-config/yield-config-rate-sources";

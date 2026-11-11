@@ -1,6 +1,6 @@
 import type { MintBurnConservationRecord } from "@shared/types/status";
-import { applyMintBurnRangeSupplyProof, completeMintBurnRangeSupplyProof, mintBurnConservationFingerprint, completeMintBurnConservationAudit, conservationOnlyEventDefsFor, getMintBurnConservationEligibility, persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence, type ConservationLogBatch } from "../../lib/mint-burn-conservation";
-import { acceptMintBurnSupplyProof, invalidateConflictingMintBurnSupplyProofs, invalidateMintBurnSupplyProofs, invalidateMintBurnSupplyProofRange, persistMintBurnSupplyProof } from "../../lib/mint-burn-supply-proofs";
+import { applyMintBurnRangeSupplyProof, completeMintBurnRangeSupplyProof, mintBurnConservationFingerprint, completeMintBurnConservationAudit, conservationOnlyEventDefsFor, getMintBurnConservationEligibility, persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence, type ConservationLogBatch } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
+import { acceptMintBurnSupplyProof, invalidateConflictingMintBurnSupplyProofs, invalidateMintBurnSupplyProofs, invalidateMintBurnSupplyProofRange, persistMintBurnSupplyProof } from "../../lib/mint-burn-pipeline/mint-burn-supply-proofs";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { withRpcRequestOperation } from "../../lib/rpc-request-observer";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
@@ -8,7 +8,7 @@ import { blockHashesForLogs } from "../../lib/alchemy-logs";
 import type { RpcEndpoint } from "../../lib/chain-registry";
 import { fetchMintBurnLogs, resolveMintBurnBlockTimestamps } from "../../lib/mint-burn-pipeline/rpc";
 import { budgetExhausted, createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
-import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
+import type { MintBurnTxContext } from "../../lib/mint-burn-pipeline/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows, reconcileReviewedSupplyBurns } from "../../lib/mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
 import { DECODE_QUARANTINE_REASON, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../lib/mint-burn-pipeline/scan-policy";
@@ -24,8 +24,8 @@ import type {
   MintBurnContractConfig,
   MintBurnEventDef,
   MintBurnTier,
-} from "../../lib/mint-burn-contracts";
-import { requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-conservation";
+} from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
 import { TronRpcError, type TronJsonRpcReader } from "../../lib/tron-jsonrpc";
 

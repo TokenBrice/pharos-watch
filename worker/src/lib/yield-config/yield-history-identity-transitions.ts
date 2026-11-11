@@ -1,4 +1,4 @@
-import { buildOnChainSourceKey } from "../yield-utils";
+import { buildOnChainSourceKey } from "../yield/yield-utils";
 
 interface YieldHistoryIdentityTransitions {
   onChainAliases: Array<{ stablecoinId: string; sourceKey: string }>;

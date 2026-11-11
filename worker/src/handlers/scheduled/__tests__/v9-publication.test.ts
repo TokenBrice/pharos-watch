@@ -19,11 +19,11 @@ vi.mock("../slot-groups", async (importOriginal) => ({
   ...await importOriginal<typeof import("../slot-groups")>(),
   runScheduledSlotGroups: mocks.runScheduledSlotGroups,
 }));
-vi.mock("../../../lib/v9-slot-window", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../../../lib/v9-slot-window")>(),
+vi.mock("../../../lib/safety-score-v9/v9-slot-window", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/safety-score-v9/v9-slot-window")>(),
   runV9AfterCoreWithinWindow: mocks.runV9AfterCoreWithinWindow,
 }));
-vi.mock("../../../cron/compute-safety-score-v9", () => ({
+vi.mock("../../../cron/safety-score-v9/compute-safety-score-v9", () => ({
   computeSafetyScoreV9: mocks.computeSafetyScoreV9,
 }));
 vi.mock("../../../lib/safety-score-v9/publication-materialization", () => ({
@@ -32,7 +32,7 @@ vi.mock("../../../lib/safety-score-v9/publication-materialization", () => ({
 vi.mock("../../../lib/structured-log", () => ({
   logWorkerEvent: mocks.logWorkerEvent,
 }));
-vi.mock("../../../cron/sync-v9-supply-attribution", () => ({ syncSafetyScoreV9SupplyAttribution: mocks.syncSupplyAttribution }));
+vi.mock("../../../cron/safety-score-v9/sync-v9-supply-attribution", () => ({ syncSafetyScoreV9SupplyAttribution: mocks.syncSupplyAttribution }));
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 import { runV9PublicationSlot } from "../v9-publication";

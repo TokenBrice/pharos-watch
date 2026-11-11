@@ -8,7 +8,7 @@ import {
   type SfrxusdCrosschainRouteRejectionCode,
   type SfrxusdCrosschainV9RouteAttempt,
   type SfrxusdRouteBlock,
-} from "../../lib/sfrxusd-crosschain-redemption-route";
+} from "../../lib/redemption-backstop/sfrxusd-crosschain-redemption-route";
 import type {
   EvmBlockHeader,
   EvmMulticall3Call,

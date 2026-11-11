@@ -7,7 +7,7 @@ import type { BlacklistRow } from "../src/lib/blacklist/shared";
 import {
   getBlacklistConfigsForSymbolAndChain,
   type ContractEventConfig,
-} from "../src/lib/blacklist-contracts";
+} from "../src/lib/blacklist/blacklist-contracts";
 import {
   fetchKycRipRows,
   formatKycRipCliUsage,

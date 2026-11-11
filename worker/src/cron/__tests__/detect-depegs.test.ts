@@ -55,13 +55,13 @@ vi.mock("@shared/lib/peg-rates", () => ({
   normalizePegType: (pegType: string | undefined) => pegType,
 }));
 
-vi.mock("../../lib/native-peg-quotes", () => ({
+vi.mock("../../lib/pricing/native-peg-quotes", () => ({
   fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
 }));
 
-import { detectDepegEvents } from "../detect-depegs";
-import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
-import { rowToDepegEvent, type DepegRow } from "../../lib/depeg-helpers";
+import { detectDepegEvents } from "../depeg-detection/detect-depegs";
+import { fetchCurrentNativePegQuotes } from "../../lib/pricing/native-peg-quotes";
+import { rowToDepegEvent, type DepegRow } from "../../lib/depeg-detection/depeg-helpers";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
 
 function isCloseEventUpdate(sql: string): boolean {

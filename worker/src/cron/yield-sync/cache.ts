@@ -32,7 +32,7 @@ import {
 } from "@shared/lib/error-utils";
 import {
   DETERMINISTIC_APY_SANITY_MAX,
-} from "../yield-helpers";
+} from "./yield-helpers";
 import {
   PYS_APY_SANITY_MAX,
 } from "@shared/lib/yield-scoring";

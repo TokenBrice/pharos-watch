@@ -14,7 +14,7 @@ import {
 import {
   normalizeFixedInput,
   type ReportCardsFixedInput,
-} from "../report-cards-fixed-input";
+} from "../safety-score-v9/report-cards-fixed-input";
 import {
   SafetyScoreV9DeploymentSupplyCensusSchema,
   type SafetyScoreV9DeploymentSupplyCensus,

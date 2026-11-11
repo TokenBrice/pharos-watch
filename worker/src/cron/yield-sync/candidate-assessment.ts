@@ -20,7 +20,7 @@ import {
   qualifyYieldEvidence,
   classifyYieldSourceFreshness,
   getComparisonAnchorStaleThresholdMs,
-} from "../../lib/yield-ranking-helpers";
+} from "../../lib/yield/yield-ranking-helpers";
 import type { ResolvedYield } from "./types";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./history-evidence";
 import { resolveDependencyConcentration } from "@shared/lib/yield-source-risk-registry";

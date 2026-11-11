@@ -10,7 +10,7 @@ import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-supp
 import { makeExecutionContext } from "../../test-helpers/__shared/auth";
 
 const loadIdentity = vi.hoisted(() => vi.fn());
-vi.mock("../../lib/safety-score-active-source", () => ({ loadActiveSafetyScoreIdentity: loadIdentity }));
+vi.mock("../../lib/safety-score-v9/safety-score-active-source", () => ({ loadActiveSafetyScoreIdentity: loadIdentity }));
 import { handleDependencyScenarios } from "../dependency-scenarios";
 function artifact(): DependencyScenarioArtifact {
   return {

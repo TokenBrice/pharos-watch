@@ -1,6 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import type { EvmRpcOptions } from "../../lib/evm-rpc";
 import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile } from "../measured-execution/registry";
 import { createDexMeasuredExecutionRpcBudget, type DexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";

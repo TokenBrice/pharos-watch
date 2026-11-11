@@ -10,7 +10,7 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evid
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { projectControlAuthority } from "../safety-score-v9/extension-shared";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CORE_ROUTE = "hyperliquid:0x88102bea0bbad5f301f6e9e4dacdf979";

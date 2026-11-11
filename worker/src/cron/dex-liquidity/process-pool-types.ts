@@ -1,6 +1,6 @@
 import type { DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import type {
   CurvePoolEntry,
   CurveStableswapRateInputExecutionCandidate,

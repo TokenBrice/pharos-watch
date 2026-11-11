@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
+import { deriveAuthoritativePegSignal } from "../depeg-detection/authoritative-peg-signal";
 
 describe("deriveAuthoritativePegSignal", () => {
   it("rejects a thin non-USD peer median before deriving deviation", () => {

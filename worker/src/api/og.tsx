@@ -5,7 +5,7 @@ import * as React from "react";
 import satori, { init as initSatori } from "satori/standalone";
 import yogaWasm from "satori/yoga.wasm";
 import { Resvg, initResvg, resvgWasmModule } from "@cf-wasm/resvg/workerd";
-import { OG_FONTS } from "../lib/og-fonts";
+import { OG_FONTS } from "../lib/og-templates/og-fonts";
 import { StablecoinCard, type StablecoinCardData } from "../lib/og-templates/stablecoin-card";
 import { SafetyScoresCard, type SafetyScoresCardData } from "../lib/og-templates/safety-scores-card";
 import { DepegCard, type DepegCardData } from "../lib/og-templates/depeg-card";
@@ -21,19 +21,19 @@ import { ratioToPercentage } from "@shared/lib/stats";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { resolveOrReject } from "../lib/api-params";
-import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
+import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity/dex-liquidity";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/market-supply/stablecoins-cache";
+import { loadPegAnalyticsCache } from "../lib/depeg-detection/peg-analytics-cache";
 import { API_CACHE_PROFILES, buildOgImageCacheControl } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../lib/stress-signals-current-rows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { summarizeMintBurnValuation } from "@shared/lib/mint-burn-valuation";
 import { summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
-import { hasMintBurnClassificationReview } from "../lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../lib/mint-burn-pipeline/mint-burn-classification";
 import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import {
   MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL,
@@ -42,27 +42,27 @@ import {
   type MintBurnValuationTallyRow,
   readMintBurnClassificationTallyRow,
   readMintBurnValuationTallyRow,
-} from "../lib/mint-burn-hourly-valuation";
-import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
+} from "../lib/mint-burn-pipeline/mint-burn-hourly-valuation";
+import { MINT_BURN_CONFIGS } from "../lib/mint-burn-pipeline/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types/core";
-import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-v9/safety-score-index";
 import { isSafetyScoreV9SnapshotFresh, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
-import { notDisputedAuditVerdictSql } from "../lib/depeg-audit";
+import { notDisputedAuditVerdictSql } from "../lib/depeg-detection/depeg-audit";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
-import { getDepegThresholdBps } from "../lib/depeg-threshold-policy";
+import { getDepegThresholdBps } from "../lib/depeg-detection/depeg-threshold-policy";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import {
   getNativeEventPriceObservation, isNativePegEvent,
   type NativeEventPriceEvidence,
 } from "@shared/lib/depeg-quote-domain";
-import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
+import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/pricing/native-peg-quote-cache";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)

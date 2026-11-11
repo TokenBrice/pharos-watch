@@ -11,7 +11,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as dependencyHealthModule from "../../lib/dependency-health";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
-import { resolveReserveFeedReviews } from "../../lib/reserve-feed-reviews";
+import { resolveReserveFeedReviews } from "../../lib/live-reserves/reserve-feed-reviews";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";

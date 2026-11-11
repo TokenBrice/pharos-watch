@@ -5,13 +5,13 @@ import {
   buildBlockedProviderDiagnostic,
   buildPricingProviderDiagnostic,
   recoverProviderOnNoCandidates,
-} from "../pricing-provider-lifecycle";
+} from "../pricing/pricing-provider-lifecycle";
 import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
   MAX_ASSET_ATTEMPTS_PER_DIAGNOSTIC,
   type PricingProviderAttemptDiagnostic,
-} from "../pricing-provider-diagnostics";
+} from "../pricing/pricing-provider-diagnostics";
 
 describe("pricing provider lifecycle helpers", () => {
   it("bounds and sanitizes asset-attributable pricing attempts", () => {

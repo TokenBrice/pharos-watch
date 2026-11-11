@@ -1,7 +1,7 @@
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { buildSafetyScoreV9AcceptedProjections } from "../safety-score-v9/accepted-projections";
-import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
+import { materializeV9AcceptedPublication } from "../safety-score-v9/report-cards-v9-materialization";
 
 type PublicationWrite = Parameters<typeof persistSafetyScoreV9Publication>[1];
 

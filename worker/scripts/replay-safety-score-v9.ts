@@ -19,7 +19,7 @@ import {
   parseSafetyScoreV9InputCacheValue,
   type SafetyScoreV9CompilerInput,
 } from "../src/lib/safety-score-v9/native-input";
-import { deriveSupplyModelExitRouteObservation } from "../src/lib/redemption-exit-route-observations";
+import { deriveSupplyModelExitRouteObservation } from "../src/lib/redemption-backstop/redemption-exit-route-observations";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
   buildSafetyScoreV9Candidate,

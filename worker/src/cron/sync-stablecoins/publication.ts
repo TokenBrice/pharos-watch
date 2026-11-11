@@ -2,11 +2,11 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
-import type { PriceCacheWriteEntry } from "../../lib/price-cache";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
+import type { PriceCacheWriteEntry } from "../../lib/pricing/price-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
-import type { BinanceFetchSession } from "../../lib/cex-tickers";
-import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
+import type { BinanceFetchSession } from "../../lib/pricing/cex-tickers";
+import type { NativePegQuoteSession } from "../../lib/pricing/native-peg-quotes";
 import {
   ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
   resolveStablecoinPriceGapReviews,
@@ -15,7 +15,7 @@ import {
   seedAbsentActivePriceCoverageMarketCaps,
   type PreviousStablecoinActivePriceCoverage,
   type StablecoinPriceCoverageAsset,
-} from "../../lib/stablecoin-publication-coverage";
+} from "../../lib/market-supply/stablecoin-publication-coverage";
 import { fillMissingSupplyHistory } from "./phase-helpers";
 import {
   commitReplayPriceCache,

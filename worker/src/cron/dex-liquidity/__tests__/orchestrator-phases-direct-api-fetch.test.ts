@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   makeDexApiFetchResult,
   type DexApiPool,
-} from "../../../lib/dex-api-common";
+} from "../../../lib/dex-liquidity/dex-api-common";
 import { recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
 import {

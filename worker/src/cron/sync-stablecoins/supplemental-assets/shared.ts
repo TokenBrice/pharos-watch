@@ -1,4 +1,4 @@
-import { isSolomonPriceIdentityAllowed } from "../../../lib/solomon-usdv-identity";
+import { isSolomonPriceIdentityAllowed } from "../../../lib/pricing/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
@@ -13,9 +13,9 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-brea
 import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,
-} from "../../../lib/price-validation";
-import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
-import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
+} from "../../../lib/pricing/price-validation";
+import { validatePricingSourceFreshness } from "../../../lib/pricing/pricing-source-freshness";
+import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/pricing/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./onchain-supply";
 

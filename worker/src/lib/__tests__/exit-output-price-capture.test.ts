@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ExitOutputPriceObservationSchema } from "@shared/types/exit-output-price";
-import { buildExitOutputPriceById } from "../report-cards-snapshot";
+import { buildExitOutputPriceById } from "../safety-score-v9/report-cards-snapshot";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const NOW = 1_791_672_421;

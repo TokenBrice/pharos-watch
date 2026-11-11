@@ -9,7 +9,7 @@ import {
   DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
   DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY as SNAPSHOT_KEY,
   runDexExitRouteTurnoverWatchdog,
-} from "../../dex-exit-route-turnover-watchdog";
+} from "../dex-exit-route-turnover-watchdog";
 
 const sendToChatMock = vi.hoisted(() => vi.fn(async (..._args: unknown[]) => ({ ok: true })));
 vi.mock("../../../telegram/delivery/telegram", async (importOriginal) => ({

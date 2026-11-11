@@ -2,13 +2,13 @@ import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 
-vi.mock("../../../src/lib/mint-burn-historical-price-repair", () => ({
+vi.mock("../../../src/lib/mint-burn-pipeline/mint-burn-historical-price-repair", () => ({
   DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT: 100,
   MAX_HISTORICAL_MINT_PRICE_REPAIR_LIMIT: 500,
   repairHistoricalMintBurnPrices: vi.fn(),
 }));
 
-import { repairHistoricalMintBurnPrices } from "../../../src/lib/mint-burn-historical-price-repair";
+import { repairHistoricalMintBurnPrices } from "../../../src/lib/mint-burn-pipeline/mint-burn-historical-price-repair";
 import { handleBackfillMintBurnPrices } from "../backfill-mint-burn-prices";
 
 stubCryptoForAuth();

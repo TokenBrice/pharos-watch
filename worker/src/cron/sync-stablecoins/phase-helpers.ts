@@ -1,4 +1,4 @@
-import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
+import { LEGACY_SOLOMON_USDV_ID } from "../../lib/pricing/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { admitSupplyBuckets, getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, type SupplyBucketInvalidReason } from "@shared/lib/supply";

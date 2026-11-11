@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   computeStabilityIndex,
   getDepreciationFactor,
-} from "../stability-index";
-import type { StabilityInput } from "../stability-index";
+} from "../psi/stability-index";
+import type { StabilityInput } from "../psi/stability-index";
 import { getConditionBand, PSI_COMPONENT_LIMITS } from "@shared/lib/psi-policy";
 
 /** Build a StabilityInput with sensible defaults, overridable per-test. */

@@ -3,11 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { buildMintBurnLegacySpans, MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint, mintBurnWindowAdmits, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, mintBurnWindowCoverage, resolveMintBurnWatermark, cachedFlowFallbackResponse } from "../../lib/mint-burn-flows-service";
 import { makeMintBurnScanSegments, mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { hydrateMintBurn } from "../../lib/dews/source-state/hydration";
-import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
+import { aggregateFlowCacheKey } from "../../lib/mint-burn-pipeline/mint-burn-flow-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });

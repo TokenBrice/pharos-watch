@@ -25,7 +25,7 @@ import {
   v9StagedPublicMaterializationStatements,
   type V9AcceptedPublicMaterializationSource,
   type V9StagedPublicMaterialization,
-} from "../report-cards-v9-materialization";
+} from "./report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
 import {

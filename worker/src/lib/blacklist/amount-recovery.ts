@@ -8,7 +8,7 @@ import {
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventByTopic,
   type ContractEventConfig,
-} from "../blacklist-contracts";
+} from "./blacklist-contracts";
 import { executeAtomicBatch } from "../db";
 import {
   type EtherscanLogEntry,

@@ -1,4 +1,4 @@
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import type { StagedPool } from "./types";
 
 export const DISCOVERY_STAGE_TIMEOUT_MS = {

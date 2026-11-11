@@ -21,7 +21,7 @@ import {
   compileSafetyScoreV9FactSetFromFixedInput,
   compileSafetyScoreV9FactSetFromNormalizedInput,
 } from "../safety-score-v9/fact-set";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { makeV9FixedInput, makeV9TwoAssetFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta, metaMap, reviewedResearchMeta } from "./safety-score-v9-fact-set.test-support";
 

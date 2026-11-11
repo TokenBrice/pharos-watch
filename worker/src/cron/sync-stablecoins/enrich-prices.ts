@@ -1,6 +1,6 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runEnrichmentPasses } from "./enrich-prices-fallback";
 import type { DexScreenerTargetOutcome } from "./enrich-prices-dexscreener-pass";

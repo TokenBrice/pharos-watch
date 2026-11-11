@@ -24,7 +24,7 @@ import {
   DDR_SNAPSHOT_CACHE_GENERATION,
   DDR_VERSION_STAMP,
 } from "@shared/lib/methodology-versions/depeg-resolver";
-import { buildDdrMethodologyEnvelope } from "../../lib/depeg-resolver-methodology";
+import { buildDdrMethodologyEnvelope } from "../../lib/depeg-resolver/depeg-resolver-methodology";
 import type {
   DdrCanonicalIncident,
   DdrFirstPublicationMembership,
@@ -32,7 +32,7 @@ import type {
   DdrPublicationManifest,
   DdrSealInput,
   DdrSealedPublicPrediction,
-} from "../depeg-resolver-v2-contracts";
+} from "./depeg-resolver-v2-contracts";
 import { DAY, DDR_SNAPSHOT_TTL_SEC } from "./constants";
 import type { DdrDiagnosticResponse, DdrLineage } from "./types";
 import { firstPublicationByPredictionId, sealedByIncident } from "./storage-adapters";

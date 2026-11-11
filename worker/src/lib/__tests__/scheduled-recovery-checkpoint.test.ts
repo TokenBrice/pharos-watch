@@ -18,7 +18,7 @@ import {
   setLiveReserveCheckpointCohortGrading,
 } from "../../cron/reserve-adapters/reserve-checkpoint";
 import { ScheduledCheckpointOwnershipLostError } from "../scheduled-checkpoint-primitives";
-import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/sync-live-reserves-shared";
+import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/live-reserves/sync-live-reserves-shared";
 
 const CHILD_JOBS = [
   "sync-live-reserves",

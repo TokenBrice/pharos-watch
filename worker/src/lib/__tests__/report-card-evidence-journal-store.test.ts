@@ -9,7 +9,7 @@ import {
 } from "@shared/lib/report-card-evidence-journal";
 import { BOUNDED_JOURNAL_RETENTION_SEC } from "../bounded-journal-store";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { loadReportCardEvidenceJournalByIdV1 } from "../report-card-evidence-journal-store";
+import { loadReportCardEvidenceJournalByIdV1 } from "../safety-score-v9/report-card-evidence-journal-store";
 
 const DIGEST = "a".repeat(64);
 const MIGRATION = readFileSync(

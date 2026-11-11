@@ -1,5 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import type { PriceValidationReferences } from "../price-validation";
+import type { PriceValidationReferences } from "../pricing/price-validation";
 import type {
   CurrentPriceOverride,
   HistoricalPricePoint,

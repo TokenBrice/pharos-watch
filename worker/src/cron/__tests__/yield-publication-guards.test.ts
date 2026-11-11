@@ -14,7 +14,7 @@ import {
   SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-} from "../../lib/yield-ranking-helpers";
+} from "../../lib/yield/yield-ranking-helpers";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../yield-sync/benchmarks";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication-rankings";
 import { validateYieldRankingsPayloadForPublish } from "../yield-sync/publication-admission";

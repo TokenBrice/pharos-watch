@@ -5,7 +5,7 @@ import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { executeAtomicBatch } from "../../lib/db";
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import type { DexPriceObs, LiquidityMetrics } from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";

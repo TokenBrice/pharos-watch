@@ -1,7 +1,7 @@
-import { isCoinGeckoHistoryAllowed } from "../../lib/solomon-usdv-identity";
+import { isCoinGeckoHistoryAllowed } from "../../lib/pricing/solomon-usdv-identity";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { USER_AGENT } from "../../lib/constants";
-import { cgHeaders, cgUrl } from "../../lib/coingecko";
+import { cgHeaders, cgUrl } from "../../lib/pricing/coingecko";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {

@@ -2,14 +2,14 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
-import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
-import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
+import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist/blacklist-contracts";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist/blacklist-summary-service";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-} from "../../lib/blacklist-cache-keys";
+} from "../../lib/blacklist/blacklist-cache-keys";
 import { balanceRow, makeValidSummaryPayload } from "./blacklist-summary.test-support";
 
 type Summary = Required<BlacklistSummaryResponse>;

@@ -2,12 +2,12 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { type ChainRpcConfig, getChainRpc, registryRpcUrls } from "../../lib/chain-registry";
-import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { parseChainlinkLatestRoundData } from "../../lib/pricing/chainlink-round-data";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
-import { computeApyFromRate, isDeterministicApyWithinSanityBounds } from "../yield-helpers";
+import { computeApyFromRate, isDeterministicApyWithinSanityBounds } from "./yield-helpers";
 import { getFiniteNumber, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./sources-rpc";
 import type { ResolvedYield, ResolvedYieldCandidate } from "./types";
 

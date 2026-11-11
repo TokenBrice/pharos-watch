@@ -8,14 +8,14 @@ import {
   type DigestStyleGateKind,
   parseDigestStyleGateMode,
   resolveDigestStyleGateModes,
-} from "../lib/digest-style-gate";
+} from "../lib/digest/digest-style-gate";
 import {
   DIGEST_LLM_PROFILE_CACHE_KEYS,
   parseDigestLlmProfile,
   readDigestLlmProfiles,
-} from "../lib/digest-llm-profile";
-import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
-import { normalizeBlacklistSyncStateKey } from "../lib/blacklist-cache-keys";
+} from "../lib/digest/digest-llm-profile";
+import { CONTRACT_CONFIGS } from "../lib/blacklist/blacklist-contracts";
+import { normalizeBlacklistSyncStateKey } from "../lib/blacklist/blacklist-cache-keys";
 
 /**
  * Cache key used by `digest-trigger-poll` to decide whether to run the digest

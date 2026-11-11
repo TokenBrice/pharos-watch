@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { buildBlacklistContractBalanceKey, getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
-import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";

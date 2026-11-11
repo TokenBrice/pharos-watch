@@ -5,13 +5,13 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { abortError, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../../lib/dex-cron-constants";
+import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../../lib/dex-liquidity/dex-cron-constants";
 import {
   isProviderCircuitAllowed,
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
-} from "../../lib/pricing-provider-lifecycle";
-import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSide, getDsTrackedTokenSymbol } from "../../lib/dexscreener";
+} from "../../lib/pricing/pricing-provider-lifecycle";
+import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSide, getDsTrackedTokenSymbol } from "../../lib/dex-liquidity/dexscreener";
 import { applyResolvedPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
@@ -24,7 +24,7 @@ import {
   errorClassFor,
   errorMessageFor,
   type PricingProviderAttemptDiagnostic,
-} from "../../lib/pricing-provider-diagnostics";
+} from "../../lib/pricing/pricing-provider-diagnostics";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 const DEXSCREENER_BATCH_SIZE = 30;

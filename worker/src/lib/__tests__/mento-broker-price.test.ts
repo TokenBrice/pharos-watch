@@ -11,7 +11,7 @@ vi.mock("../evm-rpc", () => ({ fetchEvmBlockNumber: (...args: unknown[]) => bloc
 import { fetchMentoBrokerPrice, mentoBrokerProvider } from "../authoritative-price-sources/mento-broker";
 import { fetchAuthoritativeLivePriceOverrides } from "../authoritative-price-sources";
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
-import { evaluateStablecoinActivePriceCoverage } from "../stablecoin-publication-coverage";
+import { evaluateStablecoinActivePriceCoverage } from "../market-supply/stablecoin-publication-coverage";
 import { applyProtocolPriceOverrides, createValidationContextResolver, settleNominalPriceReferences } from "../../cron/sync-stablecoins/pricing";
 const UNIT = 10n ** 18n;
 const BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad", USDM = "0x765de816845861e75a25fca122bb6898b8b1282a";

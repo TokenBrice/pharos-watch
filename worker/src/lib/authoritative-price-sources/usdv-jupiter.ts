@@ -4,7 +4,7 @@ import { CIRCUIT_SOURCE } from "../constants";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { getRpcAuthHeaders, registryRpcUrls } from "../chain-registry";
 import { sleepWithSignal, throwIfAborted } from "../abort";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
 import { resolveTrustedOverrideParent, USDC_CIRCLE_ID, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 
 const POOL = "DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH";

@@ -7,7 +7,7 @@ import {
   stagedPoolConfidence,
   stagedPoolMaturityDays,
 } from "../../dex-discovery/types";
-import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../../lib/dex-cron-constants";
+import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../../lib/dex-liquidity/dex-cron-constants";
 import { mergeStagedPools } from "../staging-merge";
 import {
   applyPoolVolumeEligibility,

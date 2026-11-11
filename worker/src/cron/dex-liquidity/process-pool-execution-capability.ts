@@ -3,7 +3,7 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
-import type { DexApiPool } from "../../lib/dex-api-common";
+import type { DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import type {
   CurvePoolEntry,
   CurveStableswapRateInputExecutionCandidate,

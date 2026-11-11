@@ -6,12 +6,12 @@ import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { throwIfAborted } from "../abort";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { createPricingAssetAttempt } from "../pricing-provider-diagnostics";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
+import { createPricingAssetAttempt } from "../pricing/pricing-provider-diagnostics";
 import {
   buildBlockedProviderDiagnostic,
   buildNoCandidatesDiagnostic,
-} from "../pricing-provider-lifecycle";
+} from "../pricing/pricing-provider-lifecycle";
 import { runCoingeckoOnchainAddressProvider } from "./coingecko-onchain";
 import {
   ADDRESS_PROVIDER_RUN_BUDGET_MS,
@@ -26,7 +26,7 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
-import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../stablecoin-publication-coverage";
+import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../market-supply/stablecoin-publication-coverage";
 
 export type {
   AddressPriceAssetLike,

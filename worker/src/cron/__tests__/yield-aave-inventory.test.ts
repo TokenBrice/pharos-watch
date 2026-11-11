@@ -59,7 +59,7 @@ vi.mock("../../lib/db-cache", () => ({
 
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { fetchAaveV3SupplyRates } from "../yield-sync/sources-rpc";
-import { syncYieldSupplemental } from "../sync-yield-supplemental";
+import { syncYieldSupplemental } from "../yield-sync/sync-yield-supplemental";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
 
 describe("Aave pinned inventory snapshots", () => {

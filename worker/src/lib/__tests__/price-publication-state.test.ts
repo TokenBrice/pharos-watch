@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hasPublishableCurrentPrice } from "../price-publication-state";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
 
 describe("price-publication-state", () => {
   it("requires a positive finite price, publishable source, and timestamp provenance", () => {

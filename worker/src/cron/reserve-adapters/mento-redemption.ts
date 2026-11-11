@@ -30,7 +30,7 @@ import {
   fetchOnchainUint256,
 } from "./helpers";
 import { throwIfAborted } from "../../lib/abort";
-import { resolveMentoFxMarketReopen } from "../../lib/stablecoin-publication-coverage";
+import { resolveMentoFxMarketReopen } from "../../lib/market-supply/stablecoin-publication-coverage";
 import { getCachedRequest } from "./request";
 
 // --- Redemption telemetry ---------------------------------------------------

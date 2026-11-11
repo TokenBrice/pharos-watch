@@ -1,5 +1,5 @@
 import type { BlacklistAmountStatus } from "@shared/types/blacklist";
-import type { ContractEventConfig } from "../blacklist-contracts";
+import type { ContractEventConfig } from "./blacklist-contracts";
 import { shouldSuppressAsMirrorZero } from "./shared";
 
 const SELECTED_AMOUNT_STATE_COLUMNS = [

@@ -12,7 +12,7 @@ vi.mock("../../telegram/delivery/telegram", async (importOriginal) => ({
 
 import {
   runDigestPublicationWatchdog,
-} from "../digest-publication-watchdog";
+} from "../digest/digest-publication-watchdog";
 
 const DATE = "2026-08-31";
 const fixtures = createLatestSchemaFixtureTracker();

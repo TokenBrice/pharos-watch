@@ -1,7 +1,7 @@
-import { computeAndStoreDepegResolverReview } from "../compute-depeg-resolver-review";
-import { writeDepegResolverAssessments } from "../../lib/depeg-resolver-assessment-store";
+import { computeAndStoreDepegResolverReview } from "../depeg-resolver-review/compute-depeg-resolver-review";
+import { writeDepegResolverAssessments } from "../../lib/depeg-resolver/depeg-resolver-assessment-store";
 import { parseJsonObject } from "../../lib/json-parse";
-import type { DdrV2StoreContracts } from "../depeg-resolver-v2-contracts";
+import type { DdrV2StoreContracts } from "./depeg-resolver-v2-contracts";
 import type { DdrDiagnosticResponse } from "./types";
 import { formatDdrrFailure } from "./utils";
 

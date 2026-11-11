@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPrimaryConsensusResults } from "../enrich-prices-primary-consensus";
 import { applyListAggregatorDowngrade } from "../enrich-prices-primary-hardening";
-import { validateCompositePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
+import { validateCompositePricingSourceFreshness } from "../../../lib/pricing/pricing-source-freshness";
 import { classifyPrimaryDepegTrust } from "../../../lib/depeg-trust-policy";
 import {
   createEmptyPrimaryConsensusQuoteMaps,

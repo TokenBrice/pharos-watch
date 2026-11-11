@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { loadPublicationManifestByToken } from "../src/lib/depeg-resolver-publication-store";
+import { loadPublicationManifestByToken } from "../src/lib/depeg-resolver/depeg-resolver-publication-store";
 import { parseStrictCliArgs, runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
 import { sqlString } from "./lib/remote-d1";
 

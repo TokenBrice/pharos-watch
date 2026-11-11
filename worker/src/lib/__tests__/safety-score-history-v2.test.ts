@@ -20,7 +20,7 @@ import {
   prepareSafetyScoreHistoryV2Write,
   safetyScoreHistoryIdentitiesAreComparable,
   safetyScoreHistoryIdentityFromV2Row,
-} from "../safety-score-history-v2";
+} from "../safety-score-v9/safety-score-history-v2";
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations");
 const FIXTURES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../test-helpers/migration-fixtures");

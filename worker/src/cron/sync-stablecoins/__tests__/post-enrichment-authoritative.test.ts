@@ -18,8 +18,8 @@ vi.mock("../../../lib/authoritative-price-sources", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../lib/native-peg-implied-prices", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/native-peg-implied-prices")>();
+vi.mock("../../../lib/pricing/native-peg-implied-prices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/pricing/native-peg-implied-prices")>();
   return {
     ...actual,
     fetchCurrentNativePegImpliedUsdQuotes: vi.fn(async () => new Map()),

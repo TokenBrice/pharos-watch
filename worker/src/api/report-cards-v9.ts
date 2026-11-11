@@ -1,6 +1,6 @@
 import { jsonResponse } from "../lib/api-response";
 import { safetyScoreSnapshotHeaders, withSafetyScoreRepresentationEtag as withRepresentationEtag } from "../lib/safety-score-v9/http-response";
-import { loadV9PublicMaterializedResponse, V9PublicMaterializationUnavailableError } from "../lib/report-cards-v9-materialization";
+import { loadV9PublicMaterializedResponse, V9PublicMaterializationUnavailableError } from "../lib/safety-score-v9/report-cards-v9-materialization";
 import { legacyV9FreshnessBody } from "./report-cards-v9-freshness";
 
 /** Every invocation admits live accepted identity/health; only immutable bytes are reused. */

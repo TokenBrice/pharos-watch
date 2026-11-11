@@ -28,7 +28,7 @@ import {
   checkDigestSafetyContextForDelivery,
   findUnboundDigestSafetyClaimMarkers,
   parseDigestSafetyContext,
-} from "../../lib/digest-safety-context";
+} from "../../lib/digest/digest-safety-context";
 
 export const TELEGRAM_DIGEST_OUTBOX_CLAIM_TTL_SEC = 120;
 const TELEGRAM_DIGEST_OUTBOX_DRAIN_LIMIT = 4;

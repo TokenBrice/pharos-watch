@@ -10,7 +10,7 @@ import { Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-pri
 import { LenderCollateralBackingSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
+import { buildSafetyScoreV9PublicationIdentity } from "./report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
 import { AcceptedPublicationBaselineSchema, buildSafetyScoreV9AcceptedPublicationBaseline, type SafetyScoreV9DexExpiryWitness } from "./publication-assessment";
 

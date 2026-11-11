@@ -2,7 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DlPool, ResolvedYieldEntry, SafetyScoreSnapshot, YieldResolutionResult } from "./types";
 import { resolveYieldTypeLabel } from "./source-risk";
 import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
-import { isBlockedYieldOpportunitySource, matchAllDlPools } from "../yield-helpers";
+import { isBlockedYieldOpportunitySource, matchAllDlPools } from "./yield-helpers";
 import { getPriceDerivedApy } from "./state";
 import { LAYER3_EXCLUDED_VENUE_PROJECTS } from "../../lib/yield-config/yield-config-lending-protocols";
 import { ON_CHAIN_RATE_CONFIGS, PRICE_DERIVED_FALLBACK_IDS, RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";

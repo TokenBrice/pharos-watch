@@ -6,7 +6,7 @@ import * as circuitBreaker from "../../lib/circuit-breaker";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
-import { syncUsdsStatus } from "../sync-usds-status";
+import { syncUsdsStatus } from "../blacklist/sync-usds-status";
 
 const DEFAULT_USDS_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },

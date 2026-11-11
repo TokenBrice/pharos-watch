@@ -7,8 +7,8 @@
  * their full scheduled-event runtime budget on Mondays.
  * Connection budget: 4/6 peak.
  */
-import { syncBluechip } from "../../cron/sync-bluechip";
-import { generateDailyDigest } from "../../cron/daily-digest";
+import { syncBluechip } from "../../cron/bluechip/sync-bluechip";
+import { generateDailyDigest } from "../../cron/daily-digest/daily-digest";
 import {
   buildTelegramCreds,
   buildTwitterCreds,

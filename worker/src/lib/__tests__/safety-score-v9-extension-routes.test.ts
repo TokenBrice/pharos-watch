@@ -12,7 +12,7 @@ import {
 import { fixedFee } from "@shared/lib/redemption-backstop-configs/shared";
 import type { ExitExecutionCertificate, ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
@@ -23,7 +23,7 @@ import {
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9/extension-routes";
-import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-observations";
+import { buildRedemptionExitRouteObservation } from "../redemption-backstop/redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { dexRouteObservation, withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 import { makeExitRoute } from "@shared/lib/__tests__/safety-score-v9-exit.test-support";

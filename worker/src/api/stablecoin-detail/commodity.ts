@@ -1,6 +1,6 @@
 import { DEFILLAMA_API, DEFILLAMA_COINS } from "../../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { fetchCoinGeckoMarketHistory } from "../../lib/coingecko-market-history";
+import { fetchCoinGeckoMarketHistory } from "../../lib/pricing/coingecko-market-history";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {
   buildNativeSupplyBuckets,

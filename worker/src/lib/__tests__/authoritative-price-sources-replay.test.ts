@@ -15,7 +15,7 @@ import { getProtocolParPriceOverride } from "../authoritative-price-sources/prot
 
 const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
-vi.mock("../historical-market-prices", () => ({
+vi.mock("../pricing/historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: (...args: unknown[]) => fetchMarketBackfillPriceSeriesMock(...args),
 }));
 

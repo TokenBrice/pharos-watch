@@ -1,9 +1,9 @@
 import { decodeAbiParameters, encodeAbiParameters, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { CIRCUIT_SOURCE } from "../constants";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../dex-liquidity/dex-cron-constants";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
 import { fetchPinnedEthereumRuntime } from "./pinned-ethereum-runtime";
 import { resolveTrustedOverrideParent, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-contracts-data";
-import { isCanonicalMintBurnPair } from "../mint-burn-canonical-chain";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-pipeline/mint-burn-contracts-data";
+import { isCanonicalMintBurnPair } from "../mint-burn-pipeline/mint-burn-canonical-chain";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
 import { buildChainRpcs, getRpcAuth } from "../chain-registry";
 import { mintBurnRpcEndpoints } from "../mint-burn-pipeline/rpc";
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";

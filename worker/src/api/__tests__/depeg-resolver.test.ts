@@ -13,7 +13,7 @@ import {
   computeDdrManifestBasePayloadHash,
   computeDdrPublicRowHash,
 } from "@shared/lib/depeg-resolver/public-contract";
-import { DDR_SNAPSHOT_CACHE_GENERATION as DDR_CACHE_ENVELOPE_GENERATION, loadDepegResolverSnapshot } from "../../lib/depeg-resolver-snapshot-cache";
+import { DDR_SNAPSHOT_CACHE_GENERATION as DDR_CACHE_ENVELOPE_GENERATION, loadDepegResolverSnapshot } from "../../lib/depeg-resolver/depeg-resolver-snapshot-cache";
 import { DDR_DURATION_BAND_META, DdrResponseSchema } from "@shared/types/depeg-resolver";
 import type {
   DdrPredictionMeta,

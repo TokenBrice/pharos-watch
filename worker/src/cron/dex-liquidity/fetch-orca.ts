@@ -3,7 +3,7 @@ import {
   DIRECT_API_POOL_MIN_TVL_USD,
   makeDexApiFetchResult,
   type DexApiPool,
-} from "../../lib/dex-api-common";
+} from "../../lib/dex-liquidity/dex-api-common";
 import { rethrowIfAborted, sleepWithSignal } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import {

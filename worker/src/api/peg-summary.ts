@@ -13,10 +13,10 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
-import { getDepegThresholdBpsForPegCurrency } from "../lib/depeg-threshold-policy";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
-import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
+import { getDepegThresholdBpsForPegCurrency } from "../lib/depeg-detection/depeg-threshold-policy";
+import { loadStablecoinsCache } from "../lib/market-supply/stablecoins-cache";
+import { derivePegAnalyticsSnapshot } from "../lib/depeg-detection/peg-analytics";
+import { countPegEventDays, loadPegAnalyticsCache } from "../lib/depeg-detection/peg-analytics-cache";
 import { signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices } from "../lib/current-peg-observations";
 import { deriveDexDeviationBps } from "@shared/lib/current-peg-observations";
@@ -24,7 +24,7 @@ import {
   effectiveStartedAtSql,
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
   IncidentProjectionUnavailableError,
-} from "../lib/depeg-event-projection";
+} from "../lib/depeg-detection/depeg-event-projection";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,

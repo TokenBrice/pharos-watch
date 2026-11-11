@@ -4,7 +4,7 @@ import { jsonResponse, mockFetch, type MockFetchSpy } from "@shared/test-utils/m
 import { buildAlchemyUrl } from "../../lib/alchemy-logs";
 import { mintBurnRpcEndpoints } from "../../lib/mint-burn-pipeline/rpc";
 import { fetchEvmTokenBalance } from "../../lib/blacklist/balance-providers";
-import type { ContractEventConfig } from "../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../lib/blacklist/blacklist-contracts";
 import { createBlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import {
   buildChainRpcs,
@@ -16,8 +16,8 @@ import {
 } from "../../lib/chain-registry";
 import { createBudget } from "../../lib/evm-logs";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
-import { fetchConservationBoundaries, getMintBurnConservationRuntimeEntry } from "../../lib/mint-burn-conservation";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { fetchConservationBoundaries, getMintBurnConservationRuntimeEntry } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { fetchEvmEventsIncremental, RPC_LOG_SCAN_WINDOWS } from "../blacklist/evm-source";
 import { ethereumConfig } from "../blacklist/__tests__/balance.test-support";
 

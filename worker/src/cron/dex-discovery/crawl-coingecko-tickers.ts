@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { sleepWithSignal } from "../../lib/abort";
-import { cgHeaders, cgUrl } from "../../lib/coingecko";
+import { cgHeaders, cgUrl } from "../../lib/pricing/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { CG_TICKERS_RATE_MS } from "../dex-liquidity/constants";

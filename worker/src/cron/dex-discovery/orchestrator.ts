@@ -6,8 +6,8 @@ import { isCensusProviderSetSupersededByRegistry } from "@shared/lib/dex-deploym
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
-import { loadPriceValidationReferences } from "../../lib/price-validation";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity/dex-liquidity";
+import { loadPriceValidationReferences } from "../../lib/pricing/price-validation";
 import type { DiscoveryCrawlTier, DiscoveryMeta, DiscoveryRunCheckpoint } from "./types";
 import { DISCOVERY_TIERS, STAGED_POOL_FRESH_HOURS } from "./types";
 import {

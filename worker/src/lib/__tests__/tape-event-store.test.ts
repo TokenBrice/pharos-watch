@@ -4,9 +4,9 @@ import {
   filterUnprojectedTapeEvents,
   insertTapeEvents,
   queryTapeEvents,
-} from "../tape-event-store";
-import { mapTapeEventRow, parseDateStringToEpochSec } from "../tape-event-helpers";
-import type { TapeEventInsert } from "../tape-event-types";
+} from "../tape-projectors/tape-event-store";
+import { mapTapeEventRow, parseDateStringToEpochSec } from "../tape-projectors/tape-event-helpers";
+import type { TapeEventInsert } from "../tape-projectors/tape-event-types";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {

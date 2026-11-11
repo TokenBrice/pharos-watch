@@ -1,9 +1,9 @@
 import { drainMintBurnMaterializationDebt, rebuildMintBurnMaterializationHours } from "../../lib/mint-burn-pipeline/materialization-debt";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import type { SyncMintBurnStatus, MintBurnLane } from "../../lib/mint-burn-pipeline/types";
-import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { withBudgetMetadata } from "../../lib/cron-progress";
 import {
   setMintBurnRunState,

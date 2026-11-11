@@ -1,7 +1,7 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
+import { fetchCoingeckoSimplePrices } from "../../lib/pricing/coingecko-simple-price";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import {

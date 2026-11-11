@@ -4,12 +4,12 @@ import {
   createValidationContextResolver,
   type ProtocolPriceOverride,
 } from "../pricing";
-import { validatePrimaryPriceCandidate } from "../../../lib/price-publish-policy";
+import { validatePrimaryPriceCandidate } from "../../../lib/pricing/price-publish-policy";
 import type { PeggedAsset } from "../enrich-prices";
 import { makePeggedAsset } from "./_fixtures";
 import { clearPriceMetadata, normalizeStablecoinsPayload, stampPriceMetadata } from "../shared";
 
-vi.mock("../../../lib/price-publish-policy", () => ({
+vi.mock("../../../lib/pricing/price-publish-policy", () => ({
   validatePrimaryPriceCandidate: vi.fn(),
   validatePublishedAssetPrice: vi.fn(),
 }));

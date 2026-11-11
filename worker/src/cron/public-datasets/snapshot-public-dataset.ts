@@ -1,0 +1,697 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
+/**
+ * Daily public-dataset snapshot writer.
+ *
+ * Reads canonical caches already produced by other crons (stablecoins,
+ * report-card cache, latest PSI, current DEWS stress signals, current DEX
+ * liquidity) and writes a single gzipped JSON envelope into the
+ * `public_snapshots` D1 table. This row is the substrate for both
+ *   GET /api/snapshots/<YYYY-MM-DD>.json (full daily blob, idea 12.6)
+ * and
+ *   GET /api/snapshot/<YYYY-MM-DD>/stablecoin/<id> (per-coin projection,
+ *   idea 11.14).
+ *
+ * Zero outbound fetches — strictly D1-only — so this job consumes 0/6 of the
+ * trigger's connection budget.
+ *
+ * Idempotent: keyed on the UTC ISO date, rows are write-once so dated public
+ * snapshot URLs can be cached immutably without later same-day mutation.
+ */
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
+import {
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
+  PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
+} from "@shared/lib/public-dataset-snapshot-budget";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { recordCronFailure, type CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity/dex-liquidity";
+import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { sha256Hex } from "../../lib/hash";
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { PRICING_PIPELINE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { safeJsonParse } from "../../lib/api-cache-read";
+import { safeErrorMessage, stripSensitive } from "../../lib/safe-error-message";
+import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
+import { loadActiveSafetyScoreSource } from "../../lib/safety-score-v9/safety-score-active-source";
+import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import {
+  PUBLIC_SNAPSHOT_ENVELOPE_VERSION,
+  PublicSnapshotEnvelopeV2Schema,
+  type PublicSnapshotEnvelopeV2,
+} from "@shared/types/public-snapshot";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import { isSafetyScoreV9SnapshotFresh } from "../../lib/safety-score-v9/consumer-freshness";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
+import { buildStablecoinsCacheFreshnessGateResult } from "../../lib/market-supply/supply-snapshot-completion";
+
+type StableMethodologyVersions = {
+  pegScore: string;
+  dews: string;
+  liquidityScore: string;
+  psi: string;
+  reportCard: string;
+  chainHealth: string;
+  redemptionBackstop: string;
+  pricingPipeline: string;
+  yieldMethodology: string;
+};
+
+interface StabilityIndexRow {
+  computed_at: number;
+  score: number;
+  band: string;
+  components: string | null;
+  methodology_version: string | null;
+}
+
+interface StressSignalRow {
+  stablecoin_id: string;
+  computed_at: number;
+  score: number;
+  band: string;
+  signals_json: string | null;
+}
+
+interface DexLiquidityRow {
+  stablecoin_id: string;
+  total_tvl_usd: number | null;
+  total_volume_24h_usd: number | null;
+  volume_availability_json?: string | null;
+  pool_count: number | null;
+  liquidity_score: number | null;
+  durability_score: number | null;
+  coverage_class: string | null;
+  coverage_confidence: number | null;
+  methodology_version: string | null;
+  updated_at: number;
+}
+
+interface ExistingSnapshotRow {
+  content_hash: string;
+  byte_size: number;
+  created_at: number;
+}
+
+interface SnapshotSectionReadFailure {
+  section: "dews" | "liquidity";
+  error: string;
+}
+
+interface SnapshotSectionFinding {
+  section: "dews" | "liquidity";
+  reason: string;
+}
+
+interface PublishedDexGenerationRow {
+  current_row_count: number | null;
+}
+
+interface SnapshotPublicDatasetOptions {
+  minStablecoinsCacheUpdatedAtSec?: number | null;
+  freshnessGateLabel?: string;
+  stablecoinsCacheRetryAttempts?: number;
+  stablecoinsCacheRetryDelayMs?: number;
+  completionReason?: string;
+  /**
+   * Admitted slot clock. The row's UTC day comes from this clock, so a late
+   * delivery that crosses midnight still writes the write-once day its
+   * admission checked. Defaults to the wall clock.
+   */
+  slotStartedAtSec?: number;
+}
+
+const DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS = 0;
+const DEFAULT_STABLECOINS_CACHE_RETRY_DELAY_MS = PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS;
+const MAX_STABLECOINS_CACHE_RETRY_ATTEMPTS = PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS;
+
+function isoDateUtc(now: Date): string {
+  return now.toISOString().slice(0, 10);
+}
+
+
+async function gzipBytes(input: Uint8Array): Promise<Uint8Array> {
+  const stream = new Response(Uint8Array.from(input)).body!.pipeThrough(new CompressionStream("gzip"));
+  const buffer = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
+/**
+ * The liquidity methodology label is the newest version persisted on the exported
+ * rows (ADR-3 versions compare numerically), not the deployed constant: between a
+ * deploy and the first publication under it, every row still carries the previous
+ * version. Each row also exports its own version, because retained rows of coins
+ * no longer scored keep older ones. The deployed constant labels an export with
+ * no row carrying a parseable version (including an empty export).
+ */
+function latestPersistedLiquidityMethodology(rows: readonly DexLiquidityRow[]): string {
+  let latest: string | null = null;
+  for (const { methodology_version: version } of rows) {
+    if (!version || !Number.isFinite(Number(version))) continue;
+    if (latest == null || Number(version) > Number(latest)) latest = version;
+  }
+  return latest ?? LIQUIDITY_METHODOLOGY_VERSION;
+}
+
+function buildMethodologyVersions(reportCardVersion: string, liquidityScoreVersion: string): StableMethodologyVersions {
+  return {
+    pegScore: SAFETY_SCORE_METHODOLOGY_VERSION,
+    dews: DEPEG_DEWS_METHODOLOGY_VERSION,
+    liquidityScore: liquidityScoreVersion,
+    psi: PSI_METHODOLOGY_VERSION,
+    reportCard: reportCardVersion,
+    chainHealth: CHAIN_HEALTH_METHODOLOGY_VERSION,
+    redemptionBackstop: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
+    pricingPipeline: PRICING_PIPELINE_METHODOLOGY_VERSION,
+    yieldMethodology: YIELD_METHODOLOGY_VERSION,
+  };
+}
+
+type SnapshotSafetySource =
+  | {
+      kind: "ok";
+      model: "v9";
+      identity: SafetyScoreV9PublicationIdentity;
+      reportCards: ReportCardsV9CurrentResponse;
+      updatedAt: number;
+    }
+  | {
+      kind: "error";
+      reason: string;
+      updatedAt: number | null;
+    };
+
+async function loadSnapshotSafetySource(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<SnapshotSafetySource> {
+  const active = await loadActiveSafetyScoreSource(db, signal);
+  throwIfAborted(signal);
+
+  if (active.kind === "error") {
+    return {
+      kind: "error",
+      reason: active.reason,
+      updatedAt: null,
+    };
+  }
+
+  if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
+    return {
+      kind: "error",
+      reason: "stale-cache",
+      updatedAt: active.snapshot.updatedAt,
+    };
+  }
+  return {
+    kind: "ok",
+    model: "v9",
+    identity: active.snapshot.safetyScoreIdentity,
+    reportCards: active.snapshot,
+    updatedAt: active.snapshot.updatedAt,
+  };
+}
+
+/** Write-once precheck read for the day's row. Idempotent SELECT: a transient
+ *  D1 overload here must retry, exactly like the scheduled not-due checks in
+ *  `handlers/scheduled/quarter-hourly.ts`; one queued read must not fail the
+ *  run that owns the day's artifact (2026-09-23 09:31 UTC error run). */
+async function loadExistingSnapshot(
+  db: D1Database,
+  snapshotDate: string,
+  signal?: AbortSignal,
+): Promise<ExistingSnapshotRow | null> {
+  return runWithOverloadRetry(
+    () =>
+      db
+        .prepare("SELECT content_hash, byte_size, created_at FROM public_snapshots WHERE snapshot_date = ?")
+        .bind(snapshotDate)
+        .first<ExistingSnapshotRow>(),
+    3,
+    signal,
+  );
+}
+
+function stablecoinsCachePredatesGate(
+  updatedAt: number,
+  options: SnapshotPublicDatasetOptions,
+): options is SnapshotPublicDatasetOptions & { minStablecoinsCacheUpdatedAtSec: number } {
+  return options.minStablecoinsCacheUpdatedAtSec != null && updatedAt < options.minStablecoinsCacheUpdatedAtSec;
+}
+
+function getStablecoinsCacheRetryAttempts(options: SnapshotPublicDatasetOptions): number {
+  const rawAttempts = options.stablecoinsCacheRetryAttempts ?? DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS;
+  if (!Number.isFinite(rawAttempts) || rawAttempts <= 0) return 0;
+  return Math.min(MAX_STABLECOINS_CACHE_RETRY_ATTEMPTS, Math.floor(rawAttempts));
+}
+
+function getStablecoinsCacheRetryDelayMs(options: SnapshotPublicDatasetOptions): number {
+  const rawDelayMs = options.stablecoinsCacheRetryDelayMs ?? DEFAULT_STABLECOINS_CACHE_RETRY_DELAY_MS;
+  return Number.isFinite(rawDelayMs) && rawDelayMs > 0 ? Math.floor(rawDelayMs) : 0;
+}
+
+export async function snapshotPublicDataset(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: SnapshotPublicDatasetOptions = {},
+): Promise<CronResult> {
+  throwIfAborted(signal);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const slotDayStartedAtSec = bucketUnixSecondsToUtcDay(options.slotStartedAtSec ?? nowSec);
+  const snapshotDate = isoDateUtc(new Date(slotDayStartedAtSec * 1000));
+  const expectedPsiComputedAt = slotDayStartedAtSec - DAY_SECONDS;
+
+  const existingSnapshot = await loadExistingSnapshot(db, snapshotDate, signal);
+  throwIfAborted(signal);
+  if (existingSnapshot) {
+    return createCronResult({
+      itemCount: 0,
+      metadata: {
+        snapshotDate,
+        skipped: "already_exists",
+        contentHash: existingSnapshot.content_hash,
+        byteSize: existingSnapshot.byte_size,
+        createdAt: existingSnapshot.created_at,
+      },
+    });
+  }
+
+  // --- 1. Stablecoins (canonical market cache; required) ---
+  let stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
+  throwIfAborted(signal);
+  if (stablecoinsCache.kind !== "ok") {
+    logWorkerEventArgs("handler", "warn", `[snapshot-public-dataset] Stablecoins cache unavailable: ${stablecoinsCache.kind}`);
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "stablecoins_cache_unavailable", cacheKind: stablecoinsCache.kind },
+    });
+  }
+  const firstStablecoinsCacheUpdatedAt = stablecoinsCache.updatedAt;
+  let stablecoinsCacheRetryAttempts = 0;
+  const maxStablecoinsCacheRetryAttempts = getStablecoinsCacheRetryAttempts(options);
+  const stablecoinsCacheRetryDelayMs = getStablecoinsCacheRetryDelayMs(options);
+  while (
+    stablecoinsCachePredatesGate(stablecoinsCache.updatedAt, options)
+    && stablecoinsCacheRetryAttempts < maxStablecoinsCacheRetryAttempts
+  ) {
+    stablecoinsCacheRetryAttempts += 1;
+    await sleepWithSignal(stablecoinsCacheRetryDelayMs, signal);
+    stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
+    throwIfAborted(signal);
+    if (stablecoinsCache.kind !== "ok") {
+      return createCronResult({
+        status: "degraded",
+        itemCount: 0,
+        metadata: {
+          reason: "stablecoins_cache_unavailable",
+          cacheKind: stablecoinsCache.kind,
+          retryAttempts: stablecoinsCacheRetryAttempts,
+          firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt,
+        },
+      });
+    }
+  }
+  if (stablecoinsCachePredatesGate(stablecoinsCache.updatedAt, options)) {
+    return buildStablecoinsCacheFreshnessGateResult({
+      cacheUpdatedAt: stablecoinsCache.updatedAt,
+      requiredUpdatedAt: options.minStablecoinsCacheUpdatedAtSec,
+      freshnessGateLabel: options.freshnessGateLabel,
+      retry: { attempts: stablecoinsCacheRetryAttempts, firstCacheUpdatedAt: firstStablecoinsCacheUpdatedAt },
+    });
+  }
+
+  // --- 2. Active Safety Score publication (required and identity-bound) ---
+  let safetySource: SnapshotSafetySource | null = await loadSnapshotSafetySource(db, signal);
+  if (safetySource.kind === "error") {
+    logWorkerEventArgs("handler", "warn", `[snapshot-public-dataset] Active Safety Score unavailable: ${safetySource.reason}`);
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "active_safety_score_unavailable",
+        sourceReason: safetySource.reason,
+        updatedAt: safetySource.updatedAt,
+      },
+    });
+  }
+  const { identity: safetyScoreIdentity, updatedAt: safetyUpdatedAt, model: safetyScoreModel } = safetySource;
+  const safetyPublicationSource = safetySource.reportCards.source;
+  const safetyPublicationHealth = safetySource.reportCards.publicationHealth;
+
+  // --- 3. Latest PSI row (required to be the completed prior UTC day) ---
+  let psiRow: StabilityIndexRow | null = null;
+  try {
+    psiRow = await db
+      .prepare(
+        "SELECT computed_at, score, band, components, methodology_version FROM stability_index ORDER BY computed_at DESC LIMIT 1",
+      )
+      .first<StabilityIndexRow>();
+    throwIfAborted(signal);
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    logWorkerEventArgs("handler", "warn", "[snapshot-public-dataset] PSI read failed:", err);
+  }
+  if (!psiRow) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "psi_snapshot_missing", expectedComputedAt: expectedPsiComputedAt },
+    });
+  }
+  if (psiRow.computed_at !== expectedPsiComputedAt) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "psi_snapshot_stale", expectedComputedAt: expectedPsiComputedAt, actualComputedAt: psiRow.computed_at },
+    });
+  }
+
+  // --- 4. DEWS stress signals (one completed publication generation) ---
+  const sectionReadFailures: SnapshotSectionReadFailure[] = [];
+  let stressRows: StressSignalRow[] = [];
+  const publishedDews = await loadPublishedStressSignalGeneration(db, nowSec);
+  throwIfAborted(signal);
+  if (publishedDews.status === "ok") {
+    stressRows = publishedDews.rows;
+  } else {
+    recordCronFailure("snapshot-public-dataset", publishedDews.reason, { metadata: { stage: "read-dews" } });
+    sectionReadFailures.push({ section: "dews", error: publishedDews.reason.slice(0, 200) });
+  }
+
+  // --- 5. DEX liquidity (latest per coin) ---
+  let dexRows: DexLiquidityRow[] = [];
+  try {
+    const result = await db
+      .prepare(
+        `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, volume_availability_json, pool_count, liquidity_score,
+                durability_score, coverage_class, coverage_confidence, methodology_version, updated_at
+         FROM dex_liquidity
+         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
+         ORDER BY liquidity_score DESC`,
+      )
+      .all<DexLiquidityRow>();
+    throwIfAborted(signal);
+    dexRows = result.results ?? [];
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "read-liquidity" } });
+    sectionReadFailures.push({ section: "liquidity", error: toErrorMessage(err).slice(0, 200) });
+  }
+
+  if (sectionReadFailures.length > 0) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "public_snapshot_section_read_failed",
+        snapshotDate,
+        missingSections: sectionReadFailures.map((failure) => failure.section),
+        failedSections: sectionReadFailures,
+      }),
+    };
+  }
+
+  // Fail closed before the write-once insert: a successful read is not proof
+  // that the section is complete. A stale DEWS generation or fewer liquidity
+  // rows than the published generation would seal a partial day that the
+  // quarter-hourly catch-up can never repair.
+  const sectionFindings: SnapshotSectionFinding[] = [];
+  const publishedDewsComputedAt = publishedDews.status === "ok" ? publishedDews.computedAt : null;
+  if (publishedDews.status === "ok") {
+    const dewsAgeSec = nowSec - publishedDews.computedAt;
+    if (dewsAgeSec > DEWS_GENERATION_CONSUMER_MAX_AGE_SEC) {
+      sectionFindings.push({
+        section: "dews",
+        reason: `dews-generation-stale:${dewsAgeSec}s>${DEWS_GENERATION_CONSUMER_MAX_AGE_SEC}s`,
+      });
+    }
+  }
+  let publishedDexGeneration: PublishedDexGenerationRow | null = null;
+  try {
+    publishedDexGeneration = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `SELECT /* pharos:snapshot-public-dataset:published-dex-generation */
+                  current_row_count
+             FROM dex_liquidity_publication_generations
+            WHERE state = 'published'
+            ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
+            LIMIT 1`,
+        )
+        .first<PublishedDexGenerationRow>(),
+      3,
+      signal,
+    );
+    throwIfAborted(signal);
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    sectionFindings.push({ section: "liquidity", reason: "liquidity-generation-read-failed" });
+  }
+  if (
+    publishedDexGeneration?.current_row_count != null
+    && publishedDexGeneration.current_row_count > dexRows.length
+  ) {
+    sectionFindings.push({
+      section: "liquidity",
+      reason: `liquidity-rows:${dexRows.length}/${publishedDexGeneration.current_row_count}`,
+    });
+  }
+  if (sectionFindings.length > 0) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "public_snapshot_section_incomplete",
+        snapshotDate,
+        incompleteSections: sectionFindings,
+      }),
+    };
+  }
+
+  const methodologyVersions = buildMethodologyVersions(
+    safetyScoreIdentity.methodologyVersion,
+    latestPersistedLiquidityMethodology(dexRows),
+  );
+  const snapshotMetadata = {
+    ...methodologyVersions,
+    safetyScoreIdentity,
+  };
+
+  let envelope: PublicSnapshotEnvelopeV2 | null = {
+    version: PUBLIC_SNAPSHOT_ENVELOPE_VERSION,
+    snapshotDate,
+    generatedAt: nowSec,
+    methodologyVersions,
+    safetyScoreIdentity,
+    stablecoins: stablecoinsCache.payload.peggedAssets,
+    fxFallbackRates: stablecoinsCache.payload.fxFallbackRates ?? null,
+    reportCards: safetySource.reportCards,
+    psi: {
+      computedAt: psiRow.computed_at,
+      score: psiRow.score,
+      band: psiRow.band,
+      components: safeJsonParse<Record<string, unknown> | null>(
+        psiRow.components,
+        null,
+        `snapshot-public-dataset:psi:${snapshotDate}:components`,
+      ),
+      methodologyVersion: psiRow.methodology_version ?? methodologyVersions.psi,
+    },
+    dews: stressRows.map((row) => ({
+      stablecoinId: row.stablecoin_id,
+      computedAt: row.computed_at,
+      score: row.score,
+      band: row.band,
+      signals: safeJsonParse<Record<string, unknown> | null>(
+        row.signals_json,
+        null,
+        `snapshot-public-dataset:dews:${row.stablecoin_id}:${row.computed_at}:signals_json`,
+      ),
+    })),
+    liquidity: dexRows.map((row) => {
+      let evidence = null;
+      try {
+        evidence = normalizeDexLiquidityEvidence({ ...row, total_tvl_usd: row.total_tvl_usd ?? 0 });
+      } catch {
+        // Quarantine coverage-dependent ratings without losing observed pool aggregates.
+      }
+      return {
+        stablecoinId: row.stablecoin_id,
+        totalTvlUsd: row.total_tvl_usd,
+        // Measured 24h total only: recorded partial/missing/stale windows export null.
+        totalVolume24hUsd: readStoredDexVolumeWindow(
+          row.total_volume_24h_usd,
+          parseDexVolumeAvailabilityRecord(row.volume_availability_json),
+          "24h",
+        ).measuredUsd,
+        poolCount: row.pool_count,
+        liquidityScore: evidence ? row.liquidity_score : null,
+        durabilityScore: evidence ? row.durability_score : null,
+        coverageClass: evidence?.coverageClass ?? null,
+        unavailableReason: evidence ? null : "invalid-coverage-evidence" as const,
+        methodologyVersion: row.methodology_version,
+        updatedAt: row.updated_at,
+      };
+    }),
+  } satisfies PublicSnapshotEnvelopeV2;
+  PublicSnapshotEnvelopeV2Schema.parse(envelope);
+
+  const jsonBytes = new TextEncoder().encode(JSON.stringify(envelope));
+  // The atomic identity fence below needs no decoded cards while hashing/compressing.
+  envelope = null;
+  safetySource = null;
+  const byteSize = jsonBytes.byteLength;
+
+  let contentHash: string;
+  let payloadGz: Uint8Array;
+  try {
+    [contentHash, payloadGz] = await Promise.all([sha256Hex(jsonBytes), gzipBytes(jsonBytes)]);
+    throwIfAborted(signal);
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    const safeMessage = stripSensitive(safeErrorMessage(err));
+    recordCronFailure("snapshot-public-dataset", safeMessage, { metadata: { stage: "compress_failed" } });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "compress_failed", error: safeMessage },
+    });
+  }
+
+  try {
+    throwIfAborted(signal);
+    if (!isSafetyScoreV9SnapshotFresh({ updatedAt: safetyUpdatedAt, publicationHealth: safetyPublicationHealth })) {
+      return createCronResult({
+        status: "degraded", itemCount: 0,
+        metadata: { reason: "active_safety_score_changed_before_insert", sourceReason: "stale-cache",
+          expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId },
+      });
+    }
+
+    const publicationFenceSql = `EXISTS (
+           SELECT 1
+           FROM cache
+           WHERE key = ?
+             AND updated_at = ?
+             AND json_extract(value, '$.identity.publicationGenerationId') = ?
+             AND json_extract(value, '$.identity.policyVersion') = ?
+             AND json_extract(value, '$.identity.policyId') = ?
+             AND json_extract(value, '$.identity.policyDigest') = ?
+             AND json_extract(value, '$.identity.evaluationBuildDigest') = ?
+             AND json_extract(value, '$.identity.baseInputGenerationId') = ?
+             AND json_extract(value, '$.identity.candidateId') = ?
+             AND json_extract(value, '$.identity.factSetDigest') = ?
+             AND json_extract(value, '$.identity.resultDigest') = ?
+         )
+         AND EXISTS (
+           SELECT 1
+           FROM cache
+           WHERE key = ?
+             AND json_extract(value, '$.acceptedPublicationGenerationId') = ?
+             AND json_extract(value, '$.acceptedAtSec') = ?
+             AND json_extract(value, '$.status') = 'current'
+         )`;
+    const publicationFenceBinds = [
+      SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      safetyUpdatedAt,
+      safetyScoreIdentity.publicationGenerationId,
+      safetyScoreIdentity.methodologyVersion,
+      safetyScoreIdentity.policyId,
+      safetyScoreIdentity.policyDigest,
+      safetyScoreIdentity.evaluationBuildDigest,
+      safetyScoreIdentity.baseInputGenerationId,
+      safetyPublicationSource.candidateId,
+      safetyPublicationSource.factSetDigest,
+      safetyPublicationSource.resultDigest,
+      SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+      safetyScoreIdentity.publicationGenerationId,
+      safetyUpdatedAt,
+    ];
+
+    const result = await db
+      .prepare(
+        `INSERT OR IGNORE INTO public_snapshots
+         (snapshot_date, payload_gz, methodology_versions, content_hash, byte_size, created_at)
+         SELECT ?, ?, ?, ?, ?, ?
+         WHERE ${publicationFenceSql}`,
+      )
+      .bind(
+        snapshotDate,
+        payloadGz,
+        JSON.stringify(snapshotMetadata),
+        contentHash,
+        byteSize,
+        nowSec,
+        ...publicationFenceBinds,
+      )
+      .run();
+    if (result.meta.changes === 0) {
+      const snapshotNowExists = await loadExistingSnapshot(db, snapshotDate, signal);
+      if (!snapshotNowExists) {
+        return createCronResult({
+          status: "degraded",
+          itemCount: 0,
+          metadata: {
+            reason: "active_safety_score_changed_before_insert",
+            expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
+          },
+        });
+      }
+      return createCronResult({
+        itemCount: 0,
+        metadata: {
+          snapshotDate,
+          skipped: "already_exists",
+          contentHash,
+          byteSize,
+          compressedSize: payloadGz.byteLength,
+        },
+      });
+    }
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "insert" } });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "db_write_failed", error: String(err).slice(0, 200) },
+    });
+  }
+
+  return createCronResult({
+    itemCount: 1,
+    metadata: {
+      ...(options.completionReason ? { reason: options.completionReason } : {}),
+      snapshotDate,
+      contentHash,
+      byteSize,
+      compressedSize: payloadGz.byteLength,
+      stablecoinCount: stablecoinsCache.payload.peggedAssets.length,
+      safetyScoreModel,
+      safetyScorePublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
+      ...(stablecoinsCacheRetryAttempts > 0
+        ? {
+          stablecoinsCacheRetryAttempts,
+          firstStablecoinsCacheUpdatedAt,
+          finalStablecoinsCacheUpdatedAt: stablecoinsCache.updatedAt,
+        }
+        : {}),
+      dewsCount: stressRows.length,
+      dewsComputedAt: publishedDewsComputedAt,
+      liquidityCount: dexRows.length,
+      dexPublicationRowCount: publishedDexGeneration?.current_row_count ?? null,
+    },
+  });
+}

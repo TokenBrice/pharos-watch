@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { DatabaseSync } from "node:sqlite";
-import { snapshotPsiDaily } from "../snapshot-psi";
+import { snapshotPsiDaily } from "../psi/snapshot-psi";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const createLatestSchemaSqlite = fixtures.open;

@@ -40,7 +40,7 @@ vi.mock("../../lib/db-cache", async (importOriginal) => ({
   setCache: mocks.setCache,
 }));
 
-vi.mock("../../lib/report-cards-snapshot", () => ({
+vi.mock("../../lib/safety-score-v9/report-cards-snapshot", () => ({
   loadExactDexPublicationGeneration: mocks.loadDexGeneration,
 }));
 
@@ -83,7 +83,7 @@ vi.mock(
   },
 );
 
-vi.mock("../../lib/report-card-evidence-journal-store", () => ({
+vi.mock("../../lib/safety-score-v9/report-card-evidence-journal-store", () => ({
   loadReportCardEvidenceJournalByIdV1:
     mocks.loadEvidenceJournalById,
 }));
@@ -103,7 +103,7 @@ vi.mock("../../lib/safety-score-v9/publication-health", async (importOriginal) =
   loadSafetyScoreV9PublicationHealth: mocks.loadPublicationHealth,
 }));
 
-const { computeSafetyScoreV9, SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } = await import("../compute-safety-score-v9");
+const { computeSafetyScoreV9, SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } = await import("../safety-score-v9/compute-safety-score-v9");
 
 // Parsers/publication are mocked in gate cases; build the valid transport control only once.
 const validNativeInput = createNativeSafetyScoreV9FullRegistryInput();

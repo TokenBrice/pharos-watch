@@ -12,7 +12,7 @@ import type { DdrrLineage } from "@shared/types/depeg-resolver-review";
 import type {
   DdrCanonicalIncident,
   DdrSealedPublicPrediction,
-} from "../depeg-resolver-v2-contracts";
+} from "../depeg-resolver/depeg-resolver-v2-contracts";
 
 function payloadStringValue(value: unknown): string | null {
   return stringValue(value, { trim: false });

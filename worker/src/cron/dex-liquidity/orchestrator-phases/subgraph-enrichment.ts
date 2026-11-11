@@ -1,7 +1,7 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { rethrowIfAborted } from "../../../lib/abort";
-import type { PriceValidationReferences } from "../../../lib/price-validation";
+import type { PriceValidationReferences } from "../../../lib/pricing/price-validation";
 import { UNISWAP_V4_SUBGRAPHS, UNIV3_SUBGRAPHS } from "../constants";
 import {
   fetchUniswapV4Data,

@@ -3,8 +3,8 @@ import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { handleDepegEvents } from "../../api/depeg-events";
-import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../depeg-event-projection";
-import { DEPEG_EVENTS_COUNT_CACHE_KEY, prepareDepegEventsCountStatements } from "../depeg-events-count-cache";
+import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../depeg-detection/depeg-event-projection";
+import { DEPEG_EVENTS_COUNT_CACHE_KEY, prepareDepegEventsCountStatements } from "../depeg-detection/depeg-events-count-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

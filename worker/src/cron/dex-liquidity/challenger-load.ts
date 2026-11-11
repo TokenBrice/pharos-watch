@@ -1,5 +1,5 @@
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity/dex-liquidity";
 import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
 import type {
   DexPriceChallengerLoadRow,

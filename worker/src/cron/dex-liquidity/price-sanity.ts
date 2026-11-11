@@ -4,7 +4,7 @@ import {
   buildPriceValidationContext,
   validatePriceCandidate,
   type PriceValidationReferences,
-} from "../../lib/price-validation";
+} from "../../lib/pricing/price-validation";
 
 /** Peg-aware sanity gate for DEX price observations across all tracked stablecoin types. */
 export function isPlausibleDexObservationPrice(

@@ -3,7 +3,7 @@ import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-regist
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { getPrimaryPriceAgeSec, getPrimaryTrustSources, type PrimaryPriceTrustInput } from "@shared/lib/depeg-primary-trust";
 export { classifyPrimaryDepegTrust } from "@shared/lib/depeg-primary-trust";
-import { DEX_PRICE_CHECK_FRESHNESS_SEC, DEX_PRICE_CHECK_UI_MIN_TVL_USD } from "./dex-cron-constants";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC, DEX_PRICE_CHECK_UI_MIN_TVL_USD } from "./dex-liquidity/dex-cron-constants";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
 export { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";

@@ -8,7 +8,7 @@ import type {
   LiveReservesConfig,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { requireChainlinkLatestRoundData } from "../../lib/pricing/chainlink-round-data";
 import {
   DECIMALS_SELECTOR,
   LATEST_ROUND_DATA_SELECTOR,

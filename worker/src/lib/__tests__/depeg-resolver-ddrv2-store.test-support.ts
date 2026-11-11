@@ -4,12 +4,12 @@ import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/dep
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   ensureCanonicalIncidents,
-} from "../depeg-resolver-incident-store";
+} from "../depeg-resolver/depeg-resolver-incident-store";
 import {
   sealPublicNoCall,
   sealPublicPrediction,
   type DdrPublicAssessmentSealInput,
-} from "../depeg-resolver-publication-store";
+} from "../depeg-resolver/depeg-resolver-publication-store";
 
 export interface SqliteD1 extends D1Database {
   close(): void;

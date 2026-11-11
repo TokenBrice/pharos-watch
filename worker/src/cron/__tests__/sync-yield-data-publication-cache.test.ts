@@ -18,18 +18,18 @@ import {
 } from "./sync-yield-data.test-support";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { syncYieldData } from "../sync-yield-data";
-import * as yieldHelpersModule from "../yield-helpers";
+import { syncYieldData } from "../yield-sync/sync-yield-data";
+import * as yieldHelpersModule from "../yield-sync/yield-helpers";
 import * as publicationModule from "../yield-sync/publication-generation";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
-import * as safetyScoresModule from "../../lib/safety-scores";
+import * as safetyScoreActiveSourceModule from "../../lib/safety-score-v9/safety-score-active-source";
+import * as safetyScoresModule from "../../lib/safety-score-v9/safety-scores";
 import * as yieldPools from "../../lib/yield-config/yield-config-pools";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
-import type * as YieldHelpers from "../yield-helpers";
+import type * as YieldHelpers from "../yield-sync/yield-helpers";
 import type { YieldRankingsResponse } from "@shared/types/yield";
 
 function makePublicationCacheDb() {
@@ -222,7 +222,7 @@ describe("syncYieldData", () => {
     // hardcoded fallback (ageSeconds null) and the row is an unpublishable
     // stale-benchmark NR row under B13.
     mockHealthyRiskFreeRateCache();
-    const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
+    const actual = await vi.importActual<typeof YieldHelpers>("../yield-sync/yield-helpers");
     vi.spyOn(yieldHelpersModule, "detectWarningSignals").mockImplementation(actual.detectWarningSignals);
 
     mockFetch([
@@ -465,7 +465,7 @@ describe("syncYieldData", () => {
       ], nowSec - 60),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    const actual = await vi.importActual<typeof yieldHelpersModule>("../yield-helpers");
+    const actual = await vi.importActual<typeof yieldHelpersModule>("../yield-sync/yield-helpers");
     vi.mocked(yieldHelpersModule.findBestLendingPool).mockImplementation(actual.findBestLendingPool);
     mockFetch([]);
 

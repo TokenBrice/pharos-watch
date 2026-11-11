@@ -10,8 +10,8 @@ import {
   DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1,
   ensureCanonicalIncidents,
   loadCanonicalIncidents,
-} from "../depeg-resolver-incident-store";
-import { recordLockDeferral, recordLockOpportunity } from "../depeg-resolver-lock-opportunity-store";
+} from "../depeg-resolver/depeg-resolver-incident-store";
+import { recordLockDeferral, recordLockOpportunity } from "../depeg-resolver/depeg-resolver-lock-opportunity-store";
 import {
   loadFirstPublicationMembership,
   loadLatestPublicationManifest,
@@ -19,8 +19,8 @@ import {
   sealPublicNoCall,
   sealPublicPrediction,
   writePublicationManifest,
-} from "../depeg-resolver-publication-store";
-import { authorizeEventRepair, consumeEventRepairAuthorization } from "../depeg-resolver-repair-store";
+} from "../depeg-resolver/depeg-resolver-publication-store";
+import { authorizeEventRepair, consumeEventRepairAuthorization } from "../depeg-resolver/depeg-resolver-repair-store";
 import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC, DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD, DDR_FORECAST_READINESS_VERSION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { coverageRowForIncident } from "../../cron/depeg-resolver-review/coverage-rows";
 import { toCanonicalIncidentInput } from "../../cron/depeg-resolver/utils";

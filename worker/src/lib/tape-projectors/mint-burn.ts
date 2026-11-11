@@ -18,11 +18,11 @@ import { FLOW_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants"
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { batchExecute } from "../d1-primitives";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../mint-burn-flows-service";
-import { mintBurnTapeClaimStaleSql, mintBurnTapeEligibleSql } from "../mint-burn-tape-claim";
-import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
-import type { TapeEventInsert } from "../tape-event-types";
+import { mintBurnTapeClaimStaleSql, mintBurnTapeEligibleSql } from "../mint-burn-pipeline/mint-burn-tape-claim";
+import { buildTapeEventId, deriveIssuerId } from "./tape-event-helpers";
+import type { TapeEventInsert } from "./tape-event-types";
 import {
   finalizeProjectorBatch,
   fetchRowsWithTieExpansion,

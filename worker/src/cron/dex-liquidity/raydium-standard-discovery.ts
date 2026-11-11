@@ -1,7 +1,7 @@
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { convertToGtNewPools, type DexApiPool } from "../../lib/dex-api-common";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import { convertToGtNewPools, type DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { isDexApiRecord } from "./direct-api-json";
 import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 import { normalizeProtocol } from "./pool-helpers";

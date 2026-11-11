@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { handleYieldHistory } from "../yield-history";
-import { readYieldRankingsCoinCache } from "../../lib/yield-rankings-coin-cache";
+import { readYieldRankingsCoinCache } from "../../lib/yield/yield-rankings-coin-cache";
 import { publishedYieldCache } from "./yield-history.test-support";
 import { YieldHistoryResponseSchema } from "@shared/types/yield";
 

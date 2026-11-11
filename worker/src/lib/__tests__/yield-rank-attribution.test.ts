@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { buildYieldRankChangeAttribution } from "../yield-rank-attribution";
+import { buildYieldRankChangeAttribution } from "../yield/yield-rank-attribution";
 
 const priorMove = { previousRank: 15, rankDelta: 12, primaryDriver: "apy" as const };
 

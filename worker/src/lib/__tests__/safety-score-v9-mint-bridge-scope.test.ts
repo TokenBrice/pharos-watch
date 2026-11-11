@@ -25,7 +25,7 @@ import {
   mergedBridgeCapSemantics,
   type StructuredBridgeOverlayEntry,
 } from "../safety-score-v9/extension-bridge";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import {
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension-shared";

@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeMintBurnConfig } from "../../../test-helpers/__shared/mint-burn-config";
-import { fetchConservationBoundaries } from "../../../lib/mint-burn-conservation";
+import { fetchConservationBoundaries } from "../../../lib/mint-burn-pipeline/mint-burn-conservation";
 import { createMintBurnConfigSummary } from "../sync-config";
 import { mintBurnScanRequestFloor, syncMintBurnConfigWithRetries } from "../scan-with-retry";
-import { mintBurnConfigKey as configKey } from "../../../lib/mint-burn-contract-identity";
+import { mintBurnConfigKey as configKey } from "../../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { runMintBurnConfigPhase } from "../run-configs";
 import type * as ScanRetryModule from "../scan-with-retry";
 
 vi.mock("../scan-with-retry", async (importOriginal) => ({
   ...await importOriginal<typeof ScanRetryModule>(), syncMintBurnConfigWithRetries: vi.fn(),
 }));
-vi.mock("../../../lib/mint-burn-conservation", () => ({
+vi.mock("../../../lib/mint-burn-pipeline/mint-burn-conservation", () => ({
   fetchConservationBoundaries: vi.fn(),
   conservationOnlyEventDefsFor: () => [],
   getMintBurnConservationEligibility: () => ({ supported: true }),

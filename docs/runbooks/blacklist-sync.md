@@ -165,7 +165,7 @@ Do not run older delete-and-replace revisions of either balance tool: they can e
 
 ## Methodology And Ownership
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the runtime scans the live contract configurations in `worker/src/lib/blacklist-contracts.ts`; that registry owns the supported chains and symbols; deferred and out-of-scope deployments are owned by `worker/src/lib/blacklist-coverage-manifest.ts`.
+Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the runtime scans the live contract configurations in `worker/src/lib/blacklist/blacklist-contracts.ts`; that registry owns the supported chains and symbols; deferred and out-of-scope deployments are owned by `worker/src/lib/blacklist/blacklist-coverage-manifest.ts`.
 
 - **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
@@ -177,9 +177,9 @@ Fresh admitted producer observations and production resource evidence remain sep
 
 Three registries have deliberately different jobs:
 
-- `CONTRACT_CONFIGS` in `worker/src/lib/blacklist-contracts.ts` is the cron-backed scan set. It owns tracker-specific chain, contract, start-block, event-family, topic, and decoding metadata.
+- `CONTRACT_CONFIGS` in `worker/src/lib/blacklist/blacklist-contracts.ts` is the cron-backed scan set. It owns tracker-specific chain, contract, start-block, event-family, topic, and decoding metadata.
 - `BLACKLIST_STABLECOINS` in `shared/types/market.ts` is the API and UI filter universe. It may retain archived identities after a live scan is retired.
-- `worker/src/lib/blacklist-coverage-manifest.ts` derives supported coverage and owns explicit deferred and out-of-scope deployment records.
+- `worker/src/lib/blacklist/blacklist-coverage-manifest.ts` derives supported coverage and owns explicit deferred and out-of-scope deployment records.
 
 Do not copy any of those rosters into documentation. Contract addresses and decimals resolve from the shared stablecoin registry except for explicit traded-contract or tracker-specific overrides in `blacklist-contracts.ts`.
 
@@ -294,7 +294,7 @@ The producer summary cache is admitted fail-closed against the shared response s
 
 - **Expression:** `3 */6 * * *`
 - **Slot:** `worker/src/handlers/scheduled/hourly-blacklist.ts`
-- **Producer:** `syncBlacklist()` in `worker/src/cron/sync-blacklist.ts`
+- **Producer:** `syncBlacklist()` in `worker/src/cron/blacklist/sync-blacklist.ts`
 - **Runtime budget:** 10 minutes for scans, with a 60-second minimum window before starting another config; a separately capped maintenance tail ends at 10 minutes 45 seconds
 - **Subrequest budget:** 900 across scanning, enrichment, and maintenance
 - **Provider limiter:** serial per-provider limiters — Tron reads share 3 requests per second across Dwellir and TronGrid, Etherscan uses 4 requests per second injected by the scheduled slot (the producer's own 3/s default applies only when no external Etherscan limiter is supplied)
@@ -353,7 +353,7 @@ freshness still advance only at the proven safe head, not at a tolerated frontie
 
 ## Event And Coverage Rules
 
-`worker/src/lib/blacklist-contracts.ts` is the only registry for event signatures, topic hashes, address/amount decoding indices, array encodings, direction booleans, and deployment start blocks. Reviewed event arrays are composed directly; configurations still clone their event lists. Parsing is implemented in:
+`worker/src/lib/blacklist/blacklist-contracts.ts` is the only registry for event signatures, topic hashes, address/amount decoding indices, array encodings, direction booleans, and deployment start blocks. Reviewed event arrays are composed directly; configurations still clone their event lists. Parsing is implemented in:
 
 - `worker/src/cron/blacklist/evm-source.ts`
 - `worker/src/lib/blacklist/evm-payload.ts` for the registry-defined payload decoding shared by EVM ingestion and destroy receipt recovery; identity/timestamps and receipt matching remain caller-owned

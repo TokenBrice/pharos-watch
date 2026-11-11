@@ -4,8 +4,8 @@ import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { RemoteD1Client } from "../lib/remote-d1";
 import { buildBlacklistActiveRecords } from "@shared/lib/blacklist-active-records";
-import { mapBlacklistEventRow, type BlacklistEventRow } from "../../src/lib/blacklist-api";
-import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
+import { mapBlacklistEventRow, type BlacklistEventRow } from "../../src/lib/blacklist/blacklist-api";
+import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist/blacklist-contracts";
 
 const databases = createLatestSchemaFixtureTracker();
 afterEach(() => databases.closeAll());

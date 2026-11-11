@@ -5,19 +5,19 @@ import { buildCronFreshnessHeaders, buildCronFreshnessMeta, type CronTimestampLo
 import { jsonResponse, jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-config";
+import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-pipeline/mint-burn-health-config";
 import { MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC } from "../cron/mint-burn/run-state";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification,
   tallyMintBurnClassificationBucket, type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
-import { hasMintBurnClassificationReview } from "./mint-burn-classification";
+import { hasMintBurnClassificationReview } from "./mint-burn-pipeline/mint-burn-classification";
 import type { MintBurnClassification, MintBurnHourlyBucket } from "@shared/types/mint-burn";
 import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 
 /** Same effective fresh budget returned by buildCronFreshnessMeta, not its base cadence. */
 export const MINT_BURN_WATERMARK_MAX_AGE_SEC =
   MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC * getCacheRatioThresholds("cron-output").degraded;
-import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-pipeline/mint-burn-contracts";
 import { decodeJsonString } from "./cache-json";
 import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -33,21 +33,21 @@ import {
 } from "@shared/lib/mint-burn-valuation";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnCoinCoverage, type MintBurnScanWindow, type MintBurnValuationCompleteness, type MintBurnWatermark } from "@shared/types/mint-burn";
 import { mintBurnScanCoverageAdmits, mintBurnWindowAdmits, buildMintBurnLegacySpans, decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, prepareMintBurnLegacyEvidence, MINT_BURN_LEGACY_CUTOVER, type MintBurnLegacySpan, type MintBurnLegacyRow, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "./mint-burn-contract-identity";
-import { MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL, type MintBurnClassificationTallyRow, readMintBurnClassificationTallyRow, MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
+import { mintBurnConfigKey } from "./mint-burn-pipeline/mint-burn-contract-identity";
+import { MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL, type MintBurnClassificationTallyRow, readMintBurnClassificationTallyRow, MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-pipeline/mint-burn-hourly-valuation";
 
-import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
+import { FLOW_CACHE_PREFIX } from "./mint-burn-pipeline/mint-burn-flow-cache-keys";
 import {
   decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, selectMintBurnStalledFrontiers,
   persistMintBurnAdmissions, persistMintBurnQuarantines, persistMintBurnResumptions,
   prepareMintBurnAdmissions, prepareMintBurnPublicationPolicy, resolveMintBurnPublication,
   type MintBurnAdmissionRow,
-} from "./mint-burn-publication";
+} from "./mint-burn-pipeline/mint-burn-publication";
 
 export {
   aggregateFlowCacheKey,
   perCoinFlowCacheKey,
-} from "./mint-burn-flow-cache-keys";
+} from "./mint-burn-pipeline/mint-burn-flow-cache-keys";
 
 /** Closed UTC hours only: raw-event boundary fragments cannot be recovered after retention. */
 export function mintBurnHourlyWindow(nowSec: number, hours: number) {

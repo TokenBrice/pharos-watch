@@ -1,5 +1,5 @@
 import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
-import type { DdrV2StoreContracts } from "../depeg-resolver-v2-contracts";
+import type { DdrV2StoreContracts } from "./depeg-resolver-v2-contracts";
 
 /** Admitted publication projection, owned by one resolver run. Null means unavailable. */
 export type DdrStructuralContext = ReadonlyMap<string, {

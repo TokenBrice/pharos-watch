@@ -1,7 +1,7 @@
-import { getDepegThresholdBps } from "../../../src/lib/depeg-threshold-policy";
-import type { DepegRow } from "../../../src/lib/depeg-helpers";
+import { getDepegThresholdBps } from "../../../src/lib/depeg-detection/depeg-threshold-policy";
+import type { DepegRow } from "../../../src/lib/depeg-detection/depeg-helpers";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import type { PsiDepegEventRow } from "../../../src/lib/psi-recompute";
+import type { PsiDepegEventRow } from "../../../src/lib/psi/psi-recompute";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;

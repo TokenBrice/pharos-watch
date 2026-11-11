@@ -6,7 +6,7 @@ import * as reconciliation from "../supply-gap-reconciliation";
 import * as transport from "../../../lib/fetch-retry";
 import * as circuit from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { MIN_VALID_ASSET_COUNT } from "../../../lib/stablecoin-intake-policy";
+import { MIN_VALID_ASSET_COUNT } from "../../../lib/market-supply/stablecoin-intake-policy";
 import { makePeggedAsset } from "./_fixtures";
 import * as shared from "../shared";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";

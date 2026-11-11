@@ -4,7 +4,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../market-supply/stablecoin-publication-coverage";
 import {
   checkDdrEligibleUnsealed,
   checkDepegDetectionCensus,
@@ -14,7 +14,7 @@ import {
   DEPEG_BLIND_EVENT_REVIEWS,
   DepegBlindEventReviewSchema,
   resolveDepegBlindEventReviews,
-} from "../canary-checks-depeg";
+} from "../depeg-detection/canary-checks-depeg";
 
 const fixtures = createLatestSchemaFixtureTracker();
 

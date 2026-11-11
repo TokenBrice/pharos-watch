@@ -2,14 +2,14 @@ import { COVERAGE_REPAIR_MAX_BLOCKS } from "../mint-burn/repair-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import { hasMintBurnScanCoverage, mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { loadMintBurnCoverageGaps as loadGaps, repairMintBurnCoverage } from "../mint-burn/repair-coverage";
 import { createMintBurnConfigSummary as configSummary, syncMintBurnConfig } from "../mint-burn/sync-config";
 import type { runMintBurnConfigPhase } from "../mint-burn/run-configs";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { fetchConservationBoundaries, mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { fetchConservationBoundaries, mintBurnConservationFingerprint } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 import * as rpc from "../../lib/mint-burn-pipeline/rpc";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import * as abort from "../../lib/abort";
@@ -21,11 +21,11 @@ import {
 } from "../mint-burn/repair-supply-proofs";
 
 import type * as SyncConfigModule from "../mint-burn/sync-config";
-import type * as ConservationModule from "../../lib/mint-burn-conservation";
+import type * as ConservationModule from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 vi.mock("../mint-burn/sync-config", async (importOriginal) => ({
   ...await importOriginal<typeof SyncConfigModule>(), syncMintBurnConfig: vi.fn(),
 }));
-vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => ({
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-conservation", async (importOriginal) => ({
   ...await importOriginal<typeof ConservationModule>(),
   fetchConservationBoundaries: vi.fn(async () => new Map()),
 }));

@@ -3,9 +3,9 @@ import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import { CANARY_INCIDENT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { CanaryStatus, CanaryExecutionStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
-import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
-import { classifyStablecoinPublicationGap, evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
-import { checkSupplyHistoryDailyCoverage } from "./canary-checks-supply";
+import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./market-supply/stablecoins-cache";
+import { classifyStablecoinPublicationGap, evaluateStablecoinPublicationCoverage } from "./market-supply/stablecoin-publication-coverage";
+import { checkSupplyHistoryDailyCoverage } from "./market-supply/canary-checks-supply";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "./abort";
@@ -17,7 +17,7 @@ import {
 import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
-import { loadActiveSafetyScoreCohort } from "./safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "./safety-score-v9/safety-score-active-source";
 import { classifyFreshness } from "./status/freshness-oracle";
 import {
   checkDdrEligibleUnsealed,
@@ -25,8 +25,8 @@ import {
   checkDepegDexSuppression,
   checkDepegOpenCoverage,
   checkDepegPendingConfirmation,
-} from "./canary-checks-depeg";
-import { checkBlacklistRosterCoverage, checkMintBurnPublicationCoverage } from "./canary-checks-mintburn";
+} from "./depeg-detection/canary-checks-depeg";
+import { checkBlacklistRosterCoverage, checkMintBurnPublicationCoverage } from "./mint-burn-pipeline/canary-checks-mintburn";
 import {
   boundedText,
   degradedResult,
@@ -37,10 +37,10 @@ import {
   unavailableResult,
 } from "./canary-check-results";
 import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
-import { checkTapeClassLiveness } from "./canary-checks-tape";
-import { checkPublicDatasetSnapshotCompleteness } from "./canary-checks-public-dataset";
+import { checkTapeClassLiveness } from "./tape-projectors/canary-checks-tape";
+import { checkPublicDatasetSnapshotCompleteness } from "./public-datasets/canary-checks-public-dataset";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
-import { PRICING_CANARY_CHECKS } from "./canary-checks-pricing";
+import { PRICING_CANARY_CHECKS } from "./pricing/canary-checks-pricing";
 
 export {
   normalizeWorkerCanaryMode,

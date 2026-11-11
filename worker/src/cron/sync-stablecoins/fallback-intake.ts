@@ -3,12 +3,12 @@ import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/r
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import { getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { MIN_VALID_ASSET_COUNT } from "../../lib/stablecoin-intake-policy";
+import { MIN_VALID_ASSET_COUNT } from "../../lib/market-supply/stablecoin-intake-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { throwIfAborted } from "../../lib/abort";
-import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+import { validatePricingSourceFreshness } from "../../lib/pricing/pricing-source-freshness";
 import type { CronResult } from "./shared";
 import { buildSyncMetadata, hydrateGeckoIdAliases, restorePreferredNativeSupply } from "./shared";
 import { filterStructurallyValidAssets, normalizeChainCirculating } from "./phase-helpers";

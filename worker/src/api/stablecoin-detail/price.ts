@@ -1,11 +1,11 @@
-import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
+import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib/pricing/solomon-usdv-identity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { admitSupplyBuckets } from "@shared/lib/supply";
 import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
-import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/market-supply/stablecoins-cache";
 import { hasUsableCurrentPrice } from "../../lib/current-peg-observations";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 

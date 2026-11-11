@@ -5,7 +5,7 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { getExecutableRedemptionObserver, observeExecutableRedemptionRoute } from "../../cron/reserve-adapters/executable-redemption-observers";
 import { resolveCoinContractAddress } from "../../cron/reserve-adapters/evm";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
-import { buildExitOutputPriceById } from "../report-cards-snapshot";
+import { buildExitOutputPriceById } from "../safety-score-v9/report-cards-snapshot";
 import {
   deriveModelConfidenceWithDetails,
   deriveModelConfidence,
@@ -48,9 +48,9 @@ import {
 import {
   buildRedemptionExitRouteObservation,
   deriveSupplyModelExitRouteObservation,
-} from "../redemption-exit-route-observations";
-import { buildFpiControllerV9ExitRouteObservation } from "../fpi-controller-redemption-route";
-import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../sfrxusd-crosschain-redemption-route";
+} from "./redemption-exit-route-observations";
+import { buildFpiControllerV9ExitRouteObservation } from "./fpi-controller-redemption-route";
+import { buildSfrxusdCrosschainV9ExitRouteObservation } from "./sfrxusd-crosschain-redemption-route";
 import { deriveCurrentPegObservationMap } from "../current-peg-observations";
 import type { RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
 

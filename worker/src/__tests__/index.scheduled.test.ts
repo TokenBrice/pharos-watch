@@ -4,7 +4,7 @@ import {
 import { getScheduledWorkerRoleForExpression } from "@shared/lib/scheduled-runner-registry";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type * as V9SlotWindow from "../lib/v9-slot-window";
+import type * as V9SlotWindow from "../lib/safety-score-v9/v9-slot-window";
 import type { ScheduledExecutionFence } from "../lib/scheduled-execution-contract";
 import type { SlotDeadline } from "../lib/cron-timeouts";
 import type { CronRunLoggerOptions } from "../lib/cron-logger";
@@ -179,15 +179,15 @@ const cronMocks = vi.hoisted(() => ({
   reconcileTelegramWebhookRegistration: vi.fn(async () => ({ attempted: false, expectedUrl: null })),
 }));
 
-vi.mock("../cron/sync-stablecoins", () => ({ syncStablecoins: cronMocks.syncStablecoins }));
-vi.mock("../cron/sync-stablecoin-charts", () => ({ syncStablecoinCharts: cronMocks.syncStablecoinCharts }));
-vi.mock("../cron/sync-blacklist", () => ({ syncBlacklist: cronMocks.syncBlacklist }));
-vi.mock("../cron/sync-mint-burn", () => ({ syncMintBurn: cronMocks.syncMintBurn }));
+vi.mock("../cron/market-supply/sync-stablecoins", () => ({ syncStablecoins: cronMocks.syncStablecoins }));
+vi.mock("../cron/market-supply/sync-stablecoin-charts", () => ({ syncStablecoinCharts: cronMocks.syncStablecoinCharts }));
+vi.mock("../cron/blacklist/sync-blacklist", () => ({ syncBlacklist: cronMocks.syncBlacklist }));
+vi.mock("../cron/mint-burn/sync-mint-burn", () => ({ syncMintBurn: cronMocks.syncMintBurn }));
 vi.mock("../cron/dex-discovery/orchestrator", () => ({ syncDexDiscovery: cronMocks.syncDexDiscovery }));
-vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }));
-vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
+vi.mock("../cron/pricing/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }));
+vi.mock("../cron/psi/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../lib/dews/service", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
-vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
+vi.mock("../cron/tape/project-tape", () => ({ projectTape: cronMocks.projectTape }));
 vi.mock("../cron/telegram/dispatch/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
 vi.mock("../cron/telegram/maintenance/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
@@ -246,18 +246,18 @@ vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runS
 vi.mock("../cron/cron-staleness-watchdog", () => ({
   runCronStalenessWatchdog: cronMocks.runCronStalenessWatchdog,
 }));
-vi.mock("../cron/digest-publication-watchdog", () => ({
+vi.mock("../cron/digest/digest-publication-watchdog", () => ({
   runDigestPublicationWatchdog: cronMocks.runDigestPublicationWatchdog,
 }));
-vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
-vi.mock("../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks.snapshotChainSupply }));
-vi.mock("../cron/sync-v9-supply-attribution", () => ({
+vi.mock("../cron/market-supply/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
+vi.mock("../cron/market-supply/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks.snapshotChainSupply }));
+vi.mock("../cron/safety-score-v9/sync-v9-supply-attribution", () => ({
   syncSafetyScoreV9SupplyAttribution: cronMocks.syncSafetyScoreV9SupplyAttribution,
 }));
-vi.mock("../cron/compute-safety-score-v9", () => ({
+vi.mock("../cron/safety-score-v9/compute-safety-score-v9", () => ({
   computeSafetyScoreV9: cronMocks.computeSafetyScoreV9,
 }));
-vi.mock("../lib/v9-slot-window", async (importOriginal) => ({
+vi.mock("../lib/safety-score-v9/v9-slot-window", async (importOriginal) => ({
   ...await importOriginal<typeof V9SlotWindow>(),
   waitForV9MemoryLaneRelease: vi.fn(async () => undefined),
   runV9AfterCoreWithinWindow: vi.fn(
@@ -267,20 +267,20 @@ vi.mock("../lib/v9-slot-window", async (importOriginal) => ({
     ) => run(new AbortController().signal),
   ),
 }));
-vi.mock("../cron/prepare-safety-score-v9-input", () => ({
+vi.mock("../cron/safety-score-v9/prepare-safety-score-v9-input", () => ({
   prepareSafetyScoreV9Input: cronMocks.prepareSafetyScoreV9Input,
 }));
-vi.mock("../cron/compute-depeg-resolver", () => ({ computeDepegResolver: cronMocks.computeDepegResolver }));
-vi.mock("../cron/snapshot-safety-grade-history", () => ({
+vi.mock("../cron/depeg-resolver/compute-depeg-resolver", () => ({ computeDepegResolver: cronMocks.computeDepegResolver }));
+vi.mock("../cron/safety-score-v9/snapshot-safety-grade-history", () => ({
   snapshotSafetyGradeHistory: cronMocks.snapshotSafetyGradeHistory,
 }));
-vi.mock("../cron/fetch-tbill-rate", () => ({ fetchTbillRate: cronMocks.fetchTbillRate }));
-vi.mock("../cron/snapshot-psi", () => ({ snapshotPsiDaily: cronMocks.snapshotPsiDaily }));
-vi.mock("../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset: cronMocks.snapshotPublicDataset }));
-vi.mock("../cron/sync-usds-status", () => ({ syncUsdsStatus: cronMocks.syncUsdsStatus }));
-vi.mock("../cron/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncLiveReserves }));
-vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: cronMocks.syncRedemptionBackstops }));
-vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syncKinesisSupply }));
+vi.mock("../cron/yield-sync/fetch-tbill-rate", () => ({ fetchTbillRate: cronMocks.fetchTbillRate }));
+vi.mock("../cron/psi/snapshot-psi", () => ({ snapshotPsiDaily: cronMocks.snapshotPsiDaily }));
+vi.mock("../cron/public-datasets/snapshot-public-dataset", () => ({ snapshotPublicDataset: cronMocks.snapshotPublicDataset }));
+vi.mock("../cron/blacklist/sync-usds-status", () => ({ syncUsdsStatus: cronMocks.syncUsdsStatus }));
+vi.mock("../cron/live-reserves/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncLiveReserves }));
+vi.mock("../cron/redemption-backstop/sync-redemption-backstops", () => ({ syncRedemptionBackstops: cronMocks.syncRedemptionBackstops }));
+vi.mock("../cron/market-supply/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syncKinesisSupply }));
 vi.mock("../cron/dex-liquidity/orchestrator", () => ({
   stageDexLiquidityScoring: cronMocks.stageDexLiquidityScoring,
   consumeDexLiquidityScoringStage: cronMocks.consumeDexLiquidityScoringStage,
@@ -289,20 +289,20 @@ vi.mock("../cron/measured-execution/sync", () => ({
   syncDexMeasuredExecution: cronMocks.syncDexMeasuredExecution,
   syncDexShadowMeasuredExecution: cronMocks.syncDexShadowMeasuredExecution,
 }));
-vi.mock("../cron/dex-exit-route-turnover-watchdog", () => ({
+vi.mock("../cron/dex-liquidity/dex-exit-route-turnover-watchdog", () => ({
   runDexExitRouteTurnoverWatchdog: cronMocks.runDexExitRouteTurnoverWatchdog,
 }));
-vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
-vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));
-vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }));
-vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
-vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
+vi.mock("../cron/yield-sync/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
+vi.mock("../cron/yield-sync/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));
+vi.mock("../cron/bluechip/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }));
+vi.mock("../cron/daily-digest/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
+vi.mock("../cron/weekly-recap/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
 vi.mock("../cron/cron-sentinel", () => ({
   runCronSentinel: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
 }));
 vi.mock("../cron/prune-status-probe-runs", () => ({ runPruneStatusProbeRuns: cronMocks.runPruneStatusProbeRuns }));
 vi.mock("../cron/prune-cron-history", () => ({ runPruneCronHistory: cronMocks.runPruneCronHistory }));
-vi.mock("../lib/repair-tasks", () => ({ runWorkerRepairTaskRunner: cronMocks.runWorkerRepairTaskRunner }));
+vi.mock("../lib/depeg-resolver/repair-tasks", () => ({ runWorkerRepairTaskRunner: cronMocks.runWorkerRepairTaskRunner }));
 vi.mock("../cron/prune-detail-cache", () => ({ runPruneDetailCache: cronMocks.runPruneDetailCache }));
 vi.mock("../cron/telegram/maintenance/telegram-inactive-cleanup", () => ({
   runTelegramInactiveCleanup: cronMocks.runTelegramInactiveCleanup,
@@ -310,11 +310,11 @@ vi.mock("../cron/telegram/maintenance/telegram-inactive-cleanup", () => ({
 vi.mock("../cron/telegram/maintenance/telegram-retention-cleanup", () => ({
   runTelegramRetentionCleanup: cronMocks.runTelegramRetentionCleanup,
 }));
-vi.mock("../cron/mint-burn-growth-watchdog", () => ({
+vi.mock("../cron/mint-burn/mint-burn-growth-watchdog", () => ({
   runMintBurnGrowthWatchdog: cronMocks.runMintBurnGrowthWatchdog,
 }));
 vi.mock("../cron/cron-duration-watchdog", () => ({ runCronDurationWatchdog: cronMocks.runCronDurationWatchdog }));
-vi.mock("../cron/yield-coverage-audit", () => ({ runYieldCoverageAudit: cronMocks.runYieldCoverageAudit }));
+vi.mock("../cron/yield-coverage-audit/yield-coverage-audit", () => ({ runYieldCoverageAudit: cronMocks.runYieldCoverageAudit }));
 vi.mock("../lib/mint-burn-pipeline/flow-aggregate", () => ({
   refreshAggregateMintBurnFlowCache: cronMocks.refreshAggregateMintBurnFlowCache,
 }));
@@ -328,7 +328,7 @@ vi.mock("../lib/db-cache", () => ({
   shouldSkipFreshCache: vi.fn(async () => false),
 }));
 
-vi.mock("../lib/price-cache", () => ({
+vi.mock("../lib/pricing/price-cache", () => ({
   getPriceCache: vi.fn(async () => new Map()),
   savePriceCache: vi.fn(async () => undefined),
 }));
@@ -570,7 +570,7 @@ describe("worker.scheduled", () => {
   });
 
   it("bypasses the V9 memory wait on public but retains it on heavy charts", async () => {
-    const { waitForV9MemoryLaneRelease } = await import("../lib/v9-slot-window");
+    const { waitForV9MemoryLaneRelease } = await import("../lib/safety-score-v9/v9-slot-window");
     const env = { ...makeScheduledEnv(), SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
     await worker.scheduled({ cron: "9 * * * *" } as ScheduledEvent, env, makeExecutionContext().ctx);
     expect(waitForV9MemoryLaneRelease).not.toHaveBeenCalled();

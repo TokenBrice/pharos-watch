@@ -6,7 +6,7 @@ import { runDlContractPasses } from "./enrich-prices-defillama-pass";
 import { runCmcPass } from "./enrich-prices-cmc-pass";
 import { runDexScreenerPass, type DexScreenerTargetOutcome } from "./enrich-prices-dexscreener-pass";
 import { runJupiterPass } from "./enrich-prices-jupiter-pass";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
 
 export interface EnrichmentPassCounts {
   pass1: number;

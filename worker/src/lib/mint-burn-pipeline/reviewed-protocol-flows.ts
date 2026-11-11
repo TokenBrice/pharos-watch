@@ -1,5 +1,5 @@
 import { REVIEWED_PROTOCOL_INTERNAL_FLOW_BY_EVENT_ID } from "@shared/lib/reviewed-protocol-internal-flows";
-import { getOnChainSupplyExclusionConfig } from "../onchain-supply-exclusions";
+import { getOnChainSupplyExclusionConfig } from "../market-supply/onchain-supply-exclusions";
 import type { MintBurnRow } from "./types";
 
 const AMOUNT_TOLERANCE = 1e-6;

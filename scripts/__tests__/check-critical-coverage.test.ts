@@ -88,20 +88,20 @@ describe("critical coverage changed-file detection", () => {
         "worker/src/cron/sync-stablecoins/new-price-path.ts",
         "worker/src/cron/depeg-detection/new-decision-helper.ts",
         "worker/src/cron/sync-live-reserves-new-helper.ts",
-        "worker/src/lib/mint-burn-scoring.ts",
+        "worker/src/lib/mint-burn-pipeline/mint-burn-scoring.ts",
         "worker/src/lib/live-reserves/store-extra.ts",
-        "worker/src/lib/depeg-resolver-store-validators.ts",
+        "worker/src/lib/depeg-resolver/depeg-resolver-store-validators.ts",
         "worker/src/lib/dews/scoring.ts",
         "worker/src/lib/dews/service.ts",
         "worker/src/lib/dews/source-state/hydration.ts",
         "worker/src/lib/dews/types.ts",
         "worker/src/lib/dews/__tests__/scoring-blacklist.test.ts",
-        "worker/src/lib/price-consensus.ts",
+        "worker/src/lib/pricing/price-consensus.ts",
         "worker/src/lib/publication-contract.ts",
-        "worker/src/lib/pricing-types.ts",
+        "worker/src/lib/pricing/pricing-types.ts",
         "worker/src/cron/depeg-detection/types.ts",
         "worker/src/cron/sync-stablecoins/__tests__/new-price-path.test.ts",
-        "worker/src/cron/daily-digest.ts",
+        "worker/src/cron/daily-digest/daily-digest.ts",
       ],
     });
 
@@ -109,17 +109,17 @@ describe("critical coverage changed-file detection", () => {
       "functions/lib/upstream-proxy.ts",
       "shared/lib/peg-score.ts",
       "worker/src/api/safety-score-history.ts",
-      "worker/src/cron/daily-digest.ts",
+      "worker/src/cron/daily-digest/daily-digest.ts",
       "worker/src/cron/depeg-detection/new-decision-helper.ts",
       "worker/src/cron/sync-live-reserves-new-helper.ts",
       "worker/src/cron/sync-stablecoins/new-price-path.ts",
-      "worker/src/lib/depeg-resolver-store-validators.ts",
+      "worker/src/lib/depeg-resolver/depeg-resolver-store-validators.ts",
       "worker/src/lib/dews/scoring.ts",
       "worker/src/lib/dews/service.ts",
       "worker/src/lib/dews/source-state/hydration.ts",
       "worker/src/lib/live-reserves/store-extra.ts",
-      "worker/src/lib/mint-burn-scoring.ts",
-      "worker/src/lib/price-consensus.ts",
+      "worker/src/lib/mint-burn-pipeline/mint-burn-scoring.ts",
+      "worker/src/lib/pricing/price-consensus.ts",
       "worker/src/lib/publication-contract.ts",
     ]);
   });
@@ -178,7 +178,7 @@ describe("critical coverage changed-file detection", () => {
   });
   it("validates facade rationale and executable implementation ownership", () => {
     const file = "worker/src/lib/new-price-helper.ts";
-    const owner = "worker/src/lib/price-consensus.ts";
+    const owner = "worker/src/lib/pricing/price-consensus.ts";
     const ownerTest = "worker/src/lib/__tests__/price-consensus.test.ts";
     const waiver = { reviewAfter: "2026-09-05", reason: "Only forwards the covered implementation", owner, ownerTest };
     const options = {
@@ -214,7 +214,7 @@ describe("critical coverage changed-file detection", () => {
   });
 
   it("reports due facade reviews within grace and rejects expired reviews", () => {
-    const owner = "worker/src/lib/price-consensus.ts";
+    const owner = "worker/src/lib/pricing/price-consensus.ts";
     const ownerTest = "worker/src/lib/__tests__/price-consensus.test.ts";
     const facade = (reviewAfter: string) => ({
       reviewAfter, reason: "Forwards to the enrolled implementation", owner, ownerTest,
@@ -349,19 +349,19 @@ describe("critical coverage changed-file detection", () => {
   it("rejects missing, malformed, out-of-range, and unjustifiably lowered baseline entries", () => {
     const thresholds: Record<string, number> = {
       "worker/src/lib/auth.ts": 70,
-      "worker/src/lib/price-consensus.ts": 40,
+      "worker/src/lib/pricing/price-consensus.ts": 40,
     };
 
     expect(validateCriticalCoverageBaseline(
       {
         "worker/src/lib/auth.ts": 69.9,
-        "worker/src/lib/price-consensus.ts": "90",
+        "worker/src/lib/pricing/price-consensus.ts": "90",
       },
-      ["worker/src/lib/auth.ts", "worker/src/lib/price-consensus.ts", "worker/src/lib/evm-rpc.ts"],
+      ["worker/src/lib/auth.ts", "worker/src/lib/pricing/price-consensus.ts", "worker/src/lib/evm-rpc.ts"],
       (file) => thresholds[file] ?? 40,
     )).toEqual([
       "worker/src/lib/auth.ts: baseline 69.9% is below enforced floor 70.0%",
-      "worker/src/lib/price-consensus.ts: baseline must be a finite number between 0 and 100",
+      "worker/src/lib/pricing/price-consensus.ts: baseline must be a finite number between 0 and 100",
       "worker/src/lib/evm-rpc.ts: baseline must be a finite number between 0 and 100",
     ]);
 
@@ -407,7 +407,7 @@ describe("critical coverage changed-file detection", () => {
 
 
   it.each(["source", "edited owner", "deleted owner"])("ratchets coverage regressions for a changed %s", (change) => {
-    const file = "worker/src/lib/price-consensus.ts";
+    const file = "worker/src/lib/pricing/price-consensus.ts";
     const owner = change === "deleted owner" ? "worker/src/lib/__tests__/removed.test.ts" : "worker/src/lib/__tests__/price-consensus.test.ts";
     const { errors, exits } = runCoverageFixture({
       env: {
@@ -420,13 +420,13 @@ describe("critical coverage changed-file detection", () => {
       execFile: mockExecFileSync((_cmd, args) => {
         if (args?.[0] === "show") return JSON.stringify({ files: { [file]: 51 } });
         if (args?.[0] === "ls-tree") return `${owner}\0${file}\0`;
-        if (args?.[0] === "cat-file") return `deadbeef blob 28\0import "../price-consensus";\0`;
+        if (args?.[0] === "cat-file") return `deadbeef blob 36\0import "../pricing/price-consensus";\0`;
         throw new Error("Unexpected Git command");
       }),
     });
 
     expect(exits).toEqual([1]);
-    expect(errors).toContain("[coverage] REGRESSION worker/src/lib/price-consensus.ts: 50.0% < baseline 51.0% (tolerance 0.0%)");
+    expect(errors).toContain("[coverage] REGRESSION worker/src/lib/pricing/price-consensus.ts: 50.0% < baseline 51.0% (tolerance 0.0%)");
   });
 
   it.each([3, 4])("enforces the provider branch floor independently at %i/10 branches", (brh) => {
@@ -444,12 +444,12 @@ describe("critical coverage changed-file detection", () => {
 
   it("keeps the fixed reliability line floors", () => {
     expect(CRITICAL_COVERAGE_LINE_FLOORS).toEqual({
-      "worker/src/lib/stablecoins-cache.ts": 50,
+      "worker/src/lib/market-supply/stablecoins-cache.ts": 50,
       "worker/src/lib/auth.ts": 70,
       "worker/src/lib/evm-rpc.ts": 70,
-      "worker/src/lib/safety-scores.ts": 40,
+      "worker/src/lib/safety-score-v9/safety-scores.ts": 40,
       "worker/src/handlers/scheduled.ts": 40,
-      "worker/src/cron/daily-digest.ts": 40,
+      "worker/src/cron/daily-digest/daily-digest.ts": 40,
       "worker/src/api/stablecoin-detail.ts": 30,
       "worker/src/api/health.ts": 60,
       "worker/src/api/status.ts": 40,
@@ -489,8 +489,8 @@ describe("critical coverage changed-file detection", () => {
     expect(CRITICAL_COVERAGE_BRANCH_FLOORS).toEqual({
       "worker/src/lib/auth.ts": 40,
       "worker/src/lib/evm-rpc.ts": 40,
-      "worker/src/lib/safety-scores.ts": 40,
-      "worker/src/lib/price-publication-state.ts": 40,
+      "worker/src/lib/safety-score-v9/safety-scores.ts": 40,
+      "worker/src/lib/pricing/price-publication-state.ts": 40,
     });
   });
 

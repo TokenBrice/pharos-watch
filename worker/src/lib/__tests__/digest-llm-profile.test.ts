@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { DIGEST_LLM_PROFILE_CACHE_KEYS, readDigestLlmProfiles, resolveDigestLlmProfile } from "../digest-llm-profile";
+import { DIGEST_LLM_PROFILE_CACHE_KEYS, readDigestLlmProfiles, resolveDigestLlmProfile } from "../digest/digest-llm-profile";
 
 function cacheDb(values: Record<string, string>): D1Database {
   return mockD1(Object.values(DIGEST_LLM_PROFILE_CACHE_KEYS).map((key) => ({

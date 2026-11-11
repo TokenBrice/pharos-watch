@@ -5,8 +5,8 @@ import { percentileNearestRank } from "@shared/lib/stats";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { errorResponse, jsonResponse, methodNotAllowedResponse } from "../lib/api-response";
-import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/backtest-anchors";
-import { BACKTEST_LOOKBACK_DAYS } from "../lib/backtest-anchors";
+import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/depeg-detection/backtest-anchors";
+import { BACKTEST_LOOKBACK_DAYS } from "../lib/depeg-detection/backtest-anchors";
 import { computeHistoricalDEWS } from "../lib/dews";
 import type { HistoricalDEWSInput } from "../lib/dews";
 import { assembleDewsScoringInput } from "../lib/dews/input-assembly";
@@ -18,8 +18,8 @@ import type {
 } from "../lib/dews/contracts";
 import { malformedInputDegradesRun } from "../lib/dews/malformed-input";
 import { computeAndStoreDEWS } from "../lib/dews/service";
-import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../lib/dex-liquidity-response";
-import type { DexHistoryRow } from "../lib/dex-liquidity-response";
+import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../lib/dex-liquidity/dex-liquidity-response";
+import type { DexHistoryRow } from "../lib/dex-liquidity/dex-liquidity-response";
 import { parseOptionalDayWindow } from "../lib/backfill-day-window";
 
 interface DepegEventRow {

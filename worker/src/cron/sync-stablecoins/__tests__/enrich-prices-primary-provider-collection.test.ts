@@ -5,14 +5,14 @@ import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import * as circuit from "../../../lib/circuit-breaker";
-import { fetchCoingeckoSimplePrices } from "../../../lib/coingecko-simple-price";
-import { fetchCgTickerPricesDetailed } from "../../../lib/cg-ticker";
-import { fetchCoinbasePrices } from "../../../lib/cex-tickers";
-import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../../lib/curve-onchain";
+import { fetchCoingeckoSimplePrices } from "../../../lib/pricing/coingecko-simple-price";
+import { fetchCgTickerPricesDetailed } from "../../../lib/pricing/cg-ticker";
+import { fetchCoinbasePrices } from "../../../lib/pricing/cex-tickers";
+import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../../lib/pricing/curve-onchain";
 import { shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset } from "../enrich-prices-shared";
-import * as hive from "../../../lib/hive-market-price";
+import * as hive from "../../../lib/pricing/hive-market-price";
 
 vi.mock("../../../lib/circuit-breaker", async (importOriginal) => {
   const actual = await importOriginal<typeof circuit>();
@@ -24,22 +24,22 @@ vi.mock("../../../lib/circuit-breaker", async (importOriginal) => {
     recoverBreakerOnNoCandidateSafe: vi.fn(async () => {}),
   };
 });
-vi.mock("../../../lib/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
-vi.mock("../../../lib/cg-ticker", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../lib/cg-ticker")>()),
+vi.mock("../../../lib/pricing/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
+vi.mock("../../../lib/pricing/cg-ticker", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/pricing/cg-ticker")>()),
   fetchCgTickerPricesDetailed: vi.fn(),
 }));
-vi.mock("../../../lib/cex-tickers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../lib/cex-tickers")>()),
+vi.mock("../../../lib/pricing/cex-tickers", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/pricing/cex-tickers")>()),
   fetchCoinbasePrices: vi.fn(),
 }));
-vi.mock("../../../lib/curve-onchain", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../lib/curve-onchain")>()),
+vi.mock("../../../lib/pricing/curve-onchain", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/pricing/curve-onchain")>()),
   fetchCurveOnchainPrices: vi.fn(),
   fetchCurveOracleEma: vi.fn(),
 }));
 
-vi.mock("../../../lib/depeg-helpers", () => ({
+vi.mock("../../../lib/depeg-detection/depeg-helpers", () => ({
   createDexPriceSourceLoadTelemetry: vi.fn(() => ({
     staleRows: [],
     malformedRows: [],

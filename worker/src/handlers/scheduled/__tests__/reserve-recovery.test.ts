@@ -28,7 +28,7 @@ vi.mock("../../../cron/reserve-adapters/reserve-checkpoint", () => ({
   retireSupersededLiveReserveCheckpoints: mocks.retire,
   releaseUnstartedLiveReserveRecoveryClaim: mocks.release,
 }));
-vi.mock("../../../lib/reserve-continuation-reconciliation", () => ({
+vi.mock("../../../lib/live-reserves/reserve-continuation-reconciliation", () => ({
   reconcileReserveContinuations: vi.fn(async () => 0),
 }));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
@@ -44,11 +44,11 @@ vi.mock("../four-hourly-reserves", () => {
 vi.mock("../context", () => ({
   createScheduledRuntimeContext: mocks.createRuntime,
 }));
-vi.mock("../../../cron/reserve-recovery-config", () => {
+vi.mock("../../../cron/live-reserves/reserve-recovery-config", () => {
   mocks.configRecoveryInitialized = true;
   return { recoverLiveReserveConfigChanges: mocks.configRecovery };
 });
-vi.mock("../../../lib/reserve-producer-priority", async (importOriginal) => ({
+vi.mock("../../../lib/live-reserves/reserve-producer-priority", async (importOriginal) => ({
   ...await importOriginal(),
   getReserveProducerPriority: mocks.priority,
   resolveReserveProducerAdmission: async (...args: unknown[]) => ({

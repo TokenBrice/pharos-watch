@@ -14,12 +14,12 @@ import {
   buildTapeEventId,
   deriveIssuerId,
   severityForDepegOpened,
-} from "../tape-event-helpers";
+} from "./tape-event-helpers";
 import { getCache, prepareCacheUpsert } from "../db-cache";
 import {
   insertTapeEvents,
-} from "../tape-event-store";
-import type { TapeEventInsert } from "../tape-event-types";
+} from "./tape-event-store";
+import type { TapeEventInsert } from "./tape-event-types";
 import {
   DEFAULT_BATCH_LIMIT,
   fetchRowsWithTieExpansion,

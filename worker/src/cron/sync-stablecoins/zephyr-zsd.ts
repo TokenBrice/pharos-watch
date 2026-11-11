@@ -8,8 +8,8 @@ import {
 } from "@shared/lib/onchain-supply-probe";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
-import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
-import { isReasonablePrice } from "../../lib/price-validation";
+import { validatePricingSourceFreshness } from "../../lib/pricing/pricing-source-freshness";
+import { isReasonablePrice } from "../../lib/pricing/price-validation";
 import type { PeggedAsset } from "./enrich-prices";
 import { pegTypeKey, getSupplementalChainLabels, toPositiveFiniteNumber } from "./supplemental-assets/shared";
 

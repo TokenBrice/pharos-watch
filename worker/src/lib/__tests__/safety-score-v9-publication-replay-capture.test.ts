@@ -20,7 +20,7 @@ import {
 } from "@shared/types/safety-score-v9-incidents";
 import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
-import { buildFixedInputCacheEntry, REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
+import { buildFixedInputCacheEntry, REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../safety-score-v9/report-cards-fixed-input-cache-codec";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { sha256Hex } from "@shared/lib/sha256";

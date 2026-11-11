@@ -18,7 +18,7 @@ import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { loadDlStablecoinPools } from "../yield-sync/sources-dl";
 import { buildDlStablecoinPoolsCache, parseDlStablecoinPoolsCache } from "../yield-sync/cache";
-import { STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
+import { STALE_THRESHOLD_MS } from "../../lib/yield/yield-ranking-helpers";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 describe("loadDlStablecoinPools", () => {

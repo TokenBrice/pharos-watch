@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { blacklistEventOrderSql, compareBlacklistEvents } from "@shared/lib/blacklist-event-order";
 import { buildBlacklistActiveRecords } from "@shared/lib/blacklist-active-records";
-import { mapBlacklistEventRow } from "../../../lib/blacklist-api";
+import { mapBlacklistEventRow } from "../../../lib/blacklist/blacklist-api";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import { buildLatestBlacklistRows } from "../../../lib/blacklist/row-preparation";
 import { quarantineBlacklistDecodeFailure } from "../../../lib/blacklist/decode-quarantine";

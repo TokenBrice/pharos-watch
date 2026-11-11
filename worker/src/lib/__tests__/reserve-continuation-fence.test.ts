@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
-import { claimReserveContinuation, finishReserveContinuation, heartbeatReserveContinuation } from "../reserve-continuation-fence";
+import { claimReserveContinuation, finishReserveContinuation, heartbeatReserveContinuation } from "../live-reserves/reserve-continuation-fence";
 import { beginLiveReserveCheckpoint, continueLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery, loadLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
 import { acquireCronLease, runCronWithLease } from "../cron-lease-primitives";
 import { createSlotDeadline } from "../cron-timeouts";
 import { markScheduledChildStarted, writeScheduledChildTerminal } from "../scheduled-child-terminal";
 import type { ScheduledChildIdentity } from "../scheduled-child-terminal";
-import { reconcileReserveContinuations } from "../reserve-continuation-reconciliation";
+import { reconcileReserveContinuations } from "../live-reserves/reserve-continuation-reconciliation";
 
-import { ACCEPTED_RESERVE_GENERATION_KEY, sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
+import { ACCEPTED_RESERVE_GENERATION_KEY, sealAcceptedReserveGeneration } from "../live-reserves/accepted-reserve-generation";
 const fixtures = createLatestSchemaFixtureTracker();
 const ROOT = 1_728_000_660;
 const NOW = 1_728_003_600;

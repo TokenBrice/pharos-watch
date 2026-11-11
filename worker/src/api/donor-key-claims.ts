@@ -29,7 +29,7 @@ import {
 import { parseRequestJsonWithSchema } from "../lib/api-json-body";
 import { jsonResponse } from "../lib/api-response";
 import { logWorkerEvent } from "../lib/structured-log";
-import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-v9/safety-score-index";
 
 const ROUTE = "donor-key-claims";
 const CLAIM_BODY_MAX_BYTES = 4096;

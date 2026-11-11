@@ -6,16 +6,16 @@ import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.te
 vi.mock("../../../cron/cron-duration-watchdog", () => ({
   runCronDurationWatchdog: vi.fn(async () => ({ status: "ok" })),
 }));
-vi.mock("../../../cron/sync-live-reserves", () => ({
+vi.mock("../../../cron/live-reserves/sync-live-reserves", () => ({
   syncLiveReserves: vi.fn(),
 }));
-vi.mock("../../../cron/sync-redemption-backstops", () => ({
+vi.mock("../../../cron/redemption-backstop/sync-redemption-backstops", () => ({
   syncRedemptionBackstops: vi.fn(),
 }));
-vi.mock("../../../cron/sync-kinesis-supply", () => ({
+vi.mock("../../../cron/market-supply/sync-kinesis-supply", () => ({
   syncKinesisSupply: vi.fn(),
 }));
-vi.mock("../../../lib/collateral-drift", () => ({
+vi.mock("../../../lib/live-reserves/collateral-drift", () => ({
   checkCollateralDrift: vi.fn(),
 }));
 vi.mock("../../../lib/live-reserves/store", () => ({
@@ -50,22 +50,22 @@ vi.mock("../../../cron/reserve-adapters/reserve-checkpoint", async () => {
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
 }));
-vi.mock("../../../lib/reserve-producer-priority", () => ({
+vi.mock("../../../lib/live-reserves/reserve-producer-priority", () => ({
   getReserveProducerPriority: vi.fn(),
 }));
 
-import { syncLiveReserves } from "../../../cron/sync-live-reserves";
-import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
-import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
-import { checkCollateralDrift } from "../../../lib/collateral-drift";
+import { syncLiveReserves } from "../../../cron/live-reserves/sync-live-reserves";
+import { syncRedemptionBackstops } from "../../../cron/redemption-backstop/sync-redemption-backstops";
+import { syncKinesisSupply } from "../../../cron/market-supply/sync-kinesis-supply";
+import { checkCollateralDrift } from "../../../lib/live-reserves/collateral-drift";
 import { logSkippedCronRun } from "../preflight-skip";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves/store";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { makeLiveReserveCheckpoint } from "../../../lib/__tests__/scheduled-recovery-checkpoint.test-support";
 import { getCache, setCache } from "../../../lib/db-cache";
-import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
+import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/live-reserves/alert-reserve-source-cache";
 import { SNAPSHOT_KEYS } from "../../../cron/telegram/sources/telegram-alert-snapshots";
-import { getReserveProducerPriority } from "../../../lib/reserve-producer-priority";
+import { getReserveProducerPriority } from "../../../lib/live-reserves/reserve-producer-priority";
 import {
   finishLiveReserveCheckpoint,
   continueLiveReserveCheckpoint,

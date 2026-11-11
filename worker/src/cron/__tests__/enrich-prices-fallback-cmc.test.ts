@@ -17,7 +17,7 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing/pricing-source-freshness";
 import { buildChainRpcs } from "../../lib/chain-registry";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();

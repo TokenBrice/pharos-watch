@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildPrimarySourceCandidates, type PrimaryCollectedQuotes } from "../primary-price-collector";
+import { buildPrimarySourceCandidates, type PrimaryCollectedQuotes } from "../pricing/primary-price-collector";
 
 function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): PrimaryCollectedQuotes {
   return {

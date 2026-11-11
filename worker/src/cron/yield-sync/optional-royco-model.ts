@@ -1,6 +1,6 @@
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { YieldMarketStatus, YieldSourceRisk, YieldTrancheSide } from "@shared/types/yield";
-import { SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
+import { SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS } from "../../lib/yield/yield-ranking-helpers";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import type { TrackedOptionalAsset } from "./optional-source-identity";
 import type { ResolvedYieldCandidate } from "./types";

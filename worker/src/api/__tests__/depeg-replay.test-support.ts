@@ -1,5 +1,5 @@
-import type { DepegRow } from "../../lib/depeg-helpers";
-import type { HistoricalMarketSourceDiagnostics } from "../../lib/historical-market-prices";
+import type { DepegRow } from "../../lib/depeg-detection/depeg-helpers";
+import type { HistoricalMarketSourceDiagnostics } from "../../lib/pricing/historical-market-prices";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 
 export function makeAuditEvent(overrides: Partial<DepegRow> = {}): DepegRow & Record<string, unknown> {

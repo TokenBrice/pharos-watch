@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const auditCapture = vi.hoisted(() => ({
   inFlight: undefined as Promise<unknown> | undefined,
   run: undefined as
-    | ((...args: Parameters<typeof import("../cron/yield-coverage-audit").runYieldCoverageAudit>) =>
-        ReturnType<typeof import("../cron/yield-coverage-audit").runYieldCoverageAudit>)
+    | ((...args: Parameters<typeof import("../cron/yield-coverage-audit/yield-coverage-audit").runYieldCoverageAudit>) =>
+        ReturnType<typeof import("../cron/yield-coverage-audit/yield-coverage-audit").runYieldCoverageAudit>)
     | undefined,
 }));
 
-vi.mock("../cron/yield-coverage-audit", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../cron/yield-coverage-audit")>();
+vi.mock("../cron/yield-coverage-audit/yield-coverage-audit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../cron/yield-coverage-audit/yield-coverage-audit")>();
   const run = (...args: Parameters<typeof actual.runYieldCoverageAudit>) => {
     const inFlight = actual.runYieldCoverageAudit(...args);
     auditCapture.inFlight = inFlight;
@@ -24,12 +24,12 @@ vi.mock("../cron/yield-sync/sources-dl", async (importOriginal) => {
   return { ...actual, loadDlStablecoinPools: vi.fn() };
 });
 
-vi.mock("../lib/safety-scores", () => ({ computeSafetyScoresSnapshot: vi.fn() }));
+vi.mock("../lib/safety-score-v9/safety-scores", () => ({ computeSafetyScoresSnapshot: vi.fn() }));
 
 import { handleTriggerYieldCoverageAudit } from "../handlers/scheduled/yield-coverage-audit-manual";
-import { runYieldCoverageAudit } from "../cron/yield-coverage-audit";
+import { runYieldCoverageAudit } from "../cron/yield-coverage-audit/yield-coverage-audit";
 import { loadDlStablecoinPools } from "../cron/yield-sync/sources-dl";
-import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
+import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-score-v9/safety-scores";
 import { closeOpenLeaseDatabases, makeLeaseDb } from "../lib/__tests__/cron-leases.test-support";
 import { makeWorkerReportCardsV9Response } from "../test-helpers/report-cards-v9";
 import type { DlPool } from "../cron/yield-sync/types";

@@ -17,14 +17,14 @@ const mocks = vi.hoisted(() => ({
   generateDailyDigest: vi.fn(),
 }));
 
-vi.mock("../../../cron/snapshot-supply", () => ({ snapshotSupply: mocks.snapshotSupply }));
-vi.mock("../../../cron/snapshot-safety-grade-history", () => ({ snapshotSafetyGradeHistory: mocks.snapshotSafetyGradeHistory }));
-vi.mock("../../../cron/snapshot-psi", () => ({ snapshotPsiDaily: mocks.snapshotPsiDaily }));
-vi.mock("../../../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset: mocks.snapshotPublicDataset }));
-vi.mock("../../../cron/fetch-tbill-rate", () => ({ fetchTbillRate: mocks.fetchTbillRate }));
-vi.mock("../../../cron/sync-usds-status", () => ({ syncUsdsStatus: mocks.syncUsdsStatus }));
-vi.mock("../../../cron/sync-bluechip", () => ({ syncBluechip: mocks.syncBluechip }));
-vi.mock("../../../cron/daily-digest", () => ({ generateDailyDigest: mocks.generateDailyDigest }));
+vi.mock("../../../cron/market-supply/snapshot-supply", () => ({ snapshotSupply: mocks.snapshotSupply }));
+vi.mock("../../../cron/safety-score-v9/snapshot-safety-grade-history", () => ({ snapshotSafetyGradeHistory: mocks.snapshotSafetyGradeHistory }));
+vi.mock("../../../cron/psi/snapshot-psi", () => ({ snapshotPsiDaily: mocks.snapshotPsiDaily }));
+vi.mock("../../../cron/public-datasets/snapshot-public-dataset", () => ({ snapshotPublicDataset: mocks.snapshotPublicDataset }));
+vi.mock("../../../cron/yield-sync/fetch-tbill-rate", () => ({ fetchTbillRate: mocks.fetchTbillRate }));
+vi.mock("../../../cron/blacklist/sync-usds-status", () => ({ syncUsdsStatus: mocks.syncUsdsStatus }));
+vi.mock("../../../cron/bluechip/sync-bluechip", () => ({ syncBluechip: mocks.syncBluechip }));
+vi.mock("../../../cron/daily-digest/daily-digest", () => ({ generateDailyDigest: mocks.generateDailyDigest }));
 
 import { runDaily0800Slot } from "../daily-0800";
 import { runDaily0805Slot } from "../daily-0805";

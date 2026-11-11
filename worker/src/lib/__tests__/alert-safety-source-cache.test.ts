@@ -11,7 +11,7 @@ import {
   loadActiveAlertSafetySourceAssessment,
   parseAlertSafetySnapshotEnvelope,
   parsePersistedAlertSafetyV9SourceEnvelope,
-} from "../alert-safety-source-cache";
+} from "../safety-score-v9/alert-safety-source-cache";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,

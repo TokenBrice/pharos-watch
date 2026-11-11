@@ -26,8 +26,8 @@ import {
   runCliEntrypoint,
   writeCliHelpIfRequested,
 } from "../../scripts/lib/cli-args.mjs";
-import { MINT_BURN_CONFIGS } from "../src/lib/mint-burn-contracts";
-import type { MintBurnContractConfig, MintBurnEventDef } from "../src/lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../src/lib/mint-burn-pipeline/mint-burn-contracts";
+import type { MintBurnContractConfig, MintBurnEventDef } from "../src/lib/mint-burn-pipeline/mint-burn-contracts";
 import { buildAlchemyUrl, fetchAlchemyLogs, getAlchemyBlockNumber } from "../src/lib/alchemy-logs";
 import type { AlchemyLogEntry } from "../src/lib/alchemy-logs";
 import { eventDefTopicFilters } from "../src/cron/mint-burn/sync-config";
@@ -47,7 +47,7 @@ import {
   type ReviewedConservationIdentity,
   type MintBurnConservationLawResolver,
   type ReviewedConservationWindow,
-} from "../src/lib/mint-burn-conservation";
+} from "../src/lib/mint-burn-pipeline/mint-burn-conservation";
 
 const USAGE = `Usage: npm run audit:mint-burn-conservation-admission -- --ids <csv> --out <dir> [options]
 

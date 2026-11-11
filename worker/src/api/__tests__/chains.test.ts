@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import * as activeSafetyScoreSource from "../../lib/safety-score-index";
+import * as activeSafetyScoreSource from "../../lib/safety-score-v9/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import {
   makeWorkerReportCardsV9Response,

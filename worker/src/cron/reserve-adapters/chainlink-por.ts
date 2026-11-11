@@ -4,7 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { requireChainlinkLatestRoundData } from "../../lib/pricing/chainlink-round-data";
 import {
   aggregateMultichainErc20Supply,
   aggregateScopedLiabilitySupply,

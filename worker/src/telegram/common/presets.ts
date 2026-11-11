@@ -15,7 +15,7 @@ export {
   type TelegramPresetDefinition,
   type TelegramPresetId,
 } from "@shared/lib/telegram-presets";
-import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/market-supply/stablecoins-cache";
 
 /** Matches the ResolvedCoin shape from telegram-alerts.ts — duplicated here to avoid a circular import. */
 interface ResolvedCoin { id: string; symbol: string; name: string }

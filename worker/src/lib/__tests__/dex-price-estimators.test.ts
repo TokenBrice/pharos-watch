@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../dex-price-estimators";
+import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../dex-liquidity/dex-price-estimators";
 
 describe("computeWeightedMedianPrice", () => {
   it("preserves the lower discrete value at an exact half-weight boundary", () => {

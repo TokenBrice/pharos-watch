@@ -31,7 +31,7 @@ vi.mock("../live-reserves/store-shared", async (importOriginal) => {
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 
-import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
+import { RESERVE_FEED_REVIEWS } from "../live-reserves/reserve-feed-reviews";
 import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { beginLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";

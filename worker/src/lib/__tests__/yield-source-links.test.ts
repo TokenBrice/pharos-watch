@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveYieldSourceUrl } from "../yield-source-links";
+import { resolveYieldSourceUrl } from "../yield/yield-source-links";
 import { LENDING_PROTOCOL_ALLOWLIST, LENDING_PROTOCOL_LABELS } from "../yield-config/yield-config-lending-protocols";
 
 // DL pool UUIDs are assembled so fixture literals don't read as secrets.

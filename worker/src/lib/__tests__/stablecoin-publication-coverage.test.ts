@@ -2,7 +2,7 @@ import {
   STABLECOIN_PUBLICATION_WAIVERS as PUBLICATION_WAIVERS,
   STABLECOIN_PRICE_GAP_REVIEWS as GAP_REVIEWS,
   STABLECOIN_MARKET_HOURS_CALENDARS as MARKET_CALENDARS,
-} from "../stablecoin-publication-reviews";
+} from "../market-supply/stablecoin-publication-reviews";
 import { protocolParProvider } from "../authoritative-price-sources/protocol-par";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS as COINS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -22,7 +22,7 @@ import {
   selectAppliedStablecoinPublicationWaivers as selectWaivers,
   loadPreviousStablecoinActivePriceCoverage as loadCoverage,
   seedAbsentActivePriceCoverageMarketCaps as seedAbsentCaps,
-} from "../stablecoin-publication-coverage";
+} from "../market-supply/stablecoin-publication-coverage";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mentoFpmmProvider } from "../authoritative-price-sources/mento-fpmm";
 import { mentoBrokerProvider } from "../authoritative-price-sources/mento-broker";

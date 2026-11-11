@@ -11,7 +11,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { seedPsiPairedHistory, seedPsiSupply, seedPsiEvent, seedPsiDews, readPsiDay } from "../../../src/api/__tests__/psi-replay.test-support";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 import { buildRecomputeStabilityStatements } from "../audit-depeg-history/stability-recompute";
-import { loadPsiEligibleDepegEvents } from "../../../src/lib/psi-replay-inputs";
+import { loadPsiEligibleDepegEvents } from "../../../src/lib/psi/psi-replay-inputs";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

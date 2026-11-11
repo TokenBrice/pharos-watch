@@ -236,7 +236,7 @@ const PERMANENT_RETENTION_POLICIES: readonly PermanentRetentionPolicy[] = PERMAN
 const OWNER_MANAGED_TABLES = [
   ["status_probe_runs", "created_at", "worker/src/cron/prune-status-probe-runs.ts", "90 days", "strict cutoff; 10,000 rows per invocation"],
   ["d1_capacity_observations", "observed_at", "worker/src/lib/status/d1-capacity-store.ts", "180 days", "hourly observation age"],
-  ["stability_index_samples", "stored_at", "worker/src/cron/stability-index.ts", "90 days", "strict sample age"],
+  ["stability_index_samples", "stored_at", "worker/src/cron/psi/stability-index.ts", "90 days", "strict sample age"],
   ["reserve_composition_history", "fetched_at", "worker/src/lib/live-reserves/store-write.ts", "LIVE_RESERVE_HISTORY_RETENTION_SEC (30 days)", "protect frozen IDs and current/referenced attempts; bounded batches"],
   ["reserve_sync_attempt_history", "attempted_at", "worker/src/lib/live-reserves/store-write.ts", "LIVE_RESERVE_HISTORY_RETENTION_SEC (30 days)", "protect frozen IDs and current/referenced attempts; bounded batches"],
   ["mint_burn_events", "timestamp", "worker/src/cron/mint-burn/retention.ts", "8 days", "finalized pricing, Tape cursor and aggregate/frontier guards"],

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   validateCompositePricingSourceFreshness,
   validatePricingSourceFreshness,
-} from "../pricing-source-freshness";
+} from "../pricing/pricing-source-freshness";
 
 describe("pricing source freshness", () => {
   it("accepts the trusted-age boundary but rejects the next second", () => {

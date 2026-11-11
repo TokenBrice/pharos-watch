@@ -32,7 +32,7 @@ import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { EvmV2ExecutionCandidate, SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 import { buildSolidlyV2ExecutionCandidate, enrichSolidlyV2ExecutionModels } from "./solidly-v2";
 import { enrichRaydiumStandardDiscoveryExecutionModels } from "./raydium-standard-discovery";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
 
 /** Reuse this run's verified reserves; the target's own cached price never values its quote. */
 export function refreshUsdaV2Price(input: {

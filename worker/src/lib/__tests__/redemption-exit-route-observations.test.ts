@@ -9,7 +9,7 @@ import {
   buildPhysicalToUsdExitObservation,
   deriveSupplyModelExitRouteObservation,
   usesPrimaryRedemptionReviewTerms,
-} from "../redemption-exit-route-observations";
+} from "../redemption-backstop/redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ActiveSafetyScoreCohort } from "../safety-score-active-source";
+import type { ActiveSafetyScoreCohort } from "../safety-score-v9/safety-score-active-source";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
@@ -7,7 +7,7 @@ const { mockLoadActiveSafetyScoreCohort } = vi.hoisted(() => ({
   mockLoadActiveSafetyScoreCohort: vi.fn(),
 }));
 
-vi.mock("../safety-score-active-source", () => ({
+vi.mock("../safety-score-v9/safety-score-active-source", () => ({
   loadActiveSafetyScoreCohort: mockLoadActiveSafetyScoreCohort,
 }));
 

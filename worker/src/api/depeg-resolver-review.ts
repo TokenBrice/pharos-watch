@@ -2,8 +2,8 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import { jsonFreshDegradedResponse } from "../lib/api-response";
-import { buildDdrrResponseEnvelope, buildEmptyDdrrSummary } from "../lib/depeg-resolver-review-response";
-import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
+import { buildDdrrResponseEnvelope, buildEmptyDdrrSummary } from "../lib/depeg-resolver/depeg-resolver-review-response";
+import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver/depeg-resolver-review-snapshot-cache";
 
 function degradedResponse(reason: string): DdrrResponse {
   const nowSec = Math.floor(Date.now() / 1000);

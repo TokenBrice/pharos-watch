@@ -1,0 +1,474 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
+import { materializeBlacklistGapMetrics } from "../../lib/blacklist/blacklist-gaps";
+import { materializeBlacklistSummarySnapshot } from "../../lib/blacklist/blacklist-summary-service";
+import { captureBlacklistSummaryFence } from "../../lib/blacklist/blacklist-cache-invalidation";
+import { type RateLimitedFetch, createRateLimiter } from "../../lib/evm-logs";
+import { type ChainRpcConfig } from "../../lib/chain-registry";
+import type { CronProgressReporter } from "../../lib/cron-logger";
+import { reportCronProgress, withBudgetMetadata } from "../../lib/cron-progress";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { backfillAmounts, type BlacklistAmountBackfillResult } from "../../lib/blacklist/amount-recovery";
+import {
+  backfillTronBlacklistAmounts,
+  type TronAmountBackfillResult,
+} from "../../lib/blacklist/tron-amount-recovery";
+import { resolveTronBlacklistOrder, type TronOrderBackfillResult } from "../../lib/blacklist/tron-order-recovery";
+import {
+  blacklistRuntimeBudgetReached,
+  blacklistSubrequestBudgetReached,
+  createBlacklistRunBudget,
+  type BlacklistRunBudget,
+} from "../../lib/blacklist/run-budget";
+import { deriveSyncBlacklistStatus } from "./sync-support";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { getOldestBlacklistSuccessAt } from "./state";
+import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, scanBlacklistConfigs } from "./config-scan";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
+import { refreshBlacklistAmountRepairQueue } from "../../lib/blacklist/amount-repair-queue";
+import { reconcileCurrentBalanceDebt } from "../../lib/blacklist/current-balance-debt";
+
+const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
+const SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS = 10 * 60_000 + 45_000;
+const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
+const BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT = 10;
+const BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS = 10_000;
+// Preserve the existing maintenance-tail allowance for Tron/debt, plus snapshot publication.
+const BLACKLIST_POST_EVM_REPAIR_RESERVE_MS = SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS
+  - SYNC_BLACKLIST_RUNTIME_BUDGET_MS + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS;
+// createRateLimiter is intentionally serial. Keep the declared live
+// concurrency aligned with that implementation and the shared six-connection
+// trigger budget; throughput is controlled independently by requests/second.
+const BLACKLIST_PROVIDER_LIVE_CONCURRENCY = 1;
+// TronGrid always runs at this rate; for Etherscan it is only the fallback the
+// scheduled slot overrides with a faster injected limiter. Run metadata reports
+// each limiter's own rate rather than this constant.
+const BLACKLIST_PROVIDER_REQUESTS_PER_SECOND = 3;
+
+type SyncBlacklistResult = {
+  itemCount: number;
+  metadata: string;
+  status: "ok" | "degraded" | "error";
+};
+
+type RepairStageOutcome = {
+  outcome: "ok" | "partial" | "failed" | "skipped";
+  reason: string | null;
+};
+
+const REPAIR_OK: RepairStageOutcome = { outcome: "ok", reason: null };
+const REPAIR_EXCEPTION_REASON = "repair-threw";
+
+function skippedRepair(reason: string): RepairStageOutcome {
+  return { outcome: "skipped", reason };
+}
+
+function measuredRepair(budgetReached: boolean): RepairStageOutcome {
+  return budgetReached ? { outcome: "partial", reason: "blacklist-budget-exhausted" } : REPAIR_OK;
+}
+
+export interface SyncBlacklistOptions {
+  db: D1Database;
+  etherscanApiKey: string | null;
+  trongridApiKey: string | null;
+  drpcApiKey: string | null;
+  externalEtherscanRL?: RateLimitedFetch;
+  signal?: AbortSignal;
+  onProgress?: CronProgressReporter;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
+}
+
+export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBlacklistResult> {
+  const { db, etherscanApiKey, trongridApiKey, drpcApiKey, externalEtherscanRL, signal, onProgress, chainRpcs } = opts;
+  const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(BLACKLIST_PROVIDER_REQUESTS_PER_SECOND);
+  const tronLimiter = createRateLimiter(BLACKLIST_PROVIDER_REQUESTS_PER_SECOND);
+  const runStartedAtMs = Date.now();
+  const runBudget = createBlacklistRunBudget({
+    subrequestLimit: 900,
+    runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
+    minimumConfigWindowMs: SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS,
+  });
+  const maintenanceRunBudget: BlacklistRunBudget = {
+    ...runBudget,
+    deadlineMs: runStartedAtMs + SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS,
+    minimumConfigWindowMs: 0,
+  };
+  const budget = runBudget.subrequestBudget;
+  const summaryFence = await captureBlacklistSummaryFence(db);
+  const scan = await scanBlacklistConfigs({
+    db,
+    etherscanApiKey,
+    trongridApiKey,
+    drpcApiKey,
+    etherscanLimiter,
+    tronLimiter,
+    runBudget,
+    signal,
+    onProgress,
+    chainRpcs,
+    dwellirNative: opts.dwellirNative,
+  });
+  const {
+    totalFetchedEvents,
+    contractsSkipped,
+    apiErrors,
+    rpcLogConfigs,
+    providerCircuitSkips,
+    incompleteRuntimeConfigs,
+    counters,
+    apiErrorClasses,
+    apiErrorConfigs,
+    configsAttempted,
+    configsSucceeded,
+    stateConflicts,
+    blacklistProviderCalls,
+    maxProviderSplitDepth,
+    coverageOutcomeCounts,
+    configStates,
+    zeroCursorConfigs,
+    etherscanCircuitAllowed,
+  } = scan;
+  let { runtimeBudgetHit, etherscanCircuitSkips, tronGridCircuitSkips } = scan;
+  let producerGapMetricSnapshots = 0;
+  let producerSummarySnapshot = false;
+  let producerSnapshotSkipped = false;
+  let producerSnapshotError: string | null = null;
+  let producerSnapshotReason: "superseded" | null = null;
+  // Null until a stage returns: a throw or an admission skip is not observed zero work.
+  let amountBackfill: BlacklistAmountBackfillResult | null = null;
+  let tronAmountBackfill: TronAmountBackfillResult | null = null;
+  let tronOrderBackfill: TronOrderBackfillResult | null = null;
+  let amountRepair: RepairStageOutcome = REPAIR_OK;
+  let tronOrderRepair: RepairStageOutcome = REPAIR_OK;
+  let tronAmountRepair: RepairStageOutcome = REPAIR_OK;
+  let debtRepair: RepairStageOutcome = REPAIR_OK;
+  // Amount-gap rows this run inserted must reach the durable repair queue even
+  // when the maintenance tail loses its window to scan overruns, circuits or
+  // budgets: queue admission is bookkeeping, not a provider repair attempt.
+  // Without it, a skipped tail leaves zero-attempt events absent from the
+  // queue the repair lane and the operator runbook read.
+  try {
+    await refreshBlacklistAmountRepairQueue(db, Math.floor(Date.now() / 1000));
+  } catch (err) {
+    logWorkerEventArgs("handler", "warn", "[sync-blacklist] Amount repair queue refresh failed:", err);
+  }
+
+  // Historical amount repair and Tron freeze-amount replay are maintenance work.
+  // They run only after every admissible event source has had its turn. A short,
+  // separately capped tail window lets the durable repair queue make progress
+  // after scan-budget exhaustion without taking time away from event scans.
+  const scanBudgetExhausted = blacklistRuntimeBudgetReached(runBudget);
+  if (
+    etherscanCircuitAllowed &&
+    !blacklistRuntimeBudgetReached(maintenanceRunBudget) &&
+    !blacklistSubrequestBudgetReached(maintenanceRunBudget)
+  ) {
+    try {
+      amountBackfill = await backfillAmounts(
+        db,
+        etherscanApiKey,
+        etherscanLimiter,
+        maintenanceRunBudget,
+        signal,
+        {
+          ...(scanBudgetExhausted ? { maxRows: BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT } : {}),
+          attemptDeadlineMs: maintenanceRunBudget.deadlineMs - BLACKLIST_POST_EVM_REPAIR_RESERVE_MS,
+          drpcApiKey,
+          chainRpcs,
+        },
+      );
+      runtimeBudgetHit ||= amountBackfill.runtimeBudgetReached;
+      amountRepair = amountBackfill.repairWindowExhausted
+        ? { outcome: "partial", reason: "maintenance-tail-reserved" }
+        : measuredRepair(amountBackfill.runtimeBudgetReached);
+    } catch (err) {
+      amountRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Backfill failed:", err);
+    }
+  } else if (!etherscanCircuitAllowed) {
+    amountRepair = skippedRepair("provider-circuit-open");
+    etherscanCircuitSkips++;
+    logWorkerEventArgs("handler", "warn", "[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
+  } else {
+    amountRepair = skippedRepair(
+      blacklistRuntimeBudgetReached(maintenanceRunBudget)
+        ? "maintenance-budget-exhausted"
+        : "subrequest-budget-exhausted",
+    );
+  }
+
+  // Tron freeze amounts need TronGrid only, so the replay tail runs even when the
+  // Etherscan circuit is open, but it must respect the TronGrid circuit the scan
+  // lane already consults. It keeps the same maintenance window and the same
+  // subrequest budget as every other tail lane.
+  const tronGridCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID);
+  if (tronGridCircuitAllowed && !blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
+    let tronOrderResolved = false;
+    try {
+      tronOrderBackfill = await resolveTronBlacklistOrder(db, {
+        apiKey: trongridApiKey,
+        limiter: tronLimiter,
+        budget,
+        signal,
+        pagesFetched: { count: 0 },
+      }, maintenanceRunBudget, summaryFence);
+      tronOrderResolved = true;
+    } catch (err) {
+      tronOrderRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
+      tronAmountRepair = skippedRepair("tron-order-repair-failed");
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron order repair failed:", err);
+    }
+    if (tronOrderResolved) {
+      try {
+        tronAmountBackfill = await backfillTronBlacklistAmounts(db, {
+          trongridApiKey,
+          limiter: tronLimiter,
+          runBudget: maintenanceRunBudget,
+          signal,
+        });
+        runtimeBudgetHit ||= tronAmountBackfill.runtimeBudgetReached;
+        tronAmountRepair = measuredRepair(tronAmountBackfill.runtimeBudgetReached);
+      } catch (err) {
+        tronAmountRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
+        logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron amount replay failed:", err);
+      }
+    }
+  } else {
+    const skipReason = !tronGridCircuitAllowed ? "provider-circuit-open"
+      : blacklistRuntimeBudgetReached(maintenanceRunBudget) ? "maintenance-budget-exhausted"
+      : "subrequest-budget-exhausted";
+    tronOrderRepair = skippedRepair(skipReason);
+    tronAmountRepair = skippedRepair(skipReason);
+    if (!tronGridCircuitAllowed) {
+      tronGridCircuitSkips++;
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] TronGrid circuit open, skipping Tron amount replay");
+    }
+  }
+  if (!blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
+    try {
+      await reconcileCurrentBalanceDebt(db, {
+        etherscanApiKey, drpcApiKey, trongridApiKey, etherscanLimiter, tronLimiter,
+        runBudget: maintenanceRunBudget, signal, chainRpcs,
+      }, { etherscanAllowed: etherscanCircuitAllowed, tronGridAllowed: tronGridCircuitAllowed });
+    } catch (err) {
+      debtRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Current-balance debt reconciliation failed:", err);
+    }
+  } else {
+    debtRepair = skippedRepair(
+      blacklistRuntimeBudgetReached(maintenanceRunBudget)
+        ? "maintenance-budget-exhausted"
+        : "subrequest-budget-exhausted",
+    );
+  }
+  const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
+  runtimeBudgetHit ||= counters.currentBalanceCacheCounters.budgetExhausted;
+  const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
+    contractsSkipped,
+    totalConfigs: configStates.length,
+    incompleteRuntimeConfigs,
+    subrequestBudgetHit: subrequestBudgetReached,
+  });
+  const { oldestSuccessAt, neverSucceeded } = getOldestBlacklistSuccessAt(configStates);
+  const coverageFailures = Object.values(scan.coverageVerdicts).filter((verdict) => verdict === "failed").length;
+  const coverageLaggingWithinTolerance = Object.values(scan.coverageVerdicts)
+    .filter((verdict) => verdict === "lagging-within-tolerance").length;
+  const scanStatus: SyncBlacklistResult["status"] =
+    derivedStatus === "ok" &&
+    (providerCircuitSkips > 0 || coverageFailures > 0 || stateConflicts > 0 || neverSucceeded > 0)
+      ? "degraded"
+      : derivedStatus;
+  const producerSnapshotWindowUnavailable =
+    Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= maintenanceRunBudget.deadlineMs;
+
+  // Refresh observed totals during catch-up without advancing the full-coverage freshness clock.
+  if (
+    runtimeBudgetHit ||
+    blacklistRuntimeBudgetReached(maintenanceRunBudget) ||
+    subrequestBudgetReached ||
+    producerSnapshotWindowUnavailable
+  ) {
+    producerSnapshotSkipped = true;
+  } else {
+    try {
+      const snapshotNow = Math.floor(Date.now() / 1000);
+      if (oldestSuccessAt != null) {
+        const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow, undefined, oldestSuccessAt);
+        producerGapMetricSnapshots = gapSnapshot.written;
+      }
+      // Configs that did not reach their safe head this run hold the coverage clock back.
+      const behindConfigs = configStates
+        .filter((state) => state.lastSucceededAt == null || state.lastSucceededAt < Math.floor(runStartedAtMs / 1000))
+        .map((state) => ({
+          configKey: state.configKey,
+          symbol: state.config.stablecoin,
+          chainName: state.config.chain.chainName,
+          lastSucceededAt: state.lastSucceededAt,
+        }));
+      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt, behindConfigs, summaryFence);
+      producerSummarySnapshot = summarySnapshot.written;
+      producerSnapshotReason = summarySnapshot.reason ?? null;
+    } catch (err) {
+      producerSnapshotError = err instanceof Error ? err.name : "UnknownError";
+      await reportCronProgress(
+        onProgress,
+        {
+          stage: "producer-snapshots",
+          itemsDone: configStates.length,
+          itemsTotal: configStates.length,
+          message: "Failed to materialize blacklist producer snapshots",
+          metadata: {
+            producerSnapshotError,
+            errorMessage: toErrorMessage(err),
+          },
+        },
+        budget,
+      );
+    }
+  }
+
+  // Final status: publication and repair throws raise ok to degraded, never lower error.
+  const failureReasons = [
+    ...(producerSnapshotReason != null ? [producerSnapshotReason] : []),
+    ...(producerSnapshotError != null ? ["blacklist-snapshot-publication-failed"] : []),
+    ...(amountRepair.outcome === "failed" ? ["blacklist-evm-amount-repair-failed"] : []),
+    ...(tronOrderRepair.outcome === "failed" ? ["blacklist-tron-order-repair-failed"] : []),
+    ...(tronAmountRepair.outcome === "failed" ? ["blacklist-tron-amount-repair-failed"] : []),
+    ...(debtRepair.outcome === "failed" ? ["blacklist-current-balance-debt-repair-failed"] : []),
+  ];
+  const status: SyncBlacklistResult["status"] =
+    scanStatus === "ok" && failureReasons.length > 0 ? "degraded" : scanStatus;
+  const scanReason = scanStatus === "ok" ? null
+    : stateConflicts > 0 ? "blacklist-state-conflict"
+    : runtimeBudgetHit || subrequestBudgetReached ? "blacklist-budget-exhausted"
+    : providerCircuitSkips > 0 ? "blacklist-provider-circuit-open"
+    : "blacklist-source-coverage-incomplete";
+  const reasons = [...new Set([...(scanReason ? [scanReason] : []), ...failureReasons])];
+
+  const decodeRetryRows = await runWithOverloadRetry(
+    () => db.prepare(`
+      SELECT substr(remainder, 1, instr(remainder, ':') - 1) AS configKey, COUNT(*) AS count
+      FROM (SELECT substr(key, length('blacklist:decode-retry:') + 1) AS remainder
+        FROM cache WHERE key GLOB 'blacklist:decode-retry:*')
+      GROUP BY configKey
+    `).all<{ configKey: string; count: number }>(),
+    3,
+    signal,
+  );
+  const decodeRetryCounts = Object.fromEntries(
+    (decodeRetryRows.results ?? []).map((row) => [row.configKey, row.count]),
+  );
+
+  logWorkerEventArgs("handler", "info", `[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
+  await reportCronProgress(
+    onProgress,
+    {
+      stage: "complete",
+      itemsDone: configStates.length,
+      itemsTotal: configStates.length,
+      message: "Completed blacklist sync",
+      metadata: {
+        rowsWritten: counters.totalInsertedRows,
+        eventsFetched: totalFetchedEvents,
+        contractsSkipped,
+        apiErrors,
+        configsAttempted,
+        configsSucceeded,
+        coverageFailures,
+        stateConflicts,
+      },
+    },
+    budget,
+  );
+  return {
+    status,
+    itemCount: counters.totalInsertedRows,
+    metadata: JSON.stringify(
+      withBudgetMetadata(budget, {
+        outputPublishedAt: status !== "error" && (counters.totalInsertedRows > 0 || configsSucceeded > 0)
+          ? Math.floor(Date.now() / 1000) : null,
+        ...(status !== "ok" ? {
+          reason: reasons[0] ?? "blacklist-source-coverage-incomplete",
+          ...(failureReasons.length > 0 ? { reasons } : {}),
+        } : {}),
+        rowsWritten: counters.totalInsertedRows,
+        eventsFetched: totalFetchedEvents,
+        decodeRetryCounts,
+        contractsSkipped,
+        apiErrors,
+        apiErrorConfigs,
+        zeroCursorConfigCount: zeroCursorConfigs.length,
+        zeroCursorConfigs: zeroCursorConfigs.slice(0, 10),
+        configsAttempted,
+        configsSucceeded,
+        coverageFailures,
+        coverageFailureConfigs: scan.coverageFailureConfigs,
+        coverageVerdicts: scan.coverageVerdicts,
+        coverageLaggingWithinTolerance,
+        coverageLagToleranceBlocks: BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS,
+        stateConflicts,
+        rpcLogConfigs,
+        tronRpc: scan.tronRpc,
+        providerCircuitSkips,
+        etherscanCircuitSkips,
+        tronGridCircuitSkips,
+        apiErrorClasses,
+        coverageOutcomeCounts,
+        configLag: scan.configLag,
+        blacklistProviderCalls,
+        maxProviderSplitDepth,
+        providerLimiterLiveConcurrency: BLACKLIST_PROVIDER_LIVE_CONCURRENCY,
+        etherscanLimiterRequestsPerSecond: etherscanLimiter.requestsPerSecond ?? null,
+        tronLimiterRequestsPerSecond: tronLimiter.requestsPerSecond ?? null,
+        amountRepairOutcome: amountRepair.outcome,
+        amountRepairReason: amountRepair.reason,
+        amountRepairAttempted: amountBackfill?.attempted ?? null,
+        amountRepairResolved: amountBackfill?.resolved ?? null,
+        amountRepairRetried: amountBackfill?.retried ?? null,
+        amountRepairUnrecoverable: amountBackfill?.unrecoverable ?? null,
+        amountRepairTailWindowUsed: scanBudgetExhausted,
+        amountRepairTailLimit: scanBudgetExhausted ? BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT : null,
+        tronAmountRepairOutcome: tronAmountRepair.outcome,
+        tronAmountRepairReason: tronAmountRepair.reason,
+        tronAmountRepairAttempted: tronAmountBackfill?.attempted ?? null,
+        tronAmountRepairResolved: tronAmountBackfill?.resolved ?? null,
+        tronAmountRepairRetried: tronAmountBackfill?.retried ?? null,
+        tronAmountRepairParked: tronAmountBackfill?.parked ?? null,
+        tronAmountRepairLimit: tronAmountBackfill?.limit ?? null,
+        tronOrderOutcome: tronOrderRepair.outcome,
+        tronOrderReason: tronOrderRepair.reason,
+        tronOrderBlocksAttempted: tronOrderBackfill?.blocksAttempted ?? null,
+        tronOrderPositionsResolved: tronOrderBackfill?.positionsResolved ?? null,
+        tronOrderBlocksDeferred: tronOrderBackfill?.blocksDeferred ?? null,
+        currentBalanceDebtOutcome: debtRepair.outcome,
+        currentBalanceDebtReason: debtRepair.reason,
+        maintenanceRuntimeBudgetMs: SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS,
+        runtimeBudgetReached: runtimeBudgetHit,
+        subrequestBudgetReached,
+        runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
+        incompleteRuntimeConfigs,
+        oldestConfigSuccessAt: oldestSuccessAt,
+        oldestConfigSuccessAgeSec:
+          oldestSuccessAt == null ? null : Math.max(0, Math.floor(Date.now() / 1000) - oldestSuccessAt),
+        configsNeverSucceeded: neverSucceeded,
+        enrichAttempted: counters.enrichCounters.attempted,
+        enrichSucceeded: counters.enrichCounters.succeeded,
+        enrichFailed: counters.enrichCounters.failed,
+        currentBalanceCacheUpdated: counters.currentBalanceCacheCounters.updated,
+        currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
+        currentBalanceCacheSkippedDueBudget: counters.currentBalanceCacheCounters.skippedDueBudget,
+        currentBalanceCacheBudgetExhausted: counters.currentBalanceCacheCounters.budgetExhausted,
+        currentBalanceCacheDeferredToDebt: counters.currentBalanceCacheCounters.deferredToDebt,
+        producerGapMetricSnapshots,
+        producerSummarySnapshot,
+        producerSnapshotSkipped,
+        producerSnapshotError,
+        producerSnapshotReason,
+        producerSnapshotWindowMs: BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS,
+        producerSnapshotWindowUnavailable,
+      }),
+    ),
+  };
+}

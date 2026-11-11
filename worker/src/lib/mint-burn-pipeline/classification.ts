@@ -14,17 +14,17 @@ import { chunkArray } from "../collections";
 import {
   classifyBridgeAwareBurnRows,
   type MintBurnTxContext,
-} from "../mint-burn-bridge-classifier";
-import type { MintBurnContractConfig } from "../mint-burn-contracts";
+} from "./mint-burn-bridge-classifier";
+import type { MintBurnContractConfig } from "./mint-burn-contracts";
 import { budgetExhausted } from "../evm-logs";
 import type { RpcEndpoint } from "../chain-registry";
-import type { MintBurnSupplyProofEvidence } from "../mint-burn-supply-proofs";
-import { getMintBurnConservationRuntimeEntry, requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
+import type { MintBurnSupplyProofEvidence } from "./mint-burn-supply-proofs";
+import { getMintBurnConservationRuntimeEntry, requiresReviewedSupplyBurnProof } from "./mint-burn-conservation";
 import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-logs";
 import { updateEventClassifications } from "./persistence";
 import { throwIfAborted } from "../abort";
 import { getCache, setCache } from "../db-cache";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "./mint-burn-contract-identity";
 import type {
   BurnClassificationCounters,
   MintBurnRequestBudget,

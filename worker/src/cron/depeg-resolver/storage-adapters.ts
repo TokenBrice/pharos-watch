@@ -9,14 +9,14 @@ import {
   type DdrSealedPublicPrediction,
   type DdrSealInput,
   type DdrV2StoreContracts,
-} from "../depeg-resolver-v2-contracts";
+} from "./depeg-resolver-v2-contracts";
 import {
   closeRecoveredPreLockIncidents as closeRecoveredPreLockIncidentsStore,
   ensureCanonicalIncidents as ensureCanonicalIncidentsStore,
   loadCanonicalIncidents as loadCanonicalIncidentsStore,
   recordLockDeferral as recordLockDeferralStore,
   recordLockOpportunity as recordLockOpportunityStore,
-} from "../../lib/depeg-resolver-incident-store";
+} from "../../lib/depeg-resolver/depeg-resolver-incident-store";
 import {
   loadFirstPublicationMembership as loadFirstPublicationMembershipStore,
   loadLatestPublicationManifest as loadLatestPublicationManifestStore,
@@ -25,10 +25,10 @@ import {
   sealPublicPrediction as sealPublicPredictionStore,
   writePublicationManifest as writePublicationManifestStore,
   type DdrPublicAssessmentSealInput as StoreDdrPublicAssessmentSealInput,
-} from "../../lib/depeg-resolver-publication-store";
+} from "../../lib/depeg-resolver/depeg-resolver-publication-store";
 import {
   loadPredictionErrata as loadPredictionErrataStore,
-} from "../../lib/depeg-resolver-errata-store";
+} from "../../lib/depeg-resolver/depeg-resolver-errata-store";
 
 export function sealedByIncident(rows: readonly DdrSealedPublicPrediction[]): Map<string, DdrSealedPublicPrediction> {
   const out = new Map<string, DdrSealedPublicPrediction>();

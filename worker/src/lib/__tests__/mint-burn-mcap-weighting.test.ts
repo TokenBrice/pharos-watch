@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getMintBurnTrackedChains, sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { getMintBurnTrackedChains, sumMcapForTrackedChains } from "../mint-burn-pipeline/mint-burn-mcap-weighting";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
 
 describe("sumMcapForTrackedChains", () => {
   it("adds Tron supply only when its config is in the admitted publication scope", () => {

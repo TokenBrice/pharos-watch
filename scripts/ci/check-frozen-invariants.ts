@@ -16,8 +16,8 @@
 import { FROZEN_IDS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 // Independent registries that the freeze runbook requires us to clean up.
-import { MINT_BURN_CONFIG_SPECS } from "../../worker/src/lib/mint-burn-contracts-data";
-import { CONTRACT_CONFIGS } from "../../worker/src/lib/blacklist-contracts";
+import { MINT_BURN_CONFIG_SPECS } from "../../worker/src/lib/mint-burn-pipeline/mint-burn-contracts-data";
+import { CONTRACT_CONFIGS } from "../../worker/src/lib/blacklist/blacklist-contracts";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { assertStaticComparePairs } from "../../src/lib/compare-pages";
 
@@ -37,7 +37,7 @@ for (const id of FROZEN_IDS) {
 for (const config of MINT_BURN_CONFIG_SPECS) {
   if (FROZEN_IDS.has(config.stablecoinId)) {
     failures.push(
-      `${config.stablecoinId}: still in MINT_BURN_CONFIG_SPECS (worker/src/lib/mint-burn-contracts-data.ts) — remove per freeze runbook`,
+      `${config.stablecoinId}: still in MINT_BURN_CONFIG_SPECS (worker/src/lib/mint-burn-pipeline/mint-burn-contracts-data.ts) — remove per freeze runbook`,
     );
   }
 }
@@ -45,11 +45,11 @@ for (const config of CONTRACT_CONFIGS) {
   const id = "stablecoinId" in config ? config.stablecoinId : undefined;
   if (typeof id !== "string" || id.length === 0) {
     failures.push(
-      "CONTRACT_CONFIGS entry is missing stablecoinId (worker/src/lib/blacklist-contracts.ts) — restore the required registry key",
+      "CONTRACT_CONFIGS entry is missing stablecoinId (worker/src/lib/blacklist/blacklist-contracts.ts) — restore the required registry key",
     );
   } else if (FROZEN_IDS.has(id)) {
     failures.push(
-      `${id}: still in CONTRACT_CONFIGS (worker/src/lib/blacklist-contracts.ts) — remove per freeze runbook`,
+      `${id}: still in CONTRACT_CONFIGS (worker/src/lib/blacklist/blacklist-contracts.ts) — remove per freeze runbook`,
     );
   }
 }

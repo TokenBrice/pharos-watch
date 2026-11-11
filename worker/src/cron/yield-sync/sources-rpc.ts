@@ -1,7 +1,7 @@
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { StablecoinData } from "@shared/types/supply";
-import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
-import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+import { hasPublishableCurrentPrice } from "../../lib/pricing/price-publication-state";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing/pricing-source-freshness";
 import {
   registryRpcEndpoints,
   type ChainRpcConfig,

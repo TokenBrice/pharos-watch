@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   states: vi.fn(),
 }));
 
-vi.mock("../sync-live-reserves-shared", () => ({
+vi.mock("../live-reserves/sync-live-reserves-shared", () => ({
   CONFIGURED_COINS: [{ id: "coin", liveReservesConfig: mocks.config }],
 }));
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => ({
@@ -36,16 +36,16 @@ vi.mock("../reserve-adapters/m0", () => {
   mocks.adapterInitialized = true;
   return { fetchM0Reserves: vi.fn() };
 });
-vi.mock("../reserve-adapter-runner", () => {
+vi.mock("../live-reserves/reserve-adapter-runner", () => {
   mocks.runnerInitialized = true;
   return {};
 });
-vi.mock("../sync-live-reserves-core", () => {
+vi.mock("../live-reserves/sync-live-reserves-core", () => {
   mocks.coreInitialized = true;
   return {};
 });
 
-import { recoverLiveReserveConfigChanges } from "../reserve-recovery-config";
+import { recoverLiveReserveConfigChanges } from "../live-reserves/reserve-recovery-config";
 
 it("checks a consumed fingerprint without initializing adapters or producer execution", async () => {
   const fingerprint = computeLiveReserveConfigFingerprint(mocks.config);

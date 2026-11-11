@@ -10,8 +10,8 @@ import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
-import * as scoreIndex from "../../lib/safety-score-index";
+import { loadActiveSafetyScoreSource } from "../../lib/safety-score-v9/safety-score-active-source";
+import * as scoreIndex from "../../lib/safety-score-v9/safety-score-index";
 import { handleYieldRankings, handleYieldRankingsCoin } from "../yield-rankings-cache";
 import * as structuredLog from "../../lib/structured-log";
 import { handleSafetyGrades } from "../safety-grades";
@@ -20,7 +20,7 @@ import * as opportunitySafety from "@shared/lib/yield-opportunity-risk";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import * as abort from "../../lib/abort";
 import * as dbCache from "../../lib/db-cache";
-import * as cohortCache from "../../lib/yield-rankings-coin-cache";
+import * as cohortCache from "../../lib/yield/yield-rankings-coin-cache";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;

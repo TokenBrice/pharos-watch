@@ -25,7 +25,7 @@ import {
   validatePriceCandidate,
   validatePriceCandidateAgainstReference,
   type PriceValidationReferences,
-} from "../price-validation";
+} from "../pricing/price-validation";
 
 describe("buildPriceValidationContext", () => {
   it("does not let provider NAV flags override an omitted tracked false flag", () => {

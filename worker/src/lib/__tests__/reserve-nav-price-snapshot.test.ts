@@ -1,18 +1,18 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserves/live-reserve-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
-import { loadReserveNavSupplyPrice } from "../reserve-nav-price";
+import { loadReserveNavSupplyPrice } from "../pricing/reserve-nav-price";
 import { collectPrimaryProviderQuotes, type PrimaryPricePlan } from "../../cron/sync-stablecoins/enrich-prices-primary-provider-collection";
 import { fetchFiatCoinGeckoTokens } from "../../cron/sync-stablecoins/supplemental-assets/fiat-cg";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as SupplementalShared from "../../cron/sync-stablecoins/supplemental-assets/shared";
 import type * as OnchainSupply from "../../cron/sync-stablecoins/supplemental-assets/onchain-supply";
-import { createDexPriceSourceLoadTelemetry } from "../depeg-helpers";
+import { createDexPriceSourceLoadTelemetry } from "../depeg-detection/depeg-helpers";
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const actual = await importOriginal<typeof StablecoinRegistry>();

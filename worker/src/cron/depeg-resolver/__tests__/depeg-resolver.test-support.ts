@@ -4,7 +4,7 @@ import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils
 import type { StablecoinData } from "@shared/types/supply";
 import type { DdrLoadedContext } from "../context";
 import type { DdrEventDbRow } from "../types";
-import type { DdrCanonicalIncident } from "../../depeg-resolver-v2-contracts";
+import type { DdrCanonicalIncident } from "../depeg-resolver-v2-contracts";
 
 export const NOW_SEC = 1_780_358_400;
 export const DAY = 86_400;

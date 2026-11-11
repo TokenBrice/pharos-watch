@@ -33,14 +33,14 @@ import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { breakerKeyForConfig, CONFIGURED_COINS, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { breakerKeyForConfig, CONFIGURED_COINS, SYNC_ORDERED_CONFIGURED_COINS } from "../live-reserves/sync-live-reserves-shared";
 import { advanceLiveReserveCheckpoint, beginLiveReserveCheckpoint } from "../reserve-adapters/reserve-checkpoint";
-import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
-import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
-import { createAdapterLatencyCollector, syncReserveCoin } from "../sync-live-reserves-core";
+import { finalizeReserveSyncRun } from "../live-reserves/sync-live-reserves-finalize";
+import { resolveLiveReserveSyncBudgetConfig } from "../live-reserves/sync-live-reserves-config";
+import { createAdapterLatencyCollector, syncReserveCoin } from "../live-reserves/sync-live-reserves-core";
 import { getReserveSyncState } from "../../lib/live-reserves/store-read";
 import { adaptMakinaStrategyReserves } from "../reserve-adapters/makina-strategy";
-import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
+import { RESERVE_FEED_REVIEWS } from "../../lib/live-reserves/reserve-feed-reviews";
 import type { ReserveSyncStateRecord } from "../../lib/live-reserves/store";
 
 const mockD1 = mockLiveReserveD1;
@@ -159,7 +159,7 @@ describe("syncLiveReserves", () => {
     }, new Set<string>())
     .size;
 
-  type SyncLiveReserves = typeof import("../sync-live-reserves").syncLiveReserves;
+  type SyncLiveReserves = typeof import("../live-reserves/sync-live-reserves").syncLiveReserves;
   const healthyReserves = () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] });
   const mockHealthyAdapter = () => mockAdapterRegistry(async () => healthyReserves());
   const uniqueBreakerKeys = new Set(ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig)
@@ -182,7 +182,7 @@ describe("syncLiveReserves", () => {
     db: Parameters<SyncLiveReserves>[0], budget?: Parameters<SyncLiveReserves>[4],
     progress?: Parameters<SyncLiveReserves>[3], checkpoint?: Parameters<SyncLiveReserves>[5],
   ) {
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     return syncLiveReserves(db, runController.signal, {}, progress, budget, checkpoint);
   }
 
@@ -212,7 +212,7 @@ describe("syncLiveReserves", () => {
 
   async function expectRetainedBook(id: string, failNextRead: () => void, checkFailure: (state: Record<string, unknown>) => void) {
     const { db, sqlite } = fixtures.open();
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const snapshot = () => sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
     const success = () => sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id);
     await runScopedSlice(syncLiveReserves, db, id);
@@ -400,7 +400,7 @@ describe("syncLiveReserves", () => {
 
   async function runReservoirQueue(order: "canonical" | "reversed") {
     vi.resetModules();
-    const shared = await import("../sync-live-reserves-shared");
+    const shared = await import("../live-reserves/sync-live-reserves-shared");
     const queue = [...shared.SYNC_ORDERED_CONFIGURED_COINS];
     const slots = queue.flatMap((coin, index) =>
       (RESERVOIR_COIN_IDS as readonly string[]).includes(coin.id) ? [index] : [],
@@ -408,7 +408,7 @@ describe("syncLiveReserves", () => {
     const reservoirCoins = slots.map((index) => queue[index]!);
     if (order === "reversed") reservoirCoins.reverse();
     slots.forEach((index, position) => { queue[index] = reservoirCoins[position]!; });
-    vi.doMock("../sync-live-reserves-shared", () => ({
+    vi.doMock("../live-reserves/sync-live-reserves-shared", () => ({
       ...shared,
       SYNC_ORDERED_CONFIGURED_COINS: queue,
     }));
@@ -443,7 +443,7 @@ describe("syncLiveReserves", () => {
     });
 
     try {
-      const { syncLiveReserves } = await import("../sync-live-reserves");
+      const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
       const { db, sqlite } = fixtures.open();
       await syncLiveReserves(db, runController.signal, {});
       // Reading back through the persisted row proves the orchestrator wrote
@@ -464,7 +464,7 @@ describe("syncLiveReserves", () => {
       ).length;
       return { redemptionByCoin, reservoirCallCount };
     } finally {
-      vi.doUnmock("../sync-live-reserves-shared");
+      vi.doUnmock("../live-reserves/sync-live-reserves-shared");
       vi.resetModules();
     }
   }
@@ -506,7 +506,7 @@ describe("syncLiveReserves", () => {
       }));
       const { db, sqlite } = fixtures.open();
       // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
-      const { syncLiveReserves } = await import("../sync-live-reserves");
+      const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
       await runScopedSlice(syncLiveReserves, db, "usdcx-movement");
       const before = sqlite.prepare(
         "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
@@ -556,7 +556,7 @@ describe("syncLiveReserves", () => {
     }));
     const { db, sqlite } = fixtures.open();
     // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     await runScopedSlice(syncLiveReserves, db, "u-united-stables");
     const healthy = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables");
     expect(healthy).toBeDefined();
@@ -1155,7 +1155,7 @@ describe("syncLiveReserves", () => {
       }),
     }));
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const db = mockD1();
     const runPromise = syncLiveReserves(db, runController.signal, {});
 
@@ -1201,7 +1201,7 @@ describe("syncLiveReserves", () => {
       didReserveSyncSuccessBecomeAuthoritative: vi.fn(async () => true),
     }));
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const db = mockD1();
     const runPromise = syncLiveReserves(
       db,
@@ -1246,7 +1246,7 @@ describe("syncLiveReserves", () => {
       async () => await new Promise<never>(() => undefined),
     );
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const db = mockD1();
     const runPromise = syncLiveReserves(
       db,
@@ -1316,7 +1316,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("records string abort reasons and the adapter fallback for non-error reasons", async () => {
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     for (const { reason, expectedAttemptError, expectedRunError } of [
       { reason: "operator cancelled", expectedAttemptError: "operator cancelled", expectedRunError: "operator cancelled" },
       { reason: 42, expectedAttemptError: "adapter-timeout", expectedRunError: "Operation aborted" },
@@ -1395,7 +1395,7 @@ describe("syncLiveReserves", () => {
 
   it("keeps Yuzu's failed attempt and retained snapshot unchanged when acknowledging the cron finding", async () => {
     let now = Math.floor(Date.now() / 1000);
-    const reviews = await import("../../lib/reserve-feed-reviews");
+    const reviews = await import("../../lib/live-reserves/reserve-feed-reviews");
     const review = { ...RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!, reviewedAt: now - 1, expiresAt: now + 86400 };
     vi.spyOn(reviews, "resolveReserveFeedReviews").mockReturnValue({ activeById: new Map([[review.stablecoinId, review]]), expiredIds: [], invalidIds: [] });
     vi.spyOn(Date, "now").mockImplementation(() => now * 1000);
@@ -1863,7 +1863,7 @@ describe("syncLiveReserves", () => {
 
 describe("buildSharedSourceCacheKey", () => {
   it("produces the same key regardless of key insertion order", async () => {
-    const { buildSharedSourceCacheKey } = await import("../sync-live-reserves-shared");
+    const { buildSharedSourceCacheKey } = await import("../live-reserves/sync-live-reserves-shared");
 
     const adapter = {
       key: "mento",
@@ -1904,7 +1904,7 @@ describe("buildSharedSourceCacheKey", () => {
   });
 
   it("keeps same-URL shared sources separate when parser params differ", async () => {
-    const { buildSharedSourceCacheKey } = await import("../sync-live-reserves-shared");
+    const { buildSharedSourceCacheKey } = await import("../live-reserves/sync-live-reserves-shared");
 
     const adapter = {
       key: "circle-transparency",

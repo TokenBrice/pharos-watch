@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
-import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary-service";
-import { loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance } from "../blacklist-current-balances";
-import { CONTRACT_CONFIGS, getBlacklistConfigsForSymbolAndChain } from "../blacklist-contracts";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist/blacklist-summary-service";
+import { loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance } from "../blacklist/blacklist-current-balances";
+import { CONTRACT_CONFIGS, getBlacklistConfigsForSymbolAndChain } from "../blacklist/blacklist-contracts";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { invalidateBlacklistDerivedCaches } from "../blacklist-cache-invalidation";
-import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, getBlacklistDerivedCacheKeys } from "../blacklist-cache-keys";
-import { materializeBlacklistGapMetrics } from "../blacklist-gaps";
+import { invalidateBlacklistDerivedCaches } from "../blacklist/blacklist-cache-invalidation";
+import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, getBlacklistDerivedCacheKeys } from "../blacklist/blacklist-cache-keys";
+import { materializeBlacklistGapMetrics } from "../blacklist/blacklist-gaps";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 

@@ -15,7 +15,7 @@ lifecycle review rather than auto-close.
 
 ## Flags
 
-Computed daily by `worker/src/lib/depeg-lifecycle.ts` inside the digest cron's
+Computed daily by `worker/src/lib/depeg-detection/depeg-lifecycle.ts` inside the digest cron's
 active-depeg collector, before the prompt slice. The collector excludes
 untracked/frozen coins and unavailable market caps. Flags require a fresh live
 price and a positive current authoritative peg reference; the reference

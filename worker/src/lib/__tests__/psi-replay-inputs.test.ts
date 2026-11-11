@@ -3,13 +3,13 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeDepegRow as makeFixtureDepegRow } from "../../test-helpers/__shared/fixtures";
-import type { DepegRow } from "../depeg-helpers";
+import type { DepegRow } from "../depeg-detection/depeg-helpers";
 import { seedPsiDews, seedPsiEvent, seedPsiSupply } from "../../api/__tests__/psi-replay.test-support";
 import {
   loadHistoricalPsiArchives,
   loadPsiEligibleDepegEvents,
   loadSupplyHistoryRowsForWindow,
-} from "../psi-replay-inputs";
+} from "../psi/psi-replay-inputs";
 
 const DAY = 1_772_668_800;
 const fixtures = createLatestSchemaFixtureTracker();

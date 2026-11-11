@@ -34,19 +34,19 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/report-cards-snapshot-inputs", () => ({
+vi.mock("../../lib/safety-score-v9/report-cards-snapshot-inputs", () => ({
   loadReportCardsSnapshotInputs: mockLoadInputs,
 }));
 
-vi.mock("../../lib/peg-analytics", () => ({
+vi.mock("../../lib/depeg-detection/peg-analytics", () => ({
   derivePegAnalyticsSnapshot: mockDerivePegAnalytics,
 }));
 
-vi.mock("../../lib/peg-analytics-cache", () => ({
+vi.mock("../../lib/depeg-detection/peg-analytics-cache", () => ({
   publishPegAnalyticsCache: mockPublishPegAnalytics,
 }));
 
-vi.mock("../../lib/report-cards-snapshot", () => ({
+vi.mock("../../lib/safety-score-v9/report-cards-snapshot", () => ({
   loadExactDexPublicationGeneration: mockLoadExactDexGeneration,
   buildNavPriceById: () => ({}),
   buildExitOutputPriceById: () => ({}),
@@ -62,7 +62,7 @@ vi.mock("../../lib/safety-score-v9/capture-control", async (importOriginal) => (
   commitCaptureControl: mockCommitCaptureControl,
 }));
 
-vi.mock("../../lib/stablecoins-cache", () => ({
+vi.mock("../../lib/market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: mockLoadStablecoinsCache,
 }));
 
@@ -76,14 +76,14 @@ vi.mock("../../lib/safety-score-v9/transfer-materiality-observer", () => ({
   observeSafetyScoreV9TransferMaterialityGeneration: mockObserveTransferMateriality,
 }));
 
-vi.mock("../../lib/report-card-evidence-journal-store", () => ({
+vi.mock("../../lib/safety-score-v9/report-card-evidence-journal-store", () => ({
   loadReportCardEvidenceJournalByIdV1: async () => ({}),
 }));
 
 const {
   prepareSafetyScoreV9Input,
   V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS,
-} = await import("../prepare-safety-score-v9-input");
+} = await import("../safety-score-v9/prepare-safety-score-v9-input");
 const { buildNativeSafetyScoreV9Capture } = await import("../../lib/__tests__/safety-score-v9-capture.test-support");
 const { NativeSafetyScoreV9InputSchema } = await import("../../lib/safety-score-v9/native-input");
 

@@ -17,7 +17,7 @@ import { installAdapterNetwork, expectValidAdapterOutput, type AdapterNetworkSpe
 import { midasNetwork, midasClaimData, MIDAS_CAPTURE_NOW, MIDAS_CHECKPOINT_SEC, type MidasTestDocument } from "./midas-mtbill.test-support";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
-import { classifyFailure } from "../../sync-live-reserves-shared";
+import { classifyFailure } from "../../live-reserves/sync-live-reserves-shared";
 import type { ReserveCompositionRecord } from "../../../lib/live-reserves/store-shared";
 
 interface HistoricalFixture {

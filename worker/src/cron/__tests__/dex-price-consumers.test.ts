@@ -3,32 +3,32 @@ import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type { DatabaseSync } from "node:sqlite";
-import type { LoadedDexPrices } from "../../lib/depeg-helpers";
-import type * as depegHelpers from "../../lib/depeg-helpers";
-import type * as nativePegQuotes from "../../lib/native-peg-quotes";
-import type * as confirmationEvidence from "../pending-depeg-confirmation-evidence";
-import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
-import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
+import type { LoadedDexPrices } from "../../lib/depeg-detection/depeg-helpers";
+import type * as depegHelpers from "../../lib/depeg-detection/depeg-helpers";
+import type * as nativePegQuotes from "../../lib/pricing/native-peg-quotes";
+import type * as confirmationEvidence from "../depeg-detection/pending-depeg-confirmation-evidence";
+import { loadDexPoolChallengers } from "../../lib/depeg-detection/depeg-helpers";
+import { fetchCurrentNativePegQuotes } from "../../lib/pricing/native-peg-quotes";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { insertDexPrice, insertPendingDepeg, makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
 import { buildPrimaryPricePlan } from "../sync-stablecoins/enrich-prices-primary-provider-collection";
 import { hydrateDepegDetection } from "../depeg-detection/hydration";
-import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
+import { confirmPendingDepegs } from "../depeg-detection/confirm-pending-depegs";
+import { collectConfirmationEvidence } from "../depeg-detection/pending-depeg-confirmation-evidence";
 
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => false),
   recordOutcomeSafe: vi.fn(async () => undefined),
 }));
-vi.mock("../../lib/native-peg-quotes", async (importOriginal) => ({
+vi.mock("../../lib/pricing/native-peg-quotes", async (importOriginal) => ({
   ...await importOriginal<typeof nativePegQuotes>(),
   fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
 }));
-vi.mock("../../lib/depeg-helpers", async (importOriginal) => ({
+vi.mock("../../lib/depeg-detection/depeg-helpers", async (importOriginal) => ({
   ...await importOriginal<typeof depegHelpers>(),
   loadDexPoolChallengers: vi.fn(async () => new Map()),
 }));
-vi.mock("../pending-depeg-confirmation-evidence", async (importOriginal) => {
+vi.mock("../depeg-detection/pending-depeg-confirmation-evidence", async (importOriginal) => {
   const actual = await importOriginal<typeof confirmationEvidence>();
   return { ...actual, collectConfirmationEvidence: vi.fn(actual.collectConfirmationEvidence) };
 });

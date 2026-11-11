@@ -1,7 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import * as activeSafetyScoreSource from "../../lib/safety-score-index";
-import * as flightToQualityClassification from "../../lib/flight-to-quality-classification";
+import * as activeSafetyScoreSource from "../../lib/safety-score-v9/safety-score-index";
+import * as flightToQualityClassification from "../../lib/mint-burn-pipeline/flight-to-quality-classification";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,

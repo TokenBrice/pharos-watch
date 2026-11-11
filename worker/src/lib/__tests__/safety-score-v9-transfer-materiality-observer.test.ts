@@ -10,7 +10,7 @@ import { exactInputBoundTransferMaterialityPacket, SAFETY_SCORE_V9_TRANSFER_MATE
 import type { fetchMoveFungibleAssetSupply, MoveFungibleAssetSupplyObservation } from "../chain-observation";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { CENSUS_FIXTURE_META_BY_ID } from "./safety-score-v9-transfer-census.test-support";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { createDwellirNativeCapability } from "../dwellir-native";

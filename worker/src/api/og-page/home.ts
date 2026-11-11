@@ -1,6 +1,6 @@
 import { formatCurrency } from "@shared/lib/format";
 import { buildLiveHomepageHeroSnapshot, describeHomepageSupplyCoverage } from "@shared/lib/homepage-hero-snapshot";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { formatActiveDepegs, loadActiveDepegCount, loadDisplayedPsiLabel } from "./market-state";
 import { freshnessReason, settleSupport, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 

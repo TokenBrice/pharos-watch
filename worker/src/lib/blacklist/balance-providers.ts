@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../structured-log";
-import type { ContractEventConfig } from "../blacklist-contracts";
+import type { ContractEventConfig } from "./blacklist-contracts";
 import { decimalNumberFromBigInt } from "../bigint";
 import { encodeBalanceOfCallData } from "../evm-selectors";
 import {

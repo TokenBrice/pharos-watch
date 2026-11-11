@@ -5,7 +5,7 @@ import {
   deliverTwitterDigestWithLedger,
   readTwitterDigestDeliveryStatus,
   type TwitterDigestDeliveryRecord,
-} from "../twitter-digest-ledger";
+} from "../digest/twitter-digest-ledger";
 
 const KEY = "daily-digest:twitter-sent:2026-08-22";
 const NOW_SEC = 1_787_360_000;

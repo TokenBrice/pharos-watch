@@ -5,8 +5,8 @@ import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-clos
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/price-depeg-voting-policy";
-import { getDepegRecoveryThresholdBps, getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
+import { divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/pricing/price-depeg-voting-policy";
+import { getDepegRecoveryThresholdBps, getDepegThresholdBps } from "../../lib/depeg-detection/depeg-threshold-policy";
 import {
   buildPendingReason,
   countDexProtocolCorroborations,
@@ -18,11 +18,11 @@ import {
   type DexPriceRow,
   type PendingDepegReason,
   type PendingDepegReasonFlag,
-} from "../../lib/depeg-helpers";
+} from "../../lib/depeg-detection/depeg-helpers";
 import {
   classifyNativeQuoteImplausibility,
   type NativeQuoteImplausibility,
-} from "../../lib/native-quote-plausibility";
+} from "../../lib/depeg-detection/native-quote-plausibility";
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
@@ -53,7 +53,7 @@ import {
   resolveDirectRecovery,
   resolvePeakUpdateCommand,
 } from "./native-quote-policy";
-import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
+import { deriveAuthoritativePegSignal } from "./authoritative-peg-signal";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 
 interface DecisionContext {

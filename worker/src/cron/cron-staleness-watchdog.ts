@@ -29,15 +29,15 @@ import {
   compactSupplyIntegrityReport,
   confirmSupplyIntegrityConditions,
   loadSupplyIntegrityReport,
-} from "../lib/supply-integrity";
+} from "../lib/market-supply/supply-integrity";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
 import { loadCanaryOperatorWatch } from "./operator-watch-canary";
 import { loadProbeOperatorWatch } from "./operator-watch-probe";
-import { buildPricingOperatorConditions, pricingOperatorRuleIds } from "./operator-watch-pricing";
-import { loadBlacklistConfigWatchConditions } from "./operator-watch-blacklist";
-import { loadMintBurnStuckConfigWatchConditions } from "./operator-watch-mintburn";
+import { buildPricingOperatorConditions, pricingOperatorRuleIds } from "./pricing/operator-watch-pricing";
+import { loadBlacklistConfigWatchConditions } from "./blacklist/operator-watch-blacklist";
+import { loadMintBurnStuckConfigWatchConditions } from "./mint-burn/operator-watch-mintburn";
 import { loadDexYieldWatchConditions } from "./operator-watch-dex-yield";
-import { loadPsiDailyCoverage } from "./operator-watch-psi-daily";
+import { loadPsiDailyCoverage } from "./psi/operator-watch-psi-daily";
 import type { OperatorWatchCondition, OperatorWatchSection } from "./operator-watch-types";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and

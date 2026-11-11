@@ -6,8 +6,8 @@ vi.mock("../fetch-retry", () => ({
 }));
 
 import { fetchJsonWithRetry } from "../fetch-retry";
-import { isValidFxRate } from "../fx-config";
-import { loadCommodityPeerMedianReference, resolveMetalReferenceRates, type MetalPegKey } from "../fx-metals";
+import { isValidFxRate } from "../pricing/fx-config";
+import { loadCommodityPeerMedianReference, resolveMetalReferenceRates, type MetalPegKey } from "../pricing/fx-metals";
 
 const validateMetalRate = (pegKey: MetalPegKey, rate: number): boolean =>
   pegKey === "peggedGOLD"

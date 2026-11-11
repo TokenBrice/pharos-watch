@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStabilityIndex } from "../stability-index";
+import { computeStabilityIndex } from "../psi/stability-index";
 
 type Scenario = {
   label: string;

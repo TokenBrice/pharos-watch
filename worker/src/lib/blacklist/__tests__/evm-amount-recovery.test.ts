@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CONTRACT_CONFIGS } from "../../blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../blacklist-contracts";
 import type { EtherscanLogEntry } from "../../evm-logs";
 import type { ChainRpcConfig, RpcEndpoint } from "../../chain-registry";
 import { fetchJsonWithRetry } from "../../fetch-retry";

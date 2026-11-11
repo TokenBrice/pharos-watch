@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { fetchCoinGeckoMarketHistory } from "../coingecko-market-history";
+import { fetchCoinGeckoMarketHistory } from "../pricing/coingecko-market-history";
 
 afterEach(() => {
   vi.restoreAllMocks();

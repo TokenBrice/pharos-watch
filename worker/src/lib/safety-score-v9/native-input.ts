@@ -24,18 +24,18 @@ import { canonicalizeLenderBookObservation } from "@shared/lib/safety-score-v9/l
 import {
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
-} from "../report-cards-fixed-input";
+} from "./report-cards-fixed-input";
 import {
   assertCommonFixedInputConsistency,
   createFixedInputPayloadFields,
   normalizeCommonFixedInputRecords,
-} from "../report-cards-fixed-input-contract";
+} from "./report-cards-fixed-input-contract";
 import {
   buildFixedInputCacheEntry,
   FixedInputCacheEnvelopeFields,
   parseFixedInputCacheEntry,
   REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
-} from "../report-cards-fixed-input-cache-codec";
+} from "./report-cards-fixed-input-cache-codec";
 import { V9PublicationInputHealthSchema } from "./publication-assessment";
 import { parseJson } from "../json-parse";
 

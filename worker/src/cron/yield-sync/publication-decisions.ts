@@ -16,11 +16,11 @@ import { getConfidencePriority, buildSelectionReason, compareCandidates } from "
 import { type EvaluatedYieldSource } from "./evaluation";
 import {
   getRankingStaleThresholdMs,
-} from "../../lib/yield-ranking-helpers";
+} from "../../lib/yield/yield-ranking-helpers";
 import {
   isRealSourceSwitch,
   LEGACY_BEST_YIELD_SOURCE_KEY,
-} from "../../lib/yield-history-ownership-handoffs";
+} from "../../lib/yield/yield-history-ownership-handoffs";
 import {
   buildHistoryKey,
 } from "./history-evidence";

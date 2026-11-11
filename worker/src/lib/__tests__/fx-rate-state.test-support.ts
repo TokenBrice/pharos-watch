@@ -1,5 +1,5 @@
 import { sha256Hex } from "@shared/lib/sha256";
-import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
+import { EXPECTED_FX_PEG_KEYS } from "../pricing/fx-config";
 
 /**
  * One published FX generation as the two `cache` rows `persistFxRateState()` writes:

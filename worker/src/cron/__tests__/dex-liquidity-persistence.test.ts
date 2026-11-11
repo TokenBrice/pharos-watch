@@ -14,7 +14,7 @@ import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import type * as DbModule from "../../lib/db";
-import { computeDexDeploymentSupplyCoverage } from "../../lib/report-cards-snapshot-inputs";
+import { computeDexDeploymentSupplyCoverage } from "../../lib/safety-score-v9/report-cards-snapshot-inputs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { initMetrics } from "../dex-liquidity/__tests__/scoring-test-builders";
 import { initSourcePoolGraph } from "../dex-liquidity/pool-helpers";

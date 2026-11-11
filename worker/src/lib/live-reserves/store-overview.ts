@@ -1,4 +1,4 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import { emptyReserveCompositionOverview, ReserveContinuationExecutionStatusSchema } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
@@ -25,7 +25,7 @@ import {
   hasUncertainWriteState,
 } from "./store-snapshot-state";
 import { parseReserveCompositionRow } from "./store-row-decoding";
-import { matchReserveFeedReview, resolveReserveFeedReviews } from "../reserve-feed-reviews";
+import { matchReserveFeedReview, resolveReserveFeedReviews } from "./reserve-feed-reviews";
 
 
 interface LiveReserveResumePointer {

@@ -7,24 +7,24 @@ import {
   computeRedemptionPayloadFingerprint,
   projectReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
-import type { DexDeploymentSupplyCoverage } from "../report-cards-fixed-input";
+import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { StablecoinData } from "@shared/types/supply";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { PROTOCOL_REDEEM_SOURCE } from "../authoritative-price-sources/helpers";
-import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
-import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
-import { derivePegAnalyticsSnapshot } from "../peg-analytics";
+import { summarizeCollateralDriftFromLiveReserveMap } from "../live-reserves/collateral-drift";
+import type { StablecoinsCacheLoadResult } from "../market-supply/stablecoins-cache";
+import { derivePegAnalyticsSnapshot } from "../depeg-detection/peg-analytics";
 import {
   loadReportCardsSnapshotInputs,
   type ReportCardsInputFreshness,
-} from "../report-cards-snapshot-inputs";
+} from "./report-cards-snapshot-inputs";
 import {
   buildNavPriceById,
   buildExitOutputPriceById,
   loadExactDexPublicationGeneration,
   resolveExactRedemptionPublicationGeneration,
-} from "../report-cards-snapshot";
+} from "./report-cards-snapshot";
 import {
   computeNativeDexLiquidityPayloadFingerprint,
   normalizeNativeV9Input,
@@ -32,15 +32,15 @@ import {
   type NativeSafetyScoreV9Input,
 } from "./native-input";
 import type { SafetyScoreV9PegProvenanceSource } from "./peg-provenance";
-import { loadReportCardEvidenceJournalByIdV1 } from "../report-card-evidence-journal-store";
+import { loadReportCardEvidenceJournalByIdV1 } from "./report-card-evidence-journal-store";
 import { createRuntimeGapVerdict } from "./fact-set-context";
 import type { PipelineGapByAssetId } from "@shared/lib/report-cards-fixed-input-identity";
 import type { ReportCardEvidenceJournalByIdV1 } from "@shared/lib/report-card-evidence-journal";
 import { compareCodeUnits } from "@shared/lib/compare";
-import { assessConsumedRedemptionReserves } from "../accepted-reserve-generation";
+import { assessConsumedRedemptionReserves } from "../live-reserves/accepted-reserve-generation";
 import { logWorkerEvent } from "../structured-log";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import type { DexLiquidityRowQuarantineReason } from "../dex-liquidity";
+import type { DexLiquidityRowQuarantineReason } from "../dex-liquidity/dex-liquidity";
 import { captureRedemptionReserveQuarantine } from "./redemption-reserve-quarantine";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveLenderTokenIds, deriveLenderBookObservationIdentity, canonicalizeLenderBookObservation, supportsLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";

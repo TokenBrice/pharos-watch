@@ -1,4 +1,4 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/live-reserve-policy";
 import { fetchEearnSuiSupply } from "./sui-vault-supply";
 import { fetchUsdySuiSupply } from "./usdy-sui-supply";
 import { fetchUsdyAptosSupply } from "./usdy-aptos-supply";
@@ -41,7 +41,7 @@ import { logWorkerEvent } from "../../../lib/structured-log";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
   CURATED_ONCHAIN_SUPPLY_EXCLUSIONS,
-} from "../../../lib/onchain-supply-exclusions";
+} from "../../../lib/market-supply/onchain-supply-exclusions";
 import {
   fetchErc20TotalSupply,
   fetchIcrcLedgerTotalSupply,

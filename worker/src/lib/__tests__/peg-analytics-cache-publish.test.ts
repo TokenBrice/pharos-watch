@@ -3,7 +3,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import * as cache from "../db-cache";
-import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../peg-analytics-cache";
+import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../depeg-detection/peg-analytics-cache";
 import {
   getCacheJsonParseFailureCountersForTests,
   resetCacheJsonParseFailureCountersForTests,

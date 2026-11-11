@@ -1,4 +1,4 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/live-reserve-policy";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
@@ -14,7 +14,7 @@ import { WORKER_TRACKED_META_BY_ID, hasWorkerLiveReserves } from "@shared/lib/st
 import { getReserves } from "@shared/lib/reserve-templates";
 import { getLiveReserveAdapterDefinition, computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 
-import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
+import { RESERVE_FEED_REVIEWS } from "../../lib/live-reserves/reserve-feed-reviews";
 import { adaptOndoUsdyPortfolio } from "../../cron/reserve-adapters/ondo-usdy";
 
 const acknowledgedReview = RESERVE_FEED_REVIEWS.find((review) => review.stablecoinId === "yzusd-yuzu")!;

@@ -14,7 +14,7 @@ import { loadTimelineOgPage } from "../og-page/timeline";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import * as currentPegObservations from "../../lib/current-peg-observations";
 import * as depegTrustPolicy from "../../lib/depeg-trust-policy";
-import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/dex-liquidity/dex-cron-constants";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const TODAY_START_SEC = Math.floor(nowSec / 86_400) * 86_400;

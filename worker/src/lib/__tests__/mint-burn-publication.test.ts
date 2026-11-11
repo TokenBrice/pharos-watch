@@ -3,11 +3,11 @@ import * as hashing from "@shared/lib/sha256";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
+import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-pipeline/mint-burn-contracts";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-pipeline/flow-aggregate";
 import { handleMintBurnFlows } from "../../api/mint-burn-flows";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, readMintBurnWindowContext as readContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
@@ -18,8 +18,8 @@ import {
   resolveMintBurnDisabledSymbolPolicy,
   resolveMintBurnDisabledSymbols,
   syncMintBurnPublicationPolicy,
-} from "../mint-burn-publication";
-import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
+} from "../mint-burn-pipeline/mint-burn-publication";
+import { aggregateFlowCacheKey } from "../mint-burn-pipeline/mint-burn-flow-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });

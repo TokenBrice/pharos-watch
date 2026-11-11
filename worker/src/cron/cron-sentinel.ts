@@ -2,9 +2,9 @@ import type { DailyCronSentinelOptions } from "./cron-sentinel-daily";
 import type { CronResult } from "../lib/cron-logger";
 import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
 import { runCronStalenessWatchdog } from "./cron-staleness-watchdog";
-import { runDigestPublicationWatchdog } from "./digest-publication-watchdog";
-import { runDexExitRouteTurnoverWatchdog } from "./dex-exit-route-turnover-watchdog";
-import { runReservePostSyncWatchdog } from "./reserve-post-sync-watchdog";
+import { runDigestPublicationWatchdog } from "./digest/digest-publication-watchdog";
+import { runDexExitRouteTurnoverWatchdog } from "./dex-liquidity/dex-exit-route-turnover-watchdog";
+import { runReservePostSyncWatchdog } from "./live-reserves/reserve-post-sync-watchdog";
 import { runCronSentinelSources, type CronSentinelMode } from "./cron-sentinel-result";
 
 /** `daily` is reached only through `runDailyCronSentinel`, never dispatched here. */

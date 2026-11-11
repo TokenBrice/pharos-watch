@@ -5,14 +5,14 @@ import {
   buildSizeGuardedStablecoinsSyncMetadata,
   buildStablecoinsSyncResult,
 } from "../metadata";
-import type { PricingAssetAttemptRecord } from "../../../lib/pricing-provider-diagnostics";
-import { createEmptyGtProbeStats } from "../../../lib/geckoterminal-price-probe-stats";
+import type { PricingAssetAttemptRecord } from "../../../lib/pricing/pricing-provider-diagnostics";
+import { createEmptyGtProbeStats } from "../../../lib/dex-liquidity/geckoterminal-price-probe-stats";
 import {
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
   loadPreviousStablecoinActivePriceCoverage,
   STABLECOIN_PRICE_GAP_REVIEWS,
-} from "../../../lib/stablecoin-publication-coverage";
+} from "../../../lib/market-supply/stablecoin-publication-coverage";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { PriceObservationEffectiveness } from "../price-corroboration-observations";
 import type { PeggedAsset } from "../enrich-prices";
@@ -21,7 +21,7 @@ import {
   compactCronMetadataForPersistence,
   MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
 } from "../../../lib/cron-metadata-persistence";
-import { fetchHiveNativeHbdPrice } from "../../../lib/hive-market-price";
+import { fetchHiveNativeHbdPrice } from "../../../lib/pricing/hive-market-price";
 
 it.each([false, true])("preserves bounded native evidence for successful and unavailable attempts (success=%s)", async (success) => {
   const { diagnostic } = await fetchHiveNativeHbdPrice(undefined, { generation: 1_777_000_000 });

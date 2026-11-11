@@ -34,9 +34,9 @@ import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
-import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist/blacklist-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
   deriveCronFreshnessProducers,
@@ -49,7 +49,7 @@ import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
   buildSupplySnapshotCompletionMarker,
   buildSupplySnapshotCoverageExpectation,
-} from "../../lib/supply-snapshot-completion";
+} from "../../lib/market-supply/supply-snapshot-completion";
 
 interface FakeFailureRow {
   key: string;

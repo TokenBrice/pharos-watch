@@ -19,7 +19,7 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety, stripSafetyDerivedSourceRisk } from "@shared/lib/yield-opportunity-risk";
-import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, qualifyYieldEvidence, scoreYieldPys, getRankingStaleThresholdMs, getRankingAgingThresholdMs, getComparisonAnchorStaleThresholdMs, resolveEvidenceNullReason } from "../lib/yield-ranking-helpers";
+import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, qualifyYieldEvidence, scoreYieldPys, getRankingStaleThresholdMs, getRankingAgingThresholdMs, getComparisonAnchorStaleThresholdMs, resolveEvidenceNullReason } from "../lib/yield/yield-ranking-helpers";
 import {
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
@@ -29,17 +29,17 @@ import {
   buildYieldRankBaseline,
   buildYieldRankChangeAttribution,
   compareYieldRankRows,
-} from "../lib/yield-rank-attribution";
+} from "../lib/yield/yield-rank-attribution";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse, jsonResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { sleep } from "../lib/abort";
 
-import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
+import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-v9/safety-score-index";
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
-import { readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort } from "../lib/yield-rankings-coin-cache";
+import { readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort } from "../lib/yield/yield-rankings-coin-cache";
 import { getCache } from "../lib/db-cache";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";

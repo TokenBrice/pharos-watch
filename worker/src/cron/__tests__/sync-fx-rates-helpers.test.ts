@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { isValidFxRate } from "../../lib/fx-config";
-import { getFxSourceStatus, type FxRateState, type FxSourceCadence } from "../../lib/fx-rate-state";
-import { FxSyncRunState } from "../sync-fx-rates-helpers";
+import { isValidFxRate } from "../../lib/pricing/fx-config";
+import { getFxSourceStatus, type FxRateState, type FxSourceCadence } from "../../lib/pricing/fx-rate-state";
+import { FxSyncRunState } from "../pricing/sync-fx-rates-helpers";
 
 const syncStartSec = Math.floor(Date.parse("2025-06-15T12:00:00Z") / 1000);
 

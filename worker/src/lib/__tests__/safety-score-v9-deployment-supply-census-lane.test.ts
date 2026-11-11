@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runDeploymentSupplyCensusShadow } from "../../cron/sync-v9-supply-attribution";
+import { runDeploymentSupplyCensusShadow } from "../../cron/safety-score-v9/sync-v9-supply-attribution";
 
 const CLOCK = 1_793_355_466;
 

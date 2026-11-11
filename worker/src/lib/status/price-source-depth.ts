@@ -4,7 +4,7 @@ import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,
   type StablecoinsCacheLoadResult,
-} from "../stablecoins-cache";
+} from "../market-supply/stablecoins-cache";
 import type {
   PriceSourceDepthBucket,
   PriceSourceDepthDistribution,

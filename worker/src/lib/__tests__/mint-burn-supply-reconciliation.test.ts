@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { MintBurnSupplyReconciliationReceipt as Receipt } from "@shared/types/status";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
-import { reconcileMintBurnSupplyReceipt, readMintBurnSupplyReconciliation, runMintBurnSupplyReconciliation } from "../mint-burn-supply-reconciliation";
+import { reconcileMintBurnSupplyReceipt, readMintBurnSupplyReconciliation, runMintBurnSupplyReconciliation } from "../mint-burn-pipeline/mint-burn-supply-reconciliation";
 import { fetchEvmUint256AtBlock, fetchEvmBlockHeader } from "../evm-rpc";
 
 const day = 86_400;

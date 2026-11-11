@@ -4,7 +4,7 @@ import {
   USER_AGENT,
 } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
-import { pricesAgreeWithinBps } from "../../lib/price-divergence";
+import { pricesAgreeWithinBps } from "../../lib/pricing/price-divergence";
 import { JupiterPriceEntrySchema, JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
 import { throwIfAborted } from "../../lib/abort";
 import { getRpcAuthHeaders, registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
@@ -16,11 +16,11 @@ import {
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
   responseFromBufferedBody,
-} from "../../lib/pricing-provider-lifecycle";
+} from "../../lib/pricing/pricing-provider-lifecycle";
 import {
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
-} from "../../lib/pricing-provider-diagnostics";
+} from "../../lib/pricing/pricing-provider-diagnostics";
 import {
   applyResolvedPrice,
   type PeggedAsset,

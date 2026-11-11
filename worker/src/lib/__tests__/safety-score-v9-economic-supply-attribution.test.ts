@@ -20,7 +20,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type * as SupplyAttributionGeneration from "../safety-score-v9/supply-attribution-generation";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { ReviewedProviderChainPartitionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, deriveReviewedProviderChainPartition } from "../safety-score-v9/supply-attribution-contract";
 import { createSafetyScoreV9TransferMaterialityGeneration, exactInputBoundTransferMaterialityPacket, type SafetyScoreV9TransferMaterialityObservation } from "../safety-score-v9/transfer-materiality";

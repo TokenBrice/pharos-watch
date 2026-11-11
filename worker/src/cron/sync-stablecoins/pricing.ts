@@ -1,4 +1,4 @@
-import { isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
+import { isSolomonPriceIdentityAllowed } from "../../lib/pricing/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import {
@@ -6,7 +6,7 @@ import {
   getFreshReferencePriceForContext,
   type PriceValidationContext,
   type PriceValidationReferences,
-} from "../../lib/price-validation";
+} from "../../lib/pricing/price-validation";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import { clearPriceMetadata, stampPriceMetadata } from "./shared";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
@@ -16,13 +16,13 @@ import { getProtocolParPriceOverride, protocolParProvider } from "../../lib/auth
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { NominalPriceReference } from "@shared/types/price";
-import type { PriceCacheEntry } from "../../lib/price-cache";
-import type { DlListQuote } from "../../lib/primary-price-collector";
+import type { PriceCacheEntry } from "../../lib/pricing/price-cache";
+import type { DlListQuote } from "../../lib/pricing/primary-price-collector";
 import {
   type TrustedPriceReference,
   validatePrimaryPriceCandidate,
   validatePublishedAssetPrice,
-} from "../../lib/price-publish-policy";
+} from "../../lib/pricing/price-publish-policy";
 import { projectPriceDerivation, type AuthoritativeLivePriceOverrideStats, type CurrentPriceOverride } from "../../lib/authoritative-price-sources";
 import {
   getRegistryLivePriceDiagnosticTarget,
@@ -31,8 +31,8 @@ import {
 import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
-} from "../../lib/pricing-provider-diagnostics";
-import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+} from "../../lib/pricing/pricing-provider-diagnostics";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing/pricing-source-freshness";
 
 const MAX_AUTHORITATIVE_PUBLICATION_ASSET_ATTEMPTS = 512;
 

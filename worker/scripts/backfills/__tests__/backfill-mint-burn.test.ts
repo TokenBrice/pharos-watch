@@ -36,7 +36,7 @@ import {
   resolveBlockTimestamps,
 } from "../../../src/lib/alchemy-logs";
 import { getMintBurnFinalizedHead } from "../../../src/lib/mint-burn-pipeline/rpc";
-import { MINT_BURN_CONFIGS } from "../../../src/lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../../src/lib/mint-burn-pipeline/mint-burn-contracts";
 import { BRIDGE_RECEIPTS, receiptContext } from "../../../src/lib/__tests__/mint-burn-bridge-classifier.test-support";
 
 const TRON_USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";

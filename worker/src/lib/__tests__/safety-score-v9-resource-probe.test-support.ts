@@ -2,7 +2,7 @@ import { appendFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { computeSafetyScoreV9 } from "../../cron/compute-safety-score-v9";
+import { computeSafetyScoreV9 } from "../../cron/safety-score-v9/compute-safety-score-v9";
 import { offlineTransferMaterialityDependencies } from "@shared/test-utils/v9-resource-offline";
 
 // No fixture/migration imports: this graph is the measured application closure.

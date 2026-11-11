@@ -3,12 +3,12 @@ import { applyTrackedAssetOverrides } from "../../cron/sync-stablecoins/phase-he
 import { buildPreviousTrustedPriceLookup } from "../../cron/sync-stablecoins/pricing";
 import { runDlContractPasses } from "../../cron/sync-stablecoins/enrich-prices-defillama-pass";
 import { makePeggedAsset } from "../../cron/sync-stablecoins/__tests__/_fixtures";
-import { validatePrimaryPriceCandidate, validateFallbackPriceCandidate } from "../price-publish-policy";
-import { buildPriceValidationContext } from "../price-validation";
-import { fetchCoinGeckoMarketHistory } from "../coingecko-market-history";
-import { fetchCgPriceHistoryHourly, fetchMarketBackfillPriceSeries } from "../historical-market-prices";
+import { validatePrimaryPriceCandidate, validateFallbackPriceCandidate } from "../pricing/price-publish-policy";
+import { buildPriceValidationContext } from "../pricing/price-validation";
+import { fetchCoinGeckoMarketHistory } from "../pricing/coingecko-market-history";
+import { fetchCgPriceHistoryHourly, fetchMarketBackfillPriceSeries } from "../pricing/historical-market-prices";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { isCoinGeckoHistoryAllowed } from "../solomon-usdv-identity";
+import { isCoinGeckoHistoryAllowed } from "../pricing/solomon-usdv-identity";
 
 const LEGACY = "usdv-solomon";
 const NEW = "usdv-solomon-v2";

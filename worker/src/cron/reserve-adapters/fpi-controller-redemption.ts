@@ -14,7 +14,7 @@ import { rethrowIfAborted } from "../../lib/abort";
 import {
   FpiControllerV9RouteAttemptSchema,
   type FpiControllerV9RouteAttempt,
-} from "../../lib/fpi-controller-redemption-route";
+} from "../../lib/redemption-backstop/fpi-controller-redemption-route";
 import {
   decodeFunctionResult,
   encodeFunctionData,

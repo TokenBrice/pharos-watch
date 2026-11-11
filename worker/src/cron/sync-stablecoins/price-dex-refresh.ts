@@ -5,10 +5,10 @@ import { throwIfAborted, rethrowIfAborted } from "../../lib/abort";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { recordOutcomeDecision, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { dsRateLimit } from "../../lib/dexscreener";
-import { isProviderCircuitAllowed, recoverProviderOnNoCandidates, recordProviderOutcomeSafe } from "../../lib/pricing-provider-lifecycle";
-import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
-import type { PricingAssetAttemptRecord, PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import { dsRateLimit } from "../../lib/dex-liquidity/dexscreener";
+import { isProviderCircuitAllowed, recoverProviderOnNoCandidates, recordProviderOutcomeSafe } from "../../lib/pricing/pricing-provider-lifecycle";
+import { hasPublishableCurrentPrice } from "../../lib/pricing/price-publication-state";
+import type { PricingAssetAttemptRecord, PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
 import {
   buildAddressPriceTargets,
   collectAddressPriceProviderQuotes,
@@ -21,7 +21,7 @@ import { buildDexScreenerTargets, runDexScreenerPass, type DexScreenerBatchTarge
 import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, type PriceCorroborationObservation } from "./price-corroboration-observations";
 import { loadFxRatesForPriceBounds } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices-shared";
-import { resolveStablecoinPriceGapReviews } from "../../lib/stablecoin-publication-coverage";
+import { resolveStablecoinPriceGapReviews } from "../../lib/market-supply/stablecoin-publication-coverage";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { runShortLivedPriceRefresh, type ShortLivedRefreshSummary } from "./price-short-lived-refresh";
 

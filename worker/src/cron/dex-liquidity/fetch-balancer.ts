@@ -1,5 +1,5 @@
 import { passesUsdVolumeSourcePreflight as shouldEnrichBalancerPool } from "./pool-volume-sanity";
-import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import { isDexApiRecord, parseStrictFiniteDecimal } from "./direct-api-json";
 import { DIRECT_API_DEFAULT_MAX_PAGES } from "./direct-api-policy";
 import { runPaginatedDirectApiFetch } from "./direct-api-paginated";

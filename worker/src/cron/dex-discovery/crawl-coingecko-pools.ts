@@ -6,16 +6,16 @@ import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
-import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isBlockedDexId } from "../../lib/dex-liquidity/dex-cron-constants";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
 import {
   cgPoolVolume24hReading,
   CG_ONCHAIN_MIN_RESERVE_USD,
   fetchCgTokenPoolsWithStatus,
   type CgPool,
   type CgPoolsByAddressResult,
-} from "../../lib/coingecko-onchain";
+} from "../../lib/dex-liquidity/coingecko-onchain";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";
 import type { ParsedPool } from "../dex-liquidity/crawl-helpers";

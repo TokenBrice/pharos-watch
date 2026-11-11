@@ -5,7 +5,7 @@ import { LIQUIDITY_STRONG_HISTORY_CONFIDENCE_MIN, liquidityTvlBasisEpoch } from 
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { runCappedPruneFamily } from "../shared/capped-delete";
-import { normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
+import { normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity/dex-liquidity";
 
 /** Limit the lifetime of prepared statements carrying serialized price/depth data. */
 export const DEX_LIQUIDITY_SCORING_BATCH_SIZE = 25;

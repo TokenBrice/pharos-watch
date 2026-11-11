@@ -12,7 +12,7 @@ import { backfillCoin } from "../backfill-depegs-replay";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
-vi.mock("../../../src/lib/stablecoins-cache", () => ({
+vi.mock("../../../src/lib/market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({ kind: "missing", reason: "test", payload: null })),
 }));
 
@@ -24,8 +24,8 @@ vi.mock("../../../src/lib/authoritative-price-sources", () => ({
   })),
 }));
 
-vi.mock("../../../src/lib/historical-market-prices", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../src/lib/historical-market-prices")>();
+vi.mock("../../../src/lib/pricing/historical-market-prices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/lib/pricing/historical-market-prices")>();
   return {
     ...actual,
     fetchMarketBackfillPriceSeries: vi.fn(async () => ({
@@ -39,8 +39,8 @@ vi.mock("../../../src/lib/historical-market-prices", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../src/lib/backfill-fx", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../src/lib/backfill-fx")>();
+vi.mock("../../../src/lib/pricing/backfill-fx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/lib/pricing/backfill-fx")>();
   return {
     ...actual,
     fetchHistoricalFxRates: vi.fn(async () => ({})),
@@ -50,8 +50,8 @@ vi.mock("../../../src/lib/backfill-fx", async (importOriginal) => {
 });
 
 import { handleBackfillDepegsTrusted } from "../backfill-depegs";
-import { fetchMarketBackfillPriceSeries } from "../../../src/lib/historical-market-prices";
-import { buildCommodityMedianSeriesFromCg, fetchHistoricalFxRates } from "../../../src/lib/backfill-fx";
+import { fetchMarketBackfillPriceSeries } from "../../../src/lib/pricing/historical-market-prices";
+import { buildCommodityMedianSeriesFromCg, fetchHistoricalFxRates } from "../../../src/lib/pricing/backfill-fx";
 
 stubCryptoForAuth();
 

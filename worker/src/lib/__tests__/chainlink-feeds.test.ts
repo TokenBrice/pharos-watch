@@ -12,12 +12,12 @@ import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } 
 import {
   CHAINLINK_REFERENCE_FEEDS,
   fetchChainlinkReferenceQuoteSnapshot,
-} from "../chainlink-feeds";
+} from "../pricing/chainlink-feeds";
 import {
   parseChainlinkLatestRoundData,
   parseSignedInt256Word,
   requireChainlinkLatestRoundData,
-} from "../chainlink-round-data";
+} from "../pricing/chainlink-round-data";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);
 const mockFetchEtherscanProxyHex = vi.mocked(fetchEtherscanProxyHex);

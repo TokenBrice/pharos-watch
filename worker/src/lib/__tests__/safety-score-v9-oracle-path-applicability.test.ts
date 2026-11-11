@@ -9,7 +9,7 @@ import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-fa
 import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { makeV9FixedInput, V9_EVALUATION_TEST_TIMEOUT_MS } from "../../test-helpers/v9-fixed-input";
 import { internalPriceMeta, metaMap, reviewedOracleMeta } from "./safety-score-v9-fact-set.test-support";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";

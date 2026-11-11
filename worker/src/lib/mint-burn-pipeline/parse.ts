@@ -1,8 +1,8 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-logs";
-import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
-import { requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
+import type { MintBurnContractConfig, MintBurnEventDef } from "./mint-burn-contracts";
+import { requiresReviewedSupplyBurnProof } from "./mint-burn-conservation";
 import { resolveMintBurnEventPrice } from "./context";
 import type { MintBurnPriceContext, MintBurnRow } from "./types";
 

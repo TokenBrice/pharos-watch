@@ -15,7 +15,7 @@ function installFetch(implementation: (request: Request) => Response | Promise<R
 }
 
 
-vi.mock("../../lib/blacklist-contracts", () => ({
+vi.mock("../../lib/blacklist/blacklist-contracts", () => ({
   CONTRACT_CONFIGS: [
     {
       configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -117,8 +117,8 @@ vi.mock("../../lib/blacklist/tron-order-recovery", async (importOriginal) => {
   return { ...actual, resolveTronBlacklistOrder: vi.fn(actual.resolveTronBlacklistOrder) };
 });
 
-vi.mock("../../lib/blacklist-gaps", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/blacklist-gaps")>();
+vi.mock("../../lib/blacklist/blacklist-gaps", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/blacklist/blacklist-gaps")>();
   return { ...actual, materializeBlacklistGapMetrics: vi.fn(actual.materializeBlacklistGapMetrics) };
 });
 
@@ -214,22 +214,22 @@ vi.mock("@shared/types/chain-identity", async (importOriginal) => ({
   normalizeChainId: (chain: string) => chain.trim().toLowerCase(),
 }));
 
-import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";
+import { syncBlacklist, type SyncBlacklistOptions } from "../blacklist/sync-blacklist";
 import { fetchEvmLogsForTopicWithCompleteness, getEvmBlockNumber } from "../../lib/evm-logs";
 import type { EtherscanLogEntry, EvmLogFetchResult } from "../../lib/evm-logs";
 import { batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
-import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist/blacklist-contracts";
 import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS } from "../blacklist/config-scan";
 import { backfillAmounts } from "../../lib/blacklist/amount-recovery";
 import { backfillTronBlacklistAmounts } from "../../lib/blacklist/tron-amount-recovery";
 import { resolveTronBlacklistOrder } from "../../lib/blacklist/tron-order-recovery";
 import * as tronReplayProvider from "../../lib/blacklist/tron-replay-provider";
-import { invalidateBlacklistDerivedCaches } from "../../lib/blacklist-cache-invalidation";
-import { materializeBlacklistGapMetrics } from "../../lib/blacklist-gaps";
-import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
-import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY } from "../../lib/blacklist-cache-keys";
+import { invalidateBlacklistDerivedCaches } from "../../lib/blacklist/blacklist-cache-invalidation";
+import { materializeBlacklistGapMetrics } from "../../lib/blacklist/blacklist-gaps";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist/blacklist-summary-service";
+import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY } from "../../lib/blacklist/blacklist-cache-keys";
 
 const mockD1 = createMockD1Preset([
   { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null } },
@@ -344,7 +344,7 @@ describe("syncBlacklist", () => {
       sqlite.function("unixepoch", () => Math.floor(Date.now() / 1000));
       const now = Math.floor(Date.now() / 1000);
       const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
-      const actualGaps = await vi.importActual<typeof import("../../lib/blacklist-gaps")>("../../lib/blacklist-gaps");
+      const actualGaps = await vi.importActual<typeof import("../../lib/blacklist/blacklist-gaps")>("../../lib/blacklist/blacklist-gaps");
       const actualOrder = await vi.importActual<typeof TronOrderRecoveryModule>("../../lib/blacklist/tron-order-recovery");
       vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
       installFetch(async () => new Response(JSON.stringify({ success: true, data: [] })));

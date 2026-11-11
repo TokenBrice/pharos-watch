@@ -9,8 +9,8 @@ import {
   selectDexPriceChallengerRowsFromPools,
 } from "../challenger-publish";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
-import { loadDexPoolChallengers } from "../../../lib/depeg-helpers";
-import { POOL_CHALLENGE_MIN_TVL } from "../../../lib/price-depeg-voting-policy";
+import { loadDexPoolChallengers } from "../../../lib/depeg-detection/depeg-helpers";
+import { POOL_CHALLENGE_MIN_TVL } from "../../../lib/pricing/price-depeg-voting-policy";
 import { filterRetainedPools } from "../scoring-helpers";
 import { seedPublishedDexGeneration } from "./scoring-test-support";
 import { loaderFixtures, loaderScenario } from "./challenger-load.test-support";

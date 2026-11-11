@@ -1,6 +1,6 @@
 import { throwIfAborted } from "../../lib/abort";
 import { withRpcRequestScope } from "../../lib/rpc-request-observer";
-import { conservationOnlyEventDefsFor, fetchConservationBoundaries, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-conservation";
+import { conservationOnlyEventDefsFor, fetchConservationBoundaries, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 import { syncMintBurnConfig, type SyncMintBurnConfigInput, type SyncMintBurnConfigResult } from "./sync-config";
 import { TRON_RPC_MAX_BLOCK_SPAN } from "@shared/lib/tron-jsonrpc";
 

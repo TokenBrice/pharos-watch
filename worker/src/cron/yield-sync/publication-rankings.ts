@@ -24,7 +24,7 @@ import { buildYieldSourceRisk } from "./source-risk";
 import {
   getRankingStaleThresholdMs,
   getComparisonAnchorStaleThresholdMs,
-} from "../../lib/yield-ranking-helpers";
+} from "../../lib/yield/yield-ranking-helpers";
 import {
   buildHistoryKey,
 } from "./history-evidence";
@@ -38,13 +38,13 @@ import {
   buildYieldRankBaseline,
   buildYieldRankChangeAttribution,
   compareYieldRankRows,
-} from "../../lib/yield-rank-attribution";
+} from "../../lib/yield/yield-rank-attribution";
 import {
   PYS_SCALING_FACTOR,
 } from "../../lib/yield-config/policy";
 import {
   resolveYieldSourceUrl,
-} from "../../lib/yield-source-links";
+} from "../../lib/yield/yield-source-links";
 import {
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,

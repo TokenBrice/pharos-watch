@@ -1,6 +1,6 @@
 import { buildPoolIdentity, type PoolIdentity } from "./pool-identity";
 import { buildChainAddressKey } from "./token-resolution";
-import type { DexApiPool } from "../../lib/dex-api-common";
+import type { DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 
 /**
  * Bucket published when a concentrated-liquidity source cannot decode its own

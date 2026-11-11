@@ -5,10 +5,10 @@ import { recordCronFailure, type CronProgressReporter } from "../../lib/cron-log
 import {
   buildDigestSafetyMapCaptions,
   type DigestSafetyMapResolution,
-} from "../../lib/digest-safety-map";
+} from "../../lib/digest/digest-safety-map";
 import {
   checkDigestSafetyContextForDelivery,
-} from "../../lib/digest-safety-context";
+} from "../../lib/digest/digest-safety-context";
 import type { TelegramCreds } from "../../telegram/delivery/telegram";
 import type { TelegramDigestSuccessAction } from "../../telegram/digest/digest-appendices";
 import {
@@ -16,17 +16,17 @@ import {
   enqueueTelegramDigestEdition,
   type TelegramDigestOutboxState,
 } from "../../telegram/outbox/digest-outbox";
-import { postDigestTweet, type TwitterCreds } from "../../lib/twitter";
-import { buildTweetText } from "../../lib/twitter-digest-text";
+import { postDigestTweet, type TwitterCreds } from "../../lib/digest/twitter";
+import { buildTweetText } from "../../lib/digest/twitter-digest-text";
 import { buildTelegramMessage } from "../../telegram/delivery/telegram";
 import {
   deliverTwitterDigestWithLedger,
   TwitterDigestLedgerPersistenceError,
-} from "../../lib/twitter-digest-ledger";
+} from "../../lib/digest/twitter-digest-ledger";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import { reportCronProgress } from "../../lib/cron-progress";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest/digest-sql-filters";
 import {
   classifyDigestChannelStatus,
   insertDigestRecord,

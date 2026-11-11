@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
-import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
-import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist/blacklist-summary-service";
+import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist/blacklist-contracts";
 import {
   balanceId, derivedCacheRows, ledgerRows, seedDerivedCaches, seedLedger, sqliteRemoteD1,
 } from "./blacklist-current-balance-maintenance.test-support";

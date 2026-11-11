@@ -8,7 +8,7 @@ import {
 } from "../safety-score-v9/deployment-supply-census-store";
 import type { SafetyScoreV9DeploymentSupplyCensus } from "@shared/types/safety-score-v9-deployment-supply-census";
 import { chainRpcs, installSupplyObservationClock } from "./safety-score-v9-supply-observation.test-support";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";

@@ -12,8 +12,8 @@ import {
   RedemptionBackstopSnapshotUnavailableError,
   resolveSnapshotMethodologyVersion,
   upsertRedemptionBackstopSnapshots,
-} from "../redemption-backstops-store";
-import { pruneRedemptionBackstopRunRetention, validateRedemptionBackstopSnapshot } from "../redemption-backstops-store-write";
+} from "../redemption-backstop/redemption-backstops-store";
+import { pruneRedemptionBackstopRunRetention, validateRedemptionBackstopSnapshot } from "../redemption-backstop/redemption-backstops-store-write";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   completedRunRow,

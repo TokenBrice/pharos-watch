@@ -32,7 +32,7 @@ import {
   buildPhysicalToUsdExitObservation,
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
   usesPrimaryRedemptionReviewTerms,
-} from "../redemption-exit-route-observations";
+} from "../redemption-backstop/redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 

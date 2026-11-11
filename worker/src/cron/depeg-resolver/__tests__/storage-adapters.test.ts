@@ -4,7 +4,7 @@ import type {
   DdrFirstPublicationMembership,
   DdrSealedPublicPrediction,
   DdrSealInput,
-} from "../../depeg-resolver-v2-contracts";
+} from "../depeg-resolver-v2-contracts";
 import {
   makeDdrPublicationManifest,
   makeDdrResolverRow,
@@ -26,7 +26,7 @@ const stores = vi.hoisted(() => ({
   writePublicationManifest: vi.fn(),
 }));
 
-vi.mock("../../../lib/depeg-resolver-incident-store", () => ({
+vi.mock("../../../lib/depeg-resolver/depeg-resolver-incident-store", () => ({
   closeRecoveredPreLockIncidents: stores.closeRecoveredPreLockIncidents,
   ensureCanonicalIncidents: stores.ensureCanonicalIncidents,
   loadCanonicalIncidents: stores.loadCanonicalIncidents,
@@ -34,7 +34,7 @@ vi.mock("../../../lib/depeg-resolver-incident-store", () => ({
   recordLockOpportunity: stores.recordLockOpportunity,
 }));
 
-vi.mock("../../../lib/depeg-resolver-publication-store", () => ({
+vi.mock("../../../lib/depeg-resolver/depeg-resolver-publication-store", () => ({
   loadFirstPublicationMembership: stores.loadFirstPublicationMembership,
   loadLatestPublicationManifest: stores.loadLatestPublicationManifest,
   loadSealedPublicPredictions: stores.loadSealedPublicPredictions,
@@ -43,7 +43,7 @@ vi.mock("../../../lib/depeg-resolver-publication-store", () => ({
   writePublicationManifest: stores.writePublicationManifest,
 }));
 
-vi.mock("../../../lib/depeg-resolver-errata-store", () => ({
+vi.mock("../../../lib/depeg-resolver/depeg-resolver-errata-store", () => ({
   loadPredictionErrata: stores.loadPredictionErrata,
 }));
 

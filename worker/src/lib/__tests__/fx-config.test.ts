@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { FX_RATE_BOUNDS } from "@shared/lib/peg-price-bounds";
 import { PEG_CURRENCY_VALUES } from "@shared/types/core";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
-import { EXPECTED_FX_PEG_KEYS, PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS, SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS, invertUnitsPerUsd, isValidFxRate, PRIMARY_CURRENCY_TO_PEG, REALTIME_FX_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../fx-config";
-import { getNaturalFxCadence, inferFxSourceCadence } from "../fx-cadence";
+import { EXPECTED_FX_PEG_KEYS, PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS, SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS, invertUnitsPerUsd, isValidFxRate, PRIMARY_CURRENCY_TO_PEG, REALTIME_FX_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../pricing/fx-config";
+import { getNaturalFxCadence, inferFxSourceCadence } from "../pricing/fx-cadence";
 
 describe("fx-config currency maps", () => {
   it("covers every schema fiat FX peg with a live source and realtime recovery", () => {

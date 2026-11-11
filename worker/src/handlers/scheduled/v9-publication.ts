@@ -1,5 +1,5 @@
 import { isV9PublicationSecondChanceTrigger } from "@shared/lib/cron-jobs";
-import { runV9AfterCoreWithinWindow, V9_EXECUTION_WINDOW_POLICY } from "../../lib/v9-slot-window";
+import { runV9AfterCoreWithinWindow, V9_EXECUTION_WINDOW_POLICY } from "../../lib/safety-score-v9/v9-slot-window";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
@@ -27,7 +27,7 @@ export function buildV9PublicationSlotGroups(
                 recoverSafetyScoreV9PublicMaterialization(runtime.db, windowSignal, executionWindow.deadlineMs)),
           },
           (windowSignal, executionWindow) =>
-            import("../../cron/compute-safety-score-v9").then(
+            import("../../cron/safety-score-v9/compute-safety-score-v9").then(
               ({ computeSafetyScoreV9 }) =>
                 computeSafetyScoreV9(
                   runtime.db,

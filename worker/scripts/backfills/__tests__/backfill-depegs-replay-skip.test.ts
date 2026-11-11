@@ -5,7 +5,7 @@ import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types/supply";
 import type { BackfillCoinReplayResult } from "../backfill-depegs-replay";
-import { parseSupplyData, type BackfillEvent } from "../../../src/lib/historical-depeg-extraction";
+import { parseSupplyData, type BackfillEvent } from "../../../src/lib/depeg-detection/historical-depeg-extraction";
 import { buildBackfillPlan } from "../backfill-depegs/planning";
 import type { ApplyBackfillEventsFn } from "../backfill-depegs/execution";
 import {

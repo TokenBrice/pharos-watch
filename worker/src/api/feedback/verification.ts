@@ -6,9 +6,9 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import type { VerificationResult } from "./types";
-import { getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
+import { getDepegThresholdBps } from "../../lib/depeg-detection/depeg-threshold-policy";
 
 export async function verifyDataCorrection(
   db: D1Database,

@@ -8,15 +8,15 @@ import {
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
-import { normalizePendingDepegRow } from "../../lib/depeg-pending";
+import { normalizePendingDepegRow } from "../../lib/depeg-detection/depeg-pending";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type {
   CollectedConfirmationEvidence,
   ConfirmationPlanReady,
   ConfirmationEvidenceInput,
-} from "../pending-depeg-confirmation";
-import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
-import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
+} from "../depeg-detection/pending-depeg-confirmation";
+import { evaluatePromotionDecision } from "../depeg-detection/pending-depeg-confirmation-decision";
+import { collectConfirmationEvidence } from "../depeg-detection/pending-depeg-confirmation-evidence";
 import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
 
 const NOW_SEC = 1_700_000_000;

@@ -1,0 +1,423 @@
+import { logWorkerEventArgs } from "../structured-log";
+import {
+  DexExitRouteObservationsSchema,
+  ExitRouteObservationCoverageSchema,
+} from "@shared/types/exit-route";
+import {
+  type DexLiquidityData,
+  type LiquidityCoverageClass,
+} from "@shared/types/dex-liquidity";
+import {
+  classifyLiquidityEvidence,
+  type LiquidityEvidenceClassification,
+} from "@shared/lib/dex-liquidity-evidence";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { parseJsonObject } from "../json-parse";
+
+export interface DexLiquidityRow {
+  stablecoin_id: string;
+  total_tvl_usd: number;
+  total_volume_24h_usd: number;
+  total_volume_7d_usd: number;
+  total_volume_7d_measured?: number | null;
+  /** Migration 0249 `volume_availability_json`; NULL marks a legacy (pre-DEC-19) row. */
+  volume_availability_json?: string | null;
+  pool_count: number;
+  pair_count: number;
+  chain_count: number;
+  protocol_tvl_json: string | null;
+  chain_tvl_json: string | null;
+  top_pools_json: string | null;
+  liquidity_score: number | null;
+  concentration_hhi: number | null;
+  depth_stability: number | null;
+  updated_at: number;
+  effective_tvl_usd: number | null;
+  avg_pool_stress: number | null;
+  weighted_balance_ratio: number | null;
+  organic_fraction: number | null;
+  durability_score: number | null;
+  score_components_json: string | null;
+  locked_liquidity_pct: number | null;
+  coverage_class: string | null;
+  coverage_confidence: number | null;
+  source_mix_json: string | null;
+  balance_measured_tvl_usd: number | null;
+  organic_measured_tvl_usd: number | null;
+  // Column is NOT NULL DEFAULT in D1; no NULL rows remain (verified 2026-08-19).
+  methodology_version: string;
+}
+
+type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
+  Partial<
+    Pick<
+      DexLiquidityData,
+      | "effectiveTvlUsd"
+      | "coverageClass"
+      | "coverageConfidence"
+      | "liquidityEvidenceClass"
+      | "hasMeasuredLiquidityEvidence"
+      | "balanceMeasuredTvlUsd"
+      | "organicMeasuredTvlUsd"
+      | "exitRouteObservations"
+      | "exitRouteObservationCoverage"
+      | "methodologyVersion"
+      | "trendworthy"
+    >
+  > & {
+    /** The row's own publication clock; per-coin readers stamp it (R6). */
+    updatedAt: number;
+    deploymentCoverage?: {
+      observedPools: number;
+      verifiedNoPools: number;
+      providerInaccessible: number;
+    } | null;
+  };
+
+export function dexLiquidityPublishedRowFilter(tableAlias?: string): string {
+  const generationColumn = tableAlias
+    ? `${tableAlias}.publication_generation_id`
+    : "publication_generation_id";
+  return `(${generationColumn} IS NULL OR ${generationColumn} IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))`;
+}
+
+export const DEX_LIQUIDITY_PUBLISHED_ROW_FILTER =
+  dexLiquidityPublishedRowFilter();
+
+export const DEX_LIQUIDITY_SERVED_GENERATION_SQL = `(
+              SELECT publication_generation_id FROM dex_liquidity
+              WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER})`;
+
+export async function readDexLiquidityFreshnessAge(db: D1Database, now: number): Promise<number | null> {
+  const row = await db.prepare(`SELECT (? - MAX(updated_at)) as age
+    FROM dex_liquidity
+    WHERE liquidity_score > 0
+      AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`)
+    .bind(now)
+    .first<{ age: number | null }>();
+  return row?.age ?? null;
+}
+
+export type DexLiquidityDbMap = Record<string, DexLiquiditySnapshot>;
+
+export type DexLiquidityRowQuarantineReason =
+  | "invalid-coverage-evidence"
+  | "invalid-exit-route-evidence";
+
+export interface DexLiquidityRowQuarantine {
+  reason: DexLiquidityRowQuarantineReason;
+  /**
+   * The rejected row's persisted producer version. Never scoring evidence, but
+   * the capture still proves the publication carries one DEX methodology.
+   */
+  methodologyVersion?: string;
+}
+
+export interface DexLiquidityLoadResult {
+  map: DexLiquidityDbMap;
+  latestUpdatedAt: number | null;
+  /** Rejected published rows and their machine reason, so one asset cannot hold the cohort (R8). */
+  quarantined?: Record<string, DexLiquidityRowQuarantine>;
+}
+
+export interface DexLiquidityScoresLoadResult {
+  map: Record<string, Pick<DexLiquiditySnapshot, "liquidityScore">>;
+  latestUpdatedAt: number | null;
+}
+
+type DeploymentCoverage = NonNullable<DexLiquiditySnapshot["deploymentCoverage"]>;
+
+export function deploymentKey(stablecoinId: string, chain: string, address: string): string {
+  return `${stablecoinId}\u0000${canonicalExitRouteAssetKey(chain, address)}`;
+}
+
+export const CURRENT_DEPLOYMENT_KEYS = new Set(
+  WORKER_ACTIVE_STABLECOINS.flatMap((meta) =>
+    [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])].map((deployment) =>
+      deploymentKey(meta.id, deployment.chain, deployment.address),
+    ),
+  ),
+);
+
+function parseCoverageClass(value: string | null, stablecoinId: string): LiquidityCoverageClass | null {
+  if (value === null) return null;
+  switch (value) {
+    case "primary":
+    case "mixed":
+    case "fallback":
+    case "legacy":
+    case "unobserved":
+      return value;
+    default:
+      throw new Error(`Invalid dex_liquidity coverage_class for ${stablecoinId}: ${value}`);
+  }
+}
+
+function parseCoverageConfidence(value: number | null, stablecoinId: string): number | null {
+  if (value === null) return null;
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`Invalid dex_liquidity coverage_confidence for ${stablecoinId}: ${value}`);
+  }
+  return value;
+}
+/**
+ * Coverage columns were added after the first DEX publications. A non-global
+ * row with both columns absent is retained as legacy observed-but-unmeasured
+ * evidence; every published surface must use this same conservative default.
+ */
+const NULL_COVERAGE_DEFAULT = {
+  coverageClass: "legacy" as const,
+  coverageConfidence: 0.5,
+};
+
+type DexLiquidityEvidenceRow = Pick<
+  DexLiquidityRow,
+  | "total_tvl_usd"
+  | "coverage_class"
+  | "coverage_confidence"
+> & Partial<
+  Pick<
+    DexLiquidityRow,
+    | "effective_tvl_usd"
+    | "balance_measured_tvl_usd"
+    | "organic_measured_tvl_usd"
+    | "stablecoin_id"
+  >
+>;
+
+export interface NormalizedDexLiquidityEvidence {
+  coverageClass: LiquidityCoverageClass | null;
+  coverageConfidence: number;
+  liquidityEvidenceClass: LiquidityEvidenceClassification["liquidityEvidenceClass"];
+  hasMeasuredLiquidityEvidence: boolean;
+  trendworthy: boolean;
+  effectiveTvlUsd: number;
+  balanceMeasuredTvlUsd: number | null;
+  organicMeasuredTvlUsd: number | null;
+}
+
+export function normalizeDexLiquidityEvidence(row: DexLiquidityEvidenceRow): NormalizedDexLiquidityEvidence {
+  const stablecoinId = row.stablecoin_id ?? "history";
+  const rawCoverageClass = stablecoinId === "__global__" ? null : row.coverage_class;
+  if (
+    stablecoinId !== "__global__" &&
+    (rawCoverageClass === null) !== (row.coverage_confidence === null)
+  ) {
+    throw new Error(`Incomplete dex_liquidity coverage evidence for ${stablecoinId}`);
+  }
+  const coverageClass = parseCoverageClass(
+    stablecoinId === "__global__" ? null : (rawCoverageClass ?? NULL_COVERAGE_DEFAULT.coverageClass),
+    stablecoinId,
+  );
+  const coverageConfidence = parseCoverageConfidence(
+    row.coverage_confidence ?? NULL_COVERAGE_DEFAULT.coverageConfidence,
+    stablecoinId,
+  );
+  if (coverageConfidence == null) {
+    throw new Error(`Missing normalized dex_liquidity coverage confidence for ${stablecoinId}`);
+  }
+  return {
+    coverageClass,
+    coverageConfidence,
+    ...classifyLiquidityEvidence(row.total_tvl_usd, coverageClass, coverageConfidence),
+    effectiveTvlUsd: row.effective_tvl_usd ?? 0,
+    balanceMeasuredTvlUsd: row.balance_measured_tvl_usd ?? null,
+    organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? null,
+  };
+}
+
+function parseExitRouteDetails(
+  json: string | null,
+  stablecoinId: string,
+): Pick<DexLiquiditySnapshot, "exitRouteObservations" | "exitRouteObservationCoverage"> {
+  const raw = parseJsonObject(json);
+  if (raw == null) return {};
+  const observations =
+    raw.exitRouteObservations === undefined
+      ? null
+      : DexExitRouteObservationsSchema.safeParse(raw.exitRouteObservations);
+  const coverage =
+    raw.exitRouteObservationCoverage === undefined
+      ? null
+      : ExitRouteObservationCoverageSchema.safeParse(raw.exitRouteObservationCoverage);
+  if (observations && !observations.success) {
+    throw new Error(`Invalid persisted DEX exit-route observations for ${stablecoinId}`);
+  }
+  if (coverage && !coverage.success) {
+    throw new Error(`Invalid persisted DEX exit-route coverage for ${stablecoinId}`);
+  }
+  if (observations?.success && coverage?.success) {
+    const eligibleObservationCount = observations.data.filter((observation) => observation.scoreEligible).length;
+    if (
+      coverage.data.observationCount !== observations.data.length ||
+      coverage.data.scoreEligibleObservationCount !== eligibleObservationCount
+    ) {
+      throw new Error(`Persisted DEX exit-route coverage counts do not match observations for ${stablecoinId}`);
+    }
+  }
+  return {
+    ...(observations?.success ? { exitRouteObservations: observations.data } : {}),
+    ...(coverage?.success ? { exitRouteObservationCoverage: coverage.data } : {}),
+  };
+}
+
+async function loadDexLiquidityRows(db: D1Database): Promise<DexLiquidityRow[]> {
+  const rows = await db
+      .prepare(
+        `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
+                dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
+                dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
+                dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at
+         FROM dex_liquidity dl
+         WHERE ${dexLiquidityPublishedRowFilter("dl")}`,
+      )
+      .all<DexLiquidityRow>();
+  return rows.results ?? [];
+}
+
+/** Preserve snapshot admission while bounding rows and discarding unused route graphs. */
+export async function loadDexLiquidityScores(db: D1Database): Promise<DexLiquidityScoresLoadResult> {
+  type RowIdentity = { stablecoin_id: string; updated_at: number; publication_generation_id: string | null };
+  const loadIdentities = async () => (await db.prepare(
+    `SELECT dl.stablecoin_id, dl.updated_at, dl.publication_generation_id
+     FROM dex_liquidity dl WHERE ${dexLiquidityPublishedRowFilter("dl")}
+     ORDER BY dl.stablecoin_id`,
+  ).all<RowIdentity>()).results ?? [];
+  const identities = await loadIdentities();
+  const expectedById = new Map(identities.map((row) => [row.stablecoin_id, row]));
+  let readCount = 0;
+  const map: DexLiquidityScoresLoadResult["map"] = {};
+  let latestUpdatedAt: number | null = null;
+  let cursor = "";
+  const pageSize = 64;
+  for (;;) {
+    const page = await db.prepare(
+      `SELECT dl.stablecoin_id, dl.liquidity_score, dl.total_tvl_usd, dl.effective_tvl_usd,
+              dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
+              dl.organic_measured_tvl_usd, dl.score_components_json, dl.updated_at, dl.publication_generation_id
+       FROM dex_liquidity dl
+       WHERE ${dexLiquidityPublishedRowFilter("dl")} AND dl.stablecoin_id > ?
+       ORDER BY dl.stablecoin_id LIMIT ?`,
+    ).bind(cursor, pageSize).all<DexLiquidityRow & RowIdentity>();
+    const rows = page.results ?? [];
+    for (const row of rows) {
+      const expected = expectedById.get(row.stablecoin_id);
+      if (!expected || expected.updated_at !== row.updated_at
+        || expected.publication_generation_id !== row.publication_generation_id) {
+        throw new Error("DEX liquidity publication changed during score preload");
+      }
+      readCount += 1;
+      try {
+        normalizeDexLiquidityEvidence(row);
+        parseExitRouteDetails(row.score_components_json, row.stablecoin_id);
+      } catch (error) {
+        logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+        continue;
+      }
+      map[row.stablecoin_id] = { liquidityScore: row.liquidity_score };
+      if (row.updated_at != null && (latestUpdatedAt == null || row.updated_at > latestUpdatedAt)) {
+        latestUpdatedAt = row.updated_at;
+      }
+    }
+    if (rows.length < pageSize) break;
+    cursor = rows[rows.length - 1].stablecoin_id;
+  }
+  if (readCount !== identities.length || JSON.stringify(identities) !== JSON.stringify(await loadIdentities())) {
+    throw new Error("DEX liquidity publication changed during score preload");
+  }
+  return { map, latestUpdatedAt };
+}
+
+export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiquidityLoadResult> {
+  const rows = await loadDexLiquidityRows(db);
+
+  const map: DexLiquidityDbMap = {};
+  const deploymentCoverageById = new Map<string, DeploymentCoverage>();
+  // Deployment census rows must not multiply the per-coin execution payload.
+  // The old join repeated score_components_json for every deployment, retaining
+  // ~16 MB of strings for ~1 MB of evidence before parsing on the Worker heap.
+  const deploymentRows = await db.prepare(
+    `SELECT dco.stablecoin_id, dco.chain AS deployment_chain,
+            dco.contract_address AS deployment_contract_address,
+            dco.outcome AS deployment_outcome
+     FROM dex_deployment_outcomes dco
+     INNER JOIN dex_liquidity dl ON dl.stablecoin_id = dco.stablecoin_id
+     WHERE ${dexLiquidityPublishedRowFilter("dl")}`,
+  ).all<{
+    stablecoin_id: string;
+    deployment_chain: string;
+    deployment_contract_address: string;
+    deployment_outcome: "observed_pools" | "verified_no_pools" | "provider_inaccessible";
+  }>();
+  for (const row of deploymentRows.results ?? []) {
+    if (!CURRENT_DEPLOYMENT_KEYS.has(
+      deploymentKey(row.stablecoin_id, row.deployment_chain, row.deployment_contract_address),
+    )) continue;
+    const coverage = deploymentCoverageById.get(row.stablecoin_id) ?? {
+      observedPools: 0,
+      verifiedNoPools: 0,
+      providerInaccessible: 0,
+    };
+    if (row.deployment_outcome === "observed_pools") coverage.observedPools += 1;
+    else if (row.deployment_outcome === "verified_no_pools") coverage.verifiedNoPools += 1;
+    else coverage.providerInaccessible += 1;
+    deploymentCoverageById.set(row.stablecoin_id, coverage);
+  }
+  let latestUpdatedAt: number | null = null;
+  const quarantined: Record<string, DexLiquidityRowQuarantine> = {};
+  const quarantineRow = (row: DexLiquidityRow, reason: DexLiquidityRowQuarantineReason) => {
+    const methodologyVersion = row.methodology_version?.trim();
+    quarantined[row.stablecoin_id] = methodologyVersion ? { reason, methodologyVersion } : { reason };
+  };
+  for (const row of rows) {
+    let evidence: NormalizedDexLiquidityEvidence;
+    let exitRouteDetails: Pick<
+      DexLiquiditySnapshot,
+      "exitRouteObservations" | "exitRouteObservationCoverage"
+    >;
+    try {
+      evidence = normalizeDexLiquidityEvidence(row);
+    } catch (error) {
+      logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+      quarantineRow(row, "invalid-coverage-evidence");
+      continue;
+    }
+    try {
+      exitRouteDetails = parseExitRouteDetails(row.score_components_json, row.stablecoin_id);
+    } catch (error) {
+      logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+      quarantineRow(row, "invalid-exit-route-evidence");
+      continue;
+    }
+    const snapshot: DexLiquiditySnapshot = {
+      liquidityScore: row.liquidity_score,
+      concentrationHhi: row.concentration_hhi,
+      poolCount: row.pool_count,
+      chainCount: row.chain_count,
+      updatedAt: row.updated_at,
+      ...evidence,
+      ...exitRouteDetails,
+    };
+    if (typeof row.methodology_version === "string" && row.methodology_version.trim()) {
+      snapshot.methodologyVersion = row.methodology_version.trim();
+    }
+    map[row.stablecoin_id] = snapshot;
+    if (row.updated_at != null && (latestUpdatedAt == null || row.updated_at > latestUpdatedAt)) {
+      latestUpdatedAt = row.updated_at;
+    }
+  }
+
+  for (const [stablecoinId, deploymentCoverage] of deploymentCoverageById) {
+    if (map[stablecoinId]) map[stablecoinId].deploymentCoverage = deploymentCoverage;
+  }
+
+  return Object.keys(quarantined).length > 0
+    ? { map, latestUpdatedAt, quarantined }
+    : { map, latestUpdatedAt };
+}
+
+export async function loadDexLiquidityMap(db: D1Database): Promise<DexLiquidityDbMap> {
+  const { map } = await loadDexLiquiditySnapshot(db);
+  return map;
+}

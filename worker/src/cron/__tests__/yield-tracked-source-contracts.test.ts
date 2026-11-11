@@ -45,7 +45,7 @@ import { FIXED_NOW, makeBenchmarkMeta, makeBenchmarkRegistry, makeSafetySnapshot
 import { TRACKED_OPTIONAL_SOURCE_REGISTRY, TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "../yield-sync/sources-optional";
 import * as fetchRetry from "../../lib/fetch-retry";
 import type { YieldOptionalSourceOutcome } from "../yield-sync/sources-rpc";
-import { STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
+import { STALE_THRESHOLD_MS } from "../../lib/yield/yield-ranking-helpers";
 
 async function resolvePools(dlPools: DlPool[], onOptionalSourceOutcome?: (outcome: YieldOptionalSourceOutcome) => void) {
   const { startSec, sevenDaysAgoSec, riskFreeRates } = baseEvaluationInput();

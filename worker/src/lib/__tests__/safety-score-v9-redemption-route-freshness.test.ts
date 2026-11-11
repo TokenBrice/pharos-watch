@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-observations";
+import { buildRedemptionExitRouteObservation } from "../redemption-backstop/redemption-exit-route-observations";
 import { buildRoutes } from "../safety-score-v9/fact-set-exit";
 import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";

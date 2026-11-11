@@ -6,12 +6,12 @@ import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
-import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
+import * as fixedInputCodec from "../safety-score-v9/report-cards-fixed-input-cache-codec";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
-import * as publicMaterialization from "../report-cards-v9-materialization";
-import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
+import * as publicMaterialization from "../safety-score-v9/report-cards-v9-materialization";
+import { materializeV9AcceptedPublication } from "../safety-score-v9/report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
 import { loadSafetyScoreV9PublicationStoredRow } from "../safety-score-v9/publication-chunks";
@@ -42,8 +42,8 @@ const mocks = vi.hoisted(() => ({
   persistAlertEnvelope: vi.fn(),
 }));
 
-vi.mock("../alert-safety-source-cache", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../alert-safety-source-cache")>(),
+vi.mock("../safety-score-v9/alert-safety-source-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../safety-score-v9/alert-safety-source-cache")>(),
   persistAlertSafetyV9SourceEnvelope: mocks.persistAlertEnvelope,
 }));
 

@@ -5,15 +5,15 @@ import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
-vi.mock("../../../cron/daily-digest", () => ({
+vi.mock("../../../cron/daily-digest/daily-digest", () => ({
   generateDailyDigest: vi.fn(),
   resumeDailyDigestDelivery: vi.fn(),
 }));
-vi.mock("../../../cron/weekly-recap", () => ({
+vi.mock("../../../cron/weekly-recap/weekly-recap", () => ({
   generateWeeklyRecap: vi.fn(),
 }));
-vi.mock("../../../lib/digest-safety-map", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../lib/digest-safety-map")>()),
+vi.mock("../../../lib/digest/digest-safety-map", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/digest/digest-safety-map")>()),
   resolveDigestSafetyMap: vi.fn(),
 }));
 vi.mock("../../../lib/runtime-credentials", () => ({
@@ -41,8 +41,8 @@ vi.mock("../../../lib/scheduled-slot-fence", () => ({
 }));
 
 import { sweepStaleScheduledSlotExecutions } from "../../../lib/scheduled-slot-fence";
-import { generateDailyDigest, resumeDailyDigestDelivery } from "../../../cron/daily-digest";
-import { resolveDigestSafetyMap } from "../../../lib/digest-safety-map";
+import { generateDailyDigest, resumeDailyDigestDelivery } from "../../../cron/daily-digest/daily-digest";
+import { resolveDigestSafetyMap } from "../../../lib/digest/digest-safety-map";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-credentials";
@@ -53,7 +53,7 @@ import {
   runDigestTriggerPollSlot,
 } from "../digest-trigger-poll";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../../api/admin-actions";
-import { generateWeeklyRecap } from "../../../cron/weekly-recap";
+import { generateWeeklyRecap } from "../../../cron/weekly-recap/weekly-recap";
 
 type CronResult = { status?: string; metadata?: string; itemCount?: number };
 type DigestForceRunIntent = {

@@ -4,7 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
 import { DigestArchiveCursorSchema, DigestSupplyCoverageSchema } from "@shared/types/digest";
 import { decodeJsonString } from "../lib/cache-json";
-import { DIGEST_META_TYPE_SQL, NON_BLOCKED_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { DIGEST_META_TYPE_SQL, NON_BLOCKED_DIGEST_SQL_FILTER } from "../lib/digest/digest-sql-filters";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";

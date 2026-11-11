@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { AcceptedReserveGenerationSchema, RedemptionReserveRunMetadataSchema, type AcceptedReserveGeneration } from "@shared/types/accepted-reserve-generation";
-import { acceptedReserveMetadataMap, assessConsumedRedemptionReserves, consumedReserveInput } from "../accepted-reserve-generation";
+import { acceptedReserveMetadataMap, assessConsumedRedemptionReserves, consumedReserveInput } from "../live-reserves/accepted-reserve-generation";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 

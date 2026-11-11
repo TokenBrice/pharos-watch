@@ -1,6 +1,6 @@
 import { getCache } from "../../lib/db-cache";
 import { decodeJsonString } from "../../lib/cache-json";
-import { sanitizeFxRates } from "../../lib/fx-rate-state";
+import { sanitizeFxRates } from "../../lib/pricing/fx-rate-state";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { EnrichmentPassCounts, EnrichmentPassProgress } from "./enrich-prices-fallback";
 

@@ -18,7 +18,7 @@ import miniCapture from "./fixtures/safety-score-v9-rateable-mini-capture.json";
 import {
   normalizeFixedInput,
   type ReportCardsFixedInput,
-} from "../report-cards-fixed-input";
+} from "../safety-score-v9/report-cards-fixed-input";
 import {
   createReportCardsFixedInput,
   type ReportCardsFixedInputDraft,

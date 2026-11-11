@@ -10,9 +10,9 @@ const mocks = vi.hoisted(() => ({
   syncYieldSupplemental: vi.fn(async (): Promise<CronResult> => ({ status: "ok", itemCount: 0 })),
 }));
 
-vi.mock("../../../cron/sync-yield-data", () => ({ syncYieldData: mocks.syncYieldData }));
-vi.mock("../../../cron/fetch-tbill-rate", () => ({ fetchTbillRate: mocks.fetchTbillRate }));
-vi.mock("../../../cron/sync-yield-supplemental", () => ({
+vi.mock("../../../cron/yield-sync/sync-yield-data", () => ({ syncYieldData: mocks.syncYieldData }));
+vi.mock("../../../cron/yield-sync/fetch-tbill-rate", () => ({ fetchTbillRate: mocks.fetchTbillRate }));
+vi.mock("../../../cron/yield-sync/sync-yield-supplemental", () => ({
   syncYieldSupplemental: mocks.syncYieldSupplemental,
 }));
 

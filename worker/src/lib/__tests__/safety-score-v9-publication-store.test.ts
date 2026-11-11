@@ -20,7 +20,7 @@ import { bytesToBase64 } from "@shared/lib/base64";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import { serializeSafetyScoreV9PublicationWithEncoding } from "../../test-helpers/report-cards-v9";
 import { handleReportCardsV9 } from "../../api/report-cards-v9";
-import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../report-cards-v9-materialization";
+import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../safety-score-v9/report-cards-v9-materialization";
 import {
   buildSafetyScoreV9AcceptedProjections,
   parseSafetyScoreV9AcceptedBaselineProjection,

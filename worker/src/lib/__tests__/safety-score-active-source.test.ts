@@ -12,9 +12,9 @@ const mocks = vi.hoisted(() => ({
   snapshotOverride: null as null | (() => Promise<ReportCardsV9CurrentResponse>),
 }));
 
-vi.mock("../report-cards-v9-cache", async (importOriginal) => {
+vi.mock("../safety-score-v9/report-cards-v9-cache", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../report-cards-v9-cache")>();
+    await importOriginal<typeof import("../safety-score-v9/report-cards-v9-cache")>();
   return {
     ...actual,
     loadPublishedReportCardsV9Snapshot: (db: D1Database, signal?: AbortSignal) =>
@@ -25,7 +25,7 @@ vi.mock("../report-cards-v9-cache", async (importOriginal) => {
 });
 
 const { loadActiveSafetyScoreSource } = await import(
-  "../safety-score-active-source"
+  "../safety-score-v9/safety-score-active-source"
 );
 
 function heldSnapshot(): ReportCardsV9CurrentResponse {

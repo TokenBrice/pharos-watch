@@ -2,7 +2,7 @@ import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { DECIMALS_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { getCachedRequest } from "./request";

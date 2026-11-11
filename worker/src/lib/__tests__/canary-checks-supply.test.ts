@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { checkSupplyHistoryDailyCoverage } from "../canary-checks-supply";
+import { checkSupplyHistoryDailyCoverage } from "../market-supply/canary-checks-supply";
 import {
   buildSupplySnapshotCompletionMarker,
   buildSupplySnapshotCoverageExpectation,
-} from "../supply-snapshot-completion";
+} from "../market-supply/supply-snapshot-completion";
 
 const NOW = 1_790_000_000;
 const TODAY = startOfUtcDaySec(new Date(NOW * 1000));

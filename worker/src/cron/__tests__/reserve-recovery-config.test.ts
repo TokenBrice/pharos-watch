@@ -23,14 +23,14 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal
   };
 });
 
-import { CONFIGURED_COINS } from "../sync-live-reserves-shared";
-import { syncReserveCoin } from "../sync-live-reserves-core";
-import { syncLiveReserves } from "../sync-live-reserves";
-import { recoverLiveReserveConfigChanges, selectReserveSupplyAdmissionBootstrapTargets } from "../reserve-recovery-config";
+import { CONFIGURED_COINS } from "../live-reserves/sync-live-reserves-shared";
+import { syncReserveCoin } from "../live-reserves/sync-live-reserves-core";
+import { syncLiveReserves } from "../live-reserves/sync-live-reserves";
+import { recoverLiveReserveConfigChanges, selectReserveSupplyAdmissionBootstrapTargets } from "../live-reserves/reserve-recovery-config";
 import { WORKER_TRACKED_STABLECOINS, WORKER_TRACKED_META_BY_ID, WORKER_ACTIVE_STABLECOINS, WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { loadFreshIndependentLiveReserveMap } from "../../lib/live-reserves/store";
-import type { ConfiguredCoin, LiveReserveConfig } from "../sync-live-reserves-shared";
+import type { ConfiguredCoin, LiveReserveConfig } from "../live-reserves/sync-live-reserves-shared";
 import type { AdapterContext } from "../reserve-adapters/index";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";

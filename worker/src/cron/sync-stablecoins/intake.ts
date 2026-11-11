@@ -5,14 +5,14 @@ import { detectDefiLlamaListFillDefaultPrices } from "@shared/lib/pricing-source
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
-import { MIN_VALID_ASSET_COUNT } from "../../lib/stablecoin-intake-policy";
+import { MIN_VALID_ASSET_COUNT } from "../../lib/market-supply/stablecoin-intake-policy";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { OnchainPartitionSummary } from "@shared/types/status/cron";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { reportStablecoinsStage, returnIfAborted } from "./runtime";
 import { createCronResult } from "../../lib/cron-result";
 import { isRecord } from "@shared/lib/type-guards";

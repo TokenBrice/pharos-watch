@@ -9,9 +9,9 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import {
   safetyScoreHistoryIdentityFromV2Row,
   type SafetyScoreHistoryV2Row,
-} from "../../lib/safety-score-history-v2";
-import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
-import { digestSafetyContextFromSource } from "../../lib/digest-safety-context";
+} from "../../lib/safety-score-v9/safety-score-history-v2";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-v9/safety-score-active-source";
+import { digestSafetyContextFromSource } from "../../lib/digest/digest-safety-context";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   collectorDegraded,

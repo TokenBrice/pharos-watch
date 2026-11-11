@@ -209,7 +209,7 @@ describe("doc-ownership registry integrity", () => {
   });
 
   it.each([
-    ["pricing-pipeline", ["worker/src/lib/stablecoin-publication-coverage.ts"], [
+    ["pricing-pipeline", ["worker/src/lib/market-supply/stablecoin-publication-coverage.ts"], [
       { path: "docs/process/pricing-pipeline-appendix.md", anchor: "active-price-coverage-health" },
     ]],
     ["frontend-routes", ["public/llms.txt"], [

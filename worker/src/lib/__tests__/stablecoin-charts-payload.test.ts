@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { StablecoinChartResponseSchema } from "@shared/types/supply";
-import { normalizeStablecoinChartBuckets, normalizeStablecoinChartDateSeconds, normalizeStablecoinChartPoints } from "../stablecoin-charts-payload";
+import { normalizeStablecoinChartBuckets, normalizeStablecoinChartDateSeconds, normalizeStablecoinChartPoints } from "../market-supply/stablecoin-charts-payload";
 
 describe("stablecoin chart bucket availability", () => {
   it("preserves malformed observations as null through normalization and the public schema", () => {

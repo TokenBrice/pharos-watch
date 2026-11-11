@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
-vi.mock("../../../lib/digest-safety-context", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/digest-safety-context")>();
+vi.mock("../../../lib/digest/digest-safety-context", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/digest/digest-safety-context")>();
   return {
     ...actual,
     checkDigestSafetyContextForDelivery: vi.fn(),
@@ -17,7 +17,7 @@ import {
   drainTelegramDigestOutbox,
   enqueueTelegramDigestEdition,
 } from "../digest-outbox";
-import { checkDigestSafetyContextForDelivery } from "../../../lib/digest-safety-context";
+import { checkDigestSafetyContextForDelivery } from "../../../lib/digest/digest-safety-context";
 import { prepareTelegramDigestAppendices, queuePendingTrackedStablecoinAdditions } from "../../digest/digest-appendices";
 
 interface StoredEdition {

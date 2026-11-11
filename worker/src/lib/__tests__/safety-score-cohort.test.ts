@@ -23,9 +23,9 @@ import {
   SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES,
   SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES,
 } from "../safety-score-v9/accepted-projections";
-import { loadActiveSafetyScoreIndex } from "../safety-score-index";
-import { loadActiveSafetyScoreCohort } from "../safety-score-active-source";
-import * as publicCache from "../report-cards-v9-cache";
+import { loadActiveSafetyScoreIndex } from "../safety-score-v9/safety-score-index";
+import { loadActiveSafetyScoreCohort } from "../safety-score-v9/safety-score-active-source";
+import * as publicCache from "../safety-score-v9/report-cards-v9-cache";
 import * as structuredLog from "../structured-log";
 import { SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, reassembleSafetyScoreV9CohortStoredValue, shardSafetyScoreV9CohortStoredValue } from "../safety-score-v9/publication-chunks";
 

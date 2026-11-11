@@ -6,14 +6,14 @@ import { beginLiveReserveCheckpoint, continueLiveReserveCheckpoint, loadLiveRese
 import { handleReserveContinuationBatch } from "../../handlers/reserve-continuation";
 import { runFourHourlyReserveSyncSlot } from "../../handlers/scheduled/four-hourly-reserves";
 import { buildScheduledSlotSummary } from "../../handlers/scheduled/slot-summary";
-import { sendReserveContinuation } from "../reserve-continuation-send";
+import { sendReserveContinuation } from "../live-reserves/reserve-continuation-send";
 import { createSlotDeadline } from "../cron-timeouts";
-import { sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
+import { sealAcceptedReserveGeneration } from "../live-reserves/accepted-reserve-generation";
 
 vi.mock("../../handlers/scheduled/four-hourly-reserves", () => ({ runFourHourlyReserveSyncSlot: vi.fn() }));
 const heartbeatMock = vi.hoisted(() => vi.fn());
-vi.mock("../reserve-continuation-fence", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../reserve-continuation-fence")>()),
+vi.mock("../live-reserves/reserve-continuation-fence", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../live-reserves/reserve-continuation-fence")>()),
   heartbeatReserveContinuation: heartbeatMock,
 }));
 const fixtures = createLatestSchemaFixtureTracker();

@@ -1,4 +1,4 @@
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { USD_QUOTE_COIN_IDS } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgTicker, DexPriceObs } from "./types";

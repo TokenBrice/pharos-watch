@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
-vi.mock("../../../lib/dexscreener", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/dexscreener")>();
+vi.mock("../../../lib/dex-liquidity/dexscreener", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/dex-liquidity/dexscreener")>();
   return {
     ...actual,
     fetchDsTokenPoolsWithStatus: vi.fn(),
@@ -11,8 +11,8 @@ vi.mock("../../../lib/dexscreener", async (importOriginal) => {
 });
 
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../../../lib/dex-cron-constants";
-import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
+import { DEXSCREENER_MIN_LIQUIDITY_USD } from "../../../lib/dex-liquidity/dex-cron-constants";
+import { fetchDsTokenPoolsWithStatus } from "../../../lib/dex-liquidity/dexscreener";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { runDexScreenerPass } from "../enrich-prices-dexscreener-pass";
 import type { PeggedAsset } from "../enrich-prices";
@@ -135,7 +135,7 @@ describe("runDexScreenerPass", () => {
   });
 
   it("keeps valid exact pricing beside rejected rows and leaves absent/zero volume as valid rows", async () => {
-    const actual = await vi.importActual<typeof import("../../../lib/dexscreener")>("../../../lib/dexscreener");
+    const actual = await vi.importActual<typeof import("../../../lib/dex-liquidity/dexscreener")>("../../../lib/dex-liquidity/dexscreener");
     const { volume: _volume, ...absentVolume } = exactPool("0xabc", "0xpair1", "0.99");
     const zeroVolume = { ...exactPool("0xabc", "0xpair2", "1.01"), volume: { h24: 0, h6: 0, h1: 0, m5: 0 } };
     const rejected = { ...exactPool("0xabc", "", "5", 1_000_000) };

@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   handleYieldRankings: vi.fn(),
 }));
 
-vi.mock("../../../lib/safety-score-index", () => ({
+vi.mock("../../../lib/safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: mocks.loadActiveSafetyScoreSource,
 }));
 

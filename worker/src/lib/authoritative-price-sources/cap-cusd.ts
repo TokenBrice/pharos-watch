@@ -3,7 +3,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import type { ChainRpcConfig } from "../chain-registry";
-import { findNearestSupply } from "../historical-depeg-extraction";
+import { findNearestSupply } from "../depeg-detection/historical-depeg-extraction";
 import {
   decodeUint256WordBigInt,
   encodeAddress,

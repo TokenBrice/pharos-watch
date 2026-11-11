@@ -21,7 +21,7 @@ import {
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
-} from "../cex-tickers";
+} from "../pricing/cex-tickers";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createDeferredPromise } from "./deferred.test-support";

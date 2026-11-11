@@ -17,7 +17,7 @@ import {
   isSuppressedYieldHistoryRow,
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
-} from "../../lib/yield-history-ownership-handoffs";
+} from "../../lib/yield/yield-history-ownership-handoffs";
 import {
   D1_HEAVY_STATEMENT_IDLE_RATIO,
   runWithOverloadRetry,

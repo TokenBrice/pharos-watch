@@ -23,9 +23,9 @@ import type {
   YieldHealthSummary,
 } from "@shared/types/status";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
-import { cgHeaders, cgSimplePricePath, cgUrl } from "../coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../pricing/coingecko";
 import { USER_AGENT } from "../constants";
-import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
+import { summarizeCollateralDriftFromLiveReserveMap } from "../live-reserves/collateral-drift";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../response-body";
 import {
   hasAnyCloudflareD1StatusBinding,
@@ -33,12 +33,12 @@ import {
   type CloudflareD1StatusBindings,
 } from "../env";
 import { loadFreshIndependentLiveReserveMap } from "../live-reserves/store";
-import { validatePricingSourceFreshness } from "../pricing-source-freshness";
+import { validatePricingSourceFreshness } from "../pricing/pricing-source-freshness";
 import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,
   type StablecoinsCacheLoadResult,
-} from "../stablecoins-cache";
+} from "../market-supply/stablecoins-cache";
 import {
   getD1UsageSummary,
   type D1UsageSummaryWithTableGrowth,

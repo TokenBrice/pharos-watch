@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   refreshAggregateMintBurnFlowCache: vi.fn(),
 }));
 
-vi.mock("../../../cron/sync-mint-burn", () => ({ syncMintBurn: mocks.syncMintBurn }));
+vi.mock("../../../cron/mint-burn/sync-mint-burn", () => ({ syncMintBurn: mocks.syncMintBurn }));
 vi.mock("../../../lib/mint-burn-pipeline/flow-aggregate", () => ({
   refreshAggregateMintBurnFlowCache: mocks.refreshAggregateMintBurnFlowCache,
 }));

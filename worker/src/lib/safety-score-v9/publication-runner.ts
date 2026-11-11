@@ -37,10 +37,10 @@ import {
 import { loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import type { V9PublicationPhaseElapsedMs, V9PublicationAbortCause, V9PublicationAttempt } from "./publication-attempts";
 import type { V9AssetQuarantine } from "./fact-set";
-import { persistAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
+import { persistAlertSafetyV9SourceEnvelope } from "./alert-safety-source-cache";
 import { loadSafetyScoreV9AcceptedBaselineState } from "./accepted-projection-readers";
 import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
-import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
+import { buildSafetyScoreV9PublicationIdentity } from "./report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError, type SafetyScoreV9ReplayCaptureInput } from "./publication-replay-capture";

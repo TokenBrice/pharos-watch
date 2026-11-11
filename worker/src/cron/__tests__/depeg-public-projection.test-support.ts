@@ -11,7 +11,7 @@ import type {
   DdrCanonicalIncident,
   DdrPublicationManifest,
   DdrSealedPublicPrediction,
-} from "../depeg-resolver-v2-contracts";
+} from "../depeg-resolver/depeg-resolver-v2-contracts";
 
 interface ResolverRowOptions {
   defaultAgeSec?: number;

@@ -8,8 +8,8 @@ import {
   loadPriceCorroborationObservations,
   writePriceCorroborationObservations,
 } from "../sync-stablecoins/price-corroboration-observations";
-import * as detection from "../detect-depegs";
-import * as confirmation from "../confirm-pending-depegs";
+import * as detection from "../depeg-detection/detect-depegs";
+import * as confirmation from "../depeg-detection/confirm-pending-depegs";
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
@@ -30,8 +30,8 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
 
 const fetchCurrentNativePegImpliedUsdQuotesMock = vi.fn();
 
-vi.mock("../../lib/native-peg-implied-prices", async () => {
-  const actual = await vi.importActual<typeof import("../../lib/native-peg-implied-prices")>("../../lib/native-peg-implied-prices");
+vi.mock("../../lib/pricing/native-peg-implied-prices", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/pricing/native-peg-implied-prices")>("../../lib/pricing/native-peg-implied-prices");
   return {
     ...actual,
     fetchCurrentNativePegImpliedUsdQuotes: (...args: unknown[]) => fetchCurrentNativePegImpliedUsdQuotesMock(...args),
@@ -42,7 +42,7 @@ import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { isAbortResult, runDepegPipeline, runPostEnrichmentPricePipeline } from "../sync-stablecoins/post-enrichment";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
-import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/price-validation";
+import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/pricing/price-validation";
 import { createAuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 
 const fixtures = createLatestSchemaFixtureTracker();

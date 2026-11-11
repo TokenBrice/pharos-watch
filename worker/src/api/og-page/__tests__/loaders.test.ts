@@ -17,14 +17,14 @@ const mocks = vi.hoisted(() => ({
   projectDependencyGraph: vi.fn(),
 }));
 
-vi.mock("../../../lib/stablecoins-cache", () => ({ loadStablecoinsCache: mocks.loadStablecoinsCache }));
+vi.mock("../../../lib/market-supply/stablecoins-cache", () => ({ loadStablecoinsCache: mocks.loadStablecoinsCache }));
 vi.mock("../../peg-summary", () => ({ handlePegSummary: mocks.handlePegSummary }));
 vi.mock("../../stability-index", () => ({ handleStabilityIndex: mocks.handleStabilityIndex }));
 vi.mock("../../chains", () => ({ handleChains: mocks.handleChains }));
 vi.mock("../../mint-burn-flows", () => ({ handleMintBurnFlows: mocks.handleMintBurnFlows }));
 vi.mock("../../dex-liquidity", () => ({ handleDexLiquidity: mocks.handleDexLiquidity }));
 vi.mock("../../yield-rankings-cache", () => ({ handleYieldRankings: mocks.handleYieldRankings }));
-vi.mock("../../../lib/safety-score-active-source", () => ({ loadActiveSafetyScoreCohort: mocks.loadActiveSafetyScoreCohort }));
+vi.mock("../../../lib/safety-score-v9/safety-score-active-source", () => ({ loadActiveSafetyScoreCohort: mocks.loadActiveSafetyScoreCohort }));
 vi.mock("@shared/types/dependency-graph", () => ({ projectDependencyGraph: mocks.projectDependencyGraph }));
 // Owner bodies are validated against their published schemas in production; these
 // tests exercise the loaders' own decisions, so they read the fixture body as served.

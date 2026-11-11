@@ -13,7 +13,7 @@ import { HealthResponseSchema } from "@shared/types/status/public-health";
 import { loadStablecoinsPublicationContinuity } from "../../cron/sync-stablecoins/publication";
 import { buildStablecoinsSyncResult } from "../../cron/sync-stablecoins/metadata";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
-import { evaluateStablecoinActivePriceCoverage } from "../../lib/stablecoin-publication-coverage";
+import { evaluateStablecoinActivePriceCoverage } from "../../lib/market-supply/stablecoin-publication-coverage";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
 type HealthDbOptions = {

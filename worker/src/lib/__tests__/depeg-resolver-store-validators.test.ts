@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { withSqliteD1, insertLiveEvent, sealPublicFixture, insertPredictionErratum } from "./depeg-resolver-ddrv2-store.test-support";
-import { ensureCanonicalIncidents } from "../depeg-resolver-incident-store";
+import { ensureCanonicalIncidents } from "../depeg-resolver/depeg-resolver-incident-store";
 import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_METHODOLOGY_CHANGELOG_PATH,
@@ -11,10 +11,10 @@ import {
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import { MethodologyEnvelopeSchema } from "@shared/types/methodology-envelope";
 import { DdrrResponseOpenApiSchema, type DdrrRow } from "@shared/types/depeg-resolver-review";
-import { loadPredictionErrata, type LoadPredictionErrataFilters } from "../depeg-resolver-errata-store";
-import { buildDdrMethodologyEnvelope } from "../depeg-resolver-methodology";
-import { buildDdrrResponseEnvelope } from "../depeg-resolver-review-response";
-import { assertHash, assertLockMetadata, assertNonEmpty, assertNonNegativeInteger, assertPositiveInteger } from "../depeg-resolver-store-validators";
+import { loadPredictionErrata, type LoadPredictionErrataFilters } from "../depeg-resolver/depeg-resolver-errata-store";
+import { buildDdrMethodologyEnvelope } from "../depeg-resolver/depeg-resolver-methodology";
+import { buildDdrrResponseEnvelope } from "../depeg-resolver/depeg-resolver-review-response";
+import { assertHash, assertLockMetadata, assertNonEmpty, assertNonNegativeInteger, assertPositiveInteger } from "../depeg-resolver/depeg-resolver-store-validators";
 
 describe("DDR store input rejection", () => {
   it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(

@@ -8,7 +8,7 @@ import { evaluateAccessGate, evaluateCachedPublicApiReadFastGate } from "../../h
 import { rotateApiKey } from "../../lib/api-key-admin";
 import { authenticateApiKey } from "../../lib/api-key-auth";
 import { resetApiKeyStateForTests } from "../../lib/api-key-core";
-import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-v9/safety-score-index";
 import { makeJsonRequest } from "../../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -16,7 +16,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { handleDonorKeyClaim } from "../donor-key-claims";
 
-vi.mock("../../lib/safety-score-index", () => ({
+vi.mock("../../lib/safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: vi.fn(),
 }));
 

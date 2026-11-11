@@ -12,7 +12,7 @@ import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggr
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "@shared/lib/psi-policy";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../../lib/current-peg-observations";
 import { sha256Hex } from "../../lib/hash";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
@@ -42,9 +42,9 @@ import type {
   CollectorResult,
 } from "./collectors-shared";
 import { collectorDegraded, collectorResult } from "./collectors-shared";
-import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
+import type { DepegLifecycleFlag } from "../../lib/depeg-detection/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest/digest-sql-filters";
 import { buildEditorialCandidates } from "./editorial-candidates";
 import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";

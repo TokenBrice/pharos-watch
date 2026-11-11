@@ -4,8 +4,8 @@ import type { ResolvedYield } from "./types";
 import { type YieldHistorySnapshotRow } from "./history-repository";
 import { weightedMedian } from "@shared/lib/stats";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
-import { computeYieldStability } from "../yield-helpers";
+import { isOnChainBootstrapYieldSeed } from "../../lib/yield/yield-utils";
+import { computeYieldStability } from "./yield-helpers";
 
 export function computeYieldCandidateStatistics(
   y: ResolvedYield,

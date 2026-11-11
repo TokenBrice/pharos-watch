@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import * as publishedMintBurn from "../../lib/mint-burn-published-gauge";
+import * as publishedMintBurn from "../../lib/mint-burn-pipeline/mint-burn-published-gauge";
 import { buildHistoryKey } from "../yield-sync/history-evidence";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication-rankings";
 import {

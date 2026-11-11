@@ -34,8 +34,8 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal
 
 
 
-import { snapshotChainSupply } from "../snapshot-chain-supply";
-import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
+import { snapshotChainSupply } from "../market-supply/snapshot-chain-supply";
+import type { StablecoinPublicationWaiver } from "../../lib/market-supply/stablecoin-publication-coverage";
 import { restoreFallbackCacheState } from "../sync-stablecoins/fallback";
 
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices-shared";

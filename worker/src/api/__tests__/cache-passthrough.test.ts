@@ -12,7 +12,7 @@ import {
   handleStablecoinCharts,
   handleUsdsStatus,
 } from "../cache-handlers";
-import { handleBluechipRatings } from "../../lib/bluechip-cache";
+import { handleBluechipRatings } from "../../lib/bluechip/bluechip-cache";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import { buildOpenApiDocument } from "../../../../scripts/maintenance/generate-openapi-spec";

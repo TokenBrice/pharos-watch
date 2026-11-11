@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { BlacklistGapMetrics } from "../../blacklist-gaps";
+import type { BlacklistGapMetrics } from "../../blacklist/blacklist-gaps";
 import { makeBlacklistReconciliationStatusRow } from "../../../test-helpers/__shared/fixtures";
 import { getDataQuality } from "../data-quality";
-import { unknownActivePriceCoverageHealth } from "../../stablecoin-publication-health";
+import { unknownActivePriceCoverageHealth } from "../../market-supply/stablecoin-publication-health";
 
 const NOW = 1_775_890_000;
 

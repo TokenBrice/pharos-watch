@@ -8,8 +8,8 @@ import {
 import { DdrrResponseSchema, DdrrResponseOpenApiSchema, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
 import { handleDepegResolverReview } from "../depeg-resolver-review";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-review-snapshot-cache";
-import { buildDdrrResponseEnvelope, buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
+import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver/depeg-resolver-review-snapshot-cache";
+import { buildDdrrResponseEnvelope, buildEmptyDdrrSummary } from "../../lib/depeg-resolver/depeg-resolver-review-response";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 
 afterEach(() => {

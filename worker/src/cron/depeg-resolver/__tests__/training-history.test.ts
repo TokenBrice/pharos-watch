@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { computeDuration, groupIncidents, type DdrStratumKey } from "@shared/lib/depeg-resolver";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
-import { auditVerdictNotInSql } from "../../../lib/depeg-audit";
+import { auditVerdictNotInSql } from "../../../lib/depeg-detection/depeg-audit";
 import { HISTORICAL_ROW_CAP, TRAINING_ROLLUP_BACKFILL_EVENT_CAP, TRAINING_WINDOW_SEC } from "../constants";
 import { loadDdrHistoricalEvents } from "../context";
 import { readDdrTrainingHistory, type DdrTrainingHistoryRow } from "../training-history";

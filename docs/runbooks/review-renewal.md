@@ -24,14 +24,14 @@ These notices do not change health status, create a status transition, or enter 
 1. Open Admin triage → **Informational watch**, identify the lane and stablecoin IDs, and follow the review's expiry and evidence. If an overall cause list is crowded, inspect `causes.dataQuality` on admin `GET /api/status?refresh=live`; it retains the lane-specific cause.
 2. **Price gap:** inspect `/api/health.activePriceCoverage.missingActiveAssets[].acknowledgedGap` for owner, reason, HTTPS sources, review date, and expiry. The gap remains in `missingActiveIds`; `expiredGapReviewIds` and `invalidGapReviewIds` name reviews that acknowledge nothing. Active-price coverage is not exposed on `/api/status`.
 3. **Reserve feed:** inspect `/api/status.reserveComposition.acknowledgedFeeds` for matched reviews, plus `expiredFeedReviewIds` and `invalidFeedReviewIds`. Check the asset's raw reserve evidence and latest attempt category, warning codes, and error text before deciding whether the existing review still describes the failure. An unmatched new failure must not inherit the old acknowledgement.
-4. **Supply carry:** inspect the cause IDs/expiries, `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/supply-integrity.ts`, and `/api/stablecoins` for `supplyRestored`, the available value, original observation clock and guard reason. Recovered or unavailable assets use no carry acknowledgement or reminder.
+4. **Supply carry:** inspect the cause IDs/expiries, `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/market-supply/supply-integrity.ts`, and `/api/stablecoins` for `supplyRestored`, the available value, original observation clock and guard reason. Recovered or unavailable assets use no carry acknowledgement or reminder.
 5. Re-read the official evidence. Decide whether the source has recovered, whether a fresh dated review is justified, or whether the missing-price listing needs a freeze/delist decision. Do not advance an expiry merely to keep the dashboard green.
 
 ## Renewal procedure
 
 ### Price-gap reviews
 
-Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-reviews.ts`:
+Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/market-supply/stablecoin-publication-reviews.ts`:
 
 - Keep the exact active stablecoin identity and a nonblank accountable owner and reason.
 - Record fresh, relevant public evidence using HTTPS sources and a nonfuture `reviewedAt` (Unix seconds). The resolver enforces this: a review dated after the evaluation clock is reported in `invalidGapReviewIds` and acknowledges nothing.
@@ -51,7 +51,7 @@ At the annual source-review deadline, re-read the pinned `MarketHoursBreaker` an
 
 ### Reserve-feed reviews
 
-Edit `RESERVE_FEED_REVIEWS` in `worker/src/lib/reserve-feed-reviews.ts`:
+Edit `RESERVE_FEED_REVIEWS` in `worker/src/lib/live-reserves/reserve-feed-reviews.ts`:
 
 - Keep the exact configured stablecoin and adapter identity; independent or static-validated feeds are eligible for operational review, and weak probes qualify only for pinned stalled-clock reviews.
 - Record an accountable owner, specific reason, HTTPS evidence URLs, and valid `evidenceDate` values no later than `reviewedAt`. The review date must not be future-dated.
@@ -66,13 +66,13 @@ Run the owning registry and status suites for any renewal, review the changed ev
 
 ### Blind-event reviews
 
-Edit `DEPEG_BLIND_EVENT_REVIEWS` in `worker/src/lib/canary-checks-depeg.ts` only after checking that the event remains open and blind and that its primary still needs corroboration without an authoritative alternative or an admitted $1M/two-family DEX aggregate. Name one positive-integer `eventId` and its exact `stablecoinId`; another blind event for the same coin re-alerts and needs its own review. Record the actual source family, priced-contributor TVL, family count and displayed deviation with HTTPS evidence, `owner: "ops"`, a nonfuture `reviewedAt`, and `reviewedAt < expiresAt <= reviewedAt + 14 days`. Malformed, duplicate, future or expired reviews acknowledge nothing. Never infer trusted coverage or recovery from the displayed quote.
+Edit `DEPEG_BLIND_EVENT_REVIEWS` in `worker/src/lib/depeg-detection/canary-checks-depeg.ts` only after checking that the event remains open and blind and that its primary still needs corroboration without an authoritative alternative or an admitted $1M/two-family DEX aggregate. Name one positive-integer `eventId` and its exact `stablecoinId`; another blind event for the same coin re-alerts and needs its own review. Record the actual source family, priced-contributor TVL, family count and displayed deviation with HTTPS evidence, `owner: "ops"`, a nonfuture `reviewedAt`, and `reviewedAt < expiresAt <= reviewedAt + 14 days`. Malformed, duplicate, future or expired reviews acknowledge nothing. Never infer trusted coverage or recovery from the displayed quote.
 
 Inspect `canaries.checks["depeg-open-coverage"].metadata`: raw blind counts stay truthful, while acknowledged/actionable counts grade only unreviewed blindness. `acknowledgedBlindReviewIds` lists event IDs and is complete even when event details are truncated; notices and reminders name `coin(event)`. The status standing notice and 48-hour reminder require fresh completed canary evidence and a review valid at read time; recovered events use neither. Expiry re-arms the next canary finding without changing events, DDR, DEWS, closure or alerts. Renew only from fresh coverage evidence.
 
 ### Supply-carry reviews
 
-Edit `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/supply-integrity.ts` only after rechecking the exact active asset, machine-readable reason and evidence. Set a nonfuture `reviewedAt < expiresAt`, with at most the existing 14-day review window; a dependent price-gap review must support the whole interval. A review applies only while `supplyRestored === true` and a value is available. It changes alert classification only: preserve published supply, original clocks, quarantine and carry ceilings. Renew from fresh evidence or let the ordinary carry gate re-arm; never extend a carry itself.
+Edit `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/market-supply/supply-integrity.ts` only after rechecking the exact active asset, machine-readable reason and evidence. Set a nonfuture `reviewedAt < expiresAt`, with at most the existing 14-day review window; a dependent price-gap review must support the whole interval. A review applies only while `supplyRestored === true` and a value is available. It changes alert classification only: preserve published supply, original clocks, quarantine and carry ceilings. Renew from fresh evidence or let the ordinary carry gate re-arm; never extend a carry itself.
 
 ## At expiry
 

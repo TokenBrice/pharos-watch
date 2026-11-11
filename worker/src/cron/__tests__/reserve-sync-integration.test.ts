@@ -20,7 +20,7 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal
   return mockWorkerRuntimeRegistry({ ...testRegistry, trackedMetaById });
 });
 
-import { syncLiveReserves } from "../sync-live-reserves";
+import { syncLiveReserves } from "../live-reserves/sync-live-reserves";
 import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 
 const fixtures = createLatestSchemaFixtureTracker();

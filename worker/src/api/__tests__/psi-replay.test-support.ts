@@ -1,8 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { PsiSupplyRow } from "../../lib/psi-recompute";
-import type { PsiHistoricalDewsRow } from "../../lib/psi-replay";
-import type { DepegRow } from "../../lib/depeg-helpers";
+import type { PsiSupplyRow } from "../../lib/psi/psi-recompute";
+import type { PsiHistoricalDewsRow } from "../../lib/psi/psi-replay";
+import type { DepegRow } from "../../lib/depeg-detection/depeg-helpers";
 
 export function seedPsiSupply(sqlite: DatabaseSync, rows: PsiSupplyRow[]) {
   const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)");

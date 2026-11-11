@@ -3,11 +3,11 @@ import type { ReserveContinuationMessage } from "@shared/types/reserve-continuat
 import type { Env } from "../lib/env";
 import { createSlotDeadline, assertSlotDeadline, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS } from "../lib/cron-timeouts";
 import { createLeaseOwner, runCronWithLease } from "../lib/cron-lease-primitives";
-import { createReserveLeaseOwner, reserveRecoveryLeaseAdmission } from "../lib/reserve-producer-priority";
-import { claimReserveContinuation, finishReserveContinuation, heartbeatReserveContinuation } from "../lib/reserve-continuation-fence";
-import type { ReserveContinuationClaim } from "../lib/reserve-continuation-fence";
+import { createReserveLeaseOwner, reserveRecoveryLeaseAdmission } from "../lib/live-reserves/reserve-producer-priority";
+import { claimReserveContinuation, finishReserveContinuation, heartbeatReserveContinuation } from "../lib/live-reserves/reserve-continuation-fence";
+import type { ReserveContinuationClaim } from "../lib/live-reserves/reserve-continuation-fence";
 import { createScheduledRuntimeContext } from "./scheduled/context";
-import { sendReserveContinuation } from "../lib/reserve-continuation-send";
+import { sendReserveContinuation } from "../lib/live-reserves/reserve-continuation-send";
 import { retainUntilDeadline, settleAfterAbort } from "../lib/cron-abort-settlement";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { ScheduledSlotSummary } from "./scheduled/slot-summary";

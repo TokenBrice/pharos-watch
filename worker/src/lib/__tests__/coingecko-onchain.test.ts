@@ -11,7 +11,7 @@ import {
   fetchCgTokenPoolsWithStatus,
   onchainRateLimit,
   parseCgPoolVolume,
-} from "../coingecko-onchain";
+} from "../dex-liquidity/coingecko-onchain";
 
 const validPool = {
   id: "pool-1",

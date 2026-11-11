@@ -4,7 +4,7 @@ import {
   buildDigestSafetyMapCaptions,
   MAX_SAFETY_MAP_CARRY_FORWARD_DAYS,
   resolveDigestSafetyMap,
-} from "../digest-safety-map";
+} from "../digest/digest-safety-map";
 
 const NOW_SEC = 1_777_000_000;
 const DATE = "2026-04-25";

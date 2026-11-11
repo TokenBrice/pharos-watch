@@ -11,7 +11,7 @@ import {
   getPendingExpiryLimitSec,
   SELECT_PENDING_DEPEGS_SQL,
   type PendingDepegRow,
-} from "../lib/depeg-pending";
+} from "../lib/depeg-detection/depeg-pending";
 import { isMissingTableError } from "../lib/db";
 import {
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
@@ -21,7 +21,7 @@ import {
   type ActiveIncidentProjectionLoad,
   type PublicDepegRow,
   rowToPublicDepegEvent,
-} from "../lib/depeg-event-projection";
+} from "../lib/depeg-detection/depeg-event-projection";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -34,8 +34,8 @@ import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stabl
 import type { DepegEvent, DepegPendingIncident } from "@shared/types/peg";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
-import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
-import { isExtremeMovePending } from "../lib/depeg-helpers";
+import { prepareDepegEventsCountStatements } from "../lib/depeg-detection/depeg-events-count-cache";
+import { isExtremeMovePending } from "../lib/depeg-detection/depeg-helpers";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 

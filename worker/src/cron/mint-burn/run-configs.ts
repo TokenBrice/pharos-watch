@@ -4,10 +4,10 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
 import { rethrowIfAborted } from "../../lib/abort";
 import { withRpcRequestScope } from "../../lib/rpc-request-observer";
-import { mintBurnConfigKey as configKey } from "../../lib/mint-burn-contract-identity";
+import { mintBurnConfigKey as configKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
-import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
+import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
 import { createMintBurnConfigSummary, hasTerminalMintBurnRpcFailure, type MintBurnConfigSummary } from "./sync-config";
 import { mintBurnScanRequestFloor, MINT_BURN_RETRY_BOUNDARY_REQUESTS, syncMintBurnConfigWithRetries } from "./scan-with-retry";
@@ -17,7 +17,7 @@ import type { MintBurnCoverageRepairSummary } from "./repair-coverage";
 import {
   conservationOnlyEventDefsFor, fetchConservationBoundaries, needsMintBurnConservationBoundaries, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
   type ConservationBoundaryRequest,
-} from "../../lib/mint-burn-conservation";
+} from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 
 const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
 export const MINT_BURN_PENDING_RUNTIME_BUDGET_MS = 6 * 60_000;

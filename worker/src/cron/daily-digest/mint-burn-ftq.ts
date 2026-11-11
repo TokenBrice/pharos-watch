@@ -1,12 +1,12 @@
-import { buildFlightToQualityClassificationFromV9Snapshot } from "../../lib/flight-to-quality-classification";
+import { buildFlightToQualityClassificationFromV9Snapshot } from "../../lib/mint-burn-pipeline/flight-to-quality-classification";
 import {
   buildFlightToQualityCohorts,
   detectFlightToQualityFromValuedNets,
   getFlightToQualityUnavailableReason,
   type FlightToQualityPublicationScope,
   type ValuedNetFlow24h,
-} from "../../lib/mint-burn-scoring";
-import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
+} from "../../lib/mint-burn-pipeline/mint-burn-scoring";
+import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-v9/safety-score-index";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export interface DigestMintBurnCoinNet extends ValuedNetFlow24h {

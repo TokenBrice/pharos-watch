@@ -9,7 +9,7 @@ import {
   LIVE_RESERVE_QUEUE_HASH,
   SYNC_ORDERED_CONFIGURED_COINS,
   type LiveReserveCohortGrading,
-} from "../sync-live-reserves-shared";
+} from "../live-reserves/sync-live-reserves-shared";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { hasActiveChildLeaseForScheduledSlot } from "../../lib/scheduled-slot-reconciliation";
 import { parseJsonObject } from "../../lib/json-parse";
@@ -17,7 +17,7 @@ import {
   getReserveProducerPriority,
   reserveRecoveryAdmissionSql,
   type ReserveProducerPriority,
-} from "../../lib/reserve-producer-priority";
+} from "../../lib/live-reserves/reserve-producer-priority";
 import {
   buildLiveReserveCheckpointItemStartedStatement,
   identityBinds,

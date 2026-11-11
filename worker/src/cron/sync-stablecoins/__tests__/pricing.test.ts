@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import type { PriceCacheEntry } from "../../../lib/price-cache";
+import type { PriceCacheEntry } from "../../../lib/pricing/price-cache";
 import { classifyPrimaryDepegTrust } from "../../../lib/depeg-trust-policy";
 import { protocolParProvider } from "../../../lib/authoritative-price-sources/protocol-par";
-import type { PriceValidationReferences } from "../../../lib/price-validation";
+import type { PriceValidationReferences } from "../../../lib/pricing/price-validation";
 import {
   applyProtocolPriceOverrides,
   buildPreviousTrustedPriceLookup,

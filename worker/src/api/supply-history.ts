@@ -1,7 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { getCompletedSupplySnapshot, type CompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
+import { getCompletedSupplySnapshot, type CompletedSupplySnapshot } from "../lib/market-supply/supply-snapshot-completion";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { logWorkerEventArgs } from "../lib/structured-log";

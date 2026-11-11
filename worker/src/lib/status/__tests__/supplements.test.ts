@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { CronStatusDetail } from "@shared/types/status";
-import { loadStablecoinsCache, hasUsableStablecoinsPayload, type StablecoinsCacheLoadResult } from "../../stablecoins-cache";
+import { loadStablecoinsCache, hasUsableStablecoinsPayload, type StablecoinsCacheLoadResult } from "../../market-supply/stablecoins-cache";
 
-vi.mock("../../stablecoins-cache", () => ({
+vi.mock("../../market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({ kind: "error", reason: "missing", updatedAt: null })),
   hasUsableStablecoinsPayload: vi.fn(() => false),
 }));
@@ -20,7 +20,7 @@ vi.mock("../derived-data", () => ({ getMintBurnReconciliation: vi.fn(async (_db:
   rows: [],
 })) }));
 vi.mock("../../live-reserves/store", () => ({ loadFreshIndependentLiveReserveMap: vi.fn(async () => new Map()) }));
-vi.mock("../../collateral-drift", () => ({
+vi.mock("../../live-reserves/collateral-drift", () => ({
   summarizeCollateralDriftFromLiveReserveMap: vi.fn(() => ({ driftCoins: [] })),
 }));
 vi.mock("../../../telegram/outbox/pending-capacity", () => ({

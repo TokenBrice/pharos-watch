@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildHistoricalDewsMap,
   computeHistoricalDewsStressBreadth,
-} from "../psi-replay";
-import { buildSupplySnapshotMap } from "../psi-recompute";
+} from "../psi/psi-replay";
+import { buildSupplySnapshotMap } from "../psi/psi-recompute";
 import { psiDepegRow, psiSupplyPair, replayPsiDay, DAY } from "./psi.test-support";
 
 describe("psi-replay", () => {

@@ -1,5 +1,5 @@
 import { createRateLimiter } from "../../lib/evm-logs";
-import { syncBlacklist } from "../../cron/sync-blacklist";
+import { syncBlacklist } from "../../cron/blacklist/sync-blacklist";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSinglePropagatingSlotJob } from "./slot-summary";
 

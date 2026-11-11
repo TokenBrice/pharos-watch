@@ -1,7 +1,7 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { crawlCoinGeckoPoolsStage } from "./crawl-coingecko-pools";
 import { crawlGeckoTerminalPoolsStage } from "./crawl-geckoterminal-pools";
 import {

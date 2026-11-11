@@ -5,7 +5,7 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveDexDeploymentCensusMaxAgeSec } from "../../cron/dex-liquidity/deployment-census-coverage";
 import { classifyStoredDexCensusState } from "../../cron/dex-discovery/census-state-machine";
-import { computeDexDeploymentSupplyCoverage } from "../report-cards-snapshot-inputs";
+import { computeDexDeploymentSupplyCoverage } from "../safety-score-v9/report-cards-snapshot-inputs";
 
 const mocks = vi.hoisted(() => ({
   getCache: vi.fn(),
@@ -19,12 +19,12 @@ vi.mock("../db-cache", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../db-cache")>()),
   getCache: mocks.getCache,
 }));
-vi.mock("../dex-liquidity", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../dex-liquidity")>()),
+vi.mock("../dex-liquidity/dex-liquidity", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../dex-liquidity/dex-liquidity")>()),
   loadDexLiquiditySnapshot: mocks.loadDexLiquiditySnapshot,
 }));
-vi.mock("../redemption-backstops-store", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../redemption-backstops-store")>()),
+vi.mock("../redemption-backstop/redemption-backstops-store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../redemption-backstop/redemption-backstops-store")>()),
   loadRedemptionBackstopSnapshot: mocks.loadRedemptionBackstopSnapshot,
 }));
 vi.mock("../live-reserves/store", async (importOriginal) => ({
@@ -32,8 +32,8 @@ vi.mock("../live-reserves/store", async (importOriginal) => ({
   loadFreshIndependentLiveReserveMap: mocks.loadFreshIndependentLiveReserveMap,
 }));
 
-const { loadReportCardsSnapshotInputs } = await import("../report-cards-snapshot-inputs");
-const { RedemptionBackstopSnapshotUnavailableError } = await import("../redemption-backstops-store");
+const { loadReportCardsSnapshotInputs } = await import("../safety-score-v9/report-cards-snapshot-inputs");
+const { RedemptionBackstopSnapshotUnavailableError } = await import("../redemption-backstop/redemption-backstops-store");
 
 function supplyPoint(current: number) {
   return {

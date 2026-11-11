@@ -10,7 +10,7 @@ import {
   normalizeDexLiquidityEvidence,
   type DexLiquidityRow,
   type NormalizedDexLiquidityEvidence,
-} from "../lib/dex-liquidity";
+} from "../lib/dex-liquidity/dex-liquidity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   buildDexLiquidityWarning,
@@ -23,11 +23,11 @@ import {
   type DexDeploymentOutcomeRow,
   type DexHistoryRow,
   type DexPriceRow,
-} from "../lib/dex-liquidity-response";
+} from "../lib/dex-liquidity/dex-liquidity-response";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
-import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
+import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-liquidity/dex-cron-constants";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/dex-liquidity";
 import { getDexPriceSourceEntries } from "../lib/depeg-trust-policy";

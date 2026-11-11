@@ -1,6 +1,6 @@
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
-import { rowPriceCoverage, serializeDepegPriceCoverage, type DepegRow } from "../../lib/depeg-helpers";
+import { rowPriceCoverage, serializeDepegPriceCoverage, type DepegRow } from "../../lib/depeg-detection/depeg-helpers";
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
 import type { DepegDiagnostic, DepegPersistenceCommand } from "./types";
 

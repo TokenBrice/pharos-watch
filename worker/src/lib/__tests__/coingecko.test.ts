@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { cgSimplePricePath } from "../coingecko";
-import { fetchCoingeckoSimplePrices } from "../coingecko-simple-price";
+import { cgSimplePricePath } from "../pricing/coingecko";
+import { fetchCoingeckoSimplePrices } from "../pricing/coingecko-simple-price";
 
 const NOW_SEC = 1_792_391_400;
 

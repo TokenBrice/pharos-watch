@@ -18,9 +18,9 @@ import {
   resolveReserveProducerAdmission,
   RESERVE_RECOVERY_CLAIM_SEC,
   type ReserveProducerPriority,
-} from "../../lib/reserve-producer-priority";
+} from "../../lib/live-reserves/reserve-producer-priority";
 import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
-import { reconcileReserveContinuations } from "../../lib/reserve-continuation-reconciliation";
+import { reconcileReserveContinuations } from "../../lib/live-reserves/reserve-continuation-reconciliation";
 import { runSlotCatchUpDetection } from "../../lib/scheduled-slot-catch-up";
 
 type ReserveRecoveryMode = "off" | "recover";
@@ -115,7 +115,7 @@ async function runReserveRecovery(
     // Keep changed-config work off the normal cohort's wall/CPU budget.
     // Lazy import also keeps config-only polls free of the consumer graph.
     await reportProgress({ stage: "recovering-reserve-config" });
-    const { recoverLiveReserveConfigChanges } = await import("../../cron/reserve-recovery-config");
+    const { recoverLiveReserveConfigChanges } = await import("../../cron/live-reserves/reserve-recovery-config");
     const configRecovery = await recoverLiveReserveConfigChanges(runtime.db, signal, {
       etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
       alchemyApiKey: runtime.env.ALCHEMY_API_KEY,

@@ -1,10 +1,10 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import type { HistoricalMarketSourceDiagnostics } from "../../src/lib/historical-market-prices";
-import type { BackfillEvent } from "../../src/lib/historical-depeg-extraction";
+import type { HistoricalMarketSourceDiagnostics } from "../../src/lib/pricing/historical-market-prices";
+import type { BackfillEvent } from "../../src/lib/depeg-detection/historical-depeg-extraction";
 import { existingRowOverlapsReplayWindow } from "./backfill-depegs-window";
 import type { BackfillReplayWindow } from "../../src/lib/backfill-day-window";
-import { DEPEG_EVENTS_DEPEGROW_COLUMNS } from "../../src/lib/depeg-helpers";
+import { DEPEG_EVENTS_DEPEGROW_COLUMNS } from "../../src/lib/depeg-detection/depeg-helpers";
 
 const BACKFILL_DIFF_SAMPLE_LIMIT = 20;
 

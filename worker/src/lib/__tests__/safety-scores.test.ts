@@ -3,11 +3,11 @@ import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 
-vi.mock("../safety-score-index", () => ({
+vi.mock("../safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: mockLoadActiveSafetyScoreSource,
 }));
 
-const { computeSafetyScoresSnapshot } = await import("../safety-scores");
+const { computeSafetyScoresSnapshot } = await import("../safety-score-v9/safety-scores");
 
 describe("canonical published safety scores", () => {
   beforeEach(() => mockLoadActiveSafetyScoreSource.mockReset());

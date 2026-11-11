@@ -1,6 +1,6 @@
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
-import type { CgPool, CgPoolAttributes } from "../../lib/coingecko-onchain";
-import { parseCgPoolVolume } from "../../lib/coingecko-onchain";
+import { QUALITY_MULTIPLIERS } from "../../lib/dex-liquidity/dex-cron-constants";
+import type { CgPool, CgPoolAttributes } from "../../lib/dex-liquidity/coingecko-onchain";
+import { parseCgPoolVolume } from "../../lib/dex-liquidity/coingecko-onchain";
 import type { ParsedPool } from "./crawl-helpers";
 import { parseGtShapedPool } from "./geckoterminal-shared";
 import { getGtDexQuality } from "./pool-normalization";

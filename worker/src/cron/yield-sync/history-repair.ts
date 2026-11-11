@@ -10,7 +10,7 @@ import {
 import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
-} from "../../lib/yield-history-ownership-handoffs";
+} from "../../lib/yield/yield-history-ownership-handoffs";
 
 const OWNERSHIP_HANDOFF_DELETE_CHUNK_ROWS = 5_000;
 

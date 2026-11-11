@@ -10,8 +10,8 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
-import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
-import { buildConfirmationPlan, type ConfirmationPlanInput } from "../pending-depeg-confirmation";
+import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-detection/depeg-pending";
+import { buildConfirmationPlan, type ConfirmationPlanInput } from "../depeg-detection/pending-depeg-confirmation";
 
 const NOW_SEC = 1_700_000_000;
 const openDbs: DatabaseSync[] = [];

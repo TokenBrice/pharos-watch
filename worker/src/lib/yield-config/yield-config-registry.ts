@@ -4,7 +4,7 @@ import type {
   YieldAdapterLifecycleReason,
   YieldBenchmarkKey,
 } from "@shared/types/yield";
-import { buildOnChainSourceKey } from "../yield-utils";
+import { buildOnChainSourceKey } from "../yield/yield-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Reviewed variable-NAV products whose holder return is intentionally USD-based.

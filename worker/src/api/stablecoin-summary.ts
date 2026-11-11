@@ -4,7 +4,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/market-supply/stablecoins-cache";
 import {
   getCirculatingRawOrNull,
   getPrevDayRawOrNull,

@@ -5,7 +5,7 @@ import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import { appendLinkedVariantParentYieldSources } from "../yield-sync/resolve-linked-variants";
 import { buildYieldSourceRisk } from "../yield-sync/source-risk";
 import type { ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
-import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
+import { resolveYieldSourceUrl } from "../../lib/yield/yield-source-links";
 import { baseEvaluationInput } from "./yield-evaluation.test-support";
 
 const START_SEC = 1_783_641_600;

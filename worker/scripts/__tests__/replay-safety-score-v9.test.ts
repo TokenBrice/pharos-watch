@@ -34,7 +34,7 @@ import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../src/
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
 import { makeV9FixedInput } from "../../src/test-helpers/v9-fixed-input";
 import { makeSupplyFullRedemption } from "../../src/lib/__tests__/redemption-backstops-store.test-support";
-import { deriveSupplyModelExitRouteObservation } from "../../src/lib/redemption-exit-route-observations";
+import { deriveSupplyModelExitRouteObservation } from "../../src/lib/redemption-backstop/redemption-exit-route-observations";
 import { computeRedemptionPayloadFingerprint, projectReportCardsFixedInputMethodologyVersions } from "@shared/lib/report-cards-fixed-input-identity";
 import { normalizeSafetyScoreV9CompilerInput } from "../../src/lib/safety-score-v9/native-input";
 

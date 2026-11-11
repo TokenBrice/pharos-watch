@@ -8,10 +8,10 @@ import type {
   DepegRow,
   DexPoolSource,
   DexPriceRow,
-} from "../../lib/depeg-helpers";
-import type { NativePegQuote } from "../../lib/native-peg-quotes";
-import type { PendingDepegUpsertParams } from "../../lib/depeg-pending";
-import type { AuthoritativePegSignalRejectionReason } from "../authoritative-peg-signal";
+} from "../../lib/depeg-detection/depeg-helpers";
+import type { NativePegQuote } from "../../lib/pricing/native-peg-quotes";
+import type { PendingDepegUpsertParams } from "../../lib/depeg-detection/depeg-pending";
+import type { AuthoritativePegSignalRejectionReason } from "./authoritative-peg-signal";
 
 export type DepegStageResult =
   | { status: "completed" }

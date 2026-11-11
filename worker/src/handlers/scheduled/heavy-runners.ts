@@ -1,6 +1,6 @@
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import type { SlotRunnerLoader } from "./runner-types";
-import { waitForV9MemoryLaneRelease } from "../../lib/v9-slot-window";
+import { waitForV9MemoryLaneRelease } from "../../lib/safety-score-v9/v9-slot-window";
 
 // Compile-time import boundary, not a second schedule/ownership authority.
 // Static runner imports would initialize compute/charts before admission and

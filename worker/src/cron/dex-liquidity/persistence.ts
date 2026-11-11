@@ -18,7 +18,7 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
+import { POOL_CHALLENGE_MIN_TVL } from "../../lib/pricing/price-depeg-voting-policy";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";

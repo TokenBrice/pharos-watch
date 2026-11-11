@@ -18,22 +18,22 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../../cron/dex-liquidity/orchestrator", () => ({
   consumeDexLiquidityScoringStage: mocks.consumeDexLiquidityScoringStage,
 }));
-vi.mock("../../../cron/prepare-safety-score-v9-input", () => ({
+vi.mock("../../../cron/safety-score-v9/prepare-safety-score-v9-input", () => ({
   prepareSafetyScoreV9Input: mocks.prepareSafetyScoreV9Input,
 }));
 vi.mock("../../../cron/cron-sentinel", () => ({
   runCronSentinel: mocks.runCronSentinel,
 }));
-vi.mock("../../../cron/sync-stablecoin-charts", () => ({
+vi.mock("../../../cron/market-supply/sync-stablecoin-charts", () => ({
   syncStablecoinCharts: mocks.syncStablecoinCharts,
 }));
-vi.mock("../../../lib/stablecoins-cache", () => ({
+vi.mock("../../../lib/market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: mocks.loadStablecoinsCache,
 }));
-vi.mock("../../../lib/peg-analytics", () => ({
+vi.mock("../../../lib/depeg-detection/peg-analytics", () => ({
   derivePegAnalyticsSnapshot: mocks.derivePegAnalyticsSnapshot,
 }));
-vi.mock("../../../lib/peg-analytics-cache", () => ({
+vi.mock("../../../lib/depeg-detection/peg-analytics-cache", () => ({
   publishPegAnalyticsCache: mocks.publishPegAnalyticsCache,
 }));
 

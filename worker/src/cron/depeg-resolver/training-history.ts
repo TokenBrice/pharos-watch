@@ -1,5 +1,5 @@
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
-import { auditVerdictNotInSql } from "../../lib/depeg-audit";
+import { auditVerdictNotInSql } from "../../lib/depeg-detection/depeg-audit";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { HISTORICAL_ROW_CAP, TRAINING_ROLLUP_BACKFILL_EVENT_CAP } from "./constants";
 import { formatDdrrFailure, placeholders } from "./utils";

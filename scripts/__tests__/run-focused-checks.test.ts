@@ -32,7 +32,7 @@ describe("focused checks", () => {
   });
 
   it("synthesizes domain baselines without broad structural or ignored projection checks", () => {
-    for (const path of ["worker/src/cron/sync-yield-data.ts", "shared/data/stablecoins/coins/usdc-circle.json", "scripts/ci/check-env-contract.ts"]) {
+    for (const path of ["worker/src/cron/yield-sync/sync-yield-data.ts", "shared/data/stablecoins/coins/usdc-circle.json", "scripts/ci/check-env-contract.ts"]) {
       const commands = buildFocusedCheckPlan([path]).checks.map((check) => check.command);
       expect(commands).toContain("npm run check:doc-sync");
       expect(commands).not.toContain("npm run check:structural");

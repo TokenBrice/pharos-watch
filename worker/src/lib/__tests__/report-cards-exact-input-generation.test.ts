@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveExactDexPublicationGeneration } from "../report-cards-snapshot";
+import { resolveExactDexPublicationGeneration } from "../safety-score-v9/report-cards-snapshot";
 
 const ACTIVE_IDS = ["coin-a", "coin-b"];
 const UPDATED_AT = 1_783_891_100;

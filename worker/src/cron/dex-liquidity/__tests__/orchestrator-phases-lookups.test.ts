@@ -3,8 +3,8 @@ import type { StablecoinData } from "@shared/types/supply";
 
 const loadStablecoinsCache = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../lib/stablecoins-cache", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../../../lib/stablecoins-cache")>(),
+vi.mock("../../../lib/market-supply/stablecoins-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/market-supply/stablecoins-cache")>(),
   loadStablecoinsCache,
 }));
 

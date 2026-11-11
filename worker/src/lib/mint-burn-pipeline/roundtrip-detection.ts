@@ -1,8 +1,8 @@
 import { throwIfAborted } from "../abort";
-import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-contracts";
 import { executeMintBurnMaintenanceMutations } from "./materialization-debt";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
-import { mintBurnSupplyProofAcceptedSql } from "../mint-burn-supply-proofs";
+import { mintBurnConfigKey } from "./mint-burn-contract-identity";
+import { mintBurnSupplyProofAcceptedSql } from "./mint-burn-supply-proofs";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 
 type RoundtripRow = Pick<MintBurnRow, "id" | "tx_hash" | "stablecoin_id" | "chain_id" | "direction"

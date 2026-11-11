@@ -18,15 +18,15 @@ import { loadDdrContext } from "../../cron/depeg-resolver/context";
 import { activeRow } from "../../cron/depeg-resolver/__tests__/depeg-resolver.test-support";
 import { collectSafetyScores } from "../../cron/daily-digest/collectors-risk";
 import { computeDigestMintBurnFtqFlows } from "../../cron/daily-digest/mint-burn-ftq";
-import { snapshotSafetyGradeHistory } from "../../cron/snapshot-safety-grade-history";
-import { loadDigestSafetyContext, checkDigestSafetyContextForDelivery } from "../digest-safety-context";
+import { snapshotSafetyGradeHistory } from "../../cron/safety-score-v9/snapshot-safety-grade-history";
+import { loadDigestSafetyContext, checkDigestSafetyContextForDelivery } from "../digest/digest-safety-context";
 import { checkSafetyScoreV9Publication } from "../canary-checks";
 import { loadPublicationHealth } from "../publication-contract";
 import { getDatasetFreshness } from "../status/derived-data";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
-import * as activeSource from "../safety-score-active-source";
-import * as scoreIndex from "../safety-score-index";
-import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../report-cards-v9-cache";
+import * as activeSource from "../safety-score-v9/safety-score-active-source";
+import * as scoreIndex from "../safety-score-v9/safety-score-index";
+import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../safety-score-v9/report-cards-v9-cache";
 import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publication, requireCurrentSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import {
   loadSafetyScoreV9PublicationStoredRow, shardSafetyScoreV9CohortStoredValue,

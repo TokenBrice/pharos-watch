@@ -19,11 +19,11 @@ import {
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "@shared/lib/yield-benchmark-freshness";
-import { type YieldSourceFreshness } from "../../lib/yield-ranking-helpers";
+import { type YieldSourceFreshness } from "../../lib/yield/yield-ranking-helpers";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { type YieldHistorySnapshotRow } from "./history-repository";
-import { detectWarningSignals } from "../yield-helpers";
+import { detectWarningSignals } from "./yield-helpers";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
 import { assessYieldSourceGroup } from "./candidate-assessment";
 import { selectYieldSourceGroup } from "./candidate-selection";

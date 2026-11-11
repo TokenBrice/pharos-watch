@@ -3,7 +3,7 @@ import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-c
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input-core";
 import { makeV9Extension } from "../../test-helpers/v9-fixed-input-extensions";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
-import { computeDexDeploymentSupplyCoverage } from "../report-cards-snapshot-inputs";
+import { computeDexDeploymentSupplyCoverage } from "../safety-score-v9/report-cards-snapshot-inputs";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
 

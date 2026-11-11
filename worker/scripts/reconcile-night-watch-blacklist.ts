@@ -9,8 +9,8 @@ import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/regist
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import { chunkArray } from "../src/lib/collections";
-import { CONTRACT_CONFIGS } from "../src/lib/blacklist-contracts";
-import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
+import { CONTRACT_CONFIGS } from "../src/lib/blacklist/blacklist-contracts";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist/blacklist-cache-keys";
 import { fetchKycRipRows, parsePositiveInteger, type KycRipCurrentBalanceRow } from "./lib/kyc-rip";
 import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { createRemoteD1Client, sqlString, type RemoteD1Client } from "./lib/remote-d1";

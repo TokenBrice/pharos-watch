@@ -4,7 +4,7 @@ import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type * as BackstopConfigs from "@shared/lib/redemption-backstop-configs";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,

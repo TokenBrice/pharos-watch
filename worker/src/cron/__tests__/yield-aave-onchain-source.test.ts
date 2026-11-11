@@ -55,12 +55,12 @@ vi.mock("../yield-sync/sources-rpc", async (importOriginal) => {
   };
 });
 
-vi.mock("../sync-stablecoins", () => ({ syncStablecoins: vi.fn() }));
-vi.mock("../sync-fx-rates", () => ({ syncFxRates: vi.fn(async () => ({ status: "ok" })) }));
-vi.mock("../snapshot-supply", () => ({ snapshotSupply: vi.fn(async () => ({ status: "ok" })) }));
-vi.mock("../snapshot-chain-supply", () => ({ snapshotChainSupply: vi.fn(async () => ({ status: "ok" })) }));
-vi.mock("../snapshot-psi", () => ({ snapshotPsiDaily: vi.fn() }));
-vi.mock("../snapshot-public-dataset", () => ({ snapshotPublicDataset: vi.fn() }));
+vi.mock("../market-supply/sync-stablecoins", () => ({ syncStablecoins: vi.fn() }));
+vi.mock("../pricing/sync-fx-rates", () => ({ syncFxRates: vi.fn(async () => ({ status: "ok" })) }));
+vi.mock("../market-supply/snapshot-supply", () => ({ snapshotSupply: vi.fn(async () => ({ status: "ok" })) }));
+vi.mock("../market-supply/snapshot-chain-supply", () => ({ snapshotChainSupply: vi.fn(async () => ({ status: "ok" })) }));
+vi.mock("../psi/snapshot-psi", () => ({ snapshotPsiDaily: vi.fn() }));
+vi.mock("../public-datasets/snapshot-public-dataset", () => ({ snapshotPublicDataset: vi.fn() }));
 
 
 import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
@@ -69,7 +69,7 @@ import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sou
 import { loadSupplementalSourceFamilies } from "../yield-sync/sources-supplemental";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
-import { syncStablecoins } from "../sync-stablecoins";
+import { syncStablecoins } from "../market-supply/sync-stablecoins";
 import { runQuarterHourlySlot } from "../../handlers/scheduled/quarter-hourly";
 import { makeScheduledRuntime } from "../../test-helpers/scheduled-runtime.test-support";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";

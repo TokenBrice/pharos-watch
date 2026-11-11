@@ -24,11 +24,11 @@ import {
 } from "./depeg-resolver.test-support";
 import { seedAssessmentSample, seedHistoricalEvent, seedResolverInputs } from "./context.test-support";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
+import * as activeSafetyScoreSource from "../../../lib/safety-score-v9/safety-score-active-source";
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../../test-helpers/report-cards-v9";
 import { toStructural } from "../utils";
-import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../../lib/mint-burn-contract-identity";
+import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../../lib/mint-burn-pipeline/scan-coverage";
 import * as mintBurnFlowsService from "../../../lib/mint-burn-flows-service";
 

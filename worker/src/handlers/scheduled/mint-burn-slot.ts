@@ -1,5 +1,5 @@
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { syncMintBurn } from "../../cron/sync-mint-burn";
+import { syncMintBurn } from "../../cron/mint-burn/sync-mint-burn";
 import type { MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";

@@ -6,15 +6,15 @@ import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { rethrowIfAborted } from "../abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../stablecoin-publication-coverage";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
+import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../market-supply/stablecoin-publication-coverage";
 import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
   errorClassFor,
   type PricingAssetAttemptRecord,
-} from "../pricing-provider-diagnostics";
-import type { PriceValidationReferences } from "../price-validation";
+} from "../pricing/pricing-provider-diagnostics";
+import type { PriceValidationReferences } from "../pricing/price-validation";
 import { usdvJupiterProvider } from "./usdv-jupiter";
 import { susdSolayerNavProvider } from "./susd-solayer";
 import { usdafUniswapV4Provider } from "./usdaf-uniswap-v4";

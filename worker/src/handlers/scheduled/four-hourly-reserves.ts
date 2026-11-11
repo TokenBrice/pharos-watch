@@ -13,7 +13,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * Recovery serializes Kinesis behind the head to retain its separate 3/6 budget.
  * Connection budget: 4/6 peak (3 + 1) across the declared chains.
  */
-import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
+import { syncKinesisSupply } from "../../cron/market-supply/sync-kinesis-supply";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotTask, type ScheduledSlotTaskChain } from "./slot-groups";
 import {
@@ -33,8 +33,8 @@ import {
 } from "../../cron/reserve-adapters/reserve-checkpoint";
 import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-checkpoint-primitives";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
-import { getReserveProducerPriority } from "../../lib/reserve-producer-priority";
-import { LIVE_RESERVE_CONTINUATION_BUDGETS, LIVE_RESERVE_PRODUCER_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
+import { getReserveProducerPriority } from "../../lib/live-reserves/reserve-producer-priority";
+import { LIVE_RESERVE_CONTINUATION_BUDGETS, LIVE_RESERVE_PRODUCER_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../../cron/live-reserves/sync-live-reserves-config";
 
 const SLOT_LABEL = "four-hourly reserve sync slot";
 
@@ -106,7 +106,7 @@ function buildReserveSyncSlotGroups(
           run: async (signal, reportProgress) => {
             // An exhausted recovery checkpoint needs only its consumers, not
             // the complete reserve-adapter graph retained beside their inputs.
-            const { syncLiveReserves } = await import("../../cron/sync-live-reserves");
+            const { syncLiveReserves } = await import("../../cron/live-reserves/sync-live-reserves");
             const slice = resolveLiveReserveSyncBudgetConfig(
               runtime.recoveryCheckpoint ? LIVE_RESERVE_CONTINUATION_BUDGETS : LIVE_RESERVE_PRODUCER_BUDGETS,
             );
@@ -141,7 +141,7 @@ function buildReserveSyncSlotGroups(
           // during every reserve adapter attempt, before this consumer is due.
           run: async (signal, reportProgress) => {
             await reportProgress({ stage: "initializing-redemption-backstops" });
-            const { syncRedemptionBackstops } = await import("../../cron/sync-redemption-backstops");
+            const { syncRedemptionBackstops } = await import("../../cron/redemption-backstop/sync-redemption-backstops");
             return syncRedemptionBackstops(runtime.db, signal, { chainRpcs: runtime.chainRpcs }, reportProgress);
           },
         },

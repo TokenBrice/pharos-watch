@@ -6,7 +6,7 @@ import sourceAsset from "@shared/data/stablecoins/coins.generated.json";
 import * as canonicalRegistry from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
-import decodedAsset, { decodeWorkerStablecoinCatalog } from "../full-stablecoin-catalog";
+import decodedAsset, { decodeWorkerStablecoinCatalog } from "../market-supply/full-stablecoin-catalog";
 
 function fixture(record: unknown, id = "fixture") {
   const raw = Buffer.from(JSON.stringify(record));

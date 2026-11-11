@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { fetchOrcaPools } from "../fetch-orca";
-import { convertToGtNewPools, normalizeDexApiPoolsForMerge } from "../../../lib/dex-api-pool-shaping";
+import { convertToGtNewPools, normalizeDexApiPoolsForMerge } from "../../../lib/dex-liquidity/dex-api-pool-shaping";
 
 function orcaPool(decimalsA: number, decimalsB: number, balanceA = "1000000") {
   return {

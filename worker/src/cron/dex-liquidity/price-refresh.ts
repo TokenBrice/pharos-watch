@@ -7,10 +7,10 @@ import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/typ
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { CG_ONCHAIN_MIN_RESERVE_USD, fetchCgPoolsByAddressesWithStatus, fitsCgPoolBatch, isAddressableCgPoolId, onchainRateLimit, type CgPoolsByAddressResult } from "../../lib/coingecko-onchain";
+import { CG_ONCHAIN_MIN_RESERVE_USD, fetchCgPoolsByAddressesWithStatus, fitsCgPoolBatch, isAddressableCgPoolId, onchainRateLimit, type CgPoolsByAddressResult } from "../../lib/dex-liquidity/coingecko-onchain";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { SlotDeadline } from "../../lib/cron-timeouts";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { parseCgPool } from "./coingecko-onchain-shared";
 import { evaluatePoolPriceCoherence } from "./pool-price-coherence";
 import { isPlausibleDexObservationPrice } from "./price-sanity";

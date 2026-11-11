@@ -277,7 +277,7 @@ describe("adaptive PR checks", () => {
 
 
   it.each([
-    "worker/src/lib/full-stablecoin-catalog.ts",
+    "worker/src/lib/market-supply/full-stablecoin-catalog.ts",
     "worker/src/lib/safety-score-v9/candidate.ts",
     "worker/src/lib/safety-score-v9/extension.ts",
     "worker/src/lib/safety-score-v9/fact-set.ts",
@@ -300,7 +300,7 @@ describe("adaptive PR checks", () => {
   it("selects structural checks for production and validation surfaces", () => {
     for (const path of [
       "src/lib/feature-flags.ts",
-      "worker/src/cron/sync-stablecoins.ts",
+      "worker/src/cron/market-supply/sync-stablecoins.ts",
       "scripts/ci/check-provider-resilience.ts",
       ".github/workflows/nightly-validation.yml",
     ]) {
@@ -309,7 +309,7 @@ describe("adaptive PR checks", () => {
   });
 
   it("retains cron topology validation without duplicating its cron-sync evaluator", () => {
-    const names = staticNames(["worker/src/cron/sync-stablecoins.ts"]);
+    const names = staticNames(["worker/src/cron/market-supply/sync-stablecoins.ts"]);
     expect(names).toContain("check:cron-connections");
     expect(names).not.toContain("check:cron-sync");
   });
@@ -345,7 +345,7 @@ describe("adaptive PR checks", () => {
     ["src/types/global.d.ts", true],
     ["src/generated/schema.ts", true],
     ["docs/testing.md", false],
-    ["worker/src/cron/sync-stablecoins.ts", false],
+    ["worker/src/cron/market-supply/sync-stablecoins.ts", false],
     ["src/lib/example.test.ts", false],
     ["worker/src/cron/__tests__/x.test.ts", false],
   ])("selects root typecheck only for inputs tsconfig.typecheck.json can observe: %s -> %s", (path, expected) => {
@@ -425,7 +425,7 @@ describe("adaptive PR checks", () => {
     ];
     expect(staticNames(changedFiles))
       .not.toContain("check:structural");
-    expect(staticNames([...changedFiles, "worker/src/cron/sync-stablecoins.ts"])).toContain("check:structural");
+    expect(staticNames([...changedFiles, "worker/src/cron/market-supply/sync-stablecoins.ts"])).toContain("check:structural");
   });
 
   it("retains every structural guard in order", () => {

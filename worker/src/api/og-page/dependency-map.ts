@@ -3,8 +3,8 @@ import { formatCurrency } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { projectDependencyGraph } from "@shared/types/dependency-graph";
-import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-v9/safety-score-active-source";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { freshnessReason, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 
 /**

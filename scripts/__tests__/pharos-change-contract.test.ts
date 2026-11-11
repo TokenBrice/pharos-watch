@@ -367,9 +367,9 @@ describe("reading selectors and context modes", () => {
     ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", false],
     ["functions/safety-scores/map.json.ts", true],
     ["shared/lib/supply.ts", false],
-    ["worker/src/cron/sync-stablecoins.ts", true],
+    ["worker/src/cron/market-supply/sync-stablecoins.ts", true],
     ["worker/src/lib/status/derived-data.ts", false],
-    ["worker/src/lib/collateral-drift.ts", false],
+    ["worker/src/lib/live-reserves/collateral-drift.ts", false],
   ] as const)("keeps integrity ADRs primary and undemoted for %s", (file, methodology) => {
     for (const mode of ["auto", "contract"] as const) {
       const contract = classifyChangedFiles([file], mode);
@@ -495,7 +495,7 @@ describe("reading selectors and context modes", () => {
     "src/components/ui/button.tsx", "src/app/layout.tsx", "data/failure-scenarios.json",
     "src/lib/status-dashboard-model.ts", "src/lib/status/probe-model.ts",
     "worker/src/lib/status/derived-data.ts", "worker/src/lib/status/evaluation-context.ts",
-    "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/sync-stablecoins/stages.ts",
+    "worker/src/cron/market-supply/sync-stablecoins.ts", "worker/src/cron/sync-stablecoins/stages.ts",
   ])("keeps the emitted check plan byte-identical across modes for %s", async (file) => {
     const outputs = [];
     for (const context of ["auto", "contract"] as const) {
@@ -545,7 +545,7 @@ describe("reading selectors and context modes", () => {
     expect(route([catalog]).mappings.map((mapping) => mapping.id)).toContain(registry.id);
     expectDocs(route([catalog]), docKeys(registry).filter((key) => key !== failure));
     expect(docKeys(route([catalog]))).not.toContain(failure);
-    const file = "worker/src/cron/sync-stablecoins.ts", stage = "worker/src/cron/sync-stablecoins/stages.ts";
+    const file = "worker/src/cron/market-supply/sync-stablecoins.ts", stage = "worker/src/cron/sync-stablecoins/stages.ts";
     const contract = route([file]), peer = route([stage]);
     expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["pricing-pipeline", "worker-cron", "worker-runtime"]);
     for (const field of ["docs", "requiredDocs", "background", "hardRules", "deploy"] as const) expect(contract[field]).toEqual(peer[field]);
@@ -583,8 +583,8 @@ describe("reading selectors and context modes", () => {
   });
 
   it.each([
-    "worker/src/cron/compute-safety-score-v9.ts",
-    "worker/src/cron/prepare-safety-score-v9-input.ts",
+    "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts",
+    "worker/src/cron/safety-score-v9/prepare-safety-score-v9-input.ts",
     "worker/src/lib/safety-score-v9/publication-journal.ts",
     "worker/src/lib/safety-score-v9/publication-replay-capture.ts",
     "worker/src/lib/safety-score-v9/publication-runner.ts",
@@ -604,7 +604,7 @@ describe("reading selectors and context modes", () => {
       [`public/datasets/${name}/2026-10-28.json`, "scripts-tooling", datasetDocs, true, []] as const),
     ...["scripts/maintenance/generate-public-datasets.ts", "scripts/lib/public-dataset-artifacts.ts", "src/lib/datasets/public-dataset-current.ts"].map((file) =>
       [file, "", datasetDocs, false, []] as const),
-    ["worker/src/lib/dexscreener.ts", "methodology-scoring", ["docs/dex-liquidity.md#discovery-cron", "docs/process/dex-liquidity-appendix.md#methodology-versioning"], false,
+    ["worker/src/lib/dex-liquidity/dexscreener.ts", "methodology-scoring", ["docs/dex-liquidity.md#discovery-cron", "docs/process/dex-liquidity-appendix.md#methodology-versioning"], false,
       ["worker/src/lib/__tests__/dexscreener.test.ts", "worker/src/cron/dex-discovery/__tests__/dexscreener-census.test.ts"]],
   ] as const)("routes %s to its domain docs and declared tests", (file, owner, docs, exact, tests) => {
     const contract = classifyChangedFiles([file]);
@@ -621,7 +621,7 @@ describe("reading selectors and context modes", () => {
 
   it.each([
     ["worker/src/lib/safety-score-v9/supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
-    ["worker/src/cron/sync-v9-supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
+    ["worker/src/cron/safety-score-v9/sync-v9-supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
     ["worker/src/lib/safety-score-v9/extension-bridge.ts", "bridge-in-flight-accounting"],
     ["shared/lib/safety-score-v9/control-bridge-join.ts", "bridge-in-flight-accounting"],
     ["shared/lib/safety-score-v9/__tests__/control-bridge-join.test.ts", "bridge-in-flight-accounting"],
@@ -672,7 +672,7 @@ describe("reading selectors and context modes", () => {
     expect(contract.checks.join("\n")).toContain("scripts/maintenance/__tests__/report-build-size.test.ts");
   });
 
-  it.each(["worker/src/cron/daily-digest.ts", "worker/src/cron/digest-publication-watchdog.ts"])(
+  it.each(["worker/src/cron/daily-digest/daily-digest.ts", "worker/src/cron/digest/digest-publication-watchdog.ts"])(
     "retains generation for digest producer %s", (file) => {
       expectDocs(classifyChangedFiles([file]), ["docs/digest-pipeline.md#generation"]);
     },
@@ -954,7 +954,7 @@ describe("representative --file routing", () => {
   });
 
   it("prints the same synthesized plan as focused checks", async () => {
-    const file = "worker/src/cron/sync-yield-data.ts";
+    const file = "worker/src/cron/yield-sync/sync-yield-data.ts";
     const result = await runContractCli(["--file", file, "--json"]);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
@@ -967,7 +967,7 @@ describe("representative --file routing", () => {
     ["worker/src/cron/dex-liquidity/orchestrator.ts", "docs/dex-liquidity.md"],
     ["worker/src/cron/dex-liquidity/lifecycle/source-slot.ts", "docs/process/dex-liquidity-appendix.md"],
     ["worker/src/cron/mint-burn/run.ts", "docs/mint-burn-flows.md"],
-    ["worker/src/cron/sync-mint-burn.ts", "docs/mint-burn-flows.md"],
+    ["worker/src/cron/mint-burn/sync-mint-burn.ts", "docs/mint-burn-flows.md"],
   ])("routes %s to its domain contract", (file, ownerDoc) => {
     const contract = route(file);
 

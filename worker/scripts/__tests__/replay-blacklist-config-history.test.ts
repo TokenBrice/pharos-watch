@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
+import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist/blacklist-contracts";
 import { parseEvmLogsWithCoverage } from "../../src/cron/blacklist/evm-source";
 import { buildBlacklistEventInsert } from "../../src/cron/blacklist/persistence";
 import type { AlchemyLogEntry } from "../../src/lib/alchemy-logs";
-import { BLACKLIST_CURRENT_BALANCE_COLUMNS, BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, buildBlacklistCurrentBalanceValues } from "../../src/lib/blacklist-current-balances";
+import { BLACKLIST_CURRENT_BALANCE_COLUMNS, BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, buildBlacklistCurrentBalanceValues } from "../../src/lib/blacklist/blacklist-current-balances";
 import { bindBackfillSql } from "../lib/backfill-d1";
 import { parseReplayArgs, runConfigHistoryReplay, fetchReplayLogs, SCRIPT_NAME, type ReplayDependencies } from "../replay-blacklist-config-history";
 import { sqliteRemoteD1, seedDerivedCaches, derivedCacheRows, ledgerRows, observation } from "./blacklist-current-balance-maintenance.test-support";

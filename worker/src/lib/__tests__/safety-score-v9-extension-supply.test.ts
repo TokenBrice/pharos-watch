@@ -5,7 +5,7 @@ import syzusdRiskReview from "@shared/data/stablecoins/domains/risk-review/syzus
 import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
 import xdaiRiskReview from "@shared/data/stablecoins/domains/risk-review/xdai-gnosis.json";
 import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deployment-catalog.test-support";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
 import {
   type V9ExtensionRegistryMeta,

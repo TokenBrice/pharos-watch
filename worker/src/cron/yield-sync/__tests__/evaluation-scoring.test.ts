@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolvePenaltyDerivedFields } from "../candidate-scoring";
-import { resolveEvidenceNullReason } from "../../../lib/yield-ranking-helpers";
+import { resolveEvidenceNullReason } from "../../../lib/yield/yield-ranking-helpers";
 
 const base = {
   apy30d: 5,

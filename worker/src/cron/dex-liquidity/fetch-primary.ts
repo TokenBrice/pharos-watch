@@ -2,11 +2,11 @@ import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../../lib/constants";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { isYieldRelevantDlPool } from "../yield-sync/cache";
-import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
+import { normalizeDexSymbol } from "../../lib/dex-liquidity/dex-cron-constants";
 import type {
   LlamaPool,
   CurveApiPayload,
@@ -26,7 +26,7 @@ import {
 } from "./constants";
 import { normalizeProtocol, classifyPoolType, isCryptoSwap, buildPoolFingerprint } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import {
   buildDexPriceObservationIdentity,
   buildPoolIdentity,

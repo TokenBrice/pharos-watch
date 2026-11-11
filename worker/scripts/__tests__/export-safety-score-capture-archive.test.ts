@@ -18,7 +18,7 @@ import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/rep
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, serializeSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
 import type { SafetyScoreCaptureArchiveObject } from "@shared/types/safety-score-capture-archive";
-import { buildFixedInputCacheEntry } from "../../src/lib/report-cards-fixed-input-cache-codec";
+import { buildFixedInputCacheEntry } from "../../src/lib/safety-score-v9/report-cards-fixed-input-cache-codec";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { sha256Hex } from "@shared/lib/sha256";

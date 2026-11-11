@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
 import {
   buildCoinCoverageMap,
   buildHourlyFlowSeries,
@@ -8,7 +8,7 @@ import {
   ETHEREUM_CHAIN_ID,
   readMintBurnCronSnapshot,
 } from "../mint-burn-flows-service";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/mint-burn-contract-identity";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
 import type { MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";

@@ -4,7 +4,7 @@ import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import {
   mergeStructuralSupplementalHistoryIntoCharts,
   STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
-} from "../stablecoin-charts-reconciliation";
+} from "../market-supply/stablecoin-charts-reconciliation";
 
 describe("stablecoin-charts reconciliation", () => {
   it("excludes llama-backed charts while preserving the audited empty BRZ legacy chart", () => {

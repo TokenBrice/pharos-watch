@@ -9,9 +9,9 @@ import {
   type SafetyScoreTapeProvenance,
 } from "@shared/types/tape-event";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
-import { SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL } from "../safety-score-history-v2";
-import { buildTapeEventId, deriveIssuerId, gradeRank, severityForScoreDowngrade } from "../tape-event-helpers";
-import type { TapeEventInsert } from "../tape-event-types";
+import { SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL } from "../safety-score-v9/safety-score-history-v2";
+import { buildTapeEventId, deriveIssuerId, gradeRank, severityForScoreDowngrade } from "./tape-event-helpers";
+import type { TapeEventInsert } from "./tape-event-types";
 import {
   finalizeProjectorBatch,
   fetchRowsWithTieExpansion,

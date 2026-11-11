@@ -3,7 +3,7 @@ import {
   SUPPLY_HISTORY_INSERT_MISSING_SQL,
   SUPPLY_HISTORY_UPSERT_SQL,
   writeSupplyHistoryBatch,
-} from "../../src/lib/supply-history-db";
+} from "../../src/lib/market-supply/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -14,12 +14,12 @@ import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../src/lib/constants";
-import { fetchCoinGeckoMarketHistory } from "../../src/lib/coingecko-market-history";
+import { fetchCoinGeckoMarketHistory } from "../../src/lib/pricing/coingecko-market-history";
 import type { ChainRpcConfig } from "../../src/lib/chain-registry";
 import { encodeJsonCursor, parseIntParam, parseJsonCursorParam } from "../../src/lib/api-params";
 import { jsonResponse } from "../../src/lib/api-response";
 import { binarySearchNearest } from "../../src/lib/binary-search";
-import { resolveMarketCap } from "../../src/lib/resolve-market-cap";
+import { resolveMarketCap } from "../../src/lib/market-supply/resolve-market-cap";
 import { selectBackfillCoins } from "../../src/lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse } from "../../src/lib/admin-job";
 import { fetchJsonWithRetry } from "../../src/lib/fetch-retry";
@@ -33,10 +33,10 @@ import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../src/lib/ev
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
   getOnChainSupplyExclusionConfig,
-} from "../../src/lib/onchain-supply-exclusions";
+} from "../../src/lib/market-supply/onchain-supply-exclusions";
 import { getPublicFallbackRpcUrls } from "../../src/lib/public-rpc-registry";
 import { extractDefiLlamaCoinChartPrices } from "../../src/api/stablecoin-detail/shared";
-import { fetchMarketBackfillPriceSeries, screenDailyPriceOutliers } from "../../src/lib/historical-market-prices";
+import { fetchMarketBackfillPriceSeries, screenDailyPriceOutliers } from "../../src/lib/pricing/historical-market-prices";
 import { parseOptionalDayWindow } from "../../src/lib/backfill-day-window";
 import { interpolateRateAtTimestamp, type TimestampedRatePoint } from "@shared/lib/rate-series";
 import {
@@ -45,7 +45,7 @@ import {
   OTHER_COIN_FX,
   PEG_TO_FX,
   SECONDARY_PEG_TO_FX,
-} from "../../src/lib/backfill-fx";
+} from "../../src/lib/pricing/backfill-fx";
 
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_BACKFILL_WINDOW_DAYS = 30;

@@ -17,8 +17,8 @@ import {
 } from "../authoritative-price-sources/susd-solayer";
 import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 import { fetchAuthoritativeLivePriceOverrides } from "../authoritative-price-sources";
-import { validatePrimaryPriceCandidate } from "../price-publish-policy";
-import { buildPriceValidationContext } from "../price-validation";
+import { validatePrimaryPriceCandidate } from "../pricing/price-publish-policy";
+import { buildPriceValidationContext } from "../pricing/price-validation";
 
 // Fixture capture instant: block time of Solana slot 450811104.
 const NOW = new Date("2026-09-26T22:38:14.000Z");

@@ -1,4 +1,4 @@
-import type { MintBurnType } from "../mint-burn-contracts";
+import type { MintBurnType } from "./mint-burn-contracts";
 
 export type SyncMintBurnStatus = "ok" | "degraded" | "error";
 export type MintBurnLane = "all" | "critical" | "extended";

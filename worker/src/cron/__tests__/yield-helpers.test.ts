@@ -11,7 +11,7 @@ import {
   derivePysNullReason,
   getComparisonAnchorStaleThresholdMs,
   getRankingStaleThresholdMs,
-} from "../../lib/yield-ranking-helpers";
+} from "../../lib/yield/yield-ranking-helpers";
 import {
   DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
@@ -22,8 +22,8 @@ import {
   matchAllDlPools,
   findBestLendingPool,
   isBlockedYieldOpportunitySource,
-} from "../yield-helpers";
-import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
+} from "../yield-sync/yield-helpers";
+import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield/yield-utils";
 import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config-lending-protocols";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { makeDlYieldPool } from "./yield-resolve.test-support";

@@ -9,7 +9,7 @@ import type {
   DdrCanonicalIncident,
   DdrLockTiming,
   DdrV2StoreContracts,
-} from "../depeg-resolver-v2-contracts";
+} from "./depeg-resolver-v2-contracts";
 import type { ComputeDepegResolverV2Options, DdrEventDbRow, DdrPendingPromotionOutcomeRow } from "./types";
 import {
   fallbackIncidentForEvent,

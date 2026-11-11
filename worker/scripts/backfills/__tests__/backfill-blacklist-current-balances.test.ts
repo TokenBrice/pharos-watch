@@ -2,11 +2,11 @@ import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 import { handleBackfillBlacklistCurrentBalances } from "../backfill-blacklist-current-balances";
-import { getBlacklistConfigsForSymbolAndChain } from "../../../src/lib/blacklist-contracts";
+import { getBlacklistConfigsForSymbolAndChain } from "../../../src/lib/blacklist/blacklist-contracts";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import type * as BlacklistContractsModule from "../../../src/lib/blacklist-contracts";
+import type * as BlacklistContractsModule from "../../../src/lib/blacklist/blacklist-contracts";
 
-vi.mock("../../../src/lib/blacklist-contracts", async (importOriginal) => {
+vi.mock("../../../src/lib/blacklist/blacklist-contracts", async (importOriginal) => {
   const actual = await importOriginal<typeof BlacklistContractsModule>();
   const [currentOptimismUsdt] = actual.getBlacklistConfigsForSymbolAndChain("USDT", "optimism");
   // Retain the retired deployment only in this historical-row isolation fixture,

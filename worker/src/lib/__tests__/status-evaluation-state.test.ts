@@ -28,8 +28,8 @@ import {
   evaluateStablecoinActivePriceCoverage,
   STABLECOIN_PRICE_GAP_REVIEWS,
   type StablecoinPriceGapReview,
-} from "../stablecoin-publication-coverage";
-import { DEPEG_BLIND_EVENT_REVIEWS } from "../canary-checks-depeg";
+} from "../market-supply/stablecoin-publication-coverage";
+import { DEPEG_BLIND_EVENT_REVIEWS } from "../depeg-detection/canary-checks-depeg";
 
 function makeReserveComposition(
   overrides?: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>>,

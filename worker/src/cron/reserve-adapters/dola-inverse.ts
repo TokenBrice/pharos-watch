@@ -1,5 +1,5 @@
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import type { ReserveSlice } from "@shared/types/reserves";
 import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";

@@ -16,7 +16,7 @@ import {
   encodeUint256,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { requireChainlinkLatestRoundData } from "../../lib/pricing/chainlink-round-data";
 import {
   decimalNumberFromBigInt,
   decimalStringFromBigInt,

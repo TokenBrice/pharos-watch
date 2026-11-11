@@ -30,13 +30,13 @@ Known version-specific `/methodology/pdf/*.pdf` aliases redirect directly to the
 
 | Domain | Owning contract | Runtime entry |
 | --- | --- | --- |
-| Pricing | [Pricing](./pricing-pipeline.md) | `worker/src/lib/price-consensus.ts`, sync-stablecoins enrichment |
-| PSI | [Stability Index](./stability-index.md) | `worker/src/lib/stability-index.ts`, `shared/lib/psi-policy.ts` |
+| Pricing | [Pricing](./pricing-pipeline.md) | `worker/src/lib/pricing/price-consensus.ts`, sync-stablecoins enrichment |
+| PSI | [Stability Index](./stability-index.md) | `worker/src/lib/psi/stability-index.ts`, `shared/lib/psi-policy.ts` |
 | Safety / exposure | [Report cards](./report-cards.md), [Dependency map](./dependency-map.md) | `shared/lib/safety-score-v9/`, `shared/lib/dependency-exposure.ts` |
 | Published mint component | [Mint authority](./mint-authority-scoring.md) | `shared/lib/safety-score-v9/control.ts`, `mint-posture.ts` |
 | Liquidity / redemption | [DEX](./dex-liquidity.md), [Redemption](./redemption-backstops.md) | DEX cron, `shared/lib/exit-route-scoring.ts` |
 | Classification | [Taxonomy](./stablecoin-taxonomy-pages.md) | `shared/lib/classification.ts`, `filter-tags.ts` |
-| Flows / yield | [Flows](./mint-burn-flows.md), [Yield](./yield-intelligence.md) | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/yield-scoring.ts` |
+| Flows / yield | [Flows](./mint-burn-flows.md), [Yield](./yield-intelligence.md) | `worker/src/lib/mint-burn-pipeline/mint-burn-scoring.ts`, `shared/lib/yield-scoring.ts` |
 | Peg / DEWS / DDR | [Depeg](./depeg-detection.md), [DEWS](./dews.md), [Resolver](./depeg-resolver.md) | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-resolver/` |
 | Freeze / chain health | [Blacklist](./blacklist-tracker.md), [Chain Health](./chain-health.md) | blacklist cron/contracts, `shared/lib/chains/health.ts` |
 

@@ -4,7 +4,7 @@ import {
   makeDexApiFetchResult,
   type DexApiFetchResult,
   type DexApiPool,
-} from "../../lib/dex-api-common";
+} from "../../lib/dex-liquidity/dex-api-common";
 import { isDexApiRecord } from "./direct-api-json";
 import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 

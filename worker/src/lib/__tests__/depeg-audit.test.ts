@@ -5,8 +5,8 @@ import type { DepegEvent } from "@shared/types/peg";
 import { computePegScore } from "@shared/lib/peg-score";
 import { DISPUTED_AUDIT_VERDICTS, DDR_INELIGIBLE_AUDIT_VERDICTS, PEG_SCORE_EXCLUDED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { isDdrIneligibleAuditVerdict, isDisputedAuditVerdict, isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
-import { auditVerdictNotInSql, notDisputedAuditVerdictSql } from "../depeg-audit";
-import { rowToDepegEvent, type DepegRow } from "../depeg-helpers";
+import { auditVerdictNotInSql, notDisputedAuditVerdictSql } from "../depeg-detection/depeg-audit";
+import { rowToDepegEvent, type DepegRow } from "../depeg-detection/depeg-helpers";
 import { sealPredictionFixture, withSqliteD1 } from "./depeg-resolver-ddrv2-store.test-support";
 
 const cases = [

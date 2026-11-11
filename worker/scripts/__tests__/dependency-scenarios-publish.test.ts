@@ -10,13 +10,13 @@ import { DEPENDENCY_SCENARIOS_CACHE_PREFIX } from "@shared/types/dependency-scen
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildSafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
-import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/report-cards-v9-cache";
+import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/safety-score-v9/report-cards-v9-cache";
 import { buildSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
-import { buildFixedInputCacheEntry } from "../../src/lib/report-cards-fixed-input-cache-codec";
+import { buildFixedInputCacheEntry } from "../../src/lib/safety-score-v9/report-cards-fixed-input-cache-codec";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, serializeSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../src/lib/safety-score-v9/publication-health";
 import { makeV9FixedInput, makeXautObservation } from "../../src/test-helpers/v9-fixed-input";
-import { normalizeFixedInput } from "../../src/lib/report-cards-fixed-input";
+import { normalizeFixedInput } from "../../src/lib/safety-score-v9/report-cards-fixed-input";
 import { deriveXautRepresentationGroupSupplyAttribution } from "../../src/lib/safety-score-v9/xaut-supply-attribution-contract";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 import { DEPENDENCY_SCENARIO_CHUNK_BYTES, DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT, DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER, DEPENDENCY_SCENARIO_READER_VERSION_HEADER } from "@shared/types/dependency-scenario-storage";

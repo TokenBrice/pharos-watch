@@ -1,6 +1,6 @@
 import { deriveCurrentPegObservationMap } from "../../lib/current-peg-observations";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
-import { auditVerdictNotInSql } from "../../lib/depeg-audit";
+import { auditVerdictNotInSql } from "../../lib/depeg-detection/depeg-audit";
 import {
   groupIncidents,
   quarantinedCoins,
@@ -24,18 +24,18 @@ import {
   selectLiquidityObservation,
   selectTrendBaseline,
   type DexHistoryRow,
-} from "../../lib/dex-liquidity-response";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+} from "../../lib/dex-liquidity/dex-liquidity-response";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity/dex-liquidity";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { tallyMintBurnHourlyBucket, type MintBurnValuationTally } from "@shared/lib/mint-burn-valuation";
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification, tallyMintBurnClassificationBucket } from "@shared/lib/mint-burn-classification";
-import { hasMintBurnClassificationReview } from "../../lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../../lib/mint-burn-pipeline/mint-burn-classification";
 import {
   loadRedemptionBackstopLiveSignalRows,
   RedemptionBackstopSnapshotUnavailableError,
-} from "../../lib/redemption-backstops-store";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
+} from "../../lib/redemption-backstop/redemption-backstops-store";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-v9/safety-score-active-source";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
@@ -44,7 +44,7 @@ import {
   TRAINING_WINDOW_SEC,
 } from "./constants";
 import { MINT_BURN_COVERED_COIN_IDS } from "./mint-burn-coverage";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { readDdrOpenTrainingHistory, readDdrTrainingHistory } from "./training-history";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { buildFixedInputCacheEntry, FixedInputCacheEnvelopeFields, parseFixedInputCacheEntry } from "../report-cards-fixed-input-cache-codec";
+import { buildFixedInputCacheEntry, FixedInputCacheEnvelopeFields, parseFixedInputCacheEntry } from "./report-cards-fixed-input-cache-codec";
 import { normalizeSafetyScoreV9CompilerInput, type SafetyScoreV9CompilerInput } from "./native-input";
 import { parseSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";

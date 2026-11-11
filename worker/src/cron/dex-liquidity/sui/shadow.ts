@@ -7,7 +7,7 @@ import { parseUnits } from "viem/utils";
 import { throwIfAborted } from "../../../lib/abort";
 import { getCache, setCachesAt } from "../../../lib/db-cache";
 import { loadDwellirBudgetState, recordDwellirCredits, type DwellirBudgetEnv } from "../../../lib/rpc-provider-budget";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/market-supply/stablecoins-cache";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../source-pagination-state";
 import { createSuiTransactionCheckpointResolver } from "./archival-checkpoints";
 import { quoteSuiClmmExactIn } from "./clmm-quote";

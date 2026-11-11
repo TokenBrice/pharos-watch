@@ -11,8 +11,8 @@ import {
   buildPublicDepegEventsPageQuery,
   decodeActiveIncidentProjections,
   prepareActiveIncidentProjections,
-} from "../depeg-event-projection";
-import { prepareDepegEventsCountStatements } from "../depeg-events-count-cache";
+} from "../depeg-detection/depeg-event-projection";
+import { prepareDepegEventsCountStatements } from "../depeg-detection/depeg-events-count-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

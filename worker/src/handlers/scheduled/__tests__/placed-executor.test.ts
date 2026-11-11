@@ -13,9 +13,9 @@ import { makeExecutionContext } from "../../../test-helpers/__shared/auth";
 import { compactCronMetadataForPersistence } from "../../../lib/cron-metadata-persistence";
 
 const mocks = vi.hoisted(() => ({ projectTape: vi.fn(), dews: vi.fn(), psi: vi.fn() }));
-vi.mock("../../../cron/project-tape", () => ({ projectTape: mocks.projectTape }));
+vi.mock("../../../cron/tape/project-tape", () => ({ projectTape: mocks.projectTape }));
 vi.mock("../../../lib/dews/service", () => ({ computeAndStoreDEWS: mocks.dews }));
-vi.mock("../../../cron/stability-index", () => ({ computeAndStoreStabilityIndex: mocks.psi }));
+vi.mock("../../../cron/psi/stability-index", () => ({ computeAndStoreStabilityIndex: mocks.psi }));
 import { handlePlacedExecutorFetch, runProjectTapeCanary } from "../placed-executor";
 import { runDewsPsiSlot } from "../dews-psi";
 import heavyWorker from "../../../index.heavy";

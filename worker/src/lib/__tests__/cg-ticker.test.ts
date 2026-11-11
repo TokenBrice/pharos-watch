@@ -9,7 +9,7 @@ import {
   fetchCgTickerPricesDetailed,
   pickBestTicker,
   type CgTickerConfig,
-} from "../cg-ticker";
+} from "../pricing/cg-ticker";
 
 const KAU_CONFIG: CgTickerConfig = {
   stablecoinId: "kau-kinesis",

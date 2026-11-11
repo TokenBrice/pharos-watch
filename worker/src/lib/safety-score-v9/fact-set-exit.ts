@@ -36,7 +36,7 @@ import {
   findRedemptionReserveQuarantine, redemptionReserveQuarantineScope, resolveRedemptionReserveQuarantineCause,
 } from "./redemption-reserve-quarantine";
 import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
-import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
+import { usesPrimaryRedemptionReviewTerms } from "../redemption-backstop/redemption-exit-route-observations";
 import { hasUsableRedemptionCapacityObservation } from "./extension-routes";
 import type {
   V9AssetFactsV3,

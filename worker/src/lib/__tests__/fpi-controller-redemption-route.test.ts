@@ -3,7 +3,7 @@ import {
   buildFpiControllerV9ExitRouteObservation,
   parseAcceptedFpiControllerV9RouteState,
   type FpiControllerV9RouteState,
-} from "../fpi-controller-redemption-route";
+} from "../redemption-backstop/fpi-controller-redemption-route";
 
 const NOW = 1_790_000_000;
 const PEG_PRICE_USD = 1.1579360716249116;

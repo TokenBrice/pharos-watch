@@ -1,6 +1,6 @@
 import type { DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import type { PriceValidationReferences } from "../../../lib/price-validation";
+import type { PriceValidationReferences } from "../../../lib/pricing/price-validation";
 import type { UniV3ExecutionCandidate, UniswapV4ExecutionCandidate } from "../../measured-execution/candidate-types";
 import type { EvmV2ExecutionCandidate } from "../types";
 import type { SymbolLookups } from "../token-resolution-types";

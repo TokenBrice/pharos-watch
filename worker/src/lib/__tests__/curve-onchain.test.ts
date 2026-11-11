@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CURVE_POOL_CONFIGS, type CurvePoolConfig } from "@shared/lib/curve-pool-configs";
-import { fetchCurveOnchainPrices } from "../curve-onchain";
+import { fetchCurveOnchainPrices } from "../pricing/curve-onchain";
 import curveExpandedPostA19 from "@shared/lib/__tests__/fixtures/curve-expanded-post-a19.json";
 
 vi.mock("../evm-rpc", () => ({

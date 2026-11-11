@@ -35,7 +35,7 @@ import {
   type V9CauseResolutionDiagnostic,
 } from "@shared/types/safety-score-v9-causes";
 import { createReviewedAssetRegistry, createReviewedRegistryReferenceExpander } from "@shared/lib/safety-score-v9/reviewed-registry";
-import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
+import { usesPrimaryRedemptionReviewTerms } from "../redemption-backstop/redemption-exit-route-observations";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
 // Immutable imported evaluation input; validation failures stay asset-local.

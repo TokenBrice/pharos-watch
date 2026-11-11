@@ -403,7 +403,7 @@ describe("next-trigger lifecycle (Batch 4)", () => {
 
 describe("depeg lifecycle flags (Batch 5)", () => {
   it("flags stalled collapses and chronic shallow events from the Jul 18 replay", async () => {
-    const { classifyDepegLifecycle } = await import("../../lib/depeg-lifecycle");
+    const { classifyDepegLifecycle } = await import("../../lib/depeg-detection/depeg-lifecycle");
     const fixture = loadFixture("2026-07-18");
     const { topDepegs } = await replayCollector(seedsFromFixture(fixture.inputData), generatedAt(fixture.inputData));
     const lifecycleRows = topDepegs.map((depeg) => ({
@@ -433,7 +433,7 @@ describe("depeg lifecycle flags (Batch 5)", () => {
   });
 
   it("never flags rows without a live deviation", async () => {
-    const { classifyDepegLifecycle } = await import("../../lib/depeg-lifecycle");
+    const { classifyDepegLifecycle } = await import("../../lib/depeg-detection/depeg-lifecycle");
     const flags = classifyDepegLifecycle([
       { stablecoinId: "x", symbol: "X", ageHours: 24 * 40, currentBps: undefined, mcapUsd: 5e7 },
     ]);

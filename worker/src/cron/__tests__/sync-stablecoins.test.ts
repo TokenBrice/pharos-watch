@@ -11,14 +11,14 @@ import {
   makeSyncDb,
   trackCacheWrites,
 } from "./sync-stablecoins.test-support";
-import { syncStablecoins } from "../sync-stablecoins";
+import { syncStablecoins } from "../market-supply/sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";
 import { enrichMissingPrices, fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { detectDepegEvents } from "../detect-depegs";
-import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { detectDepegEvents } from "../depeg-detection/detect-depegs";
+import { confirmPendingDepegs } from "../depeg-detection/confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { StablecoinDataSchema } from "@shared/types/supply";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
@@ -75,26 +75,26 @@ vi.mock("../sync-stablecoins/enrich-prices", () => ({
   hasMissingPrice: vi.fn((asset: { price?: number | null }) => asset.price == null || typeof asset.price !== "number" || asset.price === 0),
   fetchPrimaryPrices: vi.fn(async () => ({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 } })),
 }));
-vi.mock("../detect-depegs", () => ({ detectDepegEvents: vi.fn(async () => ({ status: "completed", census: depegCensus })) }));
-vi.mock("../confirm-pending-depegs", () => ({ confirmPendingDepegs: vi.fn(async () => ({ status: "completed", providerDiagnostics: [] })) }));
+vi.mock("../depeg-detection/detect-depegs", () => ({ detectDepegEvents: vi.fn(async () => ({ status: "completed", census: depegCensus })) }));
+vi.mock("../depeg-detection/confirm-pending-depegs", () => ({ confirmPendingDepegs: vi.fn(async () => ({ status: "completed", providerDiagnostics: [] })) }));
 vi.mock("../../lib/authoritative-price-sources", () => ({
   createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 30_000) => ({ budgetMs, candidateCount: 0, attemptedCount: 0, successCount: 0, failedCount: 0, emptyCount: 0, skippedCircuitOpen: 0, skippedBudget: 0, timedOut: false })),
   fetchAuthoritativeLivePriceOverrides: vi.fn(async () => new Map()),
   getFreshSingleSourceNavParentId: vi.fn(() => null),
 }));
-vi.mock("../../lib/resolve-market-cap", () => ({ resolveMarketCap: vi.fn((...args: unknown[]) => args[0] ?? 0) }));
+vi.mock("../../lib/market-supply/resolve-market-cap", () => ({ resolveMarketCap: vi.fn((...args: unknown[]) => args[0] ?? 0) }));
 vi.mock("../../lib/fetch-retry", async (importOriginal) => ({
   ...(await importOriginal<typeof FetchRetry>()),
   ...mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }),
 }));
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
-vi.mock("../../lib/coingecko", () => ({
+vi.mock("../../lib/pricing/coingecko", () => ({
   cgUrl: vi.fn((path: string) => `https://api.coingecko.com${path}`),
   cgSimplePricePath: vi.fn((query: string) => `/simple/price?${query}&precision=full`),
   cgHeaders: vi.fn((extra: Record<string, string>) => extra),
 }));
-vi.mock("../../lib/stablecoin-publication-coverage", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/stablecoin-publication-coverage")>();
+vi.mock("../../lib/market-supply/stablecoin-publication-coverage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/market-supply/stablecoin-publication-coverage")>();
   return {
     ...actual,
     loadPreviousStablecoinActivePriceCoverage: vi.fn(async () => ({ status: "missing" as const })),

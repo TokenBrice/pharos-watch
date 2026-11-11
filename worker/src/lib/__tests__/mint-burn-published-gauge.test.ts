@@ -5,7 +5,7 @@ import {
   readPublishedMintBurnGauge,
   PUBLISHED_GAUGE_MAX_AGE_SEC,
   PUBLISHED_GAUGE_STALE_AFTER_SEC,
-} from "../mint-burn-published-gauge";
+} from "../mint-burn-pipeline/mint-burn-published-gauge";
 
 const NOW_SEC = 1_800_000_000;
 const COMPLETE_VALUATION = {

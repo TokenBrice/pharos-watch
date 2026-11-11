@@ -1,7 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import { parseEvmLogsWithCoverage } from "../evm-source";
-import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist/blacklist-contracts";
 import {
   createBudget,
   fetchEvmLogsForTopicWithCompleteness,

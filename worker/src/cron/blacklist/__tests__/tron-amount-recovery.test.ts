@@ -33,7 +33,7 @@ import {
 import { recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { createBudget, createRateLimiter } from "../../../lib/evm-logs";
-import { getBlacklistConfigByKey } from "../../../lib/blacklist-contracts";
+import { getBlacklistConfigByKey } from "../../../lib/blacklist/blacklist-contracts";
 import { refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../../lib/tron-address";
 import { mockD1 } from "@shared/test-utils/mock-d1";

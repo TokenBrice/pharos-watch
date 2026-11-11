@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DlPool, ResolvedYieldCandidate, SafetyScoreSnapshot, YieldResolutionResult } from "./types";
-import { isBlockedYieldOpportunitySource } from "../yield-helpers";
+import { isBlockedYieldOpportunitySource } from "./yield-helpers";
 import { type StablecoinSupplyMapState } from "./state";
 import { type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import type { ChainRpcConfig } from "../../lib/chain-registry";

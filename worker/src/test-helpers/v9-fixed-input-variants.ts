@@ -2,7 +2,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { normalizeFixedInput } from "../lib/report-cards-fixed-input";
+import { normalizeFixedInput } from "../lib/safety-score-v9/report-cards-fixed-input";
 import { createReportCardsFixedInput, type ReportCardsFixedInputDraft } from "./report-cards-fixed-input";
 import { makeSupplyFullRedemption } from "../lib/__tests__/redemption-backstops-store.test-support";
 import { buildReviewedDeploymentRouteInventory, deriveReviewedDeploymentUnitPartition } from "../lib/safety-score-v9/supply-attribution-contract";

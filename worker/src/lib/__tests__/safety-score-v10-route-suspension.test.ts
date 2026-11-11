@@ -9,7 +9,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import type { RedemptionRouteSuspension } from "@shared/types/redemption";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { evaluateV9FactSet, type V9EvaluatedAsset } from "@shared/lib/safety-score-v9/evaluate-set";
 import { makeV9Extension, makeV9FixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";

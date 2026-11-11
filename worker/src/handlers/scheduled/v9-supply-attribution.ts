@@ -1,4 +1,4 @@
-import { runV9AfterCoreWithinWindow, V9_EXECUTION_WINDOW_POLICY } from "../../lib/v9-slot-window";
+import { runV9AfterCoreWithinWindow, V9_EXECUTION_WINDOW_POLICY } from "../../lib/safety-score-v9/v9-slot-window";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
@@ -20,7 +20,7 @@ export function buildV9SupplyAttributionSlotGroups(runtime: ScheduledRuntimeCont
             yieldToV9Publication: true,
           },
           (windowSignal, window) =>
-            import("../../cron/sync-v9-supply-attribution").then(
+            import("../../cron/safety-score-v9/sync-v9-supply-attribution").then(
               ({ syncSafetyScoreV9SupplyAttribution }) =>
                 syncSafetyScoreV9SupplyAttribution(
                   runtime.db,

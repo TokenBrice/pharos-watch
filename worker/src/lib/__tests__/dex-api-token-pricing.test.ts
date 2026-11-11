@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { derivePoolVolume24hUsd, getTokenReferenceUsdPrice } from "../dex-api-token-pricing";
-import type { DexApiPool, DexApiPoolToken } from "../dex-api-types";
+import { derivePoolVolume24hUsd, getTokenReferenceUsdPrice } from "../dex-liquidity/dex-api-token-pricing";
+import type { DexApiPool, DexApiPoolToken } from "../dex-liquidity/dex-api-types";
 
 // Empty address + USD reference symbol resolves to a $1 reference price via the
 // symbol fallback in getTokenReferenceUsdPrice, so each side's USD estimate is

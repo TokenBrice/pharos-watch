@@ -1,0 +1,538 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
+import { INTENTIONAL_GAP_REASONS } from "../../lib/yield-config/yield-config-rate-sources";
+
+/**
+ * Yield Pipeline — Pure Computation Functions
+ *
+ * Contains all math/scoring functions for yield intelligence. No I/O.
+ *
+ * Functions by pipeline stage:
+ * - APY computation:    computeApyFromRate(), computeApyFromPrice()
+ * - Scoring:            computePYS() (Pharos Yield Score)
+ * - Variance analysis:  computeYieldStability()
+ * - Warning detection:  detectWarningSignals()
+ * - Pool matching:      matchAllDlPools() (3-layer resolution), findBestLendingPool()
+ *
+ * I/O counterparts live in yield-sync/: sources-dl.ts (pool discovery),
+ * resolve.ts (APY resolution), cache.ts (D1 cache serialization), publication.ts (DB row mapping).
+ */
+
+export const DETERMINISTIC_APY_SANITY_MAX = 300;
+
+export {
+  computePYS,
+  PYS_RISK_PENALTY_FLOOR,
+  PYS_RISK_PENALTY_EXPONENT,
+  PYS_SUSTAINABILITY_FLOOR,
+  PYS_MAX_SOURCE_RISK_PENALTY,
+  resolvePysSourceRiskPenalty,
+} from "@shared/lib/yield-scoring";
+import { normalizeChainId } from "@shared/types/chain-identity";
+import type { YieldWarningSignalKey } from "@shared/types/yield";
+import { normalizeDexSymbol } from "../../lib/dex-liquidity/dex-cron-constants";
+import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
+
+const YIELD_SPIKE_THRESHOLD = 2.0;
+const YIELD_DIVERGENCE_THRESHOLD = 3.0;
+const NEGATIVE_TREND_THRESHOLD = 0.7;
+const REWARD_HEAVY_THRESHOLD = 0.8;
+const TVL_OUTFLOW_THRESHOLD = -0.2;
+const YIELD_SPIKE_MIN_APY = 2.0; // only flag spike if currentApy > 2%
+const NEGATIVE_TREND_MIN_APY = 1.0; // only flag negative trend if apy30d > 1%
+const ZERO_YIELD_HISTORY_THRESHOLD = 0.5; // flag when current=0 but 30d avg > 0.5%
+const BLOCKED_YIELD_OPPORTUNITY_PATTERNS = [
+  /\bresolv\b/i,
+  /\b(?:usr|stusr|wstusr)\b/i,
+];
+
+function normalizeChainFilter(filter: Set<string> | undefined): Set<string> | undefined {
+  if (!filter) return undefined;
+  return new Set(
+    [...filter]
+      .map((chain) => normalizeChainId(chain))
+      .filter((chain): chain is string => chain !== null),
+  );
+}
+function isChainAllowed(filter: Set<string> | undefined, chain: string | undefined): boolean {
+  if (!filter || !chain) return true;
+  const chainId = normalizeChainId(chain);
+  return chainId !== null && filter.has(chainId);
+}
+
+export type AnnualizedYieldResult = number | {
+  reason: "invalid-input" | "invalid-window" | "non-finite-annualization";
+};
+
+export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): AnnualizedYieldResult {
+  if (!Number.isFinite(rateNow) || !Number.isFinite(ratePrev) || ratePrev <= 0 || rateNow <= 0) {
+    return { reason: "invalid-input" };
+  }
+  if (!Number.isFinite(days) || days <= 0) return { reason: "invalid-window" };
+  const ratio = rateNow / ratePrev;
+  if (!Number.isFinite(ratio) || ratio <= 0) return { reason: "non-finite-annualization" };
+  if (ratio === 1) return 0;
+  const apy = (Math.pow(ratio, 365.25 / days) - 1) * 100;
+  return Number.isFinite(apy) ? apy : { reason: "non-finite-annualization" };
+}
+
+/**
+ * Naming-only alias for {@link computeApyFromRate} used when inputs are token prices
+ * rather than exchange rates. No additional transformation is applied.
+ */
+export function computeApyFromPrice(priceNow: number, pricePrev: number, days: number): AnnualizedYieldResult {
+  return computeApyFromRate(priceNow, pricePrev, days);
+}
+
+export function isDeterministicApyWithinSanityBounds(apy: number): boolean {
+  return Number.isFinite(apy) && apy <= DETERMINISTIC_APY_SANITY_MAX;
+}
+
+export function computeYieldStability(apySamples: number[]): number | null {
+  if (apySamples.length < 2) return null;
+  const mean = apySamples.reduce((s, v) => s + v, 0) / apySamples.length;
+  if (Math.abs(mean) < 1e-10) return null;
+  const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
+  const cv = Math.sqrt(variance) / Math.abs(mean);
+  if (!Number.isFinite(cv)) return null;
+  return Math.max(0, Math.min(1, Math.round((1 - cv) * 100) / 100));
+}
+
+interface WarningInput {
+  currentApy: number;
+  apy30d: number;
+  apyReward: number | null;
+  medianApy: number | null;
+  sourceTvlUsd: number | null;
+  prevTvlUsd: number | null;
+}
+
+/**
+ * The emitted vocabulary is `YIELD_WARNING_SIGNAL_KEYS` (`@shared/types/yield`),
+ * the single authority DEWS pins its `YIELD_WARNING_SCORES` table against: the
+ * return type below makes the compiler reject any key outside it (R5).
+ */
+export function detectWarningSignals(input: WarningInput): YieldWarningSignalKey[] {
+  const signals: YieldWarningSignalKey[] = [];
+  if (input.apy30d > 0 && input.currentApy > YIELD_SPIKE_MIN_APY && input.currentApy / input.apy30d > YIELD_SPIKE_THRESHOLD) signals.push("yield-spike");
+  if (input.medianApy != null && input.medianApy > 0 && input.currentApy > input.medianApy * YIELD_DIVERGENCE_THRESHOLD) signals.push("yield-divergence");
+  if (input.apy30d > NEGATIVE_TREND_MIN_APY && input.currentApy < input.apy30d * NEGATIVE_TREND_THRESHOLD) signals.push("negative-trend");
+  if (input.apyReward != null && input.currentApy > 0 && input.apyReward / input.currentApy > REWARD_HEAVY_THRESHOLD) signals.push("reward-heavy");
+  if (input.sourceTvlUsd != null && input.prevTvlUsd != null && input.prevTvlUsd > 0) {
+    const change = (input.sourceTvlUsd - input.prevTvlUsd) / input.prevTvlUsd;
+    if (change < TVL_OUTFLOW_THRESHOLD) signals.push("tvl-outflow");
+  }
+  if (input.currentApy === 0 && input.apy30d > ZERO_YIELD_HISTORY_THRESHOLD) signals.push("zero-yield");
+  return signals;
+}
+
+export function isBlockedYieldOpportunitySource(params: {
+  project?: string | null;
+  pool?: string | null;
+  yieldSource?: string | null;
+  poolMeta?: string | null;
+  symbol?: string | null;
+}): boolean {
+  if (YIELD_OPPORTUNITY_EXCLUSIONS.some((entry) =>
+    entry.poolIds
+      ? entry.poolIds.includes(params.pool ?? "")
+      : entry.projects.includes(params.project?.trim().toLowerCase() ?? "")
+  )) return true;
+
+  const searchText = [params.yieldSource, params.poolMeta, params.symbol]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ");
+
+  if (!searchText) return false;
+  return BLOCKED_YIELD_OPPORTUNITY_PATTERNS.some((pattern) => pattern.test(searchText));
+}
+
+/**
+ * B19 — address corroboration must prove a pool holds *this* asset and nothing
+ * else. DeFiLlama marks multi-asset wrappers `exposure: "single"` often enough that
+ * a `.some()` test over `underlyingTokens` returned a Yearn vault holding
+ * `[frxUSD, DUSD]` as the DUSD lending source and an `[sDOLA, untracked]` vault for
+ * sDOLA (board rows #2/#3). A candidate qualifies when its distinct underlying set
+ * is a single address that matches, or when it equals the coin's own address set.
+ */
+function corroboratesUnderlyingSet(
+  pool: { underlyingTokens?: string[] | null },
+  matchedAddresses: ReadonlySet<string>,
+): boolean {
+  if (matchedAddresses.size === 0) return false;
+  const underlyings = new Set(
+    (pool.underlyingTokens ?? [])
+      .map((address) => normalizeTokenAddress(address))
+      .filter((address) => address !== ""),
+  );
+  if (underlyings.size === 1) {
+    const only = [...underlyings][0]!;
+    return matchedAddresses.has(only);
+  }
+  return underlyings.size > 1
+    && underlyings.size === matchedAddresses.size
+    && [...underlyings].every((address) => matchedAddresses.has(address));
+}
+
+/**
+ * Yield-tokenization venues list their principal-token and LP markets under the
+ * wrapped token's own symbol and underlying address, flagged stablecoin +
+ * single exposure. Such a pool's APY is the PT's fixed implied rate and its TVL
+ * is the market's, never the token's intrinsic yield, so the base-symbol
+ * fallback must not adopt one under the coin's own yield label. Pendle markets
+ * reach rankings through the Pendle supplemental family as `fixed-yield` rows.
+ */
+const YIELD_TOKENIZATION_PROJECTS: Record<string, true> = { "pendle-v2": true, "spectra-v2": true };
+
+export interface VariantDlPoolCandidate {
+  pool: string;
+  symbol: string;
+  exposure: string;
+  underlyingTokens?: string[] | null;
+  chain?: string;
+  project?: string;
+}
+
+export interface VariantDlPoolSelection<T extends VariantDlPoolCandidate> {
+  selected: T | null;
+  /** Candidates left after the address/symbol/project gates; >1 is ambiguous. */
+  candidateCount: number;
+}
+
+/**
+ * Layer-2 variant gate shared by runtime matching and the coverage audit:
+ * single exposure, non-tokenization venue, normalized symbol equality, optional
+ * chain/project scoping, underlying-address corroboration when a pin address
+ * exists, and exactly one remaining candidate. `isExcluded` lets runtime drop a
+ * pool already claimed by the native layer (or reserved for another coin).
+ */
+export function selectVariantDlPool<T extends VariantDlPoolCandidate>(
+  variant: { variantSymbol: string; variantChain?: string; variantAddress?: string; variantProject?: string },
+  dlPools: readonly T[],
+  options?: { isExcluded?: (pool: T) => boolean },
+): VariantDlPoolSelection<T> {
+  const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
+  const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
+  const variantAddress = normalizeTokenAddress(variant.variantAddress ?? "");
+  const variantProject = (variant.variantProject ?? "").trim().toLowerCase();
+
+  const baseCandidates = dlPools.filter(
+    (pool) =>
+      pool.exposure === "single" &&
+      YIELD_TOKENIZATION_PROJECTS[(pool.project ?? "").trim().toLowerCase()] !== true &&
+      normalizeDexSymbol(pool.symbol) === variantSymbol &&
+      !(options?.isExcluded?.(pool) ?? false) &&
+      (!variantChain || normalizeChainId(pool.chain) === variantChain),
+  );
+
+  const addressCandidates = variantAddress
+    ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, new Set([variantAddress])))
+    : [];
+  const symbolCandidates = baseCandidates.filter((pool) => !variantAddress || !pool.underlyingTokens?.length);
+  const filterByProject = <C extends { project?: string }>(candidates: C[]): C[] =>
+    variantProject
+      ? candidates.filter((pool) => (pool.project ?? "").trim().toLowerCase() === variantProject)
+      : candidates;
+
+  const scopedAddressCandidates = filterByProject(addressCandidates);
+  const scopedSymbolCandidates = filterByProject(symbolCandidates);
+
+  let selectedVariantCandidates = symbolCandidates;
+  if (addressCandidates.length > 0) {
+    selectedVariantCandidates = variantProject ? scopedAddressCandidates : addressCandidates;
+  } else if (variantProject) {
+    selectedVariantCandidates = scopedSymbolCandidates;
+  }
+  return {
+    selected: selectedVariantCandidates.length === 1 ? selectedVariantCandidates[0]! : null,
+    candidateCount: selectedVariantCandidates.length,
+  };
+}
+
+/**
+ * Returns ALL DL pools that are yield sources for the given coin.
+ *
+ * Layer 1: YIELD_POOL_MAP (native/primary pool — stablecoin + single exposure required)
+ * Layer 2: YIELD_VARIANT_MAP (wrapper/savings pool — single exposure only; stablecoin
+ *          flag relaxed because savings wrappers like fxSAVE are not flagged as
+ *          stablecoin=true in DeFiLlama)
+ * Layer 3: Base-symbol fallback (only when both static maps miss and the caller has no
+ *          deterministic on-chain rate source — stablecoin + single exposure required,
+ *          yield-tokenization PT/LP markets excluded, picks highest TVL)
+ *
+ * Deduplicates by pool UUID. Used by sync-yield-data to support multiple sources per coin.
+ */
+export function matchAllDlPools(
+  stablecoinId: string,
+  symbol: string,
+  dlPools: Array<{
+    pool: string; symbol: string; tvlUsd: number;
+    apy: number; apyBase: number | null; apyReward: number | null;
+    stablecoin: boolean; exposure: string;
+    underlyingTokens?: string[] | null;
+    chain?: string;
+    project?: string;
+  }>,
+  poolMap: Record<string, string>,
+  variantMap: Record<string, {
+    variantSymbol: string;
+    variantChain?: string;
+    variantAddress?: string;
+    variantProject?: string;
+  }>,
+  options?: {
+    chainFilter?: Set<string>;
+    contractAddresses?: string[];
+    reservedPoolIds?: Set<string>;
+    /**
+     * The coin's intrinsic yield is already read on-chain, so a symbol/address
+     * guess can only add third-party venues (collateral markets, PT markets)
+     * under the coin's own yield label.
+     */
+    skipBaseSymbolFallback?: boolean;
+  },
+): Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> {
+  const found: Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> = [];
+  const seenUuids = new Set<string>();
+  const nativeId = poolMap[stablecoinId];
+  const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
+  const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
+  const normalizedChainFilter = normalizeChainFilter(options?.chainFilter);
+
+  const isEligibleChain = (poolChain: string | undefined): boolean => {
+    return isChainAllowed(normalizedChainFilter, poolChain);
+  };
+  const isReservedForAnotherCoin = (poolId: string): boolean => reservedPoolIds.has(poolId) && poolId !== nativeId;
+
+  // Layer 1: Curated native source. An absent pin must not borrow a generic venue's APY.
+  if (nativeId) {
+    const p = dlPools.find((pool) => pool.pool === nativeId && pool.exposure === "single");
+    if (p) {
+      found.push({ pool: p.pool, apy: p.apy, apyBase: p.apyBase, apyReward: p.apyReward, tvlUsd: p.tvlUsd });
+      seenUuids.add(p.pool);
+    } else if (!dlPools.find((pool) => pool.pool === nativeId)) {
+      logWorkerEventArgs("handler", "warn", `[yield-sync] missing-pool: native-pool ${stablecoinId} ${nativeId}`);
+    }
+  }
+
+  // Layer 2: Variant map (wrapper/savings pool — stablecoin flag relaxed)
+  const variant = variantMap[stablecoinId];
+  if (variant) {
+    const selection = selectVariantDlPool(variant, dlPools, {
+      isExcluded: (pool) => seenUuids.has(pool.pool) || isReservedForAnotherCoin(pool.pool),
+    });
+    if (selection.selected) {
+      const selected = selection.selected;
+      found.push({
+        pool: selected.pool,
+        apy: selected.apy,
+        apyBase: selected.apyBase,
+        apyReward: selected.apyReward,
+        tvlUsd: selected.tvlUsd,
+      });
+      seenUuids.add(selected.pool);
+    } else if (selection.candidateCount > 1) {
+      logWorkerEventArgs("handler", "warn",
+        `[yield-sync] Ambiguous variant DL match for ${stablecoinId} (${variant.variantSymbol}) across ${selection.candidateCount} pools; skipping variant layer`,
+      );
+    }
+  }
+
+  // Layer 3: Base-symbol fallback (only when BOTH static maps miss — stablecoin=true required).
+  // An underlying address proves the deposit asset, not receipt ownership. Require
+  // the tracked instrument's own symbol as well; differently named tranches need
+  // a curated pin or their separately typed supplemental lane.
+  if (!nativeId && found.length === 0 && !options?.skipBaseSymbolFallback && INTENTIONAL_GAP_REASONS[stablecoinId] == null) {
+    const sym = normalizeDexSymbol(symbol);
+    if (sym.length >= 4) {
+      const baseCandidates = dlPools.filter(
+        (pool) =>
+          pool.exposure === "single" &&
+          pool.stablecoin &&
+          YIELD_TOKENIZATION_PROJECTS[(pool.project ?? "").trim().toLowerCase()] !== true &&
+          !isReservedForAnotherCoin(pool.pool) &&
+          isEligibleChain(pool.chain),
+      );
+
+      const sameSymbolCounts = new Map<string, number>();
+      for (const pool of baseCandidates) {
+        if (normalizeDexSymbol(pool.symbol) !== sym) continue;
+        const chain = normalizeChainId(pool.chain ?? "") ?? "";
+        sameSymbolCounts.set(chain, (sameSymbolCounts.get(chain) ?? 0) + 1);
+      }
+      const addressCandidates = contractSet.size > 0
+        ? baseCandidates.filter((pool) =>
+          corroboratesUnderlyingSet(pool, contractSet)
+          && normalizeDexSymbol(pool.symbol) === sym
+          && sameSymbolCounts.get(normalizeChainId(pool.chain ?? "") ?? "") === 1,
+        )
+        : [];
+      if (addressCandidates.length > 0) {
+        const best = addressCandidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
+        found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
+      } else {
+        // With address evidence supplied, a no-evidence sibling is only a
+        // fallback when its chain has one exact-symbol candidate. Rejecting the
+        // corroborated pool for same-chain ambiguity must not admit the other
+        // same-symbol pool (docs: ambiguous fallback candidates are dropped).
+        const symbolCandidates = baseCandidates.filter((pool) =>
+          normalizeDexSymbol(pool.symbol) === sym
+          && (contractSet.size === 0 || (
+            !pool.underlyingTokens?.length
+            && sameSymbolCounts.get(normalizeChainId(pool.chain ?? "") ?? "") === 1
+          )),
+        );
+        if (symbolCandidates.length === 1) {
+          const candidate = symbolCandidates[0];
+          found.push({
+            pool: candidate.pool,
+            apy: candidate.apy,
+            apyBase: candidate.apyBase,
+            apyReward: candidate.apyReward,
+            tvlUsd: candidate.tvlUsd,
+          });
+        } else if (symbolCandidates.length > 1) {
+          logWorkerEventArgs("handler", "warn",
+            `[yield-sync] Ambiguous fallback DL match for ${stablecoinId} (${symbol}) across ${symbolCandidates.length} pools; skipping fallback`,
+          );
+        }
+      }
+    }
+  }
+
+  return found;
+}
+
+/**
+ * Core lending-pool eligibility gate shared by the deterministic AUTO_LENDING
+ * loop and findBestLendingPool's dynamic discovery, so the two auto paths stay
+ * in sync: single exposure, stablecoin = true, project in allowlist, and the
+ * APY/TVL quality floors. Source-block, reserved-pool, collision, and chain
+ * filters are applied separately by each caller.
+ */
+export function meetsLendingPoolCoreEligibility(
+  pool: {
+    project: string;
+    apy: number;
+    tvlUsd: number;
+    stablecoin: boolean;
+    exposure: string;
+  },
+  options: { allowlist: Set<string>; minApy: number; minTvlUsd: number },
+): boolean {
+  return (
+    pool.exposure === "single" &&
+    pool.stablecoin &&
+    options.allowlist.has(pool.project) &&
+    pool.apy >= options.minApy &&
+    pool.tvlUsd >= options.minTvlUsd
+  );
+}
+
+/**
+ * Auto-discovery: find the best lending pool for a coin from allowlisted protocols.
+ * Used for non-yield-bearing stablecoins rated C+ or above (Wave 2).
+ *
+ * Filters: single exposure, stablecoin = true, project in allowlist, symbol match.
+ * Optional quality gates: minimum APY and minimum TVL.
+ * Picks the highest-TVL pool.
+ */
+export function findBestLendingPool(
+  symbol: string,
+  dlPools: Array<{
+    pool: string; symbol: string; project: string; tvlUsd: number;
+    apy: number; apyBase: number | null; apyReward: number | null;
+    stablecoin: boolean; exposure: string;
+    poolMeta?: string | null;
+    underlyingTokens?: string[] | null;
+    chain?: string;
+  }>,
+  allowlist: Set<string>,
+  options?: {
+    minApy?: number;
+    minTvlUsd?: number;
+    contractAddresses?: string[];
+    chainFilter?: Set<string>;
+    allowSymbolMatch?: boolean;
+    reservedPoolIds?: Set<string>;
+    isBlockedPool?: (pool: {
+      pool: string;
+      symbol: string;
+      project: string;
+      tvlUsd: number;
+      apy: number;
+      apyBase: number | null;
+      apyReward: number | null;
+      stablecoin: boolean;
+      exposure: string;
+      poolMeta?: string | null;
+      underlyingTokens?: string[] | null;
+      chain?: string;
+    }) => boolean;
+  },
+): {
+  pool: string;
+  apy: number;
+  apyBase: number | null;
+  apyReward: number | null;
+  tvlUsd: number;
+  project: string;
+  chain?: string;
+} | null {
+  const symbolKey = normalizeDexSymbol(symbol);
+  const minApy = options?.minApy ?? 0;
+  const minTvlUsd = options?.minTvlUsd ?? 0;
+  const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
+  const chainFilter = normalizeChainFilter(options?.chainFilter);
+  const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
+
+  const baseCandidates = dlPools.filter((p) =>
+    meetsLendingPoolCoreEligibility(p, { allowlist, minApy, minTvlUsd }) &&
+    !isBlockedYieldOpportunitySource(p) &&
+    !reservedPoolIds.has(p.pool) &&
+    !options?.isBlockedPool?.(p) &&
+    isChainAllowed(chainFilter, p.chain)
+  );
+
+  // Primary match: underlying token address match, gated on the pool holding a
+  // single distinct underlying asset (or exactly the coin's own address set).
+  const addressCandidates = contractSet.size > 0
+    ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, contractSet))
+    : [];
+  if (addressCandidates.length > 0) {
+    const best = addressCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
+    return {
+      pool: best.pool,
+      apy: best.apy,
+      apyBase: best.apyBase,
+      apyReward: best.apyReward,
+      tvlUsd: best.tvlUsd,
+      project: best.project,
+      chain: best.chain,
+    };
+  }
+
+  if (options?.allowSymbolMatch === false) {
+    return null;
+  }
+
+  // Fallback: exact symbol, but only when the caller has determined it is safe.
+  const symbolCandidates = baseCandidates.filter((pool) =>
+    normalizeDexSymbol(pool.symbol) === symbolKey &&
+    // Supplied deposit addresses take precedence over a coincident ticker.
+    (contractSet.size === 0 || (pool.underlyingTokens ?? []).length === 0 ||
+      corroboratesUnderlyingSet(pool, contractSet))
+  );
+  if (symbolCandidates.length === 0) return null;
+
+  const best = symbolCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
+  return {
+    pool: best.pool,
+    apy: best.apy,
+    apyBase: best.apyBase,
+    apyReward: best.apyReward,
+    tvlUsd: best.tvlUsd,
+    project: best.project,
+    chain: best.chain,
+  };
+}

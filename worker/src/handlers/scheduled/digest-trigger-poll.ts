@@ -22,7 +22,7 @@ import {
 import { drainTelegramDigestOutbox } from "../../telegram/outbox/digest-outbox";
 import { getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
-import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
+import { resolveDigestSafetyMap } from "../../lib/digest/digest-safety-map";
 import { formatIsoDate } from "@shared/lib/format";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import {
@@ -39,12 +39,12 @@ import {
   summarizeSkippedScheduledJob,
   summarizeThrownScheduledJob,
 } from "./slot-summary";
-import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
+import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../../lib/digest/digest-sql-filters";
 import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS } from "../../lib/cron-timeouts";
-import { runSafetyMapProducerKick } from "../../cron/safety-map-producer-kick";
+import { runSafetyMapProducerKick } from "../../cron/digest/safety-map-producer-kick";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { runSlotCatchUpDetection } from "../../lib/scheduled-slot-catch-up";
 import { retainUntilDeadline, settleAfterAbort } from "../../lib/cron-abort-settlement";
@@ -308,7 +308,7 @@ async function runDailyDigestWithResume(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  const { generateDailyDigest, resumeDailyDigestDelivery } = await import("../../cron/daily-digest");
+  const { generateDailyDigest, resumeDailyDigestDelivery } = await import("../../cron/daily-digest/daily-digest");
   const nowSec = Math.floor(Date.now() / 1000);
   const resolution = await resolveDigestSafetyMap(formatIsoDate(nowSec), nowSec, signal);
   const twitterCreds = buildTwitterCreds(runtime.env);

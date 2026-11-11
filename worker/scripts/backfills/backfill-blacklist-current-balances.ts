@@ -3,7 +3,7 @@ import { parseIntParam } from "../../src/lib/api-params";
 import {
   CONTRACT_CONFIGS,
   getBlacklistConfigsForSymbolAndChain,
-} from "../../src/lib/blacklist-contracts";
+} from "../../src/lib/blacklist/blacklist-contracts";
 import { createBudget, createRateLimiter } from "../../src/lib/evm-logs";
 import {
   syncCurrentBalanceCacheForRows,
@@ -16,7 +16,7 @@ import {
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistRow } from "../../src/lib/blacklist/shared";
 import type { ChainRpcConfig } from "../../src/lib/chain-registry";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { invalidateBlacklistDerivedCaches } from "../../src/lib/blacklist-cache-invalidation";
+import { invalidateBlacklistDerivedCaches } from "../../src/lib/blacklist/blacklist-cache-invalidation";
 import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
 import { buildBlacklistAddressCountKey } from "@shared/lib/blacklist";
 import { buildCurrentBalanceSnapshotRows } from "../../src/lib/blacklist/row-preparation";

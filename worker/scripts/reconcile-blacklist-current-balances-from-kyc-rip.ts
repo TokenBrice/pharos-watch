@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
-import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
+import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist/blacklist-contracts";
 import { applyBlacklistCurrentBalanceMaintenance } from "./lib/blacklist-current-balance-maintenance";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import {

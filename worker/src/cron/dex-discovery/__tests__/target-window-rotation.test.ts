@@ -29,7 +29,7 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   };
 });
 
-vi.mock("../../../lib/price-validation", () => ({
+vi.mock("../../../lib/pricing/price-validation", () => ({
   loadPriceValidationReferences: vi.fn(async () => undefined),
 }));
 

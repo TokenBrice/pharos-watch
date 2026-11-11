@@ -168,15 +168,15 @@
       "label": "Pricing and supply pipelines",
       "risk": "high",
       "sources": [
-        "worker/src/cron/sync-stablecoins.ts",
+        "worker/src/cron/market-supply/sync-stablecoins.ts",
         "worker/src/cron/sync-stablecoins/**",
-        "worker/src/cron/snapshot-supply.ts",
-        "worker/src/cron/snapshot-chain-supply.ts",
-        "worker/src/cron/sync-v9-supply-attribution.ts",
-        "worker/src/lib/price*.ts",
-        "worker/src/lib/dex-api-token-pricing.ts",
-        "worker/src/lib/hive-market-price.ts",
-        "worker/src/lib/stablecoin-publication-coverage.ts",
+        "worker/src/cron/market-supply/snapshot-supply.ts",
+        "worker/src/cron/market-supply/snapshot-chain-supply.ts",
+        "worker/src/cron/safety-score-v9/sync-v9-supply-attribution.ts",
+        "worker/src/lib/pricing/price*.ts",
+        "worker/src/lib/dex-liquidity/dex-api-token-pricing.ts",
+        "worker/src/lib/pricing/hive-market-price.ts",
+        "worker/src/lib/market-supply/stablecoin-publication-coverage.ts",
         "worker/src/lib/address-price-providers/**",
         "worker/src/lib/authoritative-price-sources/**",
         "shared/lib/pricing-*.ts",
@@ -195,13 +195,13 @@
       ],
       "reading": [
         {
-          "sources": ["worker/src/lib/stablecoin-publication-coverage.ts"],
+          "sources": ["worker/src/lib/market-supply/stablecoin-publication-coverage.ts"],
           "local": [
             { "path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health" }
           ]
         },
         {
-          "sources": ["worker/src/cron/sync-v9-supply-attribution.ts"],
+          "sources": ["worker/src/cron/safety-score-v9/sync-v9-supply-attribution.ts"],
           "local": [
             { "path": "docs/supply-snapshot.md", "anchor": "supply-admission-and-nullable-helpers" },
             { "path": "docs/supply-snapshot.md", "anchor": "chain-observation-absence" },
@@ -209,7 +209,7 @@
           ]
         },
         {
-          "sources": ["worker/src/cron/snapshot-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
+          "sources": ["worker/src/cron/market-supply/snapshot-supply.ts", "worker/src/cron/market-supply/snapshot-chain-supply.ts"],
           "local": [
             { "path": "docs/supply-snapshot.md", "anchor": "algorithm" },
             { "path": "docs/supply-snapshot.md", "anchor": "supply-admission-and-nullable-helpers" },
@@ -251,16 +251,16 @@
       "risk": "high",
       "sources": [
         "worker/src/cron/reserve-adapters/**",
-        "worker/src/cron/sync-live-reserves*",
-        "worker/src/cron/reserve-post-sync-watchdog.ts",
+        "worker/src/cron/live-reserves/sync-live-reserves*",
+        "worker/src/cron/live-reserves/reserve-post-sync-watchdog.ts",
         "shared/types/live-reserve*.ts",
         "shared/types/reserve-continuation.ts",
         "shared/lib/live-reserve*.ts",
-        "worker/src/lib/live-reserves/**",
-        "worker/src/lib/collateral-drift.ts",
+        "worker/src/lib/live-reserves/{config-recovery-targets.ts,reserve-composition-census.ts,store*.ts,*/**}",
+        "worker/src/lib/live-reserves/collateral-drift.ts",
         "worker/src/lib/__tests__/collateral-drift.test.ts",
-        "worker/src/lib/accepted-reserve-generation.ts",
-        "worker/src/lib/reserve-continuation*.ts",
+        "worker/src/lib/live-reserves/accepted-reserve-generation.ts",
+        "worker/src/lib/live-reserves/reserve-continuation*.ts",
         "worker/src/handlers/reserve-continuation.ts",
         "worker/src/lib/safety-score-v9/extension-reserves.ts",
         "worker/src/api/stablecoin-reserves.ts",
@@ -356,10 +356,10 @@
       "label": "Domain yield producers and consumers",
       "risk": "high",
       "sources": [
-        "worker/src/cron/sync-yield-data*",
-        "worker/src/cron/yield-*",
-        "worker/src/cron/yield-sync/**",
-        "worker/src/lib/yield*",
+        "worker/src/cron/yield-sync/sync-yield-data*",
+        "worker/src/cron/yield-{coverage-audit,sync}/yield-*",
+        "worker/src/cron/yield-sync/{!(fetch-tbill-rate.ts|sync-yield-*.ts|yield-*.ts),*/**}",
+        "worker/src/lib/yield/yield*",
         "worker/src/lib/yield-config/**",
         "worker/src/api/yield*",
         "shared/lib/yield*.ts",
@@ -709,7 +709,7 @@
         "worker/src/lib/scheduled-slot-*.ts",
         "worker/src/lib/cron-lease-primitives.ts",
         "worker/src/lib/cron-timeouts.ts",
-        "worker/src/lib/v9-slot-window.ts",
+        "worker/src/lib/safety-score-v9/v9-slot-window.ts",
         "worker/src/lib/rpc-provider-budget.ts",
         "worker/src/lib/rpc-provider-parity/**",
         "worker/src/cron/**",
@@ -941,7 +941,8 @@
       "sources": [
         "worker/migrations/**",
         "worker/src/lib/db*.ts",
-        "worker/src/lib/*store*.ts",
+        "worker/src/lib/{,depeg-resolver/,redemption-backstop/,tape-projectors/}*store*.ts",
+        "worker/src/lib/safety-score-v9/report-card*store*.ts",
         "worker/src/api/backfill-dews.ts",
         "worker/scripts/backfills/**",
         "docs/deployment-process.md",
@@ -990,21 +991,21 @@
         "shared/lib/dews-config.ts",
         "shared/lib/liquidity-score-weights.ts",
         "shared/lib/depeg-resolver/**",
-        "worker/src/lib/stability-index.ts",
-        "worker/src/lib/mint-burn-scoring.ts",
-        "worker/src/lib/mint-burn-log-identity.ts",
-        "worker/src/lib/mint-burn-conservation.ts",
-        "worker/src/lib/mint-burn-mcap-weighting.ts",
+        "worker/src/lib/psi/stability-index.ts",
+        "worker/src/lib/mint-burn-pipeline/mint-burn-scoring.ts",
+        "worker/src/lib/mint-burn-pipeline/mint-burn-log-identity.ts",
+        "worker/src/lib/mint-burn-pipeline/mint-burn-conservation.ts",
+        "worker/src/lib/mint-burn-pipeline/mint-burn-mcap-weighting.ts",
         "worker/src/lib/mint-burn-pipeline/rpc.ts",
         "worker/src/lib/dews.ts",
         "worker/src/lib/dews/**",
-        "worker/src/cron/compute-depeg-resolver.ts",
-        "worker/src/cron/dex-liquidity/**",
+        "worker/src/cron/depeg-resolver/compute-depeg-resolver.ts",
+        "worker/src/cron/dex-liquidity/{!(dex-exit-route-turnover-watchdog.ts),*/**}",
         "worker/src/cron/measured-execution/**",
-        "worker/src/lib/dex-api-token-pricing.ts",
-        "worker/src/lib/dexscreener.ts",
-        "worker/src/cron/mint-burn/**",
-        "worker/src/cron/sync-mint-burn.ts",
+        "worker/src/lib/dex-liquidity/dex-api-token-pricing.ts",
+        "worker/src/lib/dex-liquidity/dexscreener.ts",
+        "worker/src/cron/mint-burn/{!(sync-mint-burn.ts|mint-burn-*.ts|operator-watch-mintburn.ts),*/**}",
+        "worker/src/cron/mint-burn/sync-mint-burn.ts",
         "worker/src/api/depeg-resolver.ts",
         "src/app/methodology/**",
         "docs/process/ddrr-calibration.md",
@@ -1027,17 +1028,17 @@
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "reading": [
         {
-          "sources": ["worker/src/lib/mint-burn-log-identity.ts", "worker/src/lib/mint-burn-conservation.ts", "worker/src/lib/mint-burn-pipeline/rpc.ts"],
+          "sources": ["worker/src/lib/mint-burn-pipeline/mint-burn-log-identity.ts", "worker/src/lib/mint-burn-pipeline/mint-burn-conservation.ts", "worker/src/lib/mint-burn-pipeline/rpc.ts"],
           "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "shared-ingestion-pipeline-boundaries" }],
           "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "shared-ingestion-pipeline-boundaries" }]
         },
         {
-          "sources": ["worker/src/lib/mint-burn-mcap-weighting.ts"],
+          "sources": ["worker/src/lib/mint-burn-pipeline/mint-burn-mcap-weighting.ts"],
           "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "bank-run-gauge-composite" }],
           "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "bank-run-gauge-composite" }]
         },
         {
-          "sources": ["worker/src/cron/dex-liquidity/**", "worker/src/cron/measured-execution/**", "worker/src/lib/dex-api-token-pricing.ts", "worker/src/lib/dexscreener.ts", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
+          "sources": ["worker/src/cron/dex-liquidity/{!(dex-exit-route-turnover-watchdog.ts),*/**}", "worker/src/cron/measured-execution/**", "worker/src/lib/dex-liquidity/dex-api-token-pricing.ts", "worker/src/lib/dex-liquidity/dexscreener.ts", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
           "local": [
             { "path": "docs/dex-liquidity.md", "anchor": "discovery-cron" },
             { "path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning" }
@@ -1080,7 +1081,7 @@
       "checks": ["npx vitest run shared/lib worker/src/lib"],
       "testOwnership": [
         {
-          "sources": ["worker/src/lib/dexscreener.ts"],
+          "sources": ["worker/src/lib/dex-liquidity/dexscreener.ts"],
           "tests": ["worker/src/lib/__tests__/dexscreener.test.ts", "worker/src/cron/dex-discovery/__tests__/dexscreener-census.test.ts"]
         }
       ],
@@ -1106,18 +1107,18 @@
         "shared/types/safety-score-v9*.ts",
         "shared/types/digest*.ts",
         "shared/data/safety-score-v9/**",
-        "worker/src/lib/safety-score-v9/**",
-        "worker/src/cron/sync-v9-supply-attribution.ts",
-        "worker/src/lib/digest-safety-map.ts",
-        "worker/src/cron/daily-digest.ts",
-        "worker/src/cron/daily-digest/**",
-        "worker/src/cron/digest/**",
-        "worker/src/cron/digest-publication-watchdog.ts",
-        "worker/src/cron/safety-map-producer-kick.ts",
+        "worker/src/lib/safety-score-v9/{!(alert-safety-source-cache.ts|report-card*.ts|safety-score*.ts|v9-slot-window.ts),*/**}",
+        "worker/src/cron/safety-score-v9/sync-v9-supply-attribution.ts",
+        "worker/src/lib/digest/digest-safety-map.ts",
+        "worker/src/cron/daily-digest/daily-digest.ts",
+        "worker/src/cron/daily-digest/{!(daily-digest.ts),*/**}",
+        "worker/src/cron/digest/{!(digest*.ts|safety-map-producer-kick.ts),*/**}",
+        "worker/src/cron/digest/digest-publication-watchdog.ts",
+        "worker/src/cron/digest/safety-map-producer-kick.ts",
         "worker/src/handlers/scheduled/digest-trigger-poll.ts",
-        "worker/src/cron/prepare-safety-score-v9-input.ts",
-        "worker/src/cron/compute-safety-score-v9.ts",
-        "worker/src/cron/snapshot-safety-grade-history.ts",
+        "worker/src/cron/safety-score-v9/prepare-safety-score-v9-input.ts",
+        "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts",
+        "worker/src/cron/safety-score-v9/snapshot-safety-grade-history.ts",
         "src/lib/mint-authority-display.ts",
         "src/components/stablecoin-detail/mint-authority-section.tsx",
         "shared/data/stablecoins/domains/mint-authority/**",
@@ -1155,7 +1156,7 @@
       ],
       "reading": [
         {
-          "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/**", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts"],
+          "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/{!(alert-safety-source-cache.ts|report-card*.ts|safety-score*.ts|v9-slot-window.ts),*/**}", "worker/src/cron/safety-score-v9/prepare-safety-score-v9-input.ts", "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts", "worker/src/cron/safety-score-v9/snapshot-safety-grade-history.ts"],
           "local": [
             { "path": "docs/report-cards.md", "anchor": "v10-model" },
             { "path": "docs/process/report-cards-appendix.md", "anchor": "scoped-evidence-and-exit-evaluation" }
@@ -1166,7 +1167,7 @@
           ]
         },
         {
-          "sources": ["worker/src/lib/safety-score-v9/*supply*.ts", "worker/src/lib/safety-score-v9/__tests__/*supply*.test.ts", "worker/src/cron/sync-v9-supply-attribution.ts"],
+          "sources": ["worker/src/lib/safety-score-v9/*supply*.ts", "worker/src/lib/safety-score-v9/__tests__/*supply*.test.ts", "worker/src/cron/safety-score-v9/sync-v9-supply-attribution.ts"],
           "local": [{ "path": "docs/report-cards.md", "anchor": "v10-model" }],
           "contract": [
             { "path": "docs/report-cards.md", "anchor": "api" },
@@ -1179,7 +1180,7 @@
           "required": [{ "path": "docs/process/report-cards-appendix.md", "anchor": "bridge-in-flight-accounting" }]
         },
         {
-          "sources": ["worker/src/lib/safety-score-v9/publication*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts"],
+          "sources": ["worker/src/lib/safety-score-v9/publication*.ts", "worker/src/cron/safety-score-v9/prepare-safety-score-v9-input.ts", "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts"],
           "required": [{ "path": "docs/process/report-cards-appendix.md", "anchor": "canonical-publication" }]
         },
         {
@@ -1207,7 +1208,7 @@
           ]
         },
         {
-          "sources": ["scripts/maintenance/publish-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml", "worker/src/cron/safety-map-producer-kick.ts"],
+          "sources": ["scripts/maintenance/publish-safety-score-map.ts", ".github/workflows/safety-map-refresh.yml", "worker/src/cron/digest/safety-map-producer-kick.ts"],
           "local": [{ "path": "docs/safety-score-map.md", "anchor": "publication" }],
           "contract": [
             { "path": "docs/report-cards.md", "anchor": "api" },
@@ -1219,11 +1220,11 @@
           "local": [{ "path": "docs/testing.md", "anchor": "ci-pipeline" }]
         },
         {
-          "sources": ["worker/src/lib/digest-safety-map.ts"],
+          "sources": ["worker/src/lib/digest/digest-safety-map.ts"],
           "local": [{ "path": "docs/safety-score-map.md", "anchor": "digest-map-pairing-bounded-carry-forward" }]
         },
         {
-          "sources": ["shared/types/digest*.ts", "worker/src/cron/daily-digest.ts", "worker/src/cron/daily-digest/**", "worker/src/cron/digest/**", "worker/src/cron/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts", "docs/digest-pipeline.md"],
+          "sources": ["shared/types/digest*.ts", "worker/src/cron/daily-digest/daily-digest.ts", "worker/src/cron/daily-digest/{!(daily-digest.ts),*/**}", "worker/src/cron/digest/{!(digest*.ts|safety-map-producer-kick.ts),*/**}", "worker/src/cron/digest/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts", "docs/digest-pipeline.md"],
           "local": [{ "path": "docs/digest-pipeline.md", "anchor": "generation" }],
           "contract": [{ "path": "docs/digest-pipeline.md", "anchor": "distribution" }]
         },
@@ -1281,11 +1282,11 @@
           "tests": ["scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
         },
         {
-          "sources": ["shared/lib/safety-score-v9/**", "worker/src/lib/safety-score-v9/**", "worker/src/cron/compute-safety-score-v9.ts"],
+          "sources": ["shared/lib/safety-score-v9/**", "worker/src/lib/safety-score-v9/{!(alert-safety-source-cache.ts|report-card*.ts|safety-score*.ts|v9-slot-window.ts),*/**}", "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts"],
           "tests": ["worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts"]
         },
         {
-          "sources": ["shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/native-input.ts", "worker/src/lib/safety-score-v9/capture.ts", "worker/src/cron/prepare-safety-score-v9-input.ts"],
+          "sources": ["shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/native-input.ts", "worker/src/lib/safety-score-v9/capture.ts", "worker/src/cron/safety-score-v9/prepare-safety-score-v9-input.ts"],
           "tests": ["worker/src/lib/__tests__/safety-score-v9-native-input.test.ts", "worker/src/lib/__tests__/safety-score-v9-capture.test.ts", "worker/src/cron/__tests__/prepare-safety-score-v9-input.test.ts"]
         },
         {
@@ -1334,8 +1335,8 @@
       "risk": "high",
       "sources": [
         "worker/src/lib/status/**",
-        "worker/src/lib/mint-burn-supply-reconciliation.ts",
-        "worker/src/cron/mint-burn-reconciliation-watchdog.ts",
+        "worker/src/lib/mint-burn-pipeline/mint-burn-supply-reconciliation.ts",
+        "worker/src/cron/mint-burn/mint-burn-reconciliation-watchdog.ts",
         "shared/lib/mint-burn-reconciliation-policy.ts",
         "worker/src/lib/status-evaluation.ts",
         "worker/src/lib/status-reliability-shared.ts",
@@ -1376,7 +1377,7 @@
       ],
       "reading": [
         {
-          "sources": ["worker/src/lib/mint-burn-supply-reconciliation.ts", "worker/src/cron/mint-burn-reconciliation-watchdog.ts", "shared/lib/mint-burn-reconciliation-policy.ts"],
+          "sources": ["worker/src/lib/mint-burn-pipeline/mint-burn-supply-reconciliation.ts", "worker/src/cron/mint-burn/mint-burn-reconciliation-watchdog.ts", "shared/lib/mint-burn-reconciliation-policy.ts"],
           "local": [{ "path": "docs/mint-burn-flows.md", "anchor": "daily-operator-invariant" }, { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }],
           "contract": [{ "path": "docs/mint-burn-flows.md", "anchor": "daily-operator-invariant" }, { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }]
         },
@@ -1838,7 +1839,7 @@
           "required": [{ "path": "docs/worker-infrastructure.md", "anchor": "http-request-handling-entry" }]
         },
         {
-          "sources": ["worker/src/lib/safety-score-v9/**", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/sync-v9-supply-attribution.ts", "worker/src/cron/snapshot-safety-grade-history.ts"],
+          "sources": ["worker/src/lib/safety-score-v9/{!(alert-safety-source-cache.ts|report-card*.ts|safety-score*.ts|v9-slot-window.ts),*/**}", "worker/src/cron/safety-score-v9/prepare-safety-score-v9-input.ts", "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts", "worker/src/cron/safety-score-v9/sync-v9-supply-attribution.ts", "worker/src/cron/safety-score-v9/snapshot-safety-grade-history.ts"],
           "required": [
             { "path": "docs/report-cards.md", "anchor": "v10-model" },
             { "path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it" },
@@ -1846,14 +1847,14 @@
           ]
         },
         {
-          "sources": ["worker/src/cron/telegram/**", "worker/src/telegram/**", "worker/src/lib/digest*.ts", "worker/src/cron/daily-digest.ts", "worker/src/cron/daily-digest/**", "worker/src/cron/digest/**", "worker/src/cron/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts"],
+          "sources": ["worker/src/cron/telegram/**", "worker/src/telegram/**", "worker/src/lib/digest/digest*.ts", "worker/src/cron/daily-digest/daily-digest.ts", "worker/src/cron/daily-digest/{!(daily-digest.ts),*/**}", "worker/src/cron/digest/{!(digest*.ts|safety-map-producer-kick.ts),*/**}", "worker/src/cron/digest/digest-publication-watchdog.ts", "worker/src/handlers/scheduled/digest-trigger-poll.ts"],
           "required": [
             { "path": "docs/telegram-architecture.md", "anchor": "seam-overview" },
             { "path": "docs/digest-pipeline.md", "anchor": "overview" }
           ]
         },
         {
-          "sources": ["worker/src/lib/blacklist-summary-service.ts", "worker/src/lib/__tests__/blacklist-summary*.ts"],
+          "sources": ["worker/src/lib/blacklist/blacklist-summary-service.ts", "worker/src/lib/__tests__/blacklist-summary*.ts"],
           "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiblacklist-summary" }]
         },
         {

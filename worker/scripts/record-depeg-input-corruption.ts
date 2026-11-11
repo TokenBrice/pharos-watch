@@ -6,7 +6,7 @@ import { z } from "zod";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { CliUsageError, parseStrictCliArgs, runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
 import { decodeD1Envelopes } from "../../scripts/lib/remote-d1";
-import type { DdrRepairOperation } from "../src/lib/depeg-resolver-repair-store";
+import type { DdrRepairOperation } from "../src/lib/depeg-resolver/depeg-resolver-repair-store";
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
 
 const SCRIPT = "record-depeg-input-corruption";

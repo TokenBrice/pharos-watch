@@ -1,8 +1,8 @@
-import { cgUrl, cgHeaders } from "../coingecko";
+import { cgUrl, cgHeaders } from "../pricing/coingecko";
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal, throwIfAborted } from "../abort";
-import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
-import { createPricingAssetAttempt, type PricingProviderAttemptDiagnostic, type PricingProviderRejectionReason } from "../pricing-provider-diagnostics";
+import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing/pricing-provider-lifecycle";
+import { createPricingAssetAttempt, type PricingProviderAttemptDiagnostic, type PricingProviderRejectionReason } from "../pricing/pricing-provider-diagnostics";
 import { getReviewedAddressPriceTargetOverride } from "./reviewed-target-overrides";
 import type { AddressPriceQuote, AddressPriceTarget } from "./types";
 import {

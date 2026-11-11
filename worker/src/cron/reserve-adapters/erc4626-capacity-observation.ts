@@ -3,7 +3,7 @@ import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-ada
 import type { AdapterContext } from "./types";
 import type { requireOnchainInput } from "./helpers";
 import { reserveDegradedWarning } from "./helpers";
-import type { SfrxusdCrosschainV9RouteAttempt } from "../../lib/sfrxusd-crosschain-redemption-route";
+import type { SfrxusdCrosschainV9RouteAttempt } from "../../lib/redemption-backstop/sfrxusd-crosschain-redemption-route";
 import type { ExecutableRedemptionObservation } from "./executable-redemption-read-client";
 
 export type Erc4626RedemptionLiquidityConfig = NonNullable<

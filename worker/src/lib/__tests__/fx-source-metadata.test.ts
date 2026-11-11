@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { hydrateFxRateState, getFxSourceStatus, type FxRateSourceMode } from "../fx-rate-state";
-import { applyRealtimeOverlaySourceMetadata, canCarryForwardFxRates, inheritFxSourceMetadata } from "../fx-source-metadata";
-import type { FxSourceCadence } from "../fx-cadence";
+import { hydrateFxRateState, getFxSourceStatus, type FxRateSourceMode } from "../pricing/fx-rate-state";
+import { applyRealtimeOverlaySourceMetadata, canCarryForwardFxRates, inheritFxSourceMetadata } from "../pricing/fx-source-metadata";
+import type { FxSourceCadence } from "../pricing/fx-cadence";
 
 function sourceMaps() {
   return {

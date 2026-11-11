@@ -9,7 +9,7 @@ import {
   getFlightToQualityUnavailableReason,
   getGaugeBand,
   isGaugeBandRobustToWithheldWeight,
-} from "../mint-burn-scoring";
+} from "../mint-burn-pipeline/mint-burn-scoring";
 
 describe("computeFlowIntensity", () => {
 

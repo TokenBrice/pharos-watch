@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBudget } from "../../../lib/evm-logs";
-import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../../lib/blacklist/blacklist-contracts";
 import { type BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import { ethereumConfig, makeCacheRow } from "./balance.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
-vi.mock("../../../lib/blacklist-current-balances", () => ({
+vi.mock("../../../lib/blacklist/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),
 }));
 
@@ -19,7 +19,7 @@ import {
   MAX_SCAN_PHASE_BALANCE_CAPTURES,
   syncCurrentBalanceCacheForRows,
 } from "../../../lib/blacklist/current-balance-cache";
-import { upsertBlacklistCurrentBalance } from "../../../lib/blacklist-current-balances";
+import { upsertBlacklistCurrentBalance } from "../../../lib/blacklist/blacklist-current-balances";
 import { fetchEvmTokenBalance } from "../../../lib/blacklist/balance-providers";
 
 
@@ -327,8 +327,8 @@ describe("syncCurrentBalanceCacheForRows", () => {
   });
 
   it("updates provider-failure metadata without replacing prior amount columns", async () => {
-    const actual = await vi.importActual<typeof import("../../../lib/blacklist-current-balances")>(
-      "../../../lib/blacklist-current-balances",
+    const actual = await vi.importActual<typeof import("../../../lib/blacklist/blacklist-current-balances")>(
+      "../../../lib/blacklist/blacklist-current-balances",
     );
     const { sqlite, db } = fixtures.open();
     const previous = {
@@ -507,7 +507,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
   });
 
   it.each(["PAXG", "XAUT"] as const)("preserves %s successful evidence when the current gold read fails", async (stablecoin) => {
-    const actual = await vi.importActual<typeof import("../../../lib/blacklist-current-balances")>("../../../lib/blacklist-current-balances");
+    const actual = await vi.importActual<typeof import("../../../lib/blacklist/blacklist-current-balances")>("../../../lib/blacklist/blacklist-current-balances");
     const { sqlite, db } = fixtures.open();
     const config = { ...ethereumConfig, stablecoin };
     await actual.upsertBlacklistCurrentBalance(db, {

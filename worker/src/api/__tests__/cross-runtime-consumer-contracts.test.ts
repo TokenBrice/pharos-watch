@@ -9,7 +9,7 @@ import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { ReportCardsV9AcceptedResponseSchema, ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9-current";
 import { handleStablecoins } from "../cache-handlers";
-import { handleBluechipRatings } from "../../lib/bluechip-cache";
+import { handleBluechipRatings } from "../../lib/bluechip/bluechip-cache";
 import { handleChains } from "../chains";
 import { handleReportCardsV9 } from "../report-cards-v9";
 import { validateAndWriteStablecoinsCache } from "../../cron/sync-stablecoins/cache-publication";
@@ -21,7 +21,7 @@ import {
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 import { currentInput, persistAndMaterialize } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
-import * as activeSafetyScoreSource from "../../lib/safety-score-index";
+import * as activeSafetyScoreSource from "../../lib/safety-score-v9/safety-score-index";
 
 /**
  * Producer-side cross-runtime contracts.

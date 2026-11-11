@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
+import { QUALITY_MULTIPLIERS } from "../../lib/dex-liquidity/dex-cron-constants";
 import {
   classifyCurveStableSwapQuality,
   getQualityMultiplier,

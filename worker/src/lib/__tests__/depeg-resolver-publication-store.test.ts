@@ -7,7 +7,7 @@ import {
   loadFirstPublicationMembership,
   loadLatestPublicationManifest,
   writePublicationManifest,
-} from "../depeg-resolver-publication-store";
+} from "../depeg-resolver/depeg-resolver-publication-store";
 import {
   ensureIncident,
   insertOpenEvent,

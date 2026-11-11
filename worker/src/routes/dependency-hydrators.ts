@@ -1,6 +1,6 @@
 import type { EndpointDependency } from "@shared/lib/api-endpoints";
 import { buildChainRpcs } from "../lib/chain-registry";
-import { normalizeCgApiKey } from "../lib/coingecko";
+import { normalizeCgApiKey } from "../lib/pricing/coingecko";
 import type { Env } from "../lib/env";
 import type { FullRouteContext } from "./shared";
 import { normalizeWorkerCanaryMode } from "../lib/worker-canary-mode";

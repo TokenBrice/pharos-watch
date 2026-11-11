@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 const initialized = vi.hoisted(() => ({ reserves: false, backstops: false, sentinel: false }));
 
-vi.mock("../../../cron/sync-live-reserves", () => {
+vi.mock("../../../cron/live-reserves/sync-live-reserves", () => {
   initialized.reserves = true;
   return { syncLiveReserves: vi.fn() };
 });
-vi.mock("../../../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: vi.fn() }));
+vi.mock("../../../cron/market-supply/sync-kinesis-supply", () => ({ syncKinesisSupply: vi.fn() }));
 vi.mock("../../../cron/reserve-adapters/reserve-checkpoint", () => ({
   beginLiveReserveCheckpoint: vi.fn(),
   finishLiveReserveCheckpoint: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock("../../../cron/reserve-adapters/reserve-checkpoint", () => ({
   loadLiveReserveCheckpoint: vi.fn(),
   setLiveReserveCheckpointChildDisposition: vi.fn(),
 }));
-vi.mock("../../../cron/sync-redemption-backstops", () => {
+vi.mock("../../../cron/redemption-backstop/sync-redemption-backstops", () => {
   initialized.backstops = true;
   return { syncRedemptionBackstops: vi.fn() };
 });

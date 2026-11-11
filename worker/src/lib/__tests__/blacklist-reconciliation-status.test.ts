@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeBlacklistReconciliationStatusRow } from "../../test-helpers/__shared/fixtures";
-import { loadBlacklistReconciliationStatus } from "../blacklist-reconciliation-status";
+import { loadBlacklistReconciliationStatus } from "../blacklist/blacklist-reconciliation-status";
 
 describe("loadBlacklistReconciliationStatus", () => {
   it("returns a neutral not-run status before the guarded action", async () => {

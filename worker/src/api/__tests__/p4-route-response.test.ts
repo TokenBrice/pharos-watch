@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/exit-route";
-import { normalizeDexScoreDetails } from "../../lib/dex-liquidity-response";
+import { normalizeDexScoreDetails } from "../../lib/dex-liquidity/dex-liquidity-response";
 import { makeCoinbaseRouteObservation } from "./p4-route-response.test-support";
 
 describe("P4 route observation API compatibility", () => {

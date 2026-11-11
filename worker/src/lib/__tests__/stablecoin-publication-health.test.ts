@@ -7,11 +7,11 @@ import {
   loadStablecoinPublicationHealth,
   unknownActivePriceCoverageHealth,
   unknownStablecoinPublicationHealth,
-} from "../stablecoin-publication-health";
+} from "../market-supply/stablecoin-publication-health";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   STABLECOIN_PRICE_GAP_REVIEWS, parseMissingActivePriceDetail, parsePersistedMissingActivePriceState,
-} from "../stablecoin-publication-coverage";
+} from "../market-supply/stablecoin-publication-coverage";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);

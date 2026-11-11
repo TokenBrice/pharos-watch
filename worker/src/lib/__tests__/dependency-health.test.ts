@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CacheStatus, CronStatus, PublicationHealth } from "@shared/types/status";
 import { buildDependencyHealth } from "../dependency-health";
-import { buildFxCacheStatus, hydrateFxRateState } from "../fx-rate-state";
+import { buildFxCacheStatus, hydrateFxRateState } from "../pricing/fx-rate-state";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 
 const NOW = 1_775_900_000;

@@ -11,9 +11,9 @@ import type {
 import type {
   StablecoinData,
 } from "@shared/types/supply";
-import type { DexLiquidityRow } from "../../lib/dex-liquidity";
+import type { DexLiquidityRow } from "../../lib/dex-liquidity/dex-liquidity";
 import type { ApiKeyRow } from "../../lib/api-key-core";
-import type { ReconciliationRunRow as BlacklistReconciliationStatusRow } from "../../lib/blacklist-reconciliation-status";
+import type { ReconciliationRunRow as BlacklistReconciliationStatusRow } from "../../lib/blacklist/blacklist-reconciliation-status";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import { makeStablecoin, TEST_STABLECOIN_TIMESTAMP_SEC } from "@shared/test-utils/stablecoin";
 

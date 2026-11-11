@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import samples from "./fixtures/hive-market-samples.json";
 import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
-import { fetchHiveNativeHbdPrice, HIVE_MARKET_POLICY, type HiveUsdParent } from "../hive-market-price";
+import { fetchHiveNativeHbdPrice, HIVE_MARKET_POLICY, type HiveUsdParent } from "../pricing/hive-market-price";
 
 const NOW = 1_792_391_400;
 const date = (time: number) => new Date(time * 1000).toISOString().slice(0, 19);

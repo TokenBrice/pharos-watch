@@ -34,14 +34,14 @@ import {
   BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
   queryBlacklistGapMetrics,
   type BlacklistGapMetrics,
-} from "./blacklist-gaps";
+} from "./blacklist/blacklist-gaps";
 import {
   filterInactiveCircuitStates,
   getCircuitStates,
   type CircuitRecord,
 } from "./circuit-breaker";
 import { CIRCUIT_SOURCE } from "./constants";
-import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
+import { buildMintBurnSyncHealth } from "./mint-burn-pipeline/mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
 import { loadSafetyScoreV9PublicationIdentityEnvelopeForHealth } from "./safety-score-v9/publication-store";
@@ -50,7 +50,7 @@ import {
   loadStablecoinCoverageHealth,
   unknownActivePriceCoverageHealth,
   unknownStablecoinPublicationHealth,
-} from "./stablecoin-publication-health";
+} from "./market-supply/stablecoin-publication-health";
 import type { OperatorAlertHealth, SchedulerLiveness } from "@shared/types/status/public-health";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
 import { loadOperatorAlertHealth } from "./status/operator-alert-health";

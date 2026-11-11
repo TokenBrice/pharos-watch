@@ -43,7 +43,7 @@ import {
   type SupplementalSourceFamilyKey,
 } from "../../cron/yield-sync/family-registry";
 import { safeJsonParse } from "../api-cache-read";
-import { loadActiveSafetyScoreIndex } from "../safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../safety-score-v9/safety-score-index";
 import {
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,

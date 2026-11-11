@@ -3,7 +3,7 @@ import {
   PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-} from "../../lib/yield-ranking-helpers";
+} from "../../lib/yield/yield-ranking-helpers";
 
 export const COMPOUND_V3_COMETS = [
   { stablecoinId: "usdc-circle", chain: "ethereum", comet: "0xc3d688B66703497DAA19211EEdff47f25384cdc3", symbol: "USDC" },

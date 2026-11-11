@@ -15,7 +15,7 @@ import {
   getBlacklistConfigByKey,
   getBlacklistConfigsForSymbolAndChain,
   type ContractEventConfig,
-} from "../lib/blacklist-contracts";
+} from "../lib/blacklist/blacklist-contracts";
 import { createBudget, createRateLimiter } from "../lib/evm-logs";
 import { recoverBlacklistAmountForRow } from "../lib/blacklist/amount-recovery";
 import {
@@ -28,7 +28,7 @@ import {
   blacklistSubrequestBudgetReached,
   type BlacklistRunBudget,
 } from "../lib/blacklist/run-budget";
-import { invalidateBlacklistDerivedCaches } from "../lib/blacklist-cache-invalidation";
+import { invalidateBlacklistDerivedCaches } from "../lib/blacklist/blacklist-cache-invalidation";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);

@@ -2,7 +2,7 @@ import { sqrtRatioToSpotPrice } from "../amm-math";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { encodeFunctionResult, parseAbi } from "viem/utils";
-import { convertToGtNewPools } from "../../../lib/dex-api-common";
+import { convertToGtNewPools } from "../../../lib/dex-liquidity/dex-api-common";
 import { captureClSourcePools, loadStagedPoolRecoveryRows } from "../staged-pool-recovery";
 
 const rpc = vi.hoisted(() => ({

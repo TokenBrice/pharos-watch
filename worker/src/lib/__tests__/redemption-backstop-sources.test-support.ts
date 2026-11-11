@@ -3,7 +3,7 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { RedemptionRouteAvailability } from "../redemption-backstop/availability";
 import type { RedemptionBackstopBuildOptions } from "../redemption-backstop/capacity";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
-import type { FpiControllerV9RouteState } from "../fpi-controller-redemption-route";
+import type { FpiControllerV9RouteState } from "../redemption-backstop/fpi-controller-redemption-route";
 
 const BASE_REDEMPTION_ROUTE: RedemptionBackstopConfig = {
   routeFamily: "stablecoin-redeem",

@@ -13,7 +13,7 @@ import {
   type WorkerRuntimeStablecoinMeta,
 } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
-import type { DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection } from "../depeg-resolver-v2-contracts";
+import type { DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection } from "./depeg-resolver-v2-contracts";
 import type { DdrEventDbRow, DdrStructuralContext } from "./types";
 
 type DdrRegistryMeta = Pick<WorkerRuntimeStablecoinMeta,

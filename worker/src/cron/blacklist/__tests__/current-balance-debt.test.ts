@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { computeBlacklistTrackedSummaryStats } from "@shared/lib/blacklist-active-records";
-import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
-import { loadBlacklistCurrentBalanceMap } from "../../../lib/blacklist-current-balances";
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist/blacklist-contracts";
+import { loadBlacklistCurrentBalanceMap } from "../../../lib/blacklist/blacklist-current-balances";
 import { CURRENT_BALANCE_DEBT_PREFIX, syncCurrentBalanceCacheForRows } from "../../../lib/blacklist/current-balance-cache";
 import { reconcileCurrentBalanceDebt } from "../../../lib/blacklist/current-balance-debt";
 import { resolveTronBlacklistOrder } from "../../../lib/blacklist/tron-order-recovery";

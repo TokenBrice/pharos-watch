@@ -8,10 +8,10 @@ import {
 import { errorResponse, jsonFreshResponse, jsonResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult, buildCronFreshnessMeta, buildCronFreshnessHeaders } from "../lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-event-store";
-import { mapTapeEventRow } from "../lib/tape-event-helpers";
+import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-projectors/tape-event-store";
+import { mapTapeEventRow } from "../lib/tape-projectors/tape-event-helpers";
 import { logWorkerEvent } from "../lib/structured-log";
-import type { TapeEventRow } from "../lib/tape-event-types";
+import type { TapeEventRow } from "../lib/tape-projectors/tape-event-types";
 import {
   SEVERITY_RANK,
   TAPE_EVENT_SEVERITY_VALUES,

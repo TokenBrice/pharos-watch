@@ -25,11 +25,11 @@ import {
   shardSafetyScoreV9PublicationStoredValue,
   loadSafetyScoreV9PublicationStoredRow,
 } from "../safety-score-v9/publication-chunks";
-import { loadActiveSafetyScoreIndex } from "../safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../safety-score-v9/safety-score-index";
 import { loadSafetyPublicationSize } from "../status/safety-publication-size";
 import { handleReportCardsV9 } from "../../api/report-cards-v9";
 import { handleReportCardsV9Detail } from "../../api/report-cards-v9-projections";
-import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
+import { materializeV9AcceptedPublication } from "../safety-score-v9/report-cards-v9-materialization";
 
 const databases: DatabaseSync[] = [];
 afterEach(() => { vi.useRealTimers(); for (const sqlite of databases.splice(0)) sqlite.close(); });

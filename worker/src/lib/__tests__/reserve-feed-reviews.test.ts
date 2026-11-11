@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { ReserveFeedReviewSchema, type ReserveFeedReview as Review } from "@shared/types/live-reserves";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { RESERVE_FEED_REVIEWS, matchReserveFeedReview as matchReview, resolveReserveFeedReviews as resolveReviews } from "../reserve-feed-reviews";
+import { RESERVE_FEED_REVIEWS, matchReserveFeedReview as matchReview, resolveReserveFeedReviews as resolveReviews } from "../live-reserves/reserve-feed-reviews";
 import type { ReserveSyncStateRecord as State } from "../live-reserves/store-shared";
 import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";

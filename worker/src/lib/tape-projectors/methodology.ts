@@ -41,8 +41,8 @@ import {
   buildTapeEventId,
   severityForMethodologyBump,
   truncateSummary,
-} from "../tape-event-helpers";
-import type { TapeEventInsert } from "../tape-event-types";
+} from "./tape-event-helpers";
+import type { TapeEventInsert } from "./tape-event-types";
 import {
   projectStaticCatalogEntries,
   type ProjectorOptions,

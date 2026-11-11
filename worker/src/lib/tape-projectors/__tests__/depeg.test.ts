@@ -3,8 +3,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { DEPEG_RECOVERY_CLOSE_REASONS } from "@shared/lib/depeg-closure";
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
-import { mapTapeEventRow } from "../../tape-event-helpers";
-import { queryTapeEvents } from "../../tape-event-store";
+import { mapTapeEventRow } from "../tape-event-helpers";
+import { queryTapeEvents } from "../tape-event-store";
 import { projectDepegOpened, projectDepegPeakWorsened, projectDepegResolved } from "../depeg";
 import { DEFAULT_BATCH_LIMIT, SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";

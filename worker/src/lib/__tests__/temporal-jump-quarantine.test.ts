@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { shouldWithholdTemporalJump } from "../price-publish-policy";
-import type { PriceValidationContext } from "../price-validation";
+import { shouldWithholdTemporalJump } from "../pricing/price-publish-policy";
+import type { PriceValidationContext } from "../pricing/price-validation";
 
 const USD_CONTEXT: PriceValidationContext = {
   pegClass: "usd",

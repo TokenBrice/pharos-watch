@@ -13,11 +13,11 @@ import {
   fitsCgPoolBatch,
   type CgPool,
   type CgPoolsByAddressResult,
-} from "../../lib/coingecko-onchain";
+} from "../../lib/dex-liquidity/coingecko-onchain";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isBlockedDexId } from "../../lib/dex-liquidity/dex-cron-constants";
 import { tryParseJson } from "../../lib/json-parse";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";

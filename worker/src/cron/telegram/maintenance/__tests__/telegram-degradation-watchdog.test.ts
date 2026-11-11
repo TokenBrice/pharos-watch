@@ -3,7 +3,7 @@ import {
   ALERT_SAFETY_V9_SOURCE_GENERATION,
   assessAlertSafetyEnvelope,
   buildAlertSafetyV9SourceEnvelopeFromParts,
-} from "../../../../lib/alert-safety-source-cache";
+} from "../../../../lib/safety-score-v9/alert-safety-source-cache";
 import { makeWorkerReportCardsV9Response } from "../../../../test-helpers/report-cards-v9";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -39,9 +39,9 @@ vi.mock("../../../../lib/db-cache", () => ({
   deleteCache: mockDeleteCache,
 }));
 
-vi.mock("../../../../lib/alert-safety-source-cache", async (importOriginal) => {
+vi.mock("../../../../lib/safety-score-v9/alert-safety-source-cache", async (importOriginal) => {
   const actual = await importOriginal<
-    typeof import("../../../../lib/alert-safety-source-cache")
+    typeof import("../../../../lib/safety-score-v9/alert-safety-source-cache")
   >();
   return {
     ...actual,

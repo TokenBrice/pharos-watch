@@ -48,22 +48,22 @@ const loadDexLiquidityScoresMock = vi.fn();
 const loadAcceptedReserveGenerationMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
 
-vi.mock("../../lib/stablecoins-cache", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/stablecoins-cache")>()),
+vi.mock("../../lib/market-supply/stablecoins-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/market-supply/stablecoins-cache")>()),
   loadStablecoinsCache: loadStablecoinsCacheMock,
 }));
 
-vi.mock("../../lib/dex-liquidity", () => ({
+vi.mock("../../lib/dex-liquidity/dex-liquidity", () => ({
   loadDexLiquidityScores: loadDexLiquidityScoresMock,
 }));
 
-vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/accepted-reserve-generation")>()),
+vi.mock("../../lib/live-reserves/accepted-reserve-generation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/live-reserves/accepted-reserve-generation")>()),
   loadAcceptedReserveGeneration: loadAcceptedReserveGenerationMock,
 }));
 
-vi.mock("../../lib/redemption-backstops-store-write", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/redemption-backstops-store-write")>()),
+vi.mock("../../lib/redemption-backstop/redemption-backstops-store-write", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/redemption-backstop/redemption-backstops-store-write")>()),
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
 
@@ -125,7 +125,7 @@ describe("frozen dissolved DUSD Fluid redemption coverage", () => {
         }),
       );
 
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
       // Only the depeg-availability read reaches D1; the writer is captured above.
       const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
       await syncRedemptionBackstops(db, new AbortController().signal);

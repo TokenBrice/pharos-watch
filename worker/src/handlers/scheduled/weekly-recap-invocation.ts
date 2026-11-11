@@ -1,4 +1,4 @@
-import { generateWeeklyRecap } from "../../cron/weekly-recap";
+import { generateWeeklyRecap } from "../../cron/weekly-recap/weekly-recap";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import {
   buildTelegramCreds,

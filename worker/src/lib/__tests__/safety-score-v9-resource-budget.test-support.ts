@@ -58,10 +58,10 @@ export function readHeavyProbeBuildSettings(root: string) {
 type Site = { file: string; fn: string; phase: string; kind: "variable" | "call" | "return" | "assignment"; name: string; before?: boolean; contains?: string };
 // Structural hooks are deliberately fail-closed: a renamed/duplicated statement is a protocol revision.
 const SITES: Site[] = [
-  { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "native-envelope-loaded", kind: "variable", name: "caches" },
-  { file: "worker/src/lib/report-cards-fixed-input-cache-codec.ts", fn: "parseFixedInputCacheEntry", phase: "native-inflate-decoded", kind: "variable", name: "payloadText" },
-  { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "native-input-decoded", kind: "variable", name: "fixedInput" },
-  { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "enrichment-loaded", kind: "variable", name: "evidenceJournalById" },
+  { file: "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "native-envelope-loaded", kind: "variable", name: "caches" },
+  { file: "worker/src/lib/safety-score-v9/report-cards-fixed-input-cache-codec.ts", fn: "parseFixedInputCacheEntry", phase: "native-inflate-decoded", kind: "variable", name: "payloadText" },
+  { file: "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "native-input-decoded", kind: "variable", name: "fixedInput" },
+  { file: "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "enrichment-loaded", kind: "variable", name: "evidenceJournalById" },
   { file: "worker/src/lib/safety-score-v9/accepted-projection-readers.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-row-loaded", kind: "variable", name: "row" },
   { file: "worker/src/lib/safety-score-v9/accepted-projection-readers.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-parsed", kind: "variable", name: "state" },
   { file: "worker/src/lib/safety-score-v9/publication-runner.ts", fn: "runSafetyScoreV9Publication", phase: "accepted-baseline-ready", kind: "variable", name: "acceptedPublication" },
@@ -435,7 +435,7 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
 // the esbuild metafile against hasV9ContagionInput.
 export const SAFETY_SCORE_V9_CONTAGION_PROBE_SOURCE = `
           import { readFileSync } from "node:fs";
-          import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
+          import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input.ts";
           import { applySafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation.ts";
           import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget.ts";
           import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";

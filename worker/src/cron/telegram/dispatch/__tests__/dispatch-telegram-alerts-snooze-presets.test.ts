@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
-import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../../lib/alert-reserve-source-cache";
+import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../../lib/live-reserves/alert-reserve-source-cache";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness as createBaseDispatchHarness,

@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { loadDepegResolverReviewSnapshot } from "../../../lib/depeg-resolver-review-snapshot-cache";
+import { loadDepegResolverReviewSnapshot } from "../../../lib/depeg-resolver/depeg-resolver-review-snapshot-cache";
 import { ensureIncident, insertOpenEvent, withSqliteD1 } from "../../../lib/__tests__/depeg-resolver-ddrv2-store.test-support";
 import { persistDepegResolverReviewArtifacts } from "../persistence";
 import { buildDiagnosticSnapshot } from "../public-projection";
 import { DEFAULT_DDR_V2_STORE_CONTRACTS } from "../storage-adapters";
 import { makeDdrResolverRow } from "../../__tests__/depeg-public-projection.test-support";
 import { NOW_SEC } from "./depeg-resolver.test-support";
-import * as reviewer from "../../compute-depeg-resolver-review";
+import * as reviewer from "../../depeg-resolver-review/compute-depeg-resolver-review";
 
 const fixtures = createLatestSchemaFixtureTracker();
 beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000); });

@@ -27,7 +27,7 @@ import { SCHEDULED_DELIVERY_LAG_SIGNAL, type CronFindingJobs, type ScheduledDeli
 import { getSourceFailureMessage } from "./section-errors";
 import { expiringReviews } from "./evaluation-causes";
 import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES, type SafetyPublicationSizeObservation } from "./safety-publication-size";
-import { resolveDepegBlindEventReviews } from "../canary-checks-depeg";
+import { resolveDepegBlindEventReviews } from "../depeg-detection/canary-checks-depeg";
 
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed

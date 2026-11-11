@@ -9,7 +9,7 @@
  * its driver reserves one connection even though the projector is D1-only.
  */
 import { computeAndStoreDEWS } from "../../lib/dews/service";
-import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
+import { computeAndStoreStabilityIndex } from "../../cron/psi/stability-index";
 import { runProjectTapeCanary } from "./placed-executor";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";

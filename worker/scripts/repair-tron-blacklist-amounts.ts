@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import { runCliEntrypoint } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
-import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist/blacklist-cache-keys";
 import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";

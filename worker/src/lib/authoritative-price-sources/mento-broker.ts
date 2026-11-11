@@ -5,8 +5,8 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmBlockHeader } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { buildPriceValidationContext, getFreshReferencePriceForContext } from "../price-validation";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
+import { buildPriceValidationContext, getFreshReferencePriceForContext } from "../pricing/price-validation";
 import { protocolParProvider } from "./protocol-par";
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";

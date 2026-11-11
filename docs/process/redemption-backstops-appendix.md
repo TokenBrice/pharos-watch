@@ -8,7 +8,7 @@ The [public methodology](../redemption-backstops.md) owns the scoring contract. 
 
 - **Pattern:** `11 */4 * * *`
 - **Function:** `syncRedemptionBackstops(db, signal)`
-- **File:** `worker/src/cron/sync-redemption-backstops.ts`
+- **File:** `worker/src/cron/redemption-backstop/sync-redemption-backstops.ts`
 - **Trigger order:** runs after `sync-live-reserves` in the 4-hourly reserve lane (`worker/src/handlers/scheduled/four-hourly-reserves.ts`)
 
 The cron reads:
@@ -259,7 +259,7 @@ Key columns:
 `snapshot_run_id` links immutable `redemption_backstop_run_rows` to a completed `redemption_backstop_runs` manifest. API and report-card readers prefer the latest valid completed run. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`.
 
 
-`parseDetails` in `worker/src/lib/redemption-backstops-store.ts` requires a successfully decoded object with explicit valid `resolutionState`. Missing details, malformed JSON, null/scalars/arrays, missing current core status/confidence/eligibility fields or invalid `reserveInput` reject the row and its complete run. A scalar score cannot reconstruct resolved state. Historical versions below v4 may salvage only independently valid diagnostic docs/notes/caps/confidence/scenario fields; salvage never fabricates state or provenance. Earlier-run fallback is atomic, retaining its run ID, clock, methodology and metadata, not mixing good rows from a rejected generation.
+`parseDetails` in `worker/src/lib/redemption-backstop/redemption-backstops-store.ts` requires a successfully decoded object with explicit valid `resolutionState`. Missing details, malformed JSON, null/scalars/arrays, missing current core status/confidence/eligibility fields or invalid `reserveInput` reject the row and its complete run. A scalar score cannot reconstruct resolved state. Historical versions below v4 may salvage only independently valid diagnostic docs/notes/caps/confidence/scenario fields; salvage never fabricates state or provenance. Earlier-run fallback is atomic, retaining its run ID, clock, methodology and metadata, not mixing good rows from a rejected generation.
 
 Bulk, per-coin and depeg-resolver live-signal readers share one completed-run admission boundary. It validates the full immutable row census, unique identities, details and entries in bounded pages before selecting a generation; a malformed unrequested sibling rejects that run even when the requested coin is absent. Narrow readers discard unrelated decoded graphs and then query only their selected-row or four-column signal projection under the admitted run ID, without constructing or serializing the full feed or keeping an isolate object cache.
 

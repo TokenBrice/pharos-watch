@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { LIVE_RESERVE_QUEUE_HASH, type LiveReserveCohortGrading } from "../sync-live-reserves-shared";
+import { LIVE_RESERVE_QUEUE_HASH, type LiveReserveCohortGrading } from "../live-reserves/sync-live-reserves-shared";
 import {
   mockD1 as createMockD1,
   type MockD1Database,

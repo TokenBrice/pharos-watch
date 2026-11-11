@@ -14,10 +14,10 @@ import * as post from "../post-enrichment";
 import * as notices from "../telegram-tracked-additions";
 import * as circuit from "../../../lib/circuit-breaker";
 import { getCache } from "../../../lib/db-cache";
-import { getPriceCache } from "../../../lib/price-cache";
-import * as coverage from "../../../lib/stablecoin-publication-coverage";
-import { evaluateStablecoinActivePriceCoverage } from "../../../lib/stablecoin-publication-coverage";
-import { createEmptyGtProbeStats } from "../../../lib/geckoterminal-price-probe-stats";
+import { getPriceCache } from "../../../lib/pricing/price-cache";
+import * as coverage from "../../../lib/market-supply/stablecoin-publication-coverage";
+import { evaluateStablecoinActivePriceCoverage } from "../../../lib/market-supply/stablecoin-publication-coverage";
+import { createEmptyGtProbeStats } from "../../../lib/dex-liquidity/geckoterminal-price-probe-stats";
 import {
   loadStablecoinsPublicationContinuity,
   runStablecoinsPostIntakePublication,

@@ -11,8 +11,8 @@ import {
 } from "../reconcile-night-watch-blacklist";
 import type { RemoteD1Client } from "../lib/remote-d1";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
-import { CONTRACT_CONFIGS } from "../../src/lib/blacklist-contracts";
-import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
+import { CONTRACT_CONFIGS } from "../../src/lib/blacklist/blacklist-contracts";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist/blacklist-summary-service";
 import { derivedCacheRows, seedDerivedCaches, sqliteRemoteD1 } from "./blacklist-current-balance-maintenance.test-support";
 
 const SCRIPT_NAME = "worker/scripts/reconcile-night-watch-blacklist.ts";

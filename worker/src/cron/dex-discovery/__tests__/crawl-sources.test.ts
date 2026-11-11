@@ -2,7 +2,7 @@ import { coinGeckoPool } from "./discovery.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import type * as DexScreener from "../../../lib/dexscreener";
+import type * as DexScreener from "../../../lib/dex-liquidity/dexscreener";
 
 const fetchDsTokenPairsWithStatusMock = vi.hoisted(() => vi.fn());
 const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
@@ -29,9 +29,9 @@ vi.mock("../../../lib/abort", async () => {
   };
 });
 
-vi.mock("../../../lib/coingecko-onchain", async () => {
-  const actual = await vi.importActual<typeof import("../../../lib/coingecko-onchain")>(
-    "../../../lib/coingecko-onchain",
+vi.mock("../../../lib/dex-liquidity/coingecko-onchain", async () => {
+  const actual = await vi.importActual<typeof import("../../../lib/dex-liquidity/coingecko-onchain")>(
+    "../../../lib/dex-liquidity/coingecko-onchain",
   );
   return {
     ...actual,
@@ -43,7 +43,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
   fetchJsonWithRetry: vi.fn(),
 }));
 
-vi.mock("../../../lib/dexscreener", async (importOriginal) => ({
+vi.mock("../../../lib/dex-liquidity/dexscreener", async (importOriginal) => ({
   ...(await importOriginal<typeof DexScreener>()),
   fetchDsTokenPoolsWithStatus: fetchDsTokenPoolsWithStatusMock,
   fetchDsTokenPairsWithStatus: fetchDsTokenPairsWithStatusMock,
@@ -80,12 +80,12 @@ import {
 } from "../crawl-dexscreener-pools";
 import { createCrawlStageContext, knownPoolIdKey } from "../staged-pool";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
-import { dsRateLimit, fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
-import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
+import { dsRateLimit, fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../../../lib/dex-liquidity/dexscreener";
+import { fetchCgTokenPoolsWithStatus } from "../../../lib/dex-liquidity/coingecko-onchain";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
+import { QUALITY_MULTIPLIERS } from "../../../lib/dex-liquidity/dex-cron-constants";
 
 function createMockDb(): D1Database {
   return makeNoopD1({

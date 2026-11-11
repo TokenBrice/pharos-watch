@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import type { PriceValidationReferences } from "../../../lib/price-validation";
+import type { PriceValidationReferences } from "../../../lib/pricing/price-validation";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import {
@@ -20,8 +20,8 @@ import {
   makeDexApiFetchResult,
   normalizeDexApiPoolsForMerge,
   type DexApiPool,
-} from "../../../lib/dex-api-common";
-import { resolveStablecoinIdForDexApiToken } from "../../../lib/dex-api-token-pricing";
+} from "../../../lib/dex-liquidity/dex-api-common";
+import { resolveStablecoinIdForDexApiToken } from "../../../lib/dex-liquidity/dex-api-token-pricing";
 import { fetchFluidPools } from "../fetch-fluid";
 import { fetchBalancerPools } from "../fetch-balancer";
 import { fetchRaydiumPools } from "../fetch-raydium";

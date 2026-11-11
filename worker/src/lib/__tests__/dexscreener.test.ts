@@ -9,7 +9,7 @@ vi.mock("../abort", () => ({
 }));
 
 import { fetchWithRetry } from "../fetch-retry";
-import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSymbol } from "../dexscreener";
+import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, getDsTrackedTokenSymbol } from "../dex-liquidity/dexscreener";
 
 function validPair(chainId = "base", dexId = "aerodrome") {
   return {

@@ -3,7 +3,7 @@ import { throwIfAborted } from "../abort";
 import { reconcileAtomicRoundtripGroups } from "./roundtrip-detection";
 import { applyReviewedProtocolInternalFlows, applySupplyExcludedProtocolInternalFlows } from "./reviewed-protocol-flows";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
-import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
+import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "./mint-burn-hourly-valuation";
 import { mintBurnHourlyBucketAggregatesSql } from "./hourly-aggregates";
 
 const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;

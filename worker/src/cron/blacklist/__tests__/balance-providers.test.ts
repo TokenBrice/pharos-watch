@@ -5,7 +5,7 @@ import {
   fetchEvmTokenBalanceRaw,
   fetchTronTokenCurrentBalance,
 } from "../../../lib/blacklist/balance-providers";
-import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../../lib/blacklist/blacklist-contracts";
 import type { ChainRpcConfig, RpcEndpoint } from "../../../lib/chain-registry";
 import { createBudget } from "../../../lib/evm-logs";
 

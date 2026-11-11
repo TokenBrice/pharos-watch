@@ -10,7 +10,7 @@ import {
   repairHistoricalMintBurnPrices,
   resolveHistoricalMintPrice,
   type HistoricalMintPriceSourceLoader,
-} from "../mint-burn-historical-price-repair";
+} from "../mint-burn-pipeline/mint-burn-historical-price-repair";
 
 const DAY = 86_400;
 const fixtures = createLatestSchemaFixtureTracker();

@@ -7,17 +7,17 @@ import {
   isListAggregatorOnlyPair,
   isPoolChallengeEligibleConsensus,
 } from "@shared/lib/pricing-source-policy";
-import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationContext, PriceValidationReferences } from "../../lib/pricing/price-validation";
 import {
   buildPriceValidationContext,
   isSevereFixedPegDownside,
   validatePriceCandidate,
-} from "../../lib/price-validation";
-import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote } from "../../lib/price-depeg-voting-policy";
-import { getDepegThresholdBps } from "../../lib/depeg-threshold-policy";
-import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
-import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
-import { midDivergenceBps } from "../../lib/price-divergence";
+} from "../../lib/pricing/price-validation";
+import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote } from "../../lib/pricing/price-depeg-voting-policy";
+import { getDepegThresholdBps } from "../../lib/depeg-detection/depeg-threshold-policy";
+import { loadDexPoolChallengers } from "../../lib/depeg-detection/depeg-helpers";
+import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-liquidity/dex-price-estimators";
+import { midDivergenceBps } from "../../lib/pricing/price-divergence";
 import type { ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "./enrich-prices-shared";
 

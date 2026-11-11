@@ -1,7 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { buildNativeSupplyBuckets, getLatestDetailTokenDate, type DetailResponseHelpers } from "./shared";
 
 function buildCacheFallbackToken(

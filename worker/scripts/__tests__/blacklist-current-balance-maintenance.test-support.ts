@@ -1,11 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
-import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
+import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist/blacklist-contracts";
 import {
   BLACKLIST_CURRENT_BALANCE_COLUMNS,
   buildBlacklistCurrentBalanceValues,
-} from "../../src/lib/blacklist-current-balances";
-import { getBlacklistDerivedCacheKeys } from "../../src/lib/blacklist-cache-keys";
+} from "../../src/lib/blacklist/blacklist-current-balances";
+import { getBlacklistDerivedCacheKeys } from "../../src/lib/blacklist/blacklist-cache-keys";
 import type { CurrentBalanceMaintenanceRow } from "../lib/blacklist-current-balance-maintenance";
 import type { RemoteD1Client } from "../lib/remote-d1";
 

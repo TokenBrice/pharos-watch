@@ -1,7 +1,7 @@
 import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { DatabaseSync } from "node:sqlite";
 
-import type { PendingDepegRow } from "../lib/depeg-pending";
+import type { PendingDepegRow } from "../lib/depeg-detection/depeg-pending";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const NOW_SEC = 1_700_000_000;

@@ -13,7 +13,7 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), notOkAsNull: true, passthroughNonResponse: true }));
 
-vi.mock("../../lib/cex-tickers", () => ({
+vi.mock("../../lib/pricing/cex-tickers", () => ({
   createBinanceFetchSession: vi.fn(() => ({})),
   fetchBinancePricesForRun: vi.fn(),
 }));
@@ -23,11 +23,11 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn(async () => undefined),
 }));
 
-vi.mock("../../lib/native-peg-quotes", () => ({
+vi.mock("../../lib/pricing/native-peg-quotes", () => ({
   fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
 }));
 
-import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { confirmPendingDepegs } from "../depeg-detection/confirm-pending-depegs";
 
 const NOW_SEC = 1_700_000_000;
 

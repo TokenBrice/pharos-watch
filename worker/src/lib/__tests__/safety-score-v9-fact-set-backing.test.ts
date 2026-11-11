@@ -16,7 +16,7 @@ import { eligibleReserveMeta, mintMeta } from "./safety-score-v9-reserve-admissi
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 
 import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildReserves, reconcileCollateralDependencyMappings } from "../safety-score-v9/fact-set-backing";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";

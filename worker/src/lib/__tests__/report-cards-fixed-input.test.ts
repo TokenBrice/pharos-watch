@@ -14,7 +14,7 @@ import {
 import {
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
-} from "../report-cards-fixed-input";
+} from "../safety-score-v9/report-cards-fixed-input";
 import { buildReportCardsFixedInputCacheEntry } from "../../test-helpers/report-cards-fixed-input";
 import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9/supply-attribution";
 import { makeV9RegistryFixedInput } from "../../test-helpers/v9-fixed-input";

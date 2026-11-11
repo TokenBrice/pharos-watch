@@ -4,17 +4,17 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type MintBurnSupplyReconciliationLeg, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { buildCoinCoverageMap, readMintBurnCronSnapshot, readMintBurnWindowContext, withExtendedLaneHeads, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/mint-burn-contract-identity";
 import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
-import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
-import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
-import { conservationIdentityAddress, mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
-import { readMintBurnSupplyReconciliation } from "../mint-burn-supply-reconciliation";
+import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-pipeline/mint-burn-health-config";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-pipeline/mint-burn-contracts";
+import { conservationIdentityAddress, mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-pipeline/mint-burn-conservation";
+import { readMintBurnSupplyReconciliation } from "../mint-burn-pipeline/mint-burn-supply-reconciliation";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEvent } from "../structured-log";
 import type { MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
-import { loadActiveSafetyScoreIndex } from "../safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../safety-score-v9/safety-score-index";
 import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
 import { STATUS_DATASET_FRESHNESS } from "@shared/lib/status-dataset-freshness";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -24,7 +24,7 @@ import { assessFreshnessTimestamp } from "../api-freshness-age";
 import {
   DEPEG_CENSUS_PRODUCER_JOB,
   loadLatestDepegLedgerRunAt,
-} from "../depeg-ledger-clock";
+} from "../depeg-detection/depeg-ledger-clock";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {

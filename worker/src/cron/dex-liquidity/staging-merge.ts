@@ -11,11 +11,11 @@ import {
   stagedPoolConfidence,
   stagedPoolMaturityDays,
 } from "../dex-discovery/types";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
-import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-api-pool-shaping";
-import { QUALITY_MULTIPLIERS, STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
+import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-api-pool-shaping";
+import { QUALITY_MULTIPLIERS, STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-liquidity/dex-cron-constants";
 import { coerceFiniteNumber } from "@shared/lib/type-guards";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import { buildCgTickerPriceObservations } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";

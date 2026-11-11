@@ -19,7 +19,7 @@ import {
 } from "@shared/types/safety-score-v9-deployment-supply-census";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
-import { SafetyScoreV9SupplyAttributionSchema } from "../report-cards-fixed-input";
+import { SafetyScoreV9SupplyAttributionSchema } from "./report-cards-fixed-input";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,

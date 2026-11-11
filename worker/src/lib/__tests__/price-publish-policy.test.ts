@@ -8,8 +8,8 @@ import {
   validateFallbackPriceCandidate,
   validatePrimaryPriceCandidate,
   validatePublishedAssetPrice,
-} from "../price-publish-policy";
-import type { PriceValidationContext } from "../price-validation";
+} from "../pricing/price-publish-policy";
+import type { PriceValidationContext } from "../pricing/price-validation";
 
 const USD_CONTEXT: PriceValidationContext = {
   pegClass: "usd",

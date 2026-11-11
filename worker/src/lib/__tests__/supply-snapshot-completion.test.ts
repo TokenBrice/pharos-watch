@@ -6,8 +6,8 @@ import {
   buildSupplySnapshotCompletionMarker,
   getCompletedSupplySnapshot,
   preflightSupplySnapshot,
-} from "../supply-snapshot-completion";
-import type { StablecoinPublicationWaiver } from "../stablecoin-publication-coverage";
+} from "../market-supply/supply-snapshot-completion";
+import type { StablecoinPublicationWaiver } from "../market-supply/stablecoin-publication-coverage";
 
 const SNAPSHOT_DATE = Date.UTC(2026, 6, 10) / 1000;
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinData } from "@shared/types/supply";
 import { buildDewsScoringResult } from "../scoring";
 import { loadDewsSourceState } from "../source-state";
-import { CONTRACT_CONFIGS } from "../../blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../blacklist/blacklist-contracts";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 afterEach(() => vi.restoreAllMocks());

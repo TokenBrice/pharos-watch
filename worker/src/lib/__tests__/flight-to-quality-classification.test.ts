@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import {
   buildFlightToQualityClassificationFromV9Snapshot,
-} from "../flight-to-quality-classification";
+} from "../mint-burn-pipeline/flight-to-quality-classification";
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-v9-current";

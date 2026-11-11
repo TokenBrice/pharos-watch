@@ -6,8 +6,8 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
-import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey as configKey } from "../../lib/mint-burn-contract-identity";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey as configKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { isD1ResourceWindowError } from "../../lib/d1-overload-retry";
 import { idleMintBurnRepairD1 } from "./repair-coverage";
 import { commitMintBurnSupplyProofRepair } from "./repair-supply-proofs";

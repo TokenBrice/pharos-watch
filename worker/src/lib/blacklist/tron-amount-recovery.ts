@@ -10,7 +10,7 @@ import {
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventByTopic,
   type ContractEventConfig,
-} from "../blacklist-contracts";
+} from "./blacklist-contracts";
 import { normalizeTronAddress, tronBase58ToHex, tronHexAddressToBase58 } from "../tron-address";
 import { executeAtomicBatch } from "../db";
 import type { RateLimitedFetch } from "../evm-logs";

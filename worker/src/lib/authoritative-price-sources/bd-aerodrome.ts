@@ -3,7 +3,7 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmRpcBatch, fetchEvmMulticall3Aggregate3AtBlock } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { resolveTrustedOverrideParent, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 

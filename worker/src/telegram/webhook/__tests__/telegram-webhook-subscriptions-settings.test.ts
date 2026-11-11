@@ -25,7 +25,7 @@ import {
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
 // one matching card (the fail-closed paths have their own focused tests).
 // Vitest hoists this factory before static imports initialize.
-vi.mock("../../../lib/safety-score-index", async () => {
+vi.mock("../../../lib/safety-score-v9/safety-score-index", async () => {
   const { makeTelegramSafetySnapshot } = await import("./telegram-safety.test-support.ts");
   const snapshot = makeTelegramSafetySnapshot();
   return {

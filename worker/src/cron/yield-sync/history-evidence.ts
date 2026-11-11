@@ -5,10 +5,10 @@ import {
 } from "../../lib/abort";
 import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
-} from "../../lib/yield-history-ownership-handoffs";
+} from "../../lib/yield/yield-history-ownership-handoffs";
 import {
   buildOnChainSourceKey,
-} from "../../lib/yield-utils";
+} from "../../lib/yield/yield-utils";
 import {
   type YieldHistorySnapshotRow,
 } from "./history-repository";

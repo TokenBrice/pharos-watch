@@ -6,9 +6,9 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { buildInputCorruptionPlan, decodeInputCorruptionImportReceipt, main, parseInputCorruptionArgs } from "../record-depeg-input-corruption";
 import { createRemoteD1Client } from "../lib/remote-d1";
 import type * as RemoteD1Module from "../lib/remote-d1";
-import { loadPredictionErrata } from "../../src/lib/depeg-resolver-errata-store";
-import { rowToDepegEvent } from "../../src/lib/depeg-helpers";
-import type { DepegRow } from "../../src/lib/depeg-helpers";
+import { loadPredictionErrata } from "../../src/lib/depeg-resolver/depeg-resolver-errata-store";
+import { rowToDepegEvent } from "../../src/lib/depeg-detection/depeg-helpers";
+import type { DepegRow } from "../../src/lib/depeg-detection/depeg-helpers";
 import { sealPredictionFixture, withSqliteD1 } from "../../src/lib/__tests__/depeg-resolver-ddrv2-store.test-support";
 import { decodeD1Rows } from "../../../scripts/lib/remote-d1";
 

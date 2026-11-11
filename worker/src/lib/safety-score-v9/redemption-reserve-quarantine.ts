@@ -8,7 +8,7 @@ import {
 } from "@shared/types/safety-score-v9-causes";
 import type { V9EvidenceReferenceV2, V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
 import type { PipelineGapByAssetId } from "@shared/lib/report-cards-fixed-input-identity";
-import type { RedemptionReserveQuarantineReason } from "../accepted-reserve-generation";
+import type { RedemptionReserveQuarantineReason } from "../live-reserves/accepted-reserve-generation";
 import { createRuntimeGapVerdict } from "./fact-set-context";
 
 /**

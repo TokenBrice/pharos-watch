@@ -1,10 +1,10 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { jsonFreshDegradedResponse } from "../lib/api-response";
-import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
+import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver/depeg-resolver-methodology";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildInClause, chunkArray } from "../lib/db";
-import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
+import { loadDepegResolverSnapshot } from "../lib/depeg-resolver/depeg-resolver-snapshot-cache";
 import {
   DDR_DURATION_BAND_META,
   DDR_EMPTY_READ_OVERLAY,
@@ -26,11 +26,11 @@ import {
   DDR_RESOLUTION_RUBRIC_VERSION,
   DDR_SUPPORT_RULES_VERSION,
 } from "@shared/lib/methodology-versions/depeg-resolver";
-import { loadLatestPublicationManifest } from "../lib/depeg-resolver-publication-store";
-import { loadPredictionErrata } from "../lib/depeg-resolver-errata-store";
+import { loadLatestPublicationManifest } from "../lib/depeg-resolver/depeg-resolver-publication-store";
+import { loadPredictionErrata } from "../lib/depeg-resolver/depeg-resolver-errata-store";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
-import type { DdrPublicationManifest } from "../lib/depeg-resolver-publication-store";
+import type { DdrPublicationManifest } from "../lib/depeg-resolver/depeg-resolver-publication-store";
 import type { DdrPredictionErratum } from "@shared/types/depeg-resolver";
 
 function degradedResponse(reason: string): DdrResponse {

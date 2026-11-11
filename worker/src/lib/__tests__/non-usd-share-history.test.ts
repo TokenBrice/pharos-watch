@@ -5,9 +5,9 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import {
   computeNonUsdShareHistory, sampleNonUsdShareHistory, publishNonUsdShareHistory,
   readNonUsdShareHistory, NON_USD_SHARE_HISTORY_KEY,
-} from "../non-usd-share-history";
+} from "../market-supply/non-usd-share-history";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
-import { SUPPLY_HISTORY_UPSERT_SQL, writeSupplyHistoryBatch } from "../supply-history-db";
+import { SUPPLY_HISTORY_UPSERT_SQL, writeSupplyHistoryBatch } from "../market-supply/supply-history-db";
 
 function mockD1(tables: Parameters<typeof baseMockD1>[0]) {
   const db = baseMockD1(tables);

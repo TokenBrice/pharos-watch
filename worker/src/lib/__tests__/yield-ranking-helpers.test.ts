@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
-import { qualifyYieldEvidence, scoreYieldPys } from "../yield-ranking-helpers";
+import { qualifyYieldEvidence, scoreYieldPys } from "../yield/yield-ranking-helpers";
 
 const evidence = {
   evidenceClass: "direct-onchain" as const,

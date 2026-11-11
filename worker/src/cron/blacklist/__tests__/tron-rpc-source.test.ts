@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist/blacklist-contracts";
 import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 import { TronJsonRpcReader, type TronRpcLog } from "../../../lib/tron-jsonrpc";
 import * as providerBudget from "../../../lib/rpc-provider-budget";

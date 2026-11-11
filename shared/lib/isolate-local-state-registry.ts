@@ -144,7 +144,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The bundled WASM modules are authoritative; the promise only coalesces initialization work.",
   },
   {
-    sourcePath: "worker/src/lib/og-harfbuzz.ts",
+    sourcePath: "worker/src/lib/og-templates/og-harfbuzz.ts",
     stateNames: ["freeRegistered"],
     owner: "OG-image HarfBuzz loader",
     kind: "coordination",
@@ -240,7 +240,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "cron_runs and durable cron-event records are authoritative; counts only tune log severity.",
   },
   {
-    sourcePath: "worker/src/lib/fx-rate-state.ts",
+    sourcePath: "worker/src/lib/pricing/fx-rate-state.ts",
     stateNames: ["_fxCalendar"],
     owner: "FX business-day calendar",
     kind: "cache",

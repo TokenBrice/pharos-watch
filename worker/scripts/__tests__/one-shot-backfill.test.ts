@@ -4,7 +4,7 @@ import { bindBackfillSql, createBackfillDatabase } from "../lib/backfill-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getEndpointDefinition, getStatusPageActions } from "@shared/lib/api-endpoints";
 import * as stabilityBackfill from "../backfills/backfill-stability-index";
-import { invalidateBlacklistDerivedCaches } from "../../src/lib/blacklist-cache-invalidation";
+import { invalidateBlacklistDerivedCaches } from "../../src/lib/blacklist/blacklist-cache-invalidation";
 
 const TRON_USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 

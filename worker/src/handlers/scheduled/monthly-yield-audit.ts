@@ -1,5 +1,5 @@
 import type { ScheduledRuntimeContext } from "./context";
-import { runYieldCoverageAudit } from "../../cron/yield-coverage-audit";
+import { runYieldCoverageAudit } from "../../cron/yield-coverage-audit/yield-coverage-audit";
 import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runMonthlyYieldAuditSlot(runtime: ScheduledRuntimeContext) {

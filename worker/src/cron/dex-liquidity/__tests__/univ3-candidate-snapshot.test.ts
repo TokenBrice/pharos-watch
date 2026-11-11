@@ -9,7 +9,7 @@ vi.mock("../../measured-execution/quoter-v2", async () => {
 
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { DexApiPool } from "../../../lib/dex-api-common";
+import type { DexApiPool } from "../../../lib/dex-liquidity/dex-api-common";
 import type { UniV3ExecutionCandidate } from "../../measured-execution/candidate-types";
 import { buildUniV3ExecutionCandidateKey, buildUniV3MeasuredExecutionTarget } from "../../measured-execution/inventory";
 import { joinDexMeasuredExecutionEvidence } from "../../measured-execution/join";

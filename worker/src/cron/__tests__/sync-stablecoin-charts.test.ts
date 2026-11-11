@@ -5,9 +5,9 @@ import { mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
-import { syncStablecoinCharts } from "../sync-stablecoin-charts";
-import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
-import { normalizeStablecoinChartPoints, sampleHistoricalDatePoints } from "../../lib/stablecoin-charts-payload";
+import { syncStablecoinCharts } from "../market-supply/sync-stablecoin-charts";
+import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/market-supply/stablecoin-charts-reconciliation";
+import { normalizeStablecoinChartPoints, sampleHistoricalDatePoints } from "../../lib/market-supply/stablecoin-charts-payload";
 import { handleStablecoinCharts } from "../../api/cache-handlers";
 
 const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [

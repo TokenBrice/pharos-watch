@@ -101,7 +101,7 @@ import { getCaches, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { fetchAaveV3SupplyRates, fetchCompoundV3SupplyRates } from "../yield-sync/sources-rpc";
 import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchYearnKongSources } from "../yield-sync/sources-optional-vaults";
 import { fetchRoycoDawnSources } from "../yield-sync/sources-optional-royco";
-import { syncYieldSupplemental } from "../sync-yield-supplemental";
+import { syncYieldSupplemental } from "../yield-sync/sync-yield-supplemental";
 import { loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
 import { PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalCountDropState, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalCountDropStateCacheKey, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";

@@ -1,7 +1,7 @@
-import { isCoinGeckoHistoryAllowed } from "../../src/lib/solomon-usdv-identity";
+import { isCoinGeckoHistoryAllowed } from "../../src/lib/pricing/solomon-usdv-identity";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { cgUrl, cgHeaders } from "../../src/lib/coingecko";
+import { cgUrl, cgHeaders } from "../../src/lib/pricing/coingecko";
 import { USER_AGENT } from "../../src/lib/constants";
 import { batchExecute } from "../../src/lib/db";
 import { fetchJsonWithRetry } from "../../src/lib/fetch-retry";
@@ -13,7 +13,7 @@ import {
   screenDailyPriceOutliers,
   type HistoricalMarketSourceDiagnostics,
   type PricePoint,
-} from "../../src/lib/historical-market-prices";
+} from "../../src/lib/pricing/historical-market-prices";
 
 const DEFAULT_BATCH_SIZE = 10;
 

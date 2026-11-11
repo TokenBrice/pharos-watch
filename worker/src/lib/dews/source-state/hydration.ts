@@ -16,28 +16,28 @@ import { runWithOverloadRetry } from "../../d1-overload-retry";
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../structured-log";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
-import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../../dex-liquidity-response";
-import type { DexHistoryRow } from "../../dex-liquidity-response";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity/dex-liquidity";
+import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../../dex-liquidity/dex-liquidity-response";
+import type { DexHistoryRow } from "../../dex-liquidity/dex-liquidity-response";
 import {
   CONTRACT_CONFIGS,
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
-} from "../../blacklist-contracts";
+} from "../../blacklist/blacklist-contracts";
 import { getDexAggregateObservedAt, getDexPriceSourceEntries, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
-import { validatePricingSourceFreshness } from "../../pricing-source-freshness";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../dex-cron-constants";
+import { validatePricingSourceFreshness } from "../../pricing/pricing-source-freshness";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../dex-liquidity/dex-cron-constants";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
-import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
-import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
-import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
-import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
-import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
+import { isCanonicalMintBurnPair } from "../../mint-burn-pipeline/mint-burn-canonical-chain";
+import { readPublishedMintBurnGauge } from "../../mint-burn-pipeline/mint-burn-published-gauge";
+import { MINT_BURN_CONFIGS } from "../../mint-burn-pipeline/mint-burn-contracts";
+import { isGrandfatheredMintBurnConfig } from "../../mint-burn-pipeline/mint-burn-publication";
+import { mintBurnConfigKey } from "../../mint-burn-pipeline/mint-burn-contract-identity";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, mintBurnScanFingerprint,
   prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../mint-burn-pipeline/scan-coverage";
 import { readMintBurnWindowContext } from "../../mint-burn-flows-service";
-import { hasMintBurnClassificationReview } from "../../mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../../mint-burn-pipeline/mint-burn-classification";
 import {
   addMintBurnClassificationTally,
   emptyMintBurnClassificationTally,
@@ -51,7 +51,7 @@ import {
   type MintBurnValuationTallyRow,
   readMintBurnClassificationTallyRow,
   readMintBurnValuationTallyRow,
-} from "../../mint-burn-hourly-valuation";
+} from "../../mint-burn-pipeline/mint-burn-hourly-valuation";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,

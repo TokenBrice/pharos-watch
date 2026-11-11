@@ -5,9 +5,9 @@ import {
   projectTelegramSupplyContext,
 } from "../common/context-freshness";
 import { YieldRankingsResponseSchema, type YieldRanking } from "@shared/types/yield";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER, normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity/dex-liquidity";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
+import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../../lib/mint-burn-flows-service";
 import { getCache } from "../../lib/db-cache";
 import { handleYieldRankings } from "../../api/yield-rankings-cache";
@@ -15,7 +15,7 @@ import { safeJsonParse } from "../../lib/api-cache-read";
 import {
   loadActiveSafetyScoreIndex,
   type ActiveSafetyScoreIndex,
-} from "../../lib/safety-score-index";
+} from "../../lib/safety-score-v9/safety-score-index";
 import { loadStressSignalCurrentRowForCoin } from "../../lib/stress-signals-current-rows";
 
 import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";

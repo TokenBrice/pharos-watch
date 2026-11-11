@@ -2,7 +2,7 @@ import { chunkArray } from "@shared/lib/collections";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
-import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isBlockedDexId } from "../../lib/dex-liquidity/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
 import { projectRetainedPoolPrice } from "./scoring-helpers";

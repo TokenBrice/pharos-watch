@@ -3,9 +3,9 @@ import {
   getReferencePriceForContext,
   buildPriceValidationContext,
   type PriceValidationReferences,
-} from "../../lib/price-validation";
+} from "../../lib/pricing/price-validation";
 import { getDexAggregateRejectionReason } from "../../lib/depeg-trust-policy";
-import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
+import { computePriceConsensus, type SourcePrice } from "../../lib/pricing/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { isHardPricingTrustTier, isListAggregatorOnlyPair } from "@shared/lib/pricing-source-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
@@ -15,8 +15,8 @@ import {
   type DlListQuote,
   type PrimaryDexCandidateTelemetry,
   type PrimaryCollectedQuotes,
-} from "../../lib/primary-price-collector";
-import type { DexPriceRow, DexPriceSourceLoadTelemetry } from "../../lib/depeg-helpers";
+} from "../../lib/pricing/primary-price-collector";
+import type { DexPriceRow, DexPriceSourceLoadTelemetry } from "../../lib/depeg-detection/depeg-helpers";
 import type { ValidationContextResolver } from "./pricing";
 import type {
   PrimaryConsensusQuoteMaps,

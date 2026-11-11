@@ -1,12 +1,12 @@
-import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isBlockedDexId } from "../../lib/dex-liquidity/dex-cron-constants";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
-import { dsRateLimit, fetchDsTokenPairsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
+import { dsRateLimit, fetchDsTokenPairsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dex-liquidity/dexscreener";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-normalization";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";

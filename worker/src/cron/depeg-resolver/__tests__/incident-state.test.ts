@@ -11,7 +11,7 @@ import {
 } from "../incident-state";
 import { toStructural } from "../utils";
 import { makeEventRow, makeIncident, mockResolverD1 } from "./depeg-resolver.test-support";
-import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
+import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../depeg-resolver-v2-contracts";
 
 
 describe("toStructural", () => {

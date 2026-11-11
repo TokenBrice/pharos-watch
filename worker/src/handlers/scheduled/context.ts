@@ -15,7 +15,7 @@ import {
   SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
 } from "../../lib/cron-timeouts";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
-import { normalizeCgApiKey } from "../../lib/coingecko";
+import { normalizeCgApiKey } from "../../lib/pricing/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
@@ -34,8 +34,8 @@ import {
   reserveRecoveryLeaseAdmission,
   RESERVE_PRODUCER_FINALIZATION_MARGIN_MS,
   RESERVE_PRODUCER_WAIT_MAX_MS,
-} from "../../lib/reserve-producer-priority";
-import { resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
+} from "../../lib/live-reserves/reserve-producer-priority";
+import { resolveLiveReserveSyncBudgetConfig } from "../../cron/live-reserves/sync-live-reserves-config";
 import type { CronLeaseRunResult } from "../../lib/cron-lease-primitives";
 import type { ScheduledExecutionFence } from "../../lib/scheduled-execution-contract";
 import type { ScheduledSlotCatchUpRequest } from "../../lib/scheduled-slot-fence";

@@ -1,0 +1,367 @@
+import { publishPegAnalyticsCache } from "../../lib/depeg-detection/peg-analytics-cache";
+import { getCacheUpdatedAt } from "../../lib/db-cache";
+import type { CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
+import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+import { buildNativeSafetyScoreV9Capture, loadNativeSafetyScoreV9CaptureSources } from "../../lib/safety-score-v9/capture";
+import { buildNativeV9InputCacheEntry } from "../../lib/safety-score-v9/native-input";
+import {
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+  serializeSafetyScoreV9SupplyAttributionSource,
+} from "../../lib/safety-score-v9/supply-attribution-source-contract";
+import { buildSafetyScoreV9SupplyAttributionSource } from "../../lib/safety-score-v9/supply-attribution-source";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/market-supply/stablecoins-cache";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import {
+  buildSafetyScoreV9PegProvenanceSeedCacheEntry,
+  captureSafetyScoreV9PegProvenanceById,
+} from "../../lib/safety-score-v9/peg-provenance";
+import { observeSafetyScoreV9TransferMaterialityGeneration } from "../../lib/safety-score-v9/transfer-materiality-observer";
+import {
+  SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
+  serializeSafetyScoreV9TransferMaterialityGeneration,
+} from "../../lib/safety-score-v9/transfer-materiality";
+import {
+  buildSafetyScoreV9CaptureControl, commitCaptureControl, v9WorkerProvenance, type V9WorkerProvenance,
+} from "../../lib/safety-score-v9/capture-control";
+import { DEFAULT_CRON_TIMEOUT_MS } from "@shared/lib/scheduled-runner-registry";
+import type { SlotDeadline } from "../../lib/cron-timeouts";
+import { loadMatchingCoreStablecoinsPublishedAt } from "../../lib/safety-score-v9/v9-slot-window";
+import { safeErrorMessage } from "../../lib/safe-error-message";
+
+export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
+const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
+
+interface ActiveStablecoinsProgressRow {
+  started_at: number;
+  updated_at: number;
+  stage: string | null;
+  lease_owner: string;
+  lease_until: number;
+}
+
+type StablecoinsCacheReadiness =
+  | {
+      status: "ready";
+      cache: StablecoinsCacheLoadResult;
+      waitedMs: number;
+      pendingStartedAt: number | null;
+    }
+  | {
+      status: "pending";
+      waitedMs: number;
+      cacheUpdatedAt: number | null;
+      pendingStartedAt: number | null;
+      pendingStage: string | null;
+    };
+
+async function readActiveStablecoinsProgress(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<ActiveStablecoinsProgressRow | null> {
+  throwIfAborted(signal);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT COALESCE(p.started_at, l.heartbeat_at) AS started_at,
+                  COALESCE(p.updated_at, l.heartbeat_at) AS updated_at,
+                  p.stage,
+                  l.lease_owner,
+                  l.lease_until
+             FROM cron_leases l
+             LEFT JOIN cron_run_progress p
+               ON p.job = l.job
+              AND p.lease_owner = l.lease_owner
+            WHERE l.job = 'sync-stablecoins'
+              AND l.lease_until >= ?
+            LIMIT 1`,
+        )
+        .bind(nowSec)
+        .first<ActiveStablecoinsProgressRow>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  return row ?? null;
+}
+
+async function waitForStablecoinsCacheReadiness(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: {
+    maxWaitMs?: number;
+    pollMs?: number;
+    expectedSlotStartedAt?: number;
+  } = {},
+): Promise<StablecoinsCacheReadiness> {
+  const maxWaitMs = options.maxWaitMs ?? V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS;
+  const pollMs = options.pollMs ?? V9_INPUT_STABLECOINS_SETTLE_POLL_MS;
+  const waitStartedAt = Date.now();
+  let pendingStartedAt: number | null = null;
+
+  while (true) {
+    throwIfAborted(signal);
+    const [cacheUpdatedAt, progress, admittedPublishedAt] = await Promise.all([
+      getCacheUpdatedAt(db, "stablecoins"),
+      readActiveStablecoinsProgress(db, signal),
+      options.expectedSlotStartedAt === undefined
+        ? Promise.resolve(null)
+        : loadMatchingCoreStablecoinsPublishedAt(db, options.expectedSlotStartedAt, signal),
+    ]);
+    throwIfAborted(signal);
+    pendingStartedAt = progress?.started_at ?? pendingStartedAt;
+
+    // Absence of a lease does not prove that the due producer has started.
+    // Require its live-cache publication evidence, retaining the active-run fence.
+    const expectedSlotReady = options.expectedSlotStartedAt === undefined
+      || (admittedPublishedAt != null && admittedPublishedAt === cacheUpdatedAt);
+    if (expectedSlotReady && (pendingStartedAt == null
+      || (cacheUpdatedAt != null && cacheUpdatedAt >= pendingStartedAt))) {
+      const cache = await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
+      if (options.expectedSlotStartedAt === undefined
+        || (cache.kind === "ok" && cache.updatedAt === admittedPublishedAt)) {
+        return {
+          status: "ready",
+          cache,
+          waitedMs: Date.now() - waitStartedAt,
+          pendingStartedAt,
+        };
+      }
+    }
+
+    const waitedMs = Date.now() - waitStartedAt;
+    if (waitedMs >= maxWaitMs) {
+      return {
+        status: "pending",
+        waitedMs,
+        cacheUpdatedAt,
+        pendingStartedAt,
+        pendingStage: progress?.stage ?? null,
+      };
+    }
+
+    await sleepWithSignal(Math.min(pollMs, maxWaitMs - waitedMs), signal);
+  }
+}
+
+/**
+ * Captures the native V9 scoring input, its ephemeral peg-provenance seed,
+ * and an exact-input-bound transfer-materiality generation.
+ *
+ * The envelope-v2 capture and any successfully built auxiliary rows are written
+ * atomically. It no longer builds V8 report cards on the way — publishing the
+ * peg-analytics aggregate is an explicit step here, between loading the sources
+ * and building the capture, rather than a side effect of the report-card
+ * snapshot builder.
+ */
+export async function prepareSafetyScoreV9Input(
+  db: D1Database,
+  signal?: AbortSignal,
+  expectedDexGenerationId?: string,
+  chainRpcs: Map<string, ChainRpcConfig> = new Map(),
+  workerMetadata?: V9WorkerProvenance,
+  slotDeadline?: SlotDeadline,
+  dwellirNative?: DwellirNativeCapability,
+  expectedStablecoinsSlotStartedAt?: number,
+): Promise<CronResult> {
+  throwIfAborted(signal);
+  const preparationDeadlineMs = Math.min(Date.now() + DEFAULT_CRON_TIMEOUT_MS,
+    slotDeadline?.platformDeadlineMs ?? Infinity);
+
+  const stablecoinsReadiness = await waitForStablecoinsCacheReadiness(db, signal, {
+    expectedSlotStartedAt: expectedStablecoinsSlotStartedAt,
+    maxWaitMs: Math.max(0, Math.min(
+      V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS, preparationDeadlineMs - Date.now(),
+    )),
+  });
+  if (stablecoinsReadiness.status === "pending") {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      productivity: {
+        productive: false,
+        reason: "safety-score-v9-input-source-unavailable",
+      },
+      metadata: {
+        stage: "stablecoins-cache-readiness",
+        reason: "stablecoins-generation-pending",
+        expectedStablecoinsSlotStartedAt: expectedStablecoinsSlotStartedAt ?? null,
+        waitedMs: stablecoinsReadiness.waitedMs,
+        cacheUpdatedAt: stablecoinsReadiness.cacheUpdatedAt,
+        pendingStablecoinsStartedAt: stablecoinsReadiness.pendingStartedAt,
+        pendingStablecoinsStage: stablecoinsReadiness.pendingStage,
+      },
+    });
+  }
+
+  const captureOptions = {
+    ...(expectedDexGenerationId === undefined ? {} : { expectedDexGenerationId }),
+    preloadedStablecoinsCache: stablecoinsReadiness.cache,
+  };
+  const sources = await loadNativeSafetyScoreV9CaptureSources(db, captureOptions);
+  const pegAnalyticsPublished = await publishPegAnalyticsCache(db, sources.pegAnalytics);
+  const capture = await buildNativeSafetyScoreV9Capture(db, sources, captureOptions);
+
+  throwIfAborted(signal);
+
+  const input = capture.input;
+  const publicationGenerationId = input.sourceGeneration;
+  const safetyScoreIdentity = buildSafetyScoreV9InputIdentity({
+    methodologyVersion: input.methodologyVersion,
+    baseInputGenerationId: input.baseInputGenerationId,
+    publicationGenerationId,
+  });
+  const inputEntry = await buildNativeV9InputCacheEntry(input, safetyScoreIdentity);
+  const supplyAttributionSourceValue =
+    serializeSafetyScoreV9SupplyAttributionSource(
+      buildSafetyScoreV9SupplyAttributionSource(input),
+    );
+  let v9SeedEntry:
+    ReturnType<typeof buildSafetyScoreV9PegProvenanceSeedCacheEntry> | null =
+    null;
+  let v9ExactSeed: Record<string, unknown>;
+  try {
+    const pegProvenanceById =
+      captureSafetyScoreV9PegProvenanceById(
+        input,
+        capture.v9PegProvenanceSource,
+      );
+    v9SeedEntry = buildSafetyScoreV9PegProvenanceSeedCacheEntry({
+      sourceGeneration: input.sourceGeneration,
+      clockSec: input.clockSec,
+      safetyScoreIdentity,
+      pegProvenanceById,
+    });
+    v9ExactSeed = {
+      status: "published",
+      pegProvenanceCount: Object.keys(pegProvenanceById).length,
+      storedBytes: v9SeedEntry.storedBytes,
+    };
+  } catch (error) {
+    // Keep a bounded, sanitized message: the class name alone (`Error`) left
+    // the 2026-10-21 provenance-row stall undiagnosable from run metadata.
+    v9ExactSeed = {
+      status: "unavailable",
+      code:
+        error instanceof Error && error.name
+          ? error.name.slice(0, 160)
+          : "Error",
+      message: safeErrorMessage(error),
+    };
+  }
+  let transferMaterialityEntry: {
+    key: typeof SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY;
+    value: string;
+  } | null = null;
+  let transferMateriality: Record<string, unknown>;
+  try {
+    const transferMaterialityGeneration =
+      await observeSafetyScoreV9TransferMaterialityGeneration({
+        activeAssetIds: input.activeAssetIds,
+        baseInputGenerationId: input.baseInputGenerationId,
+        registryFingerprint: input.registryFingerprint,
+        scoringClockSec: input.clockSec,
+        chainRpcs,
+        dwellirNative,
+        providerSupplyInput: input,
+        signal,
+        deadlineMs: preparationDeadlineMs,
+      });
+    const transferMaterialityObservations = Object.values(
+      transferMaterialityGeneration.observationsByAssetId,
+    );
+    const transferMaterialityAcceptedCount =
+      transferMaterialityObservations.filter(
+        (observations) =>
+          observations.length > 0
+          && observations.every((observation) => observation.status === "accepted"),
+      ).length;
+    transferMaterialityEntry = {
+      key: SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
+      value: serializeSafetyScoreV9TransferMaterialityGeneration(
+        transferMaterialityGeneration,
+      ),
+    };
+    transferMateriality = {
+      status: "published",
+      generationId: transferMaterialityGeneration.generationId,
+      observedAssetCount: transferMaterialityObservations.length,
+      acceptedAssetCount: transferMaterialityAcceptedCount,
+      rejectedAssetCount:
+        transferMaterialityObservations.length
+        - transferMaterialityAcceptedCount,
+    };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    transferMateriality = {
+      status: "unavailable",
+      code:
+        error instanceof Error && error.name
+          ? error.name.slice(0, 160)
+          : "Error",
+      message: safeErrorMessage(error),
+    };
+  }
+  const committedAtSec = Math.floor(Date.now() / 1_000);
+  const captureControl = buildSafetyScoreV9CaptureControl({
+    safetyScoreIdentity,
+    baseInputGenerationId: input.baseInputGenerationId,
+    sourceGeneration: input.sourceGeneration,
+    clockSec: input.clockSec,
+    registryFingerprint: input.registryFingerprint,
+    ...v9WorkerProvenance(workerMetadata),
+  }, committedAtSec);
+  await commitCaptureControl(db, [
+    inputEntry,
+    { key: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY, value: supplyAttributionSourceValue },
+    ...(v9SeedEntry ? [v9SeedEntry] : []),
+    ...(transferMaterialityEntry ? [transferMaterialityEntry] : []),
+  ], captureControl, v9SeedEntry !== null, committedAtSec, signal);
+
+  return {
+    ...(transferMaterialityEntry === null
+      ? { status: "degraded" as const }
+      : {}),
+    itemCount: capture.completeness.expectedCount,
+    productivity: {
+      productive: true,
+      reason:
+        transferMaterialityEntry === null
+          ? "safety-score-v9-input-published-with-transfer-materiality-unavailable"
+          : "safety-score-v9-input-published",
+    },
+    metadata: JSON.stringify({
+      updatedAt: input.updatedAt,
+      activeAssets: input.activeAssetIds.length,
+      activeCards: capture.completeness.expectedCount,
+      publicationGenerationId,
+      pegAnalyticsPublished,
+      dexGenerationId: input.dexGenerationId,
+      dexGenerationLagSec: Math.max(
+        0,
+        input.clockSec -
+          (input.inputFreshness?.dexLiquidity.updatedAt ?? input.clockSec),
+      ),
+      liquidityStale: input.liquidityStale,
+      redemptionStale: input.redemptionStale,
+      fixedInputCacheBytes: inputEntry.storedBytes,
+      fixedInputUncompressedBytes: inputEntry.uncompressedBytes,
+      supplyAttributionSourceBytes:
+        new TextEncoder().encode(supplyAttributionSourceValue).byteLength,
+      safetyScoreIdentity,
+      v9ExactSeed,
+      captureControl,
+      transferMateriality,
+      stablecoinsCacheReadiness: {
+        expectedSlotStartedAt: expectedStablecoinsSlotStartedAt ?? null,
+        waitedMs: stablecoinsReadiness.waitedMs,
+        pendingStartedAt: stablecoinsReadiness.pendingStartedAt,
+      },
+    }),
+  };
+}

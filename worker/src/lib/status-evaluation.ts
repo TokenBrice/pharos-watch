@@ -3,7 +3,7 @@ import type { CronStatusDetail, StatusCause, StatusResponse } from "@shared/type
 import { assessPublicHealth, capturePublicHealthRead, getPublicHealthEvidenceReadFailures, type PublicHealthReadResult } from "./public-health-assessment";
 import { emptyDatasetFreshness } from "./status/derived-data";
 import { getDataQuality } from "./status/data-quality";
-import { loadSupplyIntegrityReport } from "./supply-integrity";
+import { loadSupplyIntegrityReport } from "./market-supply/supply-integrity";
 import { assessSupplyIntegrityQuality } from "./status/supply-integrity-quality";
 import {
   applyCronHealthSectionErrors,

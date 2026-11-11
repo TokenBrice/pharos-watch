@@ -5,11 +5,11 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
-import { MAX_OPEN_DEPEG_EVENTS } from "../../../lib/depeg-threshold-policy";
+import { MAX_OPEN_DEPEG_EVENTS } from "../../../lib/depeg-detection/depeg-threshold-policy";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import { seedDexEvidence, seedOpenEvent } from "../../__tests__/detect-depegs.test-support";
 import { hydrateDepegDetection } from "../hydration";
-import { detectDepegEvents } from "../../detect-depegs";
+import { detectDepegEvents } from "../detect-depegs";
 import { resolveDirectRecovery, resolvePeakUpdateCommand } from "../native-quote-policy";
 import { persistDepegCommands } from "../persistence";
 

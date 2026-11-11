@@ -4,7 +4,7 @@ import { handlePegSummary } from "../../../api/peg-summary";
 import { CurrentPegSchema } from "@shared/types/current-peg";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { overlayCanonicalDetail } from "../../../api/stablecoin-detail/price";
-import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../../lib/dex-cron-constants";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../../lib/dex-liquidity/dex-cron-constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
@@ -13,7 +13,7 @@ import { loadPreviousStablecoinsById, mergeSupplementalLastKnownGood, normalizeS
 import { normalizeChainCirculating } from "../phase-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache } from "../../../lib/db-cache";
-import { getPriceCache } from "../../../lib/price-cache";
+import { getPriceCache } from "../../../lib/pricing/price-cache";
 import { makePeggedAsset } from "./_fixtures";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinDetailResponseSchema, StablecoinListResponseSchema } from "@shared/types/supply";

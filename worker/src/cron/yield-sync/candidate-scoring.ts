@@ -1,6 +1,6 @@
 import type { YieldPysNullReason } from "@shared/types/yield";
 import { computePysComponents } from "@shared/lib/yield-scoring";
-import { scoreYieldPys } from "../../lib/yield-ranking-helpers";
+import { scoreYieldPys } from "../../lib/yield/yield-ranking-helpers";
 import { PYS_SCALING_FACTOR } from "../../lib/yield-config/policy";
 import type { EvaluatedYieldSource } from "./evaluation";
 

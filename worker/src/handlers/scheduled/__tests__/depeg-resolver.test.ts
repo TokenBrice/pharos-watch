@@ -13,7 +13,7 @@ const leaseMocks = vi.hoisted(() => ({
   runCronWithLease: vi.fn(),
 }));
 
-vi.mock("../../../cron/compute-depeg-resolver", () => ({
+vi.mock("../../../cron/depeg-resolver/compute-depeg-resolver", () => ({
   computeDepegResolver: mocks.computeDepegResolver,
 }));
 vi.mock("../../../lib/cron-lease-primitives", () => ({

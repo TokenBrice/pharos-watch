@@ -33,7 +33,7 @@ vi.mock("../../lib/db-cache", () => ({
   }),
 }));
 
-vi.mock("../../lib/stablecoins-cache", () => ({
+vi.mock("../../lib/market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({
     kind: "ok",
     updatedAt: Math.floor(Date.now() / 1000),

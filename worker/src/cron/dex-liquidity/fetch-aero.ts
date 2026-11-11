@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { encodeFunctionData, parseAbi } from "viem/utils";
-import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import { throwIfAborted } from "../../lib/abort";
 import {
   fetchEvmBlockNumber,

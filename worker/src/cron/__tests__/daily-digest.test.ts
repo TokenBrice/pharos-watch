@@ -1,14 +1,14 @@
-import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../../lib/depeg-lifecycle";
+import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../../lib/depeg-detection/depeg-lifecycle";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transport";
 import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../telegram/outbox/digest-outbox";
 import { prepareTelegramDigestAppendices } from "../../telegram/digest/digest-appendices";
-import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
-import { postDigestTweet } from "../../lib/twitter";
+import { resolveDigestSafetyMap } from "../../lib/digest/digest-safety-map";
+import { postDigestTweet } from "../../lib/digest/twitter";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../digest/llm-config";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { generateDailyDigest, resumeDailyDigestDelivery } from "../daily-digest";
+import { generateDailyDigest, resumeDailyDigestDelivery } from "../daily-digest/daily-digest";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,21 +20,21 @@ import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/pricing/native-peg-quote-cache";
 import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
 
 vi.mock("@shared/lib/stablecoins/registry", async () => (await import("./daily-digest.test-support")).mockDailyDigestRegistryModule());
-vi.mock("../../lib/stablecoins-cache", async () => (await import("./daily-digest.test-support")).mockDailyDigestStablecoinsCacheModule());
-vi.mock("../../lib/safety-score-active-source", async () => (await import("./daily-digest.test-support")).mockDailyDigestSafetySourceModule());
-vi.mock("../../lib/safety-score-index", async () => ({
-  loadActiveSafetyScoreIndex: (await import("../../lib/safety-score-active-source")).loadActiveSafetyScoreCohort,
+vi.mock("../../lib/market-supply/stablecoins-cache", async () => (await import("./daily-digest.test-support")).mockDailyDigestStablecoinsCacheModule());
+vi.mock("../../lib/safety-score-v9/safety-score-active-source", async () => (await import("./daily-digest.test-support")).mockDailyDigestSafetySourceModule());
+vi.mock("../../lib/safety-score-v9/safety-score-index", async () => ({
+  loadActiveSafetyScoreIndex: (await import("../../lib/safety-score-v9/safety-score-active-source")).loadActiveSafetyScoreCohort,
 }));
-vi.mock("../../lib/flight-to-quality-classification", async () => (await import("./daily-digest.test-support")).mockDailyDigestFlightToQualityModule());
+vi.mock("../../lib/mint-burn-pipeline/flight-to-quality-classification", async () => (await import("./daily-digest.test-support")).mockDailyDigestFlightToQualityModule());
 vi.mock("../../lib/fetch-retry", async () => (await import("./daily-digest.test-support")).mockDailyDigestFetchRetryModule());
-vi.mock("../../lib/twitter", async () => (await import("./daily-digest.test-support")).mockDailyDigestTwitterModule());
-vi.mock("../../lib/digest-safety-map", async (importOriginal) => {
+vi.mock("../../lib/digest/twitter", async () => (await import("./daily-digest.test-support")).mockDailyDigestTwitterModule());
+vi.mock("../../lib/digest/digest-safety-map", async (importOriginal) => {
   const { mockDigestSafetyMapModule } = await import("./daily-digest.test-support");
-  return mockDigestSafetyMapModule(await importOriginal<typeof import("../../lib/digest-safety-map")>());
+  return mockDigestSafetyMapModule(await importOriginal<typeof import("../../lib/digest/digest-safety-map")>());
 });
 vi.mock("../../telegram/digest/digest-appendices", async () => (await import("./daily-digest.test-support")).mockDailyDigestAppendicesModule());
 vi.mock("../../telegram/outbox/digest-outbox", async () => (await import("./daily-digest.test-support")).mockDailyDigestOutboxModule());
@@ -61,9 +61,9 @@ import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/dig
 import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-style";
 import { getPsiBandStreak } from "@shared/lib/psi-view-model";
 import type { DigestInputData } from "@shared/types/digest";
-import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
-import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "../digest-input-quality";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-v9/safety-score-active-source";
+import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "../digest/digest-input-quality";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, currentPegObservation, makeCollectorCtx, makeDailyDigestScenario, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY, ANTHROPIC_OK_TEXT, getInsertDigestBinds, makeRefusalResponse, makeStreamResponse, styleGateModeTables, VALID_DAILY_EXTENDED, withClauseDash, type DailyDigestScenario, makeResumeDigestDb } from "./daily-digest.test-support";
 
 const DEFAULT_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";

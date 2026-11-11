@@ -1,4 +1,4 @@
-import { syncYieldSupplemental } from "../../cron/sync-yield-supplemental";
+import { syncYieldSupplemental } from "../../cron/yield-sync/sync-yield-supplemental";
 import { INDEPENDENT_SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../cron/yield-sync/family-registry";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";

@@ -12,7 +12,7 @@ import {
   type ParamSpec,
 } from "./api-params";
 import { errorResponse, jsonFreshResponse } from "./api-response";
-import { buildPublicDepegEventsPageQuery, PUBLIC_DEPEG_EVENTS_SQL } from "./depeg-event-projection";
+import { buildPublicDepegEventsPageQuery, PUBLIC_DEPEG_EVENTS_SQL } from "./depeg-detection/depeg-event-projection";
 
 const PAGINATED_TABLES = new Set([
   "blacklist_events",

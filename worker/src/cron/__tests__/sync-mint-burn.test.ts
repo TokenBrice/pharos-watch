@@ -16,7 +16,7 @@ import {
 
 const CCIP_BURNED_TOPIC = "0x696de425f79f4a40bc6d2122ca50507f0efbeabbff86a84871b7196ab8ea8df7";
 
-vi.mock("../../lib/mint-burn-contracts", async () => {
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-contracts", async () => {
   // The hoisted factory runs before static bindings; use the registry-free builder to avoid a mock import cycle.
   const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn-config");
   const transferEvent = (direction: "mint" | "burn") => ({
@@ -81,12 +81,12 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
   };
 });
 
-import { syncMintBurn } from "../sync-mint-burn";
+import { syncMintBurn } from "../mint-burn/sync-mint-burn";
 import { MintBurnRun } from "../mint-burn/run";
 import { getMintBurnFinalizedHead, mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { syncMintBurnConfig } from "../mint-burn/sync-config";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { batchExecute } from "../../lib/db";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import { getNullPriceBacklog } from "../../lib/mint-burn-pipeline/price-heal";
@@ -97,7 +97,7 @@ import {
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
 import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
-import * as mintBurnConservation from "../../lib/mint-burn-conservation";
+import * as mintBurnConservation from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 import type * as DbModule from "../../lib/db";
 import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
 import { withRpcRequestObserver } from "../../lib/rpc-request-observer";

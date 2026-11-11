@@ -1,12 +1,12 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
-import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isBlockedDexId } from "../../lib/dex-liquidity/dex-cron-constants";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
 import { throwIfAborted } from "../../lib/abort";
-import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { PagedTokenPoolsResult } from "../../lib/paged-token-pools";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
+import type { PagedTokenPoolsResult } from "../../lib/dex-liquidity/paged-token-pools";
 import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-normalization";
 import { isPlausibleDexObservationPrice } from "./price-sanity";

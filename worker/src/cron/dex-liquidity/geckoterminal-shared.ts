@@ -1,8 +1,8 @@
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import { USER_AGENT } from "../../lib/constants";
-import { GT_API_BASE } from "../../lib/dex-cron-constants";
+import { GT_API_BASE } from "../../lib/dex-liquidity/dex-cron-constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
-import { fetchPagedTokenPools, type PagedTokenPoolsResult } from "../../lib/paged-token-pools";
+import { fetchPagedTokenPools, type PagedTokenPoolsResult } from "../../lib/dex-liquidity/paged-token-pools";
 import type { ParsedPool } from "./crawl-helpers";
 import type { GtPool } from "./types";
 import { GT_TOKEN_POOLS_MAX_PAGES, GT_TOKEN_POOLS_PAGE_SIZE } from "./constants";

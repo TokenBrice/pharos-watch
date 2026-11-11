@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
-import type { BlacklistEventDef } from "../../blacklist-contracts";
+import type { BlacklistEventDef } from "../blacklist-contracts";
 import { decodeBlacklistEvmPayload } from "../evm-payload";
 
 const address = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

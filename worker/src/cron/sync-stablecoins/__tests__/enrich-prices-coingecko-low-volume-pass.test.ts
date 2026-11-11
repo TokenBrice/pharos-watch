@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { LOW_VOLUME_CG_FALLBACK_IDS, runCoingeckoLowVolumePass } from "../enrich-prices-coingecko-low-volume-pass";
-import { fetchCoingeckoSimplePrices } from "../../../lib/coingecko-simple-price";
+import { fetchCoingeckoSimplePrices } from "../../../lib/pricing/coingecko-simple-price";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makePeggedAsset } from "./_fixtures";
 
-vi.mock("../../../lib/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
+vi.mock("../../../lib/pricing/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
 vi.mock("../../../lib/circuit-breaker", () => ({ shouldAttemptFetch: vi.fn(), recordOutcomeSafe: vi.fn() }));
 
 beforeEach(() => {
@@ -82,7 +82,7 @@ describe("runCoingeckoLowVolumePass", () => {
     ["absent upstream clock", undefined, true],
   ] as const)("admits sparse-market quotes only with valid observation clocks: %s", async (_name, offset, accepted) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
-      "../../../lib/coingecko-simple-price",
+      "../../../lib/pricing/coingecko-simple-price",
     );
     vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
     const nowSec = 1_791_299_423;
@@ -168,7 +168,7 @@ describe("runCoingeckoLowVolumePass", () => {
     id, geckoId, price, observedAt, nowMs, assetFields, expiredFields, fxRates, responseJson = true,
   }) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
-      "../../../lib/coingecko-simple-price",
+      "../../../lib/pricing/coingecko-simple-price",
     );
     vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
     vi.useFakeTimers();

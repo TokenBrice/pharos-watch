@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist/blacklist-contracts";
 import { deriveSyncBlacklistStatus, recordProcessedRows } from "../sync-support";
 
 const threshold = Math.ceil(CONTRACT_CONFIGS.length / 2);

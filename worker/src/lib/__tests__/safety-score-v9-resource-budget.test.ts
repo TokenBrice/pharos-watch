@@ -14,7 +14,7 @@ import {
 } from "vitest";
 import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget";
 import { buildResourcePressure } from "../cron-resource-pressure";
-import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
+import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../safety-score-v9/report-cards-fixed-input-cache-codec";
 import { createResourceProbeEnv } from "./safety-score-v9-resource-env.test-support";
 import { buildSafetyScoreV9ContagionProbe } from "./safety-score-v9-resource-budget.test-support";
 import { hasV9ContagionInput } from "../../../scripts/lib/v9-resource-policy";

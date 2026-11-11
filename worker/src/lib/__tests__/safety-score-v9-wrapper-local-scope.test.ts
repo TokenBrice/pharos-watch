@@ -10,7 +10,7 @@ import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import { makeV9CohortFixedInput, makeV9RoleExtension, makeV9TwoAssetFixedInput,  v9Status, type V9ExtensionDependencyEdge } from "../../test-helpers/v9-fixed-input";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { alphaMeta,  metaMap, rebuildFixed, type FixedInput } from "./safety-score-v9-fact-set.test-support";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
 import wrapperLocalReviews from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";

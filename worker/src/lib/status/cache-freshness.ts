@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { buildInClause } from "../db";
-import { DEX_LIQUIDITY_SERVED_GENERATION_SQL, readDexLiquidityFreshnessAge } from "../dex-liquidity";
-import { YIELD_SERVED_GENERATION_SQL, readYieldFreshnessAge } from "../yield-rankings-coin-cache";
+import { DEX_LIQUIDITY_SERVED_GENERATION_SQL, readDexLiquidityFreshnessAge } from "../dex-liquidity/dex-liquidity";
+import { YIELD_SERVED_GENERATION_SQL, readYieldFreshnessAge } from "../yield/yield-rankings-coin-cache";
 import {
   STATUS_CACHE_RATIO_OVERRIDES,
   STATUS_CACHE_RATIO_THRESHOLDS,
@@ -12,7 +12,7 @@ import {
   getCacheFreshnessLane,
 } from "@shared/lib/api-freshness";
 import type { CacheStatus } from "@shared/types/status";
-import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateStateFromCacheRows } from "../fx-rate-state";
+import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateStateFromCacheRows } from "../pricing/fx-rate-state";
 import {
   getFreshnessSentinelCacheKey,
   getFreshnessSentinelProducerJob,

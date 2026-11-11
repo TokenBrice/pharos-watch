@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchCgPriceHistoryHourly, fetchMarketBackfillPriceSeries, screenDailyPriceOutliers } from "../historical-market-prices";
+import { fetchCgPriceHistoryHourly, fetchMarketBackfillPriceSeries, screenDailyPriceOutliers } from "../pricing/historical-market-prices";
 import { RATE_LIMITS } from "../rate-limit";
 import { USER_AGENT } from "../constants";
 

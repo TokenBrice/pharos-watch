@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { loadBlacklistConfigStates } from "../sync-support";
-import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
-import { normalizeBlacklistSyncStateKey } from "../../../lib/blacklist-cache-keys";
-vi.mock("../../../lib/blacklist-contracts", () => ({
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist/blacklist-contracts";
+import { normalizeBlacklistSyncStateKey } from "../../../lib/blacklist/blacklist-cache-keys";
+vi.mock("../../../lib/blacklist/blacklist-contracts", () => ({
   CONTRACT_CONFIGS: [
     {
       configKey: "ethereum-0xAbCd",

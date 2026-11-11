@@ -1,6 +1,6 @@
 import { makeIdempotentAdminRoute, type AdminRouteContext } from "../../lib/route-wrappers";
 import { jsonResponse } from "../../lib/api-response";
-import { runYieldCoverageAudit } from "../../cron/yield-coverage-audit";
+import { runYieldCoverageAudit } from "../../cron/yield-coverage-audit/yield-coverage-audit";
 import { logCronRun } from "../../lib/cron-logger";
 import { createLeaseOwner, runCronWithLease } from "../../lib/cron-lease-primitives";
 import { resolveCronTimeoutBudget } from "../../lib/cron-timeouts";

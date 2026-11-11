@@ -1,7 +1,7 @@
 import type { SafetyGradesResponse } from "@shared/types/report-cards-v9";
 import { jsonResponse } from "../lib/api-response";
 import { jsonSafetyScoreSnapshotResponse } from "../lib/safety-score-v9/http-response";
-import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../lib/safety-score-v9/safety-score-index";
 
 /**
  * Free lane (no `X-API-Key`): grade-only projection of the same accepted V9

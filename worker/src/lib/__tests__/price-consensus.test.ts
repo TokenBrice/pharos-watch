@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computePriceConsensus, type SourcePrice } from "../price-consensus";
+import { computePriceConsensus, type SourcePrice } from "../pricing/price-consensus";
 
 describe("computePriceConsensus", () => {
   it.each([[2.25, 0.98662, "hive-native-cg"], [0.98663, 0.98662, "coingecko"], [1, 0.9, "coingecko"]])("reduces direct CG %s and derived native %s to one conservative family", (cg, native, source) => {

@@ -4,7 +4,7 @@ import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledWorkerRole } from "@sha
 import type { ScheduledEnv } from "../lib/env";
 import { runScheduledSlotWithFence, type ScheduledSlotCatchUpRequest } from "../lib/scheduled-slot-fence";
 import type { SlotRunnerLoader } from "./scheduled/runner-types";
-import { sendReserveContinuation } from "../lib/reserve-continuation-send";
+import { sendReserveContinuation } from "../lib/live-reserves/reserve-continuation-send";
 import { createSlotDeadline, SCHEDULED_SLOT_JOB_BUDGET_MS } from "../lib/cron-timeouts";
 
 import { createScheduledRuntimeContext } from "./scheduled/context";

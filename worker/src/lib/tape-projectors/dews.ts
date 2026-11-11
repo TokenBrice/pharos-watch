@@ -23,13 +23,13 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
-import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
+import { buildTapeEventId, deriveIssuerId } from "./tape-event-helpers";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../db";
 import { reconcileDewsPublishedGenerationLedger } from "../dews-publication-pointer";
 import {
   getProjectorWatermark,
-} from "../tape-event-store";
-import type { TapeEventInsert } from "../tape-event-types";
+} from "./tape-event-store";
+import type { TapeEventInsert } from "./tape-event-types";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 import {
   DEFAULT_BATCH_LIMIT,

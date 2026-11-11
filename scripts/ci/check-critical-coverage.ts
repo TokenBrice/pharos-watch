@@ -82,8 +82,8 @@ interface CriticalCoverageCheckOptions {
 export const CRITICAL_COVERAGE_BRANCH_FLOORS: Record<string, number> = {
   "worker/src/lib/auth.ts": 40,
   "worker/src/lib/evm-rpc.ts": 40,
-  "worker/src/lib/safety-scores.ts": 40,
-  "worker/src/lib/price-publication-state.ts": 40,
+  "worker/src/lib/safety-score-v9/safety-scores.ts": 40,
+  "worker/src/lib/pricing/price-publication-state.ts": 40,
 };
 
 export function parseCoveragePercentage(env: NodeJS.ProcessEnv, name: string, fallback: number): number {

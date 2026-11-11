@@ -1,8 +1,8 @@
 import { BlacklistDecodeError, quarantineBlacklistDecodeFailure } from "../../lib/blacklist/decode-quarantine";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { TronEventsResponseSchema } from "../../lib/external-api-schemas";
-import type { ContractEventConfig } from "../../lib/blacklist-contracts";
-import { getBlacklistEventBySignature } from "../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../lib/blacklist/blacklist-contracts";
+import { getBlacklistEventBySignature } from "../../lib/blacklist/blacklist-contracts";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { decimalNumberFromBigInt } from "../../lib/bigint";

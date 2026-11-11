@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { READ_INPUT_STATES } from "@shared/test-utils/boundary-contract-vectors.test-support";
-import { loadStablecoinsCache, validateStablecoinEntry } from "../stablecoins-cache";
+import { loadStablecoinsCache, validateStablecoinEntry } from "../market-supply/stablecoins-cache";
 
 function makePublishedAsset(overrides: Record<string, unknown> = {}) {
   return {

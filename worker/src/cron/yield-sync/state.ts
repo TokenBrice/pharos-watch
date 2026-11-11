@@ -10,7 +10,7 @@ import {
 import {
   computeApyFromPrice,
   isDeterministicApyWithinSanityBounds,
-} from "../yield-helpers";
+} from "./yield-helpers";
 import {
   buildHardcodedUsdBenchmark,
   type ParsedYieldBenchmarkMeta,
@@ -52,7 +52,7 @@ import {
 import {
   computeSafetyScoresSnapshot,
   type PublishedSafetyScoresResultMap,
-} from "../../lib/safety-scores";
+} from "../../lib/safety-score-v9/safety-scores";
 import type {
   ChainRpcConfig,
 } from "../../lib/chain-registry";

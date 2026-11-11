@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { midDivergenceBps, pricesAgreeWithinBps } from "../price-divergence";
+import { midDivergenceBps, pricesAgreeWithinBps } from "../pricing/price-divergence";
 
 describe("price-divergence", () => {
   it("computes symmetric mid-price divergence in basis points", () => {

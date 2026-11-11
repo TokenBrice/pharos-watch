@@ -3,12 +3,12 @@ import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@sh
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { parseBluechipRatingsCache, readBluechipRatingsCache } from "../../lib/bluechip-cache";
+import { parseBluechipRatingsCache, readBluechipRatingsCache } from "../../lib/bluechip/bluechip-cache";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { bluechipResponse } from "./sync-bluechip.test-support";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC, isBluechipRatingCurrent } from "@shared/lib/bluechip-freshness";
-import { handleBluechipRatings } from "../../lib/bluechip-cache";
+import { handleBluechipRatings } from "../../lib/bluechip/bluechip-cache";
 import type * as FetchRetry from "../../lib/fetch-retry";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -40,7 +40,7 @@ vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 
-import { syncBluechip } from "../sync-bluechip";
+import { syncBluechip } from "../bluechip/sync-bluechip";
 
 const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },

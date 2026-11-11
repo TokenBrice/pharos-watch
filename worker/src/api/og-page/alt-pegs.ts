@@ -1,7 +1,7 @@
 import { buildNonUsdMarketSnapshot, formatNonUsdShare } from "@shared/lib/alt-peg-snapshot";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { freshnessReason, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 
 /** `/alt-pegs` hero: non-USD market cap of the core universe, from the same reducer as the page. */

@@ -15,11 +15,11 @@ import { buildNativeV9InputCacheEntry, normalizeNativeV9Input } from "../safety-
 import { buildSafetyScoreV9PegProvenanceSeedCacheEntry, captureSafetyScoreV9PegProvenanceById } from "../safety-score-v9/peg-provenance";
 import { buildSafetyScoreV9CaptureControl, commitCaptureControl, hasPendingAttribution } from "../safety-score-v9/capture-control";
 import { appendSupplyAttributionJournalV1 } from "../safety-score-v9/supply-attribution-journal-store";
-import { computeSafetyScoreV9 } from "../../cron/compute-safety-score-v9";
+import { computeSafetyScoreV9 } from "../../cron/safety-score-v9/compute-safety-score-v9";
 import { loadSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { loadSafetyScoreV9PublicationStoredRow } from "../safety-score-v9/publication-chunks";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
-import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY, parsePersistedAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
+import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY, parsePersistedAlertSafetyV9SourceEnvelope } from "../safety-score-v9/alert-safety-source-cache";
 import { parseNativeV9InputCacheArtifact } from "../safety-score-v9/native-input";
 import { requireCurrentSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import { parseSafetyScoreV9PublicationReplayCapture } from "../safety-score-v9/publication-replay-capture";

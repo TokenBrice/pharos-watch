@@ -20,10 +20,10 @@ const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
 const mockDeleteCache = vi.fn();
 
-vi.mock("../../lib/safety-score-active-source", () => ({
+vi.mock("../../lib/safety-score-v9/safety-score-active-source", () => ({
   loadActiveSafetyScoreCohort: mockLoadActiveSafetyScoreIndex,
 }));
-vi.mock("../../lib/safety-score-index", () => ({
+vi.mock("../../lib/safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: mockLoadActiveSafetyScoreIndex,
 }));
 vi.mock("../../lib/safety-score-v9/publication-attempts", () => ({
@@ -35,16 +35,16 @@ vi.mock("../../lib/db-cache", () => ({
   setCache: mockSetCache,
   deleteCache: mockDeleteCache,
 }));
-vi.mock("../../lib/safety-score-history-v2", async (importOriginal) => ({
+vi.mock("../../lib/safety-score-v9/safety-score-history-v2", async (importOriginal) => ({
   ...await importOriginal<
-    typeof import("../../lib/safety-score-history-v2")
+    typeof import("../../lib/safety-score-v9/safety-score-history-v2")
   >(),
   fetchLatestSafetyScoreHistoryV2Rows:
     mockFetchLatestSafetyScoreHistoryV2Rows,
 }));
 
 const { snapshotSafetyGradeHistory } = await import(
-  "../snapshot-safety-grade-history"
+  "../safety-score-v9/snapshot-safety-grade-history"
 );
 
 describe("snapshotSafetyGradeHistory", () => {

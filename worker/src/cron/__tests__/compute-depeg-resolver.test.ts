@@ -2,16 +2,16 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
+import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver/depeg-resolver-v2-contracts";
 import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { buildDdrResponse, buildDiagnosticSnapshot } from "../depeg-resolver/public-projection";
 import { sealEligibleLocks, writePublicationBeforeCache } from "../depeg-resolver/publication";
 import { DEFAULT_DDR_V2_STORE_CONTRACTS } from "../depeg-resolver/storage-adapters";
 import { ensureIncident, insertOpenEvent, sealPublicFixture, withSqliteD1 } from "../../lib/__tests__/depeg-resolver-ddrv2-store.test-support";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
-import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
+import { computeDepegResolver, type DdrV2StoreContracts } from "../depeg-resolver/compute-depeg-resolver";
 import { confirmedCronOutputAt } from "../../lib/cron-output";
-import { loadDepegResolverSnapshot } from "../../lib/depeg-resolver-snapshot-cache";
+import { loadDepegResolverSnapshot } from "../../lib/depeg-resolver/depeg-resolver-snapshot-cache";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
   makeDdrCanonicalIncident,

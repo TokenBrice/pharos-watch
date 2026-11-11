@@ -1,0 +1,565 @@
+import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
+import { BINANCE_MARKETS } from "@shared/lib/pricing-provider-config";
+import { CIRCUIT_SOURCE, USER_AGENT } from "../../lib/constants";
+import { divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/pricing/price-depeg-voting-policy";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/pricing/coingecko";
+import { recordOutcomeSafe } from "../../lib/circuit-breaker";
+import {
+  collectDexProtocolCorroborations,
+  dexPoolIndependentGroupKey,
+  dexProtocolGroupKey,
+  isNativeOriginPending,
+} from "../../lib/depeg-detection/depeg-helpers";
+import {
+  chooseIndependentOffchainDepegConfirmer,
+  getDexAggregateRejectionReason,
+  isTrustedDexPriceRow,
+  type OffchainDepegConfirmerKey,
+} from "../../lib/depeg-trust-policy";
+import {
+  classifyDirectionalSignal,
+  deriveDepegSignal,
+  type DepegSignal,
+} from "@shared/lib/depeg-signals";
+import type { PendingDepegState } from "../../lib/depeg-detection/depeg-pending";
+import {
+  classifyNativeQuoteImplausibility,
+  type NativeQuoteImplausibility,
+} from "../../lib/depeg-detection/native-quote-plausibility";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { logWorkerEvent } from "../../lib/structured-log";
+import { CoinGeckoSimplePriceEntrySchema, CoinGeckoSimplePriceSchema } from "../../lib/pricing/upstream-schemas";
+import {
+  addSource,
+  addSources,
+  buildDexConfirmationKeys,
+  buildPoolConfirmationKey,
+  buildPoolGroupKey,
+  classifyConfirmationTimestamp,
+  isOpposingConfirmationStatus,
+  isNativeQuoteForPending,
+  type CollectedConfirmationEvidence,
+  type ConfirmationEvidenceInput,
+  type ConfirmationTimestampStatus,
+  type PoolConfirmation,
+} from "./pending-depeg-confirmation";
+
+type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSignal>;
+
+const BINANCE_SYMBOLS = new Set(BINANCE_MARKETS.map((market) => market.symbol));
+
+type OffchainUnavailableReason =
+  | "non-ok"
+  | "empty-response"
+  | "upstream-error"
+  | `${ConfirmationTimestampStatus}-timestamp`;
+
+type OffchainConfirmerResult =
+  | { kind: "no-confirmer" }
+  | { kind: "circuit-open"; sourceKey: OffchainDepegConfirmerKey }
+  | {
+      kind: "classified";
+      sourceKey: OffchainDepegConfirmerKey;
+      status: DirectionalSignalStatus;
+      signal: DepegSignal | null;
+      price: number;
+    }
+  | { kind: "unavailable"; sourceKey: OffchainDepegConfirmerKey; reason: OffchainUnavailableReason };
+
+async function evaluateOffchainConfirmer(args: {
+  db: D1Database;
+  symbol: string;
+  geckoId: string;
+  pegReference: number;
+  threshold: number;
+  direction: PendingDepegState["direction"];
+  agreeSources: string[] | undefined;
+  priceSource: string | null | undefined;
+  coingeckoAllowed: boolean;
+  coingeckoApiKey: string | null | undefined;
+  signal: AbortSignal | undefined;
+  now: number;
+}): Promise<OffchainConfirmerResult> {
+  const {
+    db,
+    symbol,
+    geckoId,
+    pegReference,
+    threshold,
+    direction,
+    agreeSources,
+    priceSource,
+    coingeckoAllowed,
+    coingeckoApiKey,
+    signal,
+    now,
+  } = args;
+  const confirmerKey = chooseIndependentOffchainDepegConfirmer({ agreeSources, priceSource });
+  if (confirmerKey == null) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "offchain-confirmer-unneeded",
+      message: "Off-chain confirmation skipped because the primary agreement already includes the CoinGecko family",
+      metadata: { symbol },
+    });
+    return { kind: "no-confirmer" };
+  }
+
+  const offchainLabel = "CoinGecko";
+  const circuitKey = CIRCUIT_SOURCE.COINGECKO_CONFIRM;
+  if (!coingeckoAllowed) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "offchain-confirmer-circuit-open",
+      message: "Off-chain confirmation skipped because the circuit is open",
+      provider: offchainLabel,
+      metadata: { symbol },
+    });
+    return { kind: "circuit-open", sourceKey: confirmerKey };
+  }
+
+  try {
+    const offchainResult = await fetchJsonWithRetry<unknown>(
+      cgUrl(cgSimplePricePath(`ids=${geckoId}&vs_currencies=usd&include_last_updated_at=true`), coingeckoApiKey ?? null),
+      {
+        headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
+        signal,
+      },
+      1,
+    );
+    if (!offchainResult?.response.ok) {
+      await recordOutcomeSafe(db, circuitKey, false);
+      return { kind: "unavailable", sourceKey: confirmerKey, reason: "non-ok" };
+    }
+
+    const parsed = CoinGeckoSimplePriceSchema.safeParse(offchainResult.body);
+    // The envelope is per-key: a malformed sibling quote must not hide this
+    // asset's entry, and a malformed own entry stays unavailable.
+    const entry = parsed.success
+      ? CoinGeckoSimplePriceEntrySchema.safeParse(parsed.data[geckoId])
+      : null;
+    const offchainPrice = entry?.success ? entry.data.usd : undefined;
+    const observedAt = entry?.success ? entry.data.last_updated_at : undefined;
+
+    const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
+    if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
+      const offchainSignal = deriveDepegSignal(offchainPrice, pegReference);
+      const status = classifyDirectionalSignal(offchainSignal, threshold, direction);
+      logWorkerEvent({
+        scope: "lib",
+        job: "confirm-pending-depegs",
+        level: "info",
+        event: "offchain-confirmer-checked",
+        message: "Off-chain confirmation checked",
+        provider: offchainLabel,
+        status,
+        metadata: {
+          symbol,
+          price: offchainPrice,
+          deviationBps: offchainSignal?.absBps ?? "n/a",
+          thresholdBps: threshold,
+        },
+      });
+      await recordOutcomeSafe(db, circuitKey, true);
+      return { kind: "classified", sourceKey: confirmerKey, status, signal: offchainSignal, price: offchainPrice };
+    }
+    if (offchainPrice && offchainPrice > 0) {
+      logWorkerEvent({
+        scope: "lib",
+        job: "confirm-pending-depegs",
+        level: "info",
+        event: "offchain-confirmer-stale",
+        message: "Off-chain confirmation skipped because the timestamp was not fresh",
+        provider: offchainLabel,
+        status: timestampStatus,
+        metadata: { symbol, observedAt: observedAt ?? "missing" },
+      });
+      await recordOutcomeSafe(db, circuitKey, true);
+      return {
+        kind: "unavailable",
+        sourceKey: confirmerKey,
+        reason: `${timestampStatus}-timestamp` as OffchainUnavailableReason,
+      };
+    }
+    await recordOutcomeSafe(db, circuitKey, true);
+    return { kind: "unavailable", sourceKey: confirmerKey, reason: "empty-response" };
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    await recordOutcomeSafe(db, circuitKey, false);
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "warn",
+      event: "offchain-confirmer-fetch-failed",
+      message: "Off-chain confirmation fetch failed",
+      provider: offchainLabel,
+      metadata: { symbol },
+      error: err,
+    });
+    return { kind: "unavailable", sourceKey: confirmerKey, reason: "upstream-error" };
+  }
+}
+
+export async function collectConfirmationEvidence(
+  args: ConfirmationEvidenceInput,
+): Promise<CollectedConfirmationEvidence> {
+  const {
+    db,
+    row,
+    pendingState,
+    asset,
+    meta,
+    pegReference,
+    threshold,
+    nativeSignal,
+    nativePegQuote: suppliedNativePegQuote,
+    nativeQuoteImplausibility: plannedNativeQuoteImplausibility,
+    nativeSourceKey,
+    dexPriceRows,
+    dexPriceSources,
+    poolChallengers,
+    cexAllowed,
+    cexPrices,
+    coingeckoAllowed,
+    coingeckoApiKey,
+    signal,
+    now,
+  } = args;
+  const evidence: CollectedConfirmationEvidence = {
+    confirmingSources: [...args.evidence.confirmingSources],
+    opposingSources: [...args.evidence.opposingSources],
+    unavailableSources: [...args.evidence.unavailableSources],
+    circuitOpenSources: [...args.evidence.circuitOpenSources],
+    hardOpposingSources: [...args.evidence.hardOpposingSources],
+    offchainStatus: args.evidence.offchainStatus,
+    offchainSourceKey: args.evidence.offchainSourceKey,
+    offchainPeakCandidate: args.evidence.offchainPeakCandidate,
+    dexStatus: args.evidence.dexStatus,
+    dexConfirmationVeto: args.evidence.dexConfirmationVeto,
+    dexPeakCandidates: [...args.evidence.dexPeakCandidates],
+    dexConfirmationKeys: [...args.evidence.dexConfirmationKeys],
+    cexStatus: args.evidence.cexStatus,
+    cexPeakCandidate: args.evidence.cexPeakCandidate,
+    poolStatus: args.evidence.poolStatus,
+    poolConfirmations: [...args.evidence.poolConfirmations],
+  };
+
+  const geckoId = meta?.geckoId;
+  const isNativeOrigin = isNativeOriginPending(pendingState.reason);
+  const nativePegQuote = isNativeQuoteForPending(row, suppliedNativePegQuote) ? suppliedNativePegQuote : undefined;
+  const nativeQuoteImplausibility: NativeQuoteImplausibility | null =
+    plannedNativeQuoteImplausibility ??
+    (!isNativeOrigin && nativePegQuote
+      ? classifyNativeQuoteImplausibility({
+          price: nativePegQuote.price,
+          stablecoinId: row.stablecoin_id,
+          pegCurrency: nativePegQuote.pegCurrency,
+          pegType: row.peg_type,
+        })
+      : null);
+  if (nativeQuoteImplausibility != null) {
+    // A withheld sample is unavailable evidence, not a confirmer, opposer or
+    // recovery; the plan already recorded its machine-readable reason.
+    addSource(evidence.unavailableSources, `${nativeSourceKey}:${nativeQuoteImplausibility.reason}`);
+  } else if (nativeSignal != null && nativePegQuote != null && !isNativeOrigin) {
+    evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
+    evidence.offchainSourceKey = nativeSourceKey;
+    if (evidence.offchainStatus === "confirm") {
+      // Native quotes have reference 1; normalize the price into this USD-origin
+      // pending event's admitted peg reference before it reaches peak selection.
+      const eventDomainPrice = nativePegQuote != null ? nativePegQuote.price * pegReference : null;
+      evidence.offchainPeakCandidate = { bps: nativeSignal.bps, price: eventDomainPrice, quoteDomain: "usd" };
+      addSource(evidence.confirmingSources, nativeSourceKey);
+    } else if (isOpposingConfirmationStatus(evidence.offchainStatus)) {
+      addSource(evidence.opposingSources, nativeSourceKey);
+      addSource(evidence.hardOpposingSources, nativeSourceKey);
+    }
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "native-peg-confirmation-checked",
+      message: "Native peg confirmation checked",
+      status: evidence.offchainStatus,
+      metadata: {
+        symbol: row.symbol,
+        pegCurrency: nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native",
+        price: nativePegQuote?.price ?? "n/a",
+        deviationBps: nativeSignal.absBps,
+        thresholdBps: threshold,
+      },
+    });
+  } else if (geckoId && !isNativeOrigin) {
+    const result = await evaluateOffchainConfirmer({
+      db,
+      symbol: row.symbol,
+      geckoId,
+      pegReference,
+      threshold,
+      direction: pendingState.direction,
+      agreeSources: asset?.agreeSources,
+      priceSource: asset?.priceSource,
+      coingeckoAllowed,
+      coingeckoApiKey,
+      signal,
+      now,
+    });
+    switch (result.kind) {
+      case "no-confirmer":
+        break;
+      case "circuit-open":
+        addSource(evidence.circuitOpenSources, result.sourceKey);
+        break;
+      case "unavailable":
+        addSource(evidence.unavailableSources, `${result.sourceKey}:${result.reason}`);
+        break;
+      case "classified":
+        evidence.offchainStatus = result.status;
+        evidence.offchainSourceKey = result.sourceKey;
+        if (result.status === "confirm") {
+          evidence.offchainPeakCandidate = { bps: result.signal?.bps, price: result.price, quoteDomain: "usd" };
+          addSource(evidence.confirmingSources, result.sourceKey);
+        } else if (isOpposingConfirmationStatus(result.status)) {
+          addSource(evidence.opposingSources, result.sourceKey);
+        }
+        break;
+    }
+  }
+
+  const dexRow = dexPriceRows.get(row.stablecoin_id);
+  if (isNativeOrigin) {
+    addSource(evidence.unavailableSources, "dex:usd-native-origin");
+  } else if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
+    const aggregateRejectionReason = getDexAggregateRejectionReason(dexRow, now, "depeg");
+    const affirmative = aggregateRejectionReason == null;
+    if (!affirmative) addSource(evidence.unavailableSources, `dex:${aggregateRejectionReason}`);
+    const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
+    const aggregateDexStatus = classifyDirectionalSignal(dexSignal, threshold, pendingState.direction);
+    const protocolSources = dexPriceSources.get(row.stablecoin_id);
+    const confirmGroups = collectDexProtocolCorroborations(
+      protocolSources,
+      pegReference,
+      threshold,
+      pendingState.direction,
+      "confirm",
+    );
+    const recoverGroups = collectDexProtocolCorroborations(
+      protocolSources,
+      pegReference,
+      threshold,
+      pendingState.direction,
+      "recover",
+    );
+    const contradictGroups = collectDexProtocolCorroborations(
+      protocolSources,
+      pegReference,
+      threshold,
+      pendingState.direction,
+      "contradict",
+    );
+    if (aggregateDexStatus === "confirm" && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      if (affirmative) {
+        evidence.dexStatus = "confirm";
+        evidence.dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
+        addSources(evidence.confirmingSources, evidence.dexConfirmationKeys);
+        evidence.dexPeakCandidates = [
+          { bps: dexSignal?.bps, price: dexRow.dex_price_usd, quoteDomain: "usd" },
+          ...confirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price, quoteDomain: "usd" as const })),
+        ];
+      } else {
+        // Publication-fresh agreement can veto rejection without proving confirmation.
+        evidence.dexConfirmationVeto = true;
+      }
+    } else if (affirmative && aggregateDexStatus === "recover" && recoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      evidence.dexStatus = "recover";
+      const keys = buildDexConfirmationKeys(recoverGroups.map((group) => group.key));
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, recoverGroups.map((group) => `dex-family:${group.key}`));
+    } else if (affirmative && aggregateDexStatus === "contradict" && contradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      evidence.dexStatus = "contradict";
+      const keys = buildDexConfirmationKeys(contradictGroups.map((group) => group.key));
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, contradictGroups.map((group) => `dex-family:${group.key}`));
+    }
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "dex-confirmation-checked",
+      message: "DEX confirmation checked",
+      status: evidence.dexStatus,
+      metadata: {
+        symbol: row.symbol,
+        price: dexRow.dex_price_usd,
+        deviationBps: dexSignal?.absBps ?? "n/a",
+        thresholdBps: threshold,
+        aggregateStatus: aggregateDexStatus,
+        aggregateRejectionReason,
+        vetoOnly: evidence.dexConfirmationVeto === true,
+        confirmGroupCount: confirmGroups.length,
+        recoverGroupCount: recoverGroups.length,
+        contradictGroupCount: contradictGroups.length,
+      },
+    });
+  } else if (dexRow != null) {
+    addSource(evidence.unavailableSources, "dex:aggregate-untrusted");
+  } else {
+    addSource(evidence.unavailableSources, "dex:aggregate");
+  }
+
+  const cexSymbol = row.symbol.toUpperCase();
+  if (isNativeOrigin) {
+    addSource(evidence.unavailableSources, "cex:usd-native-origin");
+  } else if (!cexAllowed) {
+    addSource(evidence.circuitOpenSources, "cex:binance");
+  } else if (cexPrices == null) {
+    // A failed or suppressed batch only leaves this row's CEX family unread
+    // when the batch would have covered the row's configured Binance pair.
+    if (BINANCE_SYMBOLS.has(cexSymbol)) addSource(evidence.unavailableSources, "cex:binance");
+  } else {
+    const cexPrice = cexPrices.get(cexSymbol);
+    if (cexPrice && cexPrice > 0) {
+      const cexSignal = deriveDepegSignal(cexPrice, pegReference);
+      evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction);
+      if (evidence.cexStatus === "confirm") {
+        evidence.cexPeakCandidate = { bps: cexSignal?.bps, price: cexPrice, quoteDomain: "usd" };
+        addSource(evidence.confirmingSources, "cex:binance");
+      } else if (isOpposingConfirmationStatus(evidence.cexStatus)) {
+        addSource(evidence.opposingSources, "cex:binance");
+        addSource(evidence.hardOpposingSources, "cex:binance");
+      }
+      logWorkerEvent({
+        scope: "lib",
+        job: "confirm-pending-depegs",
+        level: "info",
+        event: "cex-confirmation-checked",
+        message: "CEX confirmation checked",
+        provider: "binance",
+        status: evidence.cexStatus,
+        metadata: {
+          symbol: row.symbol,
+          price: cexPrice,
+          deviationBps: cexSignal?.absBps ?? "n/a",
+          thresholdBps: threshold,
+        },
+      });
+    } else if (BINANCE_SYMBOLS.has(cexSymbol)) {
+      // The configured Binance pair was missing from a partial batch: the CEX
+      // family was unreadable for this row, not observed at zero.
+      addSource(evidence.unavailableSources, "cex:binance");
+    }
+  }
+
+  const poolConfirmGroups = new Map<string, PoolConfirmation>();
+  const poolContradictGroups = new Set<string>();
+  const poolRecoverGroups = new Set<string>();
+  const poolContradictFamilies = new Set<string>();
+  const poolRecoverFamilies = new Set<string>();
+  let poolHighTvlConfirm: PoolConfirmation | null = null;
+  const pools = poolChallengers.get(row.stablecoin_id);
+  if (isNativeOrigin) {
+    addSource(evidence.unavailableSources, "pool:usd-native-origin");
+  } else if (pools?.length) {
+    for (const pool of pools) {
+      const poolSignal = deriveDepegSignal(pool.price, pegReference);
+      if (poolSignal == null) continue;
+      const poolGroupKey = dexPoolIndependentGroupKey(pool);
+      const currentPoolStatus = classifyDirectionalSignal(poolSignal, threshold, pendingState.direction);
+      if (currentPoolStatus === "confirm") {
+        const existing = poolConfirmGroups.get(poolGroupKey);
+        const candidate = { key: poolGroupKey, pool, signal: poolSignal };
+        if (existing == null || poolSignal.absBps > existing.signal.absBps) {
+          poolConfirmGroups.set(poolGroupKey, candidate);
+        }
+        if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
+          if (poolHighTvlConfirm == null || pool.tvlUsd > poolHighTvlConfirm.pool.tvlUsd) {
+            poolHighTvlConfirm = candidate;
+          }
+        }
+        logWorkerEvent({
+          scope: "lib",
+          job: "confirm-pending-depegs",
+          level: "info",
+          event: "pool-confirmation-checked",
+          message: "Pool confirmation checked",
+          metadata: {
+            symbol: row.symbol,
+            price: pool.price,
+            protocol: pool.protocol,
+            chain: pool.chain,
+            tvlUsd: pool.tvlUsd,
+            tvlMillions: (pool.tvlUsd / 1e6).toFixed(1),
+            deviationBps: poolSignal?.absBps ?? "n/a",
+          },
+        });
+      } else if (currentPoolStatus === "contradict") {
+        poolContradictGroups.add(poolGroupKey);
+        poolContradictFamilies.add(dexProtocolGroupKey(pool));
+      } else if (currentPoolStatus === "recover") {
+        poolRecoverGroups.add(poolGroupKey);
+        poolRecoverFamilies.add(dexProtocolGroupKey(pool));
+      }
+    }
+    // 2026-09-24 (vchf-vnx): pool-only confirmation requires the confirming
+    // protocol groups to outvote the groups that contradict the pending depeg
+    // (opposite-direction or back inside the bar), mirroring the price-hardening
+    // replacement rule. Two dormant diverging pools confirmed the VCHF depeg
+    // while four live protocols sat at the reference rate.
+    const poolConfirmOutvotes = divergingProtocolGroupsOutvote({
+      divergingCount: poolConfirmGroups.size,
+      corroboratingCount: poolRecoverGroups.size + poolContradictGroups.size,
+    });
+    const highTvlConfirmOutvotes = poolHighTvlConfirm != null &&
+      poolConfirmGroups.size >= poolRecoverGroups.size + poolContradictGroups.size;
+    if (highTvlConfirmOutvotes || poolConfirmOutvotes) {
+      evidence.poolStatus = "confirm";
+      addSources(
+        evidence.confirmingSources,
+        (poolHighTvlConfirm != null ? [poolHighTvlConfirm] : [...poolConfirmGroups.values()])
+          .map((confirmation) => buildPoolConfirmationKey(confirmation.pool)),
+      );
+    } else if (poolContradictGroups.size > 0 && poolConfirmGroups.size === 0) {
+      evidence.poolStatus = "contradict";
+      const keys = [...poolContradictGroups].map(buildPoolGroupKey);
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, [...poolContradictFamilies].map((family) => `dex-family:${family}`));
+    } else if (poolRecoverGroups.size > 0 && poolConfirmGroups.size === 0 && poolContradictGroups.size === 0) {
+      evidence.poolStatus = "recover";
+      const keys = [...poolRecoverGroups].map(buildPoolGroupKey);
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, [...poolRecoverFamilies].map((family) => `dex-family:${family}`));
+    }
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "pool-confirmation-summary",
+      message: "Pool confirmation summary",
+      status: evidence.poolStatus,
+      metadata: {
+        symbol: row.symbol,
+        poolCount: pools.length,
+        confirmGroupCount: poolConfirmGroups.size,
+        highTvlConfirmation: poolHighTvlConfirm != null,
+        contradictGroupCount: poolContradictGroups.size,
+        recoverGroupCount: poolRecoverGroups.size,
+        thresholdBps: threshold,
+      },
+    });
+  } else {
+    addSource(evidence.unavailableSources, "pool:challenger");
+  }
+
+  evidence.poolConfirmations =
+    evidence.poolStatus !== "confirm" || evidence.dexStatus === "confirm"
+      ? []
+      : poolHighTvlConfirm != null
+        ? [poolHighTvlConfirm]
+        : [...poolConfirmGroups.values()];
+
+  return evidence;
+}

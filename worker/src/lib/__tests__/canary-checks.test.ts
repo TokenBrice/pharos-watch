@@ -6,7 +6,7 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
-import * as activeSafetyScoreSource from "../safety-score-active-source";
+import * as activeSafetyScoreSource from "../safety-score-v9/safety-score-active-source";
 import {
   loadCanaryStatus,
   normalizeWorkerCanaryMode,
@@ -14,20 +14,20 @@ import {
   runCanaryChecks,
 } from "../canary-checks";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
-import { checkTapeClassLiveness } from "../canary-checks-tape";
-import { PRICING_CANARY_CHECKS } from "../canary-checks-pricing";
-import { tapeProjectorCursorKey } from "../tape-event-store";
+import { checkTapeClassLiveness } from "../tape-projectors/canary-checks-tape";
+import { PRICING_CANARY_CHECKS } from "../pricing/canary-checks-pricing";
+import { tapeProjectorCursorKey } from "../tape-projectors/tape-event-store";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
   buildSupplySnapshotCompletionMarker,
   buildSupplySnapshotCoverageExpectation,
-} from "../supply-snapshot-completion";
-import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
+} from "../market-supply/supply-snapshot-completion";
+import { aggregateFlowCacheKey } from "../mint-burn-pipeline/mint-burn-flow-cache-keys";
 import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-} from "../blacklist-cache-keys";
+} from "../blacklist/blacklist-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
 

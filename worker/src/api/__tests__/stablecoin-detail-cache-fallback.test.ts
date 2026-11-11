@@ -3,7 +3,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { createDetailResponseHelpers, getLatestDetailTokenDate, type DetailResponseHelpers } from "../stablecoin-detail/shared";
 
 const { loadStablecoinsCacheMock } = vi.hoisted(() => ({ loadStablecoinsCacheMock: vi.fn() }));
-vi.mock("../../lib/stablecoins-cache", () => ({ loadStablecoinsCache: loadStablecoinsCacheMock }));
+vi.mock("../../lib/market-supply/stablecoins-cache", () => ({ loadStablecoinsCache: loadStablecoinsCacheMock }));
 
 import { handleCacheBackedDetail } from "../stablecoin-detail/cache-fallback";
 

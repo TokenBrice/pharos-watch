@@ -2,9 +2,9 @@ import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeDecision } from "../../lib/circuit-breaker";
-import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/price-cache";
-import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
-import { pricesAgreeWithinBps } from "../../lib/price-divergence";
+import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/pricing/price-cache";
+import { hasPublishableCurrentPrice } from "../../lib/pricing/price-publication-state";
+import { pricesAgreeWithinBps } from "../../lib/pricing/price-divergence";
 import {
   buildAddressPriceTargets,
   collectAddressPriceProviderQuotes,

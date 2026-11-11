@@ -1,20 +1,20 @@
 import { logWorkerEventArgs } from "../../src/lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { buildPriceReasonablenessOptions } from "../../src/lib/price-validation";
+import { buildPriceReasonablenessOptions } from "../../src/lib/pricing/price-validation";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../../src/lib/authoritative-price-sources";
-import { normalizeSupportedPegCurrency } from "../../src/lib/native-peg-quotes";
+import { normalizeSupportedPegCurrency } from "../../src/lib/pricing/native-peg-quotes";
 import {
   collapsePricesToDailyTimestamps,
   fetchMarketBackfillPriceSeries,
   type HistoricalMarketSourceDiagnostics,
-} from "../../src/lib/historical-market-prices";
+} from "../../src/lib/pricing/historical-market-prices";
 import {
   BACKFILL_MIN_CONFIRM_POINTS,
   extractDepegEvents,
   type BackfillEvent,
   type SupplySnapshot,
-} from "../../src/lib/historical-depeg-extraction";
+} from "../../src/lib/depeg-detection/historical-depeg-extraction";
 import { eventOverlapsReplayWindow, timestampInReplayWindow } from "./backfill-depegs-window";
 import type { BackfillReplayWindow } from "../../src/lib/backfill-day-window";
 

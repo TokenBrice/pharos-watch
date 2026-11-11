@@ -13,8 +13,8 @@
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { formatCompactUsdShortLowerK } from "@shared/lib/format";
 
-import { buildTapeEventId, parseDateStringToEpochSec, truncateSummary } from "../tape-event-helpers";
-import type { TapeEventInsert } from "../tape-event-types";
+import { buildTapeEventId, parseDateStringToEpochSec, truncateSummary } from "./tape-event-helpers";
+import type { TapeEventInsert } from "./tape-event-types";
 import { projectStaticCatalogEntries, type ProjectorOptions, type ProjectorResult } from "./types";
 
 interface DatedCemeteryEntry {

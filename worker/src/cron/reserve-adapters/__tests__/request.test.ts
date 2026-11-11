@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import { createAdapterIoLimiter } from "../concurrency";
 import { getChainObservationRequests } from "../../../lib/chain-observation-context";
-import { createReserveAdapterRunner } from "../../reserve-adapter-runner";
-import { createAdapterLatencyCollector } from "../../sync-live-reserves-core";
-import { CONFIGURED_COINS, classifyFailure } from "../../sync-live-reserves-shared";
+import { createReserveAdapterRunner } from "../../live-reserves/reserve-adapter-runner";
+import { createAdapterLatencyCollector } from "../../live-reserves/sync-live-reserves-core";
+import { CONFIGURED_COINS, classifyFailure } from "../../live-reserves/sync-live-reserves-shared";
 import { getReserveAdapter } from "../index";
 import {
   ADAPTER_USER_AGENT,

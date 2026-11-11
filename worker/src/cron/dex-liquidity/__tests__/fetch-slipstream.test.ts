@@ -21,7 +21,7 @@ import {
   projectSugarPoolPage,
   projectSugarTokens,
 } from "../fetch-slipstream";
-import { convertToGtNewPools, extractPriceObservations } from "../../../lib/dex-api-common";
+import { convertToGtNewPools, extractPriceObservations } from "../../../lib/dex-liquidity/dex-api-common";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeChainRpcs } from "../../../test-helpers/chain-rpc-fixtures.test-support";
 

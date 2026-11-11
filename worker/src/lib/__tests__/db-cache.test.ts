@@ -11,7 +11,7 @@ import {
   shouldSkipFreshCache,
   type CachePolicy,
 } from "../db-cache";
-import { getPriceCache, savePriceCache } from "../price-cache";
+import { getPriceCache, savePriceCache } from "../pricing/price-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

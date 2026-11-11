@@ -8,7 +8,7 @@ import {
   buildYieldCoverageEvidenceFingerprint,
   type YieldCoverageReviewQueue,
   type YieldCoverageReviewableQueueItem,
-} from "../yield-coverage-review-dispositions";
+} from "../yield-coverage-audit/yield-coverage-review-dispositions";
 
 const openDatabases: DatabaseSync[] = [];
 

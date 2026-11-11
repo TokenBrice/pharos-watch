@@ -38,10 +38,10 @@ export const RUNTIME_REACHABILITY_POLICIES = [
     entrypoints: { kind: "paths", paths: [
       "worker/src/index.ts",
       "worker/src/handlers/http/request-dispatch.ts",
-      "worker/src/lib/report-cards-v9-cache.ts",
+      "worker/src/lib/safety-score-v9/report-cards-v9-cache.ts",
       "worker/src/lib/public-health-assessment.ts",
       "worker/src/lib/safety-score-v9/publication-store.ts",
-      "worker/src/lib/safety-score-index.ts",
+      "worker/src/lib/safety-score-v9/safety-score-index.ts",
     ] },
     staticImportsOnly: true,
     forbidden: { kind: "paths", paths: [
@@ -79,14 +79,14 @@ export const RUNTIME_REACHABILITY_POLICIES = [
         "shared/lib/stablecoins/registry.ts",
         "shared/lib/tracked-stablecoin-utils.ts",
         // ADR-24: alert lanes must use the thin envelope, not full V9 snapshot decoding.
-        "worker/src/lib/safety-score-active-source.ts",
-        "worker/src/lib/report-cards-v9-cache.ts",
+        "worker/src/lib/safety-score-v9/safety-score-active-source.ts",
+        "worker/src/lib/safety-score-v9/report-cards-v9-cache.ts",
       ],
     },
     directImports: {
       entrypoints: [
         "worker/src/cron/prune-detail-cache.ts",
-        "worker/src/cron/snapshot-supply.ts",
+        "worker/src/cron/market-supply/snapshot-supply.ts",
       ],
       forbiddenSpecifiers: ["@shared/lib/psi-eligible", "@shared/lib/stablecoins/registry"],
     },

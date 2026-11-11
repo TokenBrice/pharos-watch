@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isReasonablePrice } from "../../lib/price-validation";
+import { isReasonablePrice } from "../../lib/pricing/price-validation";
 import { hasMissingPrice } from "../sync-stablecoins/enrich-prices-shared";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices-shared";
 

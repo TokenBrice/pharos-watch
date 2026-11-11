@@ -1,4 +1,4 @@
-import { GT_DEX_QUALITY, QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
+import { GT_DEX_QUALITY, QUALITY_MULTIPLIERS } from "../../lib/dex-liquidity/dex-cron-constants";
 import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 
 /** Resolve quality multiplier for a GeckoTerminal pool based on DEX ID. */

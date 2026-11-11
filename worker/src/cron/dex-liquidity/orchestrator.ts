@@ -7,7 +7,7 @@ import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./t
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { createD1CostTracker } from "../../lib/d1-cost";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { loadPriceValidationReferences } from "../../lib/price-validation";
+import { loadPriceValidationReferences } from "../../lib/pricing/price-validation";
 import { upsertStagedPools } from "../dex-discovery/persistence";
 import {
   STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
@@ -37,9 +37,9 @@ import {
 } from "./scoring";
 import { buildDexLiquidityPublicationGenerationId, persistScores, writeHistoricalSnapshots } from "./persistence";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
+import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
+import { POOL_CHALLENGE_MIN_TVL } from "../../lib/pricing/price-depeg-voting-policy";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
   buildAuthoritativeStagedPoolConfirmationIndex,

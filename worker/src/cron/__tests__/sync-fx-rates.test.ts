@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { PRIMARY_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../../lib/fx-config";
+import { PRIMARY_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../../lib/pricing/fx-config";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
@@ -38,9 +38,9 @@ function resetFetchRetryMocks(): void {
   vi.mocked(fetchJsonWithRetry).mockClear();
 }
 
-import { syncFxRates } from "../sync-fx-rates";
-import { loadExchangeRateApiPayload, loadFrankfurterPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
-import { buildFxCacheStatus, getFxReferenceTypeFromState, hydrateFxRateState } from "../../lib/fx-rate-state";
+import { syncFxRates } from "../pricing/sync-fx-rates";
+import { loadExchangeRateApiPayload, loadFrankfurterPayload, loadSecondaryCurrencyCandidate } from "../pricing/sync-fx-rates-sources";
+import { buildFxCacheStatus, getFxReferenceTypeFromState, hydrateFxRateState } from "../../lib/pricing/fx-rate-state";
 describe("syncFxRates", () => {
   const fixtures = createLatestSchemaFixtureTracker();
   beforeEach(() => {

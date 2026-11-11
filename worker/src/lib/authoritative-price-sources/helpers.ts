@@ -13,12 +13,12 @@ import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock, fe
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { throwIfAborted } from "../abort";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
-import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
+import { validateCompositePricingSourceFreshness } from "../pricing/pricing-source-freshness";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
-import type { PriceValidationReferences } from "../price-validation";
-import type { PriceCacheEntry } from "../price-cache";
+import type { PriceValidationReferences } from "../pricing/price-validation";
+import type { PriceCacheEntry } from "../pricing/price-cache";
 
 export const ETHEREUM_CHAIN = "ethereum";
 

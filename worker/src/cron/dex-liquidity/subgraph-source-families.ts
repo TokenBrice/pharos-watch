@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
-import type { PriceValidationReferences } from "../../lib/price-validation";
-import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
+import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-liquidity/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { fetchSubgraphEntities, mergeDexPriceObservationMap, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type {

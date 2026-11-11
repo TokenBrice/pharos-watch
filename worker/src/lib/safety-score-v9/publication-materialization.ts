@@ -2,7 +2,7 @@ import { setCache } from "../db-cache";
 import { createCronResult } from "../cron-result";
 import { logWorkerEvent } from "../structured-log";
 import type { CronResult } from "../cron-logger";
-import { materializeV9AcceptedPublication, type V9AcceptedPublicMaterializationSource, type V9PublicMaterializationResult, type V9PublicMaterializationTiming } from "../report-cards-v9-materialization";
+import { materializeV9AcceptedPublication, type V9AcceptedPublicMaterializationSource, type V9PublicMaterializationResult, type V9PublicMaterializationTiming } from "./report-cards-v9-materialization";
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
 import { throwIfAborted } from "../abort";
 import { loadSafetyScoreV9PublicationStoredRow } from "./publication-chunks";

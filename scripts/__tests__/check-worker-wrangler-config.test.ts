@@ -20,7 +20,7 @@ routes = [
 ]
 
 [alias]
-"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
+"#pharos-full-catalog" = "./src/lib/market-supply/full-stablecoin-catalog.ts"
 
 [version_metadata]
 binding = "CF_VERSION_METADATA"
@@ -185,9 +185,9 @@ describe("check-worker-wrangler-config", () => {
   });
   it("rejects a missing lossless Worker catalog alias", () => {
     const report = evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
-      '"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"', "",
+      '"#pharos-full-catalog" = "./src/lib/market-supply/full-stablecoin-catalog.ts"', "",
     ));
-    expect(report.issues).toContain("Worker full catalog alias must resolve to ./src/lib/full-stablecoin-catalog.ts.");
+    expect(report.issues).toContain("Worker full catalog alias must resolve to ./src/lib/market-supply/full-stablecoin-catalog.ts.");
   });
   it("accepts root-owned custom domains and fallthrough asset rules", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG)).toEqual({ failed: false, issues: [] });

@@ -3,7 +3,7 @@ import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../peg-analytics-cache";
+import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../depeg-detection/peg-analytics-cache";
 import type * as PegScoreModule from "@shared/lib/peg-score";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -91,17 +91,17 @@ vi.mock("@shared/lib/methodology-versions/registry", () => ({
   getMethodologyVersionAt: vi.fn(() => "test-methodology"),
 }));
 
-vi.mock("../supply-history-db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../supply-history-db")>();
+vi.mock("../market-supply/supply-history-db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../market-supply/supply-history-db")>();
   return {
     ...actual,
     getFirstSeenDates: vi.fn(async () => new Map<string, number>()),
   };
 });
 
-import { derivePegAnalyticsSnapshot } from "../peg-analytics";
+import { derivePegAnalyticsSnapshot } from "../depeg-detection/peg-analytics";
 import { coinTrackingStart, computePegScore } from "@shared/lib/peg-score";
-import { getFirstSeenDates } from "../supply-history-db";
+import { getFirstSeenDates } from "../market-supply/supply-history-db";
 
 describe("derivePegAnalyticsSnapshot", () => {
   it("publishes the uncapped observation boundary separately from scoring coverage", async () => {

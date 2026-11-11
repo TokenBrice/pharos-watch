@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "../mint-burn/sync-config";
 import { isMintBurnCapacityOnlyRepairDebt } from "../mint-burn/repair-coverage";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
 import { classifyBridgeBurnRows, reconcileReviewedSupplyBurns } from "../../lib/mint-burn-pipeline/classification";
@@ -10,8 +10,8 @@ import { persistMintBurnRows } from "../../lib/mint-burn-pipeline/persistence";
 import { reconcileAtomicRoundtripGroups } from "../../lib/mint-burn-pipeline/roundtrip-detection";
 import { completeMintBurnRangeSupplyProof, requiresReviewedSupplyBurnProof, completeMintBurnConservationAudit, conservationOnlyEventDefsFor, persistMintBurnConservation,
   readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
-  type ConservationEventDef } from "../../lib/mint-burn-conservation";
-import { acceptMintBurnSupplyProof, invalidateConflictingMintBurnSupplyProofs, invalidateMintBurnSupplyProofs, invalidateMintBurnSupplyProofRange, persistMintBurnSupplyProof, type MintBurnSupplyProofEvidence } from "../../lib/mint-burn-supply-proofs";
+  type ConservationEventDef } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
+import { acceptMintBurnSupplyProof, invalidateConflictingMintBurnSupplyProofs, invalidateMintBurnSupplyProofs, invalidateMintBurnSupplyProofRange, persistMintBurnSupplyProof, type MintBurnSupplyProofEvidence } from "../../lib/mint-burn-pipeline/mint-burn-supply-proofs";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnConservationRecord } from "@shared/types/status";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -27,8 +27,8 @@ vi.mock("../../lib/mint-burn-pipeline/classification", () => ({
 }));
 vi.mock("../../lib/mint-burn-pipeline/persistence", () => ({ persistMintBurnRows: vi.fn() }));
 vi.mock("../../lib/mint-burn-pipeline/roundtrip-detection", () => ({ reconcileAtomicRoundtripGroups: vi.fn() }));
-vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../../lib/mint-burn-conservation")>(),
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-conservation", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/mint-burn-pipeline/mint-burn-conservation")>(),
   getMintBurnConservationEligibility: () => ({ supported: true }),
   needsMintBurnConservationBoundaries: () => true,
   requiresReviewedSupplyBurnProof: vi.fn(() => false),
@@ -36,8 +36,8 @@ vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => ({
   conservationOnlyEventDefsFor: vi.fn(() => []),
   completeMintBurnConservationAudit: vi.fn(), persistMintBurnConservation: vi.fn(), validateMintBurnParsedConservation: vi.fn(),
   readMintBurnConservationRecords: vi.fn(), verifyPersistedMintBurnConservation: vi.fn() }));
-vi.mock("../../lib/mint-burn-supply-proofs", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/mint-burn-supply-proofs")>()),
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-supply-proofs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/mint-burn-pipeline/mint-burn-supply-proofs")>()),
   persistMintBurnSupplyProof: vi.fn(async () => {}), acceptMintBurnSupplyProof: vi.fn(async () => true),
   invalidateMintBurnSupplyProofs: vi.fn(async () => 0),
   invalidateMintBurnSupplyProofRange: vi.fn(async () => 0),

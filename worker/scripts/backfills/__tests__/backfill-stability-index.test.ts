@@ -4,9 +4,9 @@ import { makeApiRequest, stubCryptoForAuth } from "../../../src/test-helpers/__s
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { DatabaseSync } from "node:sqlite";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
-import { computeStabilityIndex } from "../../../src/lib/stability-index";
+import { computeStabilityIndex } from "../../../src/lib/psi/stability-index";
 import { seedPsiDews } from "../../../src/api/__tests__/psi-replay.test-support";
-import type { PsiHistoricalDewsRow } from "../../../src/lib/psi-replay";
+import type { PsiHistoricalDewsRow } from "../../../src/lib/psi/psi-replay";
 
 stubCryptoForAuth();
 
@@ -24,7 +24,7 @@ function callBackfillStabilityIndex(context: {
   return handleBackfillStabilityIndex({ ...context, url });
 }
 
-vi.mock("../../../src/lib/stability-index", () => ({
+vi.mock("../../../src/lib/psi/stability-index", () => ({
   computeStabilityIndex: vi.fn(() => ({
     score: 73.2,
     band: "Stable",

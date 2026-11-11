@@ -8,10 +8,10 @@ import {
   MINT_BURN_BRIDGE_VALIDATION_ERRORS,
   MINT_BURN_CONFIGS,
   validateMintBurnBridgeDetection,
-} from "../mint-burn-contracts";
-import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-contracts-data";
+} from "../mint-burn-pipeline/mint-burn-contracts";
+import { MINT_BURN_CONFIG_SPECS } from "../mint-burn-pipeline/mint-burn-contracts-data";
 import { MINT_BURN_COVERED_COIN_IDS } from "../../cron/depeg-resolver/mint-burn-coverage";
-import { getMintBurnConservationRuntimeEntry, requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
+import { getMintBurnConservationRuntimeEntry, requiresReviewedSupplyBurnProof } from "../mint-burn-pipeline/mint-burn-conservation";
 import { reviewedBurnFixture, reviewedFalseBurnEntries } from "./mint-burn-supply-proof.test-support";
 import { projectMintBurnConservationRuntime } from "../../../../scripts/maintenance/generate-mint-burn-conservation-runtime";
 

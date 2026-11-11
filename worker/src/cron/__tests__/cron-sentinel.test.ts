@@ -12,18 +12,18 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../cron-staleness-watchdog", () => ({ runCronStalenessWatchdog: mocks.freshness }));
-vi.mock("../digest-publication-watchdog", () => ({ runDigestPublicationWatchdog: mocks.digest }));
+vi.mock("../digest/digest-publication-watchdog", () => ({ runDigestPublicationWatchdog: mocks.digest }));
 vi.mock("../cron-duration-watchdog", () => ({ runCronDurationWatchdog: mocks.duration }));
-vi.mock("../mint-burn-growth-watchdog", () => ({ runMintBurnGrowthWatchdog: mocks.growth }));
-vi.mock("../../lib/repair-tasks", () => ({ runWorkerRepairTaskRunner: mocks.repair }));
-vi.mock("../dex-exit-route-turnover-watchdog", () => ({ runDexExitRouteTurnoverWatchdog: mocks.turnover }));
-vi.mock("../reserve-post-sync-watchdog", () => ({ runReservePostSyncWatchdog: mocks.reserve }));
-vi.mock("../mint-burn-reconciliation-watchdog", () => ({ runMintBurnReconciliationWatchdog: mocks.reconciliation }));
+vi.mock("../mint-burn/mint-burn-growth-watchdog", () => ({ runMintBurnGrowthWatchdog: mocks.growth }));
+vi.mock("../../lib/depeg-resolver/repair-tasks", () => ({ runWorkerRepairTaskRunner: mocks.repair }));
+vi.mock("../dex-liquidity/dex-exit-route-turnover-watchdog", () => ({ runDexExitRouteTurnoverWatchdog: mocks.turnover }));
+vi.mock("../live-reserves/reserve-post-sync-watchdog", () => ({ runReservePostSyncWatchdog: mocks.reserve }));
+vi.mock("../mint-burn/mint-burn-reconciliation-watchdog", () => ({ runMintBurnReconciliationWatchdog: mocks.reconciliation }));
 
 const sourceStates = vi.hoisted(() => new Map<string, { value: string; updatedAt: number }>());
 const watchdog = vi.hoisted(() => ({ context: vi.fn(), receipts: vi.fn(), delivery: vi.fn() }));
 vi.mock("../../lib/mint-burn-flows-service", () => ({ readMintBurnWindowContext: watchdog.context }));
-vi.mock("../../lib/mint-burn-supply-reconciliation", () => ({ readMintBurnSupplyReconciliation: watchdog.receipts }));
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-supply-reconciliation", () => ({ readMintBurnSupplyReconciliation: watchdog.receipts }));
 vi.mock("../cron-sentinel-rules", async (original) => ({
   ...await original<typeof import("../cron-sentinel-rules")>(), deliverOperatorAlert: watchdog.delivery,
 }));
@@ -205,7 +205,7 @@ describe("daily reconciliation operator delivery", () => {
         ? [{ day: 86_400, status, reason: status }] : [];
       // A later unavailable day must not hide the retained finding.
       watchdog.receipts.mockResolvedValue(new Map([["leg", { configKey: "leg", status: "unavailable", activeFindings }]]));
-      const { runMintBurnReconciliationWatchdog } = await vi.importActual<typeof import("../mint-burn-reconciliation-watchdog")>("../mint-burn-reconciliation-watchdog");
+      const { runMintBurnReconciliationWatchdog } = await vi.importActual<typeof import("../mint-burn/mint-burn-reconciliation-watchdog")>("../mint-burn/mint-burn-reconciliation-watchdog");
       const options = { nowSec: 500, operatorTelegramCreds: { chatId: "operator", botToken: "test" } };
       const result = await runMintBurnReconciliationWatchdog(emptyDb(), options);
       await runMintBurnReconciliationWatchdog(emptyDb(), options);

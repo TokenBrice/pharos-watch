@@ -10,7 +10,7 @@ import {
 } from "./voice-guards";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getMetaString, normalizeStringArray } from "./digest-intelligence-utils";
-import { findDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
+import { findDigestSafetyClaimMarkers } from "../../lib/digest/digest-safety-context";
 import { findQuarantinedDigestSignalClaims } from "@shared/lib/digest-signal-quarantine";
 import type { DigestInputData } from "@shared/types/digest";
 import {
@@ -22,9 +22,9 @@ import {
 import {
   DEFAULT_DIGEST_STYLE_GATE_MODE,
   type DigestStyleGateMode,
-} from "../../lib/digest-style-gate";
+} from "../../lib/digest/digest-style-gate";
 
-export type { DigestStyleGateMode } from "../../lib/digest-style-gate";
+export type { DigestStyleGateMode } from "../../lib/digest/digest-style-gate";
 const STYLE_GATE_MODE = DEFAULT_DIGEST_STYLE_GATE_MODE;
 
 const OPENING_FINGERPRINT_WINDOW = 7;

@@ -3,17 +3,17 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../lib/stablecoins-cache", () => ({
+vi.mock("../../lib/market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(),
 }));
 
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { computeAndStoreStabilityIndex } from "../stability-index";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
+import { computeAndStoreStabilityIndex } from "../psi/stability-index";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
-import { persistActiveNativeEventQuotes, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import { persistActiveNativeEventQuotes, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/pricing/native-peg-quote-cache";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
-import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../../lib/stability-index";
+import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../../lib/psi/stability-index";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";

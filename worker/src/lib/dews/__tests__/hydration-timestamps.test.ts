@@ -9,9 +9,9 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { loadDewsSourceState } from "../source-state";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCronTimeoutBudget } from "../../cron-timeouts";
-import { aggregateFlowCacheKey } from "../../mint-burn-flow-cache-keys";
-import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
-import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
+import { aggregateFlowCacheKey } from "../../mint-burn-pipeline/mint-burn-flow-cache-keys";
+import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../mint-burn-pipeline/mint-burn-contract-identity";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 
 const RUN_AT = 1_800_000_000;

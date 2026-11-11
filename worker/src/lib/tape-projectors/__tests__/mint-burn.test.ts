@@ -8,14 +8,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import { mintBurnTapeEligibleSql } from "../../mint-burn-tape-claim";
+import { mintBurnTapeEligibleSql } from "../../mint-burn-pipeline/mint-burn-tape-claim";
 import { projectMintBurnLargeFlows } from "../mint-burn";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds, tapeInsertBindsForType } from "./test-support";
 import { projectPsiBandShifts } from "../psi";
 import { projectScoreDowngraded, projectScoreUpgraded } from "../score";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
-import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
-import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
+import { MINT_BURN_CONFIGS } from "../../mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../mint-burn-pipeline/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 
 const SEC = 1_700_000_000;

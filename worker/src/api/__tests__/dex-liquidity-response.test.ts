@@ -5,7 +5,7 @@ import {
   buildDexDeploymentCoverage,
   normalizeTopPools,
   selectTrendBaseline,
-} from "../../lib/dex-liquidity-response";
+} from "../../lib/dex-liquidity/dex-liquidity-response";
 
 describe("stored trend evidence admission", () => {
   it.each([

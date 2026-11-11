@@ -11,9 +11,9 @@ import { MULTICALL3_ADDRESS } from "../../../lib/evm-rpc";
 import { encodeUint256 } from "../../../lib/evm-selectors";
 import { createAdapterIoLimiter } from "../concurrency";
 import { accruedMorphoLenderAssets, observeMorphoLenderBook } from "../morpho-lender-book";
-import { createReserveAdapterRunner } from "../../reserve-adapter-runner";
-import { createAdapterLatencyCollector } from "../../sync-live-reserves-core";
-import { CONFIGURED_COINS } from "../../sync-live-reserves-shared";
+import { createReserveAdapterRunner } from "../../live-reserves/reserve-adapter-runner";
+import { createAdapterLatencyCollector } from "../../live-reserves/sync-live-reserves-core";
+import { CONFIGURED_COINS } from "../../live-reserves/sync-live-reserves-shared";
 import { getReserveAdapter } from "../index";
 import { installAdapterNetwork, resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 

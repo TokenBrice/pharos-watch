@@ -1,10 +1,10 @@
 import { COVERAGE_REPAIR_MAX_BLOCKS } from "./repair-policy";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError } from "../../lib/d1-overload-retry";
-import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
+import { fetchConservationBoundaries } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
-import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { setCacheIfNewer } from "../../lib/db-cache";
 import { loadMintBurnSupplyProofRepairCursor, mintBurnSupplyProofRepairCursorKey } from "./repair-supply-proofs";
 import { MINT_BURN_PENDING_RUNTIME_BUDGET_MS, MINT_BURN_REQUEST_RESERVE, type runMintBurnConfigPhase } from "./run-configs";

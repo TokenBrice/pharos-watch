@@ -4,7 +4,7 @@ import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getPsiBandStreak, type PsiHistoryPointLike } from "@shared/lib/psi-view-model";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest/digest-sql-filters";
 import {
   collectorDegraded,
   collectorOk,

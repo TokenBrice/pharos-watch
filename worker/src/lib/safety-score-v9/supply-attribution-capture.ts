@@ -18,7 +18,7 @@ import {
 import { rethrowIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { DwellirNativeCapability } from "../dwellir-native";
-import type { V9ExecutionWindow } from "../v9-slot-window";
+import type { V9ExecutionWindow } from "./v9-slot-window";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,

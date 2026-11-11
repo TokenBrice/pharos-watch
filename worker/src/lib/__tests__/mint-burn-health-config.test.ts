@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeMintBurnSyncFreshnessStatus,
   resolveMintBurnFreshnessConfig,
-} from "../mint-burn-health-config";
+} from "../mint-burn-pipeline/mint-burn-health-config";
 
 describe("resolveMintBurnFreshnessConfig", () => {
   it("returns defaults with no env overrides", () => {

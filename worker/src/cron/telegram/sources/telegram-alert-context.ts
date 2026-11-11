@@ -6,12 +6,12 @@ import {
   projectTelegramSupplyContext,
   type TelegramSupplyContext,
 } from "../../../telegram/common/context-freshness";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../../lib/dex-liquidity";
-import { loadStablecoinsCache } from "../../../lib/stablecoins-cache";
-import { loadActiveAlertSafetySourceAssessment } from "../../../lib/alert-safety-source-cache";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../../lib/dex-liquidity/dex-liquidity";
+import { loadStablecoinsCache } from "../../../lib/market-supply/stablecoins-cache";
+import { loadActiveAlertSafetySourceAssessment } from "../../../lib/safety-score-v9/alert-safety-source-cache";
 import { buildInClause, chunkArray } from "../../../lib/db";
 import { classifyTelegramLogError, logTelegramEvent } from "../../../telegram/common/log";
-import { getMintBurnConfigsForStablecoin } from "../../../lib/mint-burn-contracts";
+import { getMintBurnConfigsForStablecoin } from "../../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../../../lib/mint-burn-flows-service";
 import { getCache } from "../../../lib/db-cache";
 import { safeJsonParse } from "../../../lib/api-cache-read";

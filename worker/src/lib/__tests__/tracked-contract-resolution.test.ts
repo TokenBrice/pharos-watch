@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import usdtTetherCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
-import { resolveRequiredTrackedContractConfig } from "../tracked-contract-resolution";
+import { resolveRequiredTrackedContractConfig } from "../market-supply/tracked-contract-resolution";
 
 type Deployment = { chain: string; address: string; decimals: number };
 const usdtOptimism = (usdtTetherCoin.contracts as Deployment[]).find((entry) => entry.chain === "optimism")!;

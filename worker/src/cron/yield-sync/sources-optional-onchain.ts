@@ -2,12 +2,12 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { throwIfAborted } from "../../lib/abort";
 import { type ChainRpcConfig, getChainRpc, hasRegistryRpc } from "../../lib/chain-registry";
-import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/pricing/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmRpcBatch, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { buildOnChainSourceKey } from "../../lib/yield-utils";
+import { buildOnChainSourceKey } from "../../lib/yield/yield-utils";
 import { resolveRpcUrls } from "./sources-rpc";
 import type { ResolvedYield } from "./types";
 

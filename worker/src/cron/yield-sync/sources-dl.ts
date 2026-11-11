@@ -25,7 +25,7 @@ import {
 } from "./cache";
 import {
   STALE_THRESHOLD_MS,
-} from "../../lib/yield-ranking-helpers";
+} from "../../lib/yield/yield-ranking-helpers";
 import type {
   DlPool,
 } from "./types";

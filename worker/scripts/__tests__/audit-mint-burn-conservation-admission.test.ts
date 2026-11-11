@@ -4,10 +4,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runAdmissionAuditCli } from "../audit-mint-burn-conservation-admission";
-import { MINT_BURN_CONFIGS } from "../../src/lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../src/lib/mint-burn-pipeline/mint-burn-contracts";
 import reviewedSidecar from "../../src/lib/mint-burn-conservation-reviewed.json";
 import { renderMintBurnConservationRuntime } from "../../../scripts/maintenance/generate-mint-burn-conservation-runtime";
-import type { ReviewedConservationEntry } from "../../src/lib/mint-burn-conservation";
+import type { ReviewedConservationEntry } from "../../src/lib/mint-burn-pipeline/mint-burn-conservation";
 
 const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
 const reviewed = reviewedSidecar.entries.find((item) => item.stablecoinId === config.stablecoinId)!;

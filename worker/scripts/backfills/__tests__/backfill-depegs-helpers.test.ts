@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildFxLookup,
   fetchHistoricalSecondaryFxRates,
-} from "../../../src/lib/backfill-fx";
+} from "../../../src/lib/pricing/backfill-fx";
 import {
   extractDepegEvents,
   findNearestSupply,
   parseSupplyData,
-} from "../../../src/lib/historical-depeg-extraction";
+} from "../../../src/lib/depeg-detection/historical-depeg-extraction";
 
 import { executeBackfillForCoin } from "../backfill-depegs/execution";
 import { mockD1 } from "@shared/test-utils/mock-d1";

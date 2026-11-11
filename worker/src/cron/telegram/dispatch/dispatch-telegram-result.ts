@@ -6,8 +6,8 @@ import {
   pendingCapacityProgressFields,
 } from "../../../telegram/outbox/pending-capacity";
 
-import type { AlertSafetySourceAssessment } from "../../../lib/alert-safety-source-cache";
-import type { AlertReserveSourceAssessment } from "../../../lib/alert-reserve-source-cache";
+import type { AlertSafetySourceAssessment } from "../../../lib/safety-score-v9/alert-safety-source-cache";
+import type { AlertReserveSourceAssessment } from "../../../lib/live-reserves/alert-reserve-source-cache";
 
 export interface DispatchCapacityMetadata {
   freezeTargetCount: number;

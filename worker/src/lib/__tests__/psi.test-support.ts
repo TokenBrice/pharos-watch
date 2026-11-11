@@ -1,5 +1,5 @@
-import { buildStabilityInputForDay, buildSupplySnapshotMap, type PsiDepegEventRow, type PsiSupplyRow } from "../psi-recompute";
-import { replayHistoricalPsiForDay, type PsiHistoricalDewsMap } from "../psi-replay";
+import { buildStabilityInputForDay, buildSupplySnapshotMap, type PsiDepegEventRow, type PsiSupplyRow } from "../psi/psi-recompute";
+import { replayHistoricalPsiForDay, type PsiHistoricalDewsMap } from "../psi/psi-replay";
 
 export const DAY = 86_400;
 

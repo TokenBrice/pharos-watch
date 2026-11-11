@@ -14,8 +14,8 @@ import {
   fetchCurrentNativePegQuotes,
   getNativePegQueryCurrencies,
   normalizeSupportedPegCurrency,
-} from "../native-peg-quotes";
-import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
+} from "../pricing/native-peg-quotes";
+import type { PricingProviderAttemptDiagnostic } from "../pricing/pricing-provider-diagnostics";
 
 function makeJsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {

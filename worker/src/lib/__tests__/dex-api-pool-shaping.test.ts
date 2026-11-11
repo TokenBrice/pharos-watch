@@ -5,8 +5,8 @@ import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capac
 import { addSecondaryPoolContribution } from "../../cron/dex-liquidity/pool-contribution";
 import { initSourcePoolGraph } from "../../cron/dex-liquidity/pool-helpers";
 import type { GtNewPool, SourcePoolGraph } from "../../cron/dex-liquidity/types";
-import { convertToGtNewPools, isPreferredDirectApiPool } from "../dex-api-pool-shaping";
-import type { DexApiPool } from "../dex-api-types";
+import { convertToGtNewPools, isPreferredDirectApiPool } from "../dex-liquidity/dex-api-pool-shaping";
+import type { DexApiPool } from "../dex-liquidity/dex-api-types";
 
 function makeDirectPool(overrides: Partial<DexApiPool>): DexApiPool {
   return {

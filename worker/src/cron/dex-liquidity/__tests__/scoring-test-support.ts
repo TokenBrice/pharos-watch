@@ -1,6 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../../lib/dex-liquidity/dex-cron-constants";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type { PoolEntry } from "../types";
 import { makePricePoolMap } from "./scoring-test-builders";

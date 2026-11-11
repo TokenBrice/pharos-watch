@@ -6,9 +6,9 @@ vi.mock("../../../lib/structured-log", () => ({
   logWorkerEvent: logWorkerEventMock,
 }));
 
-import type { DexApiPool } from "../../../lib/dex-api-types";
-import type { PriceValidationReferences } from "../../../lib/price-validation";
-import { getTokenReferenceUsdPrice } from "../../../lib/dex-api-token-pricing";
+import type { DexApiPool } from "../../../lib/dex-liquidity/dex-api-types";
+import type { PriceValidationReferences } from "../../../lib/pricing/price-validation";
+import { getTokenReferenceUsdPrice } from "../../../lib/dex-liquidity/dex-api-token-pricing";
 import { computeUniswapV4PoolId, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../uniswap-v4";
 import {
   buildNativeDexExecutionTarget,

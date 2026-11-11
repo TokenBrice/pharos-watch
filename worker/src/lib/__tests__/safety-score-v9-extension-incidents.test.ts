@@ -27,7 +27,7 @@ import {
 } from "@shared/lib/safety-score-v9/lane-screening-derivation";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../../../scripts/lib/safety-score-v9-registry";
 import { createReplayFixedInput } from "../../../scripts/__tests__/safety-score-v9-replay.test-support";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 

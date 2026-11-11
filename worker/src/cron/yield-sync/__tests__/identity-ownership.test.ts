@@ -4,7 +4,7 @@ import { appendLinkedVariantParentYieldSources } from "../resolve-linked-variant
 import { appendPoolFamilyYieldSources, enforceExternalOpportunityTvlEligibility } from "../resolve-pools";
 import { resolveYieldTypeLabel } from "../source-risk";
 import { deriveYieldSourceRole } from "../publication-decisions";
-import { matchAllDlPools } from "../../yield-helpers";
+import { matchAllDlPools } from "../yield-helpers";
 import { YIELD_POOL_MAP } from "../../../lib/yield-config/yield-config-pools";
 import type { DlPool, ResolvedYield, ResolvedYieldCandidate, ResolvedYieldEntry } from "../types";
 import type { EvaluatedYieldSource } from "../evaluation";

@@ -25,11 +25,11 @@ import {
   parseAcceptedSfrxusdCrosschainV9RouteState,
   SfrxusdCrosschainV9RouteStateSchema,
   type SfrxusdCrosschainV9RouteState,
-} from "../../../lib/sfrxusd-crosschain-redemption-route";
+} from "../../../lib/redemption-backstop/sfrxusd-crosschain-redemption-route";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
 import * as crosschainObserver from "../sfrxusd-crosschain-redemption";
-import type { SfrxusdCrosschainV9RouteAttempt } from "../../../lib/sfrxusd-crosschain-redemption-route";
+import type { SfrxusdCrosschainV9RouteAttempt } from "../../../lib/redemption-backstop/sfrxusd-crosschain-redemption-route";
 import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
 import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";
 import { expectRecentPinRouting } from "../../../test-helpers/recent-pin-routing";

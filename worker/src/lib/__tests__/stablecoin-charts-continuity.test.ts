@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assessStablecoinChartContinuity,
   STABLECOIN_CHART_CONTINUITY_THRESHOLDS,
-} from "../stablecoin-charts-continuity";
+} from "../market-supply/stablecoin-charts-continuity";
 import type { StablecoinChartPoint } from "@shared/types/supply";
 
 const DAY = 86_400;

@@ -4,9 +4,9 @@ import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { assertAllD1MatchesUsed, mockD1Strict } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeRedemptionWriteRecord } from "../../lib/__tests__/redemption-backstops-store.test-support";
-import { upsertRedemptionBackstopSnapshots } from "../../lib/redemption-backstops-store";
+import { upsertRedemptionBackstopSnapshots } from "../../lib/redemption-backstop/redemption-backstops-store";
 import { handleRedemptionBackstops } from "../redemption-backstops";
-import type * as RedemptionBackstopsStoreModule from "../../lib/redemption-backstops-store";
+import type * as RedemptionBackstopsStoreModule from "../../lib/redemption-backstop/redemption-backstops-store";
 
 import { COMPLETED_RUNS_SQL, completedRun, makeCompletedRunsDb, makeRedemptionRow } from "./redemption-backstops.test-support";
 
@@ -300,7 +300,7 @@ describe("handleRedemptionBackstops", () => {
     // The real store wraps every load failure in its unavailable error, so this
     // boundary needs a scoped module mock; the dynamic import re-resolves the
     // handler against the mocked store for this test only.
-    vi.doMock("../../lib/redemption-backstops-store", async (importOriginal) => {
+    vi.doMock("../../lib/redemption-backstop/redemption-backstops-store", async (importOriginal) => {
       const actual = await importOriginal<typeof RedemptionBackstopsStoreModule>();
       return {
         ...actual,
@@ -314,7 +314,7 @@ describe("handleRedemptionBackstops", () => {
       const { handleRedemptionBackstops: handlerWithFailingStore } = await import("../redemption-backstops");
       await expect(handlerWithFailingStore({} as D1Database)).rejects.toThrow("boom");
     } finally {
-      vi.doUnmock("../../lib/redemption-backstops-store");
+      vi.doUnmock("../../lib/redemption-backstop/redemption-backstops-store");
       vi.resetModules();
     }
   });

@@ -1,5 +1,5 @@
 import { decodeJsonString } from "../../lib/cache-json";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity/dex-liquidity";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
 import { getDexPriceSourceEntries } from "../../lib/depeg-trust-policy";

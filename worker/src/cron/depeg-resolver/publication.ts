@@ -19,14 +19,14 @@ import {
   type DdrSealedPublicPrediction,
   type DdrSealInput,
   type DdrV2StoreContracts,
-} from "../depeg-resolver-v2-contracts";
+} from "./depeg-resolver-v2-contracts";
 import type { DdrDiagnosticResponse, DdrEventDbRow } from "./types";
 import {
   DDR_LOCK_ACCOUNTING_START_AT,
   DDR_LOCK_RECONCILIATION_LIMIT,
   loadUnfinishedSealedLocks,
   type RecordLockDeferralInput,
-} from "../../lib/depeg-resolver-lock-opportunity-store";
+} from "../../lib/depeg-resolver/depeg-resolver-lock-opportunity-store";
 import { computeLockTiming } from "./incident-state";
 import { buildSealPayload, buildV2PublicationBasePayload } from "./public-projection";
 import {

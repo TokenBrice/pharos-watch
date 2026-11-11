@@ -2,7 +2,7 @@ import type { MintBurnPriceContext, MintBurnPriceHistoryPoint, MintBurnPriceObse
 import { buildInClause } from "../db";
 import { chunkArray } from "../collections";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../d1-primitives";
-import { buildPriceValidationContext, validatePriceCandidate } from "../price-validation";
+import { buildPriceValidationContext, validatePriceCandidate } from "../pricing/price-validation";
 import { isObservedPrice, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { protocolParProvider } from "../authoritative-price-sources/protocol-par";

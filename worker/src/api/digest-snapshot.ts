@@ -4,7 +4,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { DigestMcap7dDeltaCoverageSchema, DigestSupplyCoverageSchema } from "@shared/types/digest";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { isRecord } from "@shared/lib/type-guards";
-import { DIGEST_META_TYPE_SQL, NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { DIGEST_META_TYPE_SQL, NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest/digest-sql-filters";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../lib/blacklist/shared";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";

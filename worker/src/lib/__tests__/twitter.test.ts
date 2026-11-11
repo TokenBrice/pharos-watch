@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildTweetText, postDigestTweet, TwitterPostError } from "../twitter";
+import { buildTweetText, postDigestTweet, TwitterPostError } from "../digest/twitter";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const creds = {

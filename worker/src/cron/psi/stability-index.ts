@@ -1,0 +1,442 @@
+import { includePsiEventDeviation } from "../../lib/psi/psi-recompute";
+import { logWorkerEventArgs } from "../../lib/structured-log";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { round1 } from "@shared/lib/math";
+import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import type { CronResult } from "../../lib/cron-logger";
+import { createCronResult } from "../../lib/cron-result";
+import { getPriceCache } from "../../lib/pricing/price-cache";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../../lib/psi/stability-index";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
+import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
+import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
+import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
+import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
+import { isDewsAlertBand } from "@shared/lib/classification";
+import { throwIfAborted } from "../../lib/abort";
+import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
+import { isObservedPrice, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import { protocolParProvider } from "../../lib/authoritative-price-sources/protocol-par";
+import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/pricing/native-peg-quote-cache";
+
+type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string; current_native_quote: string | null };
+
+const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
+const DEWS_STRESS_MAX_AGE_SEC = DEWS_GENERATION_CONSUMER_MAX_AGE_SEC;
+
+export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
+  if (stablecoinsCache.kind !== "ok") {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "stablecoins-cache-unavailable",
+        fallbackMode: "stablecoins-cache-unavailable",
+        stablecoinsCacheReason: stablecoinsCache.reason,
+        dewsUnavailable: true,
+      },
+    });
+  }
+
+  const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => CORE_PSI_ELIGIBLE_IDS.has(coin.id));
+
+  let totalMcapUsd = 0;
+  let pairedMcapUsd = 0;
+  let pairedPrevWeek = 0;
+  const mcapById = new Map<string, number>();
+  const symbolById = new Map<string, string>();
+
+  const supplyUnavailableIds: string[] = [];
+  const carriedSupplyIds: string[] = [];
+  const trendUnavailableIds: string[] = [];
+  for (const coin of tracked) {
+    const mcap = getCirculatingRawOrNull(coin);
+    if (mcap == null || !Number.isFinite(mcap) || mcap < 0) {
+      supplyUnavailableIds.push(coin.id);
+      continue;
+    }
+    // An outage-fallback restore keeps its original clock and source; it is a
+    // documented weight, not a supply observation made by this run (R6).
+    // Routine main-path carries (chain dropout, coverage restore) stay observed.
+    if (isOutageFallbackCarry(coin)) carriedSupplyIds.push(coin.id);
+    totalMcapUsd += mcap;
+    const prevWeek = getPrevWeekRawOrNull(coin);
+    if (prevWeek != null && Number.isFinite(prevWeek) && prevWeek >= 0) {
+      pairedMcapUsd += mcap;
+      pairedPrevWeek += prevWeek;
+    } else {
+      trendUnavailableIds.push(coin.id);
+    }
+    mcapById.set(coin.id, mcap);
+    symbolById.set(coin.id, coin.symbol);
+  }
+
+  const coreTrackedIds = new Set(
+    tracked.filter((coin) => CORE_AGGREGATE_ACTIVE_IDS.has(coin.id)).map((coin) => coin.id),
+  );
+  const coreSupplyUnavailableCount = supplyUnavailableIds
+    .filter((id) => CORE_AGGREGATE_ACTIVE_IDS.has(id))
+    .length;
+  const coreCarriedSupplyCount = carriedSupplyIds
+    .filter((id) => CORE_AGGREGATE_ACTIVE_IDS.has(id))
+    .length;
+  const universeCoverage = {
+    expected: CORE_AGGREGATE_ACTIVE_IDS.size,
+    // Coverage measures the core aggregate cohort only; PSI-historical assets
+    // are outside the denominator and supply availability is its own component.
+    // Carried supply remains a published weight but is not admitted as an
+    // observation this generation.
+    present: coreTrackedIds.size,
+    admittedSupply: coreTrackedIds.size - coreSupplyUnavailableCount - coreCarriedSupplyCount,
+    missingFromCacheIds: [...CORE_AGGREGATE_ACTIVE_IDS]
+      .filter((id) => !coreTrackedIds.has(id))
+      .sort(),
+    supplyUnavailableIds,
+    carriedSupplyIds,
+    trendUnavailableIds,
+  };
+  const universeCoverageStatus = classifyPsiUniverseCoverage(
+    universeCoverage.expected,
+    universeCoverage.present,
+  );
+
+  const mcap7dChangePct = Number.isFinite(pairedPrevWeek) && pairedPrevWeek > 0 && Number.isFinite(pairedMcapUsd)
+    ? ((pairedMcapUsd - pairedPrevWeek) / pairedPrevWeek) * 100
+    : null;
+  if (!Number.isFinite(totalMcapUsd) || totalMcapUsd <= 0 || mcap7dChangePct == null || !Number.isFinite(mcap7dChangePct)) {
+    const reason = !Number.isFinite(totalMcapUsd) || totalMcapUsd <= 0
+      ? "insufficient-market-cap"
+      : "trend-inputs-unavailable";
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason,
+        fallbackMode: reason,
+        totalMcapUsd,
+        mcap7dChangePct: mcap7dChangePct != null && Number.isFinite(mcap7dChangePct) ? mcap7dChangePct : null,
+        supplyUnavailableIds,
+        trendUnavailableIds,
+        preservedCurrentSample: true,
+      },
+    });
+  }
+
+  throwIfAborted(signal);
+
+  // Active depegs — use current price to compute live deviation
+  let activeDepegs: D1Result<PsiActiveDepegRow>;
+  try {
+    activeDepegs = await db
+      .prepare(`SELECT e.stablecoin_id, e.peg_reference, e.started_at, e.peg_type, e.source,
+                       e.start_price, e.ended_at, e.recovery_price, p.quote_mode,
+                       nq.value AS current_native_quote
+                FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+                LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
+                WHERE e.ended_at IS NULL`)
+      .all<PsiActiveDepegRow>();
+  } catch (err) {
+    logWorkerEventArgs("handler", "warn", "[stability-index] depeg query failed:", err);
+    const depegEventsFailureReason = String(err);
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "depeg-events-unavailable",
+        fallbackMode: "depeg-events-unavailable",
+        depegEventsUnavailable: true,
+        depegEventsFailureReason,
+        totalMcapUsd,
+        mcap7dChangePct,
+      },
+    });
+  }
+  const now = Math.floor(Date.now() / 1000);
+
+  const priceById = new Map<string, number>();
+  for (const coin of tracked) {
+    if (isObservedPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
+      priceById.set(coin.id, coin.price);
+    }
+  }
+
+  // Keep already-open depegs in PSI when the current stablecoins snapshot temporarily
+  // lacks a usable price but we still have a recent replay-safe positive cached price.
+  const replayPriceById = new Map<string, number>();
+  try {
+    const replayPriceCache = await getPriceCache(db);
+    for (const [assetId, cached] of replayPriceCache) {
+      // Replay fallback uses only replay-safe cached values; a nominal par
+      // reference is not an observed price and cannot turn an open depeg into
+      // measured calm. Legacy `protocol-redeem` par rows carry no mode.
+      if (!isReplaySafePriceSource(cached.source) || cached.observedAtMode === "nominal_reference") continue;
+      if (cached.source === "protocol-redeem" && protocolParProvider.matches(assetId)) continue;
+      if (
+        cached.price != null &&
+        Number.isFinite(cached.price) &&
+        cached.price > 0 &&
+        Number.isFinite(cached.updatedAt) &&
+        now - cached.updatedAt < REPLAY_PRICE_CACHE_TTL_SEC
+      ) {
+        replayPriceById.set(assetId, cached.price);
+      }
+    }
+  } catch (error) {
+    logWorkerEventArgs("handler", "warn", "[stability-index] replay price cache unavailable; open-depeg fallback disabled:", error);
+  }
+
+  // Read DEWS stress signals (from previous 15-min cycle) for stress breadth
+  let dewsStressBreadth = 0;
+  let dewsUnavailable = false;
+  let dewsFailureReason: string | null = null;
+  let dewsLatestComputedAt: number | null = null;
+  let dewsRowsRead = 0;
+  const publishedDews = await loadPublishedStressSignalGeneration(db, now);
+  throwIfAborted(signal);
+  if (publishedDews.status !== "ok" || !publishedDews.exactCoverageVerified) {
+    dewsUnavailable = true;
+    dewsFailureReason = publishedDews.status !== "ok" ? publishedDews.reason : "generation-coverage-unverified";
+  } else {
+    const rows = publishedDews.rows.filter((row) => CORE_PSI_ELIGIBLE_IDS.has(row.stablecoin_id));
+    dewsRowsRead = rows.length;
+    for (const row of rows) {
+      if (!Number.isFinite(row.computed_at)) {
+        dewsUnavailable = true;
+        dewsFailureReason ??= "stress_signals latest rows are missing computed_at";
+        continue;
+      }
+
+      dewsLatestComputedAt =
+        dewsLatestComputedAt == null ? row.computed_at : Math.max(dewsLatestComputedAt, row.computed_at);
+
+      const rowAgeSec = now - row.computed_at;
+      if (rowAgeSec > DEWS_STRESS_MAX_AGE_SEC) {
+        dewsUnavailable = true;
+        dewsFailureReason ??= `stress_signals latest row for ${row.stablecoin_id} is stale (ageSec=${rowAgeSec}, maxAgeSec=${DEWS_STRESS_MAX_AGE_SEC})`;
+      }
+    }
+
+    if (!dewsUnavailable) {
+      // Count stressed coins weighted by mcap after dependency freshness is proven.
+      for (const row of rows) {
+        if (!isDewsAlertBand(row.band)) continue;
+        const coinMcap = mcapById.get(row.stablecoin_id);
+        if (coinMcap == null) continue;
+        dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * DEWS_STRESS_BREADTH_SCALE;
+      }
+    }
+  }
+
+  if (dewsUnavailable) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "dews-unavailable",
+        fallbackMode: "dews-unavailable",
+        dewsUnavailable,
+        dewsFailureReason,
+        dewsLatestComputedAt,
+        dewsRowsRead,
+        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
+        totalMcapUsd,
+        mcap7dChangePct,
+        preservedCurrentSample: true,
+      },
+    });
+  }
+
+  type DepegRow = PsiActiveDepegRow;
+  const grouped = new Map<string, DepegRow[]>();
+  for (const r of activeDepegs.results ?? []) {
+    const canonicalId = canonicalizePsiStablecoinId(r.stablecoin_id);
+    if (!CORE_PSI_ELIGIBLE_IDS.has(canonicalId)) continue;
+    const list = grouped.get(canonicalId) ?? [];
+    list.push(r);
+    grouped.set(canonicalId, list);
+  }
+
+  const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];
+  const contributors: {
+    id: string;
+    symbol: string;
+    bps: number;
+    mcapUsd: number;
+    ageDays: number;
+    factor: number;
+  }[] = [];
+  let replayPriceFallbackCount = 0;
+  let openDepegsWithoutPrice = 0;
+
+  for (const [coinId, events] of grouped) {
+    const mcapUsd = mcapById.get(coinId);
+    if (mcapUsd == null) continue;
+    const currentPrice = priceById.get(coinId);
+    const replayPrice = replayPriceById.get(coinId);
+    const usdPrice = currentPrice ?? replayPrice;
+    if (currentPrice == null && replayPrice != null && events.some((event) => !isNativePegEvent(event))) {
+      replayPriceFallbackCount++;
+    }
+
+    const aggregate = { worstBps: 0, earliestStart: Infinity };
+    let missingPrice = false;
+    for (const e of events) {
+      const price = isNativePegEvent(e)
+        ? getNativeEventPrice(e, now, decodeNativeEventQuote(e.current_native_quote))
+        : usdPrice;
+      const depegSignal = price != null ? deriveDepegSignal(price, e.peg_reference) : null;
+      if (!depegSignal) {
+        missingPrice = true;
+        continue;
+      }
+      includePsiEventDeviation(aggregate, depegSignal.bps, e.started_at);
+    }
+    if (missingPrice) openDepegsWithoutPrice++;
+
+    const { worstBps, earliestStart } = aggregate;
+    if (earliestStart === Infinity) continue;
+    const ageDays = Math.max(0, (now - earliestStart) / DAY_SECONDS);
+
+    depegs.push({ bps: worstBps, mcapUsd, depegAgeDays: ageDays });
+
+    contributors.push({
+      id: coinId,
+      symbol: symbolById.get(coinId) ?? coinId,
+      bps: worstBps,
+      mcapUsd,
+      ageDays: round1(ageDays),
+      factor: getDepreciationFactor(ageDays),
+    });
+  }
+
+  throwIfAborted(signal);
+  const degradedComponents: string[] = [
+    ...(openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : []),
+    ...(supplyUnavailableIds.length > 0 ? ["supply-unavailable"] : []),
+    ...(trendUnavailableIds.length > 0 ? ["trend-inputs-unavailable"] : []),
+    ...(carriedSupplyIds.length > 0 ? ["carried-supply"] : []),
+    ...(universeCoverageStatus !== "ok" ? ["universe-coverage"] : []),
+  ];
+
+  const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
+  if (!result) {
+    logWorkerEventArgs("handler", "warn",
+      `[stability-index] skipped sample due to insufficient market-cap input (totalMcapUsd=${totalMcapUsd})`,
+    );
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "insufficient-market-cap",
+        fallbackMode: "insufficient-market-cap",
+        totalMcapUsd,
+        depegCount: depegs.length,
+        dewsStressBreadth,
+        dewsUnavailable,
+        dewsFailureReason,
+        dewsLatestComputedAt,
+        dewsRowsRead,
+        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
+      },
+    });
+  }
+
+  await db
+    .prepare(
+      `INSERT OR REPLACE INTO stability_index_samples (stored_at, score, band, components, input_snapshot, methodology_version)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      now,
+      result.score,
+      result.band,
+      JSON.stringify(result.components),
+      JSON.stringify({
+        aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+        depegCount: depegs.length,
+        totalMcapUsd,
+        mcap7dChangePct,
+        dewsStressBreadth,
+        dewsUnavailable,
+        dewsFailureReason,
+        dewsLatestComputedAt,
+        dewsRowsRead,
+        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
+        replayPriceFallbackCount,
+        openDepegsWithoutPrice,
+        degradedComponents,
+        supplyUnavailableIds,
+        carriedSupplyIds,
+        trendUnavailableIds,
+        universeCoverage: {
+          ...universeCoverage,
+          status: universeCoverageStatus,
+        },
+        contributors,
+        methodologyVersion: PSI_METHODOLOGY_VERSION,
+      }),
+      PSI_METHODOLOGY_VERSION,
+    )
+    .run();
+
+  // Prune samples older than 90 days
+  await db
+    .prepare("DELETE FROM stability_index_samples WHERE stored_at < ?")
+    .bind(Math.floor(Date.now() / 1000) - 90 * DAY_SECONDS)
+    .run();
+
+  logWorkerEventArgs("handler", "info", `[stability-index] score=${result.score} band=${result.band}`);
+  return createCronResult({
+    status: "ok",
+    itemCount: 1,
+    productivity: {
+      productive: true,
+      reason: "psi-sample-published",
+      publications: [
+        {
+          surface: "psi",
+          generationId: `psi:${now}`,
+          publishedAt: now,
+          candidateRows: 1,
+          publishedRows: 1,
+          expectedRows: 1,
+          validationSummary: { methodologyVersion: PSI_METHODOLOGY_VERSION },
+        },
+      ],
+    },
+    metadata: {
+      reason: "psi-sample-published",
+      ...(degradedComponents.length > 0 ? {
+        quality: { reason: degradedComponents[0], reasons: degradedComponents },
+      } : {}),
+      supplyUnavailableIds,
+      carriedSupplyIds,
+      trendUnavailableIds,
+      supplyUnavailableCount: supplyUnavailableIds.length,
+      carriedSupplyCount: carriedSupplyIds.length,
+      trendUnavailableCount: trendUnavailableIds.length,
+      universeCoverage: {
+        ...universeCoverage,
+        status: universeCoverageStatus,
+      },
+      aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+      score: result.score,
+      band: result.band,
+      dewsStressBreadth,
+      dewsUnavailable,
+      dewsFailureReason,
+      dewsLatestComputedAt,
+      dewsRowsRead,
+      dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
+      replayPriceFallbackCount,
+      openDepegsWithoutPrice,
+      degradedComponents,
+    },
+  });
+}

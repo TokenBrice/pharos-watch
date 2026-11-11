@@ -11,7 +11,7 @@ import {
   reserveRecoveryAdmissionSql,
   reserveRecoveryLeaseAdmission,
   resolveReserveProducerAdmission,
-} from "../reserve-producer-priority";
+} from "../live-reserves/reserve-producer-priority";
 import { runCronWithLease } from "../cron-lease-primitives";
 import { beginLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery } from "../../cron/reserve-adapters/reserve-checkpoint";
 import { SCHEDULED_SLOT_JOB_BUDGET_MS } from "../cron-timeouts";

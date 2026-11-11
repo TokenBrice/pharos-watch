@@ -2,7 +2,7 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DigestPromoResponseSchema, type DigestPromoEdition } from "@shared/types/digest";
 import { jsonFreshResponse, jsonResponse } from "../lib/api-response";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest/digest-sql-filters";
 import { logWorkerEvent } from "../lib/structured-log";
 
 type DigestPromoRow = {

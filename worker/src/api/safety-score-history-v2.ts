@@ -10,7 +10,7 @@ import { safetyScoreHistoryHeaders } from "./safety-score-history";
 import {
   fetchSafetyScoreHistoryV2Rows,
   safetyScoreHistoryIdentityFromV2Row,
-} from "../lib/safety-score-history-v2";
+} from "../lib/safety-score-v9/safety-score-history-v2";
 
 class AllSafetyScoreHistoryRowsMalformedError extends Error {}
 

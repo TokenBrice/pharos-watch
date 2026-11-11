@@ -4,8 +4,8 @@ import {
 } from "@shared/lib/blacklist";
 import {
   upsertBlacklistCurrentBalance,
-} from "../blacklist-current-balances";
-import type { ContractEventConfig } from "../blacklist-contracts";
+} from "./blacklist-current-balances";
+import type { ContractEventConfig } from "./blacklist-contracts";
 import { type RateLimitedFetch } from "../evm-logs";
 import type { ChainRpcConfig } from "../chain-registry";
 import {

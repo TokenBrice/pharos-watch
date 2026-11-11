@@ -1,4 +1,4 @@
-import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../../lib/blacklist/blacklist-contracts";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 

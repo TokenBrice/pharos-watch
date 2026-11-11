@@ -24,43 +24,69 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES = [
   "worker/src/cron/depeg-resolver/",
   "worker/src/lib/address-price-providers/",
   "worker/src/lib/authoritative-price-sources/",
-  "worker/src/lib/depeg-resolver-",
+  "worker/src/lib/depeg-resolver/depeg-resolver-",
   "worker/src/lib/dews/",
 ];
 const HIGH_STAKES_COVERAGE_CANDIDATE_FILES = new Set([
-  "worker/src/cron/sync-stablecoins.ts",
-  "worker/src/cron/detect-depegs.ts",
-  "worker/src/cron/confirm-pending-depegs.ts",
-  "worker/src/cron/pending-depeg-confirmation.ts",
-  "worker/src/cron/pending-depeg-confirmation-decision.ts",
-  "worker/src/cron/pending-depeg-confirmation-evidence.ts",
-  "worker/src/cron/compute-depeg-resolver.ts",
-  "worker/src/cron/compute-depeg-resolver-review.ts",
+  "worker/src/cron/market-supply/sync-stablecoins.ts",
+  "worker/src/cron/depeg-detection/detect-depegs.ts",
+  "worker/src/cron/depeg-detection/confirm-pending-depegs.ts",
+  "worker/src/cron/depeg-detection/pending-depeg-confirmation.ts",
+  "worker/src/cron/depeg-detection/pending-depeg-confirmation-decision.ts",
+  "worker/src/cron/depeg-detection/pending-depeg-confirmation-evidence.ts",
+  "worker/src/cron/depeg-resolver/compute-depeg-resolver.ts",
+  "worker/src/cron/depeg-resolver-review/compute-depeg-resolver-review.ts",
   "worker/src/cron/reserve-adapters/cap-vault.ts",
-  "worker/src/cron/sync-live-reserves.ts",
+  "worker/src/cron/live-reserves/sync-live-reserves.ts",
   "worker/src/lib/stress-signals-current-rows.ts",
 ]);
 const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
-  /^worker\/src\/cron\/sync-live-reserves-[a-z0-9-]+\.ts$/,
-  /^worker\/src\/lib\/[^/]*(price|pricing)[^/]*\.ts$/,
+  /^worker\/src\/cron\/(?:live-reserves\/)?sync-live-reserves-[a-z0-9-]+\.ts$/,
+  /^worker\/src\/lib\/(?:pricing\/|dex-liquidity\/|mint-burn-pipeline\/(?=mint-burn-))?[^/]*(price|pricing)[^/]*\.ts$/,
   /^worker\/src\/lib\/live-reserves\/[^/]+\.ts$/,
   /^worker\/src\/lib\/(?:auth|evm-rpc)\.ts$/,
-  /^worker\/src\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
+  /^worker\/src\/lib\/(?:pricing\/|market-supply\/|mint-burn-pipeline\/|psi\/)?(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
   /^worker\/src\/lib\/safety-score-v9\/[^/]+\.ts$/,
   /^worker\/src\/api\/[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
   /^shared\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
   /^functions\/lib\/[^/]*proxy[^/]*\.ts$/,
 ];
 
+// Domain relocation preserves the noncandidate status of these pre-existing sources.
+const HIGH_STAKES_COVERAGE_RELOCATED_NONCANDIDATES = new Set([
+  "worker/src/cron/depeg-detection/authoritative-peg-signal.ts",
+  "worker/src/cron/depeg-resolver/depeg-resolver-v2-contracts.ts",
+  "worker/src/lib/live-reserves/accepted-reserve-generation.ts",
+  "worker/src/lib/live-reserves/alert-reserve-source-cache.ts",
+  "worker/src/lib/live-reserves/collateral-drift.ts",
+  "worker/src/lib/live-reserves/live-reserve-policy.ts",
+  "worker/src/lib/live-reserves/reserve-continuation-fence.ts",
+  "worker/src/lib/live-reserves/reserve-continuation-reconciliation.ts",
+  "worker/src/lib/live-reserves/reserve-continuation-send.ts",
+  "worker/src/lib/live-reserves/reserve-feed-reviews.ts",
+  "worker/src/lib/live-reserves/reserve-producer-priority.ts",
+  "worker/src/lib/safety-score-v9/alert-safety-source-cache.ts",
+  "worker/src/lib/safety-score-v9/report-card-evidence-journal-store.ts",
+  "worker/src/lib/safety-score-v9/report-cards-fixed-input-cache-codec.ts",
+  "worker/src/lib/safety-score-v9/report-cards-fixed-input-contract.ts",
+  "worker/src/lib/safety-score-v9/report-cards-fixed-input.ts",
+  "worker/src/lib/safety-score-v9/report-cards-snapshot-inputs.ts",
+  "worker/src/lib/safety-score-v9/report-cards-snapshot.ts",
+  "worker/src/lib/safety-score-v9/report-cards-v9-cache.ts",
+  "worker/src/lib/safety-score-v9/report-cards-v9-materialization.ts",
+  "worker/src/lib/safety-score-v9/report-cards-v9-projection.ts",
+  "worker/src/lib/safety-score-v9/v9-slot-window.ts",
+]);
+
 // Named reliability minima also enroll their sources in discovery and measurement.
 /** @type {Record<string, number>} */
 export const CRITICAL_COVERAGE_LINE_FLOORS = {
-  "worker/src/lib/stablecoins-cache.ts": 50,
+  "worker/src/lib/market-supply/stablecoins-cache.ts": 50,
   "worker/src/lib/auth.ts": 70,
   "worker/src/lib/evm-rpc.ts": 70,
-  "worker/src/lib/safety-scores.ts": 40,
+  "worker/src/lib/safety-score-v9/safety-scores.ts": 40,
   "worker/src/handlers/scheduled.ts": 40,
-  "worker/src/cron/daily-digest.ts": 40,
+  "worker/src/cron/daily-digest/daily-digest.ts": 40,
   "worker/src/api/stablecoin-detail.ts": 30,
   "worker/src/api/health.ts": 60,
   "worker/src/api/status.ts": 40,
@@ -369,8 +395,10 @@ function isHighStakesCoverageCandidate(file) {
   return (
     Object.hasOwn(CRITICAL_COVERAGE_LINE_FLOORS, file) ||
     HIGH_STAKES_COVERAGE_CANDIDATE_FILES.has(file) ||
-    HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
-    HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS.some((pattern) => pattern.test(file))
+    (!HIGH_STAKES_COVERAGE_RELOCATED_NONCANDIDATES.has(file) && (
+      HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
+      HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS.some((pattern) => pattern.test(file))
+    ))
   );
 }
 

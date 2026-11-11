@@ -2,7 +2,7 @@ import { sqrtRatioToSpotPrice } from "./amm-math";
 import { SLIPSTREAM_COLLECTION_DEPLOYMENTS as SLIPSTREAM_CONFIG } from "@shared/lib/dex-slipstream-deployments";
 import { logWorkerEventArgs, logWorkerEvent } from "../../lib/structured-log";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
-import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";

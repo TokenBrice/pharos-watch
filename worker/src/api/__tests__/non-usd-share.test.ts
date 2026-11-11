@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleNonUsdShare } from "../non-usd-share";
-import { NON_USD_SHARE_HISTORY_KEY, publishNonUsdShareHistory } from "../../lib/non-usd-share-history";
+import { NON_USD_SHARE_HISTORY_KEY, publishNonUsdShareHistory } from "../../lib/market-supply/non-usd-share-history";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const DAY = 86400;

@@ -5,7 +5,7 @@ import { loadYieldHealthSummary } from "../yield-health";
 import type { CronRunStatus, CronStatusDetail } from "@shared/types/status";
 import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
-import * as scoreIndex from "../../safety-score-index";
+import * as scoreIndex from "../../safety-score-v9/safety-score-index";
 import {
   buildYieldSupplementalRunOutcome,
   getYieldSupplementalFamilyCacheKey,

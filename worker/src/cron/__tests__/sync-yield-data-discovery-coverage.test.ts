@@ -18,13 +18,13 @@ import {
 } from "./sync-yield-data.test-support";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-import { syncYieldData } from "../sync-yield-data";
+import { syncYieldData } from "../yield-sync/sync-yield-data";
 import * as apiSchemaModule from "../../lib/api-schema";
 import { batchExecute } from "../../lib/db";
 import { getCache, getCaches } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
-import * as safetyScoresModule from "../../lib/safety-scores";
+import * as safetyScoresModule from "../../lib/safety-score-v9/safety-scores";
 import * as yieldRateSources from "../../lib/yield-config/yield-config-rate-sources";
 import * as yieldPools from "../../lib/yield-config/yield-config-pools";
 import * as yieldExplicitPools from "../../lib/yield-config/yield-config-explicit-pools";

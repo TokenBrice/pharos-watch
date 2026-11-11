@@ -22,7 +22,7 @@ import {
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
-import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 
 const DEFAULT_BLACKLIST_AMOUNT_D1_TABLES: MockTableConfig[] = [

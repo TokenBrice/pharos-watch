@@ -4,8 +4,8 @@ import {
   BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY,
   buildBlacklistCurrentBalanceValues,
   type BlacklistCurrentBalanceRow,
-} from "../../src/lib/blacklist-current-balances";
-import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../../src/lib/blacklist-cache-keys";
+} from "../../src/lib/blacklist/blacklist-current-balances";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../../src/lib/blacklist/blacklist-cache-keys";
 import { sqlString, type RemoteD1Client } from "./remote-d1";
 
 export type CurrentBalanceMaintenanceRow = Omit<BlacklistCurrentBalanceRow, "id">;

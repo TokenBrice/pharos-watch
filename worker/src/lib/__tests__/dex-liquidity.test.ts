@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadDexLiquidityMap, loadDexLiquiditySnapshot, loadDexLiquidityScores } from "../dex-liquidity";
+import { loadDexLiquidityMap, loadDexLiquiditySnapshot, loadDexLiquidityScores } from "../dex-liquidity/dex-liquidity";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function mockDb(rows: Record<string, unknown>[]): D1Database {

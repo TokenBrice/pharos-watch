@@ -2,7 +2,7 @@ import { DependencyScenarioArtifactSchema, DEPENDENCY_SCENARIOS_CACHE_PREFIX, de
 import { reassembleDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
 import { DependencyScenarioChunkManifestSchema, DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT, DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER, DEPENDENCY_SCENARIO_READER_VERSION_HEADER } from "@shared/types/dependency-scenario-storage";
 import { jsonResponse } from "../lib/api-response";
-import { loadActiveSafetyScoreIdentity } from "../lib/safety-score-active-source";
+import { loadActiveSafetyScoreIdentity } from "../lib/safety-score-v9/safety-score-active-source";
 
 /** Read-only hypothetical lane. Canonical publishers never read these keys. */
 export async function handleDependencyScenarios(db: D1Database, workerVersionId?: string | null): Promise<Response> {

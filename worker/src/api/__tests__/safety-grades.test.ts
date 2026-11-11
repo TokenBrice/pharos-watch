@@ -7,7 +7,7 @@ import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 
-vi.mock("../../lib/safety-score-index", () => ({
+vi.mock("../../lib/safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: mockLoadActiveSafetyScoreSource,
 }));
 

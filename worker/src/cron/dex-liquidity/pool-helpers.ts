@@ -18,7 +18,7 @@ import {
   QUALITY_MULTIPLIERS,
   COMPOSITE_POOL_NAMES,
   normalizeDexSymbol,
-} from "../../lib/dex-cron-constants";
+} from "../../lib/dex-liquidity/dex-cron-constants";
 import type { LiquidityFallbackCounters, LiquidityMetrics, SourcePoolGraph, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
 import { buildChainAddressKey } from "./token-resolution";

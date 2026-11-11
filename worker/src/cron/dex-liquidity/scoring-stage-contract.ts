@@ -1,4 +1,4 @@
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type {
   DirectApiFetchPhaseResult,

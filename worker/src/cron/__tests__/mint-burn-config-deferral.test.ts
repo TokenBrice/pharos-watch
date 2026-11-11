@@ -3,10 +3,10 @@ import { mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import type { DatabaseSync } from "node:sqlite";
-import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { conservationOnlyEventDefsFor, fetchConservationBoundaries,
-  getMintBurnConservationEligibility, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-conservation";
+  getMintBurnConservationEligibility, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import {
   createMintBurnConfigSummary,
@@ -28,8 +28,8 @@ vi.mock("../mint-burn/scan-with-retry", async (importOriginal) => ({
   syncMintBurnConfigWithRetries: vi.fn(),
 }));
 
-vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/mint-burn-conservation")>();
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-conservation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/mint-burn-pipeline/mint-burn-conservation")>();
   return { ...actual, fetchConservationBoundaries: vi.fn() };
 });
 

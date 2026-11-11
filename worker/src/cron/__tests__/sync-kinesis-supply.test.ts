@@ -11,7 +11,7 @@ vi.mock("../../lib/fetch-retry", () => ({
 
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
-import { syncKinesisSupply, parseKinesisResponse } from "../sync-kinesis-supply";
+import { syncKinesisSupply, parseKinesisResponse } from "../market-supply/sync-kinesis-supply";
 
 const fixtures = createLatestSchemaFixtureTracker();
 

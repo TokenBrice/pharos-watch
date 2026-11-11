@@ -3,7 +3,7 @@ import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
+import { hasPublishableCurrentPrice } from "../../lib/pricing/price-publication-state";
 import { runDlContractPasses } from "./enrich-prices-defillama-pass";
 import { runJupiterPass } from "./enrich-prices-jupiter-pass";
 import type { EnrichPassResult } from "./enrich-prices-pass-common";

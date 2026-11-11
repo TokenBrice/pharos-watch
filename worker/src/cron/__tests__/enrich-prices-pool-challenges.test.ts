@@ -14,7 +14,7 @@ import {
   applyListAggregatorDowngrade,
   applyPoolChallenge,
 } from "../sync-stablecoins/enrich-prices-primary-hardening";
-import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationContext, PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 import { selectDexPriceChallengerRowsFromPools } from "../dex-liquidity/challenger-publish";

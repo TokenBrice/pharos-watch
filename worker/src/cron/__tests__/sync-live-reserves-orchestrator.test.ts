@@ -8,14 +8,14 @@ import {
   orderConfiguredCoinsForSync,
   type ConfiguredCoin,
   type LiveReserveCohortGrading,
-} from "../sync-live-reserves-shared";
+} from "../live-reserves/sync-live-reserves-shared";
 import {
   LIVE_RESERVE_CONTINUATION_BUDGETS,
   LIVE_RESERVE_PRODUCER_BUDGETS,
   LIVE_RESERVE_PRODUCER_WORK_BUDGET_RATIO,
   LIVE_RESERVE_SLICE_COST,
   resolveLiveReserveSyncBudgetConfig,
-} from "../sync-live-reserves-config";
+} from "../live-reserves/sync-live-reserves-config";
 import {
   checkpointIdentity,
   checkpointTable,
@@ -24,10 +24,10 @@ import {
   recordOutcomeSafeMock,
   shouldAttemptFetchMock,
 } from "./live-reserves.test-support";
-import { sealAcceptedReserveGeneration } from "../../lib/accepted-reserve-generation";
+import { sealAcceptedReserveGeneration } from "../../lib/live-reserves/accepted-reserve-generation";
 
 // Cohort sealing and atomic fencing are covered by accepted-reserve-generation.test.
-vi.mock("../../lib/accepted-reserve-generation", () => ({ sealAcceptedReserveGeneration: vi.fn(async () => null) }));
+vi.mock("../../lib/live-reserves/accepted-reserve-generation", () => ({ sealAcceptedReserveGeneration: vi.fn(async () => null) }));
 
 function mockD1(tables: MockTableConfig[] = []): MockD1Database {
   return mockLiveReserveD1(tables, [
@@ -98,8 +98,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     ["Accountable dashboard returned an invalid response", "schema-shape", undefined],
     ["HTTP 503 unavailable", "upstream-http", false],
   ] as const)("classifies %s without penalizing unrelated source health", async (message, category, breakerOutcome) => {
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
-    const { classifyFailure } = await import("../sync-live-reserves-shared");
+    const { syncReserveCoin } = await import("../live-reserves/sync-live-reserves-core");
+    const { classifyFailure } = await import("../live-reserves/sync-live-reserves-shared");
     expect(classifyFailure("adapter-exception", message)).toBe(category);
     const coin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
     const stages = { checkpoint: 0, breakerRead: 0, beginWrite: 0, failureWrite: 0, authoritativeWrite: 0, progress: 0 };
@@ -119,7 +119,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
   });
 
   it("stops at an expired checkpoint deadline without beginning an unfenced domain attempt", async () => {
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
+    const { syncReserveCoin } = await import("../live-reserves/sync-live-reserves-core");
     const db = mockD1();
     const runAdapter = vi.fn();
     await expect(syncReserveCoin({
@@ -146,7 +146,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       }
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const result = await syncLiveReserves(mockD1(), new AbortController().signal, {}, undefined, {
       runBudgetMs: 60_000, adapterTimeoutMs: 20_000, d1FinalizeTimeoutMs: 30_000, finalizationMarginMs: 5_000,
     });
@@ -164,12 +164,12 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     ["a clean run", { synced: 20, failed: 0, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "ok"],
     ["a clean checkpoint-owned continuation", { synced: 10, failed: 0, skipped: 0, deferredSkipped: 10, circuitSkipped: 0, deferredCoins: 10, attemptedCoins: 10 }, true, "ok"],
   ] as const)("grades %s against the attempted-feed budget", async (_name, counts, checkpointOwned, status) => {
-    const { resolveReserveSyncRunStatus } = await import("../sync-live-reserves-finalize");
+    const { resolveReserveSyncRunStatus } = await import("../live-reserves/sync-live-reserves-finalize");
     expect(resolveReserveSyncRunStatus({ counts: { ...counts, persistenceFailed: 0 }, total: 100, checkpointOwned })).toBe(status);
   });
 
   it("classifies any productive deferred tail as degraded even below the ratio threshold", async () => {
-    const { resolveReserveSyncRunStatus } = await import("../sync-live-reserves-finalize");
+    const { resolveReserveSyncRunStatus } = await import("../live-reserves/sync-live-reserves-finalize");
 
     expect(resolveReserveSyncRunStatus({
       counts: {
@@ -209,7 +209,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         persistenceFailed: 0, circuitSkipped: 0, attemptedCoins: cohortStart,
       },
     })]);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
 
     const result = await syncLiveReserves(
       db,
@@ -269,7 +269,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => {
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     // Two-coin slices keep the producer/continuation handoff assertions at the
     // same granularity without sweeping the full configured queue. The cohort
     // sits at the tail so the final slice exhausts its frontier.
@@ -332,7 +332,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const frontier = SYNC_ORDERED_CONFIGURED_COINS.length - 93;
     const identity = checkpointIdentity(1, "packed-suffix");
     const db = mockD1([checkpointTable({
@@ -378,7 +378,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const identity = checkpointIdentity(1, "producer-headroom");
     const db = mockD1([checkpointTable({
       attemptNo: 1, invocationId: identity.invocationId, state: "running",
@@ -447,7 +447,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const identity = checkpointIdentity(1, "run-budget-stop");
     const db = mockD1([checkpointTable({
       attemptNo: 1, invocationId: identity.invocationId, state: "running",
@@ -474,7 +474,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const identity = checkpointIdentity(1, "cpu-capped");
     const db = mockD1([checkpointTable({
       attemptNo: 1, invocationId: identity.invocationId, state: "recovering",
@@ -515,7 +515,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         rows: [{ finalized: 1, repaired: 1 }],
       },
     ]);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
 
     const result = await syncLiveReserves(
       db,
@@ -561,7 +561,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const { syncLiveReserves } = await import("../live-reserves/sync-live-reserves");
     const db = mockD1();
     const result = await syncLiveReserves(db, new AbortController().signal, {}, async (update) => {
       if (update.stage === "finalizing") nowMs += TIGHT_BUDGET.runBudgetMs + TIGHT_BUDGET.d1FinalizeTimeoutMs;

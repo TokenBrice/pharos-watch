@@ -1,22 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as conservationModule from "../../mint-burn-conservation";
-import { getMintBurnConfigsForStablecoin as byId, MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
+import * as conservationModule from "../../mint-burn-pipeline/mint-burn-conservation";
+import { getMintBurnConfigsForStablecoin as byId, MINT_BURN_CONFIGS } from "../../mint-burn-pipeline/mint-burn-contracts";
 import { MintBurnConservationRecordSchema, MintBurnReconciliationSummarySchema } from "@shared/types/status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getDatasetCadenceSec } from "@shared/lib/status-dataset-freshness";
-import * as safetySourceModule from "../../safety-score-index";
+import * as safetySourceModule from "../../safety-score-v9/safety-score-index";
 import { makeWorkerReportCardsV9Response } from "../../../test-helpers/report-cards-v9";
 import { DatasetFreshnessSchema } from "@shared/types/status/core";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data";
 import { makeMintBurnScanSegments } from "../../../test-helpers/__shared/mint-burn";
-import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../../mint-burn-pipeline/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../mint-burn-publication";
-import { readMintBurnSupplyReconciliation } from "../../mint-burn-supply-reconciliation";
+import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../mint-burn-pipeline/mint-burn-publication";
+import { readMintBurnSupplyReconciliation } from "../../mint-burn-pipeline/mint-burn-supply-reconciliation";
 
-vi.mock("../../mint-burn-supply-reconciliation", () => ({ readMintBurnSupplyReconciliation: vi.fn(async () => new Map()) }));
+vi.mock("../../mint-burn-pipeline/mint-burn-supply-reconciliation", () => ({ readMintBurnSupplyReconciliation: vi.fn(async () => new Map()) }));
 
 const NOW = 1_800_000_000;
 const fixtures = createLatestSchemaFixtureTracker();

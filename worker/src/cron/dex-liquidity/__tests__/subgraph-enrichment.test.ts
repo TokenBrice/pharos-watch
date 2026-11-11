@@ -15,7 +15,7 @@ import { UNIV3_SUBGRAPHS } from "../constants";
 import { buildUniswapV4ExecutionCandidateKey, buildUniV3ExecutionCandidateKey } from "../../measured-execution/inventory";
 import type { UniswapV4ExecutionCandidate, UniV3ExecutionCandidate } from "../../measured-execution/candidate-types";
 import { computeUniswapV4PoolId, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../../measured-execution/uniswap-v4";
-import type { PriceValidationReferences } from "../../../lib/price-validation";
+import type { PriceValidationReferences } from "../../../lib/pricing/price-validation";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

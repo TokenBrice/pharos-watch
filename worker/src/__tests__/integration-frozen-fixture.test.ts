@@ -27,7 +27,7 @@ vi.mock("@shared/data/stablecoins/coins.worker-runtime.generated.json", async ()
   const { default: catalog } = await import("@shared/data/stablecoins/coins.generated.json");
   return { default: catalog };
 });
-vi.mock("../lib/mint-burn-contracts", () => ({
+vi.mock("../lib/mint-burn-pipeline/mint-burn-contracts", () => ({
   MINT_BURN_CONFIGS: [{
     stablecoinId: "fixture-frozen",
     chain: { chainId: "ethereum", type: "evm" },

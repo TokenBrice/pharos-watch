@@ -18,7 +18,7 @@ import type { LiquiditySourceMixByFamily } from "../types";
 import { makeObs, makePool, scorePoolGraph, withCompleteVolume } from "./scoring-test-builders";
 import { captureObservedPoolPrices, measurePriceRefreshDemand, refreshPoolPrices } from "../price-refresh";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import * as cg from "../../../lib/coingecko-onchain";
+import * as cg from "../../../lib/dex-liquidity/coingecko-onchain";
 import * as breaker from "../../../lib/circuit-breaker";
 import { createSlotDeadline } from "../../../lib/cron-timeouts";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";

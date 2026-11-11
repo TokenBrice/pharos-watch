@@ -1,21 +1,21 @@
 import { DEPEG_SECONDARY_THRESHOLD_RATIO } from "@shared/lib/depeg-config";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { isDdrIneligibleAuditVerdict } from "@shared/lib/depeg-audit";
-import { isCoinGeckoHistoryAllowed } from "../../../src/lib/solomon-usdv-identity";
+import { isCoinGeckoHistoryAllowed } from "../../../src/lib/pricing/solomon-usdv-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sleep } from "../../../src/lib/abort";
-import { cgHeaders, cgUrl } from "../../../src/lib/coingecko";
+import { cgHeaders, cgUrl } from "../../../src/lib/pricing/coingecko";
 import { mapWithConcurrency } from "../../../src/lib/concurrency";
-import { getDepegThresholdBps } from "../../../src/lib/depeg-threshold-policy";
+import { getDepegThresholdBps } from "../../../src/lib/depeg-detection/depeg-threshold-policy";
 import { USER_AGENT } from "../../../src/lib/constants";
-import type { DepegRow } from "../../../src/lib/depeg-helpers";
+import type { DepegRow } from "../../../src/lib/depeg-detection/depeg-helpers";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { fetchJsonWithRetry } from "../../../src/lib/fetch-retry";
 import {
   buildPriceValidationContext,
   loadPriceValidationReferences,
   validatePriceCandidate,
-} from "../../../src/lib/price-validation";
+} from "../../../src/lib/pricing/price-validation";
 import { logWorkerEvent } from "../../../src/lib/structured-log";
 
 export type Verdict = DepegAuditVerdict | "skipped" | "error";

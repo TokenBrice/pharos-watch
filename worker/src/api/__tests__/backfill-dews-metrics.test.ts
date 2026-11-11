@@ -2,15 +2,15 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillDEWS } from "../backfill-dews";
-import { BACKTEST_ANCHORS } from "../../lib/backtest-anchors";
+import { BACKTEST_ANCHORS } from "../../lib/depeg-detection/backtest-anchors";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import type { BacktestNegativeControl } from "../../lib/backtest-anchors";
-import type * as BacktestAnchors from "../../lib/backtest-anchors";
+import type { BacktestNegativeControl } from "../../lib/depeg-detection/backtest-anchors";
+import type * as BacktestAnchors from "../../lib/depeg-detection/backtest-anchors";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 
 const { controls } = vi.hoisted(() => ({ controls: [] as BacktestNegativeControl[] }));
-vi.mock("../../lib/backtest-anchors", async (importOriginal) => ({
+vi.mock("../../lib/depeg-detection/backtest-anchors", async (importOriginal) => ({
   ...(await importOriginal<typeof BacktestAnchors>()),
   BACKTEST_NEGATIVE_CONTROLS: controls,
 }));

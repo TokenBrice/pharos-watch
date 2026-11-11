@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import { createDexPriceSourceLoadTelemetry, loadDexPrices, type DexPriceRow } from "../../lib/depeg-helpers";
+import { createDexPriceSourceLoadTelemetry, loadDexPrices, type DexPriceRow } from "../../lib/depeg-detection/depeg-helpers";
 
 const NOW = 1_700_000_000;
 const MAX_AGE = 2_100;

@@ -1,4 +1,4 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/live-reserve-policy";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { DEPENDENCY_TYPE_VALUES } from "@shared/types/dependency-types";

@@ -1,5 +1,5 @@
 import { cancelResponseBodyQuietly, readResponseSnippetWithTimeout } from "../../lib/response-body";
-import { GITHUB_OWNER, GITHUB_REPO } from "../../lib/github-repo";
+import { GITHUB_OWNER, GITHUB_REPO } from "../../lib/digest/github-repo";
 
 export class GitHubIssueRejectedError extends Error {
   readonly status: number;

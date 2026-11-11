@@ -12,7 +12,7 @@ import { IsolateLocalState } from "../../lib/isolate-local-state";
 import {
   buildPriceValidationContext,
   getReferencePriceForContext,
-} from "../../lib/price-validation";
+} from "../../lib/pricing/price-validation";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import {

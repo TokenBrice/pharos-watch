@@ -14,10 +14,10 @@ import {
 import { handleStatusCronDetailRoute } from "../status-cron-detail";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConservationCacheKey } from "../../lib/mint-burn-conservation";
-import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
-import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConservationCacheKey } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-pipeline/mint-burn-publication";
+import * as activeSafetyScoreSource from "../../lib/safety-score-v9/safety-score-active-source";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import {
   handleStatus,

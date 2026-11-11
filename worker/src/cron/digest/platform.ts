@@ -17,7 +17,7 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { createCronResult, createNeutralSkippedCronResult } from "../../lib/cron-result";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { findUnboundDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
+import { findUnboundDigestSafetyClaimMarkers } from "../../lib/digest/digest-safety-context";
 import type { AnthropicFallbackHandoff, AnthropicRefusalCategory, AnthropicUsageIteration } from "./anthropic-stream";
 import { tryParseJson } from "../../lib/json-parse";
 import type { DigestCredentialDiagnostics, DigestPublicationOutcome } from "./publish";

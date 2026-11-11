@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as contracts from "../enrich-prices-defillama-pass";
 import * as jupiter from "../enrich-prices-jupiter-pass";
 import { runShortLivedPriceRefresh } from "../price-short-lived-refresh";
-import { resolveStablecoinPriceGapReviews } from "../../../lib/stablecoin-publication-coverage";
+import { resolveStablecoinPriceGapReviews } from "../../../lib/market-supply/stablecoin-publication-coverage";
 import { makePeggedAsset } from "./_fixtures";
 
 beforeEach(() => {

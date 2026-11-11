@@ -24,7 +24,7 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   };
 });
 
-vi.mock("../../../lib/price-validation", () => ({
+vi.mock("../../../lib/pricing/price-validation", () => ({
   loadPriceValidationReferences: vi.fn(async () => undefined),
 }));
 
@@ -96,7 +96,7 @@ import {
   syncDexDiscovery,
 } from "../orchestrator";
 import { crawlCoin } from "../crawl-sources";
-import { loadPriceValidationReferences } from "../../../lib/price-validation";
+import { loadPriceValidationReferences } from "../../../lib/pricing/price-validation";
 import {
   buildFailedCrawlDeploymentOutcomes,
   upsertDexDeploymentOutcomes,

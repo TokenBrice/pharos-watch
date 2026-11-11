@@ -2,7 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
-import { auditVerdictNotInSql } from "../depeg-audit";
+import { auditVerdictNotInSql } from "../depeg-detection/depeg-audit";
 import {
   mockD1Strict,
   type MockD1Database,
@@ -13,7 +13,7 @@ import {
   DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,
   DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1,
   DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
-} from "../depeg-resolver-incident-store";
+} from "../depeg-resolver/depeg-resolver-incident-store";
 
 
 const sql = (...parts: string[]): string => parts.join(" ");

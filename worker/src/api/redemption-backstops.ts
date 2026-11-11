@@ -4,7 +4,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   buildRedemptionBackstopsSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
-} from "../lib/redemption-backstops-store";
+} from "../lib/redemption-backstop/redemption-backstops-store";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 

@@ -1,7 +1,7 @@
 import {
   loadActiveAlertSafetySourceAssessment,
   type AlertSafetySourceAssessment,
-} from "../../../lib/alert-safety-source-cache";
+} from "../../../lib/safety-score-v9/alert-safety-source-cache";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import type { CronResult } from "../../../lib/cron-logger";
 import { createCronResult } from "../../../lib/cron-result";

@@ -1,4 +1,4 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { AcceptedReserveSnapshot } from "@shared/types/accepted-reserve-generation";

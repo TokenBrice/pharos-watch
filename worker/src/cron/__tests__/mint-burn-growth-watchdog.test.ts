@@ -5,9 +5,9 @@ import {
   MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
   MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS,
   runMintBurnGrowthWatchdog,
-} from "../mint-burn-growth-watchdog";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+} from "../mint-burn/mint-burn-growth-watchdog";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 
 const activeConfig = MINT_BURN_CONFIGS.find(
   (config) => config.enabled !== false && WORKER_ACTIVE_IDS.has(config.stablecoinId),

@@ -20,7 +20,7 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx",
 const TELEGRAM_IMPLEMENTATION = /^worker\/src\/(?:telegram\/|cron\/telegram\/)/;
 /** The materialization reader must stay on the cheap projection path; the full
  * publication parser is reserved for the publication writer. */
-const MATERIALIZATION_READER = "worker/src/lib/report-cards-v9-materialization.ts";
+const MATERIALIZATION_READER = "worker/src/lib/safety-score-v9/report-cards-v9-materialization.ts";
 const FULL_PUBLICATION_PARSER = "parseSafetyScoreV9Publication";
 /** Warning/notice components the homepage must not render. */
 const HOMEPAGE_BANNED_COMPONENTS =
@@ -57,17 +57,17 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
   ["worker/src/telegram/delivery/telegram.ts", [
     "worker/src/api/admin-actions.ts",
     "worker/src/cron/cron-sentinel-rules.ts", "worker/src/cron/cron-sentinel.ts",
-    "worker/src/cron/cron-staleness-watchdog.ts", "worker/src/cron/daily-digest.ts",
-    "worker/src/cron/dex-exit-route-turnover-watchdog.ts",
-    "worker/src/cron/digest-publication-watchdog.ts", "worker/src/cron/digest/publish.ts",
+    "worker/src/cron/cron-staleness-watchdog.ts", "worker/src/cron/daily-digest/daily-digest.ts",
+    "worker/src/cron/dex-liquidity/dex-exit-route-turnover-watchdog.ts",
+    "worker/src/cron/digest/digest-publication-watchdog.ts", "worker/src/cron/digest/publish.ts",
     "worker/src/cron/digest/telegram-transport.ts", "worker/src/cron/digest/wrapper-style-gate.ts",
-    "worker/src/cron/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
+    "worker/src/cron/weekly-recap/weekly-recap.ts", "worker/src/lib/runtime-credentials.ts", "worker/src/routes/shared.ts",
   ]],
   ["worker/src/telegram/delivery/delivery-sli.ts", [
     "worker/src/lib/status/telegram-bot-stats.ts",
   ]],
   ["worker/src/telegram/digest/digest-appendices.ts", [
-    "worker/src/cron/daily-digest.ts", "worker/src/cron/digest/publish.ts",
+    "worker/src/cron/daily-digest/daily-digest.ts", "worker/src/cron/digest/publish.ts",
     "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts",
   ]],
   ["worker/src/telegram/outbox/digest-outbox.ts", [
@@ -98,7 +98,7 @@ const TELEGRAM_PUBLIC_ENTRIES: readonly (readonly [string, readonly string[]])[]
     "worker/src/handlers/scheduled/daily-0300.ts",
   ]],
   ["worker/src/cron/telegram/sources/telegram-alert-snapshots.ts", [
-    "worker/src/cron/reserve-post-sync-watchdog.ts",
+    "worker/src/cron/live-reserves/reserve-post-sync-watchdog.ts",
   ]],
 ];
 const TELEGRAM_PUBLIC_PAIRS: Record<string, true> = {};

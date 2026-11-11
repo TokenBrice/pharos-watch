@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   getMintBurnConfigsForStablecoin: vi.fn(),
 }));
 
-vi.mock("../../../../lib/alert-safety-source-cache", () => ({
+vi.mock("../../../../lib/safety-score-v9/alert-safety-source-cache", () => ({
   loadActiveAlertSafetySourceAssessment: mocks.loadActiveAlertSafetySourceAssessment,
 }));
 
@@ -40,7 +40,7 @@ function safetyAssessment(
   };
 }
 
-vi.mock("../../../../lib/stablecoins-cache", () => ({
+vi.mock("../../../../lib/market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: mocks.loadStablecoinsCache,
 }));
 
@@ -53,7 +53,7 @@ vi.mock("../../../../lib/db-cache", () => ({
   getCache: mocks.getCache,
 }));
 
-vi.mock("../../../../lib/mint-burn-contracts", () => ({
+vi.mock("../../../../lib/mint-burn-pipeline/mint-burn-contracts", () => ({
   getMintBurnConfigsForStablecoin: mocks.getMintBurnConfigsForStablecoin,
 }));
 

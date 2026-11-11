@@ -4,7 +4,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { hasMintBurnScanCoverage, mintBurnScanFingerprint, type MintBurnScanCoverage } from "../mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 
 const fixtures = createLatestSchemaFixtureTracker();

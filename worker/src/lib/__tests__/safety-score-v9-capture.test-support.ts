@@ -1,5 +1,5 @@
-import type { ReportCardsSnapshotInputs } from "../report-cards-snapshot-inputs";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsSnapshotInputs } from "../safety-score-v9/report-cards-snapshot-inputs";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { BlacklistabilityReview } from "@shared/types/stablecoin-meta-compliance-schemas";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
@@ -43,7 +43,7 @@ export async function buildNativeSafetyScoreV9Capture(
   options: import("../safety-score-v9/capture").BuildNativeSafetyScoreV9CaptureOptions = {},
 ) {
   const captureModule = await import("../safety-score-v9/capture");
-  const { publishPegAnalyticsCache } = await import("../peg-analytics-cache");
+  const { publishPegAnalyticsCache } = await import("../depeg-detection/peg-analytics-cache");
   const sources = await captureModule.loadNativeSafetyScoreV9CaptureSources(db, options);
   const pegAnalyticsPublished = await publishPegAnalyticsCache(db, sources.pegAnalytics);
   const capture = await captureModule.buildNativeSafetyScoreV9Capture(db, sources, options);

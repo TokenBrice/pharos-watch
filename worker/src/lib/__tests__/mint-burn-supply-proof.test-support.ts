@@ -1,6 +1,6 @@
 import type { AlchemyLogEntry, AlchemyTransactionContextBatch } from "../alchemy-logs";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
-import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
+import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-pipeline/mint-burn-contracts";
 import type { MintBurnPriceContext } from "../mint-burn-pipeline/types";
 import reviewed from "../mint-burn-conservation-reviewed.json";
 

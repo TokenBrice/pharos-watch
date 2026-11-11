@@ -8,12 +8,12 @@ import {
 import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { getMintBurnConfigsForStablecoin, type MintBurnTier } from "../lib/mint-burn-contracts";
+import { getMintBurnConfigsForStablecoin, type MintBurnTier } from "../lib/mint-burn-pipeline/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
-import { mintBurnConfigKey } from "../lib/mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../lib/mint-burn-pipeline/flow-aggregate";
 import { buildInClause } from "../lib/db";
-import { mintBurnSupplyProofAcceptedSql } from "../lib/mint-burn-supply-proofs";
+import { mintBurnSupplyProofAcceptedSql } from "../lib/mint-burn-pipeline/mint-burn-supply-proofs";
 
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);

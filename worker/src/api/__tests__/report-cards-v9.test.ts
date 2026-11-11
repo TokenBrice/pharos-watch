@@ -20,10 +20,10 @@ import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/
 import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication, serializeSafetyScoreV9PublicationWithEncoding } from "../../test-helpers/report-cards-v9";
 import { currentInput, persistAndMaterialize } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
-import { materializeV9AcceptedPublication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../../lib/report-cards-v9-materialization";
+import { materializeV9AcceptedPublication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../../lib/safety-score-v9/report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-health";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
-import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
+import { loadActiveSafetyScoreSource } from "../../lib/safety-score-v9/safety-score-active-source";
 import { handleReportCardsV9 } from "../report-cards-v9";
 import { getRouteMatch } from "../../routes/registry";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";

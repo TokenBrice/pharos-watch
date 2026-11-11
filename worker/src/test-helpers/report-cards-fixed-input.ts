@@ -12,11 +12,11 @@ import {
   SafetyScoreV8PublicationIdentitySchema,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
-import { buildFixedInputCacheEntry } from "../lib/report-cards-fixed-input-cache-codec";
+import { buildFixedInputCacheEntry } from "../lib/safety-score-v9/report-cards-fixed-input-cache-codec";
 import {
   normalizeFixedInput,
   type ReportCardsFixedInput,
-} from "../lib/report-cards-fixed-input";
+} from "../lib/safety-score-v9/report-cards-fixed-input";
 
 export type ReportCardsFixedInputDraft = Omit<
   ReportCardsFixedInput,

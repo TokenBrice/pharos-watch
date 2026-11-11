@@ -13,7 +13,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "hive-native-hbd-market",
     family: "primary-pricing",
     description: "Depth-gated native HBD/HIVE market crossed with the existing CoinGecko HIVE/USD batch dependency.",
-    files: ["worker/src/lib/hive-market-price.ts", "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts"],
+    files: ["worker/src/lib/pricing/hive-market-price.ts", "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts"],
     tests: ["worker/src/lib/__tests__/hive-market-price.test.ts", "worker/src/cron/sync-stablecoins/__tests__/enrich-prices-primary-provider-collection.test.ts"],
     allowBareFetch: false,
     resilience: {
@@ -172,9 +172,9 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     family: "fx-sources",
     description: "Frankfurter, Open Exchange Rates, and Chainlink FX reference sources.",
     files: [
-      "worker/src/cron/sync-fx-rates.ts",
-      "worker/src/cron/sync-fx-rates-sources.ts",
-      "worker/src/cron/sync-fx-rates-helpers.ts",
+      "worker/src/cron/pricing/sync-fx-rates.ts",
+      "worker/src/cron/pricing/sync-fx-rates-sources.ts",
+      "worker/src/cron/pricing/sync-fx-rates-helpers.ts",
     ],
     tests: [
       "worker/src/cron/__tests__/sync-fx-rates.test.ts",
@@ -201,9 +201,9 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/telegram/delivery/telegram.ts",
       "worker/src/telegram/outbox/digest-outbox.ts",
       "worker/src/cron/digest/platform.ts",
-      "worker/src/cron/daily-digest.ts",
+      "worker/src/cron/daily-digest/daily-digest.ts",
       "worker/src/cron/digest/telegram-transport.ts",
-      "worker/src/cron/weekly-recap.ts",
+      "worker/src/cron/weekly-recap/weekly-recap.ts",
       "worker/src/handlers/scheduled/digest-trigger-poll.ts",
     ],
     tests: [
@@ -267,7 +267,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     family: "provider-transport",
     description: "Digest Safety Score map manifest and dated-image readiness probes.",
     files: [
-      "worker/src/lib/digest-safety-map.ts",
+      "worker/src/lib/digest/digest-safety-map.ts",
       "worker/src/cron/digest/publish.ts",
     ],
     tests: [
@@ -296,7 +296,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     id: "safety-map-producer-dispatch",
     family: "provider-transport",
     description: "Pre-digest GitHub workflow_dispatch of the Safety Score map producer.",
-    files: ["worker/src/cron/safety-map-producer-kick.ts"],
+    files: ["worker/src/cron/digest/safety-map-producer-kick.ts"],
     tests: ["worker/src/cron/__tests__/safety-map-producer-kick.test.ts"],
     allowBareFetch: true,
     directFetchJustification:
@@ -320,7 +320,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     family: "twitter",
     description: "Twitter/X daily digest delivery.",
     files: [
-      "worker/src/lib/twitter.ts",
+      "worker/src/lib/digest/twitter.ts",
       "worker/src/cron/digest/platform.ts",
       "worker/src/cron/digest/publish.ts",
     ],
@@ -369,8 +369,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     files: [
       "worker/src/cron/reserve-adapters/request.ts",
       "worker/src/lib/json-request.ts",
-      "worker/src/cron/sync-live-reserves-core.ts",
-      "worker/src/cron/sync-live-reserves-finalize.ts",
+      "worker/src/cron/live-reserves/sync-live-reserves-core.ts",
+      "worker/src/cron/live-reserves/sync-live-reserves-finalize.ts",
     ],
     tests: [
       "worker/src/cron/reserve-adapters/__tests__/request.test.ts",
@@ -492,7 +492,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     family: "cex-pricing",
     description: "Binance CEX host cascade with provider-specific status handling.",
     files: [
-      "worker/src/lib/cex-tickers.ts",
+      "worker/src/lib/pricing/cex-tickers.ts",
       "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts",
       "worker/src/lib/fetch-retry.ts",
     ],

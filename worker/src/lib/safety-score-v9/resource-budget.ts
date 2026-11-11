@@ -1,6 +1,6 @@
 import type { ResourcePressure } from "@shared/types/status/cron";
 import { buildResourcePressure } from "../cron-resource-pressure";
-import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
+import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "./report-cards-fixed-input-cache-codec";
 
 // Reviewed full catalog and active publication cardinalities. Never truncate a
 // catalog or card inventory to satisfy these admission limits.

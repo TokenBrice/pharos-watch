@@ -9,7 +9,7 @@ import { SafetyScoreV9MechanismReviewOverlaySchema } from "@shared/types/safety-
 import { asset as backingAsset, exposure, knownStatus } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
 import type { ProofOfReservesLatestReport } from "@shared/types/stablecoin-meta-primitives";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import {
   buildSafetyScoreV9MechanismReview,
   deriveCommodityClaimMechanismExitFacts,

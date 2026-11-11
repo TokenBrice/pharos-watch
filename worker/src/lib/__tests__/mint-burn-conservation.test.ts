@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mintBurnAlchemyEndpoint } from "../mint-burn-pipeline/rpc";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
 import { fetchEvmRpcBatchDetailed } from "../evm-rpc";
 import { applyMintBurnRangeSupplyProof, completeMintBurnRangeSupplyProof, getMintBurnConservationRuntimeEntry, getMintBurnRangeProofEligibility, resolveMintBurnRangeProofEligibility, completeMintBurnConservationAudit, fetchConservationBoundaries, getMintBurnConservationEligibility,
   isMintBurnConservationUnsupportedReason, mintBurnConservationCacheKey, mintBurnConservationFingerprint,
@@ -10,7 +10,7 @@ import { applyMintBurnRangeSupplyProof, completeMintBurnRangeSupplyProof, getMin
   persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
   type ConservationBoundaryEvidence, type ConservationBoundaryRequest, type ConservationEventDef,
   type MintBurnConservationRuntimeEntry,
-  type ReviewedConservationEntry } from "../mint-burn-conservation";
+  type ReviewedConservationEntry } from "../mint-burn-pipeline/mint-burn-conservation";
 import reviewedConservationSidecar from "../mint-burn-conservation-reviewed.json";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
@@ -20,14 +20,14 @@ import { classifyBridgeBurnRows, reconcileReviewedSupplyBurns } from "../mint-bu
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import { collectAffectedHours, insertMintBurnRows, persistMintBurnRows, recalcAffectedHours, updateEventClassifications } from "../mint-burn-pipeline/persistence";
 import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/materialization-debt";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint, mintBurnScanCoverageAdmits, readMintBurnScanCoverage,
   type MintBurnScanCoverage } from "../mint-burn-pipeline/scan-coverage";
 import { abiWord, reviewedBurnFixture, reviewedFalseBurnEntries } from "./mint-burn-supply-proof.test-support";
 import { acceptMintBurnSupplyProof, invalidateMintBurnSupplyProofs, invalidateMintBurnSupplyProofRange,
   invalidateChangedMintBurnSupplyProofConfigs, invalidateConflictingMintBurnSupplyProofs,
-  persistMintBurnSupplyProof, type MintBurnSupplyProofEvidence } from "../mint-burn-supply-proofs";
+  persistMintBurnSupplyProof, type MintBurnSupplyProofEvidence } from "../mint-burn-pipeline/mint-burn-supply-proofs";
 vi.mock("../alchemy-logs", async (importOriginal) => ({
   ...(await importOriginal<typeof AlchemyLogsModule>()),
   getAlchemyTransactionContextBatchMany: vi.fn(),

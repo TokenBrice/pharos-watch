@@ -6,10 +6,10 @@ import type * as CoinHelpers from "@shared/lib/mint-burn-coin-helpers";
 import type * as FlowSchemas from "@shared/types/mint-burn";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
-import { computeGaugeScore } from "../../lib/mint-burn-scoring";
+import { computeGaugeScore } from "../../lib/mint-burn-pipeline/mint-burn-scoring";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../../lib/mint-burn-pipeline/flow-aggregate";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { collectAffectedHours, insertMintBurnRows, recalcAffectedHours, updateEventClassifications } from "../../lib/mint-burn-pipeline/persistence";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import { hydrateMintBurn } from "../../lib/dews/source-state/hydration";
@@ -18,10 +18,10 @@ import { makeDewsInput } from "../../lib/__tests__/dews.test-support";
 import { rebuildRetainedLegacyValuationHours } from "../../cron/mint-burn/valuation-rebuild";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "../../cron/mint-burn/retention";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
-import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
-import { checkMintBurnPublicationCoverage } from "../../lib/canary-checks-mintburn";
-import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
+import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-pipeline/mint-burn-publication";
+import { checkMintBurnPublicationCoverage } from "../../lib/mint-burn-pipeline/canary-checks-mintburn";
+import { aggregateFlowCacheKey } from "../../lib/mint-burn-pipeline/mint-burn-flow-cache-keys";
 import { drainMintBurnMaterializationDebt } from "../../lib/mint-burn-pipeline/materialization-debt";
 // Frozen at origin/main 49da34e78 so shallow CI clones and later releases retain this oracle.
 const prB = createRequire(import.meta.url)("./fixtures/pr-b-mint-burn-readers.cjs") as

@@ -6,7 +6,7 @@ import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../../.
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
-import { buildAlertSafetyV9SourceEnvelopeFromParts, ALERT_SAFETY_V9_SOURCE_GENERATION } from "../../../../lib/alert-safety-source-cache";
+import { buildAlertSafetyV9SourceEnvelopeFromParts, ALERT_SAFETY_V9_SOURCE_GENERATION } from "../../../../lib/safety-score-v9/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../../../lib/cron-logger";
 import {
   insertTelegramSubscriber,

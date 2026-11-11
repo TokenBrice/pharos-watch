@@ -27,7 +27,7 @@ keep_names = true
 upload_source_maps = true
 
 [alias]
-"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
+"#pharos-full-catalog" = "./src/lib/market-supply/full-stablecoin-catalog.ts"
 
 [[rules]]
 type = "Text"
@@ -234,7 +234,7 @@ Scheduler measurement semantics and bounded cache pruning follow the [maintenanc
 
 ## Shared Database Helpers
 
-**Files:** `worker/src/lib/db.ts` owns generic D1 helpers; `worker/src/lib/db-cache.ts` owns `getCache`, `setCache`, `setCacheIfAbsent` and `setCacheIfNewer`; `worker/src/lib/price-cache.ts` owns `getPriceCache` and `savePriceCache`.
+**Files:** `worker/src/lib/db.ts` owns generic D1 helpers; `worker/src/lib/db-cache.ts` owns `getCache`, `setCache`, `setCacheIfAbsent` and `setCacheIfNewer`; `worker/src/lib/pricing/price-cache.ts` owns `getPriceCache` and `savePriceCache`.
 
 [Inspection](#remote-d1-inspection).
 
@@ -252,11 +252,11 @@ Feature guides own producer-specific algorithms and schemas; this document owns 
 
 | Producer family      | Source                                         | Feature contract                                  |
 | -------------------- | ---------------------------------------------- | ------------------------------------------------- |
-| Stablecoin charts    | `worker/src/cron/sync-stablecoin-charts.ts`    | [Supply Pipeline](./supply-snapshot.md#supply-pipeline) |
-| USDS state           | `worker/src/cron/sync-usds-status.ts`          | [USDS Status API](./api-reference.md#get-apiusds-status) |
-| Live reserves        | `worker/src/cron/sync-live-reserves.ts`        | [Live Reserve Sync](./live-reserves.md)           |
-| Redemption backstops | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
-| Kinesis supply       | `worker/src/cron/sync-kinesis-supply.ts`       | [On-chain monitoring](./status-dashboard.md#data-quality-status) (monitoring only) |
-| Bluechip ratings     | `worker/src/cron/sync-bluechip.ts`             | [Bluechip Ratings](./bluechip-ratings.md)         |
-| Yield benchmarks     | `worker/src/cron/fetch-tbill-rate.ts`          | [Benchmark publication and recovery validation](./runbooks/yield-benchmark-fallback-stale.md#validation) |
+| Stablecoin charts    | `worker/src/cron/market-supply/sync-stablecoin-charts.ts`    | [Supply Pipeline](./supply-snapshot.md#supply-pipeline) |
+| USDS state           | `worker/src/cron/blacklist/sync-usds-status.ts`          | [USDS Status API](./api-reference.md#get-apiusds-status) |
+| Live reserves        | `worker/src/cron/live-reserves/sync-live-reserves.ts`        | [Live Reserve Sync](./live-reserves.md)           |
+| Redemption backstops | `worker/src/cron/redemption-backstop/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
+| Kinesis supply       | `worker/src/cron/market-supply/sync-kinesis-supply.ts`       | [On-chain monitoring](./status-dashboard.md#data-quality-status) (monitoring only) |
+| Bluechip ratings     | `worker/src/cron/bluechip/sync-bluechip.ts`             | [Bluechip Ratings](./bluechip-ratings.md)         |
+| Yield benchmarks     | `worker/src/cron/yield-sync/fetch-tbill-rate.ts`          | [Benchmark publication and recovery validation](./runbooks/yield-benchmark-fallback-stale.md#validation) |
 

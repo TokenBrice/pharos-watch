@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseYieldHistoryWriterPause, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../src/lib/yield-history-cleanup";
+import { parseYieldHistoryWriterPause, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../src/lib/yield/yield-history-cleanup";
 import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
-} from "../src/lib/yield-history-ownership-handoffs";
+} from "../src/lib/yield/yield-history-ownership-handoffs";
 import {
   parseDestructiveOperationArgs,
   type DestructiveOperationMode,

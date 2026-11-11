@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
-import { fetchConservationBoundaries, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-conservation";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { fetchConservationBoundaries, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { createMintBurnConfigSummary, syncMintBurnConfig } from "../mint-burn/sync-config";
 import type { SyncMintBurnConfigInput } from "../mint-burn/sync-config";
 import type * as SyncConfigModule from "../mint-burn/sync-config";
@@ -10,8 +10,8 @@ import { mintBurnScanRequestFloor, syncMintBurnConfigWithRetries } from "../mint
 vi.mock("../mint-burn/sync-config", async (importOriginal) => ({
   ...await importOriginal<typeof SyncConfigModule>(), syncMintBurnConfig: vi.fn(),
 }));
-vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../../lib/mint-burn-conservation")>(),
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-conservation", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/mint-burn-pipeline/mint-burn-conservation")>(),
   fetchConservationBoundaries: vi.fn(),
   conservationOnlyEventDefsFor: () => [],
   needsMintBurnConservationBoundaries: vi.fn(() => false),
@@ -115,7 +115,7 @@ describe("certified adaptive scan prefixes", () => {
   });
 
   it("funds conditional DAI proof and re-fetches exact shortened boundaries without inheriting the parent", async () => {
-    const actual = await vi.importActual<typeof import("../../lib/mint-burn-conservation")>("../../lib/mint-burn-conservation");
+    const actual = await vi.importActual<typeof import("../../lib/mint-burn-pipeline/mint-burn-conservation")>("../../lib/mint-burn-pipeline/mint-burn-conservation");
     const dai = MINT_BURN_CONFIGS.find((candidate) => candidate.stablecoinId === "dai-makerdao")!;
     expect(actual.getMintBurnConservationEligibility(dai).supported).toBe(false);
     expect(actual.needsMintBurnConservationBoundaries(dai)).toBe(true);

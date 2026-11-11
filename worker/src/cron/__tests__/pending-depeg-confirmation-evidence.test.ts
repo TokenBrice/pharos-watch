@@ -5,13 +5,13 @@ import { assertAllD1MatchesUsed, mockD1Strict, type MockD1Database } from "@shar
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
-import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
+import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-detection/depeg-pending";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolChallengersByCoin, DexPriceRowsByCoin, DexPriceSourcesByCoin } from "../pending-depeg-confirmation";
-import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
+import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolChallengersByCoin, DexPriceRowsByCoin, DexPriceSourcesByCoin } from "../depeg-detection/pending-depeg-confirmation";
+import { collectConfirmationEvidence } from "../depeg-detection/pending-depeg-confirmation-evidence";
 import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
 import { makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
-import { loadDexPrices } from "../../lib/depeg-helpers";
+import { loadDexPrices } from "../../lib/depeg-detection/depeg-helpers";
 
 vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () => undefined) }));
 

@@ -10,7 +10,7 @@ import { createDeferredPromise } from "../../lib/__tests__/deferred.test-support
 import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
 import { EvmCodeIdentityError } from "../../lib/evm-code-identity-error";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import type * as StoreWriteModule from "../../lib/redemption-backstops-store-write";
+import type * as StoreWriteModule from "../../lib/redemption-backstop/redemption-backstops-store-write";
 import type * as ExecutableObserversModule from "../reserve-adapters/executable-redemption-observers";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
@@ -70,7 +70,7 @@ function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Part
   };
 }
 
-vi.mock("../../lib/stablecoins-cache", () => ({
+vi.mock("../../lib/market-supply/stablecoins-cache", () => ({
   loadStablecoinsCache: loadStablecoinsCacheMock,
   hasUsableStablecoinsPayload: (result: { kind: string; payload?: { peggedAssets?: unknown[] } | null }) =>
     (result.kind === "ok" || result.kind === "degraded") &&
@@ -79,7 +79,7 @@ vi.mock("../../lib/stablecoins-cache", () => ({
     result.payload.peggedAssets.length > 0,
 }));
 
-vi.mock("../../lib/dex-liquidity", () => ({
+vi.mock("../../lib/dex-liquidity/dex-liquidity", () => ({
   loadDexLiquidityScores: loadDexLiquidityScoresMock,
 }));
 
@@ -90,7 +90,7 @@ vi.mock("../../lib/redemption-backstop/sources", async (importOriginal) => ({
   resolveRedemptionBackstopEntry: resolveRedemptionBackstopEntryMock,
 }));
 
-vi.mock("../../lib/redemption-backstops-store-write", async (importOriginal) => ({
+vi.mock("../../lib/redemption-backstop/redemption-backstops-store-write", async (importOriginal) => ({
   ...(await importOriginal<typeof StoreWriteModule>()),
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
@@ -104,8 +104,8 @@ vi.mock("../../lib/exit-execution/runtime", () => ({
   observeReviewedExitExecutionRoutes: async () => ({ observations: [], failures: [] }),
 }));
 
-vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/accepted-reserve-generation")>()),
+vi.mock("../../lib/live-reserves/accepted-reserve-generation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/live-reserves/accepted-reserve-generation")>()),
   loadAcceptedReserveGeneration: loadAcceptedReserveGenerationMock,
 }));
 
@@ -196,7 +196,7 @@ describe("syncRedemptionBackstops", () => {
     try {
       if (input === "reserve") loadAcceptedReserveGenerationMock.mockRejectedValueOnce(new Error("unavailable"));
       else loadStablecoinsCacheMock.mockResolvedValueOnce({ kind: "error", reason: "missing-cache", updatedAt: null });
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
       const result = await syncRedemptionBackstops(db, new AbortController().signal);
       expect(result.status).toBe("error");
       expect(JSON.parse(result.metadata ?? "{}").reason).toBe(input === "reserve"
@@ -221,7 +221,7 @@ describe("syncRedemptionBackstops", () => {
         kind: "ok", updatedAt: timestamp(clock),
         payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
       });
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
       const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
       expect(result.status).toBe("error");
       expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
@@ -242,7 +242,7 @@ describe("syncRedemptionBackstops", () => {
         kind: "ok", updatedAt: input.updatedAt,
         payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
       });
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
       await syncRedemptionBackstops(mockD1(), new AbortController().signal);
       expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.stablecoinsInput).toEqual(input);
       expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.stablecoinsInput.maxAgeSec)
@@ -254,7 +254,7 @@ describe("syncRedemptionBackstops", () => {
     const controller = new AbortController();
     controller.abort(new Error("manual abort"));
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
 
     await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("manual abort");
     expect(loadStablecoinsCacheMock).not.toHaveBeenCalled();
@@ -270,7 +270,7 @@ describe("syncRedemptionBackstops", () => {
       return Promise.resolve(makeResolvedSnapshot(asset.id, now));
     });
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
 
     await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort after first row");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(1);
@@ -287,7 +287,7 @@ describe("syncRedemptionBackstops", () => {
       return Promise.resolve(makeResolvedSnapshot(asset.id, now));
     });
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
 
     await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort before write");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
@@ -305,7 +305,7 @@ describe("syncRedemptionBackstops", () => {
       `USDfr par observer: route state unavailable https://rpc.example/private-key token=private-token ${"x".repeat(400)}`,
     ));
     // Non-hoisted suite mocks must initialize before loading the cron module.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(result.status).toBe("error");
@@ -338,7 +338,7 @@ describe("syncRedemptionBackstops", () => {
         return makeResolvedSnapshot(asset.id, now);
       });
       // Non-hoisted suite mocks must initialize before loading the cron module.
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
       const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
       const metadata = JSON.parse(result.metadata ?? "{}");
       const failure = metadata.sourceFailureReasons[configuredIdsMock[0]];
@@ -378,7 +378,7 @@ describe("syncRedemptionBackstops", () => {
       }
     });
     // Non-hoisted mock variables must initialize before the cron module loads.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const reportProgress = vi.fn().mockResolvedValue(undefined);
     const pending = syncRedemptionBackstops(mockD1(), new AbortController().signal, undefined, reportProgress);
     await vi.waitFor(() => expect(started).toHaveLength(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY));
@@ -423,7 +423,7 @@ describe("syncRedemptionBackstops", () => {
       return makeResolvedSnapshot(asset.id, now);
     });
     // Non-hoisted mock variables must initialize before the cron module loads.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const pending = syncRedemptionBackstops(mockD1(), controller.signal);
     let settled = false;
     const observed = pending.catch((error: unknown) => { settled = true; return error; });
@@ -452,7 +452,7 @@ describe("syncRedemptionBackstops", () => {
       return Promise.resolve(upstream);
     });
     // This suite initializes non-hoisted mocks before loading the cron module.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     const persisted = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
     expect(persisted.find((entry) => entry.stablecoinId === "cusd-cap")).toEqual({
@@ -471,7 +471,7 @@ describe("syncRedemptionBackstops", () => {
       return Promise.resolve(makeResolvedSnapshot(asset.id, now));
     });
     // This suite initializes non-hoisted mocks before loading the cron module.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     const first = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
@@ -505,14 +505,14 @@ describe("syncRedemptionBackstops", () => {
       return transformed;
     });
     const writer = await vi.importActual<typeof StoreWriteModule>(
-      "../../lib/redemption-backstops-store-write",
+      "../../lib/redemption-backstop/redemption-backstops-store-write",
     );
     upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce(writer.upsertRedemptionBackstopSnapshots);
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       // The cron and reader share the mocked writer, initialized above.
-      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-      const { loadRedemptionBackstopSnapshot } = await import("../../lib/redemption-backstops-store");
+      const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
+      const { loadRedemptionBackstopSnapshot } = await import("../../lib/redemption-backstop/redemption-backstops-store");
       const result = await syncRedemptionBackstops(db, new AbortController().signal);
       expect(result.status).toBe("degraded");
       const metadata = JSON.parse(result.metadata ?? "{}");
@@ -551,7 +551,7 @@ describe("syncRedemptionBackstops", () => {
     const sources = await vi.importActual<typeof SourcesModule>("../../lib/redemption-backstop/sources");
     resolveRedemptionBackstopEntryMock.mockImplementationOnce(sources.resolveRedemptionBackstopEntry);
     // Static loading would evaluate this suite's mock factories before setup.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(observeExecutableRedemptionRouteMock).toHaveBeenCalledTimes(1);
@@ -598,7 +598,7 @@ describe("syncRedemptionBackstops", () => {
       );
 
     const db = mockD1();
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const reportProgress = vi.fn().mockResolvedValue(undefined);
     const result = await syncRedemptionBackstops(db, new AbortController().signal, undefined, reportProgress);
 
@@ -635,7 +635,7 @@ describe("syncRedemptionBackstops", () => {
 
   it("hashes registry config content independently of row order without changing producer order", async () => {
     // Load after the suite's non-hoisted mocks are initialized.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const forward = [...configuredIdsMock];
     const first = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     const firstHash = JSON.parse(first.metadata ?? "{}").registryHash;
@@ -669,7 +669,7 @@ describe("syncRedemptionBackstops", () => {
       immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null,
     }));
     // The module's mock factories need the non-hoisted functions above initialized first.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata).toMatchObject({
@@ -709,7 +709,7 @@ describe("syncRedemptionBackstops", () => {
       .mockResolvedValueOnce(makeResolvedSnapshot("iusd-infinifi", now));
 
     // Load after the non-hoisted mock functions initialize; a static import would run their factories too early.
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     const metadata = RedemptionReserveRunMetadataSchema.parse(JSON.parse(result.metadata ?? "{}"));
 
@@ -722,7 +722,7 @@ describe("syncRedemptionBackstops", () => {
   it("propagates snapshot write failures without reporting successful metadata", async () => {
     upsertRedemptionBackstopSnapshotsMock.mockRejectedValueOnce(new Error("snapshot write failed"));
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
 
     await expect(syncRedemptionBackstops(mockD1(), new AbortController().signal)).rejects.toThrow(
       "snapshot write failed",
@@ -744,7 +744,7 @@ describe("syncRedemptionBackstops", () => {
     });
 
     const db = mockD1();
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
 
     await expect(syncRedemptionBackstops(db, controller.signal)).rejects.toThrow("abort during write");
   });
@@ -752,7 +752,7 @@ describe("syncRedemptionBackstops", () => {
   it("continues with degraded static rows when optional DEX preload fails", async () => {
     loadDexLiquidityScoresMock.mockRejectedValueOnce(new Error("dex unavailable"));
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("degraded");
@@ -770,9 +770,9 @@ describe("syncRedemptionBackstops", () => {
   });
 
   it.each(["accepted-reserve-view-unavailable", "accepted-reserve-view-invalid"] as const)("writes no run when accepted input is %s", async (reason) => {
-    const { AcceptedReserveViewError } = await import("../../lib/accepted-reserve-generation");
+    const { AcceptedReserveViewError } = await import("../../lib/live-reserves/accepted-reserve-generation");
     loadAcceptedReserveGenerationMock.mockRejectedValueOnce(new AcceptedReserveViewError(reason));
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
     expect(result.status).toBe("error");
     expect(JSON.parse(result.metadata ?? "{}").reason).toBe(reason);
@@ -830,7 +830,7 @@ describe("syncRedemptionBackstops", () => {
         ],
       },
     ]);
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(db, new AbortController().signal);
 
     expect(result.status).toBe("ok");
@@ -877,7 +877,7 @@ describe("syncRedemptionBackstops", () => {
       }),
     );
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("ok");
@@ -902,7 +902,7 @@ describe("syncRedemptionBackstops", () => {
       makeResolvedSnapshot("cusd-cap", Math.floor(Date.now() / 1000)),
     );
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("ok");
@@ -950,7 +950,7 @@ describe("syncRedemptionBackstops", () => {
       },
     });
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("error");
@@ -984,7 +984,7 @@ describe("syncRedemptionBackstops", () => {
         notes: ["Live reserve metadata lacks scoring-grade freshness evidence"],
       }));
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("ok");
@@ -1025,7 +1025,7 @@ describe("syncRedemptionBackstops", () => {
       }),
     );
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("error");
@@ -1074,7 +1074,7 @@ describe("syncRedemptionBackstops", () => {
       ),
     );
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("ok");
@@ -1119,7 +1119,7 @@ describe("syncRedemptionBackstops", () => {
         immediateCapacityUsd: null, immediateCapacityRatio: null, ...missing[asset.id],
       })));
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("ok");
@@ -1141,7 +1141,7 @@ describe("syncRedemptionBackstops", () => {
       .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", 1_700_000_000))
       .mockRejectedValueOnce(new Error("resolver blew up"));
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("degraded");
@@ -1180,7 +1180,7 @@ describe("syncRedemptionBackstops", () => {
       latestUpdatedAt: staleNow - 14_401,
     });
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("degraded");
@@ -1206,7 +1206,7 @@ describe("syncRedemptionBackstops", () => {
       latestUpdatedAt: now + 60,
     });
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("degraded");
@@ -1221,7 +1221,7 @@ describe("syncRedemptionBackstops", () => {
       latestUpdatedAt: null,
     });
 
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const { syncRedemptionBackstops } = await import("../redemption-backstop/sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
     expect(result.status).toBe("degraded");

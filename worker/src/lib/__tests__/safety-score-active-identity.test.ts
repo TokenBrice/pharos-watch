@@ -10,9 +10,9 @@ import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-ca
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
-import { loadActiveSafetyScoreIdentity } from "../safety-score-active-source";
-import { loadActiveSafetyScoreIndex } from "../safety-score-index";
-import { computeSafetyScoresSnapshot } from "../safety-scores";
+import { loadActiveSafetyScoreIdentity } from "../safety-score-v9/safety-score-active-source";
+import { loadActiveSafetyScoreIndex } from "../safety-score-v9/safety-score-index";
+import { computeSafetyScoresSnapshot } from "../safety-score-v9/safety-scores";
 
 const databases: DatabaseSync[] = [];
 afterEach(() => { for (const db of databases.splice(0)) db.close(); });

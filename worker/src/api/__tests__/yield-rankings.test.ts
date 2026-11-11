@@ -12,11 +12,11 @@ import {
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
-import type { ActiveSafetyScoreIndex, SafetyScoreGradeSnapshot } from "../../lib/safety-score-index";
+import type { ActiveSafetyScoreIndex, SafetyScoreGradeSnapshot } from "../../lib/safety-score-v9/safety-score-index";
 
 const loadActiveSafetyScoreIndexMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../lib/safety-score-index", () => ({
+vi.mock("../../lib/safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: loadActiveSafetyScoreIndexMock,
 }));
 

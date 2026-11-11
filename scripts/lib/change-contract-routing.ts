@@ -84,7 +84,7 @@ const CONTRACT_SENSITIVE_GLOBS = [
   "shared/lib/classification.ts", "shared/lib/methodology-versions/**",
   "shared/data/methodology-changelogs/**", "shared/data/stablecoins/**",
   "shared/lib/safety-score-v9/**", "shared/data/safety-score-v9/**",
-  "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/prepare-safety-score-v9-input.ts",
+  "worker/src/cron/safety-score-v9/compute-safety-score-v9.ts", "worker/src/cron/safety-score-v9/prepare-safety-score-v9-input.ts",
   "worker/src/lib/safety-score-v9/publication*.ts",
   "worker/migrations/**", "shared/contracts/**",
 ];

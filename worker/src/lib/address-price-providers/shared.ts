@@ -10,11 +10,11 @@ import {
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
   type PricingProviderRejectionReason,
-} from "../pricing-provider-diagnostics";
+} from "../pricing/pricing-provider-diagnostics";
 import {
   applyJsonParseFailureDiagnostic,
   buildPricingProviderDiagnostic,
-} from "../pricing-provider-lifecycle";
+} from "../pricing/pricing-provider-lifecycle";
 import type { AddressPriceQuote, AddressPriceTarget } from "./types";
 import { readResponseSnippetWithTimeout, readResponseTextWithinLimitWithTimeout } from "../response-body";
 

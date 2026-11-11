@@ -4,7 +4,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import type { V9ExecutionWindow } from "../v9-slot-window";
+import type { V9ExecutionWindow } from "./v9-slot-window";
 import type { ChainRpcConfig } from "../chain-registry";
 import {
   fetchEvmBlockHeader,

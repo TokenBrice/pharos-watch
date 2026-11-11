@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { CONFIGURED_COINS } from "../live-reserves/sync-live-reserves-shared";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getReserveAdapter } from "../reserve-adapters";
-import { syncReserveCoin } from "../sync-live-reserves-core";
+import { syncReserveCoin } from "../live-reserves/sync-live-reserves-core";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 
 vi.mock("../../lib/circuit-breaker", () => ({

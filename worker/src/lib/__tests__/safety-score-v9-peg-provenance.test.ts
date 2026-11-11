@@ -4,7 +4,7 @@ import type { DepegEvent } from "@shared/types/peg";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { describe, expect, it } from "vitest";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { buildReportCardsFixedInputCacheEntry, createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";

@@ -8,7 +8,7 @@ import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "@shared/lib/safety-score-v9/trace";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { deriveNativeV9BaseInputGenerationId, NativeSafetyScoreV9InputSchema } from "../../src/lib/safety-score-v9/native-input";
-import { ReportCardsFixedInputSchema } from "../../src/lib/report-cards-fixed-input";
+import { ReportCardsFixedInputSchema } from "../../src/lib/safety-score-v9/report-cards-fixed-input";
 import { buildSafetyScoreV9ReplayArtifact, type SafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
 import { AcceptedPublicationBaselineSchema } from "../../src/lib/safety-score-v9/publication-assessment";
 import { verifyRegistrySnapshot, type SafetyScoreV9RegistrySnapshot } from "./safety-score-v9-registry";

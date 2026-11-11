@@ -68,8 +68,8 @@ vi.mock("../../lib/authoritative-price-sources", async () => ({
   fetchAuthoritativeLivePriceOverrides: pricingStageMocks.fetchAuthoritativeLivePriceOverrides,
 }));
 
-vi.mock("../../lib/native-peg-implied-prices", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/native-peg-implied-prices")>()),
+vi.mock("../../lib/pricing/native-peg-implied-prices", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/pricing/native-peg-implied-prices")>()),
   fetchCurrentNativePegImpliedUsdQuotes: pricingStageMocks.fetchNativePegImpliedUsdQuotes,
 }));
 
@@ -82,7 +82,7 @@ import {
 } from "../sync-stablecoins/phase-helpers";
 import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
 function makePricedAsset(): PeggedAsset {

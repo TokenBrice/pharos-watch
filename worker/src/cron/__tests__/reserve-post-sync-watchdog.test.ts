@@ -12,18 +12,18 @@ const mocks = vi.hoisted(() => ({
 }));
 const cache = vi.hoisted(() => new Map<string, string>());
 
-vi.mock("../../lib/collateral-drift", () => ({ checkCollateralDrift: mocks.drift }));
+vi.mock("../../lib/live-reserves/collateral-drift", () => ({ checkCollateralDrift: mocks.drift }));
 vi.mock("../../lib/live-reserves/store", () => ({
   computeReserveCompositionOverview: mocks.overview,
   getMaxSyncAge: mocks.maxAge,
   loadReserveSyncStateMap: mocks.states,
   loadPublishedReserveScoringEvidence: mocks.scoringEvidence,
 }));
-vi.mock("../../lib/reserve-feed-reviews", () => ({
+vi.mock("../../lib/live-reserves/reserve-feed-reviews", () => ({
   resolveAcknowledgedReserveFeedIds: mocks.acknowledged,
 }));
-vi.mock("../sync-live-reserves-shared", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../sync-live-reserves-shared")>();
+vi.mock("../live-reserves/sync-live-reserves-shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../live-reserves/sync-live-reserves-shared")>();
   return { ...actual, SYNC_ORDERED_CONFIGURED_COINS: actual.SYNC_ORDERED_CONFIGURED_COINS.filter((coin) => coin.id === "iusd-infinifi") };
 });
 vi.mock("../../lib/db-cache", () => ({
@@ -39,9 +39,9 @@ import {
   runReservePostSyncWatchdog,
   type ReserveAdapterAlertAttempt,
   type ReserveAdapterAlertState,
-} from "../reserve-post-sync-watchdog";
+} from "../live-reserves/reserve-post-sync-watchdog";
 import { SNAPSHOT_KEYS } from "../telegram/sources/telegram-alert-snapshots";
-import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { SYNC_ORDERED_CONFIGURED_COINS } from "../live-reserves/sync-live-reserves-shared";
 
 const COIN = "iusd-infinifi";
 const NOW = 1_000_000;

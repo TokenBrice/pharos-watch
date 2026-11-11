@@ -11,7 +11,7 @@ import { isAuthoritativeDepegPegReference } from "../depeg-trust-policy";
 import type { ContagionAmplifiers, DewsScoringResult, DewsScoringState, PersistedJsonDecodeReason } from "./contracts";
 import { decodeJsonString } from "../cache-json";
 import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING, CONTAGION_AMPLIFIER_CAP } from "../dews-contagion-policy";
-import { CONTRACT_CONFIGS } from "../blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../blacklist/blacklist-contracts";
 import { numberValue } from "@shared/lib/type-guards";
 
 // Missing `extra`/`balanceRatio` means "no balance measurement" (null), never perfect balance; a missing

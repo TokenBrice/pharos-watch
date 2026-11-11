@@ -3,7 +3,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import {
   SAFETY_MAP_KICK_MAX_DISPATCHES,
   runSafetyMapProducerKick,
-} from "../safety-map-producer-kick";
+} from "../digest/safety-map-producer-kick";
 
 const DATE = "2026-09-29";
 const MANIFEST_URL = "https://pharos.watch/safety-scores/map.json";

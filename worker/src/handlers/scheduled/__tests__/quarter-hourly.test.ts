@@ -14,13 +14,13 @@ const mocks = vi.hoisted(() => ({
   snapshotPublicDataset: vi.fn(),
 }));
 
-vi.mock("../../../cron/sync-fx-rates", () => ({ syncFxRates: mocks.syncFxRates }));
-vi.mock("../../../cron/sync-stablecoins", () => ({ syncStablecoins: mocks.syncStablecoins }));
-vi.mock("../../../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: mocks.syncYieldSupplemental }));
-vi.mock("../../../cron/snapshot-supply", () => ({ snapshotSupply: mocks.snapshotSupply }));
-vi.mock("../../../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: mocks.snapshotChainSupply }));
-vi.mock("../../../cron/snapshot-psi", () => ({ snapshotPsiDaily: mocks.snapshotPsiDaily }));
-vi.mock("../../../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset: mocks.snapshotPublicDataset }));
+vi.mock("../../../cron/pricing/sync-fx-rates", () => ({ syncFxRates: mocks.syncFxRates }));
+vi.mock("../../../cron/market-supply/sync-stablecoins", () => ({ syncStablecoins: mocks.syncStablecoins }));
+vi.mock("../../../cron/yield-sync/sync-yield-supplemental", () => ({ syncYieldSupplemental: mocks.syncYieldSupplemental }));
+vi.mock("../../../cron/market-supply/snapshot-supply", () => ({ snapshotSupply: mocks.snapshotSupply }));
+vi.mock("../../../cron/market-supply/snapshot-chain-supply", () => ({ snapshotChainSupply: mocks.snapshotChainSupply }));
+vi.mock("../../../cron/psi/snapshot-psi", () => ({ snapshotPsiDaily: mocks.snapshotPsiDaily }));
+vi.mock("../../../cron/public-datasets/snapshot-public-dataset", () => ({ snapshotPublicDataset: mocks.snapshotPublicDataset }));
 vi.mock("../preflight-skip", () => ({ logSkippedCronRun: vi.fn(async () => undefined) }));
 
 import { runQuarterHourlySlot, AAVE_TAIL_TOTAL_BUDGET_MS, QUARTER_HOURLY_SNAPSHOT_RESERVE_MS, AAVE_TAIL_DEFERRED_REASON } from "../quarter-hourly";
@@ -30,7 +30,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { buildYieldSupplementalFamilyCache, getYieldSupplementalFamilyCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../../../cron/yield-sync/cache";
 import { createSlotDeadline } from "../../../lib/cron-timeouts";
 import * as rpc from "../../../cron/yield-sync/sources-rpc";
-import type * as SupplementalModule from "../../../cron/sync-yield-supplemental";
+import type * as SupplementalModule from "../../../cron/yield-sync/sync-yield-supplemental";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -118,7 +118,7 @@ describe("runQuarterHourlySlot", () => {
   it("bounds a pre-RPC D1 stall under the real lease runtime and retries without late writes", async () => {
     // This one regression bypasses the suite's hoisted runner mock.
     const actual = await vi.importActual<typeof SupplementalModule>(
-      "../../../cron/sync-yield-supplemental",
+      "../../../cron/yield-sync/sync-yield-supplemental",
     );
     const fetchAave = vi.spyOn(rpc, "fetchAaveV3SupplyRates").mockResolvedValue({
       results: [], telemetry: rpc.createOptionalRpcFamilyTelemetry(0),

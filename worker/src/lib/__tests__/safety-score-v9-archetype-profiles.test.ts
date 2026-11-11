@@ -9,7 +9,7 @@ import { resolveWrapperForm } from "../safety-score-v9/fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { describe, expect, it } from "vitest";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import {
   MechanismReviewOverlaySchema,
   buildSafetyScoreV9MechanismReview,

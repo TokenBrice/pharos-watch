@@ -18,9 +18,9 @@ import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
 import { usd3CurvePoolProvider } from "../authoritative-price-sources/usd3-curve-pool";
 import type { LivePriceReferenceContext } from "../authoritative-price-sources/helpers";
 import { createAuthoritativeLivePriceOverrideStats as overrideStats } from "../authoritative-price-sources";
-import { buildPriceValidationContext } from "../price-validation";
-import { validatePublishedAssetPrice } from "../price-publish-policy";
-import { getPriceCache } from "../price-cache";
+import { buildPriceValidationContext } from "../pricing/price-validation";
+import { validatePublishedAssetPrice } from "../pricing/price-publish-policy";
+import { getPriceCache } from "../pricing/price-cache";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 import { CACHED_VAULT_RATE_MAX_AGE_SEC } from "../authoritative-price-sources/helpers";
@@ -29,7 +29,7 @@ import { inheritedTrackedPriceProvider } from "../authoritative-price-sources/in
 import { iusdInfinifiProvider } from "../authoritative-price-sources/infinifi-iusd";
 import { createProtocolRedeemProvider } from "../authoritative-price-sources/protocol-redeem-provider";
 import { encodeUint256 } from "../evm-selectors";
-import * as extraction from "../historical-depeg-extraction";
+import * as extraction from "../depeg-detection/historical-depeg-extraction";
 import { moveusdOrcaProvider } from "../authoritative-price-sources/moveusd-orca";
 import { fetchSolanaAccounts, SOLANA_TOKEN_PROGRAM } from "../chain-observation";
 import { publicKeyBytes } from "../../cron/dex-liquidity/solana/program-address";
@@ -98,7 +98,7 @@ describe("MOVEUSD reviewed Orca mark", () => {
 });
 
 const historicalParent = vi.hoisted(() => vi.fn());
-vi.mock("../historical-market-prices", () => ({
+vi.mock("../pricing/historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: historicalParent,
 }));
 

@@ -1,5 +1,5 @@
 import type { PriceObservedAtMode } from "@shared/types/price";
-import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
+import type { PricingProviderAttemptDiagnostic } from "../pricing/pricing-provider-diagnostics";
 import type { PricingSourceKey } from "@shared/lib/pricing-source-registry";
 
 export interface AddressPriceProviderRuntimeConfig {

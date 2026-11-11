@@ -5,7 +5,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
-} from "../../lib/yield-history-ownership-handoffs";
+} from "../../lib/yield/yield-history-ownership-handoffs";
 import { buildYieldHistoryEvaluationInputsCooperative } from "../yield-sync/history-evidence";
 import { loadYieldHistorySnapshots } from "../yield-sync/history-repository";
 import { purgeYieldHistoryOwnershipHandoffs } from "../yield-sync/history-repair";

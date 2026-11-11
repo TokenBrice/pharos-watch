@@ -6,7 +6,7 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-regis
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition } from "../onchain-supply";
 import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
-import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
+import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/market-supply/onchain-supply-exclusions";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
 import { fetchXrplSupply } from "../xrpl-supply";
 import xrplFixture from "./fixtures/ousg-xrpl.json";

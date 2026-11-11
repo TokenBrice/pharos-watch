@@ -1,19 +1,19 @@
 import { logWorkerEventArgs, logWorkerEvent } from "../structured-log";
 import { getCache } from "../db-cache";
-import { compactMintBurnPublication } from "../mint-burn-publication";
+import { compactMintBurnPublication } from "./mint-burn-publication";
 import { errorResponse } from "../api-response";
-import { computeGaugeScore, getGaugeBand } from "../mint-burn-scoring";
-import { loadStablecoinsCache } from "../stablecoins-cache";
+import { computeGaugeScore, getGaugeBand } from "./mint-burn-scoring";
+import { loadStablecoinsCache } from "../market-supply/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/supply";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY, MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
-import { sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";
-import { buildFlightToQualityClassificationFromV9Snapshot } from "../flight-to-quality-classification";
+import { sumMcapForTrackedChains } from "./mint-burn-mcap-weighting";
+import { buildFlightToQualityClassificationFromV9Snapshot } from "./flight-to-quality-classification";
 import { isRecord } from "@shared/lib/type-guards";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { ApiDependencyMeta } from "@pharos/contracts/api-meta";
 import { tryParseJson } from "../json-parse";
-import { loadActiveSafetyScoreIndex } from "../safety-score-index";
+import { loadActiveSafetyScoreIndex } from "../safety-score-v9/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 import {
   aggregateFlowCacheKey,
@@ -38,20 +38,20 @@ import {
 } from "@shared/lib/mint-burn-valuation";
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification,
   type MintBurnClassificationTally } from "@shared/lib/mint-burn-classification";
-import { hasMintBurnClassificationReview } from "../mint-burn-classification";
+import { hasMintBurnClassificationReview } from "./mint-burn-classification";
 import type { MintBurnClassification, MintBurnCoinFlow, MintBurnValuation, MintBurnWatermark } from "@shared/types/mint-burn";
 import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, mintBurnWindowAdmits, type MintBurnLegacySpan, type MintBurnScanSegment } from "./scan-coverage";
 import { getLatestSuccessfulCronTimestampResult, type CronTimestampLookupResult } from "../api-freshness";
-import type { FlightToQualityClassification } from "../flight-to-quality-classification";
+import type { FlightToQualityClassification } from "./flight-to-quality-classification";
 import {
   buildMintBurnSyncHealth,
-} from "../mint-burn-health-config";
+} from "./mint-burn-health-config";
 import {
   buildMintBurnScope,
   getMintBurnTrackedPairs,
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
-} from "../mint-burn-contracts";
+} from "./mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "./sync-state";
 import {
   buildFlightToQualityCohorts,
@@ -61,7 +61,7 @@ import {
   getFlightToQualityUnavailableReason,
   type FlightToQualityResult,
   type ValuedNetFlow24h,
-} from "../mint-burn-scoring";
+} from "./mint-burn-scoring";
 import type { MintBurnFtqUnavailableReason } from "@shared/types/mint-burn";
 import {
   MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL,
@@ -71,7 +71,7 @@ import {
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
   type MintBurnValuationTallyRow,
   readMintBurnValuationTallyRow,
-} from "../mint-burn-hourly-valuation";
+} from "./mint-burn-hourly-valuation";
 import {
   aggregateHourlyRowsByStablecoin,
   BASELINE_WINDOW_DAYS,

@@ -4,8 +4,8 @@ import {
   canonicalExitRouteScopedId,
 } from "@shared/types/exit-route-identity";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
-import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
-import type { DexApiPoolToken } from "../../lib/dex-api-types";
+import { normalizeDexSymbol } from "../../lib/dex-liquidity/dex-cron-constants";
+import type { DexApiPoolToken } from "../../lib/dex-liquidity/dex-api-types";
 import type { SymbolLookups } from "./token-resolution-types";
 
 export interface TokenResolutionResult {

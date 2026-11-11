@@ -32,7 +32,7 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
 // one matching card (the fail-closed paths have their own focused tests).
 // Vitest hoists this factory before static imports initialize.
-vi.mock("../../../lib/safety-score-index", async () => {
+vi.mock("../../../lib/safety-score-v9/safety-score-index", async () => {
   const { makeTelegramSafetySnapshot } = await import("./telegram-safety.test-support.ts");
   const snapshot = makeTelegramSafetySnapshot();
   return {
@@ -43,7 +43,7 @@ vi.mock("../../../lib/safety-score-index", async () => {
   };
 });
 // Module loading inside a hoisted mock is required by Vitest's test seam.
-vi.mock("../../../lib/safety-score-active-source", async () => {
+vi.mock("../../../lib/safety-score-v9/safety-score-active-source", async () => {
   const { makeTelegramSafetySnapshot } = await import("./telegram-safety.test-support.ts");
   return { loadActiveSafetyScoreSource: vi.fn(async () => ({ kind: "v9",
     snapshot: makeTelegramSafetySnapshot(),

@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchCurrentNativePegQuotesMock = vi.fn();
 
-vi.mock("../native-peg-quotes", () => ({
+vi.mock("../pricing/native-peg-quotes", () => ({
   fetchCurrentNativePegQuotes: (...args: unknown[]) => fetchCurrentNativePegQuotesMock(...args),
 }));
 
 import {
   computePriceDivergenceBps,
   fetchCurrentNativePegImpliedUsdQuotes,
-} from "../native-peg-implied-prices";
+} from "../pricing/native-peg-implied-prices";
 
 describe("native-peg-implied-prices", () => {
   beforeEach(() => {

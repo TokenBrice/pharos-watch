@@ -5,9 +5,9 @@ import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getNativeEventPriceObservation, isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/pricing/native-peg-quote-cache";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
+import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-detection/depeg-lifecycle";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { getMintBurnPressureRejection, type DigestFlowSupplySnapshot } from "@shared/lib/digest-mint-burn-admission";
@@ -20,13 +20,13 @@ import {
 } from "@shared/lib/digest-liquidity-admission";
 import { buildInClause } from "../../lib/db";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../../lib/blacklist/shared";
-import { normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity";
-import { getGaugeBand, getGaugeScoreInterval, isGaugeBandRobustToWithheldWeight } from "../../lib/mint-burn-scoring";
+import { normalizeDexLiquidityEvidence } from "../../lib/dex-liquidity/dex-liquidity";
+import { getGaugeBand, getGaugeScoreInterval, isGaugeBandRobustToWithheldWeight } from "../../lib/mint-burn-pipeline/mint-burn-scoring";
 import {
   readPublishedMintBurnGauge,
   type PublishedGaugeChain,
   type PublishedGaugeCoin,
-} from "../../lib/mint-burn-published-gauge";
+} from "../../lib/mint-burn-pipeline/mint-burn-published-gauge";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { classifyGaugeRegime } from "./prompt/regime";
 import { getGaugeRiskTapeTone } from "./digest-risk-tape";

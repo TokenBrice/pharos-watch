@@ -187,7 +187,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Bridge deployment materiality", stream: "BRDG",
     instructions: "Reconcile current chain-level circulating USD to reviewed deployment routes so selected, unknown, and unreviewed bridge supply shares are explicit. This usually needs both complete route metadata and a fresh chain-supply producer capture.",
     completionCriteria: "A fresh exact replay has current bridge supply shares and removes the runtime-bridge-materiality-unavailable gapId.", recommendedSkill: "stablecoin-identity-contracts",
-    likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
+    likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-supply.ts", "worker/src/cron/market-supply/snapshot-chain-supply.ts"],
     cautions: ["Do not add a manual supply override or multiply DefiLlama list-endpoint circulating USD by price."], ownerDomain: "control", defaultResolutionMode: "mixed-curation-and-runtime",
     ...workReasons({
       BRDG: ["runtime-bridge-materiality-unavailable", "material-bridge-supply-unmatched"],
@@ -227,7 +227,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Current chain supply evidence", stream: "SUPPLY",
     instructions: "Restore a current, score-eligible circulating-USD observation for the asset. Verify provider identity, price path, contracts, and chain coverage; enrich missing deployments or repair producer mapping when needed.",
     completionCriteria: "The exact fixed input contains current chain supply, the compiled supply status is known, and the chain-supply gapId is absent.", recommendedSkill: "stablecoin-runtime-price-marketcap-gate",
-    likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/snapshot-chain-supply.ts", "worker/src/lib/safety-score-v9/extension-supply.ts"],
+    likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/cron/market-supply/sync-stablecoins.ts", "worker/src/cron/market-supply/snapshot-chain-supply.ts", "worker/src/lib/safety-score-v9/extension-supply.ts"],
     cautions: ["Use getCirculatingRawOrNull() and preserve unavailable supply; DefiLlama list circulating values are already USD-denominated.", "Do not add manual, on-chain, CMC, DEX, or other supply overrides."],
     ownerDomain: "evidence",
     defaultResolutionMode: "mixed-curation-and-runtime",
@@ -236,7 +236,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     touchpoints: (source) =>
       unique([
         base(source),
-        "worker/src/cron/snapshot-chain-supply.ts",
+        "worker/src/cron/market-supply/snapshot-chain-supply.ts",
         "worker/src/lib/safety-score-v9/extension-supply.ts",
       ]),
   },
@@ -287,7 +287,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Exact DEX route coverage", stream: "EXIT",
     instructions: "Make every retained material DEX pool carry a score-eligible exact route observation: supported pool math, explicit output valuation, request/capacity curve, settlement facts, resource identity, and failure domains. Unsupported pool archetypes require producer capability, not a hand-entered estimate.",
     completionCriteria: "A fresh exact capture marks the retained DEX portfolio exact-complete and removes the incomplete-dex-route-coverage gapId. The coverage gap itself is a documentation-class disclosure label on a reviewed portfolio with viable routes: it is never a pillar witness, so completing it changes no score, and the `· partial DEX coverage` suffix is the disclosure.", recommendedSkill: null,
-    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
+    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity/dex-liquidity.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
     ...workReasons({ EXIT: [
@@ -315,7 +315,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     title: "Runtime exit route evidence", stream: "EXIT",
     instructions: "Produce at least one current exact DEX, redemption, or retained route observation with comparable notional, capacity, cost, access, settlement, output valuation, and failure-domain evidence.",
     completionCriteria: "The exact fixed input contains a score-eligible route and a fresh replay removes the missing-runtime-route-evidence gapId.", recommendedSkill: null,
-    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/redemption-exit-route-observations.ts", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["A source-only metadata edit is not complete until a fresh producer capture embeds the observation."],
+    likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/cron/redemption-backstop/sync-redemption-backstops.ts", "worker/src/lib/redemption-backstop/redemption-exit-route-observations.ts", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["A source-only metadata edit is not complete until a fresh producer capture embeds the observation."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
     ...workReasons({
@@ -329,7 +329,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "non-curation": ["correlated-exit-routes", "no-viable-exit-path"],
     }),
     context: exitContext,
-    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
+    touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/redemption-backstop/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
   },
   EXIT_SETTLEMENT_BOUND: {
     title: "Exit route settlement-bound proof", stream: "EXIT",

@@ -19,7 +19,7 @@ const {
   loadPublishedReportCardsV9Snapshot,
   projectSafetyScoreV9PublicationToPublicSnapshot,
   ReportCardsV9SnapshotUnavailableError,
-} = await import("../report-cards-v9-cache");
+} = await import("../safety-score-v9/report-cards-v9-cache");
 
 describe("canonical V9 report-card cache", () => {
   beforeEach(() => {

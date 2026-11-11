@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist/blacklist-contracts";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import type { BlacklistConfigState } from "../state";
 import type { FetchTronEventsIncrementalResult } from "../tron-source";

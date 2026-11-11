@@ -1,7 +1,7 @@
 import type { DlPool, ResolvedYield, YieldEnvelopeRejection } from "./types";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { computeApyFromRate, isDeterministicApyWithinSanityBounds } from "../yield-helpers";
-import { buildOnChainSourceKey } from "../../lib/yield-utils";
+import { computeApyFromRate, isDeterministicApyWithinSanityBounds } from "./yield-helpers";
+import { buildOnChainSourceKey } from "../../lib/yield/yield-utils";
 import type { RateDerivedConfig } from "../../lib/yield-config/yield-config-registry";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
 import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";

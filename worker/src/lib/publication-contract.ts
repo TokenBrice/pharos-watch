@@ -10,7 +10,7 @@ import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { isMissingTableError } from "./db";
 import { parseObjectMetadata } from "./json-metadata";
-import { loadActiveSafetyScoreCohort } from "./safety-score-active-source";
+import { loadActiveSafetyScoreCohort } from "./safety-score-v9/safety-score-active-source";
 
 interface PublicationGenerationRow {
   generation_id: string;

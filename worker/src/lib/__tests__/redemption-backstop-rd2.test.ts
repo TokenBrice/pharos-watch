@@ -5,13 +5,13 @@ import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import { resolveRedemptionCapacity } from "../redemption-backstop/capacity";
-import { buildRedemptionExitRouteObservation, deriveSupplyModelExitRouteObservation } from "../redemption-exit-route-observations";
+import { buildRedemptionExitRouteObservation, deriveSupplyModelExitRouteObservation } from "../redemption-backstop/redemption-exit-route-observations";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { makeV9FixedInput, makeV9Extension } from "../../test-helpers/v9-fixed-input";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
 import { mockD1Strict } from "@shared/test-utils/mock-d1";

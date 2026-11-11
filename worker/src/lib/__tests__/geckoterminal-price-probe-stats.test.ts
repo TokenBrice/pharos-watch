@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyGtProbeStats } from "../geckoterminal-price-probe-stats";
+import { createEmptyGtProbeStats } from "../dex-liquidity/geckoterminal-price-probe-stats";
 
 describe("GeckoTerminal probe run statistics", () => {
   it("starts each run with no observations and independent transport budgets", () => {

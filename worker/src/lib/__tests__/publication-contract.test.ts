@@ -4,7 +4,7 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
-import * as activeSafetyScoreSource from "../safety-score-active-source";
+import * as activeSafetyScoreSource from "../safety-score-v9/safety-score-active-source";
 import { loadPublicationHealth } from "../publication-contract";
 import { classifyPublicationDiagnostic } from "@shared/lib/status-thresholds";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";

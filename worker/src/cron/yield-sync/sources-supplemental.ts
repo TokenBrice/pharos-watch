@@ -1,5 +1,5 @@
 import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import {
   isFixedDecimalDeployment,
 } from "@shared/lib/deployment-amounts";

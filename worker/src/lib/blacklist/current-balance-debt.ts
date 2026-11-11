@@ -1,4 +1,4 @@
-import { CONTRACT_CONFIGS } from "../blacklist-contracts";
+import { CONTRACT_CONFIGS } from "./blacklist-contracts";
 import { blacklistEventOrderSql } from "@shared/lib/blacklist-event-order";
 import { CURRENT_BALANCE_DEBT_PREFIX, syncCurrentBalanceCacheForRows, type CurrentBalanceFetchContext } from "./current-balance-cache";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached } from "./run-budget";

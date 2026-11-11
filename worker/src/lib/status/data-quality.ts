@@ -2,9 +2,9 @@ import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
   BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
   queryBlacklistGapMetrics,
-} from "../blacklist-gaps";
-import type { BlacklistGapMetrics } from "../blacklist-gaps";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
+} from "../blacklist/blacklist-gaps";
+import type { BlacklistGapMetrics } from "../blacklist/blacklist-gaps";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../market-supply/stablecoins-cache";
 import {
   BLACKLIST_RECENT_WINDOW_SEC,
   STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD,
@@ -18,15 +18,15 @@ import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealt
 import { NominalPriceReferenceSchema } from "@shared/types/price";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
-import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../repair-tasks";
+import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../depeg-resolver/repair-tasks";
 import {
   EMPTY_BLACKLIST_RECONCILIATION_STATUS,
   loadBlacklistReconciliationStatus,
-} from "../blacklist-reconciliation-status";
+} from "../blacklist/blacklist-reconciliation-status";
 import {
   loadStablecoinPublicationHealth,
   unknownStablecoinPublicationHealth,
-} from "../stablecoin-publication-health";
+} from "../market-supply/stablecoin-publication-health";
 
 function emptyRepairDebt(source: DataQuality["repairDebt"]["source"] = "unavailable"): DataQuality["repairDebt"] {
   return {

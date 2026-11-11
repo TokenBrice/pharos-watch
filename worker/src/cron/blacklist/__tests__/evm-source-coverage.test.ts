@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../../lib/blacklist/blacklist-contracts";
 
 vi.mock("../../../lib/evm-logs", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../../lib/evm-logs")>();

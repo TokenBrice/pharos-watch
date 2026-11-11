@@ -12,7 +12,7 @@ import type { DepegEvent } from "@shared/types/peg";
 import type { DepegPriceCoverage } from "@shared/types/peg";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { persistDepegCommands } from "../../cron/depeg-detection/persistence";
-import { rowToDepegEvent, type DepegRow } from "../depeg-helpers";
+import { rowToDepegEvent, type DepegRow } from "../depeg-detection/depeg-helpers";
 
 const DAY = 86400;
 const NOW = 1_790_985_600;

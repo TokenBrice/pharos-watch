@@ -1,10 +1,10 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
-import type { BinanceFetchSession } from "../../lib/cex-tickers";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { NativePegQuoteSession } from "../../lib/pricing/native-peg-quotes";
+import type { BinanceFetchSession } from "../../lib/pricing/cex-tickers";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import type { CronProgressReporter } from "../../lib/cron-logger";
-import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
+import { createEmptyGtProbeStats } from "../../lib/dex-liquidity/geckoterminal-price-probe-stats";
 import {
   applyConsensusResults,
   applyProtocolPriceOverrides,

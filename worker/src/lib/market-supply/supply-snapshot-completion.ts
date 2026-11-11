@@ -1,0 +1,330 @@
+import { compareCodeUnits } from "@shared/lib/compare";
+import { sha256Hex } from "@shared/lib/sha256";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
+import { getCache } from "../db-cache";
+import {
+  evaluateStablecoinPublicationCoverage,
+  resolveStablecoinPublicationWaivers,
+  selectAppliedStablecoinPublicationWaivers,
+  type StablecoinPublicationCoverage,
+  type StablecoinPublicationWaiver,
+} from "./stablecoin-publication-coverage";
+import {
+  loadStablecoinsCache,
+  type StablecoinsCacheFailureReason,
+  type StablecoinsCacheLoadOk,
+  type StablecoinsCachePayload,
+} from "./stablecoins-cache";
+import type { CronResult } from "../cron-logger";
+
+export const SNAPSHOT_SUPPLY_LAST_WRITE_KEY = "snapshot-supply:last-write";
+export const SNAPSHOT_CHAIN_SUPPLY_LAST_WRITE_KEY = "snapshot-chain-supply:last-write";
+const SUPPLY_SNAPSHOT_COVERAGE_VERSION = 2;
+// sync-stablecoins owns the degraded verdict for an elevated publication gap;
+// snapshot jobs that complete their own work record it as a finding only.
+export const UPSTREAM_PUBLICATION_GAP_QUALITY_REASON = "upstream_publication_gap_elevated";
+
+const SHA_256_HEX_PATTERN = /^[0-9a-f]{64}$/;
+
+export interface SupplySnapshotCoverageExpectation {
+  expectedActiveCount: number;
+  coverageDigest: string;
+}
+
+export interface SupplySnapshotCompletionMarkerInput {
+  snapshotDate: number;
+  coverage: SupplySnapshotCoverageExpectation;
+  accountedActiveCount: number;
+  ownedRowIds: readonly string[];
+  missingActiveIds?: readonly string[];
+  /**
+   * Active IDs present in the source cache whose current supply was not an
+   * admitted observation and was not a documented carry. They are bounded
+   * evidence for the completion canary, never a zero supply row.
+   */
+  unavailableActiveIds?: readonly string[];
+}
+
+export interface SupplySnapshotCompletionOptions {
+  cacheKey?: string;
+  expectedCoverage?: SupplySnapshotCoverageExpectation;
+}
+
+export function buildStablecoinsCacheFreshnessGateResult(params: {
+  cacheUpdatedAt: number;
+  requiredUpdatedAt: number;
+  freshnessGateLabel?: string;
+  retry?: { attempts: number; firstCacheUpdatedAt: number };
+  alreadyWrittenSnapshotDate?: number;
+}): CronResult {
+  if (params.alreadyWrittenSnapshotDate != null) {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "already_written_today_before_freshness_gate",
+        snapshotDate: params.alreadyWrittenSnapshotDate,
+        cacheUpdatedAt: params.cacheUpdatedAt,
+        requiredUpdatedAt: params.requiredUpdatedAt,
+        freshnessGateLabel: params.freshnessGateLabel,
+      }),
+    };
+  }
+
+  return {
+    status: "degraded",
+    itemCount: 0,
+    metadata: JSON.stringify({
+      reason: "stablecoins_cache_before_slot",
+      cacheUpdatedAt: params.cacheUpdatedAt,
+      requiredUpdatedAt: params.requiredUpdatedAt,
+      freshnessGateLabel: params.freshnessGateLabel,
+      ...(params.retry && params.retry.attempts > 0
+        ? { retryAttempts: params.retry.attempts, firstCacheUpdatedAt: params.retry.firstCacheUpdatedAt }
+        : {}),
+    }),
+  };
+}
+
+export interface CompletedSupplySnapshot {
+  snapshotDate: number;
+  updatedAt: number;
+  exactCoverageVerified: boolean;
+  coverageIdentityVerified: boolean;
+  expectedActiveCount: number | null;
+  accountedActiveCount: number | null;
+  missingActiveIds: string[] | null;
+  ownedRowIds: string[] | null;
+  /** Null when the marker predates this evidence field (unknown, not empty). */
+  unavailableActiveIds: string[] | null;
+  chainObservationAdmissionVerified: boolean;
+  chainObservationProgressVerified: boolean;
+}
+
+export interface SupplySnapshotPreflightOptions<Context> {
+  nowSec?: number;
+  requiredActiveIds: readonly string[];
+  publicationWaivers: readonly StablecoinPublicationWaiver[];
+  completionCacheKey?: string;
+  maxCacheAgeSec?: number;
+  assertContinuation?: () => void;
+  deriveCoverage: (
+    payload: StablecoinsCachePayload,
+    requiredActiveIds: readonly string[],
+    snapshotDate: number,
+  ) => { accountedIds: Iterable<string>; context: Context };
+}
+
+export type SupplySnapshotPreflightResult<Context> =
+  | { kind: "cache-unavailable"; reason: StablecoinsCacheFailureReason }
+  | {
+      kind: "cache-stale";
+      cache: StablecoinsCacheLoadOk;
+      /** Null when the generation clock itself is unusable (ahead of the assessment clock). */
+      cacheAgeSec: number | null;
+      nowSec: number;
+      reason: "cache-age-exceeded" | "cache-clock-unusable";
+    }
+  | {
+      kind: "ready";
+      cache: StablecoinsCacheLoadOk;
+      cacheAgeSec: number;
+      nowSec: number;
+      snapshotDate: number;
+      requiredActiveIds: string[];
+      publicationCoverage: StablecoinPublicationCoverage;
+      coverageExpectation: SupplySnapshotCoverageExpectation;
+      lastWrite: CompletedSupplySnapshot | null;
+      context: Context;
+    };
+
+function canonicalizeRequiredActiveIds(ids: readonly string[]): string[] {
+  return [...new Set(ids)].sort();
+}
+
+function canonicalizeAppliedWaivers(
+  waivers: readonly StablecoinPublicationWaiver[],
+): Array<{ stablecoinId: string; owner: string; expiresAt: number }> {
+  return waivers
+    .map((waiver) => ({
+      stablecoinId: waiver.stablecoinId,
+      owner: waiver.owner,
+      expiresAt: waiver.expiresAt,
+    }))
+    .sort((a, b) => (
+      compareCodeUnits(a.stablecoinId, b.stablecoinId)
+      || compareCodeUnits(a.owner, b.owner)
+      || a.expiresAt - b.expiresAt
+    ));
+}
+
+function parseCanonicalOwnedRowIds(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.some((id) => typeof id !== "string" || id.length === 0)) {
+    return null;
+  }
+  const ids = value as string[];
+  const canonicalIds = [...new Set(ids)].sort();
+  return ids.length === canonicalIds.length && ids.every((id, index) => id === canonicalIds[index])
+    ? ids
+    : null;
+}
+
+export function buildSupplySnapshotCoverageExpectation(
+  requiredActiveIds: readonly string[],
+  appliedWaivers: readonly StablecoinPublicationWaiver[],
+): SupplySnapshotCoverageExpectation {
+  const canonicalRequiredActiveIds = canonicalizeRequiredActiveIds(requiredActiveIds);
+  const canonicalAppliedWaivers = canonicalizeAppliedWaivers(appliedWaivers);
+  return {
+    expectedActiveCount: canonicalRequiredActiveIds.length,
+    coverageDigest: sha256Hex(JSON.stringify({
+      requiredActiveIds: canonicalRequiredActiveIds,
+      appliedWaivers: canonicalAppliedWaivers,
+    })),
+  };
+}
+
+export function buildSupplySnapshotCompletionMarker(
+  input: SupplySnapshotCompletionMarkerInput,
+): Record<string, unknown> {
+  return {
+    snapshotDate: input.snapshotDate,
+    coverageVersion: SUPPLY_SNAPSHOT_COVERAGE_VERSION,
+    expectedActiveCount: input.coverage.expectedActiveCount,
+    accountedActiveCount: input.accountedActiveCount,
+    coverageDigest: input.coverage.coverageDigest,
+    ownedRowIds: [...new Set(input.ownedRowIds)].sort(),
+    missingActiveIds: [...new Set(input.missingActiveIds ?? [])].sort(),
+    ...(input.unavailableActiveIds !== undefined
+      ? { unavailableActiveIds: [...new Set(input.unavailableActiveIds)].sort() }
+      : {}),
+  };
+}
+
+export async function preflightSupplySnapshot<Context>(
+  db: D1Database,
+  options: SupplySnapshotPreflightOptions<Context>,
+): Promise<SupplySnapshotPreflightResult<Context>> {
+  const cache = await loadStablecoinsCache(db, { mode: "strict" });
+  if (cache.kind !== "ok") {
+    return { kind: "cache-unavailable", reason: cache.reason };
+  }
+  options.assertContinuation?.();
+
+  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
+  const cacheAgeSec = nowSec - cache.updatedAt;
+  // A generation clock ahead of the assessment clock cannot prove cache age
+  // (R2/R3); the producer stamps its real run clock, so this is a fault path.
+  if (!Number.isSafeInteger(cache.updatedAt) || cache.updatedAt <= 0 || cache.updatedAt > nowSec) {
+    return { kind: "cache-stale", cache, cacheAgeSec: null, nowSec, reason: "cache-clock-unusable" };
+  }
+  if (options.maxCacheAgeSec != null && cacheAgeSec > options.maxCacheAgeSec) {
+    return { kind: "cache-stale", cache, cacheAgeSec, nowSec, reason: "cache-age-exceeded" };
+  }
+  const snapshotDate = startOfUtcDaySec(new Date(nowSec * 1000));
+  const requiredActiveIds = [...new Set(options.requiredActiveIds)].sort();
+  const { accountedIds, context } = options.deriveCoverage(cache.payload, requiredActiveIds, snapshotDate);
+  const publicationCoverage = evaluateStablecoinPublicationCoverage(
+    accountedIds,
+    nowSec,
+    options.publicationWaivers,
+    requiredActiveIds,
+  );
+  const resolvedWaivers = resolveStablecoinPublicationWaivers(
+    requiredActiveIds,
+    nowSec,
+    options.publicationWaivers,
+  );
+  const appliedWaivers = selectAppliedStablecoinPublicationWaivers(
+    publicationCoverage.waivedActiveIds,
+    resolvedWaivers,
+  );
+  const coverageExpectation = buildSupplySnapshotCoverageExpectation(requiredActiveIds, appliedWaivers);
+  const lastWrite = await getCompletedSupplySnapshot(db, {
+    cacheKey: options.completionCacheKey,
+    expectedCoverage: coverageExpectation,
+  });
+  options.assertContinuation?.();
+
+  return {
+    kind: "ready",
+    cache,
+    cacheAgeSec,
+    nowSec,
+    snapshotDate,
+    requiredActiveIds,
+    publicationCoverage,
+    coverageExpectation,
+    lastWrite,
+    context,
+  };
+}
+
+export async function getCompletedSupplySnapshot(
+  db: D1Database,
+  options: SupplySnapshotCompletionOptions = {},
+): Promise<CompletedSupplySnapshot | null> {
+  const cached = await getCache(db, options.cacheKey ?? SNAPSHOT_SUPPLY_LAST_WRITE_KEY);
+  if (!cached) return null;
+
+  try {
+    const parsed = JSON.parse(cached.value) as {
+      snapshotDate?: unknown;
+      coverageVersion?: unknown;
+      expectedActiveCount?: unknown;
+      accountedActiveCount?: unknown;
+      coverageDigest?: unknown;
+      ownedRowIds?: unknown;
+      missingActiveIds?: unknown;
+      unavailableActiveIds?: unknown;
+      writtenRows?: unknown;
+      chainObservationAdmissionVersion?: unknown;
+      chainObservationProgressVersion?: unknown;
+    };
+    const ownedRowIds = parseCanonicalOwnedRowIds(parsed.ownedRowIds);
+    const missingActiveIds = parsed.missingActiveIds === undefined
+      ? []
+      : parseCanonicalOwnedRowIds(parsed.missingActiveIds);
+    // Legacy markers predate this field; absence stays unknown, never an empty
+    // "nothing unavailable" claim.
+    const unavailableActiveIds = parsed.unavailableActiveIds === undefined
+      ? null
+      : parseCanonicalOwnedRowIds(parsed.unavailableActiveIds);
+    // Keep v2's exact-coverage claim intact for rollback readers. Partial v2
+    // markers add a truthful missing-ID proof, never count equality.
+    const structurallyValid = parsed.coverageVersion === SUPPLY_SNAPSHOT_COVERAGE_VERSION
+      && typeof parsed.expectedActiveCount === "number"
+      && Number.isInteger(parsed.expectedActiveCount)
+      && parsed.expectedActiveCount >= 0
+      && typeof parsed.accountedActiveCount === "number"
+      && Number.isInteger(parsed.accountedActiveCount)
+      && parsed.accountedActiveCount >= 0
+      && parsed.accountedActiveCount <= parsed.expectedActiveCount
+      && missingActiveIds != null
+      && missingActiveIds.length === parsed.expectedActiveCount - parsed.accountedActiveCount
+      && typeof parsed.coverageDigest === "string"
+      && SHA_256_HEX_PATTERN.test(parsed.coverageDigest)
+      && ownedRowIds != null;
+    const matchesExpectedCoverage = options.expectedCoverage == null || (
+      parsed.expectedActiveCount === options.expectedCoverage.expectedActiveCount
+      && parsed.coverageDigest === options.expectedCoverage.coverageDigest
+    );
+    return typeof parsed.snapshotDate === "number" && Number.isFinite(parsed.snapshotDate)
+      ? {
+          snapshotDate: parsed.snapshotDate,
+          updatedAt: cached.updatedAt,
+          exactCoverageVerified: structurallyValid && matchesExpectedCoverage
+            && parsed.accountedActiveCount === parsed.expectedActiveCount,
+          coverageIdentityVerified: structurallyValid && matchesExpectedCoverage,
+          expectedActiveCount: structurallyValid ? parsed.expectedActiveCount as number : null,
+          accountedActiveCount: structurallyValid ? parsed.accountedActiveCount as number : null,
+          missingActiveIds: structurallyValid ? missingActiveIds : null,
+          ownedRowIds: structurallyValid ? ownedRowIds : null,
+          unavailableActiveIds: structurallyValid ? unavailableActiveIds : null,
+          chainObservationAdmissionVerified: parsed.chainObservationAdmissionVersion === 1,
+          chainObservationProgressVerified: parsed.chainObservationProgressVersion === 1,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}

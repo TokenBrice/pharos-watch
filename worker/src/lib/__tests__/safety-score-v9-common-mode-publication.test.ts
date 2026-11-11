@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import capture from "./fixtures/safety-score-v9-usdt-premium-capture.json";
 import { createReportCardsFixedInput, type ReportCardsFixedInputDraft } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
-import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../report-cards-v9-cache";
+import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../safety-score-v9/report-cards-v9-cache";
 import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-v9-current";
 import { SafetyScoreV9CommonModeGroupsSchema } from "@shared/types/safety-score-v9-public";
 import { projectSafetyScoreV9CommonModeGroups } from "@shared/lib/safety-score-v9/public";

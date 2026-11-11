@@ -7,7 +7,7 @@ import {
 import {
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
-} from "../report-cards-fixed-input";
+} from "../safety-score-v9/report-cards-fixed-input";
 import { buildReportCardsFixedInputCacheEntry } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";

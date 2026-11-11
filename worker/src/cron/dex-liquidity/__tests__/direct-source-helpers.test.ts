@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import * as rpc from "../../../lib/evm-rpc";
 import { refreshTempoPathUsdPrice } from "../tempo-price";
 import { classifyClPoolType } from "../direct-source-helpers";
-import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
+import { QUALITY_MULTIPLIERS } from "../../../lib/dex-liquidity/dex-cron-constants";
 
 describe("classifyClPoolType", () => {
   it("classifies PancakeSwap tiers 1/5/25/100 bp into distinct buckets", () => {

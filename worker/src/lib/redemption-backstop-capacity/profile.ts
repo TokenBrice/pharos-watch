@@ -5,7 +5,7 @@ import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import type { RedemptionRouteAvailability } from "../redemption-backstop/availability";
 import type { RedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 import type { EvmRpcOptions } from "../evm-rpc";
-import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
+import type { StablecoinsCacheLoadResult } from "../market-supply/stablecoins-cache";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import type { ExitExecutionModelReview } from "@shared/types/exit-route";
 import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-read-client";

@@ -2,7 +2,7 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
-import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isBlockedDexId } from "../../lib/dex-liquidity/dex-cron-constants";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
 import {
   buildPoolFingerprint,

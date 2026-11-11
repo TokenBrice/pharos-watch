@@ -11,7 +11,7 @@ import {
   selectLargestEvents,
   withExtendedLaneHeads,
 } from "../../lib/mint-burn-flows-service";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
 

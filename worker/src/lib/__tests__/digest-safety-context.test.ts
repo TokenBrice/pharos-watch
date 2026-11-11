@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ActiveSafetyScoreIndex } from "../safety-score-index";
+import type { ActiveSafetyScoreIndex } from "../safety-score-v9/safety-score-index";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 
 const mockLoadActiveSafetyScoreIndex = vi.fn();
 
-vi.mock("../safety-score-index", () => ({
+vi.mock("../safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: mockLoadActiveSafetyScoreIndex,
 }));
 
@@ -15,7 +15,7 @@ const {
   digestSafetyContextFromSource,
   findDigestSafetyClaimMarkers,
   findUnboundDigestSafetyClaimMarkers,
-} = await import("../digest-safety-context");
+} = await import("../digest/digest-safety-context");
 
 const identity = {
   model: "v9" as const,

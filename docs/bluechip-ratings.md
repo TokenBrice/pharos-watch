@@ -7,7 +7,7 @@ Independent stablecoin safety ratings fetched from Bluechip and exposed through 
 ## Overview
 
 - **Source:** `https://backend.bluechip.org/coin-data/{slug}`
-- **Cron:** `sync-bluechip` (`worker/src/cron/sync-bluechip.ts`)
+- **Cron:** `sync-bluechip` (`worker/src/cron/bluechip/sync-bluechip.ts`)
 - **Schedule:** `daily0805Utc` (`5 8 * * *`)
 - **Storage:** D1 `cache` row with key `bluechip-ratings`
 - **API:** `GET /api/bluechip-ratings`
@@ -30,7 +30,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 
 ## Sync Flow
 
-`syncBluechip()` in `worker/src/cron/sync-bluechip.ts` owns bounded batched fetching, schema normalization and merged writes through `setCacheIfNewer()`. A cache younger than six hours skips neutrally (`cache-fresh`); an open Bluechip circuit returns degraded (`bluechip-circuit-open`) without fetching. Fetch deadlines cover headers and bounded body completion. HTML is stripped from SMIDGE summaries; omitted/null categories are accepted. Invalid JSON, 404, empty/no-grade and transport failures are slug-local unresolved observations, not deletion or unrating.
+`syncBluechip()` in `worker/src/cron/bluechip/sync-bluechip.ts` owns bounded batched fetching, schema normalization and merged writes through `setCacheIfNewer()`. A cache younger than six hours skips neutrally (`cache-fresh`); an open Bluechip circuit returns degraded (`bluechip-circuit-open`) without fetching. Fetch deadlines cover headers and bounded body completion. HTML is stripped from SMIDGE summaries; omitted/null categories are accepted. Invalid JSON, 404, empty/no-grade and transport failures are slug-local unresolved observations, not deletion or unrating.
 
 Failure behavior:
 - If zero ratings are fetched, the cron returns `status: "degraded"`. Any retained-row reason/state changes are persisted at the **existing** map timestamp, without advancing successful publication.
@@ -57,7 +57,7 @@ Selector scoring, grade exclusions and recommendations admit only within-budget 
 
 ## API Contract
 
-`GET /api/bluechip-ratings` is implemented by `handleBluechipRatings` in `worker/src/lib/bluechip-cache.ts`.
+`GET /api/bluechip-ratings` is implemented by `handleBluechipRatings` in `worker/src/lib/bluechip/bluechip-cache.ts`.
 
 - Reads the `bluechip-ratings` cache key directly.
 - Starts from the `slow` cache profile (`public, s-maxage=3600, max-age=300`); freshness headers clamp TTLs to the remaining fresh runway and force `no-store` for stale or invalid future-clock responses.

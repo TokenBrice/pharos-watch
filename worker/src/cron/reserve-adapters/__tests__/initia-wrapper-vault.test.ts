@@ -1,4 +1,4 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/live-reserve-policy";
 import { describe, expect, it } from "vitest";
 import {
   evaluateAdapterSnapshotAdmission,

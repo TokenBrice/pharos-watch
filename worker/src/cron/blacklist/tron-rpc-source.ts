@@ -1,5 +1,5 @@
 import { decodeAddressWord, readDataWord, type RateLimitedFetch } from "../../lib/evm-logs";
-import type { ContractEventConfig } from "../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../lib/blacklist/blacklist-contracts";
 import type { BlacklistRow, TronScanTelemetry } from "../../lib/blacklist/shared";
 import type { BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { TronJsonRpcReader, TronRpcError, type TronRpcLog } from "../../lib/tron-jsonrpc";

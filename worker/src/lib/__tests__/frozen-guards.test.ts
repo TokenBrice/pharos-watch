@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertActiveStablecoin } from "../frozen-guards";
+import { assertActiveStablecoin } from "../market-supply/frozen-guards";
 
 describe("assertActiveStablecoin", () => {
   const activeIds = new Set(["usdt-tether"]);

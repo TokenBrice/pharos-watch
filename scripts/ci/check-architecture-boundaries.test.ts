@@ -294,7 +294,7 @@ describe("Telegram public surface", () => {
     ["worker/src/handlers/scheduled/five-minute-telegram.ts", "worker/src/cron/telegram/maintenance/telegram-degradation-watchdog.ts"],
     ["worker/src/handlers/scheduled/daily-0300.ts", "worker/src/cron/telegram/maintenance/telegram-inactive-cleanup.ts"],
     ["worker/src/handlers/scheduled/daily-0300.ts", "worker/src/cron/telegram/maintenance/telegram-retention-cleanup.ts"],
-    ["worker/src/cron/reserve-post-sync-watchdog.ts", "worker/src/cron/telegram/sources/telegram-alert-snapshots.ts"],
+    ["worker/src/cron/live-reserves/reserve-post-sync-watchdog.ts", "worker/src/cron/telegram/sources/telegram-alert-snapshots.ts"],
   ])("permits the registered cron entry from %s to %s", (importer, target) => {
     const root = fixture();
     writeText(root, importer, `export const load = () => import("repo/${target}");`);
@@ -325,7 +325,7 @@ describe("Telegram public surface", () => {
 
   it("rejects the full publication parser in the materialization reader", () => {
     const root = fixture();
-    const reader = "worker/src/lib/report-cards-v9-materialization.ts";
+    const reader = "worker/src/lib/safety-score-v9/report-cards-v9-materialization.ts";
     writeText(root, reader, "export const value = 1;");
     expect(checkArchitectureBoundaries(root, ["materialization-no-full-parser"])).toEqual([]);
 

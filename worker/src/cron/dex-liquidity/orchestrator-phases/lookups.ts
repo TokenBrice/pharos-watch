@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/market-supply/stablecoins-cache";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";

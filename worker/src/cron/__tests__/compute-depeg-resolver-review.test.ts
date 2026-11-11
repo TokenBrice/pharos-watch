@@ -9,9 +9,9 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   buildDepegResolverReviewSnapshot,
   computeAndStoreDepegResolverReview,
-} from "../compute-depeg-resolver-review";
-import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
-import type { DdrV2StoreContracts } from "../compute-depeg-resolver";
+} from "../depeg-resolver-review/compute-depeg-resolver-review";
+import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver/depeg-resolver-review-response";
+import type { DdrV2StoreContracts } from "../depeg-resolver/compute-depeg-resolver";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { coverageRowForIncident } from "../depeg-resolver-review/coverage-rows";
 import { makeDdrSealedPublicPrediction, type DdrSealedPredictionOverrides } from "./depeg-public-projection.test-support";

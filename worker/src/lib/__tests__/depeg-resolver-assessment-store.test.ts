@@ -6,7 +6,7 @@ import {
   type DdrDiagnosticAssessmentRow,
   type DdrDiagnosticAssessmentSnapshot,
   writeDepegResolverAssessments,
-} from "../depeg-resolver-assessment-store";
+} from "../depeg-resolver/depeg-resolver-assessment-store";
 
 const baseRow: DdrDiagnosticAssessmentRow = {
   stablecoinId: "lusd-liquity",

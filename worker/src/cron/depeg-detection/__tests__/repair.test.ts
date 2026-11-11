@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
-import { rowToDepegEvent, type DepegRow } from "../../../lib/depeg-helpers";
+import { rowToDepegEvent, type DepegRow } from "../../../lib/depeg-detection/depeg-helpers";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { buildDuplicateOpenEventRepair, buildOrphanCloseRepair } from "../repair";
 import { persistDepegCommands } from "../persistence";

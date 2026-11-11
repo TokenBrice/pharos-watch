@@ -3,7 +3,7 @@ import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../../scripts/l
 import { createWorkerD1Client } from "./lib/remote-d1";
 import { createBackfillDatabase } from "./lib/backfill-d1";
 import { buildChainRpcs } from "../src/lib/chain-registry";
-import { normalizeCgApiKey } from "../src/lib/coingecko";
+import { normalizeCgApiKey } from "../src/lib/pricing/coingecko";
 
 const jobs = {
   "backfill-depegs": {

@@ -26,7 +26,7 @@ import { buildUniV3DirectMeasuredExecutionTargets } from "../../measured-executi
 import { isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 import { fetchUniswapV3BscShadowPools } from "../fetch-uniswap-v3-bsc";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import type { DexApiPool } from "../../../lib/dex-api-types";
+import type { DexApiPool } from "../../../lib/dex-liquidity/dex-api-types";
 
 const POOL = "0xf150d29d92e7460a1531cbc9d1abeab33d6998e4";
 const FACTORY = "0xdb1d10011ad0ff90774d0c6bb92e5c5c8b4461f7";

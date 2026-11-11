@@ -17,7 +17,7 @@ Applies to `worker/`.
 - Wire shapes and vocabularies belong to one schema in `shared/types/`; import that schema and its derived type instead of creating Worker-only interfaces or literal-union copies. Reuse primitive schemas and registry-derived mappings per `shared/AGENTS.md` and ADR-32.
 - Supply at publication, scoring, filtering, and history/delta boundaries uses `getCirculatingRawOrNull()` and historical `*OrNull` helpers; preserve null with an availability reason. Zero-default helpers are deleted and banned by ESLint; explicit observed zero remains zero.
 - For cron capacity and connection rules, follow `docs/process/cron-trigger-policy.md` § “Target”.
-- For D1 row null normalization and identity checks, follow `loadBlacklistCurrentBalanceMap()` in `worker/src/lib/blacklist-current-balances.ts`.
+- For D1 row null normalization and identity checks, follow `loadBlacklistCurrentBalanceMap()` in `worker/src/lib/blacklist/blacklist-current-balances.ts`.
 - Changes to `worker/wrangler.toml` or `worker/wrangler.heavy.toml` require `npm run check:worker-config`; migration changes require `npm run check:migrations`.
 
 ## Common Checks

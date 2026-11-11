@@ -7,7 +7,7 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-regis
 import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 import * as evmRpc from "../../../../lib/evm-rpc";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
-import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
+import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/market-supply/onchain-supply-exclusions";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
 vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));

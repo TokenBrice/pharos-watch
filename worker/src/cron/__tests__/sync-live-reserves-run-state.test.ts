@@ -9,9 +9,9 @@ import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 import {
   recordDeferredTail,
   selectConfiguredCoinRunQueue,
-} from "../sync-live-reserves-run-state";
+} from "../live-reserves/sync-live-reserves-run-state";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { breakerKeyForConfig, type ConfiguredCoin } from "../sync-live-reserves-shared";
+import { breakerKeyForConfig, type ConfiguredCoin } from "../live-reserves/sync-live-reserves-shared";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function makeCoin(id: string): ConfiguredCoin {

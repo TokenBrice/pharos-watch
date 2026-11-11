@@ -40,12 +40,12 @@ vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
   setCache: vi.fn(),
 }));
-vi.mock("../../lib/safety-scores", () => ({
+vi.mock("../../lib/safety-score-v9/safety-scores", () => ({
   computeSafetyScoresSnapshot: vi.fn(),
 }));
 
 import { getCache, setCache } from "../../lib/db-cache";
-import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
+import { computeSafetyScoresSnapshot } from "../../lib/safety-score-v9/safety-scores";
 import { logCronEvent } from "../../lib/cron-logger";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import {
@@ -58,7 +58,7 @@ import {
 import {
   runYieldCoverageAudit,
   summarizeAdapterLifecycle,
-} from "../yield-coverage-audit";
+} from "../yield-coverage-audit/yield-coverage-audit";
 import { AUTO_LENDING_POOL_MAP } from "../../lib/yield-config/yield-config-lending-protocols";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
@@ -67,10 +67,10 @@ import { loadDlStablecoinPools } from "../yield-sync/sources-dl";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
-import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-dispositions";
+import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-audit/yield-coverage-review-dispositions";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
-import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
+import type { PublishedSafetyScoresResultMap } from "../../lib/safety-score-v9/safety-scores";
 import { findStaleVenueRiskScores, type StaleVenueRiskScore } from "@shared/lib/yield-source-risk-registry";
 
 const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);

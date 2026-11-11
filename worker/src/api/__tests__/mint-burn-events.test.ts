@@ -5,10 +5,10 @@ import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleMintBurnEvents } from "../mint-burn-events";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-pipeline/mint-burn-publication";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/flow-aggregate";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 
 function mockD1(tables: MockTableConfig[] = []) {

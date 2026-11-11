@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveMarketCap } from "../resolve-market-cap";
+import { resolveMarketCap } from "../market-supply/resolve-market-cap";
 
 describe("resolveMarketCap", () => {
   it("returns cgMcap when values agree within threshold", () => {

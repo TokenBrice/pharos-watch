@@ -24,9 +24,9 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
-import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
+import { buildTapeEventId, deriveIssuerId } from "./tape-event-helpers";
 import { chunkArray } from "../db";
-import type { TapeEventInsert } from "../tape-event-types";
+import type { TapeEventInsert } from "./tape-event-types";
 import {
   finalizeProjectorBatch,
   fetchRowsWithTieExpansion,

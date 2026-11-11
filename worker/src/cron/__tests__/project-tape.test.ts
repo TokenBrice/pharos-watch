@@ -3,7 +3,7 @@ import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mo
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PlacedProjectTapeResultSchema as TapeResult } from "@shared/types/placed-executor";
-import { projectTape } from "../project-tape";
+import { projectTape } from "../tape/project-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/tape-projectors/__tests__/test-support";
 import { projectCemeteryEntries } from "../../lib/tape-projectors/cemetery";

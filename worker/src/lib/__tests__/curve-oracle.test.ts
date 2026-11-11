@@ -7,7 +7,7 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
 }));
 
-import { fetchCurveOracleEma } from "../curve-onchain";
+import { fetchCurveOracleEma } from "../pricing/curve-onchain";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmUint256AtBlock } from "../evm-rpc";
 
 describe("fetchCurveOracleEma", () => {

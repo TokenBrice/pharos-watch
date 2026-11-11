@@ -14,7 +14,7 @@ export function getDailyCronSentinelSources(db: D1Database, options: DailyCronSe
   return [
     {
       source: "supply-reconciliation",
-      run: async () => (await import("./mint-burn-reconciliation-watchdog")).runMintBurnReconciliationWatchdog(db, {
+      run: async () => (await import("./mint-burn/mint-burn-reconciliation-watchdog")).runMintBurnReconciliationWatchdog(db, {
         nowSec: options.nowSec,
         operatorTelegramCreds: options.operatorTelegramCreds ?? null,
         signal: options.signal,
@@ -22,7 +22,7 @@ export function getDailyCronSentinelSources(db: D1Database, options: DailyCronSe
     },
     {
       source: "growth",
-      run: async () => (await import("./mint-burn-growth-watchdog")).runMintBurnGrowthWatchdog(db, options.signal, {
+      run: async () => (await import("./mint-burn/mint-burn-growth-watchdog")).runMintBurnGrowthWatchdog(db, options.signal, {
         disabledIds: options.mintBurnDisabledIds,
         disabledSymbols: options.mintBurnDisabledSymbols,
       }),
@@ -33,7 +33,7 @@ export function getDailyCronSentinelSources(db: D1Database, options: DailyCronSe
     },
     {
       source: "repair-debt",
-      run: async () => (await import("../lib/repair-tasks")).runWorkerRepairTaskRunner(db, {
+      run: async () => (await import("../lib/depeg-resolver/repair-tasks")).runWorkerRepairTaskRunner(db, {
         nowSec: options.nowSec,
         signal: options.signal,
         enabled: options.repairRunnerEnabled,

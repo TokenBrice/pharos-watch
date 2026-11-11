@@ -4,7 +4,7 @@ import satoriStandalone from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
-import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/pricing/native-peg-quote-cache";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { handleOg, resetOgWasmInitializationForTests } from "../og";
 import { DepegCard, type DepegCardData } from "../../lib/og-templates/depeg-card";

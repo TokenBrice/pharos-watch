@@ -3,7 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   DIGEST_STYLE_GATE_MODE_CACHE_KEYS,
   resolveDigestStyleGateMode,
-} from "../digest-style-gate";
+} from "../digest/digest-style-gate";
 
 function modeTable(kind: "daily" | "weekly", value: string | null) {
   return {

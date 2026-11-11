@@ -13,7 +13,7 @@ import {
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
   responseFromBufferedBody,
-} from "../../lib/pricing-provider-lifecycle";
+} from "../../lib/pricing/pricing-provider-lifecycle";
 import { getCache, setCache } from "../../lib/db-cache";
 import { parseJson, tryParseJson } from "../../lib/json-parse";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -27,7 +27,7 @@ import {
   createPricingAssetAttempt,
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
-} from "../../lib/pricing-provider-diagnostics";
+} from "../../lib/pricing/pricing-provider-diagnostics";
 import {
   applyResolvedPrice,
   type PeggedAsset,

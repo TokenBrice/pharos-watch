@@ -1,4 +1,4 @@
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../lib/market-supply/stablecoins-cache";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -14,7 +14,7 @@ import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-
 import {
   loadActiveSafetyScoreIndex,
   type ActiveSafetyScoreIndex,
-} from "../lib/safety-score-index";
+} from "../lib/safety-score-v9/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { assessSafetyScoreAcceptedEvidence } from "@shared/lib/safety-score-publication";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";

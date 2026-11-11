@@ -6,7 +6,7 @@ import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test
 import { registerStablecoinParameterContract } from "../../../src/test-helpers/__shared/endpoint-contracts";
 import type { ChainRpcConfig } from "../../../src/lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../../src/lib/evm-selectors";
-import { fetchHistoricalFxRates } from "../../../src/lib/backfill-fx";
+import { fetchHistoricalFxRates } from "../../../src/lib/pricing/backfill-fx";
 import { ethereumSupplyRpc, supplyRpcResponse } from "./backfill-supply-history.test-support";
 
 function mockD1(
@@ -60,8 +60,8 @@ vi.mock("../../../src/lib/evm-rpc", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../src/lib/historical-market-prices", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../src/lib/historical-market-prices")>();
+vi.mock("../../../src/lib/pricing/historical-market-prices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/lib/pricing/historical-market-prices")>();
   return {
     ...actual,
     fetchMarketBackfillPriceSeries: vi.fn(async () => ({
@@ -81,10 +81,10 @@ vi.mock("../../../src/lib/historical-market-prices", async (importOriginal) => {
 });
 
 import { handleBackfillSupplyHistoryTrusted } from "../backfill-supply-history";
-import { fetchMarketBackfillPriceSeries } from "../../../src/lib/historical-market-prices";
+import { fetchMarketBackfillPriceSeries } from "../../../src/lib/pricing/historical-market-prices";
 
-vi.mock("../../../src/lib/backfill-fx", async () => {
-  const actual = await vi.importActual<typeof import("../../../src/lib/backfill-fx")>("../../../src/lib/backfill-fx");
+vi.mock("../../../src/lib/pricing/backfill-fx", async () => {
+  const actual = await vi.importActual<typeof import("../../../src/lib/pricing/backfill-fx")>("../../../src/lib/pricing/backfill-fx");
   return {
     ...actual,
     fetchHistoricalFxRates: vi.fn(async () => ({})),

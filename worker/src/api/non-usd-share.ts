@@ -10,8 +10,8 @@ import {
   computeNonUsdShareHistory,
   readNonUsdShareHistory,
   sampleNonUsdShareHistory,
-} from "../lib/non-usd-share-history";
-import type { ComputedNonUsdShareHistory } from "../lib/non-usd-share-history";
+} from "../lib/market-supply/non-usd-share-history";
+import type { ComputedNonUsdShareHistory } from "../lib/market-supply/non-usd-share-history";
 
 export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Response> => {
   const params = parseQueryParams(url.searchParams, {

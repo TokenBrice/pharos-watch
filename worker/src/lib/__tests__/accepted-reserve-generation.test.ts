@@ -5,7 +5,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { beginLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
-import { ACCEPTED_RESERVE_GENERATION_KEY, acceptedReserveMetadataMap, assessConsumedRedemptionReserves, CONSUMED_RESERVE_CARRY_FORWARD_SEC, consumedReserveInput, loadAcceptedReserveGeneration, sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
+import { ACCEPTED_RESERVE_GENERATION_KEY, acceptedReserveMetadataMap, assessConsumedRedemptionReserves, CONSUMED_RESERVE_CARRY_FORWARD_SEC, consumedReserveInput, loadAcceptedReserveGeneration, sealAcceptedReserveGeneration } from "../live-reserves/accepted-reserve-generation";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 
 const CLOCK = 1_790_000_000;

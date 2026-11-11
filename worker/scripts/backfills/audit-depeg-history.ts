@@ -4,10 +4,10 @@ import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { jsonResponse, errorResponse } from "../../src/lib/api-response";
 import { runTrustedAdminMutation } from "../../src/lib/route-wrappers";
 import { D1_BATCH_SIZE } from "../../src/lib/constants";
-import { getDepegThresholdBps } from "../../src/lib/depeg-threshold-policy";
+import { getDepegThresholdBps } from "../../src/lib/depeg-detection/depeg-threshold-policy";
 import { buildInClause, executeAtomicBatch } from "../../src/lib/db";
-import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../../src/lib/depeg-helpers";
-import type { PsiDepegEventRow } from "../../src/lib/psi-recompute";
+import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../../src/lib/depeg-detection/depeg-helpers";
+import type { PsiDepegEventRow } from "../../src/lib/psi/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
@@ -19,7 +19,7 @@ import {
 } from "./audit-depeg-history/coingecko-audit";
 import { parseAuditRequest, type AuditPaginatedRequest, type RepairMode } from "./audit-depeg-history/request";
 import { buildRecomputeStabilityStatements } from "./audit-depeg-history/stability-recompute";
-import { loadSupplyHistoryRowsForWindow, loadPsiEligibleDepegEvents } from "../../src/lib/psi-replay-inputs";
+import { loadSupplyHistoryRowsForWindow, loadPsiEligibleDepegEvents } from "../../src/lib/psi/psi-replay-inputs";
 import {
   collectSyntheticSplitGroups,
   planSyntheticSplitRepair,

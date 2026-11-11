@@ -2,7 +2,7 @@ import { DRPC_NETWORK } from "@shared/lib/drpc";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { fetchAlchemyLogs, type AlchemyLogEntry } from "../alchemy-logs";
 import { decimalNumberFromBigInt } from "../bigint";
-import type { ContractEventConfig } from "../blacklist-contracts";
+import type { ContractEventConfig } from "./blacklist-contracts";
 import { getChainRpc, logScanRpcEndpoints, registryRpcEndpoints, type ChainRpcConfig } from "../chain-registry";
 import { fetchEvmLogsForTopicWithCompleteness, type EtherscanLogEntry, type RateLimitedFetch } from "../evm-logs";
 import { fetchEvmRpcBatch, isHexBytes, parseUint256Hex } from "../evm-rpc";

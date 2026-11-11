@@ -14,7 +14,7 @@ import {
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
   type ContractEventConfig,
-} from "../../lib/blacklist-contracts";
+} from "../../lib/blacklist/blacklist-contracts";
 import type { BlacklistEventType } from "@shared/types/blacklist";
 import { getChainRpc, logScanRpcEndpoints, type ChainRpcConfig, type RpcEndpoint } from "../../lib/chain-registry";
 import {

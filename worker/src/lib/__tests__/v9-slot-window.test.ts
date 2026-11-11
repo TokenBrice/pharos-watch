@@ -1,5 +1,5 @@
 import { ZodError } from "zod";
-import * as publicMaterialization from "../report-cards-v9-materialization";
+import * as publicMaterialization from "../safety-score-v9/report-cards-v9-materialization";
 import { recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-materialization";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
@@ -32,7 +32,7 @@ import {
   waitForV9MemoryLaneRelease,
   loadV9PublicationHourAcceptedAtSec,
   type V9ExecutionWindow,
-} from "../v9-slot-window";
+} from "../safety-score-v9/v9-slot-window";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 
 interface CoreSlotFixture {

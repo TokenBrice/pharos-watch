@@ -2,7 +2,7 @@ import { CIRCUIT_SOURCE } from "../constants";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch } from "../evm-rpc";
-import { hasPublishableCurrentPrice } from "../price-publication-state";
+import { hasPublishableCurrentPrice } from "../pricing/price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   encodeUint256,

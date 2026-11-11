@@ -6,7 +6,7 @@ import type * as OnchainSupply from "../onchain-supply";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { ReserveNavSnapshotRow } from "../../../../lib/reserve-nav-price";
+import type { ReserveNavSnapshotRow } from "../../../../lib/pricing/reserve-nav-price";
 
 const supply = vi.fn();
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: [{

@@ -1,7 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
-import type { BackfillEvent } from "../../../src/lib/historical-depeg-extraction";
+import type { BackfillEvent } from "../../../src/lib/depeg-detection/historical-depeg-extraction";
 import type { BackfillReplayWindow } from "../../../src/lib/backfill-day-window";
 import { fnv1aHash } from "../../../src/lib/hash";
 

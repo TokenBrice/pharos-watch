@@ -1,0 +1,316 @@
+import {
+  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
+  DEPEG_EVENT_MIN_SUPPLY_USD,
+  DEPEG_EXTREME_MOVE_BPS,
+} from "@shared/lib/depeg-config";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { admitSupplyBuckets } from "@shared/lib/supply";
+import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
+import { binarySearchNearest } from "../binary-search";
+
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import {
+  buildPriceValidationContext,
+  type PriceReasonablenessOptions,
+  validatePriceCandidateAgainstReference,
+} from "../pricing/price-validation";
+import { getDepegThresholdBps } from "./depeg-threshold-policy";
+import type { PricePoint } from "../pricing/historical-market-prices";
+
+export const BACKFILL_MIN_CONFIRM_POINTS = 2;
+const BACKFILL_PENDING_MAX_GAP_SEC = 6 * 3600;
+// An episode peak (including the opening print) is published only when another
+// sample of the same episode comes within this distance: one wick between par
+// readings is feed noise, not an observation the event should adopt (USDC
+// 2018-10-04, sUSD 2019-06-24). Extreme crashes keep their single print.
+const PEAK_CORROBORATION_TOLERANCE_BPS = 1000;
+const PEAK_CORROBORATION_SAMPLE_WINDOW = 2;
+
+export interface SupplyPoint {
+  date: string;
+  circulating?: Record<string, number>;
+  totalCirculatingUSD?: Record<string, number>;
+  totalCirculating?: Record<string, number>;
+}
+
+export interface BackfillEvent {
+  pegType: string;
+  direction: string;
+  peakDeviationBps: number;
+  startedAt: number;
+  endedAt: number | null;
+  startPrice: number;
+  peakPrice: number;
+  recoveryPrice: number | null;
+  pegRef: number;
+}
+
+export interface SupplySnapshot {
+  ts: number;
+  supply: number;
+}
+
+export interface BackfillEventExtractionOptions {
+  forceConfirmation?: boolean;
+  confirmationMinPoints?: number;
+  confirmationMaxGapSec?: number;
+  extremeSinglePointBps?: number | null;
+  missingSupplyUsd?: number | null;
+}
+
+export function parseSupplyData(
+  tokens: SupplyPoint[],
+  getNativeUsdRate?: (timestamp: number) => number,
+): SupplySnapshot[] {
+  const map = new Map<number, number>();
+  for (const point of tokens) {
+    const ts = Number.parseInt(point.date, 10);
+    if (!Number.isFinite(ts)) continue;
+    const usd = admitSupplyBuckets(point.totalCirculatingUSD);
+    if (usd.status === "observed") {
+      map.set(ts, usd.total);
+      continue;
+    }
+    // An invalid USD record is not permission to publish a different number.
+    if (usd.status === "invalid") continue;
+    const buckets = point.totalCirculating ?? point.circulating;
+    const native = admitSupplyBuckets(buckets);
+    if (native.status !== "observed") continue;
+    // Without a conversion reference only explicitly USD buckets are usable.
+    const rate = getNativeUsdRate?.(ts) ??
+      (Object.keys(buckets!).every((key) => key === "peggedUSD") ? 1 : null);
+    if (rate == null || !Number.isFinite(rate) || rate <= 0) continue;
+    const supply = native.total * rate;
+    if (Number.isFinite(supply)) map.set(ts, supply);
+  }
+  return Array.from(map.entries())
+    .map(([ts, supply]) => ({ ts, supply }))
+    .sort((a, b) => a.ts - b.ts);
+}
+
+export function findNearestSupply(
+  supplyByDate: SupplySnapshot[],
+  timestamp: number,
+  maxDistanceSec: number = MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
+): number | null {
+  if (supplyByDate.length === 0) return null;
+  const nearest = binarySearchNearest(supplyByDate, timestamp, (snapshot) => snapshot.ts);
+  if (!nearest || Math.abs(nearest.ts - timestamp) > maxDistanceSec) return null;
+  return nearest.supply;
+}
+
+/** True when another same-direction sample lands within tolerance of the stored peak. */
+function isCorroboratedBySample(bps: number, peakBps: number): boolean {
+  return Math.abs(bps - peakBps) <= PEAK_CORROBORATION_TOLERANCE_BPS;
+}
+
+/** True when a nearby sample of the same episode lands within tolerance of the candidate peak. */
+function isCorroboratedPeak(
+  prices: readonly PricePoint[],
+  index: number,
+  bps: number,
+  direction: string,
+  pegRef: number,
+): boolean {
+  for (let offset = -1; offset <= PEAK_CORROBORATION_SAMPLE_WINDOW; offset++) {
+    if (offset === 0) continue;
+    const neighbour = prices[index + offset];
+    if (!neighbour || neighbour.price <= 0) continue;
+    const signal = deriveDepegSignal(neighbour.price, pegRef);
+    if (!signal || signal.direction !== direction) continue;
+    if (Math.abs(signal.bps - bps) <= PEAK_CORROBORATION_TOLERANCE_BPS) return true;
+  }
+  return false;
+}
+
+export function extractDepegEvents(
+  prices: PricePoint[],
+  getPegRef: (timestamp: number) => number,
+  pegType: string,
+  supplyByDate: SupplySnapshot[],
+  fxRates?: Record<string, number>,
+  priceValidationOpts?: PriceReasonablenessOptions,
+  options?: BackfillEventExtractionOptions,
+): BackfillEvent[] {
+  const threshold = getDepegThresholdBps(pegType);
+  const confirmationMinPoints = Math.max(1, options?.confirmationMinPoints ?? BACKFILL_MIN_CONFIRM_POINTS);
+  const confirmationMaxGapSec = Math.max(1, options?.confirmationMaxGapSec ?? BACKFILL_PENDING_MAX_GAP_SEC);
+  const extremeSinglePointBps = options?.extremeSinglePointBps ?? null;
+  const events: BackfillEvent[] = [];
+  let current: BackfillEvent | null = null;
+  // An opening print is the published peak only once another same-episode
+  // sample corroborates it; otherwise the episode is withheld at close.
+  let currentPeakCorroborated = false;
+  const validationContext = buildPriceValidationContext({
+    pegType,
+    navToken: priceValidationOpts?.navToken,
+    commodityOunces: priceValidationOpts?.commodityOunces,
+  });
+  let pending: {
+    direction: string;
+    count: number;
+    /** First corroborated (or extreme) sample, used as the published start. */
+    startTs: number;
+    lastTs: number;
+    peakBps: number;
+    startPrice: number;
+    peakPrice: number;
+    pegRef: number;
+    peakCorroborated: boolean;
+  } | null = null;
+
+  function resolveSupply(timestamp: number): number | null {
+    if (supplyByDate.length > 0) {
+      return findNearestSupply(supplyByDate, timestamp);
+    }
+    const missingSupplyUsd = options?.missingSupplyUsd;
+    return typeof missingSupplyUsd === "number" && Number.isFinite(missingSupplyUsd)
+      ? missingSupplyUsd
+      : null;
+  }
+
+  function promotePending(): void {
+    if (!pending) return;
+    current = {
+      pegType,
+      direction: pending.direction,
+      peakDeviationBps: pending.peakBps,
+      startedAt: pending.startTs,
+      endedAt: null,
+      startPrice: pending.startPrice,
+      peakPrice: pending.peakPrice,
+      recoveryPrice: null,
+      pegRef: pending.pegRef,
+    };
+    currentPeakCorroborated = pending.peakCorroborated;
+    pending = null;
+  }
+
+  for (let index = 0; index < prices.length; index++) {
+    const point = prices[index]!;
+    const { timestamp, price } = point;
+    if (price <= 0) continue;
+
+    const supply = resolveSupply(timestamp);
+    if (supply === null || supply < DEPEG_EVENT_MIN_SUPPLY_USD) continue;
+
+    const pegRef = getPegRef(timestamp);
+    if (pegRef <= 0) continue;
+    const decision = validatePriceCandidateAgainstReference(price, validationContext, "historical_backfill", {
+      price: pegRef,
+      type: fxRates ? "fresh" : "none",
+    });
+    if (!decision.accepted) continue;
+
+    const depegSignal = deriveDepegSignal(price, pegRef);
+    if (!depegSignal) continue;
+    const { bps, absBps, direction } = depegSignal;
+    const isLargeCap = supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD;
+
+    if (absBps >= threshold) {
+      if (current) {
+        if (current.direction !== direction) {
+          current.endedAt = timestamp;
+          current.recoveryPrice = price;
+          if (currentPeakCorroborated) events.push(current);
+          current = null;
+          currentPeakCorroborated = false;
+        } else {
+          const corroboratesStoredPeak = isCorroboratedBySample(bps, current.peakDeviationBps);
+          if (corroboratesStoredPeak) currentPeakCorroborated = true;
+          const corroboratesCandidate = isCorroboratedPeak(prices, index, bps, direction, pegRef);
+          if (!corroboratesStoredPeak && !currentPeakCorroborated && corroboratesCandidate) {
+            // The opening print never gained support: publish this first
+            // corroborated sample instead of an unverified start/peak pair.
+            current.startedAt = timestamp;
+            current.startPrice = price;
+            current.peakDeviationBps = bps;
+            current.peakPrice = price;
+            currentPeakCorroborated = true;
+          } else if (absBps > Math.abs(current.peakDeviationBps) && corroboratesCandidate) {
+            current.peakDeviationBps = bps;
+            current.peakPrice = price;
+            currentPeakCorroborated = true;
+          }
+          continue;
+        }
+      }
+
+      const requiresConfirmation = options?.forceConfirmation === true || isLargeCap;
+      // Extreme crashes are already published as single prints by policy
+      // (native-peg `extremeSinglePointBps`, or the shared 50% band), so they
+      // need no separate corroborating sample.
+      const admittedAsExtreme = absBps >= DEPEG_EXTREME_MOVE_BPS ||
+        (extremeSinglePointBps != null && absBps >= extremeSinglePointBps);
+      const bypassesConfirmation = !requiresConfirmation ||
+        (extremeSinglePointBps != null && absBps >= extremeSinglePointBps);
+      if (bypassesConfirmation) {
+        current = {
+          pegType,
+          direction,
+          peakDeviationBps: bps,
+          startedAt: timestamp,
+          endedAt: null,
+          startPrice: price,
+          peakPrice: price,
+          recoveryPrice: null,
+          pegRef,
+        };
+        currentPeakCorroborated = admittedAsExtreme;
+        pending = null;
+      } else if (!pending || pending.direction !== direction || timestamp - pending.lastTs > confirmationMaxGapSec) {
+        pending = {
+          direction,
+          count: 1,
+          startTs: timestamp,
+          lastTs: timestamp,
+          peakBps: bps,
+          startPrice: price,
+          peakPrice: price,
+          pegRef,
+          peakCorroborated: admittedAsExtreme,
+        };
+      } else {
+        pending.count++;
+        pending.lastTs = timestamp;
+        const corroboratesStoredPeak = isCorroboratedBySample(bps, pending.peakBps);
+        if (corroboratesStoredPeak) pending.peakCorroborated = true;
+        const corroboratesCandidate = isCorroboratedPeak(prices, index, bps, direction, pegRef);
+        if (!corroboratesStoredPeak && !pending.peakCorroborated && corroboratesCandidate) {
+          pending.startTs = timestamp;
+          pending.startPrice = price;
+          pending.peakBps = bps;
+          pending.peakPrice = price;
+          pending.peakCorroborated = true;
+        } else if (absBps > Math.abs(pending.peakBps) && corroboratesCandidate) {
+          pending.peakBps = bps;
+          pending.peakPrice = price;
+          pending.peakCorroborated = true;
+        }
+        if (pending.count >= confirmationMinPoints) {
+          promotePending();
+        }
+      }
+    } else {
+      if (current) {
+        current.endedAt = timestamp;
+        current.recoveryPrice = price;
+        if (currentPeakCorroborated) events.push(current);
+        current = null;
+        currentPeakCorroborated = false;
+      }
+      pending = null;
+    }
+  }
+
+  if (current) {
+    const lastTs = prices[prices.length - 1].timestamp;
+    const now = Math.floor(Date.now() / 1000);
+    if (now - lastTs > 7 * DAY_SECONDS) {
+      current.endedAt = lastTs;
+    }
+    if (currentPeakCorroborated) events.push(current);
+  }
+
+  return events;
+}

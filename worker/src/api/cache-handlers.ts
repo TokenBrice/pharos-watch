@@ -8,7 +8,7 @@ import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../lib/response-ready-cache-contracts";
-import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";
+import { normalizeStablecoinChartPoints } from "../lib/market-supply/stablecoin-charts-payload";
 
 export { handleYieldRankings } from "./yield-rankings-cache";
 

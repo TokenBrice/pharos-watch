@@ -2,9 +2,9 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,
-} from "../../lib/price-validation";
+} from "../../lib/pricing/price-validation";
 import type { PriceObservedAtMode } from "@shared/types/price";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 

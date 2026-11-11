@@ -5,7 +5,7 @@ import { decodeAbiParameters, encodeFunctionData, parseAbi } from "viem/utils";
 import { rethrowIfAborted } from "../../lib/abort";
 import { fetchEvmCodeAtBlock, fetchEvmRpcBatch } from "../../lib/evm-rpc";
 import type { EvmRpcOptions } from "../../lib/evm-rpc";
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-liquidity/dex-cron-constants";
 import { runPinnedBlockCapture } from "./evm-capture-helpers";
 import type { TrackedStablecoinMaps } from "./orchestrator-phases/lookups";
 import type { SourcePoolGraph } from "./types";

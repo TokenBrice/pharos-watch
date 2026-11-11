@@ -44,7 +44,7 @@ vi.mock("../../lib/circuit-breaker", () => ({
 
 import {
   fetchTbillRate,
-} from "../fetch-tbill-rate";
+} from "../yield-sync/fetch-tbill-rate";
 
 import { buildHardcodedUsdBenchmark, getBenchmarkKeyForPegCurrency, resolveBenchmarkForStablecoin, toYieldBenchmarkRegistry, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
 import { classifyYieldBenchmarkFreshness, YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";

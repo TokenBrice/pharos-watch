@@ -22,7 +22,7 @@ vi.mock("../alchemy-logs", () => ({
   ),
 }));
 
-vi.mock("../mint-burn-bridge-classifier", () => ({
+vi.mock("../mint-burn-pipeline/mint-burn-bridge-classifier", () => ({
   classifyBridgeAwareBurnRows: vi.fn((rows: Array<{ direction: string; tx_hash: string; burn_type: string | null; burn_review_reason: string | null }>) => {
     for (const row of rows) {
       if (row.direction !== "burn") continue;
@@ -41,11 +41,11 @@ vi.mock("../mint-burn-bridge-classifier", () => ({
 }));
 
 import { getAlchemyTransactionContextBatchMany } from "../alchemy-logs";
-import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
+import { classifyBridgeAwareBurnRows } from "../mint-burn-pipeline/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import { applySupplyExcludedProtocolInternalFlows } from "../mint-burn-pipeline/reviewed-protocol-flows";
-import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../onchain-supply-exclusions";
+import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../market-supply/onchain-supply-exclusions";
 import {
   collectAffectedHours,
   insertMintBurnRows,
@@ -60,8 +60,8 @@ import {
 import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
 import { reconcileAtomicRoundtripGroups } from "../mint-burn-pipeline/roundtrip-detection";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
-import { MINT_BURN_CONFIGS, type MintBurnEventDef } from "../mint-burn-contracts";
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { MINT_BURN_CONFIGS, type MintBurnEventDef } from "../mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../mint-burn-pipeline/mint-burn-contract-identity";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";

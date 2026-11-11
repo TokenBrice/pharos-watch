@@ -3,14 +3,14 @@ import { insertBlacklistRows } from "../persistence";
 import { makePendingBlacklistRow } from "./blacklist.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import { getBlacklistConfigsForSymbolAndChain } from "../../../lib/blacklist-contracts";
+import { getBlacklistConfigsForSymbolAndChain } from "../../../lib/blacklist/blacklist-contracts";
 import { parseEvmLogsWithCoverage } from "../evm-source";
 import { parseTronEvent } from "../tron-source";
 import { buildBlacklistActiveRecords } from "@shared/lib/blacklist-active-records";
-import { mapBlacklistEventRow } from "../../../lib/blacklist-api";
+import { mapBlacklistEventRow } from "../../../lib/blacklist/blacklist-api";
 import { handleBlacklist } from "../../../api/blacklist";
-import { materializeBlacklistSummarySnapshot, handleBlacklistSummary } from "../../../lib/blacklist-summary-service";
-import { loadBlacklistCurrentBalanceMap } from "../../../lib/blacklist-current-balances";
+import { materializeBlacklistSummarySnapshot, handleBlacklistSummary } from "../../../lib/blacklist/blacklist-summary-service";
+import { loadBlacklistCurrentBalanceMap } from "../../../lib/blacklist/blacklist-current-balances";
 import { reconcileBlacklistIdentities } from "../../../lib/blacklist/identity-reconciliation";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import {

@@ -4,7 +4,7 @@ import {
   ALERT_RESERVE_SOURCE_GENERATION,
   assessAlertReserveSourceCache,
   buildAlertReserveSourceEnvelope,
-} from "../alert-reserve-source-cache";
+} from "../live-reserves/alert-reserve-source-cache";
 
 const nowSec = 2_000_000_000;
 const producerIntervalSec = CRON_INTERVALS["sync-live-reserves"];

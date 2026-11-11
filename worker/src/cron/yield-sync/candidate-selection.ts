@@ -5,9 +5,9 @@ import {
   type PysSourceRiskPenaltyInput,
 } from "@shared/lib/yield-scoring";
 import { type YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
-import { resolveEvidenceNullReason } from "../../lib/yield-ranking-helpers";
+import { resolveEvidenceNullReason } from "../../lib/yield/yield-ranking-helpers";
 import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
-import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
+import { isRealSourceSwitch } from "../../lib/yield/yield-history-ownership-handoffs";
 import { countSourceSwitchesWithTail } from "./history-evidence";
 import { type YieldHistorySnapshotRow } from "./history-repository";
 import type { ConfidenceTier, EvaluatedYieldSource } from "./evaluation";

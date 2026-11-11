@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-liquidity/dex-api-common";
 import {
   buildDexDirectApiFetchers,
   integrateDirectApiLiquidityPhase,

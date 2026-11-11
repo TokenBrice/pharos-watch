@@ -1,4 +1,4 @@
-import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
+import { LEGACY_SOLOMON_USDV_ID } from "../../lib/pricing/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
@@ -7,7 +7,7 @@ import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { DLPriceEntrySchema, DLPriceResponseSchema } from "../../lib/schemas";
-import { endpointLabel, type PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import { endpointLabel, type PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
 import {
   applyResolvedPrice,
   hasMissingPrice,

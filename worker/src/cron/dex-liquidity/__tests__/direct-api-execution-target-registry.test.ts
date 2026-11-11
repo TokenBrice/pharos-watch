@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-liquidity/dex-api-common";
 import {
   hasRegisteredDexExecutionTargetOutput,
 } from "../execution-target-registry";

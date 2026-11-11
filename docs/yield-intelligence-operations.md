@@ -250,10 +250,10 @@ The `/yield/` coin index groups the complete active yield-bearing compact regist
 
 | Surface | Owner |
 | --- | --- |
-| Yield resolution and publication | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/` |
-| Optional slower source families | `worker/src/cron/sync-yield-supplemental.ts` |
+| Yield resolution and publication | `worker/src/cron/yield-sync/sync-yield-data.ts`, `worker/src/cron/yield-sync/` |
+| Optional slower source families | `worker/src/cron/yield-sync/sync-yield-supplemental.ts` |
 | Benchmark registry | `worker/src/cron/tbill-sources/providers.ts` |
-| Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts`, `worker/src/lib/yield-ranking-helpers.ts` |
+| Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-sync/yield-helpers.ts`, `worker/src/lib/yield/yield-ranking-helpers.ts` |
 | Rankings and history APIs | `worker/src/api/cache-handlers.ts`, `worker/src/api/yield-history.ts` |
 | Shared wire types | `shared/types/yield.ts`, `shared/types/yield-summary.ts` |
 | Frontend queries and formatting | `src/hooks/api-hooks.ts`, `src/lib/yield-constants.ts` |

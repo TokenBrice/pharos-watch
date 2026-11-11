@@ -4,7 +4,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { assessFreshnessTimestamp } from "../api-freshness-age";
 import { CRON_TIMEOUT_MS } from "../cron-timeouts";
 import { throwIfAborted } from "../abort";
-import { loadStablecoinsCache } from "../stablecoins-cache";
+import { loadStablecoinsCache } from "../market-supply/stablecoins-cache";
 import type { PersistedJsonDecodeReason } from "./contracts";
 import { loadDewsSourceState } from "./source-state";
 

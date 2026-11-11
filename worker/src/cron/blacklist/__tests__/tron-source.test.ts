@@ -13,9 +13,9 @@ vi.mock("../../../lib/abort", async (importOriginal) => {
 });
 
 import { fetchTronEventsIncremental, parseTronEvent, validateTronPaginationUrl } from "../tron-source";
-import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../../lib/blacklist/blacklist-contracts";
 import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
-import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { ContractEventConfig } from "../../../lib/blacklist/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 
 function findConfig(stablecoinId: string) {

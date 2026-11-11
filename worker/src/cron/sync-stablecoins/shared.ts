@@ -15,15 +15,15 @@ import {
   SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC,
 } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache } from "../../lib/db-cache";
-import { getPriceCache, type PriceCacheEntry } from "../../lib/price-cache";
+import { getPriceCache, type PriceCacheEntry } from "../../lib/pricing/price-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import type { BackingType, PegCurrency } from "@shared/types/core";
 import type { PeggedAsset } from "./enrich-prices-shared";
-import type { PriceValidationReferences } from "../../lib/price-validation";
-import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
-import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
+import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/pricing/fx-rate-state";
+import { validateCompositePricingSourceFreshness } from "../../lib/pricing/pricing-source-freshness";
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;

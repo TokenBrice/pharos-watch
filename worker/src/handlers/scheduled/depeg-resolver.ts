@@ -1,7 +1,7 @@
 import type { ScheduledRuntimeContext } from "./context";
 import { parseStablecoinsCapabilities } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
-import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
+import { runV9AfterCoreWithinWindow } from "../../lib/safety-score-v9/v9-slot-window";
 
 const DDR_WINDOW_MS = 2 * 60_000;
 const DDR_MINIMUM_REMAINING_MS = 45_000;
@@ -56,7 +56,7 @@ export function buildDepegResolverSlotGroups(runtime: ScheduledRuntimeContext) {
               runtime.slotStartedAt,
             );
             const { computeDepegResolver } = await import(
-              "../../cron/compute-depeg-resolver"
+              "../../cron/depeg-resolver/compute-depeg-resolver"
             );
             return computeDepegResolver({
               db: runtime.db,

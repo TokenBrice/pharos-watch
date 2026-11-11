@@ -6,12 +6,12 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { BluechipRating } from "@shared/types/bluechip";
-import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist/blacklist-contracts";
 import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
-import { BLACKLIST_CONFIG_STALE_AGE_SEC, loadBlacklistConfigWatchConditions } from "../operator-watch-blacklist";
+import { BLACKLIST_CONFIG_STALE_AGE_SEC, loadBlacklistConfigWatchConditions } from "../blacklist/operator-watch-blacklist";
 import { loadCanaryOperatorWatch } from "../operator-watch-canary";
 import {
   loadDexYieldWatchConditions,
@@ -20,11 +20,11 @@ import {
 } from "../operator-watch-dex-yield";
 import {
   loadMintBurnStuckConfigWatchConditions,
-} from "../operator-watch-mintburn";
+} from "../mint-burn/operator-watch-mintburn";
 import {
   buildPricingOperatorConditions,
   pricingOperatorRuleIds,
-} from "../operator-watch-pricing";
+} from "../pricing/operator-watch-pricing";
 import { loadMintBurnStuckConfigs, MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY } from "../mint-burn/run-state";
 import { loadProbeOperatorWatch } from "../operator-watch-probe";
 

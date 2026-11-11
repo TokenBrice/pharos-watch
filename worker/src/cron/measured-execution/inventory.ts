@@ -6,9 +6,9 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import { SolanaDexNativeTargetSchema, type SolanaDexNativeTarget, type SolanaDexShadowTarget } from "@shared/types/solana-dex-bank";
-import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { DexApiPool } from "../../lib/dex-api-types";
-import { getMeasuredTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
+import type { DexApiPool } from "../../lib/dex-liquidity/dex-api-types";
+import { getMeasuredTokenReferenceUsdPrice } from "../../lib/dex-liquidity/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "./registry";
 import { normalizeEvmAddress } from "../../lib/evm-selectors";

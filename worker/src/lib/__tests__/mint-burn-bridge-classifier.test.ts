@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { classifyBridgeAwareBurnRows } from "../mint-burn-bridge-classifier";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
-import { BRIDGE_TOPICS } from "../mint-burn-bridge-classifier-protocols";
+import { classifyBridgeAwareBurnRows } from "../mint-burn-pipeline/mint-burn-bridge-classifier";
+import { MINT_BURN_CONFIGS } from "../mint-burn-pipeline/mint-burn-contracts";
+import { BRIDGE_TOPICS } from "../mint-burn-pipeline/mint-burn-bridge-classifier-protocols";
 import { BRIDGE_RECEIPTS, makeBridgeRow, rebindReceipt, receiptConfig, receiptContext, receiptRows, type BridgeReceipt } from "./mint-burn-bridge-classifier.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { collectAffectedHours, persistMintBurnRows, recalcAffectedHours } from "../mint-burn-pipeline/persistence";

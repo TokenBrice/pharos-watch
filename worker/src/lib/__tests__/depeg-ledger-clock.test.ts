@@ -4,7 +4,7 @@ import {
   latestDepegLedgerRun,
   loadDepegCensusRuns,
   loadLatestDepegLedgerRunAt,
-} from "../depeg-ledger-clock";
+} from "../depeg-detection/depeg-ledger-clock";
 
 const fixtures = createLatestSchemaFixtureTracker();
 

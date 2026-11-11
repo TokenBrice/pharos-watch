@@ -5,14 +5,14 @@ import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { StablecoinData } from "@shared/types/supply";
-import type { DexApiPool } from "../../lib/dex-api-common";
+import type { DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
 import type { PoolProcessingRejection } from "../dex-liquidity/process-pool-types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
-import * as priceValidation from "../../lib/price-validation";
-import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
+import * as priceValidation from "../../lib/pricing/price-validation";
+import * as realPoolShaping from "../../lib/dex-liquidity/dex-api-pool-shaping";
 import { CRON_TIMEOUT_MS, createSlotDeadline } from "../../lib/cron-timeouts";
 import { getCronMetadataBudgetBytes } from "../../lib/cron-metadata-persistence";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
@@ -280,15 +280,15 @@ vi.mock("../dex-liquidity/fetch-aero", async (importOriginal) => ({
 vi.mock("../dex-liquidity/fetch-uniswap-v3-bsc", () => ({
   fetchUniswapV3BscShadowPools: vi.fn(async () => makeDirectApiResult()),
 }));
-vi.mock("../../lib/stablecoins-cache", async () => {
-  const actual = await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache");
+vi.mock("../../lib/market-supply/stablecoins-cache", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/market-supply/stablecoins-cache")>("../../lib/market-supply/stablecoins-cache");
   return {
     ...actual,
     loadStablecoinsCache: vi.fn(async () => phaseFixtures.current.stablecoinsCache),
   };
 });
-vi.mock("../../lib/dex-api-common", async () => {
-  const actual = await vi.importActual<typeof import("../../lib/dex-api-common")>("../../lib/dex-api-common");
+vi.mock("../../lib/dex-liquidity/dex-api-common", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/dex-liquidity/dex-api-common")>("../../lib/dex-liquidity/dex-api-common");
   return {
     ...actual,
     convertToGtNewPools: vi.fn(() => new Map()),
@@ -312,8 +312,8 @@ import {
   markDexLiquidityScoringStageConsumed,
   persistDexLiquidityScoringStage as persistStage,
 } from "../dex-liquidity/scoring-stage";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
+import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-liquidity/dex-api-common";
 import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
 import { fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";

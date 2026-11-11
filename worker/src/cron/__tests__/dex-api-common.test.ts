@@ -7,7 +7,7 @@ import {
   hydrateDirectApiPoolMetadata,
   normalizeDexApiPoolsForMerge,
   type DexApiPool,
-} from "../../lib/dex-api-common";
+} from "../../lib/dex-liquidity/dex-api-common";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
 
 const MOCK_POOL: DexApiPool = {

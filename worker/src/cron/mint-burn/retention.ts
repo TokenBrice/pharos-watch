@@ -2,17 +2,17 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { mintBurnHourlyBucketAggregatesSql } from "../../lib/mint-burn-pipeline/hourly-aggregates";
-import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../../lib/mint-burn-hourly-valuation";
+import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../../lib/mint-burn-pipeline/mint-burn-hourly-valuation";
 import { runCappedPruneFamily } from "../shared/capped-delete";
-import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
-import { mintBurnTapeClaimStaleSql } from "../../lib/mint-burn-tape-claim";
-import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { tapeProjectorCursorKey } from "../../lib/tape-projectors/tape-event-store";
+import { mintBurnTapeClaimStaleSql } from "../../lib/mint-burn-pipeline/mint-burn-tape-claim";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError, runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { mintBurnSupplyProofAcceptedSql } from "../../lib/mint-burn-supply-proofs";
-import { MINT_BURN_EVENT_RETENTION_SEC, MINT_BURN_HOURLY_RETENTION_SEC } from "../../lib/mint-burn-retention-config";
+import { mintBurnSupplyProofAcceptedSql } from "../../lib/mint-burn-pipeline/mint-burn-supply-proofs";
+import { MINT_BURN_EVENT_RETENTION_SEC, MINT_BURN_HOURLY_RETENTION_SEC } from "../../lib/mint-burn-pipeline/mint-burn-retention-config";
 
 export { MINT_BURN_EVENT_RETENTION_SEC, MINT_BURN_HOURLY_RETENTION_SEC };
 

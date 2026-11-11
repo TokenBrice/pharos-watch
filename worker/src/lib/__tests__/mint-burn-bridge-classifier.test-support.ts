@@ -1,6 +1,6 @@
-import type { MintBurnBridgeClassifiableRow, MintBurnTxContext } from "../mint-burn-bridge-classifier";
-import type { MintBurnContractConfig } from "../mint-burn-contracts";
-import { BRIDGE_TOPICS } from "../mint-burn-bridge-classifier-protocols";
+import type { MintBurnBridgeClassifiableRow, MintBurnTxContext } from "../mint-burn-pipeline/mint-burn-bridge-classifier";
+import type { MintBurnContractConfig } from "../mint-burn-pipeline/mint-burn-contracts";
+import { BRIDGE_TOPICS } from "../mint-burn-pipeline/mint-burn-bridge-classifier-protocols";
 import receipts from "./fixtures/mint-burn-bridge-receipts.json";
 import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters } from "viem/utils";
 

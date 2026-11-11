@@ -215,7 +215,7 @@ describe("Aero run budget", () => {
 
 describe("Aero price evidence", () => {
   it("emits no direct price observation from tracked references alone", async () => {
-    const { extractPriceObservations } = await import("../../../lib/dex-api-pool-shaping");
+    const { extractPriceObservations } = await import("../../../lib/dex-liquidity/dex-api-pool-shaping");
     const pool = {
       source: "aero-basic" as const, chain: "base", poolAddress: STABLE_POOL, poolType: "aero-stable",
       tokens: [{ address: USDC, symbol: "USDC", decimals: 6 }, { address: USDT, symbol: "USDT", decimals: 6 }],

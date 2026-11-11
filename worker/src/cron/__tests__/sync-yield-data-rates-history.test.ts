@@ -12,8 +12,8 @@ import {
 } from "./sync-yield-data.test-support";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { syncYieldData } from "../sync-yield-data";
-import * as yieldHelpersModule from "../yield-helpers";
+import { syncYieldData } from "../yield-sync/sync-yield-data";
+import * as yieldHelpersModule from "../yield-sync/yield-helpers";
 import { getCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
@@ -26,7 +26,7 @@ import {
   installYieldCacheReader,
 } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
-import type * as YieldHelpers from "../yield-helpers";
+import type * as YieldHelpers from "../yield-sync/yield-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getPublishableNonOnchainCoverageIds } from "../yield-sync/health-policy";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
@@ -140,7 +140,7 @@ describe("syncYieldData", () => {
   it("uses the oldest available 7-45 day price anchor for young navToken coverage", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const { db, sqlite } = sqliteFixtures.open();
-    const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
+    const actual = await vi.importActual<typeof YieldHelpers>("../yield-sync/yield-helpers");
     vi.spyOn(yieldHelpersModule, "computeApyFromPrice").mockImplementation(actual.computeApyFromPrice);
     const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES (?, ?, ?, ?, ?)");
     for (const [days, price] of [[0, 1.05], [10, 1.04], [30, 1.01], [46, 0.99], [6, 1.045]]) {

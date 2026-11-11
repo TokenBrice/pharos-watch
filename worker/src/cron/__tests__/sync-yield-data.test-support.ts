@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
+import type { PublishedSafetyScoresResultMap } from "../../lib/safety-score-v9/safety-scores";
 import type * as ChainRegistryModule from "../../lib/chain-registry";
 import type * as YieldRateSourcesConfig from "../../lib/yield-config/yield-config-rate-sources";
 import type { MockRegistryStablecoin } from "../../test-helpers/cron/mock-registry";
@@ -108,8 +108,8 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/supply-history-db", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/supply-history-db")>();
+vi.mock("../../lib/market-supply/supply-history-db", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../../lib/market-supply/supply-history-db")>();
   return {
     ...orig,
     getFirstSeenDates: vi.fn(async () => new Map()),
@@ -129,8 +129,8 @@ vi.mock("../../lib/chain-registry", async (importOriginal) => {
 });
 
 // Stub yield-helpers — keep matchAllDlPools real (pure function, no I/O)
-vi.mock("../yield-helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../yield-helpers")>();
+vi.mock("../yield-sync/yield-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/yield-helpers")>();
   return {
     ...actual,
     computeApyFromRate: vi.fn(() => 5.0),
@@ -181,7 +181,7 @@ vi.mock("@shared/lib/peg-score", () => ({
   coinTrackingStart: vi.fn(() => 1600000000),
 }));
 
-vi.mock("../../lib/depeg-helpers", () => ({
+vi.mock("../../lib/depeg-detection/depeg-helpers", () => ({
   rowToDepegEvent: vi.fn((row: unknown) => row),
 }));
 
@@ -212,12 +212,12 @@ import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
-import * as safetyScoresModule from "../../lib/safety-scores";
+import * as safetyScoreActiveSourceModule from "../../lib/safety-score-v9/safety-score-active-source";
+import * as safetyScoresModule from "../../lib/safety-score-v9/safety-scores";
 import * as yieldRateSources from "../../lib/yield-config/yield-config-rate-sources";
 import * as yieldPools from "../../lib/yield-config/yield-config-pools";
 import * as yieldExplicitPools from "../../lib/yield-config/yield-config-explicit-pools";
-import * as yieldHelpersModule from "../yield-helpers";
+import * as yieldHelpersModule from "../yield-sync/yield-helpers";
 import {
   healthyRiskFreeRateCacheRow,
   installYieldCacheReader,

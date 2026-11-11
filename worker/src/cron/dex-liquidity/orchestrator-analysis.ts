@@ -4,7 +4,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata, type DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 import { round4 } from "@shared/lib/math";
 import { median } from "@shared/lib/stats";

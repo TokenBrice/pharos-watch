@@ -13,7 +13,7 @@ vi.mock("../sync-stablecoins/publication", () => ({
   runStablecoinsPostIntakePublication: stages.publish,
 }));
 
-import { syncStablecoins } from "../sync-stablecoins";
+import { syncStablecoins } from "../market-supply/sync-stablecoins";
 
 beforeEach(() => {
   vi.clearAllMocks();

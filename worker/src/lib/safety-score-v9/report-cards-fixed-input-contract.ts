@@ -1,0 +1,550 @@
+import { z } from "zod";
+import { PegSummaryCoinSchema } from "@shared/types/peg";
+import { ExitOutputPriceObservationSchema } from "@shared/types/exit-output-price";
+import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
+import { ReserveSliceSchema } from "@shared/types/reserves";
+import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
+import { sortedRecord } from "@shared/lib/compare";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
+import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { ReviewedDeploymentUnitPartitionSchema, ReviewedEconomicDeploymentPartitionSchema, XautRepresentationGroupSupplyAttributionV2Schema } from "@shared/types/safety-score-v9-supply-attribution";
+import {
+  SafetyScoreV9DeploymentSupplyCensusBindingSchema,
+  SafetyScoreV9DeploymentSupplyCensusSchema,
+} from "@shared/types/safety-score-v9-deployment-supply-census";
+import {
+  projectSafetyScoreV9PegScoreResult,
+  SafetyScoreV9PegProvenanceSummarySchema,
+} from "./peg-provenance";
+import {
+  normalizeReviewedDeploymentAttribution,
+  reviewedDeploymentAttributionValidationError,
+  normalizeReviewedEconomicDeploymentAttribution,
+  reviewedEconomicDeploymentAttributionValidationError,
+} from "./supply-attribution-contract";
+import {
+  normalizeXautRepresentationGroupAttribution,
+  XAUT_ASSET_ID,
+  xautRepresentationGroupAttributionValidationError,
+} from "./xaut-supply-attribution-contract";
+import {
+  PipelineGapByAssetIdSchema, assertPipelineGapCapture, normalizePipelineGapByAssetId,
+  type PipelineGapByAssetId,
+} from "@shared/lib/report-cards-fixed-input-identity";
+
+const FreshnessEntrySchema = z.object({
+  updatedAt: z.number().finite().nonnegative().nullable(),
+  ageSeconds: z.number().finite().nonnegative().nullable(),
+  stale: z.boolean(),
+});
+
+const NavPriceObservationSchema = z.strictObject({
+  priceUsd: z.number().finite().positive(),
+  sourceId: z.string().min(1),
+  observedAtSec: z.number().int().nonnegative(),
+  confidence: z.enum(["high", "medium", "low", "unknown"]),
+});
+
+const CanonicalLockMintSupplyAttributionSchema = z.strictObject({
+  model: z.literal("canonical-lock-mint-partition-v1"),
+  observedAtSec: z.number().int().nonnegative(),
+  currentSupplyUsdByChain: z
+    .record(z.string().trim().min(1), z.number().finite().positive())
+    .refine((rows) => Object.keys(rows).length >= 2, {
+      message: "V9 lock/mint attribution requires canonical and pooled supply rows",
+    }),
+});
+
+export const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model", [
+  CanonicalLockMintSupplyAttributionSchema,
+  XautRepresentationGroupSupplyAttributionV2Schema,
+  ReviewedDeploymentUnitPartitionSchema,
+  ReviewedEconomicDeploymentPartitionSchema,
+]);
+
+export type SafetyScoreV9SupplyAttribution = z.infer<typeof SafetyScoreV9SupplyAttributionSchema>;
+
+/** Per-asset DEX pool coverage of circulating supply. */
+const DexDeploymentSupplyCoverageSchema = z.strictObject({
+  totalSupplyUsd: z.number().finite().positive(),
+  observedSupplyUsd: z.number().finite().nonnegative(),
+  verifiedNoPoolsSupplyUsd: z.number().finite().nonnegative(),
+  providerInaccessibleSupplyUsd: z.number().finite().nonnegative(),
+  unknownSupplyUsd: z.number().finite().nonnegative(),
+  observedSupplyRatio: z.number().finite().min(0).max(1),
+  verifiedNoPoolsSupplyRatio: z.number().finite().min(0).max(1),
+  providerInaccessibleSupplyRatio: z.number().finite().min(0).max(1),
+  unknownSupplyRatio: z.number().finite().min(0).max(1),
+  unknownChains: z.array(z.string().min(1)),
+});
+
+export type DexDeploymentSupplyCoverage = z.infer<typeof DexDeploymentSupplyCoverageSchema>;
+
+/**
+ * The v10.42 directional peg input. `activeDepegPeakBpsById` keeps its
+ * any-direction semantics as the summary's consistency witness; this object
+ * carries the premium-weighted score and the discount-only peak the caps read.
+ * Ids and the `premiumWeight` admission check are asserted by
+ * {@link assertSafetyScoreV9DirectionalPegConsistency} and the fact-set entry.
+ */
+const SafetyScoreV9DirectionalPegSchema = z.strictObject({
+  premiumWeight: z.number().finite().min(0).max(1),
+  // One row per captured peg row: a marker classifies an absent row, null is an
+  // observed "no score" (insufficient data), never a missing one.
+  pegScoreById: z.record(z.string().min(1), z.number().int().min(0).max(100).nullable()),
+  // Max |peak| over open, audit-eligible, below-peg events, or null when every
+  // open event is a premium. Keyed by exactly the `activeDepegPeakBpsById` ids
+  // so an absent entry stays distinguishable from an observed "no discount".
+  activeDiscountPeakBpsById: z.record(z.string().min(1), z.number().finite().positive().nullable()),
+});
+
+export type SafetyScoreV9DirectionalPeg = z.infer<typeof SafetyScoreV9DirectionalPegSchema>;
+
+export function createFixedInputPayloadFields<
+  TPublicationHealth extends z.ZodType,
+  TChainCirculating extends z.ZodType,
+  TAfterRedemption extends z.ZodRawShape,
+  TBeforeLiveFallback extends z.ZodRawShape,
+>(options: {
+  publicationHealthSchema: TPublicationHealth;
+  chainCirculatingByIdSchema: TChainCirculating;
+  afterRedemptionBackstopMap: TAfterRedemption;
+  beforeLiveToFallbackCoins: TBeforeLiveFallback;
+}) {
+  return {
+    capturedAt: z.string().datetime(),
+    sourceGeneration: z.string().min(1),
+    registryRevision: z.string().min(1),
+    methodologyVersion: z.string().min(1),
+    clockSec: z.number().int().nonnegative(),
+    updatedAt: z.number().int().nonnegative(),
+    liquidityStale: z.boolean(),
+    redemptionStale: z.boolean(),
+    inputFreshness: z.object({
+      dexLiquidity: FreshnessEntrySchema,
+      redemptionBackstops: FreshnessEntrySchema,
+    }),
+    v9PublicationInputHealth: options.publicationHealthSchema,
+    pegDataById: z.record(z.string(), PegSummaryCoinSchema),
+    navPriceById: z.record(z.string(), NavPriceObservationSchema).optional(),
+    exitOutputPriceById: z.record(z.string(), ExitOutputPriceObservationSchema).optional(),
+    activeDepegPeakBpsById: z.record(z.string(), z.number().finite().nonnegative()),
+    // v10.42 asymmetric depeg penalties. Optional, never defaulted: absent means
+    // the capture predates premium weighting, so its peg facts, peg source
+    // generation and base-input identity replay exactly as captured.
+    safetyScoreV9DirectionalPeg: SafetyScoreV9DirectionalPegSchema.optional(),
+    redemptionBackstopMap: RedemptionBackstopMapSchema,
+    ...options.afterRedemptionBackstopMap,
+    liveReserveMap: z.record(z.string(), z.array(ReserveSliceSchema)),
+    liveReserveProvenanceMap: z.record(
+      z.string(),
+      LiveReserveSnapshotProvenanceSchema,
+    ),
+    chainCirculatingById: options.chainCirculatingByIdSchema,
+    // DefiLlama list buckets are already USD-denominated. Consumers must use
+    // getCirculatingRawOrNull() and must never multiply these values by price.
+    aggregateCirculatingById: z
+      .record(
+        z.string(),
+        z.object({
+          circulating: z.record(z.string(), z.number().finite().nonnegative()),
+          observedAtSec: z.number().int().nonnegative().nullable(),
+        }),
+      )
+      .default({}),
+    safetyScoreV9SupplyAttributionById: z
+      .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
+      .default({}),
+    // v10.38 deployment supply census projection (PLAN §4.6). Optional, never
+    // defaulted: absent means no bounds were captured at this clock, so every
+    // deployment datum stays required and no digest moves (OP-R0 S-18).
+    safetyScoreV9DeploymentSupplyCensusById: z
+      .record(z.string(), SafetyScoreV9DeploymentSupplyCensusSchema)
+      .optional(),
+    // The generation identity that map belongs to. Optional, never defaulted:
+    // a map without it is rejected as `census-rejected:generation-unbound`
+    // rather than admitted against the wrong registry/base generation.
+    safetyScoreV9DeploymentSupplyCensusBinding: SafetyScoreV9DeploymentSupplyCensusBindingSchema
+      .optional(),
+    // Both journals are retained accepted enrichment, excluded from the base digest.
+    // Reserve evidence supplies captured failure/gap causes (fact-set-context);
+    // supply attribution supplies cause/responsibility/rejection metadata (extension-supply).
+    // Enrichment identity does not imply a scalar score effect on every capture.
+    evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.default({}),
+    supplyAttributionJournalById: SupplyAttributionJournalByIdV1Schema.default({}),
+    // Optional only for proof-free historical captures. Never enrich this at compute time.
+    pipelineGapByAssetId: PipelineGapByAssetIdSchema.optional(),
+    pegProvenanceById: z
+      .record(z.string(), SafetyScoreV9PegProvenanceSummarySchema)
+      .default({}),
+    dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
+    ...options.beforeLiveToFallbackCoins,
+    liveToFallbackCoins: z.array(z.string()).default([]),
+  };
+}
+
+
+export function assertSameIds(actual: readonly string[], expected: readonly string[], label: string): void {
+  const actualSorted = [...actual].sort();
+  const expectedSorted = [...expected].sort();
+  if (JSON.stringify(actualSorted) !== JSON.stringify(expectedSorted)) {
+    const expectedSet = new Set(expectedSorted);
+    const actualSet = new Set(actualSorted);
+    throw new Error(
+      `${label} mismatch: missing=${expectedSorted.filter((id) => !actualSet.has(id)).join(",") || "none"}; ` +
+        `unexpected=${actualSorted.filter((id) => !expectedSet.has(id)).join(",") || "none"}`,
+    );
+  }
+}
+
+interface CommonFixedInput {
+  activeAssetIds: string[];
+  baseInputGenerationId?: string;
+  sourceGeneration?: string;
+  navPriceById?: Record<string, unknown>;
+  clockSec: number;
+  registryFingerprint: string;
+  liquidityStale: boolean;
+  redemptionStale: boolean;
+  dexGenerationId: string;
+  redemptionGenerationId: string;
+  dexLiqMap: Record<string, { updatedAt: number }>;
+  redemptionBackstopMap: Record<string, { updatedAt: number }>;
+  inputFreshness: Record<string, z.infer<typeof FreshnessEntrySchema>> & {
+    dexLiquidity: z.infer<typeof FreshnessEntrySchema>;
+    redemptionBackstops: z.infer<typeof FreshnessEntrySchema>;
+  };
+  aggregateCirculatingById: Record<string, { circulating: Record<string, number>; observedAtSec?: number | null }>;
+  chainCirculatingById?: Record<string, Record<string, { current: number }>>;
+  activeDepegPeakBpsById: Record<string, number>;
+  safetyScoreV9DirectionalPeg?: SafetyScoreV9DirectionalPeg;
+  safetyScoreV9SupplyAttributionById: Record<string, SafetyScoreV9SupplyAttribution>;
+  evidenceJournalById: Record<string, Array<{ completedAtSec: number }>>;
+  supplyAttributionJournalById: Record<string, Array<{ completedAtSec: number }>>;
+  pipelineGapByAssetId?: PipelineGapByAssetId;
+  pegProvenanceById: Record<string, z.infer<typeof SafetyScoreV9PegProvenanceSummarySchema>>;
+  pegDataById: Record<string, z.infer<typeof PegSummaryCoinSchema>>;
+}
+
+/**
+ * Cross-field admission for the optional directional peg input.
+ *
+ * A legacy capture omits the object entirely. A capture that carries it must
+ * describe exactly the peg rows it captured (`pegScoreById`), and its discount
+ * peaks must be keyed by exactly the any-direction open-event peaks it
+ * published — each null (premiums only) or no larger than its own
+ * any-direction peak (R1/R2 producer consistency). The weighted score never
+ * claims a score where the summary reports insufficient data, and never ranks
+ * below the summary: premium weighting can only lift the score.
+ */
+function assertSafetyScoreV9DirectionalPegConsistency(input: {
+  pegDataById: Readonly<Record<string, { pegScore?: number | null }>>;
+  activeDepegPeakBpsById: Readonly<Record<string, number>>;
+  safetyScoreV9DirectionalPeg?: SafetyScoreV9DirectionalPeg;
+}): void {
+  const directionalPeg = input.safetyScoreV9DirectionalPeg;
+  if (directionalPeg === undefined) return;
+  assertSameIds(
+    Object.keys(directionalPeg.pegScoreById),
+    Object.keys(input.pegDataById),
+    "V9 directional peg score rows",
+  );
+  assertSameIds(
+    Object.keys(directionalPeg.activeDiscountPeakBpsById),
+    Object.keys(input.activeDepegPeakBpsById),
+    "V9 directional discount peak rows",
+  );
+  for (const [assetId, discountPeakBps] of Object.entries(directionalPeg.activeDiscountPeakBpsById)) {
+    if (discountPeakBps === null) continue;
+    if (discountPeakBps <= 0) {
+      throw new Error(
+        `V9 directional discount peak for ${assetId} must be positive; received ${discountPeakBps}`,
+      );
+    }
+    const anyDirectionPeakBps = input.activeDepegPeakBpsById[assetId]!;
+    if (discountPeakBps > anyDirectionPeakBps) {
+      throw new Error(
+        `V9 directional discount peak ${discountPeakBps} for ${assetId} exceeds its any-direction peak ${anyDirectionPeakBps}`,
+      );
+    }
+  }
+  for (const [assetId, directionalScore] of Object.entries(directionalPeg.pegScoreById)) {
+    const summaryScore = input.pegDataById[assetId]!.pegScore ?? null;
+    if ((directionalScore === null) !== (summaryScore === null)) {
+      throw new Error(
+        `V9 directional peg score for ${assetId} is ${directionalScore} but the captured peg row is ${summaryScore}; score availability must match`,
+      );
+    }
+    if (directionalScore !== null && summaryScore !== null && directionalScore < summaryScore) {
+      throw new Error(
+        `V9 directional peg score ${directionalScore} for ${assetId} is below its captured peg row ${summaryScore}; premium weighting can only lift the score`,
+      );
+    }
+  }
+}
+
+interface CommonConsistencyOptions {
+  phase: "identity" | "evidence" | "freshness";
+  laneLabel: "Fixed input" | "Native V9 input";
+  exactLabel: "Exact fixed input" | "Native V9 input";
+  requireProducerBindings: boolean;
+  validateNavPriceIds: boolean;
+  navAssetIds?: ReadonlySet<string>;
+  dexActiveRowsLabel?: string;
+}
+
+export function assertCommonFixedInputConsistency(
+  input: CommonFixedInput,
+  options: CommonConsistencyOptions,
+): void {
+  if (options.phase === "identity") {
+    if (new Set(input.activeAssetIds).size !== input.activeAssetIds.length) {
+      throw new Error(`${options.laneLabel} active asset identities contain duplicates`);
+    }
+    if (options.validateNavPriceIds) {
+      const invalidNavPriceIds = Object.keys(input.navPriceById ?? {}).filter(
+        (id) => options.navAssetIds
+          ? !options.navAssetIds.has(id)
+          : ACTIVE_STABLECOINS.find((coin) => coin.id === id)?.flags.navToken !== true,
+      );
+      if (invalidNavPriceIds.length > 0) {
+        throw new Error(`${options.laneLabel} NAV price rows target non-NAV assets: ${invalidNavPriceIds.join(",")}`);
+      }
+    }
+    if (options.dexActiveRowsLabel) {
+      assertSameIds(Object.keys(input.dexLiqMap), input.activeAssetIds, options.dexActiveRowsLabel);
+    }
+    assertSafetyScoreV9DirectionalPegConsistency(input);
+    return;
+  }
+
+  if (options.phase === "evidence") {
+    if (input.pipelineGapByAssetId !== undefined) {
+      assertPipelineGapCapture(input.pipelineGapByAssetId, input.activeAssetIds, input.clockSec);
+    }
+    for (const [assetId, attribution] of Object.entries(input.safetyScoreV9SupplyAttributionById)) {
+      if (!input.activeAssetIds.includes(assetId)) {
+        throw new Error(`V9 supply attribution targets inactive asset ${assetId}`);
+      }
+      if (attribution.model !== "reviewed-deployment-unit-partition-v1" && attribution.observedAtSec > input.clockSec) {
+        throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
+      }
+      const aggregateSupplyUsd = getCirculatingRawOrNull(input.aggregateCirculatingById[assetId]);
+      if (aggregateSupplyUsd === null) throw new Error(`V9 supply attribution for ${assetId} has unavailable aggregate supply`);
+      if (attribution.model === "reviewed-economic-deployment-partition-v1") {
+        const price = NavPriceObservationSchema.safeParse(input.navPriceById?.[assetId]);
+        const validationError = reviewedEconomicDeploymentAttributionValidationError({
+          assetId, attribution, aggregateSupplyUsd,
+          registryFingerprint: input.registryFingerprint, clockSec: input.clockSec,
+          baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration,
+          aggregateObservedAtSec: input.aggregateCirculatingById[assetId]?.observedAtSec ?? null,
+          referencePrice: price.success ? price.data : null,
+          chainRows: input.chainCirculatingById?.[assetId],
+        });
+        if (validationError) throw new Error(validationError);
+        continue;
+      }
+      if (assetId === XAUT_ASSET_ID && attribution.model === "canonical-lock-mint-partition-v1") {
+        throw new Error("Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required");
+      }
+      const attributedSupplyUsd =
+        attribution.model === "canonical-lock-mint-partition-v1"
+          ? Object.values(attribution.currentSupplyUsdByChain).reduce((sum, value) => sum + value, 0)
+          : attribution.model === "canonical-lock-mint-group-partition-v2"
+            ? attribution.canonical.currentSupplyUsd + attribution.representationGroup.currentSupplyUsd
+            : attribution.deployments.reduce((sum, deployment) => sum + deployment.currentSupplyUsd, 0);
+      const toleranceUsd = Math.max(0.000001, aggregateSupplyUsd * 1e-12);
+      if (aggregateSupplyUsd <= 0 || Math.abs(attributedSupplyUsd - aggregateSupplyUsd) > toleranceUsd) {
+        throw new Error(`V9 supply attribution for ${assetId} does not conserve aggregate circulating USD`);
+      }
+      if (attribution.model === "reviewed-deployment-unit-partition-v1") {
+        const validationError = reviewedDeploymentAttributionValidationError({
+          assetId,
+          attribution,
+          aggregateSupplyUsd,
+          registryFingerprint: input.registryFingerprint,
+          clockSec: input.clockSec,
+        });
+        if (validationError) throw new Error(validationError);
+      } else if (attribution.model === "canonical-lock-mint-group-partition-v2") {
+        if (attribution.assetId !== assetId) {
+          throw new Error(`V9 supply attribution key ${assetId} does not match packet asset ${attribution.assetId}`);
+        }
+        const validationError = xautRepresentationGroupAttributionValidationError({
+          attribution,
+          aggregateSupplyUsd,
+          registryFingerprint: input.registryFingerprint,
+          clockSec: input.clockSec,
+        });
+        if (validationError) throw new Error(validationError);
+      }
+    }
+    for (const [assetId, records] of Object.entries(input.evidenceJournalById)) {
+      if (!input.activeAssetIds.includes(assetId)) throw new Error(`Evidence journal targets inactive asset ${assetId}`);
+      for (const record of records) {
+        if (record.completedAtSec > input.clockSec) {
+          throw new Error(`Evidence journal for ${assetId} is later than the scoring clock`);
+        }
+      }
+    }
+    for (const [assetId, records] of Object.entries(input.supplyAttributionJournalById)) {
+      if (!input.activeAssetIds.includes(assetId)) {
+        throw new Error(`Supply attribution journal targets inactive asset ${assetId}`);
+      }
+      for (const record of records) {
+        if (record.completedAtSec > input.clockSec) {
+          throw new Error(`Supply attribution journal for ${assetId} is later than the scoring clock`);
+        }
+      }
+    }
+    const pegProvenanceIds = Object.keys(input.pegProvenanceById);
+    if (pegProvenanceIds.length > 0) {
+      assertSameIds(pegProvenanceIds, Object.keys(input.pegDataById), "V9 peg provenance rows");
+    }
+    for (const [assetId, summary] of Object.entries(input.pegProvenanceById)) {
+      const pegSummary = input.pegDataById[assetId];
+      if (!pegSummary || summary.assetId !== assetId) {
+        throw new Error(`V9 peg provenance does not match peg row ${assetId}`);
+      }
+      if (summary.clockSec !== input.clockSec || summary.trackingStartSec !== (pegSummary.historyCoverage?.startedAt ?? null)) {
+        throw new Error(`V9 peg provenance clock/coverage does not match peg row ${assetId}`);
+      }
+      if (
+        stableJsonStringifyV1(projectSafetyScoreV9PegScoreResult(summary.legacyInclusive.result)) !==
+        stableJsonStringifyV1(projectSafetyScoreV9PegScoreResult(pegSummary))
+      ) {
+        throw new Error(`V9 peg provenance score does not match peg row ${assetId}`);
+      }
+    }
+    return;
+  }
+
+  const dexFreshness = input.inputFreshness.dexLiquidity;
+  if (options.requireProducerBindings) {
+    const dexTimestamps = [...new Set(Object.values(input.dexLiqMap).map((row) => String(row.updatedAt)))].sort();
+    if (dexTimestamps.length !== 1 || Number(dexTimestamps[0]) !== dexFreshness.updatedAt) {
+      throw new Error(`${options.exactLabel} DEX rows do not match the DEX freshness generation`);
+    }
+    const expectedDexGeneration = `dex-liquidity-${dexFreshness.updatedAt}`;
+    if (input.dexGenerationId !== expectedDexGeneration) {
+      throw new Error(
+        `${options.exactLabel} DEX generation ${input.dexGenerationId} does not match active-row generation ${expectedDexGeneration}`,
+      );
+    }
+    const redemptionFreshness = input.inputFreshness.redemptionBackstops;
+    const hasRedemptionRows = Object.keys(input.redemptionBackstopMap).length > 0;
+    if (hasRedemptionRows) {
+      const timestamps = [...new Set(Object.values(input.redemptionBackstopMap).map((row) => String(row.updatedAt)))].sort();
+      if (timestamps.length !== 1 || Number(timestamps[0]) !== redemptionFreshness.updatedAt) {
+        throw new Error(`${options.exactLabel} redemption rows do not match the redemption freshness generation`);
+      }
+    } else if (!redemptionFreshness.stale) {
+      throw new Error(`${options.exactLabel} has no redemption rows but marks redemption freshness as current`);
+    }
+    if (
+      (hasRedemptionRows && !input.redemptionGenerationId.startsWith("redemption:")) ||
+      (!hasRedemptionRows && input.redemptionGenerationId !== "redemption-backstops-unavailable")
+    ) {
+      throw new Error(`${options.exactLabel} redemption generation ${input.redemptionGenerationId} is not producer-bound`);
+    }
+    if (input.liquidityStale !== dexFreshness.stale || input.redemptionStale !== redemptionFreshness.stale) {
+      throw new Error(`${options.exactLabel} top-level freshness flags do not match lane freshness`);
+    }
+  }
+  for (const [lane, freshness] of Object.entries(input.inputFreshness)) {
+    if (freshness.updatedAt != null && freshness.updatedAt > input.clockSec) {
+      throw new Error(
+        `${options.laneLabel} ${lane} producer timestamp ${freshness.updatedAt} is later than scoring clock ${input.clockSec}`,
+      );
+    }
+    if (freshness.updatedAt == null || freshness.ageSeconds == null) {
+      if (!freshness.stale) throw new Error(`${options.laneLabel} ${lane} freshness is incomplete but not stale`);
+      continue;
+    }
+    const expectedAge = input.clockSec - freshness.updatedAt;
+    if (freshness.ageSeconds !== expectedAge) {
+      throw new Error(`${options.laneLabel} ${lane} age ${freshness.ageSeconds} does not match clock-derived age ${expectedAge}`);
+    }
+  }
+}
+
+interface CommonNormalizationInput {
+  pegDataById: Record<string, unknown>;
+  navPriceById?: Record<string, unknown>;
+  exitOutputPriceById?: Record<string, unknown>;
+  activeDepegPeakBpsById: Record<string, unknown>;
+  safetyScoreV9DirectionalPeg?: SafetyScoreV9DirectionalPeg;
+  bluechipMap?: Record<string, unknown>;
+  resolvedBlacklistStatuses?: Record<string, unknown>;
+  liveReserveMap: Record<string, unknown>;
+  liveReserveProvenanceMap: Record<string, unknown>;
+  chainCirculatingById: Record<string, unknown>;
+  aggregateCirculatingById: Record<string, unknown>;
+  safetyScoreV9SupplyAttributionById: Record<string, SafetyScoreV9SupplyAttribution>;
+  evidenceJournalById: Record<string, unknown>;
+  supplyAttributionJournalById: Record<string, unknown>;
+  pipelineGapByAssetId?: PipelineGapByAssetId;
+  pegProvenanceById: Record<string, unknown>;
+  dexDeploymentSupplyCoverageById: Record<string, unknown>;
+  liveToFallbackCoins: string[];
+}
+
+function sortedInputRecord<T extends Record<string, unknown>>(record: T): T {
+  // Sorting changes insertion order only; keys and values retain the input record's type.
+  return sortedRecord(record) as T;
+}
+
+export function normalizeCommonFixedInputRecords<T extends CommonNormalizationInput>(
+  input: T,
+): Pick<T, keyof CommonNormalizationInput> {
+  return {
+    pegDataById: sortedInputRecord(input.pegDataById),
+    ...(input.navPriceById ? { navPriceById: sortedInputRecord(input.navPriceById) } : {}),
+    ...(input.exitOutputPriceById ? { exitOutputPriceById: sortedInputRecord(input.exitOutputPriceById) } : {}),
+    activeDepegPeakBpsById: sortedInputRecord(input.activeDepegPeakBpsById),
+    ...(input.safetyScoreV9DirectionalPeg
+      ? {
+          safetyScoreV9DirectionalPeg: {
+            premiumWeight: input.safetyScoreV9DirectionalPeg.premiumWeight,
+            pegScoreById: sortedInputRecord(input.safetyScoreV9DirectionalPeg.pegScoreById),
+            activeDiscountPeakBpsById: sortedInputRecord(
+              input.safetyScoreV9DirectionalPeg.activeDiscountPeakBpsById,
+            ),
+          },
+        }
+      : {}),
+    ...(input.bluechipMap ? { bluechipMap: sortedInputRecord(input.bluechipMap) } : {}),
+    ...(input.resolvedBlacklistStatuses
+      ? { resolvedBlacklistStatuses: sortedInputRecord(input.resolvedBlacklistStatuses) }
+      : {}),
+    liveReserveMap: sortedInputRecord(input.liveReserveMap),
+    liveReserveProvenanceMap: sortedInputRecord(input.liveReserveProvenanceMap),
+    chainCirculatingById: sortedInputRecord(input.chainCirculatingById),
+    aggregateCirculatingById: sortedInputRecord(input.aggregateCirculatingById),
+    safetyScoreV9SupplyAttributionById: sortedRecord(
+      Object.fromEntries(
+        Object.entries(input.safetyScoreV9SupplyAttributionById).map(([assetId, attribution]) => [
+          assetId,
+          attribution.model === "canonical-lock-mint-partition-v1"
+            ? { ...attribution, currentSupplyUsdByChain: sortedRecord(attribution.currentSupplyUsdByChain) }
+            : attribution.model === "canonical-lock-mint-group-partition-v2"
+              ? normalizeXautRepresentationGroupAttribution(attribution)
+              : attribution.model === "reviewed-economic-deployment-partition-v1"
+                ? normalizeReviewedEconomicDeploymentAttribution(attribution)
+                : normalizeReviewedDeploymentAttribution(attribution),
+        ]),
+      ),
+    ),
+    evidenceJournalById: input.evidenceJournalById,
+    supplyAttributionJournalById: input.supplyAttributionJournalById,
+    ...(input.pipelineGapByAssetId === undefined ? {} : {
+      pipelineGapByAssetId: normalizePipelineGapByAssetId(input.pipelineGapByAssetId),
+    }),
+    pegProvenanceById: sortedInputRecord(input.pegProvenanceById),
+    dexDeploymentSupplyCoverageById: sortedInputRecord(input.dexDeploymentSupplyCoverageById),
+    liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),
+  } as Pick<T, keyof CommonNormalizationInput>;
+}

@@ -4,7 +4,7 @@ import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggreg
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
 
 const mocks = vi.hoisted(() => ({ loadStablecoinsCache: vi.fn() }));
-vi.mock("../../../lib/stablecoins-cache", () => ({ loadStablecoinsCache: mocks.loadStablecoinsCache }));
+vi.mock("../../../lib/market-supply/stablecoins-cache", () => ({ loadStablecoinsCache: mocks.loadStablecoinsCache }));
 
 import { loadAltPegsOgPage } from "../alt-pegs";
 import { OG_PAGE_LOADERS } from "../index";

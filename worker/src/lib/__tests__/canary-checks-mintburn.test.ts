@@ -5,12 +5,12 @@ import {
   MINT_BURN_PUBLICATION_BASELINE_KEY,
   checkBlacklistRosterCoverage,
   checkMintBurnPublicationCoverage,
-} from "../canary-checks-mintburn";
-import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
+} from "../mint-burn-pipeline/canary-checks-mintburn";
+import { aggregateFlowCacheKey } from "../mint-burn-pipeline/mint-burn-flow-cache-keys";
 import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-} from "../blacklist-cache-keys";
+} from "../blacklist/blacklist-cache-keys";
 
 const NOW = 1_775_900_000;
 const MAX_AGE_SEC = 8 * 3600;

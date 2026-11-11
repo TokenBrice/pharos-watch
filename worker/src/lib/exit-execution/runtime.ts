@@ -9,9 +9,9 @@ import reviewedModels from "@shared/data/safety-score-v9/exit-execution-model-re
 import { observeSecuritizeOffRampExit } from "./securitize-offramp";
 import { Erc4626CanonicalAttemptError, observeErc4626InstantExit } from "./erc4626-instant";
 import type { EvmRpcOptions } from "../evm-rpc";
-import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../market-supply/stablecoins-cache";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { getFxReferenceTypeFromState, loadFxRateState, type FxRateState } from "../fx-rate-state";
+import { getFxReferenceTypeFromState, loadFxRateState, type FxRateState } from "../pricing/fx-rate-state";
 
 type ExitExecutionRuntimeFailure = ExitExecutionRouteFailure & {
   canonicalAttempt?: ExitExecutionCanonicalAttempt;

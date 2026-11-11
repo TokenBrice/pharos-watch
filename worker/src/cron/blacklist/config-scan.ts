@@ -6,7 +6,7 @@ import { type ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
-import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist/blacklist-contracts";
 import {
   fetchEvmEventsIncremental,
   shouldPreferRpcLogScan,

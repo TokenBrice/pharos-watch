@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import * as evmRpc from "../../lib/evm-rpc";
-import { laneScreeningAttemptCacheKey } from "../sync-v9-lane-admin-events";
+import { laneScreeningAttemptCacheKey } from "../safety-score-v9/sync-v9-lane-admin-events";
 import {
   createSupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -19,7 +19,7 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
 } from "../../lib/safety-score-v9/supply-attribution-generation";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
-import type { LaneScreeningDescriptor } from "../sync-v9-lane-admin-events";
+import type { LaneScreeningDescriptor } from "../safety-score-v9/sync-v9-lane-admin-events";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { SafetyScoreV9SupplyAttributionCaptureOptions } from "../../lib/safety-score-v9/supply-attribution-capture";
 import type * as SupplyAttributionCaptureModule from "../../lib/safety-score-v9/supply-attribution-capture";
@@ -70,7 +70,7 @@ const {
   deploymentSupplyCensusSelection,
   LANE_SCREENING_SETTLE_RESERVE_MS,
   runV9LaneScreeningShadowPhase,
-} = await import("../sync-v9-supply-attribution");
+} = await import("../safety-score-v9/sync-v9-supply-attribution");
 
 
 function openDb(): { sqlite: DatabaseSync; db: D1Database } {

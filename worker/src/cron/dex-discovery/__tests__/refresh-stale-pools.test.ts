@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import type { CgPool } from "../../../lib/coingecko-onchain";
+import type { CgPool } from "../../../lib/dex-liquidity/coingecko-onchain";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { upsertStagedPools } from "../persistence";
 import {

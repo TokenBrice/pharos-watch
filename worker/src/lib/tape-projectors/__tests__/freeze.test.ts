@@ -10,10 +10,10 @@ import { FREEZE_RECOVERY_WINDOW_SEC, loadFreshFreezeAlerts } from "../../../cron
 import { insertBlacklistRows } from "../../../cron/blacklist/persistence";
 import { makeBlacklistRow as makeFixtureBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import type { BlacklistPersistedRow } from "../../blacklist/shared";
-import { CONTRACT_CONFIGS } from "../../blacklist-contracts";
+import { CONTRACT_CONFIGS } from "../../blacklist/blacklist-contracts";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 import { handleEvents } from "../../../api/events";
-import { buildTapeEventId } from "../../tape-event-helpers";
+import { buildTapeEventId } from "../tape-event-helpers";
 
 const CHAIN_MIGRATION = readFileSync(
   new NodeURL("../../../../migrations/0266_tape_freeze_chain_identity.sql", import.meta.url),

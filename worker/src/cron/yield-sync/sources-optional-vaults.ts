@@ -7,7 +7,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchJsonWithRetry, fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../../lib/response-body";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC } from "../../lib/yield-ranking-helpers";
+import { PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC } from "../../lib/yield/yield-ranking-helpers";
 import {
   createOptionalSourceBudget,
   getFiniteNumber,

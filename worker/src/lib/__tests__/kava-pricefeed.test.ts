@@ -11,8 +11,8 @@ vi.mock("../fetch-retry", () => ({
 
 import { fetchKavaUsdxPrice, kavaUsdxPricefeedProvider } from "../authoritative-price-sources/kava-pricefeed";
 import { fetchAuthoritativeLivePriceOverrides } from "../authoritative-price-sources";
-import { validatePrimaryPriceCandidate } from "../price-publish-policy";
-import { buildPriceValidationContext } from "../price-validation";
+import { validatePrimaryPriceCandidate } from "../pricing/price-publish-policy";
+import { buildPriceValidationContext } from "../pricing/price-validation";
 
 const NOW = new Date("2026-07-16T06:22:00.000Z");
 

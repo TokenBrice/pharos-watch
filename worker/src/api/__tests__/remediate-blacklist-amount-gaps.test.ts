@@ -6,7 +6,7 @@ import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helper
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { getBlacklistConfigsForSymbolAndChain } from "../../lib/blacklist-contracts";
+import { getBlacklistConfigsForSymbolAndChain } from "../../lib/blacklist/blacklist-contracts";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { fetchEvmTokenBalanceRaw } from "../../lib/blacklist/balance-providers";
 import { fetchAlchemyLogs } from "../../lib/alchemy-logs";
@@ -16,7 +16,7 @@ const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 stubCryptoForAuth();
 
-vi.mock("../../lib/blacklist-summary-service", () => ({}));
+vi.mock("../../lib/blacklist/blacklist-summary-service", () => ({}));
 vi.mock("../../lib/fetch-retry", () => ({ fetchJsonWithRetry: vi.fn() }));
 vi.mock("../../lib/blacklist/balance-providers", () => ({ fetchEvmTokenBalanceRaw: vi.fn() }));
 vi.mock("../../lib/alchemy-logs", () => ({ fetchAlchemyLogs: vi.fn() }));

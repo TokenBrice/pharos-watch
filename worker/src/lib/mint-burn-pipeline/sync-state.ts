@@ -1,7 +1,7 @@
-import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { mintBurnConfigKey } from "./mint-burn-contract-identity";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import { batchExecute, buildInClause } from "../db";
-import type { MintBurnContractConfig } from "../mint-burn-contracts";
+import type { MintBurnContractConfig } from "./mint-burn-contracts";
 import type { MintBurnSyncStateMode } from "./types";
 import { mintBurnScanCoverageStatements, type MintBurnScanCoverage } from "./scan-coverage";
 

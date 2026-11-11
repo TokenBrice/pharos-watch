@@ -7,15 +7,15 @@ import { PegSummaryCoinSchema, type PegSummaryCoin } from "@shared/types/peg";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
 import { makeRedemptionWriteRecord } from "./redemption-backstops-store.test-support";
-import type * as SnapshotModule from "../report-cards-snapshot";
+import type * as SnapshotModule from "../safety-score-v9/report-cards-snapshot";
 
 const mocks = vi.hoisted(() => ({ inputs: vi.fn(), peg: vi.fn() }));
-vi.mock("../report-cards-snapshot-inputs", () => ({ loadReportCardsSnapshotInputs: mocks.inputs }));
-vi.mock("../peg-analytics", () => ({ derivePegAnalyticsSnapshot: mocks.peg }));
-vi.mock("../peg-analytics-cache", () => ({ publishPegAnalyticsCache: vi.fn(async () => true) }));
-vi.mock("../report-card-evidence-journal-store", () => ({ loadReportCardEvidenceJournalByIdV1: vi.fn(async () => ({})) }));
-vi.mock("../collateral-drift", () => ({ summarizeCollateralDriftFromLiveReserveMap: () => ({ fallbackCoins: [] }) }));
-vi.mock("../report-cards-snapshot", async (original) => ({
+vi.mock("../safety-score-v9/report-cards-snapshot-inputs", () => ({ loadReportCardsSnapshotInputs: mocks.inputs }));
+vi.mock("../depeg-detection/peg-analytics", () => ({ derivePegAnalyticsSnapshot: mocks.peg }));
+vi.mock("../depeg-detection/peg-analytics-cache", () => ({ publishPegAnalyticsCache: vi.fn(async () => true) }));
+vi.mock("../safety-score-v9/report-card-evidence-journal-store", () => ({ loadReportCardEvidenceJournalByIdV1: vi.fn(async () => ({})) }));
+vi.mock("../live-reserves/collateral-drift", () => ({ summarizeCollateralDriftFromLiveReserveMap: () => ({ fallbackCoins: [] }) }));
+vi.mock("../safety-score-v9/report-cards-snapshot", async (original) => ({
   ...(await original<typeof SnapshotModule>()), loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex-liquidity-1790000000", updatedAt: 1790000000 })),
 }));
 import { buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";

@@ -4,12 +4,12 @@ import { describe, expect, it } from "vitest";
 import {
   ALERT_RESERVE_SOURCE_GENERATION,
   buildAlertReserveSourceEnvelope,
-} from "../../../../lib/alert-reserve-source-cache";
+} from "../../../../lib/live-reserves/alert-reserve-source-cache";
 import {
   loadActiveAlertSafetySourceAssessment,
   buildAlertSafetyV9SourceEnvelopeFromParts,
   ALERT_SAFETY_V9_SOURCE_GENERATION,
-} from "../../../../lib/alert-safety-source-cache";
+} from "../../../../lib/safety-score-v9/alert-safety-source-cache";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";

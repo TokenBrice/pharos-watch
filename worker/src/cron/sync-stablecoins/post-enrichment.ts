@@ -8,7 +8,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  */
 import { getPricingSourceRegistryEntry, isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
-import { pricesAgreeWithinBps } from "../../lib/price-divergence";
+import { pricesAgreeWithinBps } from "../../lib/pricing/price-divergence";
 import { loadPriceCorroborationObservations, type PriceObservationEffectiveness } from "./price-corroboration-observations";
 import {
   countDepegAuthoritativeSources,
@@ -22,9 +22,9 @@ import {
   type AuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeLivePriceOverrides,
 } from "../../lib/authoritative-price-sources";
-import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/price-cache";
-import { detectDepegEvents } from "../detect-depegs";
-import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/pricing/price-cache";
+import { detectDepegEvents } from "../depeg-detection/detect-depegs";
+import { confirmPendingDepegs } from "../depeg-detection/confirm-pending-depegs";
 import type {
   DepegHoldReason,
   DepegObservationCensus,
@@ -38,19 +38,19 @@ import type { PeggedAsset } from "./enrich-prices";
 import {
   type PriceValidationContext,
   type PriceValidationReferences,
-} from "../../lib/price-validation";
+} from "../../lib/pricing/price-validation";
 import {
   type TrustedPriceReference,
   validateFallbackPriceCandidate,
   validatePublishedAssetPrice,
-} from "../../lib/price-publish-policy";
+} from "../../lib/pricing/price-publish-policy";
 import {
   COINGECKO_NATIVE_IMPLIED_SOURCE,
   computePriceDivergenceBps,
   fetchCurrentNativePegImpliedUsdQuotes,
   NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS,
-} from "../../lib/native-peg-implied-prices";
-import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
+} from "../../lib/pricing/native-peg-implied-prices";
+import type { NativePegQuoteSession } from "../../lib/pricing/native-peg-quotes";
 import {
   clearPriceMetadata,
   type CronResult,
@@ -63,8 +63,8 @@ import {
   settleNominalPriceReferences,
   type ProtocolPriceOverride,
 } from "./pricing";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
-import type { BinanceFetchSession } from "../../lib/cex-tickers";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
+import type { BinanceFetchSession } from "../../lib/pricing/cex-tickers";
 import { abortResult, returnIfAborted } from "./runtime";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;

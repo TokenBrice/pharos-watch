@@ -6,7 +6,7 @@ import { makeReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
 const mockLoadActiveSafetyScoreCohort = vi.fn();
-vi.mock("../../lib/safety-score-active-source", () => ({
+vi.mock("../../lib/safety-score-v9/safety-score-active-source", () => ({
   loadActiveSafetyScoreCohort: mockLoadActiveSafetyScoreCohort,
 }));
 // Load after the accepted-source mock has been installed.

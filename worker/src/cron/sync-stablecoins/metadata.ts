@@ -13,7 +13,7 @@ import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type Tracke
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
 import type { SupplyChainGuardResult } from "./chain-dropout-guard";
-import type { GtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
+import type { GtProbeStats } from "../../lib/dex-liquidity/geckoterminal-price-probe-stats";
 import {
   createEmptyPriceSourceHealthDistribution,
   isPriceSourceHealthBucketKey,
@@ -25,7 +25,7 @@ import { isHardPricingTrustTier } from "@shared/lib/pricing-source-policy";
 import type {
   PricingAssetAttemptRecord,
   PricingProviderAttemptDiagnostic,
-} from "../../lib/pricing-provider-diagnostics";
+} from "../../lib/pricing/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import {
   STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE,
@@ -40,7 +40,7 @@ import {
   type StablecoinPublicationCoverage,
   type StablecoinPublicationGapBand,
   type StablecoinActivePriceCoverage,
-} from "../../lib/stablecoin-publication-coverage";
+} from "../../lib/market-supply/stablecoin-publication-coverage";
 import { MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../../lib/cron-metadata-persistence";
 
 const MAX_DIAGNOSTIC_ARRAY_ITEMS = 20;

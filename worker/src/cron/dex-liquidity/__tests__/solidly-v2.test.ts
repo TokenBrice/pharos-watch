@@ -14,7 +14,7 @@ import { SOLIDLY_V2_ABI } from "../solidly-v2";
 import { initSourcePoolGraph, normalizeProtocol } from "../pool-helpers";
 import type { PoolEntry } from "../types";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../../../lib/evm-rpc";
-import { normalizeTopPools } from "../../../lib/dex-liquidity-response";
+import { normalizeTopPools } from "../../../lib/dex-liquidity/dex-liquidity-response";
 import archive from "./fixtures/solidly-v2-2026-10-05-archive.json";
 
 const NOW = 1791184659;

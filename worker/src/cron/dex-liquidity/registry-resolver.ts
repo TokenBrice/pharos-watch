@@ -3,7 +3,7 @@ import {
   STAGED_POOL_FRESH_HOURS,
   type StagedPool,
 } from "../dex-discovery/types";
-import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
+import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-liquidity/dex-cron-constants";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 
 export interface RegistryPoolView {

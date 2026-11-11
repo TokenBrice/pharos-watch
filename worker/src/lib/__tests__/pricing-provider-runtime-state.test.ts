@@ -5,7 +5,7 @@ import {
   readProviderAvailability,
   recordProviderEnvironmentAvailable,
   recordProviderEnvironmentBlocked,
-} from "../pricing-provider-runtime-state";
+} from "../pricing/pricing-provider-runtime-state";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();

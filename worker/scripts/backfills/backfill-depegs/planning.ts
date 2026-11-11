@@ -7,10 +7,10 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../../src/lib/constants";
-import { cgUrl, cgHeaders } from "../../../src/lib/coingecko";
+import { cgUrl, cgHeaders } from "../../../src/lib/pricing/coingecko";
 import { fetchJsonWithRetry } from "../../../src/lib/fetch-retry";
 import { RATE_LIMITS } from "../../../src/lib/rate-limit";
-import { loadStablecoinsCache } from "../../../src/lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../../src/lib/market-supply/stablecoins-cache";
 import {
   type FxTimeSeries,
   PEG_TO_FX,
@@ -20,9 +20,9 @@ import {
   fetchHistoricalSecondaryFxRates,
   buildCommodityMedianSeriesFromCg,
   type CommodityPeg,
-} from "../../../src/lib/backfill-fx";
+} from "../../../src/lib/pricing/backfill-fx";
 import type { BackfillReplayWindow } from "../../../src/lib/backfill-day-window";
-import type { SupplyPoint } from "../../../src/lib/historical-depeg-extraction";
+import type { SupplyPoint } from "../../../src/lib/depeg-detection/historical-depeg-extraction";
 import {
   acquireDefiLlamaDetailMaterialization,
   DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES,

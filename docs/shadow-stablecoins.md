@@ -8,11 +8,11 @@ A small off-catalog metadata set preserves historical PSI and monitoring continu
 
 PSI historical assets preserve important collapse events in systems that would otherwise undercount past systemic stress after an asset leaves the tracked dashboard.
 
-`shared/lib/psi-eligible.ts` combines active tracked assets with the historical set into `PSI_ELIGIBLE_STABLECOINS` / `PSI_ELIGIBLE_IDS`, excluding every non-active tracked entry. Depeg detection, DEWS, replay and backfill inherit this monitoring universe. `worker/src/cron/snapshot-supply.ts` separately composes `WORKER_ACTIVE_IDS` plus `PSI_HISTORICAL_IDS`; it snapshots only non-restored observations actually present in the cache.
+`shared/lib/psi-eligible.ts` combines active tracked assets with the historical set into `PSI_ELIGIBLE_STABLECOINS` / `PSI_ELIGIBLE_IDS`, excluding every non-active tracked entry. Depeg detection, DEWS, replay and backfill inherit this monitoring universe. `worker/src/cron/market-supply/snapshot-supply.ts` separately composes `WORKER_ACTIVE_IDS` plus `PSI_HISTORICAL_IDS`; it snapshots only non-restored observations actually present in the cache.
 
 Two scope details do not follow from that rule:
 
-- `CORE_PSI_ELIGIBLE_IDS` (core-aggregate active + historical assets) is narrower than `PSI_ELIGIBLE_IDS`; live PSI, historical replay and recompute (`worker/src/lib/psi-history-universe.ts`, `worker/src/lib/psi-recompute.ts`) use that narrower universe and denominator.
+- `CORE_PSI_ELIGIBLE_IDS` (core-aggregate active + historical assets) is narrower than `PSI_ELIGIBLE_IDS`; live PSI, historical replay and recompute (`worker/src/lib/psi/psi-history-universe.ts`, `worker/src/lib/psi/psi-recompute.ts`) use that narrower universe and denominator.
 - `shared/lib/stablecoin-id-registry.ts` includes historical assets in PSI-inclusive resolution, but public readable resolution excludes them. DDR first-seen membership excludes both UST and IRON (`policyUniverseIncluded=false`); historical terminal-validation examples do not enroll them in public forecasting.
 
 ---

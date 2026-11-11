@@ -1,8 +1,8 @@
 import { getMintBurnFinalizedHead, mintBurnRpcEndpoints } from "../../lib/mint-burn-pipeline/rpc";
 import type { ChainRpcConfig, RpcEndpoint } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
-import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
-import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
+import type { MintBurnTxContext } from "../../lib/mint-burn-pipeline/mint-burn-bridge-classifier";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import { withRpcRequestScope } from "../../lib/rpc-request-observer";
 import { TronJsonRpcReader, TronRpcError } from "../../lib/tron-jsonrpc";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";

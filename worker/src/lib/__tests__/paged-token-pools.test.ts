@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchPagedTokenPools } from "../paged-token-pools";
+import { fetchPagedTokenPools } from "../dex-liquidity/paged-token-pools";
 
 describe("fetchPagedTokenPools", () => {
   it("starts at page one and stops after a short page", async () => {

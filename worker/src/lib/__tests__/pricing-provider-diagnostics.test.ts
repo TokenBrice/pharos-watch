@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readResponseSnippet } from "../pricing-provider-diagnostics";
+import { readResponseSnippet } from "../pricing/pricing-provider-diagnostics";
 
 afterEach(() => vi.useRealTimers());
 

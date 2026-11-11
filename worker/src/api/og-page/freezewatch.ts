@@ -1,7 +1,7 @@
 import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
 import { formatCurrency } from "@shared/lib/format";
 import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { freshnessReason, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 
 /** `/freezewatch` hero: combined freeze exposure, from the same buckets and summary as the page. */

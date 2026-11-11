@@ -4,7 +4,7 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { captureRedemptionReserveQuarantine } from "../safety-score-v9/redemption-reserve-quarantine";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const ASSET = "usdc-circle";

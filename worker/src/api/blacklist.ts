@@ -12,7 +12,7 @@ import {
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { getSupportedBlacklistChainIds, getSupportedBlacklistChainNames } from "../lib/blacklist-coverage-manifest";
+import { getSupportedBlacklistChainIds, getSupportedBlacklistChainNames } from "../lib/blacklist/blacklist-coverage-manifest";
 import {
   type BlacklistEvent,
   type BlacklistSortDirection,
@@ -20,7 +20,7 @@ import {
 } from "@shared/types/blacklist";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { blacklistCanonicalEventCountSql } from "@shared/lib/blacklist-event-order";
-import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";
+import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist/blacklist-api";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../lib/blacklist/shared";
 
 const VALID_CHAIN_NAMES = getSupportedBlacklistChainNames();

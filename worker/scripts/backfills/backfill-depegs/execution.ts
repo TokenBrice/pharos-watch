@@ -8,7 +8,7 @@ import {
   SECONDARY_PEG_TO_FX,
   OTHER_COIN_FX,
   buildFxLookup,
-} from "../../../src/lib/backfill-fx";
+} from "../../../src/lib/pricing/backfill-fx";
 import { logWorkerEvent } from "../../../src/lib/structured-log";
 import { backfillEpisodeCoveredByLiveEvent } from "../backfill-depegs-window";
 import type { BackfillReplayWindow } from "../../../src/lib/backfill-day-window";
@@ -19,7 +19,7 @@ import {
   type ExistingDepegEventRow,
 } from "../backfill-depegs-preview";
 import { backfillCoin } from "../backfill-depegs-replay";
-import { parseSupplyData, type BackfillEvent } from "../../../src/lib/historical-depeg-extraction";
+import { parseSupplyData, type BackfillEvent } from "../../../src/lib/depeg-detection/historical-depeg-extraction";
 import type { PreparedBackfillCoin } from "./planning";
 import {
   type BackfillEventProvenanceInput,

@@ -6,8 +6,8 @@ import {
   BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
   materializeBlacklistGapMetrics,
   queryBlacklistGapMetrics,
-} from "../blacklist-gaps";
-import { getBlacklistGapMetricsCacheKey } from "../blacklist-cache-keys";
+} from "../blacklist/blacklist-gaps";
+import { getBlacklistGapMetricsCacheKey } from "../blacklist/blacklist-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());

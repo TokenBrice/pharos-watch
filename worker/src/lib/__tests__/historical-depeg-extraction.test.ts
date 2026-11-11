@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { extractDepegEvents, type SupplySnapshot } from "../historical-depeg-extraction";
-import type { PricePoint } from "../historical-market-prices";
+import { extractDepegEvents, type SupplySnapshot } from "../depeg-detection/historical-depeg-extraction";
+import type { PricePoint } from "../pricing/historical-market-prices";
 
 const SUPPLY: SupplySnapshot[] = [{ ts: 1_000, supply: 6_000_000 }];
 

@@ -2,11 +2,11 @@ import { vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
-import type { ActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
+import type { ActiveSafetyScoreCohort } from "../../lib/safety-score-v9/safety-score-active-source";
 import type { StablecoinData } from "@shared/types/supply";
-import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
+import type { StablecoinsCacheLoadResult } from "../../lib/market-supply/stablecoins-cache";
 import type { PreparedTelegramDigestAppendices } from "../../telegram/digest/digest-appendices";
-import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
+import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest/digest-style-gate";
 import type { CollectorContext } from "../daily-digest/collectors-shared";
 import type { CurrentPegObservation } from "../../lib/current-peg-observations";
 import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
@@ -140,7 +140,7 @@ export function mockTelegramDigestTransportModule(
 }
 
 export function mockDigestSafetyMapModule(
-  actual: typeof import("../../lib/digest-safety-map"),
+  actual: typeof import("../../lib/digest/digest-safety-map"),
 ) {
   return {
     ...actual,

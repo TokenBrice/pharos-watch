@@ -1,6 +1,6 @@
 import { D1_MAX_BOUND_PARAMETERS, executeAtomicBatch } from "../../lib/db";
-import { buildUpsertPendingDepegStmt } from "../../lib/depeg-pending";
-import { serializeDepegPriceCoverage } from "../../lib/depeg-helpers";
+import { buildUpsertPendingDepegStmt } from "../../lib/depeg-detection/depeg-pending";
+import { serializeDepegPriceCoverage } from "../../lib/depeg-detection/depeg-helpers";
 import type { DepegPersistenceCommand } from "./types";
 
 function buildDepegPersistenceStatement(

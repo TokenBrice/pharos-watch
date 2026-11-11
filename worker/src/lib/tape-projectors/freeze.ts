@@ -12,14 +12,14 @@ import {
   buildTapeEventId,
   severityForFreezeBlocked,
   severityForFreezeDestroyed,
-} from "../tape-event-helpers";
-import { CONTRACT_CONFIGS, getBlacklistConfigByKey } from "../blacklist-contracts";
+} from "./tape-event-helpers";
+import { CONTRACT_CONFIGS, getBlacklistConfigByKey } from "../blacklist/blacklist-contracts";
 import { deleteCache, getCache, setCache } from "../db-cache";
 import { batchExecute, buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../d1-primitives";
 import { parseJsonObject } from "../json-parse";
 import { logWorkerEvent } from "../structured-log";
 import type { BlacklistPersistedRow } from "../blacklist/shared";
-import type { TapeEventInsert } from "../tape-event-types";
+import type { TapeEventInsert } from "./tape-event-types";
 import {
   DEFAULT_BATCH_LIMIT,
   finalizeProjectorBatch,

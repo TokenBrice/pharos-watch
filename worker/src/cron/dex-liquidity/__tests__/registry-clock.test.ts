@@ -17,7 +17,7 @@ import { makeV3Target } from "../../measured-execution/__tests__/measured-execut
 import { computeDexPrices } from "../dex-price-publisher";
 import { readPublicPriceRows, seedPublishedDexGeneration } from "./scoring-test-support";
 import { makePool, makePricePoolMap } from "./scoring-test-builders";
-import { loadDexPrices } from "../../../lib/depeg-helpers";
+import { loadDexPrices } from "../../../lib/depeg-detection/depeg-helpers";
 
 const SOURCE_CLOCK = 1_791_403_833;
 const READ_CLOCK = SOURCE_CLOCK + 100;

@@ -4,8 +4,8 @@ import {
   getActiveAssetServiceBreadthThreshold,
 } from "@shared/lib/status-thresholds";
 import type { StatusCause, StatusHealthValue } from "@shared/types/status";
-import { STABLECOIN_PUBLICATION_GAP_ROUTINE_MAX_SHARE } from "../stablecoin-publication-coverage";
-import type { SupplyIntegrityReport } from "../supply-integrity";
+import { STABLECOIN_PUBLICATION_GAP_ROUTINE_MAX_SHARE } from "../market-supply/stablecoin-publication-coverage";
+import type { SupplyIntegrityReport } from "../market-supply/supply-integrity";
 import { expiringReviews } from "./evaluation-causes";
 
 export interface SupplyIntegrityAssessment {

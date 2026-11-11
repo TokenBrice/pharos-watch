@@ -3,7 +3,7 @@ import {
   PlacedProjectTapeRequestSchema, PlacedProjectTapeResultSchema,
 } from "@shared/types/placed-executor";
 import type { PlacedProjectTapeRequest } from "@shared/types/placed-executor";
-import { projectTape } from "../../cron/project-tape";
+import { projectTape } from "../../cron/tape/project-tape";
 import { timingSafeCompare } from "../../lib/auth";
 import { parseRequestJsonWithSchema } from "../../lib/api-json-body";
 import { retainUntilDeadline, settleAfterAbort } from "../../lib/cron-abort-settlement";

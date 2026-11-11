@@ -8,13 +8,13 @@ import {
   pruneMintBurnRetention,
 } from "../mint-burn/retention";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanCoverageAdmits, mintBurnScanFingerprint, readMintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
-import { repairHistoricalMintBurnPrices } from "../../lib/mint-burn-historical-price-repair";
+import { repairHistoricalMintBurnPrices } from "../../lib/mint-burn-pipeline/mint-burn-historical-price-repair";
 import {
   drainMintBurnMaterializationDebt,
   rebuildMintBurnMaterializationHours,

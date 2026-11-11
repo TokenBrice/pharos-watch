@@ -31,7 +31,7 @@ import type * as ExecutableObservers from "../../cron/reserve-adapters/executabl
 import type { ExitExecutionModelReview } from "@shared/types/exit-route";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { buildRedemptionBackstopsSnapshot, loadRedemptionBackstopSnapshot, upsertRedemptionBackstopSnapshots } from "../redemption-backstops-store";
+import { buildRedemptionBackstopsSnapshot, loadRedemptionBackstopSnapshot, upsertRedemptionBackstopSnapshots } from "../redemption-backstop/redemption-backstops-store";
 import { buildRedemptionBackstopEntry as buildEntryForMergedCases } from "../redemption-backstop/sources";
 import { getRedemptionBackstopConfig as getRedemptionBackstopConfigForCostTests, type RedemptionBackstopConfig, type RedemptionCostModel } from "@shared/lib/redemption-backstops";
 import { mergeRedemptionRouteStatus } from "../redemption-backstop/route-status";
@@ -55,7 +55,7 @@ vi.mock("../live-reserves/store", async (importOriginal) => {
     getLatestSuccessfulReserveSnapshotMetadata: getLatestSuccessfulReserveSnapshotMetadataMock,
   };
 });
-vi.mock("../live-reserve-policy", () => ({ LIVE_RESERVE_FRESHNESS_SEC: 3600 }));
+vi.mock("../live-reserves/live-reserve-policy", () => ({ LIVE_RESERVE_FRESHNESS_SEC: 3600 }));
 
 describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof BuildRedemptionBackstopEntry;

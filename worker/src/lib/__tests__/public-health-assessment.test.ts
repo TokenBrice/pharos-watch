@@ -7,9 +7,9 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, STATUS_MISSING_PRICE_THRESHOLDS, getActiveAssetServiceBreadthThreshold } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
-import { STABLECOIN_PRICE_GAP_REVIEWS, evaluateStablecoinActivePriceCoverage, evaluateStablecoinPublicationCoverage, seedAbsentActivePriceCoverageMarketCaps } from "../stablecoin-publication-coverage";
+import { STABLECOIN_PRICE_GAP_REVIEWS, evaluateStablecoinActivePriceCoverage, evaluateStablecoinPublicationCoverage, seedAbsentActivePriceCoverageMarketCaps } from "../market-supply/stablecoin-publication-coverage";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
-import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
+import { EXPECTED_FX_PEG_KEYS } from "../pricing/fx-config";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";

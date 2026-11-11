@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
-import type { MintBurnEventDef } from "../mint-burn-contracts";
+import type { MintBurnEventDef } from "../mint-burn-pipeline/mint-burn-contracts";
 import type { AlchemyLogEntry, AlchemyTransactionContextBatch } from "../alchemy-logs";
 import type * as AlchemyLogsModule from "../alchemy-logs";
 import type { MintBurnPriceContext, MintBurnPriceHistoryPoint } from "../mint-burn-pipeline/types";

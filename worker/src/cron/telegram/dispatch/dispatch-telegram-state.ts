@@ -10,7 +10,7 @@ import {
   loadActiveAlertSafetySourceAssessment,
   parseAlertSafetySnapshotEnvelope,
   type AlertSafetySourceAssessment,
-} from "../../../lib/alert-safety-source-cache";
+} from "../../../lib/safety-score-v9/alert-safety-source-cache";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { loadPresetQueryFailureCount, PRESET_QUERY_FAILURE_CACHE_KEY } from "../../../lib/status/telegram-preset-failure-count";
 import { loadSafetyScoreV9PublicationAttempt, type V9PublicationAttempt } from "../../../lib/safety-score-v9/publication-attempts";
@@ -22,7 +22,7 @@ import {
   ALERT_RESERVE_SOURCE_GENERATION,
   assessAlertReserveSourceCache,
   type AlertReserveSourceAssessment,
-} from "../../../lib/alert-reserve-source-cache";
+} from "../../../lib/live-reserves/alert-reserve-source-cache";
 import {
   SNAPSHOT_KEYS,
   buildDepegSnapshot,

@@ -10,14 +10,14 @@ import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import {
   buildBlacklistCoverageManifest,
   getDeferredBlacklistCoverage,
-} from "../blacklist-coverage-manifest";
+} from "../blacklist/blacklist-coverage-manifest";
 import {
   CONTRACT_CONFIGS,
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventBySignature,
   getBlacklistEventByTopic,
   getBlacklistTopicHashes,
-} from "../blacklist-contracts";
+} from "../blacklist/blacklist-contracts";
 import { parseEvmLogsWithCoverage, shouldPreferRpcLogScan } from "../../cron/blacklist/evm-source";
 
 const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS);

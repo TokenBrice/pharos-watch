@@ -9,7 +9,7 @@ import {
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
-import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-threshold-policy";
+import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-detection/depeg-threshold-policy";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -76,7 +76,7 @@ const makeBinancePartialBatch = vi.hoisted((): (() => BinancePriceOutcome) => ()
   },
 }));
 
-vi.mock("../../lib/cex-tickers", () => {
+vi.mock("../../lib/pricing/cex-tickers", () => {
   const fetchBinancePricesDetailed = vi.fn(async () => makeBinanceNoData());
   return {
     createBinanceFetchSession: vi.fn(() => ({})),
@@ -90,7 +90,7 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn(async () => undefined),
 }));
 
-vi.mock("../../lib/native-peg-quotes", () => ({
+vi.mock("../../lib/pricing/native-peg-quotes", () => ({
   fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
   normalizeSupportedPegCurrency: vi.fn((pegCurrency: string | null | undefined) => {
     const normalized = pegCurrency?.trim().toUpperCase();
@@ -98,11 +98,11 @@ vi.mock("../../lib/native-peg-quotes", () => ({
   }),
 }));
 
-import { fetchBinancePricesDetailed, type BinancePriceOutcome } from "../../lib/cex-tickers";
+import { fetchBinancePricesDetailed, type BinancePriceOutcome } from "../../lib/pricing/cex-tickers";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
-import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { fetchCurrentNativePegQuotes } from "../../lib/pricing/native-peg-quotes";
+import { confirmPendingDepegs } from "../depeg-detection/confirm-pending-depegs";
 
 const NOW_SEC = 1_700_000_000;
 const sqliteFixtures = createLatestSchemaFixtureTracker();

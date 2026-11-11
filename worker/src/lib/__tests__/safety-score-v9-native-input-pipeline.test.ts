@@ -51,16 +51,16 @@ import {
 import { parseSafetyScoreV9Publication, serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import { loadFreshIndependentLiveReserveMap } from "../live-reserves/store-overview";
 import { reserveCompositionRow, reserveSyncRow } from "./live-reserves-store.test-support";
-import * as snapshotInputs from "../report-cards-snapshot-inputs";
-import * as snapshot from "../report-cards-snapshot";
-import * as pegAnalytics from "../peg-analytics";
-import * as pegCache from "../peg-analytics-cache";
-import * as evidenceJournalStore from "../report-card-evidence-journal-store";
+import * as snapshotInputs from "../safety-score-v9/report-cards-snapshot-inputs";
+import * as snapshot from "../safety-score-v9/report-cards-snapshot";
+import * as pegAnalytics from "../depeg-detection/peg-analytics";
+import * as pegCache from "../depeg-detection/peg-analytics-cache";
+import * as evidenceJournalStore from "../safety-score-v9/report-card-evidence-journal-store";
 import { buildSafetyScoreV9LenderCollateralProjection } from "../safety-score-v9/accepted-projections";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { compareCodeUnits } from "@shared/lib/compare";
-import { SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } from "../../cron/compute-safety-score-v9";
+import { SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } from "../../cron/safety-score-v9/compute-safety-score-v9";
 import { createV9CaptureDexSnapshot, buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";
 
 // The shared setup evaluates both capture lanes. Preserve the coverage budget

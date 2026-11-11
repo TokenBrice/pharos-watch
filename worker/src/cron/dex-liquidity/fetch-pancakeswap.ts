@@ -4,7 +4,7 @@ import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
-import { makeDexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiPool } from "../../lib/dex-liquidity/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";

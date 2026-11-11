@@ -1,16 +1,16 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/curve-onchain";
-import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
-import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
-import { fetchHiveNativeHbdPrice } from "../../lib/hive-market-price";
+import { CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/pricing/curve-onchain";
+import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/pricing/cg-ticker";
+import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/pricing/coingecko-simple-price";
+import { fetchHiveNativeHbdPrice } from "../../lib/pricing/hive-market-price";
 import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
-import { createPricingAssetAttempt } from "../../lib/pricing-provider-diagnostics";
+import { createPricingAssetAttempt } from "../../lib/pricing/pricing-provider-diagnostics";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidateSafe } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
-import { decodeCurrentReserveNavPrice, isReserveNavPriceSource, RESERVE_NAV_PRICE_SOURCES, type ReserveNavSnapshotRow } from "../../lib/reserve-nav-price";
+import { decodeCurrentReserveNavPrice, isReserveNavPriceSource, RESERVE_NAV_PRICE_SOURCES, type ReserveNavSnapshotRow } from "../../lib/pricing/reserve-nav-price";
 import { throwIfAborted } from "../../lib/abort";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
@@ -21,21 +21,21 @@ import {
   fetchCoinbasePrices,
   fetchKrakenPrices,
   type BinanceFetchSession,
-} from "../../lib/cex-tickers";
+} from "../../lib/pricing/cex-tickers";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
 import {
   createDexPriceSourceLoadTelemetry,
   loadDexPrices,
   type DexPriceSourceLoadTelemetry,
   type LoadedDexPrices,
-} from "../../lib/depeg-helpers";
-import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
+} from "../../lib/depeg-detection/depeg-helpers";
+import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/pricing/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import type { DlListQuote, NavTelemetryQuote } from "../../lib/primary-price-collector";
+import type { DlListQuote, NavTelemetryQuote } from "../../lib/pricing/primary-price-collector";
 import { isUsableGeckoId, type PeggedAsset } from "./enrich-prices-shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 

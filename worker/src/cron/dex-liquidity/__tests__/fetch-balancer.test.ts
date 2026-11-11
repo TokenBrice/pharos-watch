@@ -3,7 +3,7 @@ import { fetchBalancerPools } from "../fetch-balancer";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { fetchDirectApiFixture } from "../../__tests__/dex-liquidity-direct-api.test-support";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
-import { convertToGtNewPools } from "../../../lib/dex-api-pool-shaping";
+import { convertToGtNewPools } from "../../../lib/dex-liquidity/dex-api-pool-shaping";
 
 function cleanPool() {
   return {

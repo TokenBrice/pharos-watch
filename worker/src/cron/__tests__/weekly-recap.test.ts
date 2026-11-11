@@ -19,8 +19,8 @@ vi.mock("../digest/telegram-transport", async (importOriginal) => {
   return mockTelegramDigestTransportModule(actual);
 });
 
-vi.mock("../../lib/digest-safety-context", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/digest-safety-context")>();
+vi.mock("../../lib/digest/digest-safety-context", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/digest/digest-safety-context")>();
   return {
     ...actual,
     loadDigestSafetyContext: vi.fn(),
@@ -34,25 +34,25 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn(async () => {}),
 }));
 
-vi.mock("../../lib/twitter", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/twitter")>()),
+vi.mock("../../lib/digest/twitter", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/digest/twitter")>()),
   postDigestTweet: vi.fn(async () => ({ tweetId: "weekly-tweet", mediaAttached: true })),
 }));
 
-vi.mock("../../lib/twitter-digest-ledger", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/twitter-digest-ledger")>()),
+vi.mock("../../lib/digest/twitter-digest-ledger", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/digest/twitter-digest-ledger")>()),
   deliverTwitterDigestWithLedger: vi.fn(async (_db, _key, _edition, _now, post) => ({
     status: "sent" as const,
     post: await post(),
   })),
 }));
 
-vi.mock("../../lib/digest-safety-map", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/digest-safety-map")>()),
+vi.mock("../../lib/digest/digest-safety-map", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/digest/digest-safety-map")>()),
   resolveDigestSafetyMap: vi.fn(async () => ({ kind: "unavailable" as const, reason: "manifest-http-404" })),
 }));
 
-import { generateWeeklyRecap } from "../weekly-recap";
+import { generateWeeklyRecap } from "../weekly-recap/weekly-recap";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
   deliverTelegramDigestEdition,
@@ -61,14 +61,14 @@ import {
 import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transport";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../digest/llm-config";
-import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
+import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest/digest-style-gate";
 import {
   digestSafetyContextFromPersistedInput,
   loadDigestSafetyContext,
-} from "../../lib/digest-safety-context";
-import { resolveDigestSafetyMap } from "../../lib/digest-safety-map";
-import { postDigestTweet } from "../../lib/twitter";
-import { deliverTwitterDigestWithLedger } from "../../lib/twitter-digest-ledger";
+} from "../../lib/digest/digest-safety-context";
+import { resolveDigestSafetyMap } from "../../lib/digest/digest-safety-map";
+import { postDigestTweet } from "../../lib/digest/twitter";
+import { deliverTwitterDigestWithLedger } from "../../lib/digest/twitter-digest-ledger";
 import {
   buildEditorialPrompt,
   EDITORIAL_STYLE_HASH,

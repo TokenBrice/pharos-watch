@@ -19,7 +19,7 @@ import { resolveDependencyScenarioEvaluatorSource } from "./lib/dependency-scena
 import { parseSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
 import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "../src/lib/safety-score-v9/publication-health";
 import { reassembleSafetyScoreV9PublicationFromCacheRows, SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE } from "../src/lib/safety-score-v9/publication-chunks";
-import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../src/lib/report-cards-v9-cache";
+import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../src/lib/safety-score-v9/report-cards-v9-cache";
 import { parseSafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
 import { parseActiveWorkerVersionMarker } from "../src/lib/worker-version-first-seen";
 

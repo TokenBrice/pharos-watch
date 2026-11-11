@@ -5,7 +5,7 @@ import type {
   DexApiFetchResult,
   DexPaginationPersistenceErrorClass,
   DexPaginationPersistenceSummary,
-} from "../../lib/dex-api-common";
+} from "../../lib/dex-liquidity/dex-api-common";
 
 export interface DexSourcePaginationState {
   cursor: string | null;

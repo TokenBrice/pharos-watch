@@ -118,7 +118,7 @@ vi.mock("../../../reserve-adapters/hive-hbd-protocol", () => ({
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../fiat-cg";
 import { applyConsensusResults, createValidationContextResolver } from "../../pricing";
 import { normalizeStablecoinsPayload, restoreMissingTrackedAssets, reviewedOnchainSupplyHoldFields } from "../../shared";
-import { validatePublishedAssetPrice } from "../../../../lib/price-publish-policy";
+import { validatePublishedAssetPrice } from "../../../../lib/pricing/price-publish-policy";
 
 describe("fetchFiatCoinGeckoTokens", () => {
   beforeEach(() => {

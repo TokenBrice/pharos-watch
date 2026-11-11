@@ -12,9 +12,9 @@ import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats } from "../zephyr-zsd";
 import { fetchHiveHbdProtocolSupply } from "../../reserve-adapters/hive-hbd-protocol";
 import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
-import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/price-validation";
-import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
-import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
+import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/pricing/price-validation";
+import { validatePricingSourceFreshness } from "../../../lib/pricing/pricing-source-freshness";
+import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/pricing/reserve-nav-price";
 import { restoreCuratedAggregateChainPartition, restorePreferredNativeSupply, reviewedOnchainSupplyHoldFields } from "../shared";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {

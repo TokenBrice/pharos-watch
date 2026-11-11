@@ -3,7 +3,7 @@ import { projectV9Detail, projectV9DetailNeighborhoodCard, projectV9Table } from
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
-import { projectSafetyScoreV9PublicationForMaterialization } from "../report-cards-v9-cache";
+import { projectSafetyScoreV9PublicationForMaterialization } from "../safety-score-v9/report-cards-v9-cache";
 
 describe("V9 detail neighborhood projection reuse", () => {
   it("preserves exact detail bytes, closure membership and card order without mutating input", () => {

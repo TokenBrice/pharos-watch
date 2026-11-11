@@ -1,7 +1,7 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { fetchMarketBackfillPriceSeries } from "../historical-market-prices";
+import { fetchMarketBackfillPriceSeries } from "../pricing/historical-market-prices";
 import { findAsOfSnapshot } from "@shared/lib/rate-series";
 import {
   buildParentDerivedLiveOverride,

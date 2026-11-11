@@ -46,10 +46,10 @@ describe("runtime reachability policies", () => {
       paths: [
         "worker/src/index.ts",
         "worker/src/handlers/http/request-dispatch.ts",
-        "worker/src/lib/report-cards-v9-cache.ts",
+        "worker/src/lib/safety-score-v9/report-cards-v9-cache.ts",
         "worker/src/lib/public-health-assessment.ts",
         "worker/src/lib/safety-score-v9/publication-store.ts",
-        "worker/src/lib/safety-score-index.ts",
+        "worker/src/lib/safety-score-v9/safety-score-index.ts",
       ],
     });
   });
@@ -144,7 +144,7 @@ describe("runtime reachability policies", () => {
     writeText(root, "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts", 'import { coins } from "@shared/lib/stablecoins/registry";\nexport { coins };\n');
     writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", "export const ok = true;\n");
     writeText(root, "worker/src/cron/prune-detail-cache.ts", "export const ok = true;\n");
-    writeText(root, "worker/src/cron/snapshot-supply.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/cron/market-supply/snapshot-supply.ts", "export const ok = true;\n");
     writeText(root, "shared/lib/stablecoins/registry.ts", "export const coins = [];\n");
 
     const result = await checkRuntimeReachabilityPolicy(policy("mint-burn"), root);
@@ -164,8 +164,8 @@ describe("runtime reachability policies", () => {
     expect(telegramPolicy.forbidden).toMatchObject({
       kind: "paths",
       paths: expect.arrayContaining([
-        "worker/src/lib/safety-score-active-source.ts",
-        "worker/src/lib/report-cards-v9-cache.ts",
+        "worker/src/lib/safety-score-v9/safety-score-active-source.ts",
+        "worker/src/lib/safety-score-v9/report-cards-v9-cache.ts",
       ]),
     });
     expect(telegramPolicy.remediation).toContain("ADR-24");
@@ -178,16 +178,16 @@ describe("runtime reachability policies", () => {
     const root = makeRoot();
     writeText(root, "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts", "export const ok = true;\n");
     writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", 'export { buildAlertContextLines } from "../../cron/telegram/sources/telegram-alert-context";\n');
-    writeText(root, "worker/src/cron/telegram/sources/telegram-alert-context.ts", `import { ${loader} } from "../../../lib/${module}";\nexport const buildAlertContextLines = ${loader};\n`);
-    writeText(root, `worker/src/lib/${module}.ts`, `export const ${loader} = () => true;\n`);
+    writeText(root, "worker/src/cron/telegram/sources/telegram-alert-context.ts", `import { ${loader} } from "../../../lib/safety-score-v9/${module}";\nexport const buildAlertContextLines = ${loader};\n`);
+    writeText(root, `worker/src/lib/safety-score-v9/${module}.ts`, `export const ${loader} = () => true;\n`);
     writeText(root, "worker/src/cron/prune-detail-cache.ts", "export const ok = true;\n");
-    writeText(root, "worker/src/cron/snapshot-supply.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/cron/market-supply/snapshot-supply.ts", "export const ok = true;\n");
 
     const result = await checkRuntimeReachabilityPolicy(policy("mint-burn"), root);
     expect(result.configurationErrors).toEqual([]);
     expect(result.violations).toContainEqual({
       entrypoint: "worker/src/handlers/scheduled/five-minute-telegram.ts",
-      forbidden: `worker/src/lib/${module}.ts`,
+      forbidden: `worker/src/lib/safety-score-v9/${module}.ts`,
       kind: "reachable",
     });
   });
@@ -195,11 +195,11 @@ describe("runtime reachability policies", () => {
   it("allows the thin Telegram envelope with a type-only full source import", async () => {
     const root = makeRoot();
     writeText(root, "worker/src/handlers/scheduled/twenty-minute-mint-burn-extended.ts", "export const ok = true;\n");
-    writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", 'export { loadActiveAlertSafetySourceAssessment } from "../../lib/alert-safety-source-cache";\n');
-    writeText(root, "worker/src/lib/alert-safety-source-cache.ts", 'import type { ActiveSafetyScoreSource } from "./safety-score-active-source";\nexport const loadActiveAlertSafetySourceAssessment = (): Pick<ActiveSafetyScoreSource, "kind"> => ({ kind: "v9" });\n');
-    writeText(root, "worker/src/lib/safety-score-active-source.ts", 'export interface ActiveSafetyScoreSource { kind: "v9" }\nexport const loadActiveSafetyScoreSource = () => ({ kind: "v9" });\n');
+    writeText(root, "worker/src/handlers/scheduled/five-minute-telegram.ts", 'export { loadActiveAlertSafetySourceAssessment } from "../../lib/safety-score-v9/alert-safety-source-cache";\n');
+    writeText(root, "worker/src/lib/safety-score-v9/alert-safety-source-cache.ts", 'import type { ActiveSafetyScoreSource } from "./safety-score-active-source";\nexport const loadActiveAlertSafetySourceAssessment = (): Pick<ActiveSafetyScoreSource, "kind"> => ({ kind: "v9" });\n');
+    writeText(root, "worker/src/lib/safety-score-v9/safety-score-active-source.ts", 'export interface ActiveSafetyScoreSource { kind: "v9" }\nexport const loadActiveSafetyScoreSource = () => ({ kind: "v9" });\n');
     writeText(root, "worker/src/cron/prune-detail-cache.ts", "export const ok = true;\n");
-    writeText(root, "worker/src/cron/snapshot-supply.ts", "export const ok = true;\n");
+    writeText(root, "worker/src/cron/market-supply/snapshot-supply.ts", "export const ok = true;\n");
 
     const result = await checkRuntimeReachabilityPolicy(policy("mint-burn"), root);
     expect(result.configurationErrors).toEqual([]);

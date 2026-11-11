@@ -12,7 +12,7 @@ import {
 
 // Stub MINT_BURN_CONFIGS with two critical configs on different chains so the
 // orchestrator must produce distinct chain contexts and emit events for both.
-vi.mock("../../lib/mint-burn-contracts", async () => {
+vi.mock("../../lib/mint-burn-pipeline/mint-burn-contracts", async () => {
   // The hoisted factory runs before static bindings; use the registry-free builder to avoid a mock import cycle.
   const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn-config");
   const transferEvent = (direction: "mint" | "burn") => ({
@@ -58,8 +58,8 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
   };
 });
 
-import { syncMintBurn } from "../sync-mint-burn";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { syncMintBurn } from "../mint-burn/sync-mint-burn";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
 import {
   buildAlchemyUrl,
   fetchAlchemyLogs,
@@ -76,7 +76,7 @@ import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-cover
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import * as coverageRepair from "../mint-burn/repair-coverage";
 import * as supplyRepair from "../mint-burn/repair-supply-proofs";
-import { mintBurnConservationFingerprint } from "../../lib/mint-burn-conservation";
+import { mintBurnConservationFingerprint } from "../../lib/mint-burn-pipeline/mint-burn-conservation";
 import * as cache from "../../lib/db-cache";
 import * as abort from "../../lib/abort";
 import * as phases from "../mint-burn/run-configs";

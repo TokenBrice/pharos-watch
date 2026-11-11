@@ -14,7 +14,7 @@ import type {
   DdrCanonicalIncident,
   DdrFirstPublicationMembership,
   DdrSealedPublicPrediction,
-} from "../depeg-resolver-v2-contracts";
+} from "../depeg-resolver/depeg-resolver-v2-contracts";
 import {
   buildDdrResponse,
   buildDiagnosticSnapshot,

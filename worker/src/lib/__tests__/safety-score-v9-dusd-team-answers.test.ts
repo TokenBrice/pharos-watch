@@ -4,7 +4,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";

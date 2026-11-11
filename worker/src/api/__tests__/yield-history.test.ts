@@ -8,7 +8,7 @@ vi.mock("../../lib/json-decode-observability", () => ({
 
 // Keep the handler's evidence/failure matrix independent of the D1 projection
 // SQL, exercised end-to-end in yield-history-projection.test.ts.
-vi.mock("../../lib/yield-rankings-coin-cache", () => ({
+vi.mock("../../lib/yield/yield-rankings-coin-cache", () => ({
   readYieldRankingsCoinCache: (db: D1Database) => getCache(db, "yield-rankings"),
 }));
 
@@ -18,7 +18,7 @@ import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleYieldHistory } from "../yield-history";
-import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
+import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield/yield-history-ownership-handoffs";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import { AUTO_LENDING_POOL_MAP } from "../../lib/yield-config/yield-config-lending-protocols";

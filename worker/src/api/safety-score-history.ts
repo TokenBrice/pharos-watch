@@ -3,7 +3,7 @@ import { buildCronFreshnessHeaders, getLatestSuccessfulCronTimestampResult } fro
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
-import { fetchSafetyScoreHistoryCompatibilityRows } from "../lib/safety-score-history-v2";
+import { fetchSafetyScoreHistoryCompatibilityRows } from "../lib/safety-score-v9/safety-score-history-v2";
 
 export async function safetyScoreHistoryHeaders(context: {
   db: D1Database;

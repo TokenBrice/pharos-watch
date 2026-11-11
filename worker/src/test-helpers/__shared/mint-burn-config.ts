@@ -2,7 +2,7 @@ import type {
   MintBurnBridgeDetectionConfig,
   MintBurnContractConfig,
   MintBurnEventDef,
-} from "../../lib/mint-burn-contracts-types";
+} from "../../lib/mint-burn-pipeline/mint-burn-contracts-types";
 
 export interface MakeMintBurnConfigOverrides {
   chain?: Partial<MintBurnContractConfig["chain"]>;

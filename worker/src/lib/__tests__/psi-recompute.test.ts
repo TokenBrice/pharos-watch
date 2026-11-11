@@ -4,11 +4,11 @@ import {
   buildSupplySnapshotMap,
   type PsiSupplyRow,
   type PsiDepegEventRow,
-} from "../psi-recompute";
+} from "../psi/psi-recompute";
 import {
   findNearestSupplySnapshot,
   type PsiUniverseCache,
-} from "../psi-history-universe";
+} from "../psi/psi-history-universe";
 import { buildPsiDayInput, buildPsiStabilityInput, psiDepegRow, psiSupplyPair, DAY } from "./psi.test-support";
 
 describe("buildSupplySnapshotMap", () => {

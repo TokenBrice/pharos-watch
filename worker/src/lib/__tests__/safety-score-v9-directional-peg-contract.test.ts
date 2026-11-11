@@ -4,7 +4,7 @@ import {
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
   type ReportCardsFixedInput,
-} from "../report-cards-fixed-input";
+} from "../safety-score-v9/report-cards-fixed-input";
 import {
   buildReportCardsFixedInputCacheEntry,
   createReportCardsFixedInput,

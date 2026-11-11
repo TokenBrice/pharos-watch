@@ -15,14 +15,14 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
  * prepared on the half-hourly 16,46 chart slot (`prepare-safety-score-v9-input`,
  * after DEX publication), not in this quarter-hourly slot.
  */
-import { syncStablecoins } from "../../cron/sync-stablecoins";
-import { syncFxRates } from "../../cron/sync-fx-rates";
-import { syncYieldSupplemental } from "../../cron/sync-yield-supplemental";
+import { syncStablecoins } from "../../cron/market-supply/sync-stablecoins";
+import { syncFxRates } from "../../cron/pricing/sync-fx-rates";
+import { syncYieldSupplemental } from "../../cron/yield-sync/sync-yield-supplemental";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
-import { snapshotSupply } from "../../cron/snapshot-supply";
-import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
-import { snapshotPsiDaily } from "../../cron/snapshot-psi";
-import { snapshotPublicDataset } from "../../cron/snapshot-public-dataset";
+import { snapshotSupply } from "../../cron/market-supply/snapshot-supply";
+import { snapshotChainSupply } from "../../cron/market-supply/snapshot-chain-supply";
+import { snapshotPsiDaily } from "../../cron/psi/snapshot-psi";
+import { snapshotPublicDataset } from "../../cron/public-datasets/snapshot-public-dataset";
 import { createNeutralSkippedCronResult } from "../../lib/cron-result";
 import type { CronResult } from "../../lib/cron-logger";
 import { DAY_SECONDS } from "@shared/lib/time-constants";

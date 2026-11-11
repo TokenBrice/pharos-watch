@@ -10,7 +10,7 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extensio
 import { routeSafetyScoreV9NegativeIncidentReviews } from "../safety-score-v9/extension-incidents";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
-import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { reviewedScope } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
 

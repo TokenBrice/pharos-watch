@@ -1,21 +1,21 @@
 import { getCache } from "../lib/db-cache";
-import { compactMintBurnPublication } from "../lib/mint-burn-publication";
+import { compactMintBurnPublication } from "../lib/mint-burn-pipeline/mint-burn-publication";
 import { resolveOrReject, parseQueryParams } from "../lib/api-params";
 import { MINT_BURN_FLOWS_HOURS_QUERY } from "@shared/lib/api-endpoints/queries";
 import { errorResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
-import { buildMintBurnScope, getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
-import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
+import { buildMintBurnScope, getMintBurnConfigsForStablecoin } from "../lib/mint-burn-pipeline/mint-burn-contracts";
+import { buildMintBurnSyncHealth } from "../lib/mint-burn-pipeline/mint-burn-health-config";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,
   summarizeMintBurnValuation,
 } from "@shared/lib/mint-burn-valuation";
 import { addMintBurnClassificationTally, emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
-import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../lib/mint-burn-hourly-valuation";
+import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../lib/mint-burn-pipeline/mint-burn-hourly-valuation";
 import { decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
 import { buildInClause } from "../lib/db";
-import { hasMintBurnClassificationReview } from "../lib/mint-burn-classification";
+import { hasMintBurnClassificationReview } from "../lib/mint-burn-pipeline/mint-burn-classification";
 import {
   aggregateFlowCacheKey,
   aggregateHourlyRowsByChain,

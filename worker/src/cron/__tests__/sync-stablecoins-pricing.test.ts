@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { applyConsensusResults, buildDlListPrices, createValidationContextResolver } from "../sync-stablecoins/pricing";
-import { validatePrimaryPriceCandidate } from "../../lib/price-publish-policy";
+import { validatePrimaryPriceCandidate } from "../../lib/pricing/price-publish-policy";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { normalizeStablecoinsPayload } from "../sync-stablecoins/shared";
 
-vi.mock("../../lib/price-publish-policy", () => ({
+vi.mock("../../lib/pricing/price-publish-policy", () => ({
   validatePrimaryPriceCandidate: vi.fn(),
   validatePublishedAssetPrice: vi.fn(),
 }));

@@ -126,8 +126,8 @@ export function evaluateWorkerWranglerConfig(
     issues.push("Public must not own the accepted Safety capture archive bucket binding.");
   }
   const catalogAliases = assignments.filter(({ section, key }) => section === "alias" && key === "#pharos-full-catalog");
-  if (catalogAliases.length !== 1 || unquote(catalogAliases[0]?.value) !== "./src/lib/full-stablecoin-catalog.ts") {
-    issues.push("Worker full catalog alias must resolve to ./src/lib/full-stablecoin-catalog.ts.");
+  if (catalogAliases.length !== 1 || unquote(catalogAliases[0]?.value) !== "./src/lib/market-supply/full-stablecoin-catalog.ts") {
+    issues.push("Worker full catalog alias must resolve to ./src/lib/market-supply/full-stablecoin-catalog.ts.");
   }
   const routes = assignments.filter(({ key }) => key === "routes");
   const rootRoutes = routes.filter(({ section }) => section === "root");

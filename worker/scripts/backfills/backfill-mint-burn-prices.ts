@@ -5,7 +5,7 @@ import {
   MAX_HISTORICAL_MINT_PRICE_REPAIR_LIMIT,
   repairHistoricalMintBurnPrices,
   type HistoricalMintPriceSourceLoader,
-} from "../../src/lib/mint-burn-historical-price-repair";
+} from "../../src/lib/mint-burn-pipeline/mint-burn-historical-price-repair";
 
 const EXECUTION_CONFIRMATION = "historical-mint-prices";
 

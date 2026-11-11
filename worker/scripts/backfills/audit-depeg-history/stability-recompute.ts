@@ -1,8 +1,8 @@
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
-import type { PsiDepegEventRow } from "../../../src/lib/psi-recompute";
-import type { PsiUniverseCache } from "../../../src/lib/psi-history-universe";
-import { loadHistoricalPsiArchives } from "../../../src/lib/psi-replay-inputs";
-import { historicalPsiInputSnapshot, replayHistoricalPsiForDay } from "../../../src/lib/psi-replay";
+import type { PsiDepegEventRow } from "../../../src/lib/psi/psi-recompute";
+import type { PsiUniverseCache } from "../../../src/lib/psi/psi-history-universe";
+import { loadHistoricalPsiArchives } from "../../../src/lib/psi/psi-replay-inputs";
+import { historicalPsiInputSnapshot, replayHistoricalPsiForDay } from "../../../src/lib/psi/psi-replay";
 
 export async function buildRecomputeStabilityStatements(
   db: D1Database,

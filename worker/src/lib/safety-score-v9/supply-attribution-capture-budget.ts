@@ -1,7 +1,7 @@
 import { SUPPLY_ATTRIBUTION_CAPTURE_BUDGET, SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { throwIfAborted } from "../abort";
-import type { V9ExecutionWindow } from "../v9-slot-window";
+import type { V9ExecutionWindow } from "./v9-slot-window";
 import type { SupplyAttributionCaptureFailureReason } from "@shared/types/safety-score-v9-supply-attribution";
 
 export type BudgetedSupplyAttributionResult<T> =

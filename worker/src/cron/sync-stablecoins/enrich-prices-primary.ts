@@ -1,10 +1,10 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/pricing/price-validation";
 import { throwIfAborted } from "../../lib/abort";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing/pricing-provider-diagnostics";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { DlListQuote } from "../../lib/primary-price-collector";
-import type { BinanceFetchSession } from "../../lib/cex-tickers";
+import type { DlListQuote } from "../../lib/pricing/primary-price-collector";
+import type { BinanceFetchSession } from "../../lib/pricing/cex-tickers";
 import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "./enrich-prices-shared";
 import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "./enrich-prices-primary-provider-collection";

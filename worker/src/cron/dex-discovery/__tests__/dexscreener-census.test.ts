@@ -5,7 +5,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 }));
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { fetchDsTokenPairsWithStatus } from "../../../lib/dexscreener";
+import { fetchDsTokenPairsWithStatus } from "../../../lib/dex-liquidity/dexscreener";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 import { crawlDexScreenerPoolsStage, createDexScreenerDiscoveryRunState } from "../crawl-dexscreener-pools";
 import { classifyDexDeploymentOutcomes } from "../deployment-outcomes";

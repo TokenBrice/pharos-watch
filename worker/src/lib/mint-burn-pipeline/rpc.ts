@@ -1,12 +1,12 @@
 import { buildAlchemyUrl, fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps,
   type AlchemyLogEntry, type AlchemyLogsFetchResult, type AlchemyTopicFilter, type ResolveBlockTimestampOptions } from "../alchemy-logs";
-import { createMintBurnLogIdentityValidator } from "../mint-burn-log-identity";
+import { createMintBurnLogIdentityValidator } from "./mint-burn-log-identity";
 import type { ChainRpcConfig, RpcEndpoint } from "../chain-registry";
 import { throwIfAborted } from "../abort";
 import { budgetExhausted, type SubrequestBudget } from "../evm-logs";
 import { fetchEvmBlockHeader, type EvmBlockHeader } from "../evm-rpc";
 import { TronRpcError, type TronJsonRpcReader } from "../tron-jsonrpc";
-import { mintBurnFinalizedHeadMaxAgeSec } from "../mint-burn-health-config";
+import { mintBurnFinalizedHeadMaxAgeSec } from "./mint-burn-health-config";
 
 export function mintBurnAlchemyEndpoint(url: string): RpcEndpoint {
   return { url, operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" };

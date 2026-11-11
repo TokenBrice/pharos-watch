@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DDR_HASH_DOMAINS, stableJsonHashV1 } from "@shared/lib/depeg-resolver/hash";
 import { buildDdrChronologyImport, reconcileDdrFinalizedChronology } from "../reconcile-ddr-finalized-chronology";
-import { loadFirstPublicationMembership, writePublicationManifest } from "../../src/lib/depeg-resolver-publication-store";
+import { loadFirstPublicationMembership, writePublicationManifest } from "../../src/lib/depeg-resolver/depeg-resolver-publication-store";
 import { sealPredictionFixture, sealedPayloadWithHash, withSqliteD1 } from "../../src/lib/__tests__/depeg-resolver-ddrv2-store.test-support";
 import type { SqliteD1 } from "../../src/lib/__tests__/depeg-resolver-ddrv2-store.test-support";
-import type { DdrSealedPublicPrediction } from "../../src/lib/depeg-resolver-publication-store";
+import type { DdrSealedPublicPrediction } from "../../src/lib/depeg-resolver/depeg-resolver-publication-store";
 
 function payload(
   prediction: DdrSealedPublicPrediction,

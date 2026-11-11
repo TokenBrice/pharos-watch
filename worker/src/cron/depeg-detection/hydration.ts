@@ -2,21 +2,21 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/price";
-import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-threshold-policy";
-import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
+import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/depeg-detection/depeg-threshold-policy";
+import { POOL_CHALLENGE_MIN_TVL } from "../../lib/pricing/price-depeg-voting-policy";
 import { throwIfAborted } from "../../lib/abort";
 import {
   DEPEG_EVENTS_DEPEGROW_COLUMNS,
   loadDexPoolChallengers,
   loadDexPrices,
   logOpenDepegEventLimitReached,
-} from "../../lib/depeg-helpers";
+} from "../../lib/depeg-detection/depeg-helpers";
 import {
   fetchCurrentNativePegQuotes,
   type NativePegQuoteSession,
-} from "../../lib/native-peg-quotes";
+} from "../../lib/pricing/native-peg-quotes";
 import type { DepegDetectionRow, HydratedDepegDetection } from "./types";
-import { persistActiveNativeEventQuotes } from "../../lib/native-peg-quote-cache";
+import { persistActiveNativeEventQuotes } from "../../lib/pricing/native-peg-quote-cache";
 
 export async function hydrateDepegDetection(
   db: D1Database,

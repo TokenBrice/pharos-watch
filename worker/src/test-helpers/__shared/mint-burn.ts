@@ -3,10 +3,10 @@ import {
   type MockD1Database,
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
-import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts-types";
-import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
-import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-pipeline/mint-burn-contracts-types";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-pipeline/mint-burn-contracts";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-pipeline/mint-burn-publication";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/mint-burn-contract-identity";
 import type { MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 
 type MockRows = MockTableConfig["rows"];

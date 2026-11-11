@@ -3,7 +3,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { logCronRun } from "../../lib/cron-logger";
 import { loadProducerFreshnessFacts } from "../../lib/status/freshness-oracle";
-import { getCompletedSupplySnapshot } from "../../lib/supply-snapshot-completion";
+import { getCompletedSupplySnapshot } from "../../lib/market-supply/supply-snapshot-completion";
 import {
   buildSupplySnapshotCompletionMarker,
   makeSupplySnapshotDb,
@@ -15,7 +15,7 @@ const mockD1 = makeSupplySnapshotDb;
 const { publishNonUsdShareHistoryMock } = vi.hoisted(() => ({
   publishNonUsdShareHistoryMock: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../../lib/non-usd-share-history", () => ({
+vi.mock("../../lib/market-supply/non-usd-share-history", () => ({
   publishNonUsdShareHistory: publishNonUsdShareHistoryMock,
 }));
 
@@ -31,8 +31,8 @@ vi.mock("@shared/lib/psi-historical-assets", () => ({
   PSI_HISTORICAL_IDS: new Set(["eurt-test"]),
 }));
 
-import { snapshotSupply } from "../snapshot-supply";
-import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
+import { snapshotSupply } from "../market-supply/snapshot-supply";
+import type { StablecoinPublicationWaiver } from "../../lib/market-supply/stablecoin-publication-coverage";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const DEFAULT_REQUIRED_IDS = ["usdt-tether", "usdc-circle"] as const;

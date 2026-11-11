@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { DexApiPool } from "../../../lib/dex-api-common";
+import type { DexApiPool } from "../../../lib/dex-liquidity/dex-api-common";
 import {
   buildUniV3ExecutionCandidateKey,
   type UniV3ExecutionCandidate,

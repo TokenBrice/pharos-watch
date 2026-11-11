@@ -12,8 +12,8 @@ import { getRedemptionBackstopConfig, validateRedemptionOutputIdentity } from "@
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
-import type { FxRateState } from "../fx-rate-state";
+import type { StablecoinsCacheLoadOk } from "../market-supply/stablecoins-cache";
+import type { FxRateState } from "../pricing/fx-rate-state";
 import type * as EvmRpcModule from "../evm-rpc";
 import { makeV9FixedInput, makeV9Extension } from "../../test-helpers/v9-fixed-input";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";

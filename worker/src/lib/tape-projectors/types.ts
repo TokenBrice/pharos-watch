@@ -10,8 +10,8 @@ import {
   getProjectorWatermark,
   insertTapeEvents,
   setProjectorWatermark,
-} from "../tape-event-store";
-import type { TapeEventInsert } from "../tape-event-types";
+} from "./tape-event-store";
+import type { TapeEventInsert } from "./tape-event-types";
 
 export interface ProjectorOptions {
   /**

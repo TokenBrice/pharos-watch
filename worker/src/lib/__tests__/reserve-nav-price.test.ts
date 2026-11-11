@@ -1,7 +1,7 @@
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserves/live-reserve-policy";
 import { describe, expect, it } from "vitest";
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
-import { decodeReserveNavPrice, reserveNavSupplyScopeReason } from "../reserve-nav-price";
+import { decodeReserveNavPrice, reserveNavSupplyScopeReason } from "../pricing/reserve-nav-price";
 import type { PinnedNativeShareObservation } from "@shared/types/reserve-nav-supply";
 
 const now = Date.parse("2026-10-03T12:00:00Z") / 1000;

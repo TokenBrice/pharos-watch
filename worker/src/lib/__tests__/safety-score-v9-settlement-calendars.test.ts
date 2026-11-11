@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, RedemptionBusinessDayTerms } from "@shared/types/redemption";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../safety-score-v9/report-cards-fixed-input";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";

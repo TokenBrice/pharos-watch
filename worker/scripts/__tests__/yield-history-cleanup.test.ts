@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../src/lib/yield-history-ownership-handoffs";
+import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../src/lib/yield/yield-history-ownership-handoffs";
 import {
   createYieldHistoryCleanupArtifact,
   deleteCleanupRowsFromSqlite,

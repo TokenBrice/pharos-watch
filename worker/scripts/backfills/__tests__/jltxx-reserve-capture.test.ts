@@ -6,10 +6,10 @@ const { issuer, shares } = vi.hoisted(() => ({ issuer: vi.fn(), shares: vi.fn() 
 vi.mock("../../../src/cron/reserve-adapters/jpmorgan-nav", () => ({ fetchJpmorganNavReserves: issuer }));
 vi.mock("../../../src/cron/sync-stablecoins/supplemental-assets/onchain-supply", () => ({ fetchPinnedNativeShares: shares }));
 import { bootstrapJltxxReserves } from "../jltxx-reserve-capture";
-import { CONFIGURED_COINS } from "../../../src/cron/sync-live-reserves-shared";
-import { finalizeReserveSyncRun } from "../../../src/cron/sync-live-reserves-finalize";
-import { resolveLiveReserveSyncBudgetConfig } from "../../../src/cron/sync-live-reserves-config";
-import { createAdapterLatencyCollector } from "../../../src/cron/sync-live-reserves-core";
+import { CONFIGURED_COINS } from "../../../src/cron/live-reserves/sync-live-reserves-shared";
+import { finalizeReserveSyncRun } from "../../../src/cron/live-reserves/sync-live-reserves-finalize";
+import { resolveLiveReserveSyncBudgetConfig } from "../../../src/cron/live-reserves/sync-live-reserves-config";
+import { createAdapterLatencyCollector } from "../../../src/cron/live-reserves/sync-live-reserves-core";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   fixtures.closeAll();

@@ -4,7 +4,7 @@ import { formatCompactUsd } from "@shared/lib/format";
 import { buildLiveHomepageHeroSnapshot, describeHomepageSupplyCoverage } from "@shared/lib/homepage-hero-snapshot";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import { handleChains } from "../chains";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache } from "../../lib/market-supply/stablecoins-cache";
 import { freshnessReason, ownerUrl, readOwnerJson, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 
 /** `/chains` hero: the largest chain's share of observed global supply (max `dominanceShare`), as on the page. */

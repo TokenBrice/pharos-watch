@@ -12,13 +12,13 @@ import {
   SUPPLY_INTEGRITY_CONFIRM_KEY,
   REVIEWED_SUPPLY_CARRIES,
   type SupplyIntegrityReport,
-} from "../supply-integrity";
+} from "../market-supply/supply-integrity";
 import { assessSupplyIntegrityQuality } from "../status/supply-integrity-quality";
-import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../market-supply/stablecoin-publication-coverage";
 import {
   buildSupplySnapshotCompletionMarker,
   buildSupplySnapshotCoverageExpectation,
-} from "../supply-snapshot-completion";
+} from "../market-supply/supply-snapshot-completion";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const NOW = 1_790_000_000;

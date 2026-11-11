@@ -1,13 +1,13 @@
 import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
 import { PinnedNativeShareObservationSchema } from "@shared/types/reserve-nav-supply";
 import { getReserveAdapter } from "../../src/cron/reserve-adapters/index";
-import { createReserveAdapterRunner } from "../../src/cron/reserve-adapter-runner";
-import { createAdapterLatencyCollector, syncReserveCoin } from "../../src/cron/sync-live-reserves-core";
-import { resolveLiveReserveSyncBudgetConfig } from "../../src/cron/sync-live-reserves-config";
-import { STAGED_BOOTSTRAP_COINS } from "../../src/cron/sync-live-reserves-shared";
+import { createReserveAdapterRunner } from "../../src/cron/live-reserves/reserve-adapter-runner";
+import { createAdapterLatencyCollector, syncReserveCoin } from "../../src/cron/live-reserves/sync-live-reserves-core";
+import { resolveLiveReserveSyncBudgetConfig } from "../../src/cron/live-reserves/sync-live-reserves-config";
+import { STAGED_BOOTSTRAP_COINS } from "../../src/cron/live-reserves/sync-live-reserves-shared";
 import { getReserveCompositionRow, getReserveSyncState, didReserveSyncSuccessBecomeAuthoritative } from "../../src/lib/live-reserves/store";
 import { parseReserveCompositionRow } from "../../src/lib/live-reserves/store-row-decoding";
-import { decodeReserveNavPrice, reserveNavSupplyScopeReason } from "../../src/lib/reserve-nav-price";
+import { decodeReserveNavPrice, reserveNavSupplyScopeReason } from "../../src/lib/pricing/reserve-nav-price";
 import { fetchPinnedNativeShares } from "../../src/cron/sync-stablecoins/supplemental-assets/onchain-supply";
 import type { ChainRpcConfig } from "../../src/lib/chain-registry";
 import { throwIfAborted } from "../../src/lib/abort";

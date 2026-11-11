@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyFailure, type ReserveFailureCategory } from "../sync-live-reserves-shared";
+import { classifyFailure, type ReserveFailureCategory } from "../live-reserves/sync-live-reserves-shared";
 
 interface Case {
   name: string;

@@ -6,10 +6,10 @@ const mocks = vi.hoisted(() => ({
   buildFlightToQualityClassificationFromV9Snapshot: vi.fn(),
 }));
 
-vi.mock("../../../lib/safety-score-index", () => ({
+vi.mock("../../../lib/safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: mocks.loadActiveSafetyScoreIndex,
 }));
-vi.mock("../../../lib/flight-to-quality-classification", () => ({
+vi.mock("../../../lib/mint-burn-pipeline/flight-to-quality-classification", () => ({
   buildFlightToQualityClassificationFromV9Snapshot:
     mocks.buildFlightToQualityClassificationFromV9Snapshot,
 }));

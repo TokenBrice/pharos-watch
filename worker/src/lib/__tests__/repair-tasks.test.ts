@@ -10,9 +10,9 @@ import {
   loadDdrRepairDebtDetails,
   runWorkerRepairTaskRunner,
   syncDdrRepairDebtTasks,
-} from "../repair-tasks";
+} from "../depeg-resolver/repair-tasks";
 import { runCronSentinelSources } from "../../cron/cron-sentinel-result";
-import { DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 } from "../depeg-resolver-incident-store";
+import { DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 } from "../depeg-resolver/depeg-resolver-incident-store";
 
 const NOW = 1_775_900_000;
 

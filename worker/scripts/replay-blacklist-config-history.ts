@@ -8,9 +8,9 @@ import { blacklistCanonicalEventFilterSql, blacklistEventIdentity, blacklistEven
 import { parseEvmLogsWithCoverage } from "../src/cron/blacklist/evm-source";
 import { buildBlacklistEventInsert } from "../src/cron/blacklist/persistence";
 import { blockHashesForLogs, fetchAlchemyLogs, resolveBlockTimestamps, type AlchemyLogEntry } from "../src/lib/alchemy-logs";
-import { getBlacklistConfigByKey, getBlacklistTopicHashes, type ContractEventConfig } from "../src/lib/blacklist-contracts";
-import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist-cache-keys";
-import { BLACKLIST_CURRENT_BALANCE_COLUMNS, BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY, BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, buildBlacklistCurrentBalanceValues } from "../src/lib/blacklist-current-balances";
+import { getBlacklistConfigByKey, getBlacklistTopicHashes, type ContractEventConfig } from "../src/lib/blacklist/blacklist-contracts";
+import { BLACKLIST_DERIVED_GENERATION_ROTATION_SQL, getBlacklistDerivedCacheKeys } from "../src/lib/blacklist/blacklist-cache-keys";
+import { BLACKLIST_CURRENT_BALANCE_COLUMNS, BLACKLIST_CURRENT_BALANCE_UPSERT_POLICY, BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, buildBlacklistCurrentBalanceValues } from "../src/lib/blacklist/blacklist-current-balances";
 import { buildCurrentBalanceSnapshotRows } from "../src/lib/blacklist/row-preparation";
 import { shouldSuppressAsMirrorZero, type BlacklistRow } from "../src/lib/blacklist/shared";
 import { decimalNumberFromBigInt } from "../src/lib/bigint";

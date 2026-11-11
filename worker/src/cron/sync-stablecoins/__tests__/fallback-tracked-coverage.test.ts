@@ -17,7 +17,7 @@ import { StablecoinListResponseSchema, type StablecoinData } from "@shared/types
 import { getCache } from "../../../lib/db-cache";
 import * as authoritative from "../../../lib/authoritative-price-sources";
 import { parseStablecoinsCapabilities } from "../../../handlers/scheduled/context";
-import { snapshotSupply } from "../../snapshot-supply";
+import { snapshotSupply } from "../../market-supply/snapshot-supply";
 import * as enrichment from "../enrich-prices";
 import * as post from "../post-enrichment";
 import * as onchain from "../supplemental-assets/onchain-supply";

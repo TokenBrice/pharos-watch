@@ -1,5 +1,5 @@
 import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserves/live-reserve-policy";
 import { getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";

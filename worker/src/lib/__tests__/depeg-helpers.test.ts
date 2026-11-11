@@ -7,13 +7,13 @@ import {
   serializeDepegPriceCoverage,
   rowToDepegEvent,
   type DepegRow,
-} from "../depeg-helpers";
+} from "../depeg-detection/depeg-helpers";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { getDexAggregateRejectionReason, isAffirmativeDexPriceRow } from "../depeg-trust-policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
-import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegUpsertParams } from "../depeg-pending";
-import { isExtremeMovePending, parsePendingReason } from "../depeg-helpers";
+import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegUpsertParams } from "../depeg-detection/depeg-pending";
+import { isExtremeMovePending, parsePendingReason } from "../depeg-detection/depeg-helpers";
 import { computePegScore } from "@shared/lib/peg-score";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
 

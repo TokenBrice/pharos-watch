@@ -7,7 +7,7 @@ import {
   makeDexApiFetchResult,
   type DexApiFetchResult,
   type DexApiPool,
-} from "../../lib/dex-api-common";
+} from "../../lib/dex-liquidity/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";

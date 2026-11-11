@@ -14,7 +14,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { conditionalGetResponse, scopeResponseEtag } from "../../lib/api-response";
 
-vi.mock("../../lib/safety-score-index", () => ({
+vi.mock("../../lib/safety-score-v9/safety-score-index", () => ({
   loadActiveSafetyScoreIndex: vi.fn(async () => ({ kind: "error", reason: "safety-score-index-unavailable", snapshot: null })),
 }));
 

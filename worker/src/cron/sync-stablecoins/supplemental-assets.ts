@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../../lib/constants";
-import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/pricing/coingecko";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";

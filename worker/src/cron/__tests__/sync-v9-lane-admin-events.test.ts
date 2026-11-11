@@ -17,7 +17,7 @@ import {
   syncV9LaneAdminEvents,
   type LaneScreeningAttempt,
   type LaneScreeningDescriptor,
-} from "../sync-v9-lane-admin-events";
+} from "../safety-score-v9/sync-v9-lane-admin-events";
 
 import { persistLaneIncidentCertificates } from "../../lib/safety-score-v9/lane-incident-certificate-store";
 import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "@shared/lib/safety-score-v9/lane-screening-derivation";
