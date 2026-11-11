@@ -23,7 +23,7 @@ import {
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { appendOptionalYieldCandidate, appendPoolFamilyYieldSources, type YieldCandidateAppendStatus } from "../yield-sync/resolve";
-import { loadOndoOracleAnchorRow } from "../yield-sync/sources-optional";
+import { loadOndoOracleAnchorRow } from "../yield-sync/optional-nav-history";
 import { loadTier1PrevRateRows } from "../yield-sync/resolve";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 

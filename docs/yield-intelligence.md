@@ -584,7 +584,7 @@ Snapshot loading separates selected history from requested-source history using 
 
 History input construction and source evaluation expose only awaited cooperative APIs. Their row/coin cadence, per-iteration cancellation checks, and progress-before-yield ordering are shared by runtime and tests; deterministic tests may inject an immediately resolved `yieldToEventLoop` callback without selecting a separate execution mode.
 
-Morpho, Pendle, Yearn Kong and Beefy share only a local candidate-envelope constructor in `sources-optional.ts`: providers pass explicit identity, percent APY, pool, source key, label, yield type and per-row observation time. Optional identity-field presence and provider-specific source-key casing remain intact. Fetch/parser boundaries, budgets, exception handling and cleanup stay provider-owned; `SIMPLE_SUPPLEMENTAL_FAMILIES` remains the family runner authority.
+Morpho, Pendle, Yearn Kong and Beefy share only a local candidate-envelope constructor in `sources-optional-vaults.ts`: providers pass explicit identity, percent APY, pool, source key, label, yield type and per-row observation time. Optional identity-field presence and provider-specific source-key casing remain intact. Fetch/parser boundaries, budgets, exception handling and cleanup stay provider-owned; `SIMPLE_SUPPLEMENTAL_FAMILIES` remains the family runner authority.
 
 ### Failure Semantics
 
