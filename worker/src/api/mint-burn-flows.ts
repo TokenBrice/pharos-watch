@@ -40,8 +40,6 @@ import {
   reconcileCachedAggregateSafetyResponse,
 } from "../lib/mint-burn-pipeline/flow-aggregate";
 
-export { refreshAggregateMintBurnFlowCache } from "../lib/mint-burn-pipeline/flow-aggregate";
-
 export const handleMintBurnFlows = async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
