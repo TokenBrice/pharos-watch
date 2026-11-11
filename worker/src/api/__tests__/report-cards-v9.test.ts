@@ -17,7 +17,7 @@ import { ReportCardsV9TableResponseSchema, ReportCardsV9DetailResponseSchema } f
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-materialization";
-import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication, serializeSafetyScoreV9PublicationWithEncoding } from "../../test-helpers/report-cards-v9";
 import { currentInput, persistAndMaterialize } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
 import { materializeV9AcceptedPublication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../../lib/report-cards-v9-materialization";
@@ -119,7 +119,7 @@ describe("materialized V9 response", () => {
     const before = await handleReportCardsV9(db);
     const body = await before.text();
     const etag = before.headers.get("ETag");
-    const stored = await publicationCodec.serializeSafetyScoreV9PublicationWithEncoding(publication, encoding);
+    const stored = await serializeSafetyScoreV9PublicationWithEncoding(publication, encoding);
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stored, SAFETY_SCORE_V9_CACHE_KEYS.publication);
     const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
     const warm = await handleReportCardsV9(db);

@@ -397,6 +397,17 @@ type PendingProofAttempt =
   | { status: "accepted"; observation: EconomicSupplyObservation }
   | { status: "rejected"; reason: string };
 
+type PendingProofRejection = {
+  status: "pending-rejected";
+  routeId: string;
+  failurePredicate: string;
+  incompleteBootstrap: boolean;
+};
+
+function pendingProofRejection(routeId: string, reason: string): PendingProofRejection {
+  return { status: "pending-rejected", routeId, failurePredicate: reason, incompleteBootstrap: reason === "history-incomplete" };
+}
+
 /** Dispatch proof readers only; the caller owns pins, route names and phase order. */
 async function readReviewedPendingProof(
   source: PendingProtocolRead, id: string, deploymentKey: string, liability: boolean,
@@ -442,14 +453,18 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(
   input: Parameters<typeof observeReviewedEconomicDeploymentPartitionInternal>[0],
 ): Promise<ReviewedEconomicSupplyObservationAttempt> {
   let hardEvidenceFailure = false;
-  const result = await observeReviewedEconomicDeploymentPartitionInternal({
+  const observation = await observeReviewedEconomicDeploymentPartitionInternal({
     ...input,
     onDiagnostic: diagnostic => {
       hardEvidenceFailure ||= diagnostic.hardEvidenceFailure;
       input.onDiagnostic?.(diagnostic);
     },
   });
-  if (result.status === "rejected" && !hardEvidenceFailure && !result.failedRouteId?.endsWith(":history-incomplete")) {
+  const result: ReviewedEconomicSupplyObservationAttempt = observation.status === "pending-rejected"
+    ? { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `${observation.routeId}:${observation.failurePredicate}` }
+    : observation;
+  if (result.status === "rejected" && !hardEvidenceFailure &&
+      !(observation.status === "pending-rejected" && observation.incompleteBootstrap)) {
     emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "economic-deployment", sourceId: input.assetId, laneId: result.failedRouteId, phase: "observation-rejected", method: "partition-attempt", hardEvidenceFailure: true, failurePredicate: result.rejectionCode });
   }
   return result;
@@ -462,7 +477,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onBodyRead?: BodyReadObserver;
   onPhase?: (phase: SupplyAttributionPhase) => void;
-}): Promise<ReviewedEconomicSupplyObservationAttempt> {
+}): Promise<ReviewedEconomicSupplyObservationAttempt | PendingProofRejection> {
   let failedRouteId: string | null = null;
   const startedAtMs = Date.now();
   const currentCaptureClock = () => input.scoringClockSec + Math.max(0, Math.floor((Date.now() - startedAtMs) / 1_000));
@@ -786,8 +801,8 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
         } else {
           const result = await readReviewedPendingProof(escrow.inFlightSource, `in-flight:${escrow.id}`,
             escrow.canonicalDeploymentKey, false, headers, input, pinMaxAgeSec);
-          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable",
-            failedRouteId: `${escrow.inFlightSource.kind === "evm-layerzero-oft-pending" ? `in-flight:${escrow.id}` : escrow.id}:${result.reason}` };
+          if (result.status !== "accepted") return pendingProofRejection(
+            escrow.inFlightSource.kind === "evm-layerzero-oft-pending" ? `in-flight:${escrow.id}` : escrow.id, result.reason);
           pending = result.observation;
         }
         if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
@@ -808,7 +823,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:unsupported-read" };
         }
         const result = await readReviewedPendingProof(source, "in-flight:liability", plan.deployments[0]!.deploymentKey, true, headers, input, pinMaxAgeSec);
-        if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
+        if (result.status !== "accepted") return pendingProofRejection("in-flight:liability", result.reason);
         inFlight.push(result.observation);
       } else {
         bodyOrigin = new URL(source.url).origin; bodyMethod = "conversion";

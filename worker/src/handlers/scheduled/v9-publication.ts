@@ -23,7 +23,7 @@ export function buildV9PublicationSlotGroups(
             currentSlotKey: runtime.scheduleKey,
             v9PublicationSecondChance: isV9PublicationSecondChanceTrigger(runtime.cron),
             onV9PublicationAlreadyAccepted: (windowSignal, executionWindow) =>
-              import("../../lib/safety-score-v9/publication-runner").then(({ recoverSafetyScoreV9PublicMaterialization }) =>
+              import("../../lib/safety-score-v9/publication-materialization").then(({ recoverSafetyScoreV9PublicMaterialization }) =>
                 recoverSafetyScoreV9PublicMaterialization(runtime.db, windowSignal, executionWindow.deadlineMs)),
           },
           (windowSignal, executionWindow) =>

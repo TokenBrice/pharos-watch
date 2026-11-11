@@ -3,6 +3,8 @@ import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test
 import { createSafetyScoreV9FullRegistryInput, FULL_REGISTRY_CLOCK_SEC } from "./fixtures/safety-score-v9-full-registry-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
+import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
@@ -18,7 +20,8 @@ import * as publicationAttempts from "../safety-score-v9/publication-attempts";
 import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
-import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs, retryPendingSafetyScoreV9PublicMaterialization, recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs } from "../safety-score-v9/publication-runner";
+import { retryPendingSafetyScoreV9PublicMaterialization, recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-materialization";
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
 import * as publicationCodec from "../safety-score-v9/publication-codec";
 import * as evaluateSet from "@shared/lib/safety-score-v9/evaluate-set";
@@ -456,7 +459,7 @@ describe("Safety Score V9 publication runner", () => {
       return pipeline;
     });
     const result = await runSafetyScoreV9Publication({
-      db: {} as D1Database, fixedInput: null, fixedInputOwner: owner,
+      db: {} as D1Database, capturedInput: { owner },
       nowSec: original.clockSec,
     });
     expect(result.status).toBe("published");
@@ -478,13 +481,15 @@ describe("Safety Score V9 publication runner", () => {
         return pipeline;
       });
       const result = await runSafetyScoreV9Publication({
-        db: {} as D1Database, fixedInput, nowSec: fixedInput.clockSec,
-        preparedFixedInputAlreadyNormalized: true,
-        prepareFixedInput: async (input) => ({
-          ...input,
-          [field]: { "usdc-circle": { malformed: true } },
-          evidenceJournalById: { "usdt-tether": [], "usdc-circle": [] },
-        }),
+        db: {} as D1Database, nowSec: fixedInput.clockSec,
+        capturedInput: {
+          owner: { value: normalizeSafetyScoreV9CompilerInput(fixedInput) },
+          enrich: async (input) => ({
+            ...input,
+            [field]: { "usdc-circle": { malformed: true } },
+            evidenceJournalById: { "usdt-tether": [], "usdc-circle": [] },
+          } as SafetyScoreV9CompilerInput),
+        },
       });
       expect(result.status).toBe("published");
     },
@@ -513,14 +518,16 @@ describe("Safety Score V9 publication runner", () => {
     const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => new AbortController().signal);
     try {
       const result = await runSafetyScoreV9Publication({
-        db: {} as D1Database, fixedInput: input, nowSec: input.clockSec,
-        preparedFixedInputAlreadyNormalized: true,
-        prepareFixedInput: async (base) => ({
-          ...base,
-          safetyScoreV9SupplyAttributionById: {
-            "audd-novatti": { model: "reviewed-economic-deployment-partition-v1" },
-          },
-        }),
+        db: {} as D1Database, nowSec: input.clockSec,
+        capturedInput: {
+          owner: { value: normalizeSafetyScoreV9CompilerInput(input) },
+          enrich: async (base) => ({
+            ...base,
+            safetyScoreV9SupplyAttributionById: {
+              "audd-novatti": { model: "reviewed-economic-deployment-partition-v1" },
+            },
+          } as unknown as SafetyScoreV9CompilerInput),
+        },
       });
       // Print the complete result (including abortCause) when the status differs.
       expect(result, JSON.stringify(result)).toMatchObject({ status: "published" });
@@ -881,15 +888,16 @@ describe("Safety Score V9 publication runner", () => {
   it("still rejects a mutated base input when preparation declares itself pre-normalized", async () => {
     const result = await runSafetyScoreV9Publication({
       db: {} as D1Database,
-      fixedInput,
       nowSec: fixedInput.clockSec,
       // The composition shortcut only skips re-parsing the base payload; the
       // base-identity assertion must still reject a moved generation.
-      preparedFixedInputAlreadyNormalized: true,
-      prepareFixedInput: async (input) => ({
-        ...input,
-        sourceGeneration: "mutated-source-generation",
-      }),
+      capturedInput: {
+        owner: { value: normalizeSafetyScoreV9CompilerInput(fixedInput) },
+        enrich: async (input) => ({
+          ...input,
+          sourceGeneration: "mutated-source-generation",
+        }),
+      },
     });
 
     expect(result).toMatchObject({
@@ -902,13 +910,14 @@ describe("Safety Score V9 publication runner", () => {
   it("accepts a pre-normalized prepared input that keeps the base identity", async () => {
     const result = await runSafetyScoreV9Publication({
       db: {} as D1Database,
-      fixedInput,
       nowSec: fixedInput.clockSec,
-      preparedFixedInputAlreadyNormalized: true,
-      prepareFixedInput: async (input) => ({
-        ...input,
-        evidenceJournalById: { "usdc-circle": [] },
-      }),
+      capturedInput: {
+        owner: { value: normalizeSafetyScoreV9CompilerInput(fixedInput) },
+        enrich: async (input) => ({
+          ...input,
+          evidenceJournalById: { "usdc-circle": [] },
+        }),
+      },
     });
 
     expect(result.status).toBe("published");

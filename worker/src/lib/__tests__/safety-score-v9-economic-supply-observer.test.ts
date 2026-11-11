@@ -695,7 +695,7 @@ describe("reviewed economic supply observation", () => {
   });
 
   it("retains the escrow OFT history-incomplete cause after successful holding and identity reads", async () => {
-    const f = oftFixture(), original = vi.mocked(evmRpc.fetchEvmRpcBatch).getMockImplementation()!;
+    const f = oftFixture(), original = vi.mocked(evmRpc.fetchEvmRpcBatch).getMockImplementation()!, onDiagnostic = vi.fn();
     // Keep the source pin beyond eight 1,000,000-block discovery windows.
     // The send occurs after the eight scanned windows. Each empty page has
     // a zero historical outbound counter, authenticating that sparse prefix.
@@ -717,9 +717,10 @@ describe("reviewed economic supply observation", () => {
         return results[index];
       });
     });
-    expect(await f.run()).toEqual({
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic })).toEqual({
       status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:bridge:history-incomplete",
     });
+    expect(onDiagnostic.mock.calls.every(([diagnostic]) => !diagnostic.hardEvidenceFailure)).toBe(true);
     expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledTimes(8);
   });

@@ -26,7 +26,7 @@ vi.mock("../../../lib/v9-slot-window", async (importOriginal) => ({
 vi.mock("../../../cron/compute-safety-score-v9", () => ({
   computeSafetyScoreV9: mocks.computeSafetyScoreV9,
 }));
-vi.mock("../../../lib/safety-score-v9/publication-runner", () => ({
+vi.mock("../../../lib/safety-score-v9/publication-materialization", () => ({
   recoverSafetyScoreV9PublicMaterialization: mocks.recoverSafetyScoreV9PublicMaterialization,
 }));
 vi.mock("../../../lib/structured-log", () => ({

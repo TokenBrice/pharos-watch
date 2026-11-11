@@ -1,10 +1,6 @@
-import { setCache } from "../db-cache";
-import { createCronResult } from "../cron-result";
-import type { CronResult } from "../cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
-import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_MINIMUM_RATEABLE_ASSETS } from "@shared/types/safety-score-v9-coverage";
 import type {
   V9PublicationHealth,
@@ -38,7 +34,7 @@ import {
   persistSafetyScoreV9PublicationAttempt,
   loadSafetyScoreV9PublicationIdentityEnvelope,
 } from "./publication-store";
-import { loadSafetyScoreV9PublicationHealth, resolveSafetyScoreV9EffectivePublicationHealth, SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-health";
+import { loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import type { V9PublicationPhaseElapsedMs, V9PublicationAbortCause, V9PublicationAttempt } from "./publication-attempts";
 import type { V9AssetQuarantine } from "./fact-set";
 import { persistAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
@@ -48,15 +44,11 @@ import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache"
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError, type SafetyScoreV9ReplayCaptureInput } from "./publication-replay-capture";
-import type { AcceptedProjectionUnavailableReason } from "./accepted-projections";
 import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./publication-journal";
 import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from "./capture-archive";
 import { buildSafetyScoreV9AcceptedProjections } from "./accepted-projections";
-import { materializeV9AcceptedPublication, type V9AcceptedPublicMaterializationSource, type V9PublicMaterializationResult } from "../report-cards-v9-materialization";
-import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
-import { throwIfAborted } from "../abort";
-import { loadSafetyScoreV9PublicationStoredRow } from "./publication-chunks";
-import { parseSafetyScoreV9Publication } from "./publication-codec";
+import { materializeAcceptedPublication, type SafetyScoreV9PublicMaterializationRunResult } from "./publication-materialization";
+import { safeFailure, SafetyScoreV9AcceptedBaselineProjectionError, SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS, type SafetyScoreV9PublicationFailureStage } from "./publication-failure";
 
 // Non-scheduled publication fallback.
 const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
@@ -64,13 +56,8 @@ const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 // failed-attempt write) plus 5s cron settlement, not a measured persistence p99.
 const SAFETY_SCORE_V9_PUBLICATION_SETTLEMENT_RESERVE_MS = 15_000;
 const SAFETY_SCORE_V9_PUBLICATION_MINIMUM_BUDGET_MS = 10_000;
-const SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS = 5_000;
 const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
   "safety-score-v9-publication";
-
-type SafetyScoreV9PublicationFailureStage = Exclude<
-  NonNullable<V9PublicationAttempt["failure"]>["stage"], "aborted"
->;
 
 /**
  * Run-metadata-only sub-phase wall time (not persisted in attempt records):
@@ -84,12 +71,7 @@ export interface SafetyScoreV9PublicationSubphaseElapsedMs {
   materializeSelect: number | null;
 }
 
-export type SafetyScoreV9PublicMaterializationRunResult =
-  | V9PublicMaterializationResult
-  | { status: "failed"; publicationGenerationId: string; attempts: number; code: string; message: string }
-  | { status: "skipped"; reason: "post-commit-interrupted" };
-
-export interface RunSafetyScoreV9PublicationInput {
+interface SafetyScoreV9PublicationOptions {
   db: D1Database;
   captureArchiveBucket?: R2Bucket;
   captureArchiveContext?: ExecutionContext;
@@ -100,32 +82,32 @@ export interface RunSafetyScoreV9PublicationInput {
    */
   deferPublicMaterialization?: boolean;
   publicationDeadlineMs?: number;
-  fixedInput: unknown;
-  /** The production caller transfers ownership instead of pinning the decoded input across publication. */
-  fixedInputOwner?: { value: Readonly<SafetyScoreV9CompilerInput> | null };
   /** Original compressed prepare-time envelope; retained without re-serialization. */
   fixedInputCacheValue?: string;
-  /** The cache parser already normalized this value; avoid cloning it again on the production hot path. */
-  fixedInputAlreadyNormalized?: boolean;
-  /**
-   * `prepareFixedInput` composes its result from the already-normalized input
-   * (spreading its fields and adding the loader-validated journal projections),
-   * so the runner must not re-run the full native-input normalization over it.
-   * That pass re-parsed the whole base payload — three Zod passes, the DEX and
-   * redemption row copies, and both payload fingerprints — for data the intake
-   * parse already validated and canonicalized. With this set, only the journal
-   * projections are re-validated (`withNormalizedV9JournalProjections`) and the
-   * base-input identity is still asserted below.
-   */
-  preparedFixedInputAlreadyNormalized?: boolean;
-  prepareFixedInput?: (
-    fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-    signal: AbortSignal,
-  ) => Promise<unknown>;
   signal?: AbortSignal;
   nowSec?: number;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
 }
+
+export type RunSafetyScoreV9PublicationInput = SafetyScoreV9PublicationOptions & (
+  | {
+      fixedInput: unknown;
+      prepareFixedInput?: (
+        fixedInput: Readonly<SafetyScoreV9CompilerInput>, signal: AbortSignal,
+      ) => Promise<unknown>;
+      capturedInput?: never;
+    }
+  | {
+      capturedInput: {
+        owner: { value: Readonly<SafetyScoreV9CompilerInput> | null };
+        enrich?: (
+          fixedInput: Readonly<SafetyScoreV9CompilerInput>, signal: AbortSignal,
+        ) => Promise<SafetyScoreV9CompilerInput>;
+      };
+      fixedInput?: never;
+      prepareFixedInput?: never;
+    }
+);
 
 export type SafetyScoreV9PublicationRunResult = (
   | {
@@ -188,15 +170,13 @@ function sameBaseInput(
 }
 
 function takePublicationFixedInput(input: RunSafetyScoreV9PublicationInput): Readonly<SafetyScoreV9CompilerInput> {
-  if (input.fixedInputOwner !== undefined) {
-    const fixedInput = input.fixedInputOwner.value;
-    input.fixedInputOwner.value = null;
+  if (input.capturedInput !== undefined) {
+    const fixedInput = input.capturedInput.owner.value;
+    input.capturedInput.owner.value = null;
     if (fixedInput === null) throw new Error("Safety Score v9 input ownership was already transferred");
     return fixedInput;
   }
-  return input.fixedInputAlreadyNormalized
-    ? input.fixedInput as SafetyScoreV9CompilerInput
-    : normalizeSafetyScoreV9CompilerInput(input.fixedInput);
+  return normalizeSafetyScoreV9CompilerInput(input.fixedInput);
 }
 
 function publicationInputReloader(
@@ -224,11 +204,12 @@ async function preparePublicationInput(
 ) {
   let fixedInput = owner.value!;
   owner.value = null;
-  const normalizePreparedInput = input.prepareFixedInput && input.preparedFixedInputAlreadyNormalized
+  const prepareFixedInput = input.capturedInput?.enrich ?? input.prepareFixedInput;
+  const normalizePreparedInput = input.capturedInput?.enrich
     ? withNormalizedV9JournalProjections
     : normalizeSafetyScoreV9CompilerInput;
-  if (input.prepareFixedInput) {
-    const prepared = await input.prepareFixedInput(fixedInput, signal);
+  if (prepareFixedInput) {
+    const prepared = await prepareFixedInput(fixedInput, signal);
     const preparedFixedInput = normalizePreparedInput(prepared as SafetyScoreV9CompilerInput);
     if (!sameBaseInput(preparedFixedInput, fixedInput)) {
       throw new Error("Safety Score v9 preparation changed the authoritative fixed input");
@@ -303,29 +284,6 @@ function observationCoverageFloors(
   ];
 }
 
-function safeFailure(
-  error: unknown,
-  stage: SafetyScoreV9PublicationFailureStage,
-): { code: string; message: string } {
-  if (error instanceof SafetyScoreV9AcceptedBaselineProjectionError) {
-    return { code: error.code, message: error.message };
-  }
-  const name = error instanceof Error && error.name ? error.name : "Error";
-  const assetAndField =
-    error instanceof V9AssetEvaluationError
-      ? `-${error.assetId}-${error.fieldPath ?? "unknown-field"}`
-      : "";
-  const rawMessage = toErrorMessage(error);
-  return {
-    code: `safety-score-v9-publication-${stage}-${name}${assetAndField}`
-      .replace(/[^A-Za-z0-9._:-]/gu, "-")
-      .slice(0, 160),
-    message: (
-      rawMessage.trim() || "Safety Score v9 publication attempt failed"
-    ).slice(0, 500),
-  };
-}
-
 export function getSafetyScoreV9PublicationBudgetMs(
   nowMs: number,
   inheritedDeadlineMs?: number,
@@ -376,20 +334,6 @@ function heldPublicationHealth(args: {
         : args.attemptedAtSec,
     reasons: args.reasons,
   };
-}
-
-class SafetyScoreV9AcceptedBaselineProjectionError extends Error {
-  readonly code: string;
-
-  constructor(reason: AcceptedProjectionUnavailableReason) {
-    const suffix = reason === "projection-missing" ? "missing"
-      : reason === "read-failed" ? "read-failed"
-      : reason === "publication-mismatch" || reason === "health-mismatch" ? "publication-mismatch"
-      : "invalid";
-    super(`Accepted Safety Score v9 baseline projection unavailable: ${reason}`);
-    this.name = "SafetyScoreV9AcceptedBaselineProjectionError";
-    this.code = `safety-score-v9-accepted-baseline-projection-${suffix}`;
-  }
 }
 
 function publicationAttempt(args: {
@@ -542,134 +486,6 @@ function logPublicationGenerationDeltas(
       pillarChanges,
     },
   });
-}
-
-/**
- * Best-effort post-acceptance materialization. Acceptance is already durable;
- * a failure leaves readers on the previously selected generation and is retried
- * once in-run, then in the :52 second-chance slot without another compute.
- */
-async function materializeAcceptedPublication(
-  db: D1Database,
-  source: V9AcceptedPublicMaterializationSource,
-  signal: AbortSignal,
-  timing: SafetyScoreV9PublicationSubphaseElapsedMs,
-): Promise<SafetyScoreV9PublicMaterializationRunResult> {
-  const maxAttempts = 2;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await materializeV9AcceptedPublication(db, source, signal, timing);
-    } catch (error) {
-      if (attempt < maxAttempts && !signal.aborted) continue;
-      const failure = safeFailure(error, "publication-write");
-      logWorkerEvent({
-        scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_failed",
-        job: "compute-safety-score-v9", message: "Accepted publication retained; public representations not yet materialized",
-        metadata: { publicationGenerationId: source.publication.publicationGenerationId, attempts: attempt, ...failure },
-      });
-      return {
-        status: "failed", publicationGenerationId: source.publication.publicationGenerationId,
-        attempts: attempt, code: failure.code.replace("publication-write", "public-materialization"), message: failure.message,
-      };
-    }
-  }
-}
-
-/** The :52 recovery path owns this invocation; candidate inputs are never loaded. */
-export async function retryPendingSafetyScoreV9PublicMaterialization(
-  db: D1Database, signal: AbortSignal | undefined, deadlineMs: number,
-): Promise<{
-  status: SafetyScoreV9PublicMaterializationRunResult["status"]; publishedAtSec: number | null;
-  publicationGenerationId: string | null; reason: string; budgetMs: number;
-} | null> {
-  // Use the remaining slot, retaining 5s for commit confirmation and cron settlement.
-  const budgetMs = Math.max(0, deadlineMs - Date.now() - SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS);
-  if (budgetMs === 0) return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
-    reason: "v9-public-materialization-retry-insufficient-budget", budgetMs };
-  const retryDeadlineMs = Date.now() + budgetMs;
-  const retrySignal = AbortSignal.any([AbortSignal.timeout(budgetMs), ...(signal ? [signal] : [])]);
-  const checkBudget = () => {
-    if (Date.now() >= retryDeadlineMs) throw new DOMException("Materialization retry budget exhausted", "TimeoutError");
-    throwIfAborted(retrySignal);
-  };
-  checkBudget();
-  const row = await db.prepare(`SELECT p.updated_at AS published_at,
-    json_extract(p.value, '$.identity.publicationGenerationId') AS generation_id,
-    json_extract(p.value, '$.payloadSha256') AS payload_sha256,
-    CASE WHEN json_extract(m.value, '$.publicationGenerationId') = json_extract(p.value, '$.identity.publicationGenerationId')
-      AND json_extract(m.value, '$.payloadSha256') = json_extract(p.value, '$.payloadSha256')
-      AND json_extract(m.value, '$.projectionVersion') = ? THEN 1 ELSE 0 END AS materialized
-    FROM cache p LEFT JOIN cache m ON m.key = ? WHERE p.key = ?`)
-    .bind(V9_PUBLIC_REPRESENTATION_VERSION, V9_PUBLIC_MATERIALIZATION_CACHE_KEY, SAFETY_SCORE_V9_CACHE_KEYS.publication)
-    .first<{ published_at: number; generation_id: string; payload_sha256: string; materialized: number }>();
-  if (!row) {
-    checkBudget();
-    return { status: "skipped", publishedAtSec: null, publicationGenerationId: null,
-      reason: "v9-public-materialization-retry-source-unavailable", budgetMs };
-  }
-  if (row.materialized === 1) return null;
-  try {
-    checkBudget();
-    let source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
-    checkBudget();
-    if (!source || source.updatedAt !== row.published_at || (JSON.parse(source.value) as { payloadSha256?: unknown }).payloadSha256 !== row.payload_sha256) {
-      throw new Error("v9-public-materialization-retry-source-changed");
-    }
-    const publication = await parseSafetyScoreV9Publication(source.value, retrySignal);
-    // Recovery owns this row; release its stored text before staging wire fragments.
-    source = null;
-    checkBudget();
-    const health = await loadSafetyScoreV9PublicationHealth(db, retrySignal);
-    checkBudget();
-    if (!health || publication.publicationGenerationId !== row.generation_id || publication.publishedAtSec !== row.published_at) {
-      throw new Error("v9-public-materialization-retry-source-unavailable");
-    }
-    const result = await materializeV9AcceptedPublication(db, {
-      publication, health: resolveSafetyScoreV9EffectivePublicationHealth(publication, health), payloadSha256: row.payload_sha256,
-    }, retrySignal);
-    // The materializer confirms its committed marker even if the retry signal expired.
-    return { status: result.status, publishedAtSec: row.published_at, publicationGenerationId: row.generation_id, budgetMs,
-      reason: `v9-public-materialization-retry-${result.status}` };
-  } catch (error) {
-    const reason = (error instanceof Error || error instanceof DOMException) && error.name === "TimeoutError"
-      ? "v9-public-materialization-retry-timeout" : retrySignal.aborted
-        ? `v9-public-materialization-retry-${signal?.aborted ? "aborted" : "timeout"}` : "v9-public-materialization-retry-failed";
-    // Persist independently of the expired retry signal so later holding hours can compute.
-    await setCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicMaterializationFailure,
-      JSON.stringify({ publicationGenerationId: row.generation_id, reason }));
-    logWorkerEvent({
-      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
-      job: "compute-safety-score-v9", message: "Accepted publication retained; second-chance materialization failed", error,
-      metadata: { reason, publicationGenerationId: row.generation_id },
-    });
-    return { status: "failed", publishedAtSec: row.published_at, publicationGenerationId: row.generation_id, reason, budgetMs };
-  }
-}
-
-export async function recoverSafetyScoreV9PublicMaterialization(
-  db: D1Database, signal: AbortSignal, deadlineMs: number,
-): Promise<CronResult> {
-  try {
-    const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, signal, deadlineMs);
-    const reason = retry?.reason ?? "v9-public-materialization-already-selected";
-    return createCronResult({
-      status: retry === null || retry.status === "superseded" ? "skipped_neutral" : retry.status === "materialized" ? "ok" : "degraded",
-      itemCount: retry?.status === "materialized" ? 1 : 0,
-      metadata: { reason, publicMaterialization: retry },
-      productivity: { productive: retry?.status === "materialized", reason },
-    });
-  } catch (error) {
-    const reason = (error instanceof Error || error instanceof DOMException) && error.name === "TimeoutError"
-      ? "v9-public-materialization-retry-timeout" : signal.aborted
-        ? "v9-public-materialization-retry-aborted" : "v9-public-materialization-retry-failed";
-    logWorkerEvent({
-      scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_failed",
-      job: "compute-safety-score-v9", message: "Accepted publication retained; second-chance materialization did not complete", error,
-      metadata: { reason },
-    });
-    return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason },
-      productivity: { productive: false, reason } });
-  }
 }
 
 export async function runSafetyScoreV9Publication(

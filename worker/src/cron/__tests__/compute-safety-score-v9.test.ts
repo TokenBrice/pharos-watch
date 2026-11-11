@@ -131,10 +131,12 @@ async function installControl(control: SafetyScoreV9CaptureControl) {
 
 function mockPublishedPreparation() {
   mocks.runPublication.mockImplementation(async (input: {
-    fixedInputOwner: { value: NativeSafetyScoreV9Input };
-    prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+    capturedInput: {
+      owner: { value: NativeSafetyScoreV9Input };
+      enrich: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+    };
   }) => {
-    const prepared = await input.prepareFixedInput(input.fixedInputOwner.value, new AbortController().signal);
+    const prepared = await input.capturedInput.enrich(input.capturedInput.owner.value, new AbortController().signal);
     expect(prepared.baseInputGenerationId).toBe(fixedInput.baseInputGenerationId);
     return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
       candidateId: "candidate", outcome: "full", quarantines: [], affectedAssetIds: [], bridgeJoinDiagnostics: [] };
@@ -333,10 +335,12 @@ describe("computeSafetyScoreV9", () => {
   it("keeps accepted publication/archive metadata when the caller aborts during post-commit archiving", async () => {
     const caller = new AbortController();
     mocks.runPublication.mockImplementationOnce(async (input: {
-      fixedInputOwner: { value: NativeSafetyScoreV9Input };
-      prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+      capturedInput: {
+        owner: { value: NativeSafetyScoreV9Input };
+        enrich: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+      };
     }) => {
-      await input.prepareFixedInput(input.fixedInputOwner.value, new AbortController().signal);
+      await input.capturedInput.enrich(input.capturedInput.owner.value, new AbortController().signal);
       caller.abort(new Error("post-commit cancellation"));
       return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
         candidateId: "candidate", outcome: "clean", quarantines: [], affectedAssetIds: [],
@@ -421,10 +425,12 @@ describe("computeSafetyScoreV9", () => {
     mocks.parsePegSeed.mockReturnValue({ sourceGeneration: fixedInput.sourceGeneration, clockSec: fixedInput.clockSec,
       safetyScoreIdentity: identity, pegProvenanceById: {} });
     mocks.runPublication.mockImplementationOnce(async (input: {
-      fixedInputOwner: { value: NativeSafetyScoreV9Input };
-      prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+      capturedInput: {
+        owner: { value: NativeSafetyScoreV9Input };
+        enrich: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+      };
     }) => {
-      const prepared = await input.prepareFixedInput(input.fixedInputOwner.value, new AbortController().signal);
+      const prepared = await input.capturedInput.enrich(input.capturedInput.owner.value, new AbortController().signal);
       expect(normalizeNativeV9Input(prepared).baseInputGenerationId).toBe(fixedInput.baseInputGenerationId);
       const substituted = structuredClone(prepared);
       substituted.pipelineGapByAssetId!["usdc-circle"]![0]!.evidence.rejection!.reason = "Uncaptured current-store failure";
@@ -489,7 +495,7 @@ describe("computeSafetyScoreV9", () => {
     });
     expect(mocks.runPublication).toHaveBeenCalledOnce();
     // The evaluator scores against the capture's frozen clock, not compute time.
-    expect(mocks.runPublication.mock.calls[0]![0].fixedInputOwner.value.clockSec).toBe(fixedInput.clockSec);
+    expect(mocks.runPublication.mock.calls[0]![0].capturedInput.owner.value.clockSec).toBe(fixedInput.clockSec);
   });
 
   it("refuses a lagging capture whose stablecoin generation is past the named budget", async () => {
@@ -626,11 +632,13 @@ describe("computeSafetyScoreV9", () => {
 
   it("keeps tolerated partial V9 publications green when supply attribution applied", async () => {
     mocks.runPublication.mockImplementationOnce(async (input: {
-      fixedInputOwner: { value: unknown };
-      prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+      capturedInput: {
+        owner: { value: unknown };
+        enrich?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+      };
     }) => {
-      await input.prepareFixedInput?.(
-        input.fixedInputOwner.value,
+      await input.capturedInput.enrich?.(
+        input.capturedInput.owner.value,
         new AbortController().signal,
       );
       return {
@@ -666,11 +674,13 @@ describe("computeSafetyScoreV9", () => {
 
   it("keeps the coverage-floor verdict readable after metadata compaction", async () => {
     mocks.runPublication.mockImplementationOnce(async (input: {
-      fixedInputOwner: { value: unknown };
-      prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+      capturedInput: {
+        owner: { value: unknown };
+        enrich?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+      };
     }) => {
-      await input.prepareFixedInput?.(
-        input.fixedInputOwner.value,
+      await input.capturedInput.enrich?.(
+        input.capturedInput.owner.value,
         new AbortController().signal,
       );
       return {
@@ -743,11 +753,13 @@ describe("computeSafetyScoreV9", () => {
       reason: "generation-stale",
     });
     mocks.runPublication.mockImplementationOnce(async (input: {
-      fixedInputOwner: { value: unknown };
-      prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+      capturedInput: {
+        owner: { value: unknown };
+        enrich?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+      };
     }) => {
-      await input.prepareFixedInput?.(
-        input.fixedInputOwner.value,
+      await input.capturedInput.enrich?.(
+        input.capturedInput.owner.value,
         new AbortController().signal,
       );
       return {
@@ -836,10 +848,12 @@ describe("computeSafetyScoreV9", () => {
         .mockResolvedValueOnce(newer);
       let prepared: NativeSafetyScoreV9Input | null = null;
       mocks.runPublication.mockImplementation(async (run: {
-        fixedInputOwner: { value: NativeSafetyScoreV9Input };
-        prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+        capturedInput: {
+          owner: { value: NativeSafetyScoreV9Input };
+          enrich: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+        };
       }) => {
-        prepared = await run.prepareFixedInput(run.fixedInputOwner.value, new AbortController().signal);
+        prepared = await run.capturedInput.enrich(run.capturedInput.owner.value, new AbortController().signal);
         return { status: "published", attemptId: "attempt", publicationGenerationId: input.sourceGeneration,
           candidateId: "candidate", outcome: "full", quarantines: [], affectedAssetIds: [], bridgeJoinDiagnostics: [] };
       });
@@ -937,10 +951,12 @@ describe("computeSafetyScoreV9", () => {
         });
       let preparation: Promise<unknown> | null = null;
       mocks.runPublication.mockImplementation(async (run: {
-        fixedInputOwner: { value: NativeSafetyScoreV9Input };
-        prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+        capturedInput: {
+          owner: { value: NativeSafetyScoreV9Input };
+          enrich: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+        };
       }) => {
-        preparation = run.prepareFixedInput(run.fixedInputOwner.value, new AbortController().signal);
+        preparation = run.capturedInput.enrich(run.capturedInput.owner.value, new AbortController().signal);
         await expect(preparation).rejects.toThrow(/older than current .*\(out-of-budget\)/);
         return { status: "failed", stage: "v9-enrichment", code: "Error", message: "refused", attemptId: "attempt",
           phaseElapsedMs: {}, subphaseElapsedMs: {}, phaseTimingBasis: "workers-io-boundary-attributed", abortCause: null,

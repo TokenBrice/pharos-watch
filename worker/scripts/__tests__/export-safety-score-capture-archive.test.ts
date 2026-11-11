@@ -1,3 +1,4 @@
+import { serializeSafetyScoreV9PublicationWithEncoding } from "../../src/test-helpers/report-cards-v9";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
@@ -14,7 +15,7 @@ import { makeV9FixedInput, v9TestClockSec } from "../../src/test-helpers/v9-fixe
 import { makeWorkerSafetyScoreV9Publication } from "../../src/test-helpers/report-cards-v9";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, serializeSafetyScoreV9Publication, serializeSafetyScoreV9PublicationWithEncoding } from "../../src/lib/safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, serializeSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
 import type { SafetyScoreCaptureArchiveObject } from "@shared/types/safety-score-capture-archive";
 import { buildFixedInputCacheEntry } from "../../src/lib/report-cards-fixed-input-cache-codec";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
