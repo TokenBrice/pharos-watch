@@ -1,6 +1,9 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { runDocContractsCli } from "../maintenance/generate-doc-contracts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { runDocSyncChecks } from "../lib/doc-sync/checks";
 import { LANE_FRESHNESS_REVIEW_NOTES } from "../lib/lane-freshness-review";
 import { renderLaneFreshnessMatrix, replaceLaneFreshnessMatrix } from "../maintenance/generate-lane-freshness-matrix";
@@ -9,7 +12,9 @@ import {
   docContractEndMarker,
   docContractStartMarker,
   findDocContractDrift,
+  getDocContractRegions,
   renderDocContractBlock,
+  replaceDocContractRegions,
 } from "../lib/doc-sync/contract-blocks";
 import {
   ISOLATE_LOCAL_STATE_DOC_END,
@@ -33,6 +38,12 @@ describe("doc-sync Worker runtime documentation", () => {
     expect(checkWithOverrides({})).toEqual([]);
   });
 
+  it("rejects reuse of the availability floor for mint/burn sync freshness", () => {
+    const file = "docs/status-dashboard.md";
+    expect(checkWithOverrides({ [file]: readFileSync(resolve(ROOT, file), "utf8") + "the same floor described under Availability status above" }))
+      .toEqual([expect.objectContaining({ file, label: "mint/burn floor reuse" })]);
+  });
+
   it.each([
     ["compatibility_date", /^compatibility_date\s*=.*$/gm, '"wrong-date"'],
     ["compatibility_flags", /^compatibility_flags\s*=.*$/gm, "[]"],
@@ -48,45 +59,34 @@ describe("doc-sync Worker runtime documentation", () => {
     const failures = checkWithOverrides({
       [RUNTIME_DOC]: runtimeDoc.replace(pattern, `${key} = ${value}`),
     });
-    expect(failures.some((failure) => failure.file === RUNTIME_DOC && failure.label.startsWith("runtime configuration "))).toBe(true);
+    expect(failures.some((failure) => failure.file === RUNTIME_DOC && failure.label === "generated doc contract worker-runtime-limits")).toBe(true);
   });
 
   it("checks both observability enabled assignments independently", () => {
     const failures = checkWithOverrides({
       [RUNTIME_DOC]: runtimeDoc.replace("[observability.logs]\nenabled = true", "[observability.logs]\nenabled = false"),
     });
-    expect(failures).toEqual([
-      { file: RUNTIME_DOC, label: "runtime configuration observability.logs.enabled", expected: "true", found: "false" },
-    ]);
+    expect(failures).toEqual([expect.objectContaining({ file: RUNTIME_DOC, label: "generated doc contract worker-runtime-limits" })]);
   });
 
   it("rejects a missing runtime field in either the docs or the source", () => {
-    for (const file of [RUNTIME_DOC, "worker/wrangler.toml"]) {
-      const text = file === RUNTIME_DOC ? runtimeDoc : publicToml;
-      expect(checkWithOverrides({ [file]: text.replace(/^keep_names\s*=.*\n/m, "") })).toEqual([
-        {
-          file,
-          label: "runtime configuration root.keep_names",
-          expected: file === RUNTIME_DOC ? "true" : "declared",
-          found: null,
-        },
-      ]);
-    }
+    expect(checkWithOverrides({ [RUNTIME_DOC]: runtimeDoc.replace(/^keep_names\s*=.*\n/m, "") }))
+      .toEqual([expect.objectContaining({ file: RUNTIME_DOC, label: "generated doc contract worker-runtime-limits" })]);
+    expect(() => checkWithOverrides({ "worker/wrangler.toml": publicToml.replace(/^keep_names\s*=.*\n/m, "") }))
+      .toThrow("missing runtime configuration root.keep_names");
   });
 
   it.each([
-    runtimeDoc.replace("## Runtime Limits and Observability", "## Other Runtime Notes"),
     runtimeDoc.replace("```toml", "```text"),
     "## Runtime Limits and Observability\nNo snippet.\n## Another Section\n```toml\nminify = true\n```",
-  ])("rejects a missing TOML snippet in the owning section", (document) => {
-    expect(checkWithOverrides({ [RUNTIME_DOC]: document })).toEqual([
-      { file: RUNTIME_DOC, label: "runtime limits snippet", expected: "toml runtime limits snippet", found: null },
-    ]);
+  ])("rejects a missing or malformed generated TOML snippet", (document) => {
+    expect(checkWithOverrides({ [RUNTIME_DOC]: document }))
+      .toEqual([expect.objectContaining({ file: RUNTIME_DOC, label: "generated doc contract worker-runtime-limits" })]);
   });
 
-  it("ignores comments and insignificant assignment whitespace", () => {
+  it("ignores comments and insignificant assignment whitespace in the source", () => {
     expect(checkWithOverrides({
-      [RUNTIME_DOC]: runtimeDoc.replace("minify = true", "minify   =   true # documented setting"),
+      "worker/wrangler.toml": publicToml.replace("minify = true", "minify   =   true # documented setting"),
     })).toEqual([]);
   });
 });
@@ -120,12 +120,14 @@ describe("doc-sync lane freshness matrix", () => {
       { file: MATRIX, label: "draft sign-off boundary", expected: "**Draft for owner sign-off.**", found: null },
       { file: MATRIX, label: "sign-off boundary heading", expected: "## Sign-off boundary", found: null },
     ]);
+    expect(checkWithOverrides({ [MATRIX]: matrix.replace(LANE_FRESHNESS_REVIEW_NOTES["compute-safety-score-v9"], "wrong recovery cadence") }))
+      .toEqual([expect.objectContaining({ file: MATRIX, label: "lane-freshness-matrix" })]);
 
     const flowMap = "docs/data-flow-map.md";
     expect(checkWithOverrides({
-      [flowMap]: readFileSync(resolve(ROOT, flowMap), "utf8").replace("past the 2h consumer budget", ""),
+      [flowMap]: readFileSync(resolve(ROOT, flowMap), "utf8").replace(DOC_CONTRACT_BLOCKS.find(({ id }) => id === "flow-safety-consumer-budget")!.value, ""),
     })).toEqual([
-      { file: flowMap, label: "Safety consumer budget", expected: "past the 2h consumer budget", found: null },
+      expect.objectContaining({ file: flowMap, label: "generated doc contract flow-safety-consumer-budget" }),
     ]);
   });
 });
@@ -135,26 +137,16 @@ describe("doc-sync methodology owner sentences", () => {
     const pricing = "docs/pricing-pipeline.md";
     const depeg = "docs/depeg-detection.md";
     const pricingDrift = readFileSync(resolve(ROOT, pricing), "utf8").replace(
-      "the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.",
+      DOC_CONTRACT_BLOCKS.find(({ id }) => id === "pricing-aggregate-dex-suppression")!.value,
       "",
     );
     const depegDrift = readFileSync(resolve(ROOT, depeg), "utf8").replace(
-      "`confirm_required` direction changes keep the old-direction lifecycle open",
+      DOC_CONTRACT_BLOCKS.find(({ id }) => id === "depeg-confirm-required-direction")!.value,
       "",
     );
     expect(checkWithOverrides({ [pricing]: pricingDrift, [depeg]: depegDrift })).toEqual([
-      {
-        file: pricing,
-        label: "aggregate DEX suppression owner",
-        expected: "the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.",
-        found: null,
-      },
-      {
-        file: depeg,
-        label: "confirm-required direction lifecycle owner",
-        expected: "`confirm_required` direction changes keep the old-direction lifecycle open",
-        found: null,
-      },
+      expect.objectContaining({ file: pricing, label: "generated doc contract pricing-aggregate-dex-suppression" }),
+      expect.objectContaining({ file: depeg, label: "generated doc contract depeg-confirm-required-direction" }),
     ]);
   });
 });
@@ -184,19 +176,57 @@ describe("generated documentation contract blocks", () => {
 
   it.each(DOC_CONTRACT_BLOCKS)("detects drift in $id", (block) => {
     const drift = findDocContractDrift((file) => {
-      const document = documents.get(file)!;
+      const document = documents.get(file) ?? readFileSync(resolve(ROOT, file), "utf8");
       return file === block.file
         ? document.replace(renderDocContractBlock(block), `${docContractStartMarker(block.id)}drift${docContractEndMarker(block.id)}`)
         : document;
     });
 
     expect(drift.map((entry) => entry.id)).toContain(block.id);
+    expect(checkWithOverrides({ [block.file]: documents.get(block.file)!.replace(renderDocContractBlock(block), "broken") }))
+      .toContainEqual(expect.objectContaining({ file: block.file, label: `generated doc contract ${block.id}` }));
+    const expected = renderDocContractBlock(block);
+    const regions = [{ ...block, startMarker: docContractStartMarker(block.id), endMarker: docContractEndMarker(block.id), expected }];
+    expect(replaceDocContractRegions(`before${regions[0].startMarker}drift${regions[0].endMarker}after`, regions))
+      .toBe(`before${expected}after`);
+    expect(replaceDocContractRegions(documents.get(block.file)!, regions)).toBe(documents.get(block.file));
+    expect(() => replaceDocContractRegions(expected + expected, regions)).toThrow("exactly one complete");
+  });
+
+
+  it("checks without writing, refreshes stale blocks and rejects ambiguous markers before writing", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-doc-contracts-"));
+    try {
+      const regions = getDocContractRegions();
+      expect(GENERATED_ARTIFACT_REGISTRY.find(({ id }) => id === "doc-contracts")?.outputPaths)
+        .toEqual([...new Set(regions.map(({ file }) => file))].sort());
+      for (const file of new Set([...regions.map((region) => region.file), "worker/wrangler.toml"])) {
+        mkdirSync(dirname(resolve(root, file)), { recursive: true });
+        writeFileSync(resolve(root, file), readFileSync(resolve(ROOT, file)));
+      }
+      const [first, second] = regions;
+      const path = resolve(root, first.file);
+      const original = readFileSync(path, "utf8");
+      const broken = original.replace(first.expected, `${first.startMarker}broken${first.endMarker}`);
+      writeFileSync(path, broken);
+      expect(() => runDocContractsCli(["--check"], root)).toThrow(`${first.file}: ${first.id}`);
+      expect(readFileSync(path, "utf8")).toBe(broken);
+      const other = resolve(root, second.file);
+      const otherOriginal = readFileSync(other, "utf8");
+      writeFileSync(other, otherOriginal + second.startMarker);
+      expect(() => runDocContractsCli([], root)).toThrow("exactly one complete");
+      expect(readFileSync(path, "utf8")).toBe(broken);
+      writeFileSync(other, otherOriginal);
+      runDocContractsCli([], root);
+      expect(readFileSync(path, "utf8")).toBe(original);
+      expect(() => runDocContractsCli(["--check"], root)).not.toThrow();
+    } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
   it("rejects duplicate markers even when the first block is current", () => {
     const block = DOC_CONTRACT_BLOCKS[0];
     for (const extra of [renderDocContractBlock(block), docContractStartMarker(block.id), docContractEndMarker(block.id)]) {
-      const drift = findDocContractDrift((file) => documents.get(file)! + (file === block.file ? extra : ""));
+      const drift = findDocContractDrift((file) => (documents.get(file) ?? readFileSync(resolve(ROOT, file), "utf8")) + (file === block.file ? extra : ""));
       expect(drift.map((entry) => entry.id)).toContain(block.id);
     }
   });

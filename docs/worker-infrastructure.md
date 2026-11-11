@@ -17,6 +17,7 @@ Worker runtime safety and telemetry controls are declared in both Wrangler confi
 
 `npm run check:worker-config` owns runtime safety and paired Public/Heavy configuration; `npm run check:doc-sync` verifies the shared runtime keys in this TOML snippet against `worker/wrangler.toml`; `check:worker-config` owns `upload_source_maps`, the module rules and the paired Heavy settings.
 
+<!-- GENERATED-START: worker-runtime-limits -->
 ```toml
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
@@ -44,6 +45,7 @@ head_sampling_rate = 0.1
 enabled = true
 invocation_logs = true
 ```
+<!-- GENERATED-END: worker-runtime-limits -->
 - CPU caps are compute time, independent of wall-clock cron timeouts; Cloudflare still applies trigger-specific ceilings.
 - Qualify compatibility changes for both roles at baseline/candidate dates in a dedicated release; Heavy neutral smoke is not producer acceptance. See [runtime experiments](./process/worker-runtime-experiments.md).
 - `global_fetch_strictly_public` keeps custom-domain self-fetches on the public edge; production canaries depend on it.

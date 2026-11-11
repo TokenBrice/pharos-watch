@@ -5,6 +5,9 @@ import {
   FEEDBACK_RATE_LIMIT_WINDOW_SEC,
 } from "@shared/lib/ops-limits";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
+import { getPublicProducerGraceBudget, MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";
 import { CEMETERY_RECORDED_AT_DESCRIPTION } from "@shared/lib/cemetery-merged";
 import {
@@ -26,8 +29,10 @@ import {
 } from "@shared/lib/liquidity-score-weights";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { STATUS_BLACKLIST_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { FRESHNESS_RATIOS, getCacheHealthyMaxRatio, getCacheRatioThresholds, STATUS_BLACKLIST_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { METHODOLOGY_MANIFEST } from "./methodology-manifest";
+import { read } from "./shared";
+import { assignmentKey, buildAssignmentMap, parseAssignments } from "../wrangler-toml.mjs";
 
 export interface DocContractBlock {
   readonly id: string;
@@ -174,6 +179,76 @@ const statusBlocks: readonly DocContractBlock[] = [
   },
 ];
 
+const hours = (sec: number) => `${sec / 3_600}h`;
+const shortMinutes = (sec: number) => `${sec / 60}m`;
+const yieldBands = getCacheRatioThresholds("yield-data");
+const yieldBudget = DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec;
+const safetyInterval = CRON_INTERVALS["compute-safety-score-v9"];
+const consumerBudget = hours(2 * safetyInterval);
+const safetyEndpointSec = DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec;
+const mintBurnEndpointSec = API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
+const mintBurnProducer = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn);
+const safetyProducer = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
+
+const freshnessBlocks: readonly DocContractBlock[] = [
+  {
+    id: "yield-publication-freshness-bands",
+    file: "docs/yield-intelligence.md",
+    value: `fresh through ${integer(yieldBudget * yieldBands.degraded)} seconds, degraded through ${integer(yieldBudget * yieldBands.stale)} seconds, then stale.`,
+  },
+  {
+    id: "status-yield-cache-ratios",
+    file: "docs/status-dashboard.md",
+    value: `\`>${yieldBands.degraded}x\` degraded / \`>${yieldBands.stale}x\` stale`,
+  },
+  {
+    id: "status-yield-healthy-max-ratio",
+    file: "docs/status-dashboard.md",
+    value: `\`healthyMaxRatio\` is \`${FRESHNESS_RATIOS.DEGRADED}\` by default and \`${getCacheHealthyMaxRatio("yield-data")}\` for \`yield-data\``,
+  },
+  {
+    id: "status-safety-cadence",
+    file: "docs/status-dashboard.md",
+    value: `(${integer(safetyInterval)}-second cadence)`,
+  },
+  {
+    id: "flow-safety-consumer-budget",
+    file: "docs/data-flow-map.md",
+    value: `past the ${consumerBudget} consumer budget`,
+  },
+  {
+    id: "flow-safety-endpoint-band",
+    file: "docs/data-flow-map.md",
+    value: `(${FRESHNESS_RATIOS.DEGRADED}× the ${hours(safetyEndpointSec)} endpoint budget, ${hours(FRESHNESS_RATIOS.DEGRADED * safetyEndpointSec)})`,
+  },
+  {
+    id: "detail-safety-consumer-budget",
+    file: "docs/stablecoin-detail-page.md",
+    value: `${consumerBudget} consumer budget`,
+  },
+  {
+    id: "dependency-safety-polling",
+    file: "docs/dependency-map.md",
+    value: `${safetyInterval / 60}-minute \`staleTime\` and ${(2 * safetyInterval) / 60}-minute \`refetchInterval\`.`,
+  },
+  {
+    id: "status-mint-burn-public-freshness",
+    file: "docs/status-dashboard.md",
+    value: `fresh through ${hours(mintBurnEndpointSec)} and degraded through ${hours(mintBurnEndpointSec * MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO)}. `
+      + `Public producer status is Delayed after ${shortMinutes(mintBurnProducer.delayedAfterSec)}, Degraded after ${hours(mintBurnProducer.degradedAfterSec)} and outage after ${hours(mintBurnProducer.outageAfterSec)}.`,
+  },
+  {
+    id: "status-mint-burn-sync-window",
+    file: "docs/status-dashboard.md",
+    value: `keys off the critical-lane sync age against a \`${shortMinutes(mintBurnEndpointSec)}\` window (\`${mintBurnEndpointSec / PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn} * expectedIntervalSec\`): \`fresh\` ≤ \`${shortMinutes(mintBurnEndpointSec)}\`, \`degraded\` ≤ \`${shortMinutes(mintBurnEndpointSec * MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO)}\` (${MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO}x), \`stale\` beyond.`,
+  },
+  {
+    id: "status-safety-raw-stale-public-outage",
+    file: "docs/status-dashboard.md",
+    value: `the shared Safety Score publication floor is \`stale\` (raw stale starts beyond ${safetyProducer.degradedAfterSec / PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores} producer intervals, ${hours(safetyProducer.degradedAfterSec)}; public Safety outage starts beyond ${safetyProducer.outageAfterSec / PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores} intervals, ${hours(safetyProducer.outageAfterSec)})`,
+  },
+];
+
 export const DOC_CONTRACT_BLOCKS: readonly DocContractBlock[] = [
   ...methodologyBlocks,
   ...reportCardBlocks,
@@ -184,6 +259,17 @@ export const DOC_CONTRACT_BLOCKS: readonly DocContractBlock[] = [
   ...workerLimitBlocks,
   ...apiMetaBlocks,
   ...statusBlocks,
+  ...freshnessBlocks,
+  {
+    id: "pricing-aggregate-dex-suppression",
+    file: "docs/pricing-pipeline.md",
+    value: "the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.",
+  },
+  {
+    id: "depeg-confirm-required-direction",
+    file: "docs/depeg-detection.md",
+    value: "`confirm_required` direction changes keep the old-direction lifecycle open",
+  },
   {
     id: "cemetery-recorded-at-description",
     file: "docs/cemetery-and-compare.md",
@@ -191,15 +277,49 @@ export const DOC_CONTRACT_BLOCKS: readonly DocContractBlock[] = [
   },
 ];
 
-export function findDocContractDrift(
-  readDocument: (file: string) => string,
-  regions: readonly DocContractRegion[] = DOC_CONTRACT_BLOCKS.map((block) => ({
+/** The example selects the shared runtime controls, not routes, secrets or bindings. */
+function renderWorkerRuntimeSnippet(toml: string): string {
+  const assignments = parseAssignments(toml);
+  const config = buildAssignmentMap(assignments);
+  const field = (section: string, key: string) => {
+    const value = config.get(assignmentKey(section, key));
+    if (value === undefined) throw new Error(`worker/wrangler.toml: missing runtime configuration ${section}.${key}`);
+    return `${key.startsWith("#") ? JSON.stringify(key) : key} = ${value}`;
+  };
+  const rules = assignments.filter(({ section }) => section === "rules");
+  const textStart = rules.findIndex(({ key, value }) => key === "type" && value === '"Text"');
+  if (textStart < 0) throw new Error("worker/wrangler.toml: missing Text module rule");
+  const textEnd = rules.findIndex(({ key }, index) => index > textStart && key === "type");
+  const textRule = rules.slice(textStart, textEnd < 0 ? undefined : textEnd);
+  return [
+    "\n```toml",
+    ...["compatibility_date", "compatibility_flags", "preview_urls", "minify", "keep_names", "upload_source_maps"].map((key) => field("root", key)),
+    "", "[alias]", field("alias", "#pharos-full-catalog"),
+    "", "[[rules]]", ...textRule.map(({ key, value }) => `${key} = ${value}`),
+    "", "[limits]", field("limits", "cpu_ms"),
+    "", "[observability]", field("observability", "enabled"), field("observability", "head_sampling_rate"),
+    "", "[observability.logs]", field("observability.logs", "enabled"), field("observability.logs", "invocation_logs"),
+    "```\n",
+  ].join("\n");
+}
+
+export function getDocContractRegions(readDocument: typeof read = read): DocContractRegion[] {
+  return [...DOC_CONTRACT_BLOCKS, {
+    id: "worker-runtime-limits",
+    file: "docs/worker-infrastructure.md",
+    value: renderWorkerRuntimeSnippet(readDocument("worker/wrangler.toml")),
+  }].map((block) => ({
     id: block.id,
     file: block.file,
     startMarker: docContractStartMarker(block.id),
     endMarker: docContractEndMarker(block.id),
     expected: renderDocContractBlock(block),
-  })),
+  }));
+}
+
+export function findDocContractDrift(
+  readDocument: (file: string) => string,
+  regions: readonly DocContractRegion[] = getDocContractRegions(readDocument),
 ): DocContractDrift[] {
   const documents = new Map<string, string>();
   const drift: DocContractDrift[] = [];
@@ -221,4 +341,13 @@ export function findDocContractDrift(
   }
 
   return drift;
+}
+
+export function replaceDocContractRegions(document: string, regions: readonly DocContractRegion[]): string {
+  const drift = findDocContractDrift(() => document, regions);
+  for (const region of drift) {
+    if (region.found === null) throw new Error(`${region.file}: expected exactly one complete ${region.id} block`);
+    document = document.replace(region.found, () => region.expected);
+  }
+  return document;
 }

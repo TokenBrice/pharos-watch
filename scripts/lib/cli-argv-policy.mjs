@@ -61,6 +61,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-cron-doc-view.ts"),
     strict("scripts/maintenance/generate-ddrr-calibration-report.ts"),
+    strict("scripts/maintenance/generate-doc-contracts.ts"),
     strict("scripts/maintenance/generate-lane-freshness-matrix.ts"),
     strict("scripts/maintenance/generate-mint-authority-review-audit.ts"),
     strict("scripts/maintenance/generate-runbook-index.ts"),

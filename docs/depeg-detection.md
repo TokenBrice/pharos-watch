@@ -216,7 +216,7 @@ Threshold decisions use `abs(rawBps)` so a value that merely rounds to the bound
 - If a fresh native-currency quote is inside the recovery band, route the row through the recovery confirmation path rather than closing immediately
 - If threshold-crossing USD-primary and native quotes conflict: suppress mutation and keep the lifecycle open
 - An admitted native-domain quote can drive that row's direction replacement. For USD-domain rows, replacement requires authoritative primary input or trusted aggregate DEX corroboration from at least 2 protocol groups; close the old row and queue the replacement
-- Otherwise, `confirm_required` direction changes keep the old-direction lifecycle open and log a warning
+- Otherwise, <!-- GENERATED-START: depeg-confirm-required-direction -->`confirm_required` direction changes keep the old-direction lifecycle open<!-- GENERATED-END: depeg-confirm-required-direction --> and log a warning
 - Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a corroborated trusted DEX row corroborates the move
 - For a live event opened in the native quote domain (`peg_reference = 1` on a non-USD peg), update the peak only from a same-direction native quote; never write the USD primary price into that row
 - Same-direction DEX disagreement is now advisory only: detection logs the mismatch but does **not** auto-close the event from that contradiction alone
