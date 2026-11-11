@@ -16,7 +16,7 @@ import {
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
 import { usd3CurvePoolProvider } from "../authoritative-price-sources/usd3-curve-pool";
-import type { LivePriceReferenceContext as Usd3PriceContext } from "../authoritative-price-sources/helpers";
+import type { LivePriceReferenceContext } from "../authoritative-price-sources/helpers";
 import { createAuthoritativeLivePriceOverrideStats as overrideStats } from "../authoritative-price-sources";
 import { buildPriceValidationContext } from "../price-validation";
 import { validatePublishedAssetPrice } from "../price-publish-policy";
@@ -110,7 +110,7 @@ describe("USD3 exact Curve fallback", () => {
     uint(156101562328671154958659n), uint(196897201958399343897365n), uint(1011115724994965921n), uint(10111154486828596482n)];
   let parent: PeggedAsset;
   let previous: PeggedAsset;
-  let context: Usd3PriceContext;
+  let context: LivePriceReferenceContext;
   const livePrice = (target = unpricedChild(id), ctx = context) => usd3CurvePoolProvider.fetchLivePrice!(target, ctx);
   beforeEach(() => {
     vi.useFakeTimers();
