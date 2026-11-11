@@ -1,6 +1,8 @@
+import { metadata } from "./protocol-position.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
+  metadata,
   archetype: "protocol-position",
   headline: "A protocol claim on positions, not direct cash ownership",
   subtitle: "Bridge, vault and module liabilities retain local accounting, custody and recovery risk even when the underlying asset is a stablecoin.",

@@ -40,6 +40,13 @@ export type ArchetypeDecommissioned = ReadonlyArray<ArchetypeDecommissionedEntry
 
 
 export interface ArchetypeContent {
+  readonly metadata: {
+    readonly title: string;
+    readonly description: string;
+    readonly publishedAt: string;
+    readonly jsonLdHeadline: string;
+    readonly jsonLdDescription: string;
+  };
   readonly archetype: MechanismArchetype;
   readonly headline: string;
   readonly subtitle: string;

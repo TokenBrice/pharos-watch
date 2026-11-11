@@ -38,7 +38,7 @@ Native-family explainers distinguish proportional UCITS/TRS fund shares, shared-
 
 ### Metadata + SEO
 
-`MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts` owns titles; `DESCRIPTION_BY_ARCHETYPE` in the archetype route owns descriptions. Canonicals use `getMechanismExplainerPath`. Methodology links target current `METHODOLOGY_SECTIONS` anchors, including `#pegscore-dews-methodology` for PegScore/DEWS. The registry test checks fragments.
+`src/lib/mechanism-explainers/<archetype>.metadata.ts` owns each article’s SEO title, description, publication date and JSON-LD copy; `MECHANISM_EXPLAINER_METADATA` and `MECHANISM_EXPLAINER_TITLES` in `src/lib/mechanism-explainer-registry.ts` project those lightweight records. Canonicals use `getMechanismExplainerPath`. Methodology links target current `METHODOLOGY_SECTIONS` anchors, including `#pegscore-dews-methodology` for PegScore/DEWS. The registry test checks fragments.
 
 The shared shell emits Breadcrumb JSON-LD. The hub adds DefinedTermSet and distribution Dataset JSON-LD; archetype pages add Article JSON-LD through `buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`, which delegates to `buildArticleJsonLd` so author and publisher reference the root `#organization` node rather than an inline Organization. Metadata uses `/og-editorial-learn.png`; [OG images](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the inert legacy-image policy. There is no quiz, simulator, archetype risk score, per-step SVG deep link, Worker OG handler or FAQ/Course schema.
 

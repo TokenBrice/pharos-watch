@@ -1,3 +1,4 @@
+import { MECHANISM_EXPLAINER_METADATA } from "./mechanism-explainer-registry";
 import type { Metadata } from "next";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import {
@@ -629,18 +630,6 @@ export function buildDefinedTermSetJsonLd(): Record<string, unknown> {
 // route. `dateModified` comes from the git-derived sitemap date for the cluster,
 // so it only moves when the explainer content actually changes — not on every build.
 const MECHANISM_EXPLAINER_DATE_PUBLISHED = "2026-05-16T00:00:00Z";
-const MECHANISM_ARCHETYPE_PUBLISHED_AT: Record<MechanismArchetype, string> = {
-  "fiat-cash": MECHANISM_EXPLAINER_DATE_PUBLISHED,
-  tbill: MECHANISM_EXPLAINER_DATE_PUBLISHED,
-  cdp: MECHANISM_EXPLAINER_DATE_PUBLISHED,
-  "synthetic-delta-neutral": MECHANISM_EXPLAINER_DATE_PUBLISHED,
-  algorithmic: MECHANISM_EXPLAINER_DATE_PUBLISHED,
-  "rwa-credit-fund": "2026-05-20T00:00:00Z",
-  "commodity-claim": "2026-08-08T00:00:00Z",
-  "ucits-trs-fund": "2026-10-02T00:00:00Z",
-  "shared-reserve": "2026-10-02T00:00:00Z",
-  "protocol-position": "2026-10-02T00:00:00Z",
-};
 const MECHANISM_EXPLAINER_DATE_MODIFIED =
   (sitemapDates as Record<string, string>)["/learn/mechanisms/"] ?? MECHANISM_EXPLAINER_DATE_PUBLISHED;
 
@@ -652,12 +641,12 @@ export function buildArchetypeArticleJsonLd(archetype: MechanismArchetype): Reco
   // Author and publisher reference the root `#organization` node instead of an inline Organization.
   return buildArticleJsonLd({
     id: url,
-    headline: `${getMechanismArchetypeLabel(archetype)} stablecoins, explained`,
-    description: getMechanismArchetypeOneLiner(archetype),
+    headline: MECHANISM_EXPLAINER_METADATA[archetype].jsonLdHeadline,
+    description: MECHANISM_EXPLAINER_METADATA[archetype].jsonLdDescription,
     url,
     mainEntityOfPage: url,
     inLanguage: "en",
-    datePublished: MECHANISM_ARCHETYPE_PUBLISHED_AT[archetype],
+    datePublished: MECHANISM_EXPLAINER_METADATA[archetype].publishedAt,
     dateModified: MECHANISM_EXPLAINER_DATE_MODIFIED,
     extra: {
       isPartOf: `${SITE_ORIGIN}/learn/mechanisms/`,

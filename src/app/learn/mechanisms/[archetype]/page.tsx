@@ -7,7 +7,7 @@ import {
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { ArchetypeArticleJsonLd } from "@/lib/mechanism-json-ld";
-import { MECHANISM_EXPLAINER_TITLES } from "@/lib/mechanism-explainer-registry";
+import { MECHANISM_EXPLAINER_METADATA } from "@/lib/mechanism-explainer-registry";
 import { LearnPageShell } from "../../_shared/learn-page-shell";
 import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 import { ArchetypeExplainerBody } from "../explainer-shell";
@@ -15,29 +15,6 @@ import { ArchetypeExplainerBody } from "../explainer-shell";
 const ARCHETYPE_BY_SLUG = new Map<string, MechanismArchetype>(
   MECHANISM_ARCHETYPE_VALUES.map((archetype) => [archetype, archetype]),
 );
-
-const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
-  "fiat-cash":
-    "Fiat-backed stablecoins hold cash, Treasury bills, and short-term debt off-chain and mint 1:1 against deposits. See how the model works and which coins use it.",
-  tbill:
-    "Treasury-backed tokens use rising-NAV shares or stable $1 units with separate yield distribution. Learn both price models, redemption rails, and tracked examples.",
-  cdp:
-    "CDP stablecoins are minted as debt against onchain collateral, then kept on peg through liquidations and rate fees. Read how the design works and where it breaks.",
-  "synthetic-delta-neutral":
-    "Delta-neutral stablecoins offset economic exposures through perp-short or on-chain borrow-and-stake strategies. Read how each variant works and where its risks differ.",
-  algorithmic:
-    "Algorithmic mechanisms use programmatic peg defense with design-specific collateral. Compare current collateralized variants with historical UST-style mint/burn.",
-  "rwa-credit-fund":
-    "Tokenized credit funds wrap private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
-  "commodity-claim":
-    "Gold and silver tokens are claims on specific vaulted bars, not on dollars. Learn how allocation, title, vault custody, bar-list audits, and physical redemption work.",
-  "ucits-trs-fund":
-    "UCITS fund tokens combine physical securities and total-return swaps. Learn how proportional fund claims, NAV reconciliation, collateral and default recovery differ from cash.",
-  "shared-reserve":
-    "Shared reserve stablecoins issue several liabilities against one pool. Learn why exchange access does not prove exclusive backing, liability coverage or legal priority.",
-  "protocol-position":
-    "Protocol position dollars rely on bridge, vault or module claims. Learn how local custody, circular exposures and recovery remain distinct from underlying stablecoin reserves.",
-};
 
 function renderArchetypeExplainer(slug: MechanismArchetype) {
   const content = ARCHETYPE_CONTENT[slug];
@@ -68,8 +45,8 @@ const route = createStaticSlugRoute({
   pageBySlug: ARCHETYPE_BY_SLUG,
   getSlug: (archetype) => archetype,
   metadata: (slug) => buildPageMetadata({
-    title: MECHANISM_EXPLAINER_TITLES[slug],
-    description: DESCRIPTION_BY_ARCHETYPE[slug],
+    title: MECHANISM_EXPLAINER_METADATA[slug].title,
+    description: MECHANISM_EXPLAINER_METADATA[slug].description,
     canonical: getMechanismExplainerPath(slug),
     ogImage: "/og-editorial-learn.png",
   }),

@@ -1,6 +1,8 @@
+import { metadata } from "./fiat-cash.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
+  metadata,
   archetype: "fiat-cash",
   headline: "Cash and Treasuries, tokenized 1:1",
   subtitle:

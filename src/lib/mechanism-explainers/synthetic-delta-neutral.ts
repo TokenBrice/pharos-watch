@@ -1,6 +1,8 @@
+import { metadata } from "./synthetic-delta-neutral.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
+  metadata,
   archetype: "synthetic-delta-neutral",
   headline: "Offsetting exposures, strategy-dependent carry",
   subtitle:

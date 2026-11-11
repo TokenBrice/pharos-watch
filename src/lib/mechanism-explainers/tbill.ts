@@ -1,6 +1,8 @@
+import { metadata } from "./tbill.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
+  metadata,
   archetype: "tbill",
   headline: "Treasury-backed tokens: rising NAV or stable $1 units",
   subtitle:

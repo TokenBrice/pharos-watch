@@ -1,6 +1,8 @@
+import { metadata } from "./shared-reserve.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
+  metadata,
   archetype: "shared-reserve",
   headline: "Several liabilities, one shared reserve",
   subtitle: "Protocol exchange access is an operational claim, not proof that each token owns an exclusive slice of the pool.",

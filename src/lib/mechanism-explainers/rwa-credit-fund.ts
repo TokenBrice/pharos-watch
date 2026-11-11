@@ -1,6 +1,8 @@
+import { metadata } from "./rwa-credit-fund.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
+  metadata,
   archetype: "rwa-credit-fund",
   headline: "Tokenize a private credit fund share",
   subtitle:
