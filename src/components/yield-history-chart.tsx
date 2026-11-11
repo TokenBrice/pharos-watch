@@ -15,7 +15,7 @@ import { PysHistorySparkline, type PysHistorySparklinePoint } from "@/components
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DataHealthBanner } from "@/components/data-health-banner";
-import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_AMBER, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { CHART_GRID_DASH, CHART_GRID_STROKE } from "@/lib/chart-theme";
 import { toTimestampMs } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -39,10 +39,7 @@ import {
   YieldHistoryTooltip,
 } from "./yield-history-chart-ui";
 
-/** Distinct overlay colors (CHART_PALETTE[0] = blue is the primary series).
-    Sized for the raised MAX_OVERLAY_SOURCES cap (E19). */
 const SPIKE_COLOR = "oklch(0.72 0.18 35)";
-const OVERLAY_COLORS = CHART_PALETTE.slice(3);
 
 type NullableBenchmarkYieldHistoryChartProps = YieldHistoryChartProps;
 
@@ -353,12 +350,12 @@ export function YieldHistoryChart({
                   />
                 );
               })}
-              {model.overlaySeriesKeys.map((dataKey, i) => (
+              {model.overlayLabels.map(({ dataKey, color }) => (
                 <Line
                   key={dataKey}
                   type="monotone"
                   dataKey={dataKey}
-                  stroke={OVERLAY_COLORS[i]}
+                  stroke={color}
                   strokeWidth={1.5}
                   strokeDasharray="6 3"
                   dot={{ r: 2, strokeWidth: 0 }}
@@ -404,9 +401,9 @@ export function YieldHistoryChart({
               Global TVL-weighted median (tracked selected rows)
             </span>
           ) : null}
-          {model.overlayLabels.map((source, i) => (
+          {model.overlayLabels.map((source) => (
             <span key={source.sourceKey} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: OVERLAY_COLORS[i] }} />
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: source.color }} />
               {source.label}
             </span>
           ))}

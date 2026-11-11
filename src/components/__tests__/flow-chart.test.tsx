@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { render, screen, within } from "@testing-library/react";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { FlowChart } from "@/components/flow-chart";
+import { buildFlowChartModel } from "@/components/flow-chart-model";
 
 const originalTz = process.env.TZ;
 process.env.TZ = "America/Los_Angeles";
@@ -82,6 +83,23 @@ function tooltipMarkup(): string {
 }
 
 describe("FlowChart", () => {
+  it("keeps empty, explicit-zero and missing-member projections distinct", () => {
+    expect(buildFlowChartModel([]).chartData).toEqual([]);
+    const hourTs = 3_600_000;
+    const zero = { hourTs, mintVolumeUsd: 0, burnVolumeUsd: 0, netFlowUsd: 0 };
+    expect(buildFlowChartModel([zero]).chartData[0]).toMatchObject({
+      mint: 0, burn: 0, net: 0, cumulative: 0, rollingNet: 0, scanComplete: true,
+    });
+    const missing = buildFlowChartModel([zero, { ...zero, hourTs: hourTs + 7200 }]);
+    expect(missing.chartData[1]).toMatchObject({
+      mint: null, burn: null, net: null, cumulative: null, rollingNet: null, scanComplete: false,
+    });
+    expect(missing.chartData[2]).toMatchObject({ net: 0, cumulative: null, rollingNet: null });
+    const incomplete = buildFlowChartModel([{ ...zero, netFlowUsd: null }]);
+    expect(incomplete.chartData[0]).toMatchObject({ mint: 0, net: null, cumulative: null, rollingNet: null });
+    expect(incomplete.partialBucketCount).toBe(1);
+  });
+
   it("preserves missing hourly buckets and withholds dependent statistics", () => {
     const firstHour = 3_600_000;
     render(

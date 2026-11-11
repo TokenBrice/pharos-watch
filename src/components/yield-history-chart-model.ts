@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useYieldHistory } from "@/hooks/api-hooks";
+import { useYieldHistoryChartQueries } from "./yield-history-chart-queries";
 import { niceTicks } from "@/lib/chart-ticks";
 import { DAY_MS } from "@/lib/constants";
 import { toTimestampMs } from "@/lib/time";
@@ -17,10 +17,6 @@ import type { YieldHistoryPoint } from "@shared/types";
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 export const DEFAULT_DAYS = 90;
 export const PRESET_DAYS = [7, 30, 90, YIELD_HISTORY_MAX_DAYS] as const;
-/* Live retained-source counts reach 7 (usdc-circle), so a 4-source cap made the
-   workbench's "every retained source" claim false (E19). Sources beyond the cap
-   are still reported to the legend as omitted. */
-const MAX_OVERLAY_SOURCES = 8;
 const SOURCE_KEY_SUFFIX_LENGTH = 12;
 
 /* Spike-detection parameters (mirrors the `yield-spike` warning signal in docs/yield-intelligence.md):
@@ -419,28 +415,9 @@ export function useYieldHistoryChartModel({
       ? selectedSourceKey
       : "best";
 
-  const overlayKeys = externalSourceKeys?.slice(0, MAX_OVERLAY_SOURCES) ?? [];
-  const omittedOverlayKeys = externalSourceKeys?.slice(MAX_OVERLAY_SOURCES) ?? [];
-  const primaryOverlayKey = overlayKeys[0] ?? null;
-  const additionalOverlayKeys = overlayKeys.slice(1);
-  const primarySourceKey = primaryOverlayKey ?? effectiveSelectedSourceKey;
-
-  const historyQuery = useYieldHistory(stablecoinId, {
-    days,
-    mode: primarySourceKey === "best" ? "best" : "source",
-    sourceKey: primarySourceKey === "best" ? null : primarySourceKey,
-  });
-
-  // Fixed-width overlay slots (React hooks rules): MAX_OVERLAY_SOURCES - 1.
-  const overlayQueries = [
-    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[0] ?? null, enabled: additionalOverlayKeys.length >= 1 }),
-    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[1] ?? null, enabled: additionalOverlayKeys.length >= 2 }),
-    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[2] ?? null, enabled: additionalOverlayKeys.length >= 3 }),
-    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[3] ?? null, enabled: additionalOverlayKeys.length >= 4 }),
-    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[4] ?? null, enabled: additionalOverlayKeys.length >= 5 }),
-    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[5] ?? null, enabled: additionalOverlayKeys.length >= 6 }),
-    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[6] ?? null, enabled: additionalOverlayKeys.length >= 7 }),
-  ].slice(0, additionalOverlayKeys.length);
+  const { primarySourceKey, historyQuery, overlaySources, overlayQueries, omittedOverlayKeys } = useYieldHistoryChartQueries(
+    stablecoinId, days, effectiveSelectedSourceKey, externalSourceKeys,
+  );
 
   const chartData = useMemo<YieldHistoryChartPoint[]>(() => {
     return (historyQuery.data?.history ?? [])
@@ -449,30 +426,18 @@ export function useYieldHistoryChartModel({
       .sort((a, b) => a.date - b.date);
   }, [historyQuery.data]);
 
-  const overlayData = useMemo(() => {
-    return overlayQueries.map((query) => {
-      const series = new Map<number, number>();
-      for (const point of query.data?.history ?? []) {
-        const date = toTimestampMs(point.date);
-        if (Number.isFinite(date)) {
-          series.set(date, point.apy);
-        }
-      }
-      return series;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- overlay query result refs are fixed-width
-  }, [additionalOverlayKeys.length, overlayQueries[0]?.data, overlayQueries[1]?.data, overlayQueries[2]?.data, overlayQueries[3]?.data, overlayQueries[4]?.data, overlayQueries[5]?.data, overlayQueries[6]?.data]);
+  const overlayData = overlaySources.map((source) => source.series);
 
   const mergedChartData = useMemo(
     () => mergeHistorySeries(chartData, overlayData, nowMs),
     [chartData, overlayData, nowMs],
   );
 
-  const overlayLabels = useMemo(() => {
-    return additionalOverlayKeys.map((key) => {
-      return getSourceDisplay(key, availableSources);
-    });
-  }, [additionalOverlayKeys, availableSources]);
+  const overlayLabels = overlaySources.map((source) => ({
+    ...getSourceDisplay(source.sourceKey!, availableSources),
+    dataKey: source.dataKey,
+    color: source.color,
+  }));
   const primarySourceLabel = useMemo(() => {
     return getSourceDisplay(primarySourceKey, availableSources, primarySourceKey);
   }, [availableSources, primarySourceKey]);
@@ -584,7 +549,6 @@ export function useYieldHistoryChartModel({
     chartData,
     mergedChartData,
     overlayLabels,
-    overlaySeriesKeys: additionalOverlayKeys.map((_, index) => `apy_overlay_${index}`),
     omittedOverlayKeys,
     hasBreakdown,
     effectiveShowBreakdown,
