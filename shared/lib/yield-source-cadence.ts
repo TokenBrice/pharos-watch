@@ -137,7 +137,7 @@ export const OPTIONAL_YIELD_SOURCES = {
 /**
  * Producer cadence authority for yield ranking sources: how often each source
  * class actually receives a new observation. Worker scoring bounds derive from
- * it (`worker/src/lib/yield-ranking-helpers.ts`), and reader-facing source-age
+ * it (`worker/src/lib/yield/yield-ranking-helpers.ts`), and reader-facing source-age
  * health assesses against it through the shared public gate.
  */
 

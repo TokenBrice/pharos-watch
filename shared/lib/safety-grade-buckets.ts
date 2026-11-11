@@ -4,7 +4,7 @@ import { REPORT_CARD_GRADE_RANK } from "./report-card-core";
 /**
  * Single shared source of truth for the "safe / neutral / risky / unavailable"
  * V9 grade bucketing used by both the worker's flight-to-quality
- * classification (`worker/src/lib/flight-to-quality-classification.ts`) and
+ * classification (`worker/src/lib/mint-burn-pipeline/flight-to-quality-classification.ts`) and
  * the frontend V9 consumer helpers (`src/lib/safety-score-v9-consumers.ts`).
  * Previously each side hand-copied its own version of these boundaries.
  */

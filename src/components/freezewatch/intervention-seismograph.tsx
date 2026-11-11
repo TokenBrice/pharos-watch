@@ -36,7 +36,7 @@ interface QuarterPoint {
 // blacklist/destroy activity in its quarter (the same bar this chart plots).
 // Expect roughly one addition per year; keep the list short so labels stay
 // legible. `quarter` must match the point key format emitted by sortKeyToLabel()
-// in `worker/src/lib/blacklist-summary-service.ts`: "Qn 'YY", e.g. "Q3 '22" —
+// in `worker/src/lib/blacklist/blacklist-summary-service.ts`: "Qn 'YY", e.g. "Q3 '22" —
 // NOT "YYYY-Qn".
 const NOTABLE_QUAKES: ReadonlyArray<{ quarter: string; label: string }> = [
   { quarter: "Q3 '22", label: "Tornado Cash" },

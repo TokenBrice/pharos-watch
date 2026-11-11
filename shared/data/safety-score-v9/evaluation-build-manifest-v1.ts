@@ -1066,7 +1066,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/yield-vocabulary.ts",
-      "sha256": "17a23b9124a75c5cf957184b378bacb117497d48a7f0a1c0aa7083716b9272ac"
+      "sha256": "1a8946113b97cecb848651a93cfdb517aa536cfea98b5359e38d62aafe66fa48"
     },
     {
       "path": "worker/src/lib/abort.ts",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-11-block-26391285-shock-coverage.json.gz"
     }
   ],
-  "digest": "7984ae0a4fb49d4ac08a1317e046f4224dec35936f7fe4755e9511f6fb51dfb2"
+  "digest": "30f57d52657d243a8e2a19950a2ad1aad65134e7806e631303fac786dbc758bc"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

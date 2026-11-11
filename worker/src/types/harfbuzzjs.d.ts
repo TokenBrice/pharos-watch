@@ -1,4 +1,4 @@
-// harfbuzzjs ships no types; worker/src/lib/og-harfbuzz.ts uses only these entry points.
+// harfbuzzjs ships no types; worker/src/lib/og-templates/og-harfbuzz.ts uses only these entry points.
 declare module "harfbuzzjs/hb.js" {
   type WasmCallback = (...args: number[]) => unknown;
   interface HarfBuzzModuleArg {

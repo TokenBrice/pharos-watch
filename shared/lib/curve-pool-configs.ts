@@ -48,7 +48,7 @@ function priceRoute(
  * 3pool indices: 0=DAI(18), 1=USDC(6), 2=USDT(6)
  *
  * The on-chain get_dy fetch machinery that consumes these configs lives in
- * worker/src/lib/curve-onchain.ts (it needs RPC access, so it stays worker-side).
+ * worker/src/lib/pricing/curve-onchain.ts (it needs RPC access, so it stays worker-side).
  */
 export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   // ── USDC anchors and USDT-reference pools ──

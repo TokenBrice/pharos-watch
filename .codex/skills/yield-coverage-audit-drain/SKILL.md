@@ -14,7 +14,7 @@ local identity, safety/publication gates, and current methodology docs.
 ## Required Context
 
 Read routed yield docs and scoped instructions.
-Inspect `worker/src/cron/yield-coverage-audit.ts`, the relevant
+Inspect `worker/src/cron/yield-coverage-audit/yield-coverage-audit.ts`, the relevant
 resolver/config source under `worker/src/cron/yield-sync/` or
 `worker/src/lib/yield-config/`, and `shared/types/status.ts` when the payload
 changes. Verified docs own durable policy; `/agents/` is scratch only.

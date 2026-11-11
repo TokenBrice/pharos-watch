@@ -446,7 +446,7 @@ describe("dependency-audit exceptions", () => {
     expect(major > 0 || minor > 7 || (minor === 7 && patch >= 5)).toBe(true);
   });
 
-  // worker/src/lib/og-harfbuzz.ts imports harfbuzzjs internals from the Worker
+  // worker/src/lib/og-templates/og-harfbuzz.ts imports harfbuzzjs internals from the Worker
   // tree, so a copy nested under satori would split the HarfBuzz build in two.
   it("locks satori's exact harfbuzzjs as the single hoisted copy", () => {
     const lock = JSON.parse(readFileSync(join(process.cwd(), "package-lock.json"), "utf8")) as {

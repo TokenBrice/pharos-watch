@@ -190,7 +190,7 @@ export const YIELD_BENCHMARK_KEY_VALUES = Object.keys(YIELD_BENCHMARK_DEFINITION
 
 /**
  * Closed vocabulary of per-source yield warning keys. `detectWarningSignals()`
- * in `worker/src/cron/yield-helpers.ts` is typed to this list and DEWS pins its
+ * in `worker/src/cron/yield-sync/yield-helpers.ts` is typed to this list and DEWS pins its
  * `YIELD_WARNING_SCORES` table against it, so a new key cannot reach the stress
  * score without a reviewed weight (R5).
  */

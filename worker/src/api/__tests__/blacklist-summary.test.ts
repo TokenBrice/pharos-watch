@@ -300,7 +300,7 @@ describe("handleBlacklistSummary", () => {
       {
         match: "quarter_sort_key",
         // Timestamp 1_777_000_000 (USDT blacklist event) → bucket 8105 (Q2 2026).
-        // See worker/src/lib/blacklist-summary-service.ts quarterToSortKey:
+        // See worker/src/lib/blacklist/blacklist-summary-service.ts quarterToSortKey:
         // year*4 + floor(month/3).
         rows: [
           { stablecoin: "USDT", quarter_sort_key: 8105, event_type: "blacklist", n: 1 },

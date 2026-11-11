@@ -5,7 +5,7 @@
 //
 // Slugs match the first dot-segment of `tape_events.type` (per plan §3.3), and
 // every entry has a live projector registered in
-// `worker/src/cron/project-tape.ts`. Reserved chip slots were deleted by the
+// `worker/src/cron/tape/project-tape.ts`. Reserved chip slots were deleted by the
 // 2026-08-09 ruling (WS8.8): a class earns a chip when its projector ships.
 
 export interface TapeClassDef {
