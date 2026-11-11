@@ -157,7 +157,7 @@ function rejectedXautJournal(source: SafetyScoreV9SupplyAttributionSource, nowSe
     fallbackCode: "supply-attribution.fallback.aggregate-only",
     rejectionCode: stale ? "transparency-stale" : "transparency-source-unavailable",
     attemptedAtSec: nowSec - 1, completedAtSec: nowSec, scoringClockSec: nowSec,
-    sourceObservedAtSec: stale ? source.clockSec - 1 : null, failedRouteId: null, contentSha256: null,
+    sourceObservedAtSec: stale ? source.clockSec - 1 : null, failedRouteId: "fixture-route", contentSha256: null,
   });
 }
 
@@ -663,6 +663,8 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         diagnosticRejectedCount: 0,
         blockingRejectedAssetIds: ["xaut-tether"],
         blockingRejectedCount: 1,
+        rejectedOutcomes: [{ assetId: "xaut-tether", rejectionCode: journal.rejectionCode,
+          failedRouteId: journal.failedRouteId, journalId: journal.journalId }],
       });
       const priorGeneration = storedGeneration(sqlite);
       expect(priorGeneration.outcomesById["xaut-tether"]).toMatchObject({

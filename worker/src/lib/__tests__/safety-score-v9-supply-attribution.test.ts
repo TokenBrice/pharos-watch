@@ -103,7 +103,7 @@ function xautFixedInput(
 }
 
 
-it("retains bounded asset timings, physical EVM attempts and the last authenticated cursor through compaction", () => {
+it("retains timings, EVM attempts, authenticated cursor and rejection diagnostics through compaction", () => {
   vi.useFakeTimers();
   try {
     vi.setSystemTime(1_000);
@@ -135,11 +135,14 @@ it("retains bounded asset timings, physical EVM attempts and the last authentica
     });
     expect(Object.keys(performance.data.providers)).toHaveLength(3);
     const latencySummary = { assets: { fixture: performance.data } };
+    const rejectedOutcomes = [{ assetId: "wm-m0", rejectionCode: "deployment-state-unavailable",
+      failedRouteId: "route", journalId: "journal" }];
     const compacted = compactCronMetadataForPersistence(JSON.stringify({
-      reason: "supply-attribution-blocking-rejections", latencySummary, oversizedDiagnostic: "x".repeat(20_000),
+      reason: "supply-attribution-blocking-rejections", latencySummary, rejectedOutcomes, oversizedDiagnostic: "x".repeat(20_000),
     }), undefined, "sync-v9-supply-attribution");
     expect(compacted.compacted).toBe(true);
     expect(JSON.parse(compacted.metadata!).latencySummary).toEqual(latencySummary);
+    expect(JSON.parse(compacted.metadata!).rejectedOutcomes).toEqual(rejectedOutcomes);
     expect(compacted.persistedBytes).toBeLessThanOrEqual(8192);
   } finally {
     vi.useRealTimers();
