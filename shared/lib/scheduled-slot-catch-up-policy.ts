@@ -1,6 +1,6 @@
 import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
 import { getCronSlotStartedAtForSchedule, type CronScheduleKey } from "./cron-jobs";
-import { SCHEDULED_SLOT_PLANS, SCHEDULED_TASK_DESCRIPTORS } from "./scheduled-runner-registry";
+import { getScheduledQueueCatchUpSlotKeys, SCHEDULED_SLOT_PLANS, SCHEDULED_TASK_DESCRIPTORS } from "./scheduled-runner-registry";
 
 export interface SlotCatchUpPolicy {
   /** Arm only once the slot is this late without a live or finished execution. */
@@ -38,20 +38,13 @@ export function deriveSlotCatchUpPolicy(scheduleKey: CronScheduleKey): SlotCatch
  * checkpoint under the same slot identity, so a catch-up reopen would race it.
  * Heavy-Worker lanes are absent because the heavy Worker has no Queue.
  */
-const SLOT_CATCH_UP_LANES = [
-  "quarterHourly",
-  "halfHourlyMintBurnCritical",
-  "dewsPsiOffset",
-  "hourlyYieldSync",
-  "twoHourlyDexDiscovery",
-] as const satisfies readonly CronScheduleKey[];
+export const SLOT_CATCH_UP_SCHEDULE_KEYS = getScheduledQueueCatchUpSlotKeys();
 
-export type SlotCatchUpScheduleKey = (typeof SLOT_CATCH_UP_LANES)[number];
+export type SlotCatchUpScheduleKey = (typeof SLOT_CATCH_UP_SCHEDULE_KEYS)[number];
 export const SLOT_CATCH_UP_POLICIES: Readonly<Record<SlotCatchUpScheduleKey, SlotCatchUpPolicy>> = Object.freeze(
-  Object.fromEntries(SLOT_CATCH_UP_LANES.map((scheduleKey) => [scheduleKey, deriveSlotCatchUpPolicy(scheduleKey)])) as
+  Object.fromEntries(SLOT_CATCH_UP_SCHEDULE_KEYS.map((scheduleKey) => [scheduleKey, deriveSlotCatchUpPolicy(scheduleKey)])) as
     Record<SlotCatchUpScheduleKey, SlotCatchUpPolicy>,
 );
-export const SLOT_CATCH_UP_SCHEDULE_KEYS: readonly SlotCatchUpScheduleKey[] = SLOT_CATCH_UP_LANES;
 
 for (const scheduleKey of SLOT_CATCH_UP_SCHEDULE_KEYS) {
   // The only consumer is the public Worker's Queue handler.

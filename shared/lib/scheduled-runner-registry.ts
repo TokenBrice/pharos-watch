@@ -1,6 +1,7 @@
 import {
   CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_JOB_DEFINITIONS,
+  CRON_SCHEDULE_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
   getCronSlotStartedAtForTrigger,
@@ -58,12 +59,14 @@ export type ScheduledSlotJobChain = readonly string[];
 
 interface ScheduledSlotPlanInput {
   worker: ScheduledWorkerRole;
+  /** Explicit opt-in and processing order on the public one-shot catch-up Queue. */
+  catchUpQueueOrder?: number;
   jobChains: readonly ScheduledSlotJobChain[];
   budgetOnlyJobs?: readonly string[];
   taskPolicies?: Readonly<Record<string, ScheduledTaskPolicy>>;
 }
 
-export interface ScheduledSlotPlan extends Omit<ScheduledSlotPlanInput, "taskPolicies"> {
+export interface ScheduledSlotPlan extends Omit<ScheduledSlotPlanInput, "taskPolicies" | "catchUpQueueOrder"> {
   scheduleKey: CronScheduleKey;
   schedule: CronScheduleExpression;
   triggerSchedules: readonly string[];
@@ -72,6 +75,7 @@ export interface ScheduledSlotPlan extends Omit<ScheduledSlotPlanInput, "taskPol
 const SCHEDULED_SLOT_PLAN_INPUTS = {
   quarterHourly: {
     worker: "public",
+    catchUpQueueOrder: 0,
     jobChains: [[
       "sync-fx-rates",
       "sync-stablecoins",
@@ -121,11 +125,13 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   halfHourlyMintBurnCritical: {
     worker: "public",
+    catchUpQueueOrder: 1,
     jobChains: [["sync-mint-burn"]],
     taskPolicies: { "sync-mint-burn": { timeoutMs: 10 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
   twoHourlyDexDiscovery: {
     worker: "public",
+    catchUpQueueOrder: 4,
     jobChains: [["sync-dex-discovery"]],
     taskPolicies: { "sync-dex-discovery": { timeoutMs: 13 * 60_000, leaseOptions: LONG_RUNNING_LEASE_OPTIONS } },
   },
@@ -165,6 +171,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   dewsPsiOffset: {
     worker: "public",
+    catchUpQueueOrder: 2,
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
   },
   fourHourlyReserveSync: {
@@ -192,6 +199,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   hourlyYieldSync: {
     worker: "public",
+    catchUpQueueOrder: 3,
     // Serially ordered on purpose: the opportunistic supplemental catch-up and
     // the benchmark-registry retry both publish evidence that sync-yield-data
     // reads in the same slot, so they must land first. One serial chain keeps
@@ -291,6 +299,18 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["yield-coverage-audit"]],
   },
 } as const satisfies Record<CronScheduleKey, ScheduledSlotPlanInput>;
+
+type QueueCatchUpScheduleKey = {
+  [Key in CronScheduleKey]: (typeof SCHEDULED_SLOT_PLAN_INPUTS)[Key] extends { catchUpQueueOrder: number } ? Key : never;
+}[CronScheduleKey];
+
+export function getScheduledQueueCatchUpSlotKeys(): readonly QueueCatchUpScheduleKey[] {
+  return (Object.keys(SCHEDULED_SLOT_PLAN_INPUTS) as CronScheduleKey[])
+    .filter((key): key is QueueCatchUpScheduleKey => "catchUpQueueOrder" in SCHEDULED_SLOT_PLAN_INPUTS[key])
+    .sort((left, right) => (
+      SCHEDULED_SLOT_PLAN_INPUTS[left].catchUpQueueOrder - SCHEDULED_SLOT_PLAN_INPUTS[right].catchUpQueueOrder
+    ));
+}
 
 export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlotPlan>> = Object.freeze(
   Object.fromEntries(
@@ -441,6 +461,10 @@ export function isScheduledTaskDueAt(
 function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
   const descriptors: ScheduledTaskDescriptor[] = [];
   for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
+    const scheduleDefinition = CRON_SCHEDULE_DEFINITIONS[plan.scheduleKey];
+    const calendarIdentity = "calendarIdentity" in scheduleDefinition
+      ? { calendarIdentity: scheduleDefinition.calendarIdentity }
+      : {};
     const policies = (SCHEDULED_SLOT_PLAN_INPUTS[plan.scheduleKey] as ScheduledSlotPlanInput).taskPolicies ?? {};
     const plannedJobs = new Set(getScheduledSlotPlanBudgetEntries(plan));
     for (const job of Object.keys(policies)) {
@@ -475,7 +499,7 @@ function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
           ...(definition.connectionGroup ? { connectionGroup: definition.connectionGroup } : {}),
           chainIndex,
           taskIndex,
-          ...(plan.scheduleKey === "monthlyYieldAudit" ? { calendarIdentity: "utc-month" } : {}),
+          ...calendarIdentity,
           timeoutMs: policies[job]?.timeoutMs ?? DEFAULT_CRON_TIMEOUT_MS,
           leaseOptions: policies[job]?.leaseOptions ?? {},
           due: policies[job]?.due ?? "always",
@@ -503,7 +527,7 @@ function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
         ...(definition.connectionGroup ? { connectionGroup: definition.connectionGroup } : {}),
         chainIndex: null,
         taskIndex,
-        ...(plan.scheduleKey === "monthlyYieldAudit" ? { calendarIdentity: "utc-month" } : {}),
+        ...calendarIdentity,
         timeoutMs: policies[job]?.timeoutMs ?? DEFAULT_CRON_TIMEOUT_MS,
         leaseOptions: policies[job]?.leaseOptions ?? {},
         due: policies[job]?.due ?? "always",
