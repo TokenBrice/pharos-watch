@@ -574,7 +574,7 @@ export function buildCoinSummaries(
   };
 }
 
-export function buildAggregateScope(configs: MintBurnContractConfig[]) {
+function buildAggregateScope(configs: MintBurnContractConfig[]) {
   return buildMintBurnScope(configs);
 }
 
@@ -850,4 +850,3 @@ export async function reconcileCachedAggregateSafetyResponse(
     value: JSON.stringify(applyAggregateFtqState(payload, source, reason)),
   });
 }
-

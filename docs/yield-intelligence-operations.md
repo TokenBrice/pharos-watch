@@ -208,7 +208,7 @@ Source-config ownership changes do not rewrite historical rows or authorize a ba
 
 Before the first deployed cleanup, retain affected-row snapshots or verified Time Travel evidence: rolling back code cannot restore overwritten switch evidence.
 
-`cleanupFalseLinkedVariantSourceSwitches` in `worker/src/cron/yield-sync/history.ts` owns the ranked-generation index pin and range-scan rationale; preserve that source-level constraint when changing cleanup.
+`cleanupFalseLinkedVariantSourceSwitches` in `worker/src/cron/yield-sync/history-repair.ts` owns the ranked-generation index pin and range-scan rationale; preserve that source-level constraint when changing cleanup.
 
 Yield history keeps full hourly rows for the newest 30 days and one close-of-day row per stablecoin/source for days 31–365 in `yield_history_daily`. The API merges both tiers without duplicating a day and continues to use raw rows while a historical day has not yet been materialized. Daily materialization precedes any later raw-row cleanup.
 
@@ -252,7 +252,7 @@ The `/yield/` coin index groups the complete active yield-bearing compact regist
 | --- | --- |
 | Yield resolution and publication | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/` |
 | Optional slower source families | `worker/src/cron/sync-yield-supplemental.ts` |
-| Benchmark registry | `worker/src/cron/fetch-tbill-rate.ts` |
+| Benchmark registry | `worker/src/cron/tbill-sources/providers.ts` |
 | Source configuration and scoring helpers | `worker/src/lib/yield-config/yield-config.ts`, `worker/src/cron/yield-helpers.ts`, `worker/src/lib/yield-ranking-helpers.ts` |
 | Rankings and history APIs | `worker/src/api/cache-handlers.ts`, `worker/src/api/yield-history.ts` |
 | Shared wire types | `shared/types/index.ts` |

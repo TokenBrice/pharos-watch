@@ -32,9 +32,7 @@ export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, numbe
  * silent 10x/0.1x rescale for every key.
  */
 const YIELD_BENCHMARK_MAX_RELATIVE_CHANGE: Record<YieldBenchmarkKey, number> = Object.fromEntries(
-  [...YIELD_BENCHMARK_KEY_VALUES]
-    .sort((a, b) => YIELD_BENCHMARK_DEFINITIONS[a].relativeChangeOrder - YIELD_BENCHMARK_DEFINITIONS[b].relativeChangeOrder)
-    .map((key) => [key, YIELD_BENCHMARK_DEFINITIONS[key].maxRelativeChange]),
+  YIELD_BENCHMARK_KEY_VALUES.map((key) => [key, YIELD_BENCHMARK_DEFINITIONS[key].maxRelativeChange]),
 ) as Record<YieldBenchmarkKey, number>;
 
 /**
