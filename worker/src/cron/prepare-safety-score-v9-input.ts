@@ -9,10 +9,10 @@ import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-inp
 import { buildNativeSafetyScoreV9Capture, loadNativeSafetyScoreV9CaptureSources } from "../lib/safety-score-v9/capture";
 import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9/native-input";
 import {
-  buildSafetyScoreV9SupplyAttributionSource,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionSource,
-} from "../lib/safety-score-v9/supply-attribution-source";
+} from "../lib/safety-score-v9/supply-attribution-source-contract";
+import { buildSafetyScoreV9SupplyAttributionSource } from "../lib/safety-score-v9/supply-attribution-source";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import {

@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { archiveObjectKey } from "../src/lib/safety-score-v9/capture-archive-contract";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
@@ -8,7 +9,7 @@ import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-cl
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { decodeD1Envelopes } from "../../scripts/lib/remote-d1";
 import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
-import { archiveObjectKey, decodeArchiveExport, mergeArchiveGapEvidence, parseArchiveBoundary, parseArchiveTimeBoundary, parseArchiveDate, resolveArchiveBoundary, SafetyScoreCaptureArchiveIndexSchema, SafetyScoreCaptureArchiveJournalGapSchema, SafetyScoreCaptureArchiveRecentCronEvidenceSchema, SafetyScoreCaptureArchiveRecentCronRowSchema, SafetyScorePublicationGenerationIdSchema, type ArchiveBoundary, type SafetyScoreCaptureArchiveCronGapEvidence, type SafetyScoreCaptureArchiveGap, type SafetyScoreCaptureArchiveIndex, type SafetyScoreCaptureArchiveJournalGap, type SafetyScoreCaptureArchiveRecentCronEvidence, type SafetyScoreCaptureArchiveRecentCronRow } from "./lib/safety-score-capture-archive";
+import { decodeArchiveExport, mergeArchiveGapEvidence, parseArchiveBoundary, parseArchiveTimeBoundary, parseArchiveDate, resolveArchiveBoundary, SafetyScoreCaptureArchiveIndexSchema, SafetyScoreCaptureArchiveJournalGapSchema, SafetyScoreCaptureArchiveRecentCronEvidenceSchema, SafetyScoreCaptureArchiveRecentCronRowSchema, SafetyScorePublicationGenerationIdSchema, type ArchiveBoundary, type SafetyScoreCaptureArchiveCronGapEvidence, type SafetyScoreCaptureArchiveGap, type SafetyScoreCaptureArchiveIndex, type SafetyScoreCaptureArchiveJournalGap, type SafetyScoreCaptureArchiveRecentCronEvidence, type SafetyScoreCaptureArchiveRecentCronRow } from "./lib/safety-score-capture-archive";
 
 const PAGE_SIZE = 1_000;
 /** Authority for the producer job name; this CLI never re-types the cron vocabulary. */

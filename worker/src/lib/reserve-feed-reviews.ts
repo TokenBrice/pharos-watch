@@ -1,8 +1,9 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import { ReserveFeedReviewSchema, type ReserveFeedReview } from "@shared/types/live-reserves";
 import { RESERVE_FEED_REVIEW_MAX_AGE_SEC } from "@shared/lib/status-thresholds";
 import { getLiveReserveAdapterDefinition, getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
-import { getConfiguredLiveReserveCoins, LIVE_RESERVE_FRESHNESS_SEC, type ReserveSyncStateRecord } from "./live-reserves/store-shared";
+import { getConfiguredLiveReserveCoins, type ReserveSyncStateRecord } from "./live-reserves/store-shared";
 import { loadLatestNonSkippedReserveAttempt, type ReserveSyncAttemptTimelineEntry } from "./live-reserves/store-history-read";
 import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
 

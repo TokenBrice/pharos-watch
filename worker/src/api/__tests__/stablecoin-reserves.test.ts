@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
@@ -8,7 +9,6 @@ import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablec
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
 import { reserveCompositionRow, reserveSyncRow } from "./stablecoin-reserves.test-support";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { WORKER_TRACKED_META_BY_ID, hasWorkerLiveReserves } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getReserves } from "@shared/lib/reserve-templates";

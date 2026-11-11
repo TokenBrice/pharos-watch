@@ -13,6 +13,14 @@ import { localRegistrySnapshot } from "../safety-score-v9-registry";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { computeV9ResultDigest } from "@shared/lib/safety-score-v9/trace";
 import { validateSafetyScoreV9ReplayIntegrity, reproduceSafetyScoreV9Replay } from "../safety-score-v9-replay-validation";
+import {
+  SafetyScoreV9CompilerFactSchemaIdentityV1Schema,
+  SafetyScoreV9ProducerCapabilityIdentityV1Schema,
+  hashSafetyScoreV9CompilerFactSchemaIdentity,
+  hashSafetyScoreV9ProducerCapabilityIdentity,
+  computeSafetyScoreV9CandidateId,
+  computeSafetyScoreV9PublicationGenerationId,
+} from "../../../src/lib/safety-score-v9/candidate-identity";
 import { buildSafetyScoreV9ReplayLaneScreening } from "../../../src/lib/safety-score-v9/publication-replay-capture";
 import { loadReviewedLaneEmitterCatalog } from "../../../src/lib/safety-score-v9/lane-emitter-catalog";
 
@@ -72,6 +80,23 @@ describe("permanent replay integrity", () => {
       resultDigest: p.evaluatedSet.scoreResultDigest, publishedAtSec: p.candidate.publishedAtSec,
     })}`;
     expect(() => validateSafetyScoreV9ReplayIntegrity(artifact)).not.toThrow();
+    const historical = structuredClone(p);
+    historical.compilerFactSchemaIdentity.compilerAdapter = "historical-adapter" as typeof historical.compilerFactSchemaIdentity.compilerAdapter;
+    historical.compilerFactSchemaIdentity.compiledFactSchemaCapabilities = ["historical-capability"] as unknown as typeof historical.compilerFactSchemaIdentity.compiledFactSchemaCapabilities;
+    historical.producerCapabilityIdentity.sourceAdapters = { historical: "adapter.v1" } as unknown as typeof historical.producerCapabilityIdentity.sourceAdapters;
+    expect(SafetyScoreV9CompilerFactSchemaIdentityV1Schema.safeParse(historical.compilerFactSchemaIdentity).success).toBe(false);
+    expect(SafetyScoreV9ProducerCapabilityIdentityV1Schema.safeParse(historical.producerCapabilityIdentity).success).toBe(false);
+    historical.compilerFactSchemaDigest = hashSafetyScoreV9CompilerFactSchemaIdentity(historical.compilerFactSchemaIdentity);
+    historical.candidateIdentity.compilerFactSchemaDigest = historical.compilerFactSchemaDigest;
+    historical.producerCapabilityDigest = hashSafetyScoreV9ProducerCapabilityIdentity(historical.producerCapabilityIdentity);
+    historical.candidateIdentity.producerCapabilityDigest = historical.producerCapabilityDigest;
+    historical.candidate.candidateId = computeSafetyScoreV9CandidateId(historical.candidateIdentity);
+    historical.candidate.publicationGenerationId = computeSafetyScoreV9PublicationGenerationId({
+      candidateId: historical.candidate.candidateId, baseInputGenerationId: historical.fixedInput.baseInputGenerationId,
+      factSetDigest: historical.compiledFacts.v9FactSetDigest, evaluatedSetDigest: historical.evaluatedSet.evaluatedSetDigest,
+      resultDigest: historical.evaluatedSet.scoreResultDigest, publishedAtSec: historical.candidate.publishedAtSec,
+    });
+    expect(() => validateSafetyScoreV9ReplayIntegrity({ ...artifact, pipeline: historical })).not.toThrow();
   });
 
   it.each(["duplicate", "asset-set", "base", "fact", "result", "card", "build"])("rejects %s tampering", kind => {

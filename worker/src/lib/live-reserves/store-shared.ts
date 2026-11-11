@@ -13,7 +13,6 @@ import type {
 import type { LiveReserveAdmissionResult } from "./store-snapshot-state";
 export type { ReserveCompositionOverview } from "@shared/types/live-reserves";
 
-export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
 /** History beyond the current attempt closure is operator forensics; the prune never deletes referenced-attempt or frozen-coin rows. */
 export const LIVE_RESERVE_HISTORY_RETENTION_SEC = 30 * DAY_SECONDS;
 export const PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC = 14 * DAY_SECONDS;

@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../lib/live-reserve-policy";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
@@ -19,7 +20,6 @@ import {
   parseReserveCompositionCensusState,
 } from "../lib/live-reserves/reserve-composition-census";
 import {
-  LIVE_RESERVE_FRESHNESS_SEC,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves/store-shared";
 import { resolveAcknowledgedReserveFeedIds } from "../lib/reserve-feed-reviews";

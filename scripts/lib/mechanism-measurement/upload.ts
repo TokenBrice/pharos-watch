@@ -7,6 +7,7 @@ import { createR2MeasurementsClient } from "../r2-measurements-client";
 import {
   MECHANISM_MEASUREMENT_ROOT,
   buildMechanismCaptureSummary,
+  pinnedCaptureKey,
   summaryPathForCapture,
 } from "./capture-summary";
 
@@ -129,7 +130,7 @@ export async function uploadMechanismMeasurements(
     });
     const pinnedKey = pinnedRefs.get(capture.summary.sha256);
     if (pinnedKey) {
-      const objectKey = pinnedKey.replace(/^captures\//u, "pinned/");
+      const objectKey = pinnedCaptureKey(pinnedKey);
       await client.put(objectKey, capture.compressed, {
         contentType: "application/json",
         contentEncoding: "gzip",

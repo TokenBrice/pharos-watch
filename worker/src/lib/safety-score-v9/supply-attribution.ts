@@ -9,7 +9,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { CENTRIFUGE_BURN_MINT_ASSET_IDS, REVIEWED_ECONOMIC_SUPPLY_PLANS, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
-import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source-contract";
 
 // Replay reads only the captured partition; observers live in supply-attribution-capture.ts.
 type V9CurrentChainRows = Record<string, { current: number }>;

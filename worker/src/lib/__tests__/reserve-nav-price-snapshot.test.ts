@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -5,7 +6,6 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { loadReserveNavSupplyPrice } from "../reserve-nav-price";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserves/store-shared";
 import { collectPrimaryProviderQuotes, type PrimaryPricePlan } from "../../cron/sync-stablecoins/enrich-prices-primary-provider-collection";
 import { fetchFiatCoinGeckoTokens } from "../../cron/sync-stablecoins/supplemental-assets/fiat-cg";
 import type { StablecoinMeta } from "@shared/types/core";

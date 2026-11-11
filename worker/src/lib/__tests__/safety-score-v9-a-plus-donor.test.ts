@@ -8,7 +8,8 @@ import {
   createReportCardsFixedInput,
   type ReportCardsFixedInputDraft,
 } from "../../test-helpers/report-cards-fixed-input";
-import { buildSafetyScoreV9Candidate, computeSafetyScoreV9CandidateId } from "../safety-score-v9/candidate";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
+import { computeSafetyScoreV9CandidateId } from "../safety-score-v9/candidate-identity";
 import {
   SafetyScoreV9FactSetExtensionV2Schema,
   type SafetyScoreV9FactSetExtensionV2,

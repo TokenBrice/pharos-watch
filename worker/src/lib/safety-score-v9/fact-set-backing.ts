@@ -1,3 +1,4 @@
+import { normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { canonicalV9DependencyEdgeKey } from "@shared/lib/safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
@@ -43,7 +44,6 @@ import {
   evidenceHistoryFor,
   missingLocalFact,
   researchEvidence,
-  stableFailureDomains,
   type AssetBuildContext,
 } from "./fact-set-context";
 
@@ -712,7 +712,7 @@ export function buildReserves(context: AssetBuildContext): {
     const issuerOrObligorKey = classification?.issuerOrObligorKey ?? raw.issuerOrObligor ?? null;
     // A token link may describe strategy denomination, not a direct holding.
     const assetClass = classification?.assetClass ?? raw.assetClass ?? null;
-    const failureDomains = stableFailureDomains([
+    const failureDomains = normalizeFailureDomains([
       ...(classification?.failureDomains ?? []),
       ...(issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : []),
       ...(trackedAssetId ? [{ kind: "reserve-issuer" as const, key: `asset:${trackedAssetId}` }] : []),

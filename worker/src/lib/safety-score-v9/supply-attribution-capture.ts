@@ -41,7 +41,7 @@ import {
 import {
   observeXautRepresentationGroupSupplyAttributionAttempt,
 } from "./xaut-supply-observer";
-import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source-contract";
 import { runBudgetedSupplyAttributionAssets } from "./supply-attribution-capture-budget";
 import type { SafetyScoreV9SupplyAttributionGeneration } from "./supply-attribution-generation";
 import { createSupplyAttributionPerformance, type SupplyAttributionPhase, type SupplyAttributionPerformance } from "./supply-attribution-diagnostics";

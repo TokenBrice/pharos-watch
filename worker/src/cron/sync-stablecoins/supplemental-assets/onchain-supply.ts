@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { fetchEearnSuiSupply } from "./sui-vault-supply";
 import { fetchUsdySuiSupply } from "./usdy-sui-supply";
 import { fetchUsdyAptosSupply } from "./usdy-aptos-supply";
@@ -11,7 +12,6 @@ import { PinnedNativeShareObservationSchema, type PinnedNativeShareObservation }
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
 import { fetchSfraxStockSupply } from "./sfrax-supply";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmUint256AtBlock, type EvmBlockHeader, type EvmRpcOptions } from "../../../lib/evm-rpc";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import {

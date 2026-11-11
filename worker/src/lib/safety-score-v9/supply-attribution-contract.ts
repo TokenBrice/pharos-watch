@@ -14,7 +14,7 @@ import type { ReviewedDeploymentSupplyObservation, ReviewedDeploymentSupplyRow, 
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";
-import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source-contract";
 import { authenticateCcipPendingObservation } from "./supply-attribution-ccip-proof";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";

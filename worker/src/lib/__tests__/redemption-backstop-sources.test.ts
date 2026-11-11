@@ -53,9 +53,9 @@ vi.mock("../live-reserves/store", async (importOriginal) => {
     ...actual,
     getReserveSyncState: getReserveSyncStateMock,
     getLatestSuccessfulReserveSnapshotMetadata: getLatestSuccessfulReserveSnapshotMetadataMock,
-    LIVE_RESERVE_FRESHNESS_SEC: 3600,
   };
 });
+vi.mock("../live-reserve-policy", () => ({ LIVE_RESERVE_FRESHNESS_SEC: 3600 }));
 
 describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof BuildRedemptionBackstopEntry;

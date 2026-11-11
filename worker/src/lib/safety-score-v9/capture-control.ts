@@ -7,7 +7,7 @@ import { getCache, prepareCacheUpsert, type CacheEntryWrite } from "../db-cache"
 import { batchExecute } from "../d1-primitives";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import { getV9ExecutionDeadlineMs, V9_EXECUTION_WINDOW_POLICY } from "../v9-slot-window";
-import { SOURCE_FIXED_INPUT_MAX_AGE_SEC, type SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { SOURCE_FIXED_INPUT_MAX_AGE_SEC, type SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source-contract";
 
 export const SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY = "report-cards:v9:capture-control:v1";
 export type V9WorkerProvenance = { id: string; timestamp?: string };

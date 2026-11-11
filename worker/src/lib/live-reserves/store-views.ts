@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import {
   buildReserveDisplayBadge,
   getReserveDisplayBadgeKindForAdapter,
@@ -18,7 +19,6 @@ import { getReserveCompositionRow, getReserveSyncState } from "./store-read";
 import { matchReserveFeedReview } from "../reserve-feed-reviews";
 import { parseReserveCompositionRow } from "./store-row-decoding";
 import {
-  LIVE_RESERVE_FRESHNESS_SEC,
   hasFatalReserveWarnings,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,

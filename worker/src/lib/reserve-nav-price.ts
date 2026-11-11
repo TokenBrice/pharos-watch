@@ -1,8 +1,8 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { NavTelemetryQuote } from "./primary-price-collector";
 import { parsePositiveNumber } from "./number-utils";
 import { validatePricingSourceFreshness } from "./pricing-source-freshness";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store-shared";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";

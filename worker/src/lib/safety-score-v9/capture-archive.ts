@@ -1,4 +1,5 @@
 import { Buffer as NodeBuffer } from "node:buffer";
+import { safetyScoreCaptureArchiveKey } from "./capture-archive-contract";
 import type { SafetyScoreCaptureArchiveCacheRows, SafetyScoreCaptureArchiveObject } from "@shared/types/safety-score-capture-archive";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { createTimeoutSignal, type TimeoutSignalHandle } from "@shared/lib/timeout-signal";
@@ -174,8 +175,7 @@ export async function archiveSafetyScoreCapture(input: {
     if (waitMs === 0) return { status: "failed", reason: "capture-upload-timeout", bytes, uploaded: false };
     budget = createTimeoutSignal({ timeoutMs: waitMs, timeoutReason: "capture-upload-timeout",
       parentSignal: input.signal });
-    const day = new Date(publication.publishedAtSec * 1_000).toISOString().slice(0, 10);
-    const key = `captures/safety-score-v9-accepted/${day}/${publication.publicationGenerationId}.json`;
+    const key = safetyScoreCaptureArchiveKey(publication.publishedAtSec, publication.publicationGenerationId);
     index = {
       generationId: object.generationId, publishedAt: object.publishedAt,
       methodologyVersion: object.methodologyVersion, policyDigest: object.policyDigest,

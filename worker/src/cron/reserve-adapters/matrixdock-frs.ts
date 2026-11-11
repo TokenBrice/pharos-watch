@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
 import { z } from "zod";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -9,7 +10,6 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS } from "@shared/types/live-reserve-adapter-declarations";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import type { AdapterContext, AdapterResult } from "./types";

@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import { resolveV9RedemptionRouteCostBpsAtNotional } from "@shared/lib/redemption-backstop-configs/shared";
@@ -20,7 +21,6 @@ import type {
 } from "@shared/types/redemption";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
-import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store";
 // Conservative documented ceilings for projecting a reviewed settlement model
 // onto an observation horizon. Only "atomic" satisfies the same-notional
 // request horizon; every other model is published as diagnostic evidence.

@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { AcceptedReserveSnapshot } from "@shared/types/accepted-reserve-generation";
@@ -7,7 +8,7 @@ import type {
   LiveReserveSnapshotMetadata,
   ReserveFreshnessView,
 } from "@shared/types/live-reserves";
-import { LIVE_RESERVE_FRESHNESS_SEC, hasFatalReserveWarnings, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
+import { hasFatalReserveWarnings, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 
 export function hasConsistentSnapshotState(
