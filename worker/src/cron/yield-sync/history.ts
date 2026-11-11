@@ -1,3 +1,4 @@
+import { isLegacyDeterministicOnChainSourceKey, YIELD_HISTORY_IDENTITY_TRANSITIONS } from "../../lib/yield-config/yield-history-identity-transitions";
 import {
   THIRTY_DAYS_SECONDS,
   DAY_SECONDS,
@@ -675,18 +676,8 @@ export async function buildYieldHistoryEvaluationInputsCooperative(
   return maps;
 }
 
-const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
-const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
-
 export function buildHistoryKey(stablecoinId: string, sourceKey: string): string {
   return `${stablecoinId}::${sourceKey}`;
-}
-
-function isLegacyDeterministicOnChainSourceKey(
-  stablecoinId: string,
-  sourceKey: string | null | undefined,
-): boolean {
-  return stablecoinId === "lusd-liquity" && sourceKey === LEGACY_LUSD_BPROTOCOL_SOURCE_KEY;
 }
 
 function shouldNormalizeOnChainSourceKey(row: {
@@ -744,7 +735,9 @@ export function pickHistoryRowsForSource(
 
   const freshLegacyRows = legacyRows;
   const hasKnownSourceSemanticsBreak =
-    stablecoinId === "scrvusd-curve" && sourceKey === SCRVUSD_CURRENT_RATE_SOURCE_KEY;
+    YIELD_HISTORY_IDENTITY_TRANSITIONS.legacyCarryForwardBreaks.some(
+      (transition) => transition.stablecoinId === stablecoinId && transition.sourceKey === sourceKey,
+    );
 
   if (
     freshLegacyRows.length > 0 &&
@@ -879,36 +872,9 @@ export async function cleanupFalseLinkedVariantSourceSwitches(
 ): Promise<number> {
   const result = await db
     .prepare(
-        `WITH ranked_generations AS (
-           SELECT d.stablecoin_id, d.generation_id, d.selected_source_key, d.source_switch,
-                  ROW_NUMBER() OVER (
-                    PARTITION BY d.stablecoin_id
-                    ORDER BY d.created_at DESC, d.generation_id DESC
-                  ) AS generation_rank
-            FROM yield_source_decisions d INDEXED BY idx_yield_source_decisions_created_coin
-             JOIN yield_publication_generations g
-               ON g.generation_id = d.generation_id
-              AND g.state = 'published'
-            WHERE d.created_at >= ?
-         ), verified_clean_identities AS (
-           SELECT stablecoin_id, MIN(selected_source_key) AS selected_source_key
-             FROM ranked_generations
-            WHERE generation_rank <= 2
-            GROUP BY stablecoin_id
-           HAVING COUNT(*) = 2
-              AND SUM(CASE WHEN source_switch = 0 AND selected_source_key LIKE 'linked-variant:%' THEN 1 ELSE 0 END) = 2
-              AND MIN(selected_source_key) = MAX(selected_source_key)
-         )
-         UPDATE yield_source_decisions
-            SET source_switch = 0,
-                retention_reason = 'audit'
-          WHERE source_switch = 1
-            AND previous_best_source_key = 'onchain:' || stablecoin_id
-            AND (stablecoin_id, selected_source_key) IN (
-              SELECT stablecoin_id, selected_source_key FROM verified_clean_identities
-            )`,
+        YIELD_HISTORY_IDENTITY_TRANSITIONS.linkedVariantFalseSwitchRepair.sql,
     )
-    .bind(startSec - 7 * DAY_SECONDS)
+    .bind(startSec - YIELD_HISTORY_IDENTITY_TRANSITIONS.linkedVariantFalseSwitchRepair.lookbackDays * DAY_SECONDS)
     .run();
   return result.meta?.changes ?? 0;
 }

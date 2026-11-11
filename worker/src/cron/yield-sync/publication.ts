@@ -1,3 +1,5 @@
+import { getYieldHistorySampleAt } from "@shared/lib/yield-source-history";
+import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
@@ -546,11 +548,7 @@ const REWARDS_ONLY_SHARE = 0.5;
 const SMALLER_TVL_RATIO = 5;
 
 function isExternalOpportunitySource(source: EvaluatedYieldSource): boolean {
-  return (
-    source.yieldType === "lending-opportunity" ||
-    source.yieldType === "fixed-yield" ||
-    source.yieldType === "structured-tranche"
-  );
+  return EXTERNAL_OPPORTUNITY_YIELD_TYPES.has(source.yieldType);
 }
 
 function hasCanonicalDegradation(source: EvaluatedYieldSource): boolean {
@@ -1870,8 +1868,7 @@ export async function persistEvaluatedYieldSources(
     historyRows.push({
       stablecoin_id: source.id,
       source_key: source.sourceKey,
-      recorded_at: source.sourceKey === "protocol-api:zys-zephyr-protocol"
-        && source.sourceObservedAt != null ? source.sourceObservedAt : input.startSec,
+      recorded_at: getYieldHistorySampleAt(source.sourceKey, source.sourceObservedAt, input.startSec),
       source_observed_at: source.sourceObservedAt,
       is_best: isBest,
       apy: source.currentApy,

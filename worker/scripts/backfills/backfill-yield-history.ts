@@ -1,10 +1,10 @@
+import { getYieldHistorySampleAt, ZEPHYR_YIELD_HISTORY_POLICY } from "@shared/lib/yield-source-history";
 import { batchExecute } from "../../src/lib/db";
 import { jsonResponse } from "../../src/lib/api-response";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../../src/lib/backfill-query";
 import { fetchZephyrZysSource } from "../../src/lib/yield-source-adapters/zephyr";
 
 const DEFAULT_BATCH_SIZE = 10;
-const ZEPHYR_YIELD_SOURCE_KEY = "protocol-api:zys-zephyr-protocol";
 
 interface BackfillYieldHistoryTarget {
   id: string;
@@ -14,9 +14,9 @@ interface BackfillYieldHistoryTarget {
 
 const TARGET_YIELD_HISTORY_SOURCES: readonly BackfillYieldHistoryTarget[] = [
   {
-    id: "zys-zephyr-protocol",
-    symbol: "ZYS",
-    sourceKey: ZEPHYR_YIELD_SOURCE_KEY,
+    id: ZEPHYR_YIELD_HISTORY_POLICY.stablecoinId,
+    symbol: ZEPHYR_YIELD_HISTORY_POLICY.symbol,
+    sourceKey: ZEPHYR_YIELD_HISTORY_POLICY.sourceKey,
   },
 ] as const;
 
@@ -99,7 +99,7 @@ export async function handleBackfillYieldHistory({
         .bind(
           coin.id,
           coin.sourceKey,
-          source.sourceObservedAt,
+          getYieldHistorySampleAt(coin.sourceKey, source.sourceObservedAt, source.sourceObservedAt),
           source.sourceObservedAt,
           source.currentApy,
           source.apyBase,

@@ -1,3 +1,4 @@
+import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import { getYieldRankingBenchmarkKey } from "@/lib/yield-benchmark";
 import { YIELD_FILTER_AXIS_REGISTRY } from "@/lib/yield-view-model-filter-axes";
 import { formatTvlOption } from "@/lib/yield-view-model-helpers";
@@ -12,7 +13,6 @@ import {
   CURRENCY_TAB_AUD_CAD_PEGS,
   CURRENCY_TAB_ENUMERATED_PEGS,
   CURRENCY_TAB_PEGS,
-  EXTERNAL_OPPORTUNITY_YIELD_TYPES,
   HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS,
   MIN_SAFETY_OPTIONS,
   MIN_TVL_OPTIONS,

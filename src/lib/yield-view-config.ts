@@ -116,11 +116,6 @@ export const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilt
 export const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = YIELD_BENCHMARK_KEY_VALUES;
 export const MIN_SAFETY_OPTIONS = [50, 60, 70, 80] as const;
 export const MIN_TVL_OPTIONS = [1_000_000, 10_000_000, 100_000_000] as const;
-export const EXTERNAL_OPPORTUNITY_YIELD_TYPES = new Set<YieldType>([
-  "lending-opportunity",
-  "fixed-yield",
-  "structured-tranche",
-]);
 
 export const DEFAULT_FILTERS: YieldViewModelFilters = {
   peg: "all",

@@ -1,3 +1,4 @@
+import { getYieldHistorySampleAt, usesYieldObservationHistoryClock } from "@shared/lib/yield-source-history";
 import type {
   YieldType,
 } from "@shared/types/core";
@@ -1016,7 +1017,7 @@ function evaluateYieldSourceGroup(
     // anchor-without-yield seed shape, so a seed row must stay out of
     // apy7d/apy30d and the variance samples regardless of which lane recorded it.
     const historyRowsForStats = historyRows.filter((row) => !isOnChainBootstrapYieldSeed(row)
-      && !(sourceKey === "protocol-api:zys-zephyr-protocol" && !historySelection.usedLegacyHistory && y.sourceObservedAt != null
+      && !(usesYieldObservationHistoryClock(sourceKey) && !historySelection.usedLegacyHistory && y.sourceObservedAt != null
         && row.recorded_at === y.sourceObservedAt));
     const samples: number[] = [];
     const apy7dSamples: number[] = [];
@@ -1104,8 +1105,7 @@ function evaluateYieldSourceGroup(
       ? null
       : new Set([
           ...historyRowsForStats.map((row) => Math.floor(row.recorded_at / DAY_SECONDS)),
-          Math.floor((sourceKey === "protocol-api:zys-zephyr-protocol" && y.sourceObservedAt != null
-            ? y.sourceObservedAt : input.startSec) / DAY_SECONDS),
+          Math.floor(getYieldHistorySampleAt(sourceKey, y.sourceObservedAt, input.startSec) / DAY_SECONDS),
         ]).size;
     // A9: the penalty input and the published field resolve the reward share
     // through the same helper, so a base-only payload (apyReward null while

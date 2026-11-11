@@ -1,4 +1,4 @@
-import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@/lib/yield-view-config";
+import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import { YIELD_SOURCE_DEPTH_BANDS } from "@shared/lib/selector/yield-source";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type {

@@ -74,6 +74,10 @@ const OPPORTUNITY_CLASS_BY_YIELD_TYPE: Partial<Record<YieldType, YieldOpportunit
   "structured-tranche": "structured-tranche",
 };
 
+export const EXTERNAL_OPPORTUNITY_YIELD_TYPES = new Set<YieldType>(
+  Object.keys(OPPORTUNITY_CLASS_BY_YIELD_TYPE) as YieldType[],
+);
+
 /** External-opportunity class for a yield type; null for holder/native yield types. */
 export function deriveYieldOpportunityClass(yieldType: YieldType): YieldOpportunityClass | null {
   return OPPORTUNITY_CLASS_BY_YIELD_TYPE[yieldType] ?? null;

@@ -10,8 +10,10 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
-import { getCache } from "./db-cache";
-import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
+import {
+  readBenchmarkMonitorPublication,
+  REQUIRED_BENCHMARK_FRESH_PUBLICATIONS,
+} from "../cron/yield-sync/benchmark-monitor";
 import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
@@ -207,8 +209,6 @@ const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 const PSI_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stabilityIndex;
 const DEWS_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stressSignals;
-const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
-const USD_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:usd-fresh-streak";
 
 function classifyCanaryFreshness(timestampSec: number | null, observedAt: number, maxAgeSec: number) {
   return classifyFreshness(
@@ -663,7 +663,6 @@ export async function checkSafetyScoreV9Publication(db: D1Database) {
 
 interface BenchmarkCurrentOptions {
   currency: "GBP" | "USD";
-  streakCacheKey: string;
   maxFetchAgeSec: number;
   maxRecordAgeSec: number;
   requireRecordDate: boolean;
@@ -675,26 +674,14 @@ async function checkBenchmarkCurrent(
   options: BenchmarkCurrentOptions,
 ) {
   try {
-    const ratesCache = await getCache(db, "risk_free_rates");
-    if (!ratesCache) {
+    const publication = await readBenchmarkMonitorPublication(db, options.currency, observedAt);
+    if (!publication) {
       return failedResult("benchmark-registry-missing", {
         currency: options.currency,
-        requiredFreshPublications: 2,
+        requiredFreshPublications: REQUIRED_BENCHMARK_FRESH_PUBLICATIONS,
       });
     }
-    const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
-    const registryMetadata = parseObjectMetadata(ratesCache.value);
-    const generationId = typeof registryMetadata?.generationId === "string" && registryMetadata.generationId.length > 0
-      ? registryMetadata.generationId
-      : null;
-    const benchmark = registry?.[options.currency] ?? null;
-    const streakCache = generationId == null ? null : await getCache(db, options.streakCacheKey);
-    const streak = parseObjectMetadata(streakCache?.value ?? null);
-    const streakGenerationId = typeof streak?.generationId === "string" ? streak.generationId : null;
-    const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
-      && Number.isSafeInteger(streak.consecutiveFreshRuns) && streak.consecutiveFreshRuns >= 0
-      ? streak.consecutiveFreshRuns
-      : null;
+    const { registry, benchmark, generationId, streakGenerationId, consecutiveFreshRuns } = publication;
     const fetchedAgeSec = benchmark?.fetchedAt != null
       ? Math.max(0, observedAt - benchmark.fetchedAt)
       : null;
@@ -718,7 +705,7 @@ async function checkBenchmarkCurrent(
       isFallback: benchmark?.isFallback ?? null,
       fallbackMode: benchmark?.fallbackMode ?? null,
       consecutiveFreshRuns,
-      requiredFreshPublications: 2,
+      requiredFreshPublications: REQUIRED_BENCHMARK_FRESH_PUBLICATIONS,
     };
     if (!registry || !benchmark) return failedResult("benchmark-registry-unusable", metadata);
     if (generationId == null) {
@@ -750,9 +737,9 @@ async function checkBenchmarkCurrent(
     ) {
       problems.push(`${options.currency} benchmark observation is stale`);
     }
-    if (consecutiveFreshRuns < 2) {
+    if (consecutiveFreshRuns < REQUIRED_BENCHMARK_FRESH_PUBLICATIONS) {
       problems.push(
-        `${options.currency} benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`,
+        `${options.currency} benchmark has ${consecutiveFreshRuns}/${REQUIRED_BENCHMARK_FRESH_PUBLICATIONS} consecutive fresh publications`,
       );
     }
     if (problems.length > 0) {
@@ -767,7 +754,6 @@ async function checkBenchmarkCurrent(
 function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
   return checkBenchmarkCurrent(db, observedAt, {
     currency: "GBP",
-    streakCacheKey: GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY,
     maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
     maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.GBP,
     requireRecordDate: true,
@@ -777,7 +763,6 @@ function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
 function checkUsdBenchmarkCurrent(db: D1Database, observedAt: number) {
   return checkBenchmarkCurrent(db, observedAt, {
     currency: "USD",
-    streakCacheKey: USD_BENCHMARK_FRESH_STREAK_CACHE_KEY,
     maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
     maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
     requireRecordDate: true,
