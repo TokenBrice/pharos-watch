@@ -2,6 +2,8 @@ import type { LiveReserveAdapterValidationPolicy } from "./live-reserve-core";
 
 const DAY_SECONDS = 86_400;
 
+export const PCT_SUM_ERROR_TOLERANCE = 2;
+
 export const VERIFIED_OR_UNVERIFIED_FRESHNESS = [
   "verified",
   "unverified",

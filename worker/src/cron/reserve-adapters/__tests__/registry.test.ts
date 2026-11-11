@@ -5,7 +5,7 @@ import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
-import { LIVE_RESERVE_ADAPTER_FETCHERS } from "../index";
+import { getReserveAdapter, LIVE_RESERVE_ADAPTER_FETCHERS } from "../index";
 
 describe("adapter registry completeness", () => {
 
@@ -37,8 +37,10 @@ describe("adapter registry completeness", () => {
   );
 
   it("registers a callable fetcher for every adapter", () => {
+    expect(new Set(LIVE_RESERVE_ADAPTER_KEYS).size).toBe(LIVE_RESERVE_ADAPTER_KEYS.length);
     for (const [key, fetcher] of Object.entries(LIVE_RESERVE_ADAPTER_FETCHERS)) {
       expect(typeof fetcher, `${key} has no callable fetcher`).toBe("function");
+      expect(getReserveAdapter(key)?.fallbackInputRole).toBe(key === "hive-hbd-protocol" ? "corroboration" : undefined);
     }
   });
 

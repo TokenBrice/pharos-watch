@@ -4,7 +4,7 @@ import { DetailProviderSchema } from "./core";
 import { FullAuthoredReserveCompositionSchema } from "./reserves";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
 import { baseLiveReserveConfigSchema, LiveReserveInputSchemaByKind } from "./live-reserve-core";
-import { LIVE_RESERVE_ADAPTER_KEYS } from "./live-reserve-adapter-declarations";
+import { LIVE_RESERVE_ADAPTER_KEYS } from "./live-reserve-core";
 import { BridgeRouteRiskProfileSchema, MintAuthorityProfileSchema, OracleRiskProfileSchema } from "./stablecoin-meta-control-schemas";
 import { BlacklistabilityReviewSchema, GeniusProfileSchema, JurisdictionSchema, MicaProfileSchema } from "./stablecoin-meta-compliance-schemas";
 import {

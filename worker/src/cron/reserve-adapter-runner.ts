@@ -282,7 +282,7 @@ export function createReserveAdapterRunner(args: {
       }> = [];
       // Hive's second node corroborates the first; substituting it as primary
       // would falsely turn a failed two-node proof into a one-node success.
-      const fallbackInputs = adapter.key === "hive-hbd-protocol" ? [] : config.inputs.fallbacks ?? [];
+      const fallbackInputs = adapter.fallbackInputRole === "corroboration" ? [] : config.inputs.fallbacks ?? [];
       for (const fb of fallbackInputs) {
         throwIfAborted(args.signal);
         if (Date.now() >= (deadlineMs ?? Infinity)) throw new Error("run-budget-exhausted");

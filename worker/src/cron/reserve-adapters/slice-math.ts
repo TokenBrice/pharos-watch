@@ -4,6 +4,8 @@ import { getLiveReserveAdapterDefinition, MATERIAL_UNKNOWN_EXPOSURE_PCT } from "
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
 import { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
 import { parseDecimalNumber } from "./strict-amount";
+import { PCT_SUM_ERROR_TOLERANCE } from "@shared/types/live-reserve-adapter-policy";
+export { PCT_SUM_ERROR_TOLERANCE };
 export { decimalNumberFromBigInt, decimalStringFromBigInt };
 
 const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
@@ -15,7 +17,6 @@ const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
 };
 
 const MAX_DECIMALS = 36;
-export const PCT_SUM_ERROR_TOLERANCE = 2;
 const RATIO_SCALE = 1_000_000_000_000n;
 
 export function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSlice["risk"] {

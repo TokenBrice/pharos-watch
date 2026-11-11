@@ -25,13 +25,16 @@ describe("fetchDefiLlamaPrices", () => {
       }),
     });
 
-    const { prices, warnings } = await fetchDefiLlamaPrices(
+    const { prices, warnings, observations } = await fetchDefiLlamaPrices(
       [{ key: "branch", chain: "hyperevm", address: "0xABC" }],
       new AbortController().signal,
     );
 
     expect(prices.get("branch")).toBe(1.23);
     expect(warnings).toEqual([]);
+    expect(observations.get("branch")).toEqual({
+      sourceLookup: "hyperliquid:0xabc", quoteTimestamp: expect.any(Number), quoteConfidence: 1,
+    });
     expect(vi.mocked(fetchTextWithRetry).mock.calls[0]?.[0]).toContain("hyperliquid:0xabc");
   });
 
@@ -48,7 +51,7 @@ describe("fetchDefiLlamaPrices", () => {
   });
 
   it("returns empty prices and warnings without network I/O for no assets", async () => {
-    expect(await fetchDefiLlamaPrices([], new AbortController().signal)).toEqual({ prices: new Map(), warnings: [] });
+    expect(await fetchDefiLlamaPrices([], new AbortController().signal)).toEqual({ prices: new Map(), warnings: [], observations: new Map() });
     expect(fetchTextWithRetry).not.toHaveBeenCalled();
   });
 
@@ -83,11 +86,17 @@ describe("fetchDefiLlamaPrices", () => {
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
     expect(await fetchDefiLlamaPrices([{ key: "first", chain: "ethereum", address: "0xABC" }], signal, ctx))
-      .toEqual({ prices: new Map([["first", 2]]), warnings: [] });
+      .toEqual({ prices: new Map([["first", 2]]), warnings: [], observations: new Map([["first", {
+        sourceLookup: "ethereum:0xabc", quoteTimestamp: expect.any(Number), quoteConfidence: 1,
+      }]]) });
     expect(await fetchDefiLlamaPrices([{ key: "second", chain: "ethereum", address: "0xabc" }], signal, ctx))
-      .toEqual({ prices: new Map([["second", 2]]), warnings: [] });
+      .toEqual({ prices: new Map([["second", 2]]), warnings: [], observations: new Map([["second", {
+        sourceLookup: "ethereum:0xabc", quoteTimestamp: expect.any(Number), quoteConfidence: 1,
+      }]]) });
     expect(await fetchDefiLlamaPrices([{ key: "second", chain: "ethereum", address: "0xabc" }], signal, ctx))
-      .toEqual({ prices: new Map([["second", 2]]), warnings: [] });
+      .toEqual({ prices: new Map([["second", 2]]), warnings: [], observations: new Map([["second", {
+        sourceLookup: "ethereum:0xabc", quoteTimestamp: expect.any(Number), quoteConfidence: 1,
+      }]]) });
     expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
   });
 

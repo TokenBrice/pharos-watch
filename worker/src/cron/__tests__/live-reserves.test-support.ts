@@ -159,6 +159,7 @@ export function mockLiveReserveAdapterRegistry(fetchImpl: LiveReserveAdapterFetc
       sharedSourceMode: definition.sharedSourceMode,
       redemptionTelemetry: definition.redemptionTelemetry,
       ...(validation ? { validation } : {}),
+      ...(adapterKey === "hive-hbd-protocol" ? { fallbackInputRole: "corroboration" as const } : {}),
     };
   });
   return fetch;

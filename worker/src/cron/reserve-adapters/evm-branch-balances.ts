@@ -26,7 +26,7 @@ import {
   readBranchBalanceParams,
 } from "./branch-balances";
 import { decodeUint256Word } from "./abi-decode";
-import type { BranchPriceObservation } from "./defillama";
+import type { BranchPriceObservation } from "./branch-balances";
 import { hasDegradingWarnings, hasFatalWarnings } from "./validate";
 
 const ADAPTER_KEY = "evm-branch-balances";

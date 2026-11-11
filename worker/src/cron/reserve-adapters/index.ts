@@ -141,6 +141,10 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "chinaamc-holdings-api": lazyAdapter(() => import("./chinaamc-holdings-api").then((mod) => mod.fetchChinaamcHoldingsReserves)),
 };
 
+const ADAPTER_INPUT_POLICIES: Partial<Record<LiveReserveAdapterKey, Pick<ReserveAdapterDefinition, "fallbackInputRole">>> = {
+  "hive-hbd-protocol": { fallbackInputRole: "corroboration" },
+};
+
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the
 // adapter-key map type must be re-asserted; key coverage is enforced by the
 // LIVE_RESERVE_ADAPTER_FETCHERS annotation and the registry test.
@@ -157,6 +161,7 @@ const ADAPTERS = Object.fromEntries(
         sharedSourceMode: definition.sharedSourceMode,
         redemptionTelemetry: definition.redemptionTelemetry,
         ...(validation ? { validation } : {}),
+        ...ADAPTER_INPUT_POLICIES[key as LiveReserveAdapterKey],
       };
     })(),
   ]),

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-core";
+export type { LiveReserveAdapterKey } from "./live-reserve-core";
 import { DEPENDENCY_TYPE_VALUES } from "./dependency-types";
 import { LIVE_RESERVE_RPC_MODE_VALUES, NativeReserveQuantityBasisSchema } from "./live-reserve-core";
 import type {
@@ -2327,7 +2329,7 @@ const megausdCustodyOnchainParamsSchema = z
     }
   });
 
-export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
+const ADAPTER_DECLARATIONS = {
   "spark-usdc-v1-inventory": declareAdapter(noParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
     configValidation: CONFIG_COLLATERAL_V2,
     preferredFreshnessMode: "verified",
@@ -3463,10 +3465,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
 
-} as const satisfies Record<string, LiveReserveAdapterDescriptor>;
+} as const satisfies Record<LiveReserveAdapterKey, LiveReserveAdapterDescriptor>;
 
-export type LiveReserveAdapterKey = keyof typeof LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS;
-
-export const LIVE_RESERVE_ADAPTER_KEYS = Object.freeze(
-  Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS) as LiveReserveAdapterKey[],
-);
+export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = Object.fromEntries(
+  LIVE_RESERVE_ADAPTER_KEYS.map((key) => [key, ADAPTER_DECLARATIONS[key]]),
+) as typeof ADAPTER_DECLARATIONS;

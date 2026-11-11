@@ -20,7 +20,13 @@ import {
   valueUsdFromBigIntPrice,
 } from "./helpers";
 import { decodeUint256Word } from "./abi-decode";
-import type { BranchPriceObservation } from "./defillama";
+
+export interface BranchPriceObservation {
+  sourceKind: "configured-nominal" | "pinned-oracle" | "market-api";
+  sourceLookup: string;
+  quoteTimestamp: number | null;
+  quoteConfidence: number | null;
+}
 
 export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches">;
 
@@ -256,7 +262,7 @@ export async function fetchBranchPriceMap(
     .filter(({ branch, balanceRaw }) => balanceRaw != null && balanceRaw > 0n && branch.priceUsd == null);
   if (branchesNeedingPrices.length === 0) return new Map();
 
-  const { prices: wrapperPriceMap, warnings: wrapperWarnings } = await fetchDefiLlamaPrices(
+  const { prices: wrapperPriceMap, warnings: wrapperWarnings, observations: wrapperObservations } = await fetchDefiLlamaPrices(
     branchesNeedingPrices.map(({ branch }) => ({
       key: branch.name,
       chain: branch.priceToken?.chain ?? branch.token.chain,
@@ -264,8 +270,10 @@ export async function fetchBranchPriceMap(
     })),
     signal,
     ctx,
-    observations,
   );
+  for (const [name, observation] of wrapperObservations) {
+    observations?.set(name, { sourceKind: "market-api", ...observation });
+  }
   warnings.push(...wrapperWarnings);
 
   // For branches the wrapper-address lookup didn't resolve, fall back to the
@@ -282,7 +290,7 @@ export async function fetchBranchPriceMap(
     );
 
   if (underlyingLookups.length > 0) {
-    const { prices: underlyingPriceMap, warnings: underlyingWarnings } = await fetchDefiLlamaPrices(
+    const { prices: underlyingPriceMap, warnings: underlyingWarnings, observations: underlyingObservations } = await fetchDefiLlamaPrices(
       underlyingLookups.map(({ branch, underlying }) => ({
         key: branch.name,
         chain: underlying.chain,
@@ -290,8 +298,10 @@ export async function fetchBranchPriceMap(
       })),
       signal,
       ctx,
-      observations,
     );
+    for (const [name, observation] of underlyingObservations) {
+      observations?.set(name, { sourceKind: "market-api", ...observation });
+    }
     warnings.push(...underlyingWarnings);
     for (const [name, price] of underlyingPriceMap) {
       if (!wrapperPriceMap.has(name)) {

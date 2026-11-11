@@ -268,7 +268,7 @@ The six-chain native sum was 4,416,180,470.74 at 2026-09-27T20:43:47–20:44:16Z
 
 ## Adapter Registry
 
-`shared/types/live-reserve-adapter-declarations.ts` owns keys/schema/evidence/validation/telemetry; `worker/src/cron/reserve-adapters/index.ts` owns fetchers. Coin configs own usage, sidecars research, manifests report values. Derive rosters, do not copy them.
+`shared/types/live-reserve-core.ts` owns keys and order; `shared/types/live-reserve-adapter-declarations.ts` owns schema/evidence/validation/telemetry; `worker/src/cron/reserve-adapters/index.ts` owns fetchers. Coin configs own usage, sidecars research, manifests report values. Derive rosters, do not copy them.
 
 Tether's seven-day disclosure policy reflects Friday-publish/weekend-skip cadence, not quarterly composition age. The live JSON carries daily net circulation plus a live reserve residual, not the report-dated balance sheet; USDT coverage totals and their ratio are withheld, and a live circulation clock cannot restamp reviewed composition.
 
@@ -276,7 +276,7 @@ Tether's seven-day disclosure policy reflects Friday-publish/weekend-skip cadenc
 
 Read [metadata](../live-reserves.md#metadata-contract), [admission](../live-reserves.md#snapshot-admission-gates), [registration](../live-reserves.md#adding-a-new-adapter), then the relevant family/config/implementation/test. All family implementations are under `worker/src/cron/reserve-adapters/`; shared accounting/transport belongs to [helpers](#adapter-helper-contracts).
 
-`shared/types/live-reserve-adapter-declarations.ts` is the single authoring surface: it owns each adapter key, its Zod params schema (referenced directly by the declaration entry, not through a string identifier or a separate schema module), accepted primary input kinds, config validation policy, public source definition, provenance status, and display badge metadata. Shared `validation` tiers are named constants in `shared/types/live-reserve-adapter-policy.ts` so adapters on the same policy share one definition. `shared/lib/live-reserve-adapter-descriptors.ts` enriches the declarations and publishes `LIVE_RESERVE_ADAPTER_DEFINITIONS` as the single map for config, provenance, display, and adapter consumers; the Worker's `ReserveAdapterDefinition` is a `Pick<>` of the declaration type rather than a hand-copied structural type. `LIVE_RESERVE_ADAPTER_KEYS` and `LiveReserveAdapterKey` remain declaration-derived key views.
+`shared/types/live-reserve-adapter-declarations.ts` owns each adapter's Zod params schema (referenced directly by the declaration entry, not through a string identifier or a separate schema module), accepted primary input kinds, config validation policy, public source definition, provenance status, and display badge metadata. Shared `validation` tiers are named constants in `shared/types/live-reserve-adapter-policy.ts` so adapters on the same policy share one definition. `shared/lib/live-reserve-adapter-descriptors.ts` enriches the declarations and publishes `LIVE_RESERVE_ADAPTER_DEFINITIONS` as the single map for config, provenance, display, and adapter consumers; the Worker's `ReserveAdapterDefinition` is a `Pick<>` of the declaration type rather than a hand-copied structural type. `LIVE_RESERVE_ADAPTER_KEYS` and `LiveReserveAdapterKey` live in the lightweight `shared/types/live-reserve-core.ts`; operational declarations are checked for exact key coverage and projected in catalog order.
 
 ### Direct protocol reserve accounting
 
