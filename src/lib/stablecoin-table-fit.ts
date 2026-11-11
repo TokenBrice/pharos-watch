@@ -7,7 +7,7 @@ import type { ColumnId } from "@/lib/column-visibility";
  * and market basics (rank, name, price, peg, mcap) are never dropped; 24h
  * drops before 7d because the 7d cell carries the sparkline.
  */
-export const COLUMN_FIT_DROP_ORDER: readonly ColumnId[] = [
+const COLUMN_FIT_DROP_ORDER: readonly ColumnId[] = [
   "flags",
   "type",
   "backing",
