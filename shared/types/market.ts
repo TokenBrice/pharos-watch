@@ -1,33 +1,4 @@
-import { z } from "zod";
-import { CurrentPegSchema } from "./current-peg";
-import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
-import { DepegAuditVerdictSchema, type DepegAuditVerdict } from "./depeg-audit";
-import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
-import { FreshnessAssessmentSchema } from "@pharos/contracts/api-meta";
-import { CoinProjectionMetadataSchema } from "./coin-projection";
-import {
-  MethodologyEnvelopeSchema,
-  NominalPriceReferenceSchema,
-  PEG_CURRENCY_VALUES,
-  PriceConfidenceSchema,
-  PriceObservedAtModeSchema,
-  PriceSourceConfidenceProfileSchema,
-} from "./core";
-import { ContractDeploymentSchema } from "./stablecoin-meta-primitives";
-import {
-  DexExitRouteObservationsSchema,
-  ExitRouteObservationCoverageSchema,
-} from "./exit-route";
-import { DexMeasuredExecutionPublicProfileSchema, DexMeasuredExecutionValidationReasonSchema } from "./measured-execution";
-import { StrictIsoDateSchema } from "./safety-schema-primitives";
-import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
-import {
-  DEPEG_EVENT_CLOSE_REASON_VALUES,
-  DepegPriceCoverageSchema,
-  DepegTimestampSchema,
-  PegSummaryCoinSchema,
-  refineDepegEventChronology,
-} from "./peg";
+// Temporary scaffolding for step two; remove after the direct-import rewrite.
 
 export {
   BluechipRatingSchema,
@@ -37,6 +8,7 @@ export {
   type BluechipRatingsMap,
   type BluechipSmidge,
 } from "./bluechip";
+
 export {
   DexExitEvidenceKindSchema,
   DexExitRouteObservationSchema,
@@ -66,1426 +38,157 @@ export {
   type ExitRouteScope,
 } from "./exit-route";
 
-/** Canonical producer refusal, not a measured zero or a provider-history fallback. */
-export const SupplyUnavailableReasonSchema = z.enum(["supply-chain-dropout", "economic-float-unreconciled"]);
-export type SupplyUnavailableReason = z.infer<typeof SupplyUnavailableReasonSchema>;
-
-export const PegBucketsSchema = z.record(z.string(), z.number());
-
-/**
- * Attribution for a price derived from a tracked parent quote (e.g. parent price × vault NAV).
- * Descriptive only: `priceSource`/`priceConfidence` remain the trust authority. `navMethod` names a
- * successful live vault read; a cached rate instead names its original `rateObservedAt`.
- */
-export const PriceDerivationSchema = z.object({
-  inheritedFrom: z.string().min(1),
-  parentSource: z.string().nullable(),
-  parentConfidence: PriceConfidenceSchema.nullable(),
-  parentObservedAt: z.number().finite().nullable(),
-  parentObservedAtMode: PriceObservedAtModeSchema.nullable(),
-  parentReplaySafe: z.boolean(),
-  navMethod: z.enum(["convertToAssets", "previewRedeem"]).optional(),
-  cachedVaultRate: z.object({
-    rate: z.number().finite().positive(),
-    rateObservedAt: z.number().finite().positive(),
-  }).optional(),
-});
-export type PriceDerivation = z.infer<typeof PriceDerivationSchema>;
-
-const StablecoinDetailTokenSchema = z.object({
-  date: z.number().optional(),
-  totalCirculatingUSD: PegBucketsSchema.optional(),
-  totalCirculating: PegBucketsSchema.optional(),
-  circulating: PegBucketsSchema.optional(),
-}).passthrough();
-
-/** Public per-coin detail response; provider-specific fields intentionally pass through. */
-export const StablecoinDetailResponseSchema = z.object({
-  price: z.number().nullable().optional(),
-  priceSource: z.string().nullable().optional(),
-  priceConfidence: PriceConfidenceSchema.nullable().optional(),
-  priceUpdatedAt: z.number().nullable().optional(),
-  priceObservedAt: z.number().nullable().optional(),
-  /** Canonical parent derivation of the overlaid publication quote only. */
-  priceDerivation: PriceDerivationSchema.optional(),
-  currentPeg: CurrentPegSchema.optional(),
-  /** Current admitted list USD buckets; distinct from the provider's dated token history. */
-  currentCirculatingUSD: PegBucketsSchema.optional(),
-  currentCirculatingPrevDayUSD: PegBucketsSchema.optional(),
-  currentSupplyObservedAt: z.number().finite().positive().optional(),
-  /** Canonical carry-forward provenance for the admitted current supply overlay. */
-  currentSupplyRestored: z.boolean().optional(),
-  /** Canonical partial coverage: chain labels excluded (unavailable) from the admitted current supply. */
-  currentSupplyExcludedChains: z.array(z.string()).min(1).optional(),
-  /**
-   * Canonical producer refusal: consumers must not substitute the provider's
-   * dated history for current unavailable supply.
-   */
-  currentSupplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
-  tokens: z.array(StablecoinDetailTokenSchema).optional(),
-}).passthrough();
-export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
-
-/**
- * Published aggregate peg buckets: finite nonnegative USD per bucket. `{}` stays absence (read it with
- * the `*OrNull` supply helpers); an explicit `0` is an observed zero (CR-13 / D01-2).
- */
-const SupplyBucketsSchema = z.record(z.string(), z.number().finite().nonnegative());
-
-/**
- * Per-chain supply scalars. `null` = the chain row exists but that observation was unavailable (empty or
- * invalid provider bucket); it is never a zero. Canonical storage and public wires carry `null` (Release B).
- */
-const ChainSupplyValueSchema = z.number().finite().nonnegative().nullable();
-
-const ChainCirculatingSchema = z.record(
-  z.string(),
-  z.object({
-    chainId: z.string().optional(),
-    current: ChainSupplyValueSchema,
-    circulatingPrevDay: ChainSupplyValueSchema.optional(),
-    circulatingPrevWeek: ChainSupplyValueSchema.optional(),
-    circulatingPrevMonth: ChainSupplyValueSchema.optional(),
-  }),
-);
-
-/**
- * DEC-01 provenance on a row whose aggregate supply was raised by the bounded CoinGecko gap-fill. The
- * canonical DefiLlama total stays visible beside the supplemental CoinGecko value and the admitted ratio.
- */
-export const SupplyGapFillProvenanceSchema = z.object({
-  method: z.literal("coingecko-single-missing-chain"),
-  /** `entered` = admitted inside the entry band; `retained` = kept by the hysteresis band. */
-  admission: z.enum(["entered", "retained"]),
-  missingChainId: z.string(),
-  canonicalSource: z.literal("defillama"),
-  canonicalCurrentUsd: z.number().finite().positive(),
-  supplementalSource: z.literal("coingecko"),
-  supplementalCurrentUsd: z.number().finite().positive(),
-  ratio: z.number().finite().positive(),
-  maxRatio: z.number().finite().positive(),
-  observedAt: z.number().int().nonnegative(),
-  /** Consecutive no-decision publications; fresh reconciliation resets this bounded carry. */
-  carryForwardRuns: z.number().int().nonnegative().optional(),
-  /** Missing-chain history withheld when aggregate or chain history is unobserved or nonconserving. */
-  withheldHistoricalBuckets: z.array(z.enum(["day", "week", "month"])).min(1).optional(),
-  /** Present iff buckets are withheld; its key set exactly equals `withheldHistoricalBuckets`. */
-  withheldHistoricalBucketReasons: z.partialRecord(
-    z.enum(["day", "week", "month"]),
-    z.enum(["history-unobserved", "nonconserving"]),
-  ).optional(),
-});
-export type SupplyGapFillProvenance = z.infer<typeof SupplyGapFillProvenanceSchema>;
-
-/** On-chain shares apportioned onto a source-owned aggregate; carried shares keep their original read clock. */
-export const ChainPartitionProvenanceSchema = z.object({
-  basis: z.literal("onchain-share"),
-  observedAt: z.number().int().positive(),
-  onchainUsd: z.number().finite().positive(),
-  ratio: z.number().finite().positive(),
-  admission: z.enum(["entered", "retained", "carried"]),
-});
-export type ChainPartitionProvenance = z.infer<typeof ChainPartitionProvenanceSchema>;
-
-/** Current-chain dropout evidence; historical aggregate buckets are never rewritten by this lane. */
-export const SupplyChainGuardProvenanceSchema = z.object({
-  reason: z.literal("supply-chain-dropout"),
-  status: z.enum(["repaired", "quarantined", "unavailable", "chains-unavailable"]),
-  quarantinedSince: z.number().int().nonnegative().optional(),
-  /**
-   * A bounded minority-share quarantine, reviewed exclusion, or fill-default native remainder publishes
-   * `status: "chains-unavailable"`: the aggregate excludes unavailable chains; fill-default uses native reads only.
-   */
-  partialCoverage: z.literal(true).optional(),
-  /**
-   * Same-run supply gain on this asset's healthy chains large enough to explain the drop (e.g. a bridge
-   * representation reattributed to its source). Attribution is ambiguous, so repairs are withheld and a
-   * material drop holds the vetted whole-asset total.
-   */
-  concurrentGainUsd: z.number().finite().nonnegative().optional(),
-  chains: z.array(z.object({
-    chainId: z.string().optional(),
-    chainLabel: z.string(),
-    listCurrentUsd: z.number().finite().nonnegative().nullable(),
-    baselineUsd: z.number().finite().nonnegative(),
-    baselineObservedAt: z.number().int().nonnegative(),
-    baselineSource: z.enum(["state", "seed", "list-prev-day"]),
-    resolution: z.enum(["onchain-total-supply", "defillama-chain-history", "carried-baseline", "unavailable"]),
-    reviewedExclusion: z.object({
-      reason: z.literal("reviewed-excluded"),
-      reviewedAt: z.number().int().nonnegative(),
-      expiresAt: z.number().int().nonnegative(),
-      quarantinedSince: z.number().int().nonnegative(),
-      evidenceUrl: z.string().url(),
-    }).optional(),
-    repairedCurrentUsd: z.number().finite().nonnegative().optional(),
-    observedAt: z.number().int().nonnegative().optional(),
-    /** Native probes carry a local-read clock; daily chart points carry their upstream observation time. */
-    observedAtKind: z.enum(["upstream", "local-read"]).optional(),
-  })).min(1),
-});
-export type SupplyChainGuardProvenance = z.infer<typeof SupplyChainGuardProvenanceSchema>;
-
-/**
- * Recorded provenance of one admitted supply observation (daily history row / dataset row). A present
- * object attests that the writer inspected the admitted current row; `null`/absent means coverage was not
- * recorded (unknown, never complete). Source and clock stay null when the observation carried none.
- */
-export const SupplyObservationProvenanceSchema = z.object({
-  supplySource: z.string().nullable(),
-  supplyObservedAt: z.number().int().nonnegative().nullable(),
-  supplyChainGuard: SupplyChainGuardProvenanceSchema.nullable(),
-});
-export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProvenanceSchema>;
-
-/**
- * Why a `supplyRestored` row was carried. Only the DefiLlama-outage fallback sets
- * `outage-fallback`; routine chain-dropout and coverage carries stay unmarked so
- * consumers can keep treating them as normal main-path carries.
- */
-export const SupplyRestoreModeSchema = z.enum(["outage-fallback"]);
-export type SupplyRestoreMode = z.infer<typeof SupplyRestoreModeSchema>;
-
-const StablecoinDataRawSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  symbol: z.string(),
-  geckoId: z.string().nullable().optional(),
-  gecko_id: z.string().nullable().optional(),
-  pegType: z.string(),
-  pegMechanism: z.string(),
-  price: z.number().nullable(),
-  priceSource: z.string().nullable(),
-  priceConfidence: PriceConfidenceSchema.nullable().optional(),
-  priceUpdatedAt: z.number().nullable().optional(),
-  priceObservedAt: z.number().nullable().optional(),
-  priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
-  nominalPriceReference: NominalPriceReferenceSchema.optional(),
-  priceDerivation: PriceDerivationSchema.optional(),
-  currentPeg: CurrentPegSchema.optional(),
-  priceSyncedAt: z.number().nullable().optional(),
-  consensusSources: z.array(z.string()).optional(),
-  agreeSources: z.array(z.string()).optional(),
-  priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.nullable().optional(),
-  supplySource: z.string().optional(),
-  supplyObservedAt: z.number().nullable().optional(),
-  supplyRestored: z.boolean().optional(),
-  supplyRestoreMode: SupplyRestoreModeSchema.optional(),
-  supplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
-  supplyPerimeter: SfraxStockPerimeterObservationSchema.optional(),
-  supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
-  supplyChainGuard: SupplyChainGuardProvenanceSchema.optional(),
-  chainPartition: ChainPartitionProvenanceSchema.optional(),
-  circulating: SupplyBucketsSchema,
-  circulatingPrevDay: SupplyBucketsSchema.nullish(),
-  circulatingPrevWeek: SupplyBucketsSchema.nullish(),
-  circulatingPrevMonth: SupplyBucketsSchema.nullish(),
-  chainCirculating: ChainCirculatingSchema,
-  chains: z.array(z.string()),
-  contracts: z.array(ContractDeploymentSchema).optional(),
-  frozen: z.boolean().optional(),
-  frozenAt: StrictIsoDateSchema.optional(),
-});
-
-/** JSON wire shape after legacy aliases and optional observations have been normalized. */
-export const StablecoinDataOutputSchema = StablecoinDataRawSchema.omit({ gecko_id: true }).extend({
-  geckoId: z.string().nullable(),
-  priceConfidence: PriceConfidenceSchema.nullable(),
-  priceUpdatedAt: z.number().nullable(),
-  priceObservedAt: z.number().nullable(),
-  priceObservedAtMode: PriceObservedAtModeSchema.nullable(),
-  priceSyncedAt: z.number().nullable(),
-  consensusSources: z.array(z.string()),
-  agreeSources: z.array(z.string()),
-  priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.optional(),
-  supplyObservedAt: z.number().optional(),
-  circulatingPrevDay: SupplyBucketsSchema,
-  circulatingPrevWeek: SupplyBucketsSchema,
-  circulatingPrevMonth: SupplyBucketsSchema,
-});
-
-export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
-  id: asset.id,
-  name: asset.name,
-  symbol: asset.symbol,
-  geckoId: asset.geckoId ?? asset.gecko_id ?? null,
-  pegType: asset.pegType,
-  pegMechanism: asset.pegMechanism,
-  price: asset.price,
-  priceSource: asset.priceSource,
-  priceConfidence: asset.priceConfidence ?? null,
-  priceUpdatedAt: asset.priceUpdatedAt ?? null,
-  priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
-  priceObservedAtMode: asset.priceObservedAtMode ?? null,
-  ...(asset.nominalPriceReference != null ? { nominalPriceReference: asset.nominalPriceReference } : {}),
-  ...(asset.priceDerivation != null ? { priceDerivation: asset.priceDerivation } : {}),
-  ...(asset.currentPeg != null ? { currentPeg: asset.currentPeg } : {}),
-  priceSyncedAt: asset.priceSyncedAt ?? null,
-  consensusSources: asset.consensusSources ?? [],
-  agreeSources: asset.agreeSources ?? [],
-  ...(asset.priceSourceConfidenceProfile != null
-    ? { priceSourceConfidenceProfile: asset.priceSourceConfidenceProfile }
-    : {}),
-  supplySource: asset.supplySource,
-  ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
-  ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
-  ...(asset.supplyRestoreMode != null ? { supplyRestoreMode: asset.supplyRestoreMode } : {}),
-  ...(asset.supplyUnavailableReason != null ? { supplyUnavailableReason: asset.supplyUnavailableReason } : {}),
-  ...(asset.supplyPerimeter != null ? { supplyPerimeter: asset.supplyPerimeter } : {}),
-  ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),
-  ...(asset.supplyChainGuard != null ? { supplyChainGuard: asset.supplyChainGuard } : {}),
-  ...(asset.chainPartition != null ? { chainPartition: asset.chainPartition } : {}),
-  circulating: asset.circulating,
-  circulatingPrevDay: asset.circulatingPrevDay ?? {},
-  circulatingPrevWeek: asset.circulatingPrevWeek ?? {},
-  circulatingPrevMonth: asset.circulatingPrevMonth ?? {},
-  chainCirculating: asset.chainCirculating,
-  chains: asset.chains,
-  ...(asset.contracts && asset.contracts.length > 0 ? { contracts: asset.contracts } : {}),
-  ...(asset.frozen != null ? { frozen: asset.frozen } : {}),
-  ...(asset.frozenAt != null ? { frozenAt: asset.frozenAt } : {}),
-}));
-export type StablecoinData = z.infer<typeof StablecoinDataSchema>;
-
-export const StablecoinListResponseSchema = z.object({
-  peggedAssets: z.array(StablecoinDataSchema),
-  fxFallbackRates: z.record(z.string(), z.number()).optional(),
-});
-export type StablecoinListResponse = z.infer<typeof StablecoinListResponseSchema>;
-
 export { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
+
 export type { CauseOfDeath } from "./cause-of-death";
 
-export const DeadStablecoinSchema = z
-  .object({
-    id: z.string(), name: z.string(), symbol: z.string(), llamaId: z.string().optional(), geckoId: z.string().optional(),
-    aliases: z.array(z.string()).optional(), logo: z.string().optional(), pegCurrency: z.enum(PEG_CURRENCY_VALUES),
-    causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES), deathDate: z.string(), peakMcap: z.number().optional(),
-    epitaph: z.string().optional(), obituary: z.string(), sourceUrl: z.string(), sourceLabel: z.string(),
-    contracts: z.array(z.object({ chain: z.string(), address: z.string() }).strict()).optional(),
-    /** How the coin worked; the one authority for cemetery mechanism links. Absent until curated. */
-    mechanismArchetype: z.enum(MECHANISM_ARCHETYPE_VALUES).optional(),
-    /** UTC `YYYY-MM-DD` on which the record entered Pharos (not the death date); required for curated assets. */
-    recordedAt: StrictIsoDateSchema.optional(),
-  })
-  .strict();
-export type DeadStablecoin = z.output<typeof DeadStablecoinSchema>;
-
-export const LiquidityPoolSourceFamilySchema = z.enum([
-  "dl",
-  "cg_onchain",
-  "gecko_terminal",
-  "dexscreener",
-  "cg_tickers",
-  "horizon",
-  "aquarius",
-  "tezos",
-  "icon-balanced",
-  "kava-swap",
-  "osmosis-sqs",
-  "noble-swap",
-  "direct_api",
-]);
-export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;
-
-export const LiquidityCoverageClassSchema = z.enum(["primary", "mixed", "fallback", "legacy", "unobserved"]);
-export type LiquidityCoverageClass = z.infer<typeof LiquidityCoverageClassSchema>;
-
-/**
- * Why a published LiquidityScore is null (NR). The `activity-*` codes are the
- * DEC-19 volume-activity outcomes decided by `resolveVolumeActivityComponent`;
- * `no-retained-pools` marks a placeholder or scored row that retained no pool; the publisher
- * adds `invalid-coverage-evidence` when it quarantines a row's coverage.
- */
-export const LiquidityScoreUnavailableReasonSchema = z.enum([
-  "activity-coverage-below-floor",
-  "activity-missing",
-  "activity-stale",
-  "activity-completeness-unknown",
-  "no-retained-pools",
-  "invalid-coverage-evidence",
-]);
-export type LiquidityScoreUnavailableReason = z.infer<typeof LiquidityScoreUnavailableReasonSchema>;
-
-const LiquiditySourceMixEntrySchema = z.object({
-  poolCount: z.number(),
-  tvlUsd: z.number(),
-});
-export type LiquiditySourceMixEntry = z.infer<typeof LiquiditySourceMixEntrySchema>;
-
-export const LiquiditySourceMixSchema = z.record(z.string(), LiquiditySourceMixEntrySchema);
-export type LiquiditySourceMix = Record<string, LiquiditySourceMixEntry>;
-
-export const DexAmmExecutionTokenSchema = z.object({
-  address: z.string().min(1),
-  symbol: z.string().min(1),
-  decimals: z.number().int().min(0).max(255),
-  balance: z.number().finite().positive(),
-  referencePriceUsd: z.number().finite().positive(),
-  referencePriceSource: z.enum(["source-token-usd", "tracked-market", "peg-reference", "pool-implied"]),
-  referencePriceSourceId: z.string().min(1).optional(),
-  referencePriceObservedAt: z.number().int().positive().optional(),
-  trackedAssetId: z.string().min(1).optional(),
-  weight: z.number().finite().positive().max(1).optional(),
-});
-export type DexAmmExecutionToken = z.infer<typeof DexAmmExecutionTokenSchema>;
-
-export const DexAmmExecutionModelSchema = z
-  .object({
-    source: z.enum(["raydium", "uniswap-v2", "pancakeswap-v2", "solidly-v2", "balancer", "curve"]),
-    invariant: z.enum(["constant-product", "weighted-constant-mean", "stableswap", "solidly-stable"]),
-    trackedTokenIndex: z.number().int().nonnegative(),
-    feeRate: z.number().finite().min(0).lt(1),
-    /** StableSwap amplification coefficient A (plain paper convention, not A*n^n). */
-    amplification: z.number().finite().positive().optional(),
-    tokens: z.array(DexAmmExecutionTokenSchema).min(2).max(8),
-    capture: z.object({
-      blockNumber: z.number().int().positive(),
-      blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
-      blockTimestamp: z.number().int().positive(),
-      sourceGenerationId: z.string().min(1),
-    }).optional(),
-    solidlyState: z.object({
-      variant: z.enum(["aerodrome", "velodrome"]),
-      stable: z.literal(true),
-      reserve0: z.string().max(78).regex(/^[1-9][0-9]*$/),
-      reserve1: z.string().max(78).regex(/^[1-9][0-9]*$/),
-      fee: z.number().int().nonnegative().lt(10_000),
-      blockNumber: z.number().int().positive(),
-      blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
-      blockTimestamp: z.number().int().positive().optional(),
-      sourceGenerationId: z.string().min(1).optional(),
-      factoryAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-      poolAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-      verifiedQuoteCount: z.number().int().positive(),
-      quoteChecks: z.array(z.object({
-        tokenInIndex: z.number().int().min(0).max(1),
-        amountIn: z.string().max(78).regex(/^[1-9][0-9]*$/),
-        amountOut: z.string().max(78).regex(/^[0-9]+$/),
-      })).min(1).max(32),
-      capacityChecks: z.array(z.object({
-        requestedNotionalUsd: z.number().finite().positive(),
-        executableUsd: z.number().finite().nonnegative(),
-        selectedAmountIn: z.string().max(78).regex(/^[0-9]+$/),
-        selectedAmountOut: z.string().max(78).regex(/^[0-9]+$/),
-        rejectedAmountIn: z.string().max(78).regex(/^[1-9][0-9]*$/).optional(),
-        rejectedAmountOut: z.string().max(78).regex(/^[0-9]+$/).optional(),
-      })).min(1).max(4).optional(),
-    }).optional(),
-  })
-  .superRefine((model, ctx) => {
-    if (model.trackedTokenIndex >= model.tokens.length) {
-      ctx.addIssue({ code: "custom", path: ["trackedTokenIndex"], message: "tracked token index is out of range" });
-    }
-    if (model.invariant !== "stableswap" && model.amplification !== undefined) {
-      ctx.addIssue({ code: "custom", path: ["amplification"], message: "amplification is a stableswap parameter" });
-    }
-    if (model.source === "solidly-v2" || model.invariant === "solidly-stable" || model.solidlyState) {
-      if (model.source !== "solidly-v2" || !model.solidlyState || model.tokens.length !== 2 ||
-        model.invariant !== "solidly-stable" || model.solidlyState.stable !== true ||
-        model.feeRate !== model.solidlyState.fee / 10_000) {
-        ctx.addIssue({ code: "custom", path: ["solidlyState"], message: "invalid exact Solidly state" });
-      }
-      return;
-    }
-    if (model.invariant === "constant-product") {
-      if (
-        !["raydium", "uniswap-v2", "pancakeswap-v2"].includes(model.source) ||
-        model.tokens.length !== 2
-      ) {
-        ctx.addIssue({ code: "custom", path: ["invariant"], message: "invalid constant-product model" });
-      }
-      return;
-    }
-    if (model.invariant === "stableswap") {
-      if (model.source !== "curve" && model.source !== "balancer") {
-        ctx.addIssue({
-          code: "custom",
-          path: ["source"],
-          message: "stableswap models require a Curve or Balancer source",
-        });
-      }
-      if (model.amplification === undefined) {
-        ctx.addIssue({ code: "custom", path: ["amplification"], message: "stableswap models require amplification" });
-      }
-      return;
-    }
-    if (model.source !== "balancer") {
-      ctx.addIssue({ code: "custom", path: ["source"], message: "weighted models require Balancer source" });
-    }
-    const weights = model.tokens.map((token) => token.weight);
-    if (weights.some((weight) => weight == null)) {
-      ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted models require every token weight" });
-      return;
-    }
-    const weightSum = (weights as number[]).reduce((sum, weight) => sum + weight, 0);
-    if (Math.abs(weightSum - 1) > 0.0001) {
-      ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted model token weights must sum to one" });
-    }
-  });
-export type DexAmmExecutionModel = z.infer<typeof DexAmmExecutionModelSchema>;
-
-/** Archival reader only: these variants no longer have a producer or simulator. */
-const RetiredSolidlyStateSchema = z.object({
-  variant: z.enum(["aerodrome", "velodrome", "shadow"]),
-  stable: z.boolean(),
-  reserve0: z.string().max(78).regex(/^[1-9][0-9]*$/),
-  reserve1: z.string().max(78).regex(/^[1-9][0-9]*$/),
-  fee: z.number().int().nonnegative().lt(1_000_000),
-  blockNumber: z.number().int().positive(),
-  blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
-  blockTimestamp: z.number().int().positive().optional(),
-  sourceGenerationId: z.string().min(1).optional(),
-  factoryAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-  poolAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-  verifiedQuoteCount: z.number().int().positive(),
-  quoteChecks: z.array(z.object({
-    tokenInIndex: z.number().int().min(0).max(1),
-    amountIn: z.string().max(78).regex(/^[1-9][0-9]*$/),
-    amountOut: z.string().max(78).regex(/^[0-9]+$/),
-  })).min(1).max(32),
-}).refine((state) => state.variant === "shadow" || state.stable === false, {
-  message: "Only retired Solidly variants belong to the archival reader",
-});
-const RetiredSolidlyModelFields = {
-  invariant: z.enum(["constant-product", "solidly-stable"]),
-  trackedTokenIndex: z.number().int().nonnegative(),
-  feeRate: z.number().finite().min(0).lt(1),
-  amplification: z.undefined().optional(),
-  tokens: z.array(DexAmmExecutionTokenSchema).length(2),
-};
-export const DexRetiredSolidlyLegacyModelSchema = z.object({
-  ...RetiredSolidlyModelFields,
-  source: z.literal("solidly-v2"),
-  solidlyState: RetiredSolidlyStateSchema,
-}).transform((model) => ({
-  ...model,
-  source: "retired-solidly-v2" as const,
-  unavailableReason: "retired-solidly-variant" as const,
-  retiredSolidlyState: model.solidlyState,
-  solidlyState: undefined,
-}));
-const DexRetiredSolidlyModelSchema = z.object({
-  ...RetiredSolidlyModelFields,
-  source: z.literal("retired-solidly-v2"),
-  unavailableReason: z.literal("retired-solidly-variant"),
-  retiredSolidlyState: RetiredSolidlyStateSchema,
-  solidlyState: z.undefined().optional(),
-});
-/** Stored/API readers retain a retired row, but never treat its historical model as executable. */
-export const DexStoredAmmExecutionModelSchema = z.union([
-  DexAmmExecutionModelSchema, DexRetiredSolidlyLegacyModelSchema, DexRetiredSolidlyModelSchema,
-]);
-export type DexStoredAmmExecutionModel = z.infer<typeof DexStoredAmmExecutionModelSchema>;
-
-/**
- * Exact pool-family evidence that was retained, but whose execution model was
- * intentionally rejected by a reviewed fail-closed gate. These rows remain in
- * the exact-route completeness denominator instead of being mistaken for
- * generic shaped TVL.
- */
-export const DexExecutionCapabilityGateSchema = z.object({
-  family: z.enum([
-    "curve-stableswap",
-    "curve-cryptoswap",
-    "balancer-amm",
-    "raydium-amm",
-    "constant-product-v2",
-    "solidly-v2",
-    "measured-execution",
-  ]),
-  reason: z.enum([
-    "unsupported-invariant",
-    "rate-bearing-inputs",
-    "paused-or-swap-disabled",
-    "metapool-unsupported",
-    "incomplete-exact-capture",
-    // The verification transport failed before anything was observed (request
-    // failure, pinned block unavailable, or exhausted wall-time budget). The
-    // pool was NOT semantically refused: distinct from
-    // `incomplete-exact-capture`, which asserts an observed capture was
-    // incomplete, so operators can tell a provider blip from a data refusal.
-    "transport-unavailable",
-    "invalid-invariant-parameters",
-    "ambiguous-token-identity",
-    "tracked-input-unresolved",
-    "exact-pool-join-unresolved",
-    "target-unresolved",
-    "unsupported-chain",
-    "target-missing",
-    "quote-missing",
-    "quote-failed",
-    // A rotating producer admission budget deferred this target before any
-    // capability was exercised. Distinct from `quote-failed`, which asserts an
-    // attempted measurement did not produce a valid profile.
-    "budget-deferred",
-    "generation-mismatch",
-    "stale-observation",
-    "invalid-observation",
-    "deployment-code-mismatch",
-    "activation-pending",
-  ]),
-  validationIssues: z.array(DexMeasuredExecutionValidationReasonSchema)
-    .max(DexMeasuredExecutionValidationReasonSchema.options.length).optional(),
-});
-export type DexExecutionCapabilityGate = z.infer<typeof DexExecutionCapabilityGateSchema>;
-
-/**
- * Eligibility of one pool's provider volume reading for the current window:
- * `measured` = an in-budget observation is present (zero is a valid measurement);
- * `stale` = an observation exists but is older than the freshness budget;
- * `missing` = no usable value, or no observation clock proving its window.
- */
-const DexPoolVolumeStatusSchema = z.enum(["measured", "missing", "stale"]);
-export type DexPoolVolumeStatus = z.infer<typeof DexPoolVolumeStatusSchema>;
-
-/**
- * Aggregate completeness of one volume window over every retained contributing
- * pool (DEC-19). `complete` = every pool measured (a genuine measured zero stays
- * complete); `partial` = some measured, some missing/stale; `missing` = none
- * measured and at least one pool lacks an observation; `stale` = none measured
- * and every observation is past its budget; `unknown` = completeness cannot be
- * established (legacy row without a record, or an unreadable record).
- */
-const DexVolumeCompletenessSchema = z.enum(["complete", "partial", "missing", "stale", "unknown"]);
-export type DexVolumeCompleteness = z.infer<typeof DexVolumeCompletenessSchema>;
-
-const DexVolumeAvailabilityReasonSchema = z.enum([
-  "pool-observations-missing",
-  "pool-observations-stale",
-  "pool-observations-missing-and-stale",
-  "legacy-completeness-unrecorded",
-  "availability-record-unreadable",
-]);
-export type DexVolumeAvailabilityReason = z.infer<typeof DexVolumeAvailabilityReasonSchema>;
-
-const nullableCount = z.number().int().nonnegative().nullable();
-const nullableEpochSec = z.number().int().nonnegative().nullable();
-
-/**
- * Availability record for one measured-volume window. The advertised measured
- * total (`totalVolume24hUsd` / `totalVolume7dUsd`, history `volume24h`) is a
- * number only when `completeness === "complete"`; otherwise it is null and
- * `partialGrossUsd` separately labels the sum of the admitted (in-budget)
- * observations that were present — observed volume over the admitted pools, a
- * lower bound, never the complete statistic. `admittedTvlUsd` /
- * `retainedTvlUsd` / `volumeCoverage` publish the bound with that statistic:
- * the admitted pools' share of the retained scoring TVL (liquidity v6.9;
- * absent on records written before it). Clock fields name the observation
- * window and admission budget that produced the verdict.
- */
-const DexVolumeAvailabilitySchema = z
-  .object({
-    completeness: DexVolumeCompletenessSchema,
-    reason: DexVolumeAvailabilityReasonSchema.nullable(),
-    partialGrossUsd: z.number().finite().nonnegative().nullable(),
-    measuredPoolCount: nullableCount,
-    missingPoolCount: nullableCount,
-    stalePoolCount: nullableCount,
-    windowSec: z.number().int().positive(),
-    asOfSec: nullableEpochSec,
-    maxObservationAgeSec: z.number().int().positive().nullable(),
-    oldestObservedAtSec: nullableEpochSec,
-    newestObservedAtSec: nullableEpochSec,
-    admittedTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-    retainedTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-    volumeCoverage: z.number().finite().min(0).max(1).nullable().optional(),
-  })
-  .superRefine((availability, ctx) => {
-    if ((availability.completeness === "complete") !== (availability.reason === null)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["reason"],
-        message: "complete volume windows carry no reason; every other completeness carries one",
-      });
-    }
-    if (availability.measuredPoolCount != null && availability.measuredPoolCount > 0 && availability.partialGrossUsd === null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["partialGrossUsd"],
-        message: "measured nonempty volume windows require an admitted sum",
-      });
-    }
-  });
-export type DexVolumeAvailability = z.infer<typeof DexVolumeAvailabilitySchema>;
-
-/** Stored `volume_availability_json` record: one availability per persisted window. */
-export const DexVolumeAvailabilityRecordSchema = z.object({
-  "24h": DexVolumeAvailabilitySchema,
-  "7d": DexVolumeAvailabilitySchema.optional(),
-});
-export type DexVolumeAvailabilityRecord = z.infer<typeof DexVolumeAvailabilityRecordSchema>;
-/** Measured DEX volume windows published by the liquidity pipeline (the record's window keys). */
-export type DexVolumeWindow = keyof DexVolumeAvailabilityRecord;
-
-export const DexPoolVolumeObservationSchema = z.object({
-  status: DexPoolVolumeStatusSchema,
-  observedAtSec: nullableEpochSec,
-});
-
-const DexLiquidityPoolSchema = z.object({
-  project: z.string(),
-  chain: z.string(),
-  tvlUsd: z.number(),
-  symbol: z.string(),
-  // Null when the pool has no in-budget 24h observation (DEC-19 producers).
-  volumeUsd1d: z.number().nullable(),
-  volumeUsd7d: z.number().nullable().optional(),
-  // Absent on legacy rows: the reading's eligibility was not recorded.
-  volumeObservation: DexPoolVolumeObservationSchema.optional(),
-  poolType: z.string(),
-  source: LiquidityPoolSourceFamilySchema.optional(),
-  price: z.number().optional(),
-  extra: z
-    .object({
-      amplificationCoefficient: z.number().optional(),
-      balanceRatio: z.number().optional(),
-      feeTier: z.number().optional(),
-      effectiveTvl: z.number().optional(),
-      organicFraction: z.number().optional(),
-      pairQuality: z.number().optional(),
-      stressIndex: z.number().optional(),
-      isMetaPool: z.boolean().optional(),
-      maturityDays: z.number().optional(),
-      registryId: z.string().optional(),
-      orderbookDepthUsd: z.number().nonnegative().optional(),
-      orderbookDepthUpUsd: z.number().nonnegative().optional(),
-      orderbookTvlBasis: z.enum(["volume-derived", "coingecko-depth-2pct-capped-by-volume"]).optional(),
-      balanceDetails: z
-        .array(
-          z.object({
-            symbol: z.string(),
-            balancePct: z.number(),
-            isTracked: z.boolean(),
-          }),
-        )
-        .optional(),
-      measurement: z
-        .object({
-          tvlMeasured: z.boolean().optional(),
-          volumeMeasured: z.boolean().optional(),
-          balanceMeasured: z.boolean().optional(),
-          maturityMeasured: z.boolean().optional(),
-          priceMeasured: z.boolean().optional(),
-          synthetic: z.boolean().optional(),
-          decayed: z.boolean().optional(),
-          capped: z.boolean().optional(),
-        })
-        .optional(),
-      executionCapabilityGate: DexExecutionCapabilityGateSchema.optional(),
-      ammExecutionModel: DexStoredAmmExecutionModelSchema.optional(),
-      measuredExecution: DexMeasuredExecutionPublicProfileSchema.optional(),
-    })
-    .optional(),
-});
-export type DexLiquidityPool = z.infer<typeof DexLiquidityPoolSchema>;
-
-const DexPriceSourceSchema = z.object({
-  protocol: z.string(),
-  chain: z.string(),
-  price: z.number(),
-  tvl: z.number(),
-});
-
-export const LiquidityEvidenceClassSchema = z.enum([
-  "unobserved",
-  "measured",
-  "partial_measured",
-  "observed_unmeasured",
-]);
-
-export const DexDeploymentOutcomeSchema = z.enum(["observed_pools", "verified_no_pools", "provider_inaccessible"]);
-export type DexDeploymentOutcome = z.infer<typeof DexDeploymentOutcomeSchema>;
-
-const DexDeploymentCoverageSchema = z.object({
-  observedPools: z.number().int().nonnegative(),
-  verifiedNoPools: z.number().int().nonnegative(),
-  providerInaccessible: z.number().int().nonnegative(),
-  deployments: z.array(
-    z.object({
-      chain: z.string(),
-      contractAddress: z.string(),
-      outcome: DexDeploymentOutcomeSchema,
-      providers: z.array(z.string()),
-      reason: z.string(),
-      observedPoolCount: z.number().int().nonnegative(),
-      observedAt: z.number(),
-      waiver: z
-        .object({
-          owner: z.string(),
-          reason: z.string().nullable(),
-          expiresAt: z.number(),
-        })
-        .nullable(),
-    }),
-  ),
-});
-
-const DexLiquidityDataSchema = z
-  .object({
-    warning: z.string().nullable().optional(),
-    advisoryUnavailableReason: z.literal("dex-advisory-read-failed").nullable().optional(),
-    unavailableReason: z.literal("invalid-coverage-evidence").nullable().optional(),
-    totalTvlUsd: z.number(),
-    // Full-window measured sums: null unless the matching availability is complete.
-    totalVolume24hUsd: z.number().nullable(),
-    totalVolume7dUsd: z.number().nullable(),
-    // Absent on legacy rows (completeness unrecorded; interpret as `unknown`).
-    volume24hAvailability: DexVolumeAvailabilitySchema.optional(),
-    volume7dAvailability: DexVolumeAvailabilitySchema.optional(),
-    poolCount: z.number(),
-    pairCount: z.number(),
-    chainCount: z.number(),
-    protocolTvl: z.record(z.string(), z.number()),
-    chainTvl: z.record(z.string(), z.number()),
-    topPools: z.array(DexLiquidityPoolSchema),
-    liquidityScore: z.number().min(0).max(100).nullable(),
-    // Producer reason for a null score; null when rated, absent on rows scored before it was recorded.
-    liquidityScoreUnavailableReason: LiquidityScoreUnavailableReasonSchema.nullable().optional(),
-    concentrationHhi: z.number().min(0).max(1).nullable(),
-    depthStability: z.number().nullable(),
-    tvlChange24h: z.number().nullable(),
-    tvlChange7d: z.number().nullable(),
-    updatedAt: z.number(),
-    dexPriceUpdatedAt: nullableEpochSec.optional(),
-    dexPriceAgeSeconds: z.number().nonnegative().nullable().optional(),
-    dexPriceMaxAgeSec: z.number().positive().optional(),
-    dexPriceUnavailableReason: z.enum([
-      "missing-price", "missing-timestamp", "invalid-timestamp", "future-timestamp",
-      "stale-price", "publication-mismatch",
-    ]).nullable().optional(),
-    dexPriceUsd: z.number().nullable(),
-    dexDeviationBps: z.number().nullable(),
-    priceSourceCount: z.number().nullable(),
-    priceSourceTvl: z.number().nullable(),
-    priceSources: z.array(DexPriceSourceSchema).nullable(),
-    effectiveTvlUsd: z.number(),
-    avgPoolStress: z.number().min(0).max(100).nullable(),
-    weightedBalanceRatio: z.number().nullable(),
-    organicFraction: z.number().nullable(),
-    durabilityScore: z.number().min(0).max(100).nullable(),
-    coverageClass: LiquidityCoverageClassSchema.nullable(),
-    coverageConfidence: z.number().min(0).max(1).nullable(),
-    liquidityEvidenceClass: LiquidityEvidenceClassSchema.nullable(),
-    hasMeasuredLiquidityEvidence: z.boolean(),
-    trendworthy: z.boolean(),
-    sourceMix: LiquiditySourceMixSchema,
-    balanceMeasuredTvlUsd: z.number().nullable(),
-    organicMeasuredTvlUsd: z.number().nullable(),
-    scoreComponents: z
-      .object({
-        tvlDepth: z.number(),
-        // Null when DEC-19 marks required 24h activity unavailable (composite is NR).
-        volumeActivity: z.number().nullable(),
-        poolQuality: z.number(),
-        durability: z.number(),
-        pairDiversity: z.number(),
-      })
-      .nullable(),
-    lockedLiquidityPct: z.number().nullable(),
-    methodologyVersion: z.string(),
-    deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
-    exitRouteObservations: DexExitRouteObservationsSchema.nullable().optional(),
-    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  });
-export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
-
-export const DexLiquidityHistoryPointSchema = z
-  .object({
-    tvl: z.number(),
-    // Null unless the snapshot's 24h window was complete; legacy rows keep their number.
-    volume24h: z.number().nullable(),
-    volume24hAvailability: DexVolumeAvailabilitySchema.optional(),
-    score: z.number().nullable(),
-    date: z.number(),
-    unavailableReason: z.literal("invalid-coverage-evidence").nullable().optional(),
-    coverageClass: LiquidityCoverageClassSchema.nullable(),
-    coverageConfidence: z.number().nullable(),
-    liquidityEvidenceClass: LiquidityEvidenceClassSchema.nullable(),
-    hasMeasuredLiquidityEvidence: z.boolean(),
-    trendworthy: z.boolean(),
-    methodologyVersion: z.string(),
-    exitRouteObservations: DexExitRouteObservationsSchema.optional(),
-    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  });
-export type DexLiquidityHistoryPoint = z.infer<typeof DexLiquidityHistoryPointSchema>;
-
-export const DexLiquidityHistoryResponseSchema = z.array(DexLiquidityHistoryPointSchema);
-
-const SupplyHistoryPointSchema = z.object({
-  date: z.number(),
-  circulatingUsd: z.number(),
-  price: z.number().nullable(),
-  /** Chain-coverage provenance of this daily observation; null/absent = unrecorded (legacy), never complete. */
-  supplyProvenance: SupplyObservationProvenanceSchema.nullable().optional(),
-});
-export type SupplyHistoryPoint = z.infer<typeof SupplyHistoryPointSchema>;
-export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
-
-const NonUsdSharePointSchema = z.object({
-  date: z.number(),
-  // Numeric observed subtotals; historical cohort coverage is disclosed separately.
-  commodityShare: z.number(),
-  fiatNonUsdShare: z.number(),
-  commodity: z.number(),
-  fiatNonUsd: z.number(),
-  total: z.number(),
-  coverage: z.object({
-    basis: z.literal("interior-gap-prior-value"),
-    total: z.number().min(0).max(1),
-    commodity: z.number().min(0).max(1),
-    fiatNonUsd: z.number().min(0).max(1),
-  }).describe("Observed value divided by observed plus prior-value estimates for interior history gaps; not a deployment census.")
-    .nullable().optional(),
-});
-export type NonUsdSharePoint = z.infer<typeof NonUsdSharePointSchema>;
-export const NonUsdShareResponseSchema = z.array(NonUsdSharePointSchema);
-
-export type DexLiquidityMap = Record<string, DexLiquidityData>;
-export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);
-export const DexLiquidityCoinResponseSchema = z.object({
-  coins: DexLiquidityMapSchema,
-  projection: CoinProjectionMetadataSchema,
-});
-export type DexLiquidityCoinResponse = z.infer<typeof DexLiquidityCoinResponseSchema>;
-export const DexLiquidityTableRowSchema = DexLiquidityDataSchema.pick({
-  liquidityScore: true,
-  warning: true,
-  unavailableReason: true,
-  advisoryUnavailableReason: true,
-  updatedAt: true,
-  methodologyVersion: true,
-});
-export const DexLiquidityTableMapSchema = z.record(z.string(), DexLiquidityTableRowSchema);
-export type DexLiquidityTableMap = z.infer<typeof DexLiquidityTableMapSchema>;
-
-export const DEX_GLOBAL_KEY = "__global__";
-
-export type DepegDirection = "above" | "below";
-export const DepegDirectionSchema = z.enum(["above", "below"]);
-
-export interface DepegEventSearchEntry {
-  slug: string;
-  stablecoinId: DepegEvent["stablecoinId"];
-  symbol: DepegEvent["symbol"];
-  pegType: DepegEvent["pegType"];
-  direction: DepegDirection;
-  peakDeviationBps: DepegEvent["peakDeviationBps"];
-  startedAt: DepegEvent["startedAt"];
-  /** Reviewed audit verdict; absent when the ledger records none. */
-  auditVerdict?: DepegAuditVerdict;
-}
-
-export const DepegEventCloseReasonSchema = z.enum(DEPEG_EVENT_CLOSE_REASON_VALUES);
-export type DepegEventCloseReason = z.infer<typeof DepegEventCloseReasonSchema>;
-
-const DepegEventObjectSchema = z.object({
-  id: z.number(),
-  stablecoinId: z.string(),
-  symbol: z.string(),
-  pegType: z.string(),
-  direction: DepegDirectionSchema,
-  peakDeviationBps: z.number(),
-  startedAt: DepegTimestampSchema,
-  endedAt: DepegTimestampSchema.nullable(),
-  startPrice: z.number(),
-  peakPrice: z.number().nullable(),
-  recoveryPrice: z.number().nullable(),
-  pegReference: z.number(),
-  source: z.enum(["live", "backfill"]),
-  /** Raw threshold-crossing rows grouped into this public incident. */
-  constituentEventCount: z.number().int().positive().optional(),
-  confirmationSources: z.string().nullable().optional().default(null),
-  pendingReason: z.string().nullable().optional().default(null),
-  closeReason: DepegEventCloseReasonSchema.nullable().optional().default(null),
-  /** Present when the event's coin is absent from the tracked catalog; the row keeps its history as a retired coin. */
-  retired: z.boolean().optional(),
-  priceCoverage: DepegPriceCoverageSchema.nullable().optional(),
-  provenance: z
-    .object({
-      sourceKind: z.string().nullable().optional(),
-      replayRunId: z.string().nullable().optional(),
-      replayVersion: z.string().nullable().optional(),
-      sourcePriceProviders: z.array(z.string()).nullable().optional(),
-      quoteMode: z.string().nullable().optional(),
-      pegReferenceSource: z.string().nullable().optional(),
-      supplySource: z.string().nullable().optional(),
-      confirmationPolicy: z.string().nullable().optional(),
-      confirmationPointCount: z.number().nullable().optional(),
-      confidenceTier: z.string().nullable().optional(),
-      auditVerdict: DepegAuditVerdictSchema.nullable().optional(),
-      pegScoreEligible: z.boolean().nullable().optional(),
-      updatedAt: z.number().nullable().optional(),
-    })
-    .nullable()
-    .optional()
-    .default(null),
-});
-export const DepegEventSchema = DepegEventObjectSchema.superRefine(refineDepegEventChronology);
-export type DepegEvent = z.infer<typeof DepegEventSchema>;
-
-/** Build-time depeg archive written to data/depeg-events/*.json. */
-export const DepegEventStoredSnapshotSchema = z.array(
-  DepegEventObjectSchema
-    .extend({
-      slug: z.string().min(1),
-    })
-    .superRefine(refineDepegEventChronology),
-);
-export type DepegEventEntry = z.infer<typeof DepegEventStoredSnapshotSchema>[number];
-
-export const DepegPendingIncidentSchema = z
-  .object({
-    stablecoinId: z.string(),
-    symbol: z.string(),
-    direction: DepegDirectionSchema,
-    firstSeenAt: DepegTimestampSchema,
-    lastSeenAt: DepegTimestampSchema,
-    firstSeenBps: z.number(),
-    lastSeenBps: z.number(),
-    peakSeenBps: z.number(),
-    reason: z.string(),
-    ageSec: z.number(),
-    expiresAt: DepegTimestampSchema,
-    availableConfirmationCategories: z.array(z.string()),
-    missingConfirmationCategories: z.array(z.string()),
-  })
-  .superRefine((incident, ctx) => {
-    if (incident.lastSeenAt < incident.firstSeenAt) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["lastSeenAt"],
-        message: "A pending incident cannot be last seen before it is first seen",
-      });
-    }
-    // `expiresAt` is the effective expiry: `firstSeenAt` plus the base, extended
-    // or severe limit that applies to the row's current evidence.
-    if (incident.expiresAt <= incident.firstSeenAt) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["expiresAt"],
-        message: "A pending incident's expiry must fall after it is first seen",
-      });
-    }
-  });
-
-export type DepegPendingIncident = z.infer<typeof DepegPendingIncidentSchema>;
-
-export const DepegEventsResponseSchema = z.object({
-  events: z.array(DepegEventSchema),
-  total: z.number(),
-  totalExact: z.boolean().optional(),
-  nextCursor: z.string().nullable().optional(),
-  pending: z.array(DepegPendingIncidentSchema).optional(),
-  methodology: MethodologyEnvelopeSchema.optional(),
-});
-export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
-
-export const PegSummaryStatsSchema = z.object({
-  activeDepegCount: z.number(),
-  medianDeviationBps: z.number().nullable(),
-  worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
-  coinsAtPeg: z.number(),
-  totalTracked: z.number(),
-  depegEventsToday: z.number(),
-  depegEventsYesterday: z.number(),
-  fallbackPegRates: z.array(z.string()).optional(),
-  fxPegRates: z.array(z.string()).optional(),
-});
-export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
-
-export const PegSummaryResponseSchema = z.object({
-  coins: z.array(PegSummaryCoinSchema),
-  summary: PegSummaryStatsSchema.nullable(),
-  methodology: MethodologyEnvelopeSchema,
-  /** Present when the 200 body carries retained analytics or missing cross-checks; names the reason. */
-  degradedReason: z.string().min(1).optional(),
-});
-export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
-
-export const BLACKLIST_STABLECOINS = [
-  "USDC",
-  "USDT",
-  "PAXG",
-  "XAUT",
-  "PYUSD",
-  "USD1",
-  "USDG",
-  "RLUSD",
-  "U",
-  "USDTB",
-  "A7A5",
-  "FDUSD",
-  "BRZ",
-  "AUSD",
-  "EURI",
-  "USDQ",
-  "USDO",
-  "USDX",
-  "AID",
-  "TGBP",
-  "EURC",
-  "BUIDL",
-  "USDP",
-  "TUSD",
-  "NUSD",
-  "EURCV",
-  "USDA",
-  "USAT",
-  "AEUR",
-  "XUSD",
-  "XAUM",
-  "JPYC",
-  "FRXUSD",
-  "FIDD",
-] as const;
-
-export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
-export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
-export type BlacklistSortKey = "date" | "stablecoin" | "chain" | "event";
-export type BlacklistSortDirection = "asc" | "desc";
-export const BLACKLIST_AMOUNT_SOURCE_VALUES = [
-  "event",
-  "historical_balance",
-  "derived",
-  "unavailable",
-  "current_balance_snapshot",
-  "legacy_migration",
-] as const;
-export type BlacklistAmountSource = (typeof BLACKLIST_AMOUNT_SOURCE_VALUES)[number];
-export const BLACKLIST_AMOUNT_STATUS_VALUES = [
-  "resolved",
-  "recoverable_pending",
-  "permanently_unavailable",
-  "provider_failed",
-  "ambiguous",
-] as const;
-export type BlacklistAmountStatus = (typeof BLACKLIST_AMOUNT_STATUS_VALUES)[number];
-
-const BlacklistEventSchema = z.object({
-  id: z.string(),
-  stablecoin: z.enum(BLACKLIST_STABLECOINS),
-  chainId: z.string(),
-  chainName: z.string(),
-  eventType: z.enum(["blacklist", "unblacklist", "destroy"]),
-  address: z.string(),
-  amountNative: z.number().nullable(),
-  amountUsdAtEvent: z.number().nullable(),
-  amountSource: z.enum(BLACKLIST_AMOUNT_SOURCE_VALUES),
-  amountStatus: z.enum(BLACKLIST_AMOUNT_STATUS_VALUES),
-  txHash: z.string(),
-  blockNumber: z.number(),
-  transactionIndex: z.number().int().nonnegative().nullable().optional(),
-  timestamp: z.number(),
-  methodologyVersion: z.string(),
-  contractAddress: z.string().nullable(),
-  configKey: z.string().nullable(),
-  eventSignature: z.string().nullable(),
-  eventTopic0: z.string().nullable(),
-  suppressionReason: z.string().nullable().optional(),
-  explorerTxUrl: z.string(),
-  explorerAddressUrl: z.string(),
-});
-export type BlacklistEvent = z.infer<typeof BlacklistEventSchema>;
-
-export const BlacklistResponseSchema = z.object({
-  events: z.array(BlacklistEventSchema),
-  total: z.number(),
-  totalExact: z.boolean().optional(),
-  nextCursor: z.string().nullable().optional(),
-  methodology: MethodologyEnvelopeSchema.optional(),
-});
-export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
-
-const BlacklistChartPointSchema = z.object({
-  quarter: z.string(),
-  ...Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, z.number()])),
-  total: z.number(),
-});
-
-export const BlacklistQuarterlyEventTypePointSchema = z.object({
-  quarter: z.string(),
-  blacklist: z.number(),
-  unblacklist: z.number(),
-  destroy: z.number(),
-});
-export type BlacklistQuarterlyEventTypePoint = z.infer<typeof BlacklistQuarterlyEventTypePointSchema>;
-
-export const BlacklistRecentEventTypeCountsSchema = z.object({
-  freezes: z.number(),
-  destroys: z.number(),
-  releases: z.number(),
-});
-export type BlacklistRecentEventTypeCounts = z.infer<typeof BlacklistRecentEventTypeCountsSchema>;
-export const BlacklistValuationCoverageSchema = z.object({
-  knownCount: z.number().int().nonnegative(),
-  unavailableCount: z.number().int().nonnegative(),
-});
-export type BlacklistValuationCoverage = z.infer<typeof BlacklistValuationCoverageSchema>;
-
-
-const BlacklistSummaryStatsSchema = z.object({
-  usdcBlacklisted: z.number(),
-  usdtBlacklisted: z.number(),
-  goldBlacklisted: z.number(),
-  frozenAddresses: z.number(),
-  destroyedTotal: z.number().nullable(),
-  activeAddressCount: z.number(),
-  activeFrozenTotal: z.number(),
-  activeAmountGapCount: z.number(),
-  trackedAddressCount: z.number(),
-  trackedFrozenTotal: z.number(),
-  trackedAmountGapCount: z.number(),
-  recentCount: z.number(),
-  recentCount24h: z.number(),
-  recentFreezeCount24h: z.number(),
-  recentFreezeCount7d: z.number(),
-  recentFreezeAmount24hUsd: z.number().nullable(),
-  recentFreezeAmount7dUsd: z.number().nullable(),
-  recoverableGapCount: z.number(),
-  perCoinBlacklistCounts: z.record(z.string(), z.number()),
-  perCoinTotalEvents: z.record(z.string(), z.number()),
-  perCoinFrozenAddressCount: z.record(z.string(), z.number()),
-  perCoinFrozenTotal: z.record(z.string(), z.number().nullable()),
-  perCoinDestroyedTotal: z.record(z.string(), z.number().nullable()),
-  valuationCoverage: z.object({
-    destroyed: BlacklistValuationCoverageSchema,
-    recent24h: BlacklistValuationCoverageSchema,
-    recent7d: BlacklistValuationCoverageSchema,
-    perCoinFrozen: z.record(z.string(), BlacklistValuationCoverageSchema),
-    perCoinDestroyed: z.record(z.string(), BlacklistValuationCoverageSchema),
-  }).optional(),
-  // Key is `z.string()` like the sibling maps above: Zod 4 enum-keyed records
-  // are exhaustive, so a cache snapshot written before the next
-  // BLACKLIST_STABLECOINS addition would fail the whole summary parse.
-  perCoinQuarterlyEventTypes: z.record(z.string(), z.array(BlacklistQuarterlyEventTypePointSchema)),
-  // Key is `z.string()` (not the BLACKLIST_STABLECOINS enum) so older cached
-  // payloads — which either omit the field entirely or carry a partial record
-  // — still parse. Optional with `{}` default covers the missing-field case;
-  // the detail-page banner hook does `record[symbol] ?? zero-counts` for the
-  // missing-coin case at runtime.
-  perCoinRecentEventTypes: z.record(z.string(), BlacklistRecentEventTypeCountsSchema).optional().default({}),
-});
-
-const BlacklistChainOptionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-});
-
-const BlacklistNumericDistributionSchema = z.record(z.string(), z.number());
-
-const BlacklistCoverageSupportedSchema = z.object({
-  symbol: z.enum(BLACKLIST_STABLECOINS),
-  stablecoinId: z.string(),
-  chainId: z.string(),
-  chainName: z.string(),
-  contractAddress: z.string(),
-  configKey: z.string(),
-  providerSource: z.enum(["evm-logs", "trongrid", "other"]),
-  eventFamilies: z.array(z.string()),
-  eventTypes: z.array(z.enum(["blacklist", "unblacklist", "destroy"])),
-});
-
-const BlacklistCoverageDeferredSchema = z.object({
-  symbol: z.enum(BLACKLIST_STABLECOINS),
-  chainId: z.string(),
-  reason: z.string(),
-});
-
-const BlacklistCoverageSchema = z.object({
-  supported: z.array(BlacklistCoverageSupportedSchema),
-  unsupportedDeferred: z.array(BlacklistCoverageDeferredSchema),
-  counts: z.object({
-    supportedConfigs: z.number(),
-    unsupportedDeferredConfigs: z.number(),
-    bySymbol: BlacklistNumericDistributionSchema,
-    byChain: BlacklistNumericDistributionSchema,
-    byProviderSource: BlacklistNumericDistributionSchema,
-  }),
-});
-
-const BlacklistFreshnessDistributionSchema = z.object({
-  fresh: z.number(),
-  degraded: z.number(),
-  stale: z.number(),
-});
-
-const BlacklistFreezeLedgerMetaSchema = z.object({
-  totalRows: z.number(),
-  scopedRows: z.number(),
-  legacyRows: z.number(),
-  oldestObservedAt: z.number().nullable(),
-  newestObservedAt: z.number().nullable(),
-  oldestAgeSec: z.number().nullable(),
-  newestAgeSec: z.number().nullable(),
-  statusDistribution: BlacklistNumericDistributionSchema,
-  sourceDistribution: BlacklistNumericDistributionSchema,
-  freshnessDistribution: BlacklistFreshnessDistributionSchema,
-  currentFreshnessDistribution: BlacklistFreshnessDistributionSchema.optional(),
-  providerFailedCount: z.number(),
-  lastErrorClassDistribution: BlacklistNumericDistributionSchema,
-  sourceCategoryCounts: z.object({
-    bootstrap: z.number(),
-    current: z.number(),
-    destroy: z.number(),
-    other: z.number(),
-  }),
-  gaps: z.object({
-    tracked: z.number(),
-    recoverable: z.number(),
-    unrecoverable: z.number(),
-    recentRecoverable: z.number(),
-    neverAttempted: z.number(),
-    repeatedFailures: z.number(),
-    oldestRecoverableAgeSec: z.number().nullable(),
-    amountStatusDistribution: BlacklistNumericDistributionSchema,
-    amountSourceDistribution: BlacklistNumericDistributionSchema,
-  }),
-});
-
-const BlacklistDataQualitySchema = z.object({
-  status: z.enum(["ok", "degraded", "stale"]),
-  warnings: z.array(z.string()),
-  ambiguousOrderCount: z.number().int().nonnegative().optional(),
-  ambiguousOrderReason: z.literal("tron-cross-transaction-order").nullable().optional(),
-  amountGaps: z.object({
-    totalEvents: z.number(),
-    recoverable: z.number(),
-    unrecoverable: z.number(),
-    recentRecoverable: z.number(),
-    missingRatio: z.number(),
-    recentWindowSec: z.number(),
-  }),
-  freezeLedger: z.object({
-    providerFailedCount: z.number(),
-    trackedGapCount: z.number(),
-    scopedRows: z.number(),
-    legacyRows: z.number(),
-  }),
-  coverage: z.object({
-    supportedConfigs: z.number(),
-    unsupportedDeferredConfigs: z.number(),
-  }),
-});
-
-/** Producer-observed refresh: when totals were rebuilt and which configs have not reached their safe head. */
-const BlacklistSummaryRefreshSchema = z.object({
-  observedAt: z.number(),
-  behindConfigs: z.array(z.object({
-    configKey: z.string(),
-    symbol: z.string(),
-    chainName: z.string(),
-    lastSucceededAt: z.number().nullable(),
-  })),
-});
-export type BlacklistSummaryRefresh = z.infer<typeof BlacklistSummaryRefreshSchema>;
-
-export const BlacklistSummaryResponseSchema = z.object({
-  stats: BlacklistSummaryStatsSchema,
-  chart: z.array(BlacklistChartPointSchema),
-  chains: z.array(BlacklistChainOptionSchema),
-  coverage: BlacklistCoverageSchema.optional(),
-  freezeLedgerMeta: BlacklistFreezeLedgerMetaSchema.optional(),
-  dataQuality: BlacklistDataQualitySchema.optional(),
-  refresh: BlacklistSummaryRefreshSchema.optional(),
-  totalEvents: z.number(),
-  methodology: MethodologyEnvelopeSchema.optional(),
-});
-export type BlacklistSummaryResponse = z.infer<typeof BlacklistSummaryResponseSchema>;
-
-const SignalDetailSchema = z
-  .object({
-    value: z.number(),
-    available: z.boolean(),
-  })
-  .passthrough();
-
-const AmplifiersSchema = z.object({
-  psi: z.number(),
-  contagion: z.number(),
-});
-
-export const StressSignalAgeClassificationSchema = z.enum(["fresh", "lagging", "stale", "retainedLastValid"]);
-export type StressSignalAgeClassification = z.infer<typeof StressSignalAgeClassificationSchema>;
-
-export const StressSignalDataStatusSchema = z.enum(["ok", "degraded", "unavailable"]);
-export type StressSignalDataStatus = z.infer<typeof StressSignalDataStatusSchema>;
-
-export const StressSignalDataReasonSchema = z.enum([
-  "no-current-rows",
-  "no-readable-current-rows",
-  "all-current-rows-malformed",
-  "single-coin-current-row-missing",
-  "current-row-malformed",
-  "publication-pointer-unavailable",
-  "current-rows-read-failed",
-  "computed-count-zero",
-  "partial-coverage",
-]);
-export type StressSignalDataReason = z.infer<typeof StressSignalDataReasonSchema>;
-
-export const StressSignalEntrySchema = FreshnessAssessmentSchema.partial().extend({
-  score: z.number(),
-  band: z.string(),
-  signals: z.record(z.string(), SignalDetailSchema),
-  amplifiers: AmplifiersSchema.optional(),
-  computedAt: z.number(),
-  methodologyVersion: z.string(),
-  ageClassification: StressSignalAgeClassificationSchema.optional(),
-  // Null in single-coin mode, where no cross-coin generation comparison is made.
-  newestReturnedComputedAt: z.number().nullable().optional(),
-});
-
-export type StressSignalEntry = z.infer<typeof StressSignalEntrySchema>;
-
-export const StressSignalsAllResponseSchema = z.object({
-  signals: z.record(z.string(), StressSignalEntrySchema),
-  updatedAt: z.number(),
-  eligibleCount: z.number().int().nonnegative().optional(),
-  computedCount: z.number().int().nonnegative().optional(),
-  missingCount: z.number().int().nonnegative().optional(),
-  oldestComputedAt: z.number().optional(),
-  coverageRatio: z.number().min(0).max(1).optional(),
-  malformedRows: z.number().optional(),
-  coverageStatus: StressSignalDataStatusSchema.optional(),
-  coverageReasons: z.array(StressSignalDataReasonSchema).optional(),
-  methodology: MethodologyEnvelopeSchema,
-});
-
-export type StressSignalsAllResponse = z.infer<typeof StressSignalsAllResponseSchema>;
-
-const StressSignalHistoryEntrySchema = z.object({
-  date: z.number(),
-  score: z.number(),
-  band: z.string(),
-  signals: z.record(z.string(), SignalDetailSchema),
-  amplifiers: AmplifiersSchema.optional(),
-  methodologyVersion: z.string(),
-});
-
-export const StressSignalDetailResponseSchema = z.object({
-  current: StressSignalEntrySchema.nullable(),
-  history: z.array(StressSignalHistoryEntrySchema),
-  malformedRows: z.number().optional(),
-  currentStatus: StressSignalDataStatusSchema.optional(),
-  currentReasons: z.array(StressSignalDataReasonSchema).optional(),
-  methodology: MethodologyEnvelopeSchema,
-});
-
-export type StressSignalDetailResponse = z.infer<typeof StressSignalDetailResponseSchema>;
-
-export const STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE = "legacy-provider-all-stablecoins-v1" as const;
-export const StablecoinChartAggregateUniverseSchema = z.enum([
+export {
+  SupplyUnavailableReasonSchema,
+  type SupplyUnavailableReason,
+  PegBucketsSchema,
+  StablecoinDetailResponseSchema,
+  type StablecoinDetailResponse,
+  SupplyGapFillProvenanceSchema,
+  type SupplyGapFillProvenance,
+  ChainPartitionProvenanceSchema,
+  type ChainPartitionProvenance,
+  SupplyChainGuardProvenanceSchema,
+  type SupplyChainGuardProvenance,
+  SupplyObservationProvenanceSchema,
+  type SupplyObservationProvenance,
+  SupplyRestoreModeSchema,
+  type SupplyRestoreMode,
+  StablecoinDataOutputSchema,
+  StablecoinDataSchema,
+  type StablecoinData,
+  StablecoinListResponseSchema,
+  type StablecoinListResponse,
+  type SupplyHistoryPoint,
+  SupplyHistoryResponseSchema,
+  type NonUsdSharePoint,
+  NonUsdShareResponseSchema,
   STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
-  "core-stablecoins-v1",
-]);
+  StablecoinChartAggregateUniverseSchema,
+  StablecoinChartResponseSchema,
+  type StablecoinChartPoint,
+} from "./supply";
 
-export const StablecoinChartResponseSchema = z.array(
-  z.object({
-    date: z.number(),
-    // Omitted and null buckets are unavailable; only explicit finite nonnegative values are observations.
-    totalCirculatingUSD: z.record(z.string(), z.number().finite().nonnegative().nullable()),
-    aggregateUniverse: StablecoinChartAggregateUniverseSchema.optional(),
-  }),
-);
-export type StablecoinChartPoint = z.infer<typeof StablecoinChartResponseSchema>[number];
+export {
+  PriceDerivationSchema,
+  type PriceDerivation,
+} from "./price";
+
+export {
+  DeadStablecoinSchema,
+  type DeadStablecoin,
+} from "./cemetery";
+
+export {
+  LiquidityPoolSourceFamilySchema,
+  type LiquidityPoolSourceFamily,
+  LiquidityCoverageClassSchema,
+  type LiquidityCoverageClass,
+  LiquidityScoreUnavailableReasonSchema,
+  type LiquidityScoreUnavailableReason,
+  type LiquiditySourceMixEntry,
+  LiquiditySourceMixSchema,
+  type LiquiditySourceMix,
+  type DexPoolVolumeStatus,
+  type DexVolumeCompleteness,
+  type DexVolumeAvailabilityReason,
+  type DexVolumeAvailability,
+  DexVolumeAvailabilityRecordSchema,
+  type DexVolumeAvailabilityRecord,
+  type DexVolumeWindow,
+  DexPoolVolumeObservationSchema,
+  type DexLiquidityPool,
+  LiquidityEvidenceClassSchema,
+  DexDeploymentOutcomeSchema,
+  type DexDeploymentOutcome,
+  type DexLiquidityData,
+  DexLiquidityHistoryPointSchema,
+  type DexLiquidityHistoryPoint,
+  DexLiquidityHistoryResponseSchema,
+  type DexLiquidityMap,
+  DexLiquidityMapSchema,
+  DexLiquidityCoinResponseSchema,
+  type DexLiquidityCoinResponse,
+  DexLiquidityTableRowSchema,
+  DexLiquidityTableMapSchema,
+  type DexLiquidityTableMap,
+  DEX_GLOBAL_KEY,
+} from "./dex-liquidity";
+
+export {
+  DexAmmExecutionTokenSchema,
+  type DexAmmExecutionToken,
+  DexAmmExecutionModelSchema,
+  type DexAmmExecutionModel,
+  DexExecutionCapabilityGateSchema,
+  type DexExecutionCapabilityGate,
+} from "./dex-execution";
+
+export {
+  DexRetiredSolidlyLegacyModelSchema,
+  DexStoredAmmExecutionModelSchema,
+  type DexStoredAmmExecutionModel,
+} from "./dex-execution-legacy";
+
+export {
+  type DepegDirection,
+  DepegDirectionSchema,
+  type DepegEventSearchEntry,
+  DepegEventCloseReasonSchema,
+  type DepegEventCloseReason,
+  DepegEventSchema,
+  type DepegEvent,
+  DepegEventStoredSnapshotSchema,
+  type DepegEventEntry,
+  DepegPendingIncidentSchema,
+  type DepegPendingIncident,
+  DepegEventsResponseSchema,
+  type DepegEventsResponse,
+  PegSummaryStatsSchema,
+  type PegSummaryStats,
+  PegSummaryResponseSchema,
+  type PegSummaryResponse,
+} from "./peg";
+
+export {
+  BLACKLIST_STABLECOINS,
+  type BlacklistStablecoin,
+  type BlacklistEventType,
+  type BlacklistSortKey,
+  type BlacklistSortDirection,
+  BLACKLIST_AMOUNT_SOURCE_VALUES,
+  type BlacklistAmountSource,
+  BLACKLIST_AMOUNT_STATUS_VALUES,
+  type BlacklistAmountStatus,
+  type BlacklistEvent,
+  BlacklistResponseSchema,
+  type BlacklistResponse,
+  BlacklistQuarterlyEventTypePointSchema,
+  type BlacklistQuarterlyEventTypePoint,
+  BlacklistRecentEventTypeCountsSchema,
+  type BlacklistRecentEventTypeCounts,
+  BlacklistValuationCoverageSchema,
+  type BlacklistValuationCoverage,
+  type BlacklistSummaryRefresh,
+  BlacklistSummaryResponseSchema,
+  type BlacklistSummaryResponse,
+} from "./blacklist";
+
+export {
+  StressSignalAgeClassificationSchema,
+  type StressSignalAgeClassification,
+  StressSignalDataStatusSchema,
+  type StressSignalDataStatus,
+  StressSignalDataReasonSchema,
+  type StressSignalDataReason,
+  StressSignalEntrySchema,
+  type StressSignalEntry,
+  StressSignalsAllResponseSchema,
+  type StressSignalsAllResponse,
+  StressSignalDetailResponseSchema,
+  type StressSignalDetailResponse,
+} from "./stress";

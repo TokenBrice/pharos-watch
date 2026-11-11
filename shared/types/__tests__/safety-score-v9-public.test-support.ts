@@ -492,14 +492,16 @@ export const PRE_DUST_REASON_CODES = (
 
 // Exact pre-dust reader closure; reject future fields/refinements before reusing current modules.
 const PRE_DUST_READER_FILES = (
-  "business-calendars.ts|chain-identity.ts|coin-projection.ts|core.ts|date-primitives.ts|dependency-graph.ts|dependency-types.ts|deployment-amounts.ts|" +
-  "deployment-id.ts|exit-route-identity.ts|exit-route.ts|live-reserve-core.ts|methodology-envelope.ts|redemption.ts|report-card-grade.ts|report-cards-v9-materialization.ts|" +
-  "report-cards-v9-projections.ts|report-cards-v9.ts|reserve-bounded-facts.ts|reserve-input.ts|reserves.ts|safety-schema-primitives.ts|safety-score-publication.ts|safety-score-v9-access-lookthrough.ts|" +
-  "safety-score-v9-allocation.ts|safety-score-v9-backing.ts|safety-score-v9-causes.ts|safety-score-v9-control-scope.ts|safety-score-v9-deployment-supply-census.ts|safety-score-v9-fact-input-primitives.ts|safety-score-v9-fact-primitives.ts|safety-score-v9-facts.ts|" +
-  "safety-score-v9-grade.ts|safety-score-v9-immutable.ts|safety-score-v9-incidents.ts|safety-score-v9-l2-messenger-pending.ts|safety-score-v9-lender-book.ts|safety-score-v9-open-evidence.ts|safety-score-v9-operational-resilience-primitives.ts|safety-score-v9-public-attribution.ts|" +
-  "safety-score-v9-public-breakdowns.ts|safety-score-v9-public-cause-gaps.ts|safety-score-v9-public-causes.ts|safety-score-v9-public-evidence-facts.ts|safety-score-v9-public-facts.ts|safety-score-v9-public-historical.ts|safety-score-v9-public-internal.ts|safety-score-v9-public-trace.ts|" +
-  "safety-score-v9-public-witness-texts.ts|safety-score-v9-public.ts|safety-score-v9-publication-response.ts|safety-score-v9-reserve-scope.ts|safety-score-v9-supply-attribution.ts|safety-score-v9-vocabulary.ts|safety-score-v9-wrapper.ts|safety-score-v9.ts|" +
-  "stablecoin-meta-control-schemas.ts|stablecoin-meta-mint-authority-refinements.ts|stablecoin-meta-primitives.ts|stablecoin-taxonomy.ts|validators.ts"
+  "bluechip.ts|bridge-risk.ts|business-calendars.ts|chain-identity.ts|coin-projection.ts|compliance-vocabulary.ts|core.ts|" +
+  "custody.ts|date-primitives.ts|dependency-graph.ts|dependency-types.ts|deployment-amounts.ts|deployment-id.ts|exit-route-identity.ts|exit-route.ts|" +
+  "live-reserve-core.ts|methodology-envelope.ts|mint-authority-vocabulary.ts|oracle-risk.ts|price.ts|redemption.ts|report-card-grade.ts|report-cards-v9-materialization.ts|" +
+  "report-cards-v9-projections.ts|report-cards-v9.ts|reserve-assurance.ts|reserve-bounded-facts.ts|reserve-input.ts|reserves.ts|safety-schema-primitives.ts|safety-score-publication.ts|" +
+  "safety-score-v9-access-lookthrough.ts|safety-score-v9-allocation.ts|safety-score-v9-backing.ts|safety-score-v9-causes.ts|safety-score-v9-control-scope.ts|safety-score-v9-deployment-supply-census.ts|safety-score-v9-fact-input-primitives.ts|safety-score-v9-fact-primitives.ts|" +
+  "safety-score-v9-facts.ts|safety-score-v9-grade.ts|safety-score-v9-immutable.ts|safety-score-v9-incidents.ts|safety-score-v9-l2-messenger-pending.ts|safety-score-v9-lender-book.ts|safety-score-v9-open-evidence.ts|safety-score-v9-operational-resilience-primitives.ts|" +
+  "safety-score-v9-public-attribution.ts|safety-score-v9-public-breakdowns.ts|safety-score-v9-public-cause-gaps.ts|safety-score-v9-public-causes.ts|safety-score-v9-public-evidence-facts.ts|safety-score-v9-public-facts.ts|safety-score-v9-public-historical.ts|safety-score-v9-public-internal.ts|" +
+  "safety-score-v9-public-trace.ts|safety-score-v9-public-witness-texts.ts|safety-score-v9-public.ts|safety-score-v9-publication-response.ts|safety-score-v9-reserve-scope.ts|safety-score-v9-supply-attribution.ts|safety-score-v9-vocabulary.ts|safety-score-v9-wrapper.ts|" +
+  "safety-score-v9.ts|stablecoin-lifecycle.ts|stablecoin-meta-control-schemas.ts|stablecoin-meta-mint-authority-refinements.ts|stablecoin-meta-primitives.ts|stablecoin-meta-schemas.ts|stablecoin-taxonomy.ts|validators.ts|" +
+  "yield-vocabulary.ts"
 ).split("|");
 function assertPreviousReaderSource() {
   const hash = createHash("sha256");

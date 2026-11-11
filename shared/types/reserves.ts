@@ -183,3 +183,17 @@ export const FullReserveCompositionSchema = createReserveCompositionSchema("full
 export const FullAuthoredReserveCompositionSchema = createReserveCompositionSchema("full", AuthoredReserveSliceSchema);
 export const PartialKnownExposureReserveCompositionSchema =
   createReserveCompositionSchema("partial-known-exposure");
+
+export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "classification-only", "dependency-relationships", "selected-slices"] as const;
+export const RESERVE_NON_LINK_DISPOSITION_VALUES = [
+  "untracked-exogenous-asset",
+  "self-reserve",
+  "basket-needs-split",
+  "insufficient-evidence",
+  "not-applicable",
+] as const;
+export type ReserveNonLinkDisposition = (typeof RESERVE_NON_LINK_DISPOSITION_VALUES)[number];
+
+const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
+export type CollateralQuality = (typeof COLLATERAL_QUALITY_VALUES)[number];
+export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);

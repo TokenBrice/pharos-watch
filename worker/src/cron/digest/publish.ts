@@ -1,4 +1,4 @@
-import type { DigestSafetyContext } from "@shared/types/digest";
+import type { DigestKind, DigestSafetyContext } from "@shared/types/digest";
 import { throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { recordCronFailure, type CronProgressReporter } from "../../lib/cron-logger";
@@ -43,8 +43,6 @@ import {
   scanTwitterDigestWrapper,
   type DigestWrapperEditorialFinding,
 } from "./wrapper-style-gate";
-
-type DigestKind = "daily" | "weekly";
 
 export interface DigestCredentialDiagnostics {
   twitterMissing?: readonly string[];

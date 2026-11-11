@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const YIELD_ADAPTER_LIFECYCLE_VALUES = ["active", "quarantined", "intentional-gap", "experimental"] as const;
 export type YieldAdapterLifecycle = (typeof YIELD_ADAPTER_LIFECYCLE_VALUES)[number];
 
@@ -326,3 +328,19 @@ export type YieldOpportunityClass = (typeof YIELD_OPPORTUNITY_CLASS_VALUES)[numb
 
 export const YIELD_OPPORTUNITY_CRITICAL_EVIDENCE_VALUES = ["venue-review", "market-size", "market-status"] as const;
 export type YieldOpportunityCriticalEvidence = (typeof YIELD_OPPORTUNITY_CRITICAL_EVIDENCE_VALUES)[number];
+
+export const YIELD_TYPE_VALUES = [
+  "lending-vault",
+  "rebase",
+  "fee-sharing",
+  "lp-receipt",
+  "nav-appreciation",
+  "governance-set",
+  "lending-opportunity",
+  "fixed-yield",
+  "structured-tranche",
+] as const;
+
+export type YieldType = (typeof YIELD_TYPE_VALUES)[number];
+
+export const YieldTypeSchema = z.enum(YIELD_TYPE_VALUES);
