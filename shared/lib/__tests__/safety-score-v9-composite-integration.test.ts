@@ -215,12 +215,10 @@ describe("Safety Score v9 continuous composite and scoped risk integration", () 
     });
     expect(isV9SharedControllerSignalAlreadyPriced(independent, [], pricedControllers)).toBe(false);
     const trace = scoreV9Input(input({ structuralSignals: [independent] }), V9_CANDIDATE_POLICY_V1);
-    const exposedQuality = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.deploymentExposedQuality["critical-dependency"].high;
-    const loss = (80 - exposedQuality) * 0.5;
-    expect(trace.deploymentAdjustedScore).toBe(80 - loss);
-    expect(trace.finalScore).toBe(Math.round(80 - loss));
+    expect(trace.deploymentAdjustedScore).toBe(72);
+    expect(trace.finalScore).toBe(72);
     expect(trace.deploymentAdjustments).toEqual([
-      expect.objectContaining({ exposedScore: exposedQuality, exposureShare: 0.5, adjustmentPoints: loss }),
+      expect.objectContaining({ exposedScore: 64, exposureShare: 0.5, adjustmentPoints: 8 }),
     ]);
     expect(trace.caps).toEqual([]);
 

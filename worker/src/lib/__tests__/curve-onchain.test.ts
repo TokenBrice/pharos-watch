@@ -14,7 +14,8 @@ const mockBlockNumber = vi.mocked(fetchEvmBlockNumber);
 const mockBlockTimestamp = vi.mocked(fetchEvmBlockTimestamp);
 
 const FRESH_BLOCK_NUMBER = 19_000_000;
-const FRESH_BLOCK_TIMESTAMP = Math.floor(Date.now() / 1000) - 30; // 30s ago
+const NOW = 1_800_000_000_000;
+const FRESH_BLOCK_TIMESTAMP = 1_799_999_970;
 const THREE_POOL_ADDRESS = "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7";
 
 function hexWord(value: bigint | number | string): `0x${string}` {
@@ -35,6 +36,8 @@ function makeCurveConfig(overrides: Partial<CurvePoolConfig> = {}): CurvePoolCon
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
   mockBlockNumber.mockResolvedValue(FRESH_BLOCK_NUMBER);
   mockBlockTimestamp.mockResolvedValue(FRESH_BLOCK_TIMESTAMP);
 });
@@ -45,9 +48,6 @@ afterEach(() => {
 
 describe("fetchCurveOnchainPrices", () => {
   it("preserves all post-A19 RPC calldata, pinned blocks and route clocks", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_800_000_000_000);
-    mockBlockTimestamp.mockResolvedValue(1_799_999_970);
     const baselineRoutes = curveExpandedPostA19.routes as CurvePoolConfig[];
     mockEvmCall.mockImplementation(async (_chain, address, calldata) => {
       const outputIndex = Number(BigInt(`0x${calldata.slice(74, 138)}`));
@@ -215,8 +215,6 @@ describe("fetchCurveOnchainPrices", () => {
 
   it.each(["usat-tether", "usdq-quantoz"])(
     "converts the authored %s USDT ratio to USD and preserves the older parent clock", async (id) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(1_800_000_000_000);
       const target = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === id)!;
       const usdt = { ...CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!, chain: "arbitrum" };
       mockBlockTimestamp.mockImplementation(async (chain) => chain === "arbitrum" ? 1_799_999_800 : 1_799_999_980);
@@ -232,8 +230,6 @@ describe("fetchCurveOnchainPrices", () => {
   );
 
   it.each(["missing", "stale"] as const)("withholds USDT-reference quotes when USDT is %s", async (dependency) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_800_000_000_000);
     const targets = CURVE_POOL_CONFIGS.filter((config) => ["usat-tether", "usdq-quantoz"].includes(config.stablecoinId));
     const usdt = { ...CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!, chain: "arbitrum" };
     mockBlockTimestamp.mockImplementation(async (chain) => chain === "arbitrum" ? 1_799_999_699 : 1_799_999_980);
@@ -246,8 +242,6 @@ describe("fetchCurveOnchainPrices", () => {
   });
 
   it("pins each cross-chain hop and propagates the older dependency timestamp", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_800_000_000_000);
     mockBlockNumber.mockImplementation(async (chain) => chain === "ethereum" ? 100 : 200);
     mockBlockTimestamp.mockImplementation(async (chain) => chain === "ethereum" ? 1_799_999_800 : 1_799_999_980);
     const via = makeCurveConfig({ stablecoinId: "via", chain: "ethereum" });
@@ -567,8 +561,6 @@ describe("fetchCurveOnchainPrices", () => {
 
   it.each([[300, "ok", 1], [301, "upstream-error", 0]] as const)(
     "applies the block freshness cutoff at age %s", async (age, kind, size) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(1_800_000_000_000);
       mockBlockTimestamp.mockResolvedValue(1_800_000_000 - age);
       mockEvmCall.mockResolvedValue(hexWord(1_000_000));
       const outcome = await fetchCurveOnchainPrices([makeCurveConfig()]);

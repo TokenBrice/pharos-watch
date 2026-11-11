@@ -35,7 +35,6 @@ describe("GET /safety-scores/map.png", () => {
     expect(response.headers.get("Cache-Control")).toBe(
       "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
     );
-    expect(response.headers.get("Cache-Control")).toContain("stale-while-revalidate");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(PNG_MAGIC);
   });
 

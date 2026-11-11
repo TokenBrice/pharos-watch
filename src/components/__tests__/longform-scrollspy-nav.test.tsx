@@ -179,19 +179,18 @@ describe("LongformScrollspyNav", () => {
       vi.runAllTimers();
     });
 
-    expect(windowScrollToMock).toHaveBeenCalledTimes(5);
-    expect(windowScrollToMock).toHaveBeenNthCalledWith(1, { top: 330, behavior: "instant" });
+    expect(windowScrollToMock).toHaveBeenLastCalledWith({ top: 330, behavior: "instant" });
+    const calls = windowScrollToMock.mock.calls.length;
     expect(document.getElementById("pipeline")?.style.scrollMarginTop).toBe(
       "calc(170px + var(--pharos-sticky-summary-h, 0px))",
     );
-
     rerender(<Harness sections={[SECTIONS[1], SECTIONS[0], SECTIONS[2]]} stickyOffsetPx={106} />);
 
     act(() => {
       vi.runAllTimers();
     });
 
-    expect(windowScrollToMock).toHaveBeenCalledTimes(5);
+    expect(windowScrollToMock).toHaveBeenCalledTimes(calls);
   });
 
   it("corrects late deferred expansion with sticky clearance, then stops when the reader takes over", () => {

@@ -100,7 +100,7 @@ describe("Safety Score publication size headroom", () => {
   });
 
   it("warns strictly below 150,000 raw bytes remaining, independently of transport ratios", () => {
-    const threshold = SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES - SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES;
+    const threshold = SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES - 150_000;
     expect(evaluateSafetyPublicationSizeCauses(observed(100, 100, threshold))).toEqual([]);
     for (const uncompressedBytes of [threshold + 1, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES, SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES + 1]) {
       const [cause] = evaluateSafetyPublicationSizeCauses(observed(100, 100, uncompressedBytes));

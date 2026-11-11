@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../../dex-discovery/types";
-import { computeLiquidityScore, computePoolQualityContribution, initSourcePoolGraph } from "../pool-helpers";
+import { computeLiquidityScore, initSourcePoolGraph } from "../pool-helpers";
 import { buildPoolFingerprint } from "../pool-normalization";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
@@ -263,19 +263,13 @@ describe("buildStagedPoolWriteback", () => {
         );
         expect(merged.mergedCount).toBe(1);
         const metric = scorePoolGraph(metrics.get("usdc-circle")!);
-        const qualityMultiplier = writeback.pools[0]!.qualityMultiplier;
-        expect(qualityMultiplier).not.toBeNull();
-        const expected = computePoolQualityContribution({
-          qualityTvlUsd: 1_000_000, effectiveTvlUsd: 1_000_000,
-          qualityMultiplier: qualityMultiplier!,
-          balanceRatio: 0.2, pairQuality: 1, hasMeasuredBalance: true,
-        });
+        expect(writeback.pools[0]!.qualityMultiplier).toBe(0.85);
         expect(metric.topPools[0]).toMatchObject({
           source, symbol,
           extra: {
             balanceRatio: 0.2, lockedLiquidityPct: 80, pairQuality: 1,
-            qualityAdjustedTvl: Math.round(expected.qualityAdjustedTvl),
-            effectiveTvl: Math.round(expected.effectiveTvl),
+            qualityAdjustedTvl: 76_026,
+            effectiveTvl: 76_026,
             measurement: { balanceMeasured: true, decayed: false },
           },
         });
@@ -283,8 +277,8 @@ describe("buildStagedPoolWriteback", () => {
           metric.topPools.map((pool) => ({ reading: pool.volumeReading, tvlUsd: pool.tvlUsd })),
           { asOfSec: NOW + 3_600, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC },
         ).volumeAvailability;
-        expect(metric.qualityAdjustedTvl).toBe(Math.round(expected.qualityAdjustedTvl));
-        expect(metric.effectiveTvl).toBe(Math.round(expected.effectiveTvl));
+        expect(metric.qualityAdjustedTvl).toBe(76_026);
+        expect(metric.effectiveTvl).toBe(76_026);
         expect(metric.totalTvlForBalance).toBe(1_000_000);
         expect(metric.lockedLiqWeightedSum / metric.totalTvlForLocked).toBe(0.8);
         results.push(metric);

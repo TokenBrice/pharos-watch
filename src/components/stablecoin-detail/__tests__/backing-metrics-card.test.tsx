@@ -12,7 +12,6 @@ import {
   type BackingMetricsInput,
   type BackingMetricsOracleInput,
 } from "../backing-metrics-card";
-import { RAIL_METRIC_MAX_SUB_METRICS } from "../rail-card";
 import { buildMechanismBackingView, type MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import * as overlayLookup from "@/lib/mechanism-overlay.server";
@@ -321,7 +320,7 @@ describe("buildBackingMetricsView", () => {
       for (const liveRatio of [null, 1.4]) {
         const view = build({ backing, liveRatio, liveLiquidationCapacityRatio: 0.3 });
         expect(view, archetype).not.toBeNull();
-        expect(view!.subMetrics.length).toBeLessThanOrEqual(RAIL_METRIC_MAX_SUB_METRICS);
+        expect(view!.subMetrics.length).toBeLessThanOrEqual(2);
         const { container } = render(<BackingMetricsCard view={view!} />);
         for (const metric of backing?.metrics ?? []) {
           expect(container.textContent, `${archetype}:${metric.key}`).toContain(formatBackingMetric(metric));

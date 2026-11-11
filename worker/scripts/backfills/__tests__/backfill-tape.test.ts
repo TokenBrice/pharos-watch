@@ -1,41 +1,41 @@
-import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
+import { makeApiRequest, makeApiUrl, readJsonResponse, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 import { handleBackfillTape } from "../backfill-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../../src/lib/tape-projectors/registry";
 
 stubCryptoForAuth();
+const fixtures = createLatestSchemaFixtureTracker();
 
 afterEach(() => {
   vi.restoreAllMocks();
+  fixtures.closeAll();
 });
 
 function emptyDb(): MockD1Database {
-  // Provide rows for every read the projectors might attempt; an empty result
-  // is fine — we are testing the admin contract and dispatch, not projection.
   return mockD1([
-    { match: "FROM cache WHERE key", rows: [] },
-    { match: "ended_at IS NULL", rows: [] },
-    { match: "started_at > ?", rows: [] },
-    { match: "ended_at IS NOT NULL AND ended_at > ?", rows: [] },
-    { match: "ended_at > ? AND source = 'live'", rows: [] },
-    { match: "FROM blacklist_events", rows: [] },
-    { match: "FROM mint_burn_events", rows: [] },
-    { match: "FROM mint_burn_admission", rows: [] },
-    { match: "FROM mint_burn_publication_policy", rows: [] },
-    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
-    { match: "pharos:mint-burn-legacy-evidence", rows: [] },
-    { match: "FROM stress_signals", rows: [] },
-    { match: "FROM stability_index_samples", rows: [] },
-    { match: "FROM yield_history", rows: [] },
-    { match: "FROM yield_source_decisions", rows: [] },
-    { match: "FROM safety_score_history_v2", rows: [] },
-    { match: "FROM safety_grade_history", rows: [] },
-    // First-observation projectors probe each source key; return an observed
-    // marker regardless of the key so this suite exercises dispatch only.
+    ...[
+      "FROM cache WHERE key",
+      "ended_at IS NULL",
+      "started_at > ?",
+      "ended_at IS NOT NULL AND ended_at > ?",
+      "ended_at > ? AND source = 'live'",
+      "FROM blacklist_events",
+      "FROM mint_burn_events",
+      "FROM mint_burn_admission",
+      "FROM mint_burn_publication_policy",
+      "pharos:mint-burn-scan-coverage:read",
+      "pharos:mint-burn-legacy-evidence",
+      "FROM stress_signals",
+      "FROM stability_index_samples",
+      "FROM yield_history",
+      "FROM yield_source_decisions",
+      "FROM safety_score_history_v2",
+      "FROM safety_grade_history",
+    ].map((match) => ({ match, rows: [] })),
     { match: "SELECT 1 AS observed", rows: [{ observed: 1 }] },
-  ]) as MockD1Database;
+  ]);
 }
 
 describe("handleBackfillTape", () => {
@@ -83,10 +83,19 @@ describe("handleBackfillTape", () => {
   });
 
   it("does not write inserts when dryRun=true", async () => {
-    const db = emptyDb();
-    const res = await handleBackfillTape({ db, url: makeApiUrl("/api/backfill-tape?dryRun=true"), trustedAdmin: true, request: makeApiRequest("/api/backfill-tape?dryRun=true", { method: "POST", adminKey: "secret" }) });
-    expect(res.status).toBe(200);
-    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO tape_events"));
-    expect(inserts).toHaveLength(0);
+    const { db, sqlite } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(1730000000000);
+    sqlite.exec(`INSERT INTO depeg_events
+      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
+      VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -200, 1730000000, 0.98, 1)`);
+    for (const dryRun of [true, false]) {
+      const url = makeApiUrl(`/api/backfill-tape?class=depeg.opened&dryRun=${dryRun}`);
+      const res = await handleBackfillTape({ db, url });
+      expect(await readJsonResponse(res, 200)).toMatchObject({ projected: 1 });
+      expect(sqlite.prepare("SELECT source_row_id FROM tape_events").all())
+        .toEqual(dryRun ? [] : [{ source_row_id: "1" }]);
+      expect(sqlite.prepare("SELECT key, value FROM cache").all())
+        .toEqual(dryRun ? [] : [{ key: "tape-projector:cursor:depeg.opened", value: "1730000000" }]);
+    }
   });
 });

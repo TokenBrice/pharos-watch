@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -43,6 +44,9 @@ import { isAbortResult, runDepegPipeline, runPostEnrichmentPricePipeline } from 
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/price-validation";
 import { createAuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 function makeValidationContext(asset: PeggedAsset): PriceValidationContext {
   return buildPriceValidationContext({
@@ -458,46 +462,27 @@ describe("runPostEnrichmentPricePipeline", () => {
 
   it("stages replay-safe prices without writing price_cache before canonical publication", async () => {
     const asset = makeAsset({
-      id: "usdc-circle",
-      symbol: "USDC",
-      price: 0.9998,
-      priceSource: "coingecko",
-      priceConfidence: "single-source",
-      priceObservedAt: 1_700_000_000,
-      priceObservedAtMode: "upstream",
-      priceSyncedAt: 1_700_000_050,
-      agreeSources: ["coingecko"],
-      consensusSources: ["coingecko"],
-      pegType: "peggedUSD",
+      id: "usdc-circle", symbol: "USDC", price: 0.9998, pegType: "peggedUSD",
+      priceSyncedAt: 1_700_000_050, agreeSources: ["coingecko"], consensusSources: ["coingecko"],
     });
-    const db = mockD1();
+    const { db, sqlite } = fixtures.open();
+    sqlite.exec("INSERT INTO price_cache (asset_id, price, updated_at) VALUES ('usdc-circle', 1.01, 100)");
+    const stored = () => sqlite.prepare("SELECT * FROM price_cache").all();
+    const incumbent = stored();
 
     const result = await runPostEnrichmentPricePipeline({
-      assets: [asset],
-      db,
-      syncStartSec: 1_700_000_050,
-      validationContexts: { get: makeValidationContext },
-      previousTrustedPrices: new Map(),
-      priceCache: new Map(), authoritativeOverrides: new Map(),
-      authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(),
+      ...nativePipelineInput(asset, db),
+      validationReferences: undefined,
     }, "");
 
     expect(isAbortResult(result)).toBe(false);
-    if (isAbortResult(result)) {
-      throw new Error("unexpected abort result");
-    }
+    if (isAbortResult(result)) throw new Error("unexpected abort result");
     expect(result.priceCacheEntries).toEqual([{
-      id: "usdc-circle",
-      price: 0.9998,
-      source: "coingecko",
-      confidence: "single-source",
-      observedAt: 1_700_000_000,
-      observedAtMode: "upstream",
-      syncedAt: 1_700_000_050,
-      agreeSources: ["coingecko"],
-      consensusSources: ["coingecko"],
+      id: "usdc-circle", price: 0.9998, source: "coingecko", confidence: "single-source",
+      observedAt: 1_700_000_000, observedAtMode: "upstream", syncedAt: 1_700_000_050,
+      agreeSources: ["coingecko"], consensusSources: ["coingecko"],
     }]);
-    expect(db.getHistory().some((entry) => entry.sql.includes("price_cache") && entry.sql.includes("INSERT"))).toBe(false);
+    expect(stored()).toEqual(incumbent);
   });
 
   it("keeps a severe USX fallback when same-run CoinGecko and DexScreener quotes corroborate it", async () => {

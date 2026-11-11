@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import { PysBreakdown, type PysBreakdownProps } from "@/components/pys-breakdown";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { formatSignedPysDelta } from "@/lib/yield-presentation";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -199,55 +198,10 @@ describe("PysBreakdown", () => {
     }
 
     it("renders signed PYS deltas next to each factor multiplier", () => {
-      const actualScore = computePYS({
-        apy30d: factorScenario.apy30d,
-        safetyScore: factorScenario.safetyScore,
-        apyVarianceScore: factorScenario.apyVarianceScore,
-        scalingFactor: factorScenario.scalingFactor,
-        benchmarkRate: factorScenario.benchmarkRate,
-        sourceRiskPenalty: factorScenario.sourceRiskPenalty,
-      });
-
-      const sourceRiskNeutral = computePYS({
-        apy30d: factorScenario.apy30d,
-        safetyScore: factorScenario.safetyScore,
-        apyVarianceScore: factorScenario.apyVarianceScore,
-        scalingFactor: factorScenario.scalingFactor,
-        benchmarkRate: factorScenario.benchmarkRate,
-        sourceRiskPenalty: 1,
-      });
-      const safetyNeutral = computePYS({
-        apy30d: factorScenario.apy30d,
-        safetyScore: 100,
-        apyVarianceScore: factorScenario.apyVarianceScore,
-        scalingFactor: factorScenario.scalingFactor,
-        benchmarkRate: factorScenario.benchmarkRate,
-        sourceRiskPenalty: factorScenario.sourceRiskPenalty,
-      });
-      const sustainabilityNeutral = computePYS({
-        apy30d: factorScenario.apy30d,
-        safetyScore: factorScenario.safetyScore,
-        apyVarianceScore: 0,
-        scalingFactor: factorScenario.scalingFactor,
-        benchmarkRate: factorScenario.benchmarkRate,
-        sourceRiskPenalty: factorScenario.sourceRiskPenalty,
-      });
-
-      const expectedSourceRiskDelta = formatSignedPysDelta(actualScore - sourceRiskNeutral);
-      const expectedSafetyDelta = formatSignedPysDelta(actualScore - safetyNeutral);
-      const expectedSustainabilityDelta = formatSignedPysDelta(actualScore - sustainabilityNeutral);
-
-      const { container } = renderForFactors(actualScore);
-
-      const textContent = container.textContent ?? "";
-      expect(textContent).toContain(`(${expectedSourceRiskDelta})`);
-      expect(textContent).toContain(`(${expectedSafetyDelta})`);
-      expect(textContent).toContain(`(${expectedSustainabilityDelta})`);
-
-      // The neutralize deltas should each be non-zero in this scenario.
-      expect(actualScore - sourceRiskNeutral).not.toBe(0);
-      expect(actualScore - safetyNeutral).not.toBe(0);
-      expect(actualScore - sustainabilityNeutral).not.toBe(0);
+      renderForFactors(48);
+      expect(screen.getByLabelText(/^Divided by source-risk penalty/).textContent).toContain("(-24.0 PYS)");
+      expect(screen.getByLabelText(/^Divided by safety penalty/).textContent).toContain("(-52.0 PYS)");
+      expect(screen.getByLabelText(/^Multiplied by consistency/).textContent).toContain("(-32.0 PYS)");
     });
   });
 

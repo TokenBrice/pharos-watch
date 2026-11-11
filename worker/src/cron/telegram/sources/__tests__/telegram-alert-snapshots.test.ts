@@ -1,4 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   buildDepegSnapshot,
@@ -22,7 +23,9 @@ function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables, ...DEFAULT_TELEGRAM_SNAPSHOT_D1_TABLES]);
 }
 
+const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
+  fixtures.closeAll();
   vi.useRealTimers();
 });
 
@@ -182,13 +185,8 @@ describe("writeSnapshots", () => {
   it("persists the non-safety snapshots in one D1 batch with shared metadata", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
-    const db = mockD1([]);
-    const originalBatch = db.batch.bind(db);
-    const batchSizes: number[] = [];
-    db.batch = (async (statements: D1PreparedStatement[]) => {
-      batchSizes.push(statements.length);
-      return originalBatch(statements);
-    }) as D1Database["batch"];
+    const { db, sqlite } = fixtures.open();
+    const batch = vi.spyOn(db, "batch");
 
     await writeSnapshots(db, {
       dews: { "usdc-circle": "CALM" },
@@ -198,18 +196,17 @@ describe("writeSnapshots", () => {
       reserveDispatched: null,
     });
 
-    expect(batchSizes).toEqual([6]);
-    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
-    expect(writes.map((entry) => entry.binds[0])).toEqual([
-      SNAPSHOT_KEYS.dews,
-      SNAPSHOT_KEYS.dewsAlertable,
-      SNAPSHOT_KEYS.depeg,
-      SNAPSHOT_KEYS.reserveDispatched,
-      SNAPSHOT_KEYS.reserveObserved,
-      SNAPSHOT_KEYS.dewsCandidates,
-    ]);
-    expect(new Set(writes.map((entry) => entry.binds[2]))).toEqual(new Set([1776945600]));
-    expect(writes.find((entry) => entry.binds[0] === SNAPSHOT_KEYS.reserveDispatched)?.binds[1]).toBe("null");
+    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([6]);
+    const rows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
+    expect(new Set(rows.map((row) => row.updated_at))).toEqual(new Set([1776945600]));
+    expect(Object.fromEntries(rows.map((row) => [row.key, JSON.parse(String(row.value))]))).toEqual({
+      [SNAPSHOT_KEYS.dews]: { "usdc-circle": "CALM" },
+      [SNAPSHOT_KEYS.dewsAlertable]: {},
+      [SNAPSHOT_KEYS.depeg]: {},
+      [SNAPSHOT_KEYS.reserveDispatched]: null,
+      [SNAPSHOT_KEYS.reserveObserved]: null,
+      [SNAPSHOT_KEYS.dewsCandidates]: { "usdc-circle": { quietSinceSec: 1776945000 } },
+    });
   });
 
   it("includes the safety snapshot in the same D1 batch when present", async () => {

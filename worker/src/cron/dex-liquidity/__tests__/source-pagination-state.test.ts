@@ -58,27 +58,23 @@ describe("DEX source pagination state", () => {
   });
 
   it("returns a bounded write failure and lets the same cursor retry", async () => {
-    const run = vi.fn()
-      .mockRejectedValueOnce(new Error("D1 write unavailable: raw provider detail"))
-      .mockResolvedValueOnce({ success: true, meta: { changes: 1 } });
-    const bind = vi.fn((..._values: unknown[]) => ({ run }));
-    const db = makeNoopD1({ prepare: vi.fn(() => ({ bind })) });
-    const write = () => writeDexSourcePaginationState({
-      db,
-      sourceKey: "orca:solana",
-      cursor: "retryable-tail",
-      cycleStartedAt: 90,
-      nowSec: 110,
-      completed: false,
-      pagesFetched: 4,
+    const { db, sqlite } = fixtures.open();
+    const read = () => readDexSourcePaginationState(db, "orca:solana");
+    const write = (cursor = "retryable-tail", nowSec = 110) => writeDexSourcePaginationState({
+      db, sourceKey: "orca:solana", cursor, cycleStartedAt: 90,
+      nowSec, completed: false, pagesFetched: 4,
     });
-
+    await write("previous", 100);
+    const previous = await read();
+    sqlite.exec(`CREATE TRIGGER fail BEFORE INSERT ON dex_source_pagination_state
+      BEGIN SELECT RAISE(FAIL, 'D1 write unavailable'); END`);
     await expect(write()).resolves.toEqual({ written: false, errorClass: "write-failed" });
+    await expect(read()).resolves.toEqual(previous);
+    sqlite.exec("DROP TRIGGER fail");
     await expect(write()).resolves.toEqual({ written: true, errorClass: null });
-
-    expect(run).toHaveBeenCalledTimes(2);
-    expect(bind.mock.calls[0]?.[1]).toBe("retryable-tail");
-    expect(bind.mock.calls[1]?.[1]).toBe("retryable-tail");
+    await expect(read()).resolves.toMatchObject({
+      cursor: "retryable-tail", cycleStartedAt: 90, updatedAt: 110, completedAt: null, pagesFetched: 4,
+    });
   });
 
   it("retries a transient D1 overload on the cursor write before reporting the bounded failure", async () => {

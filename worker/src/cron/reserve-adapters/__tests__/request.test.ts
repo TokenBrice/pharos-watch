@@ -622,25 +622,29 @@ describe("binary fetch lifecycle", () => {
   });
 
   it("bounds binary body reads with the attempt timeout", async () => {
-    let cancelled = false;
-    const slowBody = new ReadableStream<Uint8Array>({
-      async pull() {
-        await new Promise<never>(() => {});
-      },
-      cancel() {
-        cancelled = true;
-      },
-    });
-    const fetchMock = vi.fn(async () => new Response(slowBody, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const startedAt = Date.now();
-    await expect(fetchBinaryResponseWithRetry(
-      "https://issuer.example/report.pdf", new AbortController().signal, 50, undefined, { maxRetries: 0 },
-    )).rejects.toMatchObject({ name: "TimeoutError" });
-    expect(Date.now() - startedAt).toBeLessThan(1_000);
-    expect(cancelled).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.useFakeTimers();
+    try {
+      const cancel = vi.fn();
+      const fetchMock = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+        async pull() { await new Promise<never>(() => {}); },
+        cancel,
+      })));
+      vi.stubGlobal("fetch", fetchMock);
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      let settled = false;
+      const pending = fetchBinaryResponseWithRetry(
+        "https://issuer.example/report.pdf", new AbortController().signal, 50, undefined, { maxRetries: 0 },
+      ).finally(() => { settled = true; });
+      const rejected = expect(pending).rejects.toMatchObject({ name: "TimeoutError" });
+      await vi.advanceTimersByTimeAsync(49);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await rejected;
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(fetchMock).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("cancels binary bodies whose declared length exceeds the limit", async () => {

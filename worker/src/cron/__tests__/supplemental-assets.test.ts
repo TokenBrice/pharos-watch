@@ -20,6 +20,7 @@ const mockD1 = createMockD1Preset([
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function makeMeta(contracts: StablecoinMeta["contracts"], id = "test-stablecoin"): StablecoinMeta {
@@ -504,12 +505,8 @@ describe("fetchGoldTokens", () => {
   });
 
   it("fills empty historical buckets from exact daily observations without replacing observed zero", async () => {
-    const snapshotDate = (daysAgo: number) => {
-      const date = new Date();
-      date.setUTCDate(date.getUTCDate() - daysAgo);
-      date.setUTCHours(0, 0, 0, 0);
-      return Math.floor(date.getTime() / 1000);
-    };
+    vi.useFakeTimers({ now: Date.UTC(2026, 5, 3, 12), toFake: ["Date"] });
+    const snapshotDate = (daysAgo: number) => Date.UTC(2026, 5, 3 - daysAgo) / 1000;
     const db = mockD1([{
       match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
       rows: [

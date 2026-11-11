@@ -188,17 +188,8 @@ describe("computePremiumWeightedPegScore", () => {
       closed(discountStart, NOW - 10 * DAY, -500),
       closed(premiumStart, NOW - 5 * DAY, 400),
     ];
-    const recency = (startedAt: number) => 1 / (1 + (NOW - startedAt) / (365.25 * DAY));
-    const severityPenalty =
-      Math.max((500 / 100) * (10 / 30) * recency(discountStart), (500 / 2000) * recency(discountStart)) +
-      0.25 * Math.max((400 / 100) * (10 / 30) * recency(premiumStart), (400 / 2000) * recency(premiumStart));
-    // The union covers days 0-15: 10 discount days plus 5 premium-only days.
-    const weightedOffPegSec = 10 * DAY + 0.25 * 5 * DAY;
-    const weightedPegPct = (1 - weightedOffPegSec / (20 * DAY)) * 100;
-    expect(weightedPegPct).toBe(43.75);
-    expect(computePremiumWeightedPegScore(events, start, NOW, 0.25)).toBe(
-      Math.round(0.5 * weightedPegPct + 0.5 * (100 - severityPenalty)),
-    );
+    // The union covers ten discount days and five premium-only days.
+    expect(computePremiumWeightedPegScore(events, start, NOW, 0.25)).toBe(71);
   });
 
   it.each([Number.POSITIVE_INFINITY, Number.NaN])(
@@ -224,45 +215,18 @@ describe("computePremiumWeightedPegScore", () => {
     ];
     expect(computePegScore(events, start, NOW).spreadPenalty).toBeCloseTo(6, 10);
 
-    const expected = (premiumWeight: number) => {
-      let totalSec = 0;
-      let belowSec = 0;
-      let totalPenalty = 0;
-      for (const event of events) {
-        const seconds = (event.endedAt ?? NOW) - Math.max(event.startedAt, start);
-        totalSec += seconds;
-        if (event.peakDeviationBps <= 0) belowSec += seconds;
-        const peakBps = Math.abs(event.peakDeviationBps);
-        const durationDays = Math.min(seconds / DAY, 90);
-        const recency = 1 / (1 + (NOW - event.startedAt) / (365.25 * DAY));
-        totalPenalty += Math.max((peakBps / 100) * (durationDays / 30) * recency, (peakBps / 2000) * recency)
-          * (event.peakDeviationBps > 0 ? premiumWeight : 1);
-      }
-      const weightedPct = Math.max(0, (1 - (belowSec + premiumWeight * (totalSec - belowSec)) / (NOW - start)) * 100);
-      const severity = Math.max(0, 100 - totalPenalty);
-      return Math.round(Math.max(0, Math.min(100, 0.5 * weightedPct + 0.5 * severity - 6)));
-    };
-
-    expect(computePremiumWeightedPegScore(events, start, NOW, 0.25)).toBe(expected(0.25));
+    // Only the two discount peaks determine spread.
+    expect(computePremiumWeightedPegScore(events, start, NOW, 0.25)).toBe(82);
   });
 
   it("scales the whole capped active penalty for a premium, not only its slope", () => {
     // Unweighted, any active peak of 2,500 bps or more costs the 50-point cap; a
     // premium costs `premiumWeight` of that capped penalty (12.5 at 0.25).
-    const expected = (peakBps: number, premiumWeight: number) => {
-      const days = 1;
-      const recency = 1 / (1 + days / 365.25);
-      const severityPenalty = Math.max((peakBps / 100) * (days / 30) * recency, (peakBps / 2000) * recency) * premiumWeight;
-      const pegPct = (1 - (premiumWeight * days * DAY) / (365 * DAY)) * 100;
-      const activePenalty = Math.min(50, Math.max(5, peakBps / 50)) * premiumWeight;
-      return Math.round(0.5 * pegPct + 0.5 * (100 - severityPenalty) - activePenalty);
-    };
-    for (const peakBps of [5_000, 10_000]) {
+    for (const [peakBps, score] of [[5_000, 87], [10_000, 87]]) {
       const events = [active(NOW - DAY, peakBps)];
-      expect(computePremiumWeightedPegScore(events, START, NOW, 0.25)).toBe(expected(peakBps, 0.25));
+      expect(computePremiumWeightedPegScore(events, START, NOW, 0.25)).toBe(score);
       expect(computePremiumWeightedPegScore(events, START, NOW, 1)).toBe(computePegScore(events, START, NOW).pegScore);
     }
-    expect(expected(5_000, 0.25)).toBe(87);
   });
 
   it("returns null exactly when the public score is null", () => {

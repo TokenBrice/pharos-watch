@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   PYS_APY_SANITY_MAX,
   PYS_MAX_SOURCE_RISK_PENALTY,
-  PYS_SUSTAINABILITY_FLOOR,
   computePysComponents,
   computePysRewardShare,
   computePYS,
@@ -239,7 +238,7 @@ describe("computePysComponents", () => {
 
   it("floors sustainabilityMultiplier at 0.3", () => {
     const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.9 });
-    expect(result.sustainabilityMultiplier).toBe(PYS_SUSTAINABILITY_FLOOR); // 1.0 - 0.9 = 0.1, floored
+    expect(result.sustainabilityMultiplier).toBe(0.3); // 1.0 - 0.9 = 0.1, floored
   });
 
   it("applies explicit source-risk penalty after effective yield and before safety scaling", () => {

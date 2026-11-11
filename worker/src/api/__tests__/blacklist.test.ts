@@ -295,55 +295,44 @@ describe("handleBlacklist", () => {
     expect(dataBinds).toContain(25_000);
   });
 
-  it("uses keyset cursor bindings for the selected sort order", async () => {
-    const firstDb = mockD1([
-      { match: "blacklist_events", rows: [
-        makeBlacklistRow({ id: "b", stablecoin: "USDT", timestamp: 200 }),
-        makeBlacklistRow({ id: "a", stablecoin: "USDT", timestamp: 100 }),
-      ] },
-    ]);
-    const first = await handleBlacklist(
-      firstDb,
-      new URL("https://x/api/blacklist?limit=1&sortBy=stablecoin&sortDirection=asc"),
-    );
-    const firstBody = await first.json() as { nextCursor: string | null };
-    expect(firstBody.nextCursor).toBeTruthy();
-
-    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }]);
-    const next = await handleBlacklist(
-      nextDb,
-      new URL(`https://x/api/blacklist?limit=1&sortBy=stablecoin&sortDirection=asc&cursor=${firstBody.nextCursor}`),
-    );
-    expect(next.status).toBe(200);
-    const query = nextDb.getHistory().find((entry) => entry.sql.includes("pharos:blacklist-events:page"));
-    expect(query?.sql).toContain("stablecoin > ?");
-    expect(query?.sql).toContain("stablecoin = ? AND timestamp < ?");
-    expect(query?.binds.slice(0, 6)).toEqual(["USDT", "USDT", 200, "USDT", 200, "b"]);
+  it("continues the selected sort order without repeats or omissions", async () => {
+    const { db, sqlite } = fixtures.open();
+    for (const [id, stablecoin, timestamp] of [
+      ["b", "USDC", 200], ["a", "USDC", 200], ["older", "USDC", 100], ["usdt", "USDT", 300],
+    ] as const) {
+      const row = makeBlacklistRow({ id, stablecoin, timestamp, tx_hash: id });
+      const columns = Object.keys(row);
+      sqlite.prepare(`INSERT INTO blacklist_events (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`)
+        .run(...Object.values(row));
+    }
+    const url = new URL("https://x/api/blacklist?limit=1&sortBy=stablecoin&sortDirection=asc");
+    const ids: string[] = [];
+    for (let page = 0; page < 4; page++) {
+      const body = await readJsonResponse<{ events: { id: string }[]; nextCursor: string | null }>(await handleBlacklist(db, url), 200);
+      expect(body.events).toHaveLength(1);
+      ids.push(body.events[0]!.id);
+      if (page < 3) expect(body.nextCursor).toEqual(expect.any(String));
+      else expect(body.nextCursor).toBeNull();
+      url.searchParams.set("cursor", body.nextCursor ?? "");
+    }
+    expect(ids).toEqual(["b", "a", "older", "usdt"]);
   });
 
-  it("uses timestamp and id keyset bindings for the default date sort", async () => {
-    const firstDb = mockD1([
-      { match: "blacklist_events", rows: [
-        makeBlacklistRow({ id: "newer", timestamp: 200 }),
-        makeBlacklistRow({ id: "older", timestamp: 100 }),
-      ] },
-    ]);
-    const first = await handleBlacklist(
-      firstDb,
-      new URL("https://x/api/blacklist?limit=1"),
-    );
-    const firstBody = await first.json() as { nextCursor: string | null };
-    expect(firstBody.nextCursor).toBeTruthy();
-
-    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }]);
-    const next = await handleBlacklist(
-      nextDb,
-      new URL(`https://x/api/blacklist?limit=1&cursor=${firstBody.nextCursor}`),
-    );
-    expect(next.status).toBe(200);
-    const query = nextDb.getHistory().find((entry) => entry.sql.includes("pharos:blacklist-events:page"));
-    expect(query?.sql).toContain("timestamp < ?");
-    expect(query?.sql).toContain("timestamp = ? AND id < ?");
-    expect(query?.binds.slice(0, 3)).toEqual([200, 200, "newer"]);
+  it("continues the default date sort across timestamp and id ties", async () => {
+    const { db, sqlite } = fixtures.open();
+    for (const [id, timestamp] of [["b", 200], ["a", 200], ["older", 100]] as const) {
+      const row = makeBlacklistRow({ id, timestamp, tx_hash: id });
+      const columns = Object.keys(row);
+      sqlite.prepare(`INSERT INTO blacklist_events (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`)
+        .run(...Object.values(row));
+    }
+    const url = new URL("https://x/api/blacklist?limit=1");
+    for (const [page, id] of ["b", "a", "older"].entries()) {
+      const body = await readJsonResponse<{ events: { id: string }[]; nextCursor: string | null }>(await handleBlacklist(db, url), 200);
+      expect(body.events.map((event) => event.id)).toEqual([id]);
+      if (page < 2) expect(body.nextCursor).toEqual(expect.any(String));
+      else expect(body.nextCursor).toBeNull();
+      url.searchParams.set("cursor", body.nextCursor ?? "");
+    }
   });
 });

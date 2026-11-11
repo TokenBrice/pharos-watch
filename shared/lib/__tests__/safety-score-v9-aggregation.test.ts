@@ -54,11 +54,7 @@ describe("cause-aware fixed-H20 aggregation", () => {
       } }), V9_CANDIDATE_POLICY_V1);
       if (included.length >= 2) {
         expect(trace.ratingStatus).toBe("rated");
-        expect(trace.finalScore).toBe(Math.round(aggregateV9SmoothBoundedHeadroom({
-          backing: included.includes("backing") ? 90 : 50,
-          exit: included.includes("exit") ? 90 : 50,
-          control: included.includes("control") ? 90 : 60,
-        }, WEIGHTS, 20, included)!.score));
+        expect(trace.finalScore).toBe([null, null, null, 76, null, 67, 67, 90][mask]);
         expect(trace.partialEvidence === null).toBe(included.length === 3);
       } else {
         expect(trace.ratingStatus).toBe("pipeline-gap");

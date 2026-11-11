@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
 import { parseCgPool, classifyCgPool } from "../coingecko-onchain-shared";
 
 function makeCgPool(
@@ -63,7 +62,7 @@ describe("CoinGecko onchain shared helpers", () => {
       quoteTokenAddress: "0xquote",
     });
     expect(classified).toMatchObject({
-      qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-5bp"],
+      qualityMultiplier: 0.85,
       poolType: "cg-cl-5bp",
       feePercentage: 0.05,
       lockedLiquidityPct: 37.5,
@@ -102,7 +101,7 @@ describe("CoinGecko onchain shared helpers", () => {
     });
 
     expect(classified.poolType).toBe("cg-stable-amm");
-    expect(classified.qualityMultiplier).toBe(QUALITY_MULTIPLIERS["generic"]);
+    expect(classified.qualityMultiplier).toBe(0.3);
     expect(classified.feePercentage).toBeNull();
     expect(classified.balanceRatio).toBeNull();
   });

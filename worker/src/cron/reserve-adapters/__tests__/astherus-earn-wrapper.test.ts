@@ -103,9 +103,12 @@ async function runTracked() {
 }
 
 function assertSingleAggregate3Batch(): void {
-  const network = getErc4626Network();
-  if (!network) throw new Error("missing astherus network");
-  expect(network.rpcCalls.filter((call) => call.viaMulticall)).toHaveLength(7);
+  const calls = getErc4626Network()!.fetchSpy.getHistory()
+    .filter(({ method }) => method === "POST").flatMap(({ body }) => JSON.parse(body!)) as {
+      method: string; params: { data: string }[];
+    }[];
+  expect(calls.filter((call) => call.method === "eth_call").map((call) => call.params[0]!.data.slice(0, 10)))
+    .toEqual(["0x82ad56cb"]);
 }
 
 describe("fetchAstherusEarnWrapperReserves", () => {

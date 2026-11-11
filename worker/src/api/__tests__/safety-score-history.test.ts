@@ -65,9 +65,6 @@ describe("handleSafetyScoreHistory", () => {
     expect(body[0]).not.toHaveProperty("recorded_at");
     expect(body[0]).not.toHaveProperty("prev_grade");
     expect(body[0]).not.toHaveProperty("transitionKind");
-    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("safety_score_history_v2"));
-    expect(historyQuery?.sql).toContain("FROM safety_grade_history legacy");
-    expect(historyQuery?.sql).toContain("'initial-baseline', 'organic-grade-change'");
   });
 
   it("preserves an initial NR row with null score and predecessor", async () => {

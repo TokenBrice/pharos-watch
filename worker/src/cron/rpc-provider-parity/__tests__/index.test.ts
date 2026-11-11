@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCircuitRecord } from "../../../lib/circuit-breaker";
@@ -21,6 +21,7 @@ const cacheDatabases: DatabaseSync[] = [];
 const API_KEY = "dwellir-parity-test-key";
 
 afterEach(() => {
+  vi.useRealTimers();
   fixtures.closeAll();
   for (const sqlite of cacheDatabases.splice(0)) sqlite.close();
 });
@@ -46,12 +47,6 @@ function probeResult(overrides: Partial<RpcParityProbeRunResult> = {}): RpcParit
 
 function metadataOf(result: CronResult | void): Record<string, unknown> {
   return JSON.parse(String(result?.metadata ?? "{}")) as Record<string, unknown>;
-}
-
-function currentMonthWindow(): { nowSec: number; month: string; ledgerKey: string } {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const month = new Date(nowSec * 1000).toISOString().slice(0, 7);
-  return { nowSec, month, ledgerKey: `rpc:dwellir:credits:v1:${month}` };
 }
 
 describe("rpc parity circuit verdict", () => {
@@ -86,7 +81,9 @@ describe("rpc parity job", () => {
 
   it("skips when the monthly credit ledger is exhausted", async () => {
     const db = cacheOnlyDb();
-    const { nowSec, month, ledgerKey } = currentMonthWindow();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime("2026-04-23T12:00:00Z");
+    const nowSec = 1_776_945_600, month = "2026-04", ledgerKey = "rpc:dwellir:credits:v1:2026-04";
     await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(ledgerKey, JSON.stringify({ window: month, usedCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH }), nowSec)
       .run();

@@ -226,27 +226,14 @@ describe("Horizon pool discovery", () => {
   });
 
   it("contains the stage timeout as a provider failure", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    mockFetch([{
-      match: "horizon.stellar.org/liquidity_pools",
-      outcomes: [{ stall: true }],
-    }], { requireMatch: true });
-    const stageContext = context({ deadlineMs: Date.now() + 10 });
-
-    const result = await crawlHorizonPoolsStage({
-      coinTargets: [target()],
-      context: stageContext.value,
-    });
-
-    expect(result.providerChecks).toEqual([
-      {
-        chain: "stellar",
-        address: EURC_ADDRESS,
-        provider: "horizon",
-        status: "failure",
-        retryable: true,
-      },
-    ]);
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    const fetchMock = mockFetch([{ match: "horizon.stellar.org/liquidity_pools", outcomes: [{ stall: true }] }], { requireMatch: true });
+    const stageContext = context({ deadlineMs: 1_800_000_000_010 });
+    const result = await crawlHorizonPoolsStage({ coinTargets: [target()], context: stageContext.value });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.providerChecks).toEqual([{
+      chain: "stellar", address: EURC_ADDRESS, provider: "horizon", status: "failure", retryable: true,
+    }]);
   });
 
   it("keeps Soroban contract-token ids outside Horizon's registered crawl scope", async () => {

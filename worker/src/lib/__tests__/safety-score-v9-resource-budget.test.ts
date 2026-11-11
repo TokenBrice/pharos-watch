@@ -124,24 +124,28 @@ describe("Safety Score V9 compile admission", () => {
     { contagion: true },
     { capturePath: "/explicit/capture.json" },
   ])("isolates probe children from poisoned ambient instrumentation: %j", (protocol) => {
-    const env = createResourceProbeEnv({
-      PATH: process.env.PATH, HOME: process.env.HOME, LANG: "C", LANGUAGE: "en", LC_ALL: "C", LC_lowercase: "poison",
-      NODE_V8_COVERAGE: "/poison/coverage", NODE_OPTIONS: "--require=/poison/preload.cjs",
-      VITEST: "true", VITEST_WORKER_ID: "1", COVERAGE: "1",
-      CONTAGION_MATRIX: "poison", SAFETY_SCORE_V9_RESOURCE_CAPTURE: "/poison/capture.json",
-      PHAROS_V9_RESOURCE_LANE: "1",
-    }, protocol);
-    const child = spawnSync(process.execPath, ["-e", "process.stdout.write(JSON.stringify(process.env))"], {
-      env, encoding: "utf8",
-    });
-    expect(child.status, child.stderr).toBe(0);
-    expect(JSON.parse(child.stdout)).toEqual({
+    const launch = (env: NodeJS.ProcessEnv) => spawnSync(process.execPath,
+      ["-p", "JSON.stringify(process.env)"], { env, encoding: "utf8" });
+    const expected = {
       ...(process.env.PATH === undefined ? {} : { PATH: process.env.PATH }),
       ...(process.env.HOME === undefined ? {} : { HOME: process.env.HOME }),
       LANG: "C", LANGUAGE: "en", LC_ALL: "C",
       ...("contagion" in protocol ? { CONTAGION_MATRIX: "1" } : {}),
       ...("capturePath" in protocol ? { SAFETY_SCORE_V9_RESOURCE_CAPTURE: protocol.capturePath } : {}),
-    });
+    };
+    const env = createResourceProbeEnv({ ...expected,
+      ...Object.fromEntries(["LC_lowercase", "NODE_V8_COVERAGE", "VITEST", "VITEST_WORKER_ID", "COVERAGE",
+        "CONTAGION_MATRIX", "SAFETY_SCORE_V9_RESOURCE_CAPTURE", "PHAROS_V9_RESOURCE_LANE"].map(key => [key, "poison"])),
+      NODE_OPTIONS: "--require=/poison/preload.cjs",
+    }, protocol);
+    expect(env).toEqual(expected);
+    const baseline = launch({});
+    expect(baseline.status, baseline.stderr).toBe(0);
+    const osEnv = JSON.parse(baseline.stdout);
+    expect(Object.keys(osEnv)).toEqual(process.platform === "darwin" ? ["__CF_USER_TEXT_ENCODING"] : []);
+    const child = launch(env);
+    expect(child.status, child.stderr).toBe(0);
+    expect(JSON.parse(child.stdout)).toEqual({ ...expected, ...osEnv });
   });
 });
 

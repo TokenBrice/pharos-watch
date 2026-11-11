@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -24,7 +24,7 @@ interface SelfTestFinding {
   RuleID: string;
 }
 
-// Model report contents from each fixture's own line, independently of scan order.
+// Report fixture lines independently of scan order.
 function selfTestScanStatus(args: string[], transform = (findings: SelfTestFinding[]) => findings): number {
   const root = args.at(-1)!;
   const findings: SelfTestFinding[] = [];
@@ -399,7 +399,7 @@ describe("run-gitleaks", () => {
   });
 
   it("snapshots the actual scanner without installing or scanning", async () => {
-    const destination = mkdtempSync(join(tmpdir(), "gitleaks-trusted-"));
+    const destination = realpathSync(mkdtempSync(join(tmpdir(), "gitleaks-trusted-")));
     const ensureBinary = vi.fn<() => Promise<string>>();
     try {
       await expect(runGitleaks({ argv: [`--snapshot-trusted=${destination}`], ensureBinary })).resolves.toEqual({ status: 0 });

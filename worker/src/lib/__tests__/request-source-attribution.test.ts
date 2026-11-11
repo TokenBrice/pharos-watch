@@ -38,7 +38,6 @@ describe("sampled Worker attribution writers", () => {
     const { db, sqlite } = fixtures.open();
     sqlite.prepare("INSERT INTO api_keys (id, key_prefix, secret_hash, name, created_at, updated_at) VALUES (7, 'prefix', 'secret', 'Partner', ?, ?)").run(minute, minute);
     const draw = vi.spyOn(Math, "random").mockReturnValue(0.9);
-    const prepare = vi.spyOn(db, "prepare");
     for (const count of [1, 2]) {
       const pending = recordApiKeyRequestAttribution(db, 7, minute);
       await vi.runAllTimersAsync();
@@ -47,7 +46,8 @@ describe("sampled Worker attribution writers", () => {
         .toEqual({ request_count: count, source_v2_request_count: count });
     }
     expect(draw).not.toHaveBeenCalled();
-    expect(prepare.mock.calls.every(([sql]) => sql.includes("INSERT INTO api_key_request_stats"))).toBe(true);
+    for (const t of ["api_request_source_samples", "api_request_consumer_stats"])
+      expect(sqlite.prepare(`SELECT * FROM ${t}`).all()).toEqual([]);
   });
 
   it("keeps persisted probability strata separate on a conflicting route/minute", async () => {

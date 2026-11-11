@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { linkSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { linkSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -197,7 +197,6 @@ function enumerateReadingSignatures() {
   return [...representatives.values()];
 }
 
-// Parse Markdown once per complete routing signature.
 let readingSignatures: ReadingSignature[] | undefined;
 
 function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
@@ -213,7 +212,7 @@ function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
 
 describe("route context accounting", () => {
   function withContextFixture(callback: (repoRoot: string) => void) {
-    const repoRoot = mkdtempSync(join(tmpdir(), "pharos-route-context-"));
+    const repoRoot = realpathSync(mkdtempSync(join(tmpdir(), "pharos-route-context-")));
     writeFileSync(join(repoRoot, "AGENTS.md"), "# Root\né😀\n");
     writeFileSync(join(repoRoot, "CLAUDE.md"), "@AGENTS.md\n");
     writeFileSync(join(repoRoot, "scope.md"), "# Scope\n");

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
 // The DL /coins pass retries a 5xx through the real backoff; stub the retry
@@ -24,6 +25,8 @@ import { runDlContractPasses } from "../sync-stablecoins/enrich-prices-defillama
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   it("returns zero counts when no assets are missing prices", async () => {
@@ -843,33 +846,14 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
   it("closes the stale DexScreener exact circuit when no exact candidates remain", async () => {
-    const openedAt = Math.floor(Date.now() / 1000) - 3600;
-    const db = makeEnrichPricesDb([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: openedAt,
-              lastSuccessAt: null,
-              openedAt,
-            }),
-            updated_at: openedAt,
-          },
-        ],
-      },
-    ]);
-    const assets: PeggedAsset[] = [
-      makePeggedAsset({
-        id: "search-usd",
-        name: "Search USD",
-        symbol: "CHFAU",
-        price: 0,
-      }),
-    ];
+    vi.useFakeTimers({ now: 1_800_000_000_000, toFake: ["Date"] });
+    const { db, sqlite } = fixtures.open();
+    const key = `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`;
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(key, JSON.stringify({
+      state: "open", consecutiveFailures: 3, lastFailureAt: 1_799_996_400,
+      lastSuccessAt: null, openedAt: 1_799_996_400,
+    }), 1_799_996_400);
+    const assets = [makePeggedAsset({ id: "search-usd", name: "Search USD", symbol: "CHFAU", price: 0 })];
 
     const fetchSpy = mockFetch();
     const result = await runDexScreenerPass(assets, undefined, db);
@@ -889,14 +873,8 @@ describe("enrichMissingPrices", () => {
     );
     expect(fetchSpy).not.toHaveBeenCalled();
 
-    const exactWrite = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO cache") &&
-          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
-      );
-    expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key)!;
+    expect(JSON.parse(String(row.value))).toMatchObject({
       state: "closed",
       consecutiveFailures: 0,
     });

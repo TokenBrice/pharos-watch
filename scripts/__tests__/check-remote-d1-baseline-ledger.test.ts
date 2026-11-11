@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { checkRemoteD1BaselineLedger, runRemoteD1BaselinePreflight } from "../ci/check-remote-d1-baseline-ledger";
@@ -89,15 +90,15 @@ describe("remote D1 baseline ledger preflight", () => {
   });
 
   it("lists pending filenames using only table and ledger SELECTs", () => {
-    const query = vi.fn<(sql: string) => string>()
-      .mockReturnValueOnce(EXISTING_TABLES)
-      .mockReturnValueOnce(receipt([BASELINE]));
+    using db = new DatabaseSync(":memory:");
+    db.exec("CREATE TABLE _cf_KV(id INTEGER PRIMARY KEY AUTOINCREMENT); PRAGMA query_only=ON");
+    const query = (sql: string) => JSON.stringify([{ success: true, results: db.prepare(sql).all() }]);
+    expect(runRemoteD1BaselinePreflight(query, MIGRATIONS)).toEqual({ status: "fresh", pendingMigrations: MIGRATIONS });
+    db.exec(`PRAGMA query_only=OFF; CREATE TABLE cache(value); CREATE TABLE d1_migrations(id, name);
+      INSERT INTO d1_migrations VALUES(1, '${BASELINE}'); PRAGMA query_only=ON`);
+    const before = db.serialize();
     expect(runRemoteD1BaselinePreflight(query, MIGRATIONS)).toEqual({ status: "adopted", pendingMigrations: [TAIL] });
-    expect(query).toHaveBeenCalledTimes(2);
-    expect(query.mock.calls[0][0]).toMatch(/^SELECT name FROM sqlite_master /);
-    expect(query.mock.calls[0][0]).toContain("substr(name, 1, 7) != 'sqlite_'");
-    expect(query.mock.calls[0][0]).toContain("name != '_cf_KV'");
-    expect(query.mock.calls[1][0]).toBe('SELECT name FROM "d1_migrations" ORDER BY id;');
+    expect(db.serialize()).toEqual(before);
   });
 
   it("does not initialize or query an absent ledger on fresh D1", () => {

@@ -264,37 +264,21 @@ describe("yield.warning_emitted projector", () => {
     expect(tapeInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(3);
   });
   it("uses source_key DESC to choose the prior row at a shared timestamp", async () => {
-    const db = mockTapeD1(
-      historyTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            source_key: "a-source",
-            recorded_at: SEC + 900,
-            warning_signals: JSON.stringify(["existing", "new-signal"]),
-          },
-        ],
-        [
-          // Both candidates are at the cursor boundary; z-source is the C21 winner.
-          { source_key: "a-source", recorded_at: SEC - 1, warning_signals: JSON.stringify(["loser"]) },
-          { source_key: "z-source", recorded_at: SEC - 1, warning_signals: JSON.stringify(["existing"]) },
-        ],
-      ),
-    ) as MockD1Database;
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+      VALUES ('usdt-tether', ?, ?, 1, 5, 'defillama', ?)`);
+    insert.run("a-source", SEC - 1, '["loser"]');
+    insert.run("z-source", SEC - 1, '["existing"]');
+    insert.run("a-source", SEC + 900, '["existing","new-signal"]');
 
-    await projectYieldWarningEmitted(db);
-    const inserts = tapeInsertBindsForType(db, "yield.warning_emitted");
-    expect(inserts).toHaveLength(1);
-    const payload = JSON.parse(String(inserts[0]![11])) as {
-      prevSignals: string[];
-      newSignals: string[];
-    };
-    expect(payload.prevSignals).toEqual(["existing"]);
-    expect(payload.newSignals).toEqual(["new-signal"]);
-
-    const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_HISTORY));
-    expect(priorQuery?.sql).toContain("ORDER BY h.recorded_at DESC, h.source_key DESC");
-    expect(priorQuery?.sql).toContain("LIMIT 1");
+    await projectYieldWarningEmitted(db, { since: SEC - 1 });
+    const events = sqlite.prepare("SELECT payload_json FROM tape_events WHERE type = 'yield.warning_emitted'").all();
+    expect(events).toHaveLength(1);
+    expect(JSON.parse(String(events[0]!.payload_json))).toEqual({
+      signals: ["existing", "new-signal"], prevSignals: ["existing"],
+      newSignals: ["new-signal"], sourceKey: "a-source",
+    });
   });
 
 });
@@ -405,37 +389,20 @@ describe("yield.pys_dropped projector", () => {
   });
 
   it("uses generation_id DESC to choose the prior row at a shared timestamp", async () => {
-    const db = mockTapeD1(
-      decisionTables(
-        [
-          {
-            stablecoin_id: "usdt-tether",
-            selected_source_key: "aave-v3:usdt",
-            selected_score: 80,
-            created_at: SEC + 900,
-          },
-        ],
-        [
-          // Both candidates are at the cursor boundary; generation-2 is the C21 winner.
-          { generation_id: "generation-1", created_at: SEC - 1, selected_score: 80 },
-          { generation_id: "generation-2", created_at: SEC - 1, selected_score: 95 },
-        ],
-      ),
-    ) as MockD1Database;
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO yield_source_decisions
+      (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+       selected_data_source, selected_apy_30d, selected_score, selected_reason, alternatives_json, created_at)
+      VALUES (?, 'usdt-tether', 'aave-v3:usdt', 'high', 'defillama', 5, ?, 'best', '[]', ?)`);
+    insert.run("generation-1", 80, SEC - 1);
+    insert.run("generation-2", 95, SEC - 1);
+    insert.run("generation-3", 80, SEC + 900);
 
-    await projectYieldPysDropped(db);
-    const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
-    expect(inserts).toHaveLength(1);
-    const payload = JSON.parse(String(inserts[0]![11])) as {
-      prevScore: number;
-      newScore: number;
-    };
-    expect(payload.prevScore).toBe(95);
-    expect(payload.newScore).toBe(80);
-
-    const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_DECISIONS));
-    expect(priorQuery?.sql).toContain("ORDER BY d.created_at DESC, d.generation_id DESC");
-    expect(priorQuery?.sql).toContain("LIMIT 1");
+    await projectYieldPysDropped(db, { since: SEC - 1 });
+    const events = sqlite.prepare("SELECT severity, payload_json FROM tape_events WHERE type = 'yield.pys_dropped'").all();
+    expect(events.map(row => ({ severity: row.severity, payload: JSON.parse(String(row.payload_json)) }))).toEqual([{
+      severity: "notice", payload: { prevScore: 95, newScore: 80, delta: 15, sourceKey: "aave-v3:usdt" },
+    }]);
   });
 });
 

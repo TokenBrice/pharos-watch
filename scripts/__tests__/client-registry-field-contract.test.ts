@@ -28,7 +28,6 @@ import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import {
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
-  GENIUS_COMPLIANCE_SUMMARY_FIELDS,
   STABLECOIN_CLIENT_DETAIL_FIELDS,
   STABLECOIN_CLIENT_LIST_FIELDS,
 } from "@shared/types/stablecoin-client-meta";
@@ -484,8 +483,30 @@ describe("client registry field contract", () => {
     const complianceProfile = projectGeniusProfile(coin.genius, GENIUS_COMPLIANCE_PROFILE_FIELDS);
     const { complianceEntries } = buildComplianceRegistryOutput({ sourceCoins: [coin] });
     const summary = complianceEntries[0].genius;
-    expect(summary).toEqual(projectGeniusProfile(coin.genius, GENIUS_COMPLIANCE_SUMMARY_FIELDS));
-    expect(summary.authorizationStatus).toBe("no-public-authorization-found");
+    const expectedSummary = {
+      applicability: "apparent-payment-stablecoin",
+      authorizationStatus: "no-public-authorization-found",
+      issuerPathway: "unknown",
+      issuerEntity: "Fixture Issuer",
+      issuerDomicile: "United States",
+      licensingRegulator: "OCC",
+      primaryFederalRegulator: "OCC",
+      stateRegulator: "NYDFS",
+      foreignExceptionStatus: "not-applicable",
+      foreignExceptionEvidence: {
+        summary: "Foreign exception posture is not applicable for a domestic issuer.",
+        references: [{ label: "Foreign exception source", url: "https://example.com/foreign-exception", sourceKind: "federal-regulator" }],
+      },
+      enforcementStatus: "no-public-action-found",
+      daspOfferSaleStatus: "not-yet-restricted",
+      reserveDisclosurePresent: true,
+      reserveDisclosureUrl: "https://example.com/reserves",
+      redemptionPolicyPresent: true,
+      monthlyAttestationPresent: true,
+      reviewer: "pharos",
+      reviewedAt: "2026-05-27",
+    };
+    expect(summary).toEqual(expectedSummary);
     for (const field of ["references", "negativeEvidenceReview", "applicabilityBasis", "notes"]) {
       expect(summary).not.toHaveProperty(field);
       expect(projected.genius).toHaveProperty(field);
@@ -498,34 +519,10 @@ describe("client registry field contract", () => {
     expect(projectGeniusProfile(null)).toBeNull();
     expect(projected.genius).toEqual(complianceProfile);
     expect(complianceProfile).toEqual({
-      applicability: "apparent-payment-stablecoin",
+      ...expectedSummary,
       applicabilityBasis: {
         summary: "Long applicability basis loads with per-coin detail.",
       },
-      authorizationStatus: "no-public-authorization-found",
-      issuerPathway: "unknown",
-      issuerEntity: "Fixture Issuer",
-      issuerDomicile: "United States",
-      licensingRegulator: "OCC",
-      primaryFederalRegulator: "OCC",
-      stateRegulator: "NYDFS",
-      foreignExceptionStatus: "not-applicable",
-      foreignExceptionEvidence: {
-        summary: "Foreign exception posture is not applicable for a domestic issuer.",
-        references: [
-          {
-            label: "Foreign exception source",
-            url: "https://example.com/foreign-exception",
-            sourceKind: "federal-regulator",
-          },
-        ],
-      },
-      enforcementStatus: "no-public-action-found",
-      daspOfferSaleStatus: "not-yet-restricted",
-      reserveDisclosurePresent: true,
-      reserveDisclosureUrl: "https://example.com/reserves",
-      redemptionPolicyPresent: true,
-      monthlyAttestationPresent: true,
       notes: "Rendered compliance note.",
       references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
       negativeEvidenceReview: {
@@ -534,8 +531,6 @@ describe("client registry field contract", () => {
         reviewer: "pharos",
         reviewedAt: "2026-05-27",
       },
-      reviewer: "pharos",
-      reviewedAt: "2026-05-27",
     });
   });
 });

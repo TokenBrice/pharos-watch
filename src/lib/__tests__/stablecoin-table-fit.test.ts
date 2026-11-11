@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COLUMN_FIT_DROP_ORDER, fitColumnsToWidth } from "@/lib/stablecoin-table-fit";
+import { fitColumnsToWidth } from "@/lib/stablecoin-table-fit";
 import { DEFAULT_VISIBLE_COLUMNS, type ColumnId } from "@/lib/column-visibility";
 
 // Mirrors the default-variant COLUMN_MIN_WIDTH_PX map in stablecoin-table.tsx.
@@ -45,9 +45,7 @@ describe("fitColumnsToWidth", () => {
 
   it("never drops columns outside the drop order, even at absurdly narrow widths", () => {
     const result = fit(100);
-    expect(result.rendered).toEqual(
-      DEFAULT_VISIBLE_COLUMNS.filter((id) => !COLUMN_FIT_DROP_ORDER.includes(id)),
-    );
+    expect(result.rendered).toEqual(["rank", "name", "price", "peg", "mcap"]);
   });
 
   it("respects a user-narrowed intent without re-adding columns", () => {

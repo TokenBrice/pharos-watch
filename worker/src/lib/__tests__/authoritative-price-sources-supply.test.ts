@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import {
   fetchEvmCallHexAtBlockMock,
@@ -13,8 +13,12 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { CIRCUIT_SOURCE } from "../constants";
 
+const NOW_SEC = 1_800_000_000;
+
 describe("resolveVaultNavSupplyPrice", () => {
+  afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     resetAuthoritativePriceSourceMocks();
   });
 
@@ -24,7 +28,7 @@ describe("resolveVaultNavSupplyPrice", () => {
 
   it("admits AA supply through Idle CDO virtualPrice", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${1_115_108n.toString(16).padStart(64, "0")}`);
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const result = await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec));
     expect(result).toMatchObject({ source: "protocol-redeem", confidence: "high", metadata: { inheritedFrom: "usdc-circle" } });
     expect(result?.price).toBeCloseTo(1.115108 * 0.9999, 8);
@@ -35,7 +39,7 @@ describe("resolveVaultNavSupplyPrice", () => {
   });
 
   it("values sGHO through previewRedeem with its parent gate", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const parent = freshParent("gho-aave", 0.9999, "coingecko+curve-onchain", { nowSec });
     const parents = new Map([[parent.id, parent]]);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${(102n * 10n ** 16n).toString(16).padStart(64, "0")}`);
@@ -55,13 +59,13 @@ describe("resolveVaultNavSupplyPrice", () => {
   });
 
   it("keeps AA unavailable when the exact CDO quote is unreadable", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
     expect(await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec))).toBeNull();
   });
 
   it.each([301, 900, 86400])("keeps live source budgets for a %ss-old composite", async (ageSec) => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const parent = freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
       nowSec, observedAt: nowSec - ageSec, priceSyncedAt: nowSec - 60,
     });
@@ -71,8 +75,7 @@ describe("resolveVaultNavSupplyPrice", () => {
 
   it.each([0, 1])("bounds previous supply parents at two cadences + %ss", async (excess) => {
     const maxAgeSec = 2 * CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec;
-    const nowSec = Math.floor(Date.now() / 1000);
-    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const nowSec = NOW_SEC;
     const parents = previousPayload(nowSec);
     Object.assign(parents.get("usdc-circle")!, { priceObservedAt: nowSec - maxAgeSec - excess, priceSyncedAt: nowSec - 900 });
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
@@ -85,13 +88,12 @@ describe("resolveVaultNavSupplyPrice", () => {
       generation: "previous-payload", parentPriceSyncedAt: parents.get("usdc-circle")!.priceSyncedAt,
     });
     expect(fetchEvmCallHexAtBlockMock.mock.calls.length).toBe(excess ? 0 : 1);
-    vi.restoreAllMocks();
   });
 
   it("persists a live NAV rate from a previous parent", async () => {
     const oneShareUsdcRaw = 1_040_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const db = mockD1([
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
       { match: "FROM authoritative_vault_rates", rows: [] },
@@ -117,7 +119,7 @@ describe("resolveVaultNavSupplyPrice", () => {
 
   it("falls back to the bounded cached vault rate when the live read fails", async () => {
     fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const db = mockD1([
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
       {
@@ -147,7 +149,7 @@ describe("resolveVaultNavSupplyPrice", () => {
 
   it.each([60, 900])("values syzUSD supply from a %ss-old same-run CoinGecko parent", async (ageSec) => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_050_000n * 10n ** 12n).toString(16).padStart(64, "0")}`);
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const override = await resolveVaultNavSupplyPrice("syzusd-yuzu", sameRunParent(nowSec, ageSec));
     expect(override).toMatchObject({
       source: "coingecko", confidence: "single-source", observedAt: nowSec - ageSec,
@@ -157,13 +159,13 @@ describe("resolveVaultNavSupplyPrice", () => {
   });
 
   it.each([
-    ["901-second-old", { priceObservedAt: Math.floor(Date.now() / 1000) - 901 }],
-    ["future", { priceObservedAt: Math.floor(Date.now() / 1000) + 3600 }],
+    ["901-second-old", { priceObservedAt: NOW_SEC - 901 }],
+    ["future", { priceObservedAt: NOW_SEC + 3600 }],
     ["clockless", { priceObservedAt: undefined, priceUpdatedAt: undefined }],
     ["non-positive", { price: 0 }],
     ["low-volume", { priceSource: "coingecko-low-volume", priceConfidence: "fallback" as const }],
   ])("keeps syzUSD supply NAV unavailable for a %s parent", async (_label, overrides) => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     expect(await resolveVaultNavSupplyPrice("syzusd-yuzu", sameRunParent(nowSec, 60, overrides))).toBeNull();
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
@@ -171,12 +173,12 @@ describe("resolveVaultNavSupplyPrice", () => {
   describe.each(["sbold-k3-capital", "ybold-yearn", "susn-noon"])("%s single-source parent admission", (id) => {
     const parentId = id === "susn-noon" ? "usn-noon" : "bold-liquity";
     function admittedParent(ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
-      return sameRunParent(Math.floor(Date.now() / 1000), ageSec, overrides, parentId);
+      return sameRunParent(NOW_SEC, ageSec, overrides, parentId);
     }
 
     it.each([60, 900])("values a %ss-old same-run parent", async (ageSec) => {
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_087n * 10n ** 15n).toString(16).padStart(64, "0")}`);
-      const nowSec = Math.floor(Date.now() / 1000);
+      const nowSec = NOW_SEC;
       const override = await resolveVaultNavSupplyPrice(id, admittedParent(ageSec));
       expect(override).toMatchObject({
         price: 1.087, source: "coingecko", confidence: "single-source", observedAt: nowSec - ageSec,
@@ -185,8 +187,8 @@ describe("resolveVaultNavSupplyPrice", () => {
     });
 
     it.each<[string, Partial<PeggedAsset>]>([
-      ["stale", { priceObservedAt: Math.floor(Date.now() / 1000) - 901 }],
-      ["future", { priceObservedAt: Math.floor(Date.now() / 1000) + 3600 }],
+      ["stale", { priceObservedAt: NOW_SEC - 901 }],
+      ["future", { priceObservedAt: NOW_SEC + 3600 }],
       ["clockless", { priceObservedAt: undefined }],
       ["non-positive", { price: 0 }],
       ["fallback", { priceConfidence: "fallback" }],
@@ -207,7 +209,7 @@ describe("resolveVaultNavSupplyPrice", () => {
   it("values sUSN supply from a fresh replay-safe single-source USN quote", async () => {
     // 1.232847915 USN per sUSN, the reviewed 2026-10-29 convertToAssets read.
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_232_847_915n * 10n ** 9n).toString(16).padStart(64, "0")}`);
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const override = await resolveVaultNavSupplyPrice("susn-noon", sameRunParent(nowSec, 60, {}, "usn-noon"));
     expect(override).toMatchObject({
       source: "coingecko", confidence: "single-source", observedAt: nowSec - 60,
@@ -222,7 +224,7 @@ describe("resolveVaultNavSupplyPrice", () => {
   });
 
   it("fails closed without a vault config", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
 
     expect(await resolveVaultNavSupplyPrice("not-a-vault-token", previousPayload(nowSec))).toBeNull();
 
@@ -230,7 +232,7 @@ describe("resolveVaultNavSupplyPrice", () => {
   });
 
   it("skips live RPC while the grouped circuit is open and no cached rate is available", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const db = makeOpenProtocolRedeemCircuitDb(nowSec);
 
     expect(await resolveVaultNavSupplyPrice("eearn-ember", previousPayload(nowSec), db)).toBeNull();
@@ -240,7 +242,7 @@ describe("resolveVaultNavSupplyPrice", () => {
   it("uses the durable supply-valuation NAV rate while live RPC circuit admission is blocked", async () => {
     const { db, sqlite } = createLatestSchemaSqlite();
     try {
-      const nowSec = Math.floor(Date.now() / 1000);
+      const nowSec = NOW_SEC;
       const circuit = JSON.stringify({
         state: "open", consecutiveFailures: 3, openedAt: nowSec,
         lastFailureAt: nowSec, lastSuccessAt: null,
@@ -266,7 +268,7 @@ describe("resolveVaultNavSupplyPrice", () => {
 
   it("returns null and records a grouped failure when the live read fails with no cached rate", async () => {
     fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = NOW_SEC;
     const db = mockD1([
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
       { match: "FROM authoritative_vault_rates", rows: [] },

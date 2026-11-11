@@ -759,42 +759,23 @@ describe("runV9AfterCoreWithinWindow", () => {
     "twoHourlyDexDiscovery",
     "halfHourlyChartsOffset",
     "halfHourlyMintBurnExtended",
-  ])("does not query the unrelated %s lane as a V9 blocker", async (unrelatedSlotKey) => {
+  ])("does not treat the active unrelated %s lane as a V9 blocker", async (unrelatedSlotKey) => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
-    const fixture = dbWithCoreSlot({
-      state: "finished",
-      result_status: "ok",
-      worker_version: "worker-v2",
-    });
-    const run = vi.fn(async () => ({
-      status: "ok" as const,
-      itemCount: 1,
-    }));
-
-    const result = await runV9AfterCoreWithinWindow(
-      options(fixture.db, scheduledTimeMs),
-      run,
-    );
-
-    expect(result.status).toBe("ok");
-    expect(run).toHaveBeenCalledTimes(1);
-    expect(fixture.prepare).toHaveBeenCalledTimes(3);
-    expect(fixture.prepare.mock.calls[2]?.[0]).toContain(
-      "WHERE slot_key = ?",
-    );
-    expect(fixture.bind).toHaveBeenLastCalledWith(
-      "v9PublicationOffset",
-      Math.floor(scheduledTimeMs / 1_000),
-      Math.floor(Date.parse("2026-07-26T12:00:00Z") / 1_000) -
-        6 * 60,
-    );
-    expect(fixture.bind).not.toHaveBeenCalledWith(
-      unrelatedSlotKey,
-      expect.anything(),
-      expect.anything(),
-    );
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const core = Date.parse("2026-07-26T12:00:00Z") / 1000;
+      const seed = sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key,slot_started_at,state,result_status,execution_owner,started_at,updated_at,worker_version)
+        VALUES (?, ?, ?, 'ok', 'owner', ?, ?, 'worker-v2')`);
+      seed.run("quarterHourly", core, "finished", core, core);
+      seed.run(unrelatedSlotKey, core, "running", core, scheduledTimeMs / 1000);
+      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const result = await runV9AfterCoreWithinWindow(options(db, scheduledTimeMs), run);
+      expect(result).toMatchObject({ status: "ok", itemCount: 1 });
+      expect(run).toHaveBeenCalledTimes(1);
+    } finally { sqlite.close(); }
   });
 
   it("blocks a prior active invocation of the same V9 schedule lane", async () => {

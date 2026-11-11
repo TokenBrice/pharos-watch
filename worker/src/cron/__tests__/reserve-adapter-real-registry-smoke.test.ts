@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CONFIGURED_COINS } from "../sync-live-reserves-shared";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getReserveAdapter } from "../reserve-adapters";
 import { syncReserveCoin } from "../sync-live-reserves-core";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
@@ -27,15 +27,7 @@ const SAMPLE_PAYLOAD = {
   },
 };
 
-function reserveDb() {
-  return mockD1([
-    { match: "INSERT INTO reserve_sync_state", rows: [] },
-    { match: "UPDATE reserve_sync_state", rows: [] },
-    { match: "INSERT INTO reserve_composition", rows: [] },
-    { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
-    { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
-  ]);
-}
+const fixtures = createLatestSchemaFixtureTracker();
 
 describe("reserve adapter real-registry smoke", () => {
   beforeEach(() => {
@@ -44,6 +36,7 @@ describe("reserve adapter real-registry smoke", () => {
   });
 
   afterEach(() => {
+    fixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -72,7 +65,7 @@ describe("reserve adapter real-registry smoke", () => {
         }),
       );
 
-    const db = reserveDb();
+    const { sqlite, db } = fixtures.open();
     const signal = AbortSignal.timeout(5_000);
     const result = await syncReserveCoin({
       db,
@@ -105,15 +98,9 @@ describe("reserve adapter real-registry smoke", () => {
     );
     expect(fetchSpy.mock.calls[1]?.[0]).toBe("https://reserve.mento.org/");
 
-    const compositionInsert = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT INTO reserve_composition (")
-    );
-    expect(compositionInsert).toBeDefined();
-    expect(compositionInsert!.binds[0]).toBe("ceur-celo");
-    expect(compositionInsert!.binds[3]).toBe("mento");
-    expect(compositionInsert!.binds[6]).toBe(1);
-
-    const slices = JSON.parse(String(compositionInsert!.binds[1])) as Array<Record<string, unknown>>;
+    const composition = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("ceur-celo")!;
+    expect(composition).toMatchObject({ stablecoin_id: "ceur-celo", source: "mento", warning_count: 1 });
+    const slices = JSON.parse(String(composition.slices)) as Array<Record<string, unknown>>;
     expect(slices).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "sUSDS (Sky savings USDS)", pct: 50, coinId: "susds-sky" }),
       expect.objectContaining({ name: "EURC (Circle euro stablecoin)", pct: 10, coinId: "eurc-circle" }),
@@ -127,24 +114,20 @@ describe("reserve adapter real-registry smoke", () => {
       expect.objectContaining({ name: "CELO", pct: 15 }),
     ]));
 
-    const metadata = JSON.parse(String(compositionInsert!.binds[5])) as Record<string, unknown>;
+    const metadata = JSON.parse(String(composition.metadata)) as Record<string, unknown>;
     expect(metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp,
       stableReservePct: 81,
     });
     expect(typeof (metadata.diag as Record<string, unknown>).durationMs).toBe("number");
-    expect(JSON.parse(String(compositionInsert!.binds[7]))).toEqual([
+    expect(JSON.parse(String(composition.warnings))).toEqual([
       expect.objectContaining({ code: "mento-redemption-telemetry-failed" }),
     ]);
 
-    const attemptHistoryInsert = db.getHistory().find((entry) =>
-      entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history (")
-    );
-    expect(attemptHistoryInsert).toBeDefined();
-    expect(attemptHistoryInsert!.binds[0]).toBe("ceur-celo");
-    expect(attemptHistoryInsert!.binds[2]).toBe("mento");
-    expect(attemptHistoryInsert!.binds[5]).toBe("degraded");
-    expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE reserve_sync_state"))).toBe(true);
+    expect(sqlite.prepare("SELECT adapter_key, status FROM reserve_sync_attempt_history WHERE stablecoin_id = ?")
+      .get("ceur-celo")).toEqual({ adapter_key: "mento", status: "degraded" });
+    expect(sqlite.prepare("SELECT last_status, warning_count FROM reserve_sync_state WHERE stablecoin_id = ?")
+      .get("ceur-celo")).toEqual({ last_status: "degraded", warning_count: 1 });
   });
 });
