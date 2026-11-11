@@ -244,14 +244,13 @@ export function foldPublicIncidents(transitions: readonly PublicStatusTransition
       };
       incidents.push(open);
     }
-    // Rows without a component record still mark the incident non-operational.
-    if (!row.components || row.components.length === 0) open.worstState = worse(open.worstState, "degraded");
+    // Rows without a component record still mark the incident non-operational, at their stored level.
     open.current = (row.components ?? []).map(({ id, state }) => ({ id, state }));
     open.currentState = open.current.reduce<PublicComponentState>((worst, { state }) => worse(worst, state),
       open.current.length > 0 ? "operational" : row.to === "stale" ? "outage" : "degraded");
+    open.worstState = worse(open.worstState, open.currentState);
     for (const component of row.components ?? []) {
       open.byId.set(component.id, worse(open.byId.get(component.id) ?? "operational", component.state));
-      open.worstState = worse(open.worstState, component.state);
       for (const reason of component.reasons) open.reasonSet.add(reason);
     }
     if (row.reason) open.reasonSet.add(row.reason);
