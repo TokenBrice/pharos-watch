@@ -155,8 +155,9 @@ async function waitForStablecoinsCacheReadiness(
  *
  * The envelope-v2 capture and any successfully built auxiliary rows are written
  * atomically. It no longer builds V8 report cards on the way — publishing the
- * peg-analytics aggregate is now an explicit step inside the capture rather than
- * a side effect of the report-card snapshot builder.
+ * peg-analytics aggregate is an explicit step here, between loading the sources
+ * and building the capture, rather than a side effect of the report-card
+ * snapshot builder.
  */
 export async function prepareSafetyScoreV9Input(
   db: D1Database,
