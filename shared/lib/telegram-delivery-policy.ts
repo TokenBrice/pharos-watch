@@ -6,7 +6,7 @@
  * capacity model cannot silently drift from production delivery behavior.
  */
 
-import { CRON_INTERVALS } from "./cron-jobs";
+import { CRON_INTERVALS, TELEGRAM_SEND_CONCURRENCY } from "./cron-jobs";
 
 /**
  * Real-time alert detection policy (ADR-32/R5: the single authority for
@@ -147,7 +147,7 @@ export const TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE = 16;
 export const TELEGRAM_FORMAT_BUDGET_ALLOWANCE = 64;
 
 /** Parallel Bot API sends, leaving Worker connection headroom. */
-export const SEND_BATCH_SIZE = 4;
+export const SEND_BATCH_SIZE = TELEGRAM_SEND_CONCURRENCY;
 
 /** Defensive retry ceiling inside the pending-row TTL window. */
 export const PENDING_MAX_ATTEMPTS = 20;

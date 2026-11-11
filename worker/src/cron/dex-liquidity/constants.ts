@@ -10,6 +10,7 @@
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
+import { DEX_SUBGRAPH_FETCH_CONCURRENCY } from "@shared/lib/cron-jobs";
 
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
@@ -335,7 +336,7 @@ export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 30_000;
  * four-connection source-stage budget because the next chain is only
  * scheduled once a prior response has released its header-wait slot.
  */
-export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = 4;
+export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = DEX_SUBGRAPH_FETCH_CONCURRENCY;
 
 /**
  * Longest a chain's last successfully fetched Uni V3 execution-candidate set

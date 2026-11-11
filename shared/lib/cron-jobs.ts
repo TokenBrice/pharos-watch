@@ -9,6 +9,11 @@ export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC =
 /** Resolver pool and both natural/recovery connection reservations share this ceiling. */
 export const REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY = 3;
 
+export const TELEGRAM_SEND_CONCURRENCY = 4;
+export const DEX_CURVE_FETCH_CONCURRENCY = 4;
+export const DEX_SUBGRAPH_FETCH_CONCURRENCY = 4;
+const DEX_SOURCE_MAX_CONNECTIONS = Math.max(DEX_CURVE_FETCH_CONCURRENCY, DEX_SUBGRAPH_FETCH_CONCURRENCY, 3);
+
 export type CronGroupKey =
   | "quarter-hourly"
   | "five-minute"
@@ -517,7 +522,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     freshnessSurface: "none",
-    maxConnections: 4, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
+    maxConnections: TELEGRAM_SEND_CONCURRENCY, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
     connectionGroup: "five-minute-telegram-chain",
   },
   {
@@ -589,7 +594,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 3600,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "isolated",
-    maxConnections: 4, // Curve/subgraph peak; serial direct families peak at 3, price refresh at 1.
+    maxConnections: DEX_SOURCE_MAX_CONNECTIONS, // Curve/subgraph peak; serial direct families peak at 3, price refresh at 1.
   },
   {
     job: "sync-dex-liquidity",
@@ -600,7 +605,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 3600,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
-    maxConnections: 4, // D1-only consumer; bounded inline source recovery reuses the stage's Curve/subgraph peak.
+    maxConnections: DEX_SOURCE_MAX_CONNECTIONS, // D1-only consumer; bounded inline source recovery reuses the stage's Curve/subgraph peak.
     connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {
