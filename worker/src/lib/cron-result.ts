@@ -1,4 +1,4 @@
-import type { CronResult } from "./cron-logger";
+import type { CronResult } from "./cron-run-contract";
 import { confirmedCronOutputAt } from "./cron-output";
 import { parseJsonObject } from "./json-parse";
 

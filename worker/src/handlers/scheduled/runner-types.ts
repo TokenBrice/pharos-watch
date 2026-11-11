@@ -3,4 +3,6 @@ import type { ScheduledSlotSummary } from "./slot-summary";
 
 export type SlotRunner = (runtime: ScheduledRuntimeContext) =>
   Promise<ScheduledSlotSummary | void> | ScheduledSlotSummary | void;
-export type SlotRunnerLoader = () => Promise<SlotRunner>;
+export type SlotRunnerLoader = (() => Promise<SlotRunner>) & {
+  admit?: (runtime: ScheduledRuntimeContext, signal: AbortSignal) => Promise<void>;
+};

@@ -1,12 +1,14 @@
 import { describeError } from "@shared/lib/error-utils";
 import type { ErrorDescriptor } from "@shared/types/error";
-import type { CronResultStatus, CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
+import type { CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
 import { settleAfterAbort, CRON_ABORT_GRACE_MS, CRON_ABORT_OBSERVATION_MARGIN_MS } from "./cron-abort-settlement";
 import {
   markScheduledChildStarted, writeScheduledChildTerminal, CronChildTerminalSupersededError, childAttemptTable,
   type ScheduledChildIdentity,
 } from "./scheduled-child-terminal";
-import type { ScheduledExecutionFence } from "./scheduled-slot-fence";
+import type { ScheduledExecutionFence } from "./scheduled-execution-contract";
+import type { CronResult, CronProgressUpdate, CronProgressReporter, CronProductivity } from "./cron-run-contract";
+export type { CronResult, CronProgressUpdate, CronProgressReporter } from "./cron-run-contract";
 import type { SlotDeadline } from "./cron-timeouts";
 import {
   CronJobAbandonedError,
@@ -27,7 +29,6 @@ import {
 import { setCache } from "./db-cache";
 import {
   recordProducerOutcome,
-  type CronProductivity,
   type ProducerIdentity,
 } from "./producer-history";
 import { stripSensitive } from "./safe-error-message";
@@ -215,24 +216,6 @@ export async function logCronEvent(db: D1Database, event: CronEventInput): Promi
 
 // --- Cron run logging types ---
 
-export interface CronResult {
-  itemCount?: number;
-  metadata?: string;
-  status?: CronResultStatus;
-  /** Human-readable failure summary persisted to cron_runs.error when present; preferred over metadata in the alert body for "error" statuses. */
-  error?: string;
-  /**
-   * Affirmative discriminant set only on results produced by the cron-stage
-   * abort builders (see `abortResult` in `sync-stablecoins/runtime.ts`). Lets `isAbortResult`
-   * identify the abort sentinel without relying on the absence of fields from
-   * other stage result shapes.
-   */
-  aborted?: true;
-  /** Explicit productive-output/publication contract for durable producer history. */
-  productivity?: CronProductivity;
-  /** Job opt-in: only confirmed committed publication evidence may survive a settled abort. */
-  abortResultPolicy?: "preserve-committed-publication";
-}
 
 /** A completed run's terminal row outlasts one spent D1 resource window instead of misreporting the run. */
 const TERMINAL_ACCOUNTING_RETRY = { waitOutResourceWindow: true } as const;
@@ -266,16 +249,6 @@ export class CronTerminalAccountingError extends Error {
   }
 }
 
-export interface CronProgressUpdate {
-  stage?: string | null;
-  itemsDone?: number | null;
-  itemsTotal?: number | null;
-  message?: string | null;
-  leaseOwner?: string | null;
-  metadata?: Record<string, unknown> | null;
-}
-
-export type CronProgressReporter = (update: CronProgressUpdate) => Promise<void>;
 
 export interface CronRunLoggerOptions {
   slotStartedAt?: number | null;

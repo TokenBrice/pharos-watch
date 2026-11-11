@@ -36,7 +36,8 @@ import {
 } from "../../lib/reserve-producer-priority";
 import { resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
 import type { CronLeaseRunResult } from "../../lib/cron-lease-primitives";
-import type { ScheduledExecutionFence, ScheduledSlotCatchUpRequest } from "../../lib/scheduled-slot-fence";
+import type { ScheduledExecutionFence } from "../../lib/scheduled-execution-contract";
+import type { ScheduledSlotCatchUpRequest } from "../../lib/scheduled-slot-fence";
 
 /**
  * Contract C: each scheduled runtime starts without Dwellir and admits routing

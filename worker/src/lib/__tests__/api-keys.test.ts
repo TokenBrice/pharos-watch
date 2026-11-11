@@ -16,7 +16,11 @@ import {
   API_KEY_AUTH_CACHE_TTL_MS,
   API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES,
   API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES,
-  getApiKeyRuntimeState,
+  getApiKeyRuntimeSnapshotForTests,
+  seedApiKeyRuntimeStateForTests,
+  isApiKeyRateLimitDependencyCircuitOpen,
+  recordApiKeyRateLimitDependencyFailure,
+  recordApiKeyRateLimitDependencySuccess,
   getCachedApiKeyByPrefix,
   lookupApiKeyByPrefix,
   normalizeCreateInput,
@@ -25,9 +29,6 @@ import {
 import {
   checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit,
-  isApiKeyRateLimitDependencyCircuitOpen,
-  recordApiKeyRateLimitDependencyFailure,
-  recordApiKeyRateLimitDependencySuccess,
   recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit,
 } from "../api-key-rate-limit";
@@ -489,7 +490,7 @@ describe("api key helpers", () => {
       kind: "unavailable",
     });
     expect(dbUnavailable.getHistory().filter((entry) => entry.sql.includes("FROM api_keys"))).toHaveLength(1);
-    expect(getApiKeyRuntimeState().apiKeyCache.has(prefix)).toBe(false);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyCache.has(prefix)).toBe(false);
   });
 
   it("fails closed instead of using stale cache for self-serve keys when D1 is unavailable", async () => {
@@ -663,20 +664,23 @@ describe("api key helpers", () => {
   });
 
   it("prunes isolate-local fallback limiter buckets once per minute", () => {
-    const state = getApiKeyRuntimeState();
+    let state = getApiKeyRuntimeSnapshotForTests();
     state.apiKeyFallbackRateLimitById.set(99, { bucketStart: 540, count: 1 });
 
+    seedApiKeyRuntimeStateForTests(state);
     expect(checkIsolateLocalApiKeyRateLimit(7, 120, 600)).toBeNull();
-    expect(state.apiKeyFallbackRateLimitById.has(99)).toBe(false);
-    expect(state.lastApiKeyFallbackRateLimitPruneBucket).toBe(600);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyFallbackRateLimitById.has(99)).toBe(false);
+    expect(getApiKeyRuntimeSnapshotForTests().lastApiKeyFallbackRateLimitPruneBucket).toBe(600);
 
+    state = getApiKeyRuntimeSnapshotForTests();
     state.apiKeyFallbackRateLimitById.set(100, { bucketStart: 540, count: 1 });
+    seedApiKeyRuntimeStateForTests({ apiKeyFallbackRateLimitById: state.apiKeyFallbackRateLimitById });
     expect(checkIsolateLocalApiKeyRateLimit(8, 120, 601)).toBeNull();
-    expect(state.apiKeyFallbackRateLimitById.has(100)).toBe(true);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyFallbackRateLimitById.has(100)).toBe(true);
 
     expect(checkIsolateLocalApiKeyRateLimit(9, 120, 660)).toBeNull();
-    expect(state.apiKeyFallbackRateLimitById.has(100)).toBe(false);
-    expect(state.lastApiKeyFallbackRateLimitPruneBucket).toBe(660);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyFallbackRateLimitById.has(100)).toBe(false);
+    expect(getApiKeyRuntimeSnapshotForTests().lastApiKeyFallbackRateLimitPruneBucket).toBe(660);
   });
 
   it("opens and resets the API key rate-limit dependency circuit", () => {
@@ -700,7 +704,7 @@ describe("api key helpers", () => {
     expect(isApiKeyRateLimitDependencyCircuitOpen(61_002)).toBe(false);
 
     recordApiKeyRateLimitDependencySuccess();
-    expect(getApiKeyRuntimeState().apiKeyRateLimitDependencyCircuit).toEqual({
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyRateLimitDependencyCircuit).toEqual({
       consecutiveFailures: 0,
       openUntilMs: 0,
     });
@@ -724,13 +728,18 @@ describe("api key helpers", () => {
       makeApiKeyPrefixLookup({ prefix: "new-2", row }),
     ]);
 
-    const state = getApiKeyRuntimeState();
+    const state = getApiKeyRuntimeSnapshotForTests();
     for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES - 1; i++) {
       state.apiKeyCache.set(`seed-${i}`, { row, freshUntilMs: Date.now() + API_KEY_AUTH_CACHE_TTL_MS });
     }
+    seedApiKeyRuntimeStateForTests(state);
+    expect(getCachedApiKeyByPrefix("seed-0")?.name).toBe("Cached");
     for (let i = 0; i < 3; i++) await lookupApiKeyByPrefix(db, `new-${i}`);
-    expect(state.apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
-    expect(getCachedApiKeyByPrefix("seed-0")).toBeNull();
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
+    expect(getCachedApiKeyByPrefix("seed-1")).toBeNull();
+    expect(getCachedApiKeyByPrefix("seed-0")?.name).toBe("Cached");
+    getApiKeyRuntimeSnapshotForTests().apiKeyCache.clear();
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
     expect(getCachedApiKeyByPrefix("new-2")?.name).toBe("Cached");
   });
 
@@ -751,15 +760,16 @@ describe("api key helpers", () => {
   });
 
   it("caps isolate-local fallback rate-limit buckets", () => {
-    const state = getApiKeyRuntimeState();
+    const state = getApiKeyRuntimeSnapshotForTests();
     for (let i = 1; i < API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES; i++) {
       state.apiKeyFallbackRateLimitById.set(i, { bucketStart: 600, count: 1 });
     }
+    seedApiKeyRuntimeStateForTests(state);
     for (let i = 0; i < 3; i++) {
       expect(checkIsolateLocalApiKeyRateLimit(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + i, 1, 600)).toBeNull();
     }
-    expect(state.apiKeyFallbackRateLimitById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
-    expect(state.apiKeyFallbackRateLimitById.has(1)).toBe(false);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyFallbackRateLimitById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyFallbackRateLimitById.has(1)).toBe(false);
     expect(checkIsolateLocalApiKeyRateLimit(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + 2, 1, 600)?.status).toBe(429);
   });
 
@@ -772,10 +782,11 @@ describe("api key helpers", () => {
       },
     ]);
 
-    const state = getApiKeyRuntimeState();
+    const state = getApiKeyRuntimeSnapshotForTests();
     for (let i = 1; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES; i++) {
       state.apiKeyLastUsageUpdateById.set(i, 1_000);
     }
+    seedApiKeyRuntimeStateForTests(state);
     for (let i = API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 3; i++) {
       await recordApiKeyUsage(
         db,
@@ -795,9 +806,9 @@ describe("api key helpers", () => {
       );
     }
 
-    expect(getApiKeyRuntimeState().apiKeyLastUsageUpdateById.size).toBe(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES);
-    expect(state.apiKeyLastUsageUpdateById.has(1)).toBe(false);
-    expect(state.apiKeyLastUsageUpdateById.has(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 3)).toBe(true);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyLastUsageUpdateById.size).toBe(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyLastUsageUpdateById.has(1)).toBe(false);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyLastUsageUpdateById.has(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 3)).toBe(true);
   });
 
   it("records an audit log entry when creating a key", async () => {

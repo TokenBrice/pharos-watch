@@ -1,6 +1,6 @@
 import type { CronResultStatus, SchedulerChildDisposition, SchedulerTerminalSource } from "@shared/types/status/cron";
-import type { CronResult } from "./cron-logger";
-import type { ScheduledExecutionFence } from "./scheduled-slot-fence";
+import type { CronResult } from "./cron-run-contract";
+import type { ScheduledExecutionFence } from "./scheduled-execution-contract";
 import { prepareProducerOutcomeStatements, type ProducerIdentity, type RecordProducerOutcomeInput } from "./producer-history";
 import { compactCronMetadataForPersistence } from "./cron-metadata-persistence";
 import { parseJsonObject } from "./json-parse";

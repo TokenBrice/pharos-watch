@@ -1,4 +1,4 @@
-import type { CronResult } from "./cron-logger";
+import type { CronResult } from "./cron-run-contract";
 
 const NON_OUTPUT_REASONS = [
   "already_written_today", "already_written_today_before_freshness_gate",

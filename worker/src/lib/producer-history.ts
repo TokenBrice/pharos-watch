@@ -1,4 +1,4 @@
-import type { PublicationSurfaceId } from "@shared/types/status";
+import type { CronPublicationRecord, CronProductivity } from "./cron-run-contract";
 import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -15,25 +15,6 @@ export interface ProducerTerminalGuard {
   executionSlotStartedAt: number;
   executionGeneration: number;
   attemptTable?: "scheduled_child_attempts" | "reserve_continuation_child_attempts";
-}
-
-export interface CronPublicationRecord {
-  surface: PublicationSurfaceId;
-  generationId: string;
-  publishedAt: number;
-  candidateRows?: number | null;
-  publishedRows?: number | null;
-  expectedRows?: number | null;
-  artifactCacheKey?: string | null;
-  artifactChecksum?: string | null;
-  inputWatermarks?: Record<string, unknown> | null;
-  validationSummary?: Record<string, unknown> | null;
-}
-
-export interface CronProductivity {
-  productive: boolean;
-  reason?: string;
-  publications?: readonly CronPublicationRecord[];
 }
 
 export interface ProducerIdentity {

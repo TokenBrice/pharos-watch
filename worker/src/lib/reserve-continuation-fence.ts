@@ -3,7 +3,7 @@ import { LIVE_RESERVE_QUEUE_HASH } from "../cron/sync-live-reserves-shared";
 import { loadLiveReserveCheckpoint, type ScheduledRecoveryCheckpoint } from "./scheduled-recovery-checkpoint";
 import { reserveRecoveryAdmissionSql, RESERVE_RECOVERY_CLAIM_SEC } from "./reserve-producer-priority";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import type { ScheduledExecutionFence } from "./scheduled-slot-fence";
+import type { ScheduledExecutionFence } from "./scheduled-execution-contract";
 import { assertSlotDeadline, type SlotDeadline } from "./cron-timeouts";
 
 export interface ReserveContinuationClaim {
