@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { SentinelResolutionsArtifactSchema, type SentinelResolutionFields, type SentinelVerdict } from "../lib/sentinel-resolution-contract";
 import {
   parseStrictCliArgs,
   requireCliString,
@@ -49,19 +50,6 @@ import type { ResolutionMode, WorkType } from "../lib/safety-score-v9-missing-da
  * quarantined, a sentinel is still open (or prose), or no task row closed.
  */
 
-/**
- * Verdict axis of the sweep checker's artifact. Restated rather than imported:
- * `scripts/` is excluded from the worker TypeScript project and cannot import
- * `worker/scripts/`. The contract test in `__tests__/apply-sentinel-closures.test.ts`
- * runs the checker's own report through this parser, so drift fails there.
- */
-export const SENTINEL_VERDICTS = ["closed", "still-open", "replaced-adversely", "unverifiable"] as const;
-export type SentinelVerdict = (typeof SENTINEL_VERDICTS)[number];
-
-/** SPP admission axis, independent of the verdict. */
-export const SENTINEL_ADMISSIONS = ["verified", "failed", "not-applicable", "unverifiable"] as const;
-export type SentinelAdmission = (typeof SENTINEL_ADMISSIONS)[number];
-
 const STRUCTURED_PENDING_PRODUCTION = "structured-pending-production";
 const SPLIT_REASON = "sentinels-partially-absent";
 const REQUIRED_CLOSURE_EVIDENCE = "replay-verified";
@@ -87,50 +75,9 @@ export class SentinelApplyError extends Error {
 }
 
 const nonEmptyText = z.string().refine((value) => value.trim().length > 0, "must not be blank");
-const sha256Text = z.string().regex(/^[0-9a-f]{64}$/, "must be a lowercase SHA-256 hex digest");
 const clockSec = z.number().int().nonnegative();
 
-const SentinelResolutionRowSchema = z
-  .object({
-    claimGroupId: nonEmptyText,
-    verdict: z.enum(SENTINEL_VERDICTS),
-    reason: nonEmptyText,
-    admission: z.enum(SENTINEL_ADMISSIONS),
-    ledgerDecisionIndex: z.number().int().nonnegative(),
-    registryFingerprint: sha256Text.optional(),
-    asOfSec: clockSec.nullable().optional(),
-    openItemCount: z.number().int().nonnegative().optional(),
-  })
-  .passthrough();
-
-const SentinelResolutionsArtifactSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    inputs: z
-      .object({
-        registry: z
-          .object({
-            missingDataRegistryFingerprint: sha256Text,
-            registrySha256: sha256Text,
-            binding: z.object({ asOfSec: clockSec }).passthrough().nullable().optional(),
-          })
-          .passthrough(),
-        ledger: z.object({ decisionCount: z.number().int().nonnegative() }).passthrough(),
-        closureEvidence: nonEmptyText,
-      })
-      .passthrough(),
-    groups: z.array(SentinelResolutionRowSchema).min(1),
-  })
-  .passthrough();
-
-export interface SentinelResolutionRow {
-  claimGroupId: string;
-  verdict: SentinelVerdict;
-  reason: string;
-  admission: SentinelAdmission;
-  ledgerDecisionIndex: number;
-  openItemCount?: number;
-}
+type SentinelResolutionRow = SentinelResolutionFields;
 
 export interface SentinelResolutions {
   schemaVersion: 1;
