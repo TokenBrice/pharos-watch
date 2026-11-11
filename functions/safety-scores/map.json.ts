@@ -1,6 +1,5 @@
+import { SAFETY_MAP_MANIFEST_KEY, SAFETY_MAP_MANIFEST_MAX_BYTES } from "@shared/lib/safety-map-artifacts";
 import {
-  SAFETY_MAP_MANIFEST_KEY,
-  SAFETY_MAP_MANIFEST_MAX_BYTES,
   getSafetyMapReadMethod,
   readSafetyMapKv,
   safetyMapJsonResponse,

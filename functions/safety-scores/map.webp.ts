@@ -1,6 +1,6 @@
+import { SAFETY_MAP_TEASER_KEY } from "@shared/lib/safety-map-artifacts";
 import {
   SAFETY_MAP_LATEST_CACHE_CONTROL,
-  SAFETY_MAP_TEASER_KEY,
   getSafetyMapReadMethod,
   readSafetyMapKv,
   safetyMapTextError,

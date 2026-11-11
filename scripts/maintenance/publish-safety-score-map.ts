@@ -14,12 +14,18 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import sharp from "sharp";
+import {
+  SAFETY_MAP_ALT_KEY,
+  SAFETY_MAP_LATEST_KEY,
+  SAFETY_MAP_MANIFEST_KEY as MANIFEST_KEY,
+  SAFETY_MAP_MANIFEST_MAX_BYTES as MAX_MANIFEST_BYTES,
+  SAFETY_MAP_TEASER_KEY,
+  safetyMapArchiveKey,
+} from "@shared/lib/safety-map-artifacts";
 import { parseStrictCliArgs, assertCliUsage, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { runShellCommand, type CommandImplementation } from "../lib/command-runner.mts";
 
 const execFileAsync = promisify(execFile);
-const MANIFEST_KEY = "safety-map:latest.json";
-const MAX_MANIFEST_BYTES = 16_384;
 
 const USAGE = `Usage: npx tsx scripts/maintenance/publish-safety-score-map.ts <phase> [options]
 
@@ -349,10 +355,10 @@ export async function renderSafetyMapPublication({
 export function safetyMapPublicationEntries(state: SafetyMapPublishState, outDir: string): Array<{ key: string; path: string; verify?: true }> {
   if (!state.manifest || !state.manifestPath) throw new Error("Publication state has no rendered manifest");
   return [
-    { key: "safety-map:alt:latest", path: join(outDir, "latest.alt.json") },
-    { key: `safety-map:${state.manifest.date}.png`, path: join(outDir, "latest.png"), verify: true },
-    { key: "safety-map:latest.png", path: join(outDir, "latest.png") },
-    { key: "safety-map:latest.webp", path: join(outDir, "latest.webp") },
+    { key: SAFETY_MAP_ALT_KEY, path: join(outDir, "latest.alt.json") },
+    { key: safetyMapArchiveKey(state.manifest.date), path: join(outDir, "latest.png"), verify: true },
+    { key: SAFETY_MAP_LATEST_KEY, path: join(outDir, "latest.png") },
+    { key: SAFETY_MAP_TEASER_KEY, path: join(outDir, "latest.webp") },
     { key: MANIFEST_KEY, path: state.manifestPath },
   ];
 }
@@ -421,7 +427,7 @@ export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobSt
   if (state?.alreadyPublished) {
     lines.push("### Skipped — today is already published", "", "The live `safety-map:latest.json` already carries today's date, so this", `\`${state.mode}\`-mode run exited without rendering or writing; only a \`force\` dispatch supersedes a same-day map.`);
   } else if (jobStatus === "success" && state?.phase === "published" && manifest) {
-    lines.push("### Published keys", "", ...safetyMapPublicationEntries(state, dirname(state.manifestPath ?? "")).map(({ key }) => `- \`${key}\`${key === MANIFEST_KEY ? " — manifest, written last" : key === `safety-map:${manifest.date}.png` ? " — the URL the digest embeds" : ""}`));
+    lines.push("### Published keys", "", ...safetyMapPublicationEntries(state, dirname(state.manifestPath ?? "")).map(({ key }) => `- \`${key}\`${key === MANIFEST_KEY ? " — manifest, written last" : key === safetyMapArchiveKey(manifest.date) ? " — the URL the digest embeds" : ""}`));
   } else {
     lines.push("### Publication incomplete or unverified", "", "This run did not confirm a complete publication. Live keys may have changed,", "including dated images referenced by the previous manifest. The manifest may", "also have been written before a failed acknowledgement or local state save.", "", "Inspect the publish logs and live KV to verify the served key set.", "", "The digest is not blocked by this miss; it may carry forward a recent dated map", "within its bounded continuity window and labels the date it depicts.");
   }

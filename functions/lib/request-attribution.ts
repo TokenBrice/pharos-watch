@@ -1,3 +1,4 @@
+import { SITE_DATA_REQUEST_SAMPLES } from "@shared/lib/pages-storage";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import {
   REQUEST_ATTRIBUTION_BUCKET_SEC,
@@ -31,20 +32,7 @@ const siteDataRequestRecorder = createBufferedAttributionRecorder<BufferedSiteDa
   flushDelayMs: REQUEST_ATTRIBUTION_FLUSH_DELAY_MS,
   pruneIntervalSec: REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   retentionSec: REQUEST_ATTRIBUTION_RETENTION_SEC,
-  insertSql: `INSERT INTO site_data_request_samples (
-           bucket_start,
-           route_key,
-           route_path,
-           delivery_path,
-           upstream_lane,
-           sample_inverse_rate,
-           sample_count
-         )
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(bucket_start, route_key, delivery_path, upstream_lane, sample_inverse_rate)
-         DO UPDATE SET
-           sample_count = sample_count + excluded.sample_count,
-           route_path = excluded.route_path`,
+  insertSql: SITE_DATA_REQUEST_SAMPLES.insertSql,
   pruneSql: [],
   logLabel: "site-data",
   buildKey: (entry) => `${entry.bucketStart}\t${entry.route.routeKey}\t${entry.deliveryPath}\t${entry.upstreamLane}\t${entry.sampleInverseRate}`,
