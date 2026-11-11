@@ -1,8 +1,6 @@
-import { metadata } from "./commodity-claim.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
-  metadata,
   archetype: "commodity-claim",
   headline: "A claim on specific vaulted metal",
   subtitle:

@@ -1,8 +1,6 @@
-import { metadata } from "./algorithmic.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
-  metadata,
   archetype: "algorithmic",
   headline: "Programmatic peg defense, with different collateral models",
   subtitle:

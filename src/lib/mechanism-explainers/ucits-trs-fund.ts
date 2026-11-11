@@ -1,8 +1,6 @@
-import { metadata } from "./ucits-trs-fund.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
-  metadata,
   archetype: "ucits-trs-fund",
   headline: "Own a fund share, not a cash reserve claim",
   subtitle: "Physical securities and total-return swaps can target a cash-like return without turning the portfolio into Treasury bills.",

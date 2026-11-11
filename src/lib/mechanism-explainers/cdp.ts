@@ -1,8 +1,6 @@
-import { metadata } from "./cdp.metadata";
 import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
-  metadata,
   archetype: "cdp",
   headline: "Mint debt against crypto collateral",
   subtitle:
