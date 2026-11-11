@@ -8,8 +8,9 @@ import {
   admitDepegLedger,
   buildStablecoinDetailHistorySnapshot,
   readAdmittedDepegLedger,
-  STABLECOIN_DETAIL_HISTORY_PILOT_IDS,
+  isEligibleForStablecoinDetailHistory,
 } from "../stablecoin-detail-history-snapshot";
+import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "../stablecoin-detail-history-rollout";
 import {
   depegLedgerCaptureId,
   DEPEG_LEDGER_CAPTURE_RELATIVE_PATH,
@@ -179,6 +180,7 @@ describe("stablecoin detail history snapshot", () => {
     ["outside the pilot", makeCoin({ id: "usds-sky", symbol: "USDS" })],
   ] as const)("returns null for %s lifecycles", (_label, coin) => {
     expect(build([makeEntry()], { coin })).toBeNull();
+    expect(isEligibleForStablecoinDetailHistory(coin, new Set([coin.id]))).toBe(_label === "outside the pilot");
   });
 
   it("keeps exactly the five pilot IDs", () => {

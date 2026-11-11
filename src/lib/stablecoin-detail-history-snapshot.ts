@@ -4,6 +4,7 @@ import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
+import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "@/lib/stablecoin-detail-history-rollout";
 import {
   readDepegLedgerCapture,
   type DepegLedgerCapture,
@@ -19,15 +20,6 @@ import {
  * preview to a React node and only that bounded markup crosses the RSC
  * boundary.
  */
-
-/** PT1's five-profile cohort. A profile outside it keeps its live-only History. */
-export const STABLECOIN_DETAIL_HISTORY_PILOT_IDS: ReadonlySet<string> = new Set([
-  "usdt-tether",
-  "usdc-circle",
-  "tusd-trueusd",
-  "dai-makerdao",
-  "fdusd-first-digital",
-]);
 
 /** The newest recorded incidents the compact preview shows. */
 const HISTORY_SNAPSHOT_EVENT_LIMIT = 6;
@@ -86,6 +78,15 @@ export interface AdmittedDepegLedger {
 }
 
 type HistorySnapshotCoin = Pick<StablecoinMeta, "id" | "symbol" | "status" | "flags">;
+
+export function isEligibleForStablecoinDetailHistory(
+  coin: HistorySnapshotCoin,
+  rolloutIds: ReadonlySet<string>,
+): boolean {
+  return rolloutIds.has(coin.id)
+    && coin.flags.navToken !== true
+    && isActiveStablecoinMeta({ status: coin.status });
+}
 
 function captureEpochSeconds(iso: string, label: string): number {
   const milliseconds = Date.parse(iso);
@@ -217,9 +218,7 @@ export function buildStablecoinDetailHistorySnapshot({
   permanentPageSlugs: ReadonlySet<string>;
   ledger?: AdmittedDepegLedger;
 }): StablecoinDetailHistorySnapshot | null {
-  if (!STABLECOIN_DETAIL_HISTORY_PILOT_IDS.has(coin.id)) return null;
-  if (coin.flags.navToken === true) return null;
-  if (!isActiveStablecoinMeta({ status: coin.status })) return null;
+  if (!isEligibleForStablecoinDetailHistory(coin, STABLECOIN_DETAIL_HISTORY_PILOT_IDS)) return null;
 
   const admittedLedger = ledger ?? readAdmittedDepegLedger();
   const coinEntries = admittedLedger.entries.filter((entry) => entry.stablecoinId === coin.id);
