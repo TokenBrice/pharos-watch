@@ -4,7 +4,7 @@ import {
   type RateDerivedConfig,
   type YieldAdapterLifecycleEntry,
 } from "./yield-config-registry";
-import { buildOnChainSourceKey } from "../yield-utils";
+import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { encodeUint256 } from "../evm-selectors";
 
 const ONE_SHARE_INPUT = {
@@ -166,18 +166,11 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
 RATE_DERIVED_CONFIGS.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
 
 
-export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, { label: string; sourceKey: string }> = {
-  "scrvusd-curve": { label: "Curve scrvUSD current-rate reader", sourceKey: "onchain:scrvusd-curve:scrvusd-current-rate" },
-  "lusd-liquity": { label: "B.Protocol LQTY-only", sourceKey: buildOnChainSourceKey("lusd-liquity") },
-  "bd-basedollar": { label: "Base Dollar Stability Pools (interest-only)", sourceKey: buildOnChainSourceKey("bd-basedollar") },
-  "bold-liquity": { label: "Liquity V2 Stability Pools (interest-only)", sourceKey: buildOnChainSourceKey("bold-liquity") },
-  "ybold-yearn": { label: "Yearn yBOLD Stability Pool vault", sourceKey: "protocol-api:yearn:ybold" },
-  "usyc-hashnote": { label: "Hashnote NAV feed", sourceKey: "protocol-api:hashnote-usyc" },
-  "mmev-midas": { label: "Midas mMEV NAV oracle", sourceKey: "protocol-api:midas-mmev-nav-oracle" },
-  "usdy-ondo-finance": { label: "Ondo USDY oracle", sourceKey: "protocol-api:ondo-usdy-oracle" },
-  "reusd-re-protocol": { label: "Re Protocol Basis-Plus (reUSD)", sourceKey: "protocol-api:re-protocol-reusd" },
-  "zys-zephyr-protocol": { label: "Zephyr Scanner ZYS returns", sourceKey: "protocol-api:zys-zephyr-protocol" },
-};
+export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, { label: string; sourceKey: string }> = Object.fromEntries(
+  Object.values(OPTIONAL_YIELD_SOURCES).map((source) => [
+    source.stablecoinId, { label: source.manifestLabel, sourceKey: source.sourceKey },
+  ]),
+);
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
   "susd-hedgecore": {

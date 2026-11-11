@@ -1,3 +1,4 @@
+import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import {
   PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
@@ -135,19 +136,18 @@ export interface YieldSourceKeyRoute {
 // Standalone and retired readers have no producing supplemental family. Match
 // the specific yearn:ybold route before the family's broader yearn: prefix.
 const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
-  { prefix: "protocol-api:yearn:ybold", venueProtocol: "yearn", chainSegmentIndex: null, family: null },
-  { prefix: "protocol-api:vaults-fyi:", venueProtocol: "vaults-fyi", chainSegmentIndex: 2, family: null },
-  { prefix: "protocol-api:bima-susbd", venueProtocol: "bima", chainSegmentIndex: null, family: null },
-  { prefix: "protocol-api:etherfuse-cetes-current-issuance", venueProtocol: "etherfuse", chainSegmentIndex: null, family: null },
-  { prefix: "protocol-api:hashnote-usyc", venueProtocol: "hashnote", chainSegmentIndex: null, family: null },
-  { prefix: "protocol-api:ondo-usdy-oracle", venueProtocol: "ondo-yield-assets", chainSegmentIndex: null, family: null },
-  { prefix: "protocol-api:midas-mmev-nav-oracle", venueProtocol: "midas-rwa", chainSegmentIndex: null, family: null },
-  { prefix: "protocol-api:re-protocol-reusd", venueProtocol: "re-protocol", chainSegmentIndex: null, family: null },
-  { prefix: "protocol-api:zys-zephyr-protocol", venueProtocol: "zephyr-protocol", chainSegmentIndex: null, family: null },
-  { prefix: "onchain:scrvusd-curve:scrvusd-current-rate", venueProtocol: "curve-llamalend", chainSegmentIndex: null, family: null },
-  { prefix: "onchain:lusd-liquity", venueProtocol: "liquity-v1", chainSegmentIndex: null, family: null },
-  { prefix: "onchain:bold-liquity", venueProtocol: "liquity-v2", chainSegmentIndex: null, family: null },
-  { prefix: "onchain:bd-basedollar", venueProtocol: "base-dollar", chainSegmentIndex: null, family: null },
+  ...[
+    ...Object.values(OPTIONAL_YIELD_SOURCES).map((source) => ({
+      routeOrder: source.routeOrder,
+      prefix: source.sourceKey,
+      venueProtocol: source.venueProtocol,
+      chainSegmentIndex: null,
+      family: null,
+    })),
+    { routeOrder: 1, prefix: "protocol-api:vaults-fyi:", venueProtocol: "vaults-fyi", chainSegmentIndex: 2, family: null },
+    { routeOrder: 2, prefix: "protocol-api:bima-susbd", venueProtocol: "bima", chainSegmentIndex: null, family: null },
+    { routeOrder: 3, prefix: "protocol-api:etherfuse-cetes-current-issuance", venueProtocol: "etherfuse", chainSegmentIndex: null, family: null },
+  ].sort((a, b) => a.routeOrder - b.routeOrder).map(({ routeOrder: _routeOrder, ...route }) => route),
   ...SUPPLEMENTAL_SOURCE_FAMILY_KEYS.flatMap((family) =>
     SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[family].routes.map((route) => ({ ...route, family })),
   ),

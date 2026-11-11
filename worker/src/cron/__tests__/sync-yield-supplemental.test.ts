@@ -67,8 +67,8 @@ vi.mock("../yield-sync/sources-rpc", async (importOriginal) => {
   };
 });
 
-vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../yield-sync/sources-optional")>();
+vi.mock("../yield-sync/sources-optional-vaults", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional-vaults")>();
 
   // The hoisted mock factory runs before static fixture imports initialize, so
   // the fixture module must be loaded dynamically here (vitest hoisting).
@@ -77,9 +77,17 @@ vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
     ...actual,
     fetchMorphoVaultSources: vi.fn(async () => healthyFamilyFetch()),
     fetchPendleMarketSources: vi.fn(async () => healthyFamilyFetch()),
-    fetchRoycoDawnSources: vi.fn(async () => ({ candidates: [], degraded: false })),
     fetchYearnKongSources: vi.fn(async () => healthyFamilyFetch()),
     fetchBeefySources: vi.fn(async () => healthyFamilyFetch()),
+  };
+});
+
+vi.mock("../yield-sync/sources-optional-royco", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional-royco")>();
+
+  return {
+    ...actual,
+    fetchRoycoDawnSources: vi.fn(async () => ({ candidates: [], degraded: false })),
   };
 });
 
@@ -91,7 +99,8 @@ vi.mock("../../lib/db-cache", () => ({
 
 import { getCaches, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { fetchAaveV3SupplyRates, fetchCompoundV3SupplyRates } from "../yield-sync/sources-rpc";
-import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchRoycoDawnSources, fetchYearnKongSources } from "../yield-sync/sources-optional";
+import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchYearnKongSources } from "../yield-sync/sources-optional-vaults";
+import { fetchRoycoDawnSources } from "../yield-sync/sources-optional-royco";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import { loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";

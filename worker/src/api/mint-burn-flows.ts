@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
 import { compactMintBurnPublication } from "../lib/mint-burn-publication";
 import { resolveOrReject, parseQueryParams } from "../lib/api-params";
+import { MINT_BURN_FLOWS_HOURS_QUERY } from "@shared/lib/api-endpoints/queries";
 import { errorResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { buildMintBurnScope, getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
@@ -71,7 +72,7 @@ export const handleMintBurnFlows = async (db: D1Database, url: URL): Promise<Res
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
     const parsed = parseQueryParams(params, {
-      hours: { type: "int", default: 24, min: 1, max: 720, rangePolicy: "reject" },
+      hours: MINT_BURN_FLOWS_HOURS_QUERY,
     });
     if (parsed instanceof Response) return parsed;
     const { hours } = parsed;

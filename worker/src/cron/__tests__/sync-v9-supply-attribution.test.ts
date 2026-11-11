@@ -13,7 +13,7 @@ import {
   serializeSafetyScoreV9SupplyAttributionSource,
   SOURCE_FIXED_INPUT_MAX_AGE_SEC,
   type SafetyScoreV9SupplyAttributionSource,
-} from "../../lib/safety-score-v9/supply-attribution-source";
+} from "../../lib/safety-score-v9/supply-attribution-source-contract";
 import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,

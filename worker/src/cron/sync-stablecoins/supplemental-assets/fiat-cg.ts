@@ -1,6 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import { REVIEWED_ONCHAIN_SUPPLY_PLANS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, type OnchainPartitionSummary } from "@shared/types/status/cron";
@@ -9,7 +9,7 @@ import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
-import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
+import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats } from "../zephyr-zsd";
 import { fetchHiveHbdProtocolSupply } from "../../reserve-adapters/hive-hbd-protocol";
 import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/price-validation";
@@ -101,7 +101,7 @@ export async function fetchFiatCoinGeckoTokens(
 
   try {
     let hiveSupply: Awaited<ReturnType<typeof fetchHiveHbdProtocolSupply>> | null = null;
-    const hbd = FIAT_CG_METAS.find((meta) => meta.id === "hbd-hive");
+    const hbd = FIAT_CG_METAS.find((meta) => REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.nativeWorkflow === "hive-debt");
     if (hbd) {
       try {
         if (hbd.liveReservesConfig?.adapter !== "hive-hbd-protocol") {
@@ -118,7 +118,7 @@ export async function fetchFiatCoinGeckoTokens(
         });
       }
     }
-    const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
+    const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.nativeWorkflow === "zephyr-scanner");
     const [priceData, zephyrProtocolStats] = await Promise.all([
       fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal, db),
       hasZephyrScannerAsset ? fetchZephyrProtocolStats(signal) : Promise.resolve(null),
@@ -126,14 +126,14 @@ export async function fetchFiatCoinGeckoTokens(
 
     const mcapMap: Record<string, number> = {};
     for (const token of FIAT_CG_METAS) {
-      if (token.id === "hbd-hive") continue;
+      if (REVIEWED_ONCHAIN_SUPPLY_PLANS[token.id]?.nativeWorkflow === "hive-debt") continue;
       const mcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
       if (mcap != null) mcapMap[token.id] = mcap;
     }
 
     const partitionCandidates = FIAT_CG_METAS.filter((meta) => mcapMap[meta.id] != null
       && !isOnchainSupplyPartitionExcluded(meta.id)
-      && !prefersOnChainSupplyMcap(meta) && meta.liveReservesConfig?.adapter !== "jpmorgan-nav"
+      && !prefersOnChainSupplyMcap(meta) && REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.nativeWorkflow !== "pinned-native-shares"
       && (selectCuratedAggregateOnchainSupplyProbeContracts(meta) || selectSupplementalOnchainSupplyProbeContract(meta)));
     partitionCandidateCount = partitionCandidates.length;
     summary.candidates = partitionCandidateCount;
@@ -164,6 +164,7 @@ export async function fetchFiatCoinGeckoTokens(
       processingMetas,
       FIAT_CG_TOKEN_CONCURRENCY,
       async (meta) => {
+        const nativeWorkflow = REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.nativeWorkflow;
         const nowSec = Math.floor(Date.now() / 1000);
         const pKey = pegTypeKey(meta);
         // Strict path first (15-min freshness gate). If that rejects but CG returned
@@ -179,7 +180,7 @@ export async function fetchFiatCoinGeckoTokens(
           priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);
         }
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
-        if (meta.id === "hbd-hive") {
+        if (nativeWorkflow === "hive-debt") {
           if (!hiveSupply) return null;
           const hbdPriceResolution = priceResolution && isReasonablePrice(priceResolution.price, pKey, fxFallbackRates)
             ? priceResolution : null;
@@ -202,7 +203,7 @@ export async function fetchFiatCoinGeckoTokens(
         // for supply valuation only; the published price stays with the live
         // override stage. Fail-closed: no trusted NAV -> the coin stays out.
         let navSupplyPrice: number | undefined;
-        const requiresClassScope = meta.liveReservesConfig?.adapter === "jpmorgan-nav";
+        const requiresClassScope = nativeWorkflow === "pinned-native-shares";
         const reserveNav = navLikeAsset && (!priceResolution || requiresClassScope)
           ? await loadReserveNavSupplyPrice(meta, db, nowSec) : null;
         if (navLikeAsset && !priceResolution) {
@@ -226,7 +227,7 @@ export async function fetchFiatCoinGeckoTokens(
           ? priceResolution?.price ?? navSupplyPrice
           : priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
 
-        if (isZephyrScannerAssetId(meta.id)) {
+        if (nativeWorkflow === "zephyr-scanner") {
           if (!zephyrProtocolStats) {
             logWorkerEventArgs("handler", "info", `[fiat-cg] No Zephyr scanner supply for ${meta.symbol}, skipping`);
             return null;

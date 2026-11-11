@@ -16,8 +16,8 @@ vi.mock("../../lib/db-cache", () => ({
 // Every sibling supplemental family reaches the network. Only the Aave family is
 // under test here, so the other fetchers reject and their families fall back to an
 // empty result, which is what the runtime does for a real upstream failure.
-vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../yield-sync/sources-optional")>();
+vi.mock("../yield-sync/sources-optional-vaults", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional-vaults")>();
 
   const failingFamilyFetch = vi.fn(async () => {
     throw new Error("family stubbed by the Aave suite");
@@ -28,6 +28,17 @@ vi.mock("../yield-sync/sources-optional", async (importOriginal) => {
     fetchPendleMarketSources: failingFamilyFetch,
     fetchYearnKongSources: failingFamilyFetch,
     fetchBeefySources: failingFamilyFetch,
+  };
+});
+
+vi.mock("../yield-sync/sources-optional-royco", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-sync/sources-optional-royco")>();
+
+  const failingFamilyFetch = vi.fn(async () => {
+    throw new Error("family stubbed by the Aave suite");
+  });
+  return {
+    ...actual,
     fetchRoycoDawnSources: failingFamilyFetch,
   };
 });

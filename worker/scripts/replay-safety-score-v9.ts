@@ -1,9 +1,7 @@
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { gunzipSync } from "node:zlib";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { CAPTURE_SUMMARY_SUFFIX, parseMechanismCaptureSummary } from "../../scripts/lib/mechanism-measurement/capture-summary";
+import { CAPTURE_SUMMARY_SUFFIX, captureLookupKeys, parseMechanismCaptureSummary, verifyCaptureBody } from "../../scripts/lib/mechanism-measurement/capture-summary";
 import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
 import type { R2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -178,15 +176,6 @@ interface CaptureReference {
   r2Key: string;
 }
 
-function captureSha256(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
-
-function decodeCaptureBody(bytes: Uint8Array): Buffer {
-  const body = Buffer.from(bytes);
-  return body[0] === 0x1f && body[1] === 0x8b ? gunzipSync(body) : body;
-}
-
 function findCaptureReference(directory: string, expectedSha256: string): CaptureReference | null {
   if (!existsSync(directory)) return null;
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -201,14 +190,6 @@ function findCaptureReference(directory: string, expectedSha256: string): Captur
     if (summary.sha256 === expectedSha256) return { sha256: summary.sha256, r2Key: summary.r2Key };
   }
   return null;
-}
-
-function verifyCaptureBody(bytes: Uint8Array, expectedSha256: string): Buffer {
-  const body = decodeCaptureBody(bytes);
-  if (captureSha256(body) !== expectedSha256) {
-    throw new Error(`capture ${expectedSha256} integrity mismatch`);
-  }
-  return body;
 }
 
 /** Resolve a SHA-256 capture through the durable local cache, then R2. */
@@ -229,10 +210,7 @@ export async function resolveSafetyScoreV9ReplayInput(
   const reference = findCaptureReference(resolve(options.summaryRoot ?? DEFAULT_CAPTURE_SUMMARY_ROOT), expectedSha256);
   if (!reference) throw new Error(`capture ${expectedSha256} expired: non-replayable`);
   const client = options.r2Client ?? createR2MeasurementsClient();
-  const keys = [
-    reference.r2Key.replace(/^captures\//u, "pinned/"),
-    reference.r2Key,
-  ];
+  const keys = captureLookupKeys(reference.r2Key);
   for (const key of keys) {
     const compressed = await client.get(key);
     if (!compressed) continue;

@@ -1104,7 +1104,6 @@ describe("safety scores dated preview", () => {
         currentModulePath: path.join(root, "current.ts"),
         datasetsDir: datasetDir,
         coinDataDir: coinDir,
-        gradePolicyPath: "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
       });
     };
 
@@ -1113,6 +1112,8 @@ describe("safety scores dated preview", () => {
     expect(await buildExpectation(dataset([row("coin-a")], { completeness: { expectedCount: 2, ratedCount: 2, notRatedCount: 0, pipelineGapCount: 0 } })))
       .toEqual({ status: "unavailable", reason: "completeness-mismatch" });
     expect(await buildExpectation(dataset([row("coin-a", { safetyGrade: "B+" })])))
+      .toEqual({ status: "unavailable", reason: "no-eligible-rated-rows" });
+    expect(await buildExpectation(dataset([row("coin-a", { safetyDisplay: { provisional: false } })])))
       .toEqual({ status: "unavailable", reason: "no-eligible-rated-rows" });
     const notRated = row("coin-b", { ratingStatus: "not-rated", safetyScore: null, safetyGrade: "NR" });
     const small = await buildExpectation(dataset([row("coin-a"), notRated], {

@@ -1,16 +1,8 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch, isHexResult } from "../evm-rpc";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
-  decodeAddressWord,
-  decodeUint256WordBigInt,
-  decimalFromRaw,
-  encodeIndexedCall,
-  encodeUint256,
-  quoteUsdcPrice,
-  resolveTrustedOverrideParent,
+  fetchGuardedCurvePoolPrice,
   type CurrentPriceOverride,
   type LivePriceContext,
   type PriceSourceProvider,
@@ -38,88 +30,30 @@ const MIN_USDC_BALANCE = 100;
 const MAX_QUOTE_IMPACT_RATIO = 0.05;
 const MAX_BLOCK_AGE_SEC = 5 * 60;
 
-function encodeGetDy(inputTokens: number): string {
-  const inputRaw = BigInt(inputTokens) * 10n ** BigInt(AZND_DECIMALS);
-  return `${GET_DY_SELECTOR}${encodeUint256(AZND_INDEX)}${encodeUint256(USDC_INDEX)}${encodeUint256(inputRaw)}`;
-}
-
 export async function fetchAzndCurvePoolPrice(
   context: LivePriceContext,
   signal?: AbortSignal,
 ): Promise<CurrentPriceOverride | null> {
-  const quoteParent = resolveTrustedOverrideParent(
-    context,
-    USDC_ID,
-    () => `[authoritative-price-sources] ${AZND_ID}: trusted USDC quote dependency unavailable`,
-    {
-      allowFreshNonReplaySafeParent: true,
-      allowFreshReplaySafeSingleSourceParent: true,
-    },
-  );
-  if (!quoteParent) return null;
-  if (Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > MAX_BLOCK_AGE_SEC) return null;
-
-  // Configured Worker RPCs first; public endpoints are only the fallback tail.
-  const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
-  const blockNumber = await fetchEvmBlockNumber(CHAIN, rpcOptions);
-  if (blockNumber == null) return null;
-  const blockTimestamp = await fetchEvmBlockTimestamp(CHAIN, blockNumber, rpcOptions);
-  const nowSec = Math.floor(Date.now() / 1000);
-  if (blockTimestamp == null || blockTimestamp > nowSec + 60 || nowSec - blockTimestamp > MAX_BLOCK_AGE_SEC) {
-    return null;
-  }
-
-  // Batch direct eth_call envelopes to retain caller semantics and one pinned
-  // block while consuming only one connection for the six pool reads.
-  const results = await fetchEvmRpcBatch(CHAIN, [
-    encodeIndexedCall(COINS_SELECTOR, AZND_INDEX),
-    encodeIndexedCall(COINS_SELECTOR, USDC_INDEX),
-    encodeIndexedCall(BALANCES_SELECTOR, AZND_INDEX),
-    encodeIndexedCall(BALANCES_SELECTOR, USDC_INDEX),
-    encodeGetDy(SMALL_QUOTE_AZND),
-    encodeGetDy(IMPACT_QUOTE_AZND),
-  ].map((data) => ({
-    method: "eth_call",
-    params: [{ to: POOL, data }, `0x${blockNumber.toString(16)}`],
-  })), rpcOptions);
-  if (!results || results.length !== 6) return null;
-  const [coin0Raw, coin1Raw, azndBalanceRaw, usdcBalanceRaw, smallQuoteRaw, impactQuoteRaw] = results.map(
-    (value) => typeof value === "string" && isHexResult(value) ? value : null,
-  );
-
-  if (decodeAddressWord(coin0Raw) !== AZND || decodeAddressWord(coin1Raw) !== USDC) return null;
-  const azndBalance = azndBalanceRaw ? decodeUint256WordBigInt(azndBalanceRaw) : null;
-  const usdcBalance = usdcBalanceRaw ? decodeUint256WordBigInt(usdcBalanceRaw) : null;
-  if (azndBalance == null || usdcBalance == null) return null;
-  if (
-    decimalFromRaw(azndBalance, AZND_DECIMALS) < MIN_AZND_BALANCE ||
-    decimalFromRaw(usdcBalance, USDC_DECIMALS) < MIN_USDC_BALANCE
-  ) {
-    return null;
-  }
-
-  const smallPrice = quoteUsdcPrice(
-    smallQuoteRaw ? decodeUint256WordBigInt(smallQuoteRaw) : null,
-    SMALL_QUOTE_AZND,
-  );
-  const impactPrice = quoteUsdcPrice(
-    impactQuoteRaw ? decodeUint256WordBigInt(impactQuoteRaw) : null,
-    IMPACT_QUOTE_AZND,
-  );
-  if (smallPrice == null || impactPrice == null) return null;
-  if (Math.abs(impactPrice - smallPrice) / smallPrice > MAX_QUOTE_IMPACT_RATIO) return null;
-
-  // Multiplication must preserve the older dependency clock under this route's budget.
-  const parentClockSelected = quoteParent.trustedParent.observedAt < blockTimestamp;
-  const observedAt = parentClockSelected ? quoteParent.trustedParent.observedAt : blockTimestamp;
-  if (Math.floor(Date.now() / 1000) - observedAt > MAX_BLOCK_AGE_SEC) return null;
-  return {
-    price: smallPrice * quoteParent.trustedParent.price,
+  return fetchGuardedCurvePoolPrice({
+    assetId: AZND_ID,
     source: AZND_CURVE_SOURCE,
-    confidence: "fallback",
-    observedAt,
-    observedAtMode: parentClockSelected ? quoteParent.trustedParent.observedAtMode ?? "upstream" : "upstream",
-  };
+    chain: CHAIN,
+    pool: POOL,
+    tokens: [
+      { address: AZND, index: AZND_INDEX, decimals: AZND_DECIMALS, minBalance: MIN_AZND_BALANCE },
+      { address: USDC, index: USDC_INDEX, decimals: USDC_DECIMALS, minBalance: MIN_USDC_BALANCE },
+    ],
+    coinsSelector: COINS_SELECTOR,
+    balancesSelector: BALANCES_SELECTOR,
+    quoteSelector: GET_DY_SELECTOR,
+    quoteInputIndex: AZND_INDEX,
+    quoteOutputIndex: USDC_INDEX,
+    quoteInputDecimals: AZND_DECIMALS,
+    smallQuoteTokens: SMALL_QUOTE_AZND,
+    impactQuoteTokens: IMPACT_QUOTE_AZND,
+    maxQuoteImpactRatio: MAX_QUOTE_IMPACT_RATIO,
+    maxBlockAgeSec: MAX_BLOCK_AGE_SEC,
+  }, context, signal);
 }
 
 export const azndCurvePoolProvider: PriceSourceProvider = {

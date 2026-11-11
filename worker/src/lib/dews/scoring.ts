@@ -136,25 +136,25 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const hasPrevDayAnchor = prevDay !== null;
     const hasPrevWeekAnchor = prevWeek !== null;
 
-    const dexLiq = sourceState.dexLiqMap.get(meta.id);
-    const dexPrice = sourceState.dexPriceMap.get(meta.id);
-    const liqHist = sourceState.liqHist7dMap.get(meta.id);
+    const dexLiq = sourceState.dexLiquidity.dexLiqMap.get(meta.id);
+    const dexPrice = sourceState.dexPrices.dexPriceMap.get(meta.id);
+    const liqHist = sourceState.liquidityHistory.liqHist7dMap.get(meta.id);
     if (liqHist) liqHistCoverageCount++;
-    const prevSnapshot = sourceState.prevSignals.get(meta.id);
+    const prevSnapshot = sourceState.previousSignals.prevSignals.get(meta.id);
     const prev = prevSnapshot?.signals;
     // An unreadable accepted-generation pointer leaves the previous reading
     // unavailable, not absent: the persisted unavailable envelope (`{value: 0,
     // available: false}`) makes the pool signal report `previous-unavailable`
     // instead of claiming `no-previous`.
-    const previousUnavailable = sourceState.previousGenerationUnavailable;
-    const mintBurn = sourceState.mintBurnMap.get(meta.id);
-    const mintBurnAgeSec = sourceState.mintBurnAgeSecById.get(meta.id) ?? null;
-    const yieldSourceRisk = sourceState.yieldSourceRisk.get(meta.id) ?? null;
-    const yieldRankChangeAttribution = sourceState.yieldRankChangeAttribution.get(meta.id) ?? null;
+    const previousUnavailable = sourceState.previousSignals.generationUnavailable;
+    const mintBurn = sourceState.mintBurn.mintBurnMap.get(meta.id);
+    const mintBurnAgeSec = sourceState.mintBurn.mintBurnAgeSecById.get(meta.id) ?? null;
+    const yieldSourceRisk = sourceState.yieldRankings.yieldSourceRisk.get(meta.id) ?? null;
+    const yieldRankChangeAttribution = sourceState.yieldRankings.yieldRankChangeAttribution.get(meta.id) ?? null;
     const hasYieldRankingEvidence = yieldSourceRisk != null || yieldRankChangeAttribution != null;
 
     const hasBlacklistTracking = BLACKLIST_TRACKED_ID_SET.has(meta.id);
-    const blacklistCounts = hasBlacklistTracking ? sourceState.blacklistCounts.get(meta.id) : undefined;
+    const blacklistCounts = hasBlacklistTracking ? sourceState.blacklist.blacklistCounts.get(meta.id) : undefined;
 
     const topPools = readTopPools(
       meta.id,
@@ -218,19 +218,19 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       blacklistEvents24h: blacklistCounts?.count24h ?? 0,
       blacklistEvents7d: blacklistCounts?.count7d ?? 0,
       hasBlacklistTracking,
-      blacklistSourceOk: sourceState.blacklistSourceOk,
+      blacklistSourceOk: sourceState.blacklist.blacklistSourceOk,
       burnVolume24hUsd: mintBurn?.burn24h ?? null,
       flowIsolated: mintBurn?.isolated === true,
       mintVolume24hUsd: mintBurn?.mint24h ?? null,
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,
-      flowDataAgeDays: mintBurnAgeSec == null ? 9999 : mintBurnAgeSec / DAY_SECONDS,
+      flowDataAgeDays: mintBurnAgeSec == null ? null : mintBurnAgeSec / DAY_SECONDS,
       flowBaselineDays: mintBurn?.baselineDays ?? null,
       flowValuation24h: mintBurn?.valuation24h ?? null,
       flowBurnBaselineValuation: mintBurn?.burnBaselineValuation ?? null,
-      yieldWarnings: sourceState.yieldWarnings.get(meta.id) ?? [],
+      yieldWarnings: sourceState.yieldWarnings.yieldWarnings.get(meta.id) ?? [],
       yieldSourceRisk,
       yieldRankChangeAttribution,
-      psiScore: sourceState.latestPsiScore,
+      psiScore: sourceState.psi.latestPsiScore,
       prevPoolValue: prev?.pool?.value ?? (previousUnavailable ? 0 : undefined),
       prevPoolAvailable: prev?.pool?.available === true,
       prevPoolComponentCoverage: numberValue((prev?.pool as { componentCoverage?: unknown } | undefined)?.componentCoverage),
@@ -238,18 +238,18 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       prevDivergAvailable: prev?.diverg?.available === true,
       contagionAmplifier: 1,
       sourceAges: {
-        dexLiquidity: sourceState.dexLiqAgeSecById.get(meta.id) ?? null,
-        dexPrice: sourceState.dexPriceAgeSecById.get(meta.id) ?? null,
+        dexLiquidity: sourceState.dexLiquidity.dexLiqAgeSecById.get(meta.id) ?? null,
+        dexPrice: sourceState.dexPrices.dexPriceAgeSecById.get(meta.id) ?? null,
         previousSignals: prevSnapshot?.ageSec ?? null,
         mintBurn: mintBurnAgeSec,
-        yieldRankings: hasYieldRankingEvidence ? sourceState.yieldRankingsAgeSec : null,
+        yieldRankings: hasYieldRankingEvidence ? sourceState.yieldRankings.yieldRankingsAgeSec : null,
       },
       staleFlags: {
-        dexLiquidity: sourceState.dexLiqStaleIds.has(meta.id),
-        dexPrice: sourceState.dexPriceStaleIds.has(meta.id),
-        previousSignals: sourceState.prevSignalStaleIds.has(meta.id),
-        mintBurn: sourceState.mintBurnStaleIds.has(meta.id),
-        yieldRankings: hasYieldRankingEvidence && sourceState.yieldRankingsRetained,
+        dexLiquidity: sourceState.dexLiquidity.dexLiqStaleIds.has(meta.id),
+        dexPrice: sourceState.dexPrices.dexPriceStaleIds.has(meta.id),
+        previousSignals: sourceState.previousSignals.prevSignalStaleIds.has(meta.id),
+        mintBurn: sourceState.mintBurn.mintBurnStaleIds.has(meta.id),
+        yieldRankings: hasYieldRankingEvidence && sourceState.yieldRankings.yieldRankingsRetained,
         pegReference: !pegReferenceTrusted,
       },
     };

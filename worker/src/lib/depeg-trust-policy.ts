@@ -34,25 +34,8 @@ export function resolveDepegSourceFamily(sourceKey: string | null | undefined): 
     return [...new Set(families)].join("+") || null;
   }
 
-  if (
-    normalized === "coingecko" ||
-    normalized === "coingecko-native-implied" ||
-    normalized === "coingecko-mirror" ||
-    normalized === "coingecko-low-volume" ||
-    normalized === "cg-ticker"
-  ) {
-    return "coingecko";
-  }
-  if (
-    normalized === "defillama" ||
-    normalized === "defillama-list" ||
-    normalized === "defillama-contract"
-  ) {
-    return "defillama";
-  }
-  if (
-    normalized === "dexscreener"
-  ) {
+  // Unregistered historical alias; registered families belong to the pricing registry.
+  if (normalized === "dexscreener") {
     return "fallback:dexscreener";
   }
 

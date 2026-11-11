@@ -135,7 +135,10 @@ describe("DEX refresh continuity", () => {
     fetch.mockImplementation(async (assets, _fx, _db, _signal, _history, _now, _missing, batch) => {
       const resolved = assets.find((row) => row.id === peer.id)!;
       Object.assign(resolved, { price: 1, priceSource: "dexscreener-exact", priceConfidence: "fallback", priceObservedAt: now, priceObservedAtMode: "local_fetch" });
-      return { resolved: 1, failures: [], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: true, success: true,
+      return { resolved: 1, failures: [], targetOutcomes: batch!.map(({ entry, target: attempted }) => ({
+        assetId: entry.asset.id, chain: attempted.chain, target: attempted.address, candidateAt: now,
+        ...(entry.asset.id === peer.id ? { result: "resolved" as const } : { result: "empty" as const, rejectionClass: "empty-response" }),
+      })), diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: true, success: true,
         assetAttempts: batch!.map(({ entry, target: attempted }) => ({
           assetId: entry.asset.id, adapter: "dexscreener-exact", source: "dexscreener-exact",
           chain: attempted.chain, target: attempted.address, state: "attempted",
@@ -383,7 +386,8 @@ describe("DEX refresh continuity", () => {
     fetch.mockImplementation(async (assets, _fx, _db, _signal, _history, _now, _missing, batch) => {
       const asset = assets[batch![0].entry.index];
       Object.assign(asset, { price: .9891, priceSource: "dexscreener-exact", priceConfidence: "fallback", priceObservedAt: now, priceObservedAtMode: "local_fetch" });
-      return { resolved: 1, failures: [], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: true, success: true,
+      return { resolved: 1, failures: [], targetOutcomes: [{ assetId: id, chain: target.chain, target: target.target,
+        result: "resolved", candidateAt: now, observedAt: now }], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: true, success: true,
         assetAttempts: [{ assetId: id, adapter: "dexscreener-exact", source: "dexscreener-exact", replaySafe: false, chain: target.chain, target: target.target, state: "attempted", result: "resolved", candidateAt: now }] }] };
     });
     expect(await runRefresh()).toMatchObject({ resolved: 1, cacheWritten: true, hintedAttempted: 0 });

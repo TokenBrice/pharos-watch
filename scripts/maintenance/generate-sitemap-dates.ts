@@ -55,7 +55,9 @@ function toGitPath(path: string): string {
 function loadGitDateIndex(): GitDateIndex {
   const output = execFileSync(
     "git",
-    ["log", `--format=${GIT_LOG_MARKER}%aI`, "--name-only", "--", ...GIT_DATE_SCAN_PATHS],
+    // A commit carrying this exact message line changed no page content (a
+    // refactor of a date source), so it must not move a published date.
+    ["log", "--invert-grep", "--grep=^Sitemap-Date: unchanged$", `--format=${GIT_LOG_MARKER}%aI`, "--name-only", "--", ...GIT_DATE_SCAN_PATHS],
     { cwd: REPO_ROOT, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
   );
   const fileDates = new Map<string, string>();

@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import { getLiveReserveAdapterDefinition, getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import {
@@ -19,7 +20,6 @@ import { decodeLiveReserveRedemptionTelemetry, type LiveReserveRedemptionTelemet
 import type { LiveReserveRedemptionOutputValuation, LiveReserveWarning } from "@shared/types/live-reserves";
 import {
   hasScoringEligibleLiveReserveFreshness,
-  LIVE_RESERVE_FRESHNESS_SEC,
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
   type ReserveSnapshotMetadataRecord,
 } from "../live-reserves/store";

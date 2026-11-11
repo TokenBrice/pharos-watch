@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import { emptyReserveCompositionOverview, ReserveContinuationExecutionStatusSchema } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
@@ -7,7 +8,6 @@ import { WORKER_TRACKED_META_BY_ID, type WorkerLiveReserveStablecoinMeta } from 
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./store-shared";
 import {
   getConfiguredLiveReserveCoins,
-  LIVE_RESERVE_FRESHNESS_SEC,
   PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
   selectScoringDegradedWarnings,
   type AuthoritativeReserveSnapshot,

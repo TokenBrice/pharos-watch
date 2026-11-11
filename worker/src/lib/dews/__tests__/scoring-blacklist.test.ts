@@ -19,32 +19,29 @@ function createAsset(id: string, symbol = "USDA"): StablecoinData {
 }
 
 function createSourceState(): DewsSourceState {
+  const dependencyDiagnostics = emptyDewsDependencyDiagnostics();
   return {
-    dexLiqRows: { results: [] },
-    dexLiqMap: new Map(),
-    dexLiqAgeSecById: new Map(),
-    dexLiqStaleIds: new Set(),
-    dexPriceMap: new Map(),
-    dexPriceAgeSecById: new Map(),
-    dexPriceStaleIds: new Set(),
-    liqHist7dMap: new Map(),
-    liqHistRowsRead: 0,
-    blacklistCounts: new Map([["xusd-straitsx", { count24h: 10, count7d: 10 }]]),
-    blacklistSourceOk: true,
-    prevSignals: new Map(),
-    prevSignalStaleIds: new Set(),
-    previousGenerationUnavailable: false,
-    mintBurnMap: new Map(),
-    mintBurnAgeSecById: new Map(),
-    mintBurnStaleIds: new Set(),
-    yieldWarnings: new Map(),
-    yieldSourceRisk: new Map(),
-    yieldRankChangeAttribution: new Map(),
-    yieldRankingsAgeSec: null,
-    yieldRankingsRetained: false,
-    latestPsiScore: null,
+    dexLiquidity: {
+      dexLiqRows: { results: [] }, dexLiqMap: new Map(), dexLiqAgeSecById: new Map(), dexLiqStaleIds: new Set(),
+      freshCount: 0, staleCount: 0, totalRows: 0, freshnessAgeSec: null,
+      dependencyDiagnostics: dependencyDiagnostics.dexLiquidity,
+    },
+    dexPrices: { dexPriceMap: new Map(), dexPriceAgeSecById: new Map(), dexPriceStaleIds: new Set(), trustedCount: 0, staleCount: 0 },
+    liquidityHistory: { liqHist7dMap: new Map(), liqHistRowsRead: 0 },
+    blacklist: { blacklistCounts: new Map([["xusd-straitsx", { count24h: 10, count7d: 10 }]]), blacklistSourceOk: true, rowsRead: 0 },
+    previousSignals: { prevSignals: new Map(), prevSignalStaleIds: new Set(), generationUnavailable: false, rowsRead: 0 },
+    mintBurn: {
+      mintBurnMap: new Map(), mintBurnAgeSecById: new Map(), mintBurnStaleIds: new Set(),
+      freshCount: 0, staleCount: 0, freshnessAgeSec: null, rowsRead: 0,
+    },
+    yieldWarnings: { yieldWarnings: new Map(), rowsRead: 0 },
+    yieldRankings: {
+      yieldSourceRisk: new Map(), yieldRankChangeAttribution: new Map(), yieldRankingsAgeSec: null, yieldRankingsRetained: false,
+      dependencyDiagnostics: dependencyDiagnostics.yieldRankings,
+    },
+    psi: { latestPsiScore: null, dependencyDiagnostics: dependencyDiagnostics.psi },
     sourceCoverage: {},
-    dependencyDiagnostics: emptyDewsDependencyDiagnostics(),
+    dependencyDiagnostics,
   };
 }
 
@@ -54,12 +51,12 @@ describe("buildDewsScoringResult peg reference admission", () => {
     const assets = ["usdt-tether", "usdc-circle"].map<StablecoinData>((id, i) => ({ ...createAsset(id),
       priceConfidence: i ? "low" : "fallback", circulating: { peggedUSD: 1e10 },
       circulatingPrevDay: { peggedUSD: i ? 1.08e10 : 1e11 }, circulatingPrevWeek: { peggedUSD: i ? 1.08e10 : 1e11 } }));
-    assets.forEach((a, i) => sourceState.dexPriceMap.set(a.id, { dexPriceUsd: i ? 0.99 : 0.9, sourceTotalTvl: 2e6, updatedAt: 1 }));
+    assets.forEach((a, i) => sourceState.dexPrices.dexPriceMap.set(a.id, { dexPriceUsd: i ? 0.99 : 0.9, sourceTotalTvl: 2e6, updatedAt: 1 }));
     const score = () => buildDewsScoringResult({ assetById: new Map(assets.map((a) => [a.id, a])),
       sourceState, pegRates: {}, registerMalformedPersistedInput: () => {} }).results.find((r) => r.stablecoinId === "usdc-circle")!;
     const base = score();
-    sourceState.mintBurnAgeSecById.set("usdc-circle", 0);
-    sourceState.mintBurnMap.set("usdc-circle", { isolated: true, burn24h: 3e6, mint24h: 5e5,
+    sourceState.mintBurn.mintBurnAgeSecById.set("usdc-circle", 0);
+    sourceState.mintBurn.mintBurnMap.set("usdc-circle", { isolated: true, burn24h: 3e6, mint24h: 5e5,
       burnBaseline: 7e5, mintBaseline: 0, baselineDays: 30, valuation24h: "complete", burnBaselineValuation: "complete" });
     expect(base.score).toBe(63);
     const raised = score();
@@ -107,7 +104,7 @@ describe("buildDewsScoringResult blacklist attribution", () => {
   it.each([0, 1, 2])("Broker provenance: %s", (confirmed) => {
     const asset = { ...createAsset("usdt-tether"), price: 0.98, priceSource: "mento-broker", agreeSources: confirmed === 1 ? ["kraken"] : [], priceConfidence: "fallback" as const };
     const state = createSourceState();
-    if (confirmed === 2) state.dexPriceMap.set(asset.id, { dexPriceUsd: 0.98, independentPrices: [0.98], sourceTotalTvl: 1e6, updatedAt: 1 });
+    if (confirmed === 2) state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd: 0.98, independentPrices: [0.98], sourceTotalTvl: 1e6, updatedAt: 1 });
     const row = buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), pegRates: {},
       sourceState: state, registerMalformedPersistedInput: () => {} }).results[0];
     expect(row.band).toBe(confirmed ? "ALERT" : "WATCH");
@@ -142,10 +139,10 @@ describe("buildDewsScoringResult blacklist attribution", () => {
 
   it("marks tracked blacklist evidence unavailable when the source load failed", () => {
     const observedZeroState = createSourceState();
-    observedZeroState.blacklistCounts = new Map();
+    observedZeroState.blacklist.blacklistCounts = new Map();
     const failedState = createSourceState();
-    failedState.blacklistCounts = new Map();
-    failedState.blacklistSourceOk = false;
+    failedState.blacklist.blacklistCounts = new Map();
+    failedState.blacklist.blacklistSourceOk = false;
 
     const assetById = new Map([["xusd-straitsx", createAsset("xusd-straitsx", "XUSD")]]);
     const observedZero = buildDewsScoringResult({

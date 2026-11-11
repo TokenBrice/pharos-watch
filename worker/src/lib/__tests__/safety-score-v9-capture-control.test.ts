@@ -7,7 +7,7 @@ import {
   parseSafetyScoreV9CaptureControl, prepareAttributionSettlement, requestRecapture,
   SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
 } from "../safety-score-v9/capture-control";
-import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../safety-score-v9/supply-attribution-source";
+import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../safety-score-v9/supply-attribution-source-contract";
 import { prepareCacheUpsert } from "../db-cache";
 import { batchExecute } from "../d1-primitives";
 

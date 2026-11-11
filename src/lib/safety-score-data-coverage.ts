@@ -12,7 +12,9 @@ import {
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { formatProseList, formatShortDate } from "@shared/lib/format";
+import { ECONOMIC_CONTROL_SHORT_LABEL } from "@shared/lib/classification";
 import { formatV9ReasonCodeLabel } from "./safety-score-reason-code-labels";
+import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "./safety-score-v9-labels";
 
 /**
  * Documentation-reason labels are policy-owned (`semantic.evidence.documentation`
@@ -34,47 +36,42 @@ const DOCUMENTATION_REASON_LABELS: Readonly<Record<string, string>> | null = (()
 const GAP_OWNERS = [
   {
     responsibility: "issuer-undisclosed",
-    label: "Issuer does not disclose",
     detail: "Research found the issuer does not publish the required datum.",
   },
   {
     responsibility: "integration-missing",
-    label: "Pharos has not integrated it yet",
     detail: "A source exists; wiring it into the pipeline is our work.",
   },
   {
     responsibility: "producer-failed",
-    label: "A data feed failed",
     detail: "An upstream source we rely on did not deliver.",
   },
   {
     responsibility: "method-unsupported",
-    label: "No supported method",
     detail: "No method can measure this input for this asset yet. Nothing upstream failed.",
   },
   {
     responsibility: "published-evidence-expired",
-    label: "Published evidence is out of date",
     detail: "Freshness is separate from cause: an expired copy does not prove issuer non-disclosure.",
   },
   {
     responsibility: "unresearched",
-    label: "Unresolved",
     detail: "No admissible evidence settles this input yet: it is unresearched or was researched without a conclusive source. This is not a claim of issuer silence.",
   },
   {
     responsibility: "public-data-uncurated",
-    label: "Awaiting curation",
     detail: "The required datum is public but has not yet been curated.",
   },
 ] as const satisfies ReadonlyArray<{
   responsibility: V9EvidenceResponsibility;
-  label: string;
   detail: string;
 }>;
 
-const GAP_OWNER_BY_RESPONSIBILITY = new Map<string, (typeof GAP_OWNERS)[number]>(
-  GAP_OWNERS.map((owner) => [owner.responsibility, owner]),
+const GAP_OWNER_BY_RESPONSIBILITY = new Map<string, { label: string; detail: string }>(
+  GAP_OWNERS.map((owner) => [owner.responsibility, {
+    label: SAFETY_SCORE_V9_RESPONSIBILITY_LABELS[owner.responsibility]!,
+    detail: owner.detail,
+  }]),
 );
 
 /** Multi-owner remainder of the headline bucket; it is not a responsibility. */
@@ -217,7 +214,7 @@ export function describeDataCoverageHoldCauses(
 const PILLAR_LABELS = [
   ["backing", "Backing"],
   ["exit", "Exit"],
-  ["control", "Econ. control"],
+  ["control", ECONOMIC_CONTROL_SHORT_LABEL],
 ] as const;
 
 /** Keeps the reason inventory grouped by bucket, headline first, then by size. */

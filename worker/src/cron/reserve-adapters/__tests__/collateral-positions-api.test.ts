@@ -1,7 +1,7 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { describe, expect, it } from "vitest";
 
 import { adaptCollateralPositions } from "../collateral-positions-api";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";

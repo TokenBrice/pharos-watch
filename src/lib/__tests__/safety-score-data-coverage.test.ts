@@ -12,6 +12,7 @@ import {
   V9_PUBLICATION_HOLD_REASON_LIMIT,
 } from "@/lib/safety-score-data-coverage";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
 
 const REVIEWED_AT_SEC = Date.parse("2026-10-03T00:00:00Z") / 1000;
 const EARLIER_REVIEWED_AT_SEC = Date.parse("2026-09-28T00:00:00Z") / 1000;
@@ -88,6 +89,29 @@ function withGaps(
 }
 
 describe("buildDataCoverageModel", () => {
+  it("uses the breakdown's owner wording while retaining the panel's detail", () => {
+    const expected = {
+      "integration-missing": ["We have not built this integration yet", "A source exists; wiring it into the pipeline is our work."],
+      "producer-failed": ["Our data collection failed", "An upstream source we rely on did not deliver."],
+      "method-unsupported": ["The method cannot evaluate this shape", "No method can measure this input for this asset yet. Nothing upstream failed."],
+      "published-evidence-expired": ["This was published, but our copy is out of date", "Freshness is separate from cause: an expired copy does not prove issuer non-disclosure."],
+    };
+    for (const [responsibility, [label, detail]] of Object.entries(expected)) {
+      const response = makeReportCardsV9Response({
+        openEvidence: makeOpenEvidence({
+          totals: { questions: 1, open: 1, issuer: 0, documentation: 0, obligations: 1 },
+          owners: [{ responsibility: responsibility as V9EvidenceResponsibility, questions: 1, obligations: 1 }],
+          reasons: [],
+          issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+        }),
+      });
+      expect(buildDataCoverageModel(response)!.gapOwners).toEqual([
+        expect.objectContaining({ responsibility, label, detail }),
+      ]);
+      expect(label).toBe(SAFETY_SCORE_V9_RESPONSIBILITY_LABELS[responsibility]);
+    }
+  });
+
   it("returns null without a response", () => {
     expect(buildDataCoverageModel(null)).toBeNull();
     expect(buildDataCoverageModel(undefined)).toBeNull();
@@ -213,8 +237,8 @@ describe("buildDataCoverageModel", () => {
     );
 
     expect(labels).toEqual({
-      "integration-missing": "Pharos has not integrated it yet",
-      "published-evidence-expired": "Published evidence is out of date",
+      "integration-missing": "We have not built this integration yet",
+      "published-evidence-expired": "This was published, but our copy is out of date",
       "public-data-uncurated": "Awaiting curation",
     });
   });
@@ -330,7 +354,7 @@ describe("buildDataCoverageModel", () => {
     expect(model.inputsByPillar).toEqual([
       { key: "backing", label: "Backing", count: 2 },
       { key: "exit", label: "Exit", count: 12 },
-      { key: "control", label: "Econ. control", count: 2 },
+      { key: "control", label: "Control", count: 2 },
     ]);
     expect(model.inputsEvaluated).toBe(16);
     expect(model.backingObservedCount).toBe(2);

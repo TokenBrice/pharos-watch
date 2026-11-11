@@ -59,6 +59,15 @@ import {
   type MintBurnValuationTally,
 } from "@shared/lib/mint-burn-valuation";
 import type {
+  DexLiquidityHydration,
+  DexPriceHydration,
+  DexLiquidityHistoryHydration,
+  BlacklistHydration,
+  PreviousStressSignalsHydration,
+  MintBurnHydration,
+  YieldWarningsHydration,
+  YieldRankingsHydration,
+  LatestPsiHydration,
   BlacklistCountByStablecoinId,
   DexLiquidityDependencyDiagnostics,
   DexLiquidityRow,
@@ -83,13 +92,13 @@ import {
 import { classifyFreshness } from "../../status/freshness-oracle";
 
 import {
+  DEWS_MINT_BURN_FRESHNESS_BUDGET_SEC,
   DEWS_PSI_FRESHNESS_BUDGET_SEC,
   DEWS_STALE_DEX_LIQUIDITY_SEC,
   DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC,
 } from "./budgets";
 import { assessFreshnessTimestamp } from "../../api-freshness-age";
 const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
-const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
 // DEWS can overlap the next yield producer while it is still publishing.
 const DEWS_FRESH_YIELD_RANKINGS_SEC = CRON_INTERVALS["sync-yield-data"]
   + resolveCronTimeoutBudget("sync-yield-data").configuredTimeoutMs / 1000;
@@ -157,18 +166,6 @@ async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<{
     },
   });
   return { rows, generationUnavailableReason };
-}
-
-export interface DexLiquidityHydration {
-  dexLiqRows: { results: DexLiquidityRow[] };
-  dexLiqMap: Map<string, DexLiquidityRow>;
-  dexLiqAgeSecById: Map<string, number>;
-  dexLiqStaleIds: Set<string>;
-  freshCount: number;
-  staleCount: number;
-  totalRows: number;
-  freshnessAgeSec: number | null;
-  dependencyDiagnostics: DexLiquidityDependencyDiagnostics;
 }
 
 interface DexLiquidityPublicationGenerationRow {
@@ -298,19 +295,6 @@ export async function hydrateDexLiquidity(ctx: HydrationContext): Promise<DexLiq
   };
 }
 
-export interface DexPriceHydration {
-  dexPriceMap: Map<string, DexPriceSnapshot>;
-  dexPriceAgeSecById: Map<string, number>;
-  dexPriceStaleIds: Set<string>;
-  trustedCount: number;
-  /**
-   * Null when the underlying load failed; the orchestrator omits the
-   * `dexPricesStaleRows` coverage key in that case to preserve the legacy
-   * source-coverage shape.
-   */
-  staleCount: number | null;
-}
-
 export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceHydration> {
   const dexPriceMap = new Map<string, DexPriceSnapshot>();
   const dexPriceAgeSecById = new Map<string, number>();
@@ -380,11 +364,6 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
   };
 }
 
-export interface DexLiquidityHistoryHydration {
-  liqHist7dMap: Map<string, LiquidityHistorySnapshot>;
-  liqHistRowsRead: number;
-}
-
 export async function hydrateDexLiquidityHistory(
   ctx: HydrationContext,
   currentLiquidityById: ReadonlyMap<string, DexLiquidityRow>,
@@ -439,12 +418,6 @@ export async function hydrateDexLiquidityHistory(
     ctx.registerSourceFailure("dex-liquidity-history", error);
   }
   return { liqHist7dMap, liqHistRowsRead };
-}
-
-export interface BlacklistHydration {
-  blacklistCounts: BlacklistCountByStablecoinId;
-  blacklistSourceOk: boolean;
-  rowsRead: number;
 }
 
 type BlacklistEventHydrationRow = Pick<BlacklistPersistedRow,
@@ -511,14 +484,6 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
   return { blacklistCounts, blacklistSourceOk, rowsRead: blacklistRowsRead };
 }
 
-export interface PreviousStressSignalsHydration {
-  prevSignals: Map<string, { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }>;
-  prevSignalStaleIds: Set<string>;
-  /** True when the accepted-generation pointer itself was unreadable or invalid. */
-  generationUnavailable: boolean;
-  rowsRead: number;
-}
-
 export async function hydratePreviousStressSignals(ctx: HydrationContext): Promise<PreviousStressSignalsHydration> {
   const prevSignals = new Map<
     string,
@@ -566,16 +531,6 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
     ctx.registerSourceFailure("stress-signals", error);
   }
   return { prevSignals, prevSignalStaleIds, generationUnavailable, rowsRead: prevSignalRowsRead };
-}
-
-export interface MintBurnHydration {
-  mintBurnMap: Map<string, MintBurnSnapshot>;
-  mintBurnAgeSecById: Map<string, number>;
-  mintBurnStaleIds: Set<string>;
-  freshCount: number;
-  staleCount: number;
-  freshnessAgeSec: number | null;
-  rowsRead: number;
 }
 
 export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHydration> {
@@ -739,7 +694,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       const latestHourTs = end;
       const ageSec = getRowAgeSec(latestHourTs, ctx.nowSec);
       if (ageSec != null) mintBurnAgeSecById.set(stablecoinId, ageSec);
-      if (ageSec == null || ageSec > DEWS_STALE_MINT_BURN_SEC) {
+      if (ageSec == null || ageSec > DEWS_MINT_BURN_FRESHNESS_BUDGET_SEC) {
         mintBurnStaleIds.add(stablecoinId);
       }
       // Only fully proven windows admit quiet zero; gross values remain observed subtotals.
@@ -757,10 +712,10 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     }
     if (mintBurnMap.size > 0) mintBurnLatestHourTs = end;
     const mintBurnAgeSec = mintBurnLatestHourTs != null ? Math.max(0, ctx.nowSec - mintBurnLatestHourTs) : null;
-    if (mintBurnAgeSec != null && mintBurnAgeSec > DEWS_STALE_MINT_BURN_SEC) {
+    if (mintBurnAgeSec != null && mintBurnAgeSec > DEWS_MINT_BURN_FRESHNESS_BUDGET_SEC) {
       ctx.registerSourceFailure(
         "mint-burn-hourly-freshness",
-        `mint_burn_hourly age ${mintBurnAgeSec}s exceeds ${DEWS_STALE_MINT_BURN_SEC}s`,
+        `mint_burn_hourly age ${mintBurnAgeSec}s exceeds ${DEWS_MINT_BURN_FRESHNESS_BUDGET_SEC}s`,
       );
     }
   } catch (error) {
@@ -775,11 +730,6 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     freshnessAgeSec: mintBurnLatestHourTs != null ? Math.max(0, ctx.nowSec - mintBurnLatestHourTs) : null,
     rowsRead: mintBurnRowsRead,
   };
-}
-
-export interface YieldWarningsHydration {
-  yieldWarnings: Map<string, string[]>;
-  rowsRead: number;
 }
 
 export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<YieldWarningsHydration> {
@@ -825,16 +775,6 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
     ctx.registerSourceFailure("yield-data", error);
   }
   return { yieldWarnings, rowsRead: yieldWarningRowsRead };
-}
-
-export interface YieldRankingsHydration {
-  yieldSourceRisk: Map<string, YieldSourceRisk>;
-  yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;
-  /** Age of the admitted rankings generation; null when none was admitted. */
-  yieldRankingsAgeSec: number | null;
-  /** True when the admitted generation is a retained last-good one past the producer budget. */
-  yieldRankingsRetained: boolean;
-  dependencyDiagnostics: StablecoinsDependencyDiagnostics;
 }
 
 export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<YieldRankingsHydration> {
@@ -934,10 +874,7 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
   };
 }
 
-export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<{
-  latestPsiScore: number | null;
-  dependencyDiagnostics: StablecoinsDependencyDiagnostics;
-}> {
+export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<LatestPsiHydration> {
   const diagnostics: StablecoinsDependencyDiagnostics = {
     generationId: null, updatedAt: null, ageSeconds: null,
     freshnessBudgetSec: DEWS_PSI_FRESHNESS_BUDGET_SEC, reason: "missing-sample",

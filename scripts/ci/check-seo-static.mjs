@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import { register as registerCommonJs } from "tsx/cjs/api";
+import { register as registerEsm } from "tsx/esm/api";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
@@ -20,6 +22,7 @@ import {
 } from "../lib/seo-html-parse.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { findDuplicateSitemapLocs, parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
+import { RETIRED_PUBLIC_ROUTES as RETIRED_INTERNAL_ROUTE_PREFIXES } from "../lib/retired-public-routes.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
 // These families dropped their route-level loading.tsx (2026-10-25 SEO plan,
@@ -31,38 +34,6 @@ const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-t
 const EMPTY_BAILOUT_TEMPLATE_PATTERN = /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
 const PHAROS_ORIGIN = "https://pharos.watch";
 const PHAROS_HOSTNAME = new URL(PHAROS_ORIGIN).hostname;
-const RETIRED_INTERNAL_ROUTE_PREFIXES = [
-  { prefix: "/telegram", replacement: "/pharoswatchbot/" },
-  { prefix: "/screener/selector", replacement: "/screener/picker/" },
-  { prefix: "/mica", replacement: "/compliance/" },
-  { prefix: "/blacklist", replacement: "/freezewatch/" },
-  { prefix: "/report-cards", replacement: "/safety-scores/" },
-  { prefix: "/risk-lab", replacement: "/safety-scores/" },
-  { prefix: "/peg-tracker", replacement: "/" },
-  { prefix: "/stability-index-alt", replacement: "/stability-index/" },
-  { prefix: "/tape", replacement: "/timeline/" },
-  { prefix: "/stablecoins/protocol/liquity-v1", replacement: "/stablecoins/infrastructure/liquity-v1/" },
-  { prefix: "/stablecoins/protocol/liquity-v2", replacement: "/stablecoins/infrastructure/liquity-v2/" },
-  { prefix: "/stablecoins/protocol/liquity", replacement: "/stablecoins/infrastructure/liquity-v1/" },
-  { prefix: "/about/principles", replacement: "/about/" },
-  { prefix: "/about/editorial", replacement: "/about/" },
-  { prefix: "/about/style", replacement: "/about/" },
-  { prefix: "/sitemap-tree", replacement: "/" },
-  { prefix: "/start", replacement: "/" },
-  { prefix: "/about/bluechip", replacement: "/about/#bluechip" },
-  { prefix: "/docs/architecture", replacement: "/docs/" },
-  { prefix: "/docs/worker-and-api-limits", replacement: "/docs/" },
-  { prefix: "/docs/data-flow-map", replacement: "/docs/" },
-  { prefix: "/docs/design-language", replacement: "/docs/" },
-  { prefix: "/docs/design-tokens", replacement: "/docs/" },
-  { prefix: "/stablecoin/pusd-pleasing", replacement: "/coverage/" },
-  { prefix: "/stablecoin/phpc-coins-ph", replacement: "/coverage/" },
-  { prefix: "/feed/digest", replacement: "/feed/digest.xml" },
-  { prefix: "/feed/depeg", replacement: "/feed/depeg.xml" },
-  { prefix: "/feed/methodology", replacement: "/feed/methodology.xml" },
-  { prefix: "/feed/cemetery", replacement: "/feed/cemetery.xml" },
-  { prefix: "/methodology/pdf", replacement: "/methodology/" },
-];
 const RICHNESS_CHECKS = [
   {
     label: "stablecoin detail",
@@ -1382,12 +1353,13 @@ function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
 const SAFETY_SCORES_ROUTE = "/safety-scores/";
 const SAFETY_RESULTS_REGION_LABEL = "Safety score cards";
 const SAFETY_RESULTS_REGION_ID = "data";
-const SAFETY_PREVIEW_MAX_ROWS = 20;
-const SAFETY_GRADE_VALUES = new Set(["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"]);
+registerCommonJs();
+registerEsm();
+const { admitSafetyScoresPreviewRows, SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS, SAFETY_SCORES_PREVIEW_MAX_ROWS } =
+  await import("../../src/lib/safety-grade-snapshot.ts");
 const SAFETY_PROFILE_HREF_PATTERN = /^\/stablecoin\/[^/]+\/$/;
 const PUBLIC_DATASETS_DIR = path.resolve("public/datasets");
 const PUBLIC_DATASET_CURRENT_MODULE_PATH = path.resolve("src/lib/datasets/public-dataset-current.ts");
-const SAFETY_GRADE_POLICY_PATH = path.resolve("shared/data/safety-score-v9/methodology-policy-candidate-v1.json");
 const COMPLIANCE_DATA_DIR = path.resolve("shared/data/stablecoins/domains/compliance");
 let safetyScoresPreviewExpectationCache;
 let compliancePanelExpectationCache;
@@ -1432,16 +1404,11 @@ function readCurrentPublicDatasetDate(currentModulePath) {
   return /PUBLIC_DATASET_CURRENT_DATE\s*=\s*"(\d{4}-\d{2}-\d{2})"/.exec(source)?.[1] ?? null;
 }
 
-function gradeForScore(score, thresholds) {
-  const clamped = Math.max(0, Math.min(100, score));
-  return thresholds.find((entry) => clamped >= entry.minScore)?.grade ?? "F";
-}
-
 /**
  * Projects the expected preview the same way the page does: rated rows that are
  * current active registry members with recorded, threshold-consistent grades,
- * sorted by score then code-unit id and cut at the row bound. Mirrors
- * `buildSafetyScoresPreview` in `src/lib/safety-grade-snapshot.ts`; any
+ * sorted by score then code-unit id and cut at the row bound. Reuses the
+ * page admission in `src/lib/safety-grade-snapshot.ts`; any
  * divergence surfaces as missing/unexpected profile links in the artifact.
  *
  * @returns {{ status: "ok", preview: { snapshotDate: string, publishedAtSec: number, publishedAtIso: string, publishedDate: string, eligibleRatedCount: number, rows: { id: string, href: string, grade: string, score: number }[] } } | { status: "unavailable", reason: string }}
@@ -1450,7 +1417,6 @@ export function buildSafetyScoresPreviewExpectation({
   currentModulePath = PUBLIC_DATASET_CURRENT_MODULE_PATH,
   datasetsDir = PUBLIC_DATASETS_DIR,
   coinDataDir = COIN_DATA_DIR,
-  gradePolicyPath = SAFETY_GRADE_POLICY_PATH,
 } = {}) {
   const unavailable = (reason) => ({ status: "unavailable", reason });
   const datasetDate = readCurrentPublicDatasetDate(currentModulePath);
@@ -1462,7 +1428,7 @@ export function buildSafetyScoresPreviewExpectation({
   // block this expectation reads. An unknown version is named instead of folded
   // into "missing" so the warning states that the artifact and the check are
   // out of step while the page serves its neutral skeleton.
-  if (display?.version !== 1 && display?.version !== 2) {
+  if (!SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS.includes(display?.version)) {
     return unavailable(
       display?.version === undefined
         ? "display-projection-missing"
@@ -1474,38 +1440,9 @@ export function buildSafetyScoresPreviewExpectation({
   if (!safety) return unavailable(display.safetyUnavailableReason ?? "safety-projection-missing");
   const publishedAtSec = safety.publishedAtSec;
   if (!Number.isInteger(publishedAtSec) || publishedAtSec <= 0) return unavailable("publication-clock-invalid");
-  const thresholds = readJsonFile(gradePolicyPath)?.semantic?.formula?.gradeThresholds;
-  if (!Array.isArray(thresholds) || thresholds.length === 0) return unavailable("grade-policy-unreadable");
   const activeIds = readActiveStablecoinIds(coinDataDir);
   if (!activeIds) return unavailable("active-registry-unavailable");
 
-  // Global admissions the page performs before it projects any row: a second
-  // row per asset, an inconsistent not-rated/pipeline-gap row, a completeness
-  // mismatch or an incompatible methodology all withhold the preview.
-  const ratedStatusCounts = { rated: 0, "not-rated": 0, "pipeline-gap": 0 };
-  const seenIds = new Set();
-  for (const row of Array.isArray(dataset.rows) ? dataset.rows : []) {
-    if (!row || typeof row.stablecoinId !== "string" || row.stablecoinId.length === 0) continue;
-    if (seenIds.has(row.stablecoinId)) return unavailable(`duplicate-dataset-row:${row.stablecoinId}`);
-    seenIds.add(row.stablecoinId);
-    if (row.ratingStatus === "not-rated") {
-      if (row.safetyScore !== null || row.safetyGrade !== "NR") return unavailable(`invalid-not-rated-row:${row.stablecoinId}`);
-      ratedStatusCounts["not-rated"] += 1;
-    } else if (row.ratingStatus === "pipeline-gap") {
-      if (row.safetyScore !== null || row.safetyGrade !== null) return unavailable(`invalid-pipeline-gap-row:${row.stablecoinId}`);
-      ratedStatusCounts["pipeline-gap"] += 1;
-    } else if (row.ratingStatus === "rated") {
-      ratedStatusCounts.rated += 1;
-    }
-  }
-  const completeness = safety.completeness;
-  if (
-    ratedStatusCounts.rated !== completeness?.ratedCount
-    || ratedStatusCounts["not-rated"] !== completeness?.notRatedCount
-    || ratedStatusCounts["pipeline-gap"] !== completeness?.pipelineGapCount
-  ) {
-    return unavailable("completeness-mismatch");
-  }
   const methodologyLabel = dataset._meta?.methodologyLabel;
   const methodologyVersion = String(safety.identity?.methodologyVersion ?? "").replace(/^v/, "");
   if (
@@ -1516,27 +1453,13 @@ export function buildSafetyScoresPreviewExpectation({
     return unavailable("methodology-identity-mismatch");
   }
 
-  const rows = [];
-  for (const row of Array.isArray(dataset.rows) ? dataset.rows : []) {
-    if (!row || typeof row.stablecoinId !== "string" || row.ratingStatus !== "rated") continue;
-    const { safetyScore: score, safetyGrade: grade } = row;
-    if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100) continue;
-    if (typeof grade !== "string" || !SAFETY_GRADE_VALUES.has(grade)) continue;
-    if (!activeIds.has(row.stablecoinId)) continue;
-    // A held letter is published as recorded; the page omits any row whose
-    // recorded facts contradict the score or its own hold.
-    const gradeHold = row.safetyDisplay?.gradeHold ?? null;
-    const rawGrade = gradeForScore(score, thresholds);
-    if (gradeHold) {
-      if (gradeHold.rawGrade !== rawGrade || grade === rawGrade) continue;
-    } else if (grade !== rawGrade) {
-      continue;
-    }
-    rows.push({ id: row.stablecoinId, href: buildStablecoinHref(row.stablecoinId), grade, score });
-  }
-  if (rows.length === 0) return unavailable("no-eligible-rated-rows");
-  rows.sort((left, right) => right.score - left.score
-    || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+  const admission = admitSafetyScoresPreviewRows(
+    Array.isArray(dataset.rows) ? dataset.rows : [],
+    [...activeIds].map((id) => ({ id, name: id, symbol: id })),
+    safety.completeness,
+  );
+  if (admission.unavailableReason) return unavailable(admission.unavailableReason);
+  const rows = admission.rows;
 
   return {
     status: "ok",
@@ -1548,7 +1471,7 @@ export function buildSafetyScoresPreviewExpectation({
       // than the dataset's calendar date.
       publishedDate: new Date(publishedAtSec * 1000).toISOString().slice(0, 10),
       eligibleRatedCount: rows.length,
-      rows: rows.slice(0, SAFETY_PREVIEW_MAX_ROWS),
+      rows: rows.slice(0, SAFETY_SCORES_PREVIEW_MAX_ROWS).map(({ id, href, grade, score }) => ({ id, href, grade, score })),
     },
   };
 }

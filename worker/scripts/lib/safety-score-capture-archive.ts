@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
 import { z } from "zod";
-import { SafetyScoreCaptureArchiveObjectSchema } from "@shared/types/safety-score-capture-archive";
+import { decodeSafetyScoreCaptureArchiveObject } from "../../src/lib/safety-score-v9/capture-archive-contract";
 import { parseSafetyScoreV9PublicationReplayCacheRows } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { parseSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
 
@@ -176,21 +175,8 @@ export function resolveArchiveBoundary(rows: readonly SafetyScoreCaptureArchiveI
   return null;
 }
 
-export function archiveObjectKey(row: Pick<SafetyScoreCaptureArchiveIndex, "published_at" | "generation_id">): string {
-  // Reject path separators before using an index identity in the offline filesystem path.
-  if (!/^[A-Za-z0-9:_-]+$/u.test(row.generation_id)) throw new Error("Invalid archive generation path identity");
-  return `captures/safety-score-v9-accepted/${new Date(row.published_at * 1000).toISOString().slice(0, 10)}/${row.generation_id}.json`;
-}
-
 export async function decodeArchiveExport(index: SafetyScoreCaptureArchiveIndex, bytes: Uint8Array) {
-  if (createHash("sha256").update(bytes).digest("hex") !== index.object_sha256) throw new Error("capture-archive-sha256-mismatch");
-  if (bytes.byteLength !== index.object_bytes) throw new Error("capture-archive-byte-length-mismatch");
-  const object = SafetyScoreCaptureArchiveObjectSchema.parse(JSON.parse(Buffer.from(bytes).toString("utf8")));
-  if (object.generationId !== index.generation_id || object.publishedAt !== index.published_at ||
-      object.methodologyVersion !== index.methodology_version || object.policyDigest !== index.policy_digest ||
-      object.evaluationBuildDigest !== index.evaluation_build_digest || index.r2_key !== archiveObjectKey(index)) {
-    throw new Error("capture-archive-index-identity-mismatch");
-  }
+  const object = decodeSafetyScoreCaptureArchiveObject(index, bytes);
   const cacheExport = [{ success: true as const, results: [object.base, object.delta].map((row) => ({
     key: row.key, value: row.value, updated_at: row.updatedAt,
   })) }];

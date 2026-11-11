@@ -183,6 +183,49 @@ describe("generated sitemap dates are independent of checkout time", () => {
     baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-03-01T00:00:00.000Z" });
   });
 
+  it("ignores a commit marked `Sitemap-Date: unchanged` when Git dates are read", async () => {
+    const { execFileSync } = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+    const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = await vi.importActual<typeof import("node:fs")>("node:fs");
+    const { tmpdir } = await import("node:os");
+    const repo = mkdtempSync(join(tmpdir(), "sitemap-date-marker-"));
+    const git = (args: readonly string[], date?: string) =>
+      String(execFileSync("git", args, {
+        cwd: repo,
+        encoding: "utf-8",
+        env: {
+          ...process.env,
+          GIT_CONFIG_GLOBAL: "/dev/null",
+          GIT_CONFIG_SYSTEM: "/dev/null",
+          GIT_AUTHOR_NAME: "t",
+          GIT_AUTHOR_EMAIL: "t@example.invalid",
+          GIT_COMMITTER_NAME: "t",
+          GIT_COMMITTER_EMAIL: "t@example.invalid",
+          ...(date ? { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : {}),
+        },
+      }));
+    try {
+      git(["init", "-q"]);
+      mkdirSync(join(repo, "src/app"), { recursive: true });
+      const commit = (contents: string, message: string, date: string) => {
+        writeFileSync(join(repo, ROOT_PAGE_PATH), contents);
+        git(["add", "-A"]);
+        git(["commit", "-q", "-m", message], date);
+      };
+      commit("content", "feat: write the page", BASE_COMMIT);
+      commit("refactored", "refactor: move an import\n\nSitemap-Date: unchanged\n", LATER_COMMIT);
+      // The exact arguments the generator passes to Git, run against real history.
+      const marked = git(generator.gitLogArgs);
+      // Git prints UTC as `Z`, so compare the clock without its zone suffix.
+      expect(marked).toContain(`${GIT_MARKER}${BASE_COMMIT.slice(0, 19)}`);
+      expect(marked).not.toContain(LATER_COMMIT.slice(0, 19));
+
+      commit("rewritten", "feat: rewrite the page\n\nThe line Sitemap-Date: unchanged inside a sentence is not the marker.\n", "2026-10-01T00:00:00+00:00");
+      expect(git(generator.gitLogArgs)).toContain(`${GIT_MARKER}2026-10-01T00:00:00`);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
   it("declares and scans the shared case-study schema", async () => {
     expect(SITEMAP_COMMIT_DERIVED_SOURCE_PATHS).toContain(SCHEMA_PATH);
     expect(files).toContain(SCHEMA_PATH);

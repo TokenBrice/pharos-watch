@@ -3,10 +3,9 @@ import {
   type DependencyType,
   type V9DependencyEconomicRole,
 } from "../../types/dependency-types";
-import { compareText } from "./primitives";
+import { compareText, domainKey, normalizeFailureDomain, normalizeFailureDomains } from "./primitives";
 import type { V9FailureDomainRef, V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9EvidenceCause, V9PartialEvidence, V9RatingStatus } from "../../types/safety-score-v9-causes";
-import { resolveChainId } from "../../types/chain-identity";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
@@ -218,27 +217,6 @@ export interface V9ResolvedDependencyInputs {
 }
 
 
-function canonicalPlanningDomain(domain: V9FailureDomainRef): V9FailureDomainRef {
-  if (domain.kind !== "chain") return domain;
-  return { kind: "chain", key: resolveChainId(domain.key) ?? domain.key.toLowerCase() };
-}
-
-function domainKey(domain: V9FailureDomainRef): string {
-  const canonical = canonicalPlanningDomain(domain);
-  return `${canonical.kind}:${canonical.key}`;
-}
-
-function canonicalPlanningDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
-  return [
-    ...new Map(
-      domains.map((domain) => {
-        const canonical = canonicalPlanningDomain(domain);
-        return [domainKey(canonical), canonical];
-      }),
-    ).values(),
-  ].sort((left, right) => compareText(domainKey(left), domainKey(right)));
-}
-
 function pathSortKey(path: V9DependencyPathPlan): string {
   return `${path.assetId}\u0000${path.exposureKey}\u0000${path.riskEventKey}\u0000${path.upstreamAssetId}\u0000${path.role}\u0000${path.dependencyType}\u0000${path.edgeKey}`;
 }
@@ -281,7 +259,7 @@ function coalescedPath(
 ): V9DependencyPathPlan {
   const ordered = [...edges].sort(comparePlanningEdge);
   const selected = ordered[0]!;
-  const failureDomains = canonicalPlanningDomains([
+  const failureDomains = normalizeFailureDomains([
     ...ordered.flatMap((edge) => edge.failureDomains),
     ...additionalFailureDomains,
   ]);
@@ -359,7 +337,7 @@ function collectCommonModes(
     { failureDomain: V9FailureDomainRef; members: V9CommonModeMember[]; memberKeys: Set<string> }
   >();
   const add = (domain: V9FailureDomainRef, member: V9CommonModeMember) => {
-    const canonical = canonicalPlanningDomain(domain);
+    const canonical = normalizeFailureDomain(domain);
     const key = domainKey(canonical);
     const group =
       groups.get(key) ?? { failureDomain: canonical, members: [], memberKeys: new Set<string>() };

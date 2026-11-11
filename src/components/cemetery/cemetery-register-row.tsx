@@ -8,6 +8,7 @@ import { causeColorVars } from "@/lib/cemetery-cause-style";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { cn } from "@/lib/utils";
+import { isRowActivation } from "@/lib/row-activation";
 import { CemeteryRegisterAutopsy } from "./cemetery-register-autopsy";
 import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import styles from "./cemetery-register.module.css";
@@ -46,9 +47,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
   // Whole-row tap toggles; the disclosure button stays the keyboard path, and
   // nested controls or a text selection keep their own behaviour.
   const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
-    if ((event.target as Element).closest("a, button, input, select, label")) return;
-    if (window.getSelection()?.toString()) return;
-    onToggle(row.id, !expanded);
+    if (isRowActivation(event)) onToggle(row.id, !expanded);
   };
 
   return (

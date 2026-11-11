@@ -9,6 +9,7 @@ import {
 } from "@/components/providers";
 import { setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { openCommandPalette } from "@/lib/command-palette";
+import NotFound from "@/app/not-found";
 
 const setThemeMock = vi.hoisted(() => vi.fn());
 
@@ -58,6 +59,23 @@ afterEach(() => {
 });
 
 describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
+
+  it("lets the global shortcut toggle search once on the not-found page and keeps its search button", async () => {
+    render(<Providers><NotFound /></Providers>);
+    await screen.findByTestId("route-progress-bar");
+
+    expect(pressKey("k", { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(await screen.findByTestId("command-palette")).toBeTruthy();
+    pressKey("k", { ctrlKey: true });
+    expect(screen.queryByTestId("command-palette")).toBeNull();
+    pressKey("k", { metaKey: true });
+    expect(await screen.findByTestId("command-palette")).toBeTruthy();
+    pressKey("k", { metaKey: true });
+    expect(screen.queryByTestId("command-palette")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Search the dashboard/ }));
+    expect(await screen.findByTestId("command-palette")).toBeTruthy();
+  });
 
   it.each([
     "/about/",

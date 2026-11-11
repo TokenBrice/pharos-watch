@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { firefox } from "playwright";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("playwright", () => ({ firefox: { launch: vi.fn() } }));
+
 
 import {
   computeDemandOrbitZones,
@@ -10,9 +17,49 @@ import {
   selectMapPsi,
   subgradeLaneForGrade,
   supplyMassBarWidth,
+  runSafetyScoreMapCli,
 } from "../maintenance/build-safety-score-map";
 
-import { makeSafetyMapPsiPayload } from "./build-safety-score-map.test-support";
+import {
+  makeSafetyMapPsiPayload,
+  makeSafetyMapRatedCard,
+  makeSafetyMapReportCardsResponse,
+  makeSafetyMapStablecoinsPayload,
+} from "./build-safety-score-map.test-support";
+
+it("keeps both serif masthead titles inside the reserved left margin", async () => {
+  const now = 1_794_391_200;
+  const outDir = mkdtempSync(join(tmpdir(), "pharos-safety-map-margin-"));
+  const bodies = [
+    makeSafetyMapReportCardsResponse({
+      cards: [makeSafetyMapRatedCard({ id: "margin-fixture", grade: "A+", score: 90 })],
+      fixtureId: "margin", methodologyVersion: "10.01", defaultUpdatedAt: now, asOfSec: now,
+    }),
+    makeSafetyMapStablecoinsPayload([{ id: "margin-fixture", symbol: "FIX", circulating: { peggedUSD: 100 } }]),
+    makeSafetyMapPsiPayload({ score: 94, band: "BEDROCK", computedAt: now }, now),
+  ];
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+  const request = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    Response.json(bodies.shift(), { headers: { "X-Data-Updated-At": String(now) } }));
+  const browser = vi.mocked(firefox.launch).mockRejectedValue(new Error("stop after SVG"));
+  try {
+    await runSafetyScoreMapCli({
+      argv: ["--out", join(outDir, "map.png")], apiKey: "fixture-key", baseUrl: "https://fixture.test",
+      io: { log: () => {}, warn: () => {}, error: () => {} },
+    });
+    expect(browser).toHaveBeenCalledOnce();
+    const svg = readFileSync(join(outDir, "map.svg"), "utf8");
+    const titles = [...svg.matchAll(/<text x="([^"]+)"[^>]*>(The Stablecoin|Safety Map)<\/text>/g)];
+    expect(titles).toHaveLength(2);
+    expect(titles.map((match) => Number(match[1]))).toEqual([48, 48]);
+  } finally {
+    clock.mockRestore();
+    request.mockRestore();
+    browser.mockReset();
+    rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
 
 describe("Safety Map PSI footer", () => {
   const psiPayload = (current: Record<string, unknown> | null) => makeSafetyMapPsiPayload(current);

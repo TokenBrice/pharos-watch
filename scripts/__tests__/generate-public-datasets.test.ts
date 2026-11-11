@@ -14,6 +14,7 @@ import * as depegSnapshot from "../../src/lib/depeg-event-snapshot";
 import { copyDatasetWorkspace, datasetBytes } from "./generate-public-datasets.test-support";
 import * as depegCapture from "../lib/depeg-ledger-capture";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { RETIRED_PUBLIC_ROUTE_REDIRECTS, projectRetiredPublicRouteRedirects } from "../lib/retired-public-routes.mjs";
 
 beforeEach(() => {
   vi.spyOn(depegSnapshot, "readDepegEventSnapshot").mockImplementation(() => [makeEvent(null), makeCoverageSentinel()]);
@@ -80,7 +81,7 @@ function legacyProjection(snapshotDate = DATE) {
 async function writeBundle(root: string, date = DATE) {
   const dirs = artifactDirs(root);
   for (const file of [dirs.redirectsPath, dirs.currentDatasetModulePath]) await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(dirs.redirectsPath, buildPublicDatasetRedirectBlock(date));
+  await writeFile(dirs.redirectsPath, projectRetiredPublicRouteRedirects(buildPublicDatasetRedirectBlock(date)));
   await writeFile(dirs.currentDatasetModulePath, buildPublicDatasetCurrentModule(date));
   for (const [topic, count] of [["top-stablecoins", 493], ["depeg-history", 0], ["scores-latest", 493], ["peg-mechanism-distribution", 99]] as const) {
     await writeArtifacts(dirs, topic, buildTopicArtifacts({
@@ -873,6 +874,34 @@ describe("generate-public-datasets", () => {
 
 
 describe("PR mirror integrity mode", () => {
+  it("projects reviewed retirement slots without moving redirect layout and rejects destination drift", async () => {
+    const redirects = await readFile(path.resolve("public/_redirects"), "utf8");
+    expect(projectRetiredPublicRouteRedirects(redirects)).toBe(redirects);
+    const lines = new Set(redirects.split("\n"));
+    for (const rule of RETIRED_PUBLIC_ROUTE_REDIRECTS) {
+      expect(lines.has(`${rule.source} ${rule.destination} ${rule.status}`), rule.source).toBe(true);
+    }
+    const dirs = await writeBundle(await makeRoot());
+    const aliases = await readFile(dirs.redirectsPath, "utf8");
+    const valid = projectRetiredPublicRouteRedirects(aliases);
+    const missing = valid.replace("/telegram /pharoswatchbot/ 301\n", "");
+    const repaired = projectRetiredPublicRouteRedirects(missing);
+    expect(repaired).toContain("/telegram /pharoswatchbot/ 301\n");
+    expect(projectRetiredPublicRouteRedirects(repaired)).toBe(repaired);
+    await writeFile(dirs.redirectsPath, missing);
+    expect(checkAllTopics(dirs, true)).toEqual({
+      ok: false, reason: "retired public route redirects differ from their declared policy",
+    });
+    await writeFile(dirs.redirectsPath, valid);
+    expect(checkAllTopics(dirs, true)).toEqual({ ok: true });
+    const drifted = valid.replace("/telegram /pharoswatchbot/ 301", "/telegram /wrong/ 302");
+    expect(projectRetiredPublicRouteRedirects(drifted)).toBe(valid);
+    await writeFile(dirs.redirectsPath, drifted);
+    expect(checkAllTopics(dirs, true)).toEqual({
+      ok: false, reason: "retired public route redirects differ from their declared policy",
+    });
+  });
+
   it.each([
     [DATE, 0, true], [DATE, 2, true], [DATE, 3, true],
     ["2026-02-30", 0, false], ["2026-13-01", 0, false], ["2026-05-17", 0, false],

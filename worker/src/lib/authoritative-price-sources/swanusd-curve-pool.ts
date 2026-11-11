@@ -1,16 +1,8 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch, isHexResult } from "../evm-rpc";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
-  decodeAddressWord,
-  decodeUint256WordBigInt,
-  decimalFromRaw,
-  encodeIndexedCall,
-  encodeUint256,
-  quoteUsdcPrice,
-  resolveTrustedOverrideParent,
+  fetchGuardedCurvePoolPrice,
   type CurrentPriceOverride,
   type LivePriceContext,
   type PriceSourceProvider,
@@ -42,11 +34,6 @@ const MIN_USDC_BALANCE = 1_000;
 const MAX_QUOTE_IMPACT_RATIO = 0.05;
 const MAX_BLOCK_AGE_SEC = 5 * 60;
 
-function encodeGetDy(inputTokens: number): string {
-  const inputRaw = BigInt(inputTokens) * 10n ** BigInt(SWANUSD_DECIMALS);
-  return `${GET_DY_SELECTOR}${encodeUint256(SWANUSD_INDEX)}${encodeUint256(USDC_INDEX)}${encodeUint256(inputRaw)}`;
-}
-
 /**
  * Exact-pool swanUSD/USDC quote for rows that would otherwise stay missing.
  *
@@ -66,84 +53,26 @@ export async function fetchSwanusdCurvePoolPrice(
   context: LivePriceContext,
   signal?: AbortSignal,
 ): Promise<CurrentPriceOverride | null> {
-  const quoteParent = resolveTrustedOverrideParent(
-    context,
-    USDC_ID,
-    () => `[authoritative-price-sources] ${SWANUSD_ID}: trusted USDC quote dependency unavailable`,
-    {
-      allowFreshNonReplaySafeParent: true,
-      allowFreshReplaySafeSingleSourceParent: true,
-    },
-  );
-  if (!quoteParent) return null;
-
-  // The derived USD price is only as fresh as its older input. A USDC parent
-  // already outside this route's five-minute budget can never publish, so reject
-  // it before spending the block and pool reads.
-  if (Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > MAX_BLOCK_AGE_SEC) return null;
-
-  // Configured Worker RPCs first; public endpoints are only the fallback tail.
-  const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
-  const blockNumber = await fetchEvmBlockNumber(CHAIN, rpcOptions);
-  if (blockNumber == null) return null;
-  const blockTimestamp = await fetchEvmBlockTimestamp(CHAIN, blockNumber, rpcOptions);
-  const nowSec = Math.floor(Date.now() / 1000);
-  if (blockTimestamp == null || blockTimestamp > nowSec + 60 || nowSec - blockTimestamp > MAX_BLOCK_AGE_SEC) {
-    return null;
-  }
-
-  // Batch direct eth_call envelopes to retain caller semantics and one pinned
-  // block while consuming only one connection for the six pool reads.
-  const results = await fetchEvmRpcBatch(CHAIN, [
-    encodeIndexedCall(COINS_SELECTOR, USDC_INDEX),
-    encodeIndexedCall(COINS_SELECTOR, SWANUSD_INDEX),
-    encodeIndexedCall(BALANCES_SELECTOR, USDC_INDEX),
-    encodeIndexedCall(BALANCES_SELECTOR, SWANUSD_INDEX),
-    encodeGetDy(SMALL_QUOTE_SWANUSD),
-    encodeGetDy(IMPACT_QUOTE_SWANUSD),
-  ].map((data) => ({
-    method: "eth_call",
-    params: [{ to: POOL, data }, `0x${blockNumber.toString(16)}`],
-  })), rpcOptions);
-  if (!results || results.length !== 6) return null;
-  const [coin0Raw, coin1Raw, usdcBalanceRaw, swanusdBalanceRaw, smallQuoteRaw, impactQuoteRaw] = results.map(
-    (value) => typeof value === "string" && isHexResult(value) ? value : null,
-  );
-
-  if (decodeAddressWord(coin0Raw) !== USDC || decodeAddressWord(coin1Raw) !== SWANUSD) return null;
-  const usdcBalance = usdcBalanceRaw ? decodeUint256WordBigInt(usdcBalanceRaw) : null;
-  const swanusdBalance = swanusdBalanceRaw ? decodeUint256WordBigInt(swanusdBalanceRaw) : null;
-  if (usdcBalance == null || swanusdBalance == null) return null;
-  if (
-    decimalFromRaw(usdcBalance, USDC_DECIMALS) < MIN_USDC_BALANCE ||
-    decimalFromRaw(swanusdBalance, SWANUSD_DECIMALS) < MIN_SWANUSD_BALANCE
-  ) {
-    return null;
-  }
-
-  const smallPrice = quoteUsdcPrice(
-    smallQuoteRaw ? decodeUint256WordBigInt(smallQuoteRaw) : null,
-    SMALL_QUOTE_SWANUSD,
-  );
-  const impactPrice = quoteUsdcPrice(
-    impactQuoteRaw ? decodeUint256WordBigInt(impactQuoteRaw) : null,
-    IMPACT_QUOTE_SWANUSD,
-  );
-  if (smallPrice == null || impactPrice == null) return null;
-  if (Math.abs(impactPrice - smallPrice) / smallPrice > MAX_QUOTE_IMPACT_RATIO) return null;
-
-  // Provenance keeps the older dependency clock: multiplying by the USDC parent
-  // must not renew the parent's observation time under this route's budget.
-  const parentClockSelected = quoteParent.trustedParent.observedAt < blockTimestamp;
-  const observedAt = parentClockSelected ? quoteParent.trustedParent.observedAt : blockTimestamp;
-  if (Math.floor(Date.now() / 1000) - observedAt > MAX_BLOCK_AGE_SEC) return null;
-  return {
-    price: smallPrice * quoteParent.trustedParent.price,
+  return fetchGuardedCurvePoolPrice({
+    assetId: SWANUSD_ID,
     source: SWANUSD_CURVE_SOURCE,
-    confidence: "fallback",
-    observedAt,
-    observedAtMode: parentClockSelected ? quoteParent.trustedParent.observedAtMode ?? "upstream" : "upstream",
-  };
+    chain: CHAIN,
+    pool: POOL,
+    tokens: [
+      { address: USDC, index: USDC_INDEX, decimals: USDC_DECIMALS, minBalance: MIN_USDC_BALANCE },
+      { address: SWANUSD, index: SWANUSD_INDEX, decimals: SWANUSD_DECIMALS, minBalance: MIN_SWANUSD_BALANCE },
+    ],
+    coinsSelector: COINS_SELECTOR,
+    balancesSelector: BALANCES_SELECTOR,
+    quoteSelector: GET_DY_SELECTOR,
+    quoteInputIndex: SWANUSD_INDEX,
+    quoteOutputIndex: USDC_INDEX,
+    quoteInputDecimals: SWANUSD_DECIMALS,
+    smallQuoteTokens: SMALL_QUOTE_SWANUSD,
+    impactQuoteTokens: IMPACT_QUOTE_SWANUSD,
+    maxQuoteImpactRatio: MAX_QUOTE_IMPACT_RATIO,
+    maxBlockAgeSec: MAX_BLOCK_AGE_SEC,
+  }, context, signal);
 }
 
 export const swanusdCurvePoolProvider: PriceSourceProvider = {

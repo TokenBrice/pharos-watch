@@ -181,7 +181,7 @@ const apiLinks = [
 const feedLinks = [
   ["Digest feed (RSS 2.0)", absolute("/feed/digest.xml"), "Daily and weekly digests."],
   ["Depeg feed (RSS 2.0)", absolute("/feed/depeg.xml"), "Confirmed depeg events."],
-  ["Methodology feed (RSS 2.0)", absolute("/feed/methodology.xml"), "Unified methodology changelog across 10 datasets."],
+  ["Methodology feed (RSS 2.0)", absolute("/feed/methodology.xml"), `Unified methodology changelog across ${METHODOLOGY_CHANGELOG_REGISTRY.length} datasets.`],
   ["Cemetery feed (RSS 2.0)", absolute("/feed/cemetery.xml"), "Newly archived defunct stablecoins."],
 ] as const;
 

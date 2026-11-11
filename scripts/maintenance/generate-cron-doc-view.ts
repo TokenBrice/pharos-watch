@@ -12,6 +12,7 @@ import {
 } from "@shared/lib/scheduled-runner-registry";
 import { evaluateCronScheduleSync, parseWranglerCronTriggers } from "../ci/check-cron-schedule-sync";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { syncWranglerCronTriggers } from "./generate-wrangler-cron-triggers";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DOC_PATH = "docs/worker-infrastructure.md";
@@ -30,6 +31,7 @@ Options:
 type WorkerTriggers = Record<ScheduledWorkerRole, readonly string[]>;
 
 export function loadCronDocTriggers(repoRoot: string): WorkerTriggers {
+  syncWranglerCronTriggers(repoRoot, true);
   return {
     public: parseWranglerCronTriggers(readFileSync(resolve(repoRoot, "worker/wrangler.toml"), "utf8")),
     heavy: parseWranglerCronTriggers(readFileSync(resolve(repoRoot, "worker/wrangler.heavy.toml"), "utf8")),

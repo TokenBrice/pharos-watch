@@ -1,7 +1,7 @@
 import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEventArgs } from "../structured-log";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { rethrowIfAborted } from "../abort";
@@ -24,7 +24,7 @@ import { moveusdOrcaProvider } from "./moveusd-orca";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { swanusdCurvePoolProvider } from "./swanusd-curve-pool";
 import { stbtCurvePoolProvider } from "./stbt-curve-pool";
-import { usd3CurvePoolProvider, type Usd3PriceContext } from "./usd3-curve-pool";
+import { usd3CurvePoolProvider } from "./usd3-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
 import { capCusdProvider } from "./cap-cusd";
@@ -36,6 +36,7 @@ import {
   type HistoricalPriceContext,
   type HistoricalPriceResolution,
   type LivePriceContext,
+  type LivePriceReferenceContext,
   type PriceSourceProvider,
   getRegistryLivePriceDiagnosticTarget,
   isValidatedLivePriceNoQuote,
@@ -253,7 +254,7 @@ export function createAuthoritativeLivePriceOverrideStats(
   };
 }
 
-export interface AuthoritativeLivePriceOverrideOptions extends Pick<Usd3PriceContext, "previousAssetsById" | "priceCache"> {
+export interface AuthoritativeLivePriceOverrideOptions extends Pick<LivePriceReferenceContext, "previousAssetsById" | "priceCache"> {
   chainRpcs?: Map<string, ChainRpcConfig>;
   db?: D1Database;
   wallClockBudgetMs?: number;
@@ -308,7 +309,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
   options?: AuthoritativeLivePriceOverrideOptions,
 ): Promise<Map<string, CurrentPriceOverride>> {
   const results = new Map<string, CurrentPriceOverride>();
-  const liveContext: Usd3PriceContext = {
+  const liveContext: LivePriceReferenceContext = {
     chainRpcs: options?.chainRpcs,
     assetsById: new Map(assets.map((asset) => [asset.id, { ...asset }])),
     validationReferences,
@@ -320,7 +321,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
     vaultRateWrites: new Map(),
   };
   const candidates = assets
-    .filter((asset) => ACTIVE_IDS.has(asset.id))
+    .filter((asset) => WORKER_ACTIVE_IDS.has(asset.id))
     .map((asset, originalIndex) => {
       const previousMissingGenerations = options?.previousMissingGenerationsById?.get(asset.id) ?? 0;
       const alertEligibleMissing =

@@ -448,17 +448,18 @@ export async function runPriceDexRefresh(params: {
       for (const attempt of rows.flatMap((row) => row.assetAttempts ?? [])) {
         const diagnostic = summary.assetDiagnostics.find((row) => row.assetId === attempt.assetId);
         if (diagnostic) diagnostic.attempt = attempt;
-        if (attempt.state === "attempted" && attempt.result === "empty") {
-          const hint = plan.targetsById.get(attempt.assetId);
-          if (hint && hint.chain === attempt.chain && hint.target === attempt.target) {
-            plan.targetsById.delete(attempt.assetId);
+      }
+      for (const outcome of result.targetOutcomes ?? []) {
+        if (outcome.result === "empty") {
+          const hint = plan.targetsById.get(outcome.assetId);
+          if (hint && hint.chain === outcome.chain && hint.target === outcome.target) {
+            plan.targetsById.delete(outcome.assetId);
           }
           continue;
         }
-        if (attempt.result !== "resolved" || !attempt.chain || !attempt.target) continue;
-        const asset = plan.cohort.find((asset) => asset.id === attempt.assetId);
+        const asset = plan.cohort.find((asset) => asset.id === outcome.assetId);
         if (!asset || !hasPublishableCurrentPrice(asset) || asset.priceObservedAt == null) continue;
-        const target = { id: asset.id, chain: attempt.chain, target: attempt.target, observedAt: asset.priceObservedAt };
+        const target = { id: asset.id, chain: outcome.chain, target: outcome.target, observedAt: asset.priceObservedAt };
         plan.targetsById.set(asset.id, target);
         observations.push({ ...target, source: "dexscreener-exact", price: asset.price!,
           observedAt: asset.priceObservedAt, observedAtMode: asset.priceObservedAtMode ?? null });

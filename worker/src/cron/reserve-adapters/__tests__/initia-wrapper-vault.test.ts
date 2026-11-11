@@ -1,5 +1,5 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { describe, expect, it } from "vitest";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import {
   evaluateAdapterSnapshotAdmission,
   expectWarningEffect,

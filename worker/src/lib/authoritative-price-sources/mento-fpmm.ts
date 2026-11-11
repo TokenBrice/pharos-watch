@@ -1,4 +1,5 @@
 import { decodeAbiParameters, parseAbiParameters } from "viem/utils";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmStorageAtBlock } from "../evm-rpc";
@@ -13,6 +14,7 @@ const TOKEN_IMPLEMENTATION = "0x815795c30d0758a297b08cd4e0643620c974c318";
 const POOL_IMPLEMENTATION_WORD = "0x0000000000000000000000008cb0518a0510ab62450f79f3cd9ee0cbddb77f30";
 const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const UNIT = 10n ** 18n;
+const MAX_BLOCK_AGE_SEC = 5 * 60;
 // Reviewed USDm/token FPMM pools. JPYm amounts match CHFm's USD scale (~$125 impact quote, ~$1,250 inventory floor).
 const ROUTES: Record<string, { symbol: string; token: string; pool: string; impactInput: bigint; minInputReserve: bigint }> = {
   "chfm-mento": { symbol: "CHFm", token: "0xb55a79f398e759e43c95b979163f30ec87ee131d", pool: "0xdc81135fd82f02cae736e261fb676b716663e8b8", impactInput: 100n * UNIT, minInputReserve: 1_000n * UNIT },
@@ -38,14 +40,15 @@ export async function fetchMentoFpmmPrice(id: string, context: LivePriceContext,
     { allowFreshReplaySafeSingleSourceParent: true });
   if (!parent) return null;
   const parentAge = Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt;
-  if (parentAge < 0 || parentAge >= 300) return reject("parent-age");
+  const maxObservationAgeSec = getPricingSourceRegistryEntry("mento-fpmm")?.maxTrustedAgeSec;
+  if (parentAge < 0 || maxObservationAgeSec == null || parentAge >= maxObservationAgeSec) return reject("parent-age");
   const options = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls("celo"), maxRetries: 0 };
   const block = await fetchEvmBlockNumber("celo", options);
   if (block == null) return reject("block-unavailable");
   const head = await fetchEvmBlockHeader("celo", block, options);
   const timestamp = head?.timestamp;
   const now = Math.floor(Date.now() / 1000);
-  if (timestamp == null || timestamp > now || now - timestamp >= 300) return reject("block-age");
+  if (timestamp == null || timestamp > now || now - timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age");
   const implementation = await fetchEvmStorageAtBlock("celo", route.pool, IMPLEMENTATION_SLOT, block, options);
   throwIfAborted(signal);
   if (implementation?.toLowerCase() !== POOL_IMPLEMENTATION_WORD) return reject("pool-implementation");
@@ -116,7 +119,7 @@ export async function fetchMentoFpmmPrice(id: string, context: LivePriceContext,
     const price = Number(small) / Number(UNIT) * parent.trustedParent.price;
     if (!Number.isFinite(price) || price <= 0) return reject("price-invalid");
     const observedAt = Math.min(timestamp, parent.trustedParent.observedAt);
-    if (Math.floor(Date.now() / 1000) - observedAt >= 300) return reject("expired-during-fetch");
+    if (Math.floor(Date.now() / 1000) - observedAt >= maxObservationAgeSec) return reject("expired-during-fetch");
     return { price, source: "mento-fpmm", confidence: "fallback",
       observedAt, observedAtMode: "upstream" };
   } catch {

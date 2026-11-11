@@ -2,6 +2,7 @@ import { compareCodeUnits } from "../compare";
 import type { V9FailureDomainRef } from "../../types/safety-score-v9-fact-primitives";
 import { sha256HexFromUtf8Chunks } from "../sha256";
 import { stableJsonStringifyChunksV1 } from "../stable-json";
+import { resolveChainId } from "../../types/chain-identity";
 
 // Compatibility name for existing V9 callers; implementation lives in compare.ts.
 export { compareCodeUnits as compareText } from "../compare";
@@ -74,6 +75,17 @@ export function domainKey(domain: V9FailureDomainRef): string {
   return `${domain.kind}:${domain.key}`;
 }
 
+export function normalizeFailureDomain(domain: V9FailureDomainRef): V9FailureDomainRef {
+  if (domain.kind !== "chain") return domain;
+  return { kind: "chain", key: resolveChainId(domain.key) ?? domain.key.toLowerCase() };
+}
+
+/** Normalize raw producer/planning inputs before deduplicating canonical identities. */
+export function normalizeFailureDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
+  return canonicalDomains(domains.map(normalizeFailureDomain));
+}
+
+/** Deduplicate already canonical identities without interpreting raw chain aliases. */
 export function canonicalDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
   return canonicalUniqueBy(domains, domainKey, (left, right) => compareCodeUnits(domainKey(left), domainKey(right)), "last");
 }

@@ -15,7 +15,7 @@ import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, findEvmBlockHeaderInTimestampWindow, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
-import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source-contract";
 import { observeL2MessengerPending } from "./l2-messenger-pending-observer";
 import { observeLayerZeroOftPending } from "./layerzero-oft-pending-observer";
 import { observeEconomicCosmosBank, pinEconomicCosmosBank, type CosmosBankPin } from "./cosmos-bank-observer";

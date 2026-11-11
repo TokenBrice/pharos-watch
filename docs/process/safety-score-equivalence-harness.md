@@ -184,7 +184,8 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createR2MeasurementsClient } from './scripts/lib/r2-measurements-client.ts';
 import { sqlString } from './scripts/lib/remote-d1.ts';
-import { SafetyScoreCaptureArchiveIndexSchema, archiveObjectKey } from './worker/scripts/lib/safety-score-capture-archive.ts';
+import { SafetyScoreCaptureArchiveIndexSchema } from './worker/scripts/lib/safety-score-capture-archive.ts';
+import { archiveObjectKey } from './worker/src/lib/safety-score-v9/capture-archive-contract.ts';
 const row = SafetyScoreCaptureArchiveIndexSchema.parse(JSON.parse(readFileSync('agents/v9-captures/historical/index.json', 'utf8')));
 if (row.r2_key !== archiveObjectKey(row)) throw new Error('archive key mismatch');
 const bytes = await createR2MeasurementsClient().get(row.r2_key);
@@ -540,14 +541,23 @@ Choose the branch by the reviewed release contract. A neutral release retains th
    Confirm the matching generation: the publication's `safetyScoreIdentity.baseInputGenerationId` must equal the accepted capture's `fixedInput.baseInputGenerationId`, and its publication generation must match the capture's `publicationGenerationId`. If production advances, take a fresh pair rather than diffing across generations.
 
 3. Replay the post-cutover capture at the **pre-cutover** commit (step b).
-4. The served publication is an envelope around the same card objects, so project both sides to the card array the diff CLI keys on:
+4. Project the served publication to the card array the diff CLI keys on. For the replay, restore publication-time grade hysteresis from its retained accepted baseline, then resolve witness texts to match the API. Run both helpers from the **pre-cutover** checkout:
 
    ```sh
    jq '{pipeline:{candidate:{cards:.cards}}}' \
      agents/v9-captures/live-v9-<stamp>.json > agents/v9-captures/live-cards-<stamp>.json
-   jq '{pipeline:{candidate:{cards:.pipeline.candidate.cards}}}' \
+   node --import tsx --input-type=module - \
      agents/v9-captures/replay-<pre-cutover-commit>-<stamp>.json \
-     > agents/v9-captures/replay-cards-<stamp>.json
+     agents/v9-captures/replay-cards-<stamp>.json <<'NODE'
+   import { readFileSync, writeFileSync } from "node:fs";
+   import { applySafetyScoreV9GradeHysteresis } from "./shared/lib/safety-score-v9/grade-hysteresis.ts";
+   import { resolveV9PublicWitnessTexts } from "./shared/types/safety-score-v9-public-witness-texts.ts";
+   const [inputPath, outputPath] = process.argv.slice(2);
+   const replay = JSON.parse(readFileSync(inputPath, "utf8"));
+   if (replay.sourceAdmissionBaseline === undefined) throw new Error("accepted-publication-replay-baseline-unavailable");
+   const candidate = applySafetyScoreV9GradeHysteresis(replay.pipeline.candidate, replay.sourceAdmissionBaseline);
+   writeFileSync(outputPath, JSON.stringify({ pipeline: { candidate: { cards: candidate.cards.map(resolveV9PublicWitnessTexts) } } }));
+   NODE
 
    npm run safety-score-v9:diff -- \
      --baseline agents/v9-captures/replay-cards-<stamp>.json \
@@ -583,15 +593,24 @@ Do not compare the live publication with pre-cutover code using `--assert-empty`
      --published-at <captured-clockSec>
    ```
 
-   Require replay candidate `publicationGenerationId`, `baseInputGenerationId`, `evaluationBuildDigest`, `candidateId`, `factSetDigest`, `resultDigest`, and `publishedAtSec` to equal the accepted live counterparts (the candidate/fact/result digests are also exposed under `source`, and the publication clock under `updatedAt`). Then project both sides to cards and require an empty normalized diff:
+   Require replay candidate `publicationGenerationId`, `baseInputGenerationId`, `evaluationBuildDigest`, `candidateId`, `factSetDigest`, `resultDigest`, and `publishedAtSec` to equal the accepted live counterparts (the candidate/fact/result digests are also exposed under `source`, and the publication clock under `updatedAt`). Then project both sides to cards, restoring publication-time grade hysteresis and resolving replay witness texts with the **exact deployed** checkout's helpers, and require an empty normalized diff:
 
    ```sh
    jq '{pipeline:{candidate:{cards:.cards}}}' \
      agents/v9-captures/post-deploy-<stamp>/publication.json \
      > agents/v9-captures/post-deploy-<stamp>/live-cards.json
-   jq '{pipeline:{candidate:{cards:.pipeline.candidate.cards}}}' \
+   node --import tsx --input-type=module - \
      agents/v9-captures/post-deploy-<stamp>/replay-deployed.json \
-     > agents/v9-captures/post-deploy-<stamp>/replay-cards.json
+     agents/v9-captures/post-deploy-<stamp>/replay-cards.json <<'NODE'
+   import { readFileSync, writeFileSync } from "node:fs";
+   import { applySafetyScoreV9GradeHysteresis } from "./shared/lib/safety-score-v9/grade-hysteresis.ts";
+   import { resolveV9PublicWitnessTexts } from "./shared/types/safety-score-v9-public-witness-texts.ts";
+   const [inputPath, outputPath] = process.argv.slice(2);
+   const replay = JSON.parse(readFileSync(inputPath, "utf8"));
+   if (replay.sourceAdmissionBaseline === undefined) throw new Error("accepted-publication-replay-baseline-unavailable");
+   const candidate = applySafetyScoreV9GradeHysteresis(replay.pipeline.candidate, replay.sourceAdmissionBaseline);
+   writeFileSync(outputPath, JSON.stringify({ pipeline: { candidate: { cards: candidate.cards.map(resolveV9PublicWitnessTexts) } } }));
+   NODE
    npm run safety-score-v9:diff -- \
      --baseline agents/v9-captures/post-deploy-<stamp>/replay-cards.json \
      --candidate agents/v9-captures/post-deploy-<stamp>/live-cards.json \

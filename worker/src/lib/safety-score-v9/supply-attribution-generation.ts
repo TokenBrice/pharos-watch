@@ -38,7 +38,7 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
 } from "./supply-attribution";
-import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source-contract";
 import { parseJson, parseJsonObject } from "../json-parse";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =

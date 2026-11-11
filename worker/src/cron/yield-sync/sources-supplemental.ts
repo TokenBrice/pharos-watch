@@ -44,14 +44,8 @@ import {
   OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT,
   runOptionalSourceFamily,
 } from "./sources-rpc";
-import {
-  fetchBeefySources,
-  fetchMorphoVaultSources,
-  fetchPendleMarketSources,
-  fetchRoycoDawnSources,
-  fetchYearnKongSources,
-  type SupplementalFamilyFetchResult,
-} from "./sources-optional";
+import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchYearnKongSources, type SupplementalFamilyFetchResult } from "./sources-optional-vaults";
+import { fetchRoycoDawnSources } from "./sources-optional-royco";
 import type {
   ResolvedYieldCandidate,
 } from "./types";

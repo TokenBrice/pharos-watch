@@ -1,3 +1,4 @@
+import { archiveObjectKey } from "../../src/lib/safety-score-v9/capture-archive-contract";
 import { serializeSafetyScoreV9PublicationWithEncoding } from "../../src/test-helpers/report-cards-v9";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -10,7 +11,7 @@ import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { runSafetyScoreCaptureArchiveCli } from "../export-safety-score-capture-archive";
 import { parseReportCardsAcceptedCacheExport, runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
-import { archiveObjectKey, decodeArchiveExport, parseArchiveBoundary, resolveArchiveBoundary, type SafetyScoreCaptureArchiveIndex } from "../lib/safety-score-capture-archive";
+import { decodeArchiveExport, parseArchiveBoundary, resolveArchiveBoundary, type SafetyScoreCaptureArchiveIndex } from "../lib/safety-score-capture-archive";
 import { makeV9FixedInput, v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { makeWorkerSafetyScoreV9Publication } from "../../src/test-helpers/report-cards-v9";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";

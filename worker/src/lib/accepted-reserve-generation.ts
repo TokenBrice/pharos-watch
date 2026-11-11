@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import { AcceptedReserveGenerationSchema, AcceptedReserveSnapshotSchema, RedemptionReserveRunMetadataSchema, type AcceptedReserveGeneration, type ConsumedReserveInput } from "@shared/types/accepted-reserve-generation";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
@@ -7,7 +8,7 @@ import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { sha256Hex } from "./hash";
 import { executeAtomicBatch } from "./db";
-import { LIVE_RESERVE_FRESHNESS_SEC, hasFatalReserveWarnings } from "./live-reserves/store-shared";
+import { hasFatalReserveWarnings } from "./live-reserves/store-shared";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves/store-shared";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission, hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";

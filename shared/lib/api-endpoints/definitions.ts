@@ -1,4 +1,4 @@
-import { API_PATHS } from "./paths";
+import { API_PATHS, DYNAMIC_API_PATHS } from "./paths";
 
 export type EndpointMethod = "GET" | "HEAD" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
@@ -337,7 +337,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     key: "stablecoin-detail",
-    path: "/api/stablecoin/:id",
+    path: DYNAMIC_API_PATHS.stablecoinDetail.template,
     routeDependencies: ["coingeckoApiKey"],
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
@@ -348,7 +348,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   }),
   publicGet({
     key: "stablecoin-live-summary",
-    path: "/api/stablecoin-live-summary/:id",
+    path: DYNAMIC_API_PATHS.stablecoinLiveSummary.template,
     routeDependencies: ["coingeckoApiKey"],
     publicApiAccess: "site-only",
     strictContract: true,
@@ -364,14 +364,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     key: "stablecoin-summary",
-    path: "/api/stablecoin-summary/:id",
+    path: DYNAMIC_API_PATHS.stablecoinSummary.template,
     probeGroup: "public",
     probePath: API_PATHS.stablecoinSummary("usdt-tether"),
   }),
   publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     key: "stablecoin-reserves",
-    path: "/api/stablecoin-reserves/:id",
+    path: DYNAMIC_API_PATHS.stablecoinReserves.template,
     probeGroup: "public",
     probePath: API_PATHS.stablecoinReserves("iusd-infinifi"),
   }),
@@ -526,13 +526,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     // Keep this out of public probes because valid dates come from /api/snapshots/index.
     key: "snapshot-day",
-    path: "/api/snapshots/:date.json",
+    path: DYNAMIC_API_PATHS.snapshotDay.template,
   }),
   publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     // Keep this out of public probes because valid dates come from /api/snapshots/index.
     key: "snapshot-coin",
-    path: "/api/snapshot/:date/stablecoin/:id",
+    path: DYNAMIC_API_PATHS.snapshotCoin.template,
   }),
   publicGet({
     key: "yield-rankings",
@@ -900,6 +900,21 @@ const BASE_ENDPOINT_DEFINITIONS = [
 ] as const satisfies readonly BaseEndpointDefinition[];
 
 export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];
+/** Integration artifacts cover every non-admin GET except internal site-only transports. */
+export type PublicApiEndpointKey = Exclude<
+  Extract<(typeof BASE_ENDPOINT_DEFINITIONS)[number], { adminRequired: false; methods: readonly ["GET"] }>,
+  { publicApiAccess: "site-only" }
+>["key"];
+type AnonymousThrottleLane = "public-api" | "site-api";
+
+/** Anonymous publication limiter membership, including credentialed Pages reads. */
+const ANONYMOUS_THROTTLE_LANES: Partial<Record<EndpointKey, readonly AnonymousThrottleLane[]>> = {
+  "safety-grades": ["public-api"],
+  "dependency-graph-v1": ["public-api"],
+  "dependency-scenarios": ["public-api", "site-api"],
+  "public-status-history": ["site-api"],
+};
+
 export type EndpointDefinitionByKey<K extends EndpointKey> =
   Extract<(typeof BASE_ENDPOINT_DEFINITIONS)[number], { key: K }>
   & Pick<EndpointDefinition, "publicApiAccess" | "siteDataAccess">;
@@ -970,6 +985,11 @@ export function getEndpointDefinition(path: string): EndpointDefinition | undefi
 
 export function getEndpointDefinitionByKey(key: EndpointKey): EndpointDefinition | undefined {
   return ENDPOINT_DEFINITION_BY_KEY.get(key);
+}
+
+export function isAnonymousThrottlePath(path: string, lane: AnonymousThrottleLane): boolean {
+  const endpoint = ENDPOINT_DEFINITION_BY_PATH.get(path);
+  return endpoint != null && (ANONYMOUS_THROTTLE_LANES[endpoint.key as EndpointKey]?.includes(lane) ?? false);
 }
 
 export function getEndpointOpsProxyTimeoutMs(path: string, fallbackMs: number): number {

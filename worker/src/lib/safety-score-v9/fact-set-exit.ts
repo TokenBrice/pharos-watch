@@ -1,3 +1,4 @@
+import { normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
@@ -62,7 +63,6 @@ import {
   missingLocalFact,
   componentResearchEvidence,
   assertKnownComponentEvidenceCurrent,
-  stableFailureDomains,
   createRuntimeGapVerdict,
   evidenceGapClassificationsFor,
   type AssetBuildContext,
@@ -699,7 +699,7 @@ function buildRoute(
     },
     capacityCurve,
     output,
-    failureDomains: stableFailureDomains([...baseDomains, ...args.review.failureDomains]),
+    failureDomains: normalizeFailureDomains([...baseDomains, ...args.review.failureDomains]),
   };
 }
 

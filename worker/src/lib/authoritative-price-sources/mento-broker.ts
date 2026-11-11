@@ -1,5 +1,6 @@
 import { decodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, type ParseAbi } from "viem/utils";
 import { decodeMentoPoolExchange, MENTO_POOL_SPREAD_FIXIDITY_SCALE } from "@shared/lib/mento-contracts";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmBlockHeader } from "../evm-rpc";
@@ -18,6 +19,7 @@ const RESERVE = "0x9380fa34fd9e4fd14c06305fd7b6199089ed4eb9";
 const ORACLE = "0xefb84935239dacdecf7c5ba76d8de40b077b7b33";
 const BREAKER = "0x303ed1df62fa067659b586ebee8de0ece824ab39";
 const UNIT = 10n ** 18n;
+const MAX_BLOCK_AGE_SEC = 5 * 60;
 const ROUTES: Record<string, { token: string; exchange: string; feed: string; depth: bigint }> = {
   "audm-mento": { token: "0x7175504c455076f15c04a2f90a8e352281f492f9", exchange: "0xd580d237231109e6a96d67d82450611c610a805a26660c90281bdc0cd04a95c7", feed: "0x646bd504c3864ea5b8a6b6d25743721f61864a07", depth: 1_000n * UNIT },
   "cadm-mento": { token: "0xff4ab19391af240c311c54200a492233052b6325", exchange: "0x517ccc3bcab9f35e2e24143a0c1809068efc649f740846cfb6a1c5703735c1ee", feed: "0x20869cf54ead821c45dfb2ab0c23d2e10fbb65a4", depth: 1_000n * UNIT },
@@ -43,17 +45,18 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
   const parent = resolveTrustedOverrideParent(context, MENTO_BROKER_PARENT_ID, () => "Mento Broker: trusted USDm unavailable", { allowFreshReplaySafeSingleSourceParent: true });
   if (!parent) return reject("parent-unavailable");
   const parentAge = Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt;
-  if (parentAge < 0 || parentAge >= 300) return reject("parent-age");
+  const maxObservationAgeSec = getPricingSourceRegistryEntry("mento-broker")?.maxTrustedAgeSec;
+  if (parentAge < 0 || maxObservationAgeSec == null || parentAge >= maxObservationAgeSec) return reject("parent-age");
   const options = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls("celo"), maxRetries: 0 };
   throwIfAborted(signal);
   const cached = validatedHeads.get(context);
   const cachedAge = cached ? Math.floor(Date.now() / 1000) - cached.head.timestamp : Infinity;
-  const reusable = cached && cachedAge >= 0 && cachedAge < 300 ? cached : undefined;
+  const reusable = cached && cachedAge >= 0 && cachedAge < MAX_BLOCK_AGE_SEC ? cached : undefined;
   const block = reusable?.block ?? await fetchEvmBlockNumber("celo", options);
   if (block == null) return reject("block-unavailable");
   const head = reusable?.head ?? await fetchEvmBlockHeader("celo", block, options);
   const now = Math.floor(Date.now() / 1000);
-  if (!head || head.timestamp > now || now - head.timestamp >= 300) return reject("block-age");
+  if (!head || head.timestamp > now || now - head.timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age");
   const call = (label: string, target: string, signature: string, args: readonly unknown[] = []) => ({ label, target,
     callData: encodeFunctionData({ abi: parseAbi([signature]) as ParseAbi<readonly string[]>, functionName: signature.match(/function (\w+)/)![1], args }) });
   const calls = [
@@ -128,7 +131,7 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
     }
     const observedAt = Math.min(head.timestamp, oracleTime, parent.trustedParent.observedAt);
     const age = Math.floor(Date.now() / 1000) - observedAt;
-    if (age < 0 || age >= 300) return reject("dependency-age");
+    if (age < 0 || age >= maxObservationAgeSec) return reject("dependency-age");
     const price = Number(small) / Number(UNIT) * parent.trustedParent.price;
     if (!Number.isFinite(price) || price <= 0) return reject("price-invalid");
     validatedHeads.set(context, { block, head });

@@ -1,6 +1,6 @@
 import { CG_CHAIN_MAP } from "@shared/lib/chains";
 import { resolveChainId } from "@shared/types/chain-identity";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -204,7 +204,7 @@ function buildAssetDeployments(asset: AddressPriceAssetLike): Array<{
   origin: AddressPriceTarget["origin"];
   decimals?: number;
 }> {
-  const meta = ACTIVE_META_BY_ID.get(asset.id);
+  const meta = WORKER_ACTIVE_META_BY_ID.get(asset.id);
   return [
     ...addAssetAddressDeployments(asset),
     // Native XRPL amounts and unknown decimals cannot enter fixed-decimal address pricing.
@@ -281,7 +281,7 @@ export function buildAddressPriceTargets(params: {
     );
     if (!targeting.include) continue;
 
-    const meta = ACTIVE_META_BY_ID.get(asset.id);
+    const meta = WORKER_ACTIVE_META_BY_ID.get(asset.id);
     const metadataDeployments = [
       ...(meta?.contracts ?? []),
       ...(meta?.tradedContracts ?? []),

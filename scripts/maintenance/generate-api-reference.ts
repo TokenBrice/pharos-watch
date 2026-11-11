@@ -36,11 +36,7 @@ interface OpenApiRoute {
   parameters: string; responseCodes: string; responseSchemaRefs: readonly string[]; definition: EndpointDefinition;
 }
 
-const SUPPLEMENTAL_ENDPOINT_ORDER = [
-  "donor-key-claim", "feedback", "telegram-mini-app-session", "telegram-mini-app-mutation", "telegram-webhook",
-] as const;
-
-const SUPPLEMENTAL_NOTES: Readonly<Record<(typeof SUPPLEMENTAL_ENDPOINT_ORDER)[number], string>> = {
+const SUPPLEMENTAL_NOTES = {
   "donor-key-claim": "Issues one non-expiring supporter API key to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
   feedback: "Accepts the bounded feedback form payload used by the website.",
   "telegram-mini-app-session": "Creates or refreshes a Telegram Mini App session after Telegram init-data validation.",
@@ -286,7 +282,7 @@ function renderOgRoute(): string {
 export function renderGeneratedBlock(spec: OpenApiSpec): string {
   const routes = collectOpenApiRoutes(spec);
   if (routes.length !== PUBLIC_API_ARTIFACT_ENDPOINTS.length) throw new Error(`Expected ${PUBLIC_API_ARTIFACT_ENDPOINTS.length} OpenAPI operations, found ${routes.length}`);
-  const supplemental = SUPPLEMENTAL_ENDPOINT_ORDER.map((key) => {
+  const supplemental = Object.keys(SUPPLEMENTAL_NOTES).map((key) => {
     const definition = ENDPOINT_DEFINITIONS.find((candidate) => candidate.key === key);
     if (!definition || definition.adminRequired) throw new Error(`Missing public endpoint definition ${key}`);
     return definition;

@@ -1,9 +1,9 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { throwIfAborted } from "../../lib/abort";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
 import {
   decimalNumberFromBigInt,
   notApplicableFreshnessMetadata,

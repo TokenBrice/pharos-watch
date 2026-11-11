@@ -1,9 +1,9 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../lib/live-reserve-policy";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../lib/live-reserves/store-shared";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";

@@ -4,7 +4,7 @@ import { canonicalizeChainCirculating, normalizeChainSupplyValue } from "@shared
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
-import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
+import { REVIEWED_ONCHAIN_SUPPLY_PLANS, selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO } from "@shared/lib/pricing-source-policy";
 import type { SupplyChainGuardProvenance } from "@shared/types/market";
@@ -19,7 +19,7 @@ import { fetchSolanaTokenSupply } from "../../lib/chain-observation";
 import { getPegReferencePriceUsd } from "./supply-gap-reconciliation";
 import { supplyObservationClock } from "./shared";
 import type { PeggedAsset } from "./enrich-prices-shared";
-import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_OBSERVED_AT, CHAIN_DROPOUT_SEED_VALID_UNTIL } from "./chain-dropout-seed";
+import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_OBSERVED_AT, CHAIN_DROPOUT_SEED_VALID_UNTIL, REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "./chain-dropout-seed";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 
 const CHAIN_DROPOUT_STATE_KEY = "sync-stablecoins:chain-dropout-state";
@@ -36,151 +36,10 @@ export const CHAIN_DROPOUT_POLICY = {
   solanaReadTimeoutMs: 20_000,
 } as const;
 
-// Reviewed issuer-native deployments, not bridge representations. Contracts/decimals are catalog-owned.
-export const CHAIN_DROPOUT_ONCHAIN_ROSTER = [
-  { assetId: "usdg-paxos", chainId: "xlayer" },
-  { assetId: "usdg-paxos", chainId: "ink" },
-  // Issuer confirms native Solana XUSD and the catalog mint: https://www.straitsx.com/blog-post/xsgd-and-xusd-live-on-solana
-  { assetId: "xusd-straitsx", chainId: "solana" },
-  // Catalog mint-authority reviews identify independent issuer-native stocks; no bridge subtraction.
-  { assetId: "moveusd-cfx", chainId: "solana" },
-  { assetId: "rwausdi-multipli", chainId: "ethereum" },
-  { assetId: "rwausdi-multipli", chainId: "base" },
-  { assetId: "rwausdi-multipli", chainId: "monad" },
-  { assetId: "rwausdi-multipli", chainId: "arbitrum" },
-  { assetId: "rwausdi-multipli", chainId: "xlayer" },
-  { assetId: "rwausdi-multipli", chainId: "robinhood" },
-  // 2026-11-04: Pharos block 22082858 confirms 3,210,140 native tokens (rpc.pharos.xyz).
-  { assetId: "rwausdi-multipli", chainId: "pharos" },
-] as const;
-const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
-  assetId: string; chainId: string; reviewedAt: number; evidenceUrl: string;
-  /** Omitted-only release: exclude the unknown contribution until re-review, never value it at zero. */
-  excludeOmittedUntil?: number;
-}[] = [
-  // 2026-10-16 06:18 UTC: Arbitrum block 515293481 confirms 1,155,833.488355934
-  // satUSD, matching the lower list/history stock after the October 11 reduction.
-  {
-    assetId: "satusd-river", chainId: "arbitrum",
-    reviewedAt: Date.parse("2026-10-16T06:18:46Z") / 1000,
-    evidenceUrl: "https://arbiscan.io/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb",
-  },
-  // Polygon block 95617466: 533,719.13 EURS total minus 100,000 issuer inventory
-  // equals the list's 433,719.13 EUR. Ethereum gains the corresponding bridge unwind;
-  // accepting the observed lower chain stock avoids adding it back a second time.
-  {
-    assetId: "eurs-stasis", chainId: "polygon",
-    reviewedAt: Date.parse("2026-10-16T06:18:46Z") / 1000,
-    evidenceUrl: "https://polygonscan.com/token/0xe111178a87a3bff0c8d18decba5798827539ae99",
-  },
-  // 2026-11-06: Polygon block 96823850 confirms 363,068.694747281274675608 SBC
-  // at the held baseline's own clock. Block 96856472 has 463,068.694747281274675608;
-  // both disprove the held $1.846M level. Accept the provider's lower observation unchanged.
-  {
-    assetId: "sbc-brale", chainId: "polygon",
-    reviewedAt: Date.parse("2026-11-06T18:42:00Z") / 1000,
-    evidenceUrl: "https://polygonscan.com/token/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
-  },
-  // Finalized Solana slot 466634085 confirms 7,808,083.761641852 SBC, matching
-  // the price-adjusted list's $7.798M rather than the held $15.916M baseline.
-  {
-    assetId: "sbc-brale", chainId: "solana",
-    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
-    evidenceUrl: "https://solscan.io/token/DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
-  },
-  // Ethereum block 26365071: 1,001,981.18 GBPA total; Etherscan holders confirms
-  // the detail feed's 1,001,879.18 unreleased balance, leaving 102 circulating.
-  {
-    assetId: "gbpa-agant", chainId: "ethereum",
-    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
-    evidenceUrl: "https://etherscan.io/token/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b#balances",
-  },
-  // Finalized Solana slot 466212454 confirms 2,153,029.477071 EUROP, matching
-  // detail native supply. Ethereum block 26357578 has 9,824,599.672717 tokens;
-  // the lower Solana stock is real, without claiming a matched cross-chain migration.
-  {
-    assetId: "europ-schuman", chainId: "solana",
-    reviewedAt: Date.parse("2026-11-06T18:42:00Z") / 1000,
-    evidenceUrl: "https://solscan.io/token/euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA",
-  },
-  // 2026-11-03 10:09 UTC: BOB block 40419289 (rpc.gobob.xyz) confirms
-  // 1,322,822.22 satUSD, matching the lower list level after River's BOB
-  // redemption; the persisted $15.26M baseline is a disproven pre-collapse level.
-  {
-    assetId: "satusd-river", chainId: "bob",
-    reviewedAt: Date.parse("2026-11-03T10:09:25Z") / 1000,
-    evidenceUrl: "https://explorer.gobob.xyz/token/0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
-  },
-  // 2026-11-03 10:09 UTC: Base block 53455609 (mainnet.base.org) confirms
-  // 239,013.52 satUSD, exactly the observed list current.
-  {
-    assetId: "satusd-river", chainId: "base",
-    reviewedAt: Date.parse("2026-11-03T10:09:25Z") / 1000,
-    evidenceUrl: "https://basescan.org/token/0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
-  },
-  // 2026-11-03 10:09 UTC: Ethereum block 26333581 (ethereum-rpc.publicnode.com)
-  // confirms 932,368.82 satUSD, exactly the observed list current.
-  {
-    assetId: "satusd-river", chainId: "ethereum",
-    reviewedAt: Date.parse("2026-11-03T10:09:23Z") / 1000,
-    evidenceUrl: "https://etherscan.io/token/0x1958853a8be062dc4f401750eb233f5850f0d0d2",
-  },
-  // 2026-11-03 10:16 UTC: Solana slot 464859942 (api.mainnet-beta.solana.com)
-  // confirms 794,463.996947 DUSD, matching the lower list level after StandX's
-  // Solana contraction from $3.01M.
-  {
-    assetId: "dusd-standx", chainId: "solana",
-    reviewedAt: Date.parse("2026-11-03T10:16:00Z") / 1000,
-    evidenceUrl: "https://solscan.io/token/DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
-  },
-  // 2026-11-04 00:05 UTC: Plasma block 36808012 (rpc.plasma.to) confirms
-  // 13,372,760.551335 TRYB, matching the lower list level after BiLira's Plasma
-  // burns (blocks 35221462 and 36085454); the $1.42M baseline is pre-burn.
-  {
-    assetId: "tryb-bilira", chainId: "plasma",
-    reviewedAt: Date.parse("2026-11-04T00:05:26Z") / 1000,
-    evidenceUrl: "https://plasmascan.to/token/0x90729a45948c3078890bc80f2a4e7870a2ea4c5e",
-  },
-  // 2026-11-04 09:03 UTC: finalized Ethereum block 26340352 confirms 2,000,000 USDQ,
-  // matching list/detail after the reduction from the frozen 7M baseline.
-  {
-    assetId: "usdq-quantoz", chainId: "ethereum",
-    reviewedAt: Date.parse("2026-11-04T09:03:51Z") / 1000,
-    evidenceUrl: "https://etherscan.io/token/0xc83e27f270cce0a3a3a29521173a83f402c1768b",
-  },
-  // Finalized Base block 53496375 confirms 91,362.381965885876828965 USDGLO,
-  // matching native detail and price-adjusted list stock, down from the $1.018M baseline.
-  {
-    assetId: "usdglo-glo", chainId: "base",
-    reviewedAt: Date.parse("2026-11-04T09:03:51Z") / 1000,
-    evidenceUrl: "https://basescan.org/token/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
-  },
-  // Tempo absent from list/detail. Finalized block 47370052 confirms 17,161,941.91
-  // BUIDL shares, not the stale $107.4M baseline. Owner accepts omission, never par-NAV valuation.
-  {
-    assetId: "buidl-blackrock", chainId: "tempo",
-    reviewedAt: Date.parse("2026-11-04T09:03:53Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-18T09:03:53Z") / 1000,
-    evidenceUrl: "https://explorer.tempo.xyz/token/0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24",
-  },
-  // Finalized Tempo block 47370053 confirms 1M fxUSD, also omitted by list/detail.
-  // Catalog review identifies a lock/mint representation, ineligible for additive native repair.
-  {
-    assetId: "fxusd-f-x-protocol", chainId: "tempo",
-    reviewedAt: Date.parse("2026-11-04T09:03:53Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-18T09:03:53Z") / 1000,
-    evidenceUrl: "https://explorer.tempo.xyz/token/0x20c000000000000000000000850e533bd762b72c",
-  },
-  // HyperEVM block 50654180 reads 43,067.502661 frxUSD, already included under
-  // the provider's Hyperliquid L1 row; exclude the omitted old $3.749M identity.
-  {
-    assetId: "frxusd-frax", chainId: "hyperevm",
-    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-21T19:45:46Z") / 1000,
-    evidenceUrl: "https://purrsec.com/token/0x80eede496655fb9047dd39d9f418d5483ed600df",
-  },
-];
-
+export const CHAIN_DROPOUT_ONCHAIN_ROSTER = Object.entries(REVIEWED_ONCHAIN_SUPPLY_PLANS)
+  .flatMap(([assetId, plan]) => (plan.aggregateContracts ?? plan.repairContracts ?? [])
+    .filter((deployment) => deployment.dropoutRepair)
+    .map((deployment) => ({ assetId, chainId: deployment.chain })));
 const TimestampSchema = z.number().int().nonnegative();
 const PairStateSchema = z.object({
   assetId: z.string(),
@@ -311,7 +170,10 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
   const contracts = meta?.contracts?.filter((contract) => contract.chain === chainId) ?? [];
   const config = chainRpcs.get(chainId);
   // Reviewed Pharos state-only routes are admitted solely for this roster's supply reads.
-  const endpoints = assetId === "rwausdi-multipli" && chainId === "pharos"
+  const plan = REVIEWED_ONCHAIN_SUPPLY_PLANS[assetId];
+  const repairDeployment = (plan?.aggregateContracts ?? plan?.repairContracts ?? [])
+    .find((deployment) => deployment.chain === chainId && deployment.dropoutRepair);
+  const endpoints = repairDeployment?.dropoutRepair === "pharos-state-only"
     ? config?.endpoints.filter((endpoint) => endpoint.position === "supplemental" && endpoint.stateHistory === "archive"
       && endpoint.logsHistory === "none" && !endpoint.routingDisabled) ?? []
     : registryRpcEndpoints(config);
@@ -485,7 +347,7 @@ export async function guardChainDropouts(input: {
       const pair: PairState = previous ?? { assetId: meta.id, chainLabel: label, ...(group.chainId ? { chainId: group.chainId } : {}), baselineUsd: baseline ?? 0, baselineObservedAt: seed ? CHAIN_DROPOUT_SEED_OBSERVED_AT : Math.max(0, now - 86400), baselineSource, quarantinedSince: null };
       const reviewed = REVIEWED_CHAIN_SUPPLY_COLLAPSES.find((entry) => entry.assetId === meta.id && entry.chainId === group.chainId
         && entry.reviewedAt >= (pair.quarantinedSince ?? now) && entry.reviewedAt <= now);
-      if (observation.current == null && reviewed?.excludeOmittedUntil != null && now < reviewed.excludeOmittedUntil) {
+      if (observation.current == null && reviewed?.policy === "exclude-omitted" && now < reviewed.excludeOmittedUntil) {
         // Retain the original incident and baseline for expiry/recovery; neither enters this generation's totals.
         pair.quarantinedSince ??= now;
         state.pairs[key] = pair;
@@ -522,7 +384,7 @@ export async function guardChainDropouts(input: {
       result.flagged++;
       pair.quarantinedSince ??= now;
       state.pairs[key] = pair;
-      if (reviewed && reviewed.excludeOmittedUntil == null && observation.current != null) {
+      if (reviewed?.policy === "accept-observed-collapse" && observation.current != null) {
         pair.baselineUsd = observation.current;
         pair.baselineObservedAt = now;
         pair.quarantinedSince = null;

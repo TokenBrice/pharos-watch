@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
-import { fetchMidasMmevNavOracleSource } from "../yield-sync/sources-optional";
+import { fetchMidasMmevNavOracleSource } from "../yield-sync/sources-optional-nav";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID } from "../yield-sync/sources-optional";

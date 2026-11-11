@@ -97,7 +97,8 @@ async function fetchLogos(): Promise<void> {
   let existing: Record<string, string> = {};
   try {
     existing = JSON.parse(fs.readFileSync(LOGO_OUTPUT_PATH, "utf-8"));
-  } catch {
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) throw error;
   }
   for (const [id, url] of Object.entries(existing)) {
     if (!/^\d+$/.test(id) && url.startsWith("/logos/")) {

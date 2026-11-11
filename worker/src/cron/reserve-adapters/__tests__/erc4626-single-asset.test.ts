@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { describe, expect, it } from "vitest";
 import { toFunctionSelector } from "viem/utils";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -6,7 +7,6 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { computeLiveReserveConfigFingerprint, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "../../../lib/safety-score-v9/fact-set";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";

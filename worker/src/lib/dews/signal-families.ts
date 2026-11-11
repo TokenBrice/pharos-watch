@@ -10,10 +10,12 @@
  */
 
 import { clamp } from "@shared/lib/math";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSInput, SignalResult, WorstPoolComponentStatus, WorstPoolUnavailableReason } from "./types";
 import { piecewiseLinear } from "./compatibility";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { DEWS_MINT_BURN_FRESHNESS_BUDGET_SEC } from "./source-state/budgets";
 
 const CONFIDENCE_SCORES: Record<string, number> = {
   high: 0,
@@ -51,7 +53,10 @@ export const YIELD_WARNING_SCORES: Record<string, number> = {
   "zero-yield": 0,
 };
 
-export function computeSupplySignal(input: DEWSInput): SignalResult {
+export function computeSupplySignal(input: Pick<DEWSInput,
+  "circulatingCurrent" | "circulatingPrevDay" | "circulatingPrevWeek" | "mcapUsd"
+  | "circulatingPrevDayAvailable" | "circulatingPrevWeekAvailable"
+>): SignalResult {
   const { circulatingCurrent, circulatingPrevDay, circulatingPrevWeek, mcapUsd } = input;
   const prevDayAvailable = (input.circulatingPrevDayAvailable ?? true)
     && Number.isFinite(circulatingPrevDay) && circulatingPrevDay >= 0;
@@ -219,7 +224,9 @@ export function computePoolSignal(input: DEWSInput): SignalResult {
   };
 }
 
-export function computeLiquiditySignal(input: DEWSInput): SignalResult {
+export function computeLiquiditySignal(input: Pick<DEWSInput,
+  "liquidityScore" | "liquidityScore7dAgo" | "tvlCurrent" | "tvl7dAgo"
+>): SignalResult {
   const { liquidityScore, liquidityScore7dAgo, tvlCurrent, tvl7dAgo } = input;
 
   const currentScoreAvailable = liquidityScore !== null && Number.isFinite(liquidityScore);
@@ -283,12 +290,6 @@ export function computeLiquiditySignal(input: DEWSInput): SignalResult {
 
 export function computePriceSignal(input: DEWSInput): SignalResult {
   const { price, priceConfidence, prevPriceConfidence } = input;
-
-  // A reconstruction that never read price evidence must not inherit the live
-  // null-price maximum; unavailable is not zero and is not observed stress (R1/R2).
-  if (input.priceEvidenceUnavailable) {
-    return { value: 0, available: false, confidence: null, unavailableReason: "price-evidence-unavailable" };
-  }
 
   // No price at all = maximum concern. We deliberately return available:true
   // (not available:false) so the 100 stress points feed the DEWS score even
@@ -449,7 +450,8 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
   if (baselineDays < 7) {
     return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-baseline-too-short" };
   }
-  if (!Number.isFinite(input.flowDataAgeDays) || input.flowDataAgeDays > 1) {
+  if (input.flowDataAgeDays === null || !Number.isFinite(input.flowDataAgeDays) ||
+    input.flowDataAgeDays > DEWS_MINT_BURN_FRESHNESS_BUDGET_SEC / DAY_SECONDS) {
     return { value: 0, available: false, baselineDays, unavailableReason: "mint-burn-stale" };
   }
   // Missing USD valuation is never read as zero dollars (D11-2): unpriced 24h

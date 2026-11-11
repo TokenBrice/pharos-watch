@@ -48,6 +48,20 @@ export function decodeCaptureBody(bytes: Uint8Array): Buffer {
   return body[0] === 0x1f && body[1] === 0x8b ? gunzipSync(body) : body;
 }
 
+export function pinnedCaptureKey(key: string): string {
+  return key.replace(/^captures\//u, "pinned/");
+}
+
+export function captureLookupKeys(key: string): string[] {
+  return [pinnedCaptureKey(key), key];
+}
+
+export function verifyCaptureBody(bytes: Uint8Array, expectedSha256: string): Buffer {
+  const body = decodeCaptureBody(bytes);
+  if (captureHash(body) !== expectedSha256) throw new Error(`capture ${expectedSha256} integrity mismatch`);
+  return body;
+}
+
 export async function resolveCaptureBody(
   path: string,
   options: ResolveCaptureBodyOptions = {},
@@ -70,11 +84,10 @@ export async function resolveCaptureBody(
     return cached;
   }
   const client = options.r2Client ?? createR2MeasurementsClient();
-  for (const key of [summary.r2Key.replace(/^captures\//u, "pinned/"), summary.r2Key]) {
+  for (const key of captureLookupKeys(summary.r2Key)) {
     const compressed = await client.get(key);
     if (!compressed) continue;
-    const body = decodeCaptureBody(compressed);
-    if (captureHash(body) !== summary.sha256) throw new Error(`capture ${summary.sha256} integrity mismatch`);
+    const body = verifyCaptureBody(compressed, summary.sha256);
     mkdirSync(cacheDir, { recursive: true });
     writeFileSync(cachePath, body);
     return body;

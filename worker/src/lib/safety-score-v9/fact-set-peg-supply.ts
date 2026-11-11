@@ -1,3 +1,4 @@
+import { normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isV9RepresentationGroupRoute } from "@shared/lib/safety-score-v9/facts";
@@ -19,7 +20,6 @@ import {
   addEvidence,
   missingLocalFact,
   researchEvidence,
-  stableFailureDomains,
   type AssetBuildContext,
 } from "./fact-set-context";
 import {
@@ -629,7 +629,7 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
     selectedRouteSupplyShare: review?.selectedRouteSupplyShare ?? null,
     unknownRouteSupplyShare: review?.unknownRouteSupplyShare ?? null,
     unreviewedRouteSupplyShare: review?.unreviewedRouteSupplyShare ?? null,
-    failureDomains: stableFailureDomains(review?.failureDomains ?? []),
+    failureDomains: normalizeFailureDomains(review?.failureDomains ?? []),
   };
 }
 
@@ -834,7 +834,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     unknownRouteSupplyShare: review?.unknownRouteSupplyShare ?? null,
     unreviewedRouteSupplyShare: review?.unreviewedRouteSupplyShare ?? null,
     ...(review?.providerRowExclusions === undefined ? {} : { providerRowExclusions: review.providerRowExclusions }),
-    failureDomains: stableFailureDomains([
+    failureDomains: normalizeFailureDomains([
       ...chains.flatMap((chain) =>
         isV9RepresentationGroupRoute(chain)
           ? []

@@ -472,7 +472,7 @@ describe("computeAndStoreDEWS", () => {
         burnVolume24hUsd: null,
         mintVolume24hUsd: null,
         burnBaseline30dUsd: null,
-        flowDataAgeDays: 9999,
+        flowDataAgeDays: null,
         flowBaselineDays: null,
         sourceAges: expect.objectContaining({ mintBurn: null }),
       }),

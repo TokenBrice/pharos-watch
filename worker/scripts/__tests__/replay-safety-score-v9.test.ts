@@ -26,7 +26,7 @@ import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 import { assertReportCardsCaptureCurrent, runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
-import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../../src/lib/safety-score-v9/supply-attribution-source";
+import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../../src/lib/safety-score-v9/supply-attribution-source-contract";
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-codec";
 import { createSafetyScoreV9TransferMaterialityGeneration } from "../../src/lib/safety-score-v9/transfer-materiality";

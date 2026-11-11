@@ -161,6 +161,7 @@
     "logos:cemetery-atlas": "node --import tsx scripts/maintenance/build-cemetery-logo-atlas.ts",
     "subset:fonts": "node scripts/maintenance/subset-fonts.mjs",
     "generate:public-datasets": "tsx scripts/maintenance/generate-public-datasets.ts",
+    "generate:wrangler-crons": "node --import tsx scripts/maintenance/generate-wrangler-cron-triggers.ts",
     "digest:curation": "node scripts/maintenance/weekly-curation-digest.mjs",
     "check:build-size": "node scripts/maintenance/report-build-size.mjs --check",
     "check:phishing-signatures": "node --import tsx scripts/ci/check-phishing-signatures.ts",

@@ -1,9 +1,14 @@
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   evaluateCronScheduleSync,
   parseWranglerCronTriggers,
 } from "../ci/check-cron-schedule-sync";
+
+import { replaceWranglerCronTriggers, syncWranglerCronTriggers } from "../maintenance/generate-wrangler-cron-triggers";
 
 describe("check-cron-schedule-sync", () => {
   afterEach(() => {
@@ -94,24 +99,48 @@ describe("check-cron-schedule-sync", () => {
     expect(report.failed).toBe(true);
   });
 
-  it("reports configured trigger drift as missing and extra slots", () => {
-    const report = evaluateCronScheduleSync({
-      cronSchedules: {
-        slotA: "1 * * * *",
-        slotB: "2 * * * *",
-      },
-      scheduledSlotPlans: {
-        slotA: { worker: "public", jobChains: [["job-a"]] },
-        slotB: { worker: "public", jobChains: [["job-b"]] },
-      },
-      cronJobDefinitions: [{ job: "job-a" }, { job: "job-b" }],
-      cronConnectionBudgetEntries: [{ job: "job-a" }, { job: "job-b" }],
-      wranglerCronTriggers: { public: ["1 * * * *", "9 * * * *"], heavy: [] },
-    });
-
-    expect(report.failed).toBe(true);
-    expect(report.onlyInWranglerSchedules).toEqual(["9 * * * *"]);
-    expect(report.onlyInSharedSchedules).toEqual(["2 * * * *"]);
+  it("generates only cron array contents, preserves deployed order and rejects hand edits", () => {
+    const root = mkdtempSync(join(tmpdir(), "wrangler-crons-"));
+    const configs = [["public", "wrangler.toml"], ["heavy", "wrangler.heavy.toml"]] as const;
+    try {
+      mkdirSync(join(root, "worker"));
+      for (const [role, name] of configs) {
+        const existing = readFileSync(`worker/${name}`, "utf8");
+        expect(replaceWranglerCronTriggers(existing, role)).toBe(existing);
+        const authored = `# before\n${existing}\n# after\n`;
+        expect(replaceWranglerCronTriggers(authored, role)).toBe(authored);
+        writeFileSync(join(root, "worker", name), existing);
+      }
+      syncWranglerCronTriggers(root, true);
+      for (const [, name] of configs) {
+        const path = join(root, "worker", name);
+        const existing = readFileSync(path, "utf8");
+        const mutations = [
+          existing.replace(/^(  "[^"\n]+",)$/m, "$1 "),
+          existing.replace(/^(  "[^"\n]+",)\n/m, ""),
+          existing.replace(/^(  "[^"\n]+",)\n/m, "$1\n$1\n"),
+          existing.replace(/^(  "[^"\n]+",)\n(  "[^"\n]+",)\n/m, "$2\n$1\n"),
+          existing.replace(/^(  ")[^"\n]+/m, '$199 * * * *'),
+        ];
+        for (const changed of mutations) {
+          expect(changed).not.toBe(existing);
+          writeFileSync(path, changed);
+          expect(() => syncWranglerCronTriggers(root, true)).toThrow("cron arrays are out of date");
+          expect(readFileSync(path, "utf8")).toBe(changed);
+          syncWranglerCronTriggers(root);
+          expect(readFileSync(path, "utf8")).toBe(existing);
+        }
+      }
+      for (const malformed of [
+        "[vars]\ncrons = [\n]\n",
+        "[triggers]\ncrons = [\n[vars]\nother = [\n]\n",
+        "[triggers]\ncrons = []\n",
+        "[triggers]\ncrons = [\n]\ncrons = [\n]\n",
+        "[triggers]\ncrons = [\n]\n[triggers]\ncrons = [\n]\n",
+      ]) expect(() => replaceWranglerCronTriggers(malformed, "public")).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("rejects a duplicate raw Wrangler cron expression before set comparison", () => {
@@ -125,8 +154,6 @@ describe("check-cron-schedule-sync", () => {
 
     expect(report.duplicateWranglerSchedules).toEqual(["1 * * * *"]);
     expect(report.duplicateSlotPlanSchedules).toEqual([]);
-    expect(report.onlyInWranglerSchedules).toEqual([]);
-    expect(report.onlyInSharedSchedules).toEqual([]);
     expect(report.failed).toBe(true);
   });
 
@@ -179,26 +206,22 @@ describe("check-cron-schedule-sync", () => {
     for (const other of [
       "duplicateSlotPlanSchedules", "duplicateWranglerSchedules", "missingPlanKeys",
       "extraPlanKeys", "missingRuntimeJobs", "unknownRuntimeJobs", "missingBudgetJobs",
-      "unknownBudgetJobs", "onlyInWranglerSchedules", "onlyInSharedSchedules",
+      "unknownBudgetJobs",
       "onlyInSlotPlanSchedules", "missingSlotPlanSchedules",
     ] as const) {
       if (other !== field) expect(report[other]).toEqual([]);
     }
   });
 
-  it.each([
-    [{ public: [], heavy: [] }, ["1 * * * *"], []],
-    [{ public: [], heavy: ["1 * * * *"] }, [], ["heavy:1 * * * *"]],
-  ])("rejects omitted and wrong-owner triggers", (triggers, missing, misowned) => {
+  it("rejects wrong-owner triggers", () => {
     const report = evaluateCronScheduleSync({
       cronSchedules: { slot: "1 * * * *" },
       scheduledSlotPlans: { slot: { worker: "public", jobChains: [] } },
       cronJobDefinitions: [],
       cronConnectionBudgetEntries: [],
-      wranglerCronTriggers: triggers,
+      wranglerCronTriggers: { public: [], heavy: ["1 * * * *"] },
     });
     expect(report.failed).toBe(true);
-    expect(report.onlyInSharedSchedules).toEqual(missing);
-    expect(report.misownedWranglerSchedules).toEqual(misowned);
+    expect(report.misownedWranglerSchedules).toEqual(["heavy:1 * * * *"]);
   });
 });

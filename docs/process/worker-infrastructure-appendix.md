@@ -709,9 +709,9 @@ Before resource deletion, rollback uses compatible paired source/config with tri
 
 ### Deployed Trigger Topology
 
-The [generated cron table](../worker-infrastructure.md#cron-scheduling) owns the cadence, alias and Worker-role view. The duplicate-free union of `worker/wrangler.toml` and `worker/wrangler.heavy.toml` owns deployed expressions; `CRON_GROWTH_HEADROOM_POLICY` (`shared/lib/cron-jobs.ts`) applies to that union. Redistribution adds zero expressions or logical work. Run `npm run check:cron-sync` / `npm run check:cron-connections` for exact aggregate topology and owner parity instead of maintaining another schedule inventory.
+The [generated cron table](../worker-infrastructure.md#cron-scheduling) owns the cadence, alias and Worker-role view. The duplicate-free union of generated cron arrays in `worker/wrangler.toml` and `worker/wrangler.heavy.toml` is the deployed inventory; `CRON_GROWTH_HEADROOM_POLICY` (`shared/lib/cron-jobs.ts`) applies to that union. Redistribution adds zero expressions or logical work. Run `npm run check:cron-sync` / `npm run check:cron-connections` for exact aggregate topology and owner parity instead of maintaining another schedule inventory.
 
-- The two Wrangler configs own disjoint deployed trigger expressions.
+- The two Wrangler cron arrays project disjoint role-owned trigger expressions; regenerate them with `npm run generate:wrangler-crons` rather than hand-editing cron lines.
 - `shared/lib/cron-jobs.ts` owns status-tracked job metadata and connection-budget entries.
 - `shared/lib/scheduled-runner-registry.ts` owns expression-to-runner dispatch, public/heavy ownership and serial/parallel topology.
 - `npm run check:cron-sync` verifies aggregate schedule, ownership and dispatch parity; `npm run check:cron-connections` reports each config and unchanged aggregate growth/connection gates.

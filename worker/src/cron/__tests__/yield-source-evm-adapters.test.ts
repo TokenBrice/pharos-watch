@@ -8,7 +8,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { fetchCompoundV3SupplyRates } from "../yield-sync/sources-rpc";
-import { fetchOndoUsdyOracleSource } from "../yield-sync/sources-optional";
+import { fetchOndoUsdyOracleSource } from "../yield-sync/sources-optional-nav";
 
 const mockEvmCall = vi.mocked(fetchEvmUint256AtBlock);
 
@@ -63,6 +63,7 @@ describe("fetchOndoUsdyOracleSource", () => {
     const result = await fetchOndoUsdyOracleSource(1, 7, 1_771_000_000);
     expect(result).toMatchObject({ currentApy: 0, apyBase: 0, exchangeRate: 1 });
     expect(result?.observationKind).toBeUndefined();
+    await expect(fetchOndoUsdyOracleSource(1, Infinity, 1_771_000_000)).resolves.toBeNull();
   });
 
   it("returns null when oracle call fails", async () => {

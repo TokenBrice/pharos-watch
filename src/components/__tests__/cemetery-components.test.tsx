@@ -555,4 +555,30 @@ describe("CemeteryRegister", () => {
     expect(within(autopsy).getByText("Tracked archive: frozen detail page")).toBeTruthy();
     expect(within(autopsy).getByRole("link", { name: /Archived data/ }).getAttribute("href")).toBe("/stablecoin/coin-2/");
   });
+
+  it("activates rows only for plain primary clicks, ignoring selections elsewhere on the page", () => {
+    render(<Harness />);
+    const row = mainRow("coin-2");
+    const autopsy = document.getElementById("autopsy-coin-2") as HTMLTableRowElement;
+    const modifiers = [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }, { button: 2 }];
+    for (const options of modifiers) {
+      fireEvent.click(row, options);
+      expect(autopsy.hidden).toBe(true);
+    }
+    const selection = window.getSelection()!;
+    const range = document.createRange();
+    range.selectNodeContents(screen.getByRole("heading", { name: "Every documented death" }));
+    selection.addRange(range);
+    try {
+      fireEvent.click(row);
+      expect(autopsy.hidden).toBe(false);
+      selection.removeAllRanges();
+      range.selectNodeContents(within(row).getByText("Coin 2"));
+      selection.addRange(range);
+      fireEvent.click(row);
+      expect(autopsy.hidden).toBe(false);
+    } finally {
+      selection.removeAllRanges();
+    }
+  });
 });

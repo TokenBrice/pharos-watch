@@ -6,7 +6,6 @@ import { CompiledV9FactSetV2Schema, CompiledV9FactSetV3Schema } from "@shared/ty
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "@shared/lib/safety-score-v9/trace";
-import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { deriveNativeV9BaseInputGenerationId, NativeSafetyScoreV9InputSchema } from "../../src/lib/safety-score-v9/native-input";
 import { ReportCardsFixedInputSchema } from "../../src/lib/report-cards-fixed-input";
@@ -16,8 +15,34 @@ import { verifyRegistrySnapshot, type SafetyScoreV9RegistrySnapshot } from "./sa
 import type { V9ProductionScoreTrace } from "@shared/lib/safety-score-v9/score";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "../../src/lib/safety-score-v9/transfer-materiality";
-import { Sha256Schema } from "@shared/types/safety-schema-primitives";
+import {
+  ReleaseCandidateIdSchema,
+  SafetyScoreV9CandidateIdentityV1Schema,
+  SafetyScoreV9CompilerFactSchemaIdentityV1Schema,
+  SafetyScoreV9ProducerCapabilityIdentityV1Schema,
+  hashSafetyScoreV9CompilerFactSchemaIdentity,
+  hashSafetyScoreV9ProducerCapabilityIdentity,
+  computeSafetyScoreV9CandidateId,
+  computeSafetyScoreV9PublicationGenerationId,
+} from "../../src/lib/safety-score-v9/candidate-identity";
 import { parseSafetyScoreV9ReplayLaneScreening } from "../../src/lib/safety-score-v9/publication-replay-capture";
+
+/** Archive identity v1 retained arbitrary producer/compiler versions before current pins. */
+const HistoricalSafetyScoreV9IdentityV1Codec = z.object({
+  candidateIdentity: SafetyScoreV9CandidateIdentityV1Schema,
+  compilerFactSchemaIdentity: SafetyScoreV9CompilerFactSchemaIdentityV1Schema.extend({
+    fixedInputSchemaVersion: z.number().int().positive(),
+    factExtensionSchemaVersion: z.number().int().positive(), compiledFactSchemaVersion: z.number().int().positive(),
+    compiledFactSchemaCapabilities: z.array(z.string().min(1)), compilerAdapter: z.string().min(1),
+  }),
+  producerCapabilityIdentity: SafetyScoreV9ProducerCapabilityIdentityV1Schema.extend({
+    inputContractVersions: z.object({ fixedInput: z.number().int().positive(), factExtension: z.number().int().positive() }).strict(),
+    sourceAdapters: z.record(z.string(), z.string().min(1)),
+    scoreBearingMethodologyVersions: z.record(z.string(), z.array(z.string().min(1))),
+    dexRouteCapabilityMatrixVersions: z.array(z.string().min(1)),
+    freshnessPolicySec: z.record(z.string(), z.number().int().nonnegative().nullable()),
+  }),
+});
 
 const CardProjectionSchema = z.object({
   id: z.string().min(1).refine(id => id.trim() === id && id.length > 0, "canonical nonempty asset ID"),
@@ -75,25 +100,7 @@ export function validateSafetyScoreV9ReplayIntegrity(value: unknown): asserts va
     lifecycle: z.literal("active"),
     releaseAuthorization: z.object({ authorized: z.literal(false), reason: z.literal("v9-replay-only") }),
     pipeline: z.object({
-      candidateIdentity: z.object({
-        schemaVersion: z.literal(1), policyId: z.string().min(1),
-        policyDigest: Sha256Schema, evaluationBuildDigest: Sha256Schema,
-        compilerFactSchemaDigest: Sha256Schema, producerCapabilityDigest: Sha256Schema,
-      }).strict(),
-      compilerFactSchemaIdentity: z.object({
-        schemaVersion: z.literal(1), fixedInputSchemaVersion: z.number().int().positive(),
-        factExtensionSchemaVersion: z.number().int().positive(), compiledFactSchemaVersion: z.number().int().positive(),
-        compiledFactSchemaCapabilities: z.array(z.string().min(1)), compilerAdapter: z.string().min(1),
-        evaluationBuildDigest: Sha256Schema,
-      }).strict(),
-      producerCapabilityIdentity: z.object({
-        schemaVersion: z.literal(1),
-        inputContractVersions: z.object({ fixedInput: z.number().int().positive(), factExtension: z.number().int().positive() }).strict(),
-        sourceAdapters: z.record(z.string(), z.string().min(1)),
-        scoreBearingMethodologyVersions: z.record(z.string(), z.array(z.string().min(1))),
-        dexRouteCapabilityMatrixVersions: z.array(z.string().min(1)),
-        freshnessPolicySec: z.record(z.string(), z.number().int().nonnegative().nullable()),
-      }).strict(),
+      ...HistoricalSafetyScoreV9IdentityV1Codec.shape,
       fixedInput: z.object({
         schemaVersion: z.union([z.literal(3), z.literal(4)]),
         activeAssetIds: z.array(z.string()), clockSec: z.number().int().nonnegative(),
@@ -147,8 +154,8 @@ export function validateSafetyScoreV9ReplayIntegrity(value: unknown): asserts va
   same(pipeline.evaluatedSet.scoreResultDigest, result, "evaluated result digest");
   same(pipeline.candidate.resultDigest, result, "candidate result digest");
   const identity = pipeline.candidateIdentity;
-  const compilerDigest = domainDigest("safety-score-v9.compiler-fact-schema.v1", pipeline.compilerFactSchemaIdentity);
-  const producerDigest = domainDigest("safety-score-v9.producer-capability-build.v1", pipeline.producerCapabilityIdentity);
+  const compilerDigest = hashSafetyScoreV9CompilerFactSchemaIdentity(pipeline.compilerFactSchemaIdentity);
+  const producerDigest = hashSafetyScoreV9ProducerCapabilityIdentity(pipeline.producerCapabilityIdentity);
   same(pipeline.compilerFactSchemaDigest, compilerDigest, "compiler identity digest");
   same(identity.compilerFactSchemaDigest, compilerDigest, "candidate compiler digest");
   same(pipeline.producerCapabilityDigest, producerDigest, "producer identity digest");
@@ -160,12 +167,12 @@ export function validateSafetyScoreV9ReplayIntegrity(value: unknown): asserts va
   same(pipeline.evaluatedSet.evaluationBuildDigest, identity.evaluationBuildDigest, "evaluated build");
   same(pipeline.evaluatedSet.policyDigest, identity.policyDigest, "evaluated policy digest");
   same(pipeline.evaluatedSet.policyId, identity.policyId, "evaluated policy ID");
-  if (!/^v9-rc-[1-9][0-9]*$/.test(pipeline.candidate.candidateId)) same(pipeline.candidate.candidateId, `safety-score-v9:v1:${domainDigest("safety-score-v9.publication-id.v1", identity)}`, "candidate ID");
-  same(pipeline.candidate.publicationGenerationId, `report-cards:v9:v1:${domainDigest("safety-score-v9.publication.v1", {
+  if (!ReleaseCandidateIdSchema.safeParse(pipeline.candidate.candidateId).success) same(pipeline.candidate.candidateId, computeSafetyScoreV9CandidateId(identity), "candidate ID");
+  same(pipeline.candidate.publicationGenerationId, computeSafetyScoreV9PublicationGenerationId({
     candidateId: pipeline.candidate.candidateId, baseInputGenerationId: base, factSetDigest: facts,
     evaluatedSetDigest: pipeline.evaluatedSet.evaluatedSetDigest, resultDigest: result,
     publishedAtSec: pipeline.candidate.publishedAtSec,
-  })}`, "publication generation");
+  }), "publication generation");
   same(pipeline.producerCapabilityIdentity.inputContractVersions, {
     fixedInput: pipeline.fixedInput.schemaVersion, factExtension: pipeline.extension.schemaVersion,
   }, "producer input contracts");
@@ -201,7 +208,7 @@ export function reproduceSafetyScoreV9Replay(value: unknown, context: ReplayRepr
   same(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), context.sourceRevision, "source revision");
   same([value.pipeline.candidateIdentity.policyId, value.pipeline.candidateIdentity.policyDigest, value.pipeline.candidateIdentity.evaluationBuildDigest, value.pipeline.candidate.publishedAtSec], [context.policyId, context.policyDigest, context.evaluationBuildDigest, context.publishedAtSec], "intended policy/build/clock");
   same(value.pipeline.fixedInput.registryFingerprint, verifyRegistrySnapshot(context.registrySnapshot).fingerprint, "intended registry");
-  const rebuilt = buildSafetyScoreV9ReplayArtifact({ fixedInput: value.pipeline.fixedInput, extension: value.pipeline.extension, publishedAtSec: context.publishedAtSec, registrySnapshot: context.registrySnapshot, transferMaterialityGeneration: context.transferMaterialityGeneration, ...(/^v9-rc-[1-9][0-9]*$/.test(value.pipeline.candidate.candidateId) ? { releaseCandidateId: value.pipeline.candidate.candidateId } : {}),
+  const rebuilt = buildSafetyScoreV9ReplayArtifact({ fixedInput: value.pipeline.fixedInput, extension: value.pipeline.extension, publishedAtSec: context.publishedAtSec, registrySnapshot: context.registrySnapshot, transferMaterialityGeneration: context.transferMaterialityGeneration, ...(ReleaseCandidateIdSchema.safeParse(value.pipeline.candidate.candidateId).success ? { releaseCandidateId: value.pipeline.candidate.candidateId } : {}),
     ...(value.sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline: AcceptedPublicationBaselineSchema.nullable().parse(value.sourceAdmissionBaseline) }),
     ...(value.laneScreening === undefined ? {} : { laneScreening: value.laneScreening === null ? null : parseSafetyScoreV9ReplayLaneScreening(value.laneScreening) }) });
   same(rebuilt.pipeline, value.pipeline, "intended-revision reproduction");

@@ -47,7 +47,7 @@ import {
   normalizeReviewedDeploymentAddress,
   reviewedSupplyRouteKind,
 } from "./supply-attribution-contract";
-import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source-contract";
 
 /**
  * One assembled `deployment-supply-census-v1` generation (WS6 / 4a, PLAN §4.6).

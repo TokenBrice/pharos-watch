@@ -16,6 +16,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import {
   SNAPSHOT_DATE_PATTERN,
 } from "@shared/lib/api-endpoints";
+import { SNAPSHOT_INDEX_LIMIT_QUERY } from "@shared/lib/api-endpoints/queries";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { tryParseJson } from "../lib/json-parse";
@@ -39,11 +40,6 @@ import {
 } from "@shared/types/public-snapshot";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
-// The archive holds ~130 daily rows (2026-09); a default equal to the bound keeps
-// parameterless key-holder calls returning the full index until the archive
-// outgrows it, at which point `pagination.hasMore` tells them to page.
-const SNAPSHOT_INDEX_MAX_LIMIT = 500;
-const SNAPSHOT_INDEX_DEFAULT_LIMIT = SNAPSHOT_INDEX_MAX_LIMIT;
 
 interface PublicSnapshotIndexRow {
   snapshot_date: string;
@@ -494,9 +490,9 @@ export const handleSnapshotsIndex = async (
     return errorResponse(400, "Invalid cursor — expected YYYY-MM-DD");
   }
   const rawLimit = url.searchParams.get("limit");
-  const limit = rawLimit == null ? SNAPSHOT_INDEX_DEFAULT_LIMIT : Number(rawLimit);
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > SNAPSHOT_INDEX_MAX_LIMIT) {
-    return errorResponse(400, `Invalid limit — expected an integer from 1 to ${SNAPSHOT_INDEX_MAX_LIMIT}`);
+  const limit = rawLimit == null ? SNAPSHOT_INDEX_LIMIT_QUERY.default : Number(rawLimit);
+  if (!Number.isSafeInteger(limit) || limit < SNAPSHOT_INDEX_LIMIT_QUERY.min || limit > SNAPSHOT_INDEX_LIMIT_QUERY.max) {
+    return errorResponse(400, `Invalid limit — expected an integer from ${SNAPSHOT_INDEX_LIMIT_QUERY.min} to ${SNAPSHOT_INDEX_LIMIT_QUERY.max}`);
   }
 
   const statement = cursor == null

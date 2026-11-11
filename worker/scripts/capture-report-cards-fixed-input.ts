@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
 import { loadSafetyScoreV9RegistryRef, localRegistrySnapshot, type SafetyScoreV9RegistrySnapshot } from "./lib/safety-score-v9-registry";
-import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../src/lib/safety-score-v9/supply-attribution-source";
+import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../src/lib/safety-score-v9/supply-attribution-source-contract";
 import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
 
 /** The accepted-cache-export admission path shared by the CLI and archive round-trip tests. */

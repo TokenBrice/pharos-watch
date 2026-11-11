@@ -204,8 +204,13 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(V9_SCORE_INPUT_DATA_PATHS).toContain("shared/data/safety-score-v9/lender-collateral-classes-v1.json");
     expect(paths).not.toContain("scripts/build-data/generate-worker-stablecoin-catalog.ts");
     expect(paths).not.toContain("shared/lib/__tests__/safety-score-v9-matched-invariants.test-support.ts");
-    expect(paths).toContain("worker/src/lib/scheduled-checkpoint-primitives.ts");
+    expect(paths).toContain("worker/src/lib/live-reserve-policy.ts");
     for (const path of [
+      "worker/src/lib/scheduled-checkpoint-primitives.ts",
+      "worker/src/lib/live-reserves/store.ts",
+      "worker/src/lib/live-reserves/store-shared.ts",
+      "worker/src/lib/db.ts",
+      "worker/src/lib/d1-overload-retry.ts",
       "worker/src/lib/scheduled-recovery-checkpoint.ts",
       "worker/src/lib/scheduled-slot-reconciliation.ts",
       "worker/src/lib/cron-logger.ts",

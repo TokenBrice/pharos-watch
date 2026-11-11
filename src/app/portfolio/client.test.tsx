@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { render, screen, waitFor } from "@testing-library/react";
-import { renderToString } from "react-dom/server";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { compile } from "tailwindcss";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
@@ -122,6 +122,19 @@ describe("PortfolioClient URL sync", () => {
     expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
     expect(screen.getByText("coin-selector")).toBeTruthy();
     expect(screen.getByText("portfolio-empty-state")).toBeTruthy();
+  });
+
+  it("uses Economic Control in the live subtotals and the empty preview", async () => {
+    portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }], totalUsd: 100 };
+    reportCardsState.data = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle" })] });
+    render(<PortfolioClient />);
+    expect(screen.getByText("Economic Control")).toBeTruthy();
+
+    const { PortfolioEmptyState } = await vi.importActual<typeof import("@/components/portfolio-empty-state")>("@/components/portfolio-empty-state");
+    const preview = renderToStaticMarkup(<PortfolioEmptyState presets={[]} onApplyPreset={() => {}} />);
+    expect(preview).toContain(">Economic Control</span>");
+    expect(preview).toContain("Backing, Exit and Economic Control subtotals");
+    expect(preview).not.toContain("Economic control");
   });
 
   it.each([

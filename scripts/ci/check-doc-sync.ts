@@ -13,8 +13,9 @@ function main(): void {
     console.error("");
     console.error(`${failures.length} doc sync check(s) failed.`);
     console.error("");
-    console.error("Fix: update the doc files above to match the source-of-truth values");
-    console.error("in shared/lib/, worker/src/, and the curated docs corpus.");
+    console.error("Refresh managed contract blocks: node --import tsx scripts/maintenance/generate-doc-contracts.ts");
+    console.error("Refresh lane matrix: node --import tsx scripts/maintenance/generate-lane-freshness-matrix.ts");
+    console.error("Keep authored explanations aligned with their source-of-truth owners.");
     process.exit(1);
   }
 

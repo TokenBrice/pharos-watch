@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { buildNativeV9InputCacheEntry } from "../safety-score-v9/native-input";
 import {
-  buildSafetyScoreV9SupplyAttributionSource,
   deploymentSupplyCensusSourceView,
   parseSafetyScoreV9SupplyAttributionSource,
   serializeSafetyScoreV9SupplyAttributionSource,
-} from "../safety-score-v9/supply-attribution-source";
+} from "../safety-score-v9/supply-attribution-source-contract";
+import { buildSafetyScoreV9SupplyAttributionSource } from "../safety-score-v9/supply-attribution-source";
 import { createNativeSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 

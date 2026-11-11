@@ -6,6 +6,7 @@ import {
   type EndpointPublicApiAccess,
   type EndpointSiteDataAccess,
 } from "./definitions";
+import { DYNAMIC_API_PATHS } from "./paths";
 export type DynamicEndpointDescriptorKey =
   | "stablecoin-summary"
   | "stablecoin-reserves"
@@ -90,10 +91,10 @@ function publicDynamic<Key extends DynamicEndpointDescriptorKey & EndpointKey>(
 }
 
 export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
-  publicDynamic({ key: "stablecoin-summary", pattern: /^\/api\/stablecoin-summary\/([^/]+)$/ }),
-  publicDynamic({ key: "stablecoin-reserves", pattern: /^\/api\/stablecoin-reserves\/([^/]+)$/ }),
-  publicDynamic({ key: "stablecoin-detail", pattern: /^\/api\/stablecoin\/([^/]+)$/ }),
-  publicDynamic({ key: "stablecoin-live-summary", pattern: /^\/api\/stablecoin-live-summary\/([^/]+)$/ }),
+  publicDynamic({ key: "stablecoin-summary", pattern: DYNAMIC_API_PATHS.stablecoinSummary.pattern }),
+  publicDynamic({ key: "stablecoin-reserves", pattern: DYNAMIC_API_PATHS.stablecoinReserves.pattern }),
+  publicDynamic({ key: "stablecoin-detail", pattern: DYNAMIC_API_PATHS.stablecoinDetail.pattern }),
+  publicDynamic({ key: "stablecoin-live-summary", pattern: DYNAMIC_API_PATHS.stablecoinLiveSummary.pattern }),
   {
     key: "og-image",
     pattern: /^\/api\/og\//,
@@ -107,21 +108,21 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
       routePath: "/api/og/*",
     },
   },
-  publicDynamic({ key: "snapshot-day", pattern: /^\/api\/snapshots\/(\d{4}-\d{2}-\d{2})\.json$/ }),
-  publicDynamic({ key: "snapshot-coin", pattern: /^\/api\/snapshot\/(\d{4}-\d{2}-\d{2})\/stablecoin\/([^/]+)$/ }),
+  publicDynamic({ key: "snapshot-day", pattern: DYNAMIC_API_PATHS.snapshotDay.pattern }),
+  publicDynamic({ key: "snapshot-coin", pattern: DYNAMIC_API_PATHS.snapshotCoin.pattern }),
   adminDynamicPost({
     key: "api-key-update",
-    pattern: /^\/api\/api-keys\/(\d+)\/update$/,
+    pattern: DYNAMIC_API_PATHS.apiKeyUpdate.pattern,
     routeDependencies: ["apiKeyHashPepper"],
   }),
   adminDynamicPost({
     key: "api-key-deactivate",
-    pattern: /^\/api\/api-keys\/(\d+)\/deactivate$/,
+    pattern: DYNAMIC_API_PATHS.apiKeyDeactivate.pattern,
     routeDependencies: [],
   }),
   adminDynamicPost({
     key: "api-key-rotate",
-    pattern: /^\/api\/api-keys\/(\d+)\/rotate$/,
+    pattern: DYNAMIC_API_PATHS.apiKeyRotate.pattern,
     routeDependencies: ["apiKeyHashPepper"],
   }),
 ] as const satisfies readonly DynamicEndpointDescriptor[];

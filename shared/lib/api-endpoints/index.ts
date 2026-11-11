@@ -41,7 +41,7 @@ export {
   validateEndpointMethod,
 } from "./validation";
 export { getStatusPageActions } from "./status";
-export { SNAPSHOT_DATE_PATTERN } from "./snapshot";
+export { SNAPSHOT_DATE_PATTERN } from "./paths";
 export {
   STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   STATIC_ENDPOINT_ROUTE_DEFINITIONS,

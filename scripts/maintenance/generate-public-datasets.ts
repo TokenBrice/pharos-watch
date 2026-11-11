@@ -73,6 +73,7 @@ import {
 import { z } from "zod";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { projectRetiredPublicRouteRedirects } from "../lib/retired-public-routes.mjs";
 import { buildPublicDatasetArtifacts, type DatasetColumn } from "../lib/public-dataset-artifacts";
 import { readDepegLedgerCapture, type DepegLedgerCapture } from "../lib/depeg-ledger-capture";
 import {
@@ -872,7 +873,9 @@ function writePublicDatasetRedirects(snapshotDate: string, redirectsPath = REDIR
   }
   const after = end + REDIRECT_BLOCK_END.length;
   const replacement = buildPublicDatasetRedirectBlock(snapshotDate).trimEnd();
-  return writeArtifact(redirectsPath, `${redirects.slice(0, start)}${replacement}${redirects.slice(after)}`);
+  return writeArtifact(redirectsPath, projectRetiredPublicRouteRedirects(
+    `${redirects.slice(0, start)}${replacement}${redirects.slice(after)}`,
+  ));
 }
 
 function buildPublicDatasetCurrentModule(snapshotDate: string): string {
@@ -1327,7 +1330,13 @@ function checkAllTopics(
     const result = checkTopic(topic, dirs);
     if (!result.ok) return result;
   }
-  return checkCurrentDatasetModule(dirs, integrityOnly);
+  const current = checkCurrentDatasetModule(dirs, integrityOnly);
+  if (!current.ok) return current;
+  const redirects = readFileSync(dirs.redirectsPath, "utf8");
+  if (projectRetiredPublicRouteRedirects(redirects) !== redirects) {
+    return { ok: false, reason: "retired public route redirects differ from their declared policy" };
+  }
+  return current;
 }
 
 function shouldPreserveExistingDatasetMirrorsAfterFetchFailure(): boolean {

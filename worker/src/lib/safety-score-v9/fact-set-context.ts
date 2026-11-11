@@ -1,4 +1,3 @@
-import { resolveChainId } from "@shared/types/chain-identity";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import {
@@ -12,7 +11,7 @@ import {
   type V9ResolvedEvidenceCause,
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
-import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, domainDigest, normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {
@@ -136,16 +135,6 @@ export function projectResearchOverlayPayload(value: unknown): unknown {
   return projected ?? value;
 }
 
-export function stableFailureDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
-  const normalized = domains.map((domain): V9FailureDomainRef => {
-    if (domain.kind !== "chain") return domain;
-    return { kind: "chain", key: resolveChainId(domain.key) ?? domain.key.toLowerCase() };
-  });
-  return [...new Map(normalized.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
-    (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
-  );
-}
-
 export function normalizeCompiledFailureDomains<T>(value: T): T {
   if (Array.isArray(value)) {
     let normalized: unknown[] | undefined;
@@ -164,7 +153,7 @@ export function normalizeCompiledFailureDomains<T>(value: T): T {
     let entry: unknown;
     if (key === "failureDomains" && Array.isArray(current)) {
       const domains = current as V9FailureDomainRef[];
-      const canonical = stableFailureDomains(domains);
+      const canonical = normalizeFailureDomains(domains);
       entry = domains.length === canonical.length && domains.every((domain, index) =>
         domain.kind === canonical[index]!.kind && domain.key === canonical[index]!.key)
         ? current : canonical;

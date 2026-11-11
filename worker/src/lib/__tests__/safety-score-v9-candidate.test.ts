@@ -26,10 +26,9 @@ import {
   buildSafetyScoreV9PublicationFromNormalizedInput,
   buildSafetyScoreV9PublicationFromOwnedInput,
   type SafetyScoreV9FixedInputOwner,
-  computeSafetyScoreV9CandidateId,
-  computeSafetyScoreV9ProducerCapabilityDigest,
   publicDependencyMetadata,
 } from "../safety-score-v9/candidate";
+import { computeSafetyScoreV9CandidateId, computeSafetyScoreV9ProducerCapabilityDigest } from "../safety-score-v9/candidate-identity";
 import {
   compileSafetyScoreV9FactSetFromValidatedExtension,
   type SafetyScoreV9FactSetExtensionV2,

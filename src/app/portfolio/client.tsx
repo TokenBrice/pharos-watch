@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { ECONOMIC_CONTROL_LABEL } from "@shared/lib/classification";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // ---------------------------------------------------------------------------
@@ -168,7 +169,7 @@ export function PortfolioClient() {
                 const score = v9Projection.value.pillars[pillar];
                 return (
                 <div key={pillar} className="rounded-lg border border-border/60 px-3 py-3">
-                  <dt className="pharos-label">{pillar === "control" ? "Economic control" : pillar}{v9Projection.value.partialEvidence && " · known-only subtotal"}</dt>
+                  <dt className="pharos-label">{pillar === "control" ? ECONOMIC_CONTROL_LABEL : pillar}{v9Projection.value.partialEvidence && " · known-only subtotal"}</dt>
                   <dd className="mt-1 pharos-numeric text-lg font-semibold">{score === null ? "Unavailable" : `${score}/100`}</dd>
                   {v9Projection.value.partialEvidence && <p className="mt-1 text-xs text-muted-foreground">Included holdings: {v9Projection.value.coverageUsd.pillars[pillar]} USD of {v9Projection.value.coverageUsd.total} USD</p>}
                 </div>

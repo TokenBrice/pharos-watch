@@ -252,16 +252,19 @@ const SAFETY_SCORES_PREVIEW_PROJECTION_FIELDS = {
  * version is unrecognized: the page serves its neutral skeleton and the build
  * wrapper warns with the reason instead of quietly dropping the preview.
  */
+export const SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS = [1, 2] as const;
+export const SAFETY_SCORES_PREVIEW_MAX_ROWS = 20;
+
 const SafetyScoresPreviewDisplayProjectionSchema = z.discriminatedUnion("version", [
   z
     .object({
-      version: z.literal(1),
+      version: z.literal(SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS[0]),
       ...SAFETY_SCORES_PREVIEW_PROJECTION_FIELDS,
     })
     .strict(),
   z
     .object({
-      version: z.literal(2),
+      version: z.literal(SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS[1]),
       ...SAFETY_SCORES_PREVIEW_PROJECTION_FIELDS,
       openEvidence: z.unknown(),
       openEvidenceUnavailableReason: z.unknown(),
@@ -324,61 +327,18 @@ function describeProjectionRefusal(value: unknown): string {
   }
   if (!("version" in value)) return "display-projection-missing";
   const { version } = value;
-  if (version === 1 || version === 2) return "display-projection-invalid";
+  if (SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS.some((supported) => supported === version)) return "display-projection-invalid";
   return version === undefined
     ? "display-projection-missing"
     : `display-projection-version-unsupported:${String(version)}`;
 }
 
-function admitSafetyScoresPreview(
-  dataset: unknown,
+/** Row admission shared by the dated page preview and its exported-HTML check. */
+export function admitSafetyScoresPreviewRows(
+  rows: readonly unknown[],
   registry: readonly RegistryIdentity[],
-  assessedAtSec: number,
-): PreviewAdmission {
-  const parsedDataset = SafetyScoresPreviewDatasetSchema.safeParse(dataset);
-  if (!parsedDataset.success) return { preview: null, omitted: [] };
-  const rawProjection = parsedDataset.data._meta?.displayProjection;
-  const projection = SafetyScoresPreviewDisplayProjectionSchema.safeParse(rawProjection);
-  if (!projection.success) {
-    // Legacy exports and missing metadata yield no preview; a projection this
-    // release cannot read is named so the build wrapper can warn about it.
-    return {
-      preview: null,
-      omitted: [],
-      projectionUnavailableReason: describeProjectionRefusal(rawProjection),
-    };
-  }
-  const display = projection.data;
-  if (display.safety === null) return { preview: null, omitted: [] };
-  const safety = display.safety;
-  const snapshotMidnightSec = Math.floor(Date.parse(`${display.snapshotDate}T00:00:00Z`) / 1000);
-  if (!Number.isFinite(snapshotMidnightSec)) return { preview: null, omitted: [] };
-  const assessedMidnightSec = Math.floor(assessedAtSec / 86_400) * 86_400;
-  const ageDays = (assessedMidnightSec - snapshotMidnightSec) / 86_400;
-  const replay = process.env.PHAROS_PAGES_REPLAY === "1";
-  if (
-    !Number.isInteger(ageDays)
-    || ageDays < 0
-    || (ageDays > PUBLIC_DATASET_MAX_AGE_DAYS && !replay)
-    || snapshotMidnightSec > assessedAtSec
-    || safety.asOfSec > safety.publishedAtSec
-    || safety.publishedAtSec > display.capturedAtSec
-    || display.capturedAtSec > assessedAtSec
-    || safety.publishedAtSec > assessedAtSec
-  ) {
-    return { preview: null, omitted: [] };
-  }
-  // The dataset's declared Safety methodology must be the publication identity
-  // that supplied these facts; two incompatible scores are never mixed.
-  const methodologyLabel = parsedDataset.data._meta?.methodologyLabel;
-  const methodologyVersion = safety.identity.methodologyVersion.replace(/^v/, "");
-  if (
-    typeof methodologyLabel !== "string"
-    || !methodologyLabel.includes(`safety-score v${methodologyVersion}`)
-  ) {
-    return { preview: null, omitted: [] };
-  }
-
+  completeness: Pick<SafetyScoresPreviewCompleteness, "ratedCount" | "notRatedCount" | "pipelineGapCount"> | undefined,
+): { rows: SafetyScoresPreviewRow[]; omitted: Array<{ id: string; reason: string }>; unavailableReason?: string } {
   const registryById = new Map(registry.map((coin) => [coin.id, coin]));
   const omitted: Array<{ id: string; reason: string }> = [];
   const eligible: SafetyScoresPreviewRow[] = [];
@@ -387,27 +347,27 @@ function admitSafetyScoresPreview(
   let notRatedCount = 0;
   let pipelineGapCount = 0;
 
-  for (const rawRow of parsedDataset.data.rows) {
+  for (const rawRow of rows) {
     const row = SafetyScoresPreviewRowSchema.safeParse(rawRow);
     if (!row.success) continue;
     const { stablecoinId, ratingStatus } = row.data;
     if (seenIds.has(stablecoinId)) {
       // One row per asset is a publication invariant; do not publish a
       // partially reconciled census.
-      return { preview: null, omitted: [] };
+      return { rows: [], omitted: [], unavailableReason: `duplicate-dataset-row:${stablecoinId}` };
     }
     seenIds.add(stablecoinId);
     if (ratingStatus === null || ratingStatus === undefined) continue;
     if (ratingStatus === "not-rated") {
       if (row.data.safetyScore !== null || row.data.safetyGrade !== "NR") {
-        return { preview: null, omitted };
+        return { rows: [], omitted, unavailableReason: `invalid-not-rated-row:${stablecoinId}` };
       }
       notRatedCount += 1;
       continue;
     }
     if (ratingStatus === "pipeline-gap") {
       if (row.data.safetyScore !== null || row.data.safetyGrade !== null) {
-        return { preview: null, omitted };
+        return { rows: [], omitted, unavailableReason: `invalid-pipeline-gap-row:${stablecoinId}` };
       }
       pipelineGapCount += 1;
       continue;
@@ -460,19 +420,74 @@ function admitSafetyScoresPreview(
     });
   }
 
-  const completeness = safety.completeness;
   if (
-    ratedCount !== completeness.ratedCount
-    || notRatedCount !== completeness.notRatedCount
-    || pipelineGapCount !== completeness.pipelineGapCount
+    ratedCount !== completeness?.ratedCount
+    || notRatedCount !== completeness?.notRatedCount
+    || pipelineGapCount !== completeness?.pipelineGapCount
   ) {
-    return { preview: null, omitted };
+    return { rows: [], omitted, unavailableReason: "completeness-mismatch" };
   }
-  if (eligible.length === 0) return { preview: null, omitted };
+  if (eligible.length === 0) return { rows: [], omitted, unavailableReason: "no-eligible-rated-rows" };
 
   eligible.sort((left, right) => right.score - left.score
     || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
-  const rows = eligible.slice(0, 20);
+  return { rows: eligible, omitted };
+}
+
+function admitSafetyScoresPreview(
+  dataset: unknown,
+  registry: readonly RegistryIdentity[],
+  assessedAtSec: number,
+): PreviewAdmission {
+  const parsedDataset = SafetyScoresPreviewDatasetSchema.safeParse(dataset);
+  if (!parsedDataset.success) return { preview: null, omitted: [] };
+  const rawProjection = parsedDataset.data._meta?.displayProjection;
+  const projection = SafetyScoresPreviewDisplayProjectionSchema.safeParse(rawProjection);
+  if (!projection.success) {
+    // Legacy exports and missing metadata yield no preview; a projection this
+    // release cannot read is named so the build wrapper can warn about it.
+    return {
+      preview: null,
+      omitted: [],
+      projectionUnavailableReason: describeProjectionRefusal(rawProjection),
+    };
+  }
+  const display = projection.data;
+  if (display.safety === null) return { preview: null, omitted: [] };
+  const safety = display.safety;
+  const snapshotMidnightSec = Math.floor(Date.parse(`${display.snapshotDate}T00:00:00Z`) / 1000);
+  if (!Number.isFinite(snapshotMidnightSec)) return { preview: null, omitted: [] };
+  const assessedMidnightSec = Math.floor(assessedAtSec / 86_400) * 86_400;
+  const ageDays = (assessedMidnightSec - snapshotMidnightSec) / 86_400;
+  const replay = process.env.PHAROS_PAGES_REPLAY === "1";
+  if (
+    !Number.isInteger(ageDays)
+    || ageDays < 0
+    || (ageDays > PUBLIC_DATASET_MAX_AGE_DAYS && !replay)
+    || snapshotMidnightSec > assessedAtSec
+    || safety.asOfSec > safety.publishedAtSec
+    || safety.publishedAtSec > display.capturedAtSec
+    || display.capturedAtSec > assessedAtSec
+    || safety.publishedAtSec > assessedAtSec
+  ) {
+    return { preview: null, omitted: [] };
+  }
+  // The dataset's declared Safety methodology must be the publication identity
+  // that supplied these facts; two incompatible scores are never mixed.
+  const methodologyLabel = parsedDataset.data._meta?.methodologyLabel;
+  const methodologyVersion = safety.identity.methodologyVersion.replace(/^v/, "");
+  if (
+    typeof methodologyLabel !== "string"
+    || !methodologyLabel.includes(`safety-score v${methodologyVersion}`)
+  ) {
+    return { preview: null, omitted: [] };
+  }
+
+  const completeness = safety.completeness;
+  const admission = admitSafetyScoresPreviewRows(parsedDataset.data.rows, registry, completeness);
+  const { rows: eligible, omitted } = admission;
+  if (admission.unavailableReason) return { preview: null, omitted };
+  const rows = eligible.slice(0, SAFETY_SCORES_PREVIEW_MAX_ROWS);
   return {
     preview: {
       kind: "safety-grade-preview",

@@ -31,18 +31,6 @@ export default function NotFound() {
     if (/Mac|iPhone|iPad/.test(navigator.userAgent)) setShortcutLabel("⌘K");
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        openCommandPalette();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   const recent = history.slice(0, 3);
   const topSuggestion = suggestions[0];
 

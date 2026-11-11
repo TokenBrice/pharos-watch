@@ -53,7 +53,7 @@ Worker test fixtures compile against the Worker's ES2021 library, not the fronte
 
 Changed-file classification retains deletions and both sides of cross-area renames; ordinary Git selection failures stop the check rather than producing an empty plan. Classification uses frozen base/branch-head refs; CI executes on a tested merge checkout, so import-graph test discovery inspects that tree while ownership selection retains the branch diff. Nonexistent test files are filtered only before execution. Generic parallel commands cancel and settle siblings on failure unless continue-on-error is explicit; the local PR runner instead collects every independent leaf. Sources: [`changed-files.mts`](../scripts/lib/changed-files.mts) and [`run-pr-checks.ts`](../scripts/maintenance/run-pr-checks.ts).
 
-`check:doc-sync` owns source-backed generated contract blocks, runtime TOML snippet parity, the cron-derived lane freshness matrix and its owning prose sentences, and the methodology page owner sentences. Edit source constants and regenerate the reported blocks, never literal marker contents. `check:worker-config` separately owns configuration safety and Public/Heavy parity.
+`check:doc-sync` checks managed source-backed contract blocks, including the runtime TOML example and methodology rules, plus the generated lane freshness matrix and its authored sign-off boundaries. Refresh reported blocks with `node --import tsx scripts/maintenance/generate-doc-contracts.ts`; never edit literal marker contents. The separate `lane-freshness-matrix` generator owns the cron-derived matrix and its review notes. `check:worker-config` separately owns configuration safety and Public/Heavy parity.
 
 ### Smallest adequate check per area
 

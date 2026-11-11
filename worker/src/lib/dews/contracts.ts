@@ -100,31 +100,90 @@ export interface ContagionAmplifiers {
   triggeringIds: string[];
 }
 
-export interface DewsSourceState {
+export interface DexLiquidityHydration {
   dexLiqRows: { results: DexLiquidityRow[] };
   dexLiqMap: Map<string, DexLiquidityRow>;
   dexLiqAgeSecById: Map<string, number>;
   dexLiqStaleIds: Set<string>;
+  freshCount: number;
+  staleCount: number;
+  totalRows: number;
+  freshnessAgeSec: number | null;
+  dependencyDiagnostics: DexLiquidityDependencyDiagnostics;
+}
+
+export interface DexPriceHydration {
   dexPriceMap: Map<string, DexPriceSnapshot>;
   dexPriceAgeSecById: Map<string, number>;
   dexPriceStaleIds: Set<string>;
+  trustedCount: number;
+  /**
+   * Null when the underlying load failed; the orchestrator omits the
+   * `dexPricesStaleRows` coverage key in that case to preserve the legacy
+   * source-coverage shape.
+   */
+  staleCount: number | null;
+}
+
+export interface DexLiquidityHistoryHydration {
   liqHist7dMap: Map<string, LiquidityHistorySnapshot>;
   liqHistRowsRead: number;
+}
+
+export interface BlacklistHydration {
   blacklistCounts: BlacklistCountByStablecoinId;
   blacklistSourceOk: boolean;
+  rowsRead: number;
+}
+
+export interface PreviousStressSignalsHydration {
   prevSignals: Map<string, { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
-  /** The accepted-generation pointer was unreadable: previous evidence is unavailable, not absent. */
-  previousGenerationUnavailable: boolean;
+  /** True when the accepted-generation pointer itself was unreadable or invalid. */
+  generationUnavailable: boolean;
+  rowsRead: number;
+}
+
+export interface MintBurnHydration {
   mintBurnMap: Map<string, MintBurnSnapshot>;
   mintBurnAgeSecById: Map<string, number>;
   mintBurnStaleIds: Set<string>;
+  freshCount: number;
+  staleCount: number;
+  freshnessAgeSec: number | null;
+  rowsRead: number;
+}
+
+export interface YieldWarningsHydration {
   yieldWarnings: Map<string, string[]>;
+  rowsRead: number;
+}
+
+export interface YieldRankingsHydration {
   yieldSourceRisk: Map<string, YieldSourceRisk>;
   yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;
+  /** Age of the admitted rankings generation; null when none was admitted. */
   yieldRankingsAgeSec: number | null;
+  /** True when the admitted generation is a retained last-good one past the producer budget. */
   yieldRankingsRetained: boolean;
+  dependencyDiagnostics: StablecoinsDependencyDiagnostics;
+}
+
+export interface LatestPsiHydration {
   latestPsiScore: number | null;
+  dependencyDiagnostics: StablecoinsDependencyDiagnostics;
+}
+
+export interface DewsSourceState {
+  dexLiquidity: DexLiquidityHydration;
+  dexPrices: DexPriceHydration;
+  liquidityHistory: DexLiquidityHistoryHydration;
+  blacklist: BlacklistHydration;
+  previousSignals: PreviousStressSignalsHydration;
+  mintBurn: MintBurnHydration;
+  yieldWarnings: YieldWarningsHydration;
+  yieldRankings: YieldRankingsHydration;
+  psi: LatestPsiHydration;
   sourceCoverage: Record<string, number>;
   dependencyDiagnostics: {
     dexLiquidity: DexLiquidityDependencyDiagnostics;

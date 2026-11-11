@@ -1,7 +1,7 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { describe, expect, it } from "vitest";
 import { adaptMatrixdockFrsState } from "../matrixdock-frs";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 
 const PARAMS = {
   label: "Physical silver bars (LBMA Good Delivery, Asian vault custody)",

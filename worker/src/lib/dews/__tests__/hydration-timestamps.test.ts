@@ -273,8 +273,8 @@ describe("DEWS hydration timestamp admission", () => {
       const hydrated = await loadDewsSourceState({
         db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
       });
-      expect(hydrated.dexLiqMap.get("usdt-tether")?.methodology_version).toBe(current);
-      expect(hydrated.liqHist7dMap.get("usdt-tether")).toEqual({ score: 73, tvl, date });
+      expect(hydrated.dexLiquidity.dexLiqMap.get("usdt-tether")?.methodology_version).toBe(current);
+      expect(hydrated.liquidityHistory.liqHist7dMap.get("usdt-tether")).toEqual({ score: 73, tvl, date });
     } finally {
       sqlite.close();
     }

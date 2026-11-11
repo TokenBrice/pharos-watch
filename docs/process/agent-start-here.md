@@ -52,7 +52,7 @@ Report changed files/findings, exercised checks, unresolved work and operational
 
 ## 8. Commit And Release
 
-Root [Verify and ship](../../AGENTS.md#verify-and-ship) owns commit and protected-main policy; [Scripts: Operational notes](../scripts.md#operational-notes) owns workspace automation. For substantial campaigns only, include the existing scratch plan path and task IDs in the commit body; bounded changes need neither.
+Root [Verify and ship](../../AGENTS.md#verify-and-ship) owns commit and protected-main policy; [Scripts: Operational notes](../scripts.md#operational-notes) owns workspace automation. For substantial campaigns only, include the existing scratch plan path and task IDs in the commit body; bounded changes need neither. A refactor commit that edits a sitemap date source (a route `page.tsx` or one of the content roots in [`sitemap-source-paths.mts`](../../scripts/lib/sitemap-source-paths.mts)) without changing what the page says carries the message line `Sitemap-Date: unchanged`, so [published dates](../scripts.md#build-and-generated-artifacts) do not move.
 
 ## 9. Methodology Changes
 

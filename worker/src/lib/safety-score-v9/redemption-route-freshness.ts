@@ -1,9 +1,9 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import { getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserves/store-shared";
 
 /**
  * A reserve disclosure and the cron that consumed it have different clocks.

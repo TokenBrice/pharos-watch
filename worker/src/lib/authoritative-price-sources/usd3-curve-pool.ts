@@ -1,6 +1,5 @@
 import { CIRCUIT_SOURCE } from "../constants";
-import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import type { PriceCacheEntry } from "../price-cache";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch } from "../evm-rpc";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
@@ -9,7 +8,7 @@ import {
   encodeUint256,
   resolveTrustedOverrideParent,
   type CurrentPriceOverride,
-  type LivePriceContext,
+  type LivePriceReferenceContext,
   type PriceSourceProvider,
 } from "./helpers";
 
@@ -28,14 +27,9 @@ const MAX_QUOTE_IMPACT_RATIO = 0.05;
 const MAX_NAV_DEVIATION_RATIO = 0.03;
 const MAX_REFERENCE_AGE_SEC = 24 * 60 * 60;
 
-export interface Usd3PriceContext extends LivePriceContext {
-  previousAssetsById?: ReadonlyMap<string, PeggedAsset>;
-  priceCache?: ReadonlyMap<string, PriceCacheEntry>;
-}
-
 /** Missing-only sell proceeds, bounded by an original-clock trusted USD3 reference. */
 async function fetchUsd3CurvePoolPrice(
-  context: Usd3PriceContext,
+  context: LivePriceReferenceContext,
   signal?: AbortSignal,
 ): Promise<CurrentPriceOverride | null> {
   const reject = (reason: string): null => {
@@ -72,7 +66,8 @@ async function fetchUsd3CurvePoolPrice(
     () => `[authoritative-price-sources] ${USD3_ID}: trusted scrvUSD quote dependency unavailable`,
     { allowFreshNonReplaySafeParent: true, allowFreshReplaySafeSingleSourceParent: true },
   );
-  if (!parent || Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt > MAX_AGE_SEC) return null;
+  const maxObservationAgeSec = getPricingSourceRegistryEntry(SOURCE)?.maxTrustedAgeSec;
+  if (!parent || maxObservationAgeSec == null || Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt > maxObservationAgeSec) return null;
 
   const options = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
   const block = await fetchEvmBlockNumber(CHAIN, options);
@@ -103,7 +98,7 @@ async function fetchUsd3CurvePoolPrice(
   if (Math.abs(largePrice - smallPrice) / smallPrice > MAX_QUOTE_IMPACT_RATIO) return null;
 
   const observedAt = Math.min(timestamp, parent.trustedParent.observedAt);
-  if (Math.floor(Date.now() / 1000) - observedAt > MAX_AGE_SEC) return null;
+  if (Math.floor(Date.now() / 1000) - observedAt > maxObservationAgeSec) return null;
   const price = smallPrice * parent.trustedParent.price;
   if (!Number.isFinite(price) || price <= 0) return null;
   if (Math.floor(Date.now() / 1000) - reference.observedAt > MAX_REFERENCE_AGE_SEC) return reject("usd3-reference-stale");

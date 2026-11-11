@@ -22,7 +22,7 @@ import {
   SOURCE_FIXED_INPUT_MAX_AGE_SEC,
   deploymentSupplyCensusSourceView,
   type SafetyScoreV9SupplyAttributionSource,
-} from "../lib/safety-score-v9/supply-attribution-source";
+} from "../lib/safety-score-v9/supply-attribution-source-contract";
 import {
   createSafetyScoreV9SupplyAttributionGeneration,
   isSafetyScoreV9SupplyAttributionGenerationCompatible,

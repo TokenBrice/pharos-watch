@@ -1,3 +1,4 @@
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
 import type { ReserveSlice } from "@shared/types/core";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { DEPENDENCY_TYPE_VALUES } from "@shared/types/dependency-types";
@@ -9,7 +10,6 @@ import {
 import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk, PCT_SUM_ERROR_TOLERANCE } from "./helpers";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 
 export interface ValidationInput {

@@ -13,6 +13,7 @@ import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { SafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { ECONOMIC_CONTROL_SHORT_LABEL } from "@shared/lib/classification";
 import { SafetyScoresContentLoadingState } from "./loading-state";
 import {
   SafetyEmptyState,
@@ -44,7 +45,7 @@ const SORT_OPTIONS: ReadonlyArray<{ key: V9SortKey; label: string }> = [
   { key: "overall", label: "Overall" },
   { key: "backing", label: "Backing" },
   { key: "exit", label: "Exit" },
-  { key: "control", label: "Econ. Control" },
+  { key: "control", label: ECONOMIC_CONTROL_SHORT_LABEL },
   { key: "mcap", label: "MCap" },
 ];
 
