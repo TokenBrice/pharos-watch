@@ -181,17 +181,13 @@ function resolveZephyrPrice(
   };
 }
 
-export function isZephyrScannerAssetId(id: string): boolean {
-  return isZephyrScannerSupplyId(id);
-}
-
 function buildZephyrPeggedAsset(
   meta: StablecoinMeta,
   stats: ZephyrScannerAssetStats,
   priceResolution: ZephyrZsdPriceResolution | null,
   nowSec = Math.floor(Date.now() / 1000),
 ): PeggedAsset | null {
-  if (!isZephyrScannerAssetId(meta.id)) return null;
+  if (!isZephyrScannerSupplyId(meta.id)) return null;
   // ZYS's USD supply valuation depends on the scanner NAV; ZSD can retain its
   // independently admitted market-price or nominal-par supply valuation.
   if (meta.id === ZEPHYR_ZYS_ASSET_ID && stats.observedAtRejected) return null;

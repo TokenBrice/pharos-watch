@@ -9,7 +9,7 @@ import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
-import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
+import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats } from "../zephyr-zsd";
 import { fetchHiveHbdProtocolSupply } from "../../reserve-adapters/hive-hbd-protocol";
 import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/price-validation";
@@ -29,8 +29,7 @@ import {
   type CoinGeckoMcapData,
 } from "./shared";
 
-export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko"
-  || REVIEWED_ONCHAIN_SUPPLY_PLANS[stablecoin.id]?.nativeWorkflow != null);
+export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
 // Measured full-roster reads need more than 20s; retain rotation under the 30s ceiling.
 export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 30_000;
@@ -119,7 +118,7 @@ export async function fetchFiatCoinGeckoTokens(
         });
       }
     }
-    const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
+    const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.nativeWorkflow === "zephyr-scanner");
     const [priceData, zephyrProtocolStats] = await Promise.all([
       fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal, db),
       hasZephyrScannerAsset ? fetchZephyrProtocolStats(signal) : Promise.resolve(null),

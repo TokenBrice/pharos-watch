@@ -70,4 +70,3 @@ export function projectRetiredPublicRouteRedirects(contents) {
   }
   return lines.join("\n");
 }
-
