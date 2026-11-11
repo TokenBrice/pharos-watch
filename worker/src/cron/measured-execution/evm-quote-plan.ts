@@ -1,4 +1,4 @@
-import { DEX_MEASURED_MAX_COST_BPS } from "@shared/types/measured-execution";
+import { DEX_MEASURED_MAX_COST_BPS, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -8,7 +8,7 @@ import {
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import { executeAdaptiveMulticall } from "./adaptive-multicall";
-import { rawAmountToUsdOrNull } from "./fixed-point";
+import { rawAmountToUsdOrNull, usdToRawAmount } from "./fixed-point";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
   type DexMeasuredExecutionBudgetStopReason,
@@ -17,6 +17,37 @@ import {
 } from "./profiles";
 
 const MAX_CONCURRENT_EVM_CHAIN_LANES = 3;
+export const EVM_SINGLE_CALL_QUOTE_BATCH_SIZE = 8;
+export const EVM_SINGLE_CALL_QUOTE_GAS = "0x1c9c380";
+
+interface EvmSingleCallQuoteRequest {
+  target: DexMeasuredExecutionTarget;
+  inputUsd: number;
+  endpointAddress: `0x${string}`;
+}
+
+export interface EncodedEvmSingleCallQuoteRequest extends EvmSingleCallQuoteRequest {
+  index: number;
+  label: string;
+  amountInRaw: bigint;
+  callData: `0x${string}`;
+}
+
+export interface EvmSingleCallQuoteOutcome {
+  targetId: string;
+  inputUsd: number;
+  point?: DexMeasuredRawQuotePoint;
+  failureReason?: string;
+}
+
+export interface EvmSingleCallQuoteBatchInput {
+  requests: readonly EvmSingleCallQuoteRequest[];
+  blockNumber: number;
+  blockHash: `0x${string}`;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
+}
 
 interface QuoteTokenAmount {
   decimals: number;
@@ -278,7 +309,7 @@ export function createEvmQuotePlanMulticallExecutor(options: {
 }
 
 /** One encoded call per request, addressed to that request's execution endpoint. */
-export function buildEvmSingleCallQuotePlans<
+function buildEvmSingleCallQuotePlans<
   TEncoded extends {
     index: number;
     label: string;
@@ -302,7 +333,7 @@ export function buildEvmSingleCallQuotePlans<
 }
 
 /** A reverted quote is published as a zero-output point, never dropped. */
-export function materializeRevertedEvmQuotePoint(
+function materializeRevertedEvmQuotePoint(
   request: {
     amountInRaw: bigint;
     callData: string;
@@ -320,4 +351,73 @@ export function materializeRevertedEvmQuotePoint(
     reverted: true,
     adapterMetadata: { executionReverted: true },
   })!;
+}
+
+export function executeEvmSingleCallQuotes(input: EvmSingleCallQuoteBatchInput, policy: {
+  maxRawAmount: bigint;
+  isValidTarget(target: DexMeasuredExecutionTarget): boolean;
+  encodeCall(target: DexMeasuredExecutionTarget, amountInRaw: bigint): `0x${string}`;
+  decodePoint(request: EncodedEvmSingleCallQuoteRequest, result: EvmMulticall3Result): DexMeasuredRawQuotePoint | null;
+  executeMulticall: EvmQuotePlanSpec<EvmQuotePlanItem, EvmSingleCallQuoteOutcome>["executeMulticall"];
+  retryFailedCallsIndividually: boolean;
+  emptyRevert: "zero-output" | "failure";
+}): Promise<EvmSingleCallQuoteOutcome[]> {
+  const encoded = input.requests.map((request, index): EncodedEvmSingleCallQuoteRequest | null => {
+    const amountInRaw = usdToRawAmount(
+      request.inputUsd,
+      request.target.tokenIn.decimals,
+      request.target.tokenIn.referencePriceUsd,
+      { maxRawAmount: policy.maxRawAmount },
+    );
+    if (amountInRaw == null || !policy.isValidTarget(request.target)) return null;
+    try {
+      return {
+        ...request,
+        index,
+        label: `${index}:${request.target.targetId}`,
+        amountInRaw,
+        callData: policy.encodeCall(request.target, amountInRaw),
+      };
+    } catch {
+      return null;
+    }
+  });
+  const outcomes = input.requests.map<EvmSingleCallQuoteOutcome>((request, index) =>
+    encoded[index] == null
+      ? { targetId: request.target.targetId, inputUsd: request.inputUsd, failureReason: "invalid-quote-input" }
+      : { targetId: request.target.targetId, inputUsd: request.inputUsd },
+  );
+  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber, input.blockHash);
+  return executeEvmQuotePlan({
+    plans,
+    outcomes,
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    rpcBudget: input.rpcBudget,
+    spec: {
+      batchSize: EVM_SINGLE_CALL_QUOTE_BATCH_SIZE,
+      executeMulticall: policy.executeMulticall,
+      adaptive: {
+        failedAttemptAccounting: "single-call",
+        unattemptedResult: "failure-result",
+        retryFailedCallsIndividually: policy.retryFailedCallsIndividually,
+      },
+      materializeTransportFailure: (request, reason) => ({
+        targetId: request.target.targetId,
+        inputUsd: request.inputUsd,
+        failureReason: reason ?? "quoter-rpc-unavailable",
+      }),
+      resolveResult: (request, result) => {
+        if (!result.success) {
+          return result.returnData === "0x" && policy.emptyRevert === "failure"
+            ? { targetId: request.target.targetId, inputUsd: request.inputUsd, failureReason: "quoter-empty-revert" }
+            : { targetId: request.target.targetId, inputUsd: request.inputUsd, point: materializeRevertedEvmQuotePoint(request, result) };
+        }
+        const point = policy.decodePoint(request, result);
+        return point
+          ? { targetId: request.target.targetId, inputUsd: request.inputUsd, point }
+          : { targetId: request.target.targetId, inputUsd: request.inputUsd, failureReason: "quoter-invalid-result" };
+      },
+    },
+  });
 }

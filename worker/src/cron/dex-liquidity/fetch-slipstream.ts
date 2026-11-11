@@ -1,3 +1,4 @@
+import { sqrtRatioToSpotPrice } from "./amm-math";
 import { SLIPSTREAM_COLLECTION_DEPLOYMENTS as SLIPSTREAM_CONFIG } from "@shared/lib/dex-slipstream-deployments";
 import { logWorkerEventArgs, logWorkerEvent } from "../../lib/structured-log";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
@@ -11,7 +12,6 @@ import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import {
   captureClSourcePools,
   rawAmountToDecimal,
-  sqrtRatioToSpotPrice,
   loadStagedPoolRecoveryRows,
   type StagedPoolRecoveryRowWithFeeTier,
 } from "./staged-pool-recovery";

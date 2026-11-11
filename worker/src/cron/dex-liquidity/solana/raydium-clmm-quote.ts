@@ -1,3 +1,4 @@
+import { ceilDiv, q64TokenDelta as delta } from "../amm-math";
 import { fetchSolanaAccountBatch, solanaPublicKey, type SolanaAccount } from "../../reserve-adapters/solana";
 import type { AdapterContext } from "../../reserve-adapters/types";
 import { programAddress, publicKeyBytes } from "./program-address";
@@ -106,12 +107,6 @@ export function raydiumTickSqrtPrice(tick: number): bigint {
   let ratio = Q64;
   for (let i = 0; i < TICK_FACTORS.length; i++) if (Math.abs(tick) & (1 << i)) ratio = ratio * TICK_FACTORS[i] >> 64n;
   return tick > 0 ? MAX_U128 / ratio : ratio;
-}
-function ceilDiv(n: bigint, d: bigint): bigint { return (n + d - 1n) / d; }
-function delta(a: bigint, b: bigint, liquidity: bigint, tokenA: boolean, roundUp: boolean): bigint {
-  const numerator = liquidity * (a > b ? a - b : b - a) * (tokenA ? Q64 : 1n);
-  const denominator = tokenA ? a * b : Q64;
-  return roundUp ? ceilDiv(numerator, denominator) : numerator / denominator;
 }
 
 /** Bitmap gaps are empty liquidity space, not steps: only initialized ticks incur fee rounding. */
