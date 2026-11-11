@@ -17,7 +17,8 @@ import type { StatusCause } from "../types/status";
  * stays listed so legacy history rows keep their public classification.
  *
  * The 2026-04-13 status-stability hardening defined the included/excluded
- * code list.
+ * code list. `cron_error_runs` left it on 2026-11-11: a single transient
+ * failed run is a Watch, and repeated failures are critical, so Act now.
  */
 const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "cache_ratio_stale",
@@ -40,7 +41,6 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "stablecoin_publication_unknown",
   "open_circuit_groups",
   "circuit_query_failed",
-  "cron_error_runs",
   "multiple_unhealthy_crons",
   "unhealthy_crons_present",
   "db_unhealthy",

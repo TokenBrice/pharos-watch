@@ -1,4 +1,4 @@
-import { jsonResponse } from "../lib/api-response";
+import { errorResponse, jsonResponse } from "../lib/api-response";
 import type { HealthResponse } from "@shared/types/status";
 import {
   assessPublicHealth,
@@ -112,7 +112,9 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
   const [snapshot, schedulerLiveness] = await Promise.all([
     loadStatusPublicHealthSnapshot(db, now), loadSchedulerLiveness(db, now),
   ]);
-  const cachedHealth = snapshot.kind === "fresh" ? snapshot.payload.publicHealth : null;
+  // A snapshot of a failed database check (written before 2026-11-11) holds no assessment.
+  const cachedHealth = snapshot.kind === "fresh" && !snapshot.payload.publicHealth.warnings.includes("db-unhealthy")
+    ? snapshot.payload.publicHealth : null;
   const cachedSchedulerUnhealthy = cachedHealth != null
     && (cachedHealth.schedulerLiveness?.status !== "healthy"
       || cachedHealth.schedulerLiveness?.heavy?.status !== "healthy"
@@ -153,6 +155,9 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
   }
 
   const assessment = await assessPublicHealth(db, now, { logPrefix: "health", schedulerLiveness });
+  // No snapshot and no database read: nothing was assessed, so there is no
+  // verdict to serve (R2). Uncached, so the next request re-checks.
+  if (!assessment.dbHealthy) return errorResponse(503, "Health check unavailable", { noStore: true });
   const body: HealthResponse = { ...buildPublicHealthResponse(assessment, now), assessedAt: now };
   return jsonResponse(body, { headers: { "Cache-Control": CACHE_PROFILES.realtime } });
 };

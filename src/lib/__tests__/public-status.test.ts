@@ -140,11 +140,9 @@ describe("public status helpers", () => {
   });
 
 
-  it("explains degraded yield production while retaining unknown warning evidence", () => {
-    expect(getPublicHealthWarningPresentation("cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run", BASE_HEALTH)).toEqual({
-      title: "Yield data quality",
-      detail: "A recent yield update reported incomplete or degraded inputs. Yield data remains degraded until a clean update succeeds.",
-    });
+  it("names any lane's input-quality notice while retaining unknown warning evidence", () => {
+    expect(getPublicHealthWarningPresentation("cache-quality-degraded: yield-data:risk-free-rate:EUR:ecb-failed-retained", BASE_HEALTH))
+      .toMatchObject({ detail: expect.stringContaining("yield-data:risk-free-rate:EUR:ecb-failed-retained") });
     expect(getPublicHealthWarningPresentation("unknown-health-reason", BASE_HEALTH)).toEqual({
       title: "Health warning", detail: "unknown-health-reason",
     });

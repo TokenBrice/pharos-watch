@@ -35,12 +35,12 @@ describe("handlePublicStatusHistory", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns unavailable without caching when only the history query fails", async () => {
-    const db = mockD1([{
-      match: "FROM status_transitions",
-      rows: [],
-      throwError: new Error("history read failed"),
-    }]);
+  it.each([
+    ["only the history query fails", new Error("history read failed"), true],
+    ["the database check fails", undefined, false],
+  ] as const)("returns unavailable without caching when %s", async (_case, throwError, dbHealthy) => {
+    assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy", { dbHealthy }));
+    const db = mockD1([{ match: "FROM status_transitions", rows: [], throwError }]);
 
     const res = await handlePublicStatusHistory(db, new Request("https://pharos.watch/api/public-status-history"));
 
@@ -348,7 +348,7 @@ describe("handlePublicStatusHistory", () => {
             transition_type: "degrade",
             reason: "raw-stale-immediate-escalation",
             causes: [{
-              code: "cron_error_runs",
+              code: "unhealthy_crons_present",
               layer: "availability",
               severity: "critical",
               message: "One availability-impacting cron job errored.",

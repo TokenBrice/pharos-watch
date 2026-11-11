@@ -74,7 +74,7 @@ describe("buildTriageInbox", () => {
 
   it.each([
     "active_price_coverage_incomplete", "ddr_repair_debt_present",
-    "reserve_sync_write_uncertain", "reserve_sync_budget_truncated",
+    "reserve_sync_write_uncertain", "reserve_sync_budget_truncated", "cron_error_runs",
   ])("does not promote incidental %s warnings to act", (code) => {
     const gap = cause(code, "warning");
     const data = withCauses([gap], [600, 1200, 1800].map((age) =>

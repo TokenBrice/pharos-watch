@@ -18,9 +18,9 @@ import {
 const DAY_SEC = 86_400;
 /**
  * Owner rule (2026-10-23): a day takes a non-operational state only when the
- * component held that state or worse for this long, cumulatively, that day.
- * An outage of any length always colours the day; shorter blips stay in
- * `brief` for the tooltip.
+ * component held that state or worse for this long, cumulatively, that day;
+ * shorter blips stay in `brief` for the tooltip. Since 2026-11-11 an outage
+ * follows the same rule: a red day is an hour of outage, not any blip.
  */
 export const DAY_STATE_MIN_HELD_SEC = 3_600;
 const STATE_RANK = Object.fromEntries(PUBLIC_COMPONENT_STATES.map((state, index) => [state, index])) as Record<
@@ -91,9 +91,9 @@ function buildSegments(
 
 /**
  * Fold one day's observations: the worst state held (with anything worse) for
- * `DAY_STATE_MIN_HELD_SEC` cumulatively, or any outage. `point` is the live
- * projection, a zero-length observation: it colours an outage, or the whole
- * cell when no persisted segment covers the day.
+ * `DAY_STATE_MIN_HELD_SEC` cumulatively. `point` is the live projection, a
+ * zero-length observation: it sets the cell only when no persisted segment
+ * covers the day, and is otherwise at most a brief state, outage included.
  */
 function foldDay(
   heldSec: ReadonlyMap<PublicComponentState, number>,
@@ -106,16 +106,16 @@ function foldDay(
     if (candidate === "operational") break;
     atLeast += heldSec.get(candidate) ?? 0;
     if (atLeast > 0) seen = worse(seen, candidate);
-    if (state === "operational" && (atLeast >= DAY_STATE_MIN_HELD_SEC || (candidate === "outage" && atLeast > 0))) state = candidate;
+    if (state === "operational" && atLeast >= DAY_STATE_MIN_HELD_SEC) state = candidate;
   }
-  if (point === "outage" || (point != null && heldSec.size === 0)) state = worse(state, point);
+  if (point != null && heldSec.size === 0) state = worse(state, point);
   return STATE_RANK[seen] > STATE_RANK[state] ? { state, brief: seen } : { state };
 }
 
 /**
  * Per-component daily cells for the last `days` UTC days (oldest first). Each
  * cell is the worst state the component held for `DAY_STATE_MIN_HELD_SEC` that
- * day (any outage counts); today also includes the live projection.
+ * day; today also includes the live projection.
  */
 export function buildComponentDayCells({
   transitions,
@@ -189,6 +189,9 @@ export interface PublicIncident {
   worstState: PublicComponentState;
   /** Affected components in page order, with the worst state each reached. */
   components: { id: PublicStatusComponentId; worstState: PublicComponentState }[];
+  /** The incident's latest row: what an ongoing incident is now, as opposed to its peak. */
+  current: { id: PublicStatusComponentId; state: PublicComponentState }[];
+  currentState: PublicComponentState;
   /** Machine-readable reasons and transition reasons, for the technical disclosure (R4). */
   reasons: string[];
 }
@@ -233,17 +236,21 @@ export function foldPublicIncidents(transitions: readonly PublicStatusTransition
         resolvedAt: null,
         worstState: "operational",
         components: [],
+        current: [],
+        currentState: "degraded",
         reasons: [],
         byId: new Map(),
         reasonSet: new Set(),
       };
       incidents.push(open);
     }
-    // Rows without a component record still mark the incident non-operational.
-    if (!row.components || row.components.length === 0) open.worstState = worse(open.worstState, "degraded");
+    // Rows without a component record still mark the incident non-operational, at their stored level.
+    open.current = (row.components ?? []).map(({ id, state }) => ({ id, state }));
+    open.currentState = open.current.reduce<PublicComponentState>((worst, { state }) => worse(worst, state),
+      open.current.length > 0 ? "operational" : row.to === "stale" ? "outage" : "degraded");
+    open.worstState = worse(open.worstState, open.currentState);
     for (const component of row.components ?? []) {
       open.byId.set(component.id, worse(open.byId.get(component.id) ?? "operational", component.state));
-      open.worstState = worse(open.worstState, component.state);
       for (const reason of component.reasons) open.reasonSet.add(reason);
     }
     if (row.reason) open.reasonSet.add(row.reason);

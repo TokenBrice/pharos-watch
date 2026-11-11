@@ -38,9 +38,11 @@ function cause(
  * Ops-only supply integrity causes. These code names are deliberately absent
  * from `shared/lib/status-public-impact.ts`: value/carry/partial findings name
  * producers and budgets on `/status` and the operator alert, never a reader
- * warning (ADR-42). Value drift and a stopped daily snapshot degrade the
- * data-quality verdict because the published supply surface is then wrong or
- * absent; carried supply and a sub-breadth partial snapshot remain warnings.
+ * warning (ADR-42). A wrong aggregate, a frozen feed, drift across the shared
+ * cohort breadth and a stopped daily snapshot degrade the data-quality
+ * verdict because the published supply surface is then wrong or absent;
+ * per-asset drift, carried supply and a sub-breadth partial snapshot remain
+ * warnings that name their assets.
  */
 export function assessSupplyIntegrityQuality(
   report: SupplyIntegrityReport | null,
@@ -80,6 +82,7 @@ export function assessSupplyIntegrityQuality(
       .map((finding) => `${finding.stablecoinId} ${finding.ratio.toFixed(2)}x`)
       .join(", ");
     const findingCount = value.driftFindings.length + heldDrift.length;
+    const driftBreadth = getActiveAssetServiceBreadthThreshold(expectedActive);
     causes.push(cause(
       "supply_value_drift",
       "warning",
@@ -94,12 +97,13 @@ export function assessSupplyIntegrityQuality(
       {
         metric: findingCount > 0 ? "supplyValueDriftCount" : "supplyValueAggregateRatio",
         value: findingCount > 0 ? findingCount : value.aggregateRatio ?? undefined,
+        // The count is graded against the breadth at which it degrades the verdict.
         threshold: findingCount > 0
-          ? STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling
+          ? driftBreadth ?? undefined
           : STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling,
       },
     ));
-    degrade();
+    if (value.frozen || aggregateBreached || (driftBreadth != null && findingCount >= driftBreadth)) degrade();
   }
 
   // Carry evidence comes from the stablecoins cache and survives a failed

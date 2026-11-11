@@ -1,5 +1,6 @@
 import { getStablecoinPublicationImpactStatus } from "@shared/lib/status-thresholds";
 import {
+  CACHE_QUALITY_WARNING_PREFIXES,
   getPublicMintBurnStatus,
   PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER,
 } from "@shared/lib/public-health";
@@ -155,10 +156,10 @@ export function getPublicHealthWarningPresentation(
     };
   }
 
-  if (warning === "cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run") {
+  if (warning.startsWith(CACHE_QUALITY_WARNING_PREFIXES[0])) {
     return {
-      title: "Yield data quality",
-      detail: "A recent yield update reported incomplete or degraded inputs. Yield data remains degraded until a clean update succeeds.",
+      title: "Input quality notice",
+      detail: `The latest update reported incomplete inputs (${warning.slice(CACHE_QUALITY_WARNING_PREFIXES[0].length)}). The published data is current.`,
     };
   }
 

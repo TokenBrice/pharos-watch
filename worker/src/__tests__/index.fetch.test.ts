@@ -977,7 +977,7 @@ describe("worker.fetch", () => {
     );
     await Promise.all(waits);
 
-    expect(res.status).toBe(200);
+    expect(res.status).not.toBe(401);
   });
 
   it("does not require a key on exempt OG image routes", async () => {

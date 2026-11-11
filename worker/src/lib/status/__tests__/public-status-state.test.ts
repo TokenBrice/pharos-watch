@@ -114,7 +114,7 @@ describe("reconcilePublicStatusState", () => {
     expect(await listRecentStatusTransitions(db, 50, { from: NOW - 1 })).toEqual([]);
   });
 
-  it("drops one-evaluation flaps and lets a database outage bypass hysteresis", async () => {
+  it("drops one-evaluation flaps and gives a failed database check no bypass", async () => {
     const { db } = fixtures.open();
     await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());
     // A single late evaluation between healthy ones never reaches the transition log.
@@ -127,10 +127,24 @@ describe("reconcilePublicStatusState", () => {
     await reconcilePublicStatusState(db, NOW + 4500, lateCharts());
     expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(1);
 
+    await reconcilePublicStatusState(db, NOW + 5400, makeHealthyHealthResponse());
     const down = { ...makeHealthyHealthResponse(), status: "stale" as const, warnings: ["db-unhealthy"] };
-    const outage = await reconcilePublicStatusState(db, NOW + 5400, down);
-    expect(outage.projection.headline.state).toBe("major-outage");
-    expect(outage.projection.components.every((component) => component.state === "outage" && component.since === NOW + 5400)).toBe(true);
+    expect((await reconcilePublicStatusState(db, NOW + 6300, down)).projection.headline.state).toBe("operational");
+  });
+
+  it("serves history without false-outage rows and with quality-only components as notices", async () => {
+    const { db } = fixtures.open();
+    await reconcilePublicStatusState(db, NOW, makeHealthyHealthResponse());
+    for (const [at, reason] of [[900, "db-unavailable"], [1800, "cache:yield-data:quality:x"], [2700, "cache:yield-data:stale"]] as const) {
+      await db.prepare(`INSERT INTO status_transitions (scope, next_status, raw_status, transition_type, reason, confidence,
+        causes_json, created_at, idempotency_key) VALUES ('public', 'degraded', 'degraded', 'degrade', 'x', 1, ?, ?, ?)`)
+        .bind(JSON.stringify({ version: 1, headline: { state: "degraded", title: "x", affected: ["yield"] },
+          components: [{ id: "yield", state: "degraded", reasons: [reason] }] }), NOW + at, reason).run();
+    }
+    const { transitions } = await listPublicStatusTransitions(db, 50, NOW - 1);
+    expect(transitions.map(({ at, to, components }) => [at - NOW, to, components?.length]))
+      .toEqual([[2700, "degraded", 1], [1800, "healthy", 0], [0, "healthy", 0]]);
+    expect((await listPublicStatusTransitions(db, 50, NOW + 1000)).boundary).toEqual({ at: NOW, components: [] });
   });
 
   it("publishes at once when a legacy record cannot be held faithfully", async () => {

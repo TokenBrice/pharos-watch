@@ -34,10 +34,9 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   });
 
   // The shared cache impact floor (ADR-32): age alone is not health, and a
-  // cached fallback or an explicitly degraded producer is not a healthy cache.
-  // Unknown quality (`degraded: null`) is a notice, as in the public projection.
-  const isImpacted = (cache: CacheStatus, key: string) =>
-    getCacheImpactStatus(cache, key) !== "healthy" || cache.degraded === true;
+  // cached fallback is not a healthy cache. Input quality, degraded or unknown,
+  // is a notice in the Note column, as in the public projection.
+  const isImpacted = (cache: CacheStatus, key: string) => getCacheImpactStatus(cache, key) !== "healthy";
 
   const describeBand = (cache: CacheStatus, key: string) => {
     const thresholds = getCacheRatioThresholds(key);

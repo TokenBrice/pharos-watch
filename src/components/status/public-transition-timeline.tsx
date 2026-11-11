@@ -75,21 +75,30 @@ function PublicIncidentItem({
   nowSec: number;
   liveRecovered: boolean;
 }) {
-  const names = incident.components.map((component) => PUBLIC_COMPONENT_LABEL[component.id]);
+  // An ongoing incident reads as what it is now; a resolved one as its peak.
+  const ongoing = incident.resolvedAt == null;
+  const affected = ongoing ? incident.current : incident.components.map(({ id, worstState }) => ({ id, state: worstState }));
+  const state = ongoing ? incident.currentState : incident.worstState;
+  const names = affected.map((component) => PUBLIC_COMPONENT_LABEL[component.id]);
   return (
     <li className="border-b border-border/60 py-3 last:border-0">
       <div className="flex items-start justify-between gap-3">
         <h3 className="min-w-0 text-sm font-medium text-foreground">
           {names.length > 0 ? names.join(", ") : "Public status not operational"}
         </h3>
-        <ComponentStatePill state={incident.worstState} className="shrink-0" />
+        <ComponentStatePill state={state} className="shrink-0" />
       </div>
       <IncidentTimes {...incident} nowSec={nowSec} liveRecovered={liveRecovered} />
-      {incident.components.length > 1 ? (
+      {affected.length > 1 ? (
         <p className="mt-1 text-xs text-muted-foreground">
-          {incident.components
-            .map((component) => `${PUBLIC_COMPONENT_LABEL[component.id]}: ${PUBLIC_COMPONENT_STATE_TONE[component.worstState].label}`)
+          {affected
+            .map((component) => `${PUBLIC_COMPONENT_LABEL[component.id]}: ${PUBLIC_COMPONENT_STATE_TONE[component.state].label}`)
             .join(" · ")}
+        </p>
+      ) : null}
+      {state !== incident.worstState ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Peaked at {PUBLIC_COMPONENT_STATE_TONE[incident.worstState].label.toLowerCase()} earlier in this incident.
         </p>
       ) : null}
       <TechnicalDetail reasons={incident.reasons} />

@@ -1,6 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { handleHealth } from "../health";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
@@ -464,7 +463,7 @@ describe("handleHealth", () => {
       expect(body.caches["yield-data"]).toMatchObject({
         generationId: "recovered-generation", healthy: false, degraded: true, degradedReason: "new-quality", streakDegradedRuns: 2,
       });
-      expect(body.status).toBe("degraded");
+      expect(body.status).toBe("healthy");
       expect(body.warnings).toContain("cache-quality-degraded: yield-data:new-quality");
     });
 
@@ -866,11 +865,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: "healthy" | "degraded" | "stale";
-      warnings: string[];
-      d1Capacity?: unknown;
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
     expect(body.status).toBe("degraded");
     expect(body).not.toHaveProperty("d1Capacity");
@@ -944,21 +939,11 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: "healthy" | "degraded" | "stale";
-      warnings: string[];
-      stablecoinPublication: { status: string };
-      activePriceCoverage: {
-        status: string;
-        missingActiveIds: string[];
-        alertEligibleIds: string[];
-        alertEligibleCount: number;
-      };
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
     expect(body.status).toBe("healthy");
     if (alertEligible) {
-      expect(body.stablecoinPublication.status).toBe("complete");
+      expect(body.stablecoinPublication?.status).toBe("complete");
       expect(body.activePriceCoverage).toMatchObject({
         status: "incomplete",
         missingActiveIds: [missingId],
@@ -1003,19 +988,7 @@ describe("handleHealth", () => {
 
     const res = await handleHealth(db);
 
-    const body = (await readJsonResponse(res, 200)) as {
-      status: "healthy" | "degraded" | "stale";
-      warnings: string[];
-      mintBurn: {
-        majorStaleCount: number;
-        staleMajorSymbols: string[];
-        sync: {
-          freshnessStatus: FreshnessStatus;
-          warning: string | null;
-          criticalLaneHealthy: boolean;
-        };
-      };
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
     expect(body.status).toBe("healthy");
     expect(body.warnings).toEqual([]);
@@ -1229,18 +1202,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      warnings: string[];
-      caches: Record<
-        string,
-        {
-          ageSeconds: number | null;
-          freshnessSource?: string;
-          sentinelValidationReason?: string;
-          warning?: string;
-        }
-      >;
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
     expect(body.caches["dex-liquidity"]).toMatchObject({
       ageSeconds: 45,
@@ -1256,20 +1218,9 @@ describe("handleHealth", () => {
     const db = makeHealthyHealthDb(now, { yieldSentinelAge: null });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: string;
-      warnings: string[];
-      caches: Record<string, {
-        ageSeconds: number | null;
-        freshnessSource?: string;
-        degraded?: boolean;
-        degradedReason?: string | null;
-        streakDegradedRuns?: number | null;
-        healthy: boolean;
-      }>;
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
-    expect(body.status).toBe("degraded");
+    expect(body.status).toBe("healthy");
     expect(body.caches["yield-data"]).toMatchObject({
       ageSeconds: 60,
       freshnessSource: "table-fallback",
@@ -1295,18 +1246,9 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: string;
-      warnings: string[];
-      caches: Record<string, {
-        degraded?: boolean;
-        degradedReason?: string | null;
-        streakDegradedRuns?: number | null;
-        healthy: boolean;
-      }>;
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
-    expect(body.status).toBe("degraded");
+    expect(body.status).toBe("healthy");
     expect(body.caches["yield-data"]).toMatchObject({
       degraded: true,
       degradedReason: "yield-supplemental:family-degraded:aaveV3",
@@ -1327,17 +1269,7 @@ describe("handleHealth", () => {
       });
 
       const res = await handleHealth(db);
-      const body = (await readJsonResponse(res, 200)) as {
-        status: string;
-        warnings: string[];
-        caches: Record<string, {
-          freshnessSource?: string;
-          degraded?: boolean | null;
-          degradedReason?: string | null;
-          streakDegradedRuns?: number | null;
-          healthy: boolean;
-        }>;
-      };
+      const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
       // Unknown quality stays unknown (never clean) but is an evidence-plane notice, not a public floor.
       expect(body.status).toBe("healthy");
@@ -1366,16 +1298,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: string;
-      warnings: string[];
-      caches: Record<string, {
-        degraded?: boolean;
-        degradedReason?: string | null;
-        streakDegradedRuns?: number | null;
-        healthy: boolean;
-      }>;
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
     expect(body.status).toBe("healthy");
     expect(body.caches["yield-data"]).toMatchObject({
@@ -1387,22 +1310,15 @@ describe("handleHealth", () => {
     expect(body.warnings.some((warning) => warning.startsWith("cache-quality-degraded:"))).toBe(false);
   });
 
-  it("returns stale with warnings when the DB health sentinel fails", async () => {
+  it("answers an uncached 503, never a verdict, when the DB health sentinel fails", async () => {
     const db = buildStatusD1Scenario({
       sections: ["sentinel"],
       overrides: [{ match: "SELECT 1", rows: [], throwError: new Error("db down") }],
     });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: "healthy" | "degraded" | "stale";
-      warnings: string[];
-      caches: Record<string, unknown>;
-    };
-
-    expect(body.status).toBe("stale");
-    expect(body.caches).toEqual({});
-    expect(body.warnings).toContain("db-unhealthy");
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("degrades and surfaces warnings when subqueries fail", async () => {
@@ -1412,10 +1328,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: "healthy" | "degraded" | "stale";
-      warnings: string[];
-    };
+    const body = (await readJsonResponse(res, 200)) as HealthResponse;
 
     expect(body.status).toBe("degraded");
     expect(body.warnings).toContain("blacklist-query-failed");
@@ -1442,11 +1355,7 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await res.json()) as {
-      status: string;
-      warnings: string[];
-      caches: Record<string, { mode?: string; sourceStatus?: string }>;
-    };
+    const body = (await res.json()) as HealthResponse;
 
     expect(body.status).toBe("degraded");
     expect(body.caches["fx-rates"]).toMatchObject({
@@ -1485,13 +1394,10 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await res.json()) as {
-      status: "healthy" | "degraded" | "stale";
-      circuits: Record<string, { state: string }>;
-    };
+    const body = (await res.json()) as HealthResponse;
 
     expect(body.status).toBe(expectedStatus);
-    expect(Object.values(body.circuits).filter((circuit) => circuit.state === "open")).toHaveLength(3);
+    expect(Object.values(body.circuits!).filter((circuit) => circuit.state === "open")).toHaveLength(3);
   });
 
   it("does not expose Telegram delivery lifecycle on the public response", async () => {
@@ -1570,11 +1476,9 @@ describe("handleHealth", () => {
     });
 
     const res = await handleHealth(db);
-    const body = (await res.json()) as {
-      circuits: Record<string, { state: string }>;
-    };
+    const { circuits } = (await res.json()) as HealthResponse;
 
-    expect(body.circuits["live-reserves:pmusd-precious-metals"]).toBeUndefined();
-    expect(body.circuits["live-reserves:ethena"]?.state).toBe("open");
+    expect(circuits!["live-reserves:pmusd-precious-metals"]).toBeUndefined();
+    expect(circuits!["live-reserves:ethena"]?.state).toBe("open");
   });
 });

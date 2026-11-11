@@ -129,11 +129,11 @@ export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>)
 export const CACHE_QUALITY_WARNING_PREFIXES = ["cache-quality-degraded: ", "cache-quality-unknown: "] as const;
 
 /**
- * Input-quality verdict over the caches, independent of age (rule R3). Only
- * explicitly degraded inputs floor status; unreadable quality (`degraded:
- * null`) is named as unknown, never clean (R2), but is an evidence-plane
- * fault rather than a service impact. One authority for the assessment and
- * read-time snapshot advancement (R5).
+ * Input-quality verdict over the caches, independent of age (rule R3). Input
+ * quality is named, never clean when degraded or unreadable (R2), but it does
+ * not floor status (owner rule 2026-11-11, ADR-42): the generation is
+ * published, so age grades the service and quality stays a notice. One
+ * authority for the assessment and read-time snapshot advancement (R5).
  */
 export function getCacheQualityImpact(caches: Record<string, CacheStatus>): {
   status: PublicStatusTone;
@@ -145,7 +145,7 @@ export function getCacheQualityImpact(caches: Record<string, CacheStatus>): {
   const degraded = named(true);
   const unknown = named(null);
   return {
-    status: degraded.length > 0 ? "degraded" : "healthy",
+    status: "healthy",
     warnings: [
       ...(degraded.length > 0 ? [`${CACHE_QUALITY_WARNING_PREFIXES[0]}${degraded.join(", ")}`] : []),
       ...(unknown.length > 0 ? [`${CACHE_QUALITY_WARNING_PREFIXES[1]}${unknown.join(", ")}`] : []),

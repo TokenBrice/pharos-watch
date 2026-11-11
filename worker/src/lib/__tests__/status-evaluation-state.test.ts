@@ -1232,14 +1232,15 @@ describe("availability cron-error semantics", () => {
     ).toBe("degraded");
   });
 
-  it("escalates to stale on 2+ consecutive errors on the same critical cron", () => {
-    expect(
-      evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
-      availabilityImpactingCronErrors: 1,
-      availabilityImpactingUnhealthyCrons: 1,
-      availabilityImpactingConsecutiveCronErrors: 1, })).status,
-    ).toBe("stale");
-  });
+  it.each([[1, "degraded"], [2, "stale"]] as const)(
+    "names %s critical cron(s) with 2+ consecutive errors critical and grades the status %s",
+    (jobs, status) => {
+      const result = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
+        availabilityImpactingCronErrors: jobs, availabilityImpactingConsecutiveCronErrors: jobs }));
+      expect(result.status).toBe(status);
+      expect(result.causes).toContainEqual(expect.objectContaining({ code: "cron_error_runs", severity: "critical" }));
+    },
+  );
 
   it("escalates to stale when 2+ critical crons are simultaneously unhealthy", () => {
     expect(

@@ -26,6 +26,18 @@ describe("PublicIncidentList", () => {
     expect(screen.queryByText(/older changes in this window were not loaded/)).toBeNull();
   });
 
+  it("shows an ongoing incident at its current state and names its earlier peak", () => {
+    const row = (id: number, components: PublicStatusTransition["components"]): PublicStatusTransition => ({
+      id, at: NOW - 600 * id, source: "public", from: "healthy", to: "degraded", transitionType: "degrade", reason: "x", components });
+    render(<PublicIncidentList nowSec={NOW} historyDays={30} hasMore={false} transitions={[
+      row(1, [{ id: "yield", state: "degraded", reasons: [] }]),
+      row(2, [{ id: "charts", state: "outage", reasons: [] }]),
+    ]} />);
+    expect(screen.getByText("Yield")).toBeTruthy();
+    expect(screen.queryByText(/Historical charts/)).toBeNull();
+    expect(screen.getByText(/Peaked at outage/)).toBeTruthy();
+  });
+
   it("labels legacy operator rows honestly and states the load bound (R7)", () => {
     const transitions: PublicStatusTransition[] = [
       { id: 1, at: NOW - 7200, source: "legacy", from: "healthy", to: "degraded", transitionType: "degrade",

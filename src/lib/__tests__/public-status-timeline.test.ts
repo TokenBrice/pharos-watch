@@ -132,7 +132,7 @@ describe("buildComponentDayCells", () => {
     expect(cells.yield.map((cell) => cell.state)).toEqual(["no-data", "operational"]);
   });
 
-  it("HISTORY_SMEAR: keeps an empty window operational until today's unpersisted outage", () => {
+  it("HISTORY_SMEAR: keeps an empty window operational, with today's unpersisted outage brief", () => {
     const cells = buildComponentDayCells({
       transitions: [], boundary: { at: TODAY - 40 * DAY, components: [] },
       liveComponents: live({ yield: "outage" }), liveObservedAt: NOW,
@@ -140,7 +140,8 @@ describe("buildComponentDayCells", () => {
       componentHistoryStartedAt: { yield: TODAY - 40 * DAY },
       nowSec: NOW, days: 3,
     });
-    expect(cells.yield.map(({ state }) => state)).toEqual(["operational", "operational", "outage"]);
+    expect(cells.yield.map(({ state, brief }) => brief ?? state)).toEqual(["operational", "operational", "outage"]);
+    expect(cells.yield[2].state).toBe("operational");
   });
 
   it("retains a pre-window incident when live health recovers without a persisted transition", () => {
@@ -213,15 +214,15 @@ describe("buildComponentDayCells", () => {
     expect(cells.yield.map(({ state }) => state)).toEqual(["operational", "delayed", "operational"]);
   });
 
-  it("counts worse states toward a milder band and colours any outage, however short", () => {
+  it("counts worse states toward a milder band and keeps an outage under an hour brief", () => {
     const cells = buildComponentDayCells({
       transitions: [
         // 40 min delayed then 25 min degraded: 65 min at delayed-or-worse.
         row(1, TODAY - DAY + 3600, [{ id: "yield", state: "delayed", reasons: [] }]),
         row(2, TODAY - DAY + 6000, [{ id: "yield", state: "degraded", reasons: [] }]),
         row(3, TODAY - DAY + 7500, []),
-        // A 15-minute database outage still colours today.
-        row(4, TODAY + 3600, PUBLIC_STATUS_COMPONENT_IDS.map((id) => ({ id, state: "outage" as const, reasons: ["db-unavailable"] }))),
+        // A 15-minute outage is a blip like any other state.
+        row(4, TODAY + 3600, [{ id: "yield", state: "outage", reasons: [] }]),
         row(5, TODAY + 4500, []),
       ],
       liveComponents: live(), liveObservedAt: NOW,
@@ -232,9 +233,8 @@ describe("buildComponentDayCells", () => {
     });
     expect(cells.yield).toEqual([
       { date: "2026-10-12", state: "delayed", brief: "degraded" },
-      { date: "2026-10-13", state: "outage" },
+      { date: "2026-10-13", state: "operational", brief: "outage" },
     ]);
-    expect(cells.charts.map(({ state }) => state)).toEqual(["operational", "outage"]);
   });
 
   it("keeps a live non-outage blip brief when persisted history covers the day", () => {
@@ -295,11 +295,14 @@ describe("foldPublicIncidents", () => {
     expect(incidents[0].reasons).toContain("public-projection-changed");
   });
 
-  it("keeps an unresolved incident ongoing and flags a start before the loaded window", () => {
+  it("keeps an unresolved incident ongoing at its current state and flags a start before the loaded window", () => {
     const incidents = foldPublicIncidents([
-      row(1, NOW - 3600, [{ id: "charts", state: "delayed", reasons: [] }], { from: "degraded" }),
+      row(1, NOW - 3600, [{ id: "charts", state: "outage", reasons: [] }], { from: "degraded" }),
+      row(2, NOW - 600, [{ id: "charts", state: "delayed", reasons: [] }]),
     ]);
-    expect(incidents[0]).toMatchObject({ resolvedAt: null, startKnown: false, worstState: "delayed" });
+    expect(incidents[0]).toMatchObject({
+      resolvedAt: null, startKnown: false, worstState: "outage", currentState: "delayed", current: [{ id: "charts", state: "delayed" }],
+    });
   });
 
   it("ignores legacy rows and lists incidents newest first", () => {
