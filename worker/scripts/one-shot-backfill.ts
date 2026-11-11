@@ -6,26 +6,80 @@ import { buildChainRpcs } from "../src/lib/chain-registry";
 import { normalizeCgApiKey } from "../src/lib/coingecko";
 
 const jobs = {
-  "backfill-depegs": () => import("./backfills/backfill-depegs").then((module) => module.handleBackfillDepegsTrusted),
-  "backfill-supply-history": () => import("./backfills/backfill-supply-history").then((module) => module.handleBackfillSupplyHistoryTrusted),
-  "backfill-stability-index": () => import("./backfills/backfill-stability-index").then((module) => module.handleBackfillStabilityIndex),
-  "audit-depeg-history": () => import("./backfills/audit-depeg-history").then((module) => module.handleAuditDepegHistoryTrusted),
-  "backfill-cg-prices": () => import("./backfills/backfill-cg-prices").then((module) => module.handleBackfillCgPricesTrusted),
-  "backfill-yield-history": () => import("./backfills/backfill-yield-history").then((module) => module.handleBackfillYieldHistory),
-  "backfill-mint-burn-prices": () => import("./backfills/backfill-mint-burn-prices").then((module) => module.handleBackfillMintBurnPrices),
-  "backfill-mint-burn": () => import("./backfills/backfill-mint-burn").then((module) => module.handleBackfillMintBurn),
-  "backfill-tape": () => import("./backfills/backfill-tape").then((module) => module.handleBackfillTape),
-  "reclassify-atomic-roundtrips": () => import("./backfills/reclassify-atomic-roundtrips").then((module) => module.handleReclassifyAtomicRoundtripsTrusted),
-  "backfill-blacklist-current-balances": () => import("./backfills/backfill-blacklist-current-balances").then((module) => module.handleBackfillBlacklistCurrentBalances),
-  "bootstrap-jltxx-reserves": () => import("./backfills/bootstrap-jltxx-reserves").then((module) => module.handleBootstrapJltxxReserves),
-};
+  "backfill-depegs": {
+    load: () => import("./backfills/backfill-depegs").then((module) => module.handleBackfillDepegsTrusted),
+    atomicImportOrder: 0, previewParameter: "dry-run",
+    supportsGet: false, stagedCapture: false,
+  },
+  "backfill-supply-history": {
+    load: () => import("./backfills/backfill-supply-history").then((module) => module.handleBackfillSupplyHistoryTrusted),
+    atomicImportOrder: null, previewParameter: null,
+    supportsGet: false, stagedCapture: false,
+  },
+  "backfill-stability-index": {
+    load: () => import("./backfills/backfill-stability-index").then((module) => module.handleBackfillStabilityIndex),
+    atomicImportOrder: 1, previewParameter: "dry-run",
+    supportsGet: false, stagedCapture: false,
+  },
+  "audit-depeg-history": {
+    load: () => import("./backfills/audit-depeg-history").then((module) => module.handleAuditDepegHistoryTrusted),
+    atomicImportOrder: 2, previewParameter: "dry-run",
+    supportsGet: true, stagedCapture: false,
+  },
+  "backfill-cg-prices": {
+    load: () => import("./backfills/backfill-cg-prices").then((module) => module.handleBackfillCgPricesTrusted),
+    atomicImportOrder: null, previewParameter: null,
+    supportsGet: false, stagedCapture: false,
+  },
+  "backfill-yield-history": {
+    load: () => import("./backfills/backfill-yield-history").then((module) => module.handleBackfillYieldHistory),
+    atomicImportOrder: null, previewParameter: null,
+    supportsGet: false, stagedCapture: false,
+  },
+  "backfill-mint-burn-prices": {
+    load: () => import("./backfills/backfill-mint-burn-prices").then((module) => module.handleBackfillMintBurnPrices),
+    atomicImportOrder: 4, previewParameter: "dry-run",
+    supportsGet: false, stagedCapture: false,
+  },
+  "backfill-mint-burn": {
+    load: () => import("./backfills/backfill-mint-burn").then((module) => module.handleBackfillMintBurn),
+    atomicImportOrder: 3, previewParameter: null,
+    supportsGet: false, stagedCapture: false,
+  },
+  "backfill-tape": {
+    load: () => import("./backfills/backfill-tape").then((module) => module.handleBackfillTape),
+    atomicImportOrder: null, previewParameter: "dry-run",
+    supportsGet: false, stagedCapture: false,
+  },
+  "reclassify-atomic-roundtrips": {
+    load: () => import("./backfills/reclassify-atomic-roundtrips").then((module) => module.handleReclassifyAtomicRoundtripsTrusted),
+    atomicImportOrder: 5, previewParameter: null,
+    supportsGet: false, stagedCapture: false,
+  },
+  "backfill-blacklist-current-balances": {
+    load: () => import("./backfills/backfill-blacklist-current-balances").then((module) => module.handleBackfillBlacklistCurrentBalances),
+    atomicImportOrder: 7, previewParameter: "dryRun",
+    supportsGet: false, stagedCapture: false,
+  },
+  "bootstrap-jltxx-reserves": {
+    load: () => import("./backfills/bootstrap-jltxx-reserves").then((module) => module.handleBootstrapJltxxReserves),
+    atomicImportOrder: 6, previewParameter: null,
+    supportsGet: false, stagedCapture: true,
+  },
+} satisfies Record<string, {
+  load: () => unknown;
+  atomicImportOrder: number | null;
+  previewParameter: "dry-run" | "dryRun" | null;
+  supportsGet: boolean;
+  stagedCapture: boolean;
+}>;
 export const ONE_SHOT_BACKFILL_JOBS = Object.keys(jobs);
 // These algorithms contain destructive swaps or fenced multi-row publication.
-export const ATOMIC_IMPORT_BACKFILL_JOBS = [
-  "backfill-depegs", "backfill-stability-index", "audit-depeg-history",
-  "backfill-mint-burn", "backfill-mint-burn-prices", "reclassify-atomic-roundtrips",
-  "bootstrap-jltxx-reserves", "backfill-blacklist-current-balances",
-];
+// Keep the historical exported order independently of the job/help order.
+export const ATOMIC_IMPORT_BACKFILL_JOBS = Object.entries(jobs)
+  .flatMap(([name, job]) => job.atomicImportOrder == null ? [] : [{ name, order: job.atomicImportOrder }])
+  .sort((a, b) => a.order - b.order)
+  .map(({ name }) => name);
 const USAGE = `Usage: npx tsx worker/scripts/one-shot-backfill.ts <job> [options]
 Jobs: ${ONE_SHOT_BACKFILL_JOBS.join(", ")}
 --query <URL-encoded parameters> preserves each job's existing parameter names/defaults.
@@ -55,21 +109,21 @@ export async function runOneShotBackfillCli(argv: readonly string[], dependencie
   if (values.help) { write(USAGE); return; }
   const job = positionals[0];
   if (positionals.length !== 1 || !Object.prototype.hasOwnProperty.call(jobs, job ?? "")) throw new CliUsageError("Exactly one known job is required");
+  const operation = jobs[job as keyof typeof jobs];
   const method = values.method ?? "POST";
-  if (method !== "POST" && !(job === "audit-depeg-history" && method === "GET")) throw new CliUsageError("Only audit-depeg-history supports GET; all jobs support POST");
+  if (method !== "POST" && !(operation.supportsGet && method === "GET")) throw new CliUsageError("Only audit-depeg-history supports GET; all jobs support POST");
   const url = new URL(`https://operator.invalid/jobs/${job}`);
   url.search = typeof values.query === "string" ? values.query : "";
-  const previewJobs = ["backfill-depegs", "backfill-stability-index", "audit-depeg-history", "backfill-mint-burn-prices", "backfill-tape", "backfill-blacklist-current-balances"];
-  const dryRun = previewJobs.includes(job!) && url.searchParams.get(job === "backfill-blacklist-current-balances" ? "dryRun" : "dry-run") === "true";
+  const dryRun = operation.previewParameter != null && url.searchParams.get(operation.previewParameter) === "true";
   if (!values.execute && !dryRun) throw new CliUsageError("Supply --execute or a supported explicit preview query; this job may not implement dry-run");
-  const needsAtomicImport = ATOMIC_IMPORT_BACKFILL_JOBS.includes(job!);
+  const needsAtomicImport = operation.atomicImportOrder != null;
   if (!dryRun && needsAtomicImport && !values["allow-atomic-import"]) {
     throw new CliUsageError("This job requires --allow-atomic-import; D1 imports may interrupt live database availability");
   }
   if (values["allow-atomic-import"] && (!needsAtomicImport || dryRun)) {
     throw new CliUsageError("--allow-atomic-import is only supported for write-enabled atomic jobs");
   }
-  if (job === "bootstrap-jltxx-reserves" && (url.search || values["body-json"] !== undefined || !values["idempotency-key"])) {
+  if (operation.stagedCapture && (url.search || values["body-json"] !== undefined || !values["idempotency-key"])) {
     throw new CliUsageError("Staged capture requires --idempotency-key and accepts no query/body overrides");
   }
   const request = new Request(url, { method, headers: {
@@ -78,7 +132,7 @@ export async function runOneShotBackfillCli(argv: readonly string[], dependencie
   }, ...(values["body-json"] !== undefined ? { body: String(values["body-json"]) } : {}) });
   const env = dependencies.env ?? process.env;
   const client = dependencies.client ?? createWorkerD1Client(typeof values.database === "string" ? values.database : "stablecoin-db", values.local === true ? "local" : "remote");
-  const handler = await jobs[job as keyof typeof jobs]();
+  const handler = await operation.load();
   const uncertainReceipts: string[] = [];
   const response = await handler({ db: createBackfillDatabase(client, {
     atomicImports: needsAtomicImport && !dryRun,

@@ -11,7 +11,7 @@ import { fetchEvmTokenBalanceRaw } from "./balance-providers";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import type { BlacklistRecoveryErrorClass, BlacklistRecoveryProvider } from "./amount-recovery";
 
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+export const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 type TransferLog = Pick<EtherscanLogEntry, "address" | "topics" | "data" | "blockNumber" | "transactionHash" | "logIndex">
   & Partial<Pick<AlchemyLogEntry, "removed" | "blockHash">>;
 

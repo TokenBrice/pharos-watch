@@ -11,12 +11,13 @@ import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard
 import { createRemoteD1Client, sqlString } from "./lib/remote-d1";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import { fetchTronDestroyWindowClear, type TronDestroyWindowObservation } from "../src/lib/blacklist/tron-replay-provider";
+import { TRANSFER_TOPIC as EVM_TRANSFER_TOPIC } from "../src/lib/blacklist/evm-amount-recovery";
 
 const SCRIPT = "repair-tron-blacklist-amounts";
 const TOKEN = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 const TOKEN_HEX = "a614f803b6fd780986a42c78ec9c7f77e6ded13c";
 const FREEZE_TOPIC = "42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc";
-const TRANSFER_TOPIC = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const TRANSFER_TOPIC = EVM_TRANSFER_TOPIC.slice(2);
 const integer = z.number().int().nonnegative().safe();
 const hex = z.string().regex(/^[0-9a-f]{64}$/i);
 const block = z.object({ blockID: hex, block_header: z.object({ raw_data: z.object({ number: integer, timestamp: integer }) }) });
