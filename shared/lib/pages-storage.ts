@@ -1,54 +1,44 @@
-const SITE_DATA_SAMPLES_TABLE = "site_data_request_samples";
-const siteDataSampleColumns = {
-  bucketStart: "bucket_start",
-  routeKey: "route_key",
-  routePath: "route_path",
-  deliveryPath: "delivery_path",
-  upstreamLane: "upstream_lane",
-  sampleInverseRate: "sample_inverse_rate",
-  sampleCount: "sample_count",
-} as const;
-
+/**
+ * D1 tables that Pages functions write and the Worker reads or prunes.
+ * Each statement is declared once here so the two deploy units cannot drift.
+ */
 export const SITE_DATA_REQUEST_SAMPLES = {
-  table: SITE_DATA_SAMPLES_TABLE,
-  timestampColumn: siteDataSampleColumns.bucketStart,
-  // SAFETY: Table and column identifiers are the static declarations above.
-  insertSql: `INSERT INTO ${SITE_DATA_SAMPLES_TABLE} (
-           ${Object.values(siteDataSampleColumns).join(",\n           ")}
+  table: "site_data_request_samples",
+  timestampColumn: "bucket_start",
+  insertSql: `INSERT INTO site_data_request_samples (
+           bucket_start,
+           route_key,
+           route_path,
+           delivery_path,
+           upstream_lane,
+           sample_inverse_rate,
+           sample_count
          )
          VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(${siteDataSampleColumns.bucketStart}, ${siteDataSampleColumns.routeKey}, ${siteDataSampleColumns.deliveryPath}, ${siteDataSampleColumns.upstreamLane}, ${siteDataSampleColumns.sampleInverseRate})
+         ON CONFLICT(bucket_start, route_key, delivery_path, upstream_lane, sample_inverse_rate)
          DO UPDATE SET
-           ${siteDataSampleColumns.sampleCount} = ${siteDataSampleColumns.sampleCount} + excluded.${siteDataSampleColumns.sampleCount},
-           ${siteDataSampleColumns.routePath} = excluded.${siteDataSampleColumns.routePath}`,
-  // SAFETY: This is a fixed projection of the same static table and columns.
-  sourceEventsSql: `SELECT ${siteDataSampleColumns.bucketStart}, ${siteDataSampleColumns.routeKey}, ${siteDataSampleColumns.routePath}, 'pages', 'site', ${siteDataSampleColumns.deliveryPath}, '', ${siteDataSampleColumns.sampleInverseRate}, 0, ${siteDataSampleColumns.sampleCount}
-  FROM ${SITE_DATA_SAMPLES_TABLE} WHERE ${siteDataSampleColumns.bucketStart} >= ?1 AND ${siteDataSampleColumns.bucketStart} < ?2`,
-} as const;
-
-const SELECTOR_QUOTA_TABLE = "selector_snapshot_daily_quota";
-const selectorQuotaColumns = {
-  quotaDate: "quota_date",
-  ipHash: "ip_hash",
-  count: "count",
-  firstSeenAt: "first_seen_at",
-  lastSeenAt: "last_seen_at",
+           sample_count = sample_count + excluded.sample_count,
+           route_path = excluded.route_path`,
+  sourceEventsSql: `SELECT bucket_start, route_key, route_path, 'pages', 'site', delivery_path, '', sample_inverse_rate, 0, sample_count
+  FROM site_data_request_samples WHERE bucket_start >= ?1 AND bucket_start < ?2`,
 } as const;
 
 export const SELECTOR_SNAPSHOT_DAILY_QUOTA = {
-  table: SELECTOR_QUOTA_TABLE,
-  timestampColumn: selectorQuotaColumns.quotaDate,
-  // SAFETY: Table and column identifiers are the static declarations above.
-  consumeSql: `INSERT INTO ${SELECTOR_QUOTA_TABLE} (
-         ${Object.values(selectorQuotaColumns).join(",\n         ")}
+  table: "selector_snapshot_daily_quota",
+  timestampColumn: "quota_date",
+  consumeSql: `INSERT INTO selector_snapshot_daily_quota (
+         quota_date,
+         ip_hash,
+         count,
+         first_seen_at,
+         last_seen_at
        )
        VALUES (?, ?, 1, ?, ?)
-       ON CONFLICT(${selectorQuotaColumns.quotaDate}, ${selectorQuotaColumns.ipHash}) DO UPDATE SET
-         ${selectorQuotaColumns.count} = ${selectorQuotaColumns.count} + 1,
-         ${selectorQuotaColumns.lastSeenAt} = excluded.${selectorQuotaColumns.lastSeenAt}
-       WHERE ${SELECTOR_QUOTA_TABLE}.${selectorQuotaColumns.count} < ?`,
-  // SAFETY: This statement uses only the static table and columns above.
-  refundSql: `UPDATE ${SELECTOR_QUOTA_TABLE}
-       SET ${selectorQuotaColumns.count} = CASE WHEN ${selectorQuotaColumns.count} > 0 THEN ${selectorQuotaColumns.count} - 1 ELSE 0 END
-       WHERE ${selectorQuotaColumns.quotaDate} = ? AND ${selectorQuotaColumns.ipHash} = ?`,
+       ON CONFLICT(quota_date, ip_hash) DO UPDATE SET
+         count = count + 1,
+         last_seen_at = excluded.last_seen_at
+       WHERE selector_snapshot_daily_quota.count < ?`,
+  refundSql: `UPDATE selector_snapshot_daily_quota
+       SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END
+       WHERE quota_date = ? AND ip_hash = ?`,
 } as const;
