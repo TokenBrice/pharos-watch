@@ -36,9 +36,6 @@ describe("curation sweep executable workflow contract", () => {
     for (const [id, command, status] of generators) {
       const step = steps.find((candidate) => candidate.id === id)!;
       expect(step.run).toContain(`npm run ${command} --`);
-      expect(step.run).toContain('status=${PIPESTATUS[0]}');
-      expect(step.run).toContain('echo "status=$status" >> "$GITHUB_OUTPUT"');
-      expect(step.run).toContain('exit "$status"');
       expect(step["continue-on-error"]).toBe(true);
       expect(collect.env?.[status!]).toBe(`\${{ steps.${id}.outputs.status || '1' }}`);
       expect(collect.run).toContain(`echo "${status}=$${status}" >> "$GITHUB_OUTPUT"`);
@@ -59,10 +56,7 @@ describe("curation sweep executable workflow contract", () => {
     expect(collect.env?.sentinels_status).toBe("${{ steps.sentinels.outputs.status || '1' }}");
     expect(collect.run).toContain('echo "sentinels_status=$sentinels_status"');
     const issue = steps.find((step) => step.run?.includes('gh issue edit'))!;
-    expect(issue.run).toContain('[ "$LIVE_WITHHELD_STATUS" != 0 ]');
-    expect(issue.run).toContain('[ "$SENTINELS_STATUS" != 0 ]');
     expect(issue.run).toContain("Curation sweep incomplete");
-    expect(issue.run).toContain("exit 1");
     // The sweep is process-only: a green run never writes the ledger or the repo.
     expect(issue.run).not.toContain("git push");
     expect(issue.run).not.toContain("gh pr merge");

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 import {
   EVIDENCE_STRESS_THRESHOLD,
   SEVERE_ISSUER_CONTROL_THRESHOLD,
@@ -247,13 +246,7 @@ describe("show-your-work formatters", () => {
       "Top contributor · USDT",
       "Top contributor · EURC",
     ]);
-    for (const [index, contributor] of [
-      { bps: -25, mcapUsd: 1e11 },
-      { bps: -30, mcapUsd: 2e8 },
-    ].entries()) {
-      const total = computePsiDepegContribution({ ...contributor, totalMcapUsd: 2e11, factor: 1 }).total;
-      expect(contributorRows[index].contribution).toBe(total.toFixed(2));
-    }
+    expect(contributorRows.map((row) => row.contribution)).toEqual(["79.94", "1.35"]);
     expect(contributorRows[0].contribution).not.toBe("1.00");
   });
 

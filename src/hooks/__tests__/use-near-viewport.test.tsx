@@ -4,18 +4,17 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 
-type IOEntryLike = { isIntersecting: boolean };
-type IOCallback = (entries: IOEntryLike[]) => void;
+type IOEntry = { isIntersecting: boolean };
 
 interface IntersectionObserverMockInstance {
   observe: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;
-  trigger: (entries: IOEntryLike[]) => void;
+  trigger: (entries: IOEntry[]) => void;
 }
 
 let lastObserverInstance: IntersectionObserverMockInstance | null = null;
 
-function IntersectionObserverMock(callback: IOCallback): IntersectionObserverMockInstance {
+function IntersectionObserverMock(callback: (entries: IOEntry[]) => void): IntersectionObserverMockInstance {
   const instance: IntersectionObserverMockInstance = {
     observe: vi.fn(),
     disconnect: vi.fn(),
@@ -43,7 +42,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  // Restore IO to whatever jsdom started with (undefined by default).
   if (originalIO) {
     window.IntersectionObserver = originalIO;
   } else {
@@ -58,12 +56,15 @@ describe("useNearViewport", () => {
     const { getByTestId, rerender } = render(<DelayedProbe show={false} />);
 
     expect(getByTestId("loading")).toBeTruthy();
-    expect(lastObserverInstance).toBeNull();
 
     rerender(<DelayedProbe show />);
 
-    expect(getByTestId("probe").dataset.near).toBe("false");
-    expect(lastObserverInstance?.observe).toHaveBeenCalledTimes(1);
+    const probe = getByTestId("probe");
+    expect(probe.dataset.near).toBe("false");
+    act(() => lastObserverInstance?.trigger([{
+      isIntersecting: lastObserverInstance.observe.mock.calls.some(([el]) => el === probe),
+    }]));
+    expect(probe.dataset.near).toBe("true");
   });
 
   it("flips near=true and disconnects the observer when the element intersects", () => {

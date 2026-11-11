@@ -80,16 +80,18 @@ function onSummaryLayer(matches: readonly HTMLElement[]): HTMLElement {
   return visible[0]!;
 }
 
-// The footer's live-data freshness label is relative to the clock. Pinned five
-// minutes after BASE_ENTRY.updatedAt, so it never reads an hour count that
-// collides with the score digits the summary-layer matchers look for.
+// Keep footer ages from colliding with score digits in summary matchers.
+const frames: FrameRequestCallback[] = [];
 beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
   vi.setSystemTime(new Date((BASE_ENTRY.updatedAt + 300) * 1000));
 });
 
-afterEach(() => {
+afterEach(async () => {
+  while (frames.length) await act(async () => { frames.shift()!(0); });
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("RedemptionBackstopCard", () => {
@@ -143,15 +145,7 @@ describe("RedemptionBackstopCard", () => {
     expect(rows.slice(1, 7).map((row) => row.querySelector("th")?.textContent)).toEqual([
       "Access", "Settlement", "Execution certainty", "Capacity", "Output quality", "Cost",
     ]);
-    const total = composeExitComponentScore({
-      access: BASE_ENTRY.accessScore!,
-      settlement: BASE_ENTRY.settlementScore!,
-      executionCertainty: BASE_ENTRY.executionCertaintyScore!,
-      capacity: BASE_ENTRY.capacityScore!,
-      outputAssetQuality: BASE_ENTRY.outputAssetQualityScore!,
-      cost: BASE_ENTRY.costScore!,
-    }, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS);
-    expect(rows[7]?.querySelector("td")?.textContent).toBe(total.toFixed(1));
+    expect(rows[7]?.querySelector("td")?.textContent).toBe("70.8");
   });
 
   it("leaves the displayed total unavailable when a required component is missing", () => {
@@ -531,8 +525,8 @@ describe("RedemptionBackstopCard footer freshness", () => {
   async function footerTime(freshness: Parameters<typeof RedemptionRouteSection>[0]["freshness"], ageMs: number) {
     vi.setSystemTime(new Date(generationMs + ageMs));
     const view = render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={null} coinId={BASE_ENTRY.stablecoinId} freshness={freshness} />);
-    // Hydration (two frames) then the boundary hook re-anchors to the browser clock.
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
+    while (frames.length) await act(async () => { frames.shift()!(0); });
+    await act(async () => { vi.advanceTimersByTime(0); });
     const time = view.container.querySelector("time[data-state]")!;
     return { time, state: time.getAttribute("data-state"), label: time.querySelector(".sr-only")?.textContent ?? "", unmount: view.unmount };
   }

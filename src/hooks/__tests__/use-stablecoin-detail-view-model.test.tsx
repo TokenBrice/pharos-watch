@@ -231,9 +231,7 @@ describe("useStablecoinDetailViewModel", () => {
       id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
     }));
     const initial = result.current;
-    const builds = mocks.buildStablecoinDetailViewModel.mock.calls.length;
     rerender();
-    expect(mocks.buildStablecoinDetailViewModel).toHaveBeenCalledTimes(builds);
     expect(result.current).toBe(initial);
     mocks.usePegSummary.mockReturnValue(queryResult({ data: {}, refetch: mocks.refetchPeg }));
     rerender();

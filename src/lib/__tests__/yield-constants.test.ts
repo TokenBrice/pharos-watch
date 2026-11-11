@@ -5,7 +5,6 @@ import {
   resolveYieldScoreQualification,
   computePysBreakdown,
 } from "@/lib/yield-constants";
-import { computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 
 
 
@@ -68,18 +67,9 @@ describe("computePysBreakdown", () => {
 
   it("includes v8 source-risk penalty in the displayed breakdown", () => {
     const breakdown = computePysBreakdown(8, 80, 0.9, 4, 2);
-    const expected = computePysComponents({
-      apy30d: 8,
-      safetyScore: 80,
-      apyVarianceScore: yieldStabilityToApyVarianceScore(0.9),
-      benchmarkRate: 4,
-      sourceRiskPenalty: 2,
-    });
-
-
     expect(breakdown.sourceRiskPenalty).toBe(2);
-    expect(breakdown.rowUtility).toBeCloseTo(expected.rowUtility, 6);
-    expect(breakdown.yieldEfficiency).toBeCloseTo(expected.yieldEfficiency, 6);
+    expect(breakdown.rowUtility).toBeCloseTo(4.5, 6);
+    expect(breakdown.yieldEfficiency).toBeCloseTo(4.131723405832814, 6);
   });
 });
 
