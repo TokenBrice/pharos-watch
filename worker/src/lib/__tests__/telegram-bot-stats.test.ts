@@ -46,6 +46,21 @@ describe("Telegram delivery telemetry SQL", () => {
         due: 1,
         active: 1,
       });
+      const insert = sqlite.prepare(`INSERT INTO telegram_deliveries
+        (job_id, kind, chat_id, body_hash, state, error_class, next_attempt_at, expires_at, created_at)
+        VALUES ('alert:x', 'alert', ?, 'h', ?, ?, 200, 10000, 200)`);
+      for (const [i, [state, error]] of [
+        ["retry", "rate"], ["retry", "rate"], ["retry", "server"], ["sent", "rate"], ["retry", ""], ["retry", null],
+      ].entries()) insert.run(String(i), state, error);
+      const plans: string[] = [];
+      const db = createSqliteD1(sqlite, { onAll: (sql) => {
+        if (sql.includes("GROUP BY error_class")) {
+          plans.push(...sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all().map((row) => String(row.detail)));
+        }
+      } });
+      expect(Object.entries((await getTelegramBotStats(db, 5001)).retryErrorClassCounts ?? {}))
+        .toEqual([["rate", 2], ["server", 1]]);
+      expect(plans.join("\n")).toContain("idx_telegram_deliveries_retry_error");
     } finally {
       sqlite.close();
     }
@@ -220,7 +235,6 @@ describe("mapTelegramBotStats", () => {
         expired: 1,
         nearTtl: 2,
         sending: 3,
-        // P2-13 part 3 single-sources both pending and fresh in-flight capacity in the public backlog.
         pendingSending: 1,
         freshSending: 2,
         executionUnknown: 2,
@@ -270,7 +284,6 @@ describe("mapTelegramBotStats", () => {
       subscribedChats: 0,
       emptyAlertChats: 0,
       mutedChatsWithSubscriptions: 0,
-      // P2-12 publishes unavailable preset-derived totals as null rather than fabricating zero.
       totalSubscriptions: null,
       explicitCoinSubscriptions: 0,
       presetImpliedCoinSubscriptions: null,
@@ -326,9 +339,6 @@ describe("mapTelegramBotStats", () => {
   });
 });
 
-// The field contract (shared/types/status/telegram.ts) publishes `null` when the
-// weekly `telegram-inactive-cleanup` job has no successful run in the trailing
-// 7-day window; a zero count would claim a cleanup that ran and found nobody.
 describe("getTelegramBotStats inactive cleanup", () => {
   const NOW = 1_775_890_000;
   const ONE_DAY_SEC = 86_400;
@@ -385,10 +395,8 @@ describe("getTelegramBotStats inactive cleanup", () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       insertCleanupRun(sqlite, NOW - 3 * ONE_DAY_SEC, "ok", 4);
-      // The seven-day cache guard records a skip as a successful no-op pass.
       insertCleanupRun(sqlite, NOW - 2 * ONE_DAY_SEC, "ok", 0);
       insertCleanupRun(sqlite, NOW - ONE_DAY_SEC, "error", null);
-      // Outside the trailing window.
       insertCleanupRun(sqlite, NOW - 30 * ONE_DAY_SEC, "ok", 9);
 
       const stats = await getTelegramBotStats(db, NOW);
@@ -511,14 +519,8 @@ describe("getTelegramBotStats lifecycle availability", () => {
   it("marks a failed lifecycle pending-delivery read unavailable instead of publishing a measured zero", async () => {
     const stats = await getTelegramBotStats(makeTelegramStatusDb(), NOW_SEC);
 
-    // The independent capacity read succeeded and reports a real backlog, so
-    // every other optional loader is available and the only missing evidence
-    // is the lifecycle snapshot's pending-delivery count.
     expect(stats.pendingDeliveries).toBe(7);
     expect(stats.lifecycleSnapshot?.pendingDeliveries).toBeNull();
-    // R1 (unavailable is not zero) and R4 (non-ok names a reason): the failed
-    // lifecycle read must name that field instead of publishing a measured zero
-    // with `status: "complete"`.
     expect(stats.quality).toEqual({
       status: "partial",
       unavailableFields: ["pendingDeliveries"],

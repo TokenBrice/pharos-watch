@@ -149,20 +149,27 @@ async function projectFreezeVariant(
   // Revisit only changed, already-projected identities in the bounded source
   // or recovery-attempt window. Old source timestamps alone never replay history.
   const changedRows = (await db.prepare(
-    `SELECT b.id, b.stablecoin, b.chain_id, b.chain_name, b.event_type,
+    `WITH changed AS MATERIALIZED (
+       SELECT rowid FROM blacklist_events INDEXED BY idx_be_timestamp
+        WHERE timestamp > ? AND event_type = ?
+       UNION
+       SELECT rowid FROM blacklist_events INDEXED BY idx_blacklist_events_attempted_type
+        WHERE event_type = ? AND amount_last_attempted_at > ?
+     )
+     SELECT b.id, b.stablecoin, b.chain_id, b.chain_name, b.event_type,
             b.amount_usd_at_event, b.timestamp, b.methodology_version, b.config_key,
             b.suppression_reason, b.rowid AS rowid
-       FROM blacklist_events AS b
+       FROM changed
+       CROSS JOIN blacklist_events AS b ON b.rowid = changed.rowid
        JOIN tape_events AS t INDEXED BY idx_tape_source_key
          ON t.source_table = 'blacklist_events' AND t.source_row_id = b.id AND t.transition = ?
-      WHERE b.event_type = ? AND t.suppressed_at IS NULL
-        AND (b.timestamp > ? OR b.amount_last_attempted_at > ?)
+      WHERE t.suppressed_at IS NULL
         ${until == null ? "" : "AND b.timestamp <= ?"}
         AND (b.suppression_reason IS NOT NULL OR
           CASE WHEN json_valid(t.payload_json) THEN json_extract(t.payload_json, '$.amountUsdAtEvent') END
             IS NOT b.amount_usd_at_event)
       ORDER BY b.timestamp ASC, b.rowid ASC LIMIT ?`,
-  ).bind(spec.transition, spec.eventType, sourceReconciliationSince(options), sourceReconciliationSince(options),
+  ).bind(sourceReconciliationSince(options), spec.eventType, spec.eventType, sourceReconciliationSince(options), spec.transition,
     ...(until == null ? [] : [until]), limit).all<BlacklistSourceRow>()).results ?? [];
   const retracted = changedRows.filter((row) => row.suppression_reason != null);
   if (options?.dryRun !== true) {

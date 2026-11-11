@@ -11,6 +11,8 @@ Policy for every new `worker/migrations/` file; `worker/migrations/MANIFEST.md` 
 
 Additive migrations do not need data-migration metadata.
 
+Index-only migration `0303_tape_query_indexes.sql` installs the large-flow, freeze attempted-time, Telegram retry-error and reserve attempt-time access paths before the indexed Tape reader activates. Worker rollback retains all four indexes. The [manifest rollback note](../../worker/migrations/MANIFEST.md#rollback-procedure) owns bookmark/version evidence and first affected-path acceptance; successful index creation alone proves no runtime recovery.
+
 Additive debt-table example `0280_mint_burn_dirty_hours.sql` precedes the maintenance writer: no baseline change, legacy seeding or business-row rewrite. Worker rollback retains schema/debt. Keep the verified pre-window Time Travel bookmark, ledger and Worker versions; observe source enqueue and first atomic rebuild separately from schema application. Restore D1 only for unexpected schema/data mutation.
 
 `0281_mint_burn_scan_coverage.sql` likewise installs an empty prospective-evidence table before its writer; observe durable proof roundtrips before activating public readers. Never seed history from cursors, event ages or cron metadata. Worker rollback retains fingerprinted proof; old-writer cursor advances prove no scanned interval. Keep the pre-window bookmark, ledger and Worker identities; schema application is not writer-soak acceptance.

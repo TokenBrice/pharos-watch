@@ -36,6 +36,7 @@ index	idx_blacklist_current_balances_status
 index	idx_blacklist_current_balances_status_observed
 index	idx_blacklist_events_amount_status
 index	idx_blacklist_events_api_filter
+index	idx_blacklist_events_attempted_type
 index	idx_blacklist_events_backfill
 index	idx_blacklist_events_chain_block
 index	idx_blacklist_events_chain_ts
@@ -150,6 +151,7 @@ index	idx_mbcd_until
 index	idx_mbe2_burn_type
 index	idx_mbe2_chain
 index	idx_mbe2_coin
+index	idx_mbe2_tape_large_ts
 index	idx_mbe2_ts
 index	idx_mbe_coin_chain_ts
 index	idx_mbe_counted_coin_chain_ts
@@ -191,6 +193,7 @@ index	idx_reserve_continuation_executions_root
 index	idx_reserve_sync_attempt_history_coin_attempt
 index	idx_reserve_sync_attempt_history_coin_attempt_unique
 index	idx_reserve_sync_attempt_history_coin_time
+index	idx_reserve_sync_attempt_history_time
 index	idx_reserve_sync_state_last_success_attempt
 index	idx_reserve_sync_state_pending_attempt
 index	idx_safety_grade_history_coin
@@ -278,6 +281,7 @@ index	idx_telegram_change_log_observed
 index	idx_telegram_deliveries_chat
 index	idx_telegram_deliveries_done
 index	idx_telegram_deliveries_due
+index	idx_telegram_deliveries_retry_error
 index	idx_telegram_deliveries_sending
 index	idx_telegram_digest_outbox_due
 index	idx_telegram_digest_outbox_sending

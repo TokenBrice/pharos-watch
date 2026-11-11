@@ -33,6 +33,8 @@ import {
 } from "./types";
 
 const CURSOR_KEY = "mint_burn.large_flow";
+const FLOW_TYPES = { mint: "mint_burn.large_mint", burn: "mint_burn.large_burn" } as const;
+const SOURCE_TIMESTAMP_MARGIN_SEC = 30 * 86400;
 
 // Notice threshold; tuned to emit at most a handful of events per day across
 // tracked coins. ~$10M single-transaction flows are already newsworthy in
@@ -73,7 +75,7 @@ async function fetchLargeFlows(
   return fetchRowsWithTieExpansion<MintBurnSourceRow>(db, {
     selectSql: `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
                       counterparty, timestamp, flow_type, burn_type`,
-    fromSql: "mint_burn_events INDEXED BY idx_mbe2_ts",
+    fromSql: "mint_burn_events INDEXED BY idx_mbe2_tape_large_ts",
     timeColumn: "timestamp",
     trailingWhereSql: `
                    AND ${mintBurnTapeEligibleSql("mint_burn_events")}
@@ -110,7 +112,7 @@ function buildFlowEvent(row: MintBurnSourceRow): TapeEventInsert | null {
   if (row.direction !== "mint" && row.direction !== "burn") return null;
   if (row.amount_usd == null) return null;
   const tsMs = row.timestamp * 1000;
-  const type = row.direction === "mint" ? "mint_burn.large_mint" : "mint_burn.large_burn";
+  const type = FLOW_TYPES[row.direction];
   const severity = severityForFlow(row.amount_usd);
   const transition = "updated";
   const sourceRowId = row.id;
@@ -175,18 +177,21 @@ async function projectLargeFlows(
   // Already-projected, unsuppressed claims whose source changed. Retract those
   // that became ineligible; republish eligible corrections in place. A pruned
   // source never matches the join, so a retention delete is never a retraction.
+  // Claim ts is written from source time at projection and never updated; reinsertion may correct source block time.
+  // A correction cannot plausibly approach 30 days; source timestamp bounds remain authoritative.
   const changedRows = (await db.prepare(
     `SELECT m.id, m.stablecoin_id, m.symbol, m.chain_id, m.direction, m.amount_usd,
             m.counterparty, m.timestamp, m.flow_type, m.burn_type,
             NOT (${mintBurnTapeEligibleSql("m")}) AS ineligible
-       FROM mint_burn_events AS m INDEXED BY idx_mbe2_ts
-       JOIN tape_events AS t INDEXED BY idx_tape_source_key
-         ON t.source_table = 'mint_burn_events' AND t.source_row_id = m.id AND t.transition = 'updated'
-      WHERE m.timestamp > ?${until == null ? "" : " AND m.timestamp <= ?"}
+       FROM tape_events AS t INDEXED BY idx_tape_type_ts
+       CROSS JOIN mint_burn_events AS m
+      WHERE t.type IN ('${FLOW_TYPES.mint}', '${FLOW_TYPES.burn}') AND t.ts > ?
+        AND t.source_table = 'mint_burn_events' AND t.source_row_id = m.id AND t.transition = 'updated'
+        AND m.timestamp > ?${until == null ? "" : " AND m.timestamp <= ?"}
         AND t.suppressed_at IS NULL
         AND ${mintBurnTapeClaimStaleSql("t", "m")}
       ORDER BY m.timestamp ASC, m.id ASC LIMIT ?`,
-  ).bind(reconcileSince, ...(until == null ? [] : [until]), limit)
+  ).bind((reconcileSince - SOURCE_TIMESTAMP_MARGIN_SEC) * 1000, reconcileSince, ...(until == null ? [] : [until]), limit)
     .all<MintBurnSourceRow & { ineligible: number }>()).results ?? [];
   const retracted = changedRows.filter((row) => row.ineligible === 1);
   if (!options?.dryRun && retracted.length > 0) {

@@ -543,10 +543,8 @@ describe("live-reserves-store", () => {
   });
 
   it("preserves history rows referenced by the current attempt closure past the age cutoff", async () => {
-    const { createSqliteD1 } = await import("@shared/test-utils/sqlite-d1");
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-            // Suspended feed: current composition attempt is far older than the cutoff.
       sqlite.exec(`
         INSERT INTO reserve_composition (stablecoin_id, slices, fetched_at, source, attempt_id)
           VALUES ('usdo-openeden', '[]', 1000, 'adapter', 'attempt-old-current');
@@ -566,12 +564,17 @@ describe("live-reserves-store", () => {
             ('usdo-openeden', 9500, 'adapter', 'adapter', 'ok', 'attempt-recent');
       `);
 
-      const result = await pruneLiveReserveHistory(createSqliteD1(sqlite), 10_000, {
+      const db = createSqliteD1(sqlite);
+      const prepare = vi.spyOn(db, "prepare");
+      const result = await pruneLiveReserveHistory(db, 10_000, {
         retentionSec: 1_000,
       });
 
       expect(result.compositionHistoryDeleted).toBe(1);
       expect(result.attemptHistoryDeleted).toBe(1);
+      const sql = prepare.mock.calls.find(([sql]) => sql.startsWith("DELETE FROM reserve_sync_attempt_history"))![0];
+      expect(sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...Array(sql.match(/\?/g)!.length).fill(9000))
+        .map((row) => row.detail).join("\n")).toContain("idx_reserve_sync_attempt_history_time (attempted_at<?)");
       const compositionLeft = sqlite
         .prepare("SELECT attempt_id FROM reserve_composition_history ORDER BY attempt_id")
         .all() as Array<{ attempt_id: string }>;

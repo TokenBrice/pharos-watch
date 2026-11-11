@@ -18,27 +18,12 @@ afterEach(() => {
 function event(sourceRowId: string): TapeEventInsert {
   return {
     eventId: `event-${sourceRowId}`,
-    type: "catalog.entry.added",
-    severity: "notice",
-    ts: 1_000,
-    endsAt: null,
-    coinId: null,
-    issuerId: null,
-    pegCurrency: null,
-    chain: null,
-    title: sourceRowId,
-    summary: sourceRowId,
-    payload: {},
-    sourceTable: "catalog",
-    sourceRowId,
-    transition: "opened",
-    sourceUrl: null,
-    methodologyVersion: null,
+    type: "catalog.entry.added", severity: "notice", ts: 1_000,
+    endsAt: null, coinId: null, issuerId: null, pegCurrency: null, chain: null,
+    title: sourceRowId, summary: sourceRowId, payload: {},
+    sourceTable: "catalog", sourceRowId, transition: "opened",
+    sourceUrl: null, methodologyVersion: null,
   };
-}
-
-function createTapeDatabase(): { db: D1Database } {
-  return fixtures.open();
 }
 
 describe("Tape large-flow claim guard", () => {
@@ -57,10 +42,10 @@ describe("Tape large-flow claim guard", () => {
   it("rejects stale or ineligible snapshots, updates only presentation, and never revives a suppressed claim", async () => {
     const { db, sqlite } = fixtures.open();
     const count = () => (sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events").get() as { n: number }).n;
-    await insertTapeEvents(db, [flow(20_000_000)]); // source missing
+    await insertTapeEvents(db, [flow(20_000_000)]);
     expect(count()).toBe(0);
     seedSource(sqlite, 20_000_000);
-    await insertTapeEvents(db, [flow(30_000_000)]); // stale snapshot
+    await insertTapeEvents(db, [flow(30_000_000)]);
     expect(count()).toBe(0);
     await insertTapeEvents(db, [flow(20_000_000)]);
     const first = sqlite.prepare("SELECT * FROM tape_events").get()!;
@@ -107,36 +92,26 @@ describe("Tape event source-key conflicts", () => {
 });
 
 describe("Tape event store static-catalog probes", () => {
-  it("retries two overload failures and returns each unprojected event once", async () => {
+  it("batches exact/suppressed keys, retries and propagates read failures", async () => {
     vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0);
-    const { db } = createTapeDatabase();
-    const observed = event("observed-after-overload");
-    const pending = event("pending-after-overload");
-    await insertTapeEvents(db, [observed]);
-
+    const { db, sqlite } = fixtures.open();
+    const events = Array.from({ length: 61 }, (_, i) => event(String(i)));
+    await insertTapeEvents(db, [events[0]!, events[30]!]);
+    sqlite.exec("UPDATE tape_events SET suppressed_at = 1");
+    events.push({ ...events[0]!, sourceTable: "other" }, { ...events[0]!, transition: "updated" });
     const batch = db.batch.bind(db);
-    let attempts = 0;
-    const retryingDb = new Proxy(db, {
-      get(target, property, receiver) {
-        if (property === "batch") {
-          return async (statements: D1PreparedStatement[]) => {
-            attempts += 1;
-            if (attempts <= 2) {
-              throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
-            }
-            return batch(statements);
-          };
-        }
-        return Reflect.get(target, property, receiver);
-      },
-    });
-
-    const filtering = filterUnprojectedTapeEvents(retryingDb, [observed, pending]);
+    const spy = vi.spyOn(db, "batch").mockImplementation(batch)
+      .mockRejectedValueOnce(new Error("D1 DB is overloaded"))
+      .mockRejectedValueOnce(new Error("D1 DB is overloaded"));
+    const prepare = vi.spyOn(db, "prepare");
+    const filtering = filterUnprojectedTapeEvents(db, events);
     await vi.runAllTimersAsync();
-
-    await expect(filtering).resolves.toEqual([pending]);
-    expect(attempts).toBe(3);
+    await expect(filtering).resolves.toEqual(events.filter((_, i) => i !== 0 && i !== 30));
+    expect(spy.mock.calls.map(([statements]) => statements.length)).toEqual([1, 1, 1, 1, 1]);
+    expect(prepare.mock.calls.map(([sql]) => (sql.match(/\?/g) ?? []).length)).toEqual([90, 90, 90, 90, 9]);
+    const failure = new Error("failed");
+    spy.mockRejectedValueOnce(failure);
+    await expect(filterUnprojectedTapeEvents(db, events)).rejects.toBe(failure);
   });
 });
 
@@ -154,10 +129,9 @@ describe("Curated tape event dates", () => {
   );
 });
 
-
 describe("Tape event read boundary", () => {
   it("serves a projector insert through the full wire schema", async () => {
-    const { db } = createTapeDatabase();
+    const { db } = fixtures.open();
     const inserted = event("round-trip");
     await insertTapeEvents(db, [inserted]);
 
@@ -179,7 +153,7 @@ describe("Tape event read boundary", () => {
 
   it.each(["a".repeat(48), "a".repeat(49), "a".repeat(200), "%", "_", "\\", "\u8cc7\u7523"])(
     "matches literal substrings across searchable columns for %j", async (q) => {
-      const { db } = createTapeDatabase();
+      const { db } = fixtures.open();
       await insertTapeEvents(db, [
         { ...event("title"), title: `before ${q.toUpperCase()} after` },
         { ...event("summary"), summary: `before ${q.toUpperCase()} after` },
@@ -200,7 +174,7 @@ describe("Tape event read boundary", () => {
 
   it.each(["depeg", "de_peg", "a".repeat(1_000)])(
     "matches only literal dot-delimited type prefixes for %j", async (prefix) => {
-      const { db } = createTapeDatabase();
+      const { db } = fixtures.open();
       await insertTapeEvents(db, [
         { ...event("child"), type: `${prefix}.opened` },
         { ...event("nested"), type: `${prefix.toUpperCase()}.opened.updated` },

@@ -82,29 +82,35 @@ function blacklistRow(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 describe("freeze projector", () => {
-  it.each([
+  it.each(([
     { project: projectFreezeBlocked, eventType: "blacklist", severity: "severe" },
     { project: projectFreezeDestroyed, eventType: "destroy", severity: "severe" },
-  ] as const)("reconciles recovered $eventType amounts without replacing old identities or replaying history", async ({ project, eventType, severity }) => {
+  ] as const).flatMap((item) => [false, true].map((overlap) => ({ ...item, overlap }))))("reconciles $eventType recovery (overlap=$overlap) through indexed ranges without replay", async ({ project, eventType, severity, overlap }) => {
     const { db, sqlite } = fixtures.open();
-    const oldTime = SEC - 365 * 86400;
+    const prepare = vi.spyOn(db, "prepare");
+    const oldTime = overlap ? SEC : SEC - 365 * 86400;
     await insertBlacklistRows(db, [makeBlacklistRow({
       id: "old-unknown", event_type: eventType, timestamp: oldTime,
       chain_id: "ethereum", chain_name: "Ethereum", amount_usd_at_event: null,
     })]);
     await project(db, { since: 0 });
-    const original = sqlite.prepare("SELECT * FROM tape_events WHERE source_row_id = 'old-unknown'").get()!;
-    // An unrelated old source must not be backfilled by a recent recovery attempt.
+    const select = sqlite.prepare("SELECT * FROM tape_events");
+    const original = select.get()!;
     await insertBlacklistRows(db, [makeBlacklistRow({
-      id: "unprojected-history", event_type: eventType, timestamp: oldTime - 1, tx_hash: "0xunprojected",
+      id: "unprojected-history", event_type: eventType, timestamp: SEC - 366 * 86400, tx_hash: "0xunprojected",
     })]);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_events").get()).toEqual({ n: 2 });
     sqlite.prepare(`UPDATE blacklist_events SET amount_usd_at_event = 50000000,
       amount_last_attempted_at = ? WHERE id = 'old-unknown'`).run(SEC);
-    expect((await project(db, { dryRun: true })).projected).toBe(1);
-    expect(sqlite.prepare("SELECT * FROM tape_events").get()).toEqual(original);
+    expect((await project(db, { dryRun: true, until: oldTime - 1 })).projected).toBe(0);
+    expect((await project(db, { dryRun: true, until: oldTime })).projected).toBe(1);
+    const sql = prepare.mock.calls.map(([query]) => query).find((query) => query.includes("b.suppression_reason IS NOT NULL OR"))!;
+    const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sql.replaceAll("?", "0")}`).all().map((row) => row.detail).join("\n");
+    for (const access of ["MATERIALIZE changed", "idx_be_timestamp", "idx_blacklist_events_attempted_type", "INTEGER PRIMARY KEY", "idx_tape_source_key"])
+      expect(plan).toContain(access);
+    expect(select.get()).toEqual(original);
     await project(db);
-    const corrected = sqlite.prepare("SELECT * FROM tape_events").get()!;
+    const corrected = select.get()!;
     for (const field of ["id", "event_id", "ts", "created_at", "source_row_id"]) {
       expect(corrected[field]).toBe(original[field]);
     }
@@ -125,7 +131,6 @@ describe("freeze projector", () => {
       id: "mirror-zero", timestamp: oldTime, chain_id: "ethereum", chain_name: "Ethereum",
       amount_usd_at_event: null,
     })]);
-    // Named-column old-Worker insert/read fixture runs after latest migration 0283.
     insertOldFreezeTapeRow(sqlite, "mirror-zero", "freeze.blocked", "ethereum", oldTime);
     const original = sqlite.prepare("SELECT * FROM tape_events").get()!;
     expect(original.suppressed_at).toBeNull();
@@ -143,7 +148,6 @@ describe("freeze projector", () => {
     const beforeRepeat = sqlite.prepare("SELECT total_changes() AS n").get();
     await projectFreezeBlocked(db);
     expect(sqlite.prepare("SELECT total_changes() AS n").get()).toEqual(beforeRepeat);
-    // Even an explicit historical projection cannot undo the monotonic marker.
     sqlite.prepare("UPDATE blacklist_events SET suppression_reason = NULL WHERE id = 'mirror-zero'").run();
     expect(await projectFreezeBlocked(db, { since: 0 })).toEqual({ projected: 0, advanced: null });
     expect(sqlite.prepare("SELECT * FROM tape_events").all()).toEqual([suppressed]);
@@ -192,7 +196,6 @@ describe("freeze projector", () => {
       const row = original.find((row) => row.source_row_id === item.chainId)!;
       expect(JSON.parse(String(row.payload_json))).toMatchObject({ chainName: item.chainName });
       expect(row.title).toContain(item.chainName);
-      // Seed the exact historical display-name defect after latest-schema setup.
       sqlite.prepare("UPDATE tape_events SET chain = ? WHERE source_row_id = ?").run(item.chainName, item.chainId);
     }
     sqlite.exec(CHAIN_MIGRATION);
@@ -223,8 +226,6 @@ describe("freeze projector", () => {
   ])("repairs post-migration old-writer $type rows without replacing identities or replaying alerts", async ({ eventType, type, project }) => {
     const { db, sqlite } = fixtures.open();
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
-    // Apply 0266 before the OLD Worker writes, including rows outside the
-    // scheduled source lookback and rows within the Telegram recovery gate.
     sqlite.exec(CHAIN_MIGRATION);
     expect(MIGRATED_CHAIN_NAMES).toHaveLength(9);
     expect([...new Set(CONTRACT_CONFIGS.map(({ chain }) => chain.chainName))].sort())
@@ -239,7 +240,6 @@ describe("freeze projector", () => {
     insertOldFreezeTapeRow(sqlite, "boundary", type, "Ethereum", SEC - FREEZE_RECOVERY_WINDOW_SEC);
     insertOldFreezeTapeRow(sqlite, "expired", type, "Ethereum", SEC - FREEZE_RECOVERY_WINDOW_SEC - 1);
     insertOldFreezeTapeRow(sqlite, "recent", type, "Ethereum", SEC - 12 * 3600);
-    // Preserve non-migration names, already canonical chains and other sources.
     insertOldFreezeTapeRow(sqlite, "unknown", type, "Fantom");
     insertOldFreezeTapeRow(sqlite, "canonical", type, "ethereum");
     insertOldFreezeTapeRow(sqlite, "other-source", type, "Ethereum", SEC, "other_events");
@@ -288,8 +288,6 @@ describe("freeze projector", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM tape_events WHERE chain = 'ethereum'").get()).toEqual({ count: 500 });
     const cursor = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key)!.value)) as { ts: number; id: number };
     expect(cursor.id).toBe(2);
-    // A rollback writes a newer row after the first page: only the next sweep
-    // can find it because it sorts ahead of the persisted scan cursor.
     insertOldFreezeTapeRow(sqlite, "rollback", type, "Ethereum", SEC);
     expect(await projectFreezeBlocked(db)).toEqual({ projected: 0, advanced: null });
     expect(sqlite.prepare("SELECT id FROM tape_events WHERE chain = 'Ethereum'").all()).toEqual([{ id: 502 }]);
@@ -350,8 +348,6 @@ describe("freeze projector", () => {
         metadata: { type: "freeze.blocked", reason: "freeze-chain-repair-failed" },
       }),
     ]);
-    // The failed page is still retryable; its successful replay heals only
-    // the old chain and cannot insert the already-projected fresh identity.
     expect(await projectFreezeBlocked(db)).toEqual({ projected: 0, advanced: null });
     expect(sqlite.prepare("SELECT chain FROM tape_events WHERE source_row_id = ?").get("legacy-pending-repair"))
       .toEqual({ chain: "ethereum" });
@@ -370,7 +366,7 @@ describe("freeze projector", () => {
     const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [] },
       { match: "FROM tape_events INDEXED BY idx_tape_type_ts", rows: [] },
-      { match: "FROM blacklist_events AS b", rows: [] },
+      { match: "WITH changed AS MATERIALIZED", rows: [] },
       { match: MATCH_BLACKLIST_EVENTS, matchBinds: [RECONCILIATION_SINCE, "blacklist", "opened", 2], rows: limitedRows },
       { match: MATCH_BLACKLIST_EVENTS, matchBinds: [RECONCILIATION_SINCE, SEC, "blacklist", "opened"], rows: expandedRows },
     ]) as MockD1Database;
@@ -405,7 +401,7 @@ describe("freeze projector", () => {
               'https://example.com', 1500000, ?, ?, ?, ?, ?)`);
     await insertBlacklistRows(db, [makeBlacklistRow({ id: "healthy-newer", event_type: eventType, timestamp: SEC })]);
     expect(await project(db)).toEqual({ projected: 1, advanced: SEC });
-    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("FROM blacklist_events INDEXED BY"));
+    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("FROM blacklist_events INDEXED BY idx_blacklist_events_public_event_page"));
     expect(sourceSql).toBeDefined();
     const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sourceSql!}`)
       .all(RECONCILIATION_SINCE, eventType, eventType === "unblacklist" ? "resolved" : "opened", 500)
@@ -416,8 +412,6 @@ describe("freeze projector", () => {
     const existing = sqlite.prepare("SELECT id, event_id, source_row_id, ts FROM tape_events ORDER BY id").all();
     const healthy = existing[0] as { id: number };
 
-    // A resumed independent config contributes an older event; reconciliation
-    // can independently insert a still older identity with manifest provenance.
     await insertBlacklistRows(db, [makeBlacklistRow({
       id: "recovered-older",
       event_type: eventType,
@@ -445,7 +439,6 @@ describe("freeze projector", () => {
     expect(await project(db, { maxRows: 1 })).toEqual({ projected: 1, advanced: SEC });
     expect(await project(db, { maxRows: 1 })).toEqual({ projected: 1, advanced: SEC });
     expect(await project(db, { maxRows: 1 })).toEqual({ projected: 1, advanced: SEC });
-    // Scheduled reconciliation does not scan year-old history; admin backfill does.
     expect(await project(db)).toEqual({ projected: 0, advanced: null });
     expect(await project(db, { since: 0, dryRun: true })).toEqual({ projected: 1, advanced: null });
     expect(await project(db, { since: 0 })).toEqual({ projected: 1, advanced: oldTime });

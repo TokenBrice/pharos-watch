@@ -90,6 +90,7 @@
 | 0300     | `0300_mint_burn_raw_amount.sql`                             | Add nullable decimal-string raw amounts, default-zero display-threshold flags and an across-flow transaction lookup index; no legacy inference or row rewrite. |
 | 0301     | `0301_mint_burn_supply_proofs.sql`                         | Add immutable conditional range-supply evidence with a separate acceptance lifecycle, durable config fingerprints, nullable event proof references reusing 0300 raw amounts and a partial proof-reference index; no historical proof seed or existing row mutation. |
 | 0302     | `0302_mint_burn_supply_reconciliation.sql`                   | Add prospective daily exact native-unit operator supply-reconciliation receipts; no publication or history rewrite. |
+| 0303     | `0303_tape_query_indexes.sql`                              | Add sparse large-flow, freeze attempted-time, Telegram retry-error and reserve attempt-time indexes; preserve all existing indexes and rows. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -544,6 +545,8 @@ Historical drops dated August 10 are not indefinitely recoverable through their 
 - `0297_daily_digest_read_numbering_index.sql`: restore the prior Worker for a code rollback; keep the additive index, which only changes the digest reads' plan and is inert to older Workers. Drop it only in a later measured cleanup migration, never as part of a Worker rollback.
 
 ## Rollback Procedure
+
+`0303_tape_query_indexes.sql` applies before the indexed Tape reader. Keep all four additive indexes on Worker rollback; older Workers remain compatible. Retain the pre-window Time Travel bookmark, migration ledger and public/heavy Worker versions. Index creation scans each source once; observe a new version-correlated Tape projection, Telegram retry-class read and reserve prune separately from migration success. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
 `0301_mint_burn_supply_proofs.sql` applies before the range-proof Worker. Older named-column event writers remain compatible and leave proof references NULL; migration 0300 owns exact raw amounts. Keep the table, indexes and nullable columns on Worker rollback; rollback does not invalidate or delete retained evidence. Retain the verified pre-window Time Travel bookmark, ledger and Worker versions. Separately observe the first atomic proof/member/debt write, complete-hour rebuild and retained replay; migration success alone proves none of them. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
