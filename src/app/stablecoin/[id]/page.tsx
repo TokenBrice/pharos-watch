@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -40,7 +39,7 @@ import { buildTransferReviewView } from "@/lib/transfer-review";
 import { projectOracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-client";
 import type { BackingMetricsInput } from "@/components/stablecoin-detail/backing-metrics-card";
 import { deriveLiquidationEngine } from "@/components/stablecoin-detail/mechanism-diagrams/mechanism-template";
-import type { StablecoinDetailSnapshot } from "@/lib/api";
+import { readDetailSnapshot } from "@/lib/stablecoin-detail-snapshot-reader";
 import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
 import { getStablecoinDetailDataBootstrapScript } from "@/lib/data-bootstrap-script";
 import type { StablecoinAiSummariesById } from "@shared/types";
@@ -51,17 +50,6 @@ const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 const typedFailureScenarios = failureScenarios as FailureScenariosById;
 /** Only a permanent event page may take a preview row's link. */
 const PERMANENT_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set(DEPEG_EVENT_ENTRIES.map((event) => event.slug));
-
-function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
-  try {
-    const file = resolve(process.cwd(), "src/generated/stablecoin-detail-snapshots", `${id}.json`);
-    // The ID comes from the closed tracked-stablecoin registry above.
-    return JSON.parse(readFileSync(file, "utf8")) as StablecoinDetailSnapshot;
-  } catch {
-    return null;
-  }
-}
-
 
 function DetailPageShellFallback({
   coin,
@@ -231,7 +219,10 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
   const staticCoin = buildStablecoinStaticMeta(coin);
   const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
-  const detailSnapshot = readDetailSnapshot(id);
+  // The ID comes from the closed tracked-stablecoin registry above.
+  const { snapshot: detailSnapshot } = readDetailSnapshot(
+    resolve(process.cwd(), "src/generated/stablecoin-detail-snapshots", `${id}.json`),
+  );
   // A wrapper's Mechanism flow draws its parent's design; whether that parent
   // has a liquidation engine needs the parent's server-only backing review.
   const variantParent = coin.variantOf ? TRACKED_META_BY_ID.get(coin.variantOf) : undefined;

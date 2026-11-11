@@ -464,7 +464,7 @@ export async function runSharedPriceCompletion(
       db: input.db,
       stats: authoritativeOverrideStats,
       chainRpcs: input.chainRpcs,
-      maxProviderLivePriority: 0,
+      localRepairOnly: true,
       previousMissingGenerationsById: input.previousMissingGenerationsById,
     },
   );

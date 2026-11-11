@@ -1,3 +1,4 @@
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
@@ -440,7 +441,7 @@ export function buildRedemptionExitRouteObservation(
       : REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel];
 
   return {
-    routeId: `redemption:${input.stablecoinId}:${input.config.routeFamily}`,
+    routeId: redemptionRouteId(input.stablecoinId, input.config.routeFamily),
     routeFamily: input.config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
     scope,
     ...point,
@@ -600,7 +601,7 @@ export function deriveSupplyModelExitRouteObservation(
     resolveRedemptionFiatUsdRate(output.currency, fiatReferences) !== null;
 
   return {
-    routeId: `redemption:${entry.stablecoinId}:${entry.routeFamily}`,
+    routeId: redemptionRouteId(entry.stablecoinId, entry.routeFamily),
     routeFamily,
     scope,
     ...point,

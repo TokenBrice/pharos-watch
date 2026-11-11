@@ -3,7 +3,7 @@ import type { ReserveContinuationMessage } from "@shared/types/reserve-continuat
 import type { Env } from "../lib/env";
 import { createSlotDeadline, assertSlotDeadline, SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS } from "../lib/cron-timeouts";
 import { createLeaseOwner, runCronWithLease } from "../lib/cron-lease-primitives";
-import { createReserveLeaseOwner } from "../lib/reserve-producer-priority";
+import { createReserveLeaseOwner, reserveRecoveryLeaseAdmission } from "../lib/reserve-producer-priority";
 import { claimReserveContinuation, finishReserveContinuation, heartbeatReserveContinuation } from "../lib/reserve-continuation-fence";
 import type { ReserveContinuationClaim } from "../lib/reserve-continuation-fence";
 import { createScheduledRuntimeContext } from "./scheduled/context";
@@ -95,7 +95,7 @@ export async function handleReserveContinuationBatch(
           clearInterval(heartbeat);
           await Promise.allSettled(heartbeatAttempts);
         }
-      }, { owner: leaseOwner, abortSignal: controller.signal, deadline, reserveRecoveryAdmission: true });
+      }, { owner: leaseOwner, abortSignal: controller.signal, deadline, admissionPolicy: reserveRecoveryLeaseAdmission });
       // Global lease release precedes event terminal and the next send.
       if (leased.status !== "ok" || !claim) return;
       const status = summary?.jobsErrored ? "error" : summary?.jobsDegraded || summary?.jobsSkipped ? "degraded" : "ok";

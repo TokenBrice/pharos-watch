@@ -11,7 +11,6 @@ import { loadPriceValidationReferences } from "../../lib/price-validation";
 import { upsertStagedPools } from "../dex-discovery/persistence";
 import {
   STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
-  buildStagedPoolWriteback,
 } from "./staged-pool-writeback";
 import { buildSymbolLookups, classifyPoolType, initLiquidityFallbackCounters, normalizeProtocol } from "./pool-helpers";
 import { buildChainAddressKey } from "./token-resolution";
@@ -29,7 +28,7 @@ import {
   processPoolMetrics,
 } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
-import { captureObservedPoolPrices, refreshPoolPrices } from "./price-refresh";
+import { refreshPoolPrices } from "./price-refresh";
 import {
   computeStablecoinScores,
   publishStablecoinScoreTargets,
@@ -877,11 +876,6 @@ async function buildDexLiquidityPoolState(
     },
   });
 
-  // Snapshot this run's live-lane observations before the merge: rows the merge
-  // backfills arrive from dex_pool_registry, so writing them back would advance
-  // refreshed_at every hour and no row would ever age out (immortal registry).
-  const stagedWriteback = buildStagedPoolWriteback(metrics, ctx.syncStartSec);
-  const observedThisRun = captureObservedPoolPrices({ metrics, priceObservations: sourceState.priceObservations }, ctx.syncStartSec);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -892,7 +886,9 @@ async function buildDexLiquidityPoolState(
     sourceState.authoritativeConfirmation,
     ctx.fallbackCounters,
     ctx.signal,
+    sourceState.priceObservations,
   );
+  const { stagedWriteback, observedThisRun } = staged;
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
   staged.priceObservations.clear();
   // Best-effort memory only: publication depends on the merge above, so a D1

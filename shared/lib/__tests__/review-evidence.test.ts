@@ -13,7 +13,7 @@ describe("review evidence canonical payload reuse", () => {
       canonicalInputs.push(canonical);
       return createHash("sha256").update(canonical).digest("hex");
     });
-    const evidenceKeys = builder.add({ componentKeys: ["mint", "control"], sourceId: "review", reviewedAt: "2026-10-01", sources, payload });
+    const evidenceKeys = builder.add({ componentKeys: ["economic-control:mint", "control"], sourceId: "review", reviewedAt: "2026-10-01", sources, payload });
     for (const [index, source] of [...sources].reverse().entries()) {
       const canonical = stableJsonStringifyV1({ domain: "safety-score-v9.reviewed-metadata-evidence.v2", payload: {
         assetId: "test-asset", sourceId: "review", reviewedAt: "2026-10-01", observedAt: "2026-10-01",
@@ -26,7 +26,7 @@ describe("review evidence canonical payload reuse", () => {
     }
     expect(builder.finish().componentEvidence).toEqual([
       { componentKey: "control", evidenceKeys: [...evidenceKeys].sort() },
-      { componentKey: "mint", evidenceKeys: [...evidenceKeys].sort() },
+      { componentKey: "economic-control:mint", evidenceKeys: [...evidenceKeys].sort() },
     ]);
     expect(sources[0]?.label).toBe("second");
     expect(Object.isFrozen(payload)).toBe(false);
@@ -55,12 +55,12 @@ describe("review evidence canonical payload reuse", () => {
     const canonical = stableJsonStringifyV1(envelope);
     const contentSha256 = createHash("sha256").update(canonical).digest("hex");
     const evidenceKey = `review:0:${contentSha256.slice(0, 16)}`;
-    expect(builder.add({ ...dates, componentKeys: ["mint"], sourceId: "review", payload })).toEqual([evidenceKey]);
+    expect(builder.add({ ...dates, componentKeys: ["economic-control:mint"], sourceId: "review", payload })).toEqual([evidenceKey]);
     expect(canonicalInputs).toEqual([canonical]);
     expect(builder.finish()).toEqual({
       researchEvidence: [{ evidenceKey, sourceId: "review", observedAtSec: observed, publishedAtSec: null,
         url: null, contentSha256, confidence: "manual-review", maxAgeSec: null }],
-      componentEvidence: [{ componentKey: "mint", evidenceKeys: [evidenceKey] }],
+      componentEvidence: [{ componentKey: "economic-control:mint", evidenceKeys: [evidenceKey] }],
     });
   });
 
@@ -78,9 +78,9 @@ describe("review evidence canonical payload reuse", () => {
       canonicalInputs.push(canonical);
       return createHash("sha256").update(canonical).digest("hex");
     });
-    builder.add({ componentKeys: ["existing"], sourceId: "valid", reviewedAtSec: review, payload: {} });
+    builder.add({ componentKeys: ["dependencies"], sourceId: "valid", reviewedAtSec: review, payload: {} });
     const before = builder.finish();
-    expect(() => builder.add({ ...dates, componentKeys: ["mint", "existing"], sourceId: "invalid", payload: {} })).toThrow();
+    expect(() => builder.add({ ...dates, componentKeys: ["economic-control:mint", "dependencies"], sourceId: "invalid", payload: {} })).toThrow();
     expect(builder.finish()).toEqual(before);
     expect(canonicalInputs).toHaveLength(1);
   });

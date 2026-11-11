@@ -51,7 +51,7 @@ export function projectExpiredMeasuredExitRoutes(fixedInput: MeasuredExitPublica
       observation.routeId,
       {
         observationWindowEndedAt: observation.observationHistory.observationWindowEndedAt,
-        freshnessMaxSec: getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""),
+        freshnessMaxSec: getDexMeasuredExecutionFreshnessMaxSec(),
       },
     ] as const])),
   ]));
@@ -66,7 +66,7 @@ export function projectExpiredMeasuredExitRoutes(fixedInput: MeasuredExitPublica
           observation.confidence === "high" &&
           isDexMeasuredExecutionObservationHistoryMature(history) &&
           history != null && fixedInput.clockSec - history.observationWindowEndedAt >
-            getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? "");
+            getDexMeasuredExecutionFreshnessMaxSec();
       }).map((observation) => observation.routeId),
     ])),
   };

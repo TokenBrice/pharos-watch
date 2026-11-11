@@ -28,7 +28,7 @@ import {
   sortRegisterRows,
   withoutRegisterFilters,
 } from "./cemetery-register-model";
-import { CemeteryRegisterFoldedRow, CemeteryRegisterRowPair } from "./cemetery-register-row";
+import { CemeteryRegisterFoldedRow, CemeteryRegisterRowPair, type CemeteryRegisterRowHandle } from "./cemetery-register-row";
 import { CemeteryRegisterToolbar } from "./cemetery-register-toolbar";
 import styles from "./cemetery-register.module.css";
 
@@ -93,6 +93,11 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
   const [queryDraft, setQueryDraft] = useState<string | null>(null);
 
   const sectionRef = useRef<HTMLElement>(null);
+  const rowHandlesRef = useRef(new Map<string, CemeteryRegisterRowHandle>());
+  const rowControllerRefs = useMemo(() => new Map(rows.map(({ id }) => [id, (handle: CemeteryRegisterRowHandle | null) => {
+    if (handle) rowHandlesRef.current.set(id, handle);
+    else rowHandlesRef.current.delete(id);
+  }] as const)), [rows]);
   const announcedResultRef = useRef<string | null>(null);
   const holdResultAnnouncementUntilRef = useRef(0);
 
@@ -219,10 +224,11 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
   // Scroll and focus after the reveal (or "Show all") has committed.
   useEffect(() => {
     if (!focusRequest) return;
-    const row = document.getElementById(focusRequest.id);
-    if (!row || !sectionRef.current?.contains(row)) return;
+    const handle = rowHandlesRef.current.get(focusRequest.id);
+    const row = handle?.element;
+    if (!handle || !row || !sectionRef.current?.contains(row)) return;
     if (focusRequest.scroll) row.scrollIntoView({ block: "start", behavior: focusRequest.scroll });
-    row.querySelector<HTMLButtonElement>("button[aria-controls]")?.focus({ preventScroll: focusRequest.scroll !== null });
+    handle.focusDisclosure({ preventScroll: focusRequest.scroll !== null });
   }, [focusRequest]);
 
   useEffect(() => {
@@ -299,6 +305,7 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
           ) : (
             <CemeteryRegisterRowPair
               key={row.id}
+              controllerRef={rowControllerRefs.get(row.id)}
               row={row}
               folded={folded}
               expanded={expandedIds.has(row.id)}

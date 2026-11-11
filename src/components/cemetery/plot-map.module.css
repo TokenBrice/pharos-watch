@@ -1064,8 +1064,8 @@
 .map[data-dim="year"] .tree:not([data-lit="true"]) {
   opacity: 0.35;
 }
-/* section zoom: the island sets `transform` on the world group, and (unless motion is reduced) its transition inline
-   with `!important`, because the app's global reset `svg * { transition: none !important }` wins over any rule here */
+/* section zoom: the island sets `transform` on the world group; its transition is declared in `globals.css` on
+   `[data-plot-world]`, beside the global reset `svg * { transition: none !important }` that would win over a rule here */
 .world {
   transform-box: view-box;
   transform-origin: 0 0;
@@ -1229,7 +1229,7 @@
 }
 
 /* reduced motion: stones do not lift; flowers appear without a bloom and the tag without a fade because the kit's
-   `--scene-dur-*` tokens are 0 ms (the island adds no beam or zoom transition) */
+   `--scene-dur-*` tokens are 0 ms (`globals.css` turns the beam and zoom transitions off) */
 :root[data-motion="reduced"] .grave .stone {
   translate: none;
 }

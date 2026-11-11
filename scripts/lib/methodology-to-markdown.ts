@@ -15,6 +15,7 @@ import {
 import { getListedDefinitions } from "../../src/lib/definitions";
 import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/lib/methodology-content";
 import { frontMatterBlock } from "./markdown-renderers";
+import { validateMethodologyVersion } from "./editorial-content";
 
 export type MethodologyChangelogKey = MethodologyChangelogMarkdownKey;
 
@@ -65,6 +66,7 @@ function detailMarkdown(blocks: readonly MethodologyChangelogDetailBlock[]): str
 
 export function buildMethodologyChangelogMarkdown(key: MethodologyChangelogKey, archiveKey?: string): string {
   const config = getMethodologyChangelogEntryByMarkdownKey(key);
+  validateMethodologyVersion({ currentVersion: config.currentLabel.slice(1), changelogPath: config.publicPath, changelog: config.entries });
   const archive = archiveKey === undefined ? undefined : METHODOLOGY_HISTORY_ARCHIVES.find((item) =>
     item.changelog.key === config.key && item.archive === archiveKey);
   if (archiveKey !== undefined && !archive) throw new Error(`Unknown methodology archive: ${key}/${archiveKey}`);

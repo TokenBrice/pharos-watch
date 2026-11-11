@@ -1,10 +1,10 @@
+import { COMPARISON_EVIDENCE_PILOT_SLUGS } from "@/lib/presentation-pilots.mjs";
 // @vitest-environment jsdom
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildComparisonAtAGlanceRows,
-  COMPARISON_EVIDENCE_PILOT_SLUGS,
   getStaticComparisonPagesForCoin,
   STATIC_COMPARISON_PAGE_BY_SLUG,
 } from "@/lib/compare-pages";

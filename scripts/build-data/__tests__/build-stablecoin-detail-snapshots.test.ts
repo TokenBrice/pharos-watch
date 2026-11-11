@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { TRACKED_STABLECOINS as COINS } from "@shared/lib/stablecoins/registry";
 import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema, type SupplyHistoryPoint } from "@shared/types/market";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { readDetailSnapshot } from "../../../src/lib/stablecoin-detail-snapshot-reader";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE as BATCH_SIZE, type DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
 import {
@@ -152,8 +153,17 @@ describe("stablecoin detail snapshot generator", () => {
       expect(checkSnapshots(outputDir)).toEqual(snapshots);
       const firstPath = join(outputDir, `${COINS[0].id}.json`);
       const firstBytes = readFileSync(firstPath);
+      expect(readDetailSnapshot(firstPath)).toEqual({ status: "available", snapshot: snapshots[0] });
       rmSync(firstPath);
       expect(() => checkSnapshots(outputDir)).toThrow(/Missing stablecoin detail snapshot/);
+      const warn = silence();
+      expect(readDetailSnapshot(firstPath)).toEqual({ status: "missing", snapshot: null });
+      expect(warn).toHaveBeenLastCalledWith(`[stablecoin-detail-snapshot] missing: ${firstPath}; rendering without snapshot`);
+      writeFileSync(firstPath, "{");
+      expect(readDetailSnapshot(firstPath)).toEqual({ status: "malformed", snapshot: null });
+      expect(warn).toHaveBeenLastCalledWith(`[stablecoin-detail-snapshot] malformed: ${firstPath}; rendering without snapshot`);
+      expect(readDetailSnapshot(outputDir)).toEqual({ status: "unreadable", snapshot: null });
+      expect(warn).toHaveBeenLastCalledWith(`[stablecoin-detail-snapshot] unreadable: ${outputDir}; rendering without snapshot`);
       writeFileSync(firstPath, firstBytes);
       writeFileSync(join(outputDir, "removed-coin.json"), "{}");
       expect(() => checkSnapshots(outputDir)).toThrow(/Obsolete/);

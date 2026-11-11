@@ -239,7 +239,7 @@ An `upstream` review needs no parent asset. It may come from a tracked parent or
 custody, or reserve exposure that strictly exceeds the 50% threshold under the policy above. A direct
 `Possible` token review stays in the `possible` tier even when it also carries upstream exposure. The
 Safety Score V9 access branch consumes that same reviewed verdict. `adaptAccessReview()` in
-`worker/src/lib/safety-score-v9/extension.ts` grants `structuralDisposition: "inherited-upstream"` —
+`worker/src/lib/safety-score-v9/extension-access-lookthrough.ts` grants `structuralDisposition: "inherited-upstream"` —
 which reclassifies the access gap from `missing-access-review` to the measured
 `inherited-access-exposure` — when the reviewed status is `inherited` and an upstream asset can be
 **named**, either by `variantOf`/`mintAuthority.inheritedFrom` or by a curated reserve slice.

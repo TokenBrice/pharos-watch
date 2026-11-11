@@ -1,13 +1,54 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { CaseStudyContentSchema, MethodologyContentSchema, WeeklyContentSchema } from "@shared/types/editorial-content";
 import type { CaseStudy, MethodologyChangelogDetailBlock, SummaryHref } from "@shared/types/editorial-content";
 import { buildPrStaticCheckPlan, STRUCTURAL_CHECKS } from "../maintenance/run-pr-static-checks";
+import { validateMethodologyVersion } from "../lib/editorial-content";
 import { checkEditorialContent } from "../ci/check-editorial-content";
 import { mechanismExplainerIssues } from "../../src/lib/mechanism-explainers/editorial-check";
 import { withTempRepo } from "./helpers/test-state";
 
 const load = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));
+describe("methodology declaration validation", () => {
+  const entry = (version: string, effectiveAt: number) => ({ version, effectiveAt, title: "", date: "", summary: "", impact: [], commits: [], reconstructed: false });
+
+  it("rejects an activation timeline that rolls back to an older version", () => {
+    expect(() =>
+      validateMethodologyVersion({
+        currentVersion: "2.0",
+        changelogPath: "/methodology/chronology-drift-test/",
+        changelog: [
+          entry("2.0", 1000),
+          entry("1.9", 2000),
+        ],
+      }),
+    ).toThrow(/activation chronology drift/i);
+  });
+
+  it("rejects even in production when currentVersion drifts from the latest changelog entry", () => {
+    expect(() =>
+      validateMethodologyVersion({
+        currentVersion: "1.0",
+        changelogPath: "/methodology/drift-test/",
+        changelog: [
+          entry("2.0", 1000),
+        ],
+      }),
+    ).toThrow(/drift/i);
+  });
+
+  it("validates current/latest and activation chronology in production mode", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      expect(() => validateMethodologyVersion({ currentVersion: "1.0", changelogPath: "/drift/", changelog: [entry("2.0", 1000)] })).toThrow(/version drift/i);
+      expect(() => validateMethodologyVersion({ currentVersion: "2.0", changelogPath: "/chronology/", changelog: [entry("2.0", 1000), entry("1.9", 2000)] })).toThrow(/activation chronology drift/i);
+      expect(() => validateMethodologyVersion({ currentVersion: "2.0", changelogPath: "/valid/", changelog: [entry("2.0", 2000), entry("1.9", 1000)] })).not.toThrow();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
 describe("authored editorial JSON", () => {
   it("keeps inferred recursive readonly views, six weights and internal-path hrefs", () => {
     const weights = { kind: "weights", values: ["1", "2", "3", "4", "5", "6"] } as const;

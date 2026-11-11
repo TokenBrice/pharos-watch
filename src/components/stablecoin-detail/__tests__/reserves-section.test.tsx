@@ -24,7 +24,8 @@ const AMBER_VALUE_CLASS = "text-state-warn";
 const NO_REVIEW_COIN = { ...COIN, reserves: [] };
 
 const SUMMARY: ReserveQualityClientSummary = {
-  provenanceOnly: false,
+  evidenceBasis: "full-composition",
+  populationId: COIN.id,
   chipLabel: "Highly liquid",
   chipToneClass: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
   lede: "2 reviewed reserve slices — 100% convertible within one day.",
@@ -143,7 +144,7 @@ describe("ReservesSection", () => {
     const qualitySummary = projectReserveQualityClientSummary(coin)!;
     const { container } = renderSection({ coin, qualitySummary, reserves: null });
 
-    expect(qualitySummary.provenanceOnly).toBe(true);
+    expect(qualitySummary.evidenceBasis).toBe("provenance-only");
     expect(screen.getByText(confidence)).toBeDefined();
     expect(container.textContent).toContain(`Reviewed ${coin.reserveReview!.reviewedAt}`);
     expect(container.innerHTML).toContain(coin.reserveReview!.sources[0]!.url);
@@ -376,6 +377,8 @@ describe("ReservesSection", () => {
       const coin = TRACKED_META_BY_ID.get("usdcx-movement")!;
       const qualitySummary = projectReserveQualityClientSummary(coin);
       const lookThrough = projectReserveLookThroughClientSummary(coin, TRACKED_META_BY_ID);
+      expect(qualitySummary?.populationId).toBe(coin.id);
+      expect(qualitySummary?.populationId).not.toBe(lookThrough?.parentId);
       expect(qualitySummary?.chipLabel).toBe("Opaque exit");
       expect(lookThrough).not.toBeNull();
       renderSection({ coin, qualitySummary, lookThrough });

@@ -182,6 +182,15 @@ function cacheFindings(key: string, cache: HealthResponse["caches"][string]): Co
   return findings;
 }
 
+export function projectPublicCacheStatus(key: string, cache: HealthResponse["caches"][string]) {
+  const findings = cacheFindings(key, cache);
+  const state = findings.reduce<PublicComponentState>(
+    (worst, finding) => STATE_RANK[finding.state] > STATE_RANK[worst] ? finding.state : worst,
+    "operational",
+  );
+  return { state, findings };
+}
+
 /** The sync warning texts that only restate freshness, which the age grade already covers. */
 function isMintBurnFreshnessWarning(warning: string): boolean {
   return warning.startsWith("Mint/burn sync freshness is ");
@@ -233,7 +242,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
   for (const [key, cache] of Object.entries(health.caches)) {
     // Mirror the shared cache impact floor exactly; findings only explain it.
     if (getCacheImpactStatus(cache, key) === "healthy" && cache.degraded !== true && cache.degraded !== null) continue;
-    for (const finding of cacheFindings(key, cache)) add(PUBLIC_CACHE_COMPONENT[key] ?? "stablecoin-data", finding);
+    for (const finding of projectPublicCacheStatus(key, cache).findings) add(PUBLIC_CACHE_COMPONENT[key] ?? "stablecoin-data", finding);
   }
 
   const publication = health.stablecoinPublication;

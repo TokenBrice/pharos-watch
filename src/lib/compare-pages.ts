@@ -16,6 +16,7 @@ import { COMPACT_REDEMPTION_FEE_TERMS } from "@shared/lib/redemption-backstop-co
 import type { RedemptionDocSourceSupport, StablecoinMeta } from "@shared/types";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
+import { COMPARISON_EVIDENCE_PILOT_SLUGS } from "@/lib/presentation-pilots.mjs";
 import { STATIC_COMPARE_PAIRS, buildComparePrefillUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
@@ -353,20 +354,6 @@ function buildStaticComparisonPagesOrThrow(): StaticComparisonPage[] {
 export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = buildStaticComparisonPagesOrThrow();
 
 export const STATIC_COMPARISON_PAGE_BY_SLUG = new Map(STATIC_COMPARISON_PAGES.map((page) => [page.slug, page]));
-
-/**
- * The bounded W2/C8 evidence pilot. Reviewed report and redemption facts are
- * projected only for these registered pairs; every other pair keeps its
- * existing structural rows.
- */
-export const COMPARISON_EVIDENCE_PILOT_SLUGS: ReadonlySet<string> = new Set([
-  "usdc-circle-vs-usdg-paxos",
-  "usdt-tether-vs-usdg-paxos",
-  "rlusd-ripple-vs-usdc-circle",
-  "paxg-paxos-vs-xaut-tether",
-  "usdt-tether-vs-usdc-circle",
-  "usde-ethena-vs-usds-sky",
-]);
 
 for (const slug of COMPARISON_EVIDENCE_PILOT_SLUGS) {
   if (!STATIC_COMPARISON_PAGE_BY_SLUG.has(slug)) {

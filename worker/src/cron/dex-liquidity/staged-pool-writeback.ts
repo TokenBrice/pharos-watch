@@ -21,7 +21,7 @@ export const STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC = 4 * 60 * 60;
  * Exhaustive: which retained source families the live-lane write-back owns.
  * Discovery owns its families outright — re-stamping a row that
  * `mergeStagedPools` backfilled would advance `refreshed_at` every hour and
- * make it immortal (see the pre-merge snapshot invariant in `orchestrator.ts`).
+ * make it immortal (see the pre-merge snapshot in `staging-merge.ts`).
  * Adding a family without a row fails this record's type.
  */
 const LIVE_LANE_SOURCE_FAMILY: Record<LiquidityPoolSourceFamily, boolean> = {

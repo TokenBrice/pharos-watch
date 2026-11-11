@@ -231,9 +231,7 @@ export function buildP4DexExitRouteObservations(params: {
           const outputIdentity = canonicalExitRouteAssetKey(pool.chain, profile.tokenOut.address);
           const physicalPool = { ...pool, poolId: profile.poolId };
           const observationHistory = observationHistoryForProfile(profile);
-          const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
-            profile.adapterProfileId,
-          );
+          const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec();
           // The producer bounds every included cycle to its latest complete
           // publication. The selected quote and the summary end must both remain fresh.
           const historyIsFresh =

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { prepareDependency } from "../safety-score-v9/extension-dependencies";
 import fraxMetaSource from "@shared/data/stablecoins/coins/frax-frax.json";
 import fraxReserveSource from "@shared/data/stablecoins/domains/reserves/frax-frax.json";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
@@ -58,6 +59,8 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       ]));
       const profiled = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
       expect(profiled.sources.liveReserves.observedAtSec).toBe(39_900);
+      expect(prepareDependency(metaById.get("alpha")!, fixed.liveReserveMap.alpha, new Set(fixed.activeAssetIds), fixed.clockSec, fixed).dependency)
+        .toEqual(profiled.assets.find((asset) => asset.assetId === "alpha")!.dependencies);
       const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled);
       const alpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
       const beta = compiled.assets.find((asset) => asset.assetId === "beta")!;

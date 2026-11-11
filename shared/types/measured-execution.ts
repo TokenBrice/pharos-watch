@@ -77,7 +77,7 @@ export const DEX_MEASURED_ADAPTER_PROFILE_IDS = {
 } as const;
 
 
-export function getDexMeasuredExecutionFreshnessMaxSec(_adapterProfileId: string): number {
+export function getDexMeasuredExecutionFreshnessMaxSec(): number {
   return DEX_MEASURED_FRESHNESS_MAX_SEC;
 }
 
@@ -656,7 +656,7 @@ export function validateDexMeasuredExecutionProfile(input: {
   // bind it to this target, while the adapter budget below governs freshness.
   if (
     input.nowSec - profile.quotedAt >
-    getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId)
+    getDexMeasuredExecutionFreshnessMaxSec()
   ) issues.add("stale-observation");
 
   const retainedPrice = currentTarget.retainedPoolPriceUsd;

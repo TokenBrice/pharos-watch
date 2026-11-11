@@ -1,4 +1,4 @@
-import { CHAIN_META } from "@shared/types/chain-identity";
+import { ALCHEMY_RPC_NAMES, CHAIN_META, DRPC_NETWORK_NAMES } from "@shared/types/chain-identity";
 import { DWELLIR_CHAINS, dwellirRpcUrl, type DwellirChainEntry } from "@shared/lib/dwellir-chains";
 import {
   getPublicRpcUrl,
@@ -64,26 +64,26 @@ export interface BuildChainRpcsOptions {
 
 /** Alchemy chain slugs for their JSON-RPC endpoints */
 export const ALCHEMY_CHAINS: Record<string, string> = {
-  ethereum: "eth-mainnet",
-  arbitrum: "arb-mainnet",
-  base: "base-mainnet",
-  optimism: "opt-mainnet",
-  polygon: "polygon-mainnet",
-  avalanche: "avax-mainnet",
-  bsc: "bnb-mainnet",
+  ethereum: ALCHEMY_RPC_NAMES.ethereum,
+  arbitrum: ALCHEMY_RPC_NAMES.arbitrum,
+  base: ALCHEMY_RPC_NAMES.base,
+  optimism: ALCHEMY_RPC_NAMES.optimism,
+  polygon: ALCHEMY_RPC_NAMES.polygon,
+  avalanche: ALCHEMY_RPC_NAMES.avalanche,
+  bsc: ALCHEMY_RPC_NAMES.bsc,
 };
 
 /** Numbered supply/decimals probes verified 2026-10-05; state reads only. */
 const CENSUS_STATE_ALCHEMY_CHAINS: Record<string, string> = {
-  hyperevm: "hyperliquid-mainnet",
-  linea: "linea-mainnet",
-  scroll: "scroll-mainnet",
-  zksync: "zksync-mainnet",
-  abstract: "abstract-mainnet",
-  unichain: "unichain-mainnet",
-  worldchain: "worldchain-mainnet",
-  megaeth: "megaeth-mainnet",
-  stable: "stable-mainnet",
+  hyperevm: ALCHEMY_RPC_NAMES.hyperevm,
+  linea: ALCHEMY_RPC_NAMES.linea,
+  scroll: ALCHEMY_RPC_NAMES.scroll,
+  zksync: ALCHEMY_RPC_NAMES.zksync,
+  abstract: ALCHEMY_RPC_NAMES.abstract,
+  unichain: ALCHEMY_RPC_NAMES.unichain,
+  worldchain: ALCHEMY_RPC_NAMES.worldchain,
+  megaeth: ALCHEMY_RPC_NAMES.megaeth,
+  stable: ALCHEMY_RPC_NAMES.stable,
 };
 
 /** Keyless, numbered-state supply readers; deliberately outside log inventories. */
@@ -96,9 +96,9 @@ const CENSUS_STATE_PUBLIC_RPCS: Record<string, readonly Pick<RpcEndpoint, "url" 
 
 /** Finalized, hash-pinned state and historical CCIP logs verified 2026-10-05. */
 const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
-  monad: "monad-mainnet",
-  ink: "ink-mainnet",
-  berachain: "berachain-mainnet",
+  monad: ALCHEMY_RPC_NAMES.monad,
+  ink: ALCHEMY_RPC_NAMES.ink,
+  berachain: ALCHEMY_RPC_NAMES.berachain,
 };
 
 /** Reviewed keyless routes; state-only probes do not admit archive/log inventory. */
@@ -175,9 +175,9 @@ export function buildAlchemyRpcUrl(slug: string, apiKey?: string): string {
 
 /** dRPC chain slugs */
 const DRPC_CHAINS: Record<string, string> = {
-  gnosis: "gnosis",
-  fantom: "fantom",
-  celo: "celo",
+  gnosis: DRPC_NETWORK_NAMES.gnosis,
+  fantom: DRPC_NETWORK_NAMES.fantom,
+  celo: DRPC_NETWORK_NAMES.celo,
 };
 
 /** dRPC authenticates with a `dkey` query parameter, so its URL is keyed by construction. */
@@ -345,9 +345,9 @@ export function buildChainRpcs(
 
   const keyedSolanaEndpoints = [
     alchemyApiKey
-      ? registryEndpoint(buildAlchemyRpcUrl("solana-mainnet", alchemyApiKey), "alchemy")
+      ? registryEndpoint(buildAlchemyRpcUrl(ALCHEMY_RPC_NAMES.solana, alchemyApiKey), "alchemy")
       : undefined,
-    drpcApiKey ? registryEndpoint(drpcRpcUrl("solana", drpcApiKey), "drpc") : undefined,
+    drpcApiKey ? registryEndpoint(drpcRpcUrl(DRPC_NETWORK_NAMES.solana, drpcApiKey), "drpc") : undefined,
   ].filter((endpoint): endpoint is RpcEndpoint => endpoint !== undefined);
   if (keyedSolanaEndpoints.length > 0) {
     configs.push(rpcConfig(SOLANA_PUBLIC_RPC_CHAIN_ID, "other", keyedSolanaEndpoints));
@@ -355,7 +355,7 @@ export function buildChainRpcs(
 
   if (alchemyApiKey) {
     configs.push(rpcConfig("tron", "tron", [
-      registryEndpoint(buildAlchemyRpcUrl("tron-mainnet", alchemyApiKey), "alchemy"),
+      registryEndpoint(buildAlchemyRpcUrl(ALCHEMY_RPC_NAMES.tron, alchemyApiKey), "alchemy"),
       ...publicRegistryEndpoints(getPublicRpcUrl("tron")),
     ]));
   } else {

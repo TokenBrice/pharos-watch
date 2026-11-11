@@ -100,6 +100,7 @@ export function getProtocolParPriceOverride(
 export const protocolParProvider: PriceSourceProvider = {
   source: PROTOCOL_PAR_SOURCE,
   livePriority: 0,
+  supportsLocalRepair: true,
   matches(stablecoinId: string): boolean {
     return PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.has(stablecoinId);
   },

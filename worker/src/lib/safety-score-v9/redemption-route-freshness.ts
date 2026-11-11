@@ -1,3 +1,4 @@
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import { getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
@@ -23,7 +24,7 @@ export function reserveBackedRedemptionRouteMaxAgeSec(
   if (!entry || !input || entry.sourceMode !== "dynamic" ||
       entry.freshnessKind !== "verified-source-timestamp" ||
       observation.evidenceKind !== "live-reserve-state" ||
-      observation.routeId !== `redemption:${entry.stablecoinId}:${entry.routeFamily}`) {
+      observation.routeId !== redemptionRouteId(entry.stablecoinId, entry.routeFamily)) {
     return producerMaxAgeSec;
   }
   const freshness = input.freshness;

@@ -12,8 +12,22 @@ const { useYieldHistoryMock } = vi.hoisted(() => ({
   useYieldHistoryMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/api-hooks", () => ({
+vi.mock("@/hooks/api-hooks", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/hooks/api-hooks")>(),
   useYieldHistory: useYieldHistoryMock,
+}));
+
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@tanstack/react-query")>(),
+  useQueries: ({ queries, combine }: {
+    queries: { queryKey: readonly unknown[]; enabled?: boolean }[];
+    combine: (results: unknown[]) => unknown;
+  }) => combine(queries.map(({ queryKey, enabled }) => {
+    const [, stablecoinId, days, mode, sourceKey] = queryKey;
+    const readHistory = useYieldHistoryMock;
+    const result = readHistory(stablecoinId, { days, mode, sourceKey, enabled });
+    return { ...result, data: result.data === undefined ? undefined : { data: result.data, meta: result.meta ?? null } };
+  })),
 }));
 
 vi.mock("@/hooks/use-chart-container-ready", () => ({

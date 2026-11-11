@@ -5,9 +5,8 @@ import type { NonUsdSharePoint } from "@shared/types/market";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { jsonResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";
-import { NON_USD_SHARE_MIN_DAYS } from "@shared/lib/api-endpoints/queries";
+import { NON_USD_SHARE_MIN_DAYS, NON_USD_SHARE_MAX_DAYS } from "@shared/lib/api-endpoints/queries";
 import {
-  NON_USD_SHARE_MAX_DAYS,
   computeNonUsdShareHistory,
   readNonUsdShareHistory,
   sampleNonUsdShareHistory,

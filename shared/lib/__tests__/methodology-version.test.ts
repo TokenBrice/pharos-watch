@@ -87,29 +87,14 @@ describe("createMethodologyVersion", () => {
     expect(methodology.versionLabels).toEqual(["v10.0", "v9.99"]);
   });
 
-  it("rejects an activation timeline that rolls back to an older version", () => {
-    expect(() =>
-      createMethodologyVersion({
-        currentVersion: "2.0",
-        changelogPath: "/methodology/chronology-drift-test/",
-        changelog: [
-          entry("2.0", 1000),
-          entry("1.9", 2000),
-        ],
-      }),
-    ).toThrow(/activation chronology drift/i);
-  });
-
-  it("throws in dev/test when currentVersion drifts from the latest changelog entry", () => {
-    expect(() =>
-      createMethodologyVersion({
-        currentVersion: "1.0",
-        changelogPath: "/methodology/drift-test/",
-        changelog: [
-          entry("2.0", 1000),
-        ],
-      }),
-    ).toThrow(/drift/i);
+  it("keeps runtime window resolution independent of declaration validation", () => {
+    const methodology = createMethodologyVersion({
+      currentVersion: "1.0",
+      changelogPath: "/methodology/runtime-test/",
+      changelog: [entry("2.0", 1000), entry("1.9", 2000)],
+    });
+    expect(methodology.currentVersion).toBe("1.0");
+    expect(methodology.getVersionAt(2000)).toBe("1.9");
   });
 
   it("rejects malformed currentVersion even when the changelog is empty", () => {
@@ -151,7 +136,7 @@ describe("Safety Score methodology head entry", () => {
   // Version-agnostic replacement for the per-release guard that had to be
   // hand-rewritten every time the version moved. The invariant it protected --
   // the entry, the current version, and the score migration land together --
-  // is what `createMethodologyVersion` enforces and what 9.13 set as precedent.
+  // is what generation validation enforces and what 9.13 set as precedent.
   it("is the newest changelog entry and matches the current version", () => {
     const head = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
     expect(head).toBeDefined();

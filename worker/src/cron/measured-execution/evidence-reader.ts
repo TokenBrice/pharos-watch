@@ -21,8 +21,8 @@ const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC = DEX_MEASURED_FRESHNESS_MAX_SEC;
 const DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE = 16;
 /** Bound raw target/profile JSON beside the assembled DEX pool graph. */
 export const DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE = 32;
-export function getDexMeasuredHistoryFreshnessSec(adapterProfileId: string): number {
-  return getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId);
+export function getDexMeasuredHistoryFreshnessSec(): number {
+  return getDexMeasuredExecutionFreshnessMaxSec();
 }
 
 interface QuoteRow {
@@ -580,7 +580,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           if (
             currentTarget &&
             assessmentAtSec - row.quote_published_at >
-              getDexMeasuredHistoryFreshnessSec(currentTarget.adapterProfileId)
+              getDexMeasuredHistoryFreshnessSec()
           ) {
             continue;
           }
@@ -661,7 +661,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             const observationHistory = summarizeDexMeasuredExecutionHistory({
               cycles: historyCyclesByTargetId.get(targetId) ?? [],
               nowSec: assessmentAtSec,
-              freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(profile.adapterProfileId),
+              freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(),
             });
             if (observationHistory) {
               byTargetId.set(targetId, { ...entry, observationHistory });
@@ -695,7 +695,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     const observationHistory = summarizeDexMeasuredExecutionHistory({
       cycles: historyCyclesByTargetId.get(targetId) ?? [],
       nowSec: assessmentAtSec,
-      freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(profile.adapterProfileId),
+      freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(),
     });
     if (observationHistory) {
       byTargetId.set(targetId, { ...entry, observationHistory });

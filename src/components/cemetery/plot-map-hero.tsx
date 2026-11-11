@@ -52,7 +52,7 @@ import { formatRegisterDeathDate } from "./cemetery-register-model";
 import { useCemeterySelection, type CemeterySelectionSource } from "./cemetery-selection-context";
 import { PlotMapPortraitSlot } from "./plot-map-portrait-slot";
 import { PlotMapRecordCard } from "./plot-map-record-card";
-import { PlotMapScene, desktopLayoutStyle, type PlotDesktopLayout, type PlotDim, type PlotSceneState } from "./plot-map-scene";
+import { PlotMapScene, createPlotMapSceneHandle, desktopLayoutStyle, type PlotDesktopLayout, type PlotDim, type PlotSceneState, type PlotMapSceneHandle } from "./plot-map-scene";
 import { PLOT_FLOWER_MAX, plotCauseClass } from "./plot-map-shapes";
 import { usePlotLayout } from "./use-plot-layout";
 import styles from "./plot-map.module.css";
@@ -65,14 +65,6 @@ const DOCKED_QUERY = "(min-width: 1280px)";
 const CHROME_TOP = PLOT_LAYOUT.chromeTop;
 /** A section-zoom pan keeps the focused grave this far inside the visible band (frame px). */
 const PAN_MARGIN = 40;
-/** Plan labels a docked card may cover, hidden while covered: signpost plates, colossus chips and their leaders, year stamps. */
-const PLOT_COVERABLE = "[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-overlay] > [data-year]";
-/** The scene's only motion besides the flower bloom (plan §5.4): the beam swing and the section-zoom glide. */
-const PLOT_MOTION: readonly (readonly [selector: string, transition: string])[] = [
-  ["[data-plot-beam] > g", "transform 460ms var(--ease)"],
-  ["[data-plot-world]", "transform 600ms var(--ease)"],
-];
-
 export interface PlotMapHeroProps {
   /** The register's rows (same array object: React Flight sends it once). */
   rows: readonly CemeteryRegisterRow[];
@@ -166,6 +158,17 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   const [viewportTick, setViewportTick] = useState(0);
 
   const rootRef = useRef<HTMLElement>(null);
+  const sceneRef = useRef<PlotMapSceneHandle>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const gravesRef = useRef(new Map<string, Pick<SVGElement, "focus">>());
+  const registerSceneStage = useCallback((stage: HTMLDivElement | null) => {
+    stageRef.current = stage;
+    sceneRef.current = stage ? createPlotMapSceneHandle(() => stageRef.current, gravesRef.current) : null;
+  }, []);
+  const registerSceneGrave = useCallback((id: string, element: Pick<SVGElement, "focus"> | null) => {
+    if (element) gravesRef.current.set(id, element);
+    else gravesRef.current.delete(id);
+  }, []);
   const tagRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLDivElement>(null);
   const connectorRef = useRef<HTMLSpanElement>(null);
@@ -174,7 +177,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   const beamRef = useRef<{ angle: number | null; moved: boolean }>({ angle: null, moved: false });
   /** One-shot requests the next commit carries out (set by handlers, consumed by layout effects). */
   const scrollAfterPinRef = useRef<ScrollRequest | null>(null);
-  const focusAfterZoomRef = useRef<string | null>(null);
+  const focusAfterZoomRef = useRef<"toolbar" | CauseOfDeath | null>(null);
 
   const query = useCallback(<T extends Element>(selector: string) => rootRef.current?.querySelector<T>(selector) ?? null, []);
 
@@ -246,7 +249,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   );
   const unpin = useCallback(() => {
     // closing from inside the card (× or Esc) hands focus back to the grave instead of dropping it on the page
-    if (pinnedId && inspectorRef.current?.contains(document.activeElement)) document.getElementById(`grave-${pinnedId}`)?.focus({ preventScroll: true });
+    if (pinnedId && inspectorRef.current?.contains(document.activeElement)) sceneRef.current?.grave(pinnedId)?.focus({ preventScroll: true });
     setHeroPin(null);
     setStatus("");
     setRecordHash(null);
@@ -269,7 +272,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
 
   const zoomTo = useCallback(
     (cause: CauseOfDeath) => {
-      const frame = query<HTMLElement>("[data-plot-frame]");
+      const frame = sceneRef.current?.frame();
       if (!frame?.clientWidth) return; // the desktop stage is hidden (phone layout)
       const band = visibleBand();
       const top = frame.getBoundingClientRect().top;
@@ -284,14 +287,14 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       setHot(null);
       if (camera.ids.length) setTabId(camera.ids[camera.ids.length - 1]);
       // keyboard zooms move focus to the toolbar (the signpost hides); a pointer zoom leaves focus alone
-      if (rootRef.current?.contains(document.activeElement)) focusAfterZoomRef.current = "[data-plot-zoom-out]";
+      if (rootRef.current?.contains(document.activeElement)) focusAfterZoomRef.current = "toolbar";
     },
-    [map, query],
+    [map],
   );
   const zoomReset = useCallback(() => {
     if (!zoom) return;
     if (rootRef.current?.querySelector("[data-plot-zoombar]")?.contains(document.activeElement)) {
-      focusAfterZoomRef.current = `[data-plot-signpost="${zoom.cause}"]`;
+      focusAfterZoomRef.current = zoom.cause;
     }
     setZoom(null);
   }, [zoom]);
@@ -319,7 +322,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       setTabId(id);
       panTo(id);
       // zoomed, the pan (not a page scroll) brings the grave into the band; the frame stays under the chrome
-      document.getElementById(`grave-${id}`)?.focus({ preventScroll: zoom !== null });
+      sceneRef.current?.grave(id)?.focus({ preventScroll: zoom !== null });
     },
     [panTo, zoom],
   );
@@ -413,56 +416,56 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   // it is the live layer.
   const ownsEvent = (target: EventTarget | null) =>
     plotLayout === "desktop" && target instanceof Element && !!rootRef.current?.contains(target) && !target.closest("[data-plot-portrait-slot]");
-  const graveOf = (target: EventTarget | null) => (target instanceof Element ? target.closest<SVGAElement>('a[id^="grave-"]') : null);
-  const signpostOf = (target: EventTarget | null) => (target instanceof Element ? target.closest<HTMLElement>("[data-plot-signpost]") : null);
-  const yearOf = (target: EventTarget | null) => (target instanceof Element ? target.closest<Element>("[data-plot-year]") : null);
+  const graveOf = (target: EventTarget | null) => sceneRef.current?.graveOf(target);
+  const signpostOf = (target: EventTarget | null) => sceneRef.current?.signpostOf(target);
+  const yearOf = (target: EventTarget | null) => sceneRef.current?.yearOf(target);
 
   const onPointerOver = (event: PointerEvent) => {
     if (!ownsEvent(event.target)) return;
     keyboardRef.current = false;
     const grave = graveOf(event.target);
-    if (grave?.dataset.graveId && grave.dataset.graveId !== hot?.id) enterGrave(grave.dataset.graveId, "pointer");
+    if (grave?.id && grave.id !== hot?.id) enterGrave(grave.id, "pointer");
     const post = signpostOf(event.target);
-    if (post && !zoom) setHoverDim({ kind: "lane", cause: post.dataset.plotSignpost as CauseOfDeath });
+    if (post && !zoom) setHoverDim({ kind: "lane", cause: post.cause });
     const year = yearOf(event.target);
-    if (year && !zoom) setHoverDim({ kind: "year", year: Number(year.getAttribute("data-plot-year")) });
+    if (year && !zoom) setHoverDim({ kind: "year", year: year.year });
   };
   const onPointerOut = (event: PointerEvent) => {
     if (!ownsEvent(event.target)) return;
     const related = event.relatedTarget as Node | null;
     const grave = graveOf(event.target);
-    if (grave && !grave.contains(related) && !graveOf(related) && document.activeElement !== grave) leaveGrave("pointer");
+    if (grave && !grave.element.contains(related) && !graveOf(related) && document.activeElement !== grave.element) leaveGrave("pointer");
     const post = signpostOf(event.target);
-    if (post && !post.contains(related) && !zoom) setHoverDim(null);
+    if (post && !post.element.contains(related) && !zoom) setHoverDim(null);
     const year = yearOf(event.target);
-    if (year && !year.contains(related) && !zoom) setHoverDim(null);
+    if (year && !year.element.contains(related) && !zoom) setHoverDim(null);
   };
   const onClick = (event: MouseEvent) => {
     if (!ownsEvent(event.target)) return;
     const grave = graveOf(event.target);
-    if (grave?.dataset.graveId) {
+    if (grave?.id) {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
-      pin(grave.dataset.graveId, "hero");
+      pin(grave.id, "hero");
       return;
     }
     const post = signpostOf(event.target);
     if (post) {
-      zoomTo(post.dataset.plotSignpost as CauseOfDeath);
+      zoomTo(post.cause);
       return;
     }
-    if (event.target instanceof Element && event.target.closest("[data-plot-svg]")) escape();
+    if (sceneRef.current?.isBackground(event.target)) escape();
   };
   const onFocus = (event: FocusEvent) => {
     if (!ownsEvent(event.target)) return;
     const grave = graveOf(event.target);
-    if (grave?.dataset.graveId) {
-      setTabId(grave.dataset.graveId);
-      enterGrave(grave.dataset.graveId, "focus");
+    if (grave?.id) {
+      setTabId(grave.id);
+      enterGrave(grave.id, "focus");
       return;
     }
     const post = signpostOf(event.target);
-    if (post && !zoom) setHoverDim({ kind: "lane", cause: post.dataset.plotSignpost as CauseOfDeath });
+    if (post && !zoom) setHoverDim({ kind: "lane", cause: post.cause });
   };
   const onBlur = (event: FocusEvent) => {
     if (!ownsEvent(event.target)) return;
@@ -477,14 +480,14 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       if (escape()) event.preventDefault();
       return;
     }
-    if (grave?.dataset.graveId) graveKey(event, grave.dataset.graveId);
+    if (grave?.id) graveKey(event, grave.id);
   };
 
   // A zoom change moves focus where its handler asked (toolbar after a keyboard zoom, signpost after leaving it).
   useLayoutEffect(() => {
     const selector = focusAfterZoomRef.current;
     focusAfterZoomRef.current = null;
-    if (selector) query<HTMLElement>(selector)?.focus();
+    if (selector) (selector === "toolbar" ? query<HTMLElement>("[data-plot-zoom-out]") : sceneRef.current?.signpost(selector))?.focus();
   }, [zoom, query]);
 
   // A resize re-measures the rest aim, the tag and the card, and refits an open section zoom to the new frame.
@@ -492,7 +495,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     const onResize = () => {
       setViewportTick((n) => n + 1);
       setZoom((current) => {
-        const frame = rootRef.current?.querySelector<HTMLElement>("[data-plot-frame]");
+        const frame = sceneRef.current?.frame();
         if (!current || !frame?.clientWidth) return current;
         const band = visibleBand();
         const camera = fitSectionCamera(map, current.cause, { frameWidth: frame.clientWidth, viewportHeight: band.bottom - band.top + CHROME_TOP });
@@ -508,10 +511,10 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   useLayoutEffect(() => {
     const request = scrollAfterPinRef.current;
     scrollAfterPinRef.current = null;
-    const frame = query<HTMLElement>("[data-plot-frame]");
+    const frame = sceneRef.current?.frame();
     const g = request ? nav.graves.get(request.id) : undefined;
     if (!request || !frame || !g) return;
-    if (request.focus) document.getElementById(`grave-${g.id}`)?.focus({ preventScroll: true });
+    if (request.focus) sceneRef.current?.grave(g.id)?.focus({ preventScroll: true });
     if (request.target === "card") {
       inspectorRef.current?.scrollIntoView({ block: "nearest", behavior: request.behavior });
       return;
@@ -524,25 +527,12 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     window.scrollBy({ top: (top + bottom) / 2 - (CHROME_TOP + window.innerHeight) / 2, behavior: request.behavior });
   }, [pinTick, query, nav, frameRectOf, vbW]);
 
-  // Motion: the beam swing and the zoom glide are transitions on SVG elements, which the app's global reset
-  // `svg * { transition: none !important }` cancels from any stylesheet; only an inline `!important` outranks it.
-  // Reduced motion (`usePrefersReducedMotion`, honouring the `data-motion` override) adds none: the beam jumps and
-  // the zoom cuts.
-  useLayoutEffect(() => {
-    for (const [selector, transition] of PLOT_MOTION) {
-      const el = query<SVGElement>(selector);
-      if (!el) continue;
-      if (reducedMotion) el.style.removeProperty("transition");
-      else el.style.setProperty("transition", transition, "important");
-    }
-  }, [reducedMotion, query]);
-
   // Beam: aims at the pinned grave, else the hot one (after the dwell); rests on the `113` otherwise. The first rest
   // pose is the CSS band's (no script); once moved, the rest is measured so the beam ends 12 px right of the digits.
   const beamTargetId = pinnedId ?? hotBeamId;
   useLayoutEffect(() => {
-    const rot = query<SVGGElement>("[data-plot-beam] > g");
-    const frame = query<HTMLElement>("[data-plot-frame]");
+    const rot = sceneRef.current?.beam();
+    const frame = sceneRef.current?.frame();
     if (!rot || !frame || !frame.clientWidth) return;
     const g = beamTargetId ? nav.graves.get(beamTargetId) : undefined;
     let target: [number, number] | null = g ? [g.screen.medal.x, g.screen.medal.y] : null;
@@ -587,17 +577,17 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
   const placeCard = useCallback(() => {
     const insp = inspectorRef.current;
     const connector = connectorRef.current;
-    const labels = [...(rootRef.current?.querySelectorAll<HTMLElement>(PLOT_COVERABLE) ?? [])];
+    const labels = sceneRef.current?.coverableLabels() ?? [];
     if (!connector) return;
-    const stage = query<HTMLElement>("[data-plot-stage]");
-    const frame = query<HTMLElement>("[data-plot-frame]");
+    const stage = sceneRef.current?.stage();
+    const frame = sceneRef.current?.frame();
     const g = cardId ? nav.graves.get(cardId) : undefined;
     if (!insp || !docked || !stage || !frame || !g || getComputedStyle(insp).position !== "absolute") {
       insp?.style.removeProperty("left");
       insp?.style.removeProperty("top");
       insp?.style.removeProperty("max-height");
       connector.hidden = true;
-      for (const el of labels) el.removeAttribute("data-covered");
+      for (const { element } of labels) element.removeAttribute("data-covered");
       return;
     }
     const fr = frame.getBoundingClientRect();
@@ -616,7 +606,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
         });
     const text = [...(rootRef.current?.querySelectorAll(zoom ? "[data-plot-zoombar]" : "[data-plot-head], [data-plot-figure]") ?? [])].map((el) => el.getBoundingClientRect());
     // labels hide while zoomed; chips below 1024 px have no box
-    const soft = zoom ? [] : labels.filter((el) => el.getClientRects().length > 0 && !el.hasAttribute("data-plot-leader")).map((el) => el.getBoundingClientRect());
+    const soft = zoom ? [] : labels.filter(({ element, leaderId }) => element.getClientRects().length > 0 && leaderId === undefined).map(({ element }) => element.getBoundingClientRect());
     insp.style.removeProperty("max-height");
     const p = placeInspectorCard({
       stone: toViewport(g.screen.box),
@@ -633,13 +623,13 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     drawLine(connector, p.connector.x1 - sr.left, p.connector.y1 - sr.top, p.connector.x2 - sr.left, p.connector.y2 - sr.top);
     connector.hidden = false;
     const card = { left: p.x, top: p.y, right: p.x + insp.offsetWidth, bottom: p.y + p.maxHeight };
-    const under = labels.map((el) => {
-      const r = el.getBoundingClientRect();
+    const under = labels.map(({ element }) => {
+      const r = element.getBoundingClientRect();
       return !zoom && r.width + r.height > 0 && r.left < card.right && r.right > card.left && r.top < card.bottom && r.bottom > card.top;
     });
-    const covered = new Set(labels.flatMap((el, k) => (under[k] && el.dataset.plotChip ? [el.dataset.plotChip] : [])));
-    labels.forEach((el, k) => el.toggleAttribute("data-covered", under[k] || covered.has(el.dataset.plotLeader ?? "")));
-  }, [cardId, docked, zoom, query, nav, map, frameRectOf, vbW]);
+    const covered = new Set(labels.flatMap(({ chipId }, k) => (under[k] && chipId ? [chipId] : [])));
+    labels.forEach(({ element, leaderId }, k) => element.toggleAttribute("data-covered", under[k] || covered.has(leaderId ?? "")));
+  }, [cardId, docked, zoom, nav, map, frameRectOf, vbW]);
 
   // re-place whenever the card's content can change height: preview → pinned, a flower count, a resize
   useLayoutEffect(() => {
@@ -648,7 +638,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
 
   useLayoutEffect(() => {
     const tag = tagRef.current;
-    const frame = query<HTMLElement>("[data-plot-frame]");
+    const frame = sceneRef.current?.frame();
     if (!tag || !frame || !tagText) return;
     const fr = frame.getBoundingClientRect();
     const scale = fr.width / vbW;
@@ -661,7 +651,7 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
         return { left: r.left - fr.left, top: r.top - fr.top, right: r.right - fr.left, bottom: r.bottom - fr.top };
       };
       const obstacles = [
-        ...(rootRef.current?.querySelectorAll("[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-figure], [data-plot-zoombar], [data-plot-inspector]") ?? []),
+        ...(rootRef.current ? sceneRef.current?.tagObstacles(rootRef.current) ?? [] : []),
       ]
         .filter((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden")
         .map(within);
@@ -772,6 +762,8 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
         Skip the cemetery map
       </a>
       <PlotMapScene
+        stageRef={registerSceneStage}
+        registerGrave={registerSceneGrave}
         map={map}
         layout={layout}
         atlas={atlas}

@@ -1,5 +1,6 @@
 "use client";
 
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -180,7 +181,7 @@ export function isEntryRoute(
   route: Pick<ExitAlternativeRoute, "routeId" | "lane">,
   entry: RedemptionBackstopEntry,
 ): boolean {
-  return route.lane === "redemption" && route.routeId === `redemption:${entry.stablecoinId}:${entry.routeFamily}`;
+  return route.lane === "redemption" && route.routeId === redemptionRouteId(entry.stablecoinId, entry.routeFamily);
 }
 
 /** Missing evidence cannot be zero-filled into a displayed total or cap delta. */

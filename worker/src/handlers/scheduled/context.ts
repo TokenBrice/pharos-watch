@@ -31,6 +31,7 @@ import { utcCalendarMonth, type ProducerIdentity } from "../../lib/producer-hist
 import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
 import {
   createReserveLeaseOwner,
+  reserveRecoveryLeaseAdmission,
   RESERVE_PRODUCER_FINALIZATION_MARGIN_MS,
   RESERVE_PRODUCER_WAIT_MAX_MS,
 } from "../../lib/reserve-producer-priority";
@@ -326,7 +327,7 @@ export function createScheduledRuntimeContext(
               ...descriptor.leaseOptions,
               settledAbortResult: retainCommittedCronResultAfterAbort,
             };
-            if (scheduled.recoveryCheckpoint) leaseOptions.reserveRecoveryAdmission = true;
+            if (scheduled.recoveryCheckpoint) leaseOptions.admissionPolicy = reserveRecoveryLeaseAdmission;
             if (job === "sync-live-reserves" && scheduled.scheduleKey === "fourHourlyReserveSync"
               && producerKind === "scheduled-job" && !scheduled.recoveryCheckpoint) {
               const nowMs = Date.now();

@@ -272,7 +272,7 @@ export function validateMeasuredExecutionProfile(
   }
   if (
     context.observedAt - profile.quotedAt >
-    getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId)
+    getDexMeasuredExecutionFreshnessMaxSec()
   ) issues.push("stale-profile");
   if (profile.quotedAt > context.observedAt + 60) issues.push("future-profile");
   if (

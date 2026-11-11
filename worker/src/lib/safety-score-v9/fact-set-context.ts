@@ -11,6 +11,7 @@ import {
   type V9ResolvedEvidenceCause,
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
+import type { ReviewEvidenceComponentKey } from "@shared/lib/safety-score-v9/review-evidence";
 import { compareText, domainDigest, normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -428,7 +429,7 @@ export function fallbackResearchEvidence(context: AssetBuildContext): string {
   );
 }
 
-export function componentResearchEvidence(context: AssetBuildContext, componentKey: string): string[] {
+export function componentResearchEvidence(context: AssetBuildContext, componentKey: ReviewEvidenceComponentKey): string[] {
   const binding = context.asset.componentEvidence.find((candidate) => candidate.componentKey === componentKey);
   if (!binding) return [fallbackResearchEvidence(context)];
   const evidenceByKey = new Map(context.asset.researchEvidence.map((evidence) => [evidence.evidenceKey, evidence]));
@@ -529,7 +530,7 @@ export function assertKnownComponentEvidenceCurrent(
   }
 }
 
-export function researchEvidence(context: AssetBuildContext, componentKey?: string): string {
+export function researchEvidence(context: AssetBuildContext, componentKey?: ReviewEvidenceComponentKey): string {
   return componentKey ? componentResearchEvidence(context, componentKey)[0]! : fallbackResearchEvidence(context);
 }
 
@@ -538,7 +539,7 @@ export function normalizeReviewedFactStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,
   descriptor: {
-    bindingKey: string;
+    bindingKey: ReviewEvidenceComponentKey;
     staleEvidenceError: string;
     gapId: string;
     reasonCode: V9FactGapV3["reasonCode"];

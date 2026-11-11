@@ -351,15 +351,6 @@ function toBaselineRow(value: unknown): YieldRanking | null {
   return row as YieldRanking;
 }
 
-interface AttributableRankingRow {
-  id: string;
-  name: string;
-  currentApy: number;
-  pharosYieldScore: number | null;
-  safetyScore: number | null;
-  rankChangeAttribution?: YieldRankChangeAttribution | null;
-}
-
 /**
  * B7/B31: attribution used to exist only in the read path, so the cached
  * payload DEWS hydrates never carried it and both rank branches were dead. It
@@ -369,7 +360,7 @@ interface AttributableRankingRow {
  * move is attributed.
  */
 function attachRankChangeAttribution(
-  rankings: AttributableRankingRow[],
+  rankings: YieldRanking[],
   previous: PreviousPublicationForAttribution | null | undefined,
 ): void {
   if (previous == null) return;
@@ -387,7 +378,7 @@ function attachRankChangeAttribution(
 
   const liveRankById = new Map<string, number>();
   [...rankings]
-    .sort((a, b) => compareYieldRankRows(a as unknown as YieldRanking, b as unknown as YieldRanking))
+    .sort((a, b) => compareYieldRankRows(a, b))
     .forEach((row, index) => liveRankById.set(row.id, index + 1));
 
   for (const ranking of rankings) {
@@ -396,7 +387,7 @@ function attachRankChangeAttribution(
     const attribution = buildYieldRankChangeAttribution({
       originalRow,
       hydratedRow: {
-        ...(ranking as unknown as YieldRanking),
+        ...ranking,
         liveRank: liveRankById.get(ranking.id) ?? null,
       },
       previousRank: previousRankById.get(ranking.id) ?? null,

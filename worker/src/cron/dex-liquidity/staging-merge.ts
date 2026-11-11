@@ -46,6 +46,8 @@ import { DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES } from "./constants";
 import { isDeadPool } from "./scoring-helpers";
 import { buildChainAddressKey } from "./token-resolution";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC, classifyDexPoolVolumeObservation } from "@shared/lib/dex-volume-availability";
+import { buildStagedPoolWriteback, type StagedPoolWriteback } from "./staged-pool-writeback";
+import { captureObservedPoolPrices } from "./price-refresh";
 
 export interface StagedPoolRow {
   pool_id: string;
@@ -534,7 +536,10 @@ export async function mergeStagedPools(
   authoritativeConfirmation?: AuthoritativeStagedPoolConfirmationIndex,
   fallbackCounters?: LiquidityFallbackCounters,
   signal?: AbortSignal,
+  livePriceObservations?: Map<string, DexPriceObs[]>,
 ): Promise<{
+  stagedWriteback: StagedPoolWriteback;
+  observedThisRun: Set<string>;
   mergedCount: number;
   skippedCount: number;
   skippedByExactIdentityCount: number;
@@ -549,6 +554,9 @@ export async function mergeStagedPools(
   registryFamilyBySource: Record<string, number>;
   deadPoolUnindexedChainSkips: DeadPoolUnindexedChainSkips;
 }> {
+  // Backfilled registry rows must retain their original clocks and provenance.
+  const stagedWriteback = buildStagedPoolWriteback(metrics, syncStartSec);
+  const observedThisRun = captureObservedPoolPrices({ metrics, priceObservations: livePriceObservations }, syncStartSec);
   const unreadLivePools = registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
   const result = await runWithOverloadRetry(
     () =>
@@ -960,6 +968,8 @@ export async function mergeStagedPools(
   }
 
   return {
+    stagedWriteback,
+    observedThisRun,
     mergedCount,
     skippedCount,
     skippedByExactIdentityCount: exactIdentitySkipped,

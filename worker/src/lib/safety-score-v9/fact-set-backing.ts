@@ -97,7 +97,7 @@ function normalizeMechanismReview(
   review: V9MechanismRiskReview,
 ): V9MechanismRiskReviewFactV2 {
   const evidenceIds = componentResearchEvidence(context, "mechanism-risk-review");
-  const normalized = { ...review } as V9MechanismRiskReview;
+  const normalized: V9MechanismRiskReview & Record<string, unknown> = { ...review };
   const componentGapIds: string[] = [];
   const componentEvidenceIds = new Set<string>();
   let hasStale = false;
@@ -132,7 +132,7 @@ function normalizeMechanismReview(
         scopedAssessments: originalFact.scopedAssessments.map((fragment) => ({ ...fragment })),
       }),
     };
-    const specificEvidenceKey = `mechanism-risk-review:${componentKey}`;
+    const specificEvidenceKey = `mechanism-risk-review:${componentKey}` as const;
     const factEvidenceIds = context.asset.componentEvidence.some(
       (binding) => binding.componentKey === specificEvidenceKey,
     )
@@ -242,7 +242,7 @@ function normalizeMechanismReview(
     if (value === null || typeof value !== "object" || !("status" in value)) continue;
     const componentFact = value as V9MechanismFactV1;
     if (componentFact.constraints === undefined) {
-      (normalized as unknown as Record<string, unknown>)[componentField] =
+      normalized[componentField] =
         normalizeComponent(componentField, componentField, componentFact, null);
     } else {
       const normalizedConstraints = componentFact.constraints.map((constraint) => {
@@ -256,7 +256,7 @@ function normalizeMechanismReview(
         : statuses.some((row) => row.observationState === "missing") ? "missing"
         : statuses.some((row) => row.observationState === "stale") ? "stale"
         : statuses.some((row) => row.observationState !== "known") ? "bounded-unknown" : "known";
-      (normalized as unknown as Record<string, unknown>)[componentField] = {
+      normalized[componentField] = {
         ...componentFact,
         constraints: normalizedConstraints,
         status: createV9FactStatus({

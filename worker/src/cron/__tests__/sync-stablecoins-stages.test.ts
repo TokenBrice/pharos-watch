@@ -191,8 +191,8 @@ describe("sync-stablecoins stage helpers", () => {
     for (const call of pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls) {
       expect(call[3].chainRpcs).toBe(chainRpcs);
     }
-    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[0][3].maxProviderLivePriority).toBeUndefined();
-    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[1][3].maxProviderLivePriority).toBe(0);
+    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[0][3].localRepairOnly).toBeUndefined();
+    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[1][3].localRepairOnly).toBe(true);
     expect(assets[0]).toMatchObject({
       price: 0.998,
       priceSource: "protocol-redeem",

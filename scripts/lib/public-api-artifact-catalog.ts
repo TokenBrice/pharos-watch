@@ -1,7 +1,7 @@
 import { type PublicApiEndpointKey } from "@shared/lib/api-endpoints/definitions";
 import { DYNAMIC_API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
-import { MINT_BURN_FLOWS_HOURS_QUERY, NON_USD_SHARE_MIN_DAYS, SNAPSHOT_INDEX_LIMIT_QUERY } from "@shared/lib/api-endpoints/queries";
+import { MINT_BURN_FLOWS_HOURS_QUERY, NON_USD_SHARE_MIN_DAYS, NON_USD_SHARE_MAX_DAYS, SNAPSHOT_INDEX_LIMIT_QUERY } from "@shared/lib/api-endpoints/queries";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { PEG_COVERAGE_COMPOSITE_MIN } from "@shared/lib/chains/health";
 import { definePublicArtifact, type PublicArtifactInput } from "./public-api-artifact-catalog-builders";
@@ -187,8 +187,8 @@ export const SUPPLY_HISTORY_RANGE_PARAM = {
 export const NON_USD_SHARE_DAYS_PARAM = {
   name: "days",
   in: "query",
-  schema: { type: "integer", minimum: NON_USD_SHARE_MIN_DAYS, maximum: 5000 },
-  description: `Historical lookback window in days. Omit days to use 5000; supplied values must be integers from ${NON_USD_SHARE_MIN_DAYS} to 5000.`,
+  schema: { type: "integer", minimum: NON_USD_SHARE_MIN_DAYS, maximum: NON_USD_SHARE_MAX_DAYS },
+  description: `Historical lookback window in days. Omit days to use ${NON_USD_SHARE_MAX_DAYS}; supplied values must be integers from ${NON_USD_SHARE_MIN_DAYS} to ${NON_USD_SHARE_MAX_DAYS}.`,
 } as const satisfies PublicApiArtifactParameter;
 
 export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {

@@ -1,8 +1,8 @@
 /**
  * Stablecoin Cemetery plot map: the desktop scene (frame, SVG plan, HTML overlays) and its static layout.
  *
- * No client directive: imported only by the client hero (`plot-map-hero.tsx`), which renders it from the model it
- * builds in the browser and hands it the interaction state (`PlotSceneState`). The scene renders that state and
+ * Server-safe layout helpers are called by `CemeteryHero`; the client island `plot-map-hero.tsx` renders the scene
+ * from its browser-built model and interaction state (`PlotSceneState`). The scene renders that state and
  * nothing else; events are delegated to the hero. Everything that depends on the frame width at rest (how far the
  * plan slides under the header, where the colossus chips hang, the beam's rest angle) is solved by
  * {@link desktopPlotLayout} for the viewport bands and handed to CSS as custom properties, so the rest pose needs
@@ -12,7 +12,7 @@
  * `<a id="grave-<id>" href="#<id>" role="button" aria-pressed>` with `data-grave-id`, `data-cause`, `data-year` and
  * one roving tab stop.
  */
-import { useMemo, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { useMemo, type Ref, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { parseCemeteryDeathDate } from "@shared/lib/cemetery";
 import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
@@ -398,7 +398,53 @@ export interface PlotSceneState {
   flowers: Readonly<Record<string, number>>;
 }
 
+export interface PlotMapSceneHandle {
+  frame(): HTMLElement | null;
+  stage(): HTMLElement | null;
+  beam(): SVGGElement | null;
+  grave(id: string): Pick<SVGElement, "focus"> | null;
+  signpost(cause: CauseOfDeath): HTMLElement | null;
+  graveOf(target: EventTarget | null): { element: SVGAElement; id: string } | null;
+  signpostOf(target: EventTarget | null): { element: HTMLElement; cause: CauseOfDeath } | null;
+  yearOf(target: EventTarget | null): { element: Element; year: number } | null;
+  coverableLabels(): { element: HTMLElement; chipId?: string; leaderId?: string }[];
+  tagObstacles(root: HTMLElement): Element[];
+  isBackground(target: EventTarget | null): boolean;
+}
+
+export function createPlotMapSceneHandle(
+  stage: () => HTMLElement | null,
+  graves: ReadonlyMap<string, Pick<SVGElement, "focus">>,
+): PlotMapSceneHandle {
+  const query = <T extends Element>(selector: string) => stage()?.querySelector<T>(selector) ?? null;
+  const closest = <T extends Element>(target: EventTarget | null, selector: string) => target instanceof Element ? target.closest<T>(selector) : null;
+  return {
+    frame: () => query<HTMLElement>("[data-plot-frame]"),
+    stage: () => stage(),
+    beam: () => query<SVGGElement>("[data-plot-beam] > g"),
+    grave: (id) => graves.get(id) ?? null,
+    signpost: (cause) => query<HTMLElement>(`[data-plot-signpost="${cause}"]`),
+    graveOf: (target) => {
+      const element = closest<SVGAElement>(target, 'a[id^="grave-"]');
+      return element?.dataset.graveId ? { element, id: element.dataset.graveId } : null;
+    },
+    signpostOf: (target) => {
+      const element = closest<HTMLElement>(target, "[data-plot-signpost]");
+      return element ? { element, cause: element.dataset.plotSignpost as CauseOfDeath } : null;
+    },
+    yearOf: (target) => {
+      const element = closest(target, "[data-plot-year]");
+      return element ? { element, year: Number(element.getAttribute("data-plot-year")) } : null;
+    },
+    coverableLabels: () => [...(stage()?.querySelectorAll<HTMLElement>("[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-overlay] > [data-year]") ?? [])].map((element) => ({ element, chipId: element.dataset.plotChip, leaderId: element.dataset.plotLeader })),
+    tagObstacles: (root) => [...root.querySelectorAll("[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-figure], [data-plot-zoombar], [data-plot-inspector]")],
+    isBackground: (target) => !!closest(target, "[data-plot-svg]"),
+  };
+}
+
 export interface PlotMapSceneProps {
+  stageRef?: Ref<HTMLDivElement>;
+  registerGrave?: (id: string, element: Pick<SVGElement, "focus"> | null) => void;
   map: DesktopPlotMap;
   layout: PlotDesktopLayout;
   atlas: PlotLogoAtlas;
@@ -461,7 +507,7 @@ function useSceneArt(map: DesktopPlotMap, atlas: PlotLogoAtlas) {
 }
 
 /** Desktop plan (≥ 761 px): the framed SVG scene and its HTML overlays, rendering the island's interaction state. */
-export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, children }: PlotMapSceneProps): ReactElement {
+export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, children, stageRef, registerGrave }: PlotMapSceneProps): ReactElement {
   const [vbX, vbY, vbW, vbH] = map.viewBox;
   const art = useSceneArt(map, atlas);
   const { dim, zoom } = state;
@@ -477,7 +523,7 @@ export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, chil
   } as CSSProperties;
 
   return (
-    <div className={styles.stage} data-plot-stage>
+    <div ref={stageRef} className={styles.stage} data-plot-stage>
       <div className={styles.frame} style={{ aspectRatio: `${vbW} / ${vbH}` }} data-plot-frame data-zoomed={zoom ? "true" : undefined}>
         {toolbar}
         {/* the plan's keyboard contract, read when focus enters the group (a hidden description target) */}
@@ -531,6 +577,7 @@ export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, chil
                 g ? (
                   <a
                     key={key}
+                    ref={(element) => registerGrave?.(g.id, element)}
                     className={plotGraveClass(styles.grave, g.cause, g.weather)}
                     id={`grave-${g.id}`}
                     href={`#${g.id}`}

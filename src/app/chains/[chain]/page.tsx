@@ -9,6 +9,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { isChainProfileIndexable } from "@/lib/chain-indexing";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
+import { CHAIN_CONTRACT_TABLE_PILOTS } from "@/lib/presentation-pilots.mjs";
 import { buildStaticCompareHref } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
@@ -35,7 +36,7 @@ import {
  * Not a second chain registry: every other chain profile keeps its existing
  * presentation.
  */
-const CHAIN_CONTRACT_TABLE_CHAIN_IDS = new Set(["solana", "base", "tron"]);
+const CHAIN_CONTRACT_TABLE_CHAIN_IDS = new Set(CHAIN_CONTRACT_TABLE_PILOTS.map(({ chain }) => chain));
 
 export function generateStaticParams() {
   return getActiveChainIds().map((chain) => ({ chain }));

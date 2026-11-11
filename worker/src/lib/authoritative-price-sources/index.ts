@@ -259,7 +259,7 @@ export interface AuthoritativeLivePriceOverrideOptions extends Pick<LivePriceRef
   db?: D1Database;
   wallClockBudgetMs?: number;
   stats?: AuthoritativeLivePriceOverrideStats;
-  maxProviderLivePriority?: number;
+  localRepairOnly?: boolean;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
   /** Candidate lanes inside the shared budget; defaults to the job connection declaration. */
   maxConcurrency?: number;
@@ -340,8 +340,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
         typeof entry.provider?.fetchLivePrice === "function" &&
         !(entry.provider.liveMissingOnly && hasUsableLivePrice(entry.asset) &&
           !(entry.provider === mentoBrokerProvider && protocolParProvider.matches(entry.asset.id))) &&
-        (options?.maxProviderLivePriority == null ||
-          getProviderLivePriority(entry.provider) <= options.maxProviderLivePriority),
+        (!options?.localRepairOnly || entry.provider.supportsLocalRepair === true),
     );
   const prioritizedCandidates = prioritizeAuthoritativeLivePriceCandidates(candidates);
   const budgetMs = options?.wallClockBudgetMs ?? AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS;

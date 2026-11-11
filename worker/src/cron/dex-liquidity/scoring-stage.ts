@@ -275,7 +275,7 @@ function* iterateScoringStageRecords(
   let stablecoinPriceById: Map<string, number> | null = sourceState.stablecoinPriceById;
   let stablecoinMcapById: Map<string, number> | null = sourceState.stablecoinMcapById;
   let protocolTvlCaps: Map<string, number> | null = sourceState.protocolTvlCaps;
-  let priceObservations: Map<string, DexPriceObs[]> | null = sourceState.priceObservations;
+  let priceObservations: Map<string, (DexPriceObs | undefined)[]> | null = sourceState.priceObservations;
   const source: SourceHeader = {
     validationReferences: sourceState.validationReferences,
     dlYieldsAvailable: sourceState.dlYieldsAvailable,
@@ -336,7 +336,7 @@ function* iterateScoringStageRecords(
     for (let index = 0; index < observations.length; index++) {
       const observation = observations[index]!;
       yield { kind: "price-observation", stablecoinId, observation };
-      if (consumeInput) observations[index] = undefined as unknown as DexPriceObs;
+      if (consumeInput) observations[index] = undefined;
     }
     if (consumeInput) {
       observations.length = 0;
@@ -371,7 +371,7 @@ function* iterateScoringStageRecords(
   }
 
   for (const [stablecoinId, metric] of metrics) {
-    const { pools } = metric;
+    const { pools }: { pools: (PoolEntry | undefined)[] } = metric;
     yield {
       kind: "metric",
       stablecoinId,
@@ -380,7 +380,7 @@ function* iterateScoringStageRecords(
     for (let index = 0; index < pools.length; index++) {
       const poolEntry = pools[index]!;
       yield { kind: "pool", stablecoinId, pool: poolEntry };
-      if (consumeInput) pools[index] = undefined as unknown as PoolEntry;
+      if (consumeInput) pools[index] = undefined;
     }
     if (consumeInput) {
       pools.length = 0;

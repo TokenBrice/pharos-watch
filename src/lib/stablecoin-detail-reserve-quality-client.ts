@@ -42,13 +42,12 @@ export interface ReserveQualitySliceClientRow {
   riskFactorLabels: string[];
 }
 
+type ReserveEvidenceBasis = "full-composition" | "contextual" | "provenance-only" | "legacy-curated";
+
 export interface ReserveQualityClientSummary {
-  /**
-   * True for a full-composition review whose authored slices miss a quality
-   * dimension: review provenance is projected alone, with no verdict, chip
-   * or ladder.
-   */
-  provenanceOnly: boolean;
+  evidenceBasis: ReserveEvidenceBasis;
+  /** The asset whose basket the quality figures describe, including when a wrapper draws its parent. */
+  populationId: string;
   chipLabel: string | null;
   chipToneClass: string | null;
   lede: string | null;
@@ -56,7 +55,6 @@ export interface ReserveQualityClientSummary {
   /** Whole-basket aggregates are unavailable for explicitly contextual reviews. */
   liquidWithinOneDayPct: number | null;
   unknownHorizonPct: number | null;
-  contextual?: boolean;
   /** `reserveReview.knownUnknownExposurePct` — total share of unresolved reserve dispositions. */
   unidentifiedObligorsPct: number | null;
   /** Share of the basket the review marks as self-reserve (issuer's own assets). */
@@ -240,16 +238,26 @@ function buildLadder(slices: readonly ReserveSlice[]): ReserveQualityLadderClien
   }));
 }
 
+/** A missing scope retains the curated-book contract; explicit limited scopes never gain whole-book authority. */
+export function resolveReserveEvidenceBasis(coin: StablecoinMeta): ReserveEvidenceBasis {
+  const scope = coin.reserveReview?.scope;
+  if (scope != null && scope !== "full-composition") return "contextual";
+  if (scope == null) return "legacy-curated";
+  const slices = coin.reserves ?? [];
+  return slices.some((slice) => slice.assetClass != null) && slices.some((slice) => slice.liquidityHorizon != null)
+    ? "full-composition"
+    : "provenance-only";
+}
+
 export function projectReserveQualityClientSummary(coin: StablecoinMeta): ReserveQualityClientSummary | null {
   const slices = coin.reserves ?? [];
+  const evidenceBasis = resolveReserveEvidenceBasis(coin);
   const hasQualityData =
     slices.some((slice) => slice.assetClass != null) && slices.some((slice) => slice.liquidityHorizon != null);
+  if (slices.length === 0 || (evidenceBasis === "legacy-curated" && !hasQualityData)) return null;
 
   const review = coin.reserveReview ?? null;
-  // Preserve legacy reviewless curated books; an explicit limited scope never
-  // grants whole-token composition authority, even when its rows total 100%.
-  const contextual = review?.scope != null && review.scope !== "full-composition";
-  if (slices.length === 0 || (!hasQualityData && !contextual && review?.scope !== "full-composition")) return null;
+  const contextual = evidenceBasis === "contextual";
 
   const confidenceLabel =
     typeof review?.confidence === "string"
@@ -260,16 +268,16 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
   // carry only one quality dimension. Project that provenance alone: the
   // module has no whole-basket verdict, chip or ladder to derive. Contextual
   // reviews keep their existing contextual projection.
-  if (!hasQualityData && !contextual) {
+  if (evidenceBasis === "provenance-only") {
     return {
-      provenanceOnly: true,
+      evidenceBasis,
+      populationId: coin.id,
       chipLabel: null,
       chipToneClass: null,
       lede: null,
       ladder: [],
       liquidWithinOneDayPct: null,
       unknownHorizonPct: null,
-      contextual: false,
       unidentifiedObligorsPct: null,
       selfExposurePct: null,
       topPositionName: null,
@@ -319,13 +327,13 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     : resolveChip(liquidWithinOneDayPct, unknownHorizonPct);
 
   return {
-    provenanceOnly: false,
+    evidenceBasis,
+    populationId: coin.id,
     chipLabel: chip.label,
     chipToneClass: chip.toneClass,
     lede: contextual
       ? `${slices.length} contextual reserve ${slices.length === 1 ? "slice" : "slices"}; not a whole-token composition or liquidity assessment.`
       : buildLede(slices.length, liquidWithinOneDayPct, unknownHorizonPct, unidentifiedObligorsPct, selfExposurePct),
-    contextual,
     ladder: contextual ? [] : ladder,
     liquidWithinOneDayPct: contextual ? null : liquidWithinOneDayPct,
     unknownHorizonPct: contextual ? null : unknownHorizonPct,

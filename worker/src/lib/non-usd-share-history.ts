@@ -9,9 +9,9 @@ import { throwIfAborted } from "./abort";
 import { parseJson } from "./json-parse";
 import { isRecord } from "@shared/lib/type-guards";
 import { sampleHistoricalDatePoints } from "./stablecoin-charts-payload";
+import { NON_USD_SHARE_MAX_DAYS } from "@shared/lib/api-endpoints/queries";
 
 export const NON_USD_SHARE_HISTORY_KEY = "non-usd-share:daily:v1";
-export const NON_USD_SHARE_MAX_DAYS = 5000;
 
 const CORE_AGGREGATE_ACTIVE_STABLECOINS = filterCoreAggregateStablecoins(WORKER_ACTIVE_STABLECOINS);
 

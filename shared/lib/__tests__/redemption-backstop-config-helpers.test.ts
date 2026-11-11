@@ -26,6 +26,7 @@ import {
 } from "@shared/lib/redemption-backstop-configs/shared";
 import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 
 function createBaseConfig(): RedemptionBackstopConfig {
   return {
@@ -53,7 +54,8 @@ describe("redemption backstop config helpers", () => {
     for (const config of Object.values(REDEMPTION_BACKSTOP_CONFIGS)) {
       visitObjects(config, (object) => sourceObjects.add(object));
     }
-    for (const config of Object.values(REDEMPTION_BACKSTOP_CONFIGS)) {
+    for (const [id, config] of Object.entries(REDEMPTION_BACKSTOP_CONFIGS)) {
+      expect(redemptionRouteId(id, config.routeFamily)).toBe(`redemption:${id}:${config.routeFamily}`);
       const cloned = cloneRedemptionBackstopConfig(config);
       expect(cloned).toStrictEqual(config);
       visitObjects(cloned, (object) => expect(sourceObjects.has(object)).toBe(false));

@@ -1,6 +1,4 @@
-import { createRequire } from "node:module";
-
-const { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } = createRequire(import.meta.url)("../../src/lib/stablecoin-detail-history-rollout.ts");
+import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "../../src/lib/presentation-pilots.mjs";
 
 /** C1's five-profile cohort: each route must carry the inactive-panel facts. */
 export const HISTORY_PREVIEW_PILOT_ROUTES = [...STABLECOIN_DETAIL_HISTORY_PILOT_IDS].map((id) => `/stablecoin/${id}/`);

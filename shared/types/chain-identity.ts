@@ -22,13 +22,66 @@ export interface ChainMeta {
   providers?: ChainProviders;
 }
 
+/** Provider surface names only; consumers separately own capability and admission rosters. */
+export const ALCHEMY_RPC_NAMES = {
+  ethereum: "eth-mainnet",
+  arbitrum: "arb-mainnet",
+  base: "base-mainnet",
+  optimism: "opt-mainnet",
+  polygon: "polygon-mainnet",
+  avalanche: "avax-mainnet",
+  bsc: "bnb-mainnet",
+  hyperevm: "hyperliquid-mainnet",
+  linea: "linea-mainnet",
+  scroll: "scroll-mainnet",
+  zksync: "zksync-mainnet",
+  abstract: "abstract-mainnet",
+  unichain: "unichain-mainnet",
+  worldchain: "worldchain-mainnet",
+  megaeth: "megaeth-mainnet",
+  stable: "stable-mainnet",
+  monad: "monad-mainnet",
+  ink: "ink-mainnet",
+  berachain: "berachain-mainnet",
+  fraxtal: "frax-mainnet",
+  rootstock: "rootstock-mainnet",
+  arc: "arc-mainnet",
+  tempo: "tempo-mainnet",
+  solana: "solana-mainnet",
+  tron: "tron-mainnet",
+} as const;
+
+/** Solana discovery uses a different Alchemy surface from JSON-RPC / Account Archive. */
+const ALCHEMY_SOLANA_DISCOVERY_NAME = "sol-mainnet";
+
+export const DRPC_NETWORK_NAMES = {
+  ethereum: "ethereum",
+  arbitrum: "arbitrum",
+  base: "base",
+  optimism: "optimism",
+  polygon: "polygon",
+  avalanche: "avalanche",
+  bsc: "bsc",
+  gnosis: "gnosis",
+  fantom: "fantom",
+  celo: "celo",
+  solana: "solana",
+} as const;
+
+/** Direct public hosts are distinct from paid network= aliases. */
+export const DRPC_PUBLIC_HOST_NAMES: Partial<Record<string, string>> = {
+  fraxtal: "fraxtal", klaytn: "klaytn", hemi: "hemi", plume: "plume",
+  filecoin: "filecoin", rootstock: "rootstock", etherlink: "etherlink",
+  arc: "arc", tempo: "tempo-mainnet",
+};
+
 export const CHAIN_META: Record<string, ChainMeta> = {
-  ethereum:  { name: "Ethereum",  explorerUrl: "https://etherscan.io",              evmChainId: 1,     type: "evm",  logoPath: "/chains/ethereum.png",  providers: { coingecko: "eth", dexscreener: "ethereum", geckoTerminal: "eth", alchemy: "eth-mainnet", moralis: "eth", dexpaprika: "ethereum" } },
-  arbitrum:  { name: "Arbitrum",  explorerUrl: "https://arbiscan.io",               evmChainId: 42161, type: "evm",  logoPath: "/chains/arbitrum.png",  providers: { coingecko: "arbitrum", dexscreener: "arbitrum", geckoTerminal: "arbitrum", alchemy: "arb-mainnet", moralis: "arbitrum", dexpaprika: "arbitrum", birdeye: "arbitrum" } },
-  base:      { name: "Base",      explorerUrl: "https://basescan.org",              evmChainId: 8453,  type: "evm",  logoPath: "/chains/base.png",      providers: { coingecko: "base", dexscreener: "base", geckoTerminal: "base", alchemy: "base-mainnet", moralis: "base", dexpaprika: "base", birdeye: "base" } },
-  optimism:  { name: "Optimism",  explorerUrl: "https://optimistic.etherscan.io",   evmChainId: 10,    type: "evm",  logoPath: "/chains/optimism.png",  providers: { coingecko: "optimism", dexscreener: "optimism", geckoTerminal: "optimism", alchemy: "opt-mainnet", moralis: "optimism", dexpaprika: "optimism", birdeye: "optimism" } },
-  polygon:   { name: "Polygon",   explorerUrl: "https://polygonscan.com",           evmChainId: 137,   type: "evm",  logoPath: "/chains/polygon.png",   providers: { coingecko: "polygon_pos", dexscreener: "polygon", geckoTerminal: "polygon_pos", alchemy: "polygon-mainnet", moralis: "polygon", dexpaprika: "polygon", birdeye: "polygon" } },
-  avalanche: { name: "Avalanche", explorerUrl: "https://snowscan.xyz",              evmChainId: 43114, type: "evm",  logoPath: "/chains/avalanche.png", providers: { coingecko: "avax", dexscreener: "avalanche", geckoTerminal: "avax", alchemy: "avax-mainnet", moralis: "avalanche", dexpaprika: "avalanche", birdeye: "avalanche" } },
+  ethereum:  { name: "Ethereum",  explorerUrl: "https://etherscan.io",              evmChainId: 1,     type: "evm",  logoPath: "/chains/ethereum.png",  providers: { coingecko: "eth", dexscreener: "ethereum", geckoTerminal: "eth", alchemy: ALCHEMY_RPC_NAMES.ethereum, moralis: "eth", dexpaprika: "ethereum" } },
+  arbitrum:  { name: "Arbitrum",  explorerUrl: "https://arbiscan.io",               evmChainId: 42161, type: "evm",  logoPath: "/chains/arbitrum.png",  providers: { coingecko: "arbitrum", dexscreener: "arbitrum", geckoTerminal: "arbitrum", alchemy: ALCHEMY_RPC_NAMES.arbitrum, moralis: "arbitrum", dexpaprika: "arbitrum", birdeye: "arbitrum" } },
+  base:      { name: "Base",      explorerUrl: "https://basescan.org",              evmChainId: 8453,  type: "evm",  logoPath: "/chains/base.png",      providers: { coingecko: "base", dexscreener: "base", geckoTerminal: "base", alchemy: ALCHEMY_RPC_NAMES.base, moralis: "base", dexpaprika: "base", birdeye: "base" } },
+  optimism:  { name: "Optimism",  explorerUrl: "https://optimistic.etherscan.io",   evmChainId: 10,    type: "evm",  logoPath: "/chains/optimism.png",  providers: { coingecko: "optimism", dexscreener: "optimism", geckoTerminal: "optimism", alchemy: ALCHEMY_RPC_NAMES.optimism, moralis: "optimism", dexpaprika: "optimism", birdeye: "optimism" } },
+  polygon:   { name: "Polygon",   explorerUrl: "https://polygonscan.com",           evmChainId: 137,   type: "evm",  logoPath: "/chains/polygon.png",   providers: { coingecko: "polygon_pos", dexscreener: "polygon", geckoTerminal: "polygon_pos", alchemy: ALCHEMY_RPC_NAMES.polygon, moralis: "polygon", dexpaprika: "polygon", birdeye: "polygon" } },
+  avalanche: { name: "Avalanche", explorerUrl: "https://snowscan.xyz",              evmChainId: 43114, type: "evm",  logoPath: "/chains/avalanche.png", providers: { coingecko: "avax", dexscreener: "avalanche", geckoTerminal: "avax", alchemy: ALCHEMY_RPC_NAMES.avalanche, moralis: "avalanche", dexpaprika: "avalanche", birdeye: "avalanche" } },
   bsc:       { name: "BSC",       explorerUrl: "https://bscscan.com",               evmChainId: 56,    type: "evm",  logoPath: "/chains/bsc.png",       providers: { coingecko: "bsc", dexscreener: "bsc", geckoTerminal: "bsc", moralis: "bsc", dexpaprika: "bsc", birdeye: "bsc" } },
   gnosis:    { name: "Gnosis",    explorerUrl: "https://gnosisscan.io",             evmChainId: 100,   type: "evm",  logoPath: "/chains/gnosis.png",    providers: { coingecko: "xdai", dexscreener: "gnosis", geckoTerminal: "xdai", moralis: "gnosis" } },
   fantom:    { name: "Fantom",    explorerUrl: "https://ftmscan.com",               evmChainId: 250,   type: "evm",  logoPath: "/chains/fantom.png",    providers: { coingecko: "ftm", dexscreener: "fantom", geckoTerminal: "ftm", moralis: "fantom" } },
@@ -105,7 +158,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron",  logoPath: "/chains/tron.png",     providers: { coingecko: "tron", dexscreener: "tron", dexpaprika: "tron" } },
   aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png",     darkInvert: true, providers: { coingecko: "aptos", dexscreener: "aptos", geckoTerminal: "aptos" } },
   sui:       { name: "Sui",       explorerUrl: "https://suiscan.xyz",              evmChainId: null,  type: "other", logoPath: "/chains/sui.png",       providers: { coingecko: "sui-network", dexscreener: "sui", geckoTerminal: "sui-network", dexpaprika: "sui", birdeye: "sui" } },
-  solana:    { name: "Solana",   explorerUrl: "https://solscan.io",               evmChainId: null,  type: "other", logoPath: "/chains/solana.svg",    providers: { coingecko: "solana", dexscreener: "solana", geckoTerminal: "solana", alchemy: "sol-mainnet", dexpaprika: "solana", birdeye: "solana" } },
+  solana:    { name: "Solana",   explorerUrl: "https://solscan.io",               evmChainId: null,  type: "other", logoPath: "/chains/solana.svg",    providers: { coingecko: "solana", dexscreener: "solana", geckoTerminal: "solana", alchemy: ALCHEMY_SOLANA_DISCOVERY_NAME, dexpaprika: "solana", birdeye: "solana" } },
   ton:       { name: "TON",       explorerUrl: "https://tonviewer.com",            evmChainId: null,  type: "other", logoPath: "/chains/ton.png",       providers: { dexscreener: "ton" } },
   near:      { name: "NEAR",      explorerUrl: "https://nearblocks.io",            evmChainId: null,  type: "other", logoPath: "/chains/near.png",      providers: { coingecko: "near", dexscreener: "near", geckoTerminal: "near" } },
   algorand:  { name: "Algorand",  explorerUrl: "https://explorer.perawallet.app",  evmChainId: null,  type: "other", logoPath: "/chains/algorand.png",  providers: { dexscreener: "algorand" } },

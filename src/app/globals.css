@@ -361,6 +361,21 @@
   canvas {
     transition: none !important;
   }
+  /* The scene opts these transforms into motion independently of theme transitions. */
+  [data-plot-world] {
+    transition: transform 600ms var(--ease) !important;
+  }
+  [data-plot-beam] > g {
+    transition: transform 460ms var(--ease) !important;
+  }
+  :root[data-motion="reduced"] :is([data-plot-world], [data-plot-beam] > g) {
+    transition: none !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) :is([data-plot-world], [data-plot-beam] > g) {
+      transition: none !important;
+    }
+  }
   body {
     @apply bg-background text-foreground;
     --font-pharos-display: var(--font-bricolage, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);

@@ -111,7 +111,7 @@ export function summarizeDexMeasuredExecutionHistory(input: {
     Number.isFinite(cycle.profile.quotedAt) &&
     cycle.profile.quotedAt <= input.nowSec + 60 &&
     input.nowSec - cycle.profile.quotedAt <=
-      getDexMeasuredExecutionFreshnessMaxSec(cycle.profile.adapterProfileId);
+      getDexMeasuredExecutionFreshnessMaxSec();
   const successful = activeCycles.filter(isEligibleSuccess);
   if (successful.length === 0) return null;
   const capacityCurve = conservativeCurve(successful.map((cycle) => cycle.profile));

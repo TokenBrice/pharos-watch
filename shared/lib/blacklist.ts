@@ -11,52 +11,55 @@ export function isBlacklistStablecoin(value: string): value is BlacklistStableco
   return BLACKLIST_STABLECOIN_SET.has(value);
 }
 
-export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "XAUT" | "XAUM" {
-  return symbol === "PAXG" || symbol === "XAUT" || symbol === "XAUM";
-}
-
-// Total on purpose: `null` records the reviewed decision that the asset is
-// USD-par (native units are USD). A symbol added to BLACKLIST_STABLECOINS
-// without a pricing decision here is a compile error, not a silent $1.00.
-const BLACKLIST_PRICE_ASSET_IDS: Record<BlacklistStablecoin, string | null> = {
-  USDC: null,
-  USDT: null,
-  PAXG: "paxg-paxos",
-  XAUT: "xaut-tether",
-  PYUSD: null,
-  USD1: null,
-  USDG: null,
-  RLUSD: null,
-  U: null,
-  USDTB: null,
-  A7A5: "a7a5-old-vector",
-  FDUSD: null,
-  BRZ: "brz-transfero",
-  AUSD: null,
-  EURI: "euri-banking-circle",
-  USDQ: null,
-  USDO: null,
-  USDX: null,
-  AID: null,
-  TGBP: "tgbp-tokenised",
-  EURC: "eurc-circle",
-  BUIDL: null,
-  USDP: null,
-  TUSD: null,
-  NUSD: null,
-  EURCV: "eurcv-societe-generale-forge",
-  USDA: null,
-  USAT: null,
-  AEUR: "aeur-anchored-coins",
-  XUSD: null,
-  XAUM: "xaum-matrixdock",
-  JPYC: "jpyc-jpyc",
-  FRXUSD: null,
-  FIDD: null,
+// Total on purpose: `null` records the reviewed USD-par pricing decision.
+// Commodity units own the native display precision alongside that identity.
+const BLACKLIST_ASSETS: Record<BlacklistStablecoin, { priceAssetId: string | null; commodity: "gold" | null }> = {
+  USDC: { priceAssetId: null, commodity: null },
+  USDT: { priceAssetId: null, commodity: null },
+  PAXG: { priceAssetId: "paxg-paxos", commodity: "gold" },
+  XAUT: { priceAssetId: "xaut-tether", commodity: "gold" },
+  PYUSD: { priceAssetId: null, commodity: null },
+  USD1: { priceAssetId: null, commodity: null },
+  USDG: { priceAssetId: null, commodity: null },
+  RLUSD: { priceAssetId: null, commodity: null },
+  U: { priceAssetId: null, commodity: null },
+  USDTB: { priceAssetId: null, commodity: null },
+  A7A5: { priceAssetId: "a7a5-old-vector", commodity: null },
+  FDUSD: { priceAssetId: null, commodity: null },
+  BRZ: { priceAssetId: "brz-transfero", commodity: null },
+  AUSD: { priceAssetId: null, commodity: null },
+  EURI: { priceAssetId: "euri-banking-circle", commodity: null },
+  USDQ: { priceAssetId: null, commodity: null },
+  USDO: { priceAssetId: null, commodity: null },
+  USDX: { priceAssetId: null, commodity: null },
+  AID: { priceAssetId: null, commodity: null },
+  TGBP: { priceAssetId: "tgbp-tokenised", commodity: null },
+  EURC: { priceAssetId: "eurc-circle", commodity: null },
+  BUIDL: { priceAssetId: null, commodity: null },
+  USDP: { priceAssetId: null, commodity: null },
+  TUSD: { priceAssetId: null, commodity: null },
+  NUSD: { priceAssetId: null, commodity: null },
+  EURCV: { priceAssetId: "eurcv-societe-generale-forge", commodity: null },
+  USDA: { priceAssetId: null, commodity: null },
+  USAT: { priceAssetId: null, commodity: null },
+  AEUR: { priceAssetId: "aeur-anchored-coins", commodity: null },
+  XUSD: { priceAssetId: null, commodity: null },
+  XAUM: { priceAssetId: "xaum-matrixdock", commodity: "gold" },
+  JPYC: { priceAssetId: "jpyc-jpyc", commodity: null },
+  FRXUSD: { priceAssetId: null, commodity: null },
+  FIDD: { priceAssetId: null, commodity: null },
 };
 
+export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "XAUT" | "XAUM" {
+  return isBlacklistStablecoin(symbol) && BLACKLIST_ASSETS[symbol].commodity === "gold";
+}
+
+export function getBlacklistNativeFractionDigits(stablecoin: BlacklistStablecoin): 2 | 4 {
+  return BLACKLIST_ASSETS[stablecoin].commodity === "gold" ? 4 : 2;
+}
+
 export function getBlacklistPriceAssetId(stablecoin: BlacklistStablecoin): string | null {
-  return BLACKLIST_PRICE_ASSET_IDS[stablecoin];
+  return BLACKLIST_ASSETS[stablecoin].priceAssetId;
 }
 
 export function computeBlacklistAmountUsdAtEvent(

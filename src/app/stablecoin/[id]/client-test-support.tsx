@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { LazySection } from "@/components/lazy-section";
 import { vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
@@ -70,9 +71,9 @@ export const createDetailLazySectionsMock = async () => {
 
   return {
     ...placeholders,
-    // The lazy placeholder and the synchronous pilot shell share the probe.
-    HistoryTabs: HistoryTabsProbe,
-    HistoryTabsShell: HistoryTabsProbe,
+    HistoryTabs: (props: ComponentProps<typeof HistoryTabsProbe>) => props.depegHistoryPreview
+      ? <HistoryTabsProbe {...props} />
+      : <LazySection minHeight={390}><HistoryTabsProbe {...props} /></LazySection>,
     // Wiring probe: the Mechanism card owns `#mechanism-review` when it receives a review.
     PegStabilityCard: ({
       mechanismReview,

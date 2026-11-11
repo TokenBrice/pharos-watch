@@ -7,6 +7,7 @@ import { throwIfAborted } from "../lib/abort";
 import { createLeaseOwner, runCronWithLease } from "../lib/cron-lease-primitives";
 import {
   createReserveLeaseOwner,
+  reserveRecoveryLeaseAdmission,
   RESERVE_CONFIG_RECOVERY_LEASE_SEC,
   type ReserveRecoveryPollIdentity,
 } from "../lib/reserve-producer-priority";
@@ -218,7 +219,7 @@ export async function recoverLiveReserveConfigChanges(
     };
   }, {
     abortSignal: signal, ttlSec: RESERVE_CONFIG_RECOVERY_LEASE_SEC, heartbeatSec: 30,
-    reserveRecoveryAdmission: true,
+    admissionPolicy: reserveRecoveryLeaseAdmission,
     owner: createReserveLeaseOwner(createLeaseOwner("reserve-recovery"), "reserve-recovery", "reserve-config-recovery", pollIdentity),
   });
   if (leased.status === "skipped_neutral") {
