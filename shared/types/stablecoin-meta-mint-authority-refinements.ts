@@ -1,5 +1,6 @@
 import type { z } from "zod";
-import type { MintAuthorityDirectMintAbility, MintAuthorityProfile } from "./core";
+import type { MintAuthorityDirectMintAbility } from "./mint-authority-vocabulary";
+import type { MintAuthorityProfile } from "./stablecoin-meta-control-schemas";
 import { issue } from "./safety-schema-primitives";
 const PRIVILEGED_MINT_PATHS = new Set([
   "user-collateralized-governed", "issuer-direct-mint", "permissioned-minter",

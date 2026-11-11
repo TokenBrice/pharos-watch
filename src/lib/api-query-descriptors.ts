@@ -157,7 +157,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<StablecoinListResponse>(
-      async () => (await import("@shared/types/market")).StablecoinListResponseSchema,
+      async () => (await import("@shared/types/supply")).StablecoinListResponseSchema,
     ),
   ),
   homepageSnapshot: defineApiQuery(
@@ -195,7 +195,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_BLUECHIP,
     },
     "meta",
-    createLazySchema<BluechipRatingsMap>(async () => (await import("@shared/types/market")).BluechipRatingsMapSchema),
+    createLazySchema<BluechipRatingsMap>(async () => (await import("@shared/types/bluechip")).BluechipRatingsMapSchema),
   ),
   dailyDigest: defineApiQuery(
     {
@@ -213,13 +213,13 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
     },
     "meta",
-    createLazySchema<DexLiquidityMap>(async () => (await import("@shared/types/market")).DexLiquidityMapSchema),
+    createLazySchema<DexLiquidityMap>(async () => (await import("@shared/types/dex-liquidity")).DexLiquidityMapSchema),
   ),
   // Lazy schema boundaries keep executable cohort validators out of the eager shell.
   dexLiquidityCoin: defineParameterizedApiQuery(
     "meta",
     createLazySchema<DexLiquidityMap>(async () =>
-      (await import("@shared/types/market")).DexLiquidityCoinResponseSchema.transform(({ coins }) => coins),
+      (await import("@shared/types/dex-liquidity")).DexLiquidityCoinResponseSchema.transform(({ coins }) => coins),
     ),
     (stablecoinId: string) => ({
       queryKey: ["dex-liquidity-coin", stablecoinId] as const,
@@ -234,7 +234,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
     },
     "meta",
-    createLazySchema<DexLiquidityTableMap>(async () => (await import("@shared/types/market")).DexLiquidityTableMapSchema),
+    createLazySchema<DexLiquidityTableMap>(async () => (await import("@shared/types/dex-liquidity")).DexLiquidityTableMapSchema),
   ),
   redemptionBackstopCoin: defineParameterizedApiQuery(
     "meta",
@@ -257,7 +257,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   dexLiquidityHistory: defineParameterizedApiQuery(
     "plain",
     createLazySchema<DexLiquidityHistoryPoint[]>(
-      async () => (await import("@shared/types/market")).DexLiquidityHistoryResponseSchema,
+      async () => (await import("@shared/types/dex-liquidity")).DexLiquidityHistoryResponseSchema,
     ),
     (stablecoinId: string, days: number = 90) => ({
       queryKey: ["dex-liquidity-chart-history", stablecoinId, days] as const,
@@ -333,12 +333,12 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<BlacklistSummaryResponse>(
-      async () => (await import("@shared/types/market")).BlacklistSummaryResponseSchema,
+      async () => (await import("@shared/types/blacklist")).BlacklistSummaryResponseSchema,
     ),
   ),
   blacklistEvents: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<BlacklistResponse>(async () => (await import("@shared/types/market")).BlacklistResponseSchema),
+    createLazySchema<BlacklistResponse>(async () => (await import("@shared/types/blacklist")).BlacklistResponseSchema),
     ({ queryKey, path }: BlacklistEventsDescriptorInput) => ({
       queryKey,
       path,
@@ -405,7 +405,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_15MIN,
     },
     "meta",
-    createLazySchema<PegSummaryResponse>(async () => (await import("@shared/types/market")).PegSummaryResponseSchema),
+    createLazySchema<PegSummaryResponse>(async () => (await import("@shared/types/peg")).PegSummaryResponseSchema),
   ),
   reportCardsV9: defineApiQuery(
     {
@@ -527,7 +527,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<StablecoinChartPoint[]>(
-      async () => (await import("@shared/types/market")).StablecoinChartResponseSchema,
+      async () => (await import("@shared/types/supply")).StablecoinChartResponseSchema,
     ),
   ),
   nonUsdShare: defineApiQuery(
@@ -538,7 +538,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<NonUsdSharePoint[]>(
-      async () => (await import("@shared/types/market")).NonUsdShareResponseSchema,
+      async () => (await import("@shared/types/supply")).NonUsdShareResponseSchema,
     ),
   ),
   stabilityIndex: STABILITY_INDEX_QUERY_DESCRIPTOR,
@@ -616,13 +616,13 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<StressSignalsAllResponse>(
-      async () => (await import("@shared/types/market")).StressSignalsAllResponseSchema,
+      async () => (await import("@shared/types/stress")).StressSignalsAllResponseSchema,
     ),
   ),
   stressSignalDetail: defineParameterizedApiQuery(
     "meta",
     createLazySchema<StressSignalDetailResponse>(
-      async () => (await import("@shared/types/market")).StressSignalDetailResponseSchema,
+      async () => (await import("@shared/types/stress")).StressSignalDetailResponseSchema,
     ),
     (stablecoinId: string, days: number = 30) => ({
       queryKey: ["stress-signals", stablecoinId, days] as const,
@@ -633,7 +633,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   supplyHistory: defineParameterizedApiQuery(
     "meta",
     createLazySchema<SupplyHistoryPoint[]>(
-      async () => (await import("@shared/types/market")).SupplyHistoryResponseSchema,
+      async () => (await import("@shared/types/supply")).SupplyHistoryResponseSchema,
     ),
     (stablecoinId: string, window: SupplyHistoryWindow = 1825) => ({
       queryKey: ["supply-history", stablecoinId, window] as const,

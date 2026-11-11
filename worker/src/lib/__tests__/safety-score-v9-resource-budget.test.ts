@@ -207,7 +207,6 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
 
   it("excludes broad schema barrels and sync-cron helpers from publication", () => {
     for (const path of [
-      "shared/types/index.ts",
       "shared/types/market.ts",
       "worker/src/cron/sync-stablecoins/shared.ts",
     ]) {
