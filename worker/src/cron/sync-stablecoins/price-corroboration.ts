@@ -194,6 +194,7 @@ export async function runPriceCorroboration(params: {
   const fallbackProbes = cohort.map(cloneAsFallbackProbe);
   // Published rows omit provider identifiers and NAV hints needed by fallback validation.
   applyTrackedAssetOverrides(fallbackProbes);
+  const dexTargets = new Map<string, { chain: string; target: string }>();
   const fallbackStats = await enrichMissingPrices(
     fallbackProbes,
     params.cmcApiKey,
@@ -205,6 +206,11 @@ export async function runPriceCorroboration(params: {
     undefined,
     originalMissingPriceIds,
     params.chainRpcs,
+    (outcomes) => {
+      for (const outcome of outcomes) {
+        if (outcome.result === "resolved") dexTargets.set(outcome.assetId, { chain: outcome.chain, target: outcome.target });
+      }
+    },
   );
 
   const addressProviderEnabled = isCoingeckoOnchainAddressEnabled(params.addressProvider);
@@ -231,11 +237,6 @@ export async function runPriceCorroboration(params: {
 
   const fallbackProbesById = new Map(fallbackProbes.map((asset) => [asset.id, asset]));
   // Only this run's fetched observations enter the handoff, never published references.
-  const dexTargets = new Map((fallbackStats.providerDiagnostics ?? [])
-    .filter((diagnostic) => diagnostic.source === "dexscreener-exact")
-    .flatMap((diagnostic) => diagnostic.assetAttempts ?? [])
-    .filter((attempt) => attempt.result === "resolved" && attempt.chain && attempt.target)
-    .map((attempt) => [attempt.assetId, { chain: attempt.chain!, target: attempt.target! }]));
   const observations = cohort.flatMap((asset) => {
     const fallback = fallbackObservation(fallbackProbesById.get(asset.id));
     return [...(fallback ? [fallback] : []), ...addressObservations(addressQuotes.get(asset.id))]

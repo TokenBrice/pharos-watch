@@ -4,7 +4,7 @@ import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runCoingeckoLowVolumePass } from "./enrich-prices-coingecko-low-volume-pass";
 import { runDlContractPasses } from "./enrich-prices-defillama-pass";
 import { runCmcPass } from "./enrich-prices-cmc-pass";
-import { runDexScreenerPass } from "./enrich-prices-dexscreener-pass";
+import { runDexScreenerPass, type DexScreenerTargetOutcome } from "./enrich-prices-dexscreener-pass";
 import { runJupiterPass } from "./enrich-prices-jupiter-pass";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
@@ -35,6 +35,7 @@ interface EnrichmentPassContext {
   originalMissingPriceIds?: ReadonlySet<string>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   onProgress?: EnrichmentPassProgressReporter;
+  onDexScreenerTargets?: (outcomes: readonly DexScreenerTargetOutcome[]) => void;
 }
 
 interface EnrichmentPassDefinition {
@@ -108,8 +109,9 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     key: "passDex",
     label: "DexScreener",
     failureLabel: "dexscreener",
-    run: async ({ assets, fxRates, db, signal, previousMissingGenerationsById, originalMissingPriceIds }) => {
+    run: async ({ assets, fxRates, db, signal, previousMissingGenerationsById, originalMissingPriceIds, onDexScreenerTargets }) => {
       const result = await runDexScreenerPass(assets, fxRates, db, signal, previousMissingGenerationsById, undefined, originalMissingPriceIds);
+      onDexScreenerTargets?.(result.targetOutcomes ?? []);
       return {
         counts: {
           passDex: result.resolved,

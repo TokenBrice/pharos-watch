@@ -18,13 +18,14 @@ import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_AGGREGATE_ESCROW_RESIDUALS,
   SFRAX_STOCK_PERIMETER,
-  USDY_SUI_COIN_TYPE,
+  reviewedOnchainSupplyReader,
   onchainSupplyProbeFamily,
   getOnchainSupplyHoldReason,
   isOnchainSupplyPartitionExcluded,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSupplementalOnchainSupplyProbeContract,
   type OnchainSupplyProbeFamily,
+  type SupplementalOnChainSupplySource,
 } from "@shared/lib/onchain-supply-probe";
 import {
   hasRegistryRpc,
@@ -40,7 +41,6 @@ import { logWorkerEvent } from "../../../lib/structured-log";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
   CURATED_ONCHAIN_SUPPLY_EXCLUSIONS,
-  type SupplementalOnChainSupplySource,
 } from "../../../lib/onchain-supply-exclusions";
 import {
   fetchErc20TotalSupply,
@@ -194,9 +194,10 @@ async function readContractSupplyRaw(input: {
   const evmContext = input.family === "evm" && input.chainRpcs
     ? { chainRpcs: input.chainRpcs }
     : undefined;
+  const reader = reviewedOnchainSupplyReader(input.meta, supplyContract);
 
   if (input.family === "sui") {
-    if (supplyContract.address === USDY_SUI_COIN_TYPE) {
+    if (reader === "usdy-sui") {
       return fetchUsdySuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
     }
     return fetchEearnSuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
@@ -225,7 +226,7 @@ async function readContractSupplyRaw(input: {
   }
 
   if (input.family === "aptos") {
-    if (input.meta.id === "usdy-ondo-finance") {
+    if (reader === "usdy-aptos") {
       return fetchUsdyAptosSupply(supplyContract.address, supplyContract.decimals, input.signal);
     }
     if (!input.rpcUrl) throw new Error("Aptos supply probe REST endpoint is unavailable");

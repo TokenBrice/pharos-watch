@@ -44,6 +44,17 @@ export interface DexScreenerTarget {
   expectedSymbol?: string;
 }
 
+export type DexScreenerTargetOutcome = {
+  assetId: string;
+  chain: string;
+  target: string;
+  candidateAt: number;
+} & ({ result: "empty"; rejectionClass: string } | { result: "resolved"; observedAt?: number });
+
+export interface DexScreenerPassResult extends EnrichPassResult {
+  targetOutcomes?: DexScreenerTargetOutcome[];
+}
+
 export interface RankedDexScreenerCandidate {
   asset: PeggedAsset;
   index: number;
@@ -238,9 +249,10 @@ export async function runDexScreenerPass(
   nowMs?: number,
   originalMissingPriceIds?: ReadonlySet<string>,
   exactBatch?: DexScreenerBatchTarget[],
-): Promise<EnrichPassResult> {
+): Promise<DexScreenerPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+  const targetOutcomes: DexScreenerTargetOutcome[] = [];
 
   const stillMissing = collectMissingPriceCandidates(assets);
   if (stillMissing.length === 0) {
@@ -426,20 +438,25 @@ export async function runDexScreenerPass(
             if (resolvedAssetIds.has(entry.asset.id)) continue;
             const { price: exactPrice, rejectionClass } = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
             if (exactPrice == null) {
-              assetAttempts.push({ assetId: entry.asset.id, adapter: "dexscreener-exact", source: "dexscreener-exact",
-                chain: target.chain, target: target.address, state: "attempted", result: "empty",
-                rejectionClass: rejectionClass!, candidateAt: Math.floor(Date.now() / 1000), replaySafe: false });
+              targetOutcomes.push({ assetId: entry.asset.id, chain: target.chain, target: target.address,
+                result: "empty", rejectionClass: rejectionClass!, candidateAt: Math.floor(Date.now() / 1000) });
               continue;
             }
 
             applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
             resolved += 1;
             resolvedAssetIds.add(entry.asset.id);
-            assetAttempts.push({ assetId: entry.asset.id, adapter: "dexscreener-exact", source: "dexscreener-exact",
-              chain: target.chain, target: target.address, state: "attempted", result: "resolved",
-              candidateAt: Math.floor(Date.now() / 1000), observedAt: assets[entry.index].priceObservedAt ?? undefined,
-              replaySafe: false });
+            targetOutcomes.push({ assetId: entry.asset.id, chain: target.chain, target: target.address,
+              result: "resolved", candidateAt: Math.floor(Date.now() / 1000),
+              observedAt: assets[entry.index].priceObservedAt ?? undefined });
           }
+          assetAttempts.push(...targetOutcomes.map((outcome) => outcome.result === "empty"
+            ? { assetId: outcome.assetId, adapter: "dexscreener-exact", source: "dexscreener-exact",
+                chain: outcome.chain, target: outcome.target, state: "attempted" as const, result: "empty" as const,
+                rejectionClass: outcome.rejectionClass, candidateAt: outcome.candidateAt, replaySafe: false }
+            : { assetId: outcome.assetId, adapter: "dexscreener-exact", source: "dexscreener-exact",
+                chain: outcome.chain, target: outcome.target, state: "attempted" as const, result: "resolved" as const,
+                candidateAt: outcome.candidateAt, observedAt: outcome.observedAt, replaySafe: false }));
           diagnostics.push({ source: "dexscreener-exact", stage: "fallback",
             endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${batchChain}/${batchAddressPath}`),
             status: lookupResult.status ?? null, ok: true, success: true,
@@ -502,5 +519,5 @@ export async function runDexScreenerPass(
     });
   }
 
-  return { resolved, failures: [], diagnostics };
+  return { resolved, failures: [], diagnostics, targetOutcomes };
 }

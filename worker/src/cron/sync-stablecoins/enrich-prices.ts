@@ -3,6 +3,7 @@ import { throwIfAborted } from "../../lib/abort";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runEnrichmentPasses } from "./enrich-prices-fallback";
+import type { DexScreenerTargetOutcome } from "./enrich-prices-dexscreener-pass";
 import {
   loadFxRatesForPriceBounds,
   logEnrichmentSummary,
@@ -37,6 +38,7 @@ export async function enrichMissingPrices(
   previousMissingGenerationsById?: ReadonlyMap<string, number>,
   originalMissingPriceIds?: ReadonlySet<string>,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  onDexScreenerTargets?: (outcomes: readonly DexScreenerTargetOutcome[]) => void,
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
@@ -70,6 +72,7 @@ export async function enrichMissingPrices(
     previousMissingGenerationsById,
     originalMissingPriceIds,
     chainRpcs,
+    onDexScreenerTargets,
     onProgress: async (progress) => {
       await onProgress?.({
         phase: progress.phase,
