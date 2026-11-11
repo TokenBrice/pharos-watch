@@ -1,4 +1,5 @@
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
 } from "@shared/lib/status-thresholds";
@@ -267,11 +268,7 @@ function selectDexLiquidityCoverageRun(
 ): CronRunDetail | null {
   if (!dexLiquidityCron) return null;
   const runs = dexLiquidityCron.runs;
-  // CronStatus always carries the registry interval; the 1800s fallback only
-  // guards malformed callers (sync-dex-liquidity runs every 30 minutes).
-  const intervalSec = dexLiquidityCron.expectedIntervalSec > 0
-    ? dexLiquidityCron.expectedIntervalSec
-    : 1800;
+  const intervalSec = CRON_INTERVALS["sync-dex-liquidity"];
   for (const run of runs) {
     if (now - run.startedAt > intervalSec * 2) return null;
     const sourceCoverage = run.metadata?.sourceCoverage;

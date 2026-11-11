@@ -168,7 +168,7 @@ interface AuthoredControlIdentityCarrier {
 
 function authoredControlIdSet(control: ControlOverlay): readonly string[] | null {
   // The carrier fields land on the shared control fact base with IR-0 (T1).
-  const carrier = control as unknown as AuthoredControlIdentityCarrier;
+  const carrier: AuthoredControlIdentityCarrier = control;
   const single = carrier.authoredControlId;
   const merged = carrier.authoredControlIds;
   if (merged !== undefined) {
