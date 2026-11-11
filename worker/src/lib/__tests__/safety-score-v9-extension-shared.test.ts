@@ -3,6 +3,8 @@ import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/acce
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { sha256HexFromUtf8Chunks } from "../hash";
+import { transferMaterialScope } from "../safety-score-v9/extension-access-lookthrough";
+import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   accessEvidenceObservationState,
   boundedObservedAt,
@@ -17,6 +19,19 @@ import {
 } from "../safety-score-v9/extension-shared";
 
 const CLOCK_SEC = Date.parse("2026-09-21T00:00:00.000Z") / 1_000;
+
+describe("transfer material scope", () => {
+  it("retains exact unresolved chain and deployment identities for an unknown own-contract chain", () => {
+    const fixed = makeV9FixedInput({ clockSec: CLOCK_SEC });
+    const scope = transferMaterialScope(fixed, "alpha", {
+      id: "alpha",
+      contracts: [{ chain: "Future Network", address: "0xABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD", decimals: 18 }],
+    }, null, undefined, null);
+
+    expect(scope.unresolvedMaterialChainIds).toEqual(["future network"]);
+    expect(scope.unresolvedDeclaredDeploymentKeys).toEqual(["future network:0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"]);
+  });
+});
 
 describe("review evidence timestamp admission", () => {
   const base = {

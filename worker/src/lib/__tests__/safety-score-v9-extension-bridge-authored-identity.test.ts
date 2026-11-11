@@ -9,6 +9,7 @@ import xgldRisk from "@shared/data/stablecoins/domains/risk-review/xgld-unitas.j
 import { V9NegativeIncidentReviewSchema } from "@shared/types/safety-score-v9-incidents";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
+import { buildAllocationScopeIdentityReview } from "../safety-score-v9/extension-wrapper-reviews";
 import { DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE } from "../safety-score-v9/extension-supply";
 import { routeSafetyScoreV9NegativeIncidentReviews } from "../safety-score-v9/extension-incidents";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
@@ -381,6 +382,20 @@ describe("reviewed bridge representation allocation identity", () => {
       assetId: "alpha", registeredDeploymentKeys: [`ethereum:${NATIVE_ADDRESS}`],
       deployments: [{ codeKind: "immutable", chain: "ethereum", address: NATIVE_ADDRESS, observedAtSec: CLOCK,
         block: 123, sourceUrl: meta.mintAuthority!.upgradeability!.sources[0]!.url }],
+    });
+  });
+
+  it("canonicalizes the implementation of a current reviewed proxy deployment", () => {
+    const { meta } = fixture(undefined, true);
+    const route = meta.bridgeRouteRisk!.routes![1]!;
+    route.observedAt = "2026-10-02T00:00:00Z";
+    if (route.deploymentIdentity?.codeKind !== "proxy") throw new Error("Expected proxy identity fixture");
+    route.deploymentIdentity.implementation = "0xABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCD";
+
+    expect(buildAllocationScopeIdentityReview(meta, CLOCK).deployments).toContainEqual({
+      codeKind: "proxy", chain: "base", address: BRIDGE_ADDRESS,
+      implementation: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      observedAtSec: CLOCK - 100, block: 456, sourceUrl: SOURCE.url,
     });
   });
 
