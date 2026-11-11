@@ -109,6 +109,13 @@ describe("Safety Score V9 publication codec", () => {
     await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
       ...packed, packedBytes: packed.packedBytes - 1,
     }))).rejects.toThrow(/declared uncompressed byte length/);
+    // "QR==" and "QQ==" decode to the same byte; only the second is the canonical spelling.
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...packed, payload: "QR==",
+    }))).rejects.toThrow(/base64 payload is not canonical/);
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...packed, payload: "!",
+    }))).rejects.toThrow(/Malformed Safety Score v9 publication base64 payload/);
     const noncanonical = Buffer.from(JSON.stringify(publication));
     const transport = gzipSync(Buffer.concat([Buffer.from("[]\n"), noncanonical]));
     await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
