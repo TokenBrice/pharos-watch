@@ -1,4 +1,3 @@
-// src/lib/__tests__/stablecoin-detail-reserve-quality-client.test.ts
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveReview, ReserveSlice, StablecoinMeta } from "@shared/types";

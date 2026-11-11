@@ -8,10 +8,6 @@ import { MECHANISM_ARCHETYPE_VALUES, type MechanismArchetype } from "@shared/typ
  * anchor; `#obituary-<id>` is a legacy alias.
  */
 
-// ---------------------------------------------------------------------------
-// Anchors
-// ---------------------------------------------------------------------------
-
 const CEMETERY_SECTION_ANCHORS = [
   "cemetery",
   "key-facts",
@@ -92,10 +88,6 @@ export function findCemeteryIdCollisions(ids: Iterable<string>): string[] {
   return [...collisions];
 }
 
-// ---------------------------------------------------------------------------
-// Peak buckets
-// ---------------------------------------------------------------------------
-
 export const CEMETERY_PEAK_BUCKET_KEYS = ["1b-plus", "100m-1b", "10m-100m", "under-10m", "not-recorded"] as const;
 export type CemeteryPeakBucket = (typeof CEMETERY_PEAK_BUCKET_KEYS)[number];
 
@@ -118,10 +110,6 @@ export function peakBucketOf(peak: number | null | undefined): CemeteryPeakBucke
   if (peak >= 10_000_000) return "10m-100m";
   return "under-10m";
 }
-
-// ---------------------------------------------------------------------------
-// Register filters
-// ---------------------------------------------------------------------------
 
 /** URL params owned by the Autopsy Register, in canonical href order. */
 const CEMETERY_REGISTER_PARAMS = ["cause", "year", "peg", "mechanism", "record", "peak", "q", "sort", "dir"] as const;

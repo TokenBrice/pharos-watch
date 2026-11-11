@@ -12,14 +12,13 @@ import {
   type EndpointProbeGroup,
 } from "@shared/lib/api-endpoints";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
-import { isFreshnessWarningHeader, isScheduledRefreshWarning } from "@shared/lib/api-freshness";
+import { isFreshnessWarningHeader, isScheduledRefreshWarning } from "@shared/lib/warning-headers";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { isSiteDataAllowedApiPath } from "@shared/lib/site-data-lane";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
 import { CRON_1MIN, CRON_15MIN } from "@/lib/cron-intervals";
 
-/** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {
   public: getProbePaths("public").filter(isSiteDataAllowedApiPath),
   admin: getProbePaths("admin"),

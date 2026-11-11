@@ -54,10 +54,6 @@ function buidlNetwork(overrides: {
   return { rpc };
 }
 
-// ---------------------------------------------------------------------------
-// Decoder
-// ---------------------------------------------------------------------------
-
 describe("decodeChronicleReadWithAge", () => {
   it("decodes the uint256 NAV value and uint256 age timestamp", () => {
     expect(decodeChronicleReadWithAge(encodeReadWithAge(1_027_991_334_000_000_000n, NOW_SEC))).toEqual({
@@ -70,10 +66,6 @@ describe("decodeChronicleReadWithAge", () => {
     expect(() => decodeChronicleReadWithAge("0xdeadbeef")).toThrow("malformed payload");
   });
 });
-
-// ---------------------------------------------------------------------------
-// BUIDL binding (real catalog config through the harness)
-// ---------------------------------------------------------------------------
 
 describe("chronicle-nav BUIDL binding", () => {
   it("reads the VAO NAV and aggregates totalSupply across every EVM deployment", async () => {
@@ -181,10 +173,6 @@ describe("chronicle-nav ACRDX binding", () => {
     expectWarningEffect(result, "por-supply-chain-omitted", "info");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Pure adaptation boundaries
-// ---------------------------------------------------------------------------
 
 describe("adaptChronicleNavResponse", () => {
   it("rejects a zero NAV value", () => {

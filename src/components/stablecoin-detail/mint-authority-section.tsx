@@ -522,7 +522,6 @@ export function MintAuthoritySection({
       id="mint-authority"
       title="Mint Authority"
       variant={variant}
-      // Without the ladder or the rail there is nothing to draw: one row.
       stripForm={stripForm || visual === null}
       methodology={methodology}
       headerRight={headerRight}

@@ -13,7 +13,6 @@ import {
   readDataWord,
 } from "../evm-logs";
 
-// --- decodeAddress ---
 
 describe("decodeAddress", () => {
 
@@ -42,7 +41,6 @@ describe("decodeAddressWord", () => {
   });
 });
 
-// --- readDataWord ---
 
 describe("readDataWord", () => {
   const USER = "000000000000000000000000aaaa1111aaaa2222aaaa3333aaaa4444aaaa5555";
@@ -65,7 +63,6 @@ describe("readDataWord", () => {
   });
 });
 
-// --- decodeUint256 ---
 
 describe("decodeUint256", () => {
   it("decodes standard uint256 with 18 decimals", () => {
@@ -110,8 +107,6 @@ describe("decodeUint256Word", () => {
   });
 });
 
-// --- budgetExhausted ---
-
 
 describe("budgetExhausted", () => {
   it("returns false when under limit", () => {
@@ -124,7 +119,6 @@ describe("budgetExhausted", () => {
 
 });
 
-// --- createRateLimiter ---
 
 describe("createRateLimiter", () => {
   beforeEach(() => {
@@ -150,7 +144,6 @@ describe("createRateLimiter", () => {
       return 2;
     });
 
-    // Advance time to let both complete
     await vi.advanceTimersByTimeAsync(500);
 
     const [r1, r2] = await Promise.all([p1, p2]);
@@ -162,7 +155,6 @@ describe("createRateLimiter", () => {
   });
 });
 
-// --- getEvmBlockNumber ---
 
 describe("getEvmBlockNumber", () => {
   beforeEach(() => {
@@ -190,7 +182,6 @@ describe("getEvmBlockNumber", () => {
   });
 });
 
-// --- fetchEvmLogsForTopicWithCompleteness ---
 
 describe("fetchEvmLogsForTopicWithCompleteness", () => {
   beforeEach(() => {

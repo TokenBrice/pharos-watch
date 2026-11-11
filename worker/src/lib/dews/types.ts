@@ -18,7 +18,6 @@ export interface PoolEntry {
   balanceRatio: number | null;
 }
 
-/** Why the top-pool list behind the worst-pool component could not be read. */
 export type TopPoolsUnavailableReason =
   | "top-pools-missing"
   | "top-pools-json-parse-failed"
@@ -83,25 +82,21 @@ export interface DEWSInput {
   mcapUsd: number;
   /** Null when the cache row omitted an admitted peg type (R1). */
   pegType: string | null;
-  // Supply velocity
   circulatingCurrent: number;
   circulatingPrevDay: number;
   circulatingPrevWeek: number;
   circulatingPrevDayAvailable?: boolean;
   circulatingPrevWeekAvailable?: boolean;
-  // Pool balance
   weightedBalanceRatio: number | null;
   avgPoolStress: number | null;
   /** Readable top-pool list (`[]` = observed empty set); `null` = unreadable/missing list. */
   topPools: PoolEntry[] | null;
   /** Why `topPools` is `null`; absent defaults to `top-pools-missing`. */
   topPoolsUnavailableReason?: TopPoolsUnavailableReason | null;
-  // Liquidity erosion
   liquidityScore: number | null;
   liquidityScore7dAgo: number | null;
   tvlCurrent: number | null;
   tvl7dAgo: number | null;
-  // Price confidence
   priceConfidence: string | null;
   prevPriceConfidence: string | null;
   price: number | null;
@@ -114,7 +109,6 @@ export interface DEWSInput {
    * family was not read must mark it unavailable instead of scoring it 100.
    */
   priceEvidenceUnavailable?: boolean;
-  // Cross-source divergence
   pegRef: number;
   pegReferenceAvailable?: boolean;
   pegReferenceUnavailableReason?: string | null;
@@ -123,7 +117,6 @@ export interface DEWSInput {
   dexPriceUsd: number | null;
   /** Individually admitted non-Mento protocol marks; the aggregate cannot prove independence. */
   independentDexPrices?: readonly number[];
-  // Blacklist activity
   blacklistEvents24h: number;
   blacklistEvents7d: number;
   hasBlacklistTracking: boolean;

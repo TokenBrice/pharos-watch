@@ -17,7 +17,6 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 
-// How many recent freeze rows to surface beneath the headline.
 const MAX_RECENT = 3;
 
 type WindowKey = "24h" | "7d";

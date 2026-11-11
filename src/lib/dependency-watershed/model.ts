@@ -232,7 +232,6 @@ export function buildWatershedModel(input: WatershedInput): WatershedModel {
   }
   const drawnFacts = facts.filter(fact => drawn.has(fact.from) && drawn.has(fact.to));
 
-  // Columns and virtual waypoints for links spanning more than one layer.
   const drawnIds = [...drawn].sort(compareIds);
   const maxLayer = Math.max(0, ...drawnIds.map(id => layers.get(id)!));
   const columnCount = maxLayer + 1;
@@ -267,7 +266,6 @@ export function buildWatershedModel(input: WatershedInput): WatershedModel {
   }
   const order = orderColumns(items, segments);
 
-  // Folded dependents per hub.
   const deltas = new Map<string, Omit<WatershedDelta, "x" | "top" | "width" | "path">>();
   for (const hubId of drawnIds.filter(isHub)) {
     const folded = outgoing.get(hubId)!.filter(fact => !drawn.has(fact.to)).sort(byUsd);

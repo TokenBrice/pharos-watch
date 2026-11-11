@@ -270,7 +270,6 @@ export function buildFailureDomainsView(
     };
   });
 
-  // Costly domains first, then largest (known) exposure; wholly unquantified exposures last.
   rows.sort((left, right) =>
     right.adjustmentPoints - left.adjustmentPoints
     || sortShare(right.share) - sortShare(left.share)

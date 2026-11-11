@@ -1,3 +1,4 @@
+import { passesRawTokenVolumeSourcePreflight } from "./pool-volume-sanity";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -37,8 +38,6 @@ const FLUID_GET_COLLATERAL_RESERVES_SELECTOR = "0x957755e6";
 const FLUID_GET_DEBT_RESERVES_SELECTOR = "0x55181f11";
 const FLUID_GET_POOL_FEE_SELECTOR = "0x42fcc6fb";
 const FLUID_RETRY_DELAY_CAP_MS = 5_000;
-const FLUID_LARGE_POOL_TVL_USD = 100_000_000;
-const FLUID_LARGE_POOL_MIN_VOLUME_USD = 50_000;
 const FLUID_MAX_ENRICHED_POOLS_PER_CHAIN = 5;
 
 /**
@@ -51,12 +50,7 @@ const FLUID_MAX_ENRICHED_POOLS_PER_CHAIN = 5;
  * cannot clear the guard either — only measured sides can.
  */
 function shouldEnrichFluidPool(pool: DexApiPool): boolean {
-  if (pool.tvlUsd <= FLUID_LARGE_POOL_TVL_USD) return true;
-  const tokenVolumes = pool.tokenVolumes24h;
-  if (tokenVolumes == null) return false;
-  return tokenVolumes.some(
-    (volume) => Number.isFinite(volume) && volume >= FLUID_LARGE_POOL_MIN_VOLUME_USD,
-  );
+  return passesRawTokenVolumeSourcePreflight(pool.tvlUsd, pool.tokenVolumes24h);
 }
 
 /** Fluid API chain IDs mapped to our internal chain keys */

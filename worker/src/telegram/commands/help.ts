@@ -1,8 +1,8 @@
-import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_BOT_USERNAME, type TelegramCommandName } from "@shared/lib/telegram-bot-registration";
 import { buildManageAlertsKeyboard } from "../webhook/telegram-webhook-messages";
 import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
 
-const HELP_ROWS: ReadonlyArray<readonly [section: string | null, command: string, meaning: string]> = [
+const HELP_ROWS: ReadonlyArray<readonly [section: string | null, command: `/${TelegramCommandName}` | `/${TelegramCommandName} ${string}`, meaning: string]> = [
   ["Check", "/status", "your alerts and active depegs"],
   [null, "/status USDC", "peg, stress and Safety grade for one coin"],
   [null, "/list", "what you follow"],
@@ -13,7 +13,11 @@ const HELP_ROWS: ReadonlyArray<readonly [section: string | null, command: string
 ];
 
 /** Every command `/help` names; a registration test keeps this in sync with the menu. */
-export const HELP_COMMANDS = ["status", "list", "subscribe", "unsubscribe", "pause", "settings", "forget"] as const;
+const FORGET_HELP_COMMAND: TelegramCommandName = "forget";
+export const HELP_COMMANDS: readonly TelegramCommandName[] = [
+  ...new Set(HELP_ROWS.map(([, command]) => command.split(" ")[0]!.slice(1) as TelegramCommandName)),
+  FORGET_HELP_COMMAND,
+];
 
 function renderRows(addressed: boolean): string {
   return HELP_ROWS.map(([section, command, meaning]) => {
@@ -27,7 +31,7 @@ export const PRIVATE_HELP_MESSAGE = `<b>Pharos Watch help</b>
 Most settings live in <b>Manage Alerts</b>, the button by the message box.
 ${renderRows(false)}
 
-/forget deletes everything Pharos Watch stores about this chat.
+/${FORGET_HELP_COMMAND} deletes everything Pharos Watch stores about this chat.
 Every command: pharos.watch/pharoswatchbot/#manual`;
 
 export const GROUP_HELP_MESSAGE = `<b>Pharos Watch help</b>

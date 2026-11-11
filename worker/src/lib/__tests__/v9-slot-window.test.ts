@@ -1,6 +1,6 @@
 import { ZodError } from "zod";
 import * as publicMaterialization from "../report-cards-v9-materialization";
-import { recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-runner";
+import { recoverSafetyScoreV9PublicMaterialization } from "../safety-score-v9/publication-materialization";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";

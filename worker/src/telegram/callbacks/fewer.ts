@@ -11,6 +11,7 @@ import {
   isSubscribableStablecoinId,
   runCallbackMutation,
   type CallbackHandler,
+  type ParsedCallbackData,
 } from "./_shared";
 
 const FEWER_CODES = new Set<string>(Object.values(FEWER_FAMILY_SETTING_CODES));
@@ -30,6 +31,21 @@ interface FewerTarget {
   code: string;
   /** `/settings` value: a depeg step, a DEWS band code, or "0" for off. */
   value: string;
+}
+
+type FewerAction =
+  | { kind: "step"; id: string; code: string }
+  | { kind: "set"; id: string; code: string; value: string };
+
+function decodeFewerAction(parsed: ParsedCallbackData): FewerAction | null {
+  const code = parsed.parts[2] ?? "";
+  if (!isSubscribableStablecoinId(parsed.arg) || !FEWER_CODES.has(code)) return null;
+  if (hasExactParts(parsed.parts, 3)) return { kind: "step", id: parsed.arg, code };
+  const value = parsed.parts[3];
+  if (hasExactParts(parsed.parts, 4) && value != null && isFewerValueFor(code, value)) {
+    return { kind: "set", id: parsed.arg, code, value };
+  }
+  return null;
 }
 
 /**
@@ -105,19 +121,18 @@ function fewerRank(code: string, value: string): number {
 async function resolveFewerValue(
   db: D1Database,
   chatId: string,
-  id: string,
-  code: string,
-  carried: string | undefined,
+  action: FewerAction,
 ): Promise<string> {
+  const { id, code } = action;
   if (code !== DEPEG_CODE && code !== DEWS_CODE) return "0";
   const current = await loadEffectiveFewerSetting(db, chatId, id, code);
   if (current === "0" || (code === DEPEG_CODE && current == null)) return "0";
-  if (carried == null) {
+  if (action.kind === "step") {
     return nextFewerSettingValue(code, code === DEPEG_CODE
       ? Number(current)
       : TELEGRAM_DEWS_BANDS.find((band) => DEWS_BAND_CODE_BY_VALUE[band] === current));
   }
-  return fewerRank(code, carried) >= fewerRank(code, current!) ? carried : current!;
+  return fewerRank(code, action.value) >= fewerRank(code, current!) ? action.value : current!;
 }
 
 function fewerToast({ id, code, value }: FewerTarget, privateChat: boolean): string {
@@ -149,17 +164,13 @@ function isFewerValueFor(code: string, value: string): boolean {
  */
 export const handleFewerCallback: CallbackHandler = async (context) => {
   const { db, cb, chatId, parsed } = context;
-  const code = parsed.parts[2] ?? "";
-  const carried = parsed.parts[3];
-  const valid = isSubscribableStablecoinId(parsed.arg) && FEWER_CODES.has(code) && (
-    hasExactParts(parsed.parts, 3) || (hasExactParts(parsed.parts, 4) && carried != null && isFewerValueFor(code, carried))
-  );
-  const generation = !valid ? null : await db.prepare(
+  const action = decodeFewerAction(parsed);
+  const generation = action == null ? null : await db.prepare(
     "SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?",
   ).bind(chatId).first<{ preference_generation: number }>();
-  const value = !valid || generation == null ? null : await resolveFewerValue(db, chatId, parsed.arg!, code, carried);
+  const value = action == null || generation == null ? null : await resolveFewerValue(db, chatId, action);
   await runCallbackMutation<FewerTarget>(context, {
-    validate: () => (valid && value != null ? { id: parsed.arg!, code, value } : null),
+    validate: () => (action != null && value != null ? { id: action.id, code: action.code, value } : null),
     requireAdmin: true,
     eventType: "subscribe",
     actionDetail: "fewer",

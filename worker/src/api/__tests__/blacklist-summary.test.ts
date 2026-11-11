@@ -618,7 +618,6 @@ describe("handleBlacklistSummary", () => {
     insert.run("usdt:tron:destroy", "0xdestroy", "destroy_event", "resolved", now - 30 * 86400, now - 30 * 86400, null, null, null);
     // Provider-failed refresh: prior value retained with the failure visible.
     insert.run("usdt:tron:failed", "0xfailed", "current_balance", "provider_failed", now - 3 * 86400, now - 3 * 86400, now - 60, "provider_null", 2);
-    // Fresh control row.
     insert.run("usdt:tron:fresh", "0xfresh", "current_balance", "resolved", now - 60, now - 60, null, null, null);
 
     const json = await readJsonResponse<Summary>(await handleBlacklistSummary(db), 200);

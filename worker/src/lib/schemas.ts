@@ -161,7 +161,6 @@ const DexSubgraphFailuresSchema = z.array(z.object({
   isolatedPoolIds: z.array(z.string()).max(5).optional(),
 })).max(32);
 
-/** Dex liquidity cron metadata shape */
 export const DexLiquidityCronMetadataSchema = z.object({
   rowsDropped: z.number().optional(),
   poolRejectionMateriality: z.object({

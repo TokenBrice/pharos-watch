@@ -134,7 +134,6 @@ function HorizontalNode({
   );
 }
 
-/** A straight hop between two nodes of one row, with its lock when a defense is missing. */
 function HorizontalHop({ defense, dashed, arrow = true }: { defense?: string; dashed: boolean; arrow?: boolean }) {
   return (
     <>
@@ -231,7 +230,6 @@ function HorizontalRouteMap({ route, anchorPrefix, onOpenStep }: RouteMapProps) 
         </>
       ), laneSpan);
 
-      // The spine runs through the label rows between the first and last routes.
       if (upper) {
         place(`${lane.branch.id}:fork-spine`, forkColumn, labelRow, "relative", (
           <span aria-hidden="true" className={cn("absolute inset-y-0 right-3 w-0 border-l", LINE_SOLID)} />
@@ -264,7 +262,6 @@ function HorizontalRouteMap({ route, anchorPrefix, onOpenStep }: RouteMapProps) 
           ));
         }
       });
-      // A shorter route runs a plain line to the rejoin bracket.
       if (lane.steps.length < laneLength) {
         const from = laneStart + lane.steps.length * 2 - 1;
         place(`${lane.branch.id}:run-out`, from, nodeRow, "relative", (

@@ -11,6 +11,7 @@ import {
 } from "../../lib/evm-rpc";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { buildChainAddressKey } from "./token-resolution";
+import { sqrtRatioToSpotPrice } from "./amm-math";
 
 const STAGED_POOL_RECOVERY_MAX_POOLS = 12;
 const STAGED_POOL_RECOVERY_MAX_AGE_SEC = 4 * 60 * 60;
@@ -142,31 +143,6 @@ export function rawAmountToDecimal(value: bigint, decimals: number): number {
   const fractionDigits = fraction.toString().padStart(decimals, "0").slice(0, 12);
   const asString = `${negative ? "-" : ""}${whole.toString()}.${fractionDigits}`.replace(/\.$/, "");
   return Number(asString);
-}
-/**
- * Convert a Uniswap V3-style sqrtPriceX96 (Q64.96) to a decimal-adjusted
- * spot price: the amount of token1 you receive per 1 token0 (in human
- * decimal units). Equivalent to: given 1 unit of token0, how many token1.
- * Consumers: `USD(token0) = spotPrice * USD(token1)`.
- *
- *   sqrtRatio   = sqrt(reserve1_wei / reserve0_wei) * 2^96   (Uniswap V3 convention)
- *   ratio_raw   = (sqrtRatio / 2^96)^2                         (reserve1_wei / reserve0_wei)
- *   spotPrice   = ratio_raw * 10^(token0Decimals - token1Decimals)
- *
- * Convert the bounded uint160 ratio to a floating-point significand before
- * squaring, then apply token decimals. Squaring the BigInt first and retaining
- * only 32 raw-ratio fractional bits loses legitimate pools whenever the raw
- * ratio is tiny but the decimal adjustment brings the human price back near
- * one (for example an 18-decimal token paired with 6-decimal USDC).
- */
-export function sqrtRatioToSpotPrice(
-  sqrtRatio: bigint,
-  token0Decimals: number,
-  token1Decimals: number,
-): number {
-  if (sqrtRatio <= 0n) return 0;
-  const normalizedSqrtRatio = Number(sqrtRatio) / Math.pow(2, 96);
-  return normalizedSqrtRatio * normalizedSqrtRatio * Math.pow(10, token0Decimals - token1Decimals);
 }
 
 const CL_POOL_ABI = parseAbi([

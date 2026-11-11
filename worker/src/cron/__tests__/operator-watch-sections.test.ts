@@ -19,13 +19,13 @@ import {
   loadYieldDataCoverageWatch,
 } from "../operator-watch-dex-yield";
 import {
-  MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY,
   loadMintBurnStuckConfigWatchConditions,
 } from "../operator-watch-mintburn";
 import {
   buildPricingOperatorConditions,
   pricingOperatorRuleIds,
 } from "../operator-watch-pricing";
+import { loadMintBurnStuckConfigs, MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY } from "../mint-burn/run-state";
 import { loadProbeOperatorWatch } from "../operator-watch-probe";
 
 describe("loadProbeOperatorWatch", () => {
@@ -311,6 +311,18 @@ describe("mint/burn stuck config watch conditions", () => {
       label: expect.stringContaining("2 incomplete attempts"),
       active: true,
     }]);
+  });
+
+  it("reads every stuck config in stored order, beyond the diagnostic sample cap", async () => {
+    const entries = Object.fromEntries(Array.from({ length: 12 }, (_, index) => [
+      `config-${index}`, { consecutiveIncomplete: index + 2 },
+    ]));
+    const db = mockD1([cacheRow(JSON.stringify({ entries }))]);
+    const result = await loadMintBurnStuckConfigs(db);
+    expect(result).toEqual({
+      configs: Object.keys(entries).map((configKey, index) => ({ configKey, streak: index + 2 })),
+      readFailed: false,
+    });
   });
 
   it("does not raise a single incomplete attempt", async () => {

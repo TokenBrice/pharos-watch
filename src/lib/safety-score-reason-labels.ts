@@ -315,7 +315,6 @@ function describeCommonModeShare(share: string, key: string, qualifier: string):
   return `${upperBound ? "Up to " : ""}${share} of reviewed supply ${verb} (${notes})`;
 }
 
-/** One reason, rewritten for readers. */
 export function humanizeSafetyScoreReason(message: string): string {
   return humanizeReasonParts(message).one;
 }

@@ -41,10 +41,6 @@ import {
   computeYieldSignal,
 } from "./dews/signal-families";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export type { ThreatBand };
 
 // Re-exported for back-compat with existing imports (tests, downstream callers).
@@ -85,24 +81,12 @@ export interface DEWSResult {
   staleFlags?: Record<string, boolean>;
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const MIN_AVAILABLE_WEIGHT = 0.3;
-
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
 
 function roundMetric(value: number, decimals = 2): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
 }
-
-// ---------------------------------------------------------------------------
-// Main compute
-// ---------------------------------------------------------------------------
 
 export function computeDEWS(input: DEWSInput): DEWSResult | null {
   const signals: Record<DewsSignalKey, SignalResult> = {
@@ -116,7 +100,6 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     yield: computeYieldSignal(input),
   };
 
-  // Weighted average with redistribution for missing signals
   let totalWeight = 0;
   let weightedSum = 0;
   const effectiveWeights: Partial<Record<DewsSignalKey, number>> = {};

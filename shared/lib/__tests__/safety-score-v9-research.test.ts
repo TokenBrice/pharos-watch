@@ -88,7 +88,6 @@ describe("v9 research handoff contracts", () => {
     );
 
     expect(trace.includedPillars).toEqual(["backing", "exit", "control"]);
-    // Priced at the policy's unknown backing quality for cause U.
     expect(trace.diagnosticPillarScores.backing).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U);
     expect(trace.limitedEvidenceCauses).toEqual(["U"]);
     expect(trace.limitingPillars).toEqual([]);

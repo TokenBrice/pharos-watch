@@ -13,7 +13,7 @@ import {
   buildPublicApiKeyReturningClause,
   buildPublicApiKeySelectQuery,
   clearApiKeyCache,
-  getApiKeyRuntimeState,
+  clearApiKeyUsage,
   getNowSec,
   mapRowToSummary,
   normalizeCreateInput,
@@ -272,7 +272,7 @@ export async function updateApiKey(
   }
 
   clearApiKeyCache(existing.key_prefix);
-  getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
+  clearApiKeyUsage(id);
   await recordApiKeyAuditOrLog(db, id, "updated", parsed as Record<string, unknown>, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
@@ -295,7 +295,7 @@ export async function deactivateApiKey(
   await db.prepare("UPDATE api_keys SET is_active = 0, updated_at = ? WHERE id = ?").bind(nowSec, id).run();
 
   clearApiKeyCache(existing.key_prefix);
-  getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
+  clearApiKeyUsage(id);
   await recordApiKeyAuditOrLog(db, id, "deactivated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
@@ -347,7 +347,7 @@ export async function rotateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyCache(material.keyPrefix);
-  getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
+  clearApiKeyUsage(id);
   await recordApiKeyAuditOrLog(db, id, "rotated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {

@@ -262,7 +262,6 @@ export function resolveGeneratorApiBase(): string | null {
   return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
 }
 
-/** Build public-dataset generator fetch headers from GENERATOR_API_KEY_ENV_NAMES. */
 export function generatorFetchHeaders(url?: string): Record<string, string> {
   return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url });
 }

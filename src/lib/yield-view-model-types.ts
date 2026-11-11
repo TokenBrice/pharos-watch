@@ -22,7 +22,7 @@ import type {
   YieldBenchmarkRegistry,
   YieldType,
 } from "@shared/types";
-import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
+import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 
 export type { YieldAttentionFilter, YieldBenchmarkFilter, YieldDepthFilter, YieldFilterOption, YieldOpportunityFilter, YieldPegFilter, YieldSourceChangedFilter, YieldSourceConfidenceFilter, YieldSourcePostureFilter, YieldViewModelFilters, YieldViewModelUrlParams, YieldWarningsFilter, YieldWatchlistFilter };
 

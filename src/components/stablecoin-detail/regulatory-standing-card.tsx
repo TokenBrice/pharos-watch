@@ -1,4 +1,3 @@
-// src/components/stablecoin-detail/regulatory-standing-card.tsx
 "use client";
 
 import type { ReactNode } from "react";

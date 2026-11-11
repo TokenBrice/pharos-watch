@@ -25,12 +25,15 @@ vi.mock("../../../lib/api-key-auth", () => ({
   authenticateApiKeyFromFreshCache: apiKeyMocks.authenticateApiKeyFromFreshCache,
 }));
 
-vi.mock("../../../lib/api-key-rate-limit", () => ({
-  checkApiKeyRateLimit: apiKeyMocks.checkApiKeyRateLimit,
-  checkIsolateLocalApiKeyRateLimit: apiKeyMocks.checkIsolateLocalApiKeyRateLimit,
+vi.mock("../../../lib/api-key-core", () => ({
   isApiKeyRateLimitDependencyCircuitOpen: apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen,
   recordApiKeyRateLimitDependencyFailure: apiKeyMocks.recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess: apiKeyMocks.recordApiKeyRateLimitDependencySuccess,
+}));
+
+vi.mock("../../../lib/api-key-rate-limit", () => ({
+  checkApiKeyRateLimit: apiKeyMocks.checkApiKeyRateLimit,
+  checkIsolateLocalApiKeyRateLimit: apiKeyMocks.checkIsolateLocalApiKeyRateLimit,
   recordApiKeyUsage: apiKeyMocks.recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit: apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit,
 }));

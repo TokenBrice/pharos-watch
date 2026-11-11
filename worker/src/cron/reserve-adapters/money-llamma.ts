@@ -232,7 +232,6 @@ async function fetchChainCensus(
     throw new Error(`${ADAPTER_KEY}: ${chain} MONEY supply overflows the number range`);
   }
 
-  // Per-market operator linkage and debt.
   const operatorResults = await fetchChainMulticall(
     chain,
     operators.flatMap((operator, marketId): OnchainMulticall3Call[] => [
@@ -274,7 +273,6 @@ async function fetchChainCensus(
     return { marketId, operator: normalizeAddress(operator), collateralAddress, ammAddress, symbol: "", decimals: 18, debtTokens, minBand: 0, maxBand: 0, activeBand: 0 };
   });
 
-  // Collateral identity + band span + active band.
   const metadataResults = await fetchChainMulticall(
     chain,
     descriptors.flatMap((market): OnchainMulticall3Call[] => [

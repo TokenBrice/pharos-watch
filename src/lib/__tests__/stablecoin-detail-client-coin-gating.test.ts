@@ -1,4 +1,3 @@
-// src/lib/__tests__/stablecoin-detail-client-coin-gating.test.ts
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { MAX_MINT_AUTHORITY_DETAIL_CONTROLS } from "../stablecoin-detail-mint-authority-client";

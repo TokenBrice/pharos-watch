@@ -1,3 +1,4 @@
+import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import {
   ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,
@@ -491,11 +492,9 @@ function passesLendingOpportunitySizeGate(params: {
   });
 }
 
-const FINAL_TVL_ELIGIBILITY_YIELD_TYPES: Record<string, true> = {
-  "lending-opportunity": true,
-  "fixed-yield": true,
-  "structured-tranche": true,
-};
+const FINAL_TVL_ELIGIBILITY_YIELD_TYPES: Record<string, true> = Object.fromEntries(
+  [...EXTERNAL_OPPORTUNITY_YIELD_TYPES].map((yieldType) => [yieldType, true as const]),
+);
 
 /**
  * Final fail-closed TVL eligibility pass for external venue rows.

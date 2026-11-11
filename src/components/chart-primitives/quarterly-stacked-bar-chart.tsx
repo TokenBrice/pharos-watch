@@ -33,7 +33,6 @@ export function QuarterlyStackedBarChart<T extends object>({
   children,
 }: QuarterlyStackedBarChartProps<T>) {
   const { ref, ready, width, height: measuredHeight } = useChartContainerReady<HTMLDivElement>();
-  // Stack heights, not individual series, set the value axis.
   const stackTotals = useMemo(
     () =>
       data.map((row) =>

@@ -85,7 +85,6 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
       && (!chain || config.chain.chainId === chain)).map((config) => config.chain.chainId))];
     const chainInClause = queryChainIds.length > 0 ? buildInClause(queryChainIds) : { sql: "NULL", binds: [] };
 
-    // Build WHERE conditions
     const conditions: string[] = ["stablecoin_id = ?", `chain_id IN (${chainInClause.sql})`, "below_display_threshold = 0"];
     // Pending proof chunks cannot publish effective destruction before atomic acceptance.
     const supplyAccepted = mintBurnSupplyProofAcceptedSql();

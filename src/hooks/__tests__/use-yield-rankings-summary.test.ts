@@ -62,7 +62,6 @@ describe("useYieldRankingsSummary", () => {
     await waitFor(() => expect(result.current.isFetching).toBe(true));
     expect(result.current.data?.rankings[0]?.id).toBe("usdc-circle");
 
-    // Completing the fetch replaces the retained rankings.
     act(() => {
       releaseSecondFetch?.(summaryPayload("usdt-tether"));
     });

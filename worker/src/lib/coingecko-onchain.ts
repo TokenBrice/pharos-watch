@@ -170,11 +170,6 @@ async function readCgOnchainJsonBody<T>(
   }
 }
 
-// ---------------------------------------------------------------------------
-// API functions
-// ---------------------------------------------------------------------------
-
-/** Rate-limit helper: wait between requests */
 export async function onchainRateLimit(requestCount: number, signal?: AbortSignal): Promise<void> {
   if (requestCount > 0) {
     await sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);

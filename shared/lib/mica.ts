@@ -111,7 +111,6 @@ export const MICA_TOKEN_TYPE_LABELS: Record<MicaTokenType, string> = {
   ART: "Asset-Referenced Token",
 };
 
-/** Authorization-route labels. */
 export const MICA_AUTHORIZATION_TYPE_LABELS: Record<MicaAuthorizationType, string> = {
   emi: "EMI authorization",
   "credit-institution": "Credit institution",

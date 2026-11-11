@@ -4,8 +4,6 @@ import { WATCH_MAX_SCORE } from "@shared/lib/dews-config";
 import type { DEWSInput } from "../dews";
 import { makeDewsInput } from "./dews.test-support";
 
-// --- computeDEWS tests ---
-
 function computeDews(input: DEWSInput) {
   const result = computeDEWS(input);
   expect(result).not.toBeNull();

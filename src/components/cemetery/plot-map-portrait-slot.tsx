@@ -261,7 +261,6 @@ function PortraitLayer({
     sheet.focus({ preventScroll: true });
   }, [openId, openSeq, reducedMotion]);
 
-  // Esc closes the sheet from anywhere on the page while it is open.
   useEffect(() => {
     if (!openId) return;
     const onKey = (ev: globalThis.KeyboardEvent) => {
@@ -293,7 +292,6 @@ function PortraitLayer({
     (ev: MouseEvent<HTMLDivElement>) => {
       const hit = (ev.target as Element).closest<HTMLElement>("[data-grave-id]");
       if (!hit) {
-        // a tap on empty ground unpins
         if (openId) closeSheet("silent");
         return;
       }

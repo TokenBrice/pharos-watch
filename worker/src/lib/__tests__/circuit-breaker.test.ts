@@ -94,7 +94,6 @@ describe("circuit-breaker", () => {
     });
   });
 
-  // --- getCircuitRecord ---
 
   describe("getCircuitRecord", () => {
 
@@ -222,7 +221,6 @@ describe("circuit-breaker", () => {
     });
   });
 
-  // --- shouldAttemptFetch ---
 
   describe("shouldAttemptFetch", () => {
     it("allows fetch when circuit is closed", async () => {
@@ -285,7 +283,6 @@ describe("circuit-breaker", () => {
     });
   });
 
-  // --- recordOutcome — success ---
 
   describe("recordOutcome — success", () => {
     it("resets consecutiveFailures to 0", async () => {
@@ -427,7 +424,6 @@ describe("circuit-breaker", () => {
     });
   });
 
-  // --- recordOutcome — failure ---
 
   describe("recordOutcome — failure", () => {
 
@@ -461,7 +457,6 @@ describe("circuit-breaker", () => {
     });
   });
 
-  // --- getCircuitStates ---
 
   describe("getCircuitStates", () => {
     it("returns all circuit records", async () => {
@@ -530,7 +525,6 @@ describe("circuit-breaker", () => {
     expect(getCircuitImpactStatus(countPublicImpactOpenCircuits(circuits))).toBe("healthy");
   });
 
-  // --- recoverBreakerOnNoCandidate ---
 
   describe("recoverBreakerOnNoCandidate", () => {
     it("records success when breaker is half-open so it can close on the next read", async () => {

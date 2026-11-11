@@ -93,7 +93,6 @@ function ArchivePreviewLayout({ title, riskSignal, compactIntelligence, bodyBloc
 
 function HomepagePreviewLayout({ title, riskSignal, compactIntelligence, bodyBlock }: PreviewLayoutProps) {
   return (
-    /* Homepage: two-column layout */
     <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
       <div className="min-w-0 space-y-5">
         <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">

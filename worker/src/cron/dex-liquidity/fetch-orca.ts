@@ -270,7 +270,6 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       errors.push(`page ${page} had no eligible pools despite minTvl filter`);
     }
 
-    // Cursor-based pagination
     const nextCursor = getOrcaNextCursor(json.meta);
     if (nextCursor && seenCursors.has(nextCursor)) {
       degraded = true;

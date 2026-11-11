@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import {
   makeWorkerSafetyScoreV9Publication,
+  serializeSafetyScoreV9PublicationWithEncoding,
 } from "../../test-helpers/report-cards-v9";
 import {
   admitAndSerializeSafetyScoreV9Publication,
@@ -22,7 +23,6 @@ import {
   publicationIdentityFromStorageEnvelope,
   SafetyScoreV9StorageMetadataSchema,
   serializeSafetyScoreV9Publication,
-  serializeSafetyScoreV9PublicationWithEncoding,
 } from "../safety-score-v9/publication-codec";
 import {
   decodePublicationDictionary, encodePublicationDictionary,
@@ -109,6 +109,13 @@ describe("Safety Score V9 publication codec", () => {
     await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
       ...packed, packedBytes: packed.packedBytes - 1,
     }))).rejects.toThrow(/declared uncompressed byte length/);
+    // "QR==" and "QQ==" decode to the same byte; only the second is the canonical spelling.
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...packed, payload: "QR==",
+    }))).rejects.toThrow(/base64 payload is not canonical/);
+    await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
+      ...packed, payload: "!",
+    }))).rejects.toThrow(/Malformed Safety Score v9 publication base64 payload/);
     const noncanonical = Buffer.from(JSON.stringify(publication));
     const transport = gzipSync(Buffer.concat([Buffer.from("[]\n"), noncanonical]));
     await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({
@@ -165,14 +172,15 @@ describe("Safety Score V9 publication codec", () => {
   });
   it("encodes the same canonical envelope while reusing only frozen schema-equal cards", async () => {
     const publication = deepFreeze(makeWorkerSafetyScoreV9Publication());
-    const { publication: admitted, stored } = await admitAndSerializeSafetyScoreV9Publication(publication, undefined, "legacy");
+    const { publication: admitted, stored } = await admitAndSerializeSafetyScoreV9Publication(publication);
     expect(admitted.cards[0]).toBe(publication.cards[0]);
     expect(Object.isFrozen(admitted)).toBe(true);
     expect(Object.isFrozen(admitted.cards)).toBe(true);
     const envelope = JSON.parse(stored);
     const raw = Buffer.from(stableJsonStringifyV1(publication));
     expect(envelope.payloadSha256).toBe(createHash("sha256").update(raw).digest("hex"));
-    expect(envelope.payload).toBe(bytesToBase64(gzipSync(raw)));
+    const packed = Buffer.from([...encodePublicationDictionary(publication).chunks].join(""));
+    expect(envelope.payload).toBe(bytesToBase64(gzipSync(packed)));
   });
 
   it("snapshots mutable callers before compression and leaves their graph unfrozen", async () => {

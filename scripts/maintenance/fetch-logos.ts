@@ -43,7 +43,6 @@ async function fetchLogos(): Promise<void> {
 
   const llamaGeckoIds = new Set(assets.flatMap((asset) => (asset.gecko_id ? [asset.gecko_id] : [])));
 
-  // Build gecko_id -> canonical ticker-issuer id mapping.
   const geckoToCanonicalId: Record<string, string> = {};
   for (const coin of stablecoins) {
     if (coin.geckoId && llamaGeckoIds.has(coin.geckoId)) {
@@ -99,7 +98,6 @@ async function fetchLogos(): Promise<void> {
   try {
     existing = JSON.parse(fs.readFileSync(LOGO_OUTPUT_PATH, "utf-8"));
   } catch {
-    // file doesn't exist yet — start fresh
   }
   for (const [id, url] of Object.entries(existing)) {
     if (!/^\d+$/.test(id) && url.startsWith("/logos/")) {

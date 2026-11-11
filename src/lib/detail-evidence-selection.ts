@@ -1,6 +1,6 @@
 import type { ApiMeta } from "@/lib/api";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
-import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
+import { RETAINED_EVIDENCE_MAX_AGE_MS } from "@/lib/retained-evidence-policy";
 
 export interface DetailEvidence {
   data: StablecoinLiveSummary;
@@ -10,10 +10,10 @@ export interface DetailEvidence {
 export function isRetainableDetailEvidence(evidence: DetailEvidence, nowMs: number): boolean {
   const at = evidence.meta.updatedAt;
   return at != null && at > 0 && nowMs >= at * 1000
-    && nowMs - at * 1000 <= HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS
+    && nowMs - at * 1000 <= RETAINED_EVIDENCE_MAX_AGE_MS
     && [evidence.data.priceUpdatedAt, evidence.data.priceObservedAt, evidence.data.priceSyncedAt,
       evidence.data.supplyObservedAt].every((clock) => clock == null || (clock > 0 && clock * 1000 <= nowMs
-        && nowMs - clock * 1000 <= HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS));
+        && nowMs - clock * 1000 <= RETAINED_EVIDENCE_MAX_AGE_MS));
 }
 
 /** An equal aggregate clock is not an immutable payload identity: current overlays win. */

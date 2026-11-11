@@ -15,10 +15,6 @@ import type {
   MintBurnValuation,
 } from "@shared/types/mint-burn";
 
-// ---------------------------------------------------------------------------
-// Flow Intensity Score (FIS)
-// ---------------------------------------------------------------------------
-
 export interface FlowIntensityInput {
   /** Current 24 h net flow (mint − burn), USD */
   currentDailyNet: number;
@@ -70,20 +66,12 @@ export function computeFlowIntensity(
   return clamp(raw, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX);
 }
 
-// ---------------------------------------------------------------------------
-// Gauge bands
-// ---------------------------------------------------------------------------
-
 // Thresholds live in shared/lib so the frontend draws the same band zones (R5).
 export {
   getGaugeBand,
   getGaugeScoreInterval,
   isGaugeBandRobustToWithheldWeight,
 } from "@shared/lib/mint-burn-gauge-bands";
-
-// ---------------------------------------------------------------------------
-// Bank Run Gauge (market-cap-weighted composite)
-// ---------------------------------------------------------------------------
 
 export interface GaugeCoinInput {
   intensity: number | null;
@@ -112,10 +100,6 @@ export function computeGaugeScore(
   // Keep the published composite on the documented [-100, 100] interval.
   return clamp(weightedSum / totalMcap, -100, 100);
 }
-
-// ---------------------------------------------------------------------------
-// Flight-to-quality detection
-// ---------------------------------------------------------------------------
 
 export interface FlightToQualityInput {
   /** 24 h net flow of "safe" stablecoins (USDC, USDT, etc.), USD */

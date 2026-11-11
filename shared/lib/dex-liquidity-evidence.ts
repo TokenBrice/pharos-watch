@@ -1,3 +1,5 @@
+export const LIQUIDITY_STRONG_HISTORY_CONFIDENCE_MIN = 0.75;
+
 export type LiquidityEvidenceClassification = {
   liquidityEvidenceClass: "unobserved" | "measured" | "partial_measured" | "observed_unmeasured";
   hasMeasuredLiquidityEvidence: boolean;
@@ -58,7 +60,7 @@ export function isTrendworthyLiquiditySnapshot(
   coverageConfidence: number | null,
 ): boolean {
   if (totalTvlUsd <= 0) return false;
-  if ((coverageConfidence ?? 0) < 0.75) return false;
+  if ((coverageConfidence ?? 0) < LIQUIDITY_STRONG_HISTORY_CONFIDENCE_MIN) return false;
   return coverageClass === "primary" || coverageClass === "mixed";
 }
 

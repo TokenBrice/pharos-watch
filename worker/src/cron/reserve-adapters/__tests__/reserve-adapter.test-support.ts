@@ -77,10 +77,6 @@ export function expectWarningEffect(
   expect(warning?.effect).toBe(effect);
 }
 
-// ---------------------------------------------------------------------------
-// Network table
-// ---------------------------------------------------------------------------
-
 export interface AdapterHttpResponse {
   status?: number;
   body?: string;
@@ -599,10 +595,6 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
 
   return { fetchSpy, chainRpcs, requests, rpcCalls, unmatched };
 }
-
-// ---------------------------------------------------------------------------
-// Adapter runner
-// ---------------------------------------------------------------------------
 
 export interface RunAdapterOptions {
   /** Installed for this run when the test has not installed one itself. */

@@ -7,6 +7,7 @@ import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
 import { PEG_HERO_CHIP_LABELS } from "./peg-taxonomy";
 import { PEG_LABELS_SHORT } from "./classification/pegs";
+import { QUALITY_TIER_3_CLASSES } from "./classification/peg-severity";
 import { DEPEG_THRESHOLD_BPS } from "./depeg-config";
 
 export * from "./classification/domain";
@@ -37,6 +38,18 @@ export * from "./classification/reserve-risk";
 export * from "./classification/tape";
 export * from "./classification/verdict";
 export type { BadgeStyle } from "./classification/common";
+
+const DEX_DURABILITY_STYLES = {
+  durable: { label: "Durable", text: QUALITY_TIER_3_CLASSES.good.text, bar: "bg-state-positive-solid" },
+  moderate: { label: "Moderate", text: QUALITY_TIER_3_CLASSES.watch.text, bar: "bg-state-warn-solid" },
+  fragile: { label: "Fragile", text: QUALITY_TIER_3_CLASSES.bad.text, bar: "bg-state-danger-solid" },
+} as const;
+
+export function getDexDurabilityStyle(score: number) {
+  if (score >= 70) return DEX_DURABILITY_STYLES.durable;
+  if (score >= 40) return DEX_DURABILITY_STYLES.moderate;
+  return DEX_DURABILITY_STYLES.fragile;
+}
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
 export const FLOW_COVERAGE_LABELS = { tracked: "Tracked", lagging: "Lagging" } as const;
@@ -417,7 +430,6 @@ export const PEG_BAND_LABELS = {
 const LIMITED_EVIDENCE_BADGE_CLASS =
   "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
 
-/** One label and badge palette for the screener's V9 evidence states. */
 export const SAFETY_EVIDENCE_LABELS = {
   strong: "Strong",
   adequate: "Adequate",

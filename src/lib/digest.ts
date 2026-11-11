@@ -19,7 +19,6 @@ export const EDITORIAL_BODY_STYLE: React.CSSProperties = {
   fontStyle: "italic",
 };
 
-/** Inline style for metadata labels — Courier upright */
 export const EDITORIAL_META_STYLE: React.CSSProperties = {
   fontFamily: "'Courier New', Courier, monospace",
 };
@@ -55,9 +54,6 @@ export function formatDigestDateLabel(dateStr: string, monthStyle: "long" | "sho
   return monthStyle === "long" ? formatLongDate(date) : formatShortDate(date);
 }
 
-/**
- * Split digest text into paragraphs by double newlines.
- */
 export function splitDigestParagraphs(text: string | null | undefined): string[] {
   if (!text) return [];
 

@@ -1,12 +1,15 @@
+import { CRON_EVENT_CACHE_PREFIX } from "@shared/lib/operational-cache-keys";
 import { describeError } from "@shared/lib/error-utils";
 import type { ErrorDescriptor } from "@shared/types/error";
-import type { CronResultStatus, CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
+import type { CronEvent, CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
 import { settleAfterAbort, CRON_ABORT_GRACE_MS, CRON_ABORT_OBSERVATION_MARGIN_MS } from "./cron-abort-settlement";
 import {
   markScheduledChildStarted, writeScheduledChildTerminal, CronChildTerminalSupersededError, childAttemptTable,
   type ScheduledChildIdentity,
 } from "./scheduled-child-terminal";
-import type { ScheduledExecutionFence } from "./scheduled-slot-fence";
+import type { ScheduledExecutionFence } from "./scheduled-execution-contract";
+import type { CronResult, CronProgressUpdate, CronProgressReporter, CronProductivity } from "./cron-run-contract";
+export type { CronResult, CronProgressUpdate, CronProgressReporter } from "./cron-run-contract";
 import type { SlotDeadline } from "./cron-timeouts";
 import {
   CronJobAbandonedError,
@@ -27,7 +30,6 @@ import {
 import { setCache } from "./db-cache";
 import {
   recordProducerOutcome,
-  type CronProductivity,
   type ProducerIdentity,
 } from "./producer-history";
 import { stripSensitive } from "./safe-error-message";
@@ -123,27 +125,14 @@ export function __resetCronFailureCountsForTests(): void {
   cronFailureCounts.clear();
 }
 
-export type CronEventSeverity = "info" | "warning" | "error";
+export type CronEventSeverity = CronEvent["severity"];
 
-export interface CronEventInput {
-  job: string;
-  eventType: string;
+export type CronEventInput = Pick<CronEvent, "job" | "eventType" | "message" | "metadata"> & {
   severity?: CronEventSeverity;
-  message: string;
-  metadata?: Record<string, unknown>;
-}
+};
 
-export interface CronEventRecord {
-  event: "cron_event";
-  job: string;
-  eventType: string;
-  severity: CronEventSeverity;
-  message: string;
-  metadata?: Record<string, unknown>;
-  recordedAt: number;
-}
+export type CronEventRecord = CronEvent;
 
-const CRON_EVENT_CACHE_PREFIX = "cron:event";
 const MAX_CRON_EVENT_MESSAGE_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_STRING_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_KEYS = 30;
@@ -213,26 +202,6 @@ export async function logCronEvent(db: D1Database, event: CronEventInput): Promi
   return record;
 }
 
-// --- Cron run logging types ---
-
-export interface CronResult {
-  itemCount?: number;
-  metadata?: string;
-  status?: CronResultStatus;
-  /** Human-readable failure summary persisted to cron_runs.error when present; preferred over metadata in the alert body for "error" statuses. */
-  error?: string;
-  /**
-   * Affirmative discriminant set only on results produced by the cron-stage
-   * abort builders (see `abortResult` in `sync-stablecoins/runtime.ts`). Lets `isAbortResult`
-   * identify the abort sentinel without relying on the absence of fields from
-   * other stage result shapes.
-   */
-  aborted?: true;
-  /** Explicit productive-output/publication contract for durable producer history. */
-  productivity?: CronProductivity;
-  /** Job opt-in: only confirmed committed publication evidence may survive a settled abort. */
-  abortResultPolicy?: "preserve-committed-publication";
-}
 
 /** A completed run's terminal row outlasts one spent D1 resource window instead of misreporting the run. */
 const TERMINAL_ACCOUNTING_RETRY = { waitOutResourceWindow: true } as const;
@@ -266,16 +235,6 @@ export class CronTerminalAccountingError extends Error {
   }
 }
 
-export interface CronProgressUpdate {
-  stage?: string | null;
-  itemsDone?: number | null;
-  itemsTotal?: number | null;
-  message?: string | null;
-  leaseOwner?: string | null;
-  metadata?: Record<string, unknown> | null;
-}
-
-export type CronProgressReporter = (update: CronProgressUpdate) => Promise<void>;
 
 export interface CronRunLoggerOptions {
   slotStartedAt?: number | null;
@@ -353,7 +312,6 @@ export function resolveCronDegradedReason(
   return status;
 }
 
-// --- Internal helpers ---
 
 function serializeProgressMetadata(metadata: Record<string, unknown> | null | undefined, job: string): string | null {
   if (!metadata || Object.keys(metadata).length === 0) return null;
@@ -437,7 +395,6 @@ async function clearCronProgress(
   );
 }
 
-// --- Main cron run logger ---
 
 /**
  * Wraps a cron job function with execution logging and an AbortController timeout.

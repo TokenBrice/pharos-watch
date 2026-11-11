@@ -7,6 +7,8 @@ import type {
 } from "@pharos/contracts/api-keys";
 import { API_KEY_TIER_VALUES } from "@pharos/contracts/api-keys";
 import {
+  API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
+  CIRCUIT_OPEN_THRESHOLD,
   API_KEY_DEFAULT_EXPIRY_SEC,
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
   API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
@@ -18,6 +20,7 @@ import { bytesToBase64Url } from "@shared/lib/base64url";
 import { IsolateLocalState } from "./isolate-local-state";
 import type { MinimalD1Database } from "./minimal-d1";
 import type { CacheRetentionPolicy } from "./db-cache";
+import { D1_INT32_MAX } from "./d1-constants";
 
 const API_KEY_PREFIX_BYTES = 8;
 const API_KEY_SECRET_BYTES = 24;
@@ -177,8 +180,20 @@ const _ak = new IsolateLocalState(() => ({
   lastApiKeyFallbackRateLimitPruneBucket: null as number | null,
 }));
 
-export function getApiKeyRuntimeState() {
-  return _ak.state;
+export function getApiKeyRuntimeSnapshotForTests() {
+  const state = _ak.state;
+  return {
+    ...state,
+    apiKeyCache: new Map([...state.apiKeyCache].map(([key, value]) => [key, { ...value, row: { ...value.row } }])),
+    apiKeyLastUsageUpdateById: new Map(state.apiKeyLastUsageUpdateById),
+    apiKeyFallbackRateLimitById: new Map([...state.apiKeyFallbackRateLimitById].map(([key, value]) => [key, { ...value }])),
+    apiKeyRateLimitDependencyCircuit: { ...state.apiKeyRateLimitDependencyCircuit },
+  };
+}
+
+export function seedApiKeyRuntimeStateForTests(input: Partial<ReturnType<typeof getApiKeyRuntimeSnapshotForTests>>): void {
+  Object.assign(_ak.state, input);
+  Object.assign(_ak.state, getApiKeyRuntimeSnapshotForTests());
 }
 
 // LRU eviction: Map iterates in insertion order, so the first key is the
@@ -194,19 +209,12 @@ function pruneOldestMapEntries<K, V>(map: Map<K, V>, maxEntries: number): void {
 }
 
 function pruneExpiredApiKeyCache(nowMs: number): void {
-  const cache = getApiKeyRuntimeState().apiKeyCache;
+  const cache = _ak.state.apiKeyCache;
   for (const [keyPrefix, cached] of cache) {
     if (cached.freshUntilMs <= nowMs) {
       cache.delete(keyPrefix);
     }
   }
-}
-
-// Caps a Map at maxEntries by evicting oldest-first (LRU; see
-// pruneOldestMapEntries). Callers (e.g. api-key-rate-limit.ts) must use
-// delete+set on access to keep the LRU ordering meaningful.
-export function capApiKeyMapEntries<K, V>(map: Map<K, V>, maxEntries: number): void {
-  pruneOldestMapEntries(map, maxEntries);
 }
 
 export function resetApiKeyStateForTests(): void {
@@ -385,7 +393,7 @@ export function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
 }
 
 export function clearApiKeyCache(keyPrefix: string): void {
-  getApiKeyRuntimeState().apiKeyCache.delete(keyPrefix);
+  _ak.state.apiKeyCache.delete(keyPrefix);
 }
 
 export function getCachedApiKeyByPrefix(
@@ -393,7 +401,7 @@ export function getCachedApiKeyByPrefix(
   options: { nowMs?: number } = {},
 ): ApiKeyRow | null {
   const nowMs = options.nowMs ?? Date.now();
-  const cache = getApiKeyRuntimeState().apiKeyCache;
+  const cache = _ak.state.apiKeyCache;
   const cached = cache.get(keyPrefix);
   if (!cached) {
     return null;
@@ -419,7 +427,7 @@ export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Pro
     .first<ApiKeyRow>();
 
   if (row) {
-    const state = getApiKeyRuntimeState();
+    const state = _ak.state;
     pruneExpiredApiKeyCache(nowMs);
     state.apiKeyCache.delete(keyPrefix);
     state.apiKeyCache.set(keyPrefix, {
@@ -545,4 +553,101 @@ export async function selectPublicApiKeyById(db: ApiKeyDb, id: number): Promise<
 export function requireApiKeyPepper(pepper: string | undefined): string | Response {
   const effectivePepper = pepper?.trim();
   return effectivePepper ? effectivePepper : errorResponse(500, "API key hashing is not configured");
+}
+
+const API_KEY_RATE_LIMIT_CIRCUIT_COOLDOWN_MS = API_KEY_DEPENDENCY_RETRY_AFTER_SEC * 1000;
+
+export interface ApiKeyRateLimitDependencyCircuitSnapshot {
+  consecutiveFailures: number;
+  openUntilMs: number;
+  opened: boolean;
+}
+
+export function isApiKeyRateLimitDependencyCircuitOpen(nowMs = Date.now()): boolean {
+  return _ak.state.apiKeyRateLimitDependencyCircuit.openUntilMs > nowMs;
+}
+
+export function recordApiKeyRateLimitDependencySuccess(): void {
+  const circuit = _ak.state.apiKeyRateLimitDependencyCircuit;
+  circuit.consecutiveFailures = 0;
+  circuit.openUntilMs = 0;
+}
+
+export function recordApiKeyRateLimitDependencyFailure(
+  nowMs = Date.now(),
+): ApiKeyRateLimitDependencyCircuitSnapshot {
+  const circuit = _ak.state.apiKeyRateLimitDependencyCircuit;
+  if (circuit.openUntilMs > nowMs) {
+    return {
+      consecutiveFailures: circuit.consecutiveFailures,
+      openUntilMs: circuit.openUntilMs,
+      opened: true,
+    };
+  }
+
+  circuit.consecutiveFailures += 1;
+  if (circuit.consecutiveFailures >= CIRCUIT_OPEN_THRESHOLD) {
+    circuit.openUntilMs = nowMs + API_KEY_RATE_LIMIT_CIRCUIT_COOLDOWN_MS;
+  }
+
+  return {
+    consecutiveFailures: circuit.consecutiveFailures,
+    openUntilMs: circuit.openUntilMs,
+    opened: circuit.openUntilMs > nowMs,
+  };
+}
+
+export function admitIsolateLocalApiKeyQuota(apiKeyId: number, limit: number, bucketStart: number): boolean {
+  const state = _ak.state;
+  if (state.lastApiKeyFallbackRateLimitPruneBucket !== bucketStart) {
+    state.lastApiKeyFallbackRateLimitPruneBucket = bucketStart;
+    for (const [keyId, entry] of state.apiKeyFallbackRateLimitById) {
+      if (entry.bucketStart !== bucketStart) {
+        state.apiKeyFallbackRateLimitById.delete(keyId);
+      }
+    }
+  }
+  const existing = state.apiKeyFallbackRateLimitById.get(apiKeyId);
+
+  if (!existing || existing.bucketStart !== bucketStart) {
+    state.apiKeyFallbackRateLimitById.delete(apiKeyId);
+    state.apiKeyFallbackRateLimitById.set(apiKeyId, {
+      bucketStart,
+      count: 1,
+    });
+    pruneOldestMapEntries(state.apiKeyFallbackRateLimitById, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+    return true;
+  }
+
+  existing.count = Math.min(existing.count + 1, D1_INT32_MAX);
+  state.apiKeyFallbackRateLimitById.delete(apiKeyId);
+  state.apiKeyFallbackRateLimitById.set(apiKeyId, existing);
+  if (existing.count > limit) {
+    return false;
+  }
+
+  return true;
+}
+
+export function claimApiKeyRateLimitPruneBucket(bucketStart: number): boolean {
+  const state = _ak.state;
+  if (state.lastApiKeyRateLimitPruneBucket === bucketStart) return false;
+  state.lastApiKeyRateLimitPruneBucket = bucketStart;
+  return true;
+}
+
+export function shouldRecordApiKeyUsage(apiKeyId: number, nowSec: number): boolean {
+  const lastUpdatedAt = _ak.state.apiKeyLastUsageUpdateById.get(apiKeyId) ?? 0;
+  return !(nowSec - lastUpdatedAt < API_KEY_USAGE_UPDATE_WINDOW_SEC);
+}
+
+export function markApiKeyUsageRecorded(apiKeyId: number, nowSec: number): void {
+  const usage = _ak.state.apiKeyLastUsageUpdateById;
+  usage.delete(apiKeyId);
+  usage.set(apiKeyId, nowSec);
+  pruneOldestMapEntries(usage, API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES);
+}
+
+export function clearApiKeyUsage(apiKeyId: number): void {
+  _ak.state.apiKeyLastUsageUpdateById.delete(apiKeyId);
 }

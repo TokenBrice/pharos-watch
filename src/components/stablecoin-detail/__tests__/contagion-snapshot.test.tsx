@@ -413,7 +413,6 @@ describe("ContagionSnapshot", () => {
   it("keeps the drawn graph in a shrinkable grid slot so long inspection options cannot widen it", () => {
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
     const graph = screen.getByTestId("contagion-graph");
-    // LazySection wrapper -> min-w-0 slot -> the Context grid.
     expect(graph.parentElement?.parentElement?.className).toContain("min-w-0");
   });
 

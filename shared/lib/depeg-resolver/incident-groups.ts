@@ -10,7 +10,7 @@
  */
 
 import { median } from "../stats";
-import { classifyDepegClosure } from "../depeg-closure";
+import { classifyDepegClosure, isDepegRecovery } from "../depeg-closure";
 import type { DepegDirection } from "../../types/market";
 import type { DdrHistoricalEvent } from "./inputs";
 import {
@@ -77,7 +77,7 @@ function timedSeverityFragments(event: DdrHistoricalEvent, incidentStartedAt: nu
 
 function recoveredEvent(event: DdrHistoricalEvent): boolean {
   const closure = classifyDepegClosure(event);
-  return closure === "recovered" || closure === "legacy_recovered";
+  return isDepegRecovery(closure);
 }
 
 /** Open members dominate; equal-end conflicts conservatively require both recovery labels. */

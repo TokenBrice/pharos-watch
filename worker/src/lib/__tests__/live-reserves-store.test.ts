@@ -1036,7 +1036,6 @@ describe("live-reserves-store", () => {
     expect(overview.missingCoins).toBe(emptyOverview.missingCoins - 1);
     expect(overview.writeTimeoutUncertain).toBe(1);
 
-    // Sum of primary buckets equals configured coins (no cross-counting).
     const primarySum = overview.freshCoins
       + overview.staleCoins
       + overview.missingCoins

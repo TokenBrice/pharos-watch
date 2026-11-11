@@ -1,4 +1,4 @@
-import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "../execution-target-registry";
+import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./contract";
 import { buildSolidlyV2ExecutionCandidate } from "../solidly-v2";
 import { parsePoolSymbols } from "../pool-helpers";
 

@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 
 const STATUS_PILL_BASE = "rounded-full px-2 py-0.5 text-xs font-medium";
 
-/** Generic status pill — accepts any color class via `className`. */
 export function StatusPill({ className, children }: { className?: string; children: ReactNode }) {
   return <span className={cn(STATUS_PILL_BASE, className)}>{children}</span>;
 }

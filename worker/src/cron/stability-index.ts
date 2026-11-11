@@ -159,7 +159,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
   const now = Math.floor(Date.now() / 1000);
 
-  // Build price lookup from stablecoins cache
   const priceById = new Map<string, number>();
   for (const coin of tracked) {
     if (isObservedPrice(coin) && coin.price != null && typeof coin.price === "number" && coin.price > 0) {
@@ -253,7 +252,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     });
   }
 
-  // Deduplicate by stablecoin_id: group events, pick worst deviation, earliest start
   type DepegRow = PsiActiveDepegRow;
   const grouped = new Map<string, DepegRow[]>();
   for (const r of activeDepegs.results ?? []) {

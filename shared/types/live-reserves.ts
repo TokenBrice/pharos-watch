@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ReserveObservationEnvelopeSchema, ReserveBoundedFactsGenerationSchema } from "./safety-score-v9-reserve-scope";
 import { LenderBookObservationSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
-import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-declarations";
+import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-core";
 import type {
   BaseLiveReserveConfig,
   LiveReserveInput,

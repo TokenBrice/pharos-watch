@@ -204,7 +204,6 @@ export function TechnicalDetail({ children, className }: { children: ReactNode; 
   );
 }
 
-/** Public component state pill (`PUBLIC_COMPONENT_STATE_TONE`). */
 export function ComponentStatePill({ state, className }: { state: PublicComponentState; className?: string }) {
   const tone = PUBLIC_COMPONENT_STATE_TONE[state];
   return (

@@ -192,10 +192,8 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
 
         {showClassBlurb ? <p className="text-xs leading-snug text-muted-foreground">{meta.blurb}</p> : null}
 
-        {/* Hero: the drawn forecast */}
         <ForecastTimeline row={row} />
 
-        {/* Prediction facts (band + comparison stratum) — quiet caption under the hero */}
         {showBand && cumulative ? (
           <CumulativeDurationFacts duration={duration} unresolvedShare={unresolvedShare} />
         ) : showBand ? (
@@ -223,7 +221,6 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           </p>
         ) : null}
 
-        {/* Suppressed-duration reasons (terminal / insufficient / no-support) */}
         {terminal ? (
           <div className="rounded-lg border border-state-danger-solid/25 bg-state-danger-solid/[0.06] px-3 py-2.5">
             {vocabulary === "evidence_class" ? (

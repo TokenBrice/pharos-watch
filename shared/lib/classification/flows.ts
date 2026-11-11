@@ -98,3 +98,25 @@ export const GAUGE_BAND_TONE_CLASSES = {
   CONFIDENT: "border-state-positive bg-state-positive-subtle text-state-positive-strong",
   SURGE: "border-state-positive bg-state-positive-subtle text-state-positive-strong",
 } as const satisfies Record<GaugeBand, string>;
+
+/** Tailwind color class for net flow values (positive = green, negative = red) */
+interface SignedColorOptions {
+  positiveClass?: string;
+  negativeClass?: string;
+  zeroClass?: string;
+  positiveInclusiveZero?: boolean;
+}
+
+
+export function getNetColor(value: number, options: SignedColorOptions = {}): string {
+  const {
+    positiveClass = "text-emerald-700 dark:text-emerald-400",
+    negativeClass = "text-red-700 dark:text-red-400",
+    zeroClass = "text-muted-foreground",
+    positiveInclusiveZero = false,
+  } = options;
+
+  if (value > 0 || (positiveInclusiveZero && value === 0)) return positiveClass;
+  if (value < 0) return negativeClass;
+  return zeroClass;
+}

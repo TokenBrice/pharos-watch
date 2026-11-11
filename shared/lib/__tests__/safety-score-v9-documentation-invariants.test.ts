@@ -34,7 +34,6 @@ import { makeV9Pillar, makeV9ProductionScoreInput } from "./safety-score-v9-scor
 
 const PILLARS = ["backing", "exit", "control"] as const;
 
-/** The same policy with the documentation class switched off (block absent). */
 function policyWithoutDocumentationClass() {
   const raw = structuredClone(candidatePolicyAsset) as unknown as V9MethodologyPolicy;
   delete raw.semantic.evidence.documentation;

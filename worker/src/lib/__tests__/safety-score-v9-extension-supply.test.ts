@@ -771,7 +771,6 @@ describe("buildSafetyScoreV9SupplyReview", () => {
           representationGroup: {
             deploymentRouteKey: "representation-group:xaut-tether:xaut0-omnichain",
             representationId: "xaut0-omnichain",
-            // The packet claims fewer reviewed routes than the profile carries.
             routeIds: groupRouteIds.slice(0, -1),
             riskTier: "external-lock-mint",
             failureDomainKeys: ["contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",

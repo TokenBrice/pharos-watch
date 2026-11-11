@@ -12,8 +12,6 @@ import type {
   AlertSafetySourceRow,
 } from "@shared/types/status/telegram";
 
-// ---------- Constants ----------
-
 export const SNAPSHOT_KEYS = {
   dews: "alert:dews-snapshot",
   dewsAlertable: "alert:dews-alertable-snapshot",
@@ -36,8 +34,6 @@ export const SNAPSHOT_KEYS = {
 } as const;
 
 export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
-
-// ---------- Types ----------
 
 export type DewsSnapshot = Record<string, string>;
 /**
@@ -76,8 +72,6 @@ export interface ActiveDepegRow {
   peg_reference: number;
 }
 
-// ---------- Snapshot Parsing ----------
-
 export function parseSnapshotMap<T extends Record<string, unknown>>(
   cached: { value: string; updatedAt: number } | null,
 ): T | null {
@@ -92,8 +86,6 @@ export function isSnapshotMissingOrStale(
 ): boolean {
   return !cached || nowSec - cached.updatedAt > SNAPSHOT_MAX_AGE_SEC;
 }
-
-// ---------- Snapshot Building ----------
 
 export function filterAlertableBands(snapshot: DewsSnapshot | null): DewsSnapshot {
   if (!snapshot) return {};
@@ -122,8 +114,6 @@ export function buildDepegSnapshot(rows: ActiveDepegRow[]): DepegSnapshot {
   return snapshot;
 }
 
-// ---------- Signal Extraction ----------
-
 export function extractTopSignals(signalsJson: string | null): Array<{ name: string; value: number }> {
   if (!signalsJson) return [];
   try {
@@ -143,16 +133,12 @@ export function extractTopSignals(signalsJson: string | null): Array<{ name: str
   }
 }
 
-// ---------- Safety Grade Helpers ----------
-
 export function isSafetyDeescalation(oldGrade: string, newGrade: string): boolean {
   const oldRank = getReportCardGradeRank(oldGrade, UNKNOWN_REPORT_CARD_GRADE_RANK);
   const newRank = getReportCardGradeRank(newGrade, UNKNOWN_REPORT_CARD_GRADE_RANK);
   if (oldRank == null || newRank == null) return false;
   return newRank > oldRank;
 }
-
-// ---------- Snapshot Persistence ----------
 
 export interface TelegramAlertSnapshots {
   dews: DewsSnapshot;

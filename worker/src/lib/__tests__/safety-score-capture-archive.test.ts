@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
 import { SafetyScoreCaptureArchiveObjectSchema } from "@shared/types/safety-score-capture-archive";
+import {
+  SAFETY_SCORE_V9_CACHE_KEYS,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+} from "@shared/types/safety-score-cache-keys";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
@@ -63,6 +68,11 @@ describe("accepted Safety capture archive", () => {
     expect(put).toHaveBeenCalledOnce();
     const [key, value, options] = put.mock.calls[0]!;
     const object = SafetyScoreCaptureArchiveObjectSchema.parse(JSON.parse(value));
+    expect([object.base.key, object.delta.key, object.cards.key]).toEqual([
+      SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+      SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+      SAFETY_SCORE_V9_CACHE_KEYS.publication,
+    ]);
     for (const row of [object.base, object.delta]) {
       const stored = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(row.key);
       expect(row.value).toBe(stored?.value);

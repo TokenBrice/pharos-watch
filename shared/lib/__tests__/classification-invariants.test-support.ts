@@ -19,7 +19,7 @@ export function computeCentralizedCustodyFraction(
     allCoins.map((c) => [c.id, c]),
   ),
 ): number {
-  if (visited.has(coinId)) return 0; // cycle guard
+  if (visited.has(coinId)) return 0;
   const nextVisited = new Set(visited);
   nextVisited.add(coinId);
 

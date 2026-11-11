@@ -342,7 +342,6 @@ export function YieldSourceDetails({
     : (row.provenance?.selectionReason ?? row.yieldSource);
   return (
     <div className="min-w-0 text-sm text-muted-foreground" title={selectionReason}>
-      {/* Line 1: confidence dot · source name · source-changed chip */}
       <div className="flex min-w-0 items-center gap-1.5">
         <YieldSourceIdentity
           displayLabel={row.yieldSource}

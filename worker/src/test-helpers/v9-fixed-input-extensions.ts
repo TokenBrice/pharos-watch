@@ -23,9 +23,6 @@ function v9MechanismReview() {
     assuranceAndReconciliation: component(),
   };
 }
-// --------------------------------------------------------------------------
-// Extension
-// --------------------------------------------------------------------------
 
 /** The reviewed current extension that pairs with `makeV9FixedInput()`. */
 export function makeV9Extension(

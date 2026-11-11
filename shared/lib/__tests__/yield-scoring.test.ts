@@ -210,7 +210,7 @@ describe("venue-risk rubric (yield v8.3)", () => {
 describe("computePysComponents", () => {
   it("computes riskPenalty from safety score", () => {
     const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.2 });
-    expect(result.riskPenalty).toBeCloseTo((101 - 80) / 20); // 1.05
+    expect(result.riskPenalty).toBeCloseTo((101 - 80) / 20);
   });
 
   it("raises the risk penalty by the configured exponent before computing yield efficiency", () => {
@@ -233,7 +233,7 @@ describe("computePysComponents", () => {
 
   it("defaults null safetyScore to 40", () => {
     const result = computePysComponents({ apy30d: 5, safetyScore: null, apyVarianceScore: 0 });
-    expect(result.riskPenalty).toBeCloseTo((101 - 40) / 20); // 3.05
+    expect(result.riskPenalty).toBeCloseTo((101 - 40) / 20);
   });
 
   it("floors sustainabilityMultiplier at 0.3", () => {

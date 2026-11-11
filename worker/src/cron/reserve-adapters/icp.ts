@@ -490,8 +490,6 @@ export function decodeCandidReply(bytes: Uint8Array): unknown[] {
   return values;
 }
 
-// --- Query transport -------------------------------------------------------
-
 export interface IcpQueryResult {
   /** Decoded reply argument (the Candid-encoded return value) or null on rejection. */
   reply: Uint8Array | null;

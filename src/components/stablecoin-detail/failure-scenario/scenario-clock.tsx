@@ -133,7 +133,6 @@ export function ScenarioClock({
               })}
             </div>
 
-            {/* The window: a brace under the axis, its label set into the brace. */}
             {clock.window && scenario.window ? (
               <div className="relative mt-1 h-4">
                 <span

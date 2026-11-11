@@ -170,7 +170,6 @@ export const handleDigestSnapshot = async (
       && inputData.aggregateUniverse !== undefined && inputData.aggregateUniverse === prevInputData.aggregateUniverse,
   } : null;
 
-  // Depeg episodes active on that date
   const depegResult = await db
     .prepare(
       `SELECT stablecoin_id, symbol, direction, peak_deviation_bps, started_at, ended_at

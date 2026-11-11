@@ -9,12 +9,7 @@ declare global {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Event catalog — every custom event and its typed parameters
-// ---------------------------------------------------------------------------
-
 type EventMap = {
-  // Tier 1 — Feature Adoption
   dependency_map_action: {
     action: "focus" | "type" | "limit" | "trace" | "fullscreen_open" | "hub_open_coin" | "hub_exposure" | "mode_switch" | "root_change" | "share" | "inspect_path" | "view_switch";
     value: string;
@@ -53,20 +48,16 @@ type EventMap = {
   };
   yield_degraded_exposure: { warning_code: string };
   yield_exported: { scope: "ranking" | "comparison"; row_count: number };
-  // Tier 2 — Feature Engagement
   filter_applied: { page: string; filter_type: string; filter_value: string };
   time_range_changed: { page: string; range: string };
   sort_changed: { page: string; sort_by: string };
   contract_copied: { coin_id: string; chain: string };
-  // Portfolio
   portfolio_coin_added: { coin_id: string };
   portfolio_coin_removed: { coin_id: string };
   portfolio_shared: { coin_count: number };
   portfolio_cleared: { coin_count: number };
   portfolio_preset_loaded: { preset: string };
-  // Tier 3 — Engagement Signals
   theme_toggled: { theme: string };
-  // Tier 4 — Web Vitals
   fresh_data_ready: {
     surface: "home-hero" | "detail-summary";
     value: number;
@@ -92,10 +83,6 @@ type EventMap = {
     page_path: string;
   };
 };
-
-// ---------------------------------------------------------------------------
-// Core tracking function
-// ---------------------------------------------------------------------------
 
 export function isAnalyticsAllowed(
   pathname: string | null | undefined,

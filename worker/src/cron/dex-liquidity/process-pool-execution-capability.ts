@@ -42,8 +42,9 @@ import type {
 import {
   buildRegisteredDexExecutionTarget,
   hasRegisteredDexExecutionTargetOutput,
-  type DexExecutionTargetFactoryOutput,
 } from "./execution-target-registry";
+
+import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./execution-targets/contract";
 
 export interface DirectApiExecutionTargetContext {
   uniV3ExecutionCandidates: PoolProcessingContext["uniV3ExecutionCandidates"];
@@ -66,7 +67,7 @@ function buildDirectApiFactoryInput(input: {
   stablecoinPriceById: NonNullable<PoolProcessingContext["stablecoinPriceById"]>;
   validationReferences: NonNullable<PoolProcessingContext["validationReferences"]>;
   executionTargetContext: DirectApiExecutionTargetContext;
-}) {
+}): DexExecutionTargetFactoryInput {
   const {
     pool,
     stablecoinId,
@@ -80,77 +81,32 @@ function buildDirectApiFactoryInput(input: {
   const chainNorm = canonicalExitRouteChain(pool.chain);
   const poolSymbols = pool.tokens.map((token) => token.symbol);
   const feePips = directApiPoolFeePips(pool);
-  const llamaPool = {
-    pool: pool.poolAddress,
-    chain: pool.chain,
-    project: protocol,
-    symbol: poolSymbols.join(" / "),
-    poolMeta: feePips == null ? null : `${feePips / 10_000}%`,
-    tvlUsd: pool.tvlUsd,
-    volumeUsd1d: pool.volume24hUsd,
-    volumeUsd7d: null,
-    stablecoin: pool.tokens.every((token) =>
-      chainAddressToId.has(canonicalExitRouteAssetKey(chainNorm, token.address)),
-    ),
-    underlyingTokens: pool.tokens.map((token) => token.address),
-    apyBase: null,
-    apyReward: null,
-    apy: 0,
-    sigma: 0,
-    exposure: "multi",
-    count: 30,
+  return {
+    context: {
+      symbolToChainScopedIds,
+      chainAddressToId,
+      uniV3ExecutionCandidates: executionTargetContext.uniV3ExecutionCandidates,
+      stablecoinPriceById,
+      measuredTargetCapturedAt: executionTargetContext.measuredTargetCapturedAt,
+      validationReferences,
+      uniswapV4ExecutionCandidates: executionTargetContext.uniswapV4ExecutionCandidates,
+      contractMetaByChainAddress: executionTargetContext.contractMetaByChainAddress,
+    },
+    identity: {
+      pool: {
+        pool: pool.poolAddress,
+        project: protocol,
+        symbol: poolSymbols.join(" / "),
+        poolMeta: feePips == null ? null : `${feePips / 10_000}%`,
+        underlyingTokens: pool.tokens.map((token) => token.address),
+      },
+      poolType: pool.poolType,
+      protocol,
+      chainNorm,
+    },
+    enrichment: { resolvedPoolType: pool.poolType, rawContribTvl: pool.tvlUsd },
+    stablecoinId,
   };
-  const context = {
-    pools: [llamaPool],
-    dexProjects: new Set<string>(),
-    symbolToChainScopedIds,
-    chainAddressToId,
-    curvePoolMap: new Map(),
-    uniV3PoolFees: new Map(),
-    uniV3SymbolFees: new Map(),
-    uniV3ExecutionCandidates: executionTargetContext.uniV3ExecutionCandidates,
-    stablecoinPriceById,
-    measuredTargetCapturedAt: executionTargetContext.measuredTargetCapturedAt,
-    validationReferences,
-    curvePoolCandidatesByFingerprint: new Map(),
-    uniswapV4ExecutionCandidates: executionTargetContext.uniswapV4ExecutionCandidates,
-    contractMetaByChainAddress: executionTargetContext.contractMetaByChainAddress,
-  } as PoolProcessingContext & Pick<DirectApiExecutionTargetContext, "contractMetaByChainAddress">;
-  const identity: ResolvedPoolIdentity = {
-    pool: llamaPool,
-    matchedIds: new Set([stablecoinId]),
-    poolSymbols,
-    poolType: pool.poolType,
-    protocol,
-    chainNorm,
-    addrCurveKey: canonicalExitRouteAssetKey(chainNorm, pool.poolAddress),
-    fpCurveKey: null,
-    symCurveKey: `${chainNorm}:${poolSymbols
-      .map((symbol) => symbol.toUpperCase())
-      .sort()
-      .join("-")}`,
-  };
-  const enrichment: PoolProtocolEnrichment = {
-    curveData: undefined,
-    curveMeasuredRouteData: undefined,
-    curveAddressMatch: false,
-    resolvedPoolType: pool.poolType,
-    qualityMultiplier: 1,
-    feeTierForExtra: feePips == null ? undefined : feePips / 100,
-    balanceRatio: 1,
-    hasMeasuredBalance: false,
-    poolMaturityDays: 30,
-    organicFraction: 0.5,
-    hasMeasuredOrganicFraction: false,
-    effectivePoolTvl: pool.tvlUsd,
-    rawContribTvl: pool.tvlUsd,
-    balanceDetails: undefined,
-    volumeUsd1d: pool.volume24hUsd,
-    volumeUsd7d: null,
-    // Factory projection only; this enrichment never becomes a scored pool.
-    volumeObservedAtSec: null,
-  };
-  return { context, identity, enrichment, stablecoinId };
 }
 
 /**

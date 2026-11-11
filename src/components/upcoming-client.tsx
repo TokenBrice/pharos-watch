@@ -51,10 +51,6 @@ export type UpcomingCoin = Pick<
   flags: Pick<StablecoinMeta["flags"], "pegCurrency" | "backing" | "governance">;
 };
 
-// ---------------------------------------------------------------------------
-// Filter and sort types
-// ---------------------------------------------------------------------------
-
 export type SortKey = "expected" | "alphabetical" | "phase" | "peg" | "backing" | "drift" | "milestones";
 export type SortDirection = "asc" | "desc";
 
@@ -73,7 +69,6 @@ const NATURAL_DIRECTION: Record<SortKey, SortDirection> = {
 
 const ALL_PHASES: UpcomingLaunchPhase[] = ["announced", "testnet", "auditing", "beta", "launching-soon"];
 
-/** Phase filter values: the authored phases plus coins Pharos has not phased yet. */
 export type PhaseFilterValue = UpcomingLaunchPhase | "unphased";
 const PHASE_FILTER_VALUES: readonly PhaseFilterValue[] = [...ALL_PHASES, "unphased"];
 
@@ -116,10 +111,6 @@ export function createUpcomingUrlSchema(coins: readonly UpcomingCoin[]): UrlStat
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function toggleSet<T>(set: Set<T>, value: T): Set<T> {
   const next = new Set(set);
@@ -183,7 +174,6 @@ export function sortUpcomingCoins(
         return ((a.milestones?.length ?? 0) - (b.milestones?.length ?? 0)) * dir;
     }
   };
-  // Ties fall back to the soonest target, then name, so equal groups read in launch order.
   return [...coins].sort(
     (a, b) =>
       primary(a, b) ||
@@ -268,10 +258,6 @@ function SlippedSplit({ pushed, overdue }: { pushed: number; overdue: number }):
 function ClockPending(): React.JSX.Element {
   return <span aria-hidden="true" className="inline-block h-3.5 w-12 animate-pulse rounded-sm bg-muted align-middle" />;
 }
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 // Teasers and the pre-launch projection are selected server-side in
 // src/app/upcoming/page.tsx — the client receives only the fields rendered

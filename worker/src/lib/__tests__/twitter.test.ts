@@ -30,7 +30,6 @@ describe("twitter helpers", () => {
     expect(buildTweetText("Daily Digest", "Daily Digest: USDT held while usdt volume rose and USDC followed.")).toBe(
       "Daily Digest\n\n$USDT held while usdt volume rose and USDC followed.",
     );
-    // Lowercase first mention is normalized to canonical uppercase.
     expect(buildTweetText("", "usdc traded above usdt today.")).toBe("$USDC traded above usdt today.");
 
     const longWord = buildTweetText("", "x".repeat(400));

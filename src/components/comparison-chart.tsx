@@ -41,7 +41,6 @@ export function ComparisonChart({
   normalizable,
 }: ComparisonChartProps) {
   const [normalized, setNormalized] = useState(false);
-  // Merge all series into a single array keyed by timestamp
   const mergedData = useMemo(
     () => mergeMultiSeriesData(series, (d) => d.value),
     [series],
@@ -94,7 +93,6 @@ export function ComparisonChart({
     [displayData, series],
   );
 
-  // Determine XAxis date format based on selected range
   const formatTimestamp = useCallback((ts: number) => {
     if (activeRange === "7d" || activeRange === "30d") {
       return formatChartDate(ts, "short");

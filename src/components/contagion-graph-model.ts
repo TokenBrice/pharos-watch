@@ -4,10 +4,6 @@ import type { V9Grade } from "@shared/types/safety-score-v9";
 import type { ContagionEdgeRelationship } from "@/lib/contagion-layout";
 export { stablecoinLabel as graphNodeLabel } from "@/lib/stablecoin-label";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 /** V8's legend order, which readers already know. */
 export const DEPENDENCY_TYPE_ORDER = [
   "collateral",
@@ -67,10 +63,6 @@ export const TYPE_COLORS: Record<ContagionEdgeRelationship, string> = Object.fro
 export const TYPE_DASH: Record<ContagionEdgeRelationship, string | undefined> = Object.fromEntries(
   DEPENDENCY_TYPE_ORDER.map((type) => [type, DEPENDENCY_TYPE_PRESENTATION[type].dash]),
 ) as Record<ContagionEdgeRelationship, string | undefined>;
-
-// ---------------------------------------------------------------------------
-// Pure helpers
-// ---------------------------------------------------------------------------
 
 export function gradeColor(grade: V9Grade | null): string {
   return grade === null ? "var(--color-muted-foreground)" : GRADE_RADAR_COLORS[gradeRange(grade)];

@@ -27,13 +27,17 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
-import { MAX_UINT128, usdToRawAmount } from "./fixed-point";
+import { MAX_UINT128 } from "./fixed-point";
 import {
-  buildEvmSingleCallQuotePlans,
+  EVM_SINGLE_CALL_QUOTE_BATCH_SIZE as UNISWAP_V4_MULTICALL_BATCH_SIZE,
+  EVM_SINGLE_CALL_QUOTE_GAS as UNISWAP_V4_MULTICALL_GAS,
+  type EncodedEvmSingleCallQuoteRequest,
+  type EvmSingleCallQuoteBatchInput,
+  type EvmSingleCallQuoteOutcome,
+  executeEvmSingleCallQuotes,
   createEvmQuotePlanMulticallExecutor,
   executeEvmQuotePlan,
   materializeEvmQuotePoint,
-  materializeRevertedEvmQuotePoint,
 } from "./evm-quote-plan";
 
 export const UNISWAP_V4_ADAPTER_PROFILE_ID = UNISWAP_V4_DEPLOYMENT.adapterProfileId;
@@ -51,8 +55,6 @@ const UNISWAP_V4_STATE_VIEW_ABI = parseAbi([
 const UNISWAP_V4_POOL_KEY_PARAMETERS = parseAbiParameters(
   "address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks",
 );
-const UNISWAP_V4_MULTICALL_BATCH_SIZE = 8;
-const UNISWAP_V4_MULTICALL_GAS = "0x1c9c380";
 const UNISWAP_V4_Q192 = 1n << 192n;
 
 const uniswapV4PoolStateMulticallExecutor = createEvmQuotePlanMulticallExecutor({});
@@ -575,25 +577,7 @@ export async function resolveUniswapV4PoolBindings(input: {
   return outcomes;
 }
 
-interface UniswapV4QuoteRequest {
-  target: DexMeasuredExecutionTarget;
-  inputUsd: number;
-  endpointAddress: `0x${string}`;
-}
-
-interface EncodedUniswapV4QuoteRequest extends UniswapV4QuoteRequest {
-  index: number;
-  label: string;
-  amountInRaw: bigint;
-  callData: `0x${string}`;
-}
-
-export interface UniswapV4QuoteOutcome {
-  targetId: string;
-  inputUsd: number;
-  point?: DexMeasuredRawQuotePoint;
-  failureReason?: string;
-}
+export type UniswapV4QuoteOutcome = EvmSingleCallQuoteOutcome;
 
 function encodeUniswapV4Quote(
   target: DexMeasuredExecutionTarget,
@@ -622,32 +606,8 @@ function encodeUniswapV4Quote(
   });
 }
 
-function encodeQuoteRequest(
-  request: UniswapV4QuoteRequest,
-  index: number,
-): EncodedUniswapV4QuoteRequest | null {
-  const amountInRaw = usdToRawAmount(
-    request.inputUsd,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-    { maxRawAmount: MAX_UINT128 },
-  );
-  if (amountInRaw == null || validateTargetPoolKey(request.target) == null) return null;
-  try {
-    return {
-      ...request,
-      index,
-      label: `${index}:${request.target.targetId}`,
-      amountInRaw,
-      callData: encodeUniswapV4Quote(request.target, amountInRaw),
-    };
-  } catch {
-    return null;
-  }
-}
-
 function decodeQuotePoint(
-  request: EncodedUniswapV4QuoteRequest,
+  request: EncodedEvmSingleCallQuoteRequest,
   result: EvmMulticall3Result,
 ): DexMeasuredRawQuotePoint | null {
   if (!result.success || result.returnData === "0x") return null;
@@ -671,71 +631,15 @@ function decodeQuotePoint(
   }
 }
 
-export async function quoteUniswapV4Requests(input: {
-  requests: readonly UniswapV4QuoteRequest[];
-  blockNumber: number;
-  blockHash: `0x${string}`;
-  chainRpcs: Map<string, ChainRpcConfig>;
-  signal?: AbortSignal;
-  rpcBudget?: DexMeasuredExecutionRpcBudget;
-}): Promise<UniswapV4QuoteOutcome[]> {
-  const encoded = input.requests.map(encodeQuoteRequest);
-  const outcomes = input.requests.map<UniswapV4QuoteOutcome>((request, index) =>
-    encoded[index] == null
-      ? {
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          failureReason: "invalid-quote-input",
-        }
-      : { targetId: request.target.targetId, inputUsd: request.inputUsd },
-  );
-  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber, input.blockHash);
-  return executeEvmQuotePlan({
-    plans,
-    outcomes,
-    chainRpcs: input.chainRpcs,
-    signal: input.signal,
-    rpcBudget: input.rpcBudget,
-    spec: {
-      batchSize: UNISWAP_V4_MULTICALL_BATCH_SIZE,
-      executeMulticall: uniswapV4QuoteMulticallExecutor,
-      adaptive: {
-        failedAttemptAccounting: "single-call",
-        unattemptedResult: "failure-result",
-      },
-      materializeTransportFailure: (request, reason) => ({
-        targetId: request.target.targetId,
-        inputUsd: request.inputUsd,
-        failureReason: reason ?? "quoter-rpc-unavailable",
-      }),
-      resolveResult: (request, result) => {
-        if (!result.success) {
-          return result.returnData === "0x"
-            ? {
-                targetId: request.target.targetId,
-                inputUsd: request.inputUsd,
-                failureReason: "quoter-empty-revert",
-              }
-            : {
-                targetId: request.target.targetId,
-                inputUsd: request.inputUsd,
-                point: materializeRevertedEvmQuotePoint(request, result),
-              };
-        }
-        const point = decodeQuotePoint(request, result);
-        return point
-          ? {
-                targetId: request.target.targetId,
-                inputUsd: request.inputUsd,
-                point,
-            }
-          : {
-                targetId: request.target.targetId,
-                inputUsd: request.inputUsd,
-                failureReason: "quoter-invalid-result",
-            };
-      },
-    },
+export async function quoteUniswapV4Requests(input: EvmSingleCallQuoteBatchInput): Promise<UniswapV4QuoteOutcome[]> {
+  return executeEvmSingleCallQuotes(input, {
+    maxRawAmount: MAX_UINT128,
+    isValidTarget: (target) => validateTargetPoolKey(target) != null,
+    encodeCall: encodeUniswapV4Quote,
+    decodePoint: decodeQuotePoint,
+    executeMulticall: uniswapV4QuoteMulticallExecutor,
+    retryFailedCallsIndividually: false,
+    emptyRevert: "failure",
   });
 }
 

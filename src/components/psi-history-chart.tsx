@@ -25,8 +25,6 @@ import { formatRangeTickDate } from "@/lib/chart-time-range";
 import { formatChartDate } from "@shared/lib/format";
 import type { TimeRangeOption } from "@/lib/chart-time-range";
 
-/* ─── Constants ─────────────────────────────────────────────────── */
-
 const PSI_EVENT_LABEL_CLASS =
   "[fill:var(--text-secondary)] [paint-order:stroke] [stroke:var(--surface-overlay)] [stroke-width:4px] font-medium";
 
@@ -34,8 +32,6 @@ const PSI_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; score: number }>[] =
   { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
   { id: "score", label: "Score (0–100)", format: (row) => row.score.toFixed(1) },
 ];
-
-/* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 
 export const ScoreChart = memo(function ScoreChart({
   data,

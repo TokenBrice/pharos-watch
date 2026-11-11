@@ -1432,7 +1432,6 @@ describe("computeDepegResolver", () => {
       depegPipelineHealthy: true,
     };
 
-    // First run: the new quarantined id alerts and records the marker.
     const firstDb = quarantineDb(null);
     const firstResult = await computeDepegResolver({
       db: firstDb,

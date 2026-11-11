@@ -1,7 +1,5 @@
 import type { LaunchMilestoneType, LaunchPhase } from "../../types/core";
 
-/** Pre-launch phase, milestone and date-drift presentation. */
-
 export const PRE_LAUNCH_PHASE_CLASSES = {
   announced: {
     dot: "bg-amber-500",
@@ -35,7 +33,6 @@ export const PRE_LAUNCH_PHASE_CLASSES = {
   },
 } as const satisfies Record<LaunchPhase, { dot: string; badge: string; orbit: string }>;
 
-/** Pre-launch detail page: pre-launch card and progress fill. */
 export const PRE_LAUNCH_ACCENT_CLASSES = {
   preLaunchCard: { border: "border-indigo-500/25", bg: "bg-indigo-500/[0.06]", text: "text-indigo-600 dark:text-indigo-400" },
   progressFill: "bg-indigo-500/60",

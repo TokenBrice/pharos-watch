@@ -187,8 +187,6 @@ export async function filterUnprojectedTapeEvents(
   return unprojected;
 }
 
-// --- Read path (cursor pagination) ------------------------------------------
-
 export interface TapeEventQueryFilters {
   typeExact?: string[];
   typePrefixes?: string[];        // each entry already stripped of trailing ".*"

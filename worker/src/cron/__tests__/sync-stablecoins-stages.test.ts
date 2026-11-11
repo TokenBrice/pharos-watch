@@ -29,7 +29,6 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
       { chain: "ethereum", address: "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1", decimals: 18 },
     ],
   } as never);
-  // Frozen-style entry: present in TRACKED but not ACTIVE.
   const ACTIVE_META_BY_ID = new Map(TRACKED_META_BY_ID);
   TRACKED_META_BY_ID.set("frozen-with-contracts-test", {
     flags: { navToken: false },

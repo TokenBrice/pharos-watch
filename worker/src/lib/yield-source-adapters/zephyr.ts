@@ -1,3 +1,4 @@
+import { ZEPHYR_YIELD_HISTORY_POLICY } from "@shared/lib/yield-source-history";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { USER_AGENT } from "../constants";
 import { logWorkerEventArgs } from "../structured-log";
@@ -25,7 +26,7 @@ interface ZephyrYieldSourceResult {
   comparisonAnchorObservedAt: null;
 }
 
-const ZEPHYR_ZYS_SOURCE_KEY = "protocol-api:zys-zephyr-protocol";
+const ZEPHYR_ZYS_SOURCE_KEY = ZEPHYR_YIELD_HISTORY_POLICY.sourceKey;
 const ZEPHYR_ZYS_SOURCE_LABEL = "Zephyr Scanner ZYS returns";
 const ZEPHYR_ZYS_SOURCE_TYPE = "nav-appreciation" as const;
 const ZEPHYR_HISTORICAL_RETURNS_URL = "https://zephyrprotocol.com/api/v1/historicalreturns";
@@ -44,7 +45,7 @@ const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
  * `(stablecoin_id, source_key, recorded_at)` primary key; the backfill route is
  * `INSERT OR IGNORE`, so the second write is a no-op instead of a new observation.
  */
-const ZEPHYR_OBSERVATION_BUCKET_SEC = 3600;
+const ZEPHYR_OBSERVATION_BUCKET_SEC = ZEPHYR_YIELD_HISTORY_POLICY.observationBucketSec;
 /** Same five-minute future-skew ceiling as the sibling issuer-NAV adapters. */
 const ZEPHYR_MAX_FUTURE_SKEW_SEC = 5 * 60;
 

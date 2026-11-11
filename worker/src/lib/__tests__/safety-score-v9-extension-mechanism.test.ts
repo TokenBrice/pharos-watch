@@ -488,7 +488,6 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     const fallback = buildSafetyScoreV9MechanismReview(fixedInputStub({ alpha: [{}] }), ATTESTED_META, "fiat-cash");
     const review = expandOverlayReview(overlay, fallback);
     if (review.archetype !== "fiat-cash") throw new Error("unexpected archetype");
-    // The curated component claims quality...
     expect(review.claimAndSegregation.status.observationState).toBe("known");
     expect(review.claimAndSegregation.quality).toBe("adequate");
     // ...uncurated custody stays bounded-unknown...

@@ -150,7 +150,6 @@ function buildBreakdowns(
   } satisfies V9Breakdowns;
 }
 
-/** Explicit three-pillar block for suites that assert on specific pillar scores. */
 export function makeReportCardsV9Pillars(scores: {
   backing: number | null;
   exit: number | null;

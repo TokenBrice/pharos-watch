@@ -39,7 +39,33 @@ export function getTokenReferenceUsdPrice(
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
   trackedStablecoinPrices?: Map<string, number>,
-  /** Measured targets require current per-peg evidence; diagnostics omit this clock. */
+): number | null {
+  return resolveTokenReferenceUsdPrice(
+    token, chain, chainAddressToId, symbolToChainScopedIds, validationReferences, trackedStablecoinPrices,
+  );
+}
+
+export function getMeasuredTokenReferenceUsdPrice(
+  measuredReferenceAtSec: number,
+  token: DexApiPoolToken,
+  chain: string,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
+): number | null {
+  return resolveTokenReferenceUsdPrice(
+    token, chain, chainAddressToId, symbolToChainScopedIds, validationReferences, trackedStablecoinPrices, measuredReferenceAtSec,
+  );
+}
+
+function resolveTokenReferenceUsdPrice(
+  token: DexApiPoolToken,
+  chain: string,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
   measuredReferenceAtSec?: number,
 ): number | null {
   const resolved = resolveTrackedStablecoinId(

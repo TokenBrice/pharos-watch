@@ -142,7 +142,7 @@ describe("fetchCgTickerPricesDetailed", () => {
   it("continues when one coin fails", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-      if (url.includes("kinesis-gold")) return null; // failure
+      if (url.includes("kinesis-gold")) return null;
       return makeTickerResult([makeTicker({ base: "KAG", last: 62.42, converted_volume: { usd: 143_000 } })]);
     });
 

@@ -21,8 +21,7 @@ export function defillamaAssetKey(chain: string, address: string): string {
   return `${DEFILLAMA_PRICE_CHAIN_ALIASES[chain] ?? chain}:${chain === "solana" ? address : address.toLowerCase()}`;
 }
 
-export interface BranchPriceObservation {
-  sourceKind: "configured-nominal" | "pinned-oracle" | "market-api";
+interface DefiLlamaQuoteObservation {
   sourceLookup: string;
   quoteTimestamp: number | null;
   quoteConfidence: number | null;
@@ -31,15 +30,15 @@ export interface BranchPriceObservation {
 export interface DefiLlamaPriceResult {
   prices: Map<string, number>;
   warnings: LiveReserveWarning[];
+  observations: Map<string, DefiLlamaQuoteObservation>;
 }
 
 export async function fetchDefiLlamaPrices(
   assets: Array<{ key: string; chain: string; address: string }>,
   signal: AbortSignal,
   ctx?: AdapterContext,
-  observations?: Map<string, BranchPriceObservation>,
 ): Promise<DefiLlamaPriceResult> {
-  if (assets.length === 0) return { prices: new Map(), warnings: [] };
+  if (assets.length === 0) return { prices: new Map(), warnings: [], observations: new Map() };
   const lookups = assets.map(({ key, chain, address }) => ({
     key,
     assetKey: defillamaAssetKey(chain, address),
@@ -66,6 +65,7 @@ export async function fetchDefiLlamaPrices(
   const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
   const prices = new Map<string, number>();
   const warnings: LiveReserveWarning[] = [];
+  const observations = new Map<string, DefiLlamaQuoteObservation>();
   for (const { key, assetKey } of lookups) {
     const quote = quotes[assetKey];
     if (!quote || typeof quote.price !== "number" || !Number.isFinite(quote.price) || quote.price <= 0) {
@@ -88,8 +88,7 @@ export async function fetchDefiLlamaPrices(
       warnings.push(reserveDegradedWarning("defillama-quote-quality", message));
     }
     prices.set(key, quote.price);
-    observations?.set(key, {
-      sourceKind: "market-api",
+    observations.set(key, {
       sourceLookup: assetKey,
       quoteTimestamp: typeof quote.timestamp === "number" && Number.isFinite(quote.timestamp) && quote.timestamp > 0
         ? quote.timestamp : null,
@@ -97,5 +96,5 @@ export async function fetchDefiLlamaPrices(
         ? quote.confidence : null,
     });
   }
-  return { prices, warnings };
+  return { prices, warnings, observations };
 }

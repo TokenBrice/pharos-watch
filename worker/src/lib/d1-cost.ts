@@ -18,7 +18,6 @@ export interface D1Cost {
   reasons: string[];
 }
 
-/** Attach the tracker's snapshot to a settled cron result's metadata. */
 export function withD1CostMetadata<T extends { metadata?: string | null }>(result: T, tracker: D1CostTracker): T {
   const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
   metadata.d1Cost = tracker.snapshot();

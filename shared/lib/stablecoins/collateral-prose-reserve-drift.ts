@@ -61,7 +61,6 @@ const ELIGIBILITY_MODALITY_PATTERN =
  * defects.
  */
 const NON_HOLDING_DISCLOSURE_PATTERNS = [
-  // "no <up to a few qualifiers> balance/position/exposure ..." within one clause.
   /\bno\b[^.;]{0,48}\b(?:balance|balances|position|positions|holding|holdings|exposure)\b/i,
   /\b(?:not held|not currently held|not an accepted|not accepted|not eligible|not approved|not supported|currently inactive|but inactive|rather than)\b/i,
 ] as const;

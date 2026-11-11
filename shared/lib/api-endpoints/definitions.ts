@@ -110,7 +110,6 @@ export interface EndpointDefinition {
   cacheKeyQueryParams?: readonly string[];
   /** Optional Pages ops-admin proxy timeout override for slow admin endpoints. */
   opsProxyTimeoutMs?: number;
-  /** Optional semantic parser kind for status-page probes. */
   probeSemanticKind?: "health" | "status";
   statusPageAction?: EndpointStatusPageActionConfig;
   /** Worker-only dependency hydration hints consumed by the route registry/context builder. */
@@ -328,7 +327,6 @@ function stablecoinScope(
 }
 
 const BASE_ENDPOINT_DEFINITIONS = [
-  // Public endpoints probed by the status dashboard.
   publicGet({
     key: "stablecoins",
     path: API_PATHS.stablecoins(),
@@ -715,7 +713,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     routeDependencies: ["telegram"],
   }),
 
-  // Admin status/probe endpoints.
   adminGet({
     key: "status",
     path: API_PATHS.status(),

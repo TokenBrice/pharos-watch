@@ -1,4 +1,3 @@
-// src/lib/__tests__/regulatory-standing.test.ts
 import { describe, expect, it } from "vitest";
 import type { GeniusProfile, MicaProfile, StablecoinMeta } from "@shared/types";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";

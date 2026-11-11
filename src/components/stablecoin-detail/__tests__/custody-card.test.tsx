@@ -103,7 +103,6 @@ describe("CustodyModule", () => {
     expect(section?.getAttribute("data-evidence-module")).toBe("strip");
     expect(container.querySelector("[data-rung]")).toBeNull();
     expect(container.querySelector("[data-custody-share-bar]")).toBeNull();
-    // The placeholder holder is neither a chip, a text line, nor a roster row.
     expect(container.querySelector("[data-custody-provider]")).toBeNull();
     expect(container.querySelector("[data-custody-unnamed-holder]")).toBeNull();
     expect(section?.textContent).not.toContain("not publicly identified");

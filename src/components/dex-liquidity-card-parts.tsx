@@ -7,7 +7,8 @@ import { buildBreakdownEntries, BreakdownBar, BreakdownLegend } from "@/componen
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { ChartAreaGradient, useNiceValueAxis } from "@/components/chart-primitives/axes";
-import { formatCurrency, formatChartDate, formatUsdPriceAdaptive, getNetColor } from "@shared/lib/format";
+import { formatCurrency, formatChartDate, formatUsdPriceAdaptive } from "@shared/lib/format";
+import { getNetColor } from "@shared/lib/classification/flows";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { CHART_AXIS_TICK, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
 import {
@@ -30,7 +31,7 @@ import {
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
-import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { getDexDurabilityStyle, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 export function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
@@ -405,7 +406,6 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   );
 }
 
-/** 5-bar horizontal breakdown of score components */
 export function ScoreBreakdown({ components }: { components: DexLiquidityData["scoreComponents"] }) {
   if (!components) return null;
   const bars = LIQUIDITY_SCORE_WEIGHTS.map((w) => ({
@@ -437,7 +437,7 @@ export function ScoreBreakdown({ components }: { components: DexLiquidityData["s
 
 export function DurabilityBadge({ score }: { score: number | null }) {
   if (score == null) return null;
-  const label = score >= 70 ? "Durable" : score >= 40 ? "Moderate" : "Fragile";
+  const { label } = getDexDurabilityStyle(score);
   return (
     <span className={`text-xs font-medium ${getDurabilityColor(score)}`}>
       {label} ({score})

@@ -1,8 +1,9 @@
 import type { DepegEvent } from "@shared/types/market";
-import { formatDeviationBps, formatIsoDate, formatLongDate, formatNativePrice } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate, formatLongDate } from "@shared/lib/format";
+import { formatNativePrice } from "@shared/lib/peg-format";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
-import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { classifyDepegClosure, isDepegRecovery } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DEPEG_AUDIT_DISPUTED_BADGE, DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 
@@ -110,7 +111,7 @@ export function buildDepegEventTitle(event: DepegEventDisplayInput, includeTime:
 
 export function getDepegEventClosurePresentation(event: DepegEventDisplayInput) {
   const closure = classifyDepegClosure(event);
-  const isRecovery = closure === "recovered" || closure === "legacy_recovered";
+  const isRecovery = isDepegRecovery(closure);
   const label = DEPEG_CLOSURE_LABELS[closure];
   return { closure, isRecovery, label };
 }

@@ -71,7 +71,6 @@ describe("useContagionGraphDrag", () => {
     expect(circle?.getAttribute("cx")).toBe("140");
     expect(circle?.getAttribute("cy")).toBe("150");
 
-    // Pinned positions survive a plain rerender under the same simulation key.
     rerender(<DragHarness />);
 
     expect(circle?.getAttribute("cx")).toBe("140");

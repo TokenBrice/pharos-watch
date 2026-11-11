@@ -322,12 +322,10 @@ export async function recordOutcome(
     return { before, after: { ...record } };
   }
 
-  // Failure
   record.consecutiveFailures++;
   record.lastFailureAt = now;
 
   if (record.state === "half-open") {
-    // Probe failed — reopen
     record.state = "open";
     record.openedAt = now;
     logWorkerEvent({ scope: "lib", level: "info", event: "circuit_probe_failed", message: "Circuit reopened after a failed probe", provider: source, metadata: { state: "open", consecutiveFailures: record.consecutiveFailures } });
@@ -424,7 +422,6 @@ export async function getCircuitStates(db: D1Database): Promise<Record<string, C
         states[source] = decoded.data;
       }
     } catch {
-      // skip malformed
     }
   }
   return states;

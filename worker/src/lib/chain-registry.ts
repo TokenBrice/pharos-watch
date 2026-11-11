@@ -432,7 +432,6 @@ export function buildChainRpcs(
   return map;
 }
 
-/** Look up RPC config by chain ID from a pre-built map */
 export function getChainRpc(chainRpcs: Map<string, ChainRpcConfig>, chainId: string): ChainRpcConfig | undefined {
   return chainRpcs.get(chainId);
 }

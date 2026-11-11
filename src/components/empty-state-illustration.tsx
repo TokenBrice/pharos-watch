@@ -84,9 +84,7 @@ export function EmptyStateIllustration({
 
   return (
     <div className={cn("flex flex-col items-center justify-center py-10 text-center", className)}>
-      {/* Icon container with frost-blue accent */}
       <div className="relative mb-4">
-        {/* Background glow */}
         <div
           className="absolute inset-0 rounded-full blur-xl opacity-30"
           style={{
@@ -94,7 +92,6 @@ export function EmptyStateIllustration({
             transform: "scale(1.5)",
           }}
         />
-        {/* Icon container */}
         <div className="relative rounded-full border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/5 p-4">
           <Icon
             className="h-8 w-8 text-[var(--brand-accent)]"
@@ -104,7 +101,6 @@ export function EmptyStateIllustration({
         </div>
       </div>
 
-      {/* Text content */}
       <h3 className="text-base font-semibold text-foreground">{resolvedTitle}</h3>
       <p className="mt-1.5 max-w-[320px] text-sm text-muted-foreground leading-relaxed">
         {resolvedDescription}

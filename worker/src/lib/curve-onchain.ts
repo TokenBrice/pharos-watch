@@ -82,7 +82,6 @@ export async function fetchCurveOnchainPrices(
     blockByChain.set(entry.chain, { blockNumber: entry.blockNumber, blockTimestamp: entry.blockTimestamp });
   }
 
-  // Phase 1: Execute all RPC calls at the pinned block, store raw implied prices
   const rawPrices = new Map<string, number>();
   let rpcAttempts = 0;
   let rpcThrows = 0;

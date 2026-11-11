@@ -58,8 +58,6 @@ function normalizeSecondaryFxYearCache(
 const SECONDARY_FX_FETCH_CONCURRENCY = 6;
 const COMMODITY_MEDIAN_FETCH_CONCURRENCY = 6;
 
-// ── Historical FX rate support ──────────────────────────────────────
-
 function invertCurrencyToPegMap(
   currencyToPeg: Readonly<Record<string, string>>,
   pegTypeToCurrencyPairs: ReadonlyArray<readonly [string, string]>,

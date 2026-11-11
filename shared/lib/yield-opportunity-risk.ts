@@ -51,7 +51,6 @@ import {
  */
 const OPPORTUNITY_VENUE_SAFETY_SLOPE = 5;
 
-/** Magnitude profiles for the shared penalty terms, external-opportunity engine. */
 const OPPORTUNITY_VENUE_PROFILE: VenuePenaltyProfile = {
   kind: "continuous",
   threshold: PYS_VENUE_PENALTY_THRESHOLD,
@@ -73,6 +72,10 @@ const OPPORTUNITY_CLASS_BY_YIELD_TYPE: Partial<Record<YieldType, YieldOpportunit
   "fixed-yield": "fixed-yield",
   "structured-tranche": "structured-tranche",
 };
+
+export const EXTERNAL_OPPORTUNITY_YIELD_TYPES = new Set<YieldType>(
+  Object.keys(OPPORTUNITY_CLASS_BY_YIELD_TYPE) as YieldType[],
+);
 
 /** External-opportunity class for a yield type; null for holder/native yield types. */
 export function deriveYieldOpportunityClass(yieldType: YieldType): YieldOpportunityClass | null {

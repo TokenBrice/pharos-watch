@@ -1,3 +1,4 @@
+import { D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY } from "@shared/lib/operational-cache-keys";
 import { assessD1Capacity, assessD1QuotaUsage } from "@shared/lib/d1-capacity";
 import type { D1CapacityAssessment, D1UsageSummary } from "@shared/types/status";
 import type { CloudflareD1StatusConfig } from "../env";
@@ -13,7 +14,7 @@ import {
   refreshD1CapacityAssessment,
 } from "./d1-capacity-store";
 
-export const D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY = "ops:d1-table-growth:v1";
+export { D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY } from "@shared/lib/operational-cache-keys";
 const D1_TABLE_GROWTH_SNAPSHOT_INTERVAL_SEC = 24 * 60 * 60;
 const D1_TABLE_GROWTH_CACHE_MAX_AGE_SEC = 50 * 60 * 60;
 const D1_TABLE_GROWTH_SNAPSHOT_VERSION = 1;

@@ -17,10 +17,6 @@ export function resolveSourceRoot(root: string, cwd = process.cwd()): string {
   return isAbsolute(root) ? root : join(cwd, root);
 }
 
-/**
- * @param {string} rootDir
- * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
- */
 export function collectSourceFiles(
   rootDir: string,
   {
@@ -34,7 +30,6 @@ export function collectSourceFiles(
   const files: string[] = [];
 
   function visit(dir: string): void {
-    // The scanner intentionally walks the caller-selected source root.
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (skipDotEntries && entry.name.startsWith(".")) continue;
       const entryPath = join(dir, entry.name);
@@ -54,11 +49,6 @@ export function collectSourceFiles(
   return files;
 }
 
-/**
- * @param {string} root
- * @param {string} cwd
- * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
- */
 export function collectSourceFilesUnderRoot(
   root: string,
   cwd = process.cwd(),
@@ -70,11 +60,6 @@ export function collectSourceFilesUnderRoot(
   return collectSourceFiles(absolute, { extensions, excludedDirs, skipDotEntries });
 }
 
-/**
- * @param {readonly string[]} roots
- * @param {string} cwd
- * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
- */
 export function collectSourceFilesUnderRoots(
   roots: readonly string[],
   cwd = process.cwd(),
@@ -102,4 +87,3 @@ export function collectSourceFilesUnderRoots(
 export function formatScannedOk(label: string, count: number): string {
   return `${label}: OK (${count} file${count === 1 ? "" : "s"} scanned)\n`;
 }
-

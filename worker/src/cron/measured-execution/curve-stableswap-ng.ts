@@ -45,8 +45,6 @@ const CURVE_STABLESWAP_NG_FACTORY_ABI = parseAbi([
 
 export const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID =
   DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg;
-export const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
-export const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 
 export interface CurveStableSwapNgPoolPolicy {
   chain: "ethereum" | "etherlink";

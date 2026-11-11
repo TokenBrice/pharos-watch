@@ -762,7 +762,6 @@ function BackingSplitBar({ exogenousPct, reflexivePct }: { exogenousPct: number;
   );
 }
 
-/** The visual under the headline; `null` when the headline carries none. */
 function BackingVisual({ view }: { view: BackingMetricsView }) {
   const { visual } = view;
   if (!visual && !view.sharedBookNote) return null;

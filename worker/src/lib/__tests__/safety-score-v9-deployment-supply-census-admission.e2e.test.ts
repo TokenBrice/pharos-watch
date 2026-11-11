@@ -249,7 +249,6 @@ const atBarPacket = packetFromRows([boundaryRequiredRow], {
 
 describe("v10.38 deployment supply census admission (end to end)", () => {
   it("admits a recorded sub-bar bound as a reconciled partition the documentation class reads", () => {
-    // The fixture packet is a valid C4 generation, not a hand-waved row set.
     expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(boundaryPacket)).toEqual(boundaryPacket);
 
     const input = fixedInput({

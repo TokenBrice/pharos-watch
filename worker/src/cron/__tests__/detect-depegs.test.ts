@@ -35,7 +35,6 @@ vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_HISTORICAL_IDS: new Set(["iron-historical"]),
 }));
 
-// Stub peg-rates
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: (_assets: unknown, _metaById: unknown, fxFallbackRates?: Record<string, number>) => ({
     rates: {
@@ -71,7 +70,6 @@ function isCloseEventUpdate(sql: string): boolean {
   );
 }
 
-// Helper to build a minimal asset
 function makeAsset(overrides: {
   id: string;
   symbol: string;

@@ -156,7 +156,7 @@ const YieldRankingProvenanceSchema = z.object({
   sourceMaxAgeSeconds: z.number().nullable().optional(),
   comparisonAnchorObservedAt: z.number().nullable().optional(),
   comparisonAnchorAgeSeconds: z.number().nullable().optional(),
-  confidenceTier: z.enum(["deterministic", "curated", "discovered", "fallback"]),
+  confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES),
   calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
   evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),
   evidenceCompleteness: z.number().min(0).max(1).nullable().optional(),

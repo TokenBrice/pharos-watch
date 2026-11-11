@@ -35,11 +35,9 @@ describe("selectorAnswersToScreenerFilters", () => {
     const floor = (profile: "treasury" | "yield" | "trading", tol: "zero" | "tight" | "moderate") =>
       selectorAnswersToScreenerFilters(makeInput({ profile, depegTolerance: tol })).filters
         .pegScoreMin;
-    // Treasury → treasuryPegScoreFloor
     expect([floor("treasury", "zero"), floor("treasury", "tight"), floor("treasury", "moderate")]).toEqual([
       80, 70, 60,
     ]);
-    // Yield → yieldPegScoreFloor
     expect([floor("yield", "zero"), floor("yield", "tight"), floor("yield", "moderate")]).toEqual([
       65, 55, 45,
     ]);

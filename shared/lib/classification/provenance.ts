@@ -44,7 +44,6 @@ export const YIELD_SOURCE_AGE_DISPLAY = {
   unknown: { label: "Unknown", text: "text-muted-foreground" },
 } as const satisfies Record<"fresh" | "stale" | "unknown", { label: string; text: string }>;
 
-/** Faded `/40` fills for the yield source board quality strips. */
 export const YIELD_SOURCE_QUALITY_FILL_CLASSES = {
   deterministic: "bg-emerald-500/40",
   curated: "bg-sky-500/40",

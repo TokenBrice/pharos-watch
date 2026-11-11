@@ -189,8 +189,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     [zoom, map.viewBox],
   );
 
-  // ------------------------------------------------------------------ hover / focus
-
   const aimHot = useCallback(
     (id: string | null, immediate: boolean) => {
       window.clearTimeout(dwellRef.current);
@@ -222,8 +220,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     setLastLivePin(heroPin);
     if (heroPin) setTabId(heroPin.id);
   }
-
-  // ------------------------------------------------------------------ pin
 
   const pin = useCallback(
     (id: string, source: CemeterySelectionSource) => {
@@ -271,8 +267,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     return registerPinGrave((id, source) => pinHandlerRef.current(id, source));
   }, [plotLayout, registerPinGrave]);
 
-  // ------------------------------------------------------------------ zoom
-
   const zoomTo = useCallback(
     (cause: CauseOfDeath) => {
       const frame = query<HTMLElement>("[data-plot-frame]");
@@ -319,8 +313,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     },
     [nav, zoom, vbW, frameRectOf],
   );
-
-  // ------------------------------------------------------------------ keyboard
 
   const moveTo = useCallback(
     (id: string) => {
@@ -416,8 +408,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     return () => document.removeEventListener("keydown", onKey);
   }, [plotLayout, pinnedId, zoom, hot, escape, leaveFlower]);
 
-  // ------------------------------------------------------------------ delegated events
-
   // The hero root also holds the phone layer (the portrait slot, whose graves are `walk-<id>` anchors) and, through
   // React's tree, the portalled phone sheet: the desktop plan reacts only to events from its own DOM, and only while
   // it is the live layer.
@@ -489,8 +479,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
     }
     if (grave?.dataset.graveId) graveKey(event, grave.dataset.graveId);
   };
-
-  // ------------------------------------------------------------------ effects: focus, scroll, beam, tag, card
 
   // A zoom change moves focus where its handler asked (toolbar after a keyboard zoom, signpost after leaving it).
   useLayoutEffect(() => {
@@ -650,7 +638,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       return !zoom && r.width + r.height > 0 && r.left < card.right && r.right > card.left && r.top < card.bottom && r.bottom > card.top;
     });
     const covered = new Set(labels.flatMap((el, k) => (under[k] && el.dataset.plotChip ? [el.dataset.plotChip] : [])));
-    // a chip's leader goes with its chip, and also hides wherever the card would cut it
     labels.forEach((el, k) => el.toggleAttribute("data-covered", under[k] || covered.has(el.dataset.plotLeader ?? "")));
   }, [cardId, docked, zoom, query, nav, map, frameRectOf, vbW]);
 
@@ -704,8 +691,6 @@ export function PlotMapHero({ rows, asOf, atlas, layout, portraitAspectRatio, ch
       window.removeEventListener("scroll", onScroll);
     };
   }, [cardId, docked, placeCard]);
-
-  // ------------------------------------------------------------------ render
 
   // What the zoom chip states: the camera's framed years and graves; after ←/→ panned a partial view, the section's
   // graves wholly inside the visible band.

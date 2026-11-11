@@ -1436,7 +1436,6 @@ describe("active-depeg census scope", () => {
       if (summary === null) throw new Error("A served census response must carry a summary");
       expect(summary.activeDepegCount).toBe(census);
 
-      // The route card prints that same census figure over the same owner body.
       const timeline = await loadTimelineOgPage(db, CENSUS_NOW);
       expect(timeline).toMatchObject({ kind: "ok", hero: String(census) });
     } finally {

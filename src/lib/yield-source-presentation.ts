@@ -3,6 +3,7 @@ import { getYieldSourceProducerCadenceMs } from "@shared/lib/yield-source-cadenc
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 import type { YieldRankChangeAttribution, YieldRanking } from "@shared/types";
+import { YIELD_SOURCE_CONFIDENCE_TIER_VALUES } from "@shared/types/yield-vocabulary";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
 export type YieldSourcePublishedFreshness = NonNullable<
@@ -16,28 +17,13 @@ export interface YieldSourceConfidenceStyle {
   text: string;
 }
 
-export const YIELD_SOURCE_CONFIDENCE_STYLES: Record<YieldSourceConfidenceTier, YieldSourceConfidenceStyle> = {
-  deterministic: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.pill}`,
-    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.dot}`,
-    text: YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.text,
-  },
-  curated: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.curated.pill}`,
-    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.curated.dot}`,
-    text: YIELD_SOURCE_CONFIDENCE_CLASSES.curated.text,
-  },
-  discovered: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.pill}`,
-    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.dot}`,
-    text: YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.text,
-  },
-  fallback: {
-    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.pill}`,
-    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.dot}`,
-    text: YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.text,
-  },
-};
+export const YIELD_SOURCE_CONFIDENCE_STYLES = Object.fromEntries(
+  YIELD_SOURCE_CONFIDENCE_TIER_VALUES.map((tier) => [tier, {
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES[tier].pill}`,
+    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES[tier].dot}`,
+    text: YIELD_SOURCE_CONFIDENCE_CLASSES[tier].text,
+  }]),
+) as Record<YieldSourceConfidenceTier, YieldSourceConfidenceStyle>;
 
 export type YieldSourceAgeContextBand = "within-6h" | "within-12h" | "within-24h" | "over-24h";
 

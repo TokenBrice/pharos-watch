@@ -129,7 +129,6 @@ describe("MarketDataSection history expansion", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("range=all");
     await waitFor(() => expect(marketCapDomain()).toBe(FULL_DOMAIN));
-    // The real brush strip re-domains onto the expanded history.
     const slider = screen.getByRole("slider", { name: "Brush time window" });
     expect(slider.getAttribute("aria-valuemin")).toBe(String(FULL_HISTORY[0].date * 1000));
     expect(slider.getAttribute("aria-valuemax")).toBe(
@@ -318,8 +317,6 @@ describe("MarketDataSection history expansion", () => {
       String(Math.max(ANNUAL_HISTORY[ANNUAL_HISTORY.length - 1].date - 365 * DAY, ANNUAL_HISTORY[0].date) * 1000),
     );
 
-    // Back to a seeded range: the seed domain returns and the expanded query
-    // disables again.
     fireEvent.click(screen.getByRole("button", { name: "90D" }));
     expect(marketCapDomain()).toBe(SEED_DOMAIN);
   });
@@ -360,7 +357,6 @@ describe("MarketDataSection history expansion", () => {
     expect(slider.getAttribute("aria-valuenow")).not.toBe(slider.getAttribute("aria-valuemin"));
     expect(screen.getByRole("button", { name: "Clear" })).toBeTruthy();
 
-    // The explicit clear control returns the slider to the full domain.
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(slider.getAttribute("aria-valuenow")).toBe(slider.getAttribute("aria-valuemin"));
     expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();

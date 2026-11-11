@@ -255,9 +255,6 @@ describe("adaptCrvUsd", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Fetch-level scenarios against the harness network boundary.
-// ---------------------------------------------------------------------------
 
 const CRVUSD_COIN_ID = "crvusd-curve";
 const CURVE_MARKETS_URL = "https://prices.curve.finance/v1/crvusd/markets";

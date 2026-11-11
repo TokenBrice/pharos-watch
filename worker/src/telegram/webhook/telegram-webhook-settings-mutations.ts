@@ -81,7 +81,6 @@ export async function applyCoinSetting(
   return prepared.description;
 }
 
-/** Plain on/off families, addressed by their registry setting code. */
 const PLAIN_ALERT_TYPE_BY_SETTING_CODE: Record<string, Exclude<PlainAlertType, "launch"> | undefined> = {
   [TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode]: "reserve",
   [TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode]: "freeze",

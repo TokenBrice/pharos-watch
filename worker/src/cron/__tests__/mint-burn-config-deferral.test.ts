@@ -139,10 +139,6 @@ describe("deferConfig", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Orchestrator integration tests
-// ---------------------------------------------------------------------------
-
 function makeConfig(overrides?: Partial<MintBurnContractConfig>): MintBurnContractConfig {
   return { ...makeMintBurnConfig({ asset: { contractAddress: "0xaaaa", tier: "critical" }, adapter: "mixed" }), ...overrides };
 }

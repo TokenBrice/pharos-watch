@@ -1,4 +1,3 @@
-// src/lib/__tests__/stablecoin-detail-custody-client.test.ts
 import { describe, expect, it } from "vitest";
 import type { CustodyProfile, StablecoinMeta } from "@shared/types";
 import {

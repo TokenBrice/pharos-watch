@@ -20,12 +20,12 @@ import {
 import type {
   YieldBenchmarkSelectionMode,
   YieldRankChangeAttribution,
-  YieldRanking,
   YieldSourceRole,
 } from "@shared/types/yield";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
+import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 
-export type YieldWorkbenchRanking = YieldRanking | YieldRankingSummary;
+export type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 
 export function isYieldRankingSummary(row: YieldWorkbenchRanking): row is YieldRankingSummary {
   return "alternateSourceCount" in row;

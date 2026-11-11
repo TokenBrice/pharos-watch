@@ -16,7 +16,8 @@ import { confidenceClass } from "@/lib/confidence";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { BACKING_BADGE_STYLES, BACKING_LABELS_SHORT, DIRECTION_TONE_CLASSES, GOVERNANCE_BADGE_STYLES, GOVERNANCE_LABELS_SHORT, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
-import { formatBps, formatCurrency, formatPercentChange, getNetColor, roundForDisplay } from "@shared/lib/format";
+import { formatBps, formatCurrency, formatPercentChange, roundForDisplay } from "@shared/lib/format";
+import { getNetColor } from "@shared/lib/classification/flows";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 

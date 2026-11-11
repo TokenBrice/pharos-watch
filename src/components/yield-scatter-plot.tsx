@@ -554,7 +554,6 @@ export function YieldScatterPlot({
                     : { top: 10, right: 14, bottom: 16, left: 2 }
               }
             >
-              {/* Quadrant shading */}
               {showBenchmarkReference
                 ? YIELD_SCATTER_QUADRANTS.map((quadrant) =>
                     shouldRenderYieldScatterQuadrant(quadrant, safetyDomain) ? (
@@ -585,7 +584,6 @@ export function YieldScatterPlot({
                 strokeDasharray="3 4"
               />
 
-              {/* Risk-free rate reference line */}
               {showBenchmarkReference ? (
                 <ReferenceLine
                   y={benchmarkRate}

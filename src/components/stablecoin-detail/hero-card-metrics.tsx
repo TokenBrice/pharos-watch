@@ -4,11 +4,10 @@ import { FigureLeadText } from "./figure-lead-text";
 import {
   formatBps,
   formatCurrency,
-  formatNativePrice,
   formatPercentChange,
   formatSupply,
-  pegCurrencySymbol,
 } from "@shared/lib/format";
+import { formatNativePrice, pegCurrencySymbol } from "@shared/lib/peg-format";
 import type { StablecoinMeta } from "@shared/types";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { hasObservedDisplayPrice } from "@/lib/current-peg";

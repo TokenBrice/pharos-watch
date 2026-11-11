@@ -55,7 +55,6 @@ export type IncidentReviewMigrationResolution =
   | "deployment"
   | "retired";
 
-/** How the migration row applies to the authored registry. */
 export type IncidentReviewMigrationApplication =
   | "authored"
   | "unchanged"

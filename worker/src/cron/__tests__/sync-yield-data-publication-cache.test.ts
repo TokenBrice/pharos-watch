@@ -119,7 +119,6 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db);
 
-    // Should have updated 1 yield-bearing coin
     expect(result.itemCount).toBe(1);
     expect(getPublishedYieldRows(db)).toHaveLength(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
@@ -384,7 +383,6 @@ describe("syncYieldData", () => {
   it("uses cached DL pools from DEX sync when available", async () => {
     const db = makePublicationCacheDb();
 
-    // Simulate cached pools from DEX sync
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": cacheRow({
             updatedAt: Math.floor(Date.now() / 1000),

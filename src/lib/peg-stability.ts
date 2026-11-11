@@ -3,7 +3,7 @@ import { formatTrackingSpanSeconds } from "@shared/lib/format";
 import { computePegScore } from "@shared/lib/peg-score";
 import { DAY_SECONDS } from "@/lib/constants";
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
-import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
+import { classifyDepegClosure, isDepegRecovery, type DepegClosureClassification } from "@shared/lib/depeg-closure";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 
 interface PegStabilityMetrics {
@@ -13,7 +13,6 @@ interface PegStabilityMetrics {
   trackingSpan: string;
   /** Whether tracking history is < 7 days */
   limited: boolean;
-  /** Total number of depeg events */
   eventCount: number;
   /** Worst (most extreme) peak deviation in bps, signed */
   worstDeviationBps: number | null;
@@ -21,7 +20,6 @@ interface PegStabilityMetrics {
   currentStreakDays: number | null;
   /** Latest terminal boundary, including non-recovery tracking closures */
   latestClosure: DepegClosureClassification | null;
-  /** Whether there is an ongoing depeg event right now */
   depeggedNow: boolean;
 }
 
@@ -68,7 +66,7 @@ export function computePegStability(
     }
   }
   const latestClosure = latestClosed ? classifyDepegClosure(latestClosed) : null;
-  const recovered = latestClosure === "recovered" || latestClosure === "legacy_recovered";
+  const recovered = isDepegRecovery(latestClosure);
   const currentStreakDays = !depeggedNow && recovered && latestClosed
     ? Math.floor((nowSec - latestClosed.endedAt!) / DAY_SECONDS)
     : null;

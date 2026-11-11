@@ -65,7 +65,6 @@ export async function mergeCgPools(
   }
 }
 
-/** Merge GT-discovered new pools into existing SourcePoolGraph. */
 export async function mergeGtPools(
   metrics: Map<string, SourcePoolGraph>,
   gtNewPools: Map<string, GtNewPool[]>,

@@ -1,4 +1,3 @@
-// src/lib/__tests__/stablecoin-detail-blacklistability-client.test.ts
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { projectBlacklistabilityClientSummary } from "../stablecoin-detail-blacklistability-client";

@@ -22,7 +22,6 @@ const { handleStatus } = await import("../status");
 const { STATUS_RAW_SNAPSHOT_CACHE_KEY, STATUS_RAW_SNAPSHOT_MAX_AGE_SEC } =
   await import("../../lib/status/raw-snapshot");
 
-/** Build a mock cache row with a recent updated_at */
 function makeCacheRow(key: string, ageSec = 300) {
   return {
     key,
@@ -31,7 +30,6 @@ function makeCacheRow(key: string, ageSec = 300) {
   };
 }
 
-/** Build a mock cron_runs row */
 function makeCronRow(job: string, status = "ok", ageSec = 300) {
   return {
     job,

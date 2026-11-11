@@ -35,7 +35,6 @@ export function compareDepegTrackerRows(
   b: DepegTrackerRow,
   sort: TableSortState<DepegTableSortKey>,
 ): number {
-  // __attention and unknown keys sort by the composite attention score.
   if (sort.key === "__attention" || !(sort.key in fieldExtractors)) {
     const delta = attentionScore(a) - attentionScore(b);
     return sort.direction === "asc" ? delta : -delta;

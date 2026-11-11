@@ -30,8 +30,6 @@ export interface ReserveResult {
   sync?: ReserveSyncStateView;
 }
 
-// ── Default reserve templates by classification ─────────────────────────
-
 const TEMPLATES: Record<string, ReserveSlice[]> = {
   "rwa-centralized": [
     { name: "U.S. Treasuries / Gov Securities", pct: 70, risk: "very-low" },
@@ -83,22 +81,16 @@ const TEMPLATES: Record<string, ReserveSlice[]> = {
   ],
 };
 
-// ── Template key resolution ─────────────────────────────────────────────
-
 function templateKey(coin: ReserveTemplateCoinMeta): string | null {
   const { backing, pegCurrency, governance } = coin.flags;
 
-  // Commodity pegs get their own template regardless of other flags
   if (pegCurrency === "GOLD") return "commodity-gold";
   if (pegCurrency === "SILVER") return "commodity-silver";
 
-  // Algorithmic coins share a single template
   if (backing === "algorithmic") return "algorithmic";
 
-  // Cross backing × governance
   const base = `${backing === "rwa-backed" ? "rwa" : "crypto"}-${governance}`;
 
-  // Refine crypto-centralized-dependent with collateralQuality if available
   if (base === "crypto-centralized-dependent" && coin.collateralQuality) {
     const refined = `${base}-${coin.collateralQuality}`;
     if (TEMPLATES[refined]) return refined;
@@ -106,8 +98,6 @@ function templateKey(coin: ReserveTemplateCoinMeta): string | null {
 
   return TEMPLATES[base] ? base : null;
 }
-
-// ── Public API ──────────────────────────────────────────────────────────
 
 /** Minimal coin shape needed for reserve resolution; satisfied by both the fat and client registries. */
 export type ReserveTemplateCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "collateralQuality">
@@ -124,14 +114,12 @@ const TEMPLATE_SUPPRESSED_IDS = new Set([
  * category-based template derived from the coin's classification flags.
  */
 export function getReserves(coin: ReserveTemplateCoinMeta): ReserveResult | null {
-  // Prefer manually curated data
   if (coin.reserves && coin.reserves.length > 0) {
     return { reserves: coin.reserves, estimated: false, mode: "curated-fallback" };
   }
 
   if (coin.id && TEMPLATE_SUPPRESSED_IDS.has(coin.id)) return null;
 
-  // Fall back to template
   const key = templateKey(coin);
   if (!key) return null;
 

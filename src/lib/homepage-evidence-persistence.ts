@@ -2,7 +2,7 @@ import { z } from "zod";
 import { HomepageSnapshotSchema, type HomepageSnapshot } from "@shared/types/homepage";
 import { DEPEG_DEWS_METHODOLOGY_VERSION, PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
-import { isRetainableHomepageLane } from "@/lib/homepage-evidence";
+import { isRetainableHomepageLane } from "@/lib/retained-evidence-policy";
 import { openPublicEvidenceDatabase, PUBLIC_EVIDENCE_STORE as STORE } from "@/lib/public-evidence-database";
 
 export const HOMEPAGE_EVIDENCE_QUERY_KEY = FRONTEND_API_QUERY_DESCRIPTORS.homepageSnapshot.queryKey;

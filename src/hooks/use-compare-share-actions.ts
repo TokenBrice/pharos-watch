@@ -7,7 +7,8 @@ import { canvasToBlob, loadImage, renderCompareShareImage } from "@/lib/compare-
 import { copyText } from "@/lib/clipboard";
 import { triggerBlobDownload } from "@/lib/exports/download";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
-import { formatCurrency, formatNativePrice } from "@shared/lib/format";
+import { formatCurrency } from "@shared/lib/format";
+import { formatNativePrice } from "@shared/lib/peg-format";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";

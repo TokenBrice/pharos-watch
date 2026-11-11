@@ -147,7 +147,6 @@ export async function handleCallbackQuery(
   }
 
   const knownParsed: ParsedCallbackData<CallbackAction> = { ...parsed, action };
-  // The bespoke settings route returned before the action allowlist check.
   const handler = CALLBACK_HANDLERS[action as Exclude<CallbackAction, "settings">];
   await handler({
     db,
@@ -155,9 +154,7 @@ export async function handleCallbackQuery(
     cb,
     chatId,
     parsed: knownParsed,
-    beforeIrreversibleEffect: async () => undefined,
     answerCallback: answer,
-    markMutationApplied: async () => undefined,
   });
 }
 

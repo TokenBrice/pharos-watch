@@ -8,7 +8,6 @@ import {
   formatChartPercent,
   formatPercent,
   formatCoverageRatio,
-  formatPegOccupancy,
   formatPercentFromRatio,
   formatPrice,
   formatSignedCurrency,
@@ -27,9 +26,7 @@ import {
   formatSignedCompactUsd,
   formatBps,
   formatEventDate,
-  formatNativePrice,
   formatUsdPriceAdaptive,
-  pegCurrencySymbol,
   formatPercentChange,
   formatSupply,
   formatTrackingSpanDays,
@@ -40,6 +37,7 @@ import {
   formatAddress,
   formatScoreTrimmed,
 } from "../format";
+import { formatPegOccupancy, formatNativePrice, pegCurrencySymbol } from "../peg-format";
 import {
   formatApproxDurationSeconds,
   formatRelativeAgeSeconds,
@@ -570,7 +568,7 @@ describe("non-finite formatter fallbacks", () => {
 });
 
 describe("formatRelativeTimeMs", () => {
-  const now = 1_700_000_000_000; // fixed reference point
+  const now = 1_700_000_000_000;
   it("returns seconds ago for sub-minute age", () => {
     expect(formatRelativeTimeMs(now - 30_000, { now })).toBe("30s ago");
   });

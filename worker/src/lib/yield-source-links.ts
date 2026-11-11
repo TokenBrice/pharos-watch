@@ -1,5 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { LENDING_PROTOCOL_LABELS } from "./yield-config/yield-config-lending-protocols";
+import { LENDING_PROTOCOLS } from "./yield-config/yield-config-lending-venues";
 import { YIELD_POOL_MAP } from "./yield-config/yield-config-pools";
 
 const APP_LINK_LABEL_PRIORITY = ["App", "Portal", "Earn", "Mint", "Stake", "Dashboard"] as const;
@@ -13,9 +13,12 @@ const POOL_SOURCE_URLS: Record<string, string> = {
   "5fd328af-4203-471b-bd16-1705c726d926": "https://www.curve.finance/crvusd/ethereum/scrvUSD",
 };
 
+const LENDING_PROTOCOL_SOURCE_URLS: Record<string, string> = Object.fromEntries(
+  Object.entries(LENDING_PROTOCOLS).map(([slug, config]) => [slug, config.url]),
+);
+
 const YIELD_SOURCE_URLS: Record<string, string> = {
-  "Aave v3": "https://app.aave.com/",
-  "Aave v4": "https://app.aave.com/",
+  ...Object.fromEntries(Object.values(LENDING_PROTOCOLS).map((config) => [config.label, config.url])),
   "B.Protocol Stability Pool (LQTY only)": "https://app.bprotocol.org/liquity",
   "BIMA savings (sUSBD)": "https://bima.money/earn",
   "Curve Savings (scrvUSD)": "https://www.curve.finance/crvusd/ethereum/scrvUSD",
@@ -23,101 +26,15 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "K3: sBOLD": "https://liquity.app/earn/sbold",
   "Liquity Stability Pool (via K3 sBOLD)": "https://liquity.app/earn/sbold",
   "Ondo USDY Oracle": "https://ondo.finance/usdy",
-  Beefy: "https://app.beefy.com/",
-  BENQI: "https://app.benqi.fi/",
-  "Compound v2": "https://app.compound.finance/",
-  "Compound v3": "https://app.compound.finance/",
   "Compound V3 (ethereum)": "https://app.compound.finance/",
   "Compound V3 (base)": "https://app.compound.finance/",
   "Compound V3 (arbitrum)": "https://app.compound.finance/",
-  Dolomite: "https://app.dolomite.io/",
-  Exactly: "https://app.exactly.app/",
-  Felix: "https://felix.finance/",
-  "Euler v2": "https://app.euler.finance/",
-  "Flux Finance": "https://app.fluxfinance.com/",
-  Fluid: "https://fluid.instadapp.io/",
-  "Gains Network": "https://gains.trade/",
-  JustLend: "https://justlend.org/",
-  Kamino: "https://app.kamino.finance/",
-  "Maple Finance": "https://app.maple.finance/earn",
   "Maple Finance lending": "https://app.maple.finance/earn",
-  Moonwell: "https://app.moonwell.fi/",
-  Morpho: "https://app.morpho.org/",
-  "Morpho Blue": "https://app.morpho.org/",
-  Multipli: "https://multipli.fi/",
-  OpenEden: "https://openeden.com/usdo",
-  Pendle: "https://app.pendle.finance/",
-  "Spark Savings": "https://app.spark.fi/",
-  SparkLend: "https://app.spark.fi/",
-  "Curve LlamaLend": "https://www.curve.finance/lend",
-  "Jupiter Lend": "https://jup.ag/lend",
-  "Lazy Summer": "https://summer.fi/",
-  "Silo v2": "https://app.silo.finance/",
-  "Stables Labs": "https://stables.money/",
-  Venus: "https://app.venus.io/",
-  Yearn: "https://app.yearn.fi/",
-  "Radiant v2": "https://app.radiant.capital/",
-  Fraxlend: "https://app.frax.finance/fraxlend",
-  Clearpool: "https://app.clearpool.finance/",
-  Centrifuge: "https://app.centrifuge.io/",
-  "Sturdy v2": "https://v2.sturdy.finance/",
-  Goldfinch: "https://app.goldfinch.finance/",
-  TrueFi: "https://app.truefi.io/",
-  Lagoon: "https://app.lagoon.finance/",
-  Liqwid: "https://app.liqwid.finance/",
-  "Lista Lending": "https://lista.org/",
-  Loopscale: "https://loopscale.com/",
-  "More Markets": "https://app.moremarkets.xyz/",
-  "NAVI Lending": "https://naviprotocol.io/",
-  Overnight: "https://app.overnight.fi/",
-  "SmarDex USDN": "https://smardex.io/",
-  Vesper: "https://app.vesper.finance/",
-  Sovryn: "https://sovryn.com/",
-  Wildcat: "https://app.wildcat.finance/",
-  Tectonic: "https://app.tectonic.finance/",
-  Upshift: "https://app.upshift.finance/",
-  "Venus Flux": "https://app.venus.io/",
-  Avantis: "https://app.avantis.finance/",
-  Cap: "https://app.cap.money/",
-  Resupply: "https://resupply.fi/",
-  ZeroBase: "https://zerobase.fi/",
-  "Convex Finance": "https://www.convexfinance.com/",
-  "Yo Protocol": "https://yo.xyz/",
-  "Clearpool Lending": "https://app.clearpool.finance/",
-  "3Jane": "https://3jane.xyz/",
-  "Hyperliquid Earn": "https://app.hyperliquid.xyz/earn",
-  HyperLend: "https://app.hyperlend.finance/",
-  "Zest v2": "https://app.zestprotocol.com/",
-  "Liquity v2": "https://www.liquity.org/",
-  Echelon: "https://echelon.market/",
-  TermMax: "https://app.termmax.io/",
-  Gearbox: "https://app.gearbox.fi/",
   Kong: "https://kong.yearn.fi/",
   // Tier C — 2026-05-13 audit additions
-  AutoFinance: "https://www.auto.finance",
-  Neverland: "https://neverland.money",
-  Metrom: "https://www.metrom.xyz",
-  "Mystic Finance": "https://www.mysticfinance.xyz/",
-  Bitway: "https://bitway.com/",
-  Frankencoin: "https://frankencoin.com",
   // Wave 2 — category-gated thin-chain/app-chain lenders
-  "Aries Markets": "https://ariesmarkets.xyz/",
-  Blend: "https://www.blend.capital/",
-  Current: "https://www.current.finance/",
-  Curvance: "https://app.curvance.com/",
-  Scallop: "https://app.scallop.io/",
-  Tydro: "https://tydro.com/",
   // Wave 3 — 2026-06-11 audit queue follow-up
-  "BiFi": "https://bifi.finance/",
-  "Fraxlend v1": "https://app.frax.finance/fraxlend",
   // 2026-09-23 coverage-audit drain promotions
-  "Sky Lending": "https://app.sky.money/",
-  "JustLend V1": "https://justlend.org/",
-  "Accountable": "https://accountable.capital/",
-  "Pareto Credit": "https://pareto.credit/",
-  "Inverse Finance FiRM": "https://inverse.finance",
-  "Segment Finance": "https://segment.finance",
-  "Save": "https://www.save.finance/",
   // Explicit-pool labels (parenthetical asset suffix is stripped by the label fallback chain)
   "Hydration Omnipool": "https://hydration.net/",
 };
@@ -221,7 +138,7 @@ export function resolveYieldSourceUrl(params: {
     // pool's project before the row label. An unrelated deposit venue must never
     // inherit an issuer app URL; DeFiLlama is the last resort for an unmapped venue.
     return ownValue(VENUE_PROTOCOL_SOURCE_URLS, params.venueProtocol)
-      ?? resolveLabelUrl(ownValue(LENDING_PROTOCOL_LABELS, params.venueProtocol))
+      ?? ownValue(LENDING_PROTOCOL_SOURCE_URLS, params.venueProtocol)
       ?? resolveLabelUrl(params.yieldSource)
       ?? `https://defillama.com/yields/pool/${poolId}`;
   }

@@ -44,7 +44,6 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     // aave-v3: blue-chip money market → low. morpho-blue: shared Morpho scores → medium.
     expect(venueRiskTierOf(YIELD_RISK_CONFIG["aave-v3"])).toBe("low");
     expect(venueRiskTierOf(YIELD_RISK_CONFIG["morpho-blue"])).toBe("medium");
-    // Resolver (incl. aliases) returns the same entries; unknown venues are null.
     expect(resolveReviewedYieldRiskConfig("aave-v3")).toBe(YIELD_RISK_CONFIG["aave-v3"]);
     expect(resolveReviewedYieldRiskConfig("compound")).toBe(YIELD_RISK_CONFIG["compound-v3"]);
     expect(resolveReviewedYieldRiskConfig("unreviewed-protocol")).toBeNull();

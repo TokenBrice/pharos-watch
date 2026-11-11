@@ -1,5 +1,5 @@
 import { answerCallbackQuery } from "../delivery/telegram";
-import { handleSettingsCallback, type SettingsWebhookEffect } from "../webhook/telegram-webhook-settings";
+import { handleSettingsCallback } from "../webhook/telegram-webhook-settings";
 import {
   requireAdminForMutatingCallback,
   type ParsedCallbackData,
@@ -18,11 +18,8 @@ export async function handleSettingsInlineCallback(
   cb: TelegramCallbackQuery,
   chatId: string,
   parsed: ParsedCallbackData,
-  effect: SettingsWebhookEffect = { beforeIrreversibleEffect: async () => undefined },
 ): Promise<void> {
-  const { beforeIrreversibleEffect } = effect;
   const answer = async (text: string): Promise<void> => {
-    await beforeIrreversibleEffect("callback-ack");
     await answerCallbackQuery(cb.id, botToken, { text });
   };
   const { arg: subAction = "", parts } = parsed;
@@ -47,9 +44,9 @@ export async function handleSettingsInlineCallback(
     subAction === "c";
   if (
     mutatingSettingsCallback &&
-    !(await requireAdminForMutatingCallback(db, botToken, cb, chatId, undefined, beforeIrreversibleEffect))
+    !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))
   ) {
     return;
   }
-  await handleSettingsCallback(db, botToken, cb, subAction, subArg, effect);
+  await handleSettingsCallback(db, botToken, cb, subAction, subArg);
 }

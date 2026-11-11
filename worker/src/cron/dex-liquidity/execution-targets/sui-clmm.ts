@@ -1,4 +1,4 @@
-import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "../execution-target-registry";
+import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./contract";
 import { suiClmmFamily, suiClmmPoolId, suiCoinType } from "../sui/identity";
 
 /** Native object/Move-type identities never enter the EVM-only V1 target schema.

@@ -39,7 +39,6 @@ export function CoinSelector({
     setFocusedIndex(-1);
   }, []);
 
-  // Close on click outside
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
@@ -66,7 +65,6 @@ export function CoinSelector({
       : coins;
   }, [coins, search]);
 
-  // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!open || disabled) return;
@@ -109,7 +107,6 @@ export function CoinSelector({
     [disabled, open, filtered, focusedIndex, disabledIds, onSelect, dismiss],
   );
 
-  // Scroll focused item into view
   useEffect(() => {
     if (focusedIndex >= 0 && filtered[focusedIndex]) {
       const el = document.getElementById(
@@ -119,14 +116,12 @@ export function CoinSelector({
     }
   }, [focusedIndex, filtered, optionIdPrefix]);
 
-  // Focus input when dropdown opens
   useEffect(() => {
     if (open && inputRef.current) {
       inputRef.current.focus();
     }
   }, [open]);
 
-  // Selected state: show chip with remove button
   if (selected) {
     return (
       <div className="flex min-h-11 items-center gap-2 rounded-lg border bg-accent/30 px-3 py-2 sm:min-h-9">

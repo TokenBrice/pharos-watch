@@ -163,7 +163,6 @@ export interface UseLatestEventsOptions {
   limit?: number;
   /** Exact permalink lookup, independent of listing filters. */
   eventId?: string;
-  /** Restrict to a single coin id. */
   coin?: string;
   /** Restrict to events with type prefix (e.g. `depeg`). */
   classSlug?: string;

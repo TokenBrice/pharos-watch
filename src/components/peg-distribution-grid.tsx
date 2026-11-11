@@ -16,7 +16,6 @@ interface PegBrowseChip {
   count: number;
 }
 
-/** Group pegs into semantic categories for the browse strip. */
 type PegGroup = { label: string; pegs: typeof ACTIVE_PEGS };
 function groupPegs(pegs: typeof ACTIVE_PEGS): PegGroup[] {
   const fiat: typeof ACTIVE_PEGS = [];

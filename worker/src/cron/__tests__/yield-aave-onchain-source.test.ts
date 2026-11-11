@@ -465,7 +465,6 @@ describe("fetchAaveV3SupplyRates", () => {
       // is rejected, and its coin can never score.
       expect(Number.isFinite(candidate.yield.sourceObservedAt)).toBe(true);
       expect(candidate.yield.sourceObservedAt).toBe(startSec);
-      // No comparison anchor is used for this lane.
       expect(candidate.yield.comparisonAnchorObservedAt).toBeNull();
     }
   });

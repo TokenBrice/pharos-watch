@@ -14,7 +14,6 @@ import { numberValue } from "./type-guards";
 /** Risk penalty floor — prevents division by near-zero. */
 export const PYS_RISK_PENALTY_FLOOR = 0.5;
 
-/** Exponent applied to the safety-derived risk penalty curve. */
 export const PYS_RISK_PENALTY_EXPONENT = 1.75;
 
 /** Sustainability multiplier floor — ensures non-zero contribution. */
@@ -26,7 +25,6 @@ export const PYS_DEFAULT_SAFETY_SCORE = 40;
 /** Weight applied to row-level benchmark spread when forming effective yield. */
 export const PYS_BENCHMARK_SPREAD_WEIGHT = 0.25;
 
-/** Maximum multiplier applied by explicit source-risk penalties. */
 export const PYS_MAX_SOURCE_RISK_PENALTY = 2.5;
 
 /**

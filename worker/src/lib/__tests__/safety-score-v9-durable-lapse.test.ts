@@ -149,7 +149,6 @@ describe("Safety Score v9 durable custody lapse (documentation class)", { timeou
       const extension = build(fixed, { metaById: metaMap(metadata) });
       const asset = compile(fixed, extension).assets[0]!;
       const control = asset.controls.find((row) => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
-      // Today's behavior: the lapsed question leaves no marker and no datum.
       expect(control.scopedQuestionSubject).toBeUndefined();
       expect(control.factorStatuses?.keyCustody).toBeUndefined();
       expect(asset.gaps.some((gap) => gap.causeScope?.factorKey === "keyCustody")).toBe(false);

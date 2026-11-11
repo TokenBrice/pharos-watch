@@ -20,10 +20,6 @@ import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9"
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
 
-// ---------------------------------------------------------------------------
-// Helpers — minimal mock factories
-// ---------------------------------------------------------------------------
-
 function mockCard(id: string, symbol: string, grade: V9Grade = "B", isDefunct = false): ContagionGraphCard {
   return { id, symbol, grade, isDefunct };
 }
@@ -67,19 +63,11 @@ it("preserves unavailable market cap without inflating node size", () => {
   expect(nodes.find((node) => node.id === "known")!.r).toBeGreaterThan(MIN_RADIUS);
 });
 
-// ---------------------------------------------------------------------------
-// contagionEdgeWeight
-// ---------------------------------------------------------------------------
-
 describe("contagionEdgeWeight", () => {
   it.each([false, true])("treats serial dependency blocked=%s as full pass-through", (blocked) => {
     expect(contagionEdgeWeight(serialEdge("a", "b", blocked))).toBe(1);
   });
 });
-
-// ---------------------------------------------------------------------------
-// buildGraphData
-// ---------------------------------------------------------------------------
 
 describe("buildGraphData", () => {
   const realIds = TRACKED_STABLECOINS.slice(0, 10).map((s) => s.id);
@@ -93,7 +81,6 @@ describe("buildGraphData", () => {
     return { cards, mcapMap };
   }
 
-  /** Chains the ranked ids so no node is isolated. */
   function chainEdges(ids: string[]): ReportCardsV9DependencyEdge[] {
     return ids.slice(1).map((id, index) => basketEdge(ids[index], id, 0.5));
   }

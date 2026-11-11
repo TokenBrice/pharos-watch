@@ -18,7 +18,6 @@ import type { ExportPreamble } from "@/lib/exports/preamble";
 type Status = "idle" | "copied" | "error";
 
 export interface TableExportMenuProps<T> {
-  /** Rows to export. */
   data: T[];
   /** Column descriptors. Each provides a header and an accessor. */
   columns: CsvColumn<T>[];
@@ -34,7 +33,6 @@ export interface TableExportMenuProps<T> {
   sourceGenerations?: ExportPreamble["sourceGenerations"];
   /** Optional trigger label override; defaults to "Export". */
   triggerLabel?: string;
-  /** Optional class override for the trigger button. */
   triggerClassName?: string;
   /** Disable export actions while backing rows are still resolving. */
   disabled?: boolean;

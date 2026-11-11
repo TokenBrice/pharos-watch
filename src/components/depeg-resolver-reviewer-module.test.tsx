@@ -202,7 +202,6 @@ describe("DepegResolverReviewerModule", () => {
     // …and the percentage is deliberately withheld to avoid overstating a thin sample.
     expect(screen.queryByText("50%")).toBeNull();
     expect(screen.getByText("Calibrating")).toBeTruthy();
-    // Duration miss + scored-vs-maturing progress captions.
     expect(screen.getAllByText("+1h").length).toBeGreaterThan(0);
     expect(screen.getByText(/1h 30m/)).toBeTruthy();
     expect(screen.getByText("4 scored · 1 maturing")).toBeTruthy();

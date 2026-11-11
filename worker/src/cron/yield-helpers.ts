@@ -33,7 +33,6 @@ import type { YieldWarningSignalKey } from "@shared/types/yield";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 
-// --- Warning signal thresholds ---
 const YIELD_SPIKE_THRESHOLD = 2.0;
 const YIELD_DIVERGENCE_THRESHOLD = 3.0;
 const NEGATIVE_TREND_THRESHOLD = 0.7;

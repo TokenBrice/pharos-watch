@@ -1,4 +1,4 @@
-import { tickSqrtPrice } from "../solana/whirlpool-quote";
+import { tickSqrtPrice } from "../amm-math";
 import { suiCoinType } from "./identity";
 import type { SuiClmmSnapshot, SuiClmmTick } from "./state-reader";
 

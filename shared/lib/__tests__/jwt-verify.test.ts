@@ -6,7 +6,6 @@ import {
   _resetJwksCache,
 } from "@shared/lib/cloudflare-access-jwt";
 
-// ── Helpers ─────────────────────────────────────────────────────────
 
 function base64urlEncode(data: string): string {
   const encoded = btoa(data);
@@ -110,8 +109,6 @@ const MOCK_JWKS = {
   ],
 };
 
-// ── Tests ───────────────────────────────────────────────────────────
-
 
 describe("verifyAccessJwt", () => {
   beforeEach(() => {
@@ -126,7 +123,6 @@ describe("verifyAccessJwt", () => {
     vi.restoreAllMocks();
   });
 
-  // ── Malformed tokens ──────────────────────────────────────────
 
   describe("malformed tokens", () => {
     it("rejects empty string", async () => {
@@ -157,7 +153,6 @@ describe("verifyAccessJwt", () => {
     });
   });
 
-  // ── Claim validation ─────────────────────────────────────────
 
   describe("claim validation", () => {
     it.each([
@@ -258,7 +253,6 @@ describe("verifyAccessJwt", () => {
     });
   });
 
-  // ── JWKS fetch failures ──────────────────────────────────────
 
   describe("JWKS fetch", () => {
     it("returns false when JWKS fetch fails", async () => {
@@ -316,7 +310,6 @@ describe("verifyAccessJwt", () => {
     });
   });
 
-  // ── JWKS caching ─────────────────────────────────────────────
 
   describe("JWKS caching", () => {
 
@@ -361,7 +354,6 @@ describe("verifyAccessJwt", () => {
     });
   });
 
-  // ── Unsupported algorithm ────────────────────────────────────
 
   describe("algorithm handling", () => {
     it("rejects unsupported algorithm", async () => {

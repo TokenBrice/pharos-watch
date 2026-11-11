@@ -6,10 +6,6 @@ import {
 import type { StabilityInput } from "../stability-index";
 import { getConditionBand, PSI_COMPONENT_LIMITS } from "@shared/lib/psi-policy";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 /** Build a StabilityInput with sensible defaults, overridable per-test. */
 function baseInput(overrides: Partial<StabilityInput> = {}): StabilityInput {
   return {
@@ -25,10 +21,6 @@ function computeIndex(input: StabilityInput) {
   expect(result).not.toBeNull();
   return result!;
 }
-
-// ---------------------------------------------------------------------------
-// getDepreciationFactor
-// ---------------------------------------------------------------------------
 
 describe("getDepreciationFactor", () => {
   it("returns 1.0 during the grace period (0–30 days)", () => {
@@ -51,10 +43,6 @@ describe("getDepreciationFactor", () => {
   });
 
 });
-
-// ---------------------------------------------------------------------------
-// computeStabilityIndex — healthy market
-// ---------------------------------------------------------------------------
 
 describe("computeStabilityIndex", () => {
   it("uses canonical component ceilings and the shared band lookup when saturated", () => {
@@ -92,10 +80,6 @@ describe("computeStabilityIndex", () => {
     expect(result.band).toBe("BEDROCK");
   });
 
-  // -----------------------------------------------------------------------
-  // Trend clamping
-  // -----------------------------------------------------------------------
-
   it("clamps trend at +5", () => {
     const result = computeIndex(baseInput({ mcap7dChangePct: 20 }));
     expect(result.components.trend).toBe(5);
@@ -110,10 +94,6 @@ describe("computeStabilityIndex", () => {
     const result = computeIndex(baseInput({ mcap7dChangePct: NaN }));
     expect(result.components.trend).toBe(0);
   });
-
-  // -----------------------------------------------------------------------
-  // Severity component
-  // -----------------------------------------------------------------------
 
   describe("severity", () => {
     it("computes severity for a single depeg", () => {
@@ -165,7 +145,6 @@ describe("computeStabilityIndex", () => {
     });
 
     it("severity scales with log2 amplifier", () => {
-      // Same share but different absolute mcap
       const mega = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 100e9 }],
@@ -234,10 +213,6 @@ describe("computeStabilityIndex", () => {
     });
   });
 
-  // -----------------------------------------------------------------------
-  // Breadth component
-  // -----------------------------------------------------------------------
-
   describe("breadth", () => {
     it("computes breadth from sqrt(mcap/$1B)", () => {
       // $4B coin: sqrt(4e9 / 1e9) * 3 = sqrt(4) * 3 = 2 * 3 = 6
@@ -292,10 +267,6 @@ describe("computeStabilityIndex", () => {
 
   });
 
-  // -----------------------------------------------------------------------
-  // Stress breadth component
-  // -----------------------------------------------------------------------
-
   describe("stressBreadth", () => {
     it("passes through values <= 5", () => {
       const result = computeIndex(
@@ -313,10 +284,6 @@ describe("computeStabilityIndex", () => {
       expect(result.components.stressBreadth).toBe(5);
     });
   });
-
-  // -----------------------------------------------------------------------
-  // Band assignment
-  // -----------------------------------------------------------------------
 
   describe("band assignment", () => {
     it("drops score significantly for USDT 10bps wobble", () => {
@@ -389,10 +356,6 @@ describe("computeStabilityIndex", () => {
       expect(result.score).toBe(92.2);
     });
   });
-
-  // -----------------------------------------------------------------------
-  // Edge cases
-  // -----------------------------------------------------------------------
 
   describe("edge cases", () => {
     it("handles depeg with zero bps", () => {

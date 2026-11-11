@@ -1,6 +1,5 @@
 import { formatOgStampTime } from "@shared/lib/og-route-cards";
 
-/** Radar section data for one coin. */
 interface ShareRadarCoinData {
   symbol: string;
   overallGrade: string;
@@ -30,7 +29,6 @@ export interface ShareCoinData {
   logoImg: HTMLImageElement | null;
 }
 
-// --- Layout constants ---
 const W = 1200;
 const BG = "#0d1628";
 const CARD_BG = "#1a2744";
@@ -81,7 +79,6 @@ function statRowCount(coin: ShareCoinData): number {
   return coin.safetyRating ? 9 : 8;
 }
 
-/** Draw a single coin card at (x, y) with the given width and height. */
 function drawCoinCard(
   ctx: CanvasRenderingContext2D,
   coin: ShareCoinData,
@@ -90,14 +87,12 @@ function drawCoinCard(
   cardW: number,
   cardH: number,
 ) {
-  const cx = x + cardW / 2; // center x of card
+  const cx = x + cardW / 2;
 
-  // Card background
   roundRect(ctx, x, y, cardW, cardH, CARD_RADIUS);
   ctx.fillStyle = CARD_BG;
   ctx.fill();
 
-  // Subtle border
   roundRect(ctx, x, y, cardW, cardH, CARD_RADIUS);
   ctx.strokeStyle = "rgba(232, 220, 196, 0.12)";
   ctx.lineWidth = 1;
@@ -105,10 +100,8 @@ function drawCoinCard(
 
   let curY = y + CARD_PAD;
 
-  // Coin logo (centered, 48x48)
   const logoSize = 48;
   if (coin.logoImg) {
-    // Draw circular clip for logo
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, curY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
@@ -124,20 +117,17 @@ function drawCoinCard(
   }
   curY += logoSize + 24;
 
-  // Symbol (bold, large)
   ctx.fillStyle = WHITE;
   ctx.font = "bold 22px -apple-system, 'Segoe UI', sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(coin.symbol, cx, curY);
   curY += 22;
 
-  // Name (smaller, muted)
   ctx.fillStyle = MUTED;
   ctx.font = "14px -apple-system, 'Segoe UI', sans-serif";
   ctx.fillText(coin.name, cx, curY, cardW - CARD_PAD * 2);
   curY += 28;
 
-  // Divider line
   ctx.strokeStyle = "rgba(232, 220, 196, 0.1)";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -146,7 +136,6 @@ function drawCoinCard(
   ctx.stroke();
   curY += 16;
 
-  // Stats rows: [label, value, color]
   const stats: [string, string, string][] = [
     ["Price", coin.price, WHITE],
     ["Market Cap", coin.marketCap, WHITE],
@@ -165,13 +154,11 @@ function drawCoinCard(
   const valueX = x + cardW - CARD_PAD;
 
   for (const [label, value, color] of stats) {
-    // Label
     ctx.fillStyle = MUTED;
     ctx.font = "12px -apple-system, 'Segoe UI', sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(label, labelX, curY);
 
-    // Value
     ctx.fillStyle = color;
     ctx.font = "bold 12px 'SF Mono', 'Cascadia Code', 'Consolas', monospace";
     ctx.textAlign = "right";
@@ -181,7 +168,6 @@ function drawCoinCard(
   }
 }
 
-// --- Radar constants ---
 const RADAR_R = 85;
 const RADAR_LABEL_OFFSET = 22;
 // Total section height: 24 top-gap + 16 title + 32 post-divider + radar circle + bottom label offset + 16 gap + 24 legend + 16 bottom
@@ -199,7 +185,6 @@ function drawRadarSection(
   const angleStep = (2 * Math.PI) / N;
   const startAngle = -Math.PI / 2;
 
-  // Section title
   let curY = sectionY + 24;
   ctx.fillStyle = MUTED;
   ctx.font = "13px -apple-system, 'Segoe UI', sans-serif";
@@ -207,7 +192,6 @@ function drawRadarSection(
   ctx.fillText("Safety Score Comparison", cx, curY);
   curY += 16;
 
-  // Subtle divider
   ctx.strokeStyle = "rgba(232, 220, 196, 0.08)";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -234,7 +218,6 @@ function drawRadarSection(
     ctx.stroke();
   }
 
-  // Spokes
   for (let i = 0; i < N; i++) {
     const angle = startAngle + i * angleStep;
     ctx.beginPath();
@@ -245,7 +228,6 @@ function drawRadarSection(
     ctx.stroke();
   }
 
-  // Axis labels
   ctx.fillStyle = MUTED;
   ctx.font = "11px -apple-system, 'Segoe UI', sans-serif";
   ctx.textAlign = "center";
@@ -257,7 +239,6 @@ function drawRadarSection(
     ctx.fillText(radarData.dimensionLabels[i], lx, ly);
   }
 
-  // Coin polygons
   for (const coin of radarData.coins) {
     ctx.beginPath();
     for (let i = 0; i < N; i++) {
@@ -275,7 +256,6 @@ function drawRadarSection(
     ctx.stroke();
   }
 
-  // Legend
   const legendY = radarCY + RADAR_R + RADAR_LABEL_OFFSET + 16;
   const LEGEND_ITEM_W = 110;
   const totalLegendW = radarData.coins.length * LEGEND_ITEM_W;
@@ -305,7 +285,6 @@ export function renderCompareShareImage(
   radarData?: ShareRadarData,
   asOfUpdatedAt?: number | null,
 ): HTMLCanvasElement | null {
-  // Compute card and canvas height from content
   const maxRows = coins.reduce((m, c) => Math.max(m, statRowCount(c)), -Infinity);
   const cardH = CARD_HEADER_H + maxRows * ROW_H + CARD_BOTTOM_PAD;
   const H = CARDS_Y + cardH + (radarData ? RADAR_SECTION_H : 0) + FOOTER_H;
@@ -316,18 +295,15 @@ export function renderCompareShareImage(
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  // --- Background ---
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle gradient overlay at top
   const grad = ctx.createLinearGradient(0, 0, 0, 200);
   grad.addColorStop(0, "rgba(232, 220, 196, 0.04)");
   grad.addColorStop(1, "rgba(232, 220, 196, 0)");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, 200);
 
-  // --- Header: Pharos logo + text (left) and URL (right) ---
   const logoH = 36;
   const logoW = (pharosLogo.naturalWidth / pharosLogo.naturalHeight) * logoH;
   ctx.drawImage(pharosLogo, 40, 28, logoW, logoH);
@@ -342,7 +318,6 @@ export function renderCompareShareImage(
   ctx.textAlign = "right";
   ctx.fillText("pharos.watch", W - 40, 52);
 
-  // --- Coin cards ---
   const n = coins.length;
   const totalPad = 80; // 40px each side
   const gap = 20;
@@ -355,12 +330,10 @@ export function renderCompareShareImage(
     drawCoinCard(ctx, coins[i], startX + i * (cardW + gap), CARDS_Y, cardW, cardH);
   }
 
-  // --- Radar section (optional) ---
   if (radarData) {
     drawRadarSection(ctx, radarData, CARDS_Y + cardH);
   }
 
-  // --- Footer branding ---
   ctx.fillStyle = MUTED;
   ctx.font = "13px -apple-system, 'Segoe UI', sans-serif";
   ctx.textAlign = "center";
@@ -369,7 +342,6 @@ export function renderCompareShareImage(
   return canvas;
 }
 
-/** Convert canvas to a PNG Blob. */
 export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(

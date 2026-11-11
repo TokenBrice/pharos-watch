@@ -308,7 +308,6 @@ describe("collectEndpointProbes", () => {
   it("rejects the fan-out when aborted and never starts queued probes", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
 
-    // Aborted before invocation: nothing is fetched at all.
     const preAborted = new AbortController();
     preAborted.abort();
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));

@@ -119,20 +119,16 @@ function stripRepeatedTitlePrefix(title: string, text: string): string {
 }
 
 export const ALLOWED_LEADS = [
-  // PSI family
   "psi-streak",
   "psi-regime",
   "psi-band-change",
   "psi-divergence",
-  // Depeg family
   "depeg",
   "resolved-depeg",
   "chronic-depeg",
-  // DEWS family
   "dews-band-change",
   "dews-alert-breadth",
   "dews-warning",
-  // Flow family
   "ftq",
   "mint-burn",
   "gauge-flip",
@@ -141,13 +137,11 @@ export const ALLOWED_LEADS = [
   "supply-acceleration",
   "supply-deceleration",
   "chain-migration",
-  // Risk family
   "grade-transition",
   "blacklist-contrast",
   "reserve-event",
   "yield-anomaly",
   "liquidity-shift",
-  // Structural / macro
   "macro-observation",
   "market-structure",
   "issuer-concentration",

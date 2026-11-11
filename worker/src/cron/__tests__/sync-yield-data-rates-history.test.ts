@@ -115,7 +115,6 @@ describe("syncYieldData", () => {
     expect(priceDerivedRow).toBeDefined();
     // price-derived APY should be > 0 (computeApyFromPrice mock returns 4.0)
     expect(Number(priceDerivedRow?.current_apy)).toBeGreaterThan(0);
-    // data_source should be "price-derived"
     expect(priceDerivedRow?.data_source).toBe("price-derived");
     // price-derived should be is_best (higher APY than DL's 0%)
     expect(priceDerivedRow?.is_best).toBe(1);
@@ -290,19 +289,16 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db);
 
-    // Should have at least one row written for rate-derived
     expect(result.itemCount).toBeGreaterThanOrEqual(1);
 
     const rateDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "rate-derived");
     expect(rateDerivedRow).toBeDefined();
     // APY should be 4.0 - 0.25 = 3.75
     expect(Number(rateDerivedRow?.current_apy)).toBeCloseTo(3.75, 2);
-    // data_source should be "rate-derived"
     expect(rateDerivedRow?.data_source).toBe("rate-derived");
     // rate-derived should be is_best (only source)
     expect(rateDerivedRow?.is_best).toBe(1);
 
-    // Clean up
     configs.length = 0;
   });
 

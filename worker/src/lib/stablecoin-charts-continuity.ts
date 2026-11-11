@@ -24,7 +24,6 @@ export type ChartContinuityCode =
 
 export interface ChartContinuityFinding {
   code: ChartContinuityCode;
-  /** Previous / next measurements behind the finding. */
   previous: number;
   next: number;
   bucket?: string;

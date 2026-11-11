@@ -75,8 +75,6 @@ function formatDonationUsd(value: number, priceNote: string): string {
   return formatUsdWhole(value);
 }
 
-/* ------------------------------------------------------------------ KPI row */
-
 interface KpiLabel {
   primary: string;
   secondary: string;
@@ -286,8 +284,6 @@ function FundingMiniStat({ label, value, detail }: { label: string; value: strin
   );
 }
 
-/* ---------------------------------------------------------- Cost breakdown */
-
 const CATEGORY_LABELS: Record<string, string> = { team: "Team", infra: "Infrastructure" };
 
 export interface CostBreakdownProps {
@@ -356,8 +352,6 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
     </Card>
   );
 }
-
-/* --------------------------------------------------------------- Donor list */
 
 export interface DonorListProps {
   donations: Donation[];
@@ -458,8 +452,6 @@ function InKindSupporters() {
     </section>
   );
 }
-
-/* -------------------------------------------------------------- Support CTAs */
 
 export function SupportCtas() {
   return (
@@ -620,8 +612,6 @@ function SocialButton({
     </Button>
   );
 }
-
-/* ----------------------------------------------------------- Year-end + FAQ */
 
 export function YearEndHorizon() {
   const shareUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(PHAROS_SHARE_MESSAGE);

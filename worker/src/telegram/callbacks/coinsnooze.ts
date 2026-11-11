@@ -12,7 +12,7 @@ import {
 } from "./_shared";
 
 export const handleCoinSnoozeCallback: CallbackHandler = async (context) => {
-  const { db, chatId, parsed, storedIntent } = context;
+  const { db, chatId, parsed } = context;
   await runCallbackMutation<{ id: string; duration: SnoozeArg; untilSec: number }>(context, {
     validate: () => {
       const durationToken = parsed.parts[2];
@@ -23,9 +23,7 @@ export const handleCoinSnoozeCallback: CallbackHandler = async (context) => {
       ) {
         return null;
       }
-      const untilSec = storedIntent?.kind === "callback:coinsnooze"
-        ? Number(storedIntent.payload.untilSec)
-        : unixNow() + SNOOZE_SECONDS[durationToken];
+      const untilSec = unixNow() + SNOOZE_SECONDS[durationToken];
       return Number.isFinite(untilSec)
         ? { id: parsed.arg, duration: durationToken, untilSec }
         : null;

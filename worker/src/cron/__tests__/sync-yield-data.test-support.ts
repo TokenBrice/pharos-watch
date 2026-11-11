@@ -13,7 +13,6 @@ import {
   mockRegistry,
 } from "../../test-helpers/cron";
 
-// --- Shared fixture factories ---
 
 export type StablecoinFixtureOverrides = Pick<MockRegistryStablecoin, "id"> &
   Partial<Omit<MockRegistryStablecoin, "id">>;
@@ -48,9 +47,7 @@ export function makeYieldTestRegistry(
   };
 }
 
-// --- Module-level mocks ---
 
-// Stub the stablecoins list — one yield-bearing, three non-yield-bearing.
 vi.mock("@shared/lib/stablecoins/registry", () =>
   mockRegistry(makeYieldTestRegistry([
     {
@@ -101,10 +98,8 @@ vi.mock("@shared/lib/stablecoins/registry", () =>
 // Stub fetch-retry to delegate to global fetch
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
-// Stub circuit-breaker
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
-// Stub db helpers
 vi.mock("../../lib/db", async (importOriginal) => {
   const orig = await importOriginal<typeof import("../../lib/db")>();
   return {
@@ -139,7 +134,6 @@ vi.mock("../yield-helpers", async (importOriginal) => {
   };
 });
 
-// Stub the authored yield configuration modules.
 vi.mock("../../lib/yield-config/yield-config-variants", () => ({ YIELD_VARIANT_MAP: {} }));
 vi.mock("../../lib/yield-config/yield-config-pools", () => ({ YIELD_POOL_MAP: {} }));
 vi.mock("../../lib/yield-config/yield-config-weighted-pools", () => ({ YIELD_WEIGHTED_POOL_GROUPS: {} }));
@@ -165,7 +159,6 @@ vi.mock("../../lib/yield-config/yield-config-lending-protocols", () => ({
   isAutoLendingCollisionBlockedForStablecoin: () => false,
 }));
 
-// Stub peg-score
 vi.mock("@shared/lib/peg-score", () => ({
   computePegScore: vi.fn(() => ({
     pegScore: 95,
@@ -181,12 +174,10 @@ vi.mock("@shared/lib/peg-score", () => ({
   coinTrackingStart: vi.fn(() => 1600000000),
 }));
 
-// Stub depeg-helpers
 vi.mock("../../lib/depeg-helpers", () => ({
   rowToDepegEvent: vi.fn((row: unknown) => row),
 }));
 
-// Stub constants
 vi.mock("../../lib/constants", () => ({
   USER_AGENT: "test-agent",
   CIRCUIT_SOURCE: {
@@ -227,7 +218,6 @@ const mutableActiveStablecoins = ACTIVE_STABLECOINS as typeof ACTIVE_STABLECOINS
   : never;
 const mutableTrackedMetaById = TRACKED_META_BY_ID as Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
 
-// --- Helpers ---
 
 export type YieldHistoryFixtureRow = {
   stablecoin_id: string;
@@ -596,7 +586,6 @@ function resetSyncYieldDataTest() {
   const explicitPoolMap =
     yieldExplicitPools.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldExplicitPools.EXPLICIT_YIELD_SOURCE_POOL_MAP;
   for (const key of Object.keys(explicitPoolMap)) delete explicitPoolMap[key];
-  // Reset mocks to factory defaults
   installYieldCacheReader(vi.mocked(getCache).mockReset(), {});
   vi.mocked(getCaches)
     .mockReset()

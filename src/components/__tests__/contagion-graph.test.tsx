@@ -396,7 +396,6 @@ describe("ContagionGraph", () => {
     );
 
     const usdeNode = within(screen.getByRole("figure")).getByRole("button", { name: /USDe/i });
-    // Simulate a drag to pin the node.
     fireEvent.pointerDown(usdeNode, { isPrimary: true, clientX: 220, clientY: 300, pointerId: 1 });
     const svg = container.querySelector('[role="figure"] svg');
     fireEvent.pointerMove(svg!, { clientX: 260, clientY: 320, pointerId: 1 });

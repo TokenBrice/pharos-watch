@@ -306,9 +306,6 @@ export function formatReportCardV9(
   };
 }
 
-// ---------------------------------------------------------------------------
-// DEWS
-// ---------------------------------------------------------------------------
 
 function formatDewsSignalValue(key: string, sig: StressSignalEntry["signals"][string]): string {
   if (!sig.available) return "n/a";
@@ -350,9 +347,6 @@ export function formatDews(current: StressSignalEntry): ShowYourWorkTable {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Liquidity Score
-// ---------------------------------------------------------------------------
 
 export function formatLiquidity(scoreComponents: NonNullable<DexLiquidityData["scoreComponents"]>): ShowYourWorkTable {
   // DEC-19: an unavailable activity component is shown as not reported and the
@@ -377,9 +371,6 @@ export function formatLiquidity(scoreComponents: NonNullable<DexLiquidityData["s
   };
 }
 
-// ---------------------------------------------------------------------------
-// PSI
-// ---------------------------------------------------------------------------
 
 export function formatPsi(current: StabilityIndexCurrent): ShowYourWorkTable {
   const rows: ShowYourWorkRow[] = [
@@ -424,9 +415,6 @@ export function formatPsi(current: StabilityIndexCurrent): ShowYourWorkTable {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Redemption Backstop
-// ---------------------------------------------------------------------------
 
 export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTable {
   const rows: ShowYourWorkRow[] = [
@@ -465,9 +453,6 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
   };
 }
 
-// ---------------------------------------------------------------------------
-// Chain Health
-// ---------------------------------------------------------------------------
 
 function formatChainEnvironmentValue(
   score: number,

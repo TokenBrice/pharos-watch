@@ -22,10 +22,6 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const VISIBLE_CAP = 3;
 
 type DisplayHistoryPoint = SafetyScoreHistoryPoint & {
@@ -70,10 +66,6 @@ function mergeGradeHistory(
   }
   return merged;
 }
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 function StatBox({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
@@ -126,10 +118,6 @@ function TransitionIndicator({ point }: { point: DisplayHistoryPoint }) {
     </span>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
 
 interface SafetyScoreHistorySectionProps {
   stablecoinId: string;
@@ -188,8 +176,6 @@ export function SafetyScoreHistorySection({
   const legacyQuery = useSafetyScoreHistory(stablecoinId, 3650);
   const identityAwareQuery = useSafetyScoreHistoryV2(stablecoinId, 3650);
   const [expanded, setExpanded] = useState(false);
-
-  // --- derived data --------------------------------------------------------
 
   // Computed once per mount — fresh on each page navigation, avoids module-level staleness
   const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
@@ -262,8 +248,6 @@ export function SafetyScoreHistorySection({
     { label: "Legacy history", generation: laneGeneration(legacyQuery) },
   ].filter((lane): lane is { label: string; generation: number } => lane.generation !== null);
 
-  // --- early returns -------------------------------------------------------
-
   if (history.length === 0) {
     if (legacyQuery.isLoading || identityAwareQuery.isLoading) return null;
     // Successful empty lanes omit the module; a failed lane with nothing retained is named.
@@ -271,8 +255,6 @@ export function SafetyScoreHistorySection({
       ? <StaleDataBanner queries={laneQueries} />
       : null;
   }
-
-  // --- render --------------------------------------------------------------
 
   const laneProvenance = laneStamps.map((lane) => `${lane.label} as of ${formatUtcMinute(lane.generation)}`);
   return (
@@ -300,7 +282,6 @@ export function SafetyScoreHistorySection({
       ) : null}
     >
         <StaleDataBanner queries={laneQueries} />
-        {/* Summary stats strip */}
         {stats && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {stats.best && stats.worst ? (
@@ -343,7 +324,6 @@ export function SafetyScoreHistorySection({
           </div>
         )}
 
-        {/* Mini grade timeline bar */}
         {segments.length > 0 && (
           <TooltipProvider>
             <div
@@ -380,7 +360,6 @@ export function SafetyScoreHistorySection({
           </TooltipProvider>
         )}
 
-        {/* Transition list */}
         <ol className="mt-3 divide-y divide-border/60 rounded-lg border border-border/60">
           {visibleEntries.map((point) => (
             <li
@@ -402,7 +381,6 @@ export function SafetyScoreHistorySection({
           ))}
         </ol>
 
-        {/* Show more / show less */}
         {hiddenCount > 0 && (
           <div className="pt-1 text-center">
             <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)} className="h-7 text-xs">

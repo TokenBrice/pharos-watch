@@ -17,7 +17,7 @@ vi.mock("../report-cards-snapshot", async (original) => ({
   ...(await original<typeof SnapshotModule>()),
   loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex-liquidity-1790000000", updatedAt: 1790000000 })),
 }));
-import { buildNativeSafetyScoreV9Capture } from "../safety-score-v9/capture";
+import { buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";
 
 const CLOCK_SEC = 1790000000;
 const ASSET_ID = "usdt-tether";
@@ -132,7 +132,6 @@ describe("Safety Score V9 directional peg capture", () => {
     expect(directionalPeg.pegScoreById[ASSET_ID]).toBe(
       computePremiumWeightedPegScore(captureEvents, TRACKING_START_SEC, CLOCK_SEC, PREMIUM_WEIGHT),
     );
-    // Weighting really moved the score off the public row.
     expect(directionalPeg.pegScoreById[ASSET_ID]).not.toBe(fixture.publicScore);
   });
 

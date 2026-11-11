@@ -1,8 +1,4 @@
 /**
- * Shared layout utility helpers used across visual modules.
- */
-
-/**
  * djb2-style deterministic hash for a string id with an optional salt.
  * Same id + salt always returns the same non-negative 32-bit integer.
  * Suitable for stable per-id visual jitter and radius offsets.

@@ -32,7 +32,6 @@ import {
  * differently from the house view, which is a preference, not a re-derivation.
  */
 
-/** Treasury weights — sum = 100. */
 const TREASURY_WEIGHTS: WeightVector<"treasury"> = {
   safetyOverall: 55,
   pegStabilityHistory: 22,
@@ -40,7 +39,6 @@ const TREASURY_WEIGHTS: WeightVector<"treasury"> = {
   bluechip: 10,
 } as const;
 
-/** Yield weights — sum = 100. */
 const YIELD_WEIGHTS: WeightVector<"yield"> = {
   pharosYieldScore: 28,
   safetyOverall: 19,
@@ -51,7 +49,6 @@ const YIELD_WEIGHTS: WeightVector<"yield"> = {
   liquidity: 6,
 } as const;
 
-/** Active Trading weights — sum = 100. */
 const TRADING_WEIGHTS: WeightVector<"trading"> = {
   liquidity: 30,
   pegScoreNow: 30,
@@ -81,7 +78,6 @@ export function assertWeightsSumTo100(
   }
 }
 
-/** Weight vectors keyed by profile. */
 export const WEIGHT_VECTORS: {
   treasury: WeightVector<"treasury">;
   yield: WeightVector<"yield">;
@@ -92,7 +88,6 @@ export const WEIGHT_VECTORS: {
   trading: TRADING_WEIGHTS,
 };
 
-// Load-time invariant.
 for (const profile of SELECTOR_PROFILES) {
   assertWeightsSumTo100(profile, WEIGHT_VECTORS[profile]);
 }

@@ -409,7 +409,6 @@ describe("handleChains", () => {
       dominanceGeometryTotalUsd: null,
       supplyCoverage: { aggregateUnavailableAssetCount: 1 },
     });
-    // The source generation clock is forwarded unchanged.
     expect(body.updatedAt).toBe(cache.first.updated_at);
   });
 

@@ -53,7 +53,6 @@ describe("buildUpcomingCurrencyGroups", () => {
     expect(hkd?.heading).toBe("Upcoming Hong Kong Dollar (HKD) stablecoins");
     expect(hkd?.hubHref).toBe("/stablecoins/hkd/");
     expect(groups.find((group) => group.peg === "GOLD")?.heading).toBe("Upcoming Gold stablecoins");
-    // Sizes descend, with the non-currency bucket last.
     const ranked = groups.filter((group) => group.peg !== "OTHER").map((group) => group.coins.length);
     expect(ranked).toEqual([...ranked].sort((a, b) => b - a));
     if (groups.some((group) => group.peg === "OTHER")) expect(groups.at(-1)?.peg).toBe("OTHER");

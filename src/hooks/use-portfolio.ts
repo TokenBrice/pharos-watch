@@ -29,10 +29,6 @@ interface PortfolioState {
   shareUrl: () => string;
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const STORAGE_KEY = "pharos:portfolio";
 
 function loadFromStorage(): PortfolioHolding[] {
@@ -104,8 +100,6 @@ export function usePortfolio(
     }
   }, [holdings, isFromUrl, initialized]);
 
-  // --- Actions ---
-
   const addCoin = useCallback((coinId: string, amount: number) => {
     const holding = normalizePortfolioHolding({ coinId, amount });
     if (!holding) return;
@@ -145,8 +139,6 @@ export function usePortfolio(
     }
     return url.toString();
   }, [holdings]);
-
-  // --- Derived values ---
 
   const totalUsd = useMemo(
     () => holdings.reduce((sum, h) => sum + h.amount, 0),

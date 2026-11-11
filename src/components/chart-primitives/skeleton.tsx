@@ -157,7 +157,6 @@ function StaticMonoYAxis({
   return (
     <g aria-hidden>
       {buildEvenTicks(tickCount).map((t, i) => {
-        // Screen Y inverts domain: top = max, bottom = min.
         const y = y0 + t * (y1 - y0);
         const value = max - t * (max - min);
         return (
@@ -215,17 +214,11 @@ function StaticTimeGrid({ width, height, margin, yAxisWidth, xAxisHeight, lineCo
 interface ChartShellSkeletonProps extends StaticChartGeometry {
   /** Optional className applied to the outer `<svg>`. */
   className?: string;
-  /** X-axis tick count. */
   xTickCount?: number;
-  /** Y-axis tick count. */
   yTickCount?: number;
-  /** X-axis domain. */
   xDomain?: [number, number];
-  /** Y-axis domain. */
   yDomain?: [number, number];
-  /** X tick formatter. */
   xTickFormatter?: (timestamp: number) => string;
-  /** Y tick formatter. */
   yTickFormatter?: (value: number) => string;
   /** Accessibility label for the placeholder frame. Default: "Chart loading". */
   ariaLabel?: string;

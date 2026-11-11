@@ -165,8 +165,6 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     expect(dropped).toBe(1);
   });
 
-  // --- reUSD token Transfer parsing ---
-
   const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
   const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
   const REUSD_TOKEN_ADDRESS = "0x5086bf358635b81d8c47c66d1c8b9e567db70c72";

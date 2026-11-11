@@ -442,6 +442,16 @@ function buildDeploymentSnapshotMetadata(
   };
 }
 
+const APYX_SOURCE_PROFILE = {
+  coinId: "apxusd-apyx",
+  layout: "reserves-types",
+  bucket: "reserves_split",
+  basis: "net-external-reserves",
+  selfClaims: [["Inventory", "inventory"], ["Protocol Owned Liquidity", "pol"]],
+  requestOrigin: "https://accountable.apyx.fi",
+  requestReferer: "https://accountable.apyx.fi/",
+} as const;
+
 /** Reviewed Apyx non-reserve own claims: https://docs.apyx.fi/collateral-and-custody/accountable-dashboard */
 function reconcileApyxExternalReserves(
   reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
@@ -450,9 +460,9 @@ function reconcileApyxExternalReserves(
 ) {
   const grossReservesUsd = extractOptionalReserveScalar(reserves.total_reserves, "total_reserves", { requirePositive: true });
   const grossSupplyUsd = extractOptionalReserveScalar(reserves.total_supply, "total_supply", { requirePositive: true });
-  const excludedSelfClaims = [["Inventory", "inventory"], ["Protocol Owned Liquidity", "pol"]].map(([name, field]) => {
+  const excludedSelfClaims = APYX_SOURCE_PROFILE.selfClaims.map(([name, field]) => {
     const rows = breakdown.filter((row) => row.name === name);
-    const scalar = extractOptionalReserveScalar(reserves[field as "inventory" | "pol"], field);
+    const scalar = extractOptionalReserveScalar(reserves[field], field);
     if (rows.length !== 1 || scalar == null || !Number.isFinite(scalar) || scalar < 0 || !Number.isFinite(rows[0]!.value) || rows[0]!.value < 0 || Math.abs(rows[0]!.value - scalar) > 1) {
       throw new Error(`Accountable Apyx self-claim ${name} does not reconcile to its reserve scalar`);
     }
@@ -473,7 +483,7 @@ function reconcileApyxExternalReserves(
     || Math.abs(netCoverageRatio - reportedRatio) > COLLATERALIZATION_RECONCILIATION_TOLERANCE) {
     throw new Error("Accountable Apyx net reserve/claim denominator does not reconcile to collateralization");
   }
-  return { basis: "net-external-reserves", grossReservesUsd, grossSupplyUsd, excludedSelfClaims,
+  return { basis: APYX_SOURCE_PROFILE.basis, grossReservesUsd, grossSupplyUsd, excludedSelfClaims,
     excludedSelfClaimsUsd, netExternalReservesUsd, netRedeemableClaimsUsd, netCoverageRatio };
 }
 
@@ -506,13 +516,13 @@ export function adaptAccountableDashboard(
   const coinIdMap = params.coinIdMap ?? {};
   const depTypeMap = params.depTypeMap ?? {};
   const totalReservesExcludeBuckets = new Set(params.totalReservesExcludeBuckets ?? []);
-  if (params.accountingMode && (layout !== "reserves-types" || bucket !== "reserves_split" || totalReservesExcludeBuckets.size > 0)) {
+  if (params.accountingMode && (layout !== APYX_SOURCE_PROFILE.layout || bucket !== APYX_SOURCE_PROFILE.bucket || totalReservesExcludeBuckets.size > 0)) {
     throw new Error("Accountable Apyx accounting requires an unmodified reserves_split");
   }
   const selfIssuedAccounting = params.accountingMode
     ? reconcileApyxExternalReserves(payload.data.reserves, breakdown, payload.data.collateralization)
     : null;
-  const ownClaimNames = new Set(selfIssuedAccounting?.excludedSelfClaims.map((row) => row.name) ?? []);
+  const ownClaimNames = new Set<string>(selfIssuedAccounting?.excludedSelfClaims.map((row) => row.name) ?? []);
   const signedBuckets = breakdown.filter((entry) => entry.value < 0);
   const reconciledBreakdown = breakdown.filter((entry) => !(totalReservesExcludeBuckets.has(entry.name) || ownClaimNames.has(entry.name)));
   const positiveBreakdown = reconciledBreakdown.filter((entry) => entry.value > 0);
@@ -710,8 +720,8 @@ export async function fetchAccountableReserves(
     signal,
     12_000,
     ctx,
-    coin.id === "apxusd-apyx"
-      ? { headers: buildBrowserHeaders("https://accountable.apyx.fi", "https://accountable.apyx.fi/") }
+    coin.id === APYX_SOURCE_PROFILE.coinId
+      ? { headers: buildBrowserHeaders(APYX_SOURCE_PROFILE.requestOrigin, APYX_SOURCE_PROFILE.requestReferer) }
       : undefined,
   );
   return adaptAccountableDashboard(payload, params);

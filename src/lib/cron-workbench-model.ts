@@ -848,7 +848,6 @@ export function getCronRunbooks(
   return [...new Set(hrefs)].map((href) => ({ href, label: runbookLabel(href) }));
 }
 
-/** Status causes whose `subjects` name this job. */
 export function getCronCauses(job: string, causes: readonly StatusCause[] = []): StatusCause[] {
   return causes.filter((cause) => cause.subjects?.includes(job));
 }

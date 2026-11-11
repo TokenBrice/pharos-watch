@@ -13,7 +13,6 @@ export type RunLineExclusionReason =
   /** Missing scan evidence cannot establish activity or quiet. */
   | "activity-unknown"
   | "scan-coverage-incomplete"
-  /** No mint or burn event in the 24h window. */
   | "no-24h-activity"
   /** Active, but under the history or activity floor (7 days, $50K of 24h flow). */
   | "below-scoring-floor"

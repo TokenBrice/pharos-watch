@@ -24,10 +24,6 @@ import postcss, { AtRule, type Declaration } from "postcss";
 import sharp, { type PngOptions } from "sharp";
 import { sha256Hex, sha256HexFromBytes } from "@shared/lib/sha256";
 
-// ---------------------------------------------------------------------------
-// CSS: module class map, global unwrapping, token closure (pure)
-// ---------------------------------------------------------------------------
-
 const CLASS_IN_SELECTOR = /\.(-?[_a-zA-Z][\w-]*)/g;
 const GLOBAL_WRAPPER = /:global\(([^()]*)\)/g;
 const VAR_REFERENCE = /var\(\s*(--[\w-]+)/g;
@@ -120,10 +116,6 @@ export function resolveRootTokens(css: string, rootProps: ReadonlyMap<string, st
   return Object.fromEntries([...out.entries()].sort(([a], [b]) => (a < b ? -1 : 1)));
 }
 
-// ---------------------------------------------------------------------------
-// Document helpers
-// ---------------------------------------------------------------------------
-
 let cssModuleHookRegistered = false;
 
 /**
@@ -151,10 +143,6 @@ export function dataUri(mime: string, bytes: Uint8Array): string {
 export function woff2FontFace(family: string, weight: string, bytes: Uint8Array): string {
   return `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};font-display:block;src:url("${dataUri("font/woff2", bytes)}") format("woff2");}`;
 }
-
-// ---------------------------------------------------------------------------
-// Render (browser)
-// ---------------------------------------------------------------------------
 
 export interface ScenePngRender {
   /** CSS px width the page is laid out at. */
@@ -194,10 +182,6 @@ export async function renderScenePng(html: string, opts: ScenePngRender): Promis
     await browser.close();
   }
 }
-
-// ---------------------------------------------------------------------------
-// Signature, check and build (pure over files)
-// ---------------------------------------------------------------------------
 
 export interface SignedPngImageRecord {
   sha256: string;

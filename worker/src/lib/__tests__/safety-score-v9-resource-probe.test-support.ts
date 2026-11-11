@@ -42,7 +42,7 @@ try {
   if (process.env.PHAROS_RESOURCE_PROFILE === "heavy-warm") {
     install(1);
     // Deliberately exercise the heavy module-loading boundary only in this profile.
-    const { buildNativeSafetyScoreV9Capture } = await import("../safety-score-v9/capture");
+    const { buildNativeSafetyScoreV9Capture } = await import("./safety-score-v9-capture.test-support");
     const { observeSafetyScoreV9TransferMaterialityGeneration } = await import("../safety-score-v9/transfer-materiality-observer");
     const { input } = await buildNativeSafetyScoreV9Capture(db);
     await observeSafetyScoreV9TransferMaterialityGeneration({

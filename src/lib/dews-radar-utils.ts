@@ -1,4 +1,3 @@
-// src/lib/dews-radar-utils.ts
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 import { DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
 import { deterministicHash } from "@/lib/layout-utils";

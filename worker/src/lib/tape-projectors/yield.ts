@@ -146,8 +146,6 @@ function severityForPysDrop(delta: number): TapeEventSeverity {
   return "notice";
 }
 
-// --- yield.warning_emitted --------------------------------------------------
-
 interface YieldHistoryRow {
   stablecoin_id: string;
   source_key: string;
@@ -338,8 +336,6 @@ export async function projectYieldWarningEmitted(
   degradation.report();
   return finalizeProjectorBatch(db, { events, maxCursor, cursorKey, options });
 }
-
-// --- yield.pys_dropped ------------------------------------------------------
 
 interface YieldDecisionRow {
   stablecoin_id: string;

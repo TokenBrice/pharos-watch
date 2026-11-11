@@ -1,4 +1,3 @@
-// src/lib/stablecoin-detail-custody-client.ts
 import type {
   CustodyBankruptcyRemoteness,
   CustodyProfile,

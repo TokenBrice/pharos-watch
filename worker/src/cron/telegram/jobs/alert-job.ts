@@ -32,7 +32,7 @@ import {
 } from "../dispatch/telegram-preset-subscriber-store";
 import type { TelegramDispatchEvents, TelegramFanoutPlanEvents } from "../sources/dispatch-telegram-events";
 import { toTelegramFanoutPlanEvents } from "../sources/dispatch-telegram-events";
-import type { TelegramJobKindHandler, TelegramJobPageContext } from "./registry";
+import type { TelegramJobKindHandler, TelegramJobPageContext } from "../../../telegram/delivery/job-handler";
 
 export interface TelegramAlertJobPayload {
   events: TelegramFanoutPlanEvents;
@@ -192,7 +192,7 @@ async function buildAlertJobPage(
   return { deliveries, nextCursor: chatIds.length < ctx.limit ? null : last };
 }
 
-export const alertJobHandler: TelegramJobKindHandler<TelegramAlertJobPayload> = {
+export const alertJobHandler: TelegramJobKindHandler<TelegramAlertJobPayload, "alert"> = {
   kind: "alert",
   buildPage: buildAlertJobPage,
 };

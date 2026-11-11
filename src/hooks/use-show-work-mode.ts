@@ -49,7 +49,6 @@ function removeUrlParam() {
     const next = `${url.pathname}${url.search}${url.hash}`;
     window.history.replaceState(window.history.state, "", next);
   } catch {
-    // ignore URL/history failures
   }
 }
 

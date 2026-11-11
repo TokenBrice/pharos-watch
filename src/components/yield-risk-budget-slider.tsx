@@ -80,7 +80,6 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
         <p className="pharos-label">Matching rows</p>
       </div>
       <div className="relative px-2.5 pt-3 pb-1">
-        {/* Background track — runs through the center of the dot row */}
         <div
           aria-hidden="true"
           className="absolute left-[1.125rem] right-[1.125rem] top-[1.5rem] h-1 -translate-y-1/2 rounded-full bg-border/55"
@@ -96,7 +95,6 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
             style={{ width: `calc((100% - 2.25rem) * ${fillPercentage / 100})` }}
           />
         ) : null}
-        {/* Invisible drag surface — native range input covers the whole stop row */}
         <input
           id={inputId}
           type="range"
@@ -113,7 +111,6 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
           // the visual layer renders beneath with pointer-events disabled.
           className="pharos-focus-ring absolute inset-x-2.5 top-[1.5rem] z-10 h-11 w-[calc(100%-1.25rem)] -translate-y-1/2 cursor-pointer appearance-none bg-transparent opacity-0"
         />
-        {/* Visual stops + labels — non-interactive; the input above owns events */}
         <div className="pointer-events-none relative flex justify-between">
           {stops.map((stop, idx) => {
             const style = RISK_BUDGET_STYLES[stop.key];

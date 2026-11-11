@@ -48,7 +48,6 @@ export function isHypotheticalStage(stage: FailureScenarioStage): boolean {
   return stage.kind === "premise" || stage.evidence === "inferred" || stage.evidence === "unverified";
 }
 
-/** One step placed on the path. */
 export interface RouteStep {
   stage: FailureScenarioStage;
   /**

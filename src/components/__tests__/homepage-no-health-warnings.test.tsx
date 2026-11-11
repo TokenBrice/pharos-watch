@@ -127,8 +127,6 @@ const CASES: HealthCase[] = [
   { label: "503 unavailable", meta: undefined, error: new Error("503"), hasData: false },
 ];
 
-// --- fixtures ---------------------------------------------------------------
-
 const stablecoins = {
   peggedAssets: [makeStablecoin({
     id: "usdc-circle", name: "USD Coin", symbol: "USDC",
@@ -221,7 +219,6 @@ function configure(c: HealthCase) {
 function expectNoHealthUi(container: HTMLElement) {
   expect(container.querySelector('[role="status"], [role="alert"]')).toBeNull();
   expect(container.textContent).not.toMatch(WARNING_COPY);
-  // Accessible names and tooltips count too.
   for (const element of container.querySelectorAll("[aria-label], [title]")) {
     expect(`${element.getAttribute("aria-label") ?? ""} ${element.getAttribute("title") ?? ""}`).not.toMatch(WARNING_COPY);
   }

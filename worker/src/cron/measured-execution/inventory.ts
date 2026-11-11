@@ -8,7 +8,7 @@ import {
 import { SolanaDexNativeTargetSchema, type SolanaDexNativeTarget, type SolanaDexShadowTarget } from "@shared/types/solana-dex-bank";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
-import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
+import { getMeasuredTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "./registry";
 import { normalizeEvmAddress } from "../../lib/evm-selectors";
@@ -167,23 +167,23 @@ export function buildPancakeMeasuredExecutionTargets(input: {
       const tokenOut = pool.tokens[outputIndex]!;
       const stablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenIn.address));
       if (!stablecoinId) continue;
-      const inputPrice = getTokenReferenceUsdPrice(
+      const inputPrice = getMeasuredTokenReferenceUsdPrice(
+        input.capturedAt,
         tokenIn,
         chain,
         input.chainAddressToId,
         input.symbolToChainScopedIds,
         input.validationReferences,
         input.stablecoinPriceById,
-        input.capturedAt,
       );
-      const outputPrice = getTokenReferenceUsdPrice(
+      const outputPrice = getMeasuredTokenReferenceUsdPrice(
+        input.capturedAt,
         tokenOut,
         chain,
         input.chainAddressToId,
         input.symbolToChainScopedIds,
         input.validationReferences,
         input.stablecoinPriceById,
-        input.capturedAt,
       );
       if (inputPrice == null || outputPrice == null || inputPrice <= 0 || outputPrice <= 0) continue;
       if (!hasCoherentPancakeSpotPrice(pool, inputIndex, inputPrice, outputPrice)) continue;
@@ -241,7 +241,6 @@ function resolveClImpliedOutputPrice(input: {
   inputIndex: number;
   inputPrice: number;
   outputPrice: number | null;
-  /** Counter-asset id when the output resolves to a tracked stablecoin. */
   outputStablecoinId: string | undefined;
   rejectionEvent: string;
   source: string;
@@ -312,14 +311,14 @@ function buildClMeasuredExecutionTarget(
   const tokenIn = candidate.tokens[inputIndex]!;
   const tokenOut = candidate.tokens[outputIndex]!;
   const symbolToChainScopedIds = input.symbolToChainScopedIds ?? new Map();
-  const inputPrice = getTokenReferenceUsdPrice(
+  const inputPrice = getMeasuredTokenReferenceUsdPrice(
+    input.capturedAt,
     tokenIn,
     candidate.chain,
     input.chainAddressToId,
     symbolToChainScopedIds,
     input.validationReferences,
     input.stablecoinPriceById,
-    input.capturedAt,
   );
   if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
   const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(candidate.chain, tokenOut.address));
@@ -328,14 +327,14 @@ function buildClMeasuredExecutionTarget(
     stablecoinId: input.stablecoinId,
     inputIndex,
     inputPrice,
-    outputPrice: getTokenReferenceUsdPrice(
+    outputPrice: getMeasuredTokenReferenceUsdPrice(
+      input.capturedAt,
       tokenOut,
       candidate.chain,
       input.chainAddressToId,
       symbolToChainScopedIds,
       input.validationReferences,
       input.stablecoinPriceById,
-      input.capturedAt,
     ),
     outputStablecoinId,
     rejectionEvent:
@@ -458,14 +457,14 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
   const tokenIn = input.candidate.tokens[inputIndex]!;
   const tokenOut = input.candidate.tokens[outputIndex]!;
   const symbolToChainScopedIds = input.symbolToChainScopedIds ?? new Map();
-  const inputPrice = getTokenReferenceUsdPrice(
+  const inputPrice = getMeasuredTokenReferenceUsdPrice(
+    input.capturedAt,
     tokenIn,
     chain,
     input.chainAddressToId,
     symbolToChainScopedIds,
     input.validationReferences,
     input.stablecoinPriceById,
-    input.capturedAt,
   );
   if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
   const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
@@ -475,14 +474,14 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     stablecoinId: input.stablecoinId,
     inputIndex,
     inputPrice,
-    outputPrice: getTokenReferenceUsdPrice(
+    outputPrice: getMeasuredTokenReferenceUsdPrice(
+      input.capturedAt,
       tokenOut,
       chain,
       input.chainAddressToId,
       symbolToChainScopedIds,
       input.validationReferences,
       input.stablecoinPriceById,
-      input.capturedAt,
     ),
     outputStablecoinId,
     rejectionEvent: "uniswap_v4_implied_reference_rejected",

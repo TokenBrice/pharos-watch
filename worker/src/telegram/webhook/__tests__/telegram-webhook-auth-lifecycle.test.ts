@@ -231,6 +231,7 @@ describe("handleTelegramWebhook", () => {
     const fault = mode.includes("cache"), readCache = cache.getCache;
     const { sqlite, db } = createLatestSchemaSqlite({ rowsWritten: (sql, changes) => {
       if (fault && !threw && sql.includes(mode)) { threw = true; throw new Error("Network connection lost"); }
+      if (sql.includes("INSERT INTO cache") && changes > 0) claimed();
       return changes;
     } });
     let claimed!: () => void;
@@ -244,7 +245,7 @@ describe("handleTelegramWebhook", () => {
       const payload = (await makeMyChatMemberRequest().json() as { my_chat_member: TelegramChatMemberUpdated }).my_chat_member;
       if (mode !== "empty") sqlite.prepare("INSERT INTO cache VALUES (?, '1', ?)")
         .run("telegram:group-welcome:-123", Math.floor(Date.now() / 1000) - (mode === "sent" ? 0 : TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC));
-      const first = handleMyChatMember(db, "bot-token", payload, { beforeIrreversibleEffect: async () => claimed() });
+      const first = handleMyChatMember(db, "bot-token", payload);
       const deliveries = Promise.allSettled(fault || mode === "sent" ? [first] : [first, handleMyChatMember(db, "bot-token", payload)]);
       await vi.runAllTimersAsync();
       await deliveries;

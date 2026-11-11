@@ -23,7 +23,6 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_MAX_READ_COMPRESSED_BYTES,
   SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
   SAFETY_SCORE_V9_PUBLICATION_MAX_READ_UNCOMPRESSED_BYTES,
-  SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES,
   SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES,
   SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_STORED_BYTES,
 } from "@shared/lib/safety-score-v9-publication-limits";
@@ -33,8 +32,10 @@ const STORAGE_SCHEMA_VERSION = 1;
 
 // One retained accepted generation for offline scenario replay. Both rows
 // advance with the canonical publication batch (or neither does).
-export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY = "report-cards:v9:accepted-replay:v1";
-export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v9:accepted-replay-base:v1";
+export {
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+  SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+} from "@shared/types/safety-score-cache-keys";
 
 export class SafetyScoreV9SchemaCutoverPendingError extends Error {
   readonly code = "publication-schema-cutover-pending";
@@ -279,30 +280,29 @@ function compressedStorageCandidate(value: unknown): boolean {
 export async function admitAndSerializeSafetyScoreV9Publication(
   value: SafetyScoreV9CurrentResponse,
   signal?: AbortSignal,
-  encoding: "legacy" | "dictionary" = "dictionary",
 ): Promise<{ publication: Readonly<SafetyScoreV9CurrentResponse>; stored: string }> {
   throwIfAborted(signal);
   const admitted = admitPublicationPayload({ ...value, cards: [...value.cards] }, true);
   // Writers emit only the current envelope; admitting a retained generation is read-only.
   if (admitted.schemaVersion !== 8) throw new Error("Safety Score v9 writers must emit schema 8");
   const publication = deepFreeze(admitted);
-  const dictionary = encoding === "dictionary" ? encodePublicationDictionary(publication, signal) : undefined;
-  const compressed = await gzipCanonicalJson(dictionary?.chunks ?? stableJsonStringifyChunksV1(publication), {
+  const dictionary = encodePublicationDictionary(publication, signal);
+  const compressed = await gzipCanonicalJson(dictionary.chunks, {
     label: "Safety Score v9 publication",
     maximumCompressedBytes:
       SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES,
-    maximumUncompressedBytes: dictionary ? PUBLICATION_DICTIONARY_MAX_WRITE_PACKED_BYTES : SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES,
+    maximumUncompressedBytes: PUBLICATION_DICTIONARY_MAX_WRITE_PACKED_BYTES,
     signal,
   });
   const stored = stableJsonStringifyV1(
     StorageEnvelopeSchema.parse({
-      storageSchemaVersion: dictionary ? 2 : STORAGE_SCHEMA_VERSION,
+      storageSchemaVersion: 2,
       kind: PUBLICATION_STORAGE_KIND,
-      encoding: dictionary ? "gzip-json-dictionary-base64-v1" : "gzip-base64",
-      ...(dictionary ? { packedBytes: compressed.uncompressedBytes } : {}),
+      encoding: "gzip-json-dictionary-base64-v1",
+      packedBytes: compressed.uncompressedBytes,
       identity: publicationIdentity(publication),
-      payloadSha256: dictionary?.contentSha256 ?? compressed.contentSha256,
-      uncompressedBytes: dictionary?.uncompressedBytes ?? compressed.uncompressedBytes,
+      payloadSha256: dictionary.contentSha256,
+      uncompressedBytes: dictionary.uncompressedBytes,
       compressedBytes: compressed.compressed.byteLength,
       payload: bytesToBase64(compressed.compressed),
     }),
@@ -322,15 +322,6 @@ export async function serializeSafetyScoreV9Publication(
   signal?: AbortSignal,
 ): Promise<string> {
   return (await admitAndSerializeSafetyScoreV9Publication(value, signal)).stored;
-}
-
-/** Explicit encoder for qualification and historical-format fixtures. */
-export async function serializeSafetyScoreV9PublicationWithEncoding(
-  value: SafetyScoreV9CurrentResponse,
-  encoding: "legacy" | "dictionary",
-  signal?: AbortSignal,
-): Promise<string> {
-  return (await admitAndSerializeSafetyScoreV9Publication(value, signal, encoding)).stored;
 }
 
 export async function parseSafetyScoreV9Publication(

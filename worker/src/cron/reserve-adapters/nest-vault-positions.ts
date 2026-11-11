@@ -74,7 +74,26 @@ interface NestPendingTransactionValue {
 }
 
 // These vaults publish explicit pending deposits alongside settled positions.
-const PENDING_DEPOSIT_VAULTS = new Set(["nopal-nest", "nbasis-nest"]);
+interface NestAccountingProfile {
+  withdrawalAssetSlug: string;
+  withdrawalSymbol: string;
+  receivableName: string;
+  reconciliationWithoutWithdrawals: string;
+}
+const NEST_ACCOUNTING_PROFILES = new Map<string, NestAccountingProfile>([
+  ["nopal-nest", {
+    withdrawalAssetSlug: "liquid-stone",
+    withdrawalSymbol: "OALS2T",
+    receivableName: "Nest pending redemption receivables",
+    reconciliationWithoutWithdrawals: "settled-plus-pending-deposits-plus-residual-equals-nav",
+  }],
+  ["nbasis-nest", {
+    withdrawalAssetSlug: "superstate-uscc",
+    withdrawalSymbol: "USCC",
+    receivableName: "Nest pending USCC redemption receivables",
+    reconciliationWithoutWithdrawals: "settled-plus-pending-deposits-compared-with-nav",
+  }],
+]);
 
 /**
  * `/price.nav` and `/calculated-price` are two valuations of the same vault, so
@@ -359,7 +378,8 @@ export async function fetchNestVaultPositionsReserves(
   const priceUsd = parsePositiveNumericLike(price.data?.price);
   const totalSupply = parsePositiveNumericLike(price.data?.totalSupply);
   const sourceTimestamp = readLatestTimestamp(lastPriceUpdate);
-  const reconcilePending = PENDING_DEPOSIT_VAULTS.has(coin.id);
+  const accountingProfile = NEST_ACCOUNTING_PROFILES.get(coin.id);
+  const reconcilePending = accountingProfile !== undefined;
   if (reconcilePending && navUsd == null) {
     throw new Error(`nest-vault-positions missing ${coin.symbol} NAV`);
   }
@@ -390,15 +410,11 @@ export async function fetchNestVaultPositionsReserves(
     // positive receivable belongs to the reviewed underlying: OALS2T in
     // nOPAL's liquid-stone vault, or USCC in nBASIS. NAV reconciliation proves
     // the amount, not an interchangeable asset identity.
-    const withdrawalReviewed = coin.id === "nopal-nest"
+    const withdrawalReviewed = accountingProfile
       ? (transaction: NestPendingTransactionValue) =>
-        transaction.positionKind === "yield" && transaction.assetSlug === "liquid-stone"
-        && transaction.symbol === "OALS2T"
-      : coin.id === "nbasis-nest"
-        ? (transaction: NestPendingTransactionValue) =>
-          transaction.positionKind === "yield" && transaction.assetSlug === "superstate-uscc"
-          && transaction.symbol === "USCC"
-        : () => false;
+        transaction.positionKind === "yield" && transaction.assetSlug === accountingProfile.withdrawalAssetSlug
+        && transaction.symbol === accountingProfile.withdrawalSymbol
+      : () => false;
     if (pendingTransactions.some((transaction) =>
       transaction.type === "PendingWithdrawal" && transaction.valueUsd > 0
       && !withdrawalReviewed(transaction))) {
@@ -460,9 +476,7 @@ export async function fetchNestVaultPositionsReserves(
       ? [{
           sourceKey: "nest-vault-positions:pending-withdrawals",
           value: pendingWithdrawalUsd,
-          name: coin.id === "nbasis-nest"
-            ? "Nest pending USCC redemption receivables"
-            : "Nest pending redemption receivables",
+          name: accountingProfile?.receivableName ?? "Nest pending redemption receivables",
           risk: "high" as const,
         }]
       : []),
@@ -517,9 +531,7 @@ export async function fetchNestVaultPositionsReserves(
           ? {
               reconciliationKind: grossNavUsd != null
                 ? "settled-plus-pending-plus-dividends-equals-gross-nav-less-fees-equals-net-nav"
-                : coin.id === "nbasis-nest"
-                ? "settled-plus-pending-deposits-compared-with-nav"
-                : "settled-plus-pending-deposits-plus-residual-equals-nav",
+                : accountingProfile.reconciliationWithoutWithdrawals,
               pendingTransactions,
             }
           : {}),

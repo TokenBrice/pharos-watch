@@ -12,8 +12,6 @@ import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-voca
 import { TELEGRAM_LIVE_ALERT_TYPES, TELEGRAM_RETIRED_ALERT_TYPES } from "@shared/types/status/telegram";
 import { TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
 
-// ---------- Types ----------
-
 export interface ResolvedCoin {
   id: string;
   symbol: string;
@@ -47,8 +45,6 @@ export interface ParsedTargetArgs {
 }
 
 export type TickerResolutionScope = "subscribable" | "tracked";
-
-// ---------- Constants ----------
 
 const ALERT_TYPES: ReadonlySet<string> = new Set(TELEGRAM_LIVE_ALERT_TYPES);
 const RETIRED_ALERT_TYPES: ReadonlySet<string> = new Set(TELEGRAM_RETIRED_ALERT_TYPES);
@@ -98,8 +94,6 @@ function levenshteinDistance(a: string, b: string): number {
   }
   return previous[b.length];
 }
-
-// ---------- Ticker Resolution ----------
 
 function buildSymbolIndex(coins: readonly typeof WORKER_TRACKED_STABLECOINS[number][]): Map<string, ResolvedCoin[]> {
   const map = new Map<string, ResolvedCoin[]>();
@@ -167,8 +161,6 @@ function findClosestMatch(lowerTicker: string, symbols: Map<string, ResolvedCoin
   }
   return null;
 }
-
-// ---------- Command Parsing ----------
 
 /**
  * Parse target tokens shared by subscribe/unsubscribe flows.

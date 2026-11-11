@@ -293,9 +293,6 @@ export function deriveFlowSeries({
     .filter((series): series is NonNullable<typeof series> => series != null);
 }
 
-/**
- * Build flow card entries from the flow coin map for the selected ids.
- */
 export function deriveFlowCardData({
   selectedIds,
   flowCoinMap,

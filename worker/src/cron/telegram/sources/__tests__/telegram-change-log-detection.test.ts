@@ -59,7 +59,6 @@ describe("prepareDispatchChangeLogStatements", () => {
         nowSec: 1_000,
       };
       const prepared = await prepareDispatchChangeLogStatements(db, input);
-      // Preparation alone writes nothing.
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_change_log").get()).toEqual({ n: 0 });
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM cache").get()).toEqual({ n: 0 });
       await db.batch(prepared);

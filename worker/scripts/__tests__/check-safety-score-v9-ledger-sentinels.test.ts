@@ -6,10 +6,9 @@ import {
   renderSentinelResolutionMarkdown,
   stringifySentinelResolutionReport,
   sentinelReviewedAtSec,
-  type RegistryBinding,
   type RegistryItem,
-  type SentinelResolutionReport,
 } from "../check-safety-score-v9-ledger-sentinels";
+import type { RegistryBinding, SentinelResolutionReport } from "../../../scripts/lib/sentinel-resolution-contract";
 
 // The 20261029T1814Z capture clock.
 const AS_OF_SEC = Date.UTC(2026, 9, 29, 17, 17, 24) / 1000;

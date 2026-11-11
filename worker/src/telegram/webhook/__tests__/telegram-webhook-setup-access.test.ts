@@ -301,9 +301,7 @@ describe("handleTelegramWebhook", () => {
         "bot-token",
       );
 
-      // Command should proceed (subscriber row written), not be denied.
       expect(db.getHistory().some((entry) => /INSERT INTO telegram_subscribers/i.test(entry.sql))).toBe(true);
-      // A group_admin_denial usage event with outcome 'warned' should be recorded.
       const usageRow = db
         .getHistory()
         .find(

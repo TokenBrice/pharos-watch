@@ -1128,9 +1128,7 @@ describe("classifyProbeStatus reflects STATUS_PROBE_THRESHOLDS", () => {
     const { degradedMaxFailRatio, healthyLatencyMaxMs, degradedLatencyMaxMs } = STATUS_PROBE_THRESHOLDS;
     const sampleCount = 20;
     const degradedFailCap = Math.floor(sampleCount * degradedMaxFailRatio);
-    // At the cap with p95 in degraded band -> degraded
     expect(classifyProbeStatus(sampleCount, degradedFailCap, degradedLatencyMaxMs)).toBe("degraded");
-    // One over the cap -> stale
     expect(classifyProbeStatus(sampleCount, degradedFailCap + 1, healthyLatencyMaxMs)).toBe("stale");
   });
 });

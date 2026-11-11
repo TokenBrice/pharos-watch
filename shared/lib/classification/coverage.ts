@@ -106,7 +106,6 @@ const COVERAGE_GAP_CHIP_CLASS = "border-border/70 bg-muted/60 text-muted-foregro
 export const COVERAGE_GAP_BAR_CLASS =
   "bg-muted-foreground/35 bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.08)_5px_10px)]";
 
-/** Bar label colour used whenever the bar fill is light enough for dark text. */
 const COVERAGE_BAR_TEXT_ON_LIGHT_CLASS = "text-slate-950";
 
 export interface CoverageBreakdownToneClasses {
@@ -307,7 +306,6 @@ export const COVERAGE_AUTHORITATIVE_ACCENT_CLASSES = {
   cardLabel: "text-violet-800 dark:text-violet-300",
 } as const;
 
-/** API method badges (reference panel sections, directory and sidebar). */
 export const HTTP_METHOD_BADGE_CLASSES = {
   GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   POST: "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-400",
@@ -341,7 +339,6 @@ export const METHODOLOGY_SECTION_ACCENT_CLASSES = {
   liquidity: { changelogHover: FEATURE_IDENTITY_CLASSES.dex.changelogHover },
 } as const satisfies Record<MethodologySectionAccentKey, { changelogHover: string }>;
 
-/** Column-group accent borders on methodology tables. */
 export const METHODOLOGY_TABLE_ACCENT_CLASSES = {
   pricingMarket: "border-orange-500/40",
   pricingOverride: "border-blue-500/40",

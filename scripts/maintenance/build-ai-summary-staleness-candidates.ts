@@ -79,8 +79,6 @@ const FIXTURES_DIR = (() => {
   return i !== -1 ? resolve(process.cwd(), process.argv[i + 1] ?? "") : null;
 })();
 
-// --- types ------------------------------------------------------------------
-
 export type Severity = "high" | "medium" | "low";
 
 export interface Current {
@@ -130,8 +128,6 @@ interface SummaryEntry {
   claimTokens?: AiSummaryClaimToken[];
 }
 
-// --- grade vocabulary -------------------------------------------------------
-
 const GRADES = ReportCardGradeSchema.options;
 // Longest first so modifiers win over the bare letter.
 const gradeAlternation = (grades: readonly string[]): string =>
@@ -172,8 +168,6 @@ function parseUsdAmount(raw: string, suffix: string | undefined): number | null 
         : 1;
   return value * multiplier;
 }
-
-// --- live data --------------------------------------------------------------
 
 interface LiveEndpoint {
   apiPath: string;
@@ -277,12 +271,10 @@ export async function loadCurrent(): Promise<Map<string, Current>> {
   return buildCurrentMap(cards.cards, stress.signals, peg.coins, stablecoins.peggedAssets);
 }
 
-// --- claim extraction -------------------------------------------------------
-
 /** Normalize unicode dashes and whitespace so regexes stay simple. */
 function normalize(text: string): string {
   return text
-    .replace(/\{\{\/?term:?[a-z0-9-]*\}\}/gi, "") // strip glossary markup
+    .replace(/\{\{\/?term:?[a-z0-9-]*\}\}/gi, "")
     .replace(/[‐-―−]/g, "-")
     .replace(/\s+/g, " ");
 }
@@ -506,7 +498,6 @@ export function extractFindings(text: string, cur: Current): Finding[] {
   const pegScoreRe = /\bpeg\s+score\s+(?:of|at|is|sits?\s+at)\s+(\d{1,3})\b/gi;
   for (const m of t.matchAll(pegScoreRe)) push(scoreFinding("peg-score", m[0], Number(m[1]), cur.pegScore));
 
-  // 7. Current V9 pillar scores.
   const pillarScores: Array<[RegExp, number | null, string]> = [
     [/\bbacking\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi, cur.backingScore, "backing"],
     [/\bexit\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi, cur.exitScore, "exit"],
@@ -598,8 +589,6 @@ export function extractSummaryFindings(entry: SummaryEntry, cur: Current): Findi
 }
 
 const SEV_RANK: Record<Severity, number> = { high: 3, medium: 2, low: 1 };
-
-// --- main -------------------------------------------------------------------
 
 async function main(): Promise<void> {
   const summaries = JSON.parse(readFileSync(SUMMARIES_PATH, "utf8")) as Record<string, SummaryEntry>;

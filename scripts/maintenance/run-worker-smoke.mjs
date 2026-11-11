@@ -55,7 +55,6 @@ async function cleanup(dumpLog = false) {
   try {
     await unlink(LOG_FILE);
   } catch {
-    // ignore
   }
   if (persistenceDirectory) {
     await rm(persistenceDirectory, { recursive: true, force: true });
@@ -216,7 +215,6 @@ try {
     process.stderr.write(`[worker-smoke] Failed to start wrangler: ${err.message}\n`);
   });
 
-  // 2. Wait for readiness
   process.stdout.write("[worker-smoke] Waiting for wrangler dev to be ready...\n");
   const ready = await waitForWorker();
 
@@ -228,7 +226,6 @@ try {
 
   process.stdout.write("[worker-smoke] Worker is up. Running smoke tests...\n");
 
-  // 3. Run the requested smoke scope.
   if (HEAVY) {
     await runHeavyRuntimeSmoke();
     smokeExitCode = 0;
@@ -263,5 +260,4 @@ try {
   await cleanup(smokeExitCode !== 0);
 }
 
-// 5. Propagate smoke exit code
 process.exit(smokeExitCode);

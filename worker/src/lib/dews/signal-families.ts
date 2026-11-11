@@ -15,10 +15,6 @@ import type { DEWSInput, SignalResult, WorstPoolComponentStatus, WorstPoolUnavai
 import { piecewiseLinear } from "./compatibility";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 
-// ---------------------------------------------------------------------------
-// Source-quality scoring tables
-// ---------------------------------------------------------------------------
-
 const CONFIDENCE_SCORES: Record<string, number> = {
   high: 0,
   "single-source": 25,
@@ -54,10 +50,6 @@ export const YIELD_WARNING_SCORES: Record<string, number> = {
   "reward-heavy": 20,
   "zero-yield": 0,
 };
-
-// ---------------------------------------------------------------------------
-// Signal families
-// ---------------------------------------------------------------------------
 
 export function computeSupplySignal(input: DEWSInput): SignalResult {
   const { circulatingCurrent, circulatingPrevDay, circulatingPrevWeek, mcapUsd } = input;
@@ -181,7 +173,6 @@ export function computePoolSignal(input: DEWSInput): SignalResult {
     return { value: 0, available: false };
   }
 
-  // Invert balance ratio so higher = more stress
   const balanceStress = (1 - input.weightedBalanceRatio) * 100;
   // avg_pool_stress is already 0-100 in the DB
   const poolStressScore = input.avgPoolStress;
@@ -245,7 +236,6 @@ export function computeLiquiditySignal(input: DEWSInput): SignalResult {
   const scoreDelta = scoreDeltaComputable ? (liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1) : null;
   const tvlDelta = tvlDeltaComputable ? (tvlCurrent - tvl7dAgo) / tvl7dAgo : null;
 
-  // Score erosion
   let scoreErosion = 0;
   if (scoreDelta !== null) {
     if (scoreDelta < 0) {
@@ -263,7 +253,6 @@ export function computeLiquiditySignal(input: DEWSInput): SignalResult {
     }
   }
 
-  // TVL erosion
   let tvlErosion = 0;
   if (tvlDelta !== null) {
     if (tvlDelta < 0) {
@@ -406,7 +395,6 @@ export function computeBlacklistSignal(input: DEWSInput): SignalResult {
   const { blacklistEvents24h, blacklistEvents7d } = input;
   const dailyRate7d = blacklistEvents7d / 7;
 
-  // Spike detection
   const spikeRatio = dailyRate7d > 0 ? blacklistEvents24h / dailyRate7d : blacklistEvents24h;
 
   const rawCount = piecewiseLinear(blacklistEvents24h, [
@@ -488,7 +476,6 @@ export function computeFlowSignal(input: DEWSInput): SignalResult {
         ? 5
         : 0;
 
-  // Mint/burn ratio collapse: when burns >> mints
   const ratio =
     input.mintVolume24hUsd > 0 ? input.burnVolume24hUsd / input.mintVolume24hUsd : input.burnVolume24hUsd > 0 ? 10 : 0;
 

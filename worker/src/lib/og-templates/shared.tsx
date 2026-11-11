@@ -8,12 +8,11 @@ const TEXT_SECONDARY = "#5f6570";
 const FROST_BLUE = "#0e7490";
 export const TRACK_BG = "#e4e7eb";
 
-// Semantic colors for data visualization
 export const SEMANTIC_COLORS = {
-  positive: "#15803d",   // Green for good/up
-  negative: "#dc2626",   // Red for bad/down
+  positive: "#15803d",
+  negative: "#dc2626",
   warning: "#b45309",    // Orange for caution
-  neutral: "#64748b",    // Gray for neutral
+  neutral: "#64748b",
   highlight: "#0e7490",  // Frost blue for highlights
 };
 
@@ -105,7 +104,6 @@ export function CardFrame({
         position: "relative",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -158,17 +156,14 @@ export function CardFrame({
         )}
       </div>
 
-      {/* Title */}
       <div style={{ fontSize: 34, fontWeight: 700, marginBottom: 24 }}>
         {title}
       </div>
 
-      {/* Content — spread children to fill available space */}
       <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
         {children}
       </div>
 
-      {/* Footer with timestamp */}
       {lastUpdated && (
         <div
           style={{
@@ -190,7 +185,6 @@ export function CardFrame({
   );
 }
 
-/** Sparkline SVG path from price data */
 export function Sparkline({
   data,
   color = FROST_BLUE,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyReviewedAddressPriceTargetOverride,
-  isReviewedAddressPriceTargetOverride,
+  getReviewedAddressPriceTargetOverride,
 } from "../address-price-providers/reviewed-target-overrides";
 
 const VUSD_DEPLOYMENT = {
@@ -11,10 +11,10 @@ const VUSD_DEPLOYMENT = {
 
 describe("reviewed address-price target overrides", () => {
   it("recognizes and selects only the reviewed canonical deployment", () => {
-    expect(isReviewedAddressPriceTargetOverride({
+    expect(getReviewedAddressPriceTargetOverride({
       stablecoinId: "vusd-virtue",
       ...VUSD_DEPLOYMENT,
-    })).toBe(true);
+    })).toEqual({ stablecoinId: "vusd-virtue", ...VUSD_DEPLOYMENT, prioritizeRequests: true, allowMissingLiquidity: true });
 
     expect(applyReviewedAddressPriceTargetOverride({
       stablecoinId: "vusd-virtue",

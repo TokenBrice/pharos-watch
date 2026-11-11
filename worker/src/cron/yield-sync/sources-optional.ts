@@ -1,3 +1,4 @@
+import { ZEPHYR_YIELD_HISTORY_POLICY } from "@shared/lib/yield-source-history";
 import { buildTrackedYieldAssetIndex } from "./identity";
 import {
   DAY_SECONDS,
@@ -1002,7 +1003,7 @@ const SCRVUSD_CURVE_ID = "scrvusd-curve";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
 const ONDO_USDY_ID = "usdy-ondo-finance";
 const RE_REUSD_ID = "reusd-re-protocol";
-const ZEPHYR_ZYS_ID = "zys-zephyr-protocol";
+const ZEPHYR_ZYS_ID = ZEPHYR_YIELD_HISTORY_POLICY.stablecoinId;
 const YEARN_YBOLD_ID = "ybold-yearn";
 const ONDO_USDY_ORACLE_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
 
@@ -1204,7 +1205,7 @@ export const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
   ),
   timedOptionalSourceEntry(
     ZEPHYR_ZYS_ID,
-    "protocol-api:zys-zephyr-protocol",
+    ZEPHYR_YIELD_HISTORY_POLICY.sourceKey,
     "Zephyr ZYS source",
     (budgetSignal) => fetchZephyrZysSource(budgetSignal),
   ),

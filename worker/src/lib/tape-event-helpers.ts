@@ -40,8 +40,6 @@ export function deriveIssuerId(stablecoinId: string | null): string | null {
   return stablecoinId.slice(dash + 1);
 }
 
-// --- Severity mapping -------------------------------------------------------
-
 export function severityForDepegOpened(absBps: number): TapeEventSeverity {
   if (absBps >= 2500) return "critical";
   if (absBps >= 1000) return "severe";
@@ -123,8 +121,6 @@ export function severityForMethodologyBump(version: string): TapeEventSeverity {
   const allZero = trailing.every((segment) => segment === "0");
   return allZero ? "warning" : "info";
 }
-
-// --- Row → wire -------------------------------------------------------------
 
 /** Named reasons a persisted row is quarantined at the D1 read boundary (rule R8). */
 export type TapeEventQuarantineReason = "payload-json-invalid" | "wire-schema-invalid";

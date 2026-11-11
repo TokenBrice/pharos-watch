@@ -32,7 +32,9 @@ import {
   detectTelegramFreezeJobs,
   type FreezeJobDetection,
 } from "../jobs/freeze-job";
-import { fanOutPlanningTelegramJobs, sweepTelegramJobs } from "../jobs/run-jobs";
+import { fanOutPlanningTelegramJobs } from "../jobs/run-jobs";
+import { getTelegramJobKindHandler } from "../jobs/registry";
+import { sweepTelegramJobs } from "../../../telegram/delivery/job-sweep";
 import { runTelegramRollupStep, type TelegramRollupStepResult } from "../rollup/rollup-step";
 import { loadRetractedFreezeAlertIds } from "../freeze/telegram-alert-freeze";
 import { classifyTelegramLogError, logTelegramEvent } from "../../../telegram/common/log";
@@ -233,7 +235,7 @@ export async function dispatchTelegramAlerts(
       validateFreezeClaims: (keys) => isolate("freeze-revalidation", null, () => loadRetractedFreezeAlertIds(db, keys)),
     })
     : null;
-  const sweep = await sweepTelegramJobs(db, Math.floor(Date.now() / 1000));
+  const sweep = await sweepTelegramJobs(db, Math.floor(Date.now() / 1000), getTelegramJobKindHandler);
 
   const sent = drain?.sent ?? 0;
   const attempted = drain?.attempted ?? 0;

@@ -1,27 +1,14 @@
-import { CHAIN_META } from "@shared/types/chain-identity";
+import { requireChainConfig } from "./chain-config";
 import type {
   MintBurnBridgeDetectionConfig,
   MintBurnContractConfigSpec,
 } from "./mint-burn-contracts-types";
-import type { ChainConfig } from "./blacklist-contracts";
 import {
   ccipBridgeDetection,
   cctpBridgeDetection,
   layerZeroOftBridgeDetection,
   transferMintBurn,
 } from "./mint-burn-contracts-helpers";
-
-function requireChainConfig(chainId: string): ChainConfig {
-  const meta = CHAIN_META[chainId];
-  if (!meta) throw new Error(`Unknown chain: ${chainId}`);
-  return {
-    chainId,
-    chainName: meta.name,
-    evmChainId: meta.evmChainId,
-    explorerUrl: meta.explorerUrl,
-    type: meta.type,
-  };
-}
 
 const ETHEREUM = requireChainConfig("ethereum");
 const ARBITRUM = requireChainConfig("arbitrum");
@@ -168,7 +155,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
 ];
 
 export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
-  // --- Safe havens ---
   {
     chain: ETHEREUM,
     stablecoinId: "usdt-tether",
@@ -259,7 +245,6 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
 
-  // --- Risky / crypto-backed ---
   {
     // 3Jane USD3 TransparentUpgradeableProxy, verified Blockscout deployment tx
     // 0xa50b1bacaceebe52c33a9815fa9e0eb8549f2c38218f41745647b881a7008243.

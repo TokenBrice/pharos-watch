@@ -73,7 +73,6 @@ const CURRENT_DASHBOARD_MAX_PAYLOAD_LAG_SEC = 3 * 24 * 60 * 60;
 const CATALOG_RESERVE_URL = "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve";
 const MENTO_DASHBOARD_URL = "https://reserve.mento.org/";
 
-// --- Redemption telemetry fixtures ------------------------------------------
 const USDM_ADDRESS = "0x765de816845861e75a25fca122bb6898b8b1282a";
 const USDC_ADDRESS = "0xceba9300f2b948710d2653dd7b07f33a8b32118c";
 const USDT_ADDRESS = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e";
@@ -172,7 +171,6 @@ function mentoNetwork(options: MentoNetworkOptions = {}): AdapterNetworkSpec {
   };
 }
 
-/** The real catalog config of a mento coin, with test params swapped in. */
 function catalogConfig(coinId: string, params?: Record<string, unknown>): LiveReservesConfig {
   const { config } = resolveAdapterCoin("mento", coinId);
   return params ? { ...config, params: params as LiveReservesConfig["params"] } : config;
@@ -209,7 +207,6 @@ afterEach(() => {
 });
 
 describe("mento adapter", () => {
-  // --- Pure parse/adapt units ------------------------------------------------
   it("retains measured bridge shares separately from native issuer holdings", () => {
     const captured = JSON.parse(readFileSync(join(FIXTURES_DIR, "mento-reserve-2026-09-30.json"), "utf8"));
     const result = adaptMentoReserveComposition(captured.payload);
@@ -443,7 +440,6 @@ describe("mento adapter", () => {
     expect(result.slices.some((slice) => slice.pct === 0.01)).toBe(true);
   });
 
-  // --- Fetch-level, through the harness --------------------------------------
   it("fetches the catalog-bound reserve composition and dashboard clock through the harness", async () => {
     const { result } = await runAdapter("mento", "cusd-celo", {
       params: { redemption: undefined },

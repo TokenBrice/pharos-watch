@@ -208,8 +208,6 @@ function readDepegEventsFromShards(): DepegEvent[] {
   return readDepegEventSnapshot({ missing: "throw" });
 }
 
-// --- Topic projections ------------------------------------------------------
-
 interface TopStablecoinRow {
   id: string;
   name: string;
@@ -820,8 +818,6 @@ function projectPegMechanismDistribution(
   };
 }
 
-// --- Per-topic metadata + write loop ----------------------------------------
-
 interface TopicSpec<T> {
   topic: PublicDatasetTopic;
   rows: T[];
@@ -1356,8 +1352,6 @@ function preserveExistingDatasetMirrorsAfterFetchFailure(error: unknown): boolea
   );
   return true;
 }
-
-// --- Main -------------------------------------------------------------------
 
 async function main(): Promise<void> {
   const { values } = parseArgs({

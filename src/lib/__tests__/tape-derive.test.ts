@@ -32,7 +32,6 @@ describe("projectTapeEventForReader", () => {
     expect(projected.summary).toBe("New yield warning signal (yield-spike) detected on selected source.");
     expect(formatTapeEventTitle(projected)).toBe("USDe yield warning: Yield spike");
     expect(formatTapeEventSummary(projected)).not.toMatch(/aging|Aging/);
-    // The raw event is not mutated.
     expect(raw.payload.newSignals).toEqual(["yield-spike", "aging"]);
   });
 

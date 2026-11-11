@@ -729,7 +729,6 @@ export async function syncSafetyScoreV9SupplyAttribution(
     chainRpcs,
     signal,
     {
-      clockMode: "wall",
       notBeforeSec: startedAtSec,
       executionWindow,
       db,

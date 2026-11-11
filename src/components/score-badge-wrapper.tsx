@@ -21,7 +21,6 @@ interface ScoreBadgeWrapperProps {
   /** The score badge being wrapped. Rendered as the tooltip/sheet trigger. */
   children: ReactNode;
   className?: string;
-  /** Additional class for the suffix span. */
   suffixClassName?: string;
   /**
    * When false, renders the badge/version only and skips the methodology
@@ -29,7 +28,6 @@ interface ScoreBadgeWrapperProps {
    * controls.
    */
   interactive?: boolean;
-  /** Optional accessible label for the methodology trigger. */
   triggerAriaLabel?: string;
 }
 

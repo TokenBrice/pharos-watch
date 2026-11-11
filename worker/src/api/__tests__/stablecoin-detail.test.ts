@@ -272,7 +272,6 @@ describe("handleStablecoinDetail", () => {
     const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
-    // Should NOT call fetch when cache is fresh
     expect(fetchSpy).not.toHaveBeenCalled();
 
     const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };

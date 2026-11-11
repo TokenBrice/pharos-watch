@@ -1,3 +1,4 @@
+import { retainedPoolVolumeSanityRejection } from "./pool-volume-sanity";
 import type {
   DexPoolVolumeReading,
   DexPriceObs,
@@ -136,10 +137,6 @@ function getPoolExtraBoolean(
   const value = extra?.[key];
   return typeof value === "boolean" ? value : null;
 }
-
-const POOL_VOL_TO_TVL_RATIO_MAX = 50;
-const LARGE_POOL_TVL_MIN_USD = 100_000_000;
-const LARGE_POOL_MIN_VOLUME_USD = 50_000;
 
 function normalizeSourceFamily(value: string | null | undefined): string | undefined {
   const normalized = (value ?? "").trim();
@@ -299,12 +296,12 @@ export function filterRetainedPools(
     // Runs after the DEC-19 eligibility pass: `volumeUsd1d` is an in-window
     // reading or null. The ratio sanity check needs a reading; the large-pool
     // floor treats unobserved or aged flow as not clearing it.
-    const vol = pool.volumeUsd1d;
-    if (vol != null && pool.tvlUsd > 0 && vol / pool.tvlUsd > POOL_VOL_TO_TVL_RATIO_MAX) {
+    const rejection = retainedPoolVolumeSanityRejection(pool.tvlUsd, pool.volumeUsd1d);
+    if (rejection === "volume-to-tvl-ratio") {
       if (fallbackCounters) fallbackCounters.retainedExclusionVolTvlRatio++;
       return false;
     }
-    if (pool.tvlUsd > LARGE_POOL_TVL_MIN_USD && !(vol != null && vol >= LARGE_POOL_MIN_VOLUME_USD)) {
+    if (rejection === "large-pool-low-volume") {
       if (fallbackCounters) fallbackCounters.retainedExclusionLargePoolLowVolume++;
       return false;
     }

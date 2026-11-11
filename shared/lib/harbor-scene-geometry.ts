@@ -426,7 +426,6 @@ export interface HarborCapacityReport {
   tiered: boolean;
 }
 
-/** Projected screen length of a world vector. */
 const screenLen = (p: SceneProjection, di: number, dj: number): number => {
   const a = project(p, di, dj, 0);
   const o = project(p, 0, 0, 0);

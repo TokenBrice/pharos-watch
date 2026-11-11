@@ -172,7 +172,6 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
   ]);
   const results = rows.results ?? [];
 
-  // If no sample and no history, return empty
   if (!latestSample && results.length === 0) {
     return jsonResponse({
       current: null,
@@ -188,7 +187,6 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
     }, { headers: { "Cache-Control": CACHE_PROFILES.standard } });
   }
 
-  // Build current from latest sample, falling back to latest history row
   const currentSource = latestSample ?? results[0];
   const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);
   const currentComponents = decodePsiObjectField(
@@ -265,7 +263,6 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
     };
   }).filter((row): row is NonNullable<typeof row> => row !== null);
 
-  // Append today's running average as the last point if we have samples today
   if (todayAvgRow?.avg != null) {
     const todayScore = round1(todayAvgRow.avg);
     const todayBand = getConditionBand(todayScore);

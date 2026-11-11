@@ -155,11 +155,9 @@ describe("Safety Score v9 authored mint-control identity (IR-1d)", () => {
     const originalFact = original.controls[0]!;
     const reKeyedFact = reKeyed.controls[0]!;
 
-    // An address correction re-derives the digest key...
     expect(originalFact.controlKey).toBe(mintControlKey(ASSET_ID, mintControl()));
     expect(reKeyedFact.controlKey).toBe(mintControlKey(ASSET_ID, mintControl({ address: correctedAddress })));
     expect(reKeyedFact.controlKey).not.toBe(originalFact.controlKey);
-    // ...but the authored identity, and therefore the review, survives it.
     expect(originalFact.authoredControlId).toBe(LABEL);
     expect(reKeyedFact.authoredControlId).toBe(LABEL);
     expect(reKeyedFact.factorStatuses?.incidentState?.gapIds).toEqual([

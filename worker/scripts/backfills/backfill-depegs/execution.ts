@@ -138,7 +138,6 @@ export async function executeBackfillForCoin(opts: {
     return { status: "skipped", eventCount: 0 };
   }
 
-  // Build time-varying peg reference function for this coin
   const peg = meta.flags.pegCurrency;
   const pegType = `pegged${peg}`;
   // Commodity history and its fallback are per ounce; convert to token units once below.

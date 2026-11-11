@@ -12,7 +12,7 @@ import {
 import { buildTelegramJobStatements, type TelegramDeliveryInput } from "../../../telegram/delivery/jobs";
 import { emptyAlerts } from "../dispatch/dispatch-telegram-routing";
 import { loadFreshFreezeAlerts } from "../freeze/telegram-alert-freeze";
-import type { TelegramJobKindHandler, TelegramJobPageContext } from "./registry";
+import type { TelegramJobKindHandler, TelegramJobPageContext } from "../../../telegram/delivery/job-handler";
 import { buildTelegramChangeLogStatements, freezeAlertsToChangeLogEntries } from "../rollup/change-log";
 
 /** Same cursor key as the legacy outbox, so cutover neither replays nor skips Tape rows. */
@@ -201,7 +201,7 @@ async function buildFreezeJobPage(
   };
 }
 
-export const freezeJobHandler: TelegramJobKindHandler<FreezeAlert> = {
+export const freezeJobHandler: TelegramJobKindHandler<FreezeAlert, "freeze"> = {
   kind: "freeze",
   buildPage: buildFreezeJobPage,
 };

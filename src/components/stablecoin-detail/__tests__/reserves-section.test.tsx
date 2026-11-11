@@ -163,7 +163,6 @@ describe("ReservesSection", () => {
     const { container } = renderSection();
     const region = screen.getByRole("region", { name: "Reserves" });
     expect(region.id).toBe("reserves");
-    // The hero/FAQ alias lives inside the module, ahead of its visual.
     const alias = region.querySelector("#reserve-quality");
     expect(alias).not.toBeNull();
     expect(alias!.compareDocumentPosition(screen.getByRole("figure")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -1,3 +1,4 @@
+import { publishPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { getCacheUpdatedAt } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
@@ -5,7 +6,7 @@ import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort"
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { DwellirNativeCapability } from "../lib/dwellir-native";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
-import { buildNativeSafetyScoreV9Capture } from "../lib/safety-score-v9/capture";
+import { buildNativeSafetyScoreV9Capture, loadNativeSafetyScoreV9CaptureSources } from "../lib/safety-score-v9/capture";
 import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9/native-input";
 import {
   buildSafetyScoreV9SupplyAttributionSource,
@@ -154,8 +155,9 @@ async function waitForStablecoinsCacheReadiness(
  *
  * The envelope-v2 capture and any successfully built auxiliary rows are written
  * atomically. It no longer builds V8 report cards on the way — publishing the
- * peg-analytics aggregate is now an explicit step inside the capture rather than
- * a side effect of the report-card snapshot builder.
+ * peg-analytics aggregate is an explicit step here, between loading the sources
+ * and building the capture, rather than a side effect of the report-card
+ * snapshot builder.
  */
 export async function prepareSafetyScoreV9Input(
   db: D1Database,
@@ -197,10 +199,13 @@ export async function prepareSafetyScoreV9Input(
     });
   }
 
-  const capture = await buildNativeSafetyScoreV9Capture(db, {
+  const captureOptions = {
     ...(expectedDexGenerationId === undefined ? {} : { expectedDexGenerationId }),
     preloadedStablecoinsCache: stablecoinsReadiness.cache,
-  });
+  };
+  const sources = await loadNativeSafetyScoreV9CaptureSources(db, captureOptions);
+  const pegAnalyticsPublished = await publishPegAnalyticsCache(db, sources.pegAnalytics);
+  const capture = await buildNativeSafetyScoreV9Capture(db, sources, captureOptions);
 
   throwIfAborted(signal);
 
@@ -335,7 +340,7 @@ export async function prepareSafetyScoreV9Input(
       activeAssets: input.activeAssetIds.length,
       activeCards: capture.completeness.expectedCount,
       publicationGenerationId,
-      pegAnalyticsPublished: capture.pegAnalyticsPublished,
+      pegAnalyticsPublished,
       dexGenerationId: input.dexGenerationId,
       dexGenerationLagSec: Math.max(
         0,

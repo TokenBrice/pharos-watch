@@ -37,10 +37,6 @@ export const HOWEY_UNCERTAIN_ASSETS: ReadonlySet<string> = new Set([
   "sdai-sky",
 ]);
 
-// ---------------------------------------------------------------------------
-// Threshold helpers
-// ---------------------------------------------------------------------------
-
 /** R1 Skeptic P3.8 / Compliance P2 — active-depeg threshold scales with tolerance. */
 function activeDepegThresholdBps(tol: SelectorDepegTolerance): number {
   switch (tol) {
@@ -103,10 +99,6 @@ export function tradingPegScoreFloor(tol: SelectorDepegTolerance): number {
 // so it is omitted from these per-profile sets to avoid an unreachable guard. [audit Q-218]
 const TREASURY_GRADE_REJECT: ReadonlySet<string> = new Set(["D", "C-", "C"]);
 const YIELD_TRADING_GRADE_REJECT: ReadonlySet<string> = new Set(["D"]);
-
-// ---------------------------------------------------------------------------
-// Rule evaluation
-// ---------------------------------------------------------------------------
 
 function fail(
   id: string,
@@ -340,10 +332,6 @@ export function evaluateExclusions(
   );
 }
 
-// ---------------------------------------------------------------------------
-// Required-signals coverage check
-// ---------------------------------------------------------------------------
-
 const REQUIRED_SIGNALS_BY_PROFILE: Record<SelectorProfile, readonly (keyof MergedRow)[]> = {
   treasury: [
     "safetyGrade",
@@ -399,10 +387,6 @@ export function hasRequiredSignals(
   }
   return { ok: missing.length === 0, missing };
 }
-
-// ---------------------------------------------------------------------------
-// Lower-ranked Slot-A allow-list
-// ---------------------------------------------------------------------------
 
 export const PROFILE_DEFINING_EXCLUSIONS: Record<
   SelectorProfile,

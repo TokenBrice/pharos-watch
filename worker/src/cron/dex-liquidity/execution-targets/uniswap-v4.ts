@@ -1,4 +1,4 @@
-import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "../execution-target-registry";
+import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./contract";
 import {
   buildUniswapV4ExecutionCandidateKey,
   buildUniswapV4MeasuredExecutionTarget,

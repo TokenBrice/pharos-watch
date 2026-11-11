@@ -1,3 +1,4 @@
+import { isLegacyDeterministicOnChainSourceKey } from "../lib/yield-config/yield-history-identity-transitions";
 import { YieldTypeSchema } from "@shared/types/core";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { parseStablecoinHistoryQuery } from "../lib/api-history";
@@ -48,8 +49,6 @@ import {
   variance_at_publish?: number | null;
   pys_inputs_at_publish?: string | null;
 }
-
-const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
 
 function buildSourceRiskLookupKey(generationId: string, stablecoinId: string, sourceKey: string): string {
   return `${generationId}\u0000${stablecoinId}\u0000${sourceKey}`;
@@ -144,9 +143,8 @@ function normalizeHistorySourceKey(stablecoinId: string, row: YieldHistoryRow, m
   const sourceKey = row.source_key ?? "legacy-best";
   if (
     mode === "best" &&
-    stablecoinId === "lusd-liquity" &&
     row.data_source === "onchain" &&
-    sourceKey === LEGACY_LUSD_BPROTOCOL_SOURCE_KEY
+    isLegacyDeterministicOnChainSourceKey(stablecoinId, sourceKey)
   ) {
     return buildOnChainSourceKey(stablecoinId);
   }

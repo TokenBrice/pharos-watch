@@ -1,25 +1,9 @@
-import { z } from "zod";
+import type { AdminActionAuditEntry } from "@shared/types/admin-action-audit";
 import { readRecord } from "@shared/lib/type-guards";
 import type { StatusPageAction, StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
-const AdminActionAuditEntrySchema = z.object({
-  id: z.number().int(),
-  at: z.number(),
-  actor: z.string(),
-  action: z.string(),
-  target: z.string().nullable(),
-  result: z.enum(["ok", "error"]),
-  httpStatus: z.number().int().nullable(),
-  details: z.unknown().nullable(),
-});
-
-export const AdminActionAuditLogResponseSchema = z.object({
-  entries: z.array(AdminActionAuditEntrySchema),
-});
-
-export type AdminActionAuditEntry = z.infer<typeof AdminActionAuditEntrySchema>;
-export type AdminActionAuditLogResponse = z.infer<typeof AdminActionAuditLogResponseSchema>;
+export type { AdminActionAuditEntry } from "@shared/types/admin-action-audit";
 
 export type ActionIntentCategory = "inspect" | "dry-run" | "recovery" | "communications" | "destructive";
 

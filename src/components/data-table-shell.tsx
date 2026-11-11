@@ -78,7 +78,6 @@ export interface DataTableShellProps<K extends string> {
   pagination?: TablePaginationProps;
   /** Enable striped rows for horizontal scanning */
   striped?: boolean;
-  /** Density mode for row height */
   density?: TableDensity;
   /**
    * M1: query keys whose in-flight background refetch should surface a
@@ -271,4 +270,3 @@ export function DataTableLoadingRows({
     />
   );
 }
-

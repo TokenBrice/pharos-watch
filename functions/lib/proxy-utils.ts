@@ -15,7 +15,6 @@ export function jsonError(status: number, message: string, headers?: HeadersInit
   });
 }
 
-/** Normalize a fetch error into a loggable kind/message pair. */
 export function summarizeFetchError(error: unknown): { kind: string; message: string } {
   const message = toErrorMessage(error);
   if (error instanceof DOMException) {

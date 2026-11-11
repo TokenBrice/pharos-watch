@@ -49,7 +49,6 @@ export function selectorAnswersToScreenerFilters(
   const filters: SelectorScreenerFilterProjection = {};
   const divergenceWarnings: ScreenerDivergenceWarning[] = [];
 
-  // 1. Profile-level base filter.
   if (input.profile === "treasury") {
     filters.safetyGrades = SAFETY_GRADES_TREASURY;
   } else {
@@ -62,7 +61,6 @@ export function selectorAnswersToScreenerFilters(
     filters.coins = Array.from(new Set(coinIds)).slice(0, 8);
   }
 
-  // 2. Per-profile deltas.
   switch (input.profile) {
     case "treasury": {
       applyTreasuryDeltas(input, filters);

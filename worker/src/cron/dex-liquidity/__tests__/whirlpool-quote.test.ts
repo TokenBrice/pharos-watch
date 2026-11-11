@@ -1,10 +1,11 @@
+import { tickSqrtPrice } from "../amm-math";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { z } from "zod";
 import fixture from "./fixtures/whirlpool-slot-449058549.json";
 import pinned from "./fixtures/solana-clmm-wave4-pinned.json";
 import {
   decodeWhirlpool, decodeWhirlpoolTickArray, fetchWhirlpoolSnapshot,
-  quoteWhirlpoolExactIn, tickArrayStarts, tickSqrtPrice, whirlpoolTickArrayAddress,
+  quoteWhirlpoolExactIn, tickArrayStarts, whirlpoolTickArrayAddress,
   type WhirlpoolSnapshot,
 } from "../solana/whirlpool-quote";
 

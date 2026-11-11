@@ -62,9 +62,6 @@ export const DETERMINISTIC_ONCHAIN_COOLDOWN_SEC = 6 * 3600;
 // A cooldown beyond its fixed six-hour window plus this allowance is corrupt.
 const YIELD_CACHE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 
-// ---------------------------------------------------------------------------
-// Coercion primitives shared by every cache submodule.
-// ---------------------------------------------------------------------------
 
 function toNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;
@@ -119,9 +116,6 @@ export function summarizeInvalidRows(
   return rows.slice(0, 5).map(getKey);
 }
 
-// ---------------------------------------------------------------------------
-// Risk-free rate (benchmark) payload normalization — single benchmark.
-// ---------------------------------------------------------------------------
 
 type RiskFreeRateCachePayload = Omit<
   ParsedYieldBenchmarkMeta,
@@ -376,9 +370,6 @@ export function parseRiskFreeRatesCache(
   return parseRiskFreeRatesCacheDetailed(raw, cacheUpdatedAt, nowSec)?.registry ?? null;
 }
 
-// ---------------------------------------------------------------------------
-// Deterministic on-chain health state — normalization for cron health cache.
-// ---------------------------------------------------------------------------
 
 interface DeterministicOnChainHealthStateCachePayload {
   version: 1;

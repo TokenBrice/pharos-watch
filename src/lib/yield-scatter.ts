@@ -90,10 +90,6 @@ export function computeSafetyDomain(scores: number[], isMobile: boolean): [numbe
   return [start, end];
 }
 
-// ---------------------------------------------------------------------------
-// Marker declutter — logos where they fit, exact-position dots where they don't
-// ---------------------------------------------------------------------------
-
 export const LOGO_DIAMETER_DESKTOP = 16;
 export const LOGO_DIAMETER_MOBILE = 14;
 /** Clear space kept between two logo markers, in pixels. */
@@ -153,10 +149,6 @@ export function declutterScatterMarkers<T extends DeclutterablePoint>(
   const withMarkers = points.map((point) => ({ ...point, marker: markers.get(point.id) ?? ("logo" as const) }));
   return [...withMarkers.filter((point) => point.marker === "dot"), ...withMarkers.filter((point) => point.marker === "logo")];
 }
-
-// ---------------------------------------------------------------------------
-// APY axis computation
-// ---------------------------------------------------------------------------
 
 export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisConfig {
   if (apys.length === 0) {

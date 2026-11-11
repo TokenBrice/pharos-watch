@@ -73,7 +73,6 @@ describe("ThresholdGauge", () => {
     );
     expect(lefts).toEqual([...lefts].sort((a, b) => a - b));
     expect(new Set(lefts).size).toBe(lefts.length);
-    // The knob and the fill end agree.
     expect(Number.parseFloat(container.querySelector<HTMLElement>("[data-gauge-fill]")!.style.width)).toBe(lefts[3]);
   });
 

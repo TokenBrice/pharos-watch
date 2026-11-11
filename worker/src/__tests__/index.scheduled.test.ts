@@ -5,7 +5,7 @@ import { getScheduledWorkerRoleForExpression } from "@shared/lib/scheduled-runne
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type * as V9SlotWindow from "../lib/v9-slot-window";
-import type { ScheduledExecutionFence } from "../lib/scheduled-slot-fence";
+import type { ScheduledExecutionFence } from "../lib/scheduled-execution-contract";
 import type { SlotDeadline } from "../lib/cron-timeouts";
 import type { CronRunLoggerOptions } from "../lib/cron-logger";
 import type { ScheduledChildDisposition } from "@shared/types/live-reserves";

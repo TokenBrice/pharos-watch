@@ -31,7 +31,6 @@ export function ApiReferenceLayout({ sections, children }: ApiReferenceLayoutPro
     setActiveId(id);
   }, []);
 
-  // Scrollspy
   useEffect(() => {
     const ids = idSignature.split("|");
     const nodes = ids
@@ -40,7 +39,6 @@ export function ApiReferenceLayout({ sections, children }: ApiReferenceLayoutPro
 
     if (nodes.length === 0) return;
 
-    // Set scroll-margin-top on all observed elements
     for (const node of nodes) {
       node.style.scrollMarginTop = `${SCROLL_OFFSET}px`;
     }
@@ -59,7 +57,6 @@ export function ApiReferenceLayout({ sections, children }: ApiReferenceLayoutPro
 
     for (const node of nodes) observer.observe(node);
 
-    // Handle initial hash
     if (!initialHashHandled.current) {
       initialHashHandled.current = true;
       let hash: string;

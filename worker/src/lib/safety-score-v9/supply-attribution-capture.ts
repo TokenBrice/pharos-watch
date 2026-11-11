@@ -135,7 +135,6 @@ export interface SafetyScoreV9SupplyAttributionCapture {
 }
 
 export interface SafetyScoreV9SupplyAttributionCaptureOptions {
-  clockMode: "source" | "wall";
   notBeforeSec?: number;
   executionWindow?: V9ExecutionWindow;
   db?: D1Database;
@@ -459,9 +458,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
-  options: SafetyScoreV9SupplyAttributionCaptureOptions = {
-    clockMode: "source",
-  },
+  options: SafetyScoreV9SupplyAttributionCaptureOptions = {},
 ): Promise<SafetyScoreV9SupplyAttributionCapture> {
   if (
     options.notBeforeSec !== undefined &&
@@ -475,13 +472,11 @@ export async function captureSafetyScoreV9SupplyAttribution(
   let captureClockSec = fixedInput.clockSec;
   const observationClockSec = (attemptedAtSec: number): number => {
     const clockSec =
-      options.clockMode === "wall"
-        ? Math.max(
-            fixedInput.clockSec,
-            options.notBeforeSec ?? 0,
-            attemptedAtSec,
-          )
-        : fixedInput.clockSec;
+      Math.max(
+        fixedInput.clockSec,
+        options.notBeforeSec ?? 0,
+        attemptedAtSec,
+      );
     captureClockSec = Math.max(captureClockSec, clockSec);
     return clockSec;
   };

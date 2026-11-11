@@ -45,7 +45,6 @@ describe("handleMintBurnFlows contract tests", () => {
     const parsed = MintBurnFlowsResponseSchema.safeParse(body);
     expect(parsed.success).toBe(true);
 
-    // Structural assertions
     expect(body).toHaveProperty("gauge");
     expect(body).toHaveProperty("coins");
     expect(body).toHaveProperty("hourly");
@@ -68,7 +67,6 @@ describe("handleMintBurnFlows contract tests", () => {
     const parsed = MintBurnPerCoinResponseSchema.safeParse(body);
     expect(parsed.success).toBe(true);
 
-    // Structural assertions — NOT aggregate shape
     expect(body).toHaveProperty("stablecoinId");
     expect(body).toHaveProperty("chains");
     expect(body).not.toHaveProperty("coins");
@@ -179,10 +177,6 @@ describe("handleMintBurnFlows contract tests", () => {
     });
   });
 });
-
-// ---------------------------------------------------------------------------
-// Flight-to-quality cohort completeness
-// ---------------------------------------------------------------------------
 
 const ftqRoster = [...ACTIVE_MINT_BURN_CONFIGS];
 const ftqSafeConfig = ftqRoster.find((config) => config.stablecoinId === "usdc-circle" && config.chain.chainId === "ethereum")!;

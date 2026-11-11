@@ -171,12 +171,30 @@ function buildYieldAdapterStatus(
   };
 }
 
-function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
+function decodeZephyrSnapshot(payload: ZephyrSnapshotPayload) {
   const snapshot = payload.results?.[0];
   if (!snapshot) {
     throw new Error("zephyr-scanner snapshot response did not include a latest result");
   }
+  const observed = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
+    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio);
+  const published = positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
+  const raw = positiveFixedPoint(snapshot.raw?.pr?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
+  return {
+    snapshot,
+    coverage: {
+      observed,
+      published,
+      raw,
+      ratio: observed ?? published ?? raw,
+      timestamp: (observed != null
+        ? snapshot.raw?.pr ?? snapshot.pricing_record
+        : published != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp,
+    },
+  };
+}
 
+function adaptSnapshot({ snapshot, coverage }: ReturnType<typeof decodeZephyrSnapshot>): AdapterResult {
   const reserveAssetAmount = positiveDecimalAtoms(snapshot.on_chain?.zeph_reserve_atoms, ZEPHYR_ATOM_DECIMALS)
     ?? positiveDecimalAtoms(snapshot.raw?.zeph_reserve, ZEPHYR_ATOM_DECIMALS)
     ?? parsePositiveNumericLike(snapshot.on_chain?.zeph_reserve);
@@ -190,13 +208,7 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
     ?? positiveDecimalAtoms(snapshot.raw?.num_stables, ZEPHYR_ATOM_DECIMALS)
     ?? positiveDecimalAtoms(snapshot.on_chain?.zsd_circ_atoms, ZEPHYR_ATOM_DECIMALS)
     ?? parsePositiveNumericLike(snapshot.on_chain?.zsd_circ);
-  const observedRatio = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
-    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio);
-  const publishedRatio = positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
-  const rawPricingRatio = positiveFixedPoint(snapshot.raw?.pr?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
-  const collateralizationRatio = observedRatio
-    ?? publishedRatio
-    ?? rawPricingRatio
+  const collateralizationRatio = coverage.ratio
     ?? (totalReserveUsd != null && supplyUsd != null ? totalReserveUsd / supplyUsd : null);
   // Amounts belong to this captured height; raw USD assets and normalized
   // coverage also incorporate its pricing record, not the capture clock.
@@ -204,13 +216,13 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
   if (reserveAssetPriceUsd != null) {
     materialClocks.push((publishedSpot != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp);
   }
-  if (rawAssets != null || observedRatio != null) {
+  if (rawAssets != null || coverage.observed != null) {
     materialClocks.push((snapshot.raw?.pr ?? snapshot.pricing_record)?.timestamp);
   }
-  if (observedRatio == null && collateralizationRatio != null && (
-    publishedRatio != null || rawPricingRatio != null
+  if (coverage.observed == null && collateralizationRatio != null && (
+    coverage.published != null || coverage.raw != null
   )) {
-    materialClocks.push((publishedRatio != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp);
+    materialClocks.push(coverage.timestamp);
   }
   const clocks = summarizeSourceTimestampsRequiringCoverage(materialClocks);
   const sourceTimestamp = clocks.untimestampedCount === 0 ? clocks.sourceTimestamp : null;
@@ -256,12 +268,7 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
   };
 }
 
-function adaptYieldSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
-  const snapshot = payload.results?.[0];
-  if (!snapshot) {
-    throw new Error("zephyr-scanner snapshot response did not include a latest result");
-  }
-
+function adaptYieldSnapshot({ snapshot, coverage }: ReturnType<typeof decodeZephyrSnapshot>): AdapterResult {
   const reserveAmount = positiveDecimalAtoms(
     snapshot.on_chain?.zsd_yield_reserve_atoms,
     ZEPHYR_ATOM_DECIMALS,
@@ -287,19 +294,11 @@ function adaptYieldSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
     sharePriceZsd,
   );
 
-  const observedCoverage = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
-    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio);
-  const publishedCoverage = positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
-  const zsdCoverageRatio = observedCoverage
-    ?? publishedCoverage
-    ?? positiveFixedPoint(snapshot.raw?.pr?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
   const liabilityAmountZsd = requiredShareSupply * sharePriceZsd;
-  const collateralizationRatio = requirePositive(zsdCoverageRatio, "ZSD ZEPH reserve coverage ratio");
+  const collateralizationRatio = requirePositive(coverage.ratio, "ZSD ZEPH reserve coverage ratio");
   const materialClocks: unknown[] = [
     snapshot.captured_at,
-    (observedCoverage != null
-      ? snapshot.raw?.pr ?? snapshot.pricing_record
-      : publishedCoverage != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp,
+    coverage.timestamp,
   ];
   if (publishedSharePrice != null) {
     materialClocks.push((publishedYieldPrice != null ? snapshot.pricing_record : snapshot.raw?.pr)?.timestamp);
@@ -348,7 +347,7 @@ export function adaptZephyrScanner(
   const hasResults = payload.results != null && payload.results.length > 0;
   if (assetId === ZEPHYR_ZYS_ASSET_ID) {
     if (hasResults) {
-      return adaptYieldSnapshot(payload);
+      return adaptYieldSnapshot(decodeZephyrSnapshot(payload));
     }
     throw new Error("zephyr-scanner payload did not include a valid ZYS snapshot");
   }
@@ -356,7 +355,7 @@ export function adaptZephyrScanner(
     throw new Error(`zephyr-scanner does not support asset ${assetId}`);
   }
   if (hasResults) {
-    return adaptSnapshot(payload);
+    return adaptSnapshot(decodeZephyrSnapshot(payload));
   }
   throw new Error("zephyr-scanner payload did not include a valid snapshot");
 }

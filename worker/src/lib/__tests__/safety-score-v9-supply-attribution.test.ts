@@ -7,7 +7,7 @@ import {
   writeSafetyScoreV9DeploymentSupplyCensusGeneration,
 } from "../safety-score-v9/deployment-supply-census-store";
 import type { SafetyScoreV9DeploymentSupplyCensus } from "@shared/types/safety-score-v9-deployment-supply-census";
-import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
+import { chainRpcs, installSupplyObservationClock } from "./safety-score-v9-supply-observation.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
@@ -81,6 +81,7 @@ import { compactCronMetadataForPersistence } from "../cron-metadata-persistence"
 
 const XAUT_AGGREGATE_SUPPLY_USD = 2_480_000_000;
 const OBSERVED_AT_SEC = 1_774_000_000;
+installSupplyObservationClock(OBSERVED_AT_SEC);
 
 function xautFixedInput(
   chainCirculating: Record<string, { current: number }> = {},
@@ -183,7 +184,6 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
         chainRpcs(),
         undefined,
         {
-          clockMode: "wall",
           notBeforeSec: OBSERVED_AT_SEC - 1,
         },
       ),
@@ -308,7 +308,7 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       fixedInput,
       chainRpcs(),
       undefined,
-      { clockMode: "wall" },
+      { },
     ).finally(() => nowSpy.mockRestore());
     const captured = capture.attributionById;
 
@@ -433,18 +433,21 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
   });
 
   it("journals a bounded post-clock wM Solana-finality packet", async () => {
-    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
-      status: "accepted",
-      attribution: {
-        model: "reviewed-deployment-unit-partition-v1",
-        assetId: "wm-m0",
-        observedAtSec: OBSERVED_AT_SEC + 5,
-        captureStartedAtSec: OBSERVED_AT_SEC - 20,
-        captureEndedAtSec: OBSERVED_AT_SEC + 5,
-        registryFingerprint: "a".repeat(64),
-        routeInventoryDigest: "b".repeat(64),
-        deployments: [],
-      },
+    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockImplementation(async () => {
+      vi.setSystemTime((OBSERVED_AT_SEC + 5) * 1_000);
+      return {
+        status: "accepted",
+        attribution: {
+          model: "reviewed-deployment-unit-partition-v1",
+          assetId: "wm-m0",
+          observedAtSec: OBSERVED_AT_SEC + 5,
+          captureStartedAtSec: OBSERVED_AT_SEC - 20,
+          captureEndedAtSec: OBSERVED_AT_SEC + 5,
+          registryFingerprint: "a".repeat(64),
+          routeInventoryDigest: "b".repeat(64),
+          deployments: [],
+        },
+      };
     });
     const fixedInput = {
       activeAssetIds: ["wm-m0"],
@@ -479,18 +482,21 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
   });
 
   it("quarantines a +300s wM packet while the cohort still produces a generation", async () => {
-    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
-      status: "accepted",
-      attribution: {
-        model: "reviewed-deployment-unit-partition-v1",
-        assetId: "wm-m0",
-        observedAtSec: OBSERVED_AT_SEC + 300,
-        captureStartedAtSec: OBSERVED_AT_SEC - 20,
-        captureEndedAtSec: OBSERVED_AT_SEC + 300,
-        registryFingerprint: "a".repeat(64),
-        routeInventoryDigest: "b".repeat(64),
-        deployments: [],
-      },
+    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockImplementation(async () => {
+      vi.setSystemTime((OBSERVED_AT_SEC + 300) * 1_000);
+      return {
+        status: "accepted",
+        attribution: {
+          model: "reviewed-deployment-unit-partition-v1",
+          assetId: "wm-m0",
+          observedAtSec: OBSERVED_AT_SEC + 300,
+          captureStartedAtSec: OBSERVED_AT_SEC - 20,
+          captureEndedAtSec: OBSERVED_AT_SEC + 300,
+          registryFingerprint: "a".repeat(64),
+          routeInventoryDigest: "b".repeat(64),
+          deployments: [],
+        },
+      };
     });
     rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt
       .mockResolvedValue({
@@ -521,14 +527,11 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       },
     } as unknown as ReportCardsFixedInput;
     const completedAtSec = OBSERVED_AT_SEC + 300;
-    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(
-      completedAtSec * 1_000,
-    );
 
     const capture = await captureSafetyScoreV9SupplyAttribution(
       fixedInput,
       chainRpcs(),
-    ).finally(() => nowSpy.mockRestore());
+    );
 
     expect(capture.attributionById).not.toHaveProperty("wm-m0");
     expect(capture.journalRecords).toHaveLength(2);
@@ -982,7 +985,7 @@ describe("Supply attribution shadow census projection", () => {
         xautFixedInput(),
         chainRpcs(),
         undefined,
-        { clockMode: "source", db: withCensus.db },
+        { db: withCensus.db },
       );
       expect(carried.deploymentSupplyCensusById).toEqual({ "xaut-tether": censusPacket() });
       expect(carried.deploymentSupplyCensus).toEqual({
@@ -998,10 +1001,10 @@ describe("Supply attribution shadow census projection", () => {
       });
 
       const absent = await captureSafetyScoreV9SupplyAttribution(
-        xautFixedInput(), chainRpcs(), undefined, { clockMode: "source", db: withoutCensus.db },
+        xautFixedInput(), chainRpcs(), undefined, { db: withoutCensus.db },
       );
       const storeless = await captureSafetyScoreV9SupplyAttribution(
-        xautFixedInput(), chainRpcs(), undefined, { clockMode: "source" },
+        xautFixedInput(), chainRpcs(), undefined, { },
       );
       expect("deploymentSupplyCensusById" in absent).toBe(false);
       expect("deploymentSupplyCensus" in absent).toBe(false);
@@ -1036,7 +1039,7 @@ describe("Supply attribution shadow census projection", () => {
       xautFixedInput(),
       chainRpcs(),
       undefined,
-      { clockMode: "source", db: failingDb },
+      { db: failingDb },
     );
 
     // A shadow-generation read failure is unavailable, never an empty census,

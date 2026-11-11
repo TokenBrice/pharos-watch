@@ -18,7 +18,7 @@ import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { bytesToBase64 } from "@shared/lib/base64";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
-import { serializeSafetyScoreV9PublicationWithEncoding } from "../safety-score-v9/publication-codec";
+import { serializeSafetyScoreV9PublicationWithEncoding } from "../../test-helpers/report-cards-v9";
 import { handleReportCardsV9 } from "../../api/report-cards-v9";
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../report-cards-v9-materialization";
 import {

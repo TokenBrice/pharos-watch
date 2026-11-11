@@ -51,7 +51,6 @@ function coinMeta(stablecoinId: string): { symbol: string; name: string } {
 
 type AlertTypeFlags = Record<TelegramAlertType, boolean>;
 
-/** Projects a family-keyed boolean map through the registry's column names. */
 function alertFlagsFrom<TColumn extends string>(
   row: Partial<Record<TColumn, number | null>>,
   column: (alertType: TelegramAlertType) => TColumn,

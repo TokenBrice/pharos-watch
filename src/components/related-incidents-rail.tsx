@@ -72,7 +72,6 @@ function selectGroups({
   const used = new Set<string>();
   const groups: RelatedGroup[] = [];
 
-  // 1. Same peg currency
   if (pegCurrency) {
     const canonicalPegType = pegTypeFromCurrency(pegCurrency);
     const cohort = pool.filter((event) => event.pegType === canonicalPegType);
@@ -88,7 +87,6 @@ function selectGroups({
     }
   }
 
-  // 2. Same risk archetype (looked up via the coin's mechanism archetype)
   if (riskArchetype) {
     const cohort = pool.filter(
       (event) => ARCHETYPE_BY_COIN.get(event.stablecoinId) === riskArchetype,

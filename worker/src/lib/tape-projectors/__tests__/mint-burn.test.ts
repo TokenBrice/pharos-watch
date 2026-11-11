@@ -231,7 +231,6 @@ describe("mint_burn projector", () => {
     update("amount_usd = 30000000", "amount");
     sqlite.prepare("DELETE FROM mint_burn_events WHERE id = 'pruned'").run();
 
-    // Dry-run reports without mutating.
     await projectMintBurnLargeFlows(db, { dryRun: true });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events WHERE suppressed_at IS NOT NULL").get()).toEqual({ n: 0 });
 

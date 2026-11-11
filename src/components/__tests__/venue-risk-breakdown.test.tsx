@@ -21,7 +21,6 @@ describe("VenueRiskBreakdown", () => {
     expect(screen.getByLabelText("Audits & track record: 1 out of 5")).toBeTruthy();
     expect(screen.getByLabelText("Centralization & control: 4 out of 5")).toBeTruthy();
     expect(screen.getByLabelText("Operational: 2 out of 5")).toBeTruthy();
-    // verified confidence is not badged
     expect(screen.queryByText(/confidence/)).toBeNull();
   });
 

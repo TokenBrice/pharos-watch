@@ -140,10 +140,6 @@ vi.mock("../runtime", async (importOriginal) => ({
 
 import { restoreFallbackCacheState, syncViaCoingeckoFallback } from "../fallback";
 
-// ---------------------------------------------------------------------------
-// Helpers to build realistic cgData for the REAL registry
-// ---------------------------------------------------------------------------
-
 /** Build a CoinGecko mcap payload that returns positive data for the first N
  *  ACTIVE_STABLECOINS that have a geckoId. */
 function buildRealCgData(countLimit: number, usdPrice = 1, usdMarketCap = 5_000_000) {
@@ -157,10 +153,6 @@ function buildRealCgData(countLimit: number, usdPrice = 1, usdMarketCap = 5_000_
   }
   return data;
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe("syncViaCoingeckoFallback orchestrator", () => {
   beforeEach(() => {
@@ -367,9 +359,6 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(subPhaseMocks.validateAndWriteStablecoinsCache).not.toHaveBeenCalled();
   });
 
-  // -----------------------------------------------------------------------
-  // (b) Low asset count rejects the fallback write (intake phase short-circuits)
-  // -----------------------------------------------------------------------
   it("(b) rejects write when cgData has fewer than MIN_VALID_ASSET_COUNT assets", async () => {
     // Provide only 2 entries — well below MIN_VALID_ASSET_COUNT (50)
     const cgData = buildRealCgData(2);
@@ -382,14 +371,12 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       NOW_SEC,
     );
 
-    // Should short-circuit and return the insufficient-fallback result
     expect(result.itemCount).toBeUndefined();
     const meta = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(meta.fallbackMode).toBe("coingecko-supply-fallback");
     expect(meta.rowsWritten).toBe(0);
     expect(meta.validationFailures).toBeGreaterThanOrEqual(1);
 
-    // None of the heavy sub-phases should have been called
     expect(subPhaseMocks.loadPreviousStablecoinsById).not.toHaveBeenCalled();
     expect(subPhaseMocks.validateAndWriteStablecoinsCache).not.toHaveBeenCalled();
   });
@@ -487,7 +474,6 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(assets).toHaveLength(1);
     const asset = assets[0]!;
 
-    // pegType for EUR coin must be peggedEUR
     expect(asset.pegType).toBe("peggedEUR");
 
     // The circulating value stored under peggedEUR must equal usd_market_cap
@@ -502,9 +488,6 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(stored).not.toBeCloseTo(wrongValue, 0);
   });
 
-  // -----------------------------------------------------------------------
-  // (d) Intake skips coins without a geckoId or with zero market cap.
-  // -----------------------------------------------------------------------
   it("(d) skips absent identity and zero supply while retaining the valid peer", () => {
     const coin = { name: "Fixture", symbol: "FIX", flags: { pegCurrency: "USD" as const, backing: "fiat-backed" as const } };
     const assets = buildFallbackAssetsFromCoinGecko({
@@ -523,9 +506,6 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(assets.map((asset) => asset.id)).toEqual(["valid"]);
   });
 
-  // -----------------------------------------------------------------------
-  // (g) depegErrorCount > 0 causes degraded status
-  // -----------------------------------------------------------------------
   it("(g) propagates degraded status when depeg follow-through reports errors", async () => {
     subPhaseMocks.runDepegPipeline.mockResolvedValueOnce({
       depegErrorCount: 3,

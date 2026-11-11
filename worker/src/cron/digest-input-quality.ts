@@ -10,9 +10,7 @@
  * (`worker/src/cron/daily-digest/collectors-*.ts`, `input.ts`).
  */
 export const REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES = [
-  // Active depegs
   "active-depegs-query",
-  // PSI headline sample and contributor detail
   "psi-unavailable",
   "psi-contributors-query",
   "psi-contributors-stale",
@@ -22,7 +20,6 @@ export const REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES = [
   // core cohort, which every edition since 2026-10-27 records; they stay
   // degraded-source metadata rather than a standing operator condition.
   "stablecoins-cache-stale",
-  // Safety Score
   "safety-canonical-snapshot",
   "source-load-failed",
 ] as const;

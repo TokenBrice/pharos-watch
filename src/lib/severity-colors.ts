@@ -9,6 +9,7 @@
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
+  getDexDurabilityStyle,
   getPegDeviationLevel,
   getPegScoreTier,
   PEG_DEVIATION_TONE_CLASSES,
@@ -40,10 +41,6 @@ export function deviationIconName(absBps: number): SeverityIcon {
   if (level === "moderate") return "OctagonAlert";
   return "CircleX";
 }
-
-// ---------------------------------------------------------------------------
-// Score tier system (used by liquidity, bluechip, peg components)
-// ---------------------------------------------------------------------------
 
 type ScoreTier = "green" | "blue" | "amber" | "red";
 
@@ -97,12 +94,6 @@ const SCORE_TEXT_THRESHOLDS = [
   { min: Number.NEGATIVE_INFINITY, className: TIER_TEXT.red },
 ] as const;
 
-const DURABILITY_TEXT_THRESHOLDS = [
-  { min: 70, className: QUALITY_TIER_3_CLASSES.good.text },
-  { min: 40, className: QUALITY_TIER_3_CLASSES.watch.text },
-  { min: Number.NEGATIVE_INFINITY, className: QUALITY_TIER_3_CLASSES.bad.text },
-] as const;
-
 /** Map a 0-100 liquidity/durability score to a tier */
 export function getScoreTier(score: number): ScoreTier {
   if (score >= SCORE_TIER_CUTOFFS.green) return "green";
@@ -129,14 +120,12 @@ export function pegScoreColor(score: number | null): string {
 
 /** Map a 0-100 durability score to a Tailwind text color class */
 export function getDurabilityColor(score: number): string {
-  return scoreToColorClass(score, DURABILITY_TEXT_THRESHOLDS);
+  return score == null || Number.isNaN(score) ? "text-muted-foreground" : getDexDurabilityStyle(score).text;
 }
 
 /** Map a 0-100 durability score to a Tailwind background color class */
 export function getDurabilityBgColor(score: number): string {
-  if (score >= 70) return SEVERITY_TONE_CLASS.ok.bar;
-  if (score >= 40) return SEVERITY_TONE_CLASS.watch.bar;
-  return SEVERITY_TONE_CLASS.alert.bar;
+  return getDexDurabilityStyle(score).bar;
 }
 
 /** Semantic color class for ratio-based quality (green/amber/red). */

@@ -13,14 +13,13 @@ import {
 import {
   formatCurrency,
   formatBps,
-  formatNativePrice,
   formatPercent,
-  formatPegOccupancy,
   formatPercentFromRatio,
   formatScore,
   formatSignedCurrency,
   formatSignedPercent,
 } from "@shared/lib/format";
+import { formatNativePrice, formatPegOccupancy } from "@shared/lib/peg-format";
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { getPegReference } from "@shared/lib/peg-rates";

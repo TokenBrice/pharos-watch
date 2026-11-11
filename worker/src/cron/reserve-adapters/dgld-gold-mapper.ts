@@ -66,7 +66,6 @@ export function adaptDgldGoldMapperState(
     seenNetworkIds.add(network.id);
   }
 
-  // ── Supply + reconciliation anchor per network ───────────────────────────
   let supplyTokens = 0;
   let oldestReconCheckedAt: number | null = null;
   const networkDetails: Array<Record<string, unknown>> = [];

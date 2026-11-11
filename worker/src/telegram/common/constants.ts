@@ -16,8 +16,6 @@ import {
   TELEGRAM_PENDING_PRIORITY as SHARED_TELEGRAM_PENDING_PRIORITY,
 } from "@shared/lib/telegram-delivery-policy";
 
-// ---------- Snooze durations ----------
-
 /** Snooze callback arg → duration in seconds. */
 export const SNOOZE_SECONDS = {
   "1h": 60 * 60,
@@ -25,16 +23,12 @@ export const SNOOZE_SECONDS = {
   "24h": 24 * 60 * 60,
 } as const;
 
-// ---------- Message chunking ----------
-
 /**
  * Stable version tag for the message chunking algorithm. Bump whenever the
  * splitting logic (boundaries, tag envelopes, ordering) changes in a way that would
  * alter the chunks produced from the same canonical body.
  */
 export const TELEGRAM_SPLIT_VERSION = 4;
-
-// ---------- Delivery policy ----------
 
 export const TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX = "telegram:chat-send-backoff:";
 
@@ -69,8 +63,6 @@ export {
   TELEGRAM_PENDING_DRAIN_BUDGET,
 } from "@shared/lib/telegram-delivery-policy";
 
-// ---------- Processed-updates retention ----------
-
 /** Retain processed `telegram_processed_updates` rows for 7 days for replay-ack idempotency. */
 export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
 
@@ -79,8 +71,6 @@ export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
  * reclaimed by Telegram's redelivery (a rare duplicate reply is accepted).
  */
 export const TELEGRAM_PROCESSING_STALE_SEC = 60;
-
-// ---------- Webhook ingress tuning ----------
 
 /**
  * Cache TTL for the per-chat welcome-on-add idempotency marker. Telegram can
@@ -94,12 +84,8 @@ export const TELEGRAM_GROUP_WELCOME_PENDING_PREFIX = "pending:";
 export const CHAT_COMMAND_FLOOD_WINDOW_SEC = 60;
 export const CHAT_COMMAND_FLOOD_LIMIT = 20;
 
-// ---------- Bulk subscribe/unsubscribe confirmation gate ----------
-
 /** Maximum number of coin symbols to inline in the bulk-confirm preview line. */
 export const BULK_CONFIRM_PREVIEW_LIMIT = 5;
-
-// ---------- /list manage keyboard ----------
 
 /** Page size for the /list `[ Manage ]` keyboard. */
 export const MANAGE_PAGE_SIZE = 5;

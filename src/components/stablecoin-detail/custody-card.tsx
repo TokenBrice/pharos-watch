@@ -1,4 +1,3 @@
-// src/components/stablecoin-detail/custody-card.tsx
 "use client";
 
 import { Check, CircleCheck, CircleDashed, Contrast, X, type LucideIcon } from "lucide-react";

@@ -397,7 +397,6 @@ describe("resolveOutlook — acceptance cases", () => {
       baseLive({ liquidityScore: 70 }),
     );
     expect(r.tier).toBe("recovery_unlikely");
-    // The severe freeze/seizure kill must accompany the terminal verdict.
     expect(r.factors.some((f) => f.code === "K3_freeze_seizure" && f.severity === "severe")).toBe(true);
   });
 
@@ -1430,7 +1429,6 @@ describe("computeDuration", () => {
     expect(d.stratum).toBe("below · moderate+severe+catastrophic · robust · any");
   });
 
-  // weightedClosureStats — coin-capping tests
   it("caps each coin's contribution at 1.0 so a dominant coin cannot inflate the probability", () => {
     // "dominant" coin: 10 incidents all closing within 6h (durationSec = 6h).
     // 4 other coins: 1 incident each, very long duration (never closes at 6h horizon).

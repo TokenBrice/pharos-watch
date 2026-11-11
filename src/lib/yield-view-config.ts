@@ -1,14 +1,13 @@
 import { PEG_BADGE_STYLES, type YieldRiskBudgetKey } from "@shared/lib/classification";
-import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
+import {
+  YIELD_BENCHMARK_KEY_VALUES,
+  YIELD_SOURCE_CONFIDENCE_TIER_VALUES,
+  type YieldSourceConfidenceTier,
+} from "@shared/types/yield-vocabulary";
 import { type PegCurrency, type YieldBenchmarkKey, type YieldType } from "@shared/types";
 import type { YieldSourceDepthLens, YieldSourcePosture } from "@/lib/yield-source-risk";
 
-export type YieldSourceConfidenceFilter =
-  | "all"
-  | "deterministic"
-  | "curated"
-  | "discovered"
-  | "fallback";
+export type YieldSourceConfidenceFilter = "all" | YieldSourceConfidenceTier;
 export type YieldPresetKey =
   | "treasury-grade"
   | "best-dollar"
@@ -107,20 +106,10 @@ export const CURRENCY_TAB_ENUMERATED_PEGS = new Set<PegCurrency>([
   ...CURRENCY_TAB_PEGS,
   ...CURRENCY_TAB_AUD_CAD_PEGS,
 ]);
-export const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilter, "all">[] = [
-  "deterministic",
-  "curated",
-  "discovered",
-  "fallback",
-];
+export const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilter, "all">[] = YIELD_SOURCE_CONFIDENCE_TIER_VALUES;
 export const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = YIELD_BENCHMARK_KEY_VALUES;
 export const MIN_SAFETY_OPTIONS = [50, 60, 70, 80] as const;
 export const MIN_TVL_OPTIONS = [1_000_000, 10_000_000, 100_000_000] as const;
-export const EXTERNAL_OPPORTUNITY_YIELD_TYPES = new Set<YieldType>([
-  "lending-opportunity",
-  "fixed-yield",
-  "structured-tranche",
-]);
 
 export const DEFAULT_FILTERS: YieldViewModelFilters = {
   peg: "all",

@@ -267,7 +267,6 @@ describe("run-gitleaks", () => {
       try {
         execFileSync("git", ["merge", "--no-commit", "main"], { cwd: repo, encoding: "utf8", stdio: "ignore" });
       } catch {
-        // conflict as planned
       }
       // Resolve with a line that exists in neither parent: only a merge-aware lane can see it.
       // Assembled at runtime so the repository's own scan never sees a literal credential.

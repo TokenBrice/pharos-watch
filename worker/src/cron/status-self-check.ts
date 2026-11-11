@@ -1,3 +1,4 @@
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CACHE_FRESHNESS_LANES, type CacheFreshnessLaneConfig } from "@shared/lib/data-surface-descriptors";
 import { getStatusSeverity } from "@shared/lib/public-health";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
@@ -121,7 +122,7 @@ const CRITICAL_PROBE_PATHS = [...PUBLIC_PROBE_PATHS, ...ADMIN_PROBE_PATHS];
 
 const DEFAULT_SELF_URL = API_ORIGIN;
 const HEALTH_PROBE_PATH = "/api/health";
-const STATUS_SELF_CHECK_INTERVAL_SEC = 15 * 60;
+const STATUS_SELF_CHECK_INTERVAL_SEC = CRON_INTERVALS["status-self-check"];
 export const STATUS_DEEP_PROBE_ROTATION_BUCKETS = 3;
 export const STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC =
   STATUS_SELF_CHECK_INTERVAL_SEC * STATUS_DEEP_PROBE_ROTATION_BUCKETS;

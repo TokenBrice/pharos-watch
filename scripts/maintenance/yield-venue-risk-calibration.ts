@@ -122,7 +122,6 @@ async function main(): Promise<void> {
     if (sr == null || row.pharosYieldScore == null) continue;
     const oldPenalty = typeof sr.sourceRiskPenalty === "number" ? sr.sourceRiskPenalty : 1;
 
-    // Validate reconstruction: recompute the published PYS with the published penalty.
     const oldPysRecomputed = scoreRow(row, oldPenalty, appliesHurdleRebase);
     recomputeTotal += 1;
     if (Math.abs(oldPysRecomputed - row.pharosYieldScore) <= 1) {
@@ -133,7 +132,6 @@ async function main(): Promise<void> {
     // Rows whose score the v8.43 re-base moves, independent of the venue model.
     if (scoreRow(row, oldPenalty, true) !== scoreRow(row, oldPenalty, false)) expectedRebaseDeltaRows += 1;
 
-    // New venue + concentration evidence.
     const cfg = resolveReviewedYieldRiskConfig(sr.venueProtocol);
     const newWeighted = cfg ? venueRiskWeightedOf(cfg) : null;
     const newTier = cfg ? venueRiskTierOf(cfg) : "unknown";

@@ -42,8 +42,6 @@ const CURVE_MAIN_REGISTRY_ABI = parseAbi([
 
 export const CURVE_STABLESWAP_ADAPTER_PROFILE_ID =
   DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap;
-export const CURVE_STABLESWAP_MIN_COMPLETE_CYCLES = 3;
-export const CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 
 export interface CurveStableSwapPoolPolicy {
   chain: "ethereum";

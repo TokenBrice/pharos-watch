@@ -104,14 +104,11 @@ describe("TelegramBroadcastPanel", () => {
     typeMessage("<b>Draft B</b>");
     expect(button("Send live broadcast").disabled).toBe(true);
 
-    // A fresh preview of Draft B re-establishes the confirmation, and the
-    // re-preview request carries the edited draft.
     fireEvent.click(button("Preview (dry run)"));
     await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(2));
     expect(adminMutationMock.mock.calls[1]?.[1]?.body).toMatchObject({ messageHtml: "<b>Draft B</b>" });
     await waitFor(() => expect(button("Send live broadcast").disabled).toBe(false));
 
-    // Switching the audience the draft was previewed for re-locks the send.
     fireEvent.change(screen.getByLabelText("Audience"), { target: { value: "global-subscribers" } });
     expect(button("Send live broadcast").disabled).toBe(true);
     expect(adminMutationMock).toHaveBeenCalledTimes(2);

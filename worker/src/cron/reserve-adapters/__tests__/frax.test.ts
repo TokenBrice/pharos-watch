@@ -21,7 +21,6 @@ const FRAX_BALANCE_SHEET_FIXTURE = JSON.parse(
 ) as FraxBalanceSheetResponse;
 const FPI_COLLATERAL_ENDPOINT = "https://api.frax.finance/v2/fpifpis/fpi-collateral";
 
-/* ---------- v2 balance-sheet tests ---------- */
 
 describe("adaptFraxBalanceSheet", () => {
   it("retains saved positive dust and the source USDS ratio without display rounding", () => {
@@ -219,7 +218,6 @@ describe("adaptFraxBalanceSheet", () => {
 
 });
 
-/* ---------- v2 FPI collateral tests ---------- */
 
 const FPI_COLLATERAL_SAMPLE: FraxFpiCollateralResponse = {
   updatedAtBlock: 25_072_838,

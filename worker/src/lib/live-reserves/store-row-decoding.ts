@@ -16,6 +16,7 @@ import {
   type LiveReserveWarning,
 } from "@shared/types/live-reserves";
 import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
+import { PCT_SUM_ERROR_TOLERANCE } from "@shared/types/live-reserve-adapter-policy";
 import { decodeJsonString } from "../cache-json";
 import { shouldUseLegacySnapshotFallback } from "./store-snapshot-state";
 import type {
@@ -24,8 +25,6 @@ import type {
   ReserveSyncStateRecord,
   SnapshotIntegrityIssue,
 } from "./store-shared";
-
-const STORED_SLICE_SUM_TOLERANCE = 2;
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
   if (!value) return {};
@@ -239,7 +238,7 @@ function parseSlicesStrict(
   }
 
   const sum = slices.reduce((acc, slice) => acc + slice.pct, 0);
-  if (Math.abs(sum - 100) > STORED_SLICE_SUM_TOLERANCE) {
+  if (Math.abs(sum - 100) > PCT_SUM_ERROR_TOLERANCE) {
     return {
       issue: {
         code: "invalid-sum",

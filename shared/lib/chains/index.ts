@@ -38,8 +38,6 @@ const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
   rise: 3,          // newer Ethereum L2
   somnia: 3,        // newer high-performance L1
   "0g": 3,         // newer high-performance L1, like RISE/Somnia/Arc; unproven security
-
-  // Everything else defaults to tier 2 via getChainResilienceTier()
 };
 
 /** Get the resilience tier for a chain (defaults to 2). */
@@ -60,7 +58,6 @@ export function getActiveChainIds(): string[] {
   return Object.keys(CHAIN_META).sort();
 }
 
-/* ─── Provider Network Slug Maps ───────────────────────────── */
 
 type ChainProvider = keyof ChainProviders;
 

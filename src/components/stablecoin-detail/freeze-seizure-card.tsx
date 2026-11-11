@@ -46,7 +46,6 @@ const SCOPE_ORDER: Record<string, number> = { canonical: 0, "material-bridge": 1
 /** Strictest posture first: a restricted copy is the finding, an open one the default. */
 const POSTURE_ORDER: Record<string, number> = { permissioned: 0, restrictable: 1, permissionless: 2 };
 
-/** Posture is geometry as well as words: open lock, lock, holder lock. */
 const POSTURE_ICONS: Record<string, LucideIcon> = {
   permissionless: LockOpen,
   restrictable: Lock,

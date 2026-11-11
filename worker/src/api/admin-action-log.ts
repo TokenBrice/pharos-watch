@@ -2,6 +2,7 @@ import { jsonResponse } from "../lib/api-response";
 import { parseClampedIntegerParam } from "../lib/api-params";
 import { makeAdminRoute, type AdminUrlRouteContext } from "../lib/route-wrappers";
 import { loadAdminAuditPage, type AdminAuditPageDescriptor } from "./admin-audit-page";
+import type { AdminActionAuditEntry, AdminActionAuditLogResponse } from "@shared/types/admin-action-audit";
 
 interface AdminActionAuditRow {
   id: number;
@@ -9,7 +10,7 @@ interface AdminActionAuditRow {
   actor: string;
   action: string;
   target: string | null;
-  result: "ok" | "error";
+  result: AdminActionAuditEntry["result"];
   http_status: number | null;
   details_json: string | null;
 }
@@ -34,22 +35,13 @@ const ADMIN_ACTION_AUDIT_PAGE = {
     httpStatus: row.http_status,
     details,
   }),
-} satisfies AdminAuditPageDescriptor<AdminActionAuditRow, {
-  id: number;
-  at: number;
-  actor: string;
-  action: string;
-  target: string | null;
-  result: "ok" | "error";
-  httpStatus: number | null;
-  details: unknown;
-}>;
+} satisfies AdminAuditPageDescriptor<AdminActionAuditRow, AdminActionAuditEntry>;
 
 export const handleAdminActionLog = makeAdminRoute<AdminUrlRouteContext>(
   "route-admin-action-log",
   async ({ db, url }) => {
     const limit = parseClampedIntegerParam(url.searchParams.get("limit"), DEFAULT_LIMIT, MIN_LIMIT, MAX_LIMIT);
     const entries = await loadAdminAuditPage(db, { descriptor: ADMIN_ACTION_AUDIT_PAGE, limit });
-    return jsonResponse({ entries });
+    return jsonResponse({ entries } satisfies AdminActionAuditLogResponse);
   },
 );

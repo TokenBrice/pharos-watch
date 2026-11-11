@@ -23,7 +23,7 @@ import {
   type SafetyScoreV9PegProvenanceSeed,
 } from "../lib/safety-score-v9/peg-provenance";
 import { runSafetyScoreV9Publication } from "../lib/safety-score-v9/publication-runner";
-import { loadSafetyScoreV9PublicationHealth } from "../lib/safety-score-v9/publication-health";
+import { loadSafetyScoreV9PublicationHealth, SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-health";
 import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
 } from "../lib/safety-score-v9/supply-attribution";
@@ -479,6 +479,122 @@ export async function computeSafetyScoreV9(
     clockSec: fixedInput.clockSec,
     pegProvenanceAssets: Object.keys(v9SeedInput.pegProvenanceById).length,
   };
+  const enrichCapturedInput = async (
+    seedInput: Readonly<SafetyScoreV9CompilerInput>, publicationSignal: AbortSignal,
+  ): Promise<SafetyScoreV9CompilerInput> => {
+    await reportProgress?.({
+      stage: "supply-generation",
+      message: "Applying bounded V9 supply attribution",
+    });
+    caches.delete(
+      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+    );
+    const generationApplication =
+      applySafetyScoreV9SupplyAttributionGeneration(
+        seedInput,
+        parsedSupplyAttributionGeneration,
+        lastAdmittedSupplyAttribution,
+      );
+    const nextLastAdmitted = buildSafetyScoreV9SupplyAttributionLastAdmitted(
+      generationApplication, lastAdmittedSupplyAttribution,
+    );
+    // Carry-forward state is best effort: a failed write only means the
+    // next run has nothing to carry and keeps the existing fallback.
+    let lastAdmittedWriteFailed = false;
+    if (nextLastAdmitted !== null && nextLastAdmitted !== lastAdmittedSupplyAttribution) {
+      try {
+        await setCache(db, SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_LAST_ADMITTED_CACHE_KEY,
+          JSON.stringify(nextLastAdmitted), publicationSignal);
+      } catch {
+        throwIfAborted(publicationSignal);
+        lastAdmittedWriteFailed = true;
+      }
+    }
+    supplyAttributionGenerationState = generationParseError
+      ? {
+          status: "incompatible",
+          generationId: null,
+          reason: "generation-malformed",
+        }
+      : generationApplication.status === "applied"
+        ? {
+            status: generationApplication.status,
+            generationId: generationApplication.generationId,
+            acceptedCount:
+              generationApplication.acceptedAssetIds.length,
+            sourceCaptureTuple: {
+              baseInputGenerationId: parsedSupplyAttributionGeneration!.sourceBaseInputGenerationId,
+              sourceGeneration: parsedSupplyAttributionGeneration!.sourceGeneration,
+              clockSec: parsedSupplyAttributionGeneration!.sourceClockSec,
+              registryFingerprint: parsedSupplyAttributionGeneration!.registryFingerprint,
+            },
+            targetBaseInputGenerationId: seedInput.baseInputGenerationId,
+            rejectedCount:
+              generationApplication.rejectedAssetIds.length,
+            invalidAssetIds:
+              generationApplication.invalidAssetIds,
+            carriedForwardAssetIds: generationApplication.carriedForwardAssetIds,
+            ...(lastAdmittedWriteFailed ? { lastAdmittedWrite: "failed" } : {}),
+          }
+        : {
+            status: generationApplication.status,
+            generationId: generationApplication.generationId,
+            reason: generationApplication.reason,
+            carriedForwardAssetIds: generationApplication.carriedForwardAssetIds,
+            ...(lastAdmittedWriteFailed ? { lastAdmittedWrite: "failed" } : {}),
+          };
+    if (!generationParseError && pairedCaptureValid && generationApplication.status !== "applied" &&
+      hasPendingAttribution(control, seedInput, Math.floor(Date.now() / 1_000))) {
+      supplyAttributionGenerationState = {
+        status: "pending", reason: "attribution-pending",
+        pendingUntilSec: control!.attribution.pendingUntilSec,
+        sourceCaptureTuple: control!.capture,
+        targetBaseInputGenerationId: seedInput.baseInputGenerationId,
+        generationId: generationApplication.generationId,
+      };
+    }
+    const supplyFixedInput = generationApplication.fixedInput;
+
+    await reportProgress?.({
+      stage: "evidence-load",
+      message: "Loading bounded V9 evidence journals",
+    });
+    const [evidenceJournalById, supplyAttributionJournalById] =
+      await Promise.all([
+        loadReportCardEvidenceJournalByIdV1(
+          db,
+          supplyFixedInput.activeAssetIds,
+          supplyFixedInput.clockSec,
+          publicationSignal,
+        ),
+        loadSupplyAttributionJournalByIdV1(
+          db,
+          SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.filter(
+            (assetId) =>
+              supplyFixedInput.activeAssetIds.includes(assetId),
+          ),
+          supplyFixedInput.clockSec,
+          publicationSignal,
+        ),
+      ]);
+    const v9FixedInput = {
+      ...supplyFixedInput,
+      evidenceJournalById,
+      supplyAttributionJournalById,
+    };
+    const currentDexGeneration = await loadExactDexPublicationGeneration(db);
+    dexCapture = assessCapturedDexGeneration(v9FixedInput, currentDexGeneration, Math.floor(Date.now() / 1_000));
+    if (!dexCapture.admitted) {
+      throw new Error(
+        `V9 candidate DEX dependency ${v9FixedInput.dexGenerationId} is older than current ${currentDexGeneration.generationId} (${dexCapture.verdict})`,
+      );
+    }
+    await reportProgress?.({
+      stage: "fixed-input-prepared",
+      message: "Prepared exact V9 input for publication assessment",
+    });
+    return v9FixedInput;
+  };
   const fixedInputOwner = { value: v9SeedInput as Readonly<SafetyScoreV9CompilerInput> | null };
   baseArtifact = null;
   fixedInput = null;
@@ -489,129 +605,9 @@ export async function computeSafetyScoreV9(
     captureArchiveContext: options.captureArchiveContext,
     deferPublicMaterialization: options.deferPublicMaterialization,
     publicationDeadlineMs: options.executionWindow?.deadlineMs,
-    fixedInput: null,
-    fixedInputOwner,
+    capturedInput: { owner: fixedInputOwner, enrich: enrichCapturedInput },
     fixedInputCacheValue,
-    fixedInputAlreadyNormalized: true,
-    // `prepareFixedInput` below spreads this normalized input and adds the two
-    // loader-validated journal projections, so the runner must not re-normalize
-    // the whole payload a second time on this hot path.
-    preparedFixedInputAlreadyNormalized: true,
     transferMaterialityGeneration,
-    prepareFixedInput: async (seedInput, publicationSignal) => {
-      await reportProgress?.({
-        stage: "supply-generation",
-        message: "Applying bounded V9 supply attribution",
-      });
-      caches.delete(
-        SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
-      );
-      const generationApplication =
-        applySafetyScoreV9SupplyAttributionGeneration(
-          seedInput,
-          parsedSupplyAttributionGeneration,
-          lastAdmittedSupplyAttribution,
-        );
-      const nextLastAdmitted = buildSafetyScoreV9SupplyAttributionLastAdmitted(
-        generationApplication, lastAdmittedSupplyAttribution,
-      );
-      // Carry-forward state is best effort: a failed write only means the
-      // next run has nothing to carry and keeps the existing fallback.
-      let lastAdmittedWriteFailed = false;
-      if (nextLastAdmitted !== null && nextLastAdmitted !== lastAdmittedSupplyAttribution) {
-        try {
-          await setCache(db, SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_LAST_ADMITTED_CACHE_KEY,
-            JSON.stringify(nextLastAdmitted), publicationSignal);
-        } catch {
-          throwIfAborted(publicationSignal);
-          lastAdmittedWriteFailed = true;
-        }
-      }
-      supplyAttributionGenerationState = generationParseError
-        ? {
-            status: "incompatible",
-            generationId: null,
-            reason: "generation-malformed",
-          }
-        : generationApplication.status === "applied"
-          ? {
-              status: generationApplication.status,
-              generationId: generationApplication.generationId,
-              acceptedCount:
-                generationApplication.acceptedAssetIds.length,
-              sourceCaptureTuple: {
-                baseInputGenerationId: parsedSupplyAttributionGeneration!.sourceBaseInputGenerationId,
-                sourceGeneration: parsedSupplyAttributionGeneration!.sourceGeneration,
-                clockSec: parsedSupplyAttributionGeneration!.sourceClockSec,
-                registryFingerprint: parsedSupplyAttributionGeneration!.registryFingerprint,
-              },
-              targetBaseInputGenerationId: seedInput.baseInputGenerationId,
-              rejectedCount:
-                generationApplication.rejectedAssetIds.length,
-              invalidAssetIds:
-                generationApplication.invalidAssetIds,
-              carriedForwardAssetIds: generationApplication.carriedForwardAssetIds,
-              ...(lastAdmittedWriteFailed ? { lastAdmittedWrite: "failed" } : {}),
-            }
-          : {
-              status: generationApplication.status,
-              generationId: generationApplication.generationId,
-              reason: generationApplication.reason,
-              carriedForwardAssetIds: generationApplication.carriedForwardAssetIds,
-              ...(lastAdmittedWriteFailed ? { lastAdmittedWrite: "failed" } : {}),
-            };
-      if (!generationParseError && pairedCaptureValid && generationApplication.status !== "applied" &&
-        hasPendingAttribution(control, seedInput, Math.floor(Date.now() / 1_000))) {
-        supplyAttributionGenerationState = {
-          status: "pending", reason: "attribution-pending",
-          pendingUntilSec: control!.attribution.pendingUntilSec,
-          sourceCaptureTuple: control!.capture,
-          targetBaseInputGenerationId: seedInput.baseInputGenerationId,
-          generationId: generationApplication.generationId,
-        };
-      }
-      const supplyFixedInput = generationApplication.fixedInput;
-
-      await reportProgress?.({
-        stage: "evidence-load",
-        message: "Loading bounded V9 evidence journals",
-      });
-      const [evidenceJournalById, supplyAttributionJournalById] =
-        await Promise.all([
-          loadReportCardEvidenceJournalByIdV1(
-            db,
-            supplyFixedInput.activeAssetIds,
-            supplyFixedInput.clockSec,
-            publicationSignal,
-          ),
-          loadSupplyAttributionJournalByIdV1(
-            db,
-            SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.filter(
-              (assetId) =>
-                supplyFixedInput.activeAssetIds.includes(assetId),
-            ),
-            supplyFixedInput.clockSec,
-            publicationSignal,
-          ),
-        ]);
-      const v9FixedInput = {
-        ...supplyFixedInput,
-        evidenceJournalById,
-        supplyAttributionJournalById,
-      };
-      const currentDexGeneration = await loadExactDexPublicationGeneration(db);
-      dexCapture = assessCapturedDexGeneration(v9FixedInput, currentDexGeneration, Math.floor(Date.now() / 1_000));
-      if (!dexCapture.admitted) {
-        throw new Error(
-          `V9 candidate DEX dependency ${v9FixedInput.dexGenerationId} is older than current ${currentDexGeneration.generationId} (${dexCapture.verdict})`,
-        );
-      }
-      await reportProgress?.({
-        stage: "fixed-input-prepared",
-        message: "Prepared exact V9 input for publication assessment",
-      });
-      return v9FixedInput;
-    },
     signal,
   });
   // Preserve the runner's terminal phase/abort evidence, including an identity-
@@ -712,7 +708,7 @@ export async function computeSafetyScoreV9(
                 candidateRows: inputSummary.activeAssets,
                 publishedRows: inputSummary.activeAssets,
                 expectedRows: inputSummary.activeAssets,
-                artifactCacheKey: "report-cards:v9",
+                artifactCacheKey: SAFETY_SCORE_V9_CACHE_KEYS.publication,
                 validationSummary: {
                   outcome: publication.outcome,
                   quarantinedAssetCount:

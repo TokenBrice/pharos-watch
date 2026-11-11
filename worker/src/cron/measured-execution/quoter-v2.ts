@@ -13,13 +13,17 @@ import {
 } from "./profiles";
 import { getDexMeasuredExecutionDeployment, isMetaquoterProfile, isTickSpacingQuoterV2Profile } from "./registry";
 import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
-import { MAX_UINT256, usdToRawAmount } from "./fixed-point";
+import { MAX_UINT256 } from "./fixed-point";
 import {
-  buildEvmSingleCallQuotePlans,
+  EVM_SINGLE_CALL_QUOTE_BATCH_SIZE as QUOTER_MULTICALL_BATCH_SIZE,
+  EVM_SINGLE_CALL_QUOTE_GAS as QUOTER_MULTICALL_GAS,
+  type EncodedEvmSingleCallQuoteRequest,
+  type EvmSingleCallQuoteBatchInput,
+  type EvmSingleCallQuoteOutcome,
+  executeEvmSingleCallQuotes,
   createEvmQuotePlanMulticallExecutor,
   executeEvmQuotePlan,
   materializeEvmQuotePoint,
-  materializeRevertedEvmQuotePoint,
 } from "./evm-quote-plan";
 
 const QUOTER_V2_ABI = parseAbi([
@@ -38,28 +42,7 @@ const V3_FACTORY_ABI = parseAbi([
 const SLIPSTREAM_FACTORY_ABI = parseAbi([
   "function getPool(address tokenA,address tokenB,int24 tickSpacing) view returns (address pool)",
 ]);
-const QUOTER_MULTICALL_BATCH_SIZE = 8;
-const QUOTER_MULTICALL_GAS = "0x1c9c380";
-
-interface QuoterV2Request {
-  target: DexMeasuredExecutionTarget;
-  inputUsd: number;
-  endpointAddress: `0x${string}`;
-}
-
-interface EncodedQuoterV2Request extends QuoterV2Request {
-  index: number;
-  label: string;
-  amountInRaw: bigint;
-  callData: `0x${string}`;
-}
-
-export interface QuoterV2BatchOutcome {
-  targetId: string;
-  inputUsd: number;
-  point?: DexMeasuredRawQuotePoint;
-  failureReason?: string;
-}
+export type QuoterV2BatchOutcome = EvmSingleCallQuoteOutcome;
 
 
 
@@ -109,28 +92,6 @@ export function encodeQuoterV2ExactInputSingle(target: DexMeasuredExecutionTarge
   });
 }
 
-function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2Request | null {
-  const amountInRaw = usdToRawAmount(
-    request.inputUsd,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-    { maxRawAmount: MAX_UINT256 },
-  );
-  if (amountInRaw == null || !hasAdapterParameter(request.target)) return null;
-  try {
-    return {
-      ...request,
-      index,
-      label: `${index}:${request.target.targetId}`,
-      amountInRaw,
-      callData: encodeQuoterV2ExactInputSingle(request.target, amountInRaw),
-    };
-  } catch {
-    return null;
-  }
-}
-
-
 // Slipstream TickMath bounds; a zero price limit maps to the directional extreme.
 const SLIPSTREAM_MIN_SQRT_RATIO = 4_295_128_739n;
 const SLIPSTREAM_MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342n;
@@ -167,7 +128,7 @@ function decodeQuoteResult(
   }) as readonly [bigint, bigint, number, bigint];
 }
 
-function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Result): DexMeasuredRawQuotePoint | null {
+function decodePoint(request: EncodedEvmSingleCallQuoteRequest, result: EvmMulticall3Result): DexMeasuredRawQuotePoint | null {
   if (!result.success || result.returnData === "0x") return null;
   try {
     const [amountOutRaw, sqrtPriceX96After, initializedTicksCrossed, gasEstimate] =
@@ -200,58 +161,15 @@ const quoterMulticallExecutor = createEvmQuotePlanMulticallExecutor({
   splitOnExecutionBudgetError: true,
 });
 
-export async function quoteQuoterV2Requests(input: {
-  requests: readonly QuoterV2Request[];
-  blockNumber: number;
-  blockHash: `0x${string}`;
-  chainRpcs: Map<string, ChainRpcConfig>;
-  signal?: AbortSignal;
-  rpcBudget?: DexMeasuredExecutionRpcBudget;
-}): Promise<QuoterV2BatchOutcome[]> {
-  const encoded = input.requests.map(encodeRequest);
-  const outcomes: QuoterV2BatchOutcome[] = input.requests.map((request, index) =>
-    encoded[index] == null
-      ? { targetId: request.target.targetId, inputUsd: request.inputUsd, failureReason: "invalid-quote-input" }
-      : { targetId: request.target.targetId, inputUsd: request.inputUsd },
-  );
-  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber, input.blockHash);
-  return executeEvmQuotePlan({
-    plans,
-    outcomes,
-    chainRpcs: input.chainRpcs,
-    signal: input.signal,
-    rpcBudget: input.rpcBudget,
-    spec: {
-      batchSize: QUOTER_MULTICALL_BATCH_SIZE,
-      executeMulticall: quoterMulticallExecutor,
-      adaptive: {
-        failedAttemptAccounting: "single-call",
-        unattemptedResult: "failure-result",
-        retryFailedCallsIndividually: true,
-      },
-      materializeTransportFailure: (request, reason) => ({
-        targetId: request.target.targetId,
-        inputUsd: request.inputUsd,
-        failureReason: reason ?? "quoter-rpc-unavailable",
-      }),
-      resolveResult: (request, result) => {
-        if (!result.success) {
-          return {
-            targetId: request.target.targetId,
-            inputUsd: request.inputUsd,
-            point: materializeRevertedEvmQuotePoint(request, result),
-          };
-        }
-        const point = decodePoint(request, result);
-        return point
-          ? { targetId: request.target.targetId, inputUsd: request.inputUsd, point }
-          : {
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          failureReason: "quoter-invalid-result",
-        };
-      },
-    },
+export async function quoteQuoterV2Requests(input: EvmSingleCallQuoteBatchInput): Promise<QuoterV2BatchOutcome[]> {
+  return executeEvmSingleCallQuotes(input, {
+    maxRawAmount: MAX_UINT256,
+    isValidTarget: hasAdapterParameter,
+    encodeCall: encodeQuoterV2ExactInputSingle,
+    decodePoint,
+    executeMulticall: quoterMulticallExecutor,
+    retryFailedCallsIndividually: true,
+    emptyRevert: "zero-output",
   });
 }
 

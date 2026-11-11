@@ -298,7 +298,6 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
   registryFingerprint: string;
   scoringClockSec: number;
   signal?: AbortSignal;
-  alignToSolana?: boolean;
   /** Null is an authored withholding; undefined is an accidentally missing identity. */
   identityRuntime: (routeId: string) => "evm" | "solana" | null | undefined;
   observeEvm: (route: {
@@ -319,9 +318,7 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
   }
 
   const observations: ReviewedDeploymentSupplyObservation[] = [];
-  const routes = input.alignToSolana
-    ? [...inventory.routes].sort((a, b) => Number(input.identityRuntime(b.routeId) === "solana") - Number(input.identityRuntime(a.routeId) === "solana"))
-    : inventory.routes;
+  const routes = [...inventory.routes].sort((a, b) => Number(input.identityRuntime(b.routeId) === "solana") - Number(input.identityRuntime(a.routeId) === "solana"));
   for (const route of routes) {
     throwIfAborted(input.signal);
     const runtime = input.identityRuntime(route.routeId);
@@ -334,7 +331,7 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
     }
     const skew = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
     const times = observations.map(observation => observation.blockTimeSec);
-    const observationWindow = input.alignToSolana && times.length > 0 ? {
+    const observationWindow = times.length > 0 ? {
       earliestTimestamp: Math.max(...times) - skew,
       latestTimestamp: Math.min(...times) + skew,
     } : undefined;

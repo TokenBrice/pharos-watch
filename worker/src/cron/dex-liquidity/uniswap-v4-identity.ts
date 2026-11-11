@@ -10,6 +10,7 @@ import { computeUniswapV4PoolId, getUniswapV4Deployment, UNISWAP_V4_ADAPTER_PROF
 import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
 import type { UniswapV4ExecutionCandidate } from "../measured-execution/candidate-types";
 import { normalizeProtocol } from "./pool-helpers";
+import { sqrtRatioToSpotPrice } from "./amm-math";
 import type { SourcePoolGraph, PoolEntry, SymbolLookups } from "./types";
 import { incrementReason, type TargetEnrichmentTelemetry } from "./route-telemetry";
 
@@ -172,7 +173,7 @@ export async function readUniswapV4ExecutionCandidate(input: {
     }));
     if (tokens.some((token) => !token.symbol || token.symbol.length > 128)) return null;
     // Uniswap's token0Price is token0 per token1 (not its reciprocal).
-    const token1Price = (Number(sqrtPriceX96) / 2 ** 96) ** 2 * 10 ** (tokens[0]!.decimals - tokens[1]!.decimals);
+    const token1Price = sqrtRatioToSpotPrice(sqrtPriceX96, tokens[0]!.decimals, tokens[1]!.decimals);
     if (!Number.isFinite(token1Price) || token1Price <= 0 || !Number.isFinite(1 / token1Price)) return null;
     return {
       chain: input.deployment.chain, poolId: input.poolId,

@@ -18,7 +18,6 @@ describe("command palette model", () => {
     const ids = buildCommandPaletteResultDescriptors({ query: "usdc", history: [], isDark: false, stablecoinLiveMetadata })
       .filter((row) => row.id === "coin-syrupusdc-maple" || row.id === "coin-sirloinusdc-steakhouse" || row.id === "coin-sparkusdc-spark")
       .map((row) => row.id);
-    // Expected order is the supplied market caps, descending.
     expect(ids).toEqual(
       [...stablecoinLiveMetadata]
         .sort(([, left], [, right]) => right.marketCapUsd - left.marketCapUsd)

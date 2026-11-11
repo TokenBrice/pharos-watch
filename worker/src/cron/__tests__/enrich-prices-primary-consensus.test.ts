@@ -12,8 +12,6 @@ import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/constants";
 
 
-// --- fetchPrimaryPrices tests ---
-
 describe("fetchPrimaryPrices", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

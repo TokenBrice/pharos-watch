@@ -1,7 +1,8 @@
+import { TELEGRAM_COMMAND_POLICIES } from "../../commands/definitions";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { classifyTelegramCommand, TELEGRAM_COMMAND_POLICIES } from "../telegram-webhook-ingress-policy";
+import { classifyTelegramCommand } from "../telegram-webhook-ingress-policy";
 
 import { COMMAND_HANDLERS, type WebhookCommandHandler } from "../../commands";
 import { makeTelegramUpdateRequest } from "../../../test-helpers/__shared/telegram";

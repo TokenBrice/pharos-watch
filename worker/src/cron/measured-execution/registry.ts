@@ -1,3 +1,5 @@
+import { AERO_DEPLOYMENTS } from "@shared/lib/dex-aero-deployments";
+import { SLIPSTREAM_COLLECTION_DEPLOYMENTS } from "@shared/lib/dex-slipstream-deployments";
 import { keccak256 } from "viem/utils";
 import {
   getDexExecutionCapabilityRegistration,
@@ -108,7 +110,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "base",
     endpointAddress: "0x254cf9e1e6e233aa1ac962cb9b05b2cfeaae15b0",
     expectedCodeHash: "0xfb0ab713266d089d5b6ac48d50455c4fadc9cd49a1efcc83a091e7c2e48dad0e",
-    factoryAddress: "0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a",
+    factoryAddress: SLIPSTREAM_COLLECTION_DEPLOYMENTS["aerodrome-slipstream"].clFactoryAddress.toLowerCase() as `0x${string}`,
     expectedFactoryCodeHash: "0x7340cf80843bd721bcaefbfc050e38304cb4174c239e6e914e3056f27f39b11c",
   },
   {
@@ -187,7 +189,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "base",
     endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
     expectedCodeHash: "0x8f9a9051a4509af163d400db3221d612d37656bb07753d71dfe78bf2016259b0",
-    factoryAddress: "0x9cb220581b91b0c83223012fe69688b92ad07a76",
+    factoryAddress: AERO_DEPLOYMENTS.find((deployment) => deployment.chain === "base")!.clFactories[0]!,
     expectedFactoryCodeHash: "0x6c09090837ace0aefe6bfa24a3bc772d13a9775b7e3109c9fece534a0ce053a6",
   },
   {
@@ -196,7 +198,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "ethereum",
     endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
     expectedCodeHash: "0xc5dbfcdb4f63bd38fcc4b08dcc619c508ba24521cc689e1e409824ae592f8774",
-    factoryAddress: "0xf4fd2e6c5b60c5b365cd1b96dd6245e6d60414c2",
+    factoryAddress: AERO_DEPLOYMENTS.find((deployment) => deployment.chain === "ethereum")!.clFactories[0]!,
     expectedFactoryCodeHash: "0x3e53af145d8106d91fad73c6dbbbfe3229c5aa96aab1e18a4bf49a705c773ef5",
   },
   {
@@ -205,7 +207,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "optimism",
     endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
     expectedCodeHash: "0x711e97d5880c2f8db7b33e5a83db08d2f1de4753b2fbb99a22d16484a825926b",
-    factoryAddress: "0xfeab42d90055db3a0616249f76b6002d72266778",
+    factoryAddress: AERO_DEPLOYMENTS.find((deployment) => deployment.chain === "optimism")!.clFactories[0]!,
     expectedFactoryCodeHash: "0x68e96345f7fdc80c927fd25a04f6f5846cdd00173f031eae7517722a67103c7a",
   },
   {
@@ -214,7 +216,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "arbitrum",
     endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
     expectedCodeHash: "0x439eef0a6e5161206328a5947518b7b51d9d6c3e99473bb3b6c0e1ddb08b4a11",
-    factoryAddress: "0x88a60ee77392577c355c0acb2a8d476d5a4ec03a",
+    factoryAddress: AERO_DEPLOYMENTS.find((deployment) => deployment.chain === "arbitrum")!.clFactories[0]!,
     expectedFactoryCodeHash: "0x4cb82764ba4fd4a80c986952190a6052747a816a6dc5c7be3fc3a7a7b1bd0af4",
   },
   {
@@ -223,7 +225,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "robinhood",
     endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
     expectedCodeHash: "0xc5dbfcdb4f63bd38fcc4b08dcc619c508ba24521cc689e1e409824ae592f8774",
-    factoryAddress: "0xc63d7338c178e805c544b8f897066bd3bbcbe136",
+    factoryAddress: AERO_DEPLOYMENTS.find((deployment) => deployment.chain === "robinhood")!.clFactories[0]!,
     expectedFactoryCodeHash: "0x3e53af145d8106d91fad73c6dbbbfe3229c5aa96aab1e18a4bf49a705c773ef5",
   },
   {
@@ -232,7 +234,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "arc",
     endpointAddress: "0x1ddfec5058180c207f55bb77d95acdd0d8227868",
     expectedCodeHash: "0x3350f0a36527b7cf341caef29258e314f148c04cbaf8dfdfaf3940ab2a6fba30",
-    factoryAddress: "0x7f83235643181e440433400a027618cd50879751",
+    factoryAddress: AERO_DEPLOYMENTS.find((deployment) => deployment.chain === "arc")!.clFactories[0]!,
     expectedFactoryCodeHash: "0xa1e59904fa067e5c6dd0fb484a46a61a49eb583dac80777bb51c9544d551af77",
   },
 ] as const;

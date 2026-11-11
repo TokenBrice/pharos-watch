@@ -59,7 +59,6 @@ describe("LazySection", () => {
       </LazySection>,
     );
 
-    // Before IO fires, child is hidden and the placeholder div carries minHeight.
     expect(queryByTestId("child")).toBeNull();
     const placeholder = container.firstChild as HTMLElement | null;
     expect(placeholder).not.toBeNull();

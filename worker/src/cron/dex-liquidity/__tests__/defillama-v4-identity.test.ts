@@ -91,7 +91,7 @@ function exactInput(chain = "ethereum", hookAddress: `0x${string}` = UNISWAP_V4_
       measuredTargetCapturedAt: 1_791_146_773,
     } as unknown as DexExecutionTargetFactoryInput["context"],
     identity: {
-      protocol: "uniswap-v4", chainNorm: chain,
+      protocol: "uniswap-v4", chainNorm: chain, poolType: "uniswap-v4-cl",
       pool: { ...pool(), pool: `${chain}:${candidate.poolId}`, underlyingTokens: [...CURRENCIES], poolMeta: null },
     } as DexExecutionTargetFactoryInput["identity"],
     enrichment: { rawContribTvl: 1_000_000 } as DexExecutionTargetFactoryInput["enrichment"],

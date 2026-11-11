@@ -14,9 +14,7 @@ function installFetch(implementation: (request: Request) => Response | Promise<R
   return mockFetch([{ match: () => true, respond: implementation }]);
 }
 
-// --- Module-level mocks ---
 
-// Stub blacklist-contracts to provide a minimal set of configs
 vi.mock("../../lib/blacklist-contracts", () => ({
   CONTRACT_CONFIGS: [
     {
@@ -193,12 +191,10 @@ function baseChainRpcConfig(): ChainRpcConfig {
   };
 }
 
-// Stub bigint helper
 vi.mock("../../lib/bigint", () => ({
   decimalNumberFromBigInt: vi.fn((value: bigint, decimals: number) => Number(value) / Math.pow(10, decimals)),
 }));
 
-// Stub db helpers
 vi.mock("../../lib/db", async (importOriginal) => {
   const orig = await importOriginal<typeof import("../../lib/db")>();
   return {
@@ -256,7 +252,6 @@ const mockD1 = createMockD1Preset([
   { match: "blacklist-gap-metrics-cache-write", rows: [] },
 ]);
 
-// --- Helpers ---
 
 const testChainRpcs = new Map<string, ChainRpcConfig>([["base", baseChainRpcConfig()]]);
 
@@ -319,7 +314,6 @@ describe("syncBlacklist", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
     vi.clearAllMocks();
-    // Reset mocks to defaults
     vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => stmts.length);
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20010000);
@@ -441,7 +435,6 @@ describe("syncBlacklist", () => {
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
-    // Should have found the 1 EVM event
     expect(result.itemCount).toBe(1);
     const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(0);
@@ -451,7 +444,6 @@ describe("syncBlacklist", () => {
     expect(meta.currentBalanceCacheBudgetExhausted).toBe(false);
     expect(meta).not.toHaveProperty("currentBalanceCacheDeleted");
     expect(meta).not.toHaveProperty("tronLedgerUpdated");
-    // batchExecute should have been called to insert the event row
     expect(batchExecute).toHaveBeenCalled();
   });
 

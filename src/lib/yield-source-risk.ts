@@ -1,6 +1,7 @@
-import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@/lib/yield-view-config";
+import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import { YIELD_SOURCE_DEPTH_BANDS } from "@shared/lib/selector/yield-source";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
+import { YIELD_SOURCE_CONFIDENCE_TIER_VALUES } from "@shared/types/yield-vocabulary";
 import type {
   YieldSourceRisk,
   YieldSourceRole,
@@ -60,12 +61,7 @@ export const YIELD_SOURCE_POSTURE_DEFINITIONS: Record<YieldSourcePosture, { labe
   },
 };
 
-export const YIELD_SOURCE_CONFIDENCE_ORDER: readonly YieldSourceConfidenceTier[] = [
-  "deterministic",
-  "curated",
-  "discovered",
-  "fallback",
-];
+export const YIELD_SOURCE_CONFIDENCE_ORDER: readonly YieldSourceConfidenceTier[] = YIELD_SOURCE_CONFIDENCE_TIER_VALUES;
 
 export const YIELD_SOURCE_CONFIDENCE_DEFINITIONS: Record<
   YieldSourceConfidenceTier,
@@ -423,7 +419,6 @@ export function projectYieldSourceDisplayDrivers(
   return index === -1 ? [...rest, STALE_SOURCE_DRIVER] : [...rest.slice(0, index), STALE_SOURCE_DRIVER, ...rest.slice(index)];
 }
 
-/** Whether the source's own observation age is publicly stale. */
 export function isYieldSourceDisplayStale(
   input: YieldSourceClockInput,
   clock: YieldSourceDisplayClock | null | undefined,

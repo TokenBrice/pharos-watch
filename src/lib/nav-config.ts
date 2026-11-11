@@ -89,8 +89,6 @@ export interface NavGroup {
   columns?: readonly NavColumn[];
 }
 
-/* ── Canonical items shared by the quick rail and the grouped menus ─────── */
-
 const DASHBOARD_NAV_ITEM: NavItem = {
   href: "/",
   label: "Home",
@@ -163,8 +161,6 @@ export const QUICK_NAV_ITEMS: readonly NavItem[] = [
   { ...STABILITY_INDEX_NAV_ITEM, shortLabel: "Stability", compactLabel: "PSI" },
   { ...FREEZEWATCH_NAV_ITEM, shortLabel: "FreezeWatch", compactLabel: "Freeze" },
 ];
-
-/* ── Resources columns — reference, updates, and product links ─────── */
 
 const MORE_COLUMNS: readonly NavColumn[] = [
   {

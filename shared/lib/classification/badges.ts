@@ -12,28 +12,22 @@ import type { BadgeStyle, PegChartColor, PegMetadata } from "./common";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 import { mapPegMetadata, PEG_METADATA } from "./pegs";
 
-// Combined label+class style maps (for detail page pill badges)
-// ---------------------------------------------------------------------------
-
 type ProofOfReserves = NonNullable<StablecoinMeta["proofOfReserves"]>;
 type ProofOfReservesType = ProofOfReserves["type"];
 type ProofAssuranceMethod = NonNullable<ProofOfReserves["latestReport"]>["assuranceMethod"];
 type ProofAssuranceScope = NonNullable<ProofOfReserves["latestReport"]>["scope"];
 type LiabilityReconciliation = NonNullable<ProofOfReserves["latestReport"]>["liabilityReconciliation"];
 
-/** Governance badge styles for the detail page. */
 export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = projectDescriptors(
   GOVERNANCE_DESCRIPTORS,
   (descriptor) => ({ label: descriptor.badgeLabel, cls: descriptor.badgeCls }),
 );
 
-/** Backing badge styles for the detail page. */
 export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = projectDescriptors(
   BACKING_DESCRIPTORS,
   (descriptor) => ({ label: descriptor.badgeLabel, cls: descriptor.badgeCls }),
 );
 
-/** Peg currency badge styles for the detail page. */
 export const PEG_BADGE_STYLES = mapPegMetadata((metadata) => metadata.badge);
 
 /** Independent engagement with a reviewed assurance opinion: the audit-blue tone. */
@@ -126,14 +120,12 @@ export const PROOF_ASSURANCE_METHOD_LABELS: Record<ProofAssuranceMethod, string>
   unknown: "Method not established",
 };
 
-/** Report-scope phrases for compact evidence rows. */
 export const PROOF_ASSURANCE_SCOPE_LABELS: Record<ProofAssuranceScope, string> = {
   "assets-only": "assets only",
   "assets-and-liabilities": "assets and liabilities",
   unknown: "scope unknown",
 };
 
-/** Liability-reconciliation phrases for compact evidence rows. */
 export const LIABILITY_RECONCILIATION_LABELS: Record<LiabilityReconciliation, string> = {
   full: "full liability reconciliation",
   partial: "partial liability reconciliation",
@@ -184,10 +176,6 @@ export const POR_TIER_STYLES: Record<AttestorTier, { cls: string; label: string;
   },
 };
 
-// ---------------------------------------------------------------------------
-// Blacklist event badge styles
-// ---------------------------------------------------------------------------
-
 const EVENT_DESCRIPTORS = {
   blacklist: {
     label: "Freeze",
@@ -222,19 +210,11 @@ export const EVENT_CHART_COLORS: Record<BlacklistEventType, string> = projectDes
   (descriptor) => descriptor.chartColor,
 );
 
-// ---------------------------------------------------------------------------
-// Peg currency chart colors (text + bg pairs for charts and stat cards)
-// ---------------------------------------------------------------------------
-
 export const PEG_CHART_COLORS = Object.fromEntries(
   (Object.entries(PEG_METADATA) as [PegCurrency, PegMetadata][]).flatMap(([peg, metadata]) =>
     metadata.chart ? [[peg, metadata.chart]] : [],
   ),
 ) as Record<string, PegChartColor>;
-
-// ---------------------------------------------------------------------------
-// Yield type labels & styles
-// ---------------------------------------------------------------------------
 
 export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "lending-vault": "Native",
@@ -339,5 +319,3 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   FRXUSD: "#f97316",
   FIDD: "#166534",
 };
-
-// ---------------------------------------------------------------------------

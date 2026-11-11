@@ -1,6 +1,6 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
-import { tickSqrtPrice } from "../solana/whirlpool-quote";
+import { tickSqrtPrice } from "../amm-math";
 import { SUI_CLMM_DEPLOYMENTS, suiCoinType, suiObjectId, type SuiClmmFamily } from "./identity";
 import type { SuiTransactionCheckpointResolver } from "./archival-checkpoints";
 

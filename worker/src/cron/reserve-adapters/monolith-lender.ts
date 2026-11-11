@@ -179,7 +179,6 @@ export async function fetchMonolithLenderReserves(
         data: DECIMALS_SELECTOR,
         verify: (value) => value === BigInt(COIN_DECIMALS) ? null : "coin decimals drifted from reviewed 18",
       }),
-      // Holdings, valuation and liabilities.
       uint256Observation({ label: "collateral-balance", contract: collateral, data: encodeBalanceOfCallData(lender) }),
       customObservation({
         label: "collateral-price",

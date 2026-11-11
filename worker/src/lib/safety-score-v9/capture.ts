@@ -15,7 +15,6 @@ import { PROTOCOL_REDEEM_SOURCE } from "../authoritative-price-sources/helpers";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
 import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../peg-analytics";
-import { publishPegAnalyticsCache } from "../peg-analytics-cache";
 import {
   loadReportCardsSnapshotInputs,
   type ReportCardsInputFreshness,
@@ -119,7 +118,6 @@ export interface NativeSafetyScoreV9Capture {
   input: NativeSafetyScoreV9Input;
   /** Ephemeral raw peg evidence for the seed; never serialized into the input. */
   v9PegProvenanceSource: SafetyScoreV9PegProvenanceSource;
-  pegAnalyticsPublished: boolean;
   completeness: {
     expectedCount: number;
   };
@@ -284,11 +282,38 @@ export function inheritPureWrapperPegObservations(
  * the cards away is what forced the capture to carry the bluechip, blacklist,
  * and collateral-drift fields the V9 compiler never reads.
  *
- * Publishing the peg-analytics aggregate is an explicit step here rather than a
- * side effect of a snapshot builder that several read paths also invoke.
+ * The prepare cron publishes peg analytics between loading these sources and
+ * building the capture, before the later DEX validation can reject it.
  */
+export async function loadNativeSafetyScoreV9CaptureSources(
+  db: D1Database,
+  options: BuildNativeSafetyScoreV9CaptureOptions = {},
+) {
+  const snapshot = await loadReportCardsSnapshotInputs(db, {
+    ...(options.preloadedStablecoinsCache
+      ? { preloadedStablecoinsCache: options.preloadedStablecoinsCache }
+      : {}),
+  });
+
+  const { stablecoinsCached } = snapshot;
+
+  const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
+  const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;
+
+  // Nav-inclusive so the published peg-analytics cache can serve peg-summary
+  // (which needs nav tokens); the capture filters nav entries back out.
+  const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
+    peggedAssets,
+    fxFallbackRates,
+    methodologyAsOf: stablecoinsCached.updatedAt,
+    includeNavTokens: true,
+  });
+  return { snapshot, peggedAssets, pegAnalytics };
+}
+
 export async function buildNativeSafetyScoreV9Capture(
   db: D1Database,
+  sources: Awaited<ReturnType<typeof loadNativeSafetyScoreV9CaptureSources>>,
   options: BuildNativeSafetyScoreV9CaptureOptions = {},
 ): Promise<NativeSafetyScoreV9Capture> {
   const {
@@ -302,24 +327,8 @@ export async function buildNativeSafetyScoreV9Capture(
     redemptionStale: readRedemptionStale,
     inputFreshness,
     v9PublicationInputHealth,
-  } = await loadReportCardsSnapshotInputs(db, {
-    ...(options.preloadedStablecoinsCache
-      ? { preloadedStablecoinsCache: options.preloadedStablecoinsCache }
-      : {}),
-  });
-
-  const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
-  const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;
-
-  // Nav-inclusive so the published peg-analytics cache can serve peg-summary
-  // (which needs nav tokens); the capture filters nav entries back out.
-  const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
-    peggedAssets,
-    fxFallbackRates,
-    methodologyAsOf: stablecoinsCached.updatedAt,
-    includeNavTokens: true,
-  });
-  const pegAnalyticsPublished = await publishPegAnalyticsCache(db, pegAnalytics);
+  } = sources.snapshot;
+  const { peggedAssets, pegAnalytics } = sources;
 
   const clockSec = pegAnalytics.nowSec;
   const registryFingerprint = computeReportCardsRegistryFingerprint();
@@ -580,7 +589,6 @@ export async function buildNativeSafetyScoreV9Capture(
       clockSec,
       eventsByCoin: pegAnalytics.eventsByCoin,
     },
-    pegAnalyticsPublished,
     completeness: { expectedCount: activeAssetIds.length },
   };
 }

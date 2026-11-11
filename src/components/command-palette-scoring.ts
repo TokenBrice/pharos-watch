@@ -25,8 +25,6 @@ function scoreSearchField(query: string, target: string, weights: { exact: numbe
   return 0;
 }
 
-// ── Page (non-coin) search scoring ──────────────────────────────────────────
-
 export interface PageSearchFields {
   label: string;
   keywords?: string;
@@ -82,8 +80,6 @@ export function pageLeadMatchScore(query: string, page: PageSearchFields): numbe
   return Math.max(label, scoreKeywordTokenMatch(query, page.keywords));
 }
 
-// ── Bounded typo tolerance ──────────────────────────────────────────────────
-
 const TYPO_TOLERANCE_MIN_QUERY_LENGTH = 4;
 /** Typo coin matches score at the symbol `contains` tier. */
 export const TYPO_COIN_MATCH_SCORE = 25;
@@ -100,17 +96,14 @@ function withinOneEdit(a: string, b: string): boolean {
     while (i < a.length && a[i] === b[i]) i++;
     const first = i;
     if (a[first + 1] === b[first + 1]) {
-      // Single substitution — the tails after it must be identical.
       return a.slice(first + 1) === b.slice(first + 1);
     }
-    // Adjacent transposition (ab … ↔ ba …).
     return (
       a[first] === b[first + 1]
       && a[first + 1] === b[first]
       && a.slice(first + 2) === b.slice(first + 2)
     );
   }
-  // Single insertion or deletion — one gap in the longer string.
   if (a.length > b.length) {
     let i = 0;
     while (i < b.length && a[i] === b[i]) i++;

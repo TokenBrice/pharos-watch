@@ -29,7 +29,6 @@ export function buildNdjsonWithPreamble<T>(
   return [meta, ...rows].join("\n");
 }
 
-/** Trigger a browser download of the NDJSON. */
 export function downloadNdjsonWithPreamble<T>(
   data: T[],
   columns: CsvColumn<T>[],

@@ -131,14 +131,12 @@ describe("DeploymentStrip", () => {
     );
 
     const lzShares = Array.from(container.querySelectorAll('[data-bracket="lz"] [data-bracket-share]'));
-    // Two separated runs, one label.
     expect(container.querySelectorAll('[data-bracket="lz"]')).toHaveLength(2);
     expect(lzShares).toHaveLength(1);
     expect(lzShares[0]!.textContent).toBe("share unquantified");
     expect(container.querySelector('[data-bracket="lz"]')!.textContent).not.toMatch(/[%?]/);
 
     expect(container.querySelector('[data-bracket="plasma"] [data-bracket-share]')!.textContent).toBe("10.8%");
-    // A domain spanning no drawn cell is not drawn.
     expect(container.querySelector('[data-bracket="ghost"]')).toBeNull();
   });
 

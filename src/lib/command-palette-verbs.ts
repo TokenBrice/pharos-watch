@@ -23,8 +23,6 @@ import {
   type ScreenerFilters,
 } from "@/lib/screener-filters";
 
-// ── Result types ────────────────────────────────────────────────────────────
-
 export type ParsedVerb =
   | { kind: "compare"; coinSymbols: string[]; resolvedCoinIds: string[]; unresolved: string[]; href: string }
   | { kind: "screen"; filters: Record<string, string | string[] | number>; href: string; error?: string }
@@ -32,8 +30,6 @@ export type ParsedVerb =
   | { kind: "unpin"; coinSymbol: string | "all"; resolvedCoinId: string | null }
   | { kind: "tape"; filters: Record<string, string>; href: string }
   | { kind: "none" };
-
-// ── Coin lookup ─────────────────────────────────────────────────────────────
 
 /**
  * Fuzzy resolve a token (symbol/name/id) to a coin id from the static palette
@@ -86,8 +82,6 @@ function resolveCoinIdFromToken(token: string): string | null {
   const [exactSymbol] = exactSymbolIds;
   return exactSymbol ?? prefixSymbol ?? prefixId ?? prefixName;
 }
-
-// ── Compare verb resolution ─────────────────────────────────────────────────
 
 const COMPARE_SEPARATOR_TOKENS = new Set(["vs", "versus", "vs."]);
 /** "X vs Y" sugar accepts 2–4 coin tokens around the separator(s). */
@@ -154,8 +148,6 @@ function buildCompareVerb(tokens: string[]): Extract<ParsedVerb, { kind: "compar
   };
 }
 
-// ── Verb keyword detection ──────────────────────────────────────────────────
-
 const VERB_KEYWORDS = ["compare", "screen", "pin", "unpin", "tape:"] as const;
 type VerbKeyword = (typeof VERB_KEYWORDS)[number];
 
@@ -182,8 +174,6 @@ function detectVerbLead(input: string): VerbLead | null {
   return null;
 }
 
-// ── Screener filter mini-parser ─────────────────────────────────────────────
-
 /**
  * Parse `key OP value` tokens into screener URL params. Supported operators:
  *   key>=N       → field "<key>Min" or maps to `safety<X>Min`
@@ -193,7 +183,6 @@ function detectVerbLead(input: string): VerbLead | null {
  * Conservative: returns an empty params object if no token parses.
  */
 interface ScreenTokenMapping {
-  /** Resolves a `key OP value` triple to URL key/value pairs. */
   resolve: (op: "gte" | "lte" | "eq", value: string) => Array<[string, string]>;
 }
 
@@ -222,7 +211,6 @@ const SCREEN_TOKEN_MAP: Record<string, ScreenTokenMapping> = {
     resolve: (op, value) => {
       const n = Number(value);
       if (!Number.isFinite(n)) {
-        // Treat `safety=A-` etc. as a safetyGrades enumList contribution.
         if (op === "eq") return [["safetyGrades", value.toUpperCase()]];
         return [];
       }
@@ -339,8 +327,6 @@ function buildScreenerResult(
   };
 }
 
-// ── Tape filter mini-parser ─────────────────────────────────────────────────
-
 const TAPE_ALLOWED_KEYS = new Set(["severity", "type", "coin", "stablecoin", "chain"]);
 
 function parseTapeTokens(rest: string): Record<string, string> {
@@ -361,8 +347,6 @@ function buildTapeHref(filters: Record<string, string>): string {
   const qs = params.toString();
   return qs ? `/timeline/?${qs}` : "/timeline/";
 }
-
-// ── Public API ──────────────────────────────────────────────────────────────
 
 export function parsePaletteInput(input: string): ParsedVerb {
   const lead = detectVerbLead(input);
@@ -415,13 +399,10 @@ export function parsePaletteInput(input: string): ParsedVerb {
     }
   }
 
-  // "<a> vs <b>" phrasing is the compare verb without the keyword.
   const vsTokens = detectVsPhrase(input);
   if (vsTokens) return buildCompareVerb(vsTokens);
   return { kind: "none" };
 }
-
-// ── Reusable helper for compare-watchlist action ────────────────────────────
 
 /** Build a /compare URL from a list of coin ids, capped at MAX_COMPARE_COINS. */
 export function buildCompareHrefFromCoinIds(coinIds: readonly string[]): string {

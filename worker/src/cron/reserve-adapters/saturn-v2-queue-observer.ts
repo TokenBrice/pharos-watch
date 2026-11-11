@@ -2,7 +2,7 @@ import { parseAbi } from "viem/utils";
 import type { EvmRpcOptions } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
 import { abiObservation } from "./evm-observation-plan";
-import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor, type ExecutableRedemptionReadClient, type ExecutableRedemptionObservation } from "./executable-redemption-read-client";
+import { readStateWithPlan, type ExecutableRedemptionReadClient, type ExecutableRedemptionObservation } from "./executable-redemption-read-client";
 
 const SHARE = "0xd166337499e176bbc38a1fbd113ab144e5bd2df7";
 const QUEUE = "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e";
@@ -87,7 +87,3 @@ export async function observeSaturnV2Queue(
     sourceUrls: ["https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview", "https://sourcify.dev/server/v2/contract/1/0x2b7074cf6681382b70e239063931ebe83c0f4e0a?fields=sources,abi,runtimeMatch", "https://sourcify.dev/server/v2/contract/1/0xdaf6f8523d7a707d173a12041e1523fdf1373f23?fields=sources,abi,runtimeMatch"], diagnostics,
   };
 }
-export const SATURN_V2_QUEUE_OBSERVER: ExecutableRedemptionObserverDescriptor = {
-  observerId: "saturn-v2-queue", coinId: "susdat-saturn", chain: "ethereum", inputContract: SHARE,
-  outputAssetKeys: ["usdat-saturn"], capacityCapability: "diagnostic-only", sourceLane: "direct", observe: observeSaturnV2Queue,
-};

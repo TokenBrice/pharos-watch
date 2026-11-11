@@ -103,4 +103,5 @@ export type ReserveAdapterDefinition = Pick<
 > & {
   key: LiveReserveAdapterKey;
   fetch: AdapterFn;
+  fallbackInputRole?: "corroboration";
 };

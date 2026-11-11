@@ -48,10 +48,8 @@ export function donorKeyGradesFromResponse(
   return new Map(response.grades.flatMap((entry) => entry.grade === null ? [] : [[entry.id, entry.grade] as const]));
 }
 
-/** What the checker can say about grades right now. */
 export type DonorWalletGradesState = "loading" | "ready" | "held" | "unavailable";
 
-/** The parts of the grades query the checker reads. */
 export interface DonorWalletGradesQuery {
   readonly data: SafetyGradesResponse | undefined;
   readonly isError: boolean;

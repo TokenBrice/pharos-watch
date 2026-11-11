@@ -24,7 +24,7 @@ import type {
   YieldViewModelUrlParams,
 } from "@/lib/yield-view-model-types";
 import { normalizeFilters } from "@/lib/yield-view-url";
-import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
+import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 
 export type { BuildYieldViewModelOptions, YieldActiveFilterSummary, YieldCohortPercentile, YieldPresetKey, YieldRiskBudgetKey, YieldRiskBudgetStop, YieldViewModel, YieldViewModelRow, YieldViewModelUrlParams } from "@/lib/yield-view-model-types";
 

@@ -184,8 +184,6 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
   );
 }
 
-// --- header --------------------------------------------------------------
-
 function SectionHeader({ stat }: { stat: { value: number | null; label: string } }) {
   return (
     <div className="space-y-1.5">
@@ -211,8 +209,6 @@ function SectionHeader({ stat }: { stat: { value: number | null; label: string }
     </div>
   );
 }
-
-// --- forecast board (left) -----------------------------------------------
 
 function VerdictDistribution({ items }: { items: ForecastItem[] }) {
   const tiered = items.flatMap((item) => (item.tier == null ? [] : [{ tier: item.tier, vocabulary: item.vocabulary }]));
@@ -294,8 +290,6 @@ function ForecastZone({
   );
 }
 
-// --- track record (right) ------------------------------------------------
-
 function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] }) {
   return (
     <div className="flex flex-1 flex-col gap-2">
@@ -374,8 +368,6 @@ function SourceStatus({ label, computedAt, usable, loading }: {
     </p>
   );
 }
-
-// --- public component ----------------------------------------------------
 
 export function HomeAltDdrOverview(): React.JSX.Element | null {
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();

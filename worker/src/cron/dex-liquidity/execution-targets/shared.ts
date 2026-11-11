@@ -2,7 +2,7 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import type {
   DexExecutionTargetFactoryInput,
   DexExecutionTargetFactoryOutput,
-} from "../execution-target-registry";
+} from "./contract";
 
 export function buildRegisteredTargetInput<TCandidate>(
   input: DexExecutionTargetFactoryInput,

@@ -73,7 +73,6 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
         const isActive = activeId === section.id;
 
         if (!hasChildren) {
-          // Plain link — concept section
           return (
             <button
               key={section.id}
@@ -93,7 +92,6 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
           );
         }
 
-        // Collapsible group — endpoint section
         return (
           <div key={section.id}>
             <button

@@ -4,7 +4,6 @@ import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledWorkerRole } from "@sha
 import type { ScheduledEnv } from "../lib/env";
 import { runScheduledSlotWithFence, type ScheduledSlotCatchUpRequest } from "../lib/scheduled-slot-fence";
 import type { SlotRunnerLoader } from "./scheduled/runner-types";
-import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { sendReserveContinuation } from "../lib/reserve-continuation-send";
 import { createSlotDeadline, SCHEDULED_SLOT_JOB_BUDGET_MS } from "../lib/cron-timeouts";
 
@@ -94,12 +93,8 @@ export async function handleScheduledEvent(
       async (slotSignal, executionFence) => {
         runtime.slotSignal = slotSignal;
         runtime.executionFence = executionFence;
-        if (
-          workerRole === "heavy" &&
-          slotPlan.scheduleKey !== "v9SupplyAttributionOffset" &&
-          slotPlan.scheduleKey !== "v9PublicationOffset"
-        ) {
-          await waitForV9MemoryLaneRelease(env.DB, slotSignal);
+        if (loadRunner.admit) {
+          await loadRunner.admit(runtime, slotSignal);
           slotSignal.throwIfAborted();
         }
         const runner = await loadRunner();

@@ -7,7 +7,6 @@ import { throwIfAborted } from "./abort";
 const MAX_RECURSION_DEPTH = 8;
 const ETHERSCAN_MAX_RESULTS = 1000;
 
-// --- Budget tracking ---
 
 export interface SubrequestBudget {
   count: number;
@@ -22,7 +21,6 @@ export function budgetExhausted(budget: SubrequestBudget): boolean {
   return budget.count >= budget.limit;
 }
 
-// --- Rate limiting ---
 
 // The configured throughput travels with the limiter so callers that report it
 // (cron run metadata) read the rate actually in force rather than restating a
@@ -53,7 +51,6 @@ export function createRateLimiter(requestsPerSecond: number): RateLimitedFetch {
   return Object.assign(limiter, { requestsPerSecond });
 }
 
-// --- Helpers ---
 
 export function decodeAddress(topicOrData: string): string {
   const cleaned = topicOrData.startsWith("0x") ? topicOrData.slice(2) : topicOrData;
@@ -97,7 +94,6 @@ export function readDataWord(hexData: string, slotIndex: number): string | null 
   return "0x" + cleaned.slice(start, start + 64);
 }
 
-// --- Chain head (current block number) ---
 
 export async function getEvmBlockNumber(
   evmChainId: number,
@@ -135,7 +131,6 @@ export async function getEvmBlockNumber(
   }
 }
 
-// --- EVM log fetching ---
 
 export interface EtherscanLogEntry {
   address: string;

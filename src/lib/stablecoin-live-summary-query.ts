@@ -1,4 +1,4 @@
-import type { ApiMeta } from "@/lib/api";
+import type { ApiMetaEnvelope as ApiMeta } from "@pharos/contracts/api-meta";
 
 type SummaryEnvelope<T> = { data: T; meta: ApiMeta | null };
 

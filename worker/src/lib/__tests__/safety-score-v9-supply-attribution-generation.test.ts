@@ -1,3 +1,4 @@
+import { installSupplyObservationClock } from "./safety-score-v9-supply-observation.test-support";
 import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -64,6 +65,7 @@ import { appendSupplyAttributionJournalV1 } from "../safety-score-v9/supply-attr
 import * as attributionJournalStore from "../safety-score-v9/supply-attribution-journal-store";
 
 const SOURCE_CLOCK_SEC = v9TestClockSec();
+installSupplyObservationClock(SOURCE_CLOCK_SEC);
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
 const TARGET_AGGREGATE_USD = 3_000_000_000;
 
@@ -470,7 +472,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       const source = kind === "different-source"
         ? { ...fixture.fixedInput, sourceGeneration: "different-source" } : fixture.fixedInput;
       const capture = await captureSafetyScoreV9SupplyAttribution(source, new Map(), undefined, {
-        clockMode: "wall", db, priorGeneration: fixtures.acceptedGeneration, deferredAssetIds: ["xaut-tether"],
+        db, priorGeneration: fixtures.acceptedGeneration, deferredAssetIds: ["xaut-tether"],
       });
       const generation = createSafetyScoreV9SupplyAttributionGeneration({ fixedInput: source, capture, capturedAtSec: nowSec });
       expect(fetchSpy).not.toHaveBeenCalled();
@@ -503,7 +505,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       vi.setSystemTime((source.clockSec + 37 * 60) * 1_000);
       const capture = await captureSafetyScoreV9SupplyAttribution(source, new Map([["ethereum", {
         chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
-      }]]), undefined, { clockMode: "wall", db, priorGeneration: fixtures.coTenantGeneration, deferredAssetIds: ["xaut-tether"] });
+      }]]), undefined, { db, priorGeneration: fixtures.coTenantGeneration, deferredAssetIds: ["xaut-tether"] });
       expect(load).toHaveBeenCalledOnce();
       expect(wm).toHaveBeenCalledOnce();
       expect(capture.journalRecords.find(row => row.assetId === "xaut-tether")).toMatchObject({
@@ -796,7 +798,6 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       };
       const observer = vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt");
       const capture = await captureSafetyScoreV9SupplyAttribution(input, undefined, undefined, {
-        clockMode: "source",
         executionWindow: {
           slotStartedAtSec: SOURCE_CLOCK_SEC,
           deadlineMs: Date.now() + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs,
@@ -856,7 +857,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         });
       const pending = captureSafetyScoreV9SupplyAttribution(input, new Map([["ethereum", {
         chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
-      }]]), undefined, { clockMode: "source", onBodyRead, dwellirNative });
+      }]]), undefined, { onBodyRead, dwellirNative });
       await vi.runAllTimersAsync();
       const capture = await pending;
       expect(onBodyRead).toHaveBeenCalledExactlyOnceWith({
@@ -932,7 +933,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         const rpcs = new Map([["ethereum", {
           chainId: "ethereum", chainName: "Ethereum", type: "evm" as const, endpoints: [], explorerUrl: "",
         }]]);
-        const capture = await captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, { clockMode: "source" });
+        const capture = await captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, { });
         capture.failureReasonById = { "wm-m0": reason };
         // Journals complete on wall time even when scoring uses the source clock.
         const capturedAtSec = Math.max(
@@ -947,7 +948,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         );
         expect(priorGeneration.outcomesById["wm-m0"]).toMatchObject({ captureFailureReason: reason });
         order.length = 0;
-        await captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, { clockMode: "source", priorGeneration });
+        await captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, { priorGeneration });
         expect(order).toEqual(reason === "capture-window-clipped"
           ? ["wm-m0", "xaut-tether"] : ["xaut-tether", "wm-m0"]);
       } finally { vi.restoreAllMocks(); }
@@ -999,7 +1000,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
           vi.setSystemTime((SOURCE_CLOCK_SEC + run * 900 + retry) * 1_000);
           const start = Date.now();
           const pending = captureSafetyScoreV9SupplyAttribution(input, rpcs, undefined, {
-            clockMode: "wall", priorGeneration,
+            priorGeneration,
             executionWindow: {
               slotStartedAtSec: Math.floor(start / 1_000),
               deadlineMs: start + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + windowMs,

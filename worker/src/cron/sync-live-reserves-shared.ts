@@ -1,7 +1,7 @@
 import { WORKER_ACTIVE_STABLECOINS, WORKER_TRACKED_META_BY_ID, hasWorkerLiveReserves, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapter-descriptors";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
-import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterKey, LiveReserveEvidenceClass } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves/store";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -9,13 +9,20 @@ import { fnv1aHash } from "../lib/hash";
 
 export const CONFIGURED_COINS = WORKER_ACTIVE_STABLECOINS.filter(hasWorkerLiveReserves);
 
-/** Fixed bootstrap bindings retain evidence only; they never enter the active sync/scoring cohort. */
-export const STAGED_BOOTSTRAP_COINS = [WORKER_TRACKED_META_BY_ID.get("jltxx-jpmorgan")].filter(
-  (coin): coin is WorkerLiveReserveStablecoinMeta => coin != null
-    && coin.status === "quarantined"
+/** Evidence retention only; these bindings grant no active sync or scoring admission. */
+const STAGED_CAPTURE_BINDINGS = [
+  { stablecoinId: "jltxx-jpmorgan", status: "quarantined", adapter: "jpmorgan-nav" },
+] as const satisfies readonly { stablecoinId: string; status: string; adapter: LiveReserveAdapterKey }[];
+
+export const STAGED_BOOTSTRAP_COINS = STAGED_CAPTURE_BINDINGS.flatMap((binding) => {
+  const coin = WORKER_TRACKED_META_BY_ID.get(binding.stablecoinId);
+  return coin != null
+    && coin.status === binding.status
     && hasWorkerLiveReserves(coin)
-    && coin.liveReservesConfig.adapter === "jpmorgan-nav",
-);
+    && coin.liveReservesConfig.adapter === binding.adapter
+    ? [coin] : [];
+});
+
 export const LIVE_RESERVE_ARTIFACT_KEEP_COIN_IDS = [
   ...CONFIGURED_COINS,
   ...STAGED_BOOTSTRAP_COINS,

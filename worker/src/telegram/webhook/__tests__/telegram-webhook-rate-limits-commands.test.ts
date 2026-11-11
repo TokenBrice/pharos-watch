@@ -1,3 +1,4 @@
+import { TELEGRAM_COMMAND_POLICIES } from "../../commands/definitions";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
@@ -13,7 +14,7 @@ import {
 } from "./telegram-webhook.test-support.ts";
 import type * as TelegramWebhookReplies from "../telegram-webhook-replies";
 import { COMMAND_HANDLERS } from "../../commands";
-import { callbackMutatesChatState, classifyTelegramCommand, TELEGRAM_COMMAND_POLICIES } from "../telegram-webhook-ingress-policy";
+import { callbackMutatesChatState, classifyTelegramCommand } from "../telegram-webhook-ingress-policy";
 import { parseStartPayload } from "../telegram-webhook-parsing";
 
 // The audited reply helper keeps its production behaviour by default; the flood
@@ -383,7 +384,6 @@ describe("handleTelegramWebhook", () => {
       const res = await handleTelegramWebhook(db, makeWebhookRequest(123, `/start ${payload}`), "test-secret", "bot-token");
 
       expect(res.status).toBe(200);
-      // Status handler did not run.
       const history = db.getHistory();
       expect(history.some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
       expect(history.some((entry) => entry.sql.includes("FROM price_cache"))).toBe(false);

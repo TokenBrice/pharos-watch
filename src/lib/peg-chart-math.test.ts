@@ -24,7 +24,6 @@ describe("computePegYAxis", () => {
     for (let i = 1; i < result.ticks.length; i += 1) {
       expect(result.ticks[i] - result.ticks[i - 1]).toBeCloseTo(result.step, 6);
     }
-    // Ticks span the full domain.
     expect(result.ticks[0]).toBeCloseTo(result.domain[0], 6);
     expect(result.ticks[result.ticks.length - 1]).toBeCloseTo(result.domain[1], 6);
   });

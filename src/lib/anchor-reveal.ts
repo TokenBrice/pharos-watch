@@ -50,7 +50,6 @@ function revealAnchorTarget(target: HTMLElement | null): void {
   // Synchronous attribute flip, so the body is displayed before any scroll.
   expandEvidenceModuleFor(target);
 
-  // The target may itself be a disclosure (e.g. an id on a <details>).
   if (target instanceof HTMLDetailsElement) {
     target.open = true;
   }

@@ -8,9 +8,6 @@ import {
 } from "@/lib/dews-radar-utils";
 import type { ThreatBand } from "@shared/lib/classification";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 export const CX = 280;
 export const CY = 240;
@@ -47,9 +44,6 @@ export const SPOKES = Array.from({ length: 8 }, (_, i) => {
 // Wake arc: 90-degree sector from 12 o'clock to 3 o'clock in the sweep group's local frame.
 export const WAKE_PATH = `M ${CX} ${CY} L ${CX} ${CY - OUTER_R} A ${OUTER_R} ${OUTER_R} 0 0 1 ${CX + OUTER_R} ${CY} Z`;
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface CalmDot {
   x: number;
@@ -86,9 +80,6 @@ export interface DewsSummaryViewModel {
   updatedAtLabel: string;
 }
 
-// ---------------------------------------------------------------------------
-// Pure helpers
-// ---------------------------------------------------------------------------
 
 /** Map a circulating supply (USD) to a dot radius. 4 tiers, fallback = undefined (caller uses band-based default). */
 export function mcapDotRadius(mcap: number | null | undefined): number | undefined {

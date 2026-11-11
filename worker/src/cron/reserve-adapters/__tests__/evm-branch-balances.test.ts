@@ -60,9 +60,6 @@ function callAddressArg(call: AdapterRpcCall): string {
   return `0x${call.data.slice(-40)}`;
 }
 
-// ---------------------------------------------------------------------------
-// Branch configs (unchanged shapes).
-// ---------------------------------------------------------------------------
 
 function wstEthBranch(overrides: Record<string, unknown> = {}) {
   return {
@@ -125,9 +122,6 @@ function makeBranchConfig(
   } as LiveReservesConfig;
 }
 
-// ---------------------------------------------------------------------------
-// Harness network builders.
-// ---------------------------------------------------------------------------
 
 const PRICES_BASE = "https://coins.llama.fi/prices/current";
 
@@ -332,9 +326,6 @@ async function runBranches(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Tests.
-// ---------------------------------------------------------------------------
 
 describe("fetchEvmBranchBalancesReserves", () => {
   it("preserves the legacy reserve result without redemption opt-in", async () => {
@@ -1400,7 +1391,6 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.metadata?.totalDebtUsd).toBeUndefined();
-    // No debt call should have been made.
     expect(network.rpcCalls.filter((call) => call.method === "eth_call").map((call) => call.selector))
       .toEqual([BALANCE_OF_SELECTOR, DECIMALS_SELECTOR]);
   });

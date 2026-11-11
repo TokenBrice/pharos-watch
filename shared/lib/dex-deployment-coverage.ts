@@ -1,3 +1,4 @@
+import { canonicalSorobanTokenId } from "./dex-soroban-identity";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
 import { CHAIN_META } from "../types/chain-identity";
 import { canonicalExitRouteScopedId } from "../types/exit-route-identity";
@@ -86,8 +87,6 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
 /** Native Horizon liquidity-pool discovery is currently scoped to classic Stellar assets. */
 const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
 
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored bounded optional code prefix plus fixed-width base32 contract id; linear, no backtracking ambiguity.
-const AQUARIUS_SOROBAN_IDENTITY_RE = /^(?:[A-Za-z0-9]{1,12}-)?(C[A-Z2-7]{55})$/;
 
 /** The exact nine Spiko Soroban token ids currently covered by Aquarius. */
 export const AQUARIUS_SUPPORTED_TOKEN_IDS: Readonly<Record<string, true>> = {
@@ -204,8 +203,8 @@ export function isHorizonDiscoveryDeployment(chain: string, address?: string): b
 /** Whether a Soroban deployment is inside the bounded Aquarius Spiko census. */
 export function isAquariusSorobanDeployment(chain: string, address?: string): boolean {
   if (chain !== "stellar" || address == null) return false;
-  const match = AQUARIUS_SOROBAN_IDENTITY_RE.exec(address.trim().toUpperCase());
-  return match?.[1] != null && AQUARIUS_SUPPORTED_TOKEN_IDS[match[1]] === true;
+  const tokenId = canonicalSorobanTokenId(address);
+  return tokenId != null && AQUARIUS_SUPPORTED_TOKEN_IDS[tokenId] === true;
 }
 
 /** Whether a deployment is the Tezos uUSD identity covered by the TzKT census. */

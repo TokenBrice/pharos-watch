@@ -3,7 +3,7 @@ import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import { createPricingAssetAttempt, type PricingProviderAttemptDiagnostic, type PricingProviderRejectionReason } from "../pricing-provider-diagnostics";
-import { isReviewedAddressPriceTargetOverride } from "./reviewed-target-overrides";
+import { getReviewedAddressPriceTargetOverride } from "./reviewed-target-overrides";
 import type { AddressPriceQuote, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
@@ -26,11 +26,11 @@ function buildRoundRobinNetworkBatches(
   const reviewedTargets: AddressPriceTarget[] = [];
   const remainingTargets: AddressPriceTarget[] = [];
   for (const target of targets) {
-    (isReviewedAddressPriceTargetOverride({
+    (getReviewedAddressPriceTargetOverride({
       stablecoinId: target.stablecoinId,
       chain: target.chain,
       address: target.address,
-    }) ? reviewedTargets : remainingTargets).push(target);
+    })?.prioritizeRequests === true ? reviewedTargets : remainingTargets).push(target);
   }
   const networks = [...groupTargetsByProviderChain([...reviewedTargets, ...remainingTargets])].map(
     ([providerChainId, networkTargets]) => ({
@@ -107,12 +107,12 @@ export async function runCoingeckoOnchainAddressProvider(
           continue;
         }
         const liquidityUsd = parseNonNegativeNumber(attrs.total_reserve_in_usd);
-        const reviewedOverride = isReviewedAddressPriceTargetOverride({
+        const reviewedOverride = getReviewedAddressPriceTargetOverride({
           stablecoinId: target.stablecoinId,
           chain: target.chain,
           address: target.address,
         });
-        if (liquidityUsd == null && !reviewedOverride) {
+        if (liquidityUsd == null && reviewedOverride?.allowMissingLiquidity !== true) {
           incrementReason(rejectedTargets, "missing-liquidity");
           continue;
         }

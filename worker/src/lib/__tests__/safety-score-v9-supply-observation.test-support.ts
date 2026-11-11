@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, vi } from "vitest";
 import type { ChainRpcConfig } from "../chain-registry";
 import { makeChainRpcs } from "../../test-helpers/chain-rpc-fixtures.test-support";
 
@@ -11,4 +12,12 @@ export function addressWord(address: string): `0x${string}` {
 
 export function chainRpcs(chainIds: readonly string[] = ["ethereum"]): Map<string, ChainRpcConfig> {
   return makeChainRpcs(chainIds);
+}
+
+export function installSupplyObservationClock(clockSec: number): void {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(clockSec * 1_000);
+  });
+  afterEach(() => vi.useRealTimers());
 }

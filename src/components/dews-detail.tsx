@@ -44,14 +44,12 @@ const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel
   yield: { name: getDewsSignalLabel("yield"), metricKey: "warnings", metricLabel: "warnings" },
 };
 
-/** Snap a max value up to the next chart Y-axis ceiling (50 / 75 / 100) */
 function snapDewsYMax(max: number): number {
   if (max <= 25) return 50;
   if (max <= 50) return 75;
   return 100;
 }
 
-/** Map a signal score to its severity color using the canonical DEWS ladder. */
 function signalBarHex(value: number): string {
   const band = DEWS_THREAT_BANDS.find(({ upper }) => value <= upper)?.band ?? "DANGER";
   return THREAT_BAND_HEX[band];
@@ -118,14 +116,12 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     });
   }, [history]);
 
-  // Dynamic Y-axis for composite view
   const chartYMax = useMemo(() => {
     if (!chartData.length) return 100;
     const max = Math.max(...chartData.map((d) => d.score as number));
     return snapDewsYMax(max);
   }, [chartData]);
 
-  // Dynamic Y-axis for breakdown view (max of any individual signal)
   const signalYMax = useMemo(() => {
     if (!history?.length) return 100;
     let max = 0;
@@ -323,7 +319,6 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           <p className="text-2xs text-muted-foreground">{unavailableSignals.join("; ")}</p>
         )}
 
-        {/* History chart */}
         {chartData.length > 1 && (
           <>
             <div ref={chartContainerRef} className="h-[240px]" role="figure" aria-label="DEWS score history">
@@ -383,7 +378,6 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
               )}
             </div>
 
-            {/* Breakdown legend */}
             {showBreakdown && (
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground">
                 {Object.entries(SIGNAL_META).map(([key, meta]) => (

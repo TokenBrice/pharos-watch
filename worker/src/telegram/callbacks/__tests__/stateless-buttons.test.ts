@@ -48,8 +48,6 @@ function callbackContext(db: D1Database, data: string, chatType = "private"): Ca
     cb: { id: "cb-1", data, from: { id: 99, username: "alice" }, message: { chat: { id: 42, type: chatType } } },
     parsed: { ...parsed, action: parsed.action as CallbackAction },
     answerCallback: vi.fn().mockResolvedValue(undefined),
-    beforeIrreversibleEffect: async () => undefined,
-    markMutationApplied: async () => undefined,
   };
 }
 

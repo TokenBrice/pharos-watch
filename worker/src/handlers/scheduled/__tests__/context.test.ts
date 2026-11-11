@@ -6,7 +6,7 @@ import { createSlotDeadline } from "../../../lib/cron-timeouts";
 import { makeCaptureDb, type DbCall } from "../../../lib/__tests__/cron-progress.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
-import type { ScheduledExecutionFence } from "../../../lib/scheduled-slot-fence";
+import type { ScheduledExecutionFence } from "../../../lib/scheduled-execution-contract";
 import type { Env, HeavyEnv } from "../../../lib/env";
 import { loadProducerHeads } from "../../../lib/producer-history";
 

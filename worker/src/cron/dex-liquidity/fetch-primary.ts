@@ -47,8 +47,8 @@ import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessi
 import { attachReviewedQuoterV2SourcePoolIdentities } from "./pool-identity";
 
 import { parseStrictFiniteDecimal } from "./direct-api-json";
+import { DEX_CURVE_FETCH_CONCURRENCY } from "@shared/lib/cron-jobs";
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
-const CURVE_API_FETCH_CONCURRENCY = 4;
 
 /**
  * Per-source body caps for the primary DEX sources. Measured 2026-09-23 against
@@ -437,7 +437,7 @@ export async function fetchDataSources(
   const curveCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API);
 
   if (curveCircuitAllowed) {
-    const curveResults = await mapWithConcurrency(CURVE_CHAINS, CURVE_API_FETCH_CONCURRENCY, async (chain) => {
+    const curveResults = await mapWithConcurrency(CURVE_CHAINS, DEX_CURVE_FETCH_CONCURRENCY, async (chain) => {
       const observedAt = Math.floor(Date.now() / 1000);
       const result = await fetchJsonWithRetry<CurveApiPayload>(
         `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
@@ -553,7 +553,6 @@ export async function buildCurveLookups(
         const metapoolAdjustedTvl =
           pool.basePoolAddress && pool.usdTotalExcludingBasePool > 0 ? pool.usdTotalExcludingBasePool : pool.usdTotal;
 
-        // Build a key from pool coins for matching
         const coinSymbols = pool.coins
           .map((c) => normalizeDexSymbol(c.symbol))
           .sort()
@@ -713,7 +712,6 @@ export async function buildCurveLookups(
           else candidates.push(entry);
           curvePoolCandidatesByFingerprint.set(fingerprintKey, candidates);
         }
-        // Also store by symbol combo for fallback matching
         curvePoolMap.set(`${chain}:${coinSymbols}`, entry);
 
         // Extract per-token price observations for DEX cross-validation

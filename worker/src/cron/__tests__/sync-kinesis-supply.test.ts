@@ -277,7 +277,6 @@ describe("syncKinesisSupply", () => {
     expect(recordOutcomeSafe).toHaveBeenCalledTimes(2);
     expect(vi.mocked(recordOutcomeSafe).mock.calls.every((c) => c[2] === true)).toBe(true);
 
-    // Verify DB upserts
     expect(bindFn).toHaveBeenCalledWith("kau-kinesis", "kinesis-kau", 2_586_388, 1_700_000_000);
     expect(bindFn).toHaveBeenCalledWith("kag-kinesis", "kinesis-kag", 3_742_495, 1_700_000_000);
   });
@@ -317,7 +316,7 @@ describe("syncKinesisSupply", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.mocked(fetchTextWithRetry).mockImplementation(async (url: string) => {
-      if (url.includes("kau-mainnet")) return null; // fetch failure
+      if (url.includes("kau-mainnet")) return null;
       if (url.includes("kag-mainnet")) return await textResult(kagResponse());
       return null;
     });

@@ -115,7 +115,6 @@ describe("HomepageTape", () => {
     // Items are duplicated for the scrolling loop; expect 2 occurrences per event.
     expect(screen.getAllByText("USDC depeg opened (-1200 bps)")).toHaveLength(2);
     expect(screen.getAllByText(/USDT \$150\.0M destroyed/)).toHaveLength(2);
-    // Score grade changes are intentionally hidden from the homepage strip.
     expect(screen.queryByText("USDT grade A -> B+")).toBeNull();
     expect(screen.getAllByLabelText("usdc-circle logo")).toHaveLength(2);
     expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(2);

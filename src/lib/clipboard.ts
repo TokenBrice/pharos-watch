@@ -13,7 +13,6 @@ export async function copyText(text: string): Promise<CopyTextResult> {
       return { ok: true };
     }
   } catch {
-    // Fall through to the legacy copy path.
   }
 
   if (

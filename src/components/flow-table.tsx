@@ -20,7 +20,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { logosById } from "@/lib/logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
-import { formatCurrency, formatSignedCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
+import { formatCurrency, formatSignedCurrency, getNetPrefix } from "@shared/lib/format";
+import { getNetColor } from "@shared/lib/classification/flows";
 import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildStablecoinUrl } from "@shared/lib/urls";

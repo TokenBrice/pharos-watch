@@ -16,10 +16,6 @@ import { deterministicHash } from "@/lib/layout-utils";
 import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
 import type { PartialEvidenceCard } from "@/lib/safety-score-reason-labels";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 /**
  * The relationship an edge draws. V9 carries a four-value `materiality` that
  * also encodes whether the upstream score resolved; the drawn relationship
@@ -84,10 +80,6 @@ export interface SupernodeState {
   anchorStrengthById: Map<string, number>;
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 export const WIDTH = 800;
 export const HEIGHT = 600;
 export const PAD = 44;
@@ -135,10 +127,6 @@ export const SUPERNODE_CONFIG = {
   sparseEdgeCutoff: 12,
   sparseTier1Count: 2,
 } as const;
-
-// ---------------------------------------------------------------------------
-// Pure helper functions
-// ---------------------------------------------------------------------------
 
 export function minMaxNormalize(ids: string[], valueById: Map<string, number>): Map<string, number> {
   if (!ids.length) return new Map<string, number>();
@@ -219,10 +207,6 @@ function pushTargetsOutOfLane(
     p.y += ny * push * sideSign;
   }
 }
-
-// ---------------------------------------------------------------------------
-// buildGraphData
-// ---------------------------------------------------------------------------
 
 /**
  * Dimensionless exposure magnitude for one V9 edge, matching
@@ -318,10 +302,6 @@ export function buildGraphData(
 
   return { nodes: graphNodes, links: graphLinks };
 }
-
-// ---------------------------------------------------------------------------
-// buildSupernodeState
-// ---------------------------------------------------------------------------
 
 export function buildSupernodeState(
   nodes: GraphNode[],
@@ -494,10 +474,6 @@ export function buildSupernodeState(
 
   return { tierById, scoreById, layoutTargetById, anchorStrengthById };
 }
-
-// ---------------------------------------------------------------------------
-// runSimulation
-// ---------------------------------------------------------------------------
 
 function* simulationSteps(
   nodes: GraphNode[],

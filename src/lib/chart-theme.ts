@@ -35,9 +35,7 @@ export const CHART_AXIS_LINE = { stroke: "var(--color-border)" } as const;
 export const CHART_REFERENCE_DASH = "4 4";
 
 export const CHART_STROKE_WIDTH = {
-  /** The chart's primary series. */
   series: 2,
-  /** Supporting or comparison series. */
   secondary: 1.5,
   /** Gridlines, reference lines, crosshairs. */
   guide: 1,

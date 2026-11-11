@@ -849,7 +849,6 @@ describe("syncYieldData", () => {
   it("handles DL yields API failure gracefully — no cached pools, API down", async () => {
     const db = makeDb();
 
-    // No cached pools
     installYieldCacheReader(vi.mocked(getCache), {});
 
     // DL yields API returns 500
@@ -860,7 +859,6 @@ describe("syncYieldData", () => {
     // Should still return a result — just with no yield data resolved for DL-sourced coins
     // The function might resolve 0 if sDAI couldn't be matched (no DL pools available)
     expect(result.itemCount).toBeDefined();
-    // recordOutcome should have been called with failure
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 

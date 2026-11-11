@@ -97,7 +97,6 @@ function resolveTierFillClass(cell: DeploymentStripCell): string {
   return tier === null ? BRIDGE_TIER_UNKNOWN_CELL_CLASS : BRIDGE_TIER_CELL_CLASSES[tier];
 }
 
-/** What the cell draws: a diagnostic takes the dashed treatment of its tier's hue. */
 function resolveCellClass(cell: DeploymentStripCell): string {
   if (cell.role !== "diagnostic") return resolveTierFillClass(cell);
   return BRIDGE_TIER_DIAGNOSTIC_CELL_CLASSES[resolveTier(cell) ?? "opaque-or-unknown"];

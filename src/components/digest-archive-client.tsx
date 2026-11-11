@@ -101,7 +101,6 @@ function WeeklyTeaser({
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
   if (paragraphs.length === 0) return null;
 
-  // First sentence as teaser, stripping any bold markdown headers
   const raw = parseDigestParagraph(paragraphs[0]).bodyText;
   const teaser = raw.split(/(?<=\.)\s/)[0] || raw;
 
@@ -332,7 +331,6 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
     ? requestedMonth
     : defaultMonth;
 
-  // Latest weekly recap (if any)
   const latestWeekly = useMemo(() => {
     return data?.digests.find((d) => d.digestType === "weekly") ?? null;
   }, [data]);
@@ -400,7 +398,6 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
     <div className="space-y-8">
       {healthBanner}
 
-      {/* Weekly column: compact teaser */}
       {latestWeekly && latestWeekly.digestExtended && (
         <section aria-label="Weekly recap" className="space-y-4">
           <WireSectionRule label="The Week in Review" />
@@ -410,7 +407,6 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
 
       <TriggerRecordSection record={triggerRecord} />
 
-      {/* Archive */}
       <section aria-label="Digest archive" className="space-y-4">
         <WireSectionRule label="Archive" />
 
@@ -492,7 +488,6 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
           </p>
         </div>
 
-        {/* Wire table */}
         <div role="region" aria-live="polite" aria-label="Digest archive list">
           {wireDigests.length === 0 && (
             <p className="text-sm text-muted-foreground py-4">No digests match these filters.</p>

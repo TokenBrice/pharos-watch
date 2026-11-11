@@ -12,13 +12,15 @@ import {
   authenticateApiKeyFromFreshCache,
   authenticateApiKey,
 } from "../../lib/api-key-auth";
-import type { AuthenticatedApiKey } from "../../lib/api-key-core";
 import {
-  checkApiKeyRateLimit,
-  checkIsolateLocalApiKeyRateLimit,
   isApiKeyRateLimitDependencyCircuitOpen,
   recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess,
+  type AuthenticatedApiKey,
+} from "../../lib/api-key-core";
+import {
+  checkApiKeyRateLimit,
+  checkIsolateLocalApiKeyRateLimit,
   recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit,
 } from "../../lib/api-key-rate-limit";

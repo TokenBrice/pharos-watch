@@ -325,7 +325,6 @@ async function readApiJson(
   }, init, options);
 }
 
-// --- Standard fetch (no meta) ---
 
 export interface ApiFetchOptions extends ApiRequestOptions {
   nullOn404?: boolean;
@@ -373,7 +372,6 @@ export async function apiFetch<T>(
   return validateApiPayload(path, payload.json, resolvedSchema, contractMode);
 }
 
-// --- Meta-aware fetch ---
 
 /** Fetch JSON + extract freshness metadata from _meta field or X-Data-Age header. */
 export async function apiFetchWithMeta<T>(

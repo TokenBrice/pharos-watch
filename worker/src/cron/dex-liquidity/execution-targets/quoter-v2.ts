@@ -1,5 +1,5 @@
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
-import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "../execution-target-registry";
+import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./contract";
 import {
   buildUniV3ExecutionCandidateKey,
   buildUniV3MeasuredExecutionTarget,

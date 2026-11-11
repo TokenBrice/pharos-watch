@@ -1,11 +1,13 @@
+import {
+  STABLECOIN_PUBLICATION_WAIVERS as PUBLICATION_WAIVERS,
+  STABLECOIN_PRICE_GAP_REVIEWS as GAP_REVIEWS,
+  STABLECOIN_MARKET_HOURS_CALENDARS as MARKET_CALENDARS,
+} from "../stablecoin-publication-reviews";
 import { protocolParProvider } from "../authoritative-price-sources/protocol-par";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS as COINS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
-  STABLECOIN_PUBLICATION_WAIVERS as PUBLICATION_WAIVERS,
-  STABLECOIN_PRICE_GAP_REVIEWS as GAP_REVIEWS,
-  STABLECOIN_MARKET_HOURS_CALENDARS as MARKET_CALENDARS,
   resolveStablecoinScheduledPriceClosures as resolveClosures,
   resolveStablecoinMarketHours as resolveMarketHours,
   resolveMentoFxMarketReopen,

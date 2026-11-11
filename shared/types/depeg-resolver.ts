@@ -19,8 +19,6 @@ import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication
 
 // Public Zod schemas keep exported companion aliases as the contract type surface.
 
-// --- Stage 1: resolution tiers ---------------------------------------------
-
 export const DDR_RESOLUTION_TIER_VALUES = [
   "recovery_likely",
   "at_risk",
@@ -73,8 +71,6 @@ export const DdrResolutionSchema = z.object({
 });
 export type DdrResolution = z.infer<typeof DdrResolutionSchema>;
 
-// --- Stage 2: duration -----------------------------------------------------
-
 export const DDR_HORIZON_VALUES = ["6h", "24h", "7d", "30d"] as const;
 export type DdrHorizon = (typeof DDR_HORIZON_VALUES)[number];
 
@@ -98,7 +94,6 @@ export const DdrHorizonCellSchema = z.object({
   /** Public interval text derived from the Wilson bounds, e.g. "35-55%". */
   probabilityDisplay: z.string().nullable(),
   probabilityInterval: z.object({ lower: z.number(), upper: z.number() }).nullable(),
-  // transparency counts
   rawAtRisk: z.number().int().nonnegative(),
   uniqueCoins: z.number().int().nonnegative(),
   intervalClosures: z.number().int().nonnegative(),
@@ -146,8 +141,6 @@ export const DdrDurationSchema = z.object({
   unresolvedShare30d: z.number().min(0).max(1).nullable().optional(),
 });
 export type DdrDuration = z.infer<typeof DdrDurationSchema>;
-
-// --- Row + related context -------------------------------------------------
 
 export const DdrRelatedContextSchema = z.object({
   dewsBand: z.string().nullable().optional().default(null),
@@ -246,8 +239,6 @@ export const DdrRowSchema = z.object({
   inputs: DdrInputsSnapshotSchema.optional(),
 });
 export type DdrRow = z.infer<typeof DdrRowSchema>;
-
-// --- Response envelope -----------------------------------------------------
 
 export const DDR_PUBLIC_WARNING =
   "Forecast from Pharos historical data. Not investment advice or a credit rating.";

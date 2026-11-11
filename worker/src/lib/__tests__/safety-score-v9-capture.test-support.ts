@@ -37,3 +37,16 @@ export function createV9CaptureDexSnapshot(
     }])),
   };
 }
+
+export async function buildNativeSafetyScoreV9Capture(
+  db: D1Database,
+  options: import("../safety-score-v9/capture").BuildNativeSafetyScoreV9CaptureOptions = {},
+) {
+  const captureModule = await import("../safety-score-v9/capture");
+  const { publishPegAnalyticsCache } = await import("../peg-analytics-cache");
+  const sources = await captureModule.loadNativeSafetyScoreV9CaptureSources(db, options);
+  const pegAnalyticsPublished = await publishPegAnalyticsCache(db, sources.pegAnalytics);
+  const capture = await captureModule.buildNativeSafetyScoreV9Capture(db, sources, options);
+  return { input: capture.input, v9PegProvenanceSource: capture.v9PegProvenanceSource,
+    pegAnalyticsPublished, completeness: capture.completeness };
+}

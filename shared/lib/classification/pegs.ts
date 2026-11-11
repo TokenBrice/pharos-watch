@@ -1,9 +1,6 @@
 import type { PegCurrency } from "../../types";
 import type { PegMetadata } from "./common";
 
-// Peg currency labels
-// ---------------------------------------------------------------------------
-
 export const PEG_METADATA = {
   USD: {
     label: "the US Dollar",
@@ -504,5 +501,3 @@ export const PEG_FILTER_OPTIONS: { value: PegCurrency | "all"; label: string }[]
   { value: "EUR", label: PEG_METADATA.EUR.filterLabel },
   { value: "GOLD", label: PEG_METADATA.GOLD.filterLabel },
 ];
-
-// ---------------------------------------------------------------------------

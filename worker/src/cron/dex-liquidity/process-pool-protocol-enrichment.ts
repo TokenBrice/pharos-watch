@@ -2,6 +2,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import {
+  classifyCurveStableSwapQuality,
   getQualityMultiplier,
   isCryptoSwap,
 } from "./pool-helpers";
@@ -69,9 +70,7 @@ export function enrichPoolProtocol(
       resolvedPoolType = "curve-cryptoswap";
       qualityMultiplier = QUALITY_MULTIPLIERS["curve-cryptoswap"]!;
     } else {
-      resolvedPoolType =
-        curveData.A >= 500 ? "curve-stableswap-high-a" : "curve-stableswap";
-      qualityMultiplier = getQualityMultiplier(resolvedPoolType, curveData.A);
+      ({ resolvedPoolType, qualityMultiplier } = classifyCurveStableSwapQuality(curveData.A));
     }
     effectivePoolTvl = curveAddressMatch
       ? curveData.metapoolAdjustedTvl
