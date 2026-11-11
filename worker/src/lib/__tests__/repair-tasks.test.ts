@@ -216,31 +216,16 @@ describe("repair tasks", () => {
     }
   });
 
-  it.each([
-    {
-      name: "returns an empty DDR detail projection when no active task rows exist",
-      payload: [],
-      expectedDetails: {
-        checkedAt: null,
-        count: 0,
-        events: [],
-        eventsTruncated: false,
-      },
-    },
-  ])("$name", async ({ payload, expectedDetails }) => {
-    const db = mockRepairD1([
-      {
-        match: "COUNT(*) OVER ()",
-        rows: payload,
-      },
-    ]);
-
-    await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual(
-      expectedDetails,
-    );
-    expect(db.getHistory()[0]?.binds).toEqual([
-      "ddr-repair-required-event",
-    ]);
+  it("returns an empty DDR detail projection when no active task rows exist", async () => {
+    const db = makeSqliteD1();
+    const empty = { checkedAt: null, count: 0, events: [], eventsTruncated: false };
+    try {
+      await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual(empty);
+      await syncDdrRepairDebtTasks(db, [1, 2].map(eventId => ({ eventId, reason: "ignored" })), 1);
+      db.sqlite.exec(`UPDATE worker_repair_tasks SET state = 'closed' WHERE subject_id = '1';
+        UPDATE worker_repair_tasks SET kind = 'other' WHERE subject_id = '2'`);
+      await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual(empty);
+    } finally { db.close(); }
   });
 
   it("bounds the detail page while aggregating every active task", async () => {
@@ -316,31 +301,20 @@ describe("repair tasks", () => {
   });
 
   it("gates claims behind the kill switch while keeping backlog counts observable", async () => {
-    const db = mockRepairD1([
-      {
-        match: "COUNT(*) AS due_count",
-        rows: [],
-        first: { due_count: 2 },
-      },
-      {
-        match: "COUNT(*) AS stale_claim_count",
-        rows: [],
-        first: { stale_claim_count: 1 },
-      },
-    ]);
-
-    const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW, enabled: false });
-
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      mode: "disabled",
-      enabled: false,
-      skipped: "kill-switch",
-      dueCount: 2,
-      staleClaimCount: 1,
-      claimed: 0,
-      autoRepairCount: 0,
-    });
-    expect(db.getHistory().some((entry) => entry.sql.includes("SET state = 'claimed'"))).toBe(false);
+    const db = makeSqliteD1();
+    try {
+      await syncDdrRepairDebtTasks(db, [1, 2, 3].map(eventId => ({ eventId, reason: "repair" })), 1);
+      db.sqlite.exec(`UPDATE worker_repair_tasks SET state = 'claimed', locked_by = 'old', locked_until = 1
+        WHERE subject_id = '3'`);
+      const rows = () => db.sqlite.prepare("SELECT * FROM worker_repair_tasks ORDER BY task_id").all();
+      const before = rows();
+      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW, enabled: false });
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        mode: "disabled", enabled: false, skipped: "kill-switch",
+        dueCount: 2, staleClaimCount: 1, claimed: 0, autoRepairCount: 0,
+      });
+      expect(rows()).toEqual(before);
+    } finally { db.close(); }
   });
 
   it("claims due deferred, failed, and stale rows through SQLite lease transitions", async () => {

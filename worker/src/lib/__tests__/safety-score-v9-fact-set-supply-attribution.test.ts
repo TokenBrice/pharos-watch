@@ -2,7 +2,7 @@ import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deploym
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { evaluateV9ExitAssetFacts, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9ExitAssetFacts } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -716,14 +716,15 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       expect.objectContaining({ reasonCode: "runtime-bridge-materiality-unavailable" }),
     );
     const evaluated = evaluateV9FactSet(unpartitioned, V9_CANDIDATE_POLICY_V1).assets[0]!;
-    const expectedRequest = selectV9ExitStressRequest(35_596_469.1, V9_CANDIDATE_POLICY_V1);
-    expect(evaluated.exit.stressRequest).toMatchObject(expectedRequest);
-    const measuredRoute = unpartitionedAlpha.exitRoutes.find((route) => route.lane === "dex")!;
-    const measuredCapacityUsd = Math.max(...measuredRoute.capacityCurve.map((point) => point.executableUsd));
+    expect(evaluated.exit.stressRequest).toMatchObject({
+      requestedNotionalUsd: expect.closeTo(1_779_823.455, 6),
+      rawSupplyRequestUsd: expect.closeTo(1_779_823.455, 6),
+      maxCostBps: 200, comparisonWindowSec: 300,
+    });
     expect(evaluated.exit.routes).toContainEqual(expect.objectContaining({
       included: true, exclusionReason: null,
       capacityPoint: expect.objectContaining({
-        requestedNotionalUsd: expectedRequest.requestedNotionalUsd, executableUsd: measuredCapacityUsd,
+        requestedNotionalUsd: expect.closeTo(1_779_823.455, 6), executableUsd: 400_000,
       }),
     }));
 

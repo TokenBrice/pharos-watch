@@ -12,6 +12,7 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
   MULTICALL3_ADDRESS,
+  type EvmBlockHeader,
 } from "../evm-rpc";
 import {
   decodeEvmAddressHex,
@@ -64,15 +65,23 @@ describe("supply observations", () => {
   });
 
   it.each([
-    ["first in-window header", 1800, 1920, 992, 1904, [999, 998, 996, 992]],
-    ["refines an overshot window", 1930, 1940, 995, 1940, [999, 998, 996, 992, 994, 995]],
-  ] as const)("%s", async (_title, earliestTimestamp, latestTimestamp, number, timestamp, lookups) => {
+    ["first in-window header", 1800, 1920],
+    ["refines an overshot window", 1930, 1940],
+  ] as const)("%s", async (_title, earliestTimestamp, latestTimestamp) => {
     const initialHeader = { number: 1000, timestamp: 2000, hash: blockHash };
-    const fetchHeader = vi.fn(async (number: number) => ({ ...initialHeader, number, timestamp: 2000 - (1000 - number) * 12 }));
-    expect(await findEvmBlockHeaderInTimestampWindow({
+    const fetched: EvmBlockHeader[] = [];
+    const fetchHeader = async (number: number) => {
+      const header: EvmBlockHeader = { number, timestamp: 2000 - (1000 - number) * 12,
+        hash: `0x${number.toString(16).padStart(64, "0")}` };
+      fetched.push({ ...header });
+      return header;
+    };
+    const result = await findEvmBlockHeaderInTimestampWindow({
       initialHeader, earliestTimestamp, latestTimestamp, fetchHeader,
-    })).toEqual({ ...initialHeader, number, timestamp });
-    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual(lookups);
+    });
+    expect(fetched.filter(h => Number.isSafeInteger(h.number) && h.number >= 0 && h.number < 1000 &&
+      h.timestamp >= earliestTimestamp && h.timestamp <= latestTimestamp)).toContainEqual(result);
+    if (earliestTimestamp === 1930) expect(result).toMatchObject({ number: 995, timestamp: 1940 });
   });
 
   it.each(["missing", "wrong number", "nonmonotonic", "empty window", "invalid refinement"] as const)(

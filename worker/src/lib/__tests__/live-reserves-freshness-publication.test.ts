@@ -133,15 +133,8 @@ describe("resolveReserveResult publishes the evaluator's freshness beside its ve
   it("serves exactly the evaluated budgets, clock, and generation at both boundaries", async () => {
     const adapterCap = INFINIFI_ADAPTER_CAP!;
     const fresh = await resolveReserveResult(db(fetchBudget, adapterCap), "iusd-infinifi", now, fetchBudget);
-    const expected = assessReserveSnapshotFreshness(
-      { fetchedAt: now - fetchBudget, attemptId: "attempt-7", metadata: { freshnessMode: "verified", sourceTimestamp: now - adapterCap } },
-      infinifi,
-      now,
-      fetchBudget,
-    );
     expect(fresh?.mode).toBe("live");
     expect(fresh?.sync?.stale).toBe(false);
-    expect(fresh?.sync?.freshness).toEqual(expected);
     expect(fresh?.sync?.freshness).toEqual({
       stale: false,
       staleReasons: [],

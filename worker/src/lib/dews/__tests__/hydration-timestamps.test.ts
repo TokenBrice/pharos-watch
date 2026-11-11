@@ -242,15 +242,17 @@ describe("DEWS hydration timestamp admission", () => {
   });
 
   it("fetches the older daily bucket at the inclusive live 8.5-day bound", async () => {
-    const now = 20000 * 86400 + 12 * 3600;
-    const date = (20000 - 8) * 86400;
-    const db = mockD1([{ match: "FROM dex_liquidity_history", rows: [
-      { stablecoin_id: "daily", snapshot_date: date, liquidity_score: 80, total_tvl_usd: 100, coverage_confidence: 0.5, methodology_version: null },
-    ] }]);
-    const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: now, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() },
-      new Map([["daily", makeDexLiquidityRow({ stablecoin_id: "daily" })]]));
-    expect(db.getHistory()[0].binds).toEqual([date]);
-    expect(hydrated.liqHist7dMap.get("daily")).toEqual({ score: 80, tvl: 100, date });
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      sqlite.exec(`INSERT INTO dex_liquidity_history
+        (stablecoin_id,snapshot_date,liquidity_score,total_tvl_usd,coverage_confidence)
+        VALUES ('daily',1727308800,80,100,0.5),('old',1727308799,80,100,0.5)`);
+      const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: 1728043200, registerSourceFailure: vi.fn(),
+        registerMalformedPersistedInput: vi.fn() }, new Map(["daily", "old"].map(id =>
+        [id, makeDexLiquidityRow({ stablecoin_id: id })])));
+      expect(hydrated.liqHistRowsRead).toBe(1);
+      expect([...hydrated.liqHist7dMap]).toEqual([["daily", { score: 80, tvl: 100, date: 1727308800 }]]);
+    } finally { sqlite.close(); }
   });
 
   it.each([

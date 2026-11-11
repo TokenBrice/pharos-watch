@@ -271,25 +271,18 @@ describe("telegram usage analytics", () => {
   });
 
   it("bounds lifecycle history to complete days in the explicit window", async () => {
-    const db = mockD1([{
-      match: "FROM telegram_watcher_lifecycle_daily",
-      rows: [{
-        day: "2026-02-22",
-        snapshot_at: 1_771_747_200,
-        active_watchers: 10,
-        new_watchers: 5,
-        churned_watchers: 2,
-        reactivated_watchers: 1,
-      }],
-    }]);
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO telegram_watcher_lifecycle_daily
+      (day, snapshot_at, active_watchers, new_watchers, churned_watchers, reactivated_watchers)
+      VALUES (?, 1771747200, 10, 5, 2, 1)`);
+    for (const day of ["2025-11-24", "2025-11-25", "2026-02-22", "2026-02-23", "2026-02-24"]) insert.run(day);
 
     const history = await loadTelegramLifecycleHistory(db, 1_771_833_600);
 
-    expect(history.points.map((point) => point.date)).toEqual(["2026-02-22"]);
-    const query = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_watcher_lifecycle_daily"));
-    expect(query?.sql).toContain("WHERE day >= ? AND day < ?");
-    expect(query?.sql).toContain("LIMIT ?");
-    expect(query?.binds[1]).toBe("2026-02-23");
+    expect(history.points.map(({ date, activeWatchers, newWatchers, churnedWatchers, reactivatedWatchers }) =>
+      [date, activeWatchers, newWatchers, churnedWatchers, reactivatedWatchers])).toEqual([
+      ["2025-11-25", 10, 5, 2, 1], ["2026-02-22", 10, 5, 2, 1],
+    ]);
   });
   it("publishes preset-implied adoption as unavailable when preset resolution fails", async () => {
     const { sqlite, db } = fixtures.open();
@@ -340,7 +333,7 @@ describe("telegram usage analytics", () => {
   });
 
   it("normalizes unknown command action details to a fixed bucket", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_usage_daily", rows: [] }]);
+    const { sqlite, db } = fixtures.open();
 
     await recordTelegramUsageEvent(db, {
       nowSec: 1_771_833_600,
@@ -349,8 +342,8 @@ describe("telegram usage analytics", () => {
       outcome: "unknown",
     });
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
-    expect(insert?.binds[3]).toBe("unknown");
+    expect(sqlite.prepare("SELECT event_type, action_detail FROM telegram_usage_daily").all())
+      .toEqual([{ event_type: "unknown_command", action_detail: "unknown" }]);
   });
 
   it("merges explicit top-coin follows with the preset-aware shape", async () => {

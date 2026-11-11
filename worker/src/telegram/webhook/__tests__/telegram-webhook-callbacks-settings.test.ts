@@ -125,21 +125,14 @@ describe("handleCallbackQuery", () => {
     });
 
     it("settings:c:<id>:db:A writes the alert_dews flag", async () => {
-      const db = mockTelegramD1([
-        { match: "FROM telegram_subscriptions", rows: [] },
-        { match: "INSERT INTO telegram_subscribers", rows: [] },
-        { match: "INSERT INTO telegram_subscriptions", rows: [] },
-      ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:c:usdc-circle:db:A", { id: "cb-coin" }));
-
-      const history = db.getHistory();
-      const insert = history.find(
-        (h) =>
-          /INSERT INTO telegram_subscriptions/.test(h.sql) && /dews_min_band = excluded\.dews_min_band/.test(h.sql),
-      );
-      expect(insert).toBeDefined();
-      expect(insert!.binds[2]).toBe(1); // alert_dews
-      expect(insert!.binds[3]).toBe("ALERT");
+      const { db, sqlite } = fixtures.open();
+      const row = sqlite.prepare(`SELECT alert_dews, dews_min_band, alert_safety
+        FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'`);
+      for (const existing of [false, true]) {
+        if (existing) sqlite.exec("UPDATE telegram_subscriptions SET alert_dews = 0, dews_min_band = 'DANGER', alert_safety = 1");
+        await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:c:usdc-circle:db:A", { id: "cb-coin" }));
+        expect(row.get()).toEqual({ alert_dews: 1, dews_min_band: "ALERT", alert_safety: existing ? 1 : 0 });
+      }
     });
 
     it("settings mutating callbacks in groups refuse non-admins before D1 writes", async () => {
@@ -168,29 +161,23 @@ describe("handleCallbackQuery", () => {
 
   describe("coinsnooze (P1-U10)", () => {
     it("coinsnooze:<id>:4h upserts alert_snooze_until_ts on the matching subscription row", async () => {
-      const before = Math.floor(Date.now() / 1000);
-      const db = mockTelegramD1([
-        { match: "INSERT INTO telegram_subscribers", rows: [] },
-        { match: "INSERT INTO telegram_subscriptions", rows: [] },
-      ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze", message: { chat: { id: 42 }, message_id: 999 } }));
-
-      const upsert = db
-        .getHistory()
-        .find(
-          (h) =>
-            /INSERT INTO telegram_subscriptions/.test(h.sql) &&
-            /alert_snooze_until_ts = excluded\.alert_snooze_until_ts/.test(h.sql),
-        );
-      expect(upsert).toBeDefined();
-      expect(upsert!.binds[0]).toBe("42");
-      expect(upsert!.binds[1]).toBe("usdc-circle");
-      const until = Number(upsert!.binds[2]);
-      expect(until).toBeGreaterThanOrEqual(before + 4 * 3600 - 2);
-      expect(until).toBeLessThanOrEqual(before + 4 * 3600 + 60);
-
-      const body = firstAckBody();
-      expect(body.text).toMatch(/Snoozed USDC for 4h/);
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(1_771_833_600_000);
+      try {
+        const { db, sqlite } = fixtures.open();
+        sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
+          INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_snooze_until_ts)
+          VALUES ('42', 'usdt-tether', 123)`);
+        await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze", message: { chat: { id: 42 }, message_id: 999 } }));
+        expect(sqlite.prepare(`SELECT stablecoin_id, alert_snooze_until_ts FROM telegram_subscriptions
+          WHERE chat_id = '42' ORDER BY stablecoin_id`).all()).toEqual([
+          { stablecoin_id: "usdc-circle", alert_snooze_until_ts: 1_771_848_000 },
+          { stablecoin_id: "usdt-tether", alert_snooze_until_ts: 123 },
+        ]);
+        expect(firstAckBody().text).toMatch(/Snoozed USDC for 4h/);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it.each([

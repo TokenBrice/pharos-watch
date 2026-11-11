@@ -70,7 +70,6 @@ describe("publishPegAnalyticsCache", () => {
   });
 
   it("counts today's and yesterday's depeg events and excludes NAV tokens", async () => {
-    const writes = vi.spyOn(cache, "setCacheIfNewer");
     const published = await publishPegAnalyticsCache(
       db,
       snapshot([
@@ -87,10 +86,9 @@ describe("publishPegAnalyticsCache", () => {
     );
 
     expect(published).toBe(true);
-    expect(writes).toHaveBeenCalledTimes(1);
-    expect(writes.mock.calls[0]![1]).toBe("peg-analytics");
-    expect(writes.mock.calls[0]![3]).toBe(NOW_SEC);
-    expect(JSON.parse(writes.mock.calls[0]![2])).toEqual({
+    const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'peg-analytics'").get()!;
+    expect(row.updated_at).toBe(NOW_SEC);
+    expect(JSON.parse(row.value as string)).toEqual({
       computedAtSec: NOW_SEC,
       depegEventsToday: 2,
       depegEventsYesterday: 1,

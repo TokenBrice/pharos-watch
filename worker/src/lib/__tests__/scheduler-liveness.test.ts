@@ -19,22 +19,24 @@ function slotDb(age: number, overrides: Record<string, unknown> = {}) {
 
 describe("live scheduled delivery", () => {
   it("queries actual starts for the fastest registry-owned heavy plan", async () => {
-    const db = slotDb(30);
-    const observation = await loadSchedulerLiveness(db, now);
-    const plan = SCHEDULED_SLOT_PLANS[observation.heavy.scheduleKey as keyof typeof SCHEDULED_SLOT_PLANS];
-    expect(plan.worker).toBe("heavy");
-    expect(CRON_SCHEDULE_CADENCES[plan.scheduleKey].intervalSec).toBe(
-      Math.min(...Object.values(SCHEDULED_SLOT_PLANS).filter((candidate) => candidate.worker === "heavy")
-        .map((candidate) => CRON_SCHEDULE_CADENCES[candidate.scheduleKey].intervalSec)),
-    );
-    const query = db.getHistory()[0];
-    expect(query.binds.slice(0, 4)).toEqual([
-      "fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll", plan.scheduleKey,
-    ]);
-    expect(query.binds.slice(4).sort()).toEqual(observation.expectedLanes!.map((lane) => lane.scheduleKey).sort());
-    expect(query.sql).toContain("MAX(started_at)");
-    expect(query.sql).not.toContain("scheduled_at");
-    expect(query.sql).not.toContain("cron_runs");
+    const { db, sqlite } = createLatestSchemaSqlite();
+    sqlite.function("unixepoch", () => observedAt);
+    try {
+      const seed = sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key,slot_started_at,state,execution_owner,started_at,updated_at)
+        VALUES (?,1,'finished','owner',?,?)`);
+      for (const [key, age] of [["fiveMinuteReserveRecovery", 90], ["fiveMinuteTelegramAlerts", 60],
+        ["digestTriggerPoll", 30], [heavyLane, 40], ["halfHourlyChartsOffset", 1]] as const)
+        seed.run(key, observedAt - age, observedAt);
+      sqlite.exec(`INSERT INTO cron_runs (job,started_at,duration_ms,status)
+        VALUES ('unrelated',${observedAt},1,'ok')`);
+      const observation = await loadSchedulerLiveness(db, now);
+      for (const p of Object.values(SCHEDULED_SLOT_PLANS).filter(p => p.worker === "heavy"))
+        expect(CRON_SCHEDULE_CADENCES[heavyLane].intervalSec).toBeLessThanOrEqual(CRON_SCHEDULE_CADENCES[p.scheduleKey].intervalSec);
+      expect(observation.lanes.map(l => l.lastStartedAt)).toEqual([observedAt - 90, observedAt - 60, observedAt - 30]);
+      expect(observation).toMatchObject({ status: "healthy", ageSeconds: 30, lastAnyStartedAt: observedAt - 1,
+        heavy: { scheduleKey: heavyLane, lastStartedAt: observedAt - 40, ageSeconds: 40, status: "healthy" } });
+    } finally { sqlite.close(); }
   });
   it("resolves every expected lane with its own bounded index seek", async () => {
     const db = slotDb(30);
