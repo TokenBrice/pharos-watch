@@ -20,6 +20,7 @@
 
 import type { ThreatBand } from "@shared/lib/classification";
 import { clamp } from "@shared/lib/math";
+import { PSI_STRESS_BOUNDARY } from "@shared/lib/psi-policy";
 import {
   DEWS_SIGNAL_LABELS,
   DEWS_SIGNAL_WEIGHTS,
@@ -53,6 +54,7 @@ export type {
   PoolEntry,
   SignalResult,
   DEWSInput,
+  HistoricalDEWSInput,
 } from "./dews/types";
 
 // Internal alias to keep the rest of this file compiling against the shared types.
@@ -62,6 +64,7 @@ import type {
   DewsTopContributor,
   SignalResult,
   DEWSInput,
+  HistoricalDEWSInput,
 } from "./dews/types";
 
 export interface DEWSResult {
@@ -99,7 +102,27 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     flow: computeFlowSignal(input),
     yield: computeYieldSignal(input),
   };
+  return combineDewsSignals(input, signals, input);
+}
 
+export function computeHistoricalDEWS(input: HistoricalDEWSInput): DEWSResult | null {
+  return combineDewsSignals({ psiScore: null }, {
+    supply: computeSupplySignal(input),
+    pool: { value: 0, available: false },
+    liq: computeLiquiditySignal(input),
+    price: { value: 0, available: false, confidence: null, unavailableReason: "price-evidence-unavailable" },
+    diverg: { value: 0, available: false, unavailableReason: "invalid-price" },
+    black: { value: 0, available: false },
+    flow: { value: 0, available: false, baselineDays: 0, unavailableReason: "mint-burn-data-missing" },
+    yield: { value: 0, available: false },
+  });
+}
+
+function combineDewsSignals(
+  input: Pick<DEWSInput, "psiScore" | "flowIsolated" | "contagionAmplifier" | "sourceAges" | "staleFlags">,
+  signals: Record<DewsSignalKey, SignalResult>,
+  priceEvidence?: DEWSInput,
+): DEWSResult | null {
   let totalWeight = 0;
   let weightedSum = 0;
   const effectiveWeights: Partial<Record<DewsSignalKey, number>> = {};
@@ -133,7 +156,8 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   // PSI < 75 (below STEADY) = market stress.
   // At PSI 75: no amplification. At PSI 40: 15% amplification. At PSI 0: 30% amplification.
   const psiAmplifier =
-    input.psiScore !== null && input.psiScore < 75 ? 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3 : 1;
+    input.psiScore !== null && input.psiScore < PSI_STRESS_BOUNDARY
+      ? 1 + Math.max(0, (PSI_STRESS_BOUNDARY - input.psiScore) / PSI_STRESS_BOUNDARY) * 0.3 : 1;
   const contagionAmplifier = clamp(input.contagionAmplifier ?? 1, 1, CONTAGION_AMPLIFIER_CAP);
   const baseScore = weightedSum / totalWeight;
   for (const [key, signal] of Object.entries(signals) as Array<[DewsSignalKey, SignalResult]>) {
@@ -149,7 +173,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     });
   }
 
-  const evidenceKinds = classifyEvidenceKinds(signals, psiAmplifier, input);
+  const evidenceKinds = classifyEvidenceKinds(signals, psiAmplifier, priceEvidence);
   const hasMarketOrLiquidityEvidence =
     evidenceKinds.includes("market-price") || evidenceKinds.includes("dex-liquidity");
   const hasSevereIssuerControlEvidence =
@@ -161,7 +185,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   let score = preliminaryScore;
   let insufficientEvidenceReason: DewsInsufficientEvidenceReason | null = null;
   if (!hasMarketOrLiquidityEvidence && !hasSevereIssuerControlEvidence &&
-    (preliminaryScore > WATCH_MAX_SCORE || hasLoneMentoBrokerPrice(input))) {
+    (preliminaryScore > WATCH_MAX_SCORE || hasLoneMentoBrokerPrice(priceEvidence))) {
     // Persist the Broker evidence limit even below WATCH so alert hysteresis
     // cannot restore an earlier alertable band from this unconfirmed leg.
     score = Math.min(preliminaryScore, WATCH_MAX_SCORE);

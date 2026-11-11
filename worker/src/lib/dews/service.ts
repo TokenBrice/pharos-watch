@@ -247,7 +247,7 @@ async function computeAndStoreDEWSWithDb(
         : [],
     },
     metadata: JSON.stringify({
-      rowsRead: assets.length + sourceState.dexLiqRows.results.length + sourceState.liqHistRowsRead,
+      rowsRead: assets.length + sourceState.dexLiquidity.dexLiqRows.results.length + sourceState.liquidityHistory.liqHistRowsRead,
       reason: degraded
         ? degradedSources.length > 0
           ? "dews-cohort-dependency-unavailable"

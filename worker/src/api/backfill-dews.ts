@@ -7,8 +7,8 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { errorResponse, jsonResponse, methodNotAllowedResponse } from "../lib/api-response";
 import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/backtest-anchors";
 import { BACKTEST_LOOKBACK_DAYS } from "../lib/backtest-anchors";
-import { computeDEWS } from "../lib/dews";
-import type { DEWSInput } from "../lib/dews";
+import { computeHistoricalDEWS } from "../lib/dews";
+import type { HistoricalDEWSInput } from "../lib/dews";
 import { assembleDewsScoringInput } from "../lib/dews/input-assembly";
 import { buildDewsScoringResult } from "../lib/dews/scoring";
 import type {
@@ -422,42 +422,21 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         ? selectTrendBaseline(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance, liqNow.methodology_version)
         : null;
 
-      const input: DEWSInput = {
+      const input: HistoricalDEWSInput = {
         stablecoinId: event.stablecoin_id,
         mcapUsd: current,
-        pegType: "peggedUSD",
         circulatingCurrent: current,
         circulatingPrevDay: prevDay ?? current,
         circulatingPrevWeek: prevWeek ?? current,
         circulatingPrevDayAvailable: prevDay != null,
         circulatingPrevWeekAvailable: prevWeek != null,
-        weightedBalanceRatio: null,
-        avgPoolStress: null,
-        topPools: null,
         liquidityScore: liqNow?.liquidity_score ?? null,
         liquidityScore7dAgo: liq7dScore?.liquidity_score ?? null,
         tvlCurrent: liqNow?.total_tvl_usd ?? null,
         tvl7dAgo: liq7d?.total_tvl_usd ?? null,
-        priceConfidence: null,
-        prevPriceConfidence: null,
-        price: null,
-        priceEvidenceUnavailable: true,
-        pegRef: 1.0,
-        dexPriceUsd: null,
-        blacklistEvents24h: 0,
-        blacklistEvents7d: 0,
-        hasBlacklistTracking: false,
-        burnVolume24hUsd: null,
-        mintVolume24hUsd: null,
-        burnBaseline30dUsd: null,
-        flowDataAgeDays: 0,
-        flowValuation24h: null,
-        flowBurnBaselineValuation: null,
-        yieldWarnings: [],
-        psiScore: null,
       };
 
-      const result = computeDEWS(input);
+      const result = computeHistoricalDEWS(input);
       if (!result) {
         if (d > 0) evaluationReasons.add("insufficient-signal-evidence");
         continue;

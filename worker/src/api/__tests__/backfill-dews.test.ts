@@ -16,7 +16,7 @@ vi.mock("@shared/lib/peg-rates", () => ({
 }));
 
 vi.mock("../../lib/dews", () => ({
-  computeDEWS: vi.fn(() => ({
+  computeHistoricalDEWS: vi.fn(() => ({
     score: 67,
     band: "WARNING",
     signals: {},
@@ -82,29 +82,30 @@ vi.mock("../../lib/stablecoins-cache", () => ({
 vi.mock("../../lib/dews/source-state", async () => {
   // Vitest hoists this factory before static imports; load its fixture inside the factory.
   const { emptyDewsDependencyDiagnostics } = await import("../../lib/dews/__tests__/source-state.test-support");
+  const dependencyDiagnostics = emptyDewsDependencyDiagnostics();
   return {
     loadDewsSourceState: vi.fn(async () => ({
-      dexLiqRows: { results: [] },
-      dexLiqMap: new Map(),
-      dexLiqAgeSecById: new Map(),
-      dexLiqStaleIds: new Set(),
-      dexPriceMap: new Map(),
-      dexPriceAgeSecById: new Map(),
-      dexPriceStaleIds: new Set(),
-      liqHist7dMap: new Map(),
-      liqHistRowsRead: 0,
-      blacklistCounts: new Map(),
-      prevSignals: new Map(),
-      prevSignalStaleIds: new Set(),
-      mintBurnMap: new Map(),
-      mintBurnAgeSecById: new Map(),
-      mintBurnStaleIds: new Set(),
-      yieldWarnings: new Map(),
-      yieldSourceRisk: new Map(),
-      yieldRankChangeAttribution: new Map(),
-      latestPsiScore: null,
+      dexLiquidity: {
+        dexLiqRows: { results: [] }, dexLiqMap: new Map(), dexLiqAgeSecById: new Map(), dexLiqStaleIds: new Set(),
+        freshCount: 0, staleCount: 0, totalRows: 0, freshnessAgeSec: null,
+        dependencyDiagnostics: dependencyDiagnostics.dexLiquidity,
+      },
+      dexPrices: { dexPriceMap: new Map(), dexPriceAgeSecById: new Map(), dexPriceStaleIds: new Set(), trustedCount: 0, staleCount: 0 },
+      liquidityHistory: { liqHist7dMap: new Map(), liqHistRowsRead: 0 },
+      blacklist: { blacklistCounts: new Map(), blacklistSourceOk: true, rowsRead: 0 },
+      previousSignals: { prevSignals: new Map(), prevSignalStaleIds: new Set(), generationUnavailable: false, rowsRead: 0 },
+      mintBurn: {
+        mintBurnMap: new Map(), mintBurnAgeSecById: new Map(), mintBurnStaleIds: new Set(),
+        freshCount: 0, staleCount: 0, freshnessAgeSec: null, rowsRead: 0,
+      },
+      yieldWarnings: { yieldWarnings: new Map(), rowsRead: 0 },
+      yieldRankings: {
+        yieldSourceRisk: new Map(), yieldRankChangeAttribution: new Map(), yieldRankingsAgeSec: null, yieldRankingsRetained: false,
+        dependencyDiagnostics: dependencyDiagnostics.yieldRankings,
+      },
+      psi: { latestPsiScore: null, dependencyDiagnostics: dependencyDiagnostics.psi },
       sourceCoverage: { dexPrices: 1, dexLiquidity: 1 },
-      dependencyDiagnostics: emptyDewsDependencyDiagnostics(),
+      dependencyDiagnostics,
     })),
   };
 });
@@ -134,7 +135,7 @@ vi.mock("../../lib/dews/service", () => ({
   })),
 }));
 
-import { computeDEWS } from "../../lib/dews";
+import { computeHistoricalDEWS } from "../../lib/dews";
 import type { DEWSResult } from "../../lib/dews";
 import { buildDewsScoringResult } from "../../lib/dews/scoring";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
@@ -159,7 +160,7 @@ describe("handleBackfillDEWS", () => {
       { match: "FROM supply_history", rows: supplyRows },
       { match: "FROM dex_liquidity_history", rows: [] },
     ]);
-    const scorer = vi.mocked(computeDEWS);
+    const scorer = vi.mocked(computeHistoricalDEWS);
     scorer.mockClear();
     scorer.mockImplementation((input) => ({
       score: input.stablecoinId === "predicted" ? 67 : 12,
@@ -252,7 +253,7 @@ describe("handleBackfillDEWS", () => {
     const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true, request });
 
     expect(response.status).toBe(200);
-    expect(computeDEWS).toHaveBeenCalledWith(
+    expect(computeHistoricalDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         circulatingCurrent: 100_000_000,
@@ -277,7 +278,7 @@ describe("handleBackfillDEWS", () => {
   });
 
   it.each([0.5, 0.499, null])("replays the earliest weekly anchor with confidence %s and unchanged supply bounds", async (confidence) => {
-    vi.mocked(computeDEWS).mockClear();
+    vi.mocked(computeHistoricalDEWS).mockClear();
     const day = 20000 * 86400;
     const evaluation = day - 7 * 86400;
     const db = mockD1([
@@ -291,7 +292,7 @@ describe("handleBackfillDEWS", () => {
     ]);
     const request = makeApiRequest("/api/backfill-dews", { adminKey: "secret" });
     await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true, request });
-    expect(computeDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+    expect(computeHistoricalDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
       liquidityScore: 80, tvlCurrent: 200,
       liquidityScore7dAgo: confidence === 0.5 ? 70 : null,
       tvl7dAgo: confidence === 0.5 ? 100 : null,
@@ -310,7 +311,7 @@ describe("handleBackfillDEWS", () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const day = 20000 * 86400;
     const evaluation = day - 7 * 86400;
-    vi.mocked(computeDEWS).mockClear();
+    vi.mocked(computeHistoricalDEWS).mockClear();
     try {
       sqlite.prepare("INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference) VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -150, ?, ?, 0.985, 1)")
         .run(day, day + 3600);
@@ -321,7 +322,7 @@ describe("handleBackfillDEWS", () => {
       insert.run(evaluation - 7 * 86400, 100, 73, historical);
       const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
       expect(response.status).toBe(200);
-      expect(computeDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      expect(computeHistoricalDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
         liquidityScore: 80, liquidityScore7dAgo: 73, tvlCurrent: 200, tvl7dAgo,
       }));
     } finally {
@@ -510,10 +511,10 @@ describe("handleBackfillDEWS", () => {
 
 describe("historical reconstruction evidence boundaries", () => {
   it("does not turn unread historical price evidence into maximum price stress", async () => {
-    const { computeDEWS: realComputeDEWS } = await vi.importActual<typeof import("../../lib/dews")>(
+    const { computeHistoricalDEWS: realComputeDEWS } = await vi.importActual<typeof import("../../lib/dews")>(
       "../../lib/dews",
     );
-    vi.mocked(computeDEWS).mockImplementation(realComputeDEWS);
+    vi.mocked(computeHistoricalDEWS).mockImplementation(realComputeDEWS);
     const { sqlite, db } = createLatestSchemaSqlite();
     const eventDay = 20_000 * 86_400;
     try {
@@ -576,7 +577,7 @@ describe("historical reconstruction evidence boundaries", () => {
       });
     } finally {
       sqlite.close();
-      vi.mocked(computeDEWS).mockImplementation(() => ({ score: 67, band: "WARNING", signals: {} } as DEWSResult));
+      vi.mocked(computeHistoricalDEWS).mockImplementation(() => ({ score: 67, band: "WARNING", signals: {} } as DEWSResult));
     }
   });
 });

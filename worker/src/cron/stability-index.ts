@@ -17,6 +17,7 @@ import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry"
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
+import { isDewsAlertBand } from "@shared/lib/classification";
 import { throwIfAborted } from "../lib/abort";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 import { isObservedPrice, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
@@ -27,7 +28,6 @@ type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string; cur
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 const DEWS_STRESS_MAX_AGE_SEC = DEWS_GENERATION_CONSUMER_MAX_AGE_SEC;
-const DEWS_STRESS_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
 
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
@@ -225,7 +225,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     if (!dewsUnavailable) {
       // Count stressed coins weighted by mcap after dependency freshness is proven.
       for (const row of rows) {
-        if (!DEWS_STRESS_BANDS.has(row.band)) continue;
+        if (!isDewsAlertBand(row.band)) continue;
         const coinMcap = mcapById.get(row.stablecoin_id);
         if (coinMcap == null) continue;
         dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * DEWS_STRESS_BREADTH_SCALE;

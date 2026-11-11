@@ -360,6 +360,22 @@ describe("DEWS signal family curves", () => {
     expect(result.baselineDays).toBe(14);
   });
 
+  it("withholds isolated flow with no net outflow", () => {
+    expect(computeFlowSignal(makeDewsInput({
+      flowIsolated: true,
+      burnVolume24hUsd: 1_000_000,
+      mintVolume24hUsd: 1_000_000,
+      burnBaseline30dUsd: 100_000,
+      flowBaselineDays: 30,
+    }))).toEqual({
+      value: 0,
+      available: false,
+      baselineDays: 30,
+      flowScope: "isolated-canonical-leg",
+      unavailableReason: "mint-burn-isolated-no-outflow",
+    });
+  });
+
   it("never scores flow from valuation that missing prices could alter", () => {
     const scored = { burnVolume24hUsd: 1_000_000, mintVolume24hUsd: 0, burnBaseline30dUsd: 100_000, flowBaselineDays: 14, flowDataAgeDays: 0.1 };
     const unavailable = (unavailableReason: string) => ({ value: 0, available: false, baselineDays: 14, unavailableReason });

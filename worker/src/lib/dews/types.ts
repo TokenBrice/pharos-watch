@@ -103,12 +103,6 @@ export interface DEWSInput {
   /** Admitted primary provenance; agreeing source families may confirm a Broker mark. */
   priceSource?: string | null;
   agreeSources?: readonly string[] | null;
-  /**
-   * Historical reconstruction never reads a price. A `null` price otherwise
-   * carries live semantics (maximum concern), so callers that know the price
-   * family was not read must mark it unavailable instead of scoring it 100.
-   */
-  priceEvidenceUnavailable?: boolean;
   pegRef: number;
   pegReferenceAvailable?: boolean;
   pegReferenceUnavailableReason?: string | null;
@@ -127,8 +121,8 @@ export interface DEWSInput {
   burnVolume24hUsd: number | null;
   mintVolume24hUsd: number | null;
   burnBaseline30dUsd: number | null;
-  /** True mint_burn_hourly source freshness age in days. */
-  flowDataAgeDays: number;
+  /** True mint_burn_hourly source freshness age in days; null when unavailable. */
+  flowDataAgeDays: number | null;
   /** Observed baseline coverage days in the 30-day mint/burn window. */
   flowBaselineDays?: number | null;
   /**
@@ -166,6 +160,14 @@ export interface DEWSInput {
   sourceAges?: Record<string, number | null>;
   staleFlags?: Record<string, boolean>;
 }
+
+/** Daily reconstruction reads only supply history and liquidity history. */
+export type HistoricalDEWSInput = Pick<DEWSInput,
+  | "stablecoinId" | "mcapUsd"
+  | "circulatingCurrent" | "circulatingPrevDay" | "circulatingPrevWeek"
+  | "circulatingPrevDayAvailable" | "circulatingPrevWeekAvailable"
+  | "liquidityScore" | "liquidityScore7dAgo" | "tvlCurrent" | "tvl7dAgo"
+>;
 
 export type DewsInsufficientEvidenceReason =
   | "data_quality_only"

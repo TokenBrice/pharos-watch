@@ -112,7 +112,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     });
 
     // Legacy rows surface as the flat signals map (no `.signals` wrapper key).
-    const prev = sourceState.prevSignals.get("usdt-tether");
+    const prev = sourceState.previousSignals.prevSignals.get("usdt-tether");
     expect(prev).toBeDefined();
     expect(prev?.signals.supply).toEqual({ value: 5, available: true });
     expect(prev?.signals.pool).toEqual({ value: 12, available: true });
@@ -144,7 +144,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
 
     // New rows surface as the unwrapped signals map for back-compat with the
     // existing smoothing read path.
-    const prev = sourceState.prevSignals.get("usdt-tether");
+    const prev = sourceState.previousSignals.prevSignals.get("usdt-tether");
     expect(prev).toBeDefined();
     expect(prev?.signals.supply).toEqual({ value: 8, available: true });
     // The amplifiers envelope is stripped — downstream hydration defaults it
@@ -173,7 +173,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       registerMalformedPersistedInput: () => {},
     });
 
-    const signals = sourceState.prevSignals.get("usdt-tether")?.signals;
+    const signals = sourceState.previousSignals.prevSignals.get("usdt-tether")?.signals;
     expect(signals).toEqual({ supply: { value: 5, available: true } });
     expect(signals?.pool).toBeUndefined();
     expect(signals?.diverg).toBeUndefined();
@@ -236,8 +236,8 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       registerMalformedPersistedInput: () => {},
     });
 
-    expect(sourceState.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 8, available: true });
-    expect(sourceState.prevSignals.get("usdc-circle")?.signals.supply).toEqual({ value: 3, available: true });
+    expect(sourceState.previousSignals.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 8, available: true });
+    expect(sourceState.previousSignals.prevSignals.get("usdc-circle")?.signals.supply).toEqual({ value: 3, available: true });
   });
 
   it("ignores previous stress rows newer than the published DEWS generation", async () => {
@@ -273,7 +273,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       registerMalformedPersistedInput: () => {},
     });
 
-    expect(sourceState.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 3, available: true });
+    expect(sourceState.previousSignals.prevSignals.get("usdt-tether")?.signals.supply).toEqual({ value: 3, available: true });
   });
 
   it.each([
@@ -319,7 +319,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       registerMalformedPersistedInput: () => {},
     });
 
-    expect(sourceState.yieldSourceRisk.get("usdt-tether")).toMatchObject({
+    expect(sourceState.yieldRankings.yieldSourceRisk.get("usdt-tether")).toMatchObject({
       sourceRiskPenalty: 1.5,
       rewardShare: 0.9,
       sourceAgeSeconds: 30_000,
@@ -332,7 +332,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
         operational: 5,
       },
     });
-    expect(sourceState.yieldRankChangeAttribution.get("usdt-tether")).toMatchObject({
+    expect(sourceState.yieldRankings.yieldRankChangeAttribution.get("usdt-tether")).toMatchObject({
       rankDelta: -5,
       primaryDriver: "source-risk",
     });
@@ -366,10 +366,10 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       registerMalformedPersistedInput: () => {},
     });
 
-    expect(sourceState.blacklistCounts.get("xusd-straitsx")).toEqual({ count24h: 1, count7d: 1 });
-    expect(sourceState.blacklistCounts.has("XUSD")).toBe(false);
-    expect(sourceState.blacklistCounts.has("xusd-babelfish")).toBe(false);
-    expect(sourceState.blacklistSourceOk).toBe(true);
+    expect(sourceState.blacklist.blacklistCounts.get("xusd-straitsx")).toEqual({ count24h: 1, count7d: 1 });
+    expect(sourceState.blacklist.blacklistCounts.has("XUSD")).toBe(false);
+    expect(sourceState.blacklist.blacklistCounts.has("xusd-babelfish")).toBe(false);
+    expect(sourceState.blacklist.blacklistSourceOk).toBe(true);
   });
 
   it("hydrates identical values when source reads settle in reverse order", async () => {
@@ -467,10 +467,10 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const normal = await load(false);
     const reversed = await load(true);
     expect(reversed).toEqual(normal);
-    expect(reversed.state.prevSignals.get("usdc-circle")?.signals.supply).toEqual({
+    expect(reversed.state.previousSignals.prevSignals.get("usdc-circle")?.signals.supply).toEqual({
       value: 7, available: true,
     });
-    expect(reversed.state.blacklistSourceOk).toBe(false);
+    expect(reversed.state.blacklist.blacklistSourceOk).toBe(false);
     expect(reversed.failures).toEqual([
       "dex-liquidity", "dex-prices", "dex-liquidity-history", "blacklist-events",
       "stress-signals-latest", "mint-burn-hourly", "yield-data", "yield-rankings", "stability-index-samples",

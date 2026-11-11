@@ -5,6 +5,9 @@ import { DAY_SECONDS } from "./time-constants";
 
 export { PSI_CONDITION_BANDS };
 
+/** PSI below STEADY marks the systemic-stress boundary. */
+export const PSI_STRESS_BOUNDARY = PSI_CONDITION_BANDS.find(({ band }) => band === "STEADY")!.min;
+
 /** Penalty ceilings and the absolute trend bound, shared by scoring and display. */
 export const PSI_COMPONENT_LIMITS = { severity: 68, breadth: 17, stressBreadth: 5, trend: 5 } as const;
 

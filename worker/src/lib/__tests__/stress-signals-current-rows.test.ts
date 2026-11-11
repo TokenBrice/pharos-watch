@@ -782,7 +782,7 @@ describe("stress-signal current-row helpers", () => {
       // previous generation" (the previous reading is unavailable), but it is
       // also not a failed read that holds the publication able to repair it.
       expect(failures).toEqual([]);
-      expect(loaded.previousGenerationUnavailable).toBe(true);
+      expect(loaded.previousSignals.generationUnavailable).toBe(true);
     },
   );
 
