@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../../../lib/evm-rpc";
-import { observeExecutableRedemptionRoute } from "../executable-redemption-observers";
+import { EXECUTABLE_REDEMPTION_OBSERVERS, observeExecutableRedemptionRoute } from "../executable-redemption-observers";
 import type { ExecutableRedemptionObserverDescriptor, ExecutableRedemptionReadClient } from "../executable-redemption-read-client";
-import { FOREST_ROAD_USDFR_OBSERVER } from "../forest-road-usdfr-observer";
-import { MONETRIX_FUNDED_QUEUE_OBSERVER, observeMonetrixRedeemRequest } from "../monetrix-funded-queue-observer";
-import { SATURN_V2_QUEUE_OBSERVER, observeSaturnV2Queue } from "../saturn-v2-queue-observer";
-import { APYUSD_UNLOCK_RECEIPT_OBSERVER, observeApyusdUnlockReceipt } from "../apyusd-unlock-receipt-observer";
+import { observeMonetrixRedeemRequest } from "../monetrix-funded-queue-observer";
+import { observeSaturnV2Queue } from "../saturn-v2-queue-observer";
+import { observeApyusdUnlockReceipt } from "../apyusd-unlock-receipt-observer";
 import forest from "./fixtures/forest-road-observer-pinned.json";
 import forestLive from "./fixtures/forest-road-observer-live-2026-10-19.json";
 import monetrix from "./fixtures/monetrix-observer-pinned.json";
@@ -17,6 +16,13 @@ import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/s
 import { resolveExecutableObserverCapacity } from "../../../lib/redemption-backstop-capacity/executable-observer";
 import { EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/redemption-backstop-capacity";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
+
+const {
+  "usdfr-par-controller": FOREST_ROAD_USDFR_OBSERVER,
+  "monetrix-funded-queue": MONETRIX_FUNDED_QUEUE_OBSERVER,
+  "saturn-v2-queue": SATURN_V2_QUEUE_OBSERVER,
+  "apyusd-unlock-receipt": APYUSD_UNLOCK_RECEIPT_OBSERVER,
+} = EXECUTABLE_REDEMPTION_OBSERVERS;
 
 type Hex = `0x${string}`;
 interface Fixture {

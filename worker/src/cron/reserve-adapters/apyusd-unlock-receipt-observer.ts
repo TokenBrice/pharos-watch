@@ -2,7 +2,7 @@ import { parseAbi } from "viem/utils";
 import type { EvmRpcOptions } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
 import { abiObservation } from "./evm-observation-plan";
-import { readStateWithPlan, type ExecutableRedemptionObserverDescriptor, type ExecutableRedemptionObservation, type ExecutableRedemptionReadClient } from "./executable-redemption-read-client";
+import { readStateWithPlan, type ExecutableRedemptionObservation, type ExecutableRedemptionReadClient } from "./executable-redemption-read-client";
 
 const VAULT = "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a";
 const RECEIPT = "0x9bf51f33955ec70f87c4b5c49441815589043237";
@@ -109,7 +109,3 @@ export async function observeApyusdUnlockReceipt(
       ownerEligibilityVerified: owner != null, observedBlockHash: rpcOptions.stateBlockHash ?? null },
   };
 }
-export const APYUSD_UNLOCK_RECEIPT_OBSERVER: ExecutableRedemptionObserverDescriptor = {
-  observerId: "apyusd-unlock-receipt", coinId: "apyusd-apyx", chain: "ethereum", inputContract: VAULT,
-  outputAssetKeys: ["apxusd-apyx"], capacityCapability: "measured", sourceLane: "direct", observe: observeApyusdUnlockReceipt,
-};

@@ -30,43 +30,39 @@ const ABI = parseAbi([
 function field(label: string, contract: string, functionName: string, args?: readonly unknown[]) {
   return abiObservation({ label, contract, abi: ABI, functionName, args });
 }
-export const MONETRIX_FUNDED_QUEUE_OBSERVER: ExecutableRedemptionObserverDescriptor = {
-  observerId: "monetrix-funded-queue", coinId: "usdm-monetrix", chain: "hyperevm", inputContract: USDM,
-  outputAssetKeys: ["usdc-circle"], capacityCapability: "diagnostic-only", sourceLane: "direct",
-  async observe(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal) {
-    const { values: s } = await readStateWithPlan("usdm-monetrix", "monetrix-queue-state", [
-      field("usdc", VAULT, "usdc"), field("usdm", VAULT, "usdm"),
-      field("escrow", VAULT, "redeemEscrow"), field("config", VAULT, "config"),
-      field("escrow-vault", ESCROW, "vault"), field("escrow-usdc", ESCROW, "usdc"),
-      field("paused", VAULT, "paused"), field("operator-paused", VAULT, "operatorPaused"),
-      field("vault-shortfall", VAULT, "redemptionShortfall"), field("escrow-shortfall", ESCROW, "shortfall"),
-      field("cooldown", CONFIG, "redeemCooldown"), field("owed", ESCROW, "totalOwed"),
-      field("balance", USDC, "balanceOf", [ESCROW]), field("usdc-decimals", USDC, "decimals"), field("usdm-decimals", USDM, "decimals"),
-    ], IDENTITIES, blockNumber, rpcOptions, client, ctx, signal);
-    for (const [key, expected] of Object.entries({ usdc: USDC, usdm: USDM, escrow: ESCROW, config: CONFIG, "escrow-vault": VAULT, "escrow-usdc": USDC })) {
-      if ((s[key] as string).toLowerCase() !== expected) throw new Error(`Monetrix ${key} identity drift`);
-    }
-    if (s["usdc-decimals"] !== 6 || s["usdm-decimals"] !== 6) throw new Error("Monetrix decimal identity drift");
-    const balance = s.balance as bigint, owed = s.owed as bigint;
-    const shortfall = owed > balance ? owed - balance : 0n;
-    if (s["vault-shortfall"] !== shortfall || s["escrow-shortfall"] !== shortfall) throw new Error("Monetrix escrow funding arithmetic mismatch");
-    const cooldown = s.cooldown as bigint;
-    if (cooldown < 60n || cooldown > 30n * 86400n) throw new Error("Monetrix cooldown outside verified config bounds");
-    return {
-      capacityRaw: 0n, capacityState: "unquantified", capacitySource: "monetrix-existing-obligations-diagnostic-only",
-      settlementBoundUnproven: true, underlyingDecimals: 6, capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain", routeStatusSource: "onchain", routeStatus: s.paused ? "paused" : "open",
-      routeStatusReason: s.paused ? "Holder request/claim lane paused" : "Request/claim open; pooled escrow requires operator replenishment and proves no new-holder completion bound",
-      feeBps: null, holderEligibility: "any-holder", outputAssetKeys: ["usdc-circle"], blockNumber, sourceTimestamp: blockTimestamp,
-      sourceUrls: ["https://doc.monetrix.xyz/guide/getting-started/redeem", "https://sourcify.dev/server/v2/contract/999/0x08f69c88c47ef1c5274fc11bfe350561252c77f2?fields=sources,abi,compilation", "https://hyperevmscan.io/address/0x17100f8cafd727550bb32e6f1496d463da6d978f#code"],
-      diagnostics: { vault: VAULT, escrow: ESCROW, config: CONFIG, outputAssetAddress: USDC,
-        escrowBalanceRaw: balance.toString(), totalOwedRaw: owed.toString(), shortfallRaw: shortfall.toString(),
-        currentNewRequestCooldownSec: Number(cooldown), cooldownAppliesTo: "new-requests-only",
-        existingRequestCooldownEnd: "stored-per-request", requestAction: "transfer-usdm-to-vault", claimAction: "burn-usdm-then-escrow-payout",
-        userPaused: s.paused, operatorPaused: s["operator-paused"], looseVaultCashUsedAsCapacity: false,
-        escrowFundsUsedAsNewHolderCapacity: false, observedBlockHash: rpcOptions.stateBlockHash ?? null },
-    };
-  },
+export const observeMonetrixFundedQueue: ExecutableRedemptionObserverDescriptor["observe"] = async (blockNumber, blockTimestamp, rpcOptions, client, ctx, signal) => {
+  const { values: s } = await readStateWithPlan("usdm-monetrix", "monetrix-queue-state", [
+    field("usdc", VAULT, "usdc"), field("usdm", VAULT, "usdm"),
+    field("escrow", VAULT, "redeemEscrow"), field("config", VAULT, "config"),
+    field("escrow-vault", ESCROW, "vault"), field("escrow-usdc", ESCROW, "usdc"),
+    field("paused", VAULT, "paused"), field("operator-paused", VAULT, "operatorPaused"),
+    field("vault-shortfall", VAULT, "redemptionShortfall"), field("escrow-shortfall", ESCROW, "shortfall"),
+    field("cooldown", CONFIG, "redeemCooldown"), field("owed", ESCROW, "totalOwed"),
+    field("balance", USDC, "balanceOf", [ESCROW]), field("usdc-decimals", USDC, "decimals"), field("usdm-decimals", USDM, "decimals"),
+  ], IDENTITIES, blockNumber, rpcOptions, client, ctx, signal);
+  for (const [key, expected] of Object.entries({ usdc: USDC, usdm: USDM, escrow: ESCROW, config: CONFIG, "escrow-vault": VAULT, "escrow-usdc": USDC })) {
+    if ((s[key] as string).toLowerCase() !== expected) throw new Error(`Monetrix ${key} identity drift`);
+  }
+  if (s["usdc-decimals"] !== 6 || s["usdm-decimals"] !== 6) throw new Error("Monetrix decimal identity drift");
+  const balance = s.balance as bigint, owed = s.owed as bigint;
+  const shortfall = owed > balance ? owed - balance : 0n;
+  if (s["vault-shortfall"] !== shortfall || s["escrow-shortfall"] !== shortfall) throw new Error("Monetrix escrow funding arithmetic mismatch");
+  const cooldown = s.cooldown as bigint;
+  if (cooldown < 60n || cooldown > 30n * 86400n) throw new Error("Monetrix cooldown outside verified config bounds");
+  return {
+    capacityRaw: 0n, capacityState: "unquantified", capacitySource: "monetrix-existing-obligations-diagnostic-only",
+    settlementBoundUnproven: true, underlyingDecimals: 6, capacityKind: "live-direct-bounded",
+    freshnessKind: "same-run-onchain", routeStatusSource: "onchain", routeStatus: s.paused ? "paused" : "open",
+    routeStatusReason: s.paused ? "Holder request/claim lane paused" : "Request/claim open; pooled escrow requires operator replenishment and proves no new-holder completion bound",
+    feeBps: null, holderEligibility: "any-holder", outputAssetKeys: ["usdc-circle"], blockNumber, sourceTimestamp: blockTimestamp,
+    sourceUrls: ["https://doc.monetrix.xyz/guide/getting-started/redeem", "https://sourcify.dev/server/v2/contract/999/0x08f69c88c47ef1c5274fc11bfe350561252c77f2?fields=sources,abi,compilation", "https://hyperevmscan.io/address/0x17100f8cafd727550bb32e6f1496d463da6d978f#code"],
+    diagnostics: { vault: VAULT, escrow: ESCROW, config: CONFIG, outputAssetAddress: USDC,
+      escrowBalanceRaw: balance.toString(), totalOwedRaw: owed.toString(), shortfallRaw: shortfall.toString(),
+      currentNewRequestCooldownSec: Number(cooldown), cooldownAppliesTo: "new-requests-only",
+      existingRequestCooldownEnd: "stored-per-request", requestAction: "transfer-usdm-to-vault", claimAction: "burn-usdm-then-escrow-payout",
+      userPaused: s.paused, operatorPaused: s["operator-paused"], looseVaultCashUsedAsCapacity: false,
+      escrowFundsUsedAsNewHolderCapacity: false, observedBlockHash: rpcOptions.stateBlockHash ?? null },
+  };
 };
 
 export interface MonetrixRequestObservationInput {

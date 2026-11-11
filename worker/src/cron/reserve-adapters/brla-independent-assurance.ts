@@ -1,7 +1,6 @@
 import {
   getIndependentAssuranceManifest,
   independentAssuranceSourceTimestamp,
-  reconcileIndependentAssuranceManifest,
   type IndependentAssuranceManifest,
 } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
@@ -9,7 +8,7 @@ import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { computeUnknownExposurePct, normalizeSlices } from "./helpers";
 import {
-  buildIndependentAssuranceReserveResult,
+  buildVerifiedIndependentAssuranceResult,
   verifyAssurancePdf,
 } from "./independent-assurance";
 import { fetchJsonPostWithRetry, fetchTextResponseWithRetry } from "./request";
@@ -395,35 +394,15 @@ export async function fetchBrlaIndependentAssuranceReserves(
     signal,
     ctx,
   });
-  const reconciliation = reconcileIndependentAssuranceManifest(manifest);
-
-  for (const requiredCode of BRLA_REQUIRED_ASSET_CODES) {
-    if (!manifest.assets.some((asset) => asset.code === requiredCode && Number(asset.amount) > 0)) {
-      throw new Error(`${ADAPTER_KEY}: required positive asset row ${requiredCode} is missing`);
-    }
-  }
-
-  const { slices, unknownExposurePct, warnings } = buildBrlaReserveSlices(manifest);
-  if (slices.length === 0) throw new Error(`${ADAPTER_KEY}: no positive reserve asset rows`);
-
-  const result = buildIndependentAssuranceReserveResult({
-    slices,
+  return buildVerifiedIndependentAssuranceResult({
     manifest,
-    reconciliation,
+    requiredAssetCodes: BRLA_REQUIRED_ASSET_CODES,
+    errorPrefix: ADAPTER_KEY,
+    classify: buildBrlaReserveSlices,
     verifiedResponseUrl: artifact.responseUrl,
     verifiedByteLength: artifact.byteLength,
     sourceTimestamp: discovery.sourceTimestamp,
     adapterKey: ADAPTER_KEY,
     newerUnreviewedReport: discovery.newerUnreviewedReport,
   });
-  if (warnings.length === 0) return result;
-
-  return {
-    ...result,
-    warnings: [...warnings, ...(result.warnings ?? [])],
-    metadata: {
-      ...result.metadata!,
-      unknownExposurePct,
-    },
-  };
 }

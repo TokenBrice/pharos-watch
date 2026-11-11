@@ -13,10 +13,10 @@ import { runtimeCodeHash } from "./onchain-identity";
 import { EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS, type ExecutableRedemptionObserverId } from "@shared/types/redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/redemption-backstop-capacity";
-import { FOREST_ROAD_USDFR_OBSERVER } from "./forest-road-usdfr-observer";
-import { MONETRIX_FUNDED_QUEUE_OBSERVER } from "./monetrix-funded-queue-observer";
-import { SATURN_V2_QUEUE_OBSERVER } from "./saturn-v2-queue-observer";
-import { APYUSD_UNLOCK_RECEIPT_OBSERVER } from "./apyusd-unlock-receipt-observer";
+import { observeForestRoadUsdfr } from "./forest-road-usdfr-observer";
+import { observeMonetrixFundedQueue } from "./monetrix-funded-queue-observer";
+import { observeSaturnV2Queue } from "./saturn-v2-queue-observer";
+import { observeApyusdUnlockReceipt } from "./apyusd-unlock-receipt-observer";
 import {
   fail,
   type ExecutableRedemptionReadClient,
@@ -77,19 +77,19 @@ export const EXECUTABLE_REDEMPTION_OBSERVERS = {
   },
   "usdfr-par-controller": {
     ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["usdfr-par-controller"],
-    observerId: "usdfr-par-controller", observe: FOREST_ROAD_USDFR_OBSERVER.observe,
+    observerId: "usdfr-par-controller", observe: observeForestRoadUsdfr,
   },
   "apyusd-unlock-receipt": {
     ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["apyusd-unlock-receipt"],
-    observerId: "apyusd-unlock-receipt", observe: APYUSD_UNLOCK_RECEIPT_OBSERVER.observe,
+    observerId: "apyusd-unlock-receipt", observe: observeApyusdUnlockReceipt,
   },
   "monetrix-funded-queue": {
     ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["monetrix-funded-queue"],
-    observerId: "monetrix-funded-queue", observe: MONETRIX_FUNDED_QUEUE_OBSERVER.observe,
+    observerId: "monetrix-funded-queue", observe: observeMonetrixFundedQueue,
   },
   "saturn-v2-queue": {
     ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["saturn-v2-queue"],
-    observerId: "saturn-v2-queue", observe: SATURN_V2_QUEUE_OBSERVER.observe,
+    observerId: "saturn-v2-queue", observe: observeSaturnV2Queue,
   },
 } satisfies Record<ExecutableRedemptionObserverId, ExecutableRedemptionObserverDescriptor>;
 

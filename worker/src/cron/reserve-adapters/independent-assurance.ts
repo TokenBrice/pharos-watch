@@ -611,6 +611,35 @@ export function buildIndependentAssuranceReserveResult(args: {
   };
 }
 
+export function buildVerifiedIndependentAssuranceResult(args: Omit<
+  Parameters<typeof buildIndependentAssuranceReserveResult>[0], "slices" | "reconciliation"
+> & {
+  requiredAssetCodes: readonly string[];
+  reconciliationOptions?: IndependentAssuranceProfile["reconciliation"];
+  errorPrefix: string;
+  classify: (manifest: IndependentAssuranceManifest) => {
+    slices: ReserveSlice[];
+    warnings?: LiveReserveWarning[];
+    unknownExposurePct?: number;
+  };
+}): AdapterResult {
+  const reconciliation = reconcileIndependentAssuranceManifest(args.manifest, args.reconciliationOptions);
+  for (const requiredCode of args.requiredAssetCodes) {
+    if (!args.manifest.assets.some((asset) => asset.code === requiredCode && Number(asset.amount) > 0)) {
+      throw new Error(`${args.errorPrefix}: required positive asset row ${requiredCode} is missing`);
+    }
+  }
+  const { slices, warnings = [], unknownExposurePct } = args.classify(args.manifest);
+  if (slices.length === 0) throw new Error(`${args.errorPrefix}: no positive reserve asset rows`);
+  const result = buildIndependentAssuranceReserveResult({ ...args, slices, reconciliation });
+  if (warnings.length === 0) return result;
+  return {
+    ...result,
+    warnings: [...warnings, ...(result.warnings ?? [])],
+    metadata: { ...result.metadata!, unknownExposurePct },
+  };
+}
+
 export async function fetchIndependentAssuranceReserves(
   coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
@@ -658,42 +687,36 @@ export async function fetchIndependentAssuranceReserves(
     signal,
     ctx,
   });
-  const reconciliation = reconcileIndependentAssuranceManifest(manifest, profile.reconciliation);
-
-  for (const requiredCode of profile.requiredAssetCodes) {
-    if (!manifest.assets.some((asset) => asset.code === requiredCode && Number(asset.amount) > 0)) {
-      throw new Error(`independent-assurance: required positive asset row ${requiredCode} is missing`);
-    }
-  }
-
-  const classifiedAssets = manifest.assets.map((asset) => {
-    const classification = profile.classifications[asset.code];
-    if (Number(asset.amount) > 0 && !classification) {
-      throw new Error(`independent-assurance: unknown positive asset row ${asset.code}`);
-    }
-    return {
-      sourceKey: `${profile.adapterName}:${profile.product.toLowerCase()}:${asset.code}`,
-      amount: Number(asset.amount),
-      name: classification?.name ?? asset.label,
-      risk: classification?.risk ?? "very-low",
-      ...(classification?.coinId ? { coinId: classification.coinId } : {}),
-      ...(classification?.depType ? { depType: classification.depType } : {}),
-      ...(classification?.assetClass ? { assetClass: classification.assetClass } : {}),
-      ...(classification?.issuerOrObligor ? { issuerOrObligor: classification.issuerOrObligor } : {}),
-      ...(classification?.riskFactors ? { riskFactors: classification.riskFactors } : {}),
-      ...(classification?.liquidityHorizon ? { liquidityHorizon: classification.liquidityHorizon } : {}),
-    };
-  });
-  const totalClassifiedAmount = classifiedAssets.reduce((sum, asset) => sum + asset.amount, 0);
-  const slices = normalizeSlices(
-    classifiedAssets.map(({ amount, ...asset }) => ({ ...asset, pct: (amount / totalClassifiedAmount) * 100 })),
-  );
-  if (slices.length === 0) throw new Error("independent-assurance: no positive reserve asset rows");
-
-  return buildIndependentAssuranceReserveResult({
-    slices,
+  return buildVerifiedIndependentAssuranceResult({
     manifest,
-    reconciliation,
+    requiredAssetCodes: profile.requiredAssetCodes,
+    reconciliationOptions: profile.reconciliation,
+    errorPrefix: "independent-assurance",
+    classify: (manifest) => {
+      const classifiedAssets = manifest.assets.map((asset) => {
+        const classification = profile.classifications[asset.code];
+        if (Number(asset.amount) > 0 && !classification) {
+          throw new Error(`independent-assurance: unknown positive asset row ${asset.code}`);
+        }
+        return {
+          sourceKey: `${profile.adapterName}:${profile.product.toLowerCase()}:${asset.code}`,
+          amount: Number(asset.amount),
+          name: classification?.name ?? asset.label,
+          risk: classification?.risk ?? "very-low",
+          ...(classification?.coinId ? { coinId: classification.coinId } : {}),
+          ...(classification?.depType ? { depType: classification.depType } : {}),
+          ...(classification?.assetClass ? { assetClass: classification.assetClass } : {}),
+          ...(classification?.issuerOrObligor ? { issuerOrObligor: classification.issuerOrObligor } : {}),
+          ...(classification?.riskFactors ? { riskFactors: classification.riskFactors } : {}),
+          ...(classification?.liquidityHorizon ? { liquidityHorizon: classification.liquidityHorizon } : {}),
+        };
+      });
+      const totalClassifiedAmount = classifiedAssets.reduce((sum, asset) => sum + asset.amount, 0);
+      const slices = normalizeSlices(
+        classifiedAssets.map(({ amount, ...asset }) => ({ ...asset, pct: (amount / totalClassifiedAmount) * 100 })),
+      );
+      return { slices };
+    },
     verifiedResponseUrl: artifact.responseUrl,
     verifiedByteLength: artifact.byteLength,
     sourceTimestamp: artifact.sourceTimestamp,
