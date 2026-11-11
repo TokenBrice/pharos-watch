@@ -6,7 +6,7 @@ import { handleStressSignals } from "../stress-signals";
 import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
-} from "@shared/types/market";
+} from "@shared/types/stress";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";

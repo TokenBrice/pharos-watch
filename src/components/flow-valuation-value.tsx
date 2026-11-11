@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { MintBurnClassification, MintBurnValuationCompleteness } from "@shared/types";
+import type { MintBurnClassification, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import {
   describeMintBurnVolumeBound,
   formatMintBurnVolume,

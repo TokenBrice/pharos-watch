@@ -18,7 +18,7 @@ import { decodeFunctionData, encodeAbiParameters, parseAbi, toFunctionSelector }
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type {
   LiveReserveAdapterKey,
   LiveReservesConfig,

@@ -1,4 +1,4 @@
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { getGeckoTerminalDiscoveryTarget } from "@shared/lib/dex-deployment-coverage";
 import { sleepWithSignal } from "../../lib/abort";

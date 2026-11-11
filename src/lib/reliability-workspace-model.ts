@@ -2,8 +2,10 @@ import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-so
 import type {
   EndpointProbeResult,
   HealthResponse,
+} from "@shared/types/status/public-health";
+import type {
   StatusResponse,
-} from "@shared/types";
+} from "@shared/types/status/response";
 import type { OperatorVerdict } from "@shared/lib/classification";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { pickInitialMode, type WorkspaceSeverity } from "@/lib/status/workspace-mode";

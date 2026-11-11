@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { computeCollateralQualityFromReserves, resolveCustodyModel } from "../report-card-policy";
-import { BACKING_TYPE_VALUES, CUSTODY_MODEL_VALUES, GOVERNANCE_TYPE_VALUES } from "@shared/types/core";
+import { BACKING_TYPE_VALUES } from "@shared/types/core";
+import { CUSTODY_MODEL_VALUES } from "@shared/types/custody";
+import { GOVERNANCE_TYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import { applyInputDrivenExclusions } from "../selector/exclusions";
 import { makeInput, makeMergedRow as makeRow } from "../selector/__tests__/fixture";

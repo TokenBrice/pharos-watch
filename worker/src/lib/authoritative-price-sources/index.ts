@@ -2,7 +2,7 @@ import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEventArgs } from "../structured-log";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { rethrowIfAborted } from "../abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";

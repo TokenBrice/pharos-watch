@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { COMMODITY_PEG_TAGS, NON_USD_NON_COMMODITY_PEG_TAGS } from "@shared/lib/filter-tags";
-import type { FilterTag } from "@shared/types";
+import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
 
 export type HomeAltPegFilter = "all" | "usd-peg" | "fiat-non-usd-peg" | "commodity-peg";
 export type HomeAltUniverse = "core" | "variants" | "catalog";

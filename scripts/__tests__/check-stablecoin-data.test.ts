@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   computeLiveReserveConfigFingerprint,
   isReserveSupplyAdmissionBootstrapAuthorized,

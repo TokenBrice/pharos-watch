@@ -11,7 +11,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { toTokenUnits } from "@shared/lib/math";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../src/lib/constants";
 import { fetchCoinGeckoMarketHistory } from "../../src/lib/coingecko-market-history";

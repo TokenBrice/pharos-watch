@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import { z } from "zod";
 import { getCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
-import { StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/market";
+import { StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/supply";
 
 // Validate critical fields only -- passthrough preserves all upstream data
 const StablecoinEntrySchema = z.object({

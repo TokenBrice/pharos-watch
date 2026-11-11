@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
-import type { BudgetOnlySurfaceStatus, StatusCause } from "@shared/types";
+import type { BudgetOnlySurfaceStatus } from "@shared/types/status/cron";
+import type { StatusCause } from "@shared/types/status/core";
 import { OPERATOR_VERDICT_TONE } from "@shared/lib/classification";
 import { Button } from "@/components/ui/button";
 import { ControlPillToggle } from "@/components/control-pill-toggle";

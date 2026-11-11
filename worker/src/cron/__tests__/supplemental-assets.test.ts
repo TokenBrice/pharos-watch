@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
   getSupplementalDefiLlamaContractPriceKey,

@@ -3,7 +3,7 @@ import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { formatCurrency } from "@shared/lib/format";
 import { FROZEN_IDS, FROZEN_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { DeadStablecoin } from "@shared/types/market";
+import type { DeadStablecoin } from "@shared/types/cemetery";
 import { getCache, setCache } from "../../lib/db-cache";
 import { escapeHtml } from "../delivery/telegram";
 

@@ -11,7 +11,7 @@ import { makePeggedAsset } from "./_fixtures";
 import * as shared from "../shared";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { StablecoinDataSchema } from "@shared/types/market";
+import { StablecoinDataSchema } from "@shared/types/supply";
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../supplemental-assets/fiat-cg";
 import * as supplementalPrices from "../supplemental-assets/shared";
 import * as onchainSupply from "../supplemental-assets/onchain-supply";

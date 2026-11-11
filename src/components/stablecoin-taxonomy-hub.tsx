@@ -5,7 +5,8 @@ import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import type { InfrastructureTaxonomyValue, StablecoinTaxonomyPage } from "@/lib/stablecoin-taxonomy";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import type { BackingType, GovernanceType } from "@shared/types";
+import type { BackingType } from "@shared/types/core";
+import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
 
 interface StablecoinTaxonomyHubProps {
   breadcrumbName: string;

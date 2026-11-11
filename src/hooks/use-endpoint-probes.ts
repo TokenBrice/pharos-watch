@@ -15,7 +15,7 @@ import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { isFreshnessWarningHeader, isScheduledRefreshWarning } from "@shared/lib/warning-headers";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { isSiteDataAllowedApiPath } from "@shared/lib/site-data-lane";
-import type { EndpointProbeResult } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
 import { usePollingQuery } from "./use-api-query";
 import { CRON_1MIN, CRON_15MIN } from "@/lib/cron-intervals";
 

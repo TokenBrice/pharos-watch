@@ -10,7 +10,7 @@ import {
   summarizeDexVolumeWindow,
   type DexPoolVolumeObservationInput,
 } from "../dex-volume-availability";
-import { DexVolumeAvailabilityRecordSchema } from "../../types/market";
+import { DexVolumeAvailabilityRecordSchema } from "../../types/dex-liquidity";
 
 const AS_OF = 1_790_000_000;
 const HOUR = 3_600;

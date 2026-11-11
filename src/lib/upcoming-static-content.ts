@@ -1,5 +1,7 @@
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
-import type { LaunchMilestone, PegCurrency, StablecoinMeta } from "@shared/types";
+import type { LaunchMilestone } from "@shared/types/stablecoin-meta-primitives";
+import type { PegCurrency } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { dateScore, formatFuzzyDate } from "@/lib/pre-launch";

@@ -1,4 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
 import { resolveCoinContractAddress } from "./evm";

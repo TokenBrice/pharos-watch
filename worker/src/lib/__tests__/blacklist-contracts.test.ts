@@ -6,7 +6,7 @@ import {
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
 import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-matchers";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import {
   buildBlacklistCoverageManifest,
   getDeferredBlacklistCoverage,

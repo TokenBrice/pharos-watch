@@ -6,7 +6,8 @@ import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-c
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { formatChartDate } from "@shared/lib/format";
-import type { YieldHistoryPoint, YieldRanking, YieldRankingsResponse } from "@shared/types";
+import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
+import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 
 const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock, loadClientStablecoinDetailMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),

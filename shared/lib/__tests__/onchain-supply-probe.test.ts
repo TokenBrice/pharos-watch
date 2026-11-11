@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "../../types/chain-identity";
 import {

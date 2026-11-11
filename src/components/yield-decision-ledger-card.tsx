@@ -1,7 +1,7 @@
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildYieldDecisionLedgerDisplay } from "@/lib/yield-decision-ledger";
-import type { YieldPublicDecisionLedger } from "@shared/types";
+import type { YieldPublicDecisionLedger } from "@shared/types/yield-evidence-schemas";
 
 export interface YieldDecisionLedgerCardProps {
   ledger: YieldPublicDecisionLedger | null | undefined;

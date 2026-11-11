@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { resolveReviewedRedemptionSettlement } from "@shared/lib/redemption-backstop-configs/settlement";
-import type { RedemptionSettlementModel } from "@shared/types";
+import type { RedemptionSettlementModel } from "@shared/types/redemption";
 import {
   RedemptionBackstopDetailsSchema,
   RedemptionBackstopEntrySchema,

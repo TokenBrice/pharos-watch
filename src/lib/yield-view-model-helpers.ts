@@ -1,6 +1,6 @@
 import { abbreviateNumberParts } from "@shared/lib/format";
 import { CURRENCY_TAB_ENUMERATED_PEGS, type YieldPegFilter } from "@/lib/yield-view-config";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 
 /**
  * TVL filter thresholds are curated round numbers, so the abbreviated value is

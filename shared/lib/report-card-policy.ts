@@ -1,9 +1,13 @@
 import type {
   CustodyModel,
+} from "../types/custody";
+import type {
   ReserveSlice,
   ReserveRisk,
+} from "../types/reserves";
+import type {
   StablecoinMeta,
-} from "../types";
+} from "../types/stablecoin-meta-schemas";
 import type { StablecoinClientMeta } from "../types/stablecoin-client-meta";
 import { roundScore } from "./math";
 

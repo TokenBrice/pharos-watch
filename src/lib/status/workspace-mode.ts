@@ -1,4 +1,4 @@
-import type { StatusHealthValue } from "@shared/types";
+import type { StatusHealthValue } from "@shared/types/status/core";
 
 /**
  * Shared scaffolding for the admin "workspace" surfaces (reliability, pipeline).

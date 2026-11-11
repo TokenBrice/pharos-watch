@@ -10,7 +10,7 @@ import type { DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inp
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
-import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/market";
+import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/supply";
 import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { getCache } from "../../lib/db-cache";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";

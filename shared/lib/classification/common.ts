@@ -1,4 +1,4 @@
-import type { FilterTag } from "../../types";
+import type { FilterTag } from "../../types/stablecoin-meta-primitives";
 
 interface BadgeStyle {
   label: string;

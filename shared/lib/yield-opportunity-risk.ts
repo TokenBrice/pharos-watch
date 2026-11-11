@@ -13,7 +13,7 @@
  * opportunity classes.
  */
 
-import type { YieldType } from "../types/core";
+import type { YieldType } from "../types/yield-vocabulary";
 import type {
   YieldOpportunityClass,
   YieldOpportunityCriticalEvidence,

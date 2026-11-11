@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import type { DepegEventsResponse } from "@shared/types";
-import { DepegEventsResponseSchema } from "@shared/types/market";
+import type { DepegEventsResponse } from "@shared/types/peg";
+import { DepegEventsResponseSchema } from "@shared/types/peg";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { createApiInfinitePollingQueryOptions, useCursorPages } from "./use-api-query";
 import { DEFAULT_MAX_AUTO_PAGES, useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";

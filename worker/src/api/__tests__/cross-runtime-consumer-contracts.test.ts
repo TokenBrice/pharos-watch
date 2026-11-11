@@ -5,7 +5,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
 import { ChainsResponseSchema } from "@shared/types/chains";
-import { StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { ReportCardsV9AcceptedResponseSchema, ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9-current";
 import { handleStablecoins } from "../cache-handlers";

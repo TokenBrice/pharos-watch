@@ -5,7 +5,7 @@ import { QueryStateNotice } from "@/components/query-state-notice";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDecimal } from "@shared/lib/format";
-import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 

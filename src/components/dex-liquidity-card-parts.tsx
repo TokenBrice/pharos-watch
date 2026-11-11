@@ -28,7 +28,7 @@ import {
   formatBalanceDetails,
 } from "@/components/dex-liquidity-card-model";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
-import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
+import type { DexLiquidityPool, DexLiquidityData } from "@shared/types/dex-liquidity";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { getDexDurabilityStyle, getPoolOrganicFractionTier, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 

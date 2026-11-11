@@ -7,16 +7,24 @@ import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
 import type { SelectorCanonicalSourceEvidence, SelectorInput, SelectorOutput } from "@shared/lib/selector/types";
 import {
   BluechipRatingsMapSchema,
-  DexLiquidityMapSchema,
-  PegSummaryResponseSchema,
-  StablecoinListResponseSchema,
-  StressSignalsAllResponseSchema,
   type BluechipRatingsMap,
+} from "@shared/types/bluechip";
+import {
+  DexLiquidityMapSchema,
   type DexLiquidityMap,
+} from "@shared/types/dex-liquidity";
+import {
+  PegSummaryResponseSchema,
   type PegSummaryResponse,
+} from "@shared/types/peg";
+import {
+  StablecoinListResponseSchema,
   type StablecoinListResponse,
+} from "@shared/types/supply";
+import {
+  StressSignalsAllResponseSchema,
   type StressSignalsAllResponse,
-} from "@shared/types/market";
+} from "@shared/types/stress";
 import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";

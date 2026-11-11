@@ -4,7 +4,7 @@ import { compactMintBurnPublication } from "../mint-burn-publication";
 import { errorResponse } from "../api-response";
 import { computeGaugeScore, getGaugeBand } from "../mint-burn-scoring";
 import { loadStablecoinsCache } from "../stablecoins-cache";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY, MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";
 import { sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";

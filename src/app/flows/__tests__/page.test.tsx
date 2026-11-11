@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MintBurnFlowsResponse } from "@shared/types";
+import type { MintBurnFlowsResponse } from "@shared/types/mint-burn";
 import { ApiFetchError } from "@/lib/api";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 

@@ -5,7 +5,7 @@ import { DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { D1Database } from "@cloudflare/workers-types";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../../src/lib/constants";
 import { cgUrl, cgHeaders } from "../../../src/lib/coingecko";
 import { fetchJsonWithRetry } from "../../../src/lib/fetch-retry";

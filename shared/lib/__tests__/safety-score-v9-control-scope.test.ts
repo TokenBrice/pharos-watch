@@ -4,7 +4,7 @@ import { gradeEconomicControlAuthority } from "../safety-score-v9/control-mint-g
 import { evaluateV9EconomicControl } from "../safety-score-v9/control";
 import { deriveV9MintPosture } from "../safety-score-v9/control-primitives";
 import { V9ControlExecutionScopeSchema, V9InProcessControlExecutionScopeSchema, admitV9ControlExecutionScopeBatch, createV9ControlExecutionScopeRootReuse, isV9AdmittedControlExecutionScope, V9WeightedQuorumSchema, type V9ControlExecutionScope } from "../../types/safety-score-v9-control-scope";
-import type { MintAuthorityProfile } from "../../types/core";
+import type { MintAuthorityProfile } from "../../types/stablecoin-meta-control-schemas";
 import type { V1005ExecutionCertificates } from "../../types/safety-score-v9-control-scope";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
 import { buildV9DependencyEvaluationPlan } from "../safety-score-v9/dependencies";

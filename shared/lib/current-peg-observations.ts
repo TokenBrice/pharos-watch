@@ -4,7 +4,7 @@ import { pegTypeFromCurrency } from "./peg-taxonomy";
 import { getCirculatingRawOrNull } from "./supply";
 import { isObservedPrice } from "./pricing-source-policy";
 import { isAuthoritativeDepegPegReference } from "./peg-reference-trust";
-import type { StablecoinData } from "../types/market";
+import type { StablecoinData } from "../types/supply";
 import { deriveDepegSignal, type DepegSignal } from "./depeg-signals";
 import { classifyPrimaryDepegTrust } from "./depeg-primary-trust";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./depeg-config";

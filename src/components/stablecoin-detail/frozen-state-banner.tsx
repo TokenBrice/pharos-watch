@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { CAUSE_HEX, CAUSE_HEX_DARK, CAUSE_META } from "@shared/lib/cause-of-death";
-import type { StablecoinObituary } from "@shared/types";
+import type { StablecoinObituary } from "@shared/types/stablecoin-meta-schemas";
 
 interface FrozenStateBannerProps {
   symbol: string;

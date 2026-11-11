@@ -3,7 +3,7 @@ import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {

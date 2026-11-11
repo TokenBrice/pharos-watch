@@ -1,4 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import { parseFiniteNumber } from "./strict-amount";

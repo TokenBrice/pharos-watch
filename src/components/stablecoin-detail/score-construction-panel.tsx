@@ -3,7 +3,7 @@
 import { ScanSearch } from "lucide-react";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-score-reason-list";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { buildScoreWaterfall, type ScoreWaterfallStep } from "@/lib/safety-score-v9-waterfall";
 import { describePartialEvidence } from "@/lib/safety-score-reason-labels";
 import { buildSafetyScoreV9Attribution } from "@/lib/stablecoin-safety-score-v9-presentation";

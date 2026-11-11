@@ -1,7 +1,9 @@
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { findCommonCriticalControls } from "@shared/lib/control-identities";
 import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
-import type { MintAuthorityControl, MintAuthorityProfile, StablecoinLink, StablecoinMeta } from "@shared/types";
+import type { MintAuthorityControl, MintAuthorityProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const ROUTE_CHECK_MINT_PATHS = new Set<MintAuthorityProfile["mintPath"]>([
   "bridge-or-oft-synthetic",

@@ -27,14 +27,20 @@ import {
 import { PEG_METADATA } from "@shared/lib/classification";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
-import { CUSTODY_MODEL_VALUES } from "@shared/types/core";
+import { CUSTODY_MODEL_VALUES } from "@shared/types/custody";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import {
   type CustodyModel,
+} from "@shared/types/custody";
+import {
   type PegCurrency,
+} from "@shared/types/core";
+import {
   type ReportCardGrade,
+} from "@shared/types/report-card-grade";
+import {
   type V9QualityPillar,
-} from "@shared/types";
+} from "@shared/types/safety-score-v9";
 import type {
   GovernanceType,
   MechanismArchetype,

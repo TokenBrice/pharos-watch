@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { BluechipGradeSchema, YIELD_TYPE_VALUES } from "../../types/core";
+import { BluechipGradeSchema } from "../../types/bluechip";
+import { YIELD_TYPE_VALUES } from "../../types/yield-vocabulary";
 import {
   BASE_CONFIDENCE_REASON_KEYS,
   COMPOSABILITY_VALUES,

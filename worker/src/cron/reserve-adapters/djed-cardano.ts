@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { toTokenUnits } from "@shared/lib/math";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {

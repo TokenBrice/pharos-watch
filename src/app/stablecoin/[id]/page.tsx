@@ -42,7 +42,7 @@ import { deriveLiquidationEngine } from "@/components/stablecoin-detail/mechanis
 import { readDetailSnapshot } from "@/lib/stablecoin-detail-snapshot-reader";
 import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
 import { getStablecoinDetailDataBootstrapScript } from "@/lib/data-bootstrap-script";
-import type { StablecoinAiSummariesById } from "@shared/types";
+import type { StablecoinAiSummariesById } from "@shared/types/editorial";
 import type { FailureScenariosById } from "@shared/types/failure-scenarios";
 import { selectFailureScenario } from "@shared/lib/failure-scenarios";
 

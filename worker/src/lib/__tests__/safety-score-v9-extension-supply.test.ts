@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import syzusdRiskReview from "@shared/data/stablecoins/domains/risk-review/syzusd-yuzu.json";
 import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";

@@ -1,7 +1,8 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { DepegQuoteDomain } from "@shared/lib/depeg-quote-domain";
-import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
-import type { DepegEventCloseReason } from "@shared/types/market";
+import type { PegAssetBase } from "@shared/types/price";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { DepegEventCloseReason } from "@shared/types/peg";
 import type { DepegPriceCoverage } from "@shared/types/peg";
 import type {
   DepegRow,

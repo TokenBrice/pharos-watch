@@ -15,7 +15,7 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { hasReviewedProtocolInternalFlowSince } from "@shared/lib/reviewed-protocol-internal-flows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 // Coins whose total supply is below this floor are excluded from the

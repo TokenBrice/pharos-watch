@@ -38,12 +38,22 @@ vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
 });
 import type {
   BluechipRatingsMap,
+} from "../../../types/bluechip";
+import type {
   DexLiquidityMap,
+} from "../../../types/dex-liquidity";
+import type {
   PegSummaryResponse,
+} from "../../../types/peg";
+import type {
   ReportCardsV9CurrentResponse,
+} from "../../../types/report-cards-v9-current";
+import type {
   StablecoinListResponse,
+} from "../../../types/supply";
+import type {
   StressSignalsAllResponse,
-} from "../../../types";
+} from "../../../types/stress";
 
 const EMPTY_ARGS: BuildSelectorRowsArgs = {
   stablecoinsData: null, pegCurrency: null, pegData: null, reportData: null,

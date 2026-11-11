@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 
 interface RenderedDiagram {

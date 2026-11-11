@@ -11,7 +11,7 @@
 
 import { median } from "../stats";
 import { classifyDepegClosure, isDepegRecovery } from "../depeg-closure";
-import type { DepegDirection } from "../../types/market";
+import type { DepegDirection } from "../../types/peg";
 import type { DdrHistoricalEvent } from "./inputs";
 import {
   currencyClass,

@@ -2,10 +2,14 @@ import { REQUEST_SOURCE_POLICY_ID, type AttributionMeasurement, type ApiRequestA
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageHealth,
+} from "@shared/types/status/core";
+import type {
   EndpointProbeResult,
   HealthResponse,
+} from "@shared/types/status/public-health";
+import type {
   StatusResponse,
-} from "@shared/types";
+} from "@shared/types/status/response";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 

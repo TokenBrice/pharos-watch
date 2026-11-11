@@ -2,8 +2,20 @@ import { z } from "zod";
 import { DailySocialSnapshotSchema, formatDailySocialValue, type DailySocialSnapshot, type DailySocialTopic } from "@shared/lib/daily-social";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { isFreshnessWarningHeader } from "@shared/lib/warning-headers";
-import { StablecoinListResponseSchema, DexLiquidityMapSchema, DexLiquidityHistoryResponseSchema, DepegEventsResponseSchema,
-  type StablecoinData, type DexLiquidityMap, type DexLiquidityHistoryPoint, type DepegEvent } from "@shared/types/market";
+import {
+  StablecoinListResponseSchema,
+  type StablecoinData
+} from "@shared/types/supply";
+import {
+  DexLiquidityMapSchema,
+  DexLiquidityHistoryResponseSchema,
+  type DexLiquidityMap,
+  type DexLiquidityHistoryPoint
+} from "@shared/types/dex-liquidity";
+import {
+  DepegEventsResponseSchema,
+  type DepegEvent
+} from "@shared/types/peg";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";

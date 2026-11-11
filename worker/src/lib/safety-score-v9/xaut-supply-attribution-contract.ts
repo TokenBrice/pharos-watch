@@ -3,7 +3,7 @@ import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { BridgeRouteRiskTier } from "@shared/types/core";
+import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
 import type { XautLockMintObservation, XautRepresentationGroupSupplyAttributionV2 } from "@shared/types/safety-score-v9-supply-attribution";
 
 // Explicit per-asset override (owner ruling 2026-07-29): xaut-tether alone runs

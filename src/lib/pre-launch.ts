@@ -6,7 +6,8 @@ import {
   type PreLaunchDriftStatus,
 } from "@shared/lib/classification/pre-launch";
 import { formatUtcDayLabel } from "@shared/lib/format";
-import type { DateHistoryEntry, LaunchMilestoneType, LaunchPhase } from "@shared/types";
+import type { DateHistoryEntry } from "@shared/types/stablecoin-meta-primitives";
+import type { LaunchMilestoneType, LaunchPhase } from "@shared/types/stablecoin-lifecycle";
 
 /** Phase → solid accent dot class (static for Tailwind scanner). */
 export const PHASE_DOT: Record<LaunchPhase, string> = {

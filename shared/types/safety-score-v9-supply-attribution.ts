@@ -4,7 +4,7 @@ import { BaseInputGenerationIdSchema, CanonicalChainIdSchema, CanonicalTextSchem
 import { CHAIN_META } from "./chain-identity";
 import { NativeBankDenomSchema } from "./stablecoin-meta-primitives";
 import { L2MessengerPendingReadSchema, L2MessengerPendingProofSchema } from "./safety-score-v9-l2-messenger-pending";
-import { BridgeRouteRiskTierSchema } from "./core";
+import { BridgeRouteRiskTierSchema } from "./bridge-risk";
 
 const vocabulary = candidatePolicy.semantic.supplyAttribution;
 function vocabularySchema(values: string[]) { return z.enum(values as [string, ...string[]]); }

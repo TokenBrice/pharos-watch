@@ -1,4 +1,4 @@
-import type { PegSummaryCoin } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
 
 type PegSummaryCoins = { values(): Iterable<PegSummaryCoin> };
 

@@ -4,7 +4,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { chainCirculatingForDisplay } from "@shared/lib/chains/circulating";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
-import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema } from "@shared/types/supply";
 import {
   getCirculatingRawOrNull,
   getPrevDayRawOrNull,

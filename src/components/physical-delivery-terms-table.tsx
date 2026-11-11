@@ -4,7 +4,7 @@ import type { ContentTableRow } from "@/components/table/content-table";
 import { PHYSICAL_BAR_CLASS_LABELS, PHYSICAL_VAULT_LOCATION_LABELS } from "@shared/lib/classification";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import { getCurrentRedemptionConfig } from "@/lib/redemption-review-currency";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
 const METAL_BY_PEG: Partial<Record<PegCurrency, "XAU" | "XAG">> = { GOLD: "XAU", SILVER: "XAG" };

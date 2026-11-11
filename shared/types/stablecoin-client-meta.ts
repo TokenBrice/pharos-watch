@@ -1,15 +1,21 @@
 import type {
   MintAuthorityConfidence,
-  MintAuthorityControl,
   MintAuthorityMintPath,
   MintAuthorityPosture,
+} from "./mint-authority-vocabulary";
+import type {
+  MintAuthorityControl,
   MintAuthorityProfile,
+} from "./stablecoin-meta-control-schemas";
+import type {
   StablecoinLink,
+} from "./stablecoin-meta-primitives";
+import type {
   StablecoinMeta,
-} from "./core";
+} from "./stablecoin-meta-schemas";
 import type { ListingClass } from "./stablecoin-taxonomy";
 
-export type { MintAuthorityConfidence, MintAuthorityMintPath, MintAuthorityPosture } from "./core";
+export type { MintAuthorityConfidence, MintAuthorityMintPath, MintAuthorityPosture } from "./mint-authority-vocabulary";
 
 export type MintAuthorityClientControlSummary = Pick<
   MintAuthorityControl,

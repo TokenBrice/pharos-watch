@@ -7,7 +7,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { numberValue } from "@shared/lib/type-guards";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
-import { NominalPriceReferenceSchema, type NominalPriceReference } from "@shared/types/core";
+import { NominalPriceReferenceSchema, type NominalPriceReference } from "@shared/types/price";
 import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, hasActivePriceGapMarketCapEvidence } from "@shared/lib/status-thresholds";
 import type {
   ActivePriceCoverageGap,

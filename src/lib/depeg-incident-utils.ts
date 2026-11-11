@@ -1,4 +1,4 @@
-import type { DepegEventsResponse, DepegPendingIncident } from "@shared/types";
+import type { DepegEventsResponse, DepegPendingIncident } from "@shared/types/peg";
 
 export function extractPendingDepegIncidents(
   data: Pick<DepegEventsResponse, "pending"> | undefined,

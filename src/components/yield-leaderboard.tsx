@@ -45,7 +45,7 @@ import { deriveYieldRowDisplay } from "@/lib/yield-row-display";
 import { trackEvent } from "@/lib/analytics";
 import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
 import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
-import type { YieldBenchmarkRegistry } from "@shared/types";
+import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_LEADERBOARD_CSV_COLUMNS } from "@/lib/yield-presentation";

@@ -5,7 +5,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isCensusProviderSetSupersededByRegistry } from "@shared/lib/dex-deployment-coverage";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DiscoveryCrawlTier, DiscoveryMeta, DiscoveryRunCheckpoint } from "./types";

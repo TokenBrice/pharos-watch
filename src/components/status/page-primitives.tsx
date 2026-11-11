@@ -14,7 +14,7 @@ import {
   type OperatorVerdict,
 } from "@shared/lib/classification";
 import { formatElapsedSeconds, timeAgo } from "@shared/lib/format";
-import type { PublicComponentState } from "@shared/types";
+import type { PublicComponentState } from "@shared/types/status/public-health";
 
 export function getCoinLabel(coinId: string): string {
   const meta = ACTIVE_META_BY_ID.get(coinId);

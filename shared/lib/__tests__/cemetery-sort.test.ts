@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DeadStablecoin } from "../../types";
+import type { DeadStablecoin } from "../../types/cemetery";
 import { parseCemeteryDeathDate, sortCemeteryCoins } from "../cemetery";
 
 function coin(id: string, deathDate: string, overrides: Partial<DeadStablecoin> = {}): DeadStablecoin {

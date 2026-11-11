@@ -1,4 +1,4 @@
-import { DexRetiredSolidlyLegacyModelSchema } from "@shared/types/market";
+import { DexRetiredSolidlyLegacyModelSchema } from "@shared/types/dex-execution-legacy";
 import {
   DexMeasuredExecutionTargetSchema,
   type DexMeasuredExecutionTarget,

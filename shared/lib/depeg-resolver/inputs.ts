@@ -108,7 +108,7 @@ export interface DdrLiveContext {
   redemptionRouteFamily?: string | null;
 }
 
-import type { DepegDirection } from "../../types/market";
+import type { DepegDirection } from "../../types/peg";
 
 /** The active confirmed depeg event being resolved. */
 export interface DdrActiveEventInput {

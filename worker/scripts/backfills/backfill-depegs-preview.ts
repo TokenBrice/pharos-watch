@@ -1,5 +1,5 @@
 import type { D1Database } from "@cloudflare/workers-types";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { HistoricalMarketSourceDiagnostics } from "../../src/lib/historical-market-prices";
 import type { BackfillEvent } from "../../src/lib/historical-depeg-extraction";
 import { existingRowOverlapsReplayWindow } from "./backfill-depegs-window";

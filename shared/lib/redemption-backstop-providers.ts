@@ -2,7 +2,7 @@ import type {
   RedemptionCapacityConfidence,
   RedemptionCapacitySemantics,
   RedemptionSourceMode,
-} from "../types";
+} from "../types/redemption";
 
 export const REDEMPTION_BACKSTOP_PROVIDER_IDS = {
   UNQUANTIFIED_MODEL: "unquantified-model",

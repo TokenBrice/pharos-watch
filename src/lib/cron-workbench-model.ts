@@ -7,9 +7,13 @@ import type {
   CronRunSummary,
   CronRunStatus,
   CronStatus,
+} from "@shared/types/status/cron";
+import type {
   StatusCause,
+} from "@shared/types/status/core";
+import type {
   StatusResponse,
-} from "@shared/types";
+} from "@shared/types/status/response";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 
 export type CronWorkbenchState = "unhealthy" | "degraded" | "unknown" | "skipped" | "running" | "healthy";

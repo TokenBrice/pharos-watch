@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { cn } from "@/lib/utils";
-import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { SCORE_TIER_5_CLASSES, SCORE_TIER_5_POLICY, resolveScoreTier5 } from "@shared/lib/classification";
 import {
   REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,

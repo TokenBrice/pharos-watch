@@ -5,7 +5,7 @@ import type { ResearchEvidence } from "@shared/types/safety-score-v9-research-ev
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { V9EconomicControlReviewV2, V9LaneIncidentClosureFailure } from "@shared/types/safety-score-v9-facts";
-import type { BridgeRouteControl } from "@shared/types/core";
+import type { BridgeRouteControl } from "@shared/types/stablecoin-meta-control-schemas";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import {
   V9ReviewedIncidentRegistryEnvelopeSchema,

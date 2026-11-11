@@ -9,7 +9,7 @@ import { SEVERITY_LABEL as SEVERITY_LABEL_BARE } from "@shared/lib/classificatio
 import type { TapeEvent } from "@shared/types/tape-event";
 import { ApiFetchError, type ApiMeta } from "@/lib/api";
 import { FLOW_CLAIM_RETRACTED_REASON, FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 import type { DataHealthInfo } from "@/lib/data-health";
 import type { DigestedDay } from "@/lib/tape-digest";
 import type { TapeFilterState } from "@/components/tape/tape-filters";

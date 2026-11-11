@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildYieldSourceBoardModel, inferLaneConfidenceTier } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
-import type { YieldRanking } from "@shared/types";
+import type { YieldRanking } from "@shared/types/yield";
 import { YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT } from "@shared/types/yield-summary";
 
 function projectRows(rankings: YieldRanking[]) {

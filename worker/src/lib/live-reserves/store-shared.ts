@@ -1,7 +1,8 @@
 import type { ScheduledCheckpointIdentity } from "../scheduled-checkpoint-primitives";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { WORKER_ACTIVE_STABLECOINS, hasWorkerLiveReserves, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveSnapshotProvenance as SharedSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
 import type {
   LiveReserveEvidenceClass,

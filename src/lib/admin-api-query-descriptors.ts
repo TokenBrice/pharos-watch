@@ -2,8 +2,10 @@ import { API_PATHS, buildQueryPath } from "@shared/lib/api-endpoints/paths";
 import type {
   StatusHistoryResponse,
   StatusResponse,
+} from "@shared/types/status/response";
+import type {
   StatusCronDetailResponse,
-} from "@shared/types";
+} from "@shared/types/status/cron";
 import type { ApiKeyAuditLogResponse, ApiKeyListResponse, CredentialLifecycleSummaryResponse } from "@pharos/contracts/api-keys";
 import type { ApiRequestAttributionResponse } from "@pharos/contracts/request-source";
 import { ApiKeyAuditLogResponseSchema, ApiKeyListResponseSchema, CredentialLifecycleSummaryResponseSchema } from "@pharos/contracts/api-keys";

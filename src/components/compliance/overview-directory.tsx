@@ -8,7 +8,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { PEG_METADATA } from "@shared/lib/classification";
-import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types";
+import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types/compliance-vocabulary";
 import {
   GENIUS_STATUS_DISPLAY_ORDER,
   MICA_STATUS_DISPLAY_ORDER,

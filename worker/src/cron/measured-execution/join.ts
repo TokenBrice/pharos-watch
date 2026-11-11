@@ -15,7 +15,7 @@ import {
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionValidationReason,
 } from "@shared/types/measured-execution";
-import type { DexExecutionCapabilityGate } from "@shared/types/market";
+import type { DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import type { PoolEntry } from "../dex-liquidity/types";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,

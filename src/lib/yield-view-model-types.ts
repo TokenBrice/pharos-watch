@@ -17,11 +17,15 @@ import type {
 } from "@/lib/yield-view-config";
 import type {
   PegCurrency,
+} from "@shared/types/core";
+import type {
   YieldBenchmarkKey,
+  YieldType,
+} from "@shared/types/yield-vocabulary";
+import type {
   YieldBenchmarkMeta,
   YieldBenchmarkRegistry,
-  YieldType,
-} from "@shared/types";
+} from "@shared/types/yield";
 import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 
 export type { YieldAttentionFilter, YieldBenchmarkFilter, YieldDepthFilter, YieldFilterOption, YieldOpportunityFilter, YieldPegFilter, YieldSourceChangedFilter, YieldSourceConfidenceFilter, YieldSourcePostureFilter, YieldViewModelFilters, YieldViewModelUrlParams, YieldWarningsFilter, YieldWatchlistFilter };

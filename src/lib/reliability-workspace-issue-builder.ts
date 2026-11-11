@@ -1,5 +1,5 @@
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
-import type { StatusHealthValue } from "@shared/types";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { normalizeStatusIssues } from "@/lib/status-dashboard-model";
 import { worstSeverity as worstWorkspaceSeverity } from "@/lib/status/workspace-mode";
 import {

@@ -6,7 +6,7 @@ import {
   resolvePressureState as getPressureState,
 } from "@shared/lib/mint-burn-coin-helpers";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
-import type { MintBurnCoinFlow } from "@shared/types";
+import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
 import { getFlowPressureUi } from "@/lib/flow-signal-ui";
 import { FLOW_COVERAGE_BADGE_CLASSES } from "@shared/lib/classification";
 

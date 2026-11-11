@@ -17,7 +17,8 @@ import {
   type SafetyScoreV9ShowWorkCard,
   type ShowYourWorkTable,
 } from "@/lib/show-your-work-formatters";
-import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
+import type { StressSignalEntry } from "@shared/types/stress";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";

@@ -1,4 +1,5 @@
-import type { HealthResponse, StatusResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
+import type { StatusResponse } from "@shared/types/status/response";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { buildActionReadinessChecks } from "@/lib/status/admin-ops-insights";

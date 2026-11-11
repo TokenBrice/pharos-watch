@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { getAboutLeadParagraphs } from "@/lib/about-content";
 
 describe("about lead paragraphs", () => {

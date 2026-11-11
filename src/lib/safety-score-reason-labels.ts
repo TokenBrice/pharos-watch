@@ -1,5 +1,5 @@
 import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
-import type { V9QualityPillar } from "@shared/types";
+import type { V9QualityPillar } from "@shared/types/safety-score-v9";
 import type { V9LocalAuthorityExposure } from "@shared/types/safety-score-v9-public";
 import { normalizeChain, prettifyProtocol } from "@/lib/dex-display-constants";
 import { describeFailureDomain } from "@/lib/failure-domain-labels";

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 import { mockFetchRetry } from "../../../test-helpers/cron";
 import type * as FetchRetry from "../../../lib/fetch-retry";

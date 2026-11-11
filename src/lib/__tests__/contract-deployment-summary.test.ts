@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
 

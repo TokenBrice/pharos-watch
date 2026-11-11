@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../types";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 import {
   ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,

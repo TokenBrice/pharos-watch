@@ -1,5 +1,5 @@
 import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
-import type { EndpointProbeResult } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
 import { Badge } from "@/components/ui/badge";
 import { getProbeDisplayStatus, isProbePassing } from "@/lib/status-dashboard-model";
 import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";

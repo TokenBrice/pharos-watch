@@ -19,7 +19,7 @@ import {
   isTezosDiscoveryDeployment,
 } from "../dex-deployment-coverage";
 import type { DexDiscoveryProvider } from "../dex-deployment-coverage";
-import type { LiquidityPoolSourceFamily } from "@shared/types/market";
+import type { LiquidityPoolSourceFamily } from "@shared/types/dex-liquidity";
 
 [
   "aquarius",

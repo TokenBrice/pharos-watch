@@ -1,5 +1,5 @@
 import { formatCurrency } from "@shared/lib/format";
-import type { BlacklistValuationCoverage } from "@shared/types/market";
+import type { BlacklistValuationCoverage } from "@shared/types/blacklist";
 
 /**
  * Keep unavailable and partially priced cohorts visible beside their subtotal.

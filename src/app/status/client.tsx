@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { PublicStatusHistoryWindow } from "@shared/types";
+import type { PublicStatusHistoryWindow } from "@shared/types/status/public-health";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
 import { Button } from "@/components/ui/button";

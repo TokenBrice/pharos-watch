@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { YieldTypeSchema } from "./core";
+import { YieldTypeSchema } from "./yield-vocabulary";
 import {
   YIELD_BENCHMARK_KEY_VALUES,
   YIELD_CALCULATION_MODE_VALUES,

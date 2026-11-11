@@ -1,7 +1,7 @@
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "./stablecoins/aggregate-client-registry";
 import { getCirculatingRawOrNull } from "./supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage, type SupplyCoverage } from "./supply-provenance";
-import type { StablecoinListResponse } from "../types";
+import type { StablecoinListResponse } from "../types/supply";
 import { HOMEPAGE_COHORT_BUCKET_IDS, type HomepageCohortBucketKey } from "./homepage-cohort-config";
 
 export type { HomepageHeroSnapshot } from "../types/homepage";

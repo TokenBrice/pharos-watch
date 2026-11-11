@@ -1,5 +1,6 @@
 import { getStatusSeverity } from "@shared/lib/public-health";
-import type { StatusCause, StatusResponse } from "@shared/types";
+import type { StatusCause } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import type { StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { DashboardNotice } from "@/lib/status/dashboard-types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";

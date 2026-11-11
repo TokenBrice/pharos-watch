@@ -1,4 +1,4 @@
-import type { MintAuthorityPosture } from "../../types/core";
+import type { MintAuthorityPosture } from "../../types/mint-authority-vocabulary";
 import type { V9MintPosture } from "./control-primitives";
 
 /**

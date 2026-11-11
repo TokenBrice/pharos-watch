@@ -1,4 +1,4 @@
-import type { ReserveRisk } from "../types";
+import type { ReserveRisk } from "../types/reserves";
 
 export const CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL = {
   // ── Very-low: no/minimal counterparty risk ─────────────────

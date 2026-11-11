@@ -1,7 +1,7 @@
 import { isCoinGeckoHistoryAllowed } from "./solomon-usdv-identity";
 import { logWorkerEventArgs } from "./structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { DEFILLAMA_COINS, USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { CoinGeckoMarketChartSchema } from "./external-api-schemas";

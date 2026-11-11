@@ -26,7 +26,7 @@ import type {
   StressSignalAgeClassification,
   StressSignalDataStatus,
   StressSignalDataReason,
-} from "@shared/types/market";
+} from "@shared/types/stress";
 
 interface AggregateCoverage {
   status: StressSignalDataStatus;

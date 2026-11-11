@@ -24,7 +24,7 @@ import {
 } from "@/lib/alt-peg-market";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 
 type FocusedChart = "share" | "cohorts";

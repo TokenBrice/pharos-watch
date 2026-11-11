@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { DepegEventEntry } from "@shared/types/market";
+import type { DepegEventEntry } from "@shared/types/peg";
 
 const { EVENTS } = vi.hoisted(() => {
   const base = {

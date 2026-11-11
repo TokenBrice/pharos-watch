@@ -2,7 +2,8 @@
 
 import { IntentLink } from "@/components/intent-link";
 import { History, Table2 } from "lucide-react";
-import type { SafetyScoreV9CurrentCard, V9QualityPillar } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { V9QualityPillar } from "@shared/types/safety-score-v9";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";

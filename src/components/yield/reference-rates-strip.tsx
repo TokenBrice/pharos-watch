@@ -19,7 +19,7 @@ import type {
   YieldBenchmarkRegistry,
   YieldSafetySnapshotMeta,
   YieldSourceInputMeta,
-} from "@shared/types";
+} from "@shared/types/yield";
 
 interface ReferenceRatesStripProps {
   benchmarks?: YieldBenchmarkRegistry | null;

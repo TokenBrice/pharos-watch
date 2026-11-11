@@ -2,7 +2,8 @@ import { YIELD_SOURCE_AGE_DISPLAY, YIELD_SOURCE_CONFIDENCE_CLASSES } from "@shar
 import { getYieldSourceProducerCadenceMs } from "@shared/lib/yield-source-cadence";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
-import type { YieldRankChangeAttribution, YieldRanking } from "@shared/types";
+import type { YieldRankChangeAttribution } from "@shared/types/yield-evidence-schemas";
+import type { YieldRanking } from "@shared/types/yield";
 import { YIELD_SOURCE_CONFIDENCE_TIER_VALUES } from "@shared/types/yield-vocabulary";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];

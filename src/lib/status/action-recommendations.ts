@@ -1,6 +1,7 @@
 import { getStatusPageActions, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
-import type { StatusCause, StatusResponse } from "@shared/types";
+import type { StatusCause } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 import { countConsecutiveStatus } from "@/lib/status/cron-run-utils";
 

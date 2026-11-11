@@ -29,7 +29,7 @@ import {
   type DexVolumeCompleteness,
   type DexVolumeWindow,
   type LiquidityScoreUnavailableReason,
-} from "../types/market";
+} from "../types/dex-liquidity";
 
 const DEX_VOLUME_WINDOW_SEC = {
   "24h": 86_400,

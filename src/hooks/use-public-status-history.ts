@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { PublicStatusHistoryResponse, PublicStatusHistoryWindow } from "@shared/types";
+import type { PublicStatusHistoryResponse, PublicStatusHistoryWindow } from "@shared/types/status/public-health";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { useRegisteredApiQuery } from "./api-hooks";
 

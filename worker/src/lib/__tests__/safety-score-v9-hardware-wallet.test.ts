@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
-import type { MintAuthorityKeyCustodyAttestation } from "@shared/types/core";
+import type { MintAuthorityKeyCustodyAttestation } from "@shared/types/stablecoin-meta-control-schemas";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { gradeEconomicControlAuthority } from "@shared/lib/safety-score-v9/control-mint-grade";
 import { makeDeploymentControl, makeReviewedMintInput } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";

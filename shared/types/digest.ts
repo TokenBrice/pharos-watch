@@ -1,7 +1,7 @@
 import { V9RatingStatusSchema, V9CompactPartialEvidenceSchema, V9EvidencePillarSchema } from "./safety-score-v9-causes";
 import { z } from "zod";
 import { DigestSafetyMapUtcDateSchema, type DigestSafetyMapCapture } from "./digest-safety-map-contract";
-import type { DepegDirection } from "./market";
+import type { DepegDirection } from "./peg";
 import type { MintBurnFlowsResponse } from "./mint-burn";
 import {
   SafetyScorePublicationIdentitySchema,

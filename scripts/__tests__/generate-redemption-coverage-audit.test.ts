@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import {
   generateRedemptionCoverageAudit,

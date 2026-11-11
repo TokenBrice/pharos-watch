@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { useStatus } from "@/hooks/admin-api-hooks";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { WorkspaceStatusBoundary } from "./workspace-status-boundary";
 
 /**

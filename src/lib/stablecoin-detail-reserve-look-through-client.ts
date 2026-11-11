@@ -1,4 +1,6 @@
-import type { ReserveRisk, StablecoinLink, StablecoinMeta } from "@shared/types";
+import type { ReserveRisk } from "@shared/types/reserves";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { projectReserveQualityClientSummary, resolveReserveEvidenceBasis } from "@/lib/stablecoin-detail-reserve-quality-client";
 
 /** One reviewed slice of the wrapped parent's basket, bounded to what the look-through visual draws. */

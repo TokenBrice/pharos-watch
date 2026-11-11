@@ -2,7 +2,7 @@ import {
   BluechipRatingSchema,
   BluechipRatingsMapSchema,
   type BluechipRatingsMap,
-} from "@shared/types/market";
+} from "@shared/types/bluechip";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { assessBluechipRating } from "@shared/lib/bluechip-freshness";

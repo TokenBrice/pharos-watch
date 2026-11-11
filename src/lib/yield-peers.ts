@@ -1,5 +1,7 @@
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { PegCurrency, YieldRanking, YieldType } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
+import type { YieldRanking } from "@shared/types/yield";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 
 export type YieldPeerSafetyBand = "80-plus" | "70-79" | "60-69" | "50-59" | "under-50" | "unknown";
 

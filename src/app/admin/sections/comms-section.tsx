@@ -1,4 +1,4 @@
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TelegramBroadcastPanel } from "@/components/status/telegram-broadcast-panel";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";

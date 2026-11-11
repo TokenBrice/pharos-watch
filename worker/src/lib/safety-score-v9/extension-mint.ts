@@ -5,10 +5,11 @@ import { compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, par
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { hasReviewedNoLocalIssuanceException, validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge-ownership";
-import type { MintAuthorityControl, MintAuthorityEconomicCapSemantics, MintAuthorityProfile, MintAuthorityScopedQuestion } from "@shared/types/core";
+import type { MintAuthorityControl, MintAuthorityProfile, MintAuthorityScopedQuestion } from "@shared/types/stablecoin-meta-control-schemas";
+import type { MintAuthorityEconomicCapSemantics } from "@shared/types/mint-authority-vocabulary";
 import type { V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
 import { V1005VotingControllerSchema } from "@shared/types/safety-score-v9-control-scope";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { ReviewEvidenceBuilder, parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
 import { projectControlAuthority, confidenceForResearch, notApplicableStatus, requiredStatus, researchReviewObservationState, reviewedObservationState, reviewedKeyCustody, type ControlOverlay, type ExtensionAsset, type V9ExtensionRegistryMeta } from "./extension-shared";
 import type { PreparedDependency } from "./extension-dependencies";

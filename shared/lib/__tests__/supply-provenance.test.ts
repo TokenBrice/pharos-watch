@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SupplyChainGuardProvenance } from "../../types/market";
+import type { SupplyChainGuardProvenance } from "../../types/supply";
 import {
   buildSupplyObservationProvenance,
   classifySupplyCoverage,

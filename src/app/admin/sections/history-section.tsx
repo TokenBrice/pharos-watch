@@ -1,5 +1,5 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { OperationalActivity, type OperationalActivityProps } from "@/components/status/operational-activity";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";

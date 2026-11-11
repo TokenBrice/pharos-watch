@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FreezeWatchClient from "./client";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 import type { ApiMeta } from "@/lib/api";
-import type { BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { CLIENT_ACTIVE_STABLECOINS, CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 

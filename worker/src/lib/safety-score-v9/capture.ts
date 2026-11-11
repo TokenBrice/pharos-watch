@@ -8,8 +8,8 @@ import {
   projectReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
 import type { DexDeploymentSupplyCoverage } from "../report-cards-fixed-input";
-import type { StablecoinData } from "@shared/types/market";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinData } from "@shared/types/supply";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { PROTOCOL_REDEEM_SOURCE } from "../authoritative-price-sources/helpers";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";

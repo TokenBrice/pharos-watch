@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../structured-log";
 import { recordOutcomeSafe } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
-import type { BlacklistStablecoin } from "@shared/types/market";
+import type { BlacklistStablecoin } from "@shared/types/blacklist";
 import { throwIfAborted } from "../abort";
 import {
   getBlacklistConfigByContract,

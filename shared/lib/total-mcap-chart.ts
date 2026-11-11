@@ -1,4 +1,4 @@
-import type { StablecoinChartPoint, SupplyHistoryPoint } from "../types";
+import type { StablecoinChartPoint, SupplyHistoryPoint } from "../types/supply";
 import type { HomepageHeroCohort } from "../types/homepage";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "./rate-series";
 import { admitSupplyBuckets } from "./supply";

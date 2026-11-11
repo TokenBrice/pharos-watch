@@ -1,4 +1,5 @@
-import type { EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
+import type { EndpointProbeResult, HealthResponse } from "@shared/types/status/public-health";
+import type { StatusResponse } from "@shared/types/status/response";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { OPERATOR_VERDICT_TONE, type OperatorVerdict } from "@shared/lib/classification";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";

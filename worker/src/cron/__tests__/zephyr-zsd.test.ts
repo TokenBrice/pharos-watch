@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { mergeSupplementalLastKnownGood } from "../sync-stablecoins/shared";
 import {

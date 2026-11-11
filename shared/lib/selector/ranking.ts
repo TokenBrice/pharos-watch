@@ -1,4 +1,4 @@
-import type { ReportCardGrade } from "../../types";
+import type { ReportCardGrade } from "../../types/report-card-grade";
 import type { ScoredEntry } from "./scoring";
 import type {
   SelectorInput,

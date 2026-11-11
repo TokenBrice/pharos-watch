@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import { CommandPalette } from "@/components/command-palette-root";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { STABLECOINS_QUERY_KEY } from "@shared/lib/query-keys";
-import type { StablecoinListResponse } from "@shared/types";
+import type { StablecoinListResponse } from "@shared/types/supply";
 
 const {
   pushMock,

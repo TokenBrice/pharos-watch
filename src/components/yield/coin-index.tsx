@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { CLIENT_ACTIVE_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import type { YieldType } from "@shared/types";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 
 interface CoinIndexEntry {
   id: string;

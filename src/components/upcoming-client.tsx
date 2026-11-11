@@ -36,7 +36,8 @@ import {
   type PreLaunchClockView,
 } from "@/lib/pre-launch";
 import { stripTermMarkup } from "@/lib/term-markup";
-import type { StablecoinMeta, UpcomingLaunchPhase } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { UpcomingLaunchPhase } from "@shared/types/stablecoin-lifecycle";
 import { type UrlStateSchema } from "@/lib/url-state";
 import { useUrlState } from "@/hooks/use-url-state";
 import { getLogoSrc } from "@/lib/logos";

@@ -1,4 +1,5 @@
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveAdapterDescriptor } from "@shared/types/live-reserve-adapter-declarations";
 import type {
   LiveReserveAdapterKey,

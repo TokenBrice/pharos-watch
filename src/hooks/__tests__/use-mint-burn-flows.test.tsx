@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MintBurnFlowsResponse } from "@shared/types";
+import type { MintBurnFlowsResponse } from "@shared/types/mint-burn";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 

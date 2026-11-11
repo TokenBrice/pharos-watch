@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { StablecoinDataSchema, StablecoinDataOutputSchema } from "@shared/types/market";
+import { StablecoinDataSchema, StablecoinDataOutputSchema } from "@shared/types/supply";
 import { ReserveBoundedFactKindSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,

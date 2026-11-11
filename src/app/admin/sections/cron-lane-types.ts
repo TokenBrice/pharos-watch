@@ -1,4 +1,4 @@
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 
 export interface CronGroup {
   key: string;

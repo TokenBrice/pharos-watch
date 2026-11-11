@@ -1,7 +1,7 @@
 import { BPS_PER_UNIT } from "@shared/lib/math";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 
 /** Producer-owned admission marker; legacy Tezos staging requires a fresh identity review. */
 export const TEZOS_POOL_IDENTITY_REVIEW_VERSION = "tezos-reviewed-v1";

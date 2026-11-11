@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../lib/evm-selectors";
 import type { OnchainRateProbe } from "../onchain";

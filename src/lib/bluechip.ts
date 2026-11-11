@@ -1,4 +1,4 @@
-import type { BluechipGrade } from "@shared/types";
+import type { BluechipGrade } from "@shared/types/bluechip";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 
 export const BLUECHIP_REPORT_BASE = "https://bluechip.org/en/coins";

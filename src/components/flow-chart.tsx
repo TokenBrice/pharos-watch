@@ -20,7 +20,7 @@ import type { ChartDataTableColumn } from "@/components/chart-primitives/data-ta
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
-import type { MintBurnClassification, MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types";
+import type { MintBurnClassification, MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import { buildFlowChartModel, type ChartDatum } from "./flow-chart-model";
 import { formatMintBurnVolume, MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@shared/lib/mint-burn-valuation-display";
 import { DAY_HOURS } from "@/lib/constants";

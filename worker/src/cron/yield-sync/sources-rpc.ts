@@ -1,5 +1,5 @@
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
 import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {

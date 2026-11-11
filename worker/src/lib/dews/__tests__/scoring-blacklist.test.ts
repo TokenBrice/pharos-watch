@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { buildDewsScoringResult } from "../scoring";
 import type { DewsSourceState } from "../contracts";
 import { emptyDewsDependencyDiagnostics } from "./source-state.test-support";

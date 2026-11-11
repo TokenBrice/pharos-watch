@@ -1,6 +1,6 @@
 import { computePegScore } from "@shared/lib/peg-score";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { describe, expect, it } from "vitest";

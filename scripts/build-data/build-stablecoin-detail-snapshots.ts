@@ -19,7 +19,7 @@ import {
   StablecoinDetailResponseSchema,
   SupplyHistoryResponseSchema,
   type SupplyHistoryPoint,
-} from "@shared/types/market";
+} from "@shared/types/supply";
 import type { StablecoinDetailSnapshot } from "../../src/lib/api";
 import { normalizeStablecoinLiveSummary, projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";

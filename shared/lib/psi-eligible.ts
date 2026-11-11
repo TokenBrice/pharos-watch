@@ -5,7 +5,7 @@ import {
 } from "./stablecoins/aggregate-registry";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "./stablecoins/registry";
 import { PSI_HISTORICAL_ASSETS, PSI_HISTORICAL_IDS, PSI_HISTORICAL_META_BY_ID } from "./psi-historical-assets";
-import type { StablecoinMeta } from "../types";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 
 export { PSI_HISTORICAL_IDS };
 

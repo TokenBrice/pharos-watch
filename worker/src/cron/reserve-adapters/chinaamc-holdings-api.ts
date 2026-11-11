@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
+import type { ReserveSlice } from "@shared/types/reserves";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";

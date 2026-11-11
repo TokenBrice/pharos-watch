@@ -4,7 +4,7 @@ import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import type { V9AllocationScopeIdentityReview } from "@shared/types/safety-score-v9-allocation";
-import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/core";
+import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import usdatRisk from "@shared/data/stablecoins/domains/risk-review/usdat-saturn.json";
 import xgldRisk from "@shared/data/stablecoins/domains/risk-review/xgld-unitas.json";
 import { V9NegativeIncidentReviewSchema } from "@shared/types/safety-score-v9-incidents";

@@ -6,7 +6,7 @@ import {
 import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { pegCurrencyToFilterTag } from "@shared/lib/filter-tags";
 import { formatProseList } from "@shared/lib/format";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import {
   ACTIVE_PEGS,

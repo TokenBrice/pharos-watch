@@ -1,4 +1,4 @@
-import type { ReserveSlice } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
 import type { LiveReserveAdapterKey, LiveReserveWarning } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition, MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/lib/live-reserve-adapters";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";

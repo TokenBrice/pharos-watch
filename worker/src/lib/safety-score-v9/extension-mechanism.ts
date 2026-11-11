@@ -8,7 +8,8 @@ import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { admitV10ReserveReportScope, resolveV10ScopedAssuranceFragments, shouldApplyV10ReserveReportScope } from "@shared/lib/safety-score-v9/reserve-scope";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { parseIsoDateOrUtcInstantSec, reviewAdmissionSec } from "@shared/types/date-primitives";
-import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
+import type { ProofOfReservesLatestReport } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   V9MechanismRiskReviewSchema,
   type V9MechanismFactV1,

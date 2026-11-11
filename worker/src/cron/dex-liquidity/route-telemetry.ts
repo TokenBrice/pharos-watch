@@ -1,5 +1,5 @@
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
-import type { ExitRouteObservation } from "@shared/types/market";
+import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { LiquidityMetrics } from "./types";
 import type { CronResult } from "../../lib/cron-logger";

@@ -1,6 +1,6 @@
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { USER_AGENT } from "../../lib/constants";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";

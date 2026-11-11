@@ -1,4 +1,4 @@
-import type { MintBurnCoverageStatus } from "@shared/types";
+import type { MintBurnCoverageStatus } from "@shared/types/mint-burn";
 import { FLOW_COVERAGE_LABELS } from "@shared/lib/classification";
 import type { CoverageStatus } from "@/lib/coverage-types";
 import {

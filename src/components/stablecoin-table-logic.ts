@@ -15,7 +15,10 @@ import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/client-registry";
-import type { DexLiquidityTableMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
+import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";

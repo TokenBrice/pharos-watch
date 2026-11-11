@@ -1,4 +1,4 @@
-import type { MintBurnCoinFlow, MintBurnGauge } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnGauge } from "@shared/types/mint-burn";
 import { assessGaugeBandSettlement, type GaugeBand } from "@shared/lib/mint-burn-gauge-bands";
 import { inferHas24hActivity, resolvePressureScore } from "@shared/lib/mint-burn-coin-helpers";
 import { resolveMintBurnValuation } from "@shared/lib/mint-burn-valuation";

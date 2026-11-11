@@ -1,4 +1,4 @@
-import type { LaunchMilestoneType, LaunchPhase } from "../../types/core";
+import type { LaunchMilestoneType, LaunchPhase } from "../../types/stablecoin-lifecycle";
 
 export const PRE_LAUNCH_PHASE_CLASSES = {
   announced: {

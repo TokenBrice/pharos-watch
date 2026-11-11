@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import type { PriceObservedAtMode } from "@shared/types/core";
+import type { PriceObservedAtMode } from "@shared/types/price";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { FetcherOutcome } from "./fetcher-result";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "./coingecko";

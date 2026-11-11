@@ -3,7 +3,7 @@ import mechanismOverlays from "@shared/data/safety-score-v9/mechanism-review-ove
 import operationalResilienceHistoricalFixture from "./fixtures/operational-resilience-overlay.historical.json";
 import transferOverlays from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
 import stablecoinsGenerated from "@shared/data/stablecoins/coins.generated.json";
-import type { StablecoinMeta } from "../core";
+import type { StablecoinMeta } from "../stablecoin-meta-schemas";
 import { SafetyScoreV9MechanismReviewOverlayFileSchema } from "../safety-score-v9-mechanism-overlays";
 import { SafetyScoreV9OperationalResilienceOverlayFileSchema } from "../safety-score-v9-operational-resilience-overlays";
 import { SafetyScoreV9ReviewedTransferFileSchema } from "../safety-score-v9-transfer-overlays";

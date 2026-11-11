@@ -4,7 +4,7 @@ import {
   isKavaSwapDiscoveryDeployment,
   KAVA_SWAP_USDX_DISCOVERY_ADDRESS,
 } from "@shared/lib/dex-deployment-coverage";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
 import { type CrawlStageContext, toStagedPool } from "./staged-pool";
 import {

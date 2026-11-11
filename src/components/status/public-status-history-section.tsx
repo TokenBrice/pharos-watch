@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicStatusHistoryResponse } from "@shared/types";
+import type { PublicStatusHistoryResponse } from "@shared/types/status/public-health";
 import { PublicIncidentList } from "@/components/status/public-transition-timeline";
 import { StatusSection } from "@/components/status/page-primitives";
 

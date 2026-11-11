@@ -8,7 +8,8 @@ import {
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isQuarantinedStablecoinMeta } from "@shared/lib/stablecoins/status";
-import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";

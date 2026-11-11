@@ -6,7 +6,7 @@ import {
   isBlacklistStablecoin,
   isGoldBlacklistStablecoin,
 } from "../blacklist";
-import { BLACKLIST_STABLECOINS } from "../../types/market";
+import { BLACKLIST_STABLECOINS } from "../../types/blacklist";
 
 describe("blacklist price boundary", () => {
   it("records a pricing decision for every tracked symbol — an unmapped symbol fails here, not as $1.00", () => {

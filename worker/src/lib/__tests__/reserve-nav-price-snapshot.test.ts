@@ -8,7 +8,7 @@ import { prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { loadReserveNavSupplyPrice } from "../reserve-nav-price";
 import { collectPrimaryProviderQuotes, type PrimaryPricePlan } from "../../cron/sync-stablecoins/enrich-prices-primary-provider-collection";
 import { fetchFiatCoinGeckoTokens } from "../../cron/sync-stablecoins/supplemental-assets/fiat-cg";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as SupplementalShared from "../../cron/sync-stablecoins/supplemental-assets/shared";
 import type * as OnchainSupply from "../../cron/sync-stablecoins/supplemental-assets/onchain-supply";

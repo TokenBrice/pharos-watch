@@ -2,7 +2,7 @@ import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtim
 import { filterCoreAggregateStablecoins } from "@shared/lib/stablecoins/aggregate-universe";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/market";
+import { NonUsdShareResponseSchema, type NonUsdSharePoint } from "@shared/types/supply";
 import { getCaches } from "./db-cache";
 import { getCompletedSupplySnapshot, SNAPSHOT_SUPPLY_LAST_WRITE_KEY } from "./supply-snapshot-completion";
 import { throwIfAborted } from "./abort";

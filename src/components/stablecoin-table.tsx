@@ -4,7 +4,10 @@ import { useMemo, useCallback, useRef, type ReactNode, type RefObject } from "re
 import { useRouter } from "next/navigation";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import { TableToolbar } from "./table-toolbar";
-import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityTableMap } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
+import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useSort } from "@/hooks/use-sort";

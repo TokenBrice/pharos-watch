@@ -8,9 +8,13 @@ import {
 import { ChainsResponseSchema } from "../../types/chains";
 import {
   PegSummaryResponseSchema,
+} from "../../types/peg";
+import {
   StablecoinListResponseSchema,
+} from "../../types/supply";
+import {
   StressSignalsAllResponseSchema,
-} from "../../types/market";
+} from "../../types/stress";
 import { ReportCardsV9AcceptedResponseSchema } from "../../types/report-cards-v9-accepted";
 import { StabilityIndexResponseSchema } from "../../types/stability";
 

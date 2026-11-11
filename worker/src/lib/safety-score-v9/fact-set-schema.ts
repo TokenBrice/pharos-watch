@@ -39,7 +39,8 @@ import {
 } from "@shared/types/exit-route";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
-import { CustodyModelSchema, WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
+import { CustodyModelSchema } from "@shared/types/custody";
+import { WRAPPER_OPERATOR_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { ParentBackingInheritanceSchema } from "@shared/types/stablecoin-meta-primitives";
 import { SafetyScoreV9WrapperAllocationReviewSchema, V9AllocationScopeIdentityReviewSchema } from "@shared/types/safety-score-v9-allocation";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";

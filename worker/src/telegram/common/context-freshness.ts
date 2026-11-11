@@ -1,7 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isFiniteNumber } from "@shared/lib/type-guards";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { DEWS_STALE_DEX_LIQUIDITY_SEC } from "../../lib/dews/source-state/budgets";
 import { classifyFreshness } from "../../lib/status/freshness-oracle";
 

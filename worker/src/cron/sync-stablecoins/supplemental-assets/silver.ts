@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { USER_AGENT } from "../../../lib/constants";
 import { cgHeaders, cgUrl } from "../../../lib/coingecko";

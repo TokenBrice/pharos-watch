@@ -1,6 +1,6 @@
 import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 
 import {
   buildInsertDepegEventStmt,

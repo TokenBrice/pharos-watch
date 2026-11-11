@@ -10,7 +10,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS, FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
-import { StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
 import { NAV_PARENT_ONLY_GECKO_IDS } from "../supplemental-assets";
 import type { PeggedAsset } from "../enrich-prices";

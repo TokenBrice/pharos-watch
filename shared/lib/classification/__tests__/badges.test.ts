@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "../../../types";
+import type { StablecoinMeta } from "../../../types/stablecoin-meta-schemas";
 import { POR_BADGE_STYLES, POR_NEUTRAL_REPORT_LABEL, getProofOfReservesStyle } from "../badges";
 
 type ProofOfReserves = NonNullable<StablecoinMeta["proofOfReserves"]>;

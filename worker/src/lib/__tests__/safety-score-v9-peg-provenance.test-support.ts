@@ -1,5 +1,5 @@
 import { computePegScore } from "@shared/lib/peg-score";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import type { PegSummaryCoin } from "@shared/types/peg";
 
 const ASSET_ID = "usdg-paxos";

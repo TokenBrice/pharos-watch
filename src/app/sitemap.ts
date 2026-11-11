@@ -16,7 +16,7 @@ import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import aiSummaries from "../../data/ai-summaries.json";
-import type { StablecoinAiSummariesById } from "@shared/types";
+import type { StablecoinAiSummariesById } from "@shared/types/editorial";
 import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
 import { changelogs } from "@/data/changelogs";
 import {

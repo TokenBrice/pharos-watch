@@ -1,4 +1,5 @@
-import type { BridgeRouteRiskTier, StablecoinMeta } from "../../types";
+import type { BridgeRouteRiskTier } from "../../types/bridge-risk";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 import { CHAIN_META } from "../../types/chain-identity";
 import type { L2BeatRiskSentiment, L2BeatStage } from "../../types/chains";
 import {

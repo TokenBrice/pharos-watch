@@ -7,7 +7,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
-import type { FilterTag } from "@shared/types";
+import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
 import type { PegRateSource } from "@shared/lib/peg-rates";
 
 interface StablecoinFilteredTableProps {

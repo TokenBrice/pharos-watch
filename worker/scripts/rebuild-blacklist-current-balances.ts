@@ -9,7 +9,7 @@ import { encodeBalanceOfCallData } from "../src/lib/evm-selectors";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import { fetchEvmTokenBalance } from "../src/lib/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
-import type { BlacklistStablecoin } from "@shared/types/market";
+import type { BlacklistStablecoin } from "@shared/types/blacklist";
 import { BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY } from "../src/lib/blacklist-current-balances";
 import { describeDestructiveOperationMode, parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
 import { parsePositiveInteger } from "./lib/kyc-rip";

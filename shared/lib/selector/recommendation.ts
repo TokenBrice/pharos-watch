@@ -1,4 +1,5 @@
-import type { BluechipGrade, ReportCardGrade } from "../../types";
+import type { BluechipGrade } from "../../types/bluechip";
+import type { ReportCardGrade } from "../../types/report-card-grade";
 import { selectLowestSubDimension } from "./lowest-sub-dimension";
 import { round1 } from "../math";
 import type { ScoredEntry } from "./scoring";

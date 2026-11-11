@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { toFunctionSelector } from "viem/utils";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";

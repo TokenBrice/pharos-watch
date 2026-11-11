@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { PriceObservedAtModeSchema } from "@shared/types/core";
+import { PriceObservedAtModeSchema } from "@shared/types/price";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEventArgs } from "../../lib/structured-log";

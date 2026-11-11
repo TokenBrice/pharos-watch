@@ -10,7 +10,7 @@
  */
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import usdx from "@shared/data/stablecoins/coins/usdx-kava.json";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey, type LiveReserveWarning } from "@shared/types/live-reserves";
 import { CORPUS_BACKLOG as CAPTURE_BACKLOG, CORPUS_CASES as CAPTURE_CASES, CORPUS_NOT_REPLAYABLE, type AdapterCorpusCase } from "./adapter-corpus.test-support";

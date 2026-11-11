@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PriceConfidenceSchema } from "./core";
+import { PriceConfidenceSchema } from "./price";
 
 export const SUI_CLMM_SHADOW_HISTORY_LIMIT = 8;
 export const SUI_CLMM_SHADOW_PACKET_MAX_BYTES = 256 * 1024;

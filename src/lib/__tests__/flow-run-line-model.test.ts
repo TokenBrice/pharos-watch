@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRunLineModel, selectRunLineDrivers } from "@/lib/flow-run-line-model";
 import { buildGaugeVerdict } from "@/lib/flow-signal-ui";
 import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
-import type { MintBurnGauge } from "@shared/types";
+import type { MintBurnGauge } from "@shared/types/mint-burn";
 
 const gauge = (overrides: Partial<MintBurnGauge> = {}): MintBurnGauge => ({
   score: -5,

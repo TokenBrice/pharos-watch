@@ -1,4 +1,4 @@
-import type { DeadStablecoin } from "../types";
+import type { DeadStablecoin } from "../types/cemetery";
 import { isValidIsoDateOnly } from "../types/date-primitives";
 import logosByStablecoinId from "../../data/logos.json";
 import { DEAD_STABLECOINS } from "./dead-stablecoins";

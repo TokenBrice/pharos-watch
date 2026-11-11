@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExitRouteObservationCoverageSchema } from "@shared/types/market";
+import { ExitRouteObservationCoverageSchema } from "@shared/types/exit-route";
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_FRESHNESS_MAX_SEC,

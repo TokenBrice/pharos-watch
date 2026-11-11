@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
 
 describe("collateral score delta detection", () => {

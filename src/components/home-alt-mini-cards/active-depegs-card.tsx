@@ -17,7 +17,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { classifyOpenIncidentEvidence, selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import type { PegSummaryCoin } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
 import { DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES, OPEN_INCIDENT_EVIDENCE_LABELS, type OpenIncidentEvidence } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 

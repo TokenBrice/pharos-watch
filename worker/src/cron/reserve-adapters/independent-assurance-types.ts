@@ -3,7 +3,7 @@ import type {
   IndependentAssuranceProduct,
   IndependentAssuranceReconciliationOptions,
 } from "@shared/lib/independent-assurance";
-import type { ReserveSlice } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
 import type { AdapterContext } from "./types";
 
 interface AssuranceSliceClassification {

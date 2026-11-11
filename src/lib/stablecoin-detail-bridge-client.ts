@@ -1,10 +1,16 @@
 import type {
   BridgeRouteDeployment,
+} from "@shared/types/stablecoin-meta-control-schemas";
+import type {
   BridgeRouteRiskConfidence,
   BridgeRouteRiskTier,
+} from "@shared/types/bridge-risk";
+import type {
   StablecoinLink,
+} from "@shared/types/stablecoin-meta-primitives";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import {
   BRIDGE_THIRD_PARTY_TIERS,
   BRIDGE_TIER_LABELS,

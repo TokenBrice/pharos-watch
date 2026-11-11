@@ -3,7 +3,7 @@ import {
   makeYieldProvenance,
   makeYieldRanking,
 } from "@shared/test-utils/yield-ranking-fixtures";
-import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
+import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 
 export function makeYieldDetailRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
   return makeYieldRanking({

@@ -1,4 +1,4 @@
-import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
+import type { BluechipRating, BluechipSmidge } from "@shared/types/bluechip";
 
 type Category = { translations?: Array<{ summary?: string }> } | null;
 type ApiCoin = {

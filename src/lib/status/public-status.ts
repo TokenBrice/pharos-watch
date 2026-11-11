@@ -3,10 +3,11 @@ import {
   getPublicMintBurnStatus,
   PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER,
 } from "@shared/lib/public-health";
-import type { HealthResponse, StatusHealthValue } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
+import type { StatusHealthValue } from "@shared/types/status/core";
 import { formatProseList } from "@shared/lib/format";
 import { getPublicAgeBandState, projectPublicStatus, type PublicStatusProjection } from "@shared/lib/public-status-components";
-import type { PublicComponentState, PublicHeadlineState } from "@shared/types";
+import type { PublicComponentState, PublicHeadlineState } from "@shared/types/status/public-health";
 import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 import { STATUS_PRIORITY } from "@/lib/status/dashboard-presentation";
 

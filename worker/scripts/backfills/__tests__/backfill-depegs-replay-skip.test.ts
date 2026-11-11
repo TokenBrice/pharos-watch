@@ -3,7 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import type { BackfillCoinReplayResult } from "../backfill-depegs-replay";
 import { parseSupplyData, type BackfillEvent } from "../../../src/lib/historical-depeg-extraction";
 import { buildBackfillPlan } from "../backfill-depegs/planning";

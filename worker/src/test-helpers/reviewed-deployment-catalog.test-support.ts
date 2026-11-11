@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import catalog from "./fixtures/reviewed-deployment-catalog-e11c86961.json";
 

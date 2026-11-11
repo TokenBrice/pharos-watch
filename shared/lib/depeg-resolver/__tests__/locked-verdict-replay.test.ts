@@ -5,7 +5,7 @@ import type {
   DdrFactorSeverity,
   DdrResolutionTier,
 } from "../../../types/depeg-resolver";
-import type { DepegDirection } from "../../../types/market";
+import type { DepegDirection } from "../../../types/peg";
 import {
   resolveDepeg,
   resolveOutlook,

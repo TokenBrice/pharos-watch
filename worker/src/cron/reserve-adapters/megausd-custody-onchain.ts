@@ -1,4 +1,5 @@
-import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
+import type { ReserveSlice } from "@shared/types/reserves";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { toErrorMessage } from "@shared/lib/error-utils";

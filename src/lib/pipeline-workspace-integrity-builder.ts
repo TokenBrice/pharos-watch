@@ -1,4 +1,4 @@
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { classifyPublicationDiagnostic } from "@shared/lib/status-thresholds";
 import { formatAge } from "@/lib/pipeline-workspace-format";
 import { healthSeverity, worstSeverity, SEVERITY_RANK } from "@/lib/status/workspace-mode";

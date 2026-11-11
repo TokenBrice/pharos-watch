@@ -1,5 +1,5 @@
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
-import type { DepegPrimaryTrust, PegAssetBase } from "@shared/types/core";
+import type { DepegPrimaryTrust, PegAssetBase } from "@shared/types/price";
 import {
   signalCrossesThreshold,
   signalIsWithinThreshold,

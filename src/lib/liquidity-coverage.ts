@@ -1,6 +1,6 @@
 import { LIQUIDITY_COVERAGE_BADGE_CLASSES } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
-import type { DexLiquidityData, LiquidityCoverageClass, LiquiditySourceMix } from "@shared/types";
+import type { DexLiquidityData, LiquidityCoverageClass, LiquiditySourceMix } from "@shared/types/dex-liquidity";
 
 const COVERAGE_BADGES: Record<LiquidityCoverageClass, { label: string; className: string }> = {
   primary: {

@@ -1,6 +1,6 @@
 import { formatCurrency } from "@shared/lib/format";
 import { getBlacklistNativeFractionDigits } from "@shared/lib/blacklist";
-import type { BlacklistEvent } from "@shared/types";
+import type { BlacklistEvent } from "@shared/types/blacklist";
 
 const AMOUNT_SOURCE_LABELS: Record<string, string> = {
   event: "event",

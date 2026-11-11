@@ -1,4 +1,6 @@
-import type { DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
+import type { DependencyWeight } from "../types/stablecoin-meta-primitives";
+import type { ReserveSlice } from "../types/reserves";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 import type { ReserveIntermediary } from "../types/reserves";
 import { DependencyTypeSchema } from "../types/dependency-types";
 

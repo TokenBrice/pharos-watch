@@ -1,4 +1,4 @@
-import type { MintBurnFlowsResponse, MintBurnValuation } from "@shared/types";
+import type { MintBurnFlowsResponse, MintBurnValuation } from "@shared/types/mint-burn";
 
 type MintBurnFlowCoin = MintBurnFlowsResponse["coins"][number];
 type MintBurnCoinValuation = NonNullable<MintBurnFlowCoin["valuation"]>;

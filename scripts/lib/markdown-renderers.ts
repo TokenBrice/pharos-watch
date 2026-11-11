@@ -31,9 +31,13 @@ import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type {
   DigestContentEntry,
+} from "@shared/types/digest";
+import type {
   StablecoinAiSummariesById,
+} from "@shared/types/editorial";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import { DigestStoredSnapshotSchema } from "@shared/types/digest";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");

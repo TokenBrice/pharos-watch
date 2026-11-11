@@ -1,4 +1,4 @@
-import type { MintBurnClassification, MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types";
+import type { MintBurnClassification, MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import {
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,

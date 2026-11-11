@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildBridgeRouteCoverageAudit } from "../lib/bridge-route-coverage-audit";
 
 function fixture(routes: NonNullable<NonNullable<StablecoinMeta["bridgeRouteRisk"]>["routes"]>): StablecoinMeta {

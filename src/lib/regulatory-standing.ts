@@ -1,10 +1,14 @@
 import type {
   GeniusAuthorizationStatus,
+  MicaStatus,
+} from "@shared/types/compliance-vocabulary";
+import type {
   GeniusProfile,
   MicaProfile,
-  MicaStatus,
+} from "@shared/types/stablecoin-meta-compliance-schemas";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import { POR_NEUTRAL_REPORT_LABEL, POR_TIER_STYLES, getProofOfReservesStyle } from "@shared/lib/classification";
 import {
   GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES,

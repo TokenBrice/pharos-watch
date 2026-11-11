@@ -12,7 +12,7 @@ import {
   MICA_AUTHORIZATION_TYPE_VALUES,
   MICA_STATUS_VALUES,
   MICA_TOKEN_TYPE_VALUES,
-} from "./core";
+} from "./compliance-vocabulary";
 import { HttpUrlSchema } from "./validators";
 import {
   BlacklistabilityReviewStatusSchema,

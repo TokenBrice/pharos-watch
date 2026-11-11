@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { YieldRanking } from "@shared/types";
+import type { YieldRanking } from "@shared/types/yield";
 
 type YieldSourceRisk = YieldRanking["sourceRisk"];
 

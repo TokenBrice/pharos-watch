@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import type { HealthResponse, StatusResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
+import type { StatusResponse } from "@shared/types/status/response";
 import { hasReserveScoreInputHold } from "@shared/lib/status-thresholds";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";

@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
-import type { YieldRanking } from "@shared/types";
+import type { YieldRanking } from "@shared/types/yield";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 
 function makeYield(overrides: Partial<YieldRanking> = {}): YieldRanking {

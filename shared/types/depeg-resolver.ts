@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "./depeg-audit";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
-import { DepegDirectionSchema } from "./market";
+import { DepegDirectionSchema } from "./peg";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 
 /**

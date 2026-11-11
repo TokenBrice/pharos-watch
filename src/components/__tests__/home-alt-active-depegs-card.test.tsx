@@ -3,7 +3,7 @@
 import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 
 const { useActiveDepegEventsMock, usePegSummaryMock } = vi.hoisted(() => ({
   useActiveDepegEventsMock: vi.fn(),

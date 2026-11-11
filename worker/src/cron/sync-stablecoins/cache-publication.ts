@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
-import { StablecoinDataSchema, type StablecoinData } from "@shared/types/market";
+import { StablecoinDataSchema, type StablecoinData } from "@shared/types/supply";
 import { CurrentPegSchema } from "@shared/types/current-peg";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices, type CurrentPegDexRow } from "../../lib/current-peg-observations";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";

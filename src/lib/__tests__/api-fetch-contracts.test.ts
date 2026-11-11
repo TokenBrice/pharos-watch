@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { StablecoinChartResponseSchema } from "@shared/types/market";
+import { StablecoinChartResponseSchema } from "@shared/types/supply";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";

@@ -1,13 +1,19 @@
 import type {
   CustodyBankruptcyRemoteness,
-  CustodyProfile,
   CustodyProviderRole,
   CustodyRehypothecation,
   CustodySegregation,
-  MechanismArchetype,
+} from "@shared/types/custody";
+import type {
+  CustodyProfile,
   StablecoinLink,
+} from "@shared/types/stablecoin-meta-primitives";
+import type {
+  MechanismArchetype,
+} from "@shared/types/stablecoin-taxonomy";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";

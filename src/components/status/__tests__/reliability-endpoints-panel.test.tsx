@@ -2,7 +2,7 @@
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EndpointProbeResult } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
 import { ReliabilityEndpointsPanel } from "../reliability-endpoints-panel";
 import { ReliabilityCopyDiagnostics } from "../reliability-copy-diagnostics";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";

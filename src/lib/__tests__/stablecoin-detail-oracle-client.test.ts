@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { OracleRiskProfile, StablecoinMeta } from "@shared/types";
-import { ORACLE_RISK_TIER_VALUES } from "@shared/types/core";
+import type { OracleRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import { ORACLE_RISK_TIER_VALUES } from "@shared/types/oracle-risk";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";

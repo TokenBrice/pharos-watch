@@ -3,7 +3,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { YieldHealthCard } from "@/components/status/yield-health";
-import type { YieldHealthSummary } from "@shared/types";
+import type { YieldHealthSummary } from "@shared/types/status/yield-liquidity";
 
 function fieldCoverage(coverageRatio: number, eligibleCount = 120) {
   const populatedCount = Math.round(coverageRatio * eligibleCount);

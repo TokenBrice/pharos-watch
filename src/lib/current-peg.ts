@@ -1,5 +1,6 @@
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 
 type CurrentPriceRow = StablecoinData | StablecoinLiveSummary;

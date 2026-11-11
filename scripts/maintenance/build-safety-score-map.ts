@@ -54,7 +54,7 @@ import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
 import { V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
 import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
-import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
+import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/supply";
 import type { DigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
 import { type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";

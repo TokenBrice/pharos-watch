@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { DexLiquidityMap } from "@shared/types";
+import type { DexLiquidityMap } from "@shared/types/dex-liquidity";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { LiquidityClient } from "./client";
 

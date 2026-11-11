@@ -1,4 +1,4 @@
-import type { DepegEvent } from "../types";
+import type { DepegEvent } from "../types/peg";
 import { median } from "./stats";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
 

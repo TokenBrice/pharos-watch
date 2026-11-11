@@ -45,7 +45,10 @@ import {
   type V9FailureDomainRef,
   type V9ObservationState,
 } from "./safety-score-v9-fact-primitives";
-import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES, ORACLE_RISK_BRANCH_KIND_VALUES, VARIANT_KIND_VALUES, MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES } from "./core";
+import { BRIDGE_ROUTE_RISK_TIER_VALUES } from "./bridge-risk";
+import { ORACLE_RISK_TIER_VALUES, ORACLE_RISK_BRANCH_KIND_VALUES } from "./oracle-risk";
+import { VARIANT_KIND_VALUES } from "./stablecoin-taxonomy";
+import { MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES } from "./mint-authority-vocabulary";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import {
   V9EvidenceCauseProofSchema, V9EvidenceCauseScopeSchema, V9EvidenceCauseBindingSchema,

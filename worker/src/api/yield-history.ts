@@ -1,5 +1,5 @@
 import { isLegacyDeterministicOnChainSourceKey } from "../lib/yield-config/yield-history-identity-transitions";
-import { YieldTypeSchema } from "@shared/types/core";
+import { YieldTypeSchema } from "@shared/types/yield-vocabulary";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { parseStablecoinHistoryQuery } from "../lib/api-history";
 import { jsonResponseWithHeaders, errorResponse } from "../lib/api-response";

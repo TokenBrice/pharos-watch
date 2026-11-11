@@ -1,4 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 export { normalizeEvmAddress } from "../../lib/evm-selectors";
 
 

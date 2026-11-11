@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DepegEvent } from "../../types/market";
+import type { DepegEvent } from "../../types/peg";
 import { computePegScore, PEG_SCORE_LOOKBACK_SEC } from "../peg-score";
 import { DAY_SECONDS } from "../time-constants";
 import { deriveV9WindowedPegScore } from "../safety-score-v9/formula";

@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
 import {
   BackingMetricsCard,

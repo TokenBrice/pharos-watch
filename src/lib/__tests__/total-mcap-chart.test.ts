@@ -3,7 +3,7 @@ import { buildTotalMcapChartRows } from "@shared/lib/total-mcap-chart";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import productionFixtureJson from "./fixtures/hero-cohort-history.json";
 import octoberFixture from "@shared/test-utils/fixtures/hero-chart-oct10.json";
-import { StablecoinChartResponseSchema } from "@shared/types/market";
+import { StablecoinChartResponseSchema } from "@shared/types/supply";
 
 // JSON imports widen literal unions such as `aggregateUniverse`; the fixture is production-shaped.
 const productionFixture = productionFixtureJson as unknown as {

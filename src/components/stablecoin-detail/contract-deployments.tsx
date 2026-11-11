@@ -21,7 +21,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
 type ContractInfo = ReturnType<typeof deriveContractInfo>;

@@ -1,4 +1,6 @@
-import type { StablecoinMeta, MintAuthorityControl, MintAuthorityProfile, StablecoinLink } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { MintAuthorityControl, MintAuthorityProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
 import { dedupeStablecoinLinksByUrl } from "@/lib/stablecoin-detail-links-client";

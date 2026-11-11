@@ -1,4 +1,4 @@
-import type { BluechipRating } from "../types/market";
+import type { BluechipRating } from "../types/bluechip";
 
 export function makeUnreportedBluechipRating(): BluechipRating {
   return {

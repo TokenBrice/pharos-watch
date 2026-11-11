@@ -4,7 +4,7 @@ import {
   isNobleSwapDiscoveryDeployment,
   isOsmosisSqsDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { sleepWithSignal } from "../../lib/abort";
 import { IsolateLocalState } from "../../lib/isolate-local-state";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";

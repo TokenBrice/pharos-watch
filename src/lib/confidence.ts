@@ -1,4 +1,4 @@
-import type { PriceConfidence } from "@shared/types";
+import type { PriceConfidence } from "@shared/types/price";
 
 const CONFIDENCE_CLASSES: Record<PriceConfidence, string> = {
   high: "pharos-confidence-high",

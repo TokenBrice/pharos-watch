@@ -2,7 +2,7 @@ import { SLIPSTREAM_COLLECTION_DEPLOYMENTS } from "@shared/lib/dex-slipstream-de
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
 import { AERO_CHAINS } from "@shared/lib/dex-aero-deployments";

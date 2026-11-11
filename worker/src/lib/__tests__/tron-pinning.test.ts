@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import usdtTetherCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { IssuerNativeLiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 import { buildChainRpcs } from "../chain-registry";
 import {

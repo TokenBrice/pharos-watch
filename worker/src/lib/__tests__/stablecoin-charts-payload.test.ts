@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StablecoinChartResponseSchema } from "@shared/types/market";
+import { StablecoinChartResponseSchema } from "@shared/types/supply";
 import { normalizeStablecoinChartBuckets, normalizeStablecoinChartDateSeconds, normalizeStablecoinChartPoints } from "../stablecoin-charts-payload";
 
 describe("stablecoin chart bucket availability", () => {

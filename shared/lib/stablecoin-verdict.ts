@@ -13,7 +13,8 @@
  * matches `agents/council13/research/06-detail-page.md` §"Decision rules".
  */
 
-import type { MechanismArchetype, StablecoinStatus, StablecoinFlags } from "../types";
+import type { MechanismArchetype, StablecoinStatus } from "../types/stablecoin-taxonomy";
+import type { StablecoinFlags } from "../types/stablecoin-meta-primitives";
 import type { ReportCardGrade } from "../types/report-card-grade";
 import type { ThreatBand } from "./classification/risk";
 import { RISKY_GRADES, SAFE_GRADES } from "./safety-grade-buckets";

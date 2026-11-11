@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CronStatus } from "@shared/types";
+import type { CronStatus } from "@shared/types/status/cron";
 import { makeAvailableTelegramDeliverySli, makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
 import {
   allMeasuredZero,

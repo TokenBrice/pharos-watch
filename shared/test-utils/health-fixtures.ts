@@ -1,4 +1,4 @@
-import type { HealthResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
 
 /**
  * Canonical healthy public-health payload shared by src and worker status

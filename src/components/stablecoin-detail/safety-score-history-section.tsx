@@ -14,10 +14,12 @@ import { formatChartDate, formatDuration, formatTrackingSpanDays } from "@shared
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import type {
   ReportCardGrade,
+} from "@shared/types/report-card-grade";
+import type {
   SafetyScoreHistoryPoint,
   SafetyScoreHistoryV2Point,
   SafetyScoreHistoryV2TransitionKind,
-} from "@shared/types";
+} from "@shared/types/safety-score-history";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";

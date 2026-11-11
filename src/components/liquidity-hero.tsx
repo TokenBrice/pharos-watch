@@ -9,7 +9,7 @@ import { buildLiquidityExitRouteModel } from "@/components/exit-route-model";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { formatCurrency } from "@shared/lib/format";
 import { describeDexVolume } from "@/lib/dex-volume-display";
-import type { DexLiquidityData } from "@shared/types";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import { informativeVolumeLowerBound } from "@/components/liquidity-table-logic";
 

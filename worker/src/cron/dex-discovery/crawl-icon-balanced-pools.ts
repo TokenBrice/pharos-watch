@@ -1,4 +1,4 @@
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { isRecord } from "@shared/lib/type-guards";
 import { toTokenUnits } from "@shared/lib/math";
 import {

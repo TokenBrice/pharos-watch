@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { runAdapter, expectWarnings } from "./reserve-adapter.test-support";
 
 const YIELD_MANAGER = "0xa230285d5683c74935ad14c446e137c8c8828438";

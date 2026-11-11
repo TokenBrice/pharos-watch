@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { DepegEventStoredSnapshotSchema } from "@shared/types/market";
-import type { DepegEvent } from "@shared/types/market";
+import { DepegEventStoredSnapshotSchema } from "@shared/types/peg";
+import type { DepegEvent } from "@shared/types/peg";
 import { computePegScore } from "@shared/lib/peg-score";
 import { DISPUTED_AUDIT_VERDICTS, DDR_INELIGIBLE_AUDIT_VERDICTS, PEG_SCORE_EXCLUDED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { isDdrIneligibleAuditVerdict, isDisputedAuditVerdict, isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";

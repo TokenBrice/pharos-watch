@@ -1,5 +1,5 @@
 import { resolveChainId } from "../../types/chain-identity";
-import type { SupplyChainGuardProvenance } from "../../types/market";
+import type { SupplyChainGuardProvenance } from "../../types/supply";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "../supply";
 
 export interface ChainCirculatingNormalizationDiagnostics {

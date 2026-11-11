@@ -5,7 +5,7 @@ import { FlowRunLine } from "@/components/flow-run-line";
 import { buildRunLineModel } from "@/lib/flow-run-line-model";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
-import type { MintBurnGauge } from "@shared/types";
+import type { MintBurnGauge } from "@shared/types/mint-burn";
 
 const mainPlot = (container: HTMLElement) =>
   [...container.querySelectorAll("svg")].find((svg) => svg.getAttribute("viewBox")?.startsWith("0 0 200"));

@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { API_PARTNER_ACCESS_URL } from "@shared/lib/public-api-contract";
-import { StablecoinDataOutputSchema, StablecoinDataSchema } from "@shared/types/market";
+import { StablecoinDataOutputSchema, StablecoinDataSchema } from "@shared/types/supply";
 import { ReserveBoundedFactOutputSchema, ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 
 import {

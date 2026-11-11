@@ -89,13 +89,15 @@ export interface LiquidityMetrics {
 import type {
   DexAmmExecutionModel,
   DexExecutionCapabilityGate,
+} from "@shared/types/dex-execution";
+import type {
   DexLiquidityPool,
   DexVolumeAvailabilityRecord,
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
   LiquidityCoverageClass,
   LiquidityScoreUnavailableReason,
-} from "@shared/types/market";
+} from "@shared/types/dex-liquidity";
 import type {
   DexMeasuredExecutionProfile,
   DexMeasuredExecutionPublicProfile,

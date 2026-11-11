@@ -29,7 +29,7 @@ import { computePegStability } from "@/lib/peg-stability";
 import { cn } from "@/lib/utils";
 import { DEPEG_DIRECTION_CLASSES, DEPEG_LIVE_PING_CLASS } from "@shared/lib/classification";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
-import type { DepegEvent, PegSummaryCoin } from "@shared/types";
+import type { DepegEvent, PegSummaryCoin } from "@shared/types/peg";
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
   return [...events].sort((a, b) => {

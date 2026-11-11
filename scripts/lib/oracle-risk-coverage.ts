@@ -1,4 +1,5 @@
-import type { OracleRiskProfile, StablecoinMeta } from "@shared/types";
+import type { OracleRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 export type OracleRiskCoverageFindingKind =
   | "missing-profile"

@@ -1,7 +1,7 @@
 import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import type { DdrLoadedContext } from "../context";
 import type { DdrEventDbRow } from "../types";
 import type { DdrCanonicalIncident } from "../../depeg-resolver-v2-contracts";

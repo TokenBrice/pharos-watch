@@ -1,4 +1,4 @@
-import type { YieldType } from "@shared/types/core";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 import type {
   YieldAdapterLifecycle,
   YieldAdapterLifecycleReason,

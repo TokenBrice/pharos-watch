@@ -4,7 +4,7 @@ import type { OgRouteSupportItem } from "@shared/lib/og-route-cards";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { PegSummaryResponseSchema } from "@shared/types/market";
+import { PegSummaryResponseSchema } from "@shared/types/peg";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
 import { handlePegSummary } from "../peg-summary";
 import { handleStabilityIndex } from "../stability-index";

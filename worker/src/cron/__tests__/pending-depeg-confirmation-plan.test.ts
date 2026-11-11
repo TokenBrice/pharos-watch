@@ -1,8 +1,8 @@
 import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { StablecoinData } from "@shared/types/supply";
 import {
   insertPendingDepeg,
   makePendingDepegRow,

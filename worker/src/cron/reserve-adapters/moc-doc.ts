@@ -1,4 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { fetchEvmRpcBatch, parseUint256Hex, type EvmRpcBatchCall } from "../../lib/evm-rpc";

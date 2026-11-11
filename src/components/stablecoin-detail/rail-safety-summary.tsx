@@ -6,7 +6,7 @@ import { IntentLink } from "@/components/intent-link";
 import { ArrowUpRight } from "lucide-react";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
-import type { ReportCardGrade } from "@shared/types";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import type { HeroSignalRailItem } from "./hero-card-metrics";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 

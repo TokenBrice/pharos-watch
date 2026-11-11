@@ -3,7 +3,7 @@ import { CRON_JOB_DEFINITIONS, getCronSlotStartedAtForSchedule } from "@shared/l
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { assessBluechipRating } from "@shared/lib/bluechip-freshness";
 import { formatIsoDate } from "@shared/lib/format";
-import type { BluechipRatingsMap } from "@shared/types/market";
+import type { BluechipRatingsMap } from "@shared/types/bluechip";
 import type { CacheStatus } from "@shared/types/status";
 import { getCache } from "../lib/db-cache";
 import { readBluechipRatingsCache } from "../lib/bluechip-cache";

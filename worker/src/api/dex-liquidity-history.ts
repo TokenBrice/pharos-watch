@@ -5,7 +5,7 @@ import { safeJsonParse } from "../lib/api-cache-read";
 import {
   DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
-} from "@shared/types/market";
+} from "@shared/types/exit-route";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { logWorkerEventArgs } from "../lib/structured-log";

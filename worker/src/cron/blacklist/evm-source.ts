@@ -15,7 +15,7 @@ import {
   getBlacklistTopicHashes,
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
-import type { BlacklistEventType } from "@shared/types/market";
+import type { BlacklistEventType } from "@shared/types/blacklist";
 import { getChainRpc, logScanRpcEndpoints, type ChainRpcConfig, type RpcEndpoint } from "../../lib/chain-registry";
 import {
   fetchEvmLogsForTopicWithCompleteness,

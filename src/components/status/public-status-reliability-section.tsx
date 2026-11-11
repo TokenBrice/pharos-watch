@@ -1,7 +1,7 @@
 "use client";
 
 import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
-import type { EndpointProbeResult, HealthResponse } from "@shared/types";
+import type { EndpointProbeResult, HealthResponse } from "@shared/types/status/public-health";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";

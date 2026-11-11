@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as EvmRpc from "../../../../lib/evm-rpc";
 
 const { header, uint256 } = vi.hoisted(() => ({ header: vi.fn(), uint256: vi.fn() }));

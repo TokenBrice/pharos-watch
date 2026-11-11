@@ -10,7 +10,9 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
-import type { DexLiquidityTableMap, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
 import type { TableDensity } from "@/hooks/use-table-density";
 
 export function buildStablecoinTableRowModel({

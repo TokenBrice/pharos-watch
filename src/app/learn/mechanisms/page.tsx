@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import type { MechanismArchetype } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import {
   MECHANISM_ARCHETYPE_SHORT_LABELS,
   getMechanismArchetypeLabel,

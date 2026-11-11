@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { MechanismArchetype, StablecoinMeta, VariantKind } from "../../../types";
+import type { MechanismArchetype, VariantKind } from "../../../types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "../../../types/stablecoin-meta-schemas";
 import { validateVariantRelationships } from "../validate-variants";
 import {
   makeCatalogCoin as makeCoin,

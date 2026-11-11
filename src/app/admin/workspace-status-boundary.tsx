@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { LogIn, RefreshCw } from "lucide-react";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 

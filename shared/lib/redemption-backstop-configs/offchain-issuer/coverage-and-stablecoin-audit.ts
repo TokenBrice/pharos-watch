@@ -1,4 +1,4 @@
-import type { RedemptionDocSource } from "../../../types";
+import type { RedemptionDocSource } from "../../../types/redemption";
 import type { RedemptionBackstopConfig, RedemptionV9RouteReviewTerms, ReviewedRedemptionTerms } from "../shared";
 import { defineConfigFamily } from "../factory";
 import {

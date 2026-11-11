@@ -3,7 +3,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
 import { SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { bytesToBase64, base64ToBytes } from "@shared/lib/base64";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import * as evmRpc from "../../../../lib/evm-rpc";

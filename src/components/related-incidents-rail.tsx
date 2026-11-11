@@ -4,8 +4,9 @@ import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-regis
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { MECHANISM_ARCHETYPE_SHORT_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
-import type { MechanismArchetype, PegCurrency } from "@shared/types";
-import type { DepegEventSearchEntry } from "@shared/types/market";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import type { PegCurrency } from "@shared/types/core";
+import type { DepegEventSearchEntry } from "@shared/types/peg";
 
 const ARCHETYPE_BY_COIN = new Map(
   CLIENT_TRACKED_STABLECOINS.map((coin) => [coin.id, coin.mechanismArchetype] as const),

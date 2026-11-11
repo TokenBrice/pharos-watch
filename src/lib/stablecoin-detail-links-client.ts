@@ -1,5 +1,5 @@
 import { isRecord, stringValue } from "@shared/lib/type-guards";
-import type { StablecoinLink } from "@shared/types";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
 
 /** Read client-safe links from a raw projection boundary without changing order. */
 export function readStablecoinLinks(value: unknown): StablecoinLink[] {

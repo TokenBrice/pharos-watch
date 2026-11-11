@@ -28,7 +28,7 @@ import {
 import { describeDexVolume } from "@/lib/dex-volume-display";
 import { dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
 import { MethodologyHint } from "@/components/methodology-hint";
-import type { LiquidityScoreUnavailableReason } from "@shared/types/market";
+import type { LiquidityScoreUnavailableReason } from "@shared/types/dex-liquidity";
 
 export { type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
 

@@ -14,7 +14,7 @@ import {
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import {

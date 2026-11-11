@@ -1,4 +1,4 @@
-import type { DexExitRouteObservation } from "@shared/types/market";
+import type { DexExitRouteObservation } from "@shared/types/exit-route";
 
 export function makeCoinbaseRouteObservation(): DexExitRouteObservation {
   return {

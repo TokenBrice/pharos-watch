@@ -1,6 +1,6 @@
 import { BACKING_LABELS, GOVERNANCE_LABELS, LAUNCH_PHASE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel } from "@shared/lib/classification";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";

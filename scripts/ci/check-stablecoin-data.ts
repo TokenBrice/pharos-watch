@@ -13,7 +13,8 @@ import { validateVariantRelationships } from "@shared/lib/stablecoins/validate-v
 import { findCollateralProseReserveDriftFindings } from "@shared/lib/stablecoins/collateral-prose-reserve-drift";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
-import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
+import type { DeadStablecoin } from "@shared/types/cemetery";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { NativeBankDenomSchema } from "@shared/types/stablecoin-meta-primitives";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";

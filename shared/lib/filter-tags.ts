@@ -1,4 +1,6 @@
-import type { FilterTag, PegCurrency, StablecoinMeta } from "../types/core";
+import type { FilterTag } from "../types/stablecoin-meta-primitives";
+import type { PegCurrency } from "../types/core";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 import {
   PEG_METADATA,
 } from "./classification";

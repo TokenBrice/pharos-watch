@@ -1,4 +1,4 @@
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { StatusSection } from "@/components/status/page-primitives";
 import { CronLaneTable } from "./cron-lane-table";
 import type { CronGroup } from "./cron-lane-types";

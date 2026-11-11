@@ -30,8 +30,8 @@ import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { formatCompactUsdShort } from "@shared/lib/format";
 import { numberValue } from "@shared/lib/type-guards";
-import type { BlacklistSummaryResponse } from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 
 const METHODOLOGY_TOPIC: Record<BlacklistabilityClientStatus, MethodologyContextKey> = {
   freezable: "freezable",

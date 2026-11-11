@@ -14,7 +14,7 @@ import { SEVERITY_LABEL_INCLUSIVE as SEVERITY_LABEL } from "@shared/lib/classifi
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
 import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";

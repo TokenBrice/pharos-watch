@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./core";
-import { PriceDerivationSchema } from "./market";
+import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./price";
+import { PriceDerivationSchema } from "./price";
 import { CurrentPegSchema } from "./current-peg";
 
 const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number().finite().nonnegative());

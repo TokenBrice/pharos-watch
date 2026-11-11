@@ -1,4 +1,5 @@
-import type { DepegPendingIncident, PegSummaryCoin, StressSignalEntry } from "@shared/types";
+import type { DepegPendingIncident, PegSummaryCoin } from "@shared/types/peg";
+import type { StressSignalEntry } from "@shared/types/stress";
 import { THREAT_BAND_ORDER, isThreatBand, type OpenIncidentEvidence } from "@shared/lib/classification";
 
 export interface DepegTrackerRow {

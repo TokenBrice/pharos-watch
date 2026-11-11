@@ -3,7 +3,7 @@ import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-regis
 import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";

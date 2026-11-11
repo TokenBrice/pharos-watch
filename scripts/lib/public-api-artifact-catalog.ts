@@ -2,7 +2,7 @@ import { type PublicApiEndpointKey } from "@shared/lib/api-endpoints/definitions
 import { DYNAMIC_API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { MINT_BURN_FLOWS_HOURS_QUERY, NON_USD_SHARE_MIN_DAYS, NON_USD_SHARE_MAX_DAYS, SNAPSHOT_INDEX_LIMIT_QUERY } from "@shared/lib/api-endpoints/queries";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { PEG_COVERAGE_COMPOSITE_MIN } from "@shared/lib/chains/health";
 import { definePublicArtifact, type PublicArtifactInput } from "./public-api-artifact-catalog-builders";
 import type { PublicApiResponseSchemaName } from "./public-api-response-schemas";

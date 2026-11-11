@@ -7,7 +7,7 @@ import {
   buildSourceRiskGoldenFixture,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { makeAltYieldSource, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
-import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
+import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 import type { ApiMeta } from "@/lib/api";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "./yield-detail.test-support";
 

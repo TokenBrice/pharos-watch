@@ -1,4 +1,4 @@
-import type { MintAuthorityPosture } from "../../types/core";
+import type { MintAuthorityPosture } from "../../types/mint-authority-vocabulary";
 import type { V9RatingStatus } from "../../types/safety-score-v9-causes";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";

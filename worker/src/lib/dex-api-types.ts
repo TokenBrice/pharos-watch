@@ -1,4 +1,4 @@
-import type { DexExecutionCapabilityGate } from "@shared/types/market";
+import type { DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 
 export interface DexApiPoolToken {
   address: string;

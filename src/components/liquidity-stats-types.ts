@@ -1,4 +1,4 @@
-import type { DexVolumeAvailability } from "@shared/types/market";
+import type { DexVolumeAvailability } from "@shared/types/dex-liquidity";
 
 export interface LiquidityStatsData {
   /** Global DEX TVL; null with `totalTvlUnavailableReason` when unpublished. */

@@ -12,7 +12,7 @@ import { buildDewsStablecoinIdsDigest, readDewsPublishedGenerationResult } from 
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import { handleStressSignals } from "../../api/stress-signals";
 import { loadPublicationHealth } from "../../lib/publication-contract";
-import { StressSignalsAllResponseSchema } from "@shared/types/market";
+import { StressSignalsAllResponseSchema } from "@shared/types/stress";
 import { computeLiquiditySignal, computeSupplySignal } from "../../lib/dews/signal-families";
 import { decodeLegacyStressSignals } from "../../lib/dews/source-state/legacy-bridge";
 import { makeDewsInput } from "../../lib/__tests__/dews.test-support";

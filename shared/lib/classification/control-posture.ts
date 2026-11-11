@@ -1,4 +1,4 @@
-import type { GovernanceQuality } from "../../types";
+import type { GovernanceQuality } from "../../types/stablecoin-taxonomy";
 
 export interface ControlPostureStyle {
   label: string;

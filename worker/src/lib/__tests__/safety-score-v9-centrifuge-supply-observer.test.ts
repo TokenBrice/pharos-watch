@@ -1,7 +1,7 @@
 import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import currentJtrsyRisk from "@shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json";
 import currentJtrsyCoin from "@shared/data/stablecoins/coins/jtrsy-anemoy.json";

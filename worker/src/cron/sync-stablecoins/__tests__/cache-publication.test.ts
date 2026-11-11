@@ -16,7 +16,7 @@ import { getCache } from "../../../lib/db-cache";
 import { getPriceCache } from "../../../lib/price-cache";
 import { makePeggedAsset } from "./_fixtures";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { StablecoinDetailResponseSchema, StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinDetailResponseSchema, StablecoinListResponseSchema } from "@shared/types/supply";
 import type { PeggedAsset } from "../enrich-prices";
 
 const fixtures = createLatestSchemaFixtureTracker();

@@ -1,5 +1,5 @@
 import { toFunctionSelector } from "viem/utils";
-import type { UsdsStatusResponse } from "@shared/types";
+import type { UsdsStatusResponse } from "@shared/types/stability";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import { shouldSkipFreshCache, setCacheIfNewer, type CacheWriteResult } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";

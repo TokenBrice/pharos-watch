@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { type ExtensionAsset, type V9ExtensionRegistryMeta } from "./extension-shared";
 
 type PegReferenceRegistryMeta = V9ExtensionRegistryMeta & Pick<StablecoinMeta, "pegReferenceId">;

@@ -10,7 +10,7 @@ import { JsonLdScript } from "@/components/json-ld-script";
 import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { API_REFERENCE_URL } from "@shared/lib/public-api-contract";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import {

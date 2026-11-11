@@ -4,7 +4,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { PegSummaryCoinSchema, type PegSummaryCoin } from "@shared/types/peg";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
 import { makeRedemptionWriteRecord } from "./redemption-backstops-store.test-support";
 import type * as SnapshotModule from "../report-cards-snapshot";

@@ -3,7 +3,7 @@ import {
   assessStablecoinChartContinuity,
   STABLECOIN_CHART_CONTINUITY_THRESHOLDS,
 } from "../stablecoin-charts-continuity";
-import type { StablecoinChartPoint } from "@shared/types/market";
+import type { StablecoinChartPoint } from "@shared/types/supply";
 
 const DAY = 86_400;
 const NOW = 1_790_000_000;

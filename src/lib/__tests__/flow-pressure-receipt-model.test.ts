@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildFlowPressureReceiptModel } from "@/lib/flow-pressure-receipt-model";
-import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types/mint-burn";
 import {
   makeInactiveMintBurnFlowCoin as makeCoin,
   makeMintBurnCoinValuation as completeValuation,

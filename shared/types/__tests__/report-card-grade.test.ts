@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import type { BluechipGrade } from "../core";
+import type { BluechipGrade } from "../bluechip";
 import { SAFETY_GRADE_VALUES, ReportCardGradeSchema } from "../report-card-grade";
 import type { SafetyGrade } from "../report-card-grade";
 

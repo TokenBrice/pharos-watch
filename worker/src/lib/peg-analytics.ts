@@ -11,7 +11,8 @@ import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/regist
 import { fuzzyDateRange } from "@shared/lib/classification/resolve-implementation-launch-date";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import type { DepegEvent, StablecoinData } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { isValidIsoDateOnly, parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
 

@@ -1,4 +1,4 @@
-import type { RedemptionSettlementModel } from "../../types";
+import type { RedemptionSettlementModel } from "../../types/redemption";
 
 const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
   "atomic",

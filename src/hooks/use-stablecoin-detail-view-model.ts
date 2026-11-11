@@ -24,7 +24,7 @@ import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useQuerySlice, type QueryResultLike, type QuerySlice } from "@/hooks/use-query-slice";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,

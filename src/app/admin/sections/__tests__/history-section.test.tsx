@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { StatusTransition } from "@shared/types";
+import type { StatusTransition } from "@shared/types/status/core";
 import { DEFAULT_INCIDENT_HISTORY_QUERY } from "@/lib/incident-history-view-model";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { HistorySection } from "../history-section";

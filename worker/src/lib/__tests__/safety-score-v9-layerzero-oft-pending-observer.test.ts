@@ -4,7 +4,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ReviewedEconomicSupplyPlanSchema, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { ChainRpcConfig } from "../chain-registry";
 import { USER_AGENT } from "../constants";
 import * as evmRpc from "../evm-rpc";

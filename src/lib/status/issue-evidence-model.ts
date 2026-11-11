@@ -1,4 +1,6 @@
-import type { HealthResponse, StatusCause, StatusResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
+import type { StatusCause } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import { getPollingWindow } from "@/lib/api-query-polling";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { OPERATOR_VERDICT_TONE } from "@shared/lib/classification";
-import type { StatusCause } from "@shared/types";
+import type { StatusCause } from "@shared/types/status/core";
 import { ResourcePressureSchema } from "@shared/types/status/cron";
 import { CronInFlightProgress } from "@/components/status/cron-in-flight-progress";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";

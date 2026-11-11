@@ -1,7 +1,7 @@
 import { createRssRoute, toRfc822, type RssItem } from "@/lib/rss";
 import { DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import type { DigestContentEntry } from "@shared/types";
+import type { DigestContentEntry } from "@shared/types/digest";
 
 export const dynamic = "force-static";
 export const revalidate = false;

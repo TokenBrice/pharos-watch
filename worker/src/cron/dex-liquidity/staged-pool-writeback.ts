@@ -2,7 +2,7 @@ import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedKey,
 } from "@shared/types/exit-route-identity";
-import type { LiquidityPoolSourceFamily } from "@shared/types/market";
+import type { LiquidityPoolSourceFamily } from "@shared/types/dex-liquidity";
 import { isValidStagedPoolId } from "../dex-discovery/persistence";
 import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../dex-discovery/types";
 import { getQualityMultiplier } from "./pool-helpers";

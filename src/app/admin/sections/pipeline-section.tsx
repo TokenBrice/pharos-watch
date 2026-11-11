@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { CoinGeckoPriceDiffCard } from "@/components/status/coingecko-price-diff";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
 import { D1UsageCard } from "@/components/status/d1-usage-card";

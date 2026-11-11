@@ -12,7 +12,7 @@ import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yiel
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
-import type { YieldHistoryPoint } from "@shared/types";
+import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 export const DEFAULT_DAYS = 90;

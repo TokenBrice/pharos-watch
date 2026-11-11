@@ -5,7 +5,7 @@ import { makeDexLiquidityHistoryRow } from "../../test-helpers/__shared/fixtures
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDexLiquidityHistory, handleDexLiquidityChartHistory } from "../dex-liquidity-history";
 import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
-import { DexLiquidityHistoryResponseSchema } from "@shared/types/market";
+import { DexLiquidityHistoryResponseSchema } from "@shared/types/dex-liquidity";
 
 describe("handleDexLiquidityHistory", () => {
   const row = makeDexLiquidityHistoryRow();

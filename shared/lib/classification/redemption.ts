@@ -8,7 +8,7 @@ import type {
   RedemptionResolutionState,
   RedemptionRouteFamily,
   RedemptionRouteStatus,
-} from "../../types";
+} from "../../types/redemption";
 import type { PhysicalToUsdRoute } from "../redemption-backstop-configs/schema";
 
 const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {

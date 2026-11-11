@@ -13,6 +13,8 @@ import {
   BRIDGE_ROUTE_RISK_TIER_VALUES,
   BRIDGE_ROUTE_SCOPE_VALUES,
   BRIDGE_ROUTE_SEMANTICS_VALUES,
+} from "./bridge-risk";
+import {
   MINT_AUTHORITY_CONFIDENCE_VALUES,
   MINT_AUTHORITY_CONTROL_ROLE_VALUES,
   MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
@@ -27,6 +29,8 @@ import {
   MINT_AUTHORITY_SUPERVISION_VALUES,
   MINT_AUTHORITY_TYPE_VALUES,
   MINT_AUTHORITY_UPGRADE_MODEL_VALUES,
+} from "./mint-authority-vocabulary";
+import {
   ORACLE_RISK_CONFIDENCE_VALUES,
   ORACLE_RISK_BRANCH_APPLICABILITY_VALUES,
   ORACLE_RISK_BRANCH_MODEL_VALUES,
@@ -34,7 +38,7 @@ import {
   ORACLE_RISK_ROLE_VALUES,
   ORACLE_RISK_LIQUIDATION_STATE_VALUES,
   ORACLE_RISK_TIER_VALUES,
-} from "./core";
+} from "./oracle-risk";
 import { hasSourceLinks, hasText, validateMintAuthorityProfile } from "./stablecoin-meta-mint-authority-refinements";
 import { HttpUrlSchema } from "./validators";
 import {

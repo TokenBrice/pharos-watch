@@ -9,8 +9,8 @@ import {
   type ApiDependencyMeta,
   type ApiMetaEnvelope,
 } from "@pharos/contracts/api-meta";
-import type { StablecoinReservesResponse } from "@shared/types";
-import type { SupplyHistoryPoint } from "@shared/types/market";
+import type { StablecoinReservesResponse } from "@shared/types/live-reserves";
+import type { SupplyHistoryPoint } from "@shared/types/supply";
 import type { SafetyGrade } from "@shared/types/report-card-grade";
 import type { ThreatBand } from "@shared/lib/classification";
 import { buildRequestUrl } from "@/lib/api-url";

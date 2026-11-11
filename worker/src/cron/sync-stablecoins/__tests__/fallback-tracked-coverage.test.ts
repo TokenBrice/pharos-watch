@@ -13,7 +13,7 @@ import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
-import { StablecoinListResponseSchema, type StablecoinData } from "@shared/types/market";
+import { StablecoinListResponseSchema, type StablecoinData } from "@shared/types/supply";
 import { getCache } from "../../../lib/db-cache";
 import * as authoritative from "../../../lib/authoritative-price-sources";
 import { parseStablecoinsCapabilities } from "../../../handlers/scheduled/context";

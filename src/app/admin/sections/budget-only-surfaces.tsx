@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { LazyDetails } from "@/components/status/lazy-details";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { formatInterval } from "@/components/status/format";
-import type { BudgetOnlySurfaceStatus } from "@shared/types";
+import type { BudgetOnlySurfaceStatus } from "@shared/types/status/cron";
 import { buildBudgetOnlySurfaceGroups, type BudgetOnlySurfaceRow } from "@/lib/cron-workbench-model";
 import { formatDurationValue, formatTimestamp, getCronStatusColor } from "./cron-lane-format";
 

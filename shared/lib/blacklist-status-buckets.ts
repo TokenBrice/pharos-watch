@@ -4,7 +4,7 @@ import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "./stablecoins/client-registry";
-import type { StablecoinData } from "../types";
+import type { StablecoinData } from "../types/supply";
 
 export type BlacklistStatusBucketKey = "yes" | "upstream" | "possible" | "no";
 

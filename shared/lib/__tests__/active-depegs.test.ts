@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DepegEvent } from "../../types";
+import type { DepegEvent } from "../../types/peg";
 import { classifyOpenIncidentEvidence, selectActiveDepegCoins } from "../active-depegs";
 import { describeHomepageSupplyCoverage, isHomepageSupplyComplete } from "../homepage-hero-snapshot";
 

@@ -38,7 +38,8 @@ import {
   resolveMechanismArchetype,
 } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { DetailContent } from "./detail-content";
 import { HistoryTabs } from "./detail-lazy-sections";
 

@@ -5,7 +5,7 @@ import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { cn } from "@/lib/utils";
 import { getProofOfReservesStyle, POR_NEUTRAL_REPORT_LABEL } from "@shared/lib/classification";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const LINK_CLASS =
   "pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground sm:min-h-0";

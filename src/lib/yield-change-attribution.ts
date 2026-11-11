@@ -36,7 +36,7 @@
  * stored in percent units.
  */
 
-import type { YieldHistoryPoint } from "@shared/types";
+import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
 
 /** Source switch impact must move 30d APY by at least this many percentage points to be considered material. */
 export const SOURCE_SWITCH_DELTA_THRESHOLD_PP = 0.5;

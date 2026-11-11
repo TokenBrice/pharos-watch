@@ -1,5 +1,5 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { EndpointProbeResult } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { LazyDetails } from "@/components/status/lazy-details";
 import { ReliabilityCopyDiagnostics } from "@/components/status/reliability-copy-diagnostics";

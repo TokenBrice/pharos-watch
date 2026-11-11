@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { buildYieldPeerRailModel, getYieldPeerSafetyBand, type YieldPeerRailModel } from "@/lib/yield-peers";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import type { PegCurrency, YieldRanking } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
+import type { YieldRanking } from "@shared/types/yield";
 
 function row(id: string, pharosYieldScore: number | null, overrides: Partial<YieldRanking> = {}): YieldRanking {
   return makeYieldRanking({

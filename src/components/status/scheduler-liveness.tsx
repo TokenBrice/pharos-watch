@@ -5,7 +5,7 @@ import { ComponentStatePill, Timestamp } from "@/components/status/page-primitiv
 import { getAgeBandState } from "@/lib/status/public-status";
 import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
 import { getPublicComponentStateRank } from "@shared/lib/public-status-components";
-import type { PublicComponentState } from "@shared/types";
+import type { PublicComponentState } from "@shared/types/status/public-health";
 
 /** Reader labels for schedule keys; unknown keys render as-is rather than inventing a name. */
 const LANE_LABELS: Record<string, string> = {

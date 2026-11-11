@@ -3,15 +3,17 @@ import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablec
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import {
   ExitRouteObservationCoverageSchema,
   ExitRouteObservationSchema,
-  type DexVolumeAvailability,
-  type DexVolumeAvailabilityRecord,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
-} from "@shared/types/market";
+} from "@shared/types/exit-route";
+import {
+  type DexVolumeAvailability,
+  type DexVolumeAvailabilityRecord,
+} from "@shared/types/dex-liquidity";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";

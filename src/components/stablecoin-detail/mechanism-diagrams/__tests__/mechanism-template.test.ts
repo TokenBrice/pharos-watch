@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { MechanismArchetype } from "@shared/types";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { buildMechanismBackingView, type MechanismBackingView } from "@/lib/mechanism-backing";
 import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-client-coin";
 import { getCoinOverride } from "../coin-overrides";

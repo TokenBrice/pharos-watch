@@ -13,7 +13,7 @@ import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
 import { formatPercent } from "@shared/lib/format";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
-import type { PegSummaryStats } from "@shared/types";
+import type { PegSummaryStats } from "@shared/types/peg";
 
 interface DepegOutlookHeroProps {
   stats: PegSummaryStats | null | undefined;

@@ -8,7 +8,7 @@ import {
   formatSupply,
 } from "@shared/lib/format";
 import { formatNativePrice, pegCurrencySymbol } from "@shared/lib/peg-format";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { hasObservedDisplayPrice } from "@/lib/current-peg";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";

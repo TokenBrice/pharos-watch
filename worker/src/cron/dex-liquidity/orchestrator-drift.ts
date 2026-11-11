@@ -1,6 +1,6 @@
 import { round4 } from "@shared/lib/math";
 import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import type { LiquiditySourceMix } from "@shared/types/market";
+import type { LiquiditySourceMix } from "@shared/types/dex-liquidity";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult } from "./types";
 

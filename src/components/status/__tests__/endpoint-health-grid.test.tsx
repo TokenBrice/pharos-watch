@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { EndpointProbeResult } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
 import { EndpointHealthGrid } from "../endpoint-health-grid";
 import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 

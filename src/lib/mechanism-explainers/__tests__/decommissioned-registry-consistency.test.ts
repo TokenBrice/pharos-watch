@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ARCHETYPE_CONTENT } from "../index";
 

@@ -19,7 +19,7 @@ import {
 } from "./orchestrator-drift";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { DexLiquidityBaselineReadFailure } from "@shared/types/status/yield-liquidity";
-import { LiquiditySourceMixSchema, type LiquiditySourceMix } from "@shared/types/market";
+import { LiquiditySourceMixSchema, type LiquiditySourceMix } from "@shared/types/dex-liquidity";
 
 
 type ParsedPreviousCronRow = {

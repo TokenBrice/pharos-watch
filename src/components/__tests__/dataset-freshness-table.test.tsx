@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { getDatasetCadenceSec, STATUS_DATASET_FRESHNESS } from "@shared/lib/status-dataset-freshness";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 
 const NOW = 1_800_000_000;
 const FRESHNESS: StatusResponse["datasetFreshness"] = {

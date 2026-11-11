@@ -5,7 +5,7 @@ import {
   DexExitRouteObservationsSchema,
   MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
   type DexExitEvidenceKind,
-} from "@shared/types/market";
+} from "@shared/types/exit-route";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";

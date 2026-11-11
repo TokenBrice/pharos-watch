@@ -11,7 +11,8 @@ import {
   getPriceSourceHealthMissingCounts,
 } from "@shared/lib/pricing-sources";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PriceSourceHealth, StatusSectionError } from "@shared/types";
+import type { PriceSourceHealth } from "@shared/types/pricing-source-health";
+import type { StatusSectionError } from "@shared/types/status/response";
 import { formatCurrency, formatElapsedSeconds } from "@shared/lib/format";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
 

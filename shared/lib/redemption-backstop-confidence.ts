@@ -11,7 +11,7 @@ import type {
   RedemptionRouteStatus,
   RedemptionRouteStatusSource,
   RedemptionSourceMode,
-} from "../types";
+} from "../types/redemption";
 import type { RedemptionCapacityModel, RedemptionCostModel } from "./redemption-backstops";
 import {
   getProviderIdForCapacityModelKind,

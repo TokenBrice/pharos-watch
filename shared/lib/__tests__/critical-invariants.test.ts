@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { StressSignalsAllResponseSchema } from "@shared/types/market";
+import { StressSignalsAllResponseSchema } from "@shared/types/stress";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import { mergeDepegSeconds } from "@shared/lib/peg-utils";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 
 function makeDepegEvent(
   overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">,

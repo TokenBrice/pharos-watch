@@ -1,5 +1,5 @@
-import type { RedemptionBackstopEntry } from "@shared/types";
-import type { RedemptionRouteFamily } from "@shared/types";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { RedemptionRouteFamily } from "@shared/types/redemption";
 import type { CoverageStatus } from "@/lib/coverage-types";
 import { REDEMPTION_MODELED_ROUTE_DISPLAY, REDEMPTION_ROUTE_FAMILY_DISPLAY } from "@shared/lib/classification";
 import {

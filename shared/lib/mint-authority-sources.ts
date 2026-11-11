@@ -1,4 +1,5 @@
-import type { MintAuthorityProfile, StablecoinLink } from "../types";
+import type { MintAuthorityProfile } from "../types/stablecoin-meta-control-schemas";
+import type { StablecoinLink } from "../types/stablecoin-meta-primitives";
 
 /** Authored profile evidence, preserving occurrences and order for audit counts. */
 export function collectMintAuthoritySources(profile: MintAuthorityProfile): StablecoinLink[] {

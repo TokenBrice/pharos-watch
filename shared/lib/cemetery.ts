@@ -1,4 +1,4 @@
-import type { DeadStablecoin } from "../types";
+import type { DeadStablecoin } from "../types/cemetery";
 import { compareCodeUnits } from "./compare";
 import { isValidCalendarDate } from "../types/date-primitives";
 

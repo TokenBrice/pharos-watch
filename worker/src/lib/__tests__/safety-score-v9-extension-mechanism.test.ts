@@ -7,7 +7,8 @@ import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-field
 import { V9MechanismRiskReviewSchema } from "@shared/types/safety-score-v9-backing";
 import { SafetyScoreV9MechanismReviewOverlaySchema } from "@shared/types/safety-score-v9-mechanism-overlays";
 import { asset as backingAsset, exposure, knownStatus } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
-import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
+import type { ProofOfReservesLatestReport } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9MechanismReview,

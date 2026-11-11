@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getReserves, type ReserveTemplateCoinMeta } from "../reserve-templates";
-import type { ReserveSlice, StablecoinFlags } from "../../types";
+import type { ReserveSlice } from "../../types/reserves";
+import type { StablecoinFlags } from "../../types/stablecoin-meta-primitives";
 
 /**
  * `rwa-backed` + `centralized-dependent` resolves to the generic

@@ -1,4 +1,5 @@
-import type { MechanismArchetype, StablecoinMeta } from "../../types";
+import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 
 type MechanismArchetypeMeta = Pick<
   StablecoinMeta,

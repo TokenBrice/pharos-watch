@@ -5,7 +5,7 @@ import {
 } from "@/lib/depeg-event-config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { DepegEventEntry } from "@shared/types/market";
+import type { DepegEventEntry } from "@shared/types/peg";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
 import { DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";

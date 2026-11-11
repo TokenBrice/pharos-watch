@@ -5,7 +5,7 @@ import {
   getCoverageBadge,
   compareFlowRows,
 } from "@/components/flow-table-logic";
-import type { MintBurnCoinFlow } from "@shared/types";
+import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { FlowTableSortKey } from "@/components/flow-table-logic";
 import { makeInactiveMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";

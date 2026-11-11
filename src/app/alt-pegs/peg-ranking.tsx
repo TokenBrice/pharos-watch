@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import type { AltPegDistributionRow } from "@/lib/alt-peg-market";
 import { formatNonUsdShare } from "@shared/lib/alt-peg-snapshot";
 import { formatCurrency } from "@shared/lib/format";

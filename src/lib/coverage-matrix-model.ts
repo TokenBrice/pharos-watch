@@ -7,13 +7,25 @@ import {
 } from "@shared/lib/stablecoins/client-registry";
 import type {
   DexLiquidityMap,
+} from "@shared/types/dex-liquidity";
+import type {
   MintBurnFlowsResponse,
+} from "@shared/types/mint-burn";
+import type {
   PegSummaryResponse,
+} from "@shared/types/peg";
+import type {
   RedemptionBackstopsResponse,
+} from "@shared/types/redemption";
+import type {
   ReportCardsV9CurrentResponse,
+} from "@shared/types/report-cards-v9-current";
+import type {
   StablecoinListResponse,
+} from "@shared/types/supply";
+import type {
   YieldRankingsResponse,
-} from "@shared/types";
+} from "@shared/types/yield";
 import type { ApiMeta } from "@/lib/api";
 import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DepegDirectionSchema } from "./market";
+import { DepegDirectionSchema } from "./peg";
 import {
   DDR_ASSESSMENT_CHECKPOINT_VALUES,
   DDR_CELL_STATE_VALUES,

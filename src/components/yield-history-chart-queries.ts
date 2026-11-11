@@ -8,7 +8,7 @@ import type { ApiMeta } from "@/lib/api";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { toTimestampMs } from "@/lib/time";
-import type { YieldHistoryResponse } from "@shared/types";
+import type { YieldHistoryResponse } from "@shared/types/yield";
 
 const OVERLAY_CAPACITY = 7;
 

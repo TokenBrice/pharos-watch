@@ -1,4 +1,4 @@
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import { formatDeviationBps, formatIsoDate, formatLongDate } from "@shared/lib/format";
 import { formatNativePrice } from "@shared/lib/peg-format";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";

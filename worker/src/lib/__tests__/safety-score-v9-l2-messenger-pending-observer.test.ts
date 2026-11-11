@@ -6,7 +6,8 @@ import { L2MessengerPendingReadSchema } from "@shared/types/safety-score-v9-l2-m
 import { observeL2MessengerPending } from "../safety-score-v9/l2-messenger-pending-observer";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
 import { ReviewedEconomicSupplyPlanSchema, type EconomicSupplyObservation, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
-import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
+import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
 import { getCache, setCache } from "../db-cache";
 import { expectRecentPinRouting } from "../../test-helpers/recent-pin-routing";

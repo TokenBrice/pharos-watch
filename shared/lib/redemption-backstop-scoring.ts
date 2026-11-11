@@ -8,7 +8,7 @@ import type {
   RedemptionRouteFamily,
   RedemptionSettlementModel,
   RedemptionSourceMode,
-} from "../types";
+} from "../types/redemption";
 import {
   EXIT_ROUTE_SCORING_TABLES,
   blendExitCapacityComponent,

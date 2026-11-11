@@ -1,7 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { NonUsdSharePoint } from "@shared/types/market";
+import type { NonUsdSharePoint } from "@shared/types/supply";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { jsonResponse, jsonResponseWithHeaders } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";

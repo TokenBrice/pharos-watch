@@ -50,7 +50,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { CURVE_R3_METAPOOL_POLICIES, CURVE_USD1_METAPOOL_POLICY } from "@shared/lib/curve-composite-policies";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
-import type { ExitRouteObservation } from "@shared/types/market";
+import type { ExitRouteObservation } from "@shared/types/exit-route";
 import { buildPoolFingerprint, initSourcePoolGraph } from "../dex-liquidity/pool-helpers";
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC, summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";

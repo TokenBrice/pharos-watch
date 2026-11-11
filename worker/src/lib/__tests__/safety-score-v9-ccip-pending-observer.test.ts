@@ -9,7 +9,7 @@ import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
 import type * as EvmRpcModule from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { getCache, setCache } from "../db-cache";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
 import { buildChainRpcs, type ChainRpcConfig } from "../chain-registry";
 

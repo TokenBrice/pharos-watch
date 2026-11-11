@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
-import { DexAmmExecutionModelSchema } from "@shared/types/market";
+import { DexAmmExecutionModelSchema } from "@shared/types/dex-execution";
 import {
   buildCurveStableSwapNgMeasuredExecutionTarget,
   buildCurveStableSwapMeasuredExecutionTargets,

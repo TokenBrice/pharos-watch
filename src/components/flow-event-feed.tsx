@@ -21,7 +21,7 @@ import {
   formatEventDate,
 } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import type { MintBurnEvent } from "@shared/types";
+import type { MintBurnEvent } from "@shared/types/mint-burn";
 
 interface FlowEventFeedProps {
   stablecoinId: string;

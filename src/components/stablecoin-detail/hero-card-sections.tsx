@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { IntentLink } from "@/components/intent-link";
 import { BadgeCheck, Rocket } from "lucide-react";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";

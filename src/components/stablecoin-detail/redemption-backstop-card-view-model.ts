@@ -1,6 +1,6 @@
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
-import type { RedemptionBackstopEntry } from "@shared/types";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { REDEMPTION_ACCESS_LABELS,
 SCORE_TIER_5_CLASSES,
 resolveScoreTier5,

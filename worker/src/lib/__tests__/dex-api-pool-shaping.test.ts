@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DexAmmExecutionModelSchema } from "@shared/types/market";
+import { DexAmmExecutionModelSchema } from "@shared/types/dex-execution";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import { addSecondaryPoolContribution } from "../../cron/dex-liquidity/pool-contribution";
 import { initSourcePoolGraph } from "../../cron/dex-liquidity/pool-helpers";

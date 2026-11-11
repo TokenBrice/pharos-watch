@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { URL, fileURLToPath } from "node:url";
-import type { OracleRiskProfile } from "@shared/types/core";
+import type { OracleRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9EconomicControlResult } from "@shared/lib/safety-score-v9/control-primitives";

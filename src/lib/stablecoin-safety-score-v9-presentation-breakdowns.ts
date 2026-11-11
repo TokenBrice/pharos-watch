@@ -1,9 +1,11 @@
 import type {
   SafetyScoreV9BackingBreakdown,
   SafetyScoreV9ControlBreakdown,
-  SafetyScoreV9CurrentCard,
   SafetyScoreV9ExitBreakdown,
-} from "@shared/types";
+} from "@shared/types/safety-score-v9-public-breakdowns";
+import type {
+  SafetyScoreV9CurrentCard,
+} from "@shared/types/safety-score-v9-public";
 import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";

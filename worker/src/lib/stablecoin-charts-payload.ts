@@ -3,7 +3,7 @@ import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
 import {
   StablecoinChartAggregateUniverseSchema,
   type StablecoinChartPoint,
-} from "@shared/types/market";
+} from "@shared/types/supply";
 import { sanitizeRecordValues } from "./normalizers";
 
 /** Sample admitted chronological points without sorting or changing their payloads. */

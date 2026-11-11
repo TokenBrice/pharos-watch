@@ -14,7 +14,7 @@ import {
   resolveTargetlessDrift,
 } from "@/lib/pre-launch-dossier";
 import { formatUtcDayLabel } from "@shared/lib/format";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 /**
  * One visitor-clock snapshot and UTC-boundary timer for readiness and path.

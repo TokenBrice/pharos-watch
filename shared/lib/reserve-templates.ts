@@ -3,10 +3,14 @@ import type {
   LiveReserveSnapshotMetadata,
   ReserveProvenanceView,
   ReservePresentationMode,
-  ReserveSlice,
   ReserveSyncStateView,
+} from "../types/live-reserves";
+import type {
+  ReserveSlice,
+} from "../types/reserves";
+import type {
   StablecoinMeta,
-} from "../types";
+} from "../types/stablecoin-meta-schemas";
 
 export interface ReserveResult {
   reserves: ReserveSlice[];

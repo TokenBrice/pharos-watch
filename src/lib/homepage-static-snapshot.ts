@@ -9,7 +9,7 @@ import { toSiteDataPath } from "@shared/lib/site-data-lane";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { buildTotalMcapChartRows, TOTAL_MCAP_COHORT_IDS, TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS } from "@shared/lib/total-mcap-chart";
-import { StablecoinChartResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/market";
+import { StablecoinChartResponseSchema, SupplyHistoryResponseSchema } from "@shared/types/supply";
 import { HomepageHistorySchema, type HomepageLaneMeta } from "@shared/types/homepage";
 
 interface TopStablecoinsDatasetRow {

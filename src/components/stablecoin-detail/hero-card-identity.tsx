@@ -5,7 +5,7 @@ import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
-import type { Infrastructure } from "@shared/types";
+import type { Infrastructure } from "@shared/types/stablecoin-taxonomy";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { SavedSafetyAssessment } from "@/lib/api";
 import { formatSavedAssessmentAsOf } from "@/lib/stablecoin-detail-hero-metrics";

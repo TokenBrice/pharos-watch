@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { analyzeMechanismArchetypeCoverage } from "../lib/mechanism-archetype-coverage";
 
 function coin(id: string, overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {

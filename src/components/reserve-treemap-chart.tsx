@@ -7,7 +7,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
 import { RESERVE_TREEMAP_LABEL_COLOR } from "@/lib/chart-colors";
-import type { ReserveRisk } from "@shared/types";
+import type { ReserveRisk } from "@shared/types/reserves";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { formatReserveSharePct } from "@/components/reserve-risk-swatch";
 

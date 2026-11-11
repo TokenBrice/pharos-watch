@@ -13,7 +13,8 @@ import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { MicaProfile, PegCurrency } from "@shared/types";
+import type { MicaProfile } from "@shared/types/stablecoin-meta-compliance-schemas";
+import type { PegCurrency } from "@shared/types/core";
 import { formatRegisterDeathDate } from "@/components/cemetery/cemetery-register-model";
 import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 

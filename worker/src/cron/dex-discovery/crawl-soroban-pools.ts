@@ -2,7 +2,7 @@ import { canonicalSorobanTokenId } from "@shared/lib/dex-soroban-identity";
 export { canonicalSorobanTokenId } from "@shared/lib/dex-soroban-identity";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { isAquariusSorobanDeployment } from "@shared/lib/dex-deployment-coverage";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {

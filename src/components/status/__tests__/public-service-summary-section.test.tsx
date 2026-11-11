@@ -2,7 +2,7 @@
 
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { PublicStatusComponent } from "@shared/types";
+import type { PublicStatusComponent } from "@shared/types/status/public-health";
 import { PUBLIC_STATUS_COMPONENT_IDS } from "@shared/types/status";
 import { PublicServiceSummarySection } from "../public-service-summary-section";
 

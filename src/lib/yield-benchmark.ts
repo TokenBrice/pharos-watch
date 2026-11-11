@@ -1,9 +1,11 @@
 import type {
   YieldBenchmarkKey,
+  YieldBenchmarkSelectionMode,
+} from "@shared/types/yield-vocabulary";
+import type {
   YieldBenchmarkMeta,
   YieldBenchmarkRegistry,
-  YieldBenchmarkSelectionMode,
-} from "@shared/types";
+} from "@shared/types/yield";
 import type { YieldRanking } from "@shared/types/yield";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
 import {

@@ -18,10 +18,16 @@ import type {
 } from "@/lib/coverage-types";
 import type {
   LiquidityCoverageClass,
+} from "@shared/types/dex-liquidity";
+import type {
   MintBurnCoverageStatus,
+} from "@shared/types/mint-burn";
+import type {
   RedemptionBackstopEntry,
+} from "@shared/types/redemption";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import type { GeniusClientProfile, MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
 import type { PublishedMintComponent } from "@/lib/mint-authority-display";

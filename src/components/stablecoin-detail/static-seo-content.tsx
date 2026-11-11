@@ -21,9 +21,13 @@ import {
 import type {
   RedemptionHolderEligibility,
   RedemptionSettlementModel,
+} from "@shared/types/redemption";
+import type {
   StablecoinAiSummary,
+} from "@shared/types/editorial";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import {
   AI_SUMMARY_UNAVAILABLE_NOTICE,
   hasAvailableAiSummaryClaims,

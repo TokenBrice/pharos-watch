@@ -1,7 +1,7 @@
 import type {
   ExitRouteObservation,
   ExitRouteObservationCoverage,
-} from "@shared/types/market";
+} from "@shared/types/exit-route";
 
 import type { FullScoreResult } from "../dex-liquidity/types";
 import { summarizeRetainedPoolVolume } from "../dex-liquidity/scoring-helpers";

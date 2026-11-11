@@ -1,4 +1,4 @@
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 
 import { SyntheticDeltaNeutralDiagram } from "./synthetic-delta-neutral-diagram";
 import { ThreeStepArchetypeDiagram } from "./three-step-archetype-diagram";

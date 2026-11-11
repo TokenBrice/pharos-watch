@@ -1,4 +1,4 @@
-import type { StablecoinAiSummary } from "@shared/types";
+import type { StablecoinAiSummary } from "@shared/types/editorial";
 import { formatUtcDayLabel } from "@shared/lib/format";
 
 export type AiDisclosureFields = Pick<

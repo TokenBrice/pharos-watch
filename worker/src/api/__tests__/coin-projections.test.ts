@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeYieldRanking, makeAltYieldSource } from "@shared/test-utils/yield-ranking-fixtures";
-import { DexLiquidityCoinResponseSchema, DexLiquidityMapSchema, DexLiquidityTableMapSchema, DexLiquidityTableRowSchema } from "@shared/types/market";
+import { DexLiquidityCoinResponseSchema, DexLiquidityMapSchema, DexLiquidityTableMapSchema, DexLiquidityTableRowSchema } from "@shared/types/dex-liquidity";
 import { RedemptionBackstopCoinResponseSchema, RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { YieldRankingsCoinResponseSchema, YieldRankingsResponseSchema } from "@shared/types/yield";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";

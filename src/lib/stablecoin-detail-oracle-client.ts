@@ -1,6 +1,8 @@
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import methodologyPolicy from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
-import type { OracleRiskConfidence, OracleRiskRole, OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
+import type { OracleRiskConfidence, OracleRiskRole, OracleRiskTier } from "@shared/types/oracle-risk";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
 import { dedupeStablecoinLinksByUrl } from "@/lib/stablecoin-detail-links-client";

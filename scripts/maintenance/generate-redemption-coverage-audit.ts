@@ -3,7 +3,7 @@
 import { resolve } from "node:path";
 import { z } from "zod";
 import type { V9PublicCauseGapTable } from "@shared/types/safety-score-v9-public-cause-gaps";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { RedemptionRouteFamily } from "@shared/types/redemption";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";

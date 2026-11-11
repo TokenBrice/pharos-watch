@@ -7,7 +7,7 @@ import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC, SUPPLEMENTAL
 import { REVIEWED_ONCHAIN_SUPPLY_PLANS, selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO } from "@shared/lib/pricing-source-policy";
-import type { SupplyChainGuardProvenance } from "@shared/types/market";
+import type { SupplyChainGuardProvenance } from "@shared/types/supply";
 import { buildChainRpcs, registryRpcEndpoints, type ChainRpcConfig } from "../../lib/chain-registry";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";

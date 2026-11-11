@@ -14,10 +14,14 @@ import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-
 import type {
   CronRunStatus,
   CronStatus,
+} from "@shared/types/status/cron";
+import type {
   StatusResponse,
+} from "@shared/types/status/response";
+import type {
   TelegramAlertType,
   TelegramDeliverySliStatus,
-} from "@shared/types";
+} from "@shared/types/status/telegram";
 
 export type CommsDeliveryHealth = "healthy" | "degraded" | "failed" | "unknown";
 export type CommsBacklogAssessment = "within-policy" | "attention" | "unknown";

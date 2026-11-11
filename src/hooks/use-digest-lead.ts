@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDailyDigest, useDigestArchive } from "@/hooks/api-hooks";
 import { formatLongDate } from "@shared/lib/format";
-import type { DigestContentEntry } from "@shared/types";
+import type { DigestContentEntry } from "@shared/types/digest";
 
 export function digestDateSlug(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 10);

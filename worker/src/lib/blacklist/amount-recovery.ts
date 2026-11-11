@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
-import type { BlacklistAmountStatus } from "@shared/types/market";
+import type { BlacklistAmountStatus } from "@shared/types/blacklist";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import {
   getBlacklistConfigByContract,

@@ -6,7 +6,7 @@ import {
 } from "../lib/mint-authority-review-audit";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { collectMintAuthoritySources } from "@shared/lib/mint-authority-sources";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import { runCoverageAuditCli } from "../lib/coverage-audit-cli";
 

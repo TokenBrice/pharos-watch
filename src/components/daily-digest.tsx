@@ -7,7 +7,7 @@ import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
-import type { DailyDigestResponse, DigestRiskSignal } from "@shared/types";
+import type { DailyDigestResponse, DigestRiskSignal } from "@shared/types/digest";
 
 
 // Editorial body style imported from @/lib/digest for consistent wire-service aesthetic

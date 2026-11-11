@@ -15,7 +15,7 @@ import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { HeroMetricRow } from "@/components/feature-hero-split";
 import { ModuleDisclosure, MODULE_FOLD_RHYTHM_CLASS } from "@/components/stablecoin-detail/module-disclosure";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
 import { type UrlStateSchema } from "@/lib/url-state";

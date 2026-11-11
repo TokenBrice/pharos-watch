@@ -1,4 +1,4 @@
-import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/blacklist";
 import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import {

@@ -8,7 +8,7 @@ import { evaluatePhysicalToUsdExit } from "@shared/lib/physical-to-usd-exit";
 import { PHYSICAL_TO_USD_EXIT_POLICY, resolveExitScoringRequest } from "@shared/lib/exit-route-scoring";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
+import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/exit-route";
 import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC } from "@shared/types/exit-route";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
 import { buildExitRouteCapacityPoint, mergeExitCurveRequests } from "@shared/lib/exit-route-capacity-point";

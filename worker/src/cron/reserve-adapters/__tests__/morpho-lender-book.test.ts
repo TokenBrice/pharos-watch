@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeAbiParameters, encodeAbiParameters, keccak256, toFunctionSelector } from "viem/utils";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
 import { LenderBookObservationSchema } from "@shared/types/safety-score-v9-lender-book";

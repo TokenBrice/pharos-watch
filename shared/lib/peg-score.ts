@@ -1,4 +1,4 @@
-import type { DepegEvent } from "../types";
+import type { DepegEvent } from "../types/peg";
 import { isPegScoreExcludedAuditVerdict } from "./depeg-audit";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds, hasCurrentTrustedDepegObservation, worstDeviation } from "./peg-utils";
 import { DAY_SECONDS } from "./time-constants";

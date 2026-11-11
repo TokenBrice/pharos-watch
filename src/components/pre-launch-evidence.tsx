@@ -1,5 +1,6 @@
 import { ExternalLink } from "lucide-react";
-import type { LaunchMilestone, StablecoinMeta } from "@shared/types";
+import type { LaunchMilestone } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { LaunchMilestoneBadge } from "@/components/pre-launch-badge";
 import { PreLaunchLaunchPath } from "@/components/pre-launch-launch-path";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
+import type { StatusCause } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import { StatusResponseSchema } from "@shared/types/status";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";

@@ -1,4 +1,4 @@
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 
 export type StablecoinRemovalReason = "no-live-data" | "no-issued-token" | "wound-down" | "catalog-review";
 

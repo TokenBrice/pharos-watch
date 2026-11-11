@@ -1,5 +1,5 @@
 import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
-import type { StablecoinLink } from "@shared/types";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
 import type { GeniusComplianceProfile } from "@shared/types/stablecoin-client-meta";
 
 export interface GeniusComplianceEvidence {

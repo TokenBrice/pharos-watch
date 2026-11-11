@@ -3,7 +3,8 @@ import { LazySection } from "@/components/lazy-section";
 import { vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
-import type { MechanismArchetype, StablecoinMeta, StablecoinObituary } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import type { StablecoinMeta, StablecoinObituary } from "@shared/types/stablecoin-meta-schemas";
 import type { StablecoinSafetyScoreV9CardProps } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 
 export async function createNextLinkMock() {

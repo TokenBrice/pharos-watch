@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getActiveByArchetype } from "@shared/lib/stablecoins/by-mechanism";
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";

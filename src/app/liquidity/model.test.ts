@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { DEX_GLOBAL_KEY, type DexLiquidityData, type DexLiquidityMap } from "@shared/types/market";
+import { DEX_GLOBAL_KEY, type DexLiquidityData, type DexLiquidityMap } from "@shared/types/dex-liquidity";
 import { buildLiquidityViewModel, formatLiquidityWarningMessage } from "./model";
 
 function makeLiquidity(overrides: Partial<DexLiquidityData> = {}): DexLiquidityData {

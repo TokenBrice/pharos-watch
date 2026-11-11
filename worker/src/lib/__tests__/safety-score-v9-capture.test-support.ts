@@ -1,7 +1,7 @@
 import type { ReportCardsSnapshotInputs } from "../report-cards-snapshot-inputs";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { BlacklistabilityReview } from "@shared/types/core";
+import type { BlacklistabilityReview } from "@shared/types/stablecoin-meta-compliance-schemas";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import capturedReviews from "./fixtures/safety-score-v9-captured-blacklist-reviews.json";
 import capturedReserveEvidence from "./fixtures/safety-score-v9-captured-reserve-evidence.json";

@@ -1,6 +1,7 @@
 import { derivePegRates, type PegRateSource } from "@shared/lib/peg-rates";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { ReportCardsV9TableResponse } from "@shared/types/report-cards-v9-projections";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";

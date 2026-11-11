@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PEG_LABELS_SHORT, STABLECOIN_STATUS_LABELS } from "@shared/lib/classification";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { normalizeWhitespace } from "@/lib/page-metadata";
 import { stripTermMarkup } from "@/lib/term-markup";

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
+import { MethodologyEnvelopeSchema } from "./methodology-envelope";
+import { YieldTypeSchema } from "./yield-vocabulary";
 import { ReportCardGradeSchema } from "./report-card-grade";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 import { FreshnessAssessmentSchema, FreshnessStatusSchema } from "@pharos/contracts/api-meta";

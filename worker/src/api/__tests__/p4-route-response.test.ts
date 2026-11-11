@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
+import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/exit-route";
 import { normalizeDexScoreDetails } from "../../lib/dex-liquidity-response";
 import { makeCoinbaseRouteObservation } from "./p4-route-response.test-support";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BudgetOnlySurfaceStatus, CronStatus } from "@shared/types";
+import type { BudgetOnlySurfaceStatus, CronStatus } from "@shared/types/status/cron";
 import {
   buildBudgetOnlySurfaceGroups,
   buildCronWorkbenchModel,

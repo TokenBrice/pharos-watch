@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import {
   BLACKLIST_STATUS_BUCKET_ORDER,
   buildBlacklistStatusBuckets,

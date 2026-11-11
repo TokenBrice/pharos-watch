@@ -1,4 +1,4 @@
-import type { DexLiquidityData } from "@shared/types/market";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 
 export function makeDexLiquidityData(
   overrides: Partial<DexLiquidityData> = {},

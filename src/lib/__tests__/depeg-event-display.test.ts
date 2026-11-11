@@ -9,7 +9,7 @@ import {
 } from "@/lib/depeg-event-display";
 import { formatDeviationBps, formatLongDate } from "@shared/lib/format";
 import type { DepegEventDisplayInput } from "@/lib/depeg-event-display";
-import { DepegEventSchema } from "@shared/types/market";
+import { DepegEventSchema } from "@shared/types/peg";
 import { classifyDepegClosure, type DepegClosureInput } from "@shared/lib/depeg-closure";
 
 const GYD_MARCH_19 = DEPEG_EVENT_ENTRIES.filter((event) => event.slug.startsWith("gyd-2026-03-19-down-"));

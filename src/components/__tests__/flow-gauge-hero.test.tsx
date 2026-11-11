@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FlowGaugeHero } from "@/components/flow-gauge-hero";
 import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
-import type { MintBurnFlowsResponse, MintBurnGauge } from "@shared/types";
+import type { MintBurnFlowsResponse, MintBurnGauge } from "@shared/types/mint-burn";
 
 const gauge = (overrides: Partial<MintBurnGauge> = {}): MintBurnGauge => ({
   score: -47.6,

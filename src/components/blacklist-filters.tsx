@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
-import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types/blacklist";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 
 const EVENT_TYPE_FILTER_OPTIONS: { value: BlacklistEventType | "all"; label: string }[] = [
   { value: "all", label: "All" },

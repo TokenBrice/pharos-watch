@@ -1,6 +1,6 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import type { PriceObservedAtMode } from "@shared/types/core";
+import type { PriceObservedAtMode } from "@shared/types/price";
 
 const MAX_FUTURE_PRICE_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
 

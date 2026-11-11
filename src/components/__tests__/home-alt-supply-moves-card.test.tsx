@@ -4,7 +4,7 @@ import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
 import { makeStablecoin as makeStablecoinFixture } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 
 const { logosByIdMock, useStablecoinsMock } = vi.hoisted(() => ({
   logosByIdMock: {} as Record<string, string>,

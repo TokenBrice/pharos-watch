@@ -1,4 +1,4 @@
-import type { YieldType } from "@shared/types/core";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 import type { YieldSourceRisk, YieldDeploymentPlace } from "@shared/types/yield";
 import { computePysRewardShare, computeSourceRiskScoreFromPenalty } from "@shared/lib/yield-scoring";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";

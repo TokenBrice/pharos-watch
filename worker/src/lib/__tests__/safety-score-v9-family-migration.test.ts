@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 

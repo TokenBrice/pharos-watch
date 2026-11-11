@@ -36,7 +36,7 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { V9ReasonCodeSchema } from "@shared/types/safety-score-v9";
 import { V9OpenEvidenceByCardSchema, V9OpenQuestionBucketSchema } from "@shared/types/safety-score-v9-open-evidence";
 import { STABLECOIN_STATUS_VALUES } from "@shared/types/stablecoin-taxonomy";

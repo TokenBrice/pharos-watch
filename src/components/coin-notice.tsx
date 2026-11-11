@@ -1,6 +1,6 @@
 import React from "react";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import type { CoinNotice as CoinNoticeType } from "@shared/types";
+import type { CoinNotice as CoinNoticeType } from "@shared/types/stablecoin-meta-primitives";
 
 const STYLES: Record<CoinNoticeType["type"], { banner: string; icon: string; title: string }> = {
   danger: {

@@ -1,4 +1,4 @@
-import type { BridgeRouteRiskTier } from "../../types";
+import type { BridgeRouteRiskTier } from "../../types/bridge-risk";
 
 export const L2BEAT_INTEROP_SNAPSHOT_META = {
   source: "https://l2beat.com/interop/summary",

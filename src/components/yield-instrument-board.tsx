@@ -25,7 +25,7 @@ import { deriveYieldRowDisplay, isOpportunityDerivedYieldRow } from "@/lib/yield
 import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { cn } from "@/lib/utils";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
-import type { YieldBenchmarkRegistry } from "@shared/types";
+import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import { trackEvent } from "@/lib/analytics";
 import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
 import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";

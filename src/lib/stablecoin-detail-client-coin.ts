@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";

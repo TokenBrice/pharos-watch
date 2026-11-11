@@ -1,4 +1,5 @@
-import type { BackingType, GovernanceType } from "@shared/types";
+import type { BackingType } from "@shared/types/core";
+import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
 import { StablecoinFilteredTable } from "@/components/stablecoin-filtered-table";
 import { StablecoinTaxonomyShell } from "@/components/stablecoin-taxonomy-shell";
 import { TaxonomyHeaderActions } from "@/components/taxonomy-header-actions";

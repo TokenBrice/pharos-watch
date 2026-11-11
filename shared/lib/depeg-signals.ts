@@ -1,6 +1,6 @@
-import type { DepegDirection } from "../types/market";
+import type { DepegDirection } from "../types/peg";
 
-export type { DepegDirection } from "../types/market";
+export type { DepegDirection } from "../types/peg";
 
 export interface RelativeBpsResult {
   bps: number;

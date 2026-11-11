@@ -13,8 +13,9 @@ import { buildV9SafetyTableMap, type V9SafetyTableRow } from "@/lib/safety-score
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
-import type { PegSummaryCoin, StablecoinData } from "@shared/types";
-import type { DexLiquidityMap } from "@shared/types/market";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
+import type { DexLiquidityMap } from "@shared/types/dex-liquidity";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { CsvColumn } from "@/lib/exports/csv";

@@ -6,7 +6,7 @@ import {
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevMonthRawOrNull, getPrevWeekRawOrNull, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
-import type { SupplyGapFillProvenance } from "@shared/types/market";
+import type { SupplyGapFillProvenance } from "@shared/types/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";

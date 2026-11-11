@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
-import type { HealthResponse, PublicStatusHistoryResponse } from "@shared/types";
+import type { HealthResponse, PublicStatusHistoryResponse } from "@shared/types/status/public-health";
 import { PUBLIC_STATUS_COMPONENT_IDS } from "@shared/types/status";
 
 const { useHealthMock, useHistoryMock, useProbesMock } = vi.hoisted(() => ({

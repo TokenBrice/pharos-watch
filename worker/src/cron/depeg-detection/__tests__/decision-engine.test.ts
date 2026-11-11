@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
+import type { PegAssetBase } from "@shared/types/price";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { decideDepegAsset } from "../decision-engine";

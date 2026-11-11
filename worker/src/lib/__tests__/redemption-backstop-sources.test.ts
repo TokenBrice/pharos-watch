@@ -6,7 +6,7 @@ import * as redemptionCapacity from "../redemption-backstop/capacity";
 import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import type {
   applyOutputDependencyResolution as ApplyOutputDependencyResolution,
   buildRedemptionBackstopEntry as BuildRedemptionBackstopEntry,

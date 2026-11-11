@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { StablecoinMeta } from "../../../types";
+import type { StablecoinMeta } from "../../../types/stablecoin-meta-schemas";
 import { makeStablecoinMeta as makeCoin } from "../../../test-utils/stablecoin";
 import { resolveMechanismArchetype } from "../resolve-mechanism-archetype";
 

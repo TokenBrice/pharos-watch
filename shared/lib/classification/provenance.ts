@@ -1,4 +1,4 @@
-import type { LiquidityCoverageClass } from "../../types/market";
+import type { LiquidityCoverageClass } from "../../types/dex-liquidity";
 import type { YieldSourceConfidenceTier } from "../../types/yield-vocabulary";
 
 /**

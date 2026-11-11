@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TRACKED_STABLECOINS as COINS } from "@shared/lib/stablecoins/registry";
-import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema, type SupplyHistoryPoint } from "@shared/types/market";
+import { StablecoinDetailResponseSchema, SupplyHistoryResponseSchema, type SupplyHistoryPoint } from "@shared/types/supply";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { readDetailSnapshot } from "../../../src/lib/stablecoin-detail-snapshot-reader";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";

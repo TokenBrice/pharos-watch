@@ -1,5 +1,5 @@
 import { MICA_STATUS_DESCRIPTIONS } from "@shared/lib/mica";
-import type { MicaProfile } from "@shared/types";
+import type { MicaProfile } from "@shared/types/stablecoin-meta-compliance-schemas";
 import type { CoverageStatus } from "@/lib/coverage-types";
 import {
   createPresetStatus,

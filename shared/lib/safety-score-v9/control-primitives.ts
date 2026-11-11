@@ -10,8 +10,9 @@ import type {
 } from "../../types/safety-score-v9-facts";
 import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
-import type { BridgeRouteRiskTier, OracleRiskTier } from "../../types/core";
-import type { MintAuthorityPosture } from "../../types/core";
+import type { BridgeRouteRiskTier } from "../../types/bridge-risk";
+import type { OracleRiskTier } from "../../types/oracle-risk";
+import type { MintAuthorityPosture } from "../../types/mint-authority-vocabulary";
 import type {
   V9ReasonCode,
   V9Severity,

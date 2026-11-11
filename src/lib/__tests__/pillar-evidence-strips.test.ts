@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { resolveMintAuthorityScoreDisplay } from "@/lib/mint-authority-display";
 import { resolveControlComponentRoles } from "@/lib/pillar-evidence-strips";

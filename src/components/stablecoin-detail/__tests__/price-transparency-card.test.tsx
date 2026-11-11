@@ -7,7 +7,7 @@ import { renderToString } from "react-dom/server";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { resolvePriceTransparencySourceStatus } from "@/components/stablecoin-detail/price-transparency-status";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 
 function makeCoinData(priceSource: string): StablecoinData {
   const freshSec = Math.floor(Date.now() / 1000) - 60;

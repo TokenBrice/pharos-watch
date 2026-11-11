@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { DepegEventsResponseSchema } from "@shared/types/market";
+import { DepegEventsResponseSchema } from "@shared/types/peg";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";

@@ -2,7 +2,7 @@ import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getDatasetCadenceSec, STATUS_DATASET_FRESHNESS } from "@shared/lib/status-dataset-freshness";
 import type { DatasetFreshnessKey } from "@shared/types/status/core";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const baseFlags = {
   backing: "crypto-backed",

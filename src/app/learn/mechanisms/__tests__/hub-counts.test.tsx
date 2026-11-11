@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { getCoinsByLifecycleStatus } from "@shared/lib/stablecoins/by-mechanism";
 import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import MechanismExplainersHub from "../page";

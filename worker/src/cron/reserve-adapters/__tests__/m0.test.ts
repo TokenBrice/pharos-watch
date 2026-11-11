@@ -3,7 +3,7 @@ import ctusdReserves from "@shared/data/stablecoins/domains/reserves/ctusd-citre
 import usdatReserves from "@shared/data/stablecoins/domains/reserves/usdat-saturn.json";
 import ctusdCoin from "@shared/data/stablecoins/coins/ctusd-citrea.json";
 import usdatCoin from "@shared/data/stablecoins/coins/usdat-saturn.json";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as OnchainModule from "../onchain";
 import * as onchain from "../onchain";
 import type { OnchainLogEntry } from "../onchain";

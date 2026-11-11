@@ -2,9 +2,11 @@ import { logWorkerEventArgs } from "./structured-log";
 import {
   DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
+} from "@shared/types/exit-route";
+import {
   type DexLiquidityData,
   type LiquidityCoverageClass,
-} from "@shared/types/market";
+} from "@shared/types/dex-liquidity";
 import {
   classifyLiquidityEvidence,
   type LiquidityEvidenceClassification,

@@ -11,7 +11,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidityCoin } from "@/hooks/api-hooks";
-import type { DexLiquidityData } from "@shared/types/market";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 import { formatCurrency, formatPercentFromRatio, formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { describeDexVolume } from "@/lib/dex-volume-display";

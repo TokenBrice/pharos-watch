@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { gunzipSync } from "fflate";
 import packedAssetText from "@shared/data/stablecoins/coins.worker-full.generated.json";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 // Workers' ambient Buffer declaration is untyped; retain the native byte decoder.
 const nativeBuffer = Buffer as {

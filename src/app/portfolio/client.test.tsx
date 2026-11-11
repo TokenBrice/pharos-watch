@@ -8,7 +8,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
 import PortfolioPage from "./page";
-import type { ReportCardsV9Response } from "@shared/types";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9-current";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 

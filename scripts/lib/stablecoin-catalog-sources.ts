@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { compareCodeUnits } from "@shared/lib/compare";
 import {
   findDuplicateStablecoinCatalogIds,

@@ -7,7 +7,7 @@ import {
   GENIUS_AUTHORIZATION_STATUS_VALUES,
   MICA_STATUS_VALUES,
   MICA_TOKEN_TYPE_VALUES,
-} from "@shared/types/core";
+} from "@shared/types/compliance-vocabulary";
 import type {
   GeniusApplicability,
   GeniusAuthorizationStatus,
@@ -16,13 +16,21 @@ import type {
   GeniusForeignExceptionStatus,
   GeniusIssuerPathway,
   GeniusPrimaryFederalRegulator,
-  MicaProfile,
   MicaStatus,
   MicaTokenType,
+} from "@shared/types/compliance-vocabulary";
+import type {
+  MicaProfile,
+} from "@shared/types/stablecoin-meta-compliance-schemas";
+import type {
   PegCurrency,
+} from "@shared/types/core";
+import type {
   StablecoinLink,
+} from "@shared/types/stablecoin-meta-primitives";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import { formatReserveReportNote } from "@/lib/regulatory-standing";
 
 import type { GeniusComplianceSummary } from "@shared/types/stablecoin-client-meta";

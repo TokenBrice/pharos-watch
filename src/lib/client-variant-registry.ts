@@ -3,7 +3,7 @@ import {
   CLIENT_ACTIVE_STABLECOINS,
   type StablecoinClientMeta,
 } from "@shared/lib/stablecoins/client-registry";
-import type { VariantKind } from "@shared/types";
+import type { VariantKind } from "@shared/types/stablecoin-taxonomy";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 
 function hasTrackedVariantMeta(

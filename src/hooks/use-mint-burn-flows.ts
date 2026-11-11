@@ -5,7 +5,7 @@ import {
   createRegisteredApiPollingQueryOptions,
   useRegisteredApiQuery,
 } from "./api-hooks";
-import type { MintBurnFlowsResponse, MintBurnPerCoinResponse, MintBurnEventsResponse } from "@shared/types";
+import type { MintBurnFlowsResponse, MintBurnPerCoinResponse, MintBurnEventsResponse } from "@shared/types/mint-burn";
 import {
   FRONTEND_API_QUERY_DESCRIPTORS,
   type MintBurnEventsDescriptorOptions,

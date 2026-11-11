@@ -1,7 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { batchExecute, runChunkedInRead } from "./db";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { DEFILLAMA_COINS, USER_AGENT } from "./constants";

@@ -1,4 +1,4 @@
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
   SAFETY_SCORE_V9_RESPONSIBILITY_LABELS,
   SAFETY_SCORE_V9_RESPONSIBILITY_ORDER,

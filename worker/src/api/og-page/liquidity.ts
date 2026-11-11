@@ -1,5 +1,5 @@
 import { formatCurrency } from "@shared/lib/format";
-import { DEX_GLOBAL_KEY, DexLiquidityMapSchema } from "@shared/types/market";
+import { DEX_GLOBAL_KEY, DexLiquidityMapSchema } from "@shared/types/dex-liquidity";
 import { handleDexLiquidity } from "../dex-liquidity";
 import { freshnessReason, readOwnerJson, unavailable, type OgPageLoader, OG_SOURCE_BUDGET_SEC } from "./types";
 

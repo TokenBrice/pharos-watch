@@ -4,7 +4,8 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCompareShareActions } from "../use-compare-share-actions";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
-import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const shareImageMocks = vi.hoisted(() => ({
   loadImage: vi.fn(),

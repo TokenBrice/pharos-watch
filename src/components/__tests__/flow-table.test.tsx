@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import type { MintBurnCoinFlow } from "@shared/types";
+import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
 import { FlowTable } from "@/components/flow-table";
 import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 

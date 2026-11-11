@@ -16,7 +16,7 @@ import type {
   V9DeploymentSupplyCensusDiagnosticV1,
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
-import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/core";
+import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import {
   COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
   DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,

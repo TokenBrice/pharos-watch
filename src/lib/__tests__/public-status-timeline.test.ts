@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PublicStatusComponent, PublicStatusTransition } from "@shared/types";
+import type { PublicStatusComponent, PublicStatusTransition } from "@shared/types/status/public-health";
 import { PUBLIC_STATUS_COMPONENT_IDS } from "@shared/types/status";
 import {
   buildComponentDayCells,

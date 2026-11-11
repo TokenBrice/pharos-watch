@@ -1,6 +1,7 @@
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
 import { z } from "zod";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
 import {

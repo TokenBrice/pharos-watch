@@ -1,7 +1,7 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { fetchMarketBackfillPriceSeries } from "../historical-market-prices";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import { hasPublishableCurrentPrice } from "../price-publication-state";

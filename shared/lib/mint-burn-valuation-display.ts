@@ -1,4 +1,4 @@
-import type { MintBurnClassification, MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "../types";
+import type { MintBurnClassification, MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "../types/mint-burn";
 import {
   boundMintBurnSignedNetRange,
   combineMintBurnValuationCompleteness,

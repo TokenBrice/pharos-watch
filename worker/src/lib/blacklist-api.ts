@@ -1,5 +1,5 @@
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
-import type { BlacklistEvent } from "@shared/types/market";
+import type { BlacklistEvent } from "@shared/types/blacklist";
 import type { BlacklistPersistedRow } from "./blacklist/shared";
 
 export type BlacklistEventRow = Omit<BlacklistPersistedRow,

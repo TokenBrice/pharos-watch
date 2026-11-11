@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS } from "@shared/lib/onchain-supply-probe";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";

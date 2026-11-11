@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
+import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyReference, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";

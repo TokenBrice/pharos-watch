@@ -8,7 +8,7 @@ import {
   QuarterlyStackedBarChart,
   type QuarterlyStackedBarSeries,
 } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
-import type { BlacklistEventType, BlacklistQuarterlyEventTypePoint } from "@shared/types";
+import type { BlacklistEventType, BlacklistQuarterlyEventTypePoint } from "@shared/types/blacklist";
 import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[260px]";

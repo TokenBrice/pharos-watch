@@ -1,4 +1,4 @@
-import type { PriceObservedAtMode } from "../types/core";
+import type { PriceObservedAtMode } from "../types/price";
 import type { PricingSourceTrustTier } from "./pricing-source-registry-types";
 import { getPricingSourceRegistryEntry } from "./pricing-source-registry";
 import { normalizePricingSourceKeys } from "./pricing-sources";

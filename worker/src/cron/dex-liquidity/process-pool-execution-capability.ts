@@ -11,7 +11,7 @@ import type {
   SymbolLookups,
 } from "./types";
 import { isCryptoSwap, normalizeProtocol } from "./pool-helpers";
-import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
+import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { buildMeasuredExecutionTargetValue } from "../measured-execution/inventory";
 import {

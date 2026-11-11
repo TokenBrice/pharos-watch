@@ -33,7 +33,7 @@ import {
   deriveFlowCardData,
 } from "@/lib/compare-derive";
 import type { ComparisonMeta } from "@/lib/compare-derive";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { CompareRadarCohort } from "@/lib/compare-data-model-types";
 import type { StaleQuery } from "@/lib/stale-query";

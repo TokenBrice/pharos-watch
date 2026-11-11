@@ -8,7 +8,7 @@ import type {
   RedemptionDocSourceSupport,
   RedemptionFeeModelKind,
   RedemptionHolderEligibility,
-} from "../../types";
+} from "../../types/redemption";
 import type {
   RedemptionBackstopConfig,
   RedemptionCostModel,

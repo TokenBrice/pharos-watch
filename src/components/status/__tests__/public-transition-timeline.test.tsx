@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { PublicStatusTransition } from "@shared/types";
+import type { PublicStatusTransition } from "@shared/types/status/public-health";
 import { PublicIncidentList } from "../public-transition-timeline";
 
 const NOW = 1_790_000_000;

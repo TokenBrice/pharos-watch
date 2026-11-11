@@ -32,8 +32,11 @@ import {
   PEG_METADATA,
   SAFETY_EVIDENCE_LABELS,
 } from "@shared/lib/classification";
-import { CUSTODY_MODEL_VALUES, GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import type { CustodyModel, GovernanceType, MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
+import { CUSTODY_MODEL_VALUES } from "@shared/types/custody";
+import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import type { CustodyModel } from "@shared/types/custody";
+import type { GovernanceType, MechanismArchetype, StablecoinStatus } from "@shared/types/stablecoin-taxonomy";
+import type { PegCurrency } from "@shared/types/core";
 
 const LIFECYCLE_LABELS: Record<StablecoinStatus, string> = {
   active: "Active",

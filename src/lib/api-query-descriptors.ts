@@ -12,18 +12,28 @@ import type { DailyDigestResponse, DigestArchiveResponse, DigestPromoResponse, D
 import type {
   BlacklistResponse,
   BlacklistSummaryResponse,
+} from "@shared/types/blacklist";
+import type {
   BluechipRatingsMap,
+} from "@shared/types/bluechip";
+import type {
   DexLiquidityHistoryPoint,
   DexLiquidityMap,
   DexLiquidityTableMap,
+} from "@shared/types/dex-liquidity";
+import type {
   NonUsdSharePoint,
-  PegSummaryResponse,
   StablecoinChartPoint,
   StablecoinListResponse,
+  SupplyHistoryPoint,
+} from "@shared/types/supply";
+import type {
+  PegSummaryResponse,
+} from "@shared/types/peg";
+import type {
   StressSignalDetailResponse,
   StressSignalsAllResponse,
-  SupplyHistoryPoint,
-} from "@shared/types/market";
+} from "@shared/types/stress";
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import type { RedemptionBackstopCoinResponse } from "@shared/types/redemption";
@@ -71,7 +81,7 @@ import {
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@shared/lib/schema-like";
 
-export type { NonUsdSharePoint } from "@shared/types/market";
+export type { NonUsdSharePoint } from "@shared/types/supply";
 
 /** First-paint window selected by the stablecoin detail market charts. */
 export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;

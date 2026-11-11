@@ -30,7 +30,7 @@ import {
 } from "../lib/maintenance-api";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { parseStrictCliArgs, runCliEntrypoint } from "../lib/cli-args.mjs";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const ROOT = process.cwd();
 const API_BASE_URL = process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;

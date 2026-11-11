@@ -1,5 +1,7 @@
 import workerRuntimeAsset from "../../data/stablecoins/coins.worker-runtime.generated.json";
-import type { ContractDeployment, PegCurrency, StablecoinMeta } from "../../types/core";
+import type { ContractDeployment } from "../../types/stablecoin-meta-primitives";
+import type { PegCurrency } from "../../types/core";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 import type { StablecoinStatus } from "../../types/stablecoin-taxonomy";
 import { buildStablecoinRegistryIndexes } from "./registry-indexes";
 import {

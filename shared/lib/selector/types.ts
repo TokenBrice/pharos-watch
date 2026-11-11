@@ -75,15 +75,29 @@ import type {
 } from "./snapshot-schemas";
 import type {
   BluechipGrade,
+} from "../../types/bluechip";
+import type {
   CustodyModel,
+} from "../../types/custody";
+import type {
   GovernanceType,
+} from "../../types/stablecoin-taxonomy";
+import type {
   PegCurrency,
+} from "../../types/core";
+import type {
   ReportCardGrade,
+} from "../../types/report-card-grade";
+import type {
   SafetyScoreV9Cap,
+} from "../../types/safety-score-v9-public-facts";
+import type {
   V9EvidenceLevel,
   V9QualityPillar,
+} from "../../types/safety-score-v9";
+import type {
   YieldType,
-} from "../../types";
+} from "../../types/yield-vocabulary";
 
 export type SelectorProfile = (typeof SELECTOR_PROFILES)[number];
 

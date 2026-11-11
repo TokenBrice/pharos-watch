@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildArchetypeArticleJsonLd } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import type { MechanismArchetype } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 
 // First date each archetype page could have been published, from the commit
 // that added its explainer content. Archetypes predating the cluster share its

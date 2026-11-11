@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicStatusComponent, PublicStatusComponentId } from "@shared/types";
+import type { PublicStatusComponent, PublicStatusComponentId } from "@shared/types/status/public-health";
 import { PUBLIC_COMPONENT_LABEL, PUBLIC_COMPONENT_SCOPE } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ComponentStatePill, StatusSection, Timestamp } from "@/components/status/page-primitives";

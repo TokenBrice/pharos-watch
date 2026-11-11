@@ -1,4 +1,4 @@
-import type { BlacklistAmountStatus } from "@shared/types/market";
+import type { BlacklistAmountStatus } from "@shared/types/blacklist";
 import type { ContractEventConfig } from "../blacklist-contracts";
 import { shouldSuppressAsMirrorZero } from "./shared";
 

@@ -14,7 +14,7 @@ import {
   buildTradingSnapshotRecommendation,
   buildYieldSnapshotRecommendation,
 } from "./snapshot-fixture";
-import { BluechipGradeSchema } from "../../../types/core";
+import { BluechipGradeSchema } from "../../../types/bluechip";
 import { SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS, SELECTOR_VERSION } from "../version";
 import { sha256Hex } from "../../sha256";
 import { runSelector } from "../engine";

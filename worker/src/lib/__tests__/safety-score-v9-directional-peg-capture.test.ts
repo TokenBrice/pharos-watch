@@ -3,7 +3,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { computePegScore, computePremiumWeightedPegScore } from "@shared/lib/peg-score";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type * as SnapshotModule from "../report-cards-snapshot";
 

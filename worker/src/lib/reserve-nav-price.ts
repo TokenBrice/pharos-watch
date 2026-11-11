@@ -1,5 +1,5 @@
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { NavTelemetryQuote } from "./primary-price-collector";
 import { parsePositiveNumber } from "./number-utils";
 import { validatePricingSourceFreshness } from "./pricing-source-freshness";

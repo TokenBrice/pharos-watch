@@ -1,5 +1,5 @@
-import type { StablecoinMeta } from "@shared/types";
-import type { DepegEventEntry } from "@shared/types/market";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { DepegEventEntry } from "@shared/types/peg";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";

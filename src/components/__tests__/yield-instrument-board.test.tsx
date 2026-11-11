@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
 import { YieldLeaderboard, type YieldLeaderboardHandle } from "@/components/yield-leaderboard";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
-import type { YieldBenchmarkRegistry } from "@shared/types";
+import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";

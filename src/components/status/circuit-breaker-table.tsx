@@ -1,4 +1,4 @@
-import type { CircuitRecord } from "@shared/types";
+import type { CircuitRecord } from "@shared/types/status/public-health";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { PublicSignalCard } from "./public-signal-card";

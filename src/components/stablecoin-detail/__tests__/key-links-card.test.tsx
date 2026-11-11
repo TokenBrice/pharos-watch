@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const meta = {
   id: "test-usd",

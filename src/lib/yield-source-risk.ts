@@ -9,9 +9,11 @@ import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { YIELD_SOURCE_CONFIDENCE_TIER_VALUES } from "@shared/types/yield-vocabulary";
 import type {
   YieldSourceRisk,
+} from "@shared/types/yield-evidence-schemas";
+import type {
   YieldSourceRole,
   YieldType,
-} from "@shared/types";
+} from "@shared/types/yield-vocabulary";
 import type {
   YieldSourceConfidenceTier,
   YieldSourcePublishedFreshness,

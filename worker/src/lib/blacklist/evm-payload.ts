@@ -1,5 +1,5 @@
 import { decodeAbiParameters } from "viem/utils";
-import type { BlacklistEventType } from "@shared/types/market";
+import type { BlacklistEventType } from "@shared/types/blacklist";
 import type { BlacklistEventDef } from "../blacklist-contracts";
 import { decodeAddressWord, decodeUint256Word, readDataWord } from "../evm-logs";
 import { BlacklistDecodeError } from "./decode-quarantine";

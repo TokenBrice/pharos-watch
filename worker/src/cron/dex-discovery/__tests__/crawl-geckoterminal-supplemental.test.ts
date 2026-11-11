@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { sleepWithSignal } from "../../../lib/abort";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
 import { fetchGtTokenPools } from "../../dex-liquidity/geckoterminal-shared";

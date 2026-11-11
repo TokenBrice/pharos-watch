@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { StatusCause, StatusTransition } from "@shared/types";
+import type { StatusCause, StatusTransition } from "@shared/types/status/core";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, RefreshCw, RotateCcw } from "lucide-react";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";

@@ -1,4 +1,5 @@
-import type { HealthResponse, StatusResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
+import type { StatusResponse } from "@shared/types/status/response";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { numberValue as readNumber, readRecord } from "@shared/lib/type-guards";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";

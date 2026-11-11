@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { z } from "zod";
-import type { StablecoinMeta, StablecoinObituary, StablecoinListingStatusReview } from "../../../types";
+import type { StablecoinMeta, StablecoinObituary, StablecoinListingStatusReview } from "../../../types/stablecoin-meta-schemas";
 import { StablecoinMetaStructuralSchema, StablecoinObituarySchema, StablecoinListingStatusReviewSchema } from "../../../types/stablecoin-meta-schemas";
 import { isValidIsin, StablecoinFlagsSchema } from "../../../types/stablecoin-meta-primitives";
 import {
@@ -15,7 +15,7 @@ import {
 } from "../schema";
 import { BridgeRouteRiskProfileSchema, MintAuthorityProfileSchema, OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
 import { V9DeploymentControlFactBaseSchema } from "../../../types/safety-score-v9-facts";
-import { STABLECOIN_STATUS_VALUES } from "../../../types/core";
+import { STABLECOIN_STATUS_VALUES } from "../../../types/stablecoin-taxonomy";
 import { reviewedScope, weightedQuorum, SCOPE_CONTROLLER } from "../../__tests__/safety-score-v9-control-scope.test-support";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin, makeStablecoinMeta } from "./test-support";
 import { makeBridgeAuthority, makeSafeControl } from "./schema.test-support";

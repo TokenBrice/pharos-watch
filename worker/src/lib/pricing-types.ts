@@ -1,4 +1,4 @@
-import type { PriceObservedAtMode } from "@shared/types/core";
+import type { PriceObservedAtMode } from "@shared/types/price";
 
 export function pickConservativeObservedAt(
   sourceKeys: string[] | undefined,
