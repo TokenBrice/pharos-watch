@@ -1,6 +1,6 @@
 import { describeError } from "@shared/lib/error-utils";
 import type { ErrorDescriptor } from "@shared/types/error";
-import type { CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
+import type { CronEvent, CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
 import { settleAfterAbort, CRON_ABORT_GRACE_MS, CRON_ABORT_OBSERVATION_MARGIN_MS } from "./cron-abort-settlement";
 import {
   markScheduledChildStarted, writeScheduledChildTerminal, CronChildTerminalSupersededError, childAttemptTable,
@@ -124,25 +124,13 @@ export function __resetCronFailureCountsForTests(): void {
   cronFailureCounts.clear();
 }
 
-export type CronEventSeverity = "info" | "warning" | "error";
+export type CronEventSeverity = CronEvent["severity"];
 
-export interface CronEventInput {
-  job: string;
-  eventType: string;
+export type CronEventInput = Pick<CronEvent, "job" | "eventType" | "message" | "metadata"> & {
   severity?: CronEventSeverity;
-  message: string;
-  metadata?: Record<string, unknown>;
-}
+};
 
-export interface CronEventRecord {
-  event: "cron_event";
-  job: string;
-  eventType: string;
-  severity: CronEventSeverity;
-  message: string;
-  metadata?: Record<string, unknown>;
-  recordedAt: number;
-}
+export type CronEventRecord = CronEvent;
 
 const CRON_EVENT_CACHE_PREFIX = "cron:event";
 const MAX_CRON_EVENT_MESSAGE_CHARS = 500;

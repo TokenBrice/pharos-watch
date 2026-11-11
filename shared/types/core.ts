@@ -691,18 +691,16 @@ export const NominalPriceReferenceSchema = z.object({
 export type NominalPriceReference = z.infer<typeof NominalPriceReferenceSchema>;
 export const DepegPrimaryTrustSchema = z.enum(DEPEG_PRIMARY_TRUST_VALUES);
 
-export interface PriceSourceConfidenceProfile {
-  activeDexLanes: number;
-  freshestDexLaneAgeSec: number | null;
-  aggregateLaneOnly: boolean;
-}
-export const PriceSourceConfidenceProfileSchema: z.ZodType<PriceSourceConfidenceProfile> = z
+const PriceSourceConfidenceProfileObjectSchema = z
   .object({
     activeDexLanes: z.number().int().min(0),
     freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
     aggregateLaneOnly: z.boolean(),
   })
   .strict();
+export type PriceSourceConfidenceProfile = z.output<typeof PriceSourceConfidenceProfileObjectSchema>;
+export const PriceSourceConfidenceProfileSchema: z.ZodType<PriceSourceConfidenceProfile> =
+  PriceSourceConfidenceProfileObjectSchema;
 
 export interface PegAssetBase {
   id: string;

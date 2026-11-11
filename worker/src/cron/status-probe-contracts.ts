@@ -1,4 +1,5 @@
-import { API_FRESHNESS_MAX_AGE_SEC, isFreshnessWarningHeader } from "@shared/lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { isFreshnessWarningHeader } from "@shared/lib/warning-headers";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { isRecord } from "@shared/lib/type-guards";
 

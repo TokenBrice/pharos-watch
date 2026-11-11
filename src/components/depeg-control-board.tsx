@@ -21,7 +21,8 @@ import {
 import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg-board-primitives";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { GOVERNANCE_FILTER_OPTIONS, OPEN_INCIDENT_EVIDENCE_LABELS, PEG_FILTER_OPTIONS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { formatCurrency, formatElapsedSeconds, formatPegOccupancy, formatTrackingSpanDays } from "@shared/lib/format";
+import { formatCurrency, formatElapsedSeconds, formatTrackingSpanDays } from "@shared/lib/format";
+import { formatPegOccupancy } from "@shared/lib/peg-format";
 import type { ThreatBand } from "@shared/lib/classification";
 
 

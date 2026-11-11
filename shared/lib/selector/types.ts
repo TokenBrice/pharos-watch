@@ -1,3 +1,45 @@
+import {
+  SELECTOR_PROFILES,
+  SELECTOR_ELIGIBLE_PEG_CURRENCIES,
+  HORIZON_VALUES,
+  DEPEG_TOLERANCE_VALUES,
+  COMPOSABILITY_VALUES,
+  EXIT_SPEED_VALUES,
+  DECENTRALIZATION_VALUES,
+  CUSTODY_OK_VALUES,
+  TREASURY_VENUE_VALUES,
+  YIELD_VENUE_VALUES,
+  TRADING_VENUE_VALUES,
+  WEIGHT_KEYS,
+  LOWEST_SUB_DIMENSION_KEYS,
+  CONTEXT_KEYS,
+  WHY_KEYS,
+  BASE_CONFIDENCE_REASON_KEYS,
+  EXCLUSION_REASONS,
+  SelectorCanonicalSourceEvidenceSchema,
+} from "./vocabulary";
+export {
+  SELECTOR_PROFILES,
+  SELECTOR_ELIGIBLE_PEG_CURRENCIES,
+  isSelectorEligiblePegCurrency,
+  HORIZON_VALUES,
+  DEPEG_TOLERANCE_VALUES,
+  COMPOSABILITY_VALUES,
+  EXIT_SPEED_VALUES,
+  DECENTRALIZATION_VALUES,
+  CUSTODY_OK_VALUES,
+  TREASURY_VENUE_VALUES,
+  YIELD_VENUE_VALUES,
+  TRADING_VENUE_VALUES,
+  WEIGHT_KEYS,
+  LOWEST_SUB_DIMENSION_KEYS,
+  CONTEXT_KEYS,
+  WHY_KEYS,
+  BASE_CONFIDENCE_REASON_KEYS,
+  EXCLUSION_REASONS,
+  SELECTOR_SNAPSHOT_VERIFICATION_KIND,
+  SelectorCanonicalSourceEvidenceSchema,
+} from "./vocabulary";
 /**
  * Stablecoin Picker — type vocabulary.
  *
@@ -9,7 +51,6 @@
  * Binding: see `docs/screener-page.md#input-and-engine-contract` for the maintained type contract.
  */
 import { z } from "zod";
-import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 import type {
   SelectorInputSchema,
   SelectorComponentSchema,
@@ -31,7 +72,7 @@ import type {
   SelectorRelaxableConstraintSchema,
   SelectorSnapshotVerificationSchema,
   SelectorOutputSchema,
-} from "./snapshot";
+} from "./snapshot-schemas";
 import type {
   BluechipGrade,
   CustodyModel,
@@ -48,54 +89,31 @@ import type {
 // Inputs
 // ---------------------------------------------------------------------------
 
-export const SELECTOR_PROFILES = ["treasury", "yield", "trading"] as const;
 export type SelectorProfile = (typeof SELECTOR_PROFILES)[number];
 
 // Initial non-USD rollout: pegs with enough active rows and live signal
 // coverage to avoid empty selector routes. BRL remains gated until the
 // peggedREAL alias path is audited.
-export const SELECTOR_ELIGIBLE_PEG_CURRENCIES = [
-  "USD",
-  "EUR",
-  "CHF",
-  "GOLD",
-] as const satisfies readonly PegCurrency[];
+
 export type SelectorEligiblePegCurrency =
   (typeof SELECTOR_ELIGIBLE_PEG_CURRENCIES)[number];
 
-const SELECTOR_ELIGIBLE_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
-
-export function isSelectorEligiblePegCurrency(
-  value: string | null | undefined,
-): value is SelectorEligiblePegCurrency {
-  return value != null && SELECTOR_ELIGIBLE_PEG_SET.has(value);
-}
-
-export const HORIZON_VALUES = ["lt24h", "1to7d", "1to4w", "1to6m", "6mplus"] as const;
 export type SelectorHorizon = (typeof HORIZON_VALUES)[number];
 
-export const DEPEG_TOLERANCE_VALUES = ["zero", "tight", "moderate"] as const;
 export type SelectorDepegTolerance = (typeof DEPEG_TOLERANCE_VALUES)[number];
 
-export const COMPOSABILITY_VALUES = ["none", "moderate", "high"] as const;
 export type SelectorComposability = (typeof COMPOSABILITY_VALUES)[number];
 
-export const EXIT_SPEED_VALUES = ["1h", "24h", "any"] as const;
 export type SelectorExitSpeed = (typeof EXIT_SPEED_VALUES)[number];
 
-export const DECENTRALIZATION_VALUES = ["any", "leaning", "required"] as const;
 export type SelectorDecentralization = (typeof DECENTRALIZATION_VALUES)[number];
 
-export const CUSTODY_OK_VALUES = ["any", "regulated-only", "onchain-only"] as const;
 export type SelectorCustodyOk = (typeof CUSTODY_OK_VALUES)[number];
 
-export const TREASURY_VENUE_VALUES = ["custody", "some", "active"] as const;
 export type SelectorTreasuryVenue = (typeof TREASURY_VENUE_VALUES)[number];
 
-export const YIELD_VENUE_VALUES = ["lend", "dex", "wrap", "all"] as const;
 export type SelectorYieldVenue = (typeof YIELD_VENUE_VALUES)[number];
 
-export const TRADING_VENUE_VALUES = ["cex", "perps", "spot", "all"] as const;
 export type SelectorTradingVenue = (typeof TRADING_VENUE_VALUES)[number];
 
 export type SelectorVenuePreference =
@@ -120,25 +138,7 @@ export type SelectorInput = z.output<typeof SelectorInputSchema>;
  * those are V9 pillars (or, for `dependencyRisk`, a Selector-side
  * re-derivation of V9's graph) already priced inside `safetyOverall`.
  */
-export const WEIGHT_KEYS = [
-  "safetyOverall",
-  "resilience",
-  "dependencyRisk",
-  "pegStabilityHistory",
-  "pegStabilityLive",
-  "pegScoreNow",
-  "decentralization",
-  "dewsInverted",
-  "bluechip",
-  "supplyLog",
-  "pharosYieldScore",
-  "excessApy",
-  "yieldVariance",
-  "liquidity",
-  "sourceRiskInverted",
-  "effectiveExit",
-  "liquidityDiversification",
-] as const;
+
 export type WeightKey = (typeof WEIGHT_KEYS)[number];
 
 /**
@@ -164,32 +164,9 @@ export type SelectorComponent = z.output<typeof SelectorComponentSchema>;
  * listed for the same stored-snapshot reason as `WEIGHT_KEYS`; the live
  * candidate sets are in `lowest-sub-dimension.ts`.
  */
-export const LOWEST_SUB_DIMENSION_KEYS = [
-  "pegStability",
-  "liquidity",
-  "resilience",
-  "decentralization",
-  "dependencyRisk",
-  "collateralQuality",
-  "custodyModel",
-  "governanceOverride",
-  "activeDepegHistory",
-  "yieldVariance",
-  "sourceRisk",
-] as const;
+
 export type LowestSubDimensionKey = (typeof LOWEST_SUB_DIMENSION_KEYS)[number];
 
-export const CONTEXT_KEYS = [
-  "recent-listing",
-  "yield-source-switched",
-  "bluechip-weakness",
-  "depeg-history",
-  "high-venue-risk",
-  "unstable-apy",
-  "thin-tvl",
-  "current-deviation",
-  "coverage-thin",
-] as const;
 export type ContextKey = (typeof CONTEXT_KEYS)[number];
 
 export type LowestSubDimension = z.output<typeof LowestSubDimensionSchema>;
@@ -198,35 +175,6 @@ export type LowestSubDimension = z.output<typeof LowestSubDimensionSchema>;
 // Why-keys (canonical reason vocabulary)
 // ---------------------------------------------------------------------------
 
-export const WHY_KEYS = [
-  // Universal
-  "top-safety",
-  "strong-bluechip",
-  "low-dews",
-  "clean-peg-history",
-  "strong-resilience",
-  "wide-chain-presence",
-  "recent-listing",
-  // Treasury
-  "regulated-custody",
-  "low-dependency-risk",
-  "dao-governance",
-  "long-tracking-span",
-  // Yield
-  "top-pys",
-  "yield-above-benchmark",
-  "low-variance",
-  "clean-yield-source",
-  "native-wrapper-rail",
-  "yield-source-recently-switched",
-  "liquid-on-multiple-chains",
-  // Trading
-  "deepest-liquidity",
-  "multi-dex-presence",
-  "tight-peg",
-  "low-stress",
-  "strong-exit",
-] as const;
 export type WhyKey = (typeof WHY_KEYS)[number];
 
 // ---------------------------------------------------------------------------
@@ -238,18 +186,6 @@ export type SelectorChainHints = z.output<typeof SelectorChainHintsSchema>;
 export type SelectorRankRobustness = z.output<typeof SelectorRankRobustnessSchema>;
 export type SelectorRankRobustnessLabel = SelectorRankRobustness["label"];
 
-export const BASE_CONFIDENCE_REASON_KEYS = [
-  "recent-listing",
-  "yield-source-switched",
-  "short-yield-history",
-  "treasury-depeg-history",
-  "redistributed-missing-data",
-  "source-risk-missing",
-  "relaxed-fallback",
-  "narrow-margin",
-  "limited-v9-evidence",
-  "v9-binding-cap",
-] as const;
 export type BaseConfidenceReasonKey = (typeof BASE_CONFIDENCE_REASON_KEYS)[number];
 export type MissingCriticalConfidenceReason = `missing-critical-${WeightKey}`;
 export type SelectorConfidenceReason = z.output<typeof SelectorConfidenceReasonSchema>;
@@ -262,35 +198,6 @@ export type SelectorRecommendation = z.output<typeof SelectorRecommendationSchem
 // Exclusions
 // ---------------------------------------------------------------------------
 
-export const EXCLUSION_REASONS = [
-  "supply-unavailable",
-  "below-supply-floor",
-  "active-depeg",
-  "safety-grade-floor",
-  "safety-resilience-floor",
-  /** Retired before `selector-v2.0`; kept so v1.x snapshots still replay. */
-  "safety-dependency-risk-floor",
-  "dews-ceiling",
-  "bluechip-d-or-f",
-  "peg-score-floor",
-  "pys-null",
-  "apy-below-floor",
-  "yield-warning-unstable",
-  "yield-warning-thin-tvl",
-  "high-venue-on-c-tier",
-  "liquidity-floor",
-  "effective-exit-floor",
-  "supply-tvl-floor-1h",
-  "peg-currency-mismatch",
-  "yield-native-only-violation",
-  "decentralization-required-violation",
-  "insufficient-control-evidence",
-  "custody-regulated-only-violation",
-  "custody-onchain-only-violation",
-  "howey-uncertain",
-  "template-coverage-gap",
-  "coverage-too-thin",
-] as const;
 export type ExclusionReason = (typeof EXCLUSION_REASONS)[number];
 
 export interface ExclusionRecord {
@@ -365,13 +272,7 @@ export interface SelectorScreenerFilterProjection {
 export type SelectorExclusionSummaryItem = z.output<typeof SelectorExclusionSummaryItemSchema>;
 export type SelectorClosestSurvivor = z.output<typeof SelectorClosestSurvivorSchema>;
 export type SelectorRelaxableConstraint = z.output<typeof SelectorRelaxableConstraintSchema>;
-export const SELECTOR_SNAPSHOT_VERIFICATION_KIND = "pharos-server-recomputed-v1" as const;
 
-export const SelectorCanonicalSourceEvidenceSchema = z.object({
-  source: z.literal("stablecoins"),
-  /** Producer-owned source clock, verdict and named budgets; null means unknown. */
-  freshness: ApiMetaEnvelopeSchema.nullable(),
-}).strict();
 export type SelectorCanonicalSourceEvidence = z.output<typeof SelectorCanonicalSourceEvidenceSchema>;
 
 export type SelectorSnapshotVerification = z.output<typeof SelectorSnapshotVerificationSchema>;

@@ -20,7 +20,8 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency, formatPegOccupancy, formatUtcDayLabel } from "@shared/lib/format";
+import { formatDuration, formatEventDate, formatBps, formatCurrency, formatUtcDayLabel } from "@shared/lib/format";
+import { formatNativePrice, formatPegOccupancy } from "@shared/lib/peg-format";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";

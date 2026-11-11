@@ -2,7 +2,6 @@ import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants"
 import { isFiniteNumber } from "./type-guards";
 import { formatRelativeAgeSeconds } from "./relative-time";
 import { ratioToPercentage, relativeChangeRatio } from "./stats";
-import { getPegTaxonomyByCurrency } from "./peg-taxonomy";
 
 type CompactUsdTier = "trillion" | "billion" | "million" | "thousand" | "unit";
 
@@ -167,10 +166,6 @@ function trimTrailingZeros(value: string): string {
   return value.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
 }
 
-export function pegCurrencySymbol(pegCurrency: string): string {
-  return getPegTaxonomyByCurrency(pegCurrency)?.symbol ?? "$";
-}
-
 export function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
   if (!isFiniteNumber(price)) return "N/A";
   return `${symbol}${price.toFixed(decimals)}`;
@@ -187,32 +182,6 @@ export function formatUsdPriceAdaptive(value: number | null | undefined): string
   const decimals = abs >= 0.01 ? 4 : abs >= 0.0001 ? 6 : 8;
   const fixed = value.toFixed(decimals);
   return abs < 0.01 ? trimTrailingZeros(fixed) : fixed;
-}
-
-/**
- * Format a USD price in the peg's native unit (e.g. gold ounces for XAUT).
- *
- * Null/unusable `pegRef` contract: fall back to the observed USD price with an
- * explicit "$" symbol — real data, clearly USD-labeled, never a fabricated
- * native-unit figure. Reference-derived surfaces (deviation, depeg signals,
- * peg scores) must fail closed at their own call sites instead; callers whose
- * cell IS the native conversion render "—" themselves (see
- * stablecoin-table-row-model.ts priceCell).
- */
-export function formatNativePrice(
-  usdPrice: number | null | undefined,
-  pegCurrency: string,
-  pegRef: number | null,
-  decimals = 4,
-): string {
-  if (!isFiniteNumber(usdPrice)) return "N/A";
-  const taxonomy = getPegTaxonomyByCurrency(pegCurrency);
-  const symbol = taxonomy?.symbol ?? "$";
-  if (taxonomy?.nativePriceUsesUsdSymbol === true) {
-    return formatPrice(usdPrice, "$", decimals);
-  }
-  if (pegRef == null || !Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
-  return formatPrice(usdPrice / pegRef, symbol, decimals);
 }
 
 /** Format a basis-point value with a sign prefix, e.g. "+12 bps" or "-5 bps". */
@@ -418,27 +387,6 @@ export function timeAgo(epochSec: number, nowSec = Date.now() / 1000): string {
   });
 }
 
-/** Tailwind color class for net flow values (positive = green, negative = red) */
-interface SignedColorOptions {
-  positiveClass?: string;
-  negativeClass?: string;
-  zeroClass?: string;
-  positiveInclusiveZero?: boolean;
-}
-
-export function getNetColor(value: number, options: SignedColorOptions = {}): string {
-  const {
-    positiveClass = "text-emerald-700 dark:text-emerald-400",
-    negativeClass = "text-red-700 dark:text-red-400",
-    zeroClass = "text-muted-foreground",
-    positiveInclusiveZero = false,
-  } = options;
-
-  if (value > 0 || (positiveInclusiveZero && value === 0)) return positiveClass;
-  if (value < 0) return negativeClass;
-  return zeroClass;
-}
-
 /** Sign prefix for positive net flow values */
 export function getNetPrefix(value: number): string {
   return value > 0 ? "+" : "";
@@ -466,13 +414,6 @@ export function formatDecimal(value: number, minimumFractionDigits = 2, maximumF
 /** Format a percentage-point value (0-100 scale) to fixed decimals with % suffix. Returns "-" for nullish. */
 export function formatPercent(value: number | null | undefined, decimals = 2): string {
   return isFiniteNumber(value) ? `${value.toFixed(decimals)}%` : "-";
-}
-
-/** Keep rounded at-peg occupancy distinguishable from a truly perfect record. */
-export function formatPegOccupancy(value: number | null | undefined, decimals = 2): string {
-  if (!isFiniteNumber(value)) return "-";
-  const rounded = value.toFixed(decimals);
-  return value < 100 && Number(rounded) === 100 ? "<100%" : `${rounded}%`;
 }
 
 /** Keep a sub-1 coverage ratio distinguishable from exact full coverage at display precision. */

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DailySocialSnapshotSchema, formatDailySocialValue, type DailySocialSnapshot, type DailySocialTopic } from "@shared/lib/daily-social";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
-import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
+import { isFreshnessWarningHeader } from "@shared/lib/warning-headers";
 import { StablecoinListResponseSchema, DexLiquidityMapSchema, DexLiquidityHistoryResponseSchema, DepegEventsResponseSchema,
   type StablecoinData, type DexLiquidityMap, type DexLiquidityHistoryPoint, type DepegEvent } from "@shared/types/market";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";

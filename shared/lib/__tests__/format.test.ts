@@ -8,7 +8,6 @@ import {
   formatChartPercent,
   formatPercent,
   formatCoverageRatio,
-  formatPegOccupancy,
   formatPercentFromRatio,
   formatPrice,
   formatSignedCurrency,
@@ -27,9 +26,7 @@ import {
   formatSignedCompactUsd,
   formatBps,
   formatEventDate,
-  formatNativePrice,
   formatUsdPriceAdaptive,
-  pegCurrencySymbol,
   formatPercentChange,
   formatSupply,
   formatTrackingSpanDays,
@@ -40,6 +37,7 @@ import {
   formatAddress,
   formatScoreTrimmed,
 } from "../format";
+import { formatPegOccupancy, formatNativePrice, pegCurrencySymbol } from "../peg-format";
 import {
   formatApproxDurationSeconds,
   formatRelativeAgeSeconds,

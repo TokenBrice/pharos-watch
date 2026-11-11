@@ -6,7 +6,8 @@ import {
   buildFlowPressureReceiptModel,
   type FlowPressureReceiptRow,
 } from "@/lib/flow-pressure-receipt-model";
-import { formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
+import { formatCurrency, formatSignedCurrency } from "@shared/lib/format";
+import { getNetColor } from "@shared/lib/classification/flows";
 import { formatMintBurnVolume } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types";

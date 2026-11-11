@@ -29,7 +29,7 @@ import { getRouteMatch } from "../../routes/registry";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";
 import * as publicationCodec from "../../lib/safety-score-v9/publication-codec";
 import { safetyScoreSnapshotHeaders, withRepresentationEtag } from "../../lib/api-response";
-import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
+import { isFreshnessWarningHeader } from "@shared/lib/warning-headers";
 import { sha256HexFromUtf8Chunks } from "../../lib/hash";
 
 function instrumentReads(db: D1Database, delayMs = 0) {

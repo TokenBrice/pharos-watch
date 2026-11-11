@@ -5,9 +5,8 @@ import {
   CACHE_FRESHNESS_LANES,
   FRESHNESS_SENTINEL_CACHE_KEYS,
   getCacheFreshnessLane,
-  isFreshnessWarningHeader,
-  isScheduledRefreshWarning,
 } from "../api-freshness";
+import { isFreshnessWarningHeader, isScheduledRefreshWarning } from "../warning-headers";
 import { CRON_INTERVALS } from "../cron-jobs";
 
 describe("api-freshness", () => {

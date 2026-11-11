@@ -1,5 +1,6 @@
 import type { DepegEvent } from "@shared/types/market";
-import { formatDeviationBps, formatIsoDate, formatLongDate, formatNativePrice } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate, formatLongDate } from "@shared/lib/format";
+import { formatNativePrice } from "@shared/lib/peg-format";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
