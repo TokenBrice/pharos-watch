@@ -1,3 +1,4 @@
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { resolveV9EvidenceCause } from "@shared/lib/safety-score-v9/evidence";
 import {
@@ -31,7 +32,7 @@ export function redemptionReserveQuarantineScope(
 ): V9EvidenceCauseScope {
   return {
     pillar: "exit", componentKey: "exit-route", factorKey: "capacity",
-    routeKey: canonicalV9RouteKey("redemption", redemptionGenerationId, `redemption:${assetId}:${routeFamily}`),
+    routeKey: canonicalV9RouteKey("redemption", redemptionGenerationId, redemptionRouteId(assetId, routeFamily)),
     exposureId: null, requiredDatum: "capacity",
   };
 }

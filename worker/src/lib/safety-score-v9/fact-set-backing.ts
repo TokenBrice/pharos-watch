@@ -132,7 +132,7 @@ function normalizeMechanismReview(
         scopedAssessments: originalFact.scopedAssessments.map((fragment) => ({ ...fragment })),
       }),
     };
-    const specificEvidenceKey = `mechanism-risk-review:${componentKey}`;
+    const specificEvidenceKey = `mechanism-risk-review:${componentKey}` as const;
     const factEvidenceIds = context.asset.componentEvidence.some(
       (binding) => binding.componentKey === specificEvidenceKey,
     )

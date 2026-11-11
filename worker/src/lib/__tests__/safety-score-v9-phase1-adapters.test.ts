@@ -11,11 +11,10 @@ import {
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
   buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
-  resolveSafetyScoreV9AssetIssuerKey,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { deriveSafetyScoreV9PegScore } from "../safety-score-v9/fact-set";
-import { hasPublishedReserveReconciliationEvidence } from "../safety-score-v9/extension";
+import { hasPublishedReserveReconciliationEvidence, resolveSafetyScoreV9AssetIssuerKey } from "../safety-score-v9/extension-mint";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
 import { addReviewedStaticReserveEvidence, resolveReviewedReserveAdmission } from "../safety-score-v9/extension-reserves";
 import {

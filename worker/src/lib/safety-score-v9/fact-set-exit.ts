@@ -1,3 +1,4 @@
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
@@ -642,7 +643,7 @@ function buildRoute(
       ["settlement", args.review.settlementSlaSec !== null && !settlementBoundUnproven],
     ] as const) {
       if (!known) continue;
-      const componentKey = `exit-route:${routeKey}:${factorKey}`;
+      const componentKey = `exit-route:${routeKey}:${factorKey}` as const;
       const refs = componentResearchEvidence(context, componentKey);
       assertKnownComponentEvidenceCurrent(context, componentKey, refs);
       rejectedFactorStatuses[factorKey] = createV9FactStatus({
@@ -833,7 +834,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
   const redemption = context.fixedInput.redemptionBackstopMap[context.asset.assetId];
   const config = getRedemptionBackstopConfig(context.asset.assetId);
   const suspension = resolveReviewedRouteSuspension(config,
-    `redemption:${context.asset.assetId}:${config?.routeFamily}`, context.fixedInput.clockSec);
+    redemptionRouteId(context.asset.assetId, config?.routeFamily), context.fixedInput.clockSec);
   if (suspension && !routes.some((route) => route.routeId === suspension.routeId && route.lane === "redemption")) {
     routes.push(buildSuspendedRoute(context, suspension));
   }
@@ -855,7 +856,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     redemption.routeStatus === "open" &&
     !routes.some((route) => route.lane === "redemption")
   ) {
-    const routeId = `redemption:${context.asset.assetId}:${redemption.routeFamily}`;
+    const routeId = redemptionRouteId(context.asset.assetId, redemption.routeFamily);
     const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
     const evidenceId = addEvidence(context, createV9EvidenceReference({
       evidenceId: `${context.asset.assetId}:redemption-capacity-unavailable`,
@@ -882,7 +883,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     if (cause.diagnostics) context.causeResolutionDiagnostics.push(...cause.diagnostics);
     const evidenceIds = cause.evidenceReferences.map((reference) => addEvidence(context, reference));
     unavailableRail = {
-      routeId: `redemption:${context.asset.assetId}:${config!.routeFamily}`,
+      routeId: redemptionRouteId(context.asset.assetId, config!.routeFamily),
       routeFamily: config!.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
       evidenceIds,
       capacityGapId: addGap(context, createV9FactGapV3({
@@ -901,7 +902,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     // An empty DEX census says nothing about this documented primary channel.
     // Keep its unavailable measurement visible without synthesizing a quote,
     // funded capacity, cost, output valuation or completion guarantee.
-    const routeId = `redemption:${context.asset.assetId}:${config.routeFamily}`;
+    const routeId = redemptionRouteId(context.asset.assetId, config.routeFamily);
     const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
     const evidenceId = addEvidence(context, createV9EvidenceReference({
       evidenceId: `${context.asset.assetId}:redemption-configured-channel`,

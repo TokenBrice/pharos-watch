@@ -1,3 +1,4 @@
+import { redemptionRouteId } from "../redemption-route-identity";
 import {
   cloneRedemptionBackstopConfig,
   type RedemptionBackstopConfig,
@@ -28,7 +29,7 @@ export function defineBackstopRegistry(
       throw new Error(`Redemption backstop config "${entry.id}" is duplicated.`);
     }
     if (entry.config.routeSuspension &&
-        entry.config.routeSuspension.routeId !== `redemption:${entry.id}:${entry.config.routeFamily}`) {
+        entry.config.routeSuspension.routeId !== redemptionRouteId(entry.id, entry.config.routeFamily)) {
       throw new Error(`Redemption suspension for "${entry.id}" must name its exact configured route.`);
     }
 

@@ -1,3 +1,4 @@
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -330,7 +331,7 @@ export async function buildRedemptionBackstopEntry(
     accessModel: config.accessModel,
     settlementModel,
   });
-  const routeSuspension = resolveReviewedRouteSuspension(config, `redemption:${stablecoinId}:${config.routeFamily}`, now);
+  const routeSuspension = resolveReviewedRouteSuspension(config, redemptionRouteId(stablecoinId, config.routeFamily), now);
   const staticRouteStatus: RedemptionRouteStatusEvidence = {
     routeStatus: routeSuspension ? "suspended" :
       capacity.routeStatus === "unknown" && !capacity.routeStatusSource

@@ -20,7 +20,7 @@ const CLOCK_SEC = Date.parse("2026-09-21T00:00:00.000Z") / 1_000;
 
 describe("review evidence timestamp admission", () => {
   const base = {
-    componentKeys: ["allocation"], sourceId: "fixture:review",
+    componentKeys: ["dependencies"] as const, sourceId: "fixture:review",
     reviewedAtSec: CLOCK_SEC - 10, observedAtSec: CLOCK_SEC - 20, payload: { scope: "contract" },
   };
 
@@ -64,7 +64,7 @@ describe("review evidence timestamp admission", () => {
     const builder = new ReviewEvidenceBuilder("alpha", CLOCK_SEC, sha256HexFromUtf8Chunks);
     builder.add(base);
     const before = builder.finish();
-    expect(() => builder.add({ componentKeys: ["new", "allocation"], sourceId: "invalid", payload: {}, ...dates }))
+    expect(() => builder.add({ componentKeys: ["control", "dependencies"], sourceId: "invalid", payload: {}, ...dates }))
       .toThrow("Evidence observation cannot postdate review");
     expect(builder.finish()).toEqual(before);
   });
@@ -72,7 +72,7 @@ describe("review evidence timestamp admission", () => {
   it("preserves numeric observation and publication provenance and deduplicates evidence bindings", () => {
     const builder = new ReviewEvidenceBuilder("alpha", CLOCK_SEC);
     const args = {
-      ...base, componentKeys: ["leverage", "allocation"],
+      ...base, componentKeys: ["wrapper-local:leverage", "dependencies"] as const,
       sources: [
         { label: "Z report", url: "https://example.test/z" },
         { label: "A report", url: "https://example.test/a" },
@@ -89,10 +89,10 @@ describe("review evidence timestamp admission", () => {
       ["https://example.test/z", CLOCK_SEC - 20, Date.parse("2026-09-19T00:00:00Z") / 1000, "issuer", 300],
     ]);
     expect(result.componentEvidence).toEqual([
-      { componentKey: "allocation", evidenceKeys: [...keys].sort() },
-      { componentKey: "leverage", evidenceKeys: [...keys].sort() },
+      { componentKey: "dependencies", evidenceKeys: [...keys].sort() },
+      { componentKey: "wrapper-local:leverage", evidenceKeys: [...keys].sort() },
     ]);
-    const changed = builder.add({ ...args, payload: { scope: "legal" }, componentKeys: ["allocation"] });
+    const changed = builder.add({ ...args, payload: { scope: "legal" }, componentKeys: ["dependencies"] });
     expect(changed.every((key) => !keys.includes(key))).toBe(true);
   });
 
@@ -100,7 +100,7 @@ describe("review evidence timestamp admission", () => {
     const builder = new ReviewEvidenceBuilder("alpha", CLOCK_SEC);
     const numericKeys = builder.add({ ...base, observedAtSec: undefined });
     const datedKeys = builder.add({
-      componentKeys: ["custody"], sourceId: "fixture:dated", reviewedAt: "2026-09-20",
+      componentKeys: ["wrapper-local:custodyEscrow"], sourceId: "fixture:dated", reviewedAt: "2026-09-20",
       observedAt: "2026-09-19", payload: {},
     });
     const result = builder.finish();

@@ -15,7 +15,7 @@ import {
   type ExtensionAsset,
   type V9ExtensionRegistryMeta,
 } from "./extension-shared";
-import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import type { ReviewEvidenceBuilder, ReviewEvidenceComponentKey } from "@shared/lib/safety-score-v9/review-evidence";
 
 const ORACLE_BRANCH_ADAPTERS = [
   ["feed", (branch: OracleRiskBranch) => (branch.feeds?.length ?? 0) > 0 || branch.fallbackBehavior != null],
@@ -195,9 +195,9 @@ export function adaptOracleReview(
     };
   }
   const confidence = confidenceForResearch(profile.confidence);
-  const componentKeys = [
+  const componentKeys: ReviewEvidenceComponentKey[] = [
     "economic-control:oracle",
-    ...ORACLE_BRANCH_ADAPTERS.map(([branch]) => `economic-control:oracle:${branch}`),
+    ...ORACLE_BRANCH_ADAPTERS.map(([branch]) => `economic-control:oracle:${branch}` as const),
   ];
   const evidenceKeys = evidence.add({
     componentKeys,

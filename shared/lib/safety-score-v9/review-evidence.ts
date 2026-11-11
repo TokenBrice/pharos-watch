@@ -5,6 +5,33 @@ import type { V9PublishedEvidenceAttribution } from "./evidence";
 import type { StablecoinLink } from "../../types/core";
 import type { ResearchEvidence, ComponentEvidence } from "../../types/safety-score-v9-research-evidence";
 
+/** Compiler joins only; historical component-evidence intake retains its open string vocabulary. */
+export type ReviewEvidenceComponentKey =
+  | "control"
+  | `control:${string}`
+  | "dependencies"
+  | "economic-control:mint"
+  | "economic-control:oracle"
+  | `economic-control:oracle:${string}`
+  | "economic-control:bridge"
+  | "access:transfer"
+  | "access:freeze"
+  | `access:freeze:${string}`
+  | `access:graph:${"node" | "edge" | "authority" | "partition" | "unresolved"}:${string}`
+  | `allocation-scope:${string}`
+  | `exit-route:${string}`
+  | "mechanism-risk-review"
+  | `mechanism-risk-review:${string}`
+  | "mechanism-risk-review-history"
+  | "operational-resilience:incident-review"
+  | "peg"
+  | `reserve-classification:${string}`
+  | "reserve-composition-history"
+  | `reserve-scope:${string}`
+  | "reviewed-static-reserves"
+  | "security-history"
+  | `wrapper-local:${"custodyEscrow" | "leverage" | "rehypothecationCorrelation" | "measuredUnwind" | "shareAccountingNavOracle" | "parentBackingInheritance"}`;
+
 export function parseBoundedDateSec(
   value: string,
   clockSec: number,
@@ -25,7 +52,7 @@ export function parseBoundedDateSec(
 
 export class ReviewEvidenceBuilder {
   readonly evidence = new Map<string, ResearchEvidence>();
-  readonly bindings = new Map<string, Set<string>>();
+  readonly bindings = new Map<ReviewEvidenceComponentKey, Set<string>>();
 
   constructor(
     private readonly assetId: string,
@@ -34,7 +61,7 @@ export class ReviewEvidenceBuilder {
   ) {}
 
   add(args: {
-    componentKeys: readonly string[];
+    componentKeys: readonly ReviewEvidenceComponentKey[];
     sourceId: string;
     reviewedAt?: string;
     reviewedAtSec?: number;

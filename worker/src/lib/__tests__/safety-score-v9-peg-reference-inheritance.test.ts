@@ -1,6 +1,7 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { describe, expect, it } from "vitest";
+import { buildPegReference } from "../safety-score-v9/extension-peg-reference";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
@@ -242,6 +243,7 @@ describe("Safety Score V9 peg-reference inheritance", () => {
     const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() });
     const childExtension = extension.assets.find((asset) => asset.assetId === CHILD_ID)!;
 
+    expect(buildPegReference(metadata().get(CHILD_ID)!, metadata())).toEqual(childExtension.pegReference);
     expect(childExtension.pegReference).toMatchObject({
       referenceKind: "nav",
       referenceKey: "nav:" + CHILD_ID + ":peg-reference:" + PARENT_ID,

@@ -29,7 +29,7 @@ import type { V9AdmittedHolderLossEvent } from "@shared/types/safety-score-v9-in
 import {
   type ControlOverlay,
 } from "./extension-shared";
-import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import type { ReviewEvidenceBuilder, ReviewEvidenceComponentKey } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 import {
   LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
@@ -552,12 +552,12 @@ export function addSafetyScoreV9NegativeIncidentEvidence(
     // Retirement keeps the row for provenance but removes it from evidence.
     if (review.retired !== undefined) continue;
     const laneWitness = review.scope.kind === "provider" || review.scope.kind === "issuer-surface";
-    const componentKeys = laneWitness
+    const componentKeys: ReviewEvidenceComponentKey[] = laneWitness
       ? closedControls
         .filter((control) => control.incidentCoverage !== undefined && (
           control.incidentCoverage.providerReviewIds.includes(review.reviewId) ||
           control.incidentCoverage.issuerSurfaceReviewId === review.reviewId))
-        .map((control) => `control:${control.controlKey}`)
+        .map((control) => `control:${control.controlKey}` as const)
       : ["control"];
     if (componentKeys.length === 0) continue;
     const rows = negativeIncidentReviewEvidence(review);
@@ -667,7 +667,7 @@ export function projectSafetyScoreV9RealizedHolderLossEvents(
   return events;
 }
 
-function incidentComponentKeys(incident: V9ReviewedIncident): readonly string[] {
+function incidentComponentKeys(incident: V9ReviewedIncident): readonly ReviewEvidenceComponentKey[] {
   if (incident.domain === "control") return ["control", "economic-control:mint"];
   if (incident.domain === "wrapper-local") {
     return [

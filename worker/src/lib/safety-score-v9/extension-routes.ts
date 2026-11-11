@@ -1,3 +1,4 @@
+import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { valuePhysicalCommodityDelivery } from "@shared/lib/physical-commodity-delivery";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -1109,7 +1110,7 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
       reference: { usdPerTroyOunce: metal?.usdPerTroyOunce ?? NaN, observedAtSec: metal?.asOf ?? 0 },
       // The separately reviewed physical channel is not the suspended legacy exchange.
       routeOpen: redemption?.routeStatus === "open" || (redemption?.routeStatus === "suspended" &&
-        resolveReviewedRouteSuspension(config, `redemption:${assetId}:${config.routeFamily}`, fixedInput.clockSec) !== undefined),
+        resolveReviewedRouteSuspension(config, redemptionRouteId(assetId, config.routeFamily), fixedInput.clockSec) !== undefined),
     });
     if (observation) retained.push({ lane: "redemption", observation, disposition: "observed", rejection: null });
   }

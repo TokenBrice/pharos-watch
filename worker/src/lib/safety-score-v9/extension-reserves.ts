@@ -13,7 +13,7 @@ import {
   validateReserveCompositionTotal,
   type ReserveSlice,
 } from "@shared/types/reserves";
-import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set";
+import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
 import {
   confidenceForResearch,
   conservativeDateEndSec,
@@ -742,7 +742,7 @@ export function addReviewedStaticReserveEvidence(
   if (admission.kind === "scoped-observation") {
     const structure = admission.observation;
     evidence.add({
-      componentKeys: ["reviewed-static-reserves", ...admission.projected.rows.map(row => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`)],
+      componentKeys: ["reviewed-static-reserves", ...admission.projected.rows.map(row => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}` as const)],
       sourceId: `stablecoin-meta.reserve-${structure.kind}`, reviewedAtSec: structure.reviewedAtSec,
       observedAtSec: structure.observedAtSec ?? structure.reviewedAtSec,
       confidence: "verified", sources: structure.sources.map(source => ({ label: structure.kind, url: source.url })),
@@ -788,7 +788,7 @@ export function addReviewedStaticReserveEvidence(
     evidence.add({
       componentKeys: [
         "reviewed-static-reserves",
-        ...admission.projected.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
+        ...admission.projected.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}` as const),
       ],
       sourceId: admission.named ? "stablecoin-meta.reviewed-audited-fallback-reserves" : "stablecoin-meta.reviewed-static-reserves",
       reviewedAt: review.reviewedAt,
@@ -813,7 +813,7 @@ export function addReviewedStaticReserveEvidence(
     evidence.add({
       componentKeys: [
         "reviewed-static-reserves",
-        ...projected.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
+        ...projected.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}` as const),
       ],
       sourceId:
         projected.provenance === "curated-fallback"
@@ -846,7 +846,7 @@ export function addReserveClassificationEvidence(
   );
   if (!review || reviewed.length === 0) return;
   evidence.add({
-    componentKeys: reviewed.map((classification) => `reserve-classification:${classification.exposureKey}`),
+    componentKeys: reviewed.map((classification) => `reserve-classification:${classification.exposureKey}` as const),
     sourceId: "stablecoin-meta.reserve-review",
     reviewedAt: review.reviewedAt,
     publishedBy: "unknown",

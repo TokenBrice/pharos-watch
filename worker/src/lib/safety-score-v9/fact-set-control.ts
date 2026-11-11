@@ -4,6 +4,7 @@ import {
   requiredV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
+import type { ReviewEvidenceComponentKey } from "@shared/lib/safety-score-v9/review-evidence";
 import type {
   V9AccessReviewV2,
   V9DeploymentControlFactV2,
@@ -64,7 +65,7 @@ function retainedExpiredCustodyEvidence(
     control.scopedQuestionFresh === true ||
     control.scopedQuestionSubject !== "key-custody-independence"
   ) return null;
-  const componentKey = `control:${control.controlKey}:keyCustody`;
+  const componentKey = `control:${control.controlKey}:keyCustody` as const;
   if (!context.asset.componentEvidence.some((row) => row.componentKey === componentKey)) return null;
   const evidenceRefIds = componentResearchEvidence(context, componentKey).filter(
     (evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale",
@@ -307,7 +308,7 @@ function boundedControlSemanticsStatus(
 function normalizeEconomicControlStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,
-  componentKey: string,
+  componentKey: "mint" | "oracle" | `oracle:${string}` | "bridge",
   reasonCode: V9FactGapV3["reasonCode"],
 ): V9FactStatusV2 {
   return normalizeReviewedFactStatus(context, original, {
@@ -486,7 +487,7 @@ export function buildEconomicControlReview(context: AssetBuildContext): V9Econom
 function normalizeAccessStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,
-  componentKey: string,
+  componentKey: "transfer" | "freeze" | `freeze:${string}`,
   structuralDisposition?: NonNullable<V9AccessReviewV2["freeze"]["structuralDisposition"]>,
 ): V9FactStatusV2 {
   // Owner ruling 2026-07-27: a current, evidenced structural verdict
@@ -628,7 +629,7 @@ export function buildAccessReview(
       const branch = graph.unresolved.find((row) => label === `access:graph:unresolved:${row.branchKey}`);
       const binding = label.endsWith(":admission") ? label.slice(0, -":admission".length).replace("access:graph:unresolved:", "") : label;
       Object.assign(status, normalizeReviewedFactStatus(context, status, {
-        bindingKey: binding, staleEvidenceError: `Access graph ${label} has inconsistent stale evidence`,
+        bindingKey: binding as ReviewEvidenceComponentKey, staleEvidenceError: `Access graph ${label} has inconsistent stale evidence`,
         gapId: `${context.asset.assetId}:gap:${label}`, reasonCode: "missing-access-review", ownerDomain: "control",
         componentKey: label, message: `Diagnostic reserve-access uncertainty: ${branch?.reason ?? "review incomplete"}.`,
       }));

@@ -213,7 +213,7 @@ describe("v10.01 named reserve reports", () => {
         const projected = packet.projected;
         expected.add({
           componentKeys: projected ? ["reviewed-static-reserves",
-            ...buildSafetyScoreV9ReserveClassifications(projected.rows).map(row => `reserve-classification:${row.exposureKey}`)]
+            ...buildSafetyScoreV9ReserveClassifications(projected.rows).map(row => `reserve-classification:${row.exposureKey}` as const)]
             : ["reserve-composition-history"],
           sourceId: projected ? "stablecoin-meta.reviewed-audited-fallback-reserves" : "stablecoin-meta.expired-reviewed-static-reserves",
           reviewedAt: review.reviewedAt, observedAt: report.periodEnd, publishedAt: report.publishedAt,
@@ -572,7 +572,7 @@ describe("reviewed curated reserve admission", () => {
       const expected = new ReviewEvidenceBuilder(meta.id, CLOCK_SEC);
       expected.add({
         componentKeys: ["reviewed-static-reserves", ...buildSafetyScoreV9ReserveClassifications(rows)
-          .map(row => `reserve-classification:${row.exposureKey}`)],
+          .map(row => `reserve-classification:${row.exposureKey}` as const)],
         sourceId: meta.liveReservesConfig ? "stablecoin-meta.reviewed-curated-fallback-reserves" : "stablecoin-meta.reviewed-standalone-reserves",
         reviewedAt: review.compositionAsOf!, publishedBy: "unknown", confidence: "verified", sources: review.sources,
         payload: { reserveReview: review, reserves: projected.rows, evidenceClass: "static-validated", provenance: projected.provenance },
@@ -633,7 +633,7 @@ describe("reviewed curated reserve admission", () => {
     const structure = meta.reserveReview!.observations![0]!;
     expected.add({
       componentKeys: ["reviewed-static-reserves", ...buildSafetyScoreV9ReserveClassifications(packet.projected.rows)
-        .map(row => `reserve-classification:${row.exposureKey}`)],
+        .map(row => `reserve-classification:${row.exposureKey}` as const)],
       sourceId: `stablecoin-meta.reserve-${structure.kind}`, reviewedAtSec: structure.reviewedAtSec,
       observedAtSec: structure.observedAtSec ?? structure.reviewedAtSec, confidence: "verified",
       sources: structure.sources.map(source => ({ label: structure.kind, url: source.url })),
