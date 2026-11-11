@@ -12,7 +12,7 @@
  * `<a id="grave-<id>" href="#<id>" role="button" aria-pressed>` with `data-grave-id`, `data-cause`, `data-year` and
  * one roving tab stop.
  */
-import { useMemo, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { useImperativeHandle, useMemo, useRef, type Ref, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { CAUSE_META, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { parseCemeteryDeathDate } from "@shared/lib/cemetery";
 import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
@@ -398,7 +398,22 @@ export interface PlotSceneState {
   flowers: Readonly<Record<string, number>>;
 }
 
+export interface PlotMapSceneHandle {
+  frame(): HTMLElement | null;
+  stage(): HTMLElement | null;
+  beam(): SVGGElement | null;
+  grave(id: string): Pick<SVGElement, "focus"> | null;
+  signpost(cause: CauseOfDeath): HTMLElement | null;
+  graveOf(target: EventTarget | null): { element: SVGAElement; id: string } | null;
+  signpostOf(target: EventTarget | null): { element: HTMLElement; cause: CauseOfDeath } | null;
+  yearOf(target: EventTarget | null): { element: Element; year: number } | null;
+  coverableLabels(): { element: HTMLElement; chipId?: string; leaderId?: string }[];
+  tagObstacles(root: HTMLElement): Element[];
+  isBackground(target: EventTarget | null): boolean;
+}
+
 export interface PlotMapSceneProps {
+  controllerRef?: Ref<PlotMapSceneHandle>;
   map: DesktopPlotMap;
   layout: PlotDesktopLayout;
   atlas: PlotLogoAtlas;
@@ -461,7 +476,35 @@ function useSceneArt(map: DesktopPlotMap, atlas: PlotLogoAtlas) {
 }
 
 /** Desktop plan (≥ 761 px): the framed SVG scene and its HTML overlays, rendering the island's interaction state. */
-export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, children }: PlotMapSceneProps): ReactElement {
+export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, children, controllerRef }: PlotMapSceneProps): ReactElement {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const gravesRef = useRef(new Map<string, Pick<SVGElement, "focus">>());
+  useImperativeHandle(controllerRef, () => {
+    const query = <T extends Element>(selector: string) => stageRef.current?.querySelector<T>(selector) ?? null;
+    const closest = <T extends Element>(target: EventTarget | null, selector: string) => target instanceof Element ? target.closest<T>(selector) : null;
+    return {
+      frame: () => query<HTMLElement>("[data-plot-frame]"),
+      stage: () => stageRef.current,
+      beam: () => query<SVGGElement>("[data-plot-beam] > g"),
+      grave: (id) => gravesRef.current.get(id) ?? null,
+      signpost: (cause) => query<HTMLElement>(`[data-plot-signpost="${cause}"]`),
+      graveOf: (target) => {
+        const element = closest<SVGAElement>(target, 'a[id^="grave-"]');
+        return element?.dataset.graveId ? { element, id: element.dataset.graveId } : null;
+      },
+      signpostOf: (target) => {
+        const element = closest<HTMLElement>(target, "[data-plot-signpost]");
+        return element ? { element, cause: element.dataset.plotSignpost as CauseOfDeath } : null;
+      },
+      yearOf: (target) => {
+        const element = closest(target, "[data-plot-year]");
+        return element ? { element, year: Number(element.getAttribute("data-plot-year")) } : null;
+      },
+      coverableLabels: () => [...(stageRef.current?.querySelectorAll<HTMLElement>("[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-overlay] > [data-year]") ?? [])].map((element) => ({ element, chipId: element.dataset.plotChip, leaderId: element.dataset.plotLeader })),
+      tagObstacles: (root) => [...root.querySelectorAll("[data-plot-signpost], [data-plot-chip], [data-plot-leader], [data-plot-figure], [data-plot-zoombar], [data-plot-inspector]")],
+      isBackground: (target) => !!closest(target, "[data-plot-svg]"),
+    };
+  }, []);
   const [vbX, vbY, vbW, vbH] = map.viewBox;
   const art = useSceneArt(map, atlas);
   const { dim, zoom } = state;
@@ -477,7 +520,7 @@ export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, chil
   } as CSSProperties;
 
   return (
-    <div className={styles.stage} data-plot-stage>
+    <div ref={stageRef} className={styles.stage} data-plot-stage>
       <div className={styles.frame} style={{ aspectRatio: `${vbW} / ${vbH}` }} data-plot-frame data-zoomed={zoom ? "true" : undefined}>
         {toolbar}
         {/* the plan's keyboard contract, read when focus enters the group (a hidden description target) */}
@@ -531,6 +574,7 @@ export function PlotMapScene({ map, layout, atlas, state, toolbar, overlay, chil
                 g ? (
                   <a
                     key={key}
+                    ref={(element) => { if (element) gravesRef.current.set(g.id, element); else gravesRef.current.delete(g.id); }}
                     className={plotGraveClass(styles.grave, g.cause, g.weather)}
                     id={`grave-${g.id}`}
                     href={`#${g.id}`}

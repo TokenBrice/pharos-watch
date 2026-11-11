@@ -108,33 +108,41 @@ async function readMiniAppResponse<T>(path: string, response: Response, schema: 
   return result.data;
 }
 
-function hydrateMiniAppResponse(response: TelegramMiniAppResponse): TelegramMiniAppClientSnapshot {
-  const compact = TelegramMiniAppSnapshotSchema.safeParse(response);
-  if (!compact.success) {
-    // Rolling deploy: a new static client can still consume an older Worker's
-    // full-catalog response. The next matching Worker response becomes compact.
-    const legacy = SharedTelegramMiniAppStateSchema.parse(response);
-    const { catalog: _catalog, ...mutableState } = legacy;
+/**
+ * State transport v1 admits the versioned compact envelope and the unversioned
+ * full-catalog state. This boundary version is independent of the DTO contract.
+ * Retire the full-catalog decoder only after the producer stops serving requests
+ * without version parameters and retained clients no longer need that shape.
+ */
+const MINI_APP_STATE_TRANSPORT_V1 = {
+  schema: TelegramMiniAppResponseSchema,
+  hydrate(response: TelegramMiniAppResponse): TelegramMiniAppClientSnapshot {
+    const compact = TelegramMiniAppSnapshotSchema.safeParse(response);
+    if (!compact.success) {
+      // The current producer still serves this shape to unversioned clients.
+      const legacy = SharedTelegramMiniAppStateSchema.parse(response);
+      const { catalog: _catalog, ...mutableState } = legacy;
+      return {
+        state: legacy,
+        stateRevision: telegramMiniAppStateRevision(mutableState as TelegramMiniAppMutableState),
+      };
+    }
+    const snapshot = compact.data;
+    assertMiniAppVersions(snapshot);
     return {
-      state: legacy,
-      stateRevision: telegramMiniAppStateRevision(mutableState as TelegramMiniAppMutableState),
+      state: {
+        ...snapshot.state,
+        catalog: TELEGRAM_MINI_APP_CATALOG as unknown as TelegramMiniAppState["catalog"],
+      },
+      stateRevision: snapshot.stateRevision,
+      ...(snapshot.undo ? { undo: snapshot.undo } : {}),
     };
-  }
-  const snapshot = compact.data;
-  assertMiniAppVersions(snapshot);
-  return {
-    state: {
-      ...snapshot.state,
-      catalog: TELEGRAM_MINI_APP_CATALOG as unknown as TelegramMiniAppState["catalog"],
-    },
-    stateRevision: snapshot.stateRevision,
-    ...(snapshot.undo ? { undo: snapshot.undo } : {}),
-  };
-}
+  },
+};
 
 export async function postMiniAppSnapshot(path: string, body: unknown): Promise<TelegramMiniAppClientSnapshot> {
-  const response = await postMiniAppJson(appendMiniAppVersions(path), body, TelegramMiniAppResponseSchema);
-  return hydrateMiniAppResponse(response);
+  const response = await postMiniAppJson(appendMiniAppVersions(path), body, MINI_APP_STATE_TRANSPORT_V1.schema);
+  return MINI_APP_STATE_TRANSPORT_V1.hydrate(response);
 }
 
 export async function postVersionedMiniAppJson<T extends VersionedMiniAppResponse>(

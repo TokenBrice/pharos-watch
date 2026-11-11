@@ -153,12 +153,22 @@ function staticImportSpecifier(node) {
   return null;
 }
 
-const deletedSupplyHelperNames = {
+const retiredSupplyHelperNames = {
   "getCirculatingRaw": true,
   "getPrevDayRaw": true,
   "getPrevWeekRaw": true,
   "sumPegBuckets": true,
 };
+
+const retiredTelegramDeliveryExportNames = [
+  "TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE",
+  "TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE",
+  "TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN",
+  "TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE",
+  "TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN",
+  "TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN",
+  "estimateTelegramTargetPlanCoordinatorBound",
+];
 
 // Names that shadow or restate the canonical helpers. A local helper with
 // different semantics takes a name that says so (e.g. asRecordOrArray).
@@ -311,10 +321,10 @@ const pharosBoundaryPlugin = {
       create(context) {
         return {
           Identifier(node) {
-            if (Object.hasOwn(deletedSupplyHelperNames, node.name)) context.report({ node, messageId: "unavailable" });
+            if (Object.hasOwn(retiredSupplyHelperNames, node.name)) context.report({ node, messageId: "unavailable" });
           },
           "MemberExpression[computed=true] > Literal.property"(node) {
-            if (Object.hasOwn(deletedSupplyHelperNames, node.value)) context.report({ node, messageId: "unavailable" });
+            if (Object.hasOwn(retiredSupplyHelperNames, node.value)) context.report({ node, messageId: "unavailable" });
           },
         };
       },
@@ -845,15 +855,7 @@ const eslintConfig = defineConfig([
       "no-restricted-exports": [
         "error",
         {
-          restrictedNamedExports: [
-            "TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE",
-            "TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE",
-            "TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN",
-            "TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE",
-            "TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN",
-            "TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN",
-            "estimateTelegramTargetPlanCoordinatorBound",
-          ],
+          restrictedNamedExports: retiredTelegramDeliveryExportNames,
         },
       ],
     },

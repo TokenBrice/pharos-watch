@@ -25,7 +25,7 @@ import { buildCemeteryPlotMap, type PortraitPlotMap } from "@/lib/cemetery-plot-
 import { toPlotMapInput, type PlotLogoAtlas } from "@/lib/cemetery-plot-map-input";
 import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { useCemeterySelection, type CemeterySelectionSource } from "./cemetery-selection-context";
-import { PORTRAIT_HEAD_PX, PlotMapPortrait } from "./plot-map-portrait";
+import { PORTRAIT_HEAD_PX, PlotMapPortrait, type PlotMapPortraitHandle } from "./plot-map-portrait";
 import { PlotMapSheet } from "./plot-map-sheet";
 import { usePlotLayout } from "./use-plot-layout";
 import plotStyles from "./plot-map.module.css";
@@ -149,9 +149,8 @@ const YEAR_LABEL_GAP = 3;
  * the empty strip) sit closer than two labels are tall, so labels first push down, then the stack is pulled back up
  * from the plan's bottom edge. Measured, so it holds at every plan width and label height.
  */
-function measureYearPushes(plan: HTMLElement): number[] {
+function measureYearPushes(plan: HTMLElement, labels: readonly HTMLElement[]): number[] {
   const height = plan.clientHeight;
-  const labels = Array.from(plan.querySelectorAll<HTMLElement>("[data-plot-year-label]"));
   const heights = labels.map((label) => label.offsetHeight);
   const natural = labels.map((label, k) => (parseFloat(label.style.top) / 100) * height - heights[k] / 2);
   const tops = [...natural];
@@ -201,6 +200,7 @@ function PortraitLayer({
   const [openSeq, setOpenSeq] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const planRef = useRef<HTMLDivElement>(null);
+  const portraitRef = useRef<PlotMapPortraitHandle>(null);
   const [yearPushes, setYearPushes] = useState<readonly number[]>([]);
 
   // Margin year labels: measured before the first paint and again whenever the plan (hence every block) resizes.
@@ -210,7 +210,7 @@ function PortraitLayer({
     let live = true;
     const update = () => {
       if (!live) return;
-      const next = measureYearPushes(plan);
+      const next = measureYearPushes(plan, portraitRef.current?.yearLabels() ?? []);
       setYearPushes((prev) => (prev.length === next.length && prev.every((v, i) => v === next[i]) ? prev : next));
     };
     update();
@@ -247,7 +247,7 @@ function PortraitLayer({
         return;
       }
       setRecordHash(null);
-      if (how === "dismiss") document.getElementById(`walk-${id}`)?.focus();
+      if (how === "dismiss") portraitRef.current?.grave(id)?.focus();
     },
     [openId, setHeroPin, revealRecord, setRecordHash],
   );
@@ -256,7 +256,7 @@ function PortraitLayer({
   useLayoutEffect(() => {
     const sheet = sheetRef.current;
     if (!openSeq || !openId || !sheet) return;
-    const grave = document.getElementById(`walk-${openId}`);
+    const grave = portraitRef.current?.grave(openId);
     if (grave) scrollGraveAboveSheet(grave, sheet, reducedMotion);
     sheet.focus({ preventScroll: true });
   }, [openId, openSeq, reducedMotion]);
@@ -290,22 +290,22 @@ function PortraitLayer({
 
   const onHitsClick = useCallback(
     (ev: MouseEvent<HTMLDivElement>) => {
-      const hit = (ev.target as Element).closest<HTMLElement>("[data-grave-id]");
+      const hit = portraitRef.current?.graveOf(ev.target);
       if (!hit) {
         if (openId) closeSheet("silent");
         return;
       }
       ev.preventDefault();
-      let id = hit.dataset.graveId ?? "";
+      let id = hit.id;
       // pointer taps: overlapping 44 px boxes resolve to the nearest grave centre (keyboard clicks keep the target)
       if (ev.detail > 0) {
         let best = Infinity;
-        for (const el of ev.currentTarget.querySelectorAll<HTMLElement>("[data-grave-id]")) {
-          const r = el.getBoundingClientRect();
+        for (const { id: candidateId, element } of portraitRef.current?.graves() ?? []) {
+          const r = element.getBoundingClientRect();
           const d = Math.hypot(r.left + r.width / 2 - ev.clientX, r.top + r.height / 2 - ev.clientY);
           if (d < best) {
             best = d;
-            id = el.dataset.graveId ?? id;
+            id = candidateId;
           }
         }
       }
@@ -316,7 +316,7 @@ function PortraitLayer({
 
   const onHitsKeyDown = useCallback(
     (ev: KeyboardEvent<HTMLDivElement>) => {
-      const id = (ev.target as HTMLElement).dataset?.graveId;
+      const id = portraitRef.current?.graveOf(ev.target)?.id;
       if (!id || ev.altKey || ev.ctrlKey || ev.metaKey) return;
       if (ev.key === " ") {
         ev.preventDefault();
@@ -332,7 +332,7 @@ function PortraitLayer({
       const next = portraitKeyTarget(map, dates, id, ev.key);
       if (!next || next === id) return;
       setTabStopId(next);
-      document.getElementById(`walk-${next}`)?.focus();
+      portraitRef.current?.grave(next)?.focus();
     },
     [map, dates, toggle, onLeaveFlower],
   );
@@ -341,6 +341,7 @@ function PortraitLayer({
   return (
     <>
       <PlotMapPortrait
+        controllerRef={portraitRef}
         map={map}
         atlas={atlas}
         tabStopId={tabStopId}

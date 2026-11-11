@@ -5,10 +5,10 @@
  * and a 44 × 44 hit target per grave (`walk-<id>`, one roving tab stop) for the mobile slot's nearest-centre
  * resolution.
  *
- * Boundary-agnostic: no hooks, no client directive. State (tab stop, pinned grave, flowers, the measured year-label
- * pushes) and the delegated hit-layer handlers come from `PlotMapPortraitSlot`.
+ * State (tab stop, pinned grave, flowers, the measured year-label pushes) and the delegated hit-layer handlers
+ * come from `PlotMapPortraitSlot`; its controller handle exposes the rendered targets without their DOM IDs.
  */
-import { memo, type KeyboardEventHandler, type MouseEventHandler, type ReactElement, type Ref } from "react";
+import { memo, useImperativeHandle, useRef, type KeyboardEventHandler, type MouseEventHandler, type ReactElement, type Ref } from "react";
 import type { CauseOfDeath } from "@shared/lib/cause-of-death";
 import { PLOT_PROJECTIONS, graveGeometry, portraitSiteMarks } from "@/lib/cemetery-plot-geometry";
 import type { PortraitPlotMap } from "@/lib/cemetery-plot-map";
@@ -35,7 +35,15 @@ export const PORTRAIT_HEAD_PX = 40;
 const NO_FLOWERS: Readonly<Record<string, number>> = {};
 const NO_PUSHES: readonly number[] = [];
 
+export interface PlotMapPortraitHandle {
+  grave(id: string): HTMLAnchorElement | null;
+  graves(): { id: string; element: HTMLAnchorElement }[];
+  graveOf(target: EventTarget | null): { id: string; element: HTMLElement } | null;
+  yearLabels(): HTMLElement[];
+}
+
 export interface PlotMapPortraitProps {
+  controllerRef?: Ref<PlotMapPortraitHandle>;
   map: PortraitPlotMap;
   atlas: PlotLogoAtlas;
   /** The one grave with `tabIndex=0` (roving stop); defaults to the model's first landing. */
@@ -115,9 +123,27 @@ export function PlotMapPortrait({
   flowers = NO_FLOWERS,
   yearPushes = NO_PUSHES,
   planRef,
+  controllerRef,
   onHitsClick,
   onHitsKeyDown,
 }: PlotMapPortraitProps): ReactElement {
+  const gravesRef = useRef(new Map<string, HTMLAnchorElement>());
+  const yearLabelsRef = useRef(new Map<string, HTMLSpanElement>());
+  useImperativeHandle(controllerRef, () => ({
+    grave: (id) => gravesRef.current.get(id) ?? null,
+    graves: () => map.graves.flatMap(({ id }) => {
+      const element = gravesRef.current.get(id);
+      return element ? [{ id, element }] : [];
+    }),
+    graveOf: (target) => {
+      const element = target instanceof Element ? target.closest<HTMLElement>("[data-grave-id]") : null;
+      return element?.dataset.graveId ? { id: element.dataset.graveId, element } : null;
+    },
+    yearLabels: () => map.blocks.flatMap(({ key }) => {
+      const element = yearLabelsRef.current.get(key);
+      return element ? [element] : [];
+    }),
+  }), [map]);
   const [vbX, vbY, vbW, vbH] = map.viewBox;
   const x = (v: number) => `${((v - vbX) / vbW) * 100}%`;
   const y = (v: number) => `${((v - vbY) / vbH) * 100}%`;
@@ -154,6 +180,7 @@ export function PlotMapPortrait({
         {map.blocks.map((b, k) => (
           <span
             key={b.key}
+            ref={(element) => { if (element) yearLabelsRef.current.set(b.key, element); else yearLabelsRef.current.delete(b.key); }}
             className={styles.yr}
             style={{ top: y((b.span.y0 + b.span.y1) / 2), marginTop: yearPushes[k] || undefined }}
             data-empty={b.empty || undefined}
@@ -168,6 +195,7 @@ export function PlotMapPortrait({
           {map.graves.map((g) => (
             <a
               key={g.id}
+              ref={(element) => { if (element) gravesRef.current.set(g.id, element); else gravesRef.current.delete(g.id); }}
               className={styles.hit44}
               id={`walk-${g.id}`}
               href={`#${g.id}`}

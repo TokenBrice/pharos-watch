@@ -32,7 +32,7 @@ export interface MethodologyVersion {
 }
 
 /** 2026-09-07T00:00:00Z: versions activated from here on carry at most two decimal digits. */
-const TWO_DECIMAL_DIGIT_RULE_EFFECTIVE_AT = 1_788_739_200;
+const HISTORICAL_VERSION_PRECISION_CUTOFF_SEC = 1_788_739_200;
 
 function parseMethodologyVersionSegment(segment: string): number {
   const value = Number.parseInt(segment, 10);
@@ -82,7 +82,7 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
   // (9.461) reads as a sub-patch and invites 9.4610-style drift; the step
   // after 9.46 is 9.47. Versions activated before the rule stay as history.
   for (const entry of sortedChangelog) {
-    if (entry.effectiveAt >= TWO_DECIMAL_DIGIT_RULE_EFFECTIVE_AT && !/^\d+\.\d{1,2}$/u.test(entry.version)) {
+    if (entry.effectiveAt >= HISTORICAL_VERSION_PRECISION_CUTOFF_SEC && !/^\d+\.\d{1,2}$/u.test(entry.version)) {
       throw new Error(
         `Invalid methodology version "${entry.version}" (${changelogPath}): at most two decimal digits are allowed; bump the second digit instead.`,
       );

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { memo, type MouseEvent } from "react";
+import { memo, useImperativeHandle, useRef, type MouseEvent, type Ref } from "react";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { MECHANISM_ARCHETYPE_SHORT_LABELS } from "@shared/lib/classification";
 import { TableCell, TableRow } from "@/components/table";
@@ -20,7 +20,13 @@ const NOT_RECORDED = (
   </>
 );
 
+export interface CemeteryRegisterRowHandle {
+  element: HTMLTableRowElement | null;
+  focusDisclosure(options: FocusOptions): void;
+}
+
 export interface CemeteryRegisterRowPairProps {
+  controllerRef?: Ref<CemeteryRegisterRowHandle>;
   row: CemeteryRegisterRow;
   /** Beyond the first 25 while unfiltered and not shown in full; CSS hides it unless it is the `:target`. */
   folded: boolean;
@@ -34,6 +40,7 @@ export interface CemeteryRegisterRowPairProps {
 /** The record's main row (`id="<id>"`, the canonical public anchor) and its autopsy row. */
 export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
   row,
+  controllerRef,
   folded,
   expanded,
   highlightClassName,
@@ -41,6 +48,12 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
   onToggle,
   onShowOnField,
 }: CemeteryRegisterRowPairProps) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  const disclosureRef = useRef<HTMLButtonElement>(null);
+  useImperativeHandle(controllerRef, () => ({
+    get element() { return rowRef.current; },
+    focusDisclosure: (options) => disclosureRef.current?.focus(options),
+  }), []);
   const autopsyId = `autopsy-${row.id}`;
   const causeLabel = CAUSE_META[row.cause].label;
 
@@ -53,6 +66,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
   return (
     <>
       <TableRow
+        ref={rowRef}
         id={row.id}
         data-folded={folded ? "" : undefined}
         onClick={handleRowClick}
@@ -135,6 +149,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
         </TableCell>
         <TableCell className="px-1 text-right">
           <button
+            ref={disclosureRef}
             type="button"
             aria-expanded={expanded}
             aria-controls={autopsyId}
