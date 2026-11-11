@@ -1,3 +1,4 @@
+import { isSlidingWindowRateLimited } from "../lib/sliding-window-rate-limit";
 import type { D1Database, KVNamespace } from "@shared/types/cloudflare-runtime";
 import {
   SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES,
@@ -77,21 +78,10 @@ function dailyQuotaDate(now = new Date()): string {
 
 function isPostRateLimited(key: string | null): boolean {
   if (!key) return false;
-  const now = Date.now();
-  const cutoff = now - POST_RATE_LIMIT_WINDOW_MS;
-  const recent = (postTimestampsByIpHash.get(key) ?? []).filter((ts) => ts > cutoff);
-  if (recent.length >= POST_RATE_LIMIT_MAX_PER_WINDOW) {
-    postTimestampsByIpHash.set(key, recent);
-    return true;
-  }
-
-  recent.push(now);
-  if (!postTimestampsByIpHash.has(key) && postTimestampsByIpHash.size >= POST_RATE_LIMIT_MAX_TRACKED_IPS) {
-    const oldest = postTimestampsByIpHash.keys().next().value;
-    if (oldest !== undefined) postTimestampsByIpHash.delete(oldest);
-  }
-  postTimestampsByIpHash.set(key, recent);
-  return false;
+  return isSlidingWindowRateLimited(
+    postTimestampsByIpHash, key, Date.now(),
+    POST_RATE_LIMIT_WINDOW_MS, POST_RATE_LIMIT_MAX_PER_WINDOW, POST_RATE_LIMIT_MAX_TRACKED_IPS,
+  );
 }
 
 async function consumeDailyPostQuota(

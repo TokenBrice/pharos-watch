@@ -30,6 +30,12 @@ export const DailySocialManifestSchema = z.object({
 
 export type DailySocialManifest = z.infer<typeof DailySocialManifestSchema>;
 
+export const DAILY_SOCIAL_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+export function dailySocialManifestKey(editionDate: string): string {
+  return `daily-social:${editionDate}.json`;
+}
+
 export function dailySocialImageKey(editionDate: string, sha256: string): string {
   return `daily-social:${editionDate}:${sha256}.png`;
 }
