@@ -1082,7 +1082,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/cache-json.ts",
-      "sha256": "911b58d546e84cd2e43040c832857128671d19a742f53ce1bb33b62659c1a151"
+      "sha256": "139047d8dd0edb441e991659a2f0195631c34b5b9b871a0027ad805699f9b3c3"
     },
     {
       "path": "worker/src/lib/canonical-generation-codec.ts",
@@ -1098,7 +1098,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/constants.ts",
-      "sha256": "a7842e274f9b77c07412f7ba09d17482e2e9610e6e0a2dfad2adf39955b23538"
+      "sha256": "65e09c1cc546fc6b8d56483a1cfc8398673bd01682a5277ffc04e12e367512fd"
     },
     {
       "path": "worker/src/lib/d1-overload-retry.ts",
@@ -1110,11 +1110,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/db-cache.ts",
-      "sha256": "c0bd68217364c5ed47c52906338858372dc3d2fca68c352852dc25cf53d07337"
+      "sha256": "b99dce12c3e85d71d29332daadeb64bcd319edc40de00d7ec0c8e1c65beaac83"
     },
     {
       "path": "worker/src/lib/db.ts",
-      "sha256": "69ac8ac2ad9619a77e9bf2e451d0e0e0cae3860aa42777ce5a6d3cf3a5645538"
+      "sha256": "956a89855b53aa83b15aa0a2e3737f6203c74a163bef1623315ec6f104cff2dc"
     },
     {
       "path": "worker/src/lib/freshness-sentinels.ts",
@@ -1375,7 +1375,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-09-block-26377132-shock-coverage.json.gz"
     }
   ],
-  "digest": "6988863d76648be08f55d06db16dec14570f746a55cf7e9a8a246defb2c79e60"
+  "digest": "a8d4da11c34ee7356409a9e5c2c36ff08a5b3fe41b597e6cb71c77c4e4cdb88e"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
