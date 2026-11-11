@@ -250,7 +250,13 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     ],
     phase: 0,
     script: "scripts/maintenance/generate-postman-collection.ts",
-    sourcePaths: ["scripts/lib/public-api-artifact-catalog.ts", "shared/lib/chains/health.ts"],
+    sourcePaths: [
+      "scripts/lib/public-api-artifact-catalog-builders.ts",
+      "scripts/lib/public-api-artifact-catalog.ts",
+      "shared/lib/api-endpoints/**",
+      "shared/lib/api-query-history.ts",
+      "shared/lib/chains/health.ts",
+    ],
   }),
   generatedArtifact({
     id: "openapi",
@@ -263,9 +269,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     script: "scripts/maintenance/generate-openapi-spec.ts",
     sourcePaths: [
+      "scripts/lib/public-api-artifact-catalog-builders.ts",
       "scripts/lib/public-api-artifact-catalog.ts",
       "scripts/lib/public-api-response-schemas.ts",
       "shared/contracts/api-meta.ts",
+      "shared/lib/api-endpoints/**",
+      "shared/lib/api-query-history.ts",
       "shared/lib/chains/health.ts",
     ],
   }),
